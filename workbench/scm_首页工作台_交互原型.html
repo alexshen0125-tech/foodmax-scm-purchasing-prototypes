@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCM 采购端 - 首页工作台</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui@2.15.14/lib/theme-chalk/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-primary: #0D7C66;
+      --brand-primary-light: #E8F5F1;
+      --brand-primary-dark: #095C4B;
+      --brand-secondary: #F59E0B;
+      --bg-page: #F0F2F5;
+      --bg-card: #FFFFFF;
+      --text-primary: #1A2332;
+      --text-secondary: #606D80;
+      --text-muted: #9BA5B3;
+      --border-light: #E8ECF1;
+      --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.04);
+      --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.04);
+      --radius: 8px;
+      --danger: #E53E3E;
+      --danger-bg: #FFF5F5;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      --success: #0D7C66;
+      --success-bg: #E8F5F1;
+      --info: #3B82F6;
+      --info-bg: #EFF6FF;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout - simulates existing SCM sidebar + content structure */
+    .app-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 220px;
+      background: #001529;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-logo .logo-text {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--brand-primary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      font-size: 14px;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .sidebar-menu {
+      padding: 8px 0;
+      flex: 1;
+    }
+
+    .menu-item {
+      padding: 0 20px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      color: rgba(255,255,255,0.65);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      gap: 10px;
+    }
+
+    .menu-item:hover { color: #fff; background: rgba(255,255,255,0.04); }
+    .menu-item.active {
+      color: #fff;
+      background: var(--brand-primary);
+      font-weight: 500;
+    }
+
+    .menu-item i { font-size: 16px; width: 16px; text-align: center; }
+
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Top navbar */
+    .navbar {
+      height: 56px;
+      background: #fff;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .navbar-breadcrumb {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .navbar-right .el-badge { cursor: pointer; }
+    .navbar-right .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--brand-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .user-name { font-size: 14px; color: var(--text-primary); }
+
+    /* Content area */
+    .content-area {
+      flex: 1;
+      padding: 20px 24px 32px;
+      overflow-y: auto;
+    }
+
+    /* Welcome header */
+    .welcome-header {
+      margin-bottom: 24px;
+    }
+
+    .welcome-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .welcome-header .subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .welcome-header .date-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--brand-primary-light);
+      color: var(--brand-primary);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .role-switcher {
+      margin-bottom: 24px;
+    }
+
+    .role-switcher .el-radio-button__inner {
+      font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
+    }
+
+    /* Section title */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 3px;
+      height: 16px;
+      background: var(--brand-primary);
+      border-radius: 2px;
+    }
+
+    .section-title .total-badge {
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 10px;
+      margin-left: 4px;
+    }
+
+    /* Todo cards grid — fixed max-width, left-aligned, not stretch */
+    .todo-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .todo-grid.cols-1 { grid-template-columns: repeat(1, 200px); }
+    .todo-grid.cols-2 { grid-template-columns: repeat(2, 1fr); max-width: 440px; }
+    .todo-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .todo-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .todo-grid.cols-5, .todo-grid.cols-6, .todo-grid.cols-7,
+    .todo-grid.cols-8, .todo-grid.cols-9 { grid-template-columns: repeat(5, 1fr); }
+
+    .todo-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .todo-card:hover {
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--brand-primary);
+      transform: translateY(-1px);
+    }
+
+    .todo-card .card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    .todo-card .card-icon.blue { background: var(--info-bg); color: var(--info); }
+    .todo-card .card-icon.green { background: var(--success-bg); color: var(--success); }
+    .todo-card .card-icon.orange { background: var(--warning-bg); color: var(--warning); }
+    .todo-card .card-icon.red { background: var(--danger-bg); color: var(--danger); }
+
+    .todo-card .card-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .todo-card .card-count {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .todo-card .card-count.danger { color: var(--danger); }
+
+    .todo-card .card-action {
+      position: absolute;
+      right: 12px;
+      bottom: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .todo-card:hover .card-action { opacity: 1; color: var(--brand-primary); }
+
+    /* KPI cards — fixed max-width, left-aligned */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .kpi-grid.cols-1 { grid-template-columns: repeat(1, 260px); }
+    .kpi-grid.cols-2 { grid-template-columns: repeat(2, 1fr); max-width: 520px; }
+    .kpi-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .kpi-grid.cols-4, .kpi-grid.cols-5, .kpi-grid.cols-6 { grid-template-columns: repeat(4, 1fr); }
+
+    /* Section empty state */
+    .section-empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      background: var(--bg-card);
+      border: 1px dashed var(--border-light);
+      border-radius: var(--radius);
+      margin-bottom: 32px;
+    }
+
+    /* Toggle control panel (prototype demo) */
+    .toggle-panel {
+      background: #FFF9E6;
+      border: 1px solid #F5E6B8;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+
+    .toggle-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .toggle-panel-header h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #92600A;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toggle-panel-body {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .kpi-card .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .kpi-card .kpi-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .kpi-card .kpi-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .kpi-card .kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      line-height: 1;
+    }
+
+    .kpi-card .kpi-trend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .kpi-trend.up { color: var(--success); }
+    .kpi-trend.down { color: var(--danger); }
+    .kpi-trend.neutral { color: var(--text-muted); }
+
+    .kpi-trend .trend-label {
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 4px;
+    }
+
+    /* Quick actions */
+    .quick-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    .quick-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: var(--shadow-card);
+      font-size: 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .quick-action-btn:hover {
+      border-color: var(--brand-primary);
+      color: var(--brand-primary);
+      box-shadow: var(--shadow-card-hover);
+    }
+
+    .quick-action-btn i {
+      font-size: 16px;
+      color: var(--brand-primary);
+    }
+
+    /* Recent activity */
+    .activity-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .activity-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .activity-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-list { padding: 0; }
+
+    .activity-item {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+
+    .activity-item:last-child { border-bottom: none; }
+    .activity-item:hover { background: #FAFBFC; }
+
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .activity-dot.blue { background: var(--info); }
+    .activity-dot.green { background: var(--success); }
+    .activity-dot.orange { background: var(--warning); }
+    .activity-dot.red { background: var(--danger); }
+
+    .activity-content { flex: 1; min-width: 0; }
+
+    .activity-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .activity-text strong { font-weight: 600; }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* Footer note */
+    .extensibility-note {
+      margin-top: 24px;
+      padding: 12px 16px;
+      background: var(--brand-primary-light);
+      border: 1px dashed var(--brand-primary);
+      border-radius: var(--radius);
+      font-size: 12px;
+      color: var(--brand-primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .extensibility-note i { font-size: 14px; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .todo-grid, .todo-grid.cols-5, .todo-grid.cols-6,
+      .todo-grid.cols-7, .todo-grid.cols-8, .todo-grid.cols-9 { grid-template-columns: repeat(3, 1fr); }
+      .kpi-grid, .kpi-grid.cols-4, .kpi-grid.cols-5, .kpi-grid.cols-6 { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .todo-grid, .todo-grid[class*="cols-"] { grid-template-columns: repeat(2, 1fr); max-width: none; }
+      .kpi-grid, .kpi-grid[class*="cols-"] { grid-template-columns: 1fr; max-width: none; }
+    }
+
+    /* Element UI overrides */
+    .el-radio-button__orig-radio:checked + .el-radio-button__inner {
+      background-color: var(--brand-primary);
+      border-color: var(--brand-primary);
+    }
+
+    .el-radio-button__inner:hover {
+      color: var(--brand-primary);
+    }
+
+    .el-button--primary {
+      background-color: var(--brand-primary);
+      border-color: var(--brand-primary);
+    }
+
+    .el-button--primary:hover {
+      background-color: var(--brand-primary-dark);
+      border-color: var(--brand-primary-dark);
+    }
+
+    .el-link.el-link--primary { color: var(--brand-primary); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="app-wrapper">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-icon">F</div>
+          <span class="logo-text">Food Max SCM</span>
+        </div>
+        <div class="sidebar-menu">
+          <div class="menu-item active">
+            <i class="el-icon-s-home"></i>
+            <span>首页工作台</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-shopping-cart-full"></i>
+            <span>采购管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-office-building"></i>
+            <span>供应商管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-goods"></i>
+            <span>货品中心</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-wallet"></i>
+            <span>结算管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-truck"></i>
+            <span>物流管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-s-data"></i>
+            <span>数据报表</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div class="main-container">
+        <!-- Navbar -->
+        <div class="navbar">
+          <div class="navbar-left">
+            <span class="navbar-breadcrumb">首页工作台</span>
+          </div>
+          <div class="navbar-right">
+            <el-badge :value="totalPending" :max="99" type="danger">
+              <i class="el-icon-bell" style="font-size:18px; color:#606D80;"></i>
+            </el-badge>
+            <div class="user-info">
+              <div class="user-avatar">{{ currentUser.avatar }}</div>
+              <span class="user-name">{{ currentUser.name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content-area">
+          <!-- Welcome -->
+          <div class="welcome-header">
+            <h1>{{ greeting }}，{{ currentUser.name }}</h1>
+            <div class="subtitle">
+              <span>{{ currentUser.roleName }} · {{ currentUser.site }}</span>
+              <span class="date-badge">
+                <i class="el-icon-date"></i>
+                {{ today }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Role switcher (for prototype demo) -->
+          <div class="role-switcher">
+            <el-radio-group v-model="currentRole" size="small" @change="onRoleChange">
+              <el-radio-button label="buyer">采购专员</el-radio-button>
+              <el-radio-button label="manager">采购主管</el-radio-button>
+              <el-radio-button label="finance">财务专员</el-radio-button>
+              <el-radio-button label="goods_ops">货品运营</el-radio-button>
+            </el-radio-group>
+            <span style="margin-left:12px; font-size:12px; color:#9BA5B3;">
+              <i class="el-icon-info"></i> 切换角色查看不同工作台内容（原型演示用）
+            </span>
+          </div>
+
+          <!-- Quick actions -->
+          <div class="section-title">快捷操作</div>
+          <div class="quick-actions">
+            <div class="quick-action-btn" v-for="action in quickActions" :key="action.label"
+                 @click="handleQuickAction(action)">
+              <i :class="action.icon"></i>
+              <span>{{ action.label }}</span>
+            </div>
+          </div>
+
+          <!-- Toggle control panel (prototype demo) -->
+          <div class="toggle-panel">
+            <div class="toggle-panel-header">
+              <h4><i class="el-icon-setting"></i> 卡片开关模拟（原型演示用，实际由后台配置控制）</h4>
+              <el-button type="text" size="mini" @click="showTogglePanel = !showTogglePanel" style="color:#92600A;">
+                {{ showTogglePanel ? '收起' : '展开' }} <i :class="showTogglePanel ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></i>
+              </el-button>
+            </div>
+            <template v-if="showTogglePanel">
+              <div style="font-size:11px; color:#92600A; font-weight:500; margin-bottom:6px;">待办卡片</div>
+              <div class="toggle-panel-body" style="margin-bottom:10px;">
+                <label class="toggle-item" v-for="todo in roleFilteredTodos" :key="'t-'+todo.key">
+                  <el-switch v-model="todo.visible" active-color="#0D7C66" :width="28" size="mini"></el-switch>
+                  {{ todo.label }}
+                </label>
+              </div>
+              <div style="font-size:11px; color:#92600A; font-weight:500; margin-bottom:6px;">数据指标</div>
+              <div class="toggle-panel-body">
+                <label class="toggle-item" v-for="kpi in roleFilteredKpis" :key="'k-'+kpi.key">
+                  <el-switch v-model="kpi.visible" active-color="#0D7C66" :width="28" size="mini"></el-switch>
+                  {{ kpi.label }}
+                </label>
+              </div>
+            </template>
+          </div>
+
+          <!-- Todo section -->
+          <template v-if="visibleTodos.length > 0">
+            <div class="section-title">
+              待办任务
+              <span class="total-badge" v-if="totalPending > 0">{{ totalPending }}</span>
+            </div>
+            <div class="todo-grid" :class="'cols-' + visibleTodos.length">
+              <div class="todo-card" v-for="todo in visibleTodos" :key="todo.key"
+                   @click="handleTodoClick(todo)">
+                <div class="card-icon" :class="todo.iconColor">
+                  <i :class="todo.icon"></i>
+                </div>
+                <div class="card-label">{{ todo.label }}</div>
+                <div class="card-count" :class="{ danger: todo.count > 10 }">{{ todo.count }}</div>
+                <div class="card-action">
+                  查看列表 <i class="el-icon-arrow-right"></i>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- KPI section -->
+          <template v-if="visibleKpis.length > 0">
+            <div class="section-title">核心数据</div>
+            <div class="kpi-grid" :class="'cols-' + visibleKpis.length">
+              <div class="kpi-card" v-for="kpi in visibleKpis" :key="kpi.label">
+                <div class="kpi-header">
+                  <span class="kpi-label">{{ kpi.label }}</span>
+                  <div class="kpi-icon" :style="{ background: kpi.iconBg, color: kpi.iconColor }">
+                    <i :class="kpi.icon"></i>
+                  </div>
+                </div>
+                <div class="kpi-value">{{ kpi.value }}</div>
+                <div class="kpi-trend" :class="kpi.trendDirection">
+                  <i :class="kpi.trendIcon"></i>
+                  <span>{{ kpi.trendValue }}</span>
+                  <span class="trend-label">{{ kpi.trendLabel }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Recent activity -->
+          <div class="section-title">最近动态</div>
+          <div class="activity-section">
+            <div class="activity-header">
+              <h3>系统通知 & 操作记录</h3>
+              <el-link type="primary" :underline="false" style="font-size:13px;">
+                查看全部 <i class="el-icon-arrow-right"></i>
+              </el-link>
+            </div>
+            <div class="activity-list">
+              <div class="activity-item" v-for="item in activities" :key="item.id">
+                <div class="activity-dot" :class="item.dotColor"></div>
+                <div class="activity-content">
+                  <div class="activity-text" v-html="item.text"></div>
+                </div>
+                <span class="activity-time">{{ item.time }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extensibility note -->
+          <div class="extensibility-note">
+            <i class="el-icon-info"></i>
+            <span>
+              扩展性说明：工作台卡片按角色配置，后端接口 <code>/api/workbench/config</code> 返回当前角色可见的待办类型和数据指标，
+              新增业务模块只需在配置中注册即可扩展，无需修改前端代码。
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@2.7.16/dist/vue.min.js"></script>
+  <script src="https://unpkg.com/element-ui@2.15.14/lib/index.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        const now = new Date();
+        const hour = now.getHours();
+        let greeting = '早上好';
+        if (hour >= 12 && hour < 14) greeting = '中午好';
+        else if (hour >= 14 && hour < 18) greeting = '下午好';
+        else if (hour >= 18) greeting = '晚上好';
+
+        return {
+          greeting,
+          today: now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }),
+          currentRole: 'buyer',
+          roles: {
+            buyer: { name: '张采购', avatar: '张', roleName: '采购专员', site: 'Singapore' },
+            manager: { name: '李主管', avatar: '李', roleName: '采购主管', site: 'Singapore' },
+            finance: { name: '王财务', avatar: '王', roleName: '财务专员', site: 'Singapore' },
+            goods_ops: { name: '赵运营', avatar: '赵', roleName: '货品运营', site: 'Singapore' },
+          },
+          showTogglePanel: true,
+          // All possible todo items with role visibility
+          allTodos: [
+            { key: 'po_pending_place', label: '采购单-待下单', count: 8, icon: 'el-icon-document-add', iconColor: 'blue', roles: ['buyer', 'manager'], link: '/purchase/order-list?status=pending_place', visible: true },
+            { key: 'po_pending_ship', label: '采购单-待发货', count: 12, icon: 'el-icon-truck', iconColor: 'orange', roles: ['buyer', 'manager'], link: '/purchase/order-list?status=pending_ship', visible: true },
+            { key: 'po_pending_receive', label: '采购单-待入库', count: 5, icon: 'el-icon-box', iconColor: 'green', roles: ['buyer', 'manager'], link: '/purchase/order-list?status=pending_receive', visible: true },
+            { key: 'settlement_pending', label: '结算单-待处理', count: 3, icon: 'el-icon-wallet', iconColor: 'blue', roles: ['buyer', 'manager', 'finance'], link: '/settlement/list?status=pending', visible: true },
+            { key: 'supplier_reg_review', label: '供应商注册-待审核', count: 2, icon: 'el-icon-user', iconColor: 'green', roles: ['buyer'], link: '/vendor/registration?status=pending_review', visible: true },
+            { key: 'invoice_review', label: '发票-待审核', count: 7, icon: 'el-icon-document-checked', iconColor: 'orange', roles: ['manager', 'finance'], link: '/settlement/invoice?status=pending_review', visible: true },
+            { key: 'supplier_reg_approve', label: '供应商注册-待审批', count: 1, icon: 'el-icon-stamp', iconColor: 'blue', roles: ['manager', 'finance'], link: '/vendor/registration?status=pending_approve', visible: true },
+            { key: 'item_review', label: '货品-待审核', count: 4, icon: 'el-icon-goods', iconColor: 'green', roles: ['goods_ops'], link: '/goods/item-list?status=pending_review', visible: true },
+            { key: 'bom_review', label: 'BOM-待审核', count: 2, icon: 'el-icon-files', iconColor: 'orange', roles: ['goods_ops'], link: '/goods/bom-list?status=pending_review', visible: true },
+          ],
+          // All KPI items with role visibility
+          allKpis: [
+            {
+              key: 'monthly_purchase', label: '本月采购金额', value: 'S$482,350',
+              icon: 'el-icon-money', iconBg: '#EFF6FF', iconColor: '#3B82F6',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '+12.3%', trendLabel: '较上月',
+              roles: ['buyer', 'manager', 'finance'], visible: true
+            },
+            {
+              key: 'monthly_settlement', label: '本月结算金额', value: 'S$396,800',
+              icon: 'el-icon-wallet', iconBg: '#E8F5F1', iconColor: '#0D7C66',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '+8.7%', trendLabel: '较上月',
+              roles: ['buyer', 'manager', 'finance'], visible: true
+            },
+            {
+              key: 'delivery_rate', label: '供应商交货准时率', value: '94.2%',
+              icon: 'el-icon-timer', iconBg: '#FFFBEB', iconColor: '#F59E0B',
+              trendDirection: 'down', trendIcon: 'el-icon-bottom', trendValue: '-1.8%', trendLabel: '较上月',
+              roles: ['buyer', 'manager'], visible: true
+            },
+            {
+              key: 'qc_deduction_rate', label: '品控扣点率', value: '3.5%',
+              icon: 'el-icon-warning-outline', iconBg: '#FFF5F5', iconColor: '#E53E3E',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '+0.3%', trendLabel: '较上月',
+              roles: ['buyer', 'manager'], visible: true
+            },
+            {
+              key: 'monthly_po_count', label: '本月建单量', value: '186',
+              icon: 'el-icon-document', iconBg: '#EFF6FF', iconColor: '#3B82F6',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '+15', trendLabel: '较上月',
+              roles: ['buyer', 'manager'], visible: true
+            },
+            {
+              key: 'avg_po_time', label: '平均建单耗时', value: '6.2 min',
+              icon: 'el-icon-time', iconBg: '#E8F5F1', iconColor: '#0D7C66',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '-2.1 min', trendLabel: '较上月（改善）',
+              roles: ['buyer', 'manager'], visible: true
+            },
+            {
+              key: 'invoice_pass_rate', label: '发票审核通过率', value: '91.8%',
+              icon: 'el-icon-circle-check', iconBg: '#E8F5F1', iconColor: '#0D7C66',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '+3.2%', trendLabel: '较上月',
+              roles: ['finance'], visible: true
+            },
+            {
+              key: 'settlement_cycle', label: '平均结算周期', value: '4.3 天',
+              icon: 'el-icon-date', iconBg: '#FFFBEB', iconColor: '#F59E0B',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '-0.8 天', trendLabel: '较上月（改善）',
+              roles: ['finance'], visible: true
+            },
+            {
+              key: 'item_count', label: '本月新增货品', value: '23',
+              icon: 'el-icon-goods', iconBg: '#E8F5F1', iconColor: '#0D7C66',
+              trendDirection: 'neutral', trendIcon: 'el-icon-minus', trendValue: '持平', trendLabel: '较上月',
+              roles: ['goods_ops'], visible: true
+            },
+            {
+              key: 'bom_count', label: '生效 BOM 数量', value: '47',
+              icon: 'el-icon-files', iconBg: '#EFF6FF', iconColor: '#3B82F6',
+              trendDirection: 'up', trendIcon: 'el-icon-top', trendValue: '+5', trendLabel: '较上月',
+              roles: ['goods_ops'], visible: true
+            },
+          ],
+          // Quick actions per role
+          allQuickActions: [
+            { label: '新建采购单', icon: 'el-icon-plus', roles: ['buyer', 'manager'], link: '/purchase/create' },
+            { label: 'AI 智能建单', icon: 'el-icon-magic-stick', roles: ['buyer', 'manager'], link: '/purchase/ai-create' },
+            { label: '邀请供应商注册', icon: 'el-icon-s-promotion', roles: ['buyer'], link: '/vendor/invite' },
+            { label: '审批中心', icon: 'el-icon-stamp', roles: ['manager', 'finance'], link: '/approval-center' },
+            { label: '发票管理', icon: 'el-icon-document', roles: ['finance'], link: '/settlement/invoice' },
+            { label: '新建货品', icon: 'el-icon-circle-plus-outline', roles: ['goods_ops'], link: '/goods/item-create' },
+            { label: '导出报表', icon: 'el-icon-download', roles: ['buyer', 'manager', 'finance', 'goods_ops'], link: '/report/export' },
+          ],
+          // Activity log
+          activities: [
+            { id: 1, text: '供应商 <strong>Ocean Fresh Pte Ltd</strong> 已确认采购单 <strong>PO-2026-0418</strong> 发货', dotColor: 'green', time: '10 分钟前' },
+            { id: 2, text: '采购单 <strong>PO-2026-0415</strong> 入库完成，品控扣点 <strong>2.1%</strong>', dotColor: 'blue', time: '25 分钟前' },
+            { id: 3, text: '发票 <strong>INV-88721</strong> OCR 识别完成，待审核', dotColor: 'orange', time: '1 小时前' },
+            { id: 4, text: '供应商 <strong>Thai Harvest Co</strong> 提交自助注册申请', dotColor: 'blue', time: '2 小时前' },
+            { id: 5, text: '结算单 <strong>STL-2026-0322</strong> 金额异常（差异 > 阈值），需人工确认', dotColor: 'red', time: '3 小时前' },
+            { id: 6, text: '货品 <strong>三文鱼柳 (Salmon Fillet)</strong> BOM 审核通过', dotColor: 'green', time: '4 小时前' },
+          ],
+        };
+      },
+      computed: {
+        currentUser() {
+          return this.roles[this.currentRole];
+        },
+        // Items for current role (for toggle panel)
+        roleFilteredTodos() {
+          return this.allTodos.filter(t => t.roles.includes(this.currentRole));
+        },
+        roleFilteredKpis() {
+          return this.allKpis.filter(k => k.roles.includes(this.currentRole));
+        },
+        // Items actually shown (role + visible toggle)
+        visibleTodos() {
+          return this.allTodos.filter(t => t.roles.includes(this.currentRole) && t.visible);
+        },
+        visibleKpis() {
+          return this.allKpis.filter(k => k.roles.includes(this.currentRole) && k.visible);
+        },
+        quickActions() {
+          return this.allQuickActions.filter(a => a.roles.includes(this.currentRole));
+        },
+        totalPending() {
+          return this.visibleTodos.reduce((sum, t) => sum + t.count, 0);
+        },
+      },
+      methods: {
+        onRoleChange(role) {
+          this.$message({
+            message: `已切换至「${this.roles[role].roleName}」视角`,
+            type: 'success',
+            duration: 1500,
+          });
+        },
+        handleTodoClick(todo) {
+          this.$message({
+            message: `跳转至：${todo.label} 列表（${todo.link}）`,
+            type: 'info',
+            duration: 2000,
+          });
+        },
+        handleQuickAction(action) {
+          this.$message({
+            message: `跳转至：${action.label}（${action.link}）`,
+            type: 'info',
+            duration: 2000,
+          });
+        },
+      },
+    });
+  </script>
+</body>
+</html>

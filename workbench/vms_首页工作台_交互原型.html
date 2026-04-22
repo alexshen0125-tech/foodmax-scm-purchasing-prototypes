@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VMS 供应商门户 - 首页工作台</title>
+  <link rel="stylesheet" href="https://unpkg.com/element-ui@2.15.14/lib/theme-chalk/index.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand-primary: #1A6B54;
+      --brand-primary-light: #E6F4EF;
+      --brand-primary-dark: #0F4A3A;
+      --brand-accent: #E8913A;
+      --bg-page: #F4F6F8;
+      --bg-card: #FFFFFF;
+      --text-primary: #1C2A3A;
+      --text-secondary: #5F6D7E;
+      --text-muted: #95A1B0;
+      --border-light: #E3E8EF;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+      --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08);
+      --radius: 10px;
+      --danger: #DC2626;
+      --danger-bg: #FEF2F2;
+      --warning: #E8913A;
+      --warning-bg: #FFF7ED;
+      --success: #1A6B54;
+      --success-bg: #E6F4EF;
+      --info: #2563EB;
+      --info-bg: #EFF6FF;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* VMS sidebar - lighter theme to differentiate from SCM */
+    .sidebar {
+      width: 200px;
+      background: #FFFFFF;
+      border-right: 1px solid var(--border-light);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-logo {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .sidebar-logo .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--brand-primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo .logo-icon svg { width: 18px; height: 18px; }
+
+    .sidebar-logo .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+    }
+
+    .sidebar-logo .logo-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sidebar-menu { padding: 12px 8px; flex: 1; }
+
+    .menu-item {
+      padding: 0 12px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      gap: 10px;
+      border-radius: 6px;
+      margin-bottom: 2px;
+    }
+
+    .menu-item:hover { color: var(--text-primary); background: var(--bg-page); }
+    .menu-item.active {
+      color: var(--brand-primary);
+      background: var(--brand-primary-light);
+      font-weight: 600;
+    }
+
+    .menu-item i { font-size: 16px; width: 16px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .supplier-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      background: var(--bg-page);
+      border-radius: 8px;
+    }
+
+    .supplier-badge .badge-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--brand-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .supplier-badge .badge-info { min-width: 0; }
+    .supplier-badge .badge-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .supplier-badge .badge-id {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .main-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    /* Navbar */
+    .navbar {
+      height: 56px;
+      background: #fff;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .navbar-left { font-size: 14px; color: var(--text-secondary); }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .lang-switch {
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px 8px;
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+    }
+
+    .lang-switch:hover { border-color: var(--brand-primary); color: var(--brand-primary); }
+
+    /* Content */
+    .content-area {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    /* Welcome banner */
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--brand-primary) 0%, #2A8F73 100%);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .welcome-banner::after {
+      content: '';
+      position: absolute;
+      right: -20px;
+      top: -20px;
+      width: 160px;
+      height: 160px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 50%;
+    }
+
+    .welcome-banner::before {
+      content: '';
+      position: absolute;
+      right: 60px;
+      bottom: -40px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+
+    .welcome-banner h1 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .welcome-banner .subtitle {
+      font-size: 14px;
+      opacity: 0.85;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .welcome-banner .date-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.15);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    /* Section */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 3px;
+      height: 16px;
+      background: var(--brand-primary);
+      border-radius: 2px;
+    }
+
+    .section-title .count-badge {
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 10px;
+    }
+
+    /* Todo cards - horizontal for VMS (fewer items) */
+    .todo-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .todo-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: var(--shadow-card);
+      position: relative;
+    }
+
+    .todo-card:hover {
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--brand-primary);
+      transform: translateY(-2px);
+    }
+
+    .todo-card.alert {
+      border-left: 3px solid var(--danger);
+    }
+
+    .todo-card .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .todo-card .card-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+    }
+
+    .todo-card .card-icon.blue { background: var(--info-bg); color: var(--info); }
+    .todo-card .card-icon.green { background: var(--success-bg); color: var(--success); }
+    .todo-card .card-icon.orange { background: var(--warning-bg); color: var(--warning); }
+    .todo-card .card-icon.red { background: var(--danger-bg); color: var(--danger); }
+
+    .todo-card .card-arrow {
+      color: var(--text-muted);
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .todo-card:hover .card-arrow { opacity: 1; color: var(--brand-primary); }
+
+    .todo-card .card-count {
+      font-size: 30px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .todo-card .card-count.danger { color: var(--danger); }
+
+    .todo-card .card-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .todo-card .alert-pulse {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* Two column layout for bottom sections */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .kpi-card .kpi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .kpi-card .kpi-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .kpi-card .kpi-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .kpi-card .kpi-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      line-height: 1;
+    }
+
+    .kpi-card .kpi-trend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .kpi-trend.up { color: var(--success); }
+    .kpi-trend.down { color: var(--danger); }
+    .kpi-trend .trend-label {
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 4px;
+    }
+
+    /* Notification list */
+    .notification-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .notification-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .notification-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .notification-header .unread-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+
+    .notification-list { padding: 0; }
+
+    .notification-item {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .notification-item:last-child { border-bottom: none; }
+    .notification-item:hover { background: #FAFBFC; }
+
+    .notification-item .noti-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .notification-item .noti-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .noti-tag.deduction { background: var(--warning-bg); color: var(--warning); }
+    .noti-tag.settlement { background: var(--info-bg); color: var(--info); }
+    .noti-tag.system { background: var(--bg-page); color: var(--text-muted); }
+
+    .notification-item .noti-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .notification-item .noti-text {
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .notification-item .noti-text strong { font-weight: 600; }
+
+    .notification-item .noti-detail {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 16px;
+    }
+
+    .notification-item .noti-detail span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Order summary table */
+    .order-summary {
+      background: var(--bg-card);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    .order-summary-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .order-summary-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .order-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .order-table th {
+      padding: 10px 18px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: #FAFBFC;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .order-table td {
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .order-table tr:last-child td { border-bottom: none; }
+    .order-table tr:hover td { background: #FAFBFC; }
+
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-tag.pending { background: var(--warning-bg); color: var(--warning); }
+    .status-tag.confirmed { background: var(--success-bg); color: var(--success); }
+    .status-tag.shipped { background: var(--info-bg); color: var(--info); }
+
+    /* Extensibility note */
+    .extensibility-note {
+      margin-top: 24px;
+      padding: 12px 16px;
+      background: var(--brand-primary-light);
+      border: 1px dashed var(--brand-primary);
+      border-radius: var(--radius);
+      font-size: 12px;
+      color: var(--brand-primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .extensibility-note i { font-size: 14px; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .todo-grid { grid-template-columns: repeat(2, 1fr); }
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .todo-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Element overrides */
+    .el-link.el-link--primary { color: var(--brand-primary); }
+    .el-button--primary {
+      background-color: var(--brand-primary);
+      border-color: var(--brand-primary);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="app-wrapper">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <div>
+            <div class="logo-text">Food Max</div>
+            <div class="logo-sub">Vendor Portal</div>
+          </div>
+        </div>
+        <div class="sidebar-menu">
+          <div class="menu-item active">
+            <i class="el-icon-s-home"></i>
+            <span>首页工作台</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-document"></i>
+            <span>采购单管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-tickets"></i>
+            <span>发票管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-wallet"></i>
+            <span>结算管理</span>
+          </div>
+          <div class="menu-item">
+            <i class="el-icon-goods"></i>
+            <span>货品管理</span>
+          </div>
+        </div>
+        <div class="sidebar-footer">
+          <div class="supplier-badge">
+            <div class="badge-avatar">O</div>
+            <div class="badge-info">
+              <div class="badge-name">Ocean Fresh Pte Ltd</div>
+              <div class="badge-id">SP-2024-0086</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main -->
+      <div class="main-container">
+        <div class="navbar">
+          <div class="navbar-left">首页工作台</div>
+          <div class="navbar-right">
+            <el-badge :value="notificationCount" :max="99" type="danger">
+              <i class="el-icon-bell" style="font-size:18px; color:#5F6D7E; cursor:pointer;"></i>
+            </el-badge>
+            <div class="lang-switch">EN / 中</div>
+          </div>
+        </div>
+
+        <div class="content-area">
+          <!-- Welcome banner -->
+          <div class="welcome-banner">
+            <h1>{{ greeting }}，Ocean Fresh Pte Ltd</h1>
+            <div class="subtitle">
+              <span>供应商门户 · Singapore Site</span>
+              <span class="date-tag">
+                <i class="el-icon-date"></i>
+                {{ today }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Todo section -->
+          <div class="section-title">
+            待办事项
+            <span class="count-badge" v-if="totalPending > 0">{{ totalPending }}</span>
+          </div>
+          <div class="todo-grid">
+            <div class="todo-card" v-for="todo in todos" :key="todo.key"
+                 :class="{ alert: todo.isAlert }"
+                 @click="handleTodoClick(todo)">
+              <div class="alert-pulse" v-if="todo.isAlert"></div>
+              <div class="card-top">
+                <div class="card-icon" :class="todo.iconColor">
+                  <i :class="todo.icon"></i>
+                </div>
+                <i class="el-icon-right card-arrow"></i>
+              </div>
+              <div class="card-count" :class="{ danger: todo.isAlert }">{{ todo.count }}</div>
+              <div class="card-label">{{ todo.label }}</div>
+            </div>
+          </div>
+
+          <!-- KPI section -->
+          <div class="section-title">经营数据</div>
+          <div class="kpi-grid">
+            <div class="kpi-card" v-for="kpi in kpis" :key="kpi.label">
+              <div class="kpi-header">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <div class="kpi-icon" :style="{ background: kpi.iconBg, color: kpi.iconColor }">
+                  <i :class="kpi.icon"></i>
+                </div>
+              </div>
+              <div class="kpi-value">{{ kpi.value }}</div>
+              <div class="kpi-trend" :class="kpi.trendDir">
+                <i :class="kpi.trendIcon"></i>
+                <span>{{ kpi.trendValue }}</span>
+                <span class="trend-label">{{ kpi.trendLabel }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom two-column: notifications + recent orders -->
+          <div class="bottom-grid">
+            <!-- Notifications -->
+            <div>
+              <div class="section-title">消息通知</div>
+              <div class="notification-section">
+                <div class="notification-header">
+                  <h3>
+                    <span>品控扣点 & 系统通知</span>
+                    <span class="unread-dot"></span>
+                  </h3>
+                  <el-link type="primary" :underline="false" style="font-size:12px;">
+                    全部 <i class="el-icon-arrow-right"></i>
+                  </el-link>
+                </div>
+                <div class="notification-list">
+                  <div class="notification-item" v-for="noti in notifications" :key="noti.id">
+                    <div class="noti-top">
+                      <span class="noti-tag" :class="noti.type">{{ noti.typeLabel }}</span>
+                      <span class="noti-time">{{ noti.time }}</span>
+                    </div>
+                    <div class="noti-text" v-html="noti.text"></div>
+                    <div class="noti-detail" v-if="noti.details">
+                      <span v-for="d in noti.details" :key="d.label">
+                        <i :class="d.icon" style="font-size:12px;"></i>
+                        {{ d.label }}：{{ d.value }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent orders -->
+            <div>
+              <div class="section-title">近期采购单</div>
+              <div class="order-summary">
+                <div class="order-summary-header">
+                  <h3>最近 7 天</h3>
+                  <el-link type="primary" :underline="false" style="font-size:12px;">
+                    查看全部 <i class="el-icon-arrow-right"></i>
+                  </el-link>
+                </div>
+                <table class="order-table">
+                  <thead>
+                    <tr>
+                      <th>采购单号</th>
+                      <th>金额</th>
+                      <th>交货日期</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="order in recentOrders" :key="order.id" @click="handleOrderClick(order)">
+                      <td style="font-weight:500;">{{ order.id }}</td>
+                      <td>{{ order.amount }}</td>
+                      <td>{{ order.deliveryDate }}</td>
+                      <td>
+                        <span class="status-tag" :class="order.statusClass">{{ order.status }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extensibility note -->
+          <div class="extensibility-note">
+            <i class="el-icon-info"></i>
+            <span>
+              扩展性说明：VMS 工作台待办项和数据指标通过接口 <code>/api/vms/workbench/config</code> 按供应商类型配置，
+              后续可扩展退货待处理、物流跟踪等模块，无需修改前端代码。
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@2.7.16/dist/vue.min.js"></script>
+  <script src="https://unpkg.com/element-ui@2.15.14/lib/index.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data() {
+        const now = new Date();
+        const hour = now.getHours();
+        let greeting = 'Good morning';
+        if (hour >= 12 && hour < 14) greeting = 'Good afternoon';
+        else if (hour >= 14 && hour < 18) greeting = 'Good afternoon';
+        else if (hour >= 18) greeting = 'Good evening';
+
+        return {
+          greeting,
+          today: now.toLocaleDateString('en-SG', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }),
+          todos: [
+            { key: 'po_confirm', label: '采购单-待确认', count: 6, icon: 'el-icon-document-checked', iconColor: 'blue', isAlert: false, link: '/order/purchase-list?status=pending_confirm' },
+            { key: 'invoice_upload', label: '发票-待上传', count: 4, icon: 'el-icon-upload2', iconColor: 'orange', isAlert: false, link: '/bill/invoice?status=pending_upload' },
+            { key: 'invoice_rejected', label: '发票-审核驳回', count: 2, icon: 'el-icon-circle-close', iconColor: 'red', isAlert: true, link: '/bill/invoice?status=rejected' },
+            { key: 'settlement_confirm', label: '结算-待确认', count: 3, icon: 'el-icon-wallet', iconColor: 'green', isAlert: false, link: '/bill/settlement?status=pending_confirm' },
+          ],
+          kpis: [
+            {
+              label: '本月订单金额', value: 'S$128,450',
+              icon: 'el-icon-money', iconBg: '#EFF6FF', iconColor: '#2563EB',
+              trendDir: 'up', trendIcon: 'el-icon-top', trendValue: '+18.5%', trendLabel: 'vs 上月'
+            },
+            {
+              label: '待发货金额', value: 'S$32,800',
+              icon: 'el-icon-truck', iconBg: '#FFF7ED', iconColor: '#E8913A',
+              trendDir: 'down', trendIcon: 'el-icon-bottom', trendValue: '-12.3%', trendLabel: 'vs 上月'
+            },
+            {
+              label: '本月结算金额', value: 'S$96,200',
+              icon: 'el-icon-wallet', iconBg: '#E6F4EF', iconColor: '#1A6B54',
+              trendDir: 'up', trendIcon: 'el-icon-top', trendValue: '+8.1%', trendLabel: 'vs 上月'
+            },
+            {
+              label: '发票审核通过率', value: '88.5%',
+              icon: 'el-icon-circle-check', iconBg: '#E6F4EF', iconColor: '#1A6B54',
+              trendDir: 'up', trendIcon: 'el-icon-top', trendValue: '+5.2%', trendLabel: 'vs 上月'
+            },
+          ],
+          notifications: [
+            {
+              id: 1, type: 'deduction', typeLabel: '品控扣点',
+              text: '采购单 <strong>PO-2026-0418</strong> 品控扣点已录入',
+              time: '2 小时前',
+              details: [
+                { icon: 'el-icon-goods', label: '货品', value: 'Atlantic Salmon Fillet' },
+                { icon: 'el-icon-warning-outline', label: '扣点率', value: '3.2%' },
+              ]
+            },
+            {
+              id: 2, type: 'deduction', typeLabel: '品控扣点',
+              text: '采购单 <strong>PO-2026-0412</strong> 品控扣点已录入',
+              time: '昨天',
+              details: [
+                { icon: 'el-icon-goods', label: '货品', value: 'Tiger Prawns 16/20' },
+                { icon: 'el-icon-warning-outline', label: '扣点率', value: '1.8%' },
+              ]
+            },
+            {
+              id: 3, type: 'settlement', typeLabel: '结算通知',
+              text: '结算单 <strong>STL-2026-0315</strong> 已完成付款，金额 <strong>S$45,600</strong>',
+              time: '2 天前',
+              details: null
+            },
+            {
+              id: 4, type: 'system', typeLabel: '系统通知',
+              text: 'VMS 系统将于 <strong>4月25日 02:00-04:00</strong> 进行维护升级',
+              time: '3 天前',
+              details: null
+            },
+          ],
+          recentOrders: [
+            { id: 'PO-2026-0421', amount: 'S$8,450', deliveryDate: '2026-04-24', status: '待确认', statusClass: 'pending' },
+            { id: 'PO-2026-0420', amount: 'S$12,300', deliveryDate: '2026-04-23', status: '待确认', statusClass: 'pending' },
+            { id: 'PO-2026-0418', amount: 'S$6,200', deliveryDate: '2026-04-22', status: '已确认', statusClass: 'confirmed' },
+            { id: 'PO-2026-0415', amount: 'S$15,800', deliveryDate: '2026-04-20', status: '已发货', statusClass: 'shipped' },
+            { id: 'PO-2026-0412', amount: 'S$9,700', deliveryDate: '2026-04-18', status: '已发货', statusClass: 'shipped' },
+          ],
+        };
+      },
+      computed: {
+        totalPending() {
+          return this.todos.reduce((sum, t) => sum + t.count, 0);
+        },
+        notificationCount() {
+          return this.notifications.filter(n => n.type === 'deduction').length;
+        },
+      },
+      methods: {
+        handleTodoClick(todo) {
+          this.$message({
+            message: `跳转至：${todo.label} 列表（${todo.link}）`,
+            type: 'info',
+            duration: 2000,
+          });
+        },
+        handleOrderClick(order) {
+          this.$message({
+            message: `查看采购单详情：${order.id}`,
+            type: 'info',
+            duration: 2000,
+          });
+        },
+      },
+    });
+  </script>
+</body>
+</html>
