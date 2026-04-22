@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCM - 供应商管理 - 邀请入驻</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+            font-size: 14px;
+            color: #1f2d3d;
+            background: #f7f7f7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== Top Navigation Bar ===== */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to right, #009945, #009945, #00d4c9, #2196f3);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+            color: #fff;
+        }
+        .top-nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-text {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        .logo-text .food { color: #ff9800; }
+        .logo-text .max { color: #ffffff; }
+        .env-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            color: #fff;
+        }
+        .top-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+        }
+        .top-nav-right .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.9);
+        }
+        .top-nav-right .nav-item:hover { color: #fff; }
+        .user-avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #fff;
+            font-weight: 500;
+        }
+        .nav-divider {
+            width: 1px;
+            height: 16px;
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* ===== Sidebar ===== */
+        .sidebar {
+            position: fixed;
+            top: 40px;
+            left: 0;
+            bottom: 0;
+            width: 220px;
+            background: #ffffff;
+            box-shadow: 0 0 6px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 999;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+        .menu-group-title {
+            padding: 16px 20px 6px;
+            font-size: 12px;
+            color: #97a8be;
+            font-weight: 500;
+        }
+        .menu-item {
+            padding: 0 20px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #333333;
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 0;
+        }
+        .menu-item:hover {
+            background: rgba(0, 153, 25, 0.05);
+            color: #009919;
+        }
+        .menu-item.active {
+            background: rgba(0, 153, 25, 0.1);
+            color: #009919;
+            font-weight: 500;
+        }
+        .menu-item .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+
+        /* ===== Main Content ===== */
+        .main-content {
+            margin-left: 220px;
+            margin-top: 40px;
+            padding: 0;
+            min-height: calc(100vh - 40px - 50px);
+        }
+        .breadcrumb-bar {
+            padding: 12px 20px;
+            font-size: 13px;
+            color: #97a8be;
+            background: #fff;
+            border-bottom: 1px solid #edeff2;
+        }
+        .breadcrumb-bar span { color: #97a8be; }
+        .breadcrumb-bar .bc-sep { margin: 0 6px; }
+        .breadcrumb-bar .bc-active { color: #1f2d3d; }
+
+        .page-body { padding: 20px; }
+
+        /* ===== Tabs ===== */
+        .el-tabs {
+            background: #fff;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .el-tabs-header {
+            display: flex;
+            border-bottom: 1px solid #edeff2;
+            padding: 0 20px;
+        }
+        .tab-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #97a8be;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            transition: all 0.15s;
+        }
+        .tab-item:hover { color: #009919; }
+        .tab-item.active {
+            color: #009919;
+            border-bottom-color: #009919;
+            font-weight: 500;
+        }
+
+        /* ===== Title Bar ===== */
+        .title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 4px 4px 0 0;
+        }
+        .title-bar h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2d3d;
+        }
+
+        /* ===== Buttons ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #dcdfe6;
+            background: #fff;
+            color: #606266;
+            transition: all 0.15s;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .btn:hover { border-color: #c0c4cc; }
+        .btn-primary {
+            background: #009919;
+            color: #fff;
+            border-color: #009919;
+        }
+        .btn-primary:hover { background: #007d14; border-color: #007d14; }
+        .btn-success {
+            background: #52c41a;
+            color: #fff;
+            border-color: #52c41a;
+        }
+        .btn-success:hover { background: #47a817; border-color: #47a817; }
+        .btn-warning-outline {
+            background: #fff;
+            color: #e6a23c;
+            border-color: #e6a23c;
+        }
+        .btn-warning-outline:hover { background: #fdf6ec; }
+        .btn-primary-outline {
+            background: #fff;
+            color: #009919;
+            border-color: #009919;
+        }
+        .btn-primary-outline:hover { background: rgba(0,153,25,0.05); }
+        .btn-text {
+            background: none;
+            border: none;
+            color: #009919;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-text:hover { color: #007d14; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* ===== Filter Form ===== */
+        .filter-form {
+            background: #fff;
+            padding: 16px 20px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-item label {
+            font-size: 13px;
+            color: #606266;
+        }
+        .filter-item input,
+        .filter-item select {
+            height: 32px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            padding: 0 10px;
+            font-size: 13px;
+            color: #1f2d3d;
+            background: #fff;
+            width: 180px;
+            font-family: inherit;
+            outline: none;
+        }
+        .filter-item input::placeholder { color: #97a8be; }
+        .filter-item input:focus,
+        .filter-item select:focus { border-color: #009919; }
+
+        /* ===== Table ===== */
+        .el-table-wrapper {
+            background: #fff;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead th {
+            background: #f2f2f2;
+            color: #2d405e;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid #edeff2;
+            white-space: nowrap;
+        }
+        tbody td {
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #1f2d3d;
+            border-bottom: 1px solid #edeff2;
+        }
+        tbody tr:hover { background: #f5f7fa; }
+
+        /* ===== Tags ===== */
+        .el-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+            line-height: 1.6;
+            white-space: nowrap;
+        }
+        .el-tag-success { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
+        .el-tag-warning { background: #fdf6ec; color: #e6a23c; border: 1px solid #faecd8; }
+        .el-tag-danger { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; }
+        .el-tag-info { background: #f4f4f5; color: #909399; border: 1px solid #e9e9eb; }
+
+        /* ===== Pagination ===== */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 12px 20px;
+            gap: 8px;
+            font-size: 13px;
+            color: #606266;
+            background: #fff;
+        }
+        .pagination .total { margin-right: 12px; }
+        .pagination .page-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dcdfe6;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            background: #fff;
+        }
+        .pagination .page-btn.active {
+            background: #009919;
+            color: #fff;
+            border-color: #009919;
+        }
+        .pagination .page-btn:hover { color: #009919; }
+
+        /* ===== Modal / Dialog ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            background: #fff;
+            border-radius: 6px;
+            width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #edeff2;
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2d3d;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-header .close-btn {
+            cursor: pointer;
+            font-size: 18px;
+            color: #909399;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #edeff2;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* ===== Form (modal) ===== */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: #606266;
+            margin-bottom: 6px;
+        }
+        .form-group label .required { color: #f56c6c; margin-right: 2px; }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #1f2d3d;
+            font-family: inherit;
+            outline: none;
+            background: #fff;
+        }
+        .form-group textarea { resize: vertical; min-height: 64px; }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { border-color: #009919; }
+
+        /* ===== Alert boxes ===== */
+        .alert {
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            line-height: 1.5;
+        }
+        .alert-warning {
+            background: #fdf6ec;
+            border: 1px solid #faecd8;
+            color: #e6a23c;
+        }
+        .alert-info {
+            background: #ecf5ff;
+            border: 1px solid #d9ecff;
+            color: #409eff;
+        }
+
+        /* ===== Info Section (QR modal) ===== */
+        .info-section {
+            border-radius: 6px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+        }
+        .info-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .info-section p, .info-section li {
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        .info-blue { background: #e8f4fd; border: 1px solid #b3d8fd; }
+        .info-green { background: #e8f5e9; border: 1px solid #a5d6a7; }
+        .info-yellow { background: #fff8e1; border: 1px solid #ffe082; }
+
+        .link-box {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .link-box input {
+            flex: 1;
+            border: 1px solid #c8e6c9;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 13px;
+            background: #fff;
+            color: #1f2d3d;
+            outline: none;
+        }
+        .qr-area {
+            text-align: center;
+            margin: 12px 0;
+        }
+
+        /* ===== Detail Page ===== */
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+        .detail-header h2 { font-size: 18px; font-weight: 600; color: #1f2d3d; }
+        .detail-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid #edeff2;
+            padding: 0 20px;
+            background: #fff;
+        }
+        .detail-tab {
+            padding: 12px 20px;
+            font-size: 14px;
+            color: #97a8be;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+        .detail-tab:hover { color: #009919; }
+        .detail-tab.active { color: #009919; border-bottom-color: #009919; font-weight: 500; }
+
+        .section-card {
+            background: #fff;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2d3d;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .badge {
+            font-size: 11px;
+            background: #f4f4f5;
+            color: #909399;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: 400;
+        }
+        .field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 40px;
+        }
+        .field-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .field-row label {
+            font-size: 12px;
+            color: #97a8be;
+        }
+        .field-row .field-value {
+            font-size: 13px;
+            color: #1f2d3d;
+            padding: 7px 10px;
+            background: #f7f7f7;
+            border: 1px solid #edeff2;
+            border-radius: 4px;
+            min-height: 32px;
+        }
+
+        /* ===== Bottom Page Switcher ===== */
+        .page-switcher {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: #fff;
+            border-top: 1px solid #edeff2;
+            display: flex;
+            z-index: 1001;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+        }
+        .page-switcher .sw-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #606266;
+            cursor: pointer;
+            border-top: 3px solid transparent;
+            transition: all 0.15s;
+            background: none;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            font-family: inherit;
+        }
+        .page-switcher .sw-btn:hover { color: #009919; background: rgba(0,153,25,0.03); }
+        .page-switcher .sw-btn.active {
+            color: #009919;
+            border-top-color: #009919;
+            font-weight: 500;
+            background: rgba(0,153,25,0.03);
+        }
+
+        /* ===== Page containers ===== */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ===== Misc ===== */
+        .hidden { display: none !important; }
+        .text-green { color: #009919; }
+        .mt-8 { margin-top: 8px; }
+        .mt-12 { margin-top: 12px; }
+        .mb-0 { margin-bottom: 0; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 12px; }
+        .text-gray { color: #97a8be; }
+
+        /* internal fields tab grid */
+        .internal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 40px;
+        }
+        .internal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .internal-field label {
+            font-size: 12px;
+            color: #97a8be;
+        }
+        .internal-field select,
+        .internal-field input {
+            height: 32px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            padding: 0 10px;
+            font-size: 13px;
+            color: #1f2d3d;
+            background: #fff;
+            font-family: inherit;
+            outline: none;
+        }
+        .internal-field select:focus,
+        .internal-field input:focus { border-color: #009919; }
+    </style>
+</head>
+<body>
+
+<!-- ===== TOP NAVIGATION BAR ===== -->
+<div class="top-nav">
+    <div class="top-nav-left">
+        <span class="logo-text"><span class="food">food</span><span class="max">max</span></span>
+        <span class="env-badge">TEST</span>
+    </div>
+    <div class="top-nav-right">
+        <span class="nav-item">中文 ▾</span>
+        <span class="nav-divider"></span>
+        <span class="nav-item">小满新加坡(SG Xiaoman) ▾</span>
+        <span class="nav-divider"></span>
+        <span class="nav-item">币种：SGD</span>
+        <span class="nav-divider"></span>
+        <span class="user-avatar">SL</span>
+        <span class="nav-item">沈亮</span>
+    </div>
+</div>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+    <div class="menu-group-title">采购管理</div>
+    <div class="menu-item"><span class="icon">📋</span> 采购单管理</div>
+    <div class="menu-item"><span class="icon">📦</span> 入库管理</div>
+
+    <div class="menu-group-title">客户需求</div>
+    <div class="menu-item"><span class="icon">✉️</span> 客户需求</div>
+
+    <div class="menu-group-title">数据迁移</div>
+    <div class="menu-item"><span class="icon">🔄</span> 数据迁移</div>
+
+    <div class="menu-group-title">调拨</div>
+    <div class="menu-item"><span class="icon">📊</span> 调拨</div>
+
+    <div class="menu-group-title">结算管理</div>
+    <div class="menu-item"><span class="icon">💰</span> 结算单管理</div>
+    <div class="menu-item"><span class="icon">💳</span> 付款管理</div>
+
+    <div class="menu-group-title">供应商管理</div>
+    <div class="menu-item active"><span class="icon">🏢</span> 供应商管理</div>
+    <div class="menu-item"><span class="icon">📄</span> 合同管理</div>
+
+    <div class="menu-group-title">商品管理</div>
+    <div class="menu-item"><span class="icon">🏪</span> 货品中心</div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content" style="padding-bottom: 60px;">
+
+    <!-- ==================== PAGE 1: Pending Audit List ==================== -->
+    <div class="page active" id="page1">
+        <div class="breadcrumb-bar">
+            <span>供应商管理</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-active">供应商列表</span>
+        </div>
+        <div class="page-body">
+            <!-- Tabs -->
+            <div class="el-tabs">
+                <div class="el-tabs-header">
+                    <div class="tab-item">供应商列表</div>
+                    <div class="tab-item active">入驻待审核</div>
+                </div>
+            </div>
+
+            <!-- Title bar -->
+            <div class="title-bar" style="margin-bottom: 0; border-radius: 4px 4px 0 0; border-bottom: 1px solid #edeff2;">
+                <h2>供应商列表</h2>
+                <button class="btn btn-primary btn-sm" onclick="showPage(2)">+ 邀请入驻</button>
+            </div>
+
+            <!-- Filter -->
+            <div class="filter-form" style="border-radius: 0; margin-bottom: 0; border-bottom: 1px solid #edeff2;">
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label>供应商编码</label>
+                        <input type="text" placeholder="请输入">
+                    </div>
+                    <div class="filter-item">
+                        <label>邀请码</label>
+                        <input type="text" placeholder="请输入">
+                    </div>
+                    <div class="filter-item">
+                        <label>供应商名称</label>
+                        <input type="text" placeholder="请输入">
+                    </div>
+                    <div class="filter-item">
+                        <label>来源国</label>
+                        <input type="text" placeholder="请输入">
+                    </div>
+                    <div class="filter-item">
+                        <label>状态</label>
+                        <select>
+                            <option value="">全部</option>
+                            <option>草稿</option>
+                            <option>已生成</option>
+                            <option>待采购确认</option>
+                            <option>已通过</option>
+                            <option>已驳回</option>
+                            <option>已作废</option>
+                        </select>
+                    </div>
+                    <div class="filter-item" style="flex-direction: row; gap: 8px; align-self: flex-end;">
+                        <button class="btn btn-primary btn-sm">查询</button>
+                        <button class="btn btn-sm">重置</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="el-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>供应商编码</th>
+                            <th>邀请码</th>
+                            <th>来源国</th>
+                            <th>供应商名称</th>
+                            <th>结算币种</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SUP20260001</td>
+                            <td>INV202604220001</td>
+                            <td>Singapore</td>
+                            <td>Greenleaf Fresh Produce Pte Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-warning">待采购确认</span></td>
+                            <td><button class="btn-text">查看详情</button><button class="btn-text" onclick="showPage(4)">去确认</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260002</td>
+                            <td>INV202604220002</td>
+                            <td>Singapore</td>
+                            <td>Ocean Harvest Seafood Pte Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-success">已通过</span></td>
+                            <td><button class="btn-text">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260003</td>
+                            <td>INV202604180003</td>
+                            <td>Malaysia</td>
+                            <td>KL Poultry Supply Sdn Bhd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-success">已通过</span></td>
+                            <td><button class="btn-text">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260004</td>
+                            <td>INV202604150004</td>
+                            <td>Thailand</td>
+                            <td>Bangkok Rice Trading Co., Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-danger">已驳回</span></td>
+                            <td><button class="btn-text">查看详情</button><button class="btn-text">编辑</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260005</td>
+                            <td>INV202604120005</td>
+                            <td>Singapore</td>
+                            <td>SG Frozen Foods Pte Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-warning">待采购确认</span></td>
+                            <td><button class="btn-text">查看详情</button><button class="btn-text">去确认</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260006</td>
+                            <td>INV202604100006</td>
+                            <td>Indonesia</td>
+                            <td>Bali Spice Export PT</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-info">草稿</span></td>
+                            <td><button class="btn-text">查看详情</button><button class="btn-text">编辑</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260007</td>
+                            <td>INV202604080007</td>
+                            <td>Vietnam</td>
+                            <td>Mekong Seafood Export JSC</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-success">已通过</span></td>
+                            <td><button class="btn-text">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260008</td>
+                            <td>INV202604050008</td>
+                            <td>China</td>
+                            <td>Fujian Dried Goods Trading Co.</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-warning">待采购确认</span></td>
+                            <td><button class="btn-text">查看详情</button><button class="btn-text">去确认</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260009</td>
+                            <td>INV202604020009</td>
+                            <td>Australia</td>
+                            <td>Aussie Premium Meats Pty Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-success">已通过</span></td>
+                            <td><button class="btn-text">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260010</td>
+                            <td>INV202603300010</td>
+                            <td>Singapore</td>
+                            <td>Little India Spices Pte Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-info">已作废</span></td>
+                            <td><button class="btn-text">查看详情</button></td>
+                        </tr>
+                        <tr>
+                            <td>SUP20260011</td>
+                            <td>INV202603280011</td>
+                            <td>Japan</td>
+                            <td>Hokkaido Dairy Products Co., Ltd</td>
+                            <td>SGD</td>
+                            <td><span class="el-tag el-tag-success">已通过</span></td>
+                            <td><button class="btn-text">查看详情</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="pagination">
+                    <span class="total">共 11 条</span>
+                    <button class="page-btn">&lt;</button>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">&gt;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 2: Invite Vendor Modal ==================== -->
+    <div class="page" id="page2">
+        <!-- Background: grayed out list -->
+        <div class="breadcrumb-bar">
+            <span>供应商管理</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-active">供应商列表</span>
+        </div>
+        <div class="page-body" style="opacity: 0.4; pointer-events: none;">
+            <div class="el-tabs">
+                <div class="el-tabs-header">
+                    <div class="tab-item">供应商列表</div>
+                    <div class="tab-item active">入驻待审核</div>
+                </div>
+            </div>
+            <div class="title-bar" style="margin-bottom: 0; border-radius: 4px 4px 0 0; border-bottom: 1px solid #edeff2;">
+                <h2>供应商列表</h2>
+                <button class="btn btn-primary btn-sm">+ 邀请入驻</button>
+            </div>
+            <div class="filter-form" style="border-radius: 0; margin-bottom: 0;">
+                <div class="filter-row">
+                    <div class="filter-item"><label>供应商编码</label><input type="text" placeholder="请输入"></div>
+                    <div class="filter-item"><label>邀请码</label><input type="text" placeholder="请输入"></div>
+                    <div class="filter-item"><label>供应商名称</label><input type="text" placeholder="请输入"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; min-height: 100vh;">
+            <div class="modal" style="margin-top: -80px;">
+                <div class="modal-header">
+                    <span>发起邀请</span>
+                    <button class="close-btn" onclick="showPage(1)">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label><span class="required">*</span> 供应商名称</label>
+                        <input type="text" value="Greenleaf Fresh Produce Pte Ltd">
+                    </div>
+                    <div class="form-group">
+                        <label><span class="required">*</span> 纳税人识别号</label>
+                        <input type="text" value="202012345A">
+                    </div>
+                    <div class="form-group">
+                        <label>链接有效期</label>
+                        <select>
+                            <option>7天</option>
+                            <option selected>14天</option>
+                            <option>30天</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <textarea>Fresh vegetable supplier</textarea>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <span>⚠️</span>
+                        <span>同一纳税人识别号仅允许存在一条有效邀请（已生成/草稿/待确认/审批中），不允许重复邀请。</span>
+                    </div>
+                    <div class="alert alert-info mb-0">
+                        <span>ℹ️</span>
+                        <span>生成邀请后将自动绑定：采购员：<strong>沈亮</strong> · 站点：<strong>小满新加坡(SG Xiaoman)</strong> · 币种：<strong>SGD</strong></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="showPage(1)">取消</button>
+                    <button class="btn btn-primary" onclick="showPage(3)">生成邀请</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 3: Invitation Link & QR Code ==================== -->
+    <div class="page" id="page3">
+        <div class="breadcrumb-bar">
+            <span>供应商管理</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-active">供应商列表</span>
+        </div>
+        <div class="page-body" style="opacity: 0.4; pointer-events: none;">
+            <div class="el-tabs">
+                <div class="el-tabs-header">
+                    <div class="tab-item">供应商列表</div>
+                    <div class="tab-item active">入驻待审核</div>
+                </div>
+            </div>
+            <div class="title-bar" style="margin-bottom: 0; border-radius: 4px 4px 0 0; border-bottom: 1px solid #edeff2;">
+                <h2>供应商列表</h2>
+                <button class="btn btn-primary btn-sm">+ 邀请入驻</button>
+            </div>
+            <div class="filter-form" style="border-radius: 0; margin-bottom: 0;">
+                <div class="filter-row">
+                    <div class="filter-item"><label>供应商编码</label><input type="text" placeholder="请输入"></div>
+                    <div class="filter-item"><label>邀请码</label><input type="text" placeholder="请输入"></div>
+                    <div class="filter-item"><label>供应商名称</label><input type="text" placeholder="请输入"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Modal -->
+        <div class="modal-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; min-height: 100vh;">
+            <div class="modal" style="width: 600px; margin-top: -60px;">
+                <div class="modal-header">
+                    <span>邀请链接与二维码</span>
+                    <button class="close-btn" onclick="showPage(1)">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Blue: Buyer Info -->
+                    <div class="info-section info-blue">
+                        <div class="info-section-title">📋 采购员信息</div>
+                        <p><strong>采购员：</strong>沈亮 &nbsp;&nbsp;|&nbsp;&nbsp; <strong>站点：</strong>小满新加坡(SG Xiaoman) &nbsp;&nbsp;|&nbsp;&nbsp; <strong>币种：</strong>SGD</p>
+                        <p class="text-sm text-gray mt-8">以上信息将自动绑定至本次邀请，供应商注册后将自动关联。</p>
+                    </div>
+
+                    <!-- Green: Registration Link -->
+                    <div class="info-section info-green">
+                        <div class="info-section-title">🔗 供应商填写链接</div>
+                        <div class="link-box">
+                            <input type="text" value="https://scm.foodmax.sg/s/INV202604220002" readonly>
+                            <button class="btn btn-primary btn-sm">复制链接</button>
+                        </div>
+
+                        <div class="qr-area">
+                            <!-- SVG QR Code simulation -->
+                            <svg width="160" height="160" viewBox="0 0 160 160" style="border: 1px solid #e0e0e0; border-radius: 4px; background: #fff; padding: 8px;">
+                                <!-- Simulated QR code pattern -->
+                                <rect x="12" y="12" width="36" height="36" rx="2" fill="#1f2d3d"/>
+                                <rect x="16" y="16" width="28" height="28" rx="1" fill="#fff"/>
+                                <rect x="22" y="22" width="16" height="16" rx="1" fill="#1f2d3d"/>
+                                <rect x="112" y="12" width="36" height="36" rx="2" fill="#1f2d3d"/>
+                                <rect x="116" y="16" width="28" height="28" rx="1" fill="#fff"/>
+                                <rect x="122" y="22" width="16" height="16" rx="1" fill="#1f2d3d"/>
+                                <rect x="12" y="112" width="36" height="36" rx="2" fill="#1f2d3d"/>
+                                <rect x="16" y="116" width="28" height="28" rx="1" fill="#fff"/>
+                                <rect x="22" y="122" width="16" height="16" rx="1" fill="#1f2d3d"/>
+                                <!-- Data pattern -->
+                                <rect x="56" y="12" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="72" y="12" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="88" y="12" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="56" y="28" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="80" y="28" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="96" y="28" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="56" y="44" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="64" y="44" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="88" y="44" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="12" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="28" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="44" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="60" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="76" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="100" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="116" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="140" y="56" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="12" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="36" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="52" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="68" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="84" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="108" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="132" y="72" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="12" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="28" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="44" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="64" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="80" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="96" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="120" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="140" y="88" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="56" y="100" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="72" y="100" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="96" y="100" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="112" y="100" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="140" y="100" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="56" y="116" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="80" y="116" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="96" y="116" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="120" y="116" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="140" y="116" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="56" y="132" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="68" y="132" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="84" y="132" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="108" y="132" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="124" y="132" width="8" height="8" fill="#1f2d3d"/>
+                                <rect x="140" y="132" width="8" height="8" fill="#1f2d3d"/>
+                                <!-- Center logo area -->
+                                <rect x="60" y="60" width="40" height="40" rx="4" fill="#fff" stroke="#e0e0e0"/>
+                                <text x="80" y="84" text-anchor="middle" font-size="10" font-weight="bold" fill="#009919">FM</text>
+                            </svg>
+                            <p class="text-sm text-gray mt-8">供应商可扫描二维码填写信息</p>
+                            <button class="btn btn-primary-outline btn-sm mt-8">下载二维码</button>
+                        </div>
+                    </div>
+
+                    <!-- Yellow: Usage Instructions -->
+                    <div class="info-section info-yellow">
+                        <div class="info-section-title">📌 使用说明</div>
+                        <ol style="padding-left: 18px; font-size: 13px; line-height: 1.8; color: #666;">
+                            <li>复制链接或下载二维码，发送给供应商</li>
+                            <li>供应商打开链接/扫描二维码填写企业信息（无需登录）</li>
+                            <li>供应商提交后，系统将通知您进行审核确认</li>
+                            <li>确认通过后，供应商正式入驻系统</li>
+                        </ol>
+                    </div>
+
+                    <div class="info-section info-yellow" style="display: flex; gap: 24px; align-items: center; padding: 10px 16px;">
+                        <span class="text-sm" style="color: #e6a23c;">⏰ 过期时间：<strong>2026-05-03</strong></span>
+                        <span class="text-sm" style="color: #e6a23c;">🔓 无需登录，供应商可直接访问</span>
+                        <span class="text-sm" style="color: #e6a23c;">🔔 供应商提交后将通知采购员 沈亮</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="showPage(1)">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PAGE 4: Confirm Detail ==================== -->
+    <div class="page" id="page4">
+        <div class="breadcrumb-bar">
+            <span>供应商管理</span>
+            <span class="bc-sep">/</span>
+            <span>入驻待审核</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-active">确认详情</span>
+        </div>
+        <div class="page-body">
+            <!-- Header -->
+            <div class="detail-header">
+                <h2>确认详情</h2>
+                <span class="el-tag el-tag-warning">待采购确认</span>
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <button class="btn btn-success btn-sm">&#10003; 确认</button>
+                    <button class="btn btn-warning-outline btn-sm">&#10007; 作废</button>
+                    <button class="btn btn-sm" onclick="showPage(1)">返回</button>
+                </div>
+            </div>
+
+            <!-- Detail Tabs -->
+            <div style="background: #fff; border-radius: 4px;">
+                <div class="detail-tabs">
+                    <div class="detail-tab active" onclick="switchDetailTab('supplier-info', this)">供应商信息</div>
+                    <div class="detail-tab" onclick="switchDetailTab('internal-fields', this)">内部字段</div>
+                    <div class="detail-tab" onclick="switchDetailTab('approval-flow', this)">审批流程</div>
+                    <div class="detail-tab" onclick="switchDetailTab('operation-log', this)">操作日志</div>
+                </div>
+
+                <!-- Supplier Info Tab -->
+                <div class="detail-tab-content" id="supplier-info" style="padding: 20px;">
+                    <!-- Basic Info -->
+                    <div class="section-card" style="padding: 0; margin-bottom: 20px;">
+                        <div class="section-title" style="padding: 16px 0 12px; border-bottom: 1px solid #edeff2; margin-bottom: 16px;">
+                            <span>🏢</span> 企业基本信息
+                            <span class="badge">供应商填写</span>
+                        </div>
+                        <div class="field-grid">
+                            <div class="field-row">
+                                <label>供应商名称</label>
+                                <div class="field-value">Greenleaf Fresh Produce Pte Ltd</div>
+                            </div>
+                            <div class="field-row">
+                                <label>供应商英文名</label>
+                                <div class="field-value">Greenleaf Fresh Produce Pte Ltd</div>
+                            </div>
+                            <div class="field-row">
+                                <label>简称</label>
+                                <div class="field-value">Greenleaf</div>
+                            </div>
+                            <div class="field-row">
+                                <label>定价方式</label>
+                                <div class="field-value">Fixed Price</div>
+                            </div>
+                            <div class="field-row">
+                                <label>地址</label>
+                                <div class="field-value">31 Fishery Port Road, #01-23, Singapore 619740</div>
+                            </div>
+                            <div class="field-row">
+                                <label>联系人</label>
+                                <div class="field-value">James Tan</div>
+                            </div>
+                            <div class="field-row">
+                                <label>电话</label>
+                                <div class="field-value">+65 9123 4567</div>
+                            </div>
+                            <div class="field-row">
+                                <label>邮箱</label>
+                                <div class="field-value">james.tan@greenleaf.sg</div>
+                            </div>
+                            <div class="field-row">
+                                <label>企业类型</label>
+                                <div class="field-value">Private Limited Company</div>
+                            </div>
+                            <div class="field-row">
+                                <label>纳税人类型</label>
+                                <div class="field-value">General Taxpayer</div>
+                            </div>
+                            <div class="field-row">
+                                <label>纳税人识别号</label>
+                                <div class="field-value">202012345A</div>
+                            </div>
+                            <div class="field-row">
+                                <label>是否农业生产者</label>
+                                <div class="field-value">No</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settlement Info -->
+                    <div class="section-card" style="padding: 0;">
+                        <div class="section-title" style="padding: 16px 0 12px; border-bottom: 1px solid #edeff2; margin-bottom: 16px;">
+                            <span>💰</span> 结算信息
+                            <span class="badge">供应商填写</span>
+                        </div>
+                        <div class="field-grid">
+                            <div class="field-row">
+                                <label>付款类型</label>
+                                <div class="field-value">Bank Transfer</div>
+                            </div>
+                            <div class="field-row">
+                                <label>预付比例 (%)</label>
+                                <div class="field-value">0</div>
+                            </div>
+                            <div class="field-row">
+                                <label>结算方式</label>
+                                <div class="field-value">Monthly Settlement</div>
+                            </div>
+                            <div class="field-row">
+                                <label>结算币种</label>
+                                <div class="field-value">SGD</div>
+                            </div>
+                            <div class="field-row">
+                                <label>财务联系人</label>
+                                <div class="field-value">Linda Wong</div>
+                            </div>
+                            <div class="field-row">
+                                <label>账户名称</label>
+                                <div class="field-value">Greenleaf Fresh Produce Pte Ltd</div>
+                            </div>
+                            <div class="field-row">
+                                <label>银行账号</label>
+                                <div class="field-value">039-318-256-0</div>
+                            </div>
+                            <div class="field-row">
+                                <label>SWIFT 代码</label>
+                                <div class="field-value">DBSSSGSG</div>
+                            </div>
+                            <div class="field-row">
+                                <label>银行名称</label>
+                                <div class="field-value">DBS Bank Ltd</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Internal Fields Tab -->
+                <div class="detail-tab-content" id="internal-fields" style="padding: 20px; display: none;">
+                    <div class="section-card" style="padding: 0;">
+                        <div class="section-title" style="padding: 16px 0 12px; border-bottom: 1px solid #edeff2; margin-bottom: 16px;">
+                            <span>⚙️</span> 内部配置
+                            <span class="badge">采购员配置</span>
+                        </div>
+                        <div class="internal-grid">
+                            <div class="internal-field">
+                                <label>供应商属性</label>
+                                <select>
+                                    <option selected>Direct Supplier</option>
+                                    <option>Agent</option>
+                                    <option>Distributor</option>
+                                </select>
+                            </div>
+                            <div class="internal-field">
+                                <label>供应商等级</label>
+                                <select>
+                                    <option>A</option>
+                                    <option selected>B</option>
+                                    <option>C</option>
+                                    <option>D</option>
+                                </select>
+                            </div>
+                            <div class="internal-field">
+                                <label>供应商性质</label>
+                                <select>
+                                    <option selected>Domestic</option>
+                                    <option>Overseas</option>
+                                </select>
+                            </div>
+                            <div class="internal-field">
+                                <label>是否参与结算</label>
+                                <select>
+                                    <option selected>Yes</option>
+                                    <option>No</option>
+                                </select>
+                            </div>
+                            <div class="internal-field">
+                                <label>合同扣点 (%)</label>
+                                <input type="text" value="0">
+                            </div>
+                            <div class="internal-field">
+                                <label>最晚付款日</label>
+                                <input type="text" value="2026-05-31" placeholder="YYYY-MM-DD">
+                            </div>
+                            <div class="internal-field">
+                                <label>合同起始日期</label>
+                                <input type="text" value="2026-04-22" placeholder="YYYY-MM-DD">
+                            </div>
+                            <div class="internal-field">
+                                <label>合同结束日期</label>
+                                <input type="text" value="2027-04-22" placeholder="YYYY-MM-DD">
+                            </div>
+                            <div class="internal-field">
+                                <label>是否测试供应商</label>
+                                <select>
+                                    <option>Yes</option>
+                                    <option selected>No</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Approval Flow Tab -->
+                <div class="detail-tab-content" id="approval-flow" style="padding: 20px; display: none;">
+                    <div class="section-card" style="padding: 0;">
+                        <div class="section-title" style="padding: 16px 0 12px; border-bottom: 1px solid #edeff2; margin-bottom: 16px;">
+                            <span>📋</span> 审批流程
+                        </div>
+                        <div style="color: #97a8be; font-size: 13px; text-align: center; padding: 40px 0;">
+                            该记录暂无审批流程配置
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operation Log Tab -->
+                <div class="detail-tab-content" id="operation-log" style="padding: 20px; display: none;">
+                    <div class="section-card" style="padding: 0;">
+                        <div class="section-title" style="padding: 16px 0 12px; border-bottom: 1px solid #edeff2; margin-bottom: 16px;">
+                            <span>📝</span> 操作日志
+                        </div>
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>时间</th>
+                                    <th>操作人</th>
+                                    <th>操作</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>2026-04-22 10:30:15</td>
+                                    <td>沈亮</td>
+                                    <td>生成邀请</td>
+                                    <td>Fresh vegetable supplier</td>
+                                </tr>
+                                <tr>
+                                    <td>2026-04-22 14:22:08</td>
+                                    <td>System</td>
+                                    <td>供应商提交信息</td>
+                                    <td>Greenleaf Fresh Produce Pte Ltd completed registration</td>
+                                </tr>
+                                <tr>
+                                    <td>2026-04-22 14:22:08</td>
+                                    <td>System</td>
+                                    <td>状态变更 → 待采购确认</td>
+                                    <td>等待采购员确认</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== BOTTOM PAGE SWITCHER ===== -->
+<div class="page-switcher">
+    <button class="sw-btn active" onclick="showPage(1)">1. 供应商列表（入驻待审核）</button>
+    <button class="sw-btn" onclick="showPage(2)">2. 发起邀请弹窗</button>
+    <button class="sw-btn" onclick="showPage(3)">3. 邀请链接弹窗</button>
+    <button class="sw-btn" onclick="showPage(4)">4. 采购确认详情</button>
+</div>
+
+<script>
+    function showPage(num) {
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        // Show target page
+        document.getElementById('page' + num).classList.add('active');
+        // Update switcher buttons
+        document.querySelectorAll('.sw-btn').forEach((btn, i) => {
+            btn.classList.toggle('active', i === num - 1);
+        });
+    }
+
+    function switchDetailTab(tabId, el) {
+        // Hide all tab contents
+        document.querySelectorAll('.detail-tab-content').forEach(c => c.style.display = 'none');
+        // Show target
+        document.getElementById(tabId).style.display = 'block';
+        // Update tab styles
+        document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+    }
+</script>
+
+</body>
+</html>
