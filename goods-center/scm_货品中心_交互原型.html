@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 货品中心 · 交互原型 v2</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:#303133;background:#f0f2f5;min-height:100vh}
+:root{--primary:#07B77D;--primary-hover:#05A06D;--primary-light:#e8f9f4;--danger:#F56C6C;--warning:#E6A23C;--info:#409EFF;--border:#DCDFE6;--t1:#303133;--t2:#606266;--t3:#909399;--bg:#F5F7FA}
+.layout{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:50px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:0;z-index:100;flex-shrink:0}
+.topbar-logo{font-weight:700;font-size:16px;color:#fff;background:var(--primary);padding:4px 12px;border-radius:4px;margin-right:24px}
+.topbar-nav{display:flex;align-items:stretch;height:100%}
+.topbar-nav a{display:flex;align-items:center;padding:0 16px;color:var(--t2);text-decoration:none;font-size:13px;border-bottom:2px solid transparent;cursor:pointer;transition:all .2s}
+.topbar-nav a:hover{color:var(--primary)}
+.topbar-nav a.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px;color:var(--t2);font-size:13px}
+.topbar-right span{cursor:pointer;padding:4px 8px;border-radius:3px}
+.topbar-right span:hover{background:var(--bg)}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:#fff;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sidebar-group-title{padding:12px 16px 6px;font-size:12px;color:var(--t3);letter-spacing:.5px}
+.sidebar-item{display:flex;align-items:center;padding:10px 20px;color:var(--t2);cursor:pointer;font-size:13px;border-left:3px solid transparent;transition:all .15s}
+.sidebar-item:hover{background:var(--primary-light);color:var(--primary)}
+.sidebar-item.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:500}
+.main{flex:1;overflow:auto;padding:16px}
+.page{display:none}.page.active{display:block}
+.card{background:#fff;border-radius:4px;border:1px solid var(--border);margin-bottom:12px}
+.card-body{padding:16px}
+.filter-form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.filter-item{display:flex;flex-direction:column;gap:4px}
+.filter-item label{font-size:12px;color:var(--t2)}
+.filter-btns{display:flex;gap:8px;align-items:flex-end}
+input[type=text],input[type=number],select,textarea{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;font-size:13px;color:var(--t1);background:#fff;outline:none;width:100%;transition:border .2s}
+input[type=text]:focus,input[type=number]:focus,select:focus,textarea:focus{border-color:var(--primary)}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23909399'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+textarea{height:80px;resize:vertical;padding:8px 10px}
+.iw120{width:120px}.iw160{width:160px}.iw200{width:200px}.iw280{width:280px}.iw100{width:100%}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:32px;padding:0 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--t1);transition:all .15s;white-space:nowrap;text-decoration:none}
+.btn:hover{color:var(--primary);border-color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);color:#fff}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+.btn-danger{color:var(--danger);border-color:var(--danger)}
+.btn-text{border:none;background:none;color:var(--primary);padding:0 4px;height:auto;cursor:pointer;font-size:13px}
+.btn-text:hover{color:var(--primary-hover)}
+.btn-text.danger{color:var(--danger)}
+.btn-text.danger:hover{color:#c0392b}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.dropdown-wrap{position:relative;display:inline-block}
+.dropdown-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);min-width:160px;z-index:200;display:none}
+.dropdown-menu.show{display:block}
+.dropdown-item{padding:8px 16px;cursor:pointer;font-size:13px;color:var(--t1)}
+.dropdown-item:hover{background:var(--primary-light);color:var(--primary)}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.tbl-toolbar-left{display:flex;align-items:center;gap:8px;color:var(--t2);font-size:13px}
+.tbl-toolbar-right{display:flex;align-items:center;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fafafa;color:var(--t2);font-weight:500;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0f0f0;color:var(--t1);vertical-align:middle}
+tr:hover td{background:#fafafa}
+.tbl-check{width:40px;text-align:center}
+input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--primary)}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500}
+.tag-green{background:#e8f9f4;color:#07B77D;border:1px solid #b3e8d8}
+.tag-blue{background:#ecf5ff;color:#409EFF;border:1px solid #b3d8ff}
+.tag-gray{background:#f4f4f5;color:#909399;border:1px solid #d3d4d6}
+.tag-orange{background:#fdf6ec;color:#E6A23C;border:1px solid #f5dab1}
+.tag-purple{background:#f0eeff;color:#8B5CF6;border:1px solid #c4b5fd}
+.switch{position:relative;display:inline-block;width:40px;height:20px;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch-slider{position:absolute;inset:0;background:#ccc;border-radius:10px;transition:.2s}
+.switch-slider:before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked+.switch-slider{background:var(--primary)}
+.switch input:checked+.switch-slider:before{transform:translateX(20px)}
+.pagination{display:flex;align-items:center;gap:4px;padding:12px 16px;justify-content:flex-end;border-top:1px solid var(--border)}
+.page-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;background:#fff;color:var(--t2)}
+.page-btn:hover,.page-btn.active{border-color:var(--primary);color:var(--primary)}
+.page-btn.active{background:var(--primary);color:#fff}
+.page-info{font-size:13px;color:var(--t2);padding:0 4px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.dialog{background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.15);max-height:90vh;overflow:hidden;display:flex;flex-direction:column}
+.dialog-sm{width:480px}.dialog-md{width:640px}.dialog-lg{width:920px}
+.dialog-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dialog-header h3{font-size:15px;font-weight:600}
+.dialog-close{width:24px;height:24px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:18px;line-height:1}
+.dialog-close:hover{background:var(--bg);color:var(--t1)}
+.dialog-body{padding:20px;overflow-y:auto;flex:1}
+.dialog-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab-item{padding:10px 18px;cursor:pointer;font-size:13px;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab-item:hover{color:var(--primary)}
+.tab-item.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.tab-pane{display:none;padding-top:16px}.tab-pane.active{display:block}
+.left-tabs{display:flex;gap:0;min-height:320px}
+.left-tab-nav{width:130px;border-right:1px solid var(--border);flex-shrink:0}
+.left-tab-nav-item{padding:10px 14px;cursor:pointer;font-size:13px;color:var(--t2);border-right:2px solid transparent;transition:all .15s;margin-right:-1px}
+.left-tab-nav-item:hover{color:var(--primary);background:var(--primary-light)}
+.left-tab-nav-item.active{color:var(--primary);background:var(--primary-light);border-right-color:var(--primary);font-weight:500}
+.left-tab-content{flex:1;padding:20px}
+.form-section{margin-bottom:24px}
+.form-section-title{font-size:14px;font-weight:600;color:var(--t1);padding:0 0 10px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+.form-row{display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap}
+.form-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px}
+.form-field.full{flex:0 0 100%}
+.form-field.w2{flex:0 0 calc(50% - 10px)}
+.form-field.w3{flex:0 0 calc(33.33% - 14px)}
+label.required::before{content:'*';color:var(--danger);margin-right:4px}
+label{font-size:13px;color:var(--t2)}
+.form-hint{font-size:12px;color:var(--t3);margin-top:2px}
+.radio-group{display:flex;gap:16px;align-items:center;height:32px}
+.radio-option{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--t1)}
+.radio-option input{accent-color:var(--primary)}
+.inline-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.inline-table th{background:#fafafa;padding:8px 10px;border:1px solid var(--border);font-weight:500;color:var(--t2);text-align:left}
+.inline-table td{padding:6px 8px;border:1px solid var(--border)}
+.inline-table select,.inline-table input{height:28px;font-size:12px}
+/* ── WIZARD ── */
+.wizard-wrap{background:#fff;min-height:100%;display:flex;flex-direction:column}
+.wizard-header{padding:14px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.wizard-header h2{font-size:16px;font-weight:600}
+.wizard-back{color:var(--t2);cursor:pointer;font-size:13px}
+.wizard-back:hover{color:var(--primary)}
+/* source selector above step bar */
+.wiz-src-bar{padding:14px 40px;background:#fafeff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:24px}
+.wiz-src-bar label{font-size:13px;color:var(--t2);font-weight:500;white-space:nowrap}
+.step-bar{display:flex;align-items:center;padding:18px 40px;background:#fff;border-bottom:1px solid var(--border)}
+.step-item{display:flex;align-items:center;flex:1}
+.step-circle{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--t3);background:#fff;flex-shrink:0;transition:all .2s}
+.step-circle.done{background:var(--primary);border-color:var(--primary);color:#fff}
+.step-circle.active{border-color:var(--primary);color:var(--primary)}
+.step-label{margin-left:8px;font-size:13px;color:var(--t3);white-space:nowrap}
+.step-label.active{color:var(--primary);font-weight:500}
+.step-label.done{color:var(--t2)}
+.step-line{flex:1;height:2px;background:var(--border);margin:0 10px}
+.step-line.done{background:var(--primary)}
+.wizard-body{flex:1;padding:24px 40px;overflow:auto}
+.wizard-footer{padding:14px 40px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px;background:#fff}
+.wf-left{margin-right:auto}
+/* page header */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.page-title{font-size:16px;font-weight:600;color:var(--t1)}
+.breadcrumb{font-size:13px;color:var(--t3);display:flex;align-items:center;gap:6px;margin-bottom:16px}
+.breadcrumb a{color:var(--primary);cursor:pointer;text-decoration:none}
+.breadcrumb a:hover{text-decoration:underline}
+.notice-box{background:#e8f9f4;border:1px solid #b3e8d8;border-radius:4px;padding:10px 14px;font-size:13px;color:#07B77D;margin-bottom:16px}
+.notice-warn{background:#fdf6ec;border-color:#f5dab1;color:#E6A23C}
+.notice-info{background:#ecf5ff;border-color:#b3d8ff;color:#409EFF}
+.readonly-field{background:#f5f7fa;color:var(--t3);cursor:not-allowed}
+.result-wrap{text-align:center;padding:48px 20px}
+.result-icon{font-size:52px;color:var(--primary);margin-bottom:16px}
+.result-title{font-size:20px;font-weight:600;margin-bottom:8px}
+.result-card{background:#fafafa;border:1px solid var(--border);border-radius:6px;padding:20px;text-align:left;max-width:560px;margin:20px auto}
+.result-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.result-row:last-child{border-bottom:none}
+.result-row-icon{width:20px;height:20px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0;margin-top:2px}
+.result-arrow{text-align:center;color:var(--t3);padding:4px 0;font-size:15px}
+.upload-add{width:72px;height:72px;border:1px dashed var(--border);border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:11px;gap:4px}
+.upload-add:hover{border-color:var(--primary);color:var(--primary)}
+.upload-list{display:flex;gap:8px;flex-wrap:wrap}
+.confirm-list{list-style:none;padding:0}
+.confirm-list li{display:flex;align-items:flex-start;gap:8px;padding:7px 0;font-size:13px;border-bottom:1px solid #f0f0f0}
+.confirm-list li:last-child{border-bottom:none}
+.ci{color:var(--primary);font-weight:700;flex-shrink:0}
+.sub{font-size:12px;color:var(--t3);margin-top:3px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--t3);font-size:13px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#303133;color:#fff;padding:10px 20px;border-radius:4px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s}
+.toast.show{opacity:1}
+.toast.success{background:#67C23A}.toast.warning{background:#E6A23C}.toast.error{background:#F56C6C}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap8{gap:8px}.gap12{gap:12px}.mt8{margin-top:8px}.mt16{margin-top:16px}.mb16{margin-bottom:16px}.text-gray{color:var(--t3)}.text-sm{font-size:12px}
+.detail-label{font-size:12px;color:var(--t3);margin-bottom:4px}
+.detail-value{font-size:13px;color:var(--t1);padding:6px 0}
+.detail-field{margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="layout">
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">Foodmax</div>
+  <nav class="topbar-nav">
+    <a onclick="return false">商城(MALL)</a>
+    <a class="active" onclick="return false">采购(SCM)</a>
+    <a onclick="return false">仓储(WMS)</a>
+  </nav>
+  <div class="topbar-right">
+    <span>小美新加坡(SG)</span><span>简体中文</span><span>SG</span><span>退出</span>
+  </div>
+</div>
+<div class="body-wrap">
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-group-title">采购管理</div>
+  <div class="sidebar-item" onclick="gotoPage('placeholder')">采购计划</div>
+  <div class="sidebar-item" onclick="gotoPage('placeholder')">采购单管理</div>
+  <div class="sidebar-group-title">货品中心</div>
+  <div class="sidebar-item" id="nav-goods" onclick="gotoPage('goods-list')">货品管理</div>
+  <div class="sidebar-item" id="nav-bom" onclick="gotoPage('bom-list')">BOM关系管理</div>
+  <div class="sidebar-item" onclick="gotoPage('placeholder')">检验报告</div>
+  <div class="sidebar-group-title">供应商管理</div>
+  <div class="sidebar-item" onclick="gotoPage('placeholder')">供应商列表</div>
+  <div class="sidebar-group-title">结算管理</div>
+  <div class="sidebar-item" onclick="gotoPage('placeholder')">结算单</div>
+</div>
+
+<div class="main" id="main-wrap">
+
+<!-- ══════════════════════════════════════════════
+     PAGE: 货品管理列表
+══════════════════════════════════════════════ -->
+<div class="page active" id="page-goods-list">
+  <div class="page-header">
+    <div class="page-title">货品管理</div>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="filter-form">
+        <div class="filter-item">
+          <label>后台类目</label>
+          <select class="iw160"><option value="">全部类目</option><option>水产原料</option><option>水产加工品</option><option>蔬菜</option><option>肉类</option><option>调味品</option></select>
+        </div>
+        <div class="filter-item">
+          <label>货品名称</label>
+          <input type="text" class="iw160" placeholder="请输入货品名称">
+        </div>
+        <div class="filter-item">
+          <label>货品编码</label>
+          <input type="text" class="iw160" placeholder="请输入货品编码">
+        </div>
+        <div class="filter-item">
+          <label>旧编码</label>
+          <input type="text" class="iw160" placeholder="请输入旧编码">
+        </div>
+        <div class="filter-item">
+          <label>货品类型</label>
+          <select class="iw120"><option value="">全部</option><option>标品</option><option>非标品</option></select>
+        </div>
+        <div class="filter-item">
+          <label>货品属性</label>
+          <select class="iw120"><option value="">全部</option><option>原料货品</option><option>成品货品</option></select>
+        </div>
+        <div class="filter-item">
+          <label>是否可采</label>
+          <select class="iw120"><option value="">全部</option><option>可采</option><option>不可采</option></select>
+        </div>
+        <div class="filter-item">
+          <label>创建时间</label>
+          <input type="text" class="iw200" placeholder="开始日期 ~ 结束日期" onfocus="this.placeholder='2026-01-01 ~ 2026-04-24'">
+        </div>
+        <div class="filter-btns">
+          <button class="btn btn-primary" onclick="showToast('查询成功，共 12 条记录','success')">查询</button>
+          <button class="btn" onclick="showToast('已重置')">重置</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tbl-toolbar">
+      <div class="tbl-toolbar-left">
+        已选 <strong id="sel-count" style="margin:0 4px">0</strong> 条
+      </div>
+      <div class="tbl-toolbar-right">
+        <div class="dropdown-wrap">
+          <button class="btn btn-primary" onclick="toggleDD('dd-create')">+ 新建货品 ▾</button>
+          <div class="dropdown-menu" id="dd-create">
+            <div class="dropdown-item" onclick="startWizard('std')">标品</div>
+            <div class="dropdown-item" onclick="startWizard('nonstd')">非标品</div>
+          </div>
+        </div>
+        <div class="dropdown-wrap">
+          <button class="btn" onclick="toggleDD('dd-batch')">批量操作 ▾</button>
+          <div class="dropdown-menu" id="dd-batch">
+            <div class="dropdown-item" onclick="openBatch()">批量设置</div>
+            <div class="dropdown-item" onclick="openImport()">批量导入</div>
+          </div>
+        </div>
+        <button class="btn" onclick="showToast('已加入导出队列')">导出</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr>
+          <th class="tbl-check"><input type="checkbox" id="check-all" onchange="toggleAll(this)"></th>
+          <th>旧编码</th>
+          <th>货品编码</th>
+          <th>货品名称</th>
+          <th>货品属性</th>
+          <th>包装规格</th>
+          <th>后台类目</th>
+          <th>货品类型</th>
+          <th>是否可采</th>
+          <th>创建时间</th>
+          <th style="min-width:180px">操作</th>
+        </tr>
+      </thead>
+      <tbody id="goods-tbody"></tbody>
+    </table>
+    </div>
+    <div class="pagination">
+      <span class="page-info">共 12 条</span>
+      <div class="page-btn">‹</div>
+      <div class="page-btn active">1</div>
+      <div class="page-btn">2</div>
+      <div class="page-btn">›</div>
+      <span class="page-info">10条/页</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: 货品详情（纯只读）
+══════════════════════════════════════════════ -->
+<div class="page" id="page-goods-detail">
+  <div class="breadcrumb">
+    <a onclick="gotoPage('goods-list')">货品管理</a>
+    <span>›</span>
+    <span id="detail-name">三文鱼原条</span>
+    <span style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="gotoPage('goods-edit')">编辑</button>
+    </span>
+  </div>
+  <div class="card">
+    <div class="tabs">
+      <div class="tab-item active" onclick="switchTab('dt',0,this)">基础信息</div>
+      <div class="tab-item" onclick="switchTab('dt',1,this)">仓储信息</div>
+      <div class="tab-item" onclick="switchTab('dt',2,this)">供应商信息</div>
+      <div class="tab-item" onclick="switchTab('dt',3,this)">操作记录</div>
+    </div>
+    <div class="card-body">
+      <div class="tab-pane active" id="dt-0">
+        <div class="form-row">
+          <div class="form-field w3"><div class="detail-label">货品编码</div><div class="detail-value" style="font-family:monospace;font-size:12px" id="dv-code">item-20260418-0012</div></div>
+          <div class="form-field w3"><div class="detail-label">旧编码</div><div class="detail-value" style="color:var(--t3);font-size:12px" id="dv-oldcode">spucode00000718</div></div>
+          <div class="form-field w3"><div class="detail-label">创建时间</div><div class="detail-value" id="dv-ct">2026-04-18 10:23</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w3"><div class="detail-label">货品类型</div><div class="detail-value" id="dv-type">标品</div></div>
+          <div class="form-field w3"><div class="detail-label">货品属性</div><div class="detail-value" id="dv-attr">原料货品</div></div>
+          <div class="form-field w3"><div class="detail-label">是否可采</div><div class="detail-value" id="dv-pur"><span class="tag tag-green">可采</span></div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w2"><div class="detail-label">货品名称</div><div class="detail-value" id="dv-name">三文鱼原条</div></div>
+          <div class="form-field w2"><div class="detail-label">后台类目</div><div class="detail-value">水产原料</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w3"><div class="detail-label">计量单位</div><div class="detail-value">KG</div></div>
+          <div class="form-field w3"><div class="detail-label">包装规格</div><div class="detail-value">箱</div></div>
+          <div class="form-field w3"><div class="detail-label">包装数量</div><div class="detail-value">10</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w2"><div class="detail-label">产地</div><div class="detail-value text-gray">—</div></div>
+          <div class="form-field w2"><div class="detail-label">品牌</div><div class="detail-value text-gray">—</div></div>
+        </div>
+      </div>
+      <div class="tab-pane" id="dt-1">
+        <div class="form-row">
+          <div class="form-field w3"><div class="detail-label">效期管理</div><div class="detail-value">是</div></div>
+          <div class="form-field w3"><div class="detail-label">保质期</div><div class="detail-value">30 天</div></div>
+          <div class="form-field w3"><div class="detail-label">保存条件</div><div class="detail-value">冷冻</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w3"><div class="detail-label">质检扣点</div><div class="detail-value">2%</div></div>
+          <div class="form-field w3"><div class="detail-label">质检拒收下限</div><div class="detail-value">5%</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field full">
+            <div class="detail-label">入仓超收</div>
+            <table class="inline-table" style="max-width:400px;margin-top:8px">
+              <thead><tr><th>仓库</th><th>超收比例</th></tr></thead>
+              <tbody><tr><td>SG-WH01</td><td>10%</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane" id="dt-2">
+        <div class="tbl-toolbar" style="padding:0 0 12px">
+          <div></div>
+          <button class="btn btn-sm btn-primary" onclick="showToast('关联供应商')">关联供应商</button>
+        </div>
+        <table>
+          <thead><tr><th>供应商编码</th><th>供应商名称</th><th>默认供应商</th><th>关联时间</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>V-20260101-001</td><td>新加坡海鲜批发商 Pte Ltd</td>
+              <td><span class="tag tag-green">是</span></td>
+              <td>2026-01-10 09:32</td>
+              <td><button class="btn-text danger" onclick="showToast('已取消关联','warning')">取消关联</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tab-pane" id="dt-3">
+        <table>
+          <thead><tr><th>操作时间</th><th>操作人</th><th>操作类型</th><th>变更内容</th></tr></thead>
+          <tbody>
+            <tr><td>2026-04-18 10:23</td><td>沈亮</td><td>创建货品</td><td>新建货品「三文鱼原条」</td></tr>
+            <tr><td>2026-04-20 14:11</td><td>沈亮</td><td>修改信息</td><td>质检扣点：0% → 2%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div style="padding:8px 0 24px">
+    <button class="btn" onclick="gotoPage('goods-list')">返回列表</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: 货品编辑
+══════════════════════════════════════════════ -->
+<div class="page" id="page-goods-edit">
+  <div class="breadcrumb">
+    <a onclick="gotoPage('goods-list')">货品管理</a>
+    <span>›</span>
+    <a onclick="gotoPage('goods-detail')">三文鱼原条</a>
+    <span>›</span>
+    <span>编辑</span>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="form-section">
+        <div class="form-section-title">基础信息</div>
+        <div class="form-row">
+          <div class="form-field w3">
+            <label>货品类型</label>
+            <input type="text" value="标品" class="readonly-field" readonly>
+          </div>
+          <div class="form-field w3">
+            <label>货品属性</label>
+            <input type="text" value="原料货品" class="readonly-field" readonly>
+          </div>
+          <div class="form-field w3">
+            <label class="required">是否可采</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="e-pur" value="yes" checked> 可采</label>
+              <label class="radio-option"><input type="radio" name="e-pur" value="no"> 不可采</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w2"><label class="required">货品名称</label><input type="text" value="三文鱼原条"></div>
+          <div class="form-field w2"><label class="required">后台类目</label><select><option>水产原料</option><option>水产加工品</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w3"><label class="required">计量单位</label><select><option>KG</option><option>g</option></select></div>
+          <div class="form-field w3"><label class="required">包装规格</label><select><option>箱</option><option>盒</option></select></div>
+          <div class="form-field w3"><label class="required">包装数量</label><input type="number" value="10"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w2"><label>产地</label><input type="text" placeholder="选填"></div>
+          <div class="form-field w2"><label>品牌</label><input type="text" placeholder="选填"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">仓储信息</div>
+        <div class="form-row">
+          <div class="form-field w3">
+            <label class="required">效期管理</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="e-shelf" checked> 是</label>
+              <label class="radio-option"><input type="radio" name="e-shelf"> 否</label>
+            </div>
+          </div>
+          <div class="form-field w3">
+            <label class="required">保质期</label>
+            <div class="flex gap8"><input type="number" value="30" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option></select></div>
+          </div>
+          <div class="form-field w3">
+            <label class="required">保存条件</label>
+            <select><option>冷冻</option><option>冷藏</option><option>常温</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w3"><label>质检扣点</label><div class="flex gap8 items-center"><input type="number" value="2" style="width:100px;height:32px"><span class="text-gray">%</span></div></div>
+          <div class="form-field w3"><label>质检拒收下限</label><div class="flex gap8 items-center"><input type="number" value="5" style="width:100px;height:32px"><span class="text-gray">%</span></div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field full">
+            <label>入仓超收</label>
+            <table class="inline-table" style="max-width:500px">
+              <thead><tr><th>仓库</th><th>超收比例(%)</th><th>操作</th></tr></thead>
+              <tbody id="edit-overstock">
+                <tr><td><select style="width:120px;height:28px;font-size:12px"><option>SG-WH01</option></select></td><td><input type="number" value="10" style="width:80px;height:28px;font-size:12px"></td><td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>
+              </tbody>
+            </table>
+            <button class="btn btn-sm mt8" onclick="addRow('edit-overstock')">+ 添加</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flex justify-between items-center" style="padding:8px 0 24px">
+    <button class="btn" onclick="gotoPage('goods-detail')">取消</button>
+    <button class="btn btn-primary" onclick="showToast('保存成功','success');setTimeout(()=>gotoPage('goods-detail'),800)">保存</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: 统一向导（标品3步 / 非标品新建4步 / 非标品已有2步）
+══════════════════════════════════════════════ -->
+<div class="page" id="page-wizard">
+  <div class="wizard-wrap">
+    <div class="wizard-header">
+      <span class="wizard-back" onclick="gotoPage('goods-list')">← 返回</span>
+      <h2 id="wiz-title">新建货品</h2>
+    </div>
+
+    <!-- 非标品：原料来源选择（在步骤条上方）-->
+    <div class="wiz-src-bar" id="wiz-src-bar" style="display:none">
+      <label>原料来源：</label>
+      <label class="radio-option"><input type="radio" name="wiz-src" value="new" checked onchange="setWizSrc('new')"> 新建原料货品</label>
+      <label class="radio-option"><input type="radio" name="wiz-src" value="exist" onchange="setWizSrc('exist')"> 选择已有原料货品</label>
+      <span class="text-gray text-sm" style="margin-left:8px">* 选择后将影响向导步骤数</span>
+    </div>
+
+    <!-- 步骤条 -->
+    <div class="step-bar" id="step-bar"></div>
+
+    <!-- 步骤内容 -->
+    <div class="wizard-body" id="wiz-body">
+
+      <!-- ─── 基础信息（标品/非标品新建 共用 Step 1）───-->
+      <div id="ws-basic" style="display:none">
+        <div class="notice-box notice-info" id="ws-basic-notice">填写货品基础信息</div>
+        <div class="form-section">
+          <div class="form-section-title">基础信息</div>
+          <div class="form-row">
+            <div class="form-field w3">
+              <label>货品类型</label>
+              <input type="text" id="wiz-type-display" value="标品" class="readonly-field" readonly>
+            </div>
+            <div class="form-field w3">
+              <label>货品属性</label>
+              <input type="text" id="wiz-attr-display" value="成品货品" class="readonly-field" readonly>
+            </div>
+            <div class="form-field w3">
+              <label class="required">是否可采</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="wiz-pur" value="yes" checked> 可采</label>
+                <label class="radio-option"><input type="radio" name="wiz-pur" value="no"> 不可采</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field w2"><label class="required">货品名称</label><input type="text" id="wiz-raw-name" class="iw100" placeholder="请输入货品名称"></div>
+            <div class="form-field w2"><label class="required">后台类目</label><select class="iw100" id="wiz-raw-cat"><option value="">请选择类目</option><option>水产原料</option><option>水产加工品</option><option>蔬菜</option><option>肉类</option><option>调味品</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit"><option value="">请选择</option><option>KG</option><option>g</option><option>L</option><option>盒</option><option>袋</option><option>份</option></select></div>
+            <div class="form-field w3"><label class="required">包装规格</label><select class="iw100"><option value="">请选择</option><option>箱</option><option>盒</option><option>袋</option><option>桶</option></select></div>
+            <div class="form-field w3"><label class="required">包装数量</label><input type="number" class="iw100" placeholder="数量" min="0.01" step="0.01"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field w2"><label>产地</label><input type="text" class="iw100" placeholder="选填"></div>
+            <div class="form-field w2"><label>品牌</label><input type="text" class="iw100" placeholder="选填"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field full">
+              <label>货品图片</label>
+              <div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片（jpg/png，≤5MB）')"><span style="font-size:20px">+</span><span>上传图片</span></div></div>
+              <div class="form-hint">最多5张，jpg/png，≤5MB</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── 已有原料搜索（非标品-已有 Step 1 替代品）───-->
+      <div id="ws-exist-raw" style="display:none">
+        <div class="notice-box notice-info">选择已有原料货品，将直接进入「创建成品货品」步骤；BOM 关系由系统自动建立</div>
+        <div class="form-row">
+          <div class="form-field" style="max-width:480px">
+            <label class="required">搜索原料货品</label>
+            <select class="iw100" onchange="fillExistRaw(this.value)">
+              <option value="">请搜索并选择货品（支持编码/名称）</option>
+              <option value="r1">item-20260418-0012 | 三文鱼原条 | KG | 冷冻 | 水产原料</option>
+              <option value="r2">item-20260401-0008 | 柠檬汁 | L | 常温 | 调味品</option>
+              <option value="r3">item-20260310-0005 | 鳕鱼柳 | KG | 冷藏 | 水产原料</option>
+            </select>
+          </div>
+        </div>
+        <div id="exist-raw-card" style="display:none;background:#f5f7fa;border:1px solid var(--border);border-radius:4px;padding:12px 16px;max-width:480px">
+          <div class="flex gap8 items-center mb16">
+            <span class="tag tag-green">已选</span>
+            <strong id="exist-raw-name">三文鱼原条</strong>
+          </div>
+          <div class="flex gap12" style="font-size:13px;color:var(--t2)">
+            <span>编码：<span id="exist-raw-code" style="font-family:monospace;font-size:12px">—</span></span>
+            <span>单位：<span id="exist-raw-unit">—</span></span>
+            <span>类目：<span id="exist-raw-cat">—</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── 仓储信息（标品/非标品新建 Step 2）───-->
+      <div id="ws-storage" style="display:none">
+        <div class="form-section">
+          <div class="form-section-title">仓储信息</div>
+          <div class="form-row">
+            <div class="form-field w3">
+              <label class="required">效期管理</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="wiz-shelf" value="yes" checked onchange="toggleShelf('wiz-shelf-ext',true)"> 是</label>
+                <label class="radio-option"><input type="radio" name="wiz-shelf" value="no" onchange="toggleShelf('wiz-shelf-ext',false)"> 否</label>
+              </div>
+            </div>
+          </div>
+          <div id="wiz-shelf-ext">
+            <div class="form-row">
+              <div class="form-field w3">
+                <label class="required">保质期</label>
+                <div class="flex gap8"><input type="number" placeholder="时长" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option><option>年</option></select></div>
+              </div>
+              <div class="form-field w3"><label class="required">保存条件</label><select class="iw100"><option value="">请选择</option><option>常温</option><option>冷藏</option><option>冷冻</option><option>冷鲜</option></select></div>
+            </div>
+          </div>
+          <div class="form-section-title" style="margin-top:16px">质检设置</div>
+          <div class="form-row">
+            <div class="form-field w3"><label>质检扣点</label><div class="flex gap8 items-center"><input type="number" placeholder="0" style="width:100px;height:32px" min="0" max="100"><span class="text-gray">%</span></div></div>
+            <div class="form-field w3"><label>质检拒收下限</label><div class="flex gap8 items-center"><input type="number" placeholder="0" style="width:100px;height:32px" min="0" max="100"><span class="text-gray">%</span></div></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field full">
+              <label>入仓超收</label>
+              <table class="inline-table" style="max-width:500px">
+                <thead><tr><th>仓库</th><th>超收比例(%)</th><th>操作</th></tr></thead>
+                <tbody id="wiz-overstock"></tbody>
+              </table>
+              <button class="btn btn-sm mt8" onclick="addRow('wiz-overstock')">+ 添加</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── 创建成品货品（非标品 Step 3/非标品-已有 Step 1）───-->
+      <div id="ws-bom" style="display:none">
+        <!-- 系统说明 -->
+        <div class="notice-box notice-info" style="margin-bottom:20px">
+          ⓘ BOM 关系由系统根据原料货品自动建立，无需手动配置。请在下方填写基于该原料生产的成品货品，支持同时创建多个成品。
+        </div>
+
+        <!-- 原料货品信息卡（只读，继承自上一步）-->
+        <div style="background:#f5f7fa;border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:24px">
+          <div style="font-size:12px;color:var(--t3);margin-bottom:10px;font-weight:500;letter-spacing:.3px">原料货品（来自上一步，只读）</div>
+          <div class="flex gap12" style="flex-wrap:wrap;gap:16px">
+            <div><span class="text-gray text-sm">编码：</span><span id="bom-raw-code" style="font-family:monospace;font-size:12px;color:var(--t3)">—</span></div>
+            <div><span class="text-gray text-sm">名称：</span><strong id="bom-raw-label">—</strong></div>
+            <div><span class="text-gray text-sm">单位：</span><span id="bom-raw-unit-display">—</span></div>
+            <div><span class="text-gray text-sm">效期管理：</span><span id="bom-raw-shelf">—</span></div>
+            <div><span class="text-gray text-sm">保质期：</span><span id="bom-raw-days">—</span></div>
+            <div><span class="text-gray text-sm">保存条件：</span><span id="bom-raw-storage">—</span></div>
+          </div>
+        </div>
+
+        <!-- 成品货品列表（可动态增减）-->
+        <div class="flex justify-between items-center" style="margin-bottom:12px">
+          <div style="font-size:14px;font-weight:600;color:var(--t1)">成品货品列表</div>
+          <button class="btn btn-sm btn-primary" onclick="addFinishedBlock()">+ 添加成品货品</button>
+        </div>
+        <div class="notice-box notice-warn" style="margin-bottom:16px">⚠ 由原料货品创建的成品货品默认「不可采」，不可修改；仓储信息默认继承原料，可逐项修改</div>
+
+        <div id="fin-blocks-wrap">
+          <!-- 第一个成品块（不可删除）-->
+          <div class="fin-block" id="fin-block-0" style="border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:12px;position:relative">
+            <div class="flex justify-between items-center" style="margin-bottom:12px">
+              <span style="font-size:13px;font-weight:600;color:var(--t1)">成品货品 #1</span>
+            </div>
+            <div class="form-row">
+              <div class="form-field w2"><label class="required">成品货品名称</label><input type="text" class="iw100 fin-name" placeholder="请输入成品名称"></div>
+              <div class="form-field w2"><label class="required">后台类目</label><select class="iw100"><option value="">请选择（默认继承原料）</option><option>水产加工品</option><option>水产原料</option><option>蔬菜</option><option>肉类</option></select></div>
+            </div>
+            <div class="form-row">
+              <div class="form-field w3"><label class="required">计量单位</label><select class="iw100 fin-unit-sel"><option value="">请选择</option><option>份</option><option>盒</option><option>袋</option><option>KG</option></select></div>
+              <div class="form-field w3"><label class="required">包装规格</label><select class="iw100"><option value="">请选择</option><option>盒</option><option>袋</option><option>箱</option></select></div>
+              <div class="form-field w3"><label class="required">包装数量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-field w3">
+                <label>是否可采</label>
+                <div class="flex gap8 items-center" style="height:32px">
+                  <span class="tag tag-gray">不可采</span>
+                  <span class="text-sm text-gray">（系统默认，不可修改）</span>
+                </div>
+              </div>
+            </div>
+            <div style="border-top:1px dashed var(--border);padding-top:12px;margin-top:4px">
+              <div style="font-size:12px;color:var(--t3);margin-bottom:10px">仓储信息（继承自原料，可修改）</div>
+              <div class="form-row">
+                <div class="form-field w3"><label>效期管理</label><div class="radio-group"><label class="radio-option"><input type="radio" name="fin-shelf-0" checked> 是</label><label class="radio-option"><input type="radio" name="fin-shelf-0"> 否</label></div></div>
+                <div class="form-field w3"><label>保质期</label><div class="flex gap8"><input type="number" placeholder="—" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option></select></div></div>
+                <div class="form-field w3"><label>保存条件</label><select class="iw100"><option value="">请选择</option><option>常温</option><option>冷藏</option><option>冷冻</option><option>冷鲜</option></select></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── 商品信息（标品 Step 3 / 非标品新建 Step 4 / 非标品已有 Step 2）───-->
+      <div id="ws-sku" style="display:none">
+        <div class="notice-box notice-info" id="sku-notice">将基于货品创建商品 SKU，建立 1:1 映射（换算系数=1）</div>
+        <div class="form-section">
+          <div class="form-section-title">商品基础信息</div>
+          <div class="form-row">
+            <div class="form-field w2"><label class="required">商品名称</label><input type="text" id="sku-name" class="iw100" placeholder="默认=货品名称，可修改"><div class="form-hint">默认=货品名称，可修改</div></div>
+            <div class="form-field w2"><label class="required">前台类目</label><select class="iw100"><option value="">请选择</option><option>海鲜水产</option><option>新鲜蔬菜</option><option>肉禽蛋品</option><option>调味品</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field w3"><label>售卖单位</label><div class="flex gap8 items-center"><input type="text" id="sku-unit" value="—" class="readonly-field" readonly style="width:80px"><span class="text-gray text-sm">= 货品计量单位</span></div></div>
+            <div class="form-field w3"><label>换算系数</label><div class="flex gap8 items-center"><input type="text" value="1" class="readonly-field" readonly style="width:60px"><span class="text-gray text-sm">1 SKU = 1 货品</span></div></div>
+          </div>
+          <div class="form-row"><div class="form-field full"><label>商品描述</label><textarea class="iw100" placeholder="面向客户的描述（选填）"></textarea></div></div>
+          <div class="form-row">
+            <div class="form-field full">
+              <label>商品图片</label>
+              <div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片')"><span style="font-size:20px">+</span><span>上传图片</span></div></div>
+              <div class="form-hint">最多5张，jpg/png，≤5MB</div>
+            </div>
+          </div>
+          <div class="form-section-title" style="margin-top:8px">售卖信息</div>
+          <div class="form-row">
+            <div class="form-field w3"><label>默认售价</label><div class="flex gap8 items-center"><input type="number" placeholder="0.00" style="width:120px;height:32px" step="0.01"><span class="text-gray">SGD</span></div></div>
+            <div class="form-field w3"><label class="required">商品状态</label><div class="radio-group"><label class="radio-option"><input type="radio" name="sku-status" checked> 暂不上架</label><label class="radio-option"><input type="radio" name="sku-status"> 立即上架</label></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /wiz-body -->
+
+    <div class="wizard-footer">
+      <div class="wf-left"></div>
+      <button class="btn" onclick="gotoPage('goods-list')">取消</button>
+      <button id="btn-prev" style="display:none" class="btn" onclick="wizPrev()">◀ 上一步</button>
+      <button id="btn-next" class="btn btn-primary" onclick="wizNext()">下一步 ▶</button>
+      <!-- 非标品新建：仓储信息完成后的分叉按钮 -->
+      <button id="btn-finish-raw" style="display:none" class="btn btn-primary" onclick="finishRawOnly()">完成原料建档</button>
+      <button id="btn-continue-fin" style="display:none" class="btn" onclick="continueToFinished()">完成并建货品 →</button>
+      <button id="btn-confirm" style="display:none" class="btn btn-primary" onclick="openConfirmBuild()">完成建档</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: BOM 管理列表
+══════════════════════════════════════════════ -->
+<div class="page" id="page-bom-list">
+  <div class="page-header"><div class="page-title">BOM 关系管理</div></div>
+  <div class="card">
+    <div class="card-body">
+      <div class="filter-form">
+        <div class="filter-item"><label>原料货品（来源）</label><input type="text" class="iw200" placeholder="名称或编码"></div>
+        <div class="filter-item"><label>成品货品（目标）</label><input type="text" class="iw200" placeholder="名称或编码"></div>
+        <div class="filter-item"><label>BOM状态</label><select class="iw120"><option value="">全部</option><option>启用</option><option>禁用</option></select></div>
+        <div class="filter-btns">
+          <button class="btn btn-primary" onclick="showToast('查询成功','success')">查询</button>
+          <button class="btn" onclick="showToast('已重置')">重置</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tbl-toolbar">
+      <div class="tbl-toolbar-left"></div>
+      <div class="tbl-toolbar-right">
+        <button class="btn btn-primary" onclick="openDialog('ov-create-bom')">+ 新建 BOM</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>来源货品编码</th><th>来源货品名称</th>
+          <th>目标货品编码</th><th>目标货品名称</th>
+          <th>原料用量</th><th>状态</th><th>创建时间</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="bom-tbody"></tbody>
+    </table>
+    <div class="pagination">
+      <span class="page-info">共 4 条</span>
+      <div class="page-btn active">1</div>
+      <div class="page-btn">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: BOM 详情（只读）
+══════════════════════════════════════════════ -->
+<div class="page" id="page-bom-detail">
+  <div class="breadcrumb">
+    <a onclick="gotoPage('bom-list')">BOM 管理</a>
+    <span>›</span>
+    <span>BOM 详情</span>
+    <span style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn btn-sm" onclick="gotoPage('bom-edit')">编辑</button>
+      <button class="btn btn-sm" onclick="showToast('已禁用此BOM关系','warning')">禁用</button>
+    </span>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="form-section-title">BOM 基础信息</div>
+      <div class="form-row">
+        <div class="form-field w2"><div class="detail-label">BOM编码</div><div class="detail-value" style="font-family:monospace;font-size:12px">BOM-20260418-0001</div></div>
+        <div class="form-field w2"><div class="detail-label">创建时间</div><div class="detail-value">2026-04-18 10:30</div></div>
+      </div>
+      <div class="form-row">
+        <div class="form-field w2"><div class="detail-label">来源货品（原料）</div><div class="detail-value">三文鱼原条 <span style="color:var(--t3);font-size:12px">item-20260418-0001</span></div></div>
+        <div class="form-field w2"><div class="detail-label">目标货品（成品）</div><div class="detail-value">三文鱼柳 <span style="color:var(--t3);font-size:12px">item-20260418-0002</span></div></div>
+      </div>
+      <div class="form-section-title" style="margin-top:16px">原料配方</div>
+      <table class="inline-table" style="max-width:600px">
+        <thead><tr><th>原料货品</th><th>用量</th><th>单位</th><th>备注</th></tr></thead>
+        <tbody>
+          <tr><td>三文鱼原条</td><td>1.2</td><td>KG</td><td>主原料</td></tr>
+          <tr><td>柠檬汁</td><td>0.05</td><td>L</td><td>辅料</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div style="padding:8px 0 24px">
+    <button class="btn" onclick="gotoPage('bom-list')">返回列表</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: BOM 编辑
+══════════════════════════════════════════════ -->
+<div class="page" id="page-bom-edit">
+  <div class="breadcrumb">
+    <a onclick="gotoPage('bom-list')">BOM 管理</a>
+    <span>›</span>
+    <a onclick="gotoPage('bom-detail')">BOM 详情</a>
+    <span>›</span>
+    <span>编辑</span>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="form-section-title">BOM 原料配方</div>
+      <div class="form-row">
+        <div class="form-field w2">
+          <label class="required">目标成品货品</label>
+          <select class="iw100"><option>三文鱼柳 (item-20260418-0002)</option><option>三文鱼刺身 (item-20260418-0003)</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field full">
+          <label class="required">原料配方</label>
+          <table class="inline-table" style="max-width:600px">
+            <thead><tr><th>原料货品</th><th>用量</th><th>单位</th><th>操作</th></tr></thead>
+            <tbody id="bom-edit-body">
+              <tr><td><select style="width:160px;height:28px;font-size:12px"><option>三文鱼原条</option></select></td><td><input type="number" value="1.2" style="width:80px;height:28px;font-size:12px"></td><td><span style="font-size:12px;color:var(--t3)">KG</span></td><td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>
+              <tr><td><select style="width:160px;height:28px;font-size:12px"><option>柠檬汁</option></select></td><td><input type="number" value="0.05" style="width:80px;height:28px;font-size:12px"></td><td><span style="font-size:12px;color:var(--t3)">L</span></td><td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-sm mt8" onclick="addBomEditRow()">+ 添加原料</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="flex justify-between items-center" style="padding:8px 0 24px">
+    <button class="btn" onclick="gotoPage('bom-detail')">取消</button>
+    <button class="btn btn-primary" onclick="showToast('BOM保存成功','success');setTimeout(()=>gotoPage('bom-detail'),800)">保存</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: 建档成功
+══════════════════════════════════════════════ -->
+<div class="page" id="page-build-result">
+  <div class="result-wrap">
+    <div class="result-icon">✓</div>
+    <div class="result-title">建档成功</div>
+    <div class="result-card">
+      <div class="result-row" id="res-raw-row">
+        <div class="result-row-icon">✓</div>
+        <div><div style="font-weight:500;margin-bottom:4px">原料货品</div><div class="text-sm text-gray" id="res-raw">item-20260424-0001 | 三文鱼原条 | KG | 可采</div></div>
+      </div>
+      <div class="result-arrow" id="res-arrow1">↓ BOM</div>
+      <div class="result-row" id="res-fin-row">
+        <div class="result-row-icon">✓</div>
+        <div><div style="font-weight:500;margin-bottom:4px">成品货品</div><div class="text-sm text-gray" id="res-fin">item-20260424-0002 | 三文鱼柳 | 份 | 不可采</div></div>
+      </div>
+      <div class="result-row" id="res-std-row" style="display:none">
+        <div class="result-row-icon">✓</div>
+        <div><div style="font-weight:500;margin-bottom:4px">货品（标品）</div><div class="text-sm text-gray" id="res-std">item-20260424-0001 | 三文鱼原条 | KG | 可采</div></div>
+      </div>
+      <div class="result-arrow" id="res-arrow2">↓ 1:1 映射</div>
+      <div class="result-row" id="res-sku-row">
+        <div class="result-row-icon">✓</div>
+        <div><div style="font-weight:500;margin-bottom:4px">商品 SKU</div><div class="text-sm text-gray" id="res-sku">SKU-20260424-0001 | 三文鱼柳 | 暂不上架</div></div>
+      </div>
+    </div>
+    <div class="btn-group" style="justify-content:center;margin-top:24px">
+      <button class="btn" onclick="gotoPage('goods-list')">返回货品列表</button>
+      <button class="btn" onclick="gotoPage('goods-detail')">查看货品详情</button>
+      <button class="btn btn-primary" onclick="resetWiz();gotoPage('wizard')">继续新建</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     PAGE: 占位
+══════════════════════════════════════════════ -->
+<div class="page" id="page-placeholder">
+  <div class="empty-state" style="margin-top:80px">
+    <div style="font-size:48px;opacity:.3;margin-bottom:12px">📄</div>
+    <p style="font-size:15px">此页面正在建设中</p>
+    <button class="btn mt16" onclick="gotoPage('goods-list')">返回货品管理</button>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /body-wrap -->
+</div><!-- /layout -->
+
+<!-- ══════════════════════════════════════════════
+     DIALOGS
+══════════════════════════════════════════════ -->
+
+<!-- 批量设置 -->
+<div class="overlay" id="ov-batch">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3>批量设置</h3><div class="dialog-close" onclick="closeDialog('ov-batch')">×</div></div>
+    <div class="dialog-body" style="padding:0">
+      <div class="left-tabs">
+        <div class="left-tab-nav">
+          <div class="left-tab-nav-item active" onclick="switchLT('bt',0,this)">效期管理</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',1,this)">入仓超收</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',2,this)">质检扣点</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',3,this)">质检拒收下限</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',4,this)">是否可采</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',5,this)">默认供应商</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',6,this)">其他检测报告</div>
+        </div>
+        <div class="left-tab-content">
+          <div id="bt-0">
+            <div class="form-row"><div class="form-field w2"><label class="required">效期管理</label><div class="radio-group"><label class="radio-option"><input type="radio" name="b-shelf" checked> 是</label><label class="radio-option"><input type="radio" name="b-shelf"> 否</label></div></div></div>
+            <div class="form-row">
+              <div class="form-field w3"><label>保质期</label><div class="flex gap8"><input type="number" placeholder="时长" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option><option>年</option></select></div></div>
+              <div class="form-field w3"><label>保存条件</label><select class="iw100"><option value="">请选择</option><option>常温</option><option>冷藏</option><option>冷冻</option><option>冷鲜</option></select></div>
+            </div>
+          </div>
+          <div id="bt-1" style="display:none">
+            <table class="inline-table"><thead><tr><th>仓库</th><th>超收比例(%)</th><th>操作</th></tr></thead><tbody id="b-overstock"></tbody></table>
+            <button class="btn btn-sm mt8" onclick="addRow('b-overstock')">+ 添加</button>
+          </div>
+          <div id="bt-2" style="display:none">
+            <div class="form-row"><div class="form-field w3"><label>质检扣点</label><div class="flex gap8 items-center"><input type="number" placeholder="0" style="width:100px;height:32px" min="0" max="100"><span class="text-gray">%</span></div><div class="form-hint">将批量更新所选货品的质检扣点</div></div></div>
+          </div>
+          <div id="bt-3" style="display:none">
+            <div class="form-row"><div class="form-field w3"><label>质检拒收下限</label><div class="flex gap8 items-center"><input type="number" placeholder="0" style="width:100px;height:32px" min="0" max="100"><span class="text-gray">%</span></div><div class="form-hint">将批量更新所选货品的质检拒收下限</div></div></div>
+          </div>
+          <div id="bt-4" style="display:none">
+            <div class="form-row"><div class="form-field w2"><label class="required">采购状态</label><div class="radio-group"><label class="radio-option"><input type="radio" name="b-pur" checked> 可采</label><label class="radio-option"><input type="radio" name="b-pur"> 不可采</label></div><div class="form-hint mt8">将批量更新所选货品的采购状态</div></div></div>
+          </div>
+          <div id="bt-5" style="display:none">
+            <table class="inline-table"><thead><tr><th>仓库</th><th>默认供应商</th></tr></thead>
+              <tbody>
+                <tr><td>SG-WH01</td><td><select style="width:200px;height:28px;font-size:12px"><option value="">请选择供应商</option><option>新加坡海鲜批发商 Pte Ltd</option><option>优鲜食材供应商</option></select></td></tr>
+                <tr><td>SG-WH02</td><td><select style="width:200px;height:28px;font-size:12px"><option value="">请选择供应商</option><option>新加坡海鲜批发商 Pte Ltd</option><option>优鲜食材供应商</option></select></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="bt-6" style="display:none">
+            <div class="form-row"><div class="form-field w2"><label>其他检测报告</label><select class="iw100"><option value="">请选择</option><option>清真认证</option><option>有机认证</option><option>食品安全检测</option></select><div class="form-hint mt8">将批量更新所选货品的检测报告类型</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-batch')">取消</button>
+      <button class="btn btn-primary" onclick="saveBatch()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批量导入 -->
+<div class="overlay" id="ov-import">
+  <div class="dialog dialog-md">
+    <div class="dialog-header"><h3>批量导入货品</h3><div class="dialog-close" onclick="closeDialog('ov-import')">×</div></div>
+    <div class="dialog-body">
+      <div class="notice-box notice-info" style="margin-bottom:16px">支持批量导入标品和非标品货品信息，导入前请先下载模板按格式填写</div>
+      <div class="form-row">
+        <div class="form-field full">
+          <label>导入模板</label>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-sm" onclick="showToast('正在下载标品模板...')">下载标品模板</button>
+            <button class="btn btn-sm" onclick="showToast('正在下载非标品模板...')">下载非标品模板</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field full">
+          <label class="required">上传文件</label>
+          <div style="border:1px dashed var(--border);border-radius:4px;padding:24px;text-align:center;cursor:pointer;color:var(--t3);font-size:13px;margin-top:4px" onclick="showToast('请选择Excel文件（.xlsx）')">
+            <div style="font-size:28px;margin-bottom:8px">📂</div>
+            <div>点击选择文件，或将文件拖拽到此区域</div>
+            <div class="form-hint" style="margin-top:4px">支持 .xlsx，单次最多 500 行</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field w2">
+          <label>数据覆盖规则</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="imp-rule" checked> 跳过已有（不覆盖）</label>
+            <label class="radio-option"><input type="radio" name="imp-rule"> 覆盖已有</label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-import')">取消</button>
+      <button class="btn btn-primary" onclick="showToast('开始解析，请稍候...','success');setTimeout(()=>closeDialog('ov-import'),1500)">开始导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建 BOM -->
+<div class="overlay" id="ov-create-bom">
+  <div class="dialog dialog-md">
+    <div class="dialog-header"><h3>新建 BOM 关系</h3><div class="dialog-close" onclick="closeDialog('ov-create-bom')">×</div></div>
+    <div class="dialog-body">
+      <div class="form-row">
+        <div class="form-field full">
+          <label class="required">目标成品货品（仅一个）</label>
+          <select class="iw100"><option value="">请选择成品货品</option><option>三文鱼柳 (item-20260418-0013)</option><option>三文鱼刺身 (item-20260418-0014)</option><option>鳕鱼排（成品）(item-20260310-0006)</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field full">
+          <label class="required">来源原料（可多个）</label>
+          <table class="inline-table">
+            <thead><tr><th>原料货品</th><th>用量</th><th>单位</th><th>操作</th></tr></thead>
+            <tbody id="bom-dlg-body">
+              <tr><td><select style="width:180px;height:28px;font-size:12px"><option value="">请选择</option><option>三文鱼原条</option><option>柠檬汁</option><option>鳕鱼柳</option></select></td><td><input type="number" placeholder="用量" style="width:70px;height:28px;font-size:12px" step="0.01"></td><td><span style="font-size:12px;color:var(--t3)">KG</span></td><td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-sm mt8" onclick="addBomDlgRow()">+ 添加原料</button>
+        </div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-create-bom')">取消</button>
+      <button class="btn btn-primary" onclick="saveBomDlg()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 确认建档 -->
+<div class="overlay" id="ov-confirm-build">
+  <div class="dialog dialog-sm">
+    <div class="dialog-header"><h3>确认建档</h3><div class="dialog-close" onclick="closeDialog('ov-confirm-build')">×</div></div>
+    <div class="dialog-body">
+      <div style="font-size:13px;color:var(--t2);margin-bottom:10px">系统将自动完成以下操作：</div>
+      <ul class="confirm-list" id="confirm-list"></ul>
+      <div class="notice-box notice-info" id="confirm-skip-tip" style="display:none;margin-top:12px">ⓘ 商品 SKU 未创建，可后续在商品中心创建</div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-confirm-build')">取消</button>
+      <button class="btn btn-primary" onclick="submitBuild()">确认建档</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DATA ───
+// 业务规则：标品固定=成品货品；非标品固定=原料货品
+const GD = [
+  {code:'item-20260418-0012',old:'spucode00000718',name:'三文鱼原条',attr:'成品货品',pack:'10KG/箱',cat:'水产原料',type:'标品',pur:true,ct:'2026-04-18 10:23'},
+  {code:'item-20260418-0013',old:'spucode00000719',name:'三文鱼柳原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,ct:'2026-04-18 10:31'},
+  {code:'item-20260418-0014',old:'spucode00000720',name:'三文鱼刺身原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,ct:'2026-04-20 14:02'},
+  {code:'item-20260410-0001',old:'spucode00000688',name:'柠檬汁',attr:'成品货品',pack:'500ml/瓶',cat:'调味品',type:'标品',pur:true,ct:'2026-04-10 09:00'},
+  {code:'item-20260410-0002',old:'spucode00000689',name:'青柠',attr:'成品货品',pack:'1KG/袋',cat:'蔬菜',type:'标品',pur:true,ct:'2026-04-10 09:05'},
+  {code:'item-20260401-0008',old:'spucode00000650',name:'小葱',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,ct:'2026-04-01 08:30'},
+  {code:'item-20260401-0009',old:'spucode00000651',name:'生姜',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,ct:'2026-04-01 08:35'},
+  {code:'item-20260323-0003',old:'spucode00000620',name:'鸡腿（冷冻）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,ct:'2026-03-23 11:00'},
+  {code:'item-20260323-0004',old:'spucode00000621',name:'猪五花（冷藏）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,ct:'2026-03-23 11:10'},
+  {code:'item-20260310-0005',old:'spucode00000600',name:'鳕鱼柳',attr:'成品货品',pack:'1KG/袋',cat:'水产原料',type:'标品',pur:true,ct:'2026-03-10 14:00'},
+  {code:'item-20260310-0006',old:'spucode00000601',name:'鳕鱼排原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,ct:'2026-03-10 14:30'},
+  {code:'item-20260305-0007',old:'spucode00000580',name:'芝麻酱',attr:'成品货品',pack:'500g/瓶',cat:'调味品',type:'标品',pur:true,ct:'2026-03-05 10:00'},
+];
+
+const BOM_DATA = [
+  {bcode:'BOM-20260418-0001',scode:'item-20260418-0012',sname:'三文鱼原条',tcode:'item-20260418-0013',tname:'三文鱼柳',usage:'1.2 KG/份',status:'启用',ct:'2026-04-18 10:30'},
+  {bcode:'BOM-20260418-0002',scode:'item-20260418-0012',sname:'三文鱼原条',tcode:'item-20260418-0014',tname:'三文鱼刺身',usage:'0.8 KG/份',status:'启用',ct:'2026-04-20 14:00'},
+  {bcode:'BOM-20260310-0001',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260310-0006',tname:'鳕鱼排（成品）',usage:'1.0 KG/份',status:'启用',ct:'2026-03-10 14:35'},
+  {bcode:'BOM-20260310-0002',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260418-0014',tname:'三文鱼刺身',usage:'0.3 KG/份',status:'禁用',ct:'2026-03-15 09:00'},
+];
+
+let selRows = new Set();
+// Wizard state
+let wizType='std', wizSrc='new', wizStep=0, wizExtended=false, wizRawOnly=false;
+function getSteps(){
+  if(wizType==='std') return ['货品信息'];
+  if(wizSrc==='exist') return ['选择原料货品','创建成品货品'];
+  return wizExtended?['原料货品信息','创建成品货品']:['原料货品信息'];
+}
+// Wizard panel order per mode
+// std: ws-basic(step0，同时显示ws-storage)
+// ns-new-base: ws-basic(step0，同时显示ws-storage) → fork
+// ns-new-ext: ws-basic(step0，同时显示ws-storage), ws-bom(step1)
+// ns-exist: ws-exist-raw(step0), ws-bom(step1)
+function getPanels(){
+  if(wizType==='std') return ['ws-basic'];
+  if(wizSrc==='exist') return ['ws-exist-raw','ws-bom'];
+  return wizExtended?['ws-basic','ws-bom']:['ws-basic'];
+}
+
+// ─── RENDER TABLE ───
+function renderGoods(){
+  const tbody=document.getElementById('goods-tbody');
+  tbody.innerHTML=GD.map((r,i)=>{
+    // Operations: 标品→新建商品；非标品→新建成品货品
+    const lastOp=r.type==='标品'
+      ?`<button class="btn-text" onclick="showToast('跳转新建商品','success')">新建商品</button>`
+      :`<button class="btn-text" onclick="startNonstdExist(${i})">新建成品货品</button>`;
+    const ops=`<button class="btn-text" onclick="viewDetail(${i})">详情</button> <button class="btn-text" onclick="editGoods(${i})">编辑</button> ${lastOp}`;
+    return `<tr>
+      <td class="tbl-check"><input type="checkbox" class="rc" data-i="${i}" onchange="selRow(this,${i})"></td>
+      <td style="font-family:monospace;font-size:11px;color:var(--t3)">${r.old}</td>
+      <td style="font-family:monospace;font-size:12px;color:var(--t3)">${r.code}</td>
+      <td><strong>${r.name}</strong></td>
+      <td><span class="tag ${r.attr==='原料货品'?'tag-blue':'tag-purple'}">${r.attr}</span></td>
+      <td>${r.pack}</td>
+      <td>${r.cat}</td>
+      <td><span class="tag ${r.type==='标品'?'tag-green':'tag-orange'}">${r.type}</span></td>
+      <td>
+        <label class="switch">
+          <input type="checkbox" ${r.pur?'checked':''} onchange="togglePur(${i},this.checked)">
+          <span class="switch-slider"></span>
+        </label>
+        <span class="text-sm text-gray" style="margin-left:6px">${r.pur?'可采':'不可采'}</span>
+      </td>
+      <td style="color:var(--t2);font-size:12px">${r.ct}</td>
+      <td>${ops}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBom(){
+  document.getElementById('bom-tbody').innerHTML=BOM_DATA.map((r,i)=>`
+    <tr>
+      <td style="font-family:monospace;font-size:12px;color:var(--t3)">${r.scode}</td>
+      <td>${r.sname}</td>
+      <td style="font-family:monospace;font-size:12px;color:var(--t3)">${r.tcode}</td>
+      <td>${r.tname}</td>
+      <td>${r.usage}</td>
+      <td><span class="tag ${r.status==='启用'?'tag-green':'tag-gray'}">${r.status}</span></td>
+      <td style="font-size:12px;color:var(--t2)">${r.ct}</td>
+      <td>
+        <button class="btn-text" onclick="gotoPage('bom-detail')">详情</button>
+        <button class="btn-text" onclick="gotoPage('bom-edit')">编辑</button>
+        <button class="btn-text ${r.status==='启用'?'danger':''}" onclick="toggleBomStatus(${i})">${r.status==='启用'?'禁用':'启用'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function togglePur(i,val){
+  GD[i].pur=val;
+  showToast(`「${GD[i].name}」已设为${val?'可采':'不可采'}`,val?'success':'warning');
+  renderGoods();
+}
+
+function toggleBomStatus(i){
+  BOM_DATA[i].status=BOM_DATA[i].status==='启用'?'禁用':'启用';
+  showToast(`BOM 已${BOM_DATA[i].status}`,'success');
+  renderBom();
+}
+
+function viewDetail(i){
+  const r=GD[i];
+  document.getElementById('detail-name').textContent=r.name;
+  document.getElementById('dv-code').textContent=r.code;
+  document.getElementById('dv-oldcode').textContent=r.old;
+  document.getElementById('dv-ct').textContent=r.ct;
+  document.getElementById('dv-type').textContent=r.type;
+  document.getElementById('dv-attr').textContent=r.attr;
+  document.getElementById('dv-name').textContent=r.name;
+  document.getElementById('dv-pur').innerHTML=r.pur?'<span class="tag tag-green">可采</span>':'<span class="tag tag-gray">不可采</span>';
+  gotoPage('goods-detail');
+}
+
+function editGoods(i){
+  viewDetail(i);
+  gotoPage('goods-edit');
+}
+
+function startNonstdExist(i){
+  // jump into wizard with nonstd-exist mode, pre-fill source selection
+  const r=GD[i];
+  startWizard('nonstd');
+  // Set to exist src
+  document.querySelector('input[name="wiz-src"][value="exist"]').checked=true;
+  setWizSrc('exist');
+  // Pre-fill the exist raw card
+  document.getElementById('exist-raw-name').textContent=r.name;
+  document.getElementById('exist-raw-code').textContent=r.code;
+  document.getElementById('exist-raw-unit').textContent=r.pack.split('/')[0].replace(/[\d.]/g,'').trim()||'KG';
+  document.getElementById('exist-raw-cat').textContent=r.cat;
+  document.getElementById('exist-raw-card').style.display='';
+  // Update BOM panel raw label
+  document.getElementById('bom-raw-label').textContent=`${r.name} (${r.code})`;
+  document.getElementById('bom-main-cell').textContent=r.name;
+  document.getElementById('bom-main-unit').textContent=r.pack.split('/')[0].replace(/[\d.]/g,'').trim()||'KG';
+}
+
+// ─── SELECTION ───
+function selRow(cb,i){
+  if(cb.checked)selRows.add(i);else selRows.delete(i);
+  document.getElementById('check-all').checked=selRows.size===GD.length;
+  document.getElementById('sel-count').textContent=selRows.size;
+}
+function toggleAll(cb){
+  document.querySelectorAll('.rc').forEach((c,i)=>{c.checked=cb.checked;if(cb.checked)selRows.add(i);else selRows.delete(i);});
+  document.getElementById('sel-count').textContent=selRows.size;
+}
+
+// ─── PAGE NAV ───
+function gotoPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));
+  if(id==='goods-list'||id==='goods-detail'||id==='goods-edit'||id==='wizard'||id==='build-result') document.getElementById('nav-goods').classList.add('active');
+  if(id==='bom-list'||id==='bom-detail'||id==='bom-edit') document.getElementById('nav-bom').classList.add('active');
+  document.getElementById('main-wrap').scrollTop=0;
+}
+
+// ─── DROPDOWNS ───
+function toggleDD(id){
+  const el=document.getElementById(id);
+  const was=el.classList.contains('show');
+  document.querySelectorAll('.dropdown-menu.show').forEach(m=>m.classList.remove('show'));
+  if(!was)el.classList.add('show');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.dropdown-wrap'))document.querySelectorAll('.dropdown-menu.show').forEach(m=>m.classList.remove('show'));});
+
+// ─── DIALOGS ───
+function openDialog(id){document.getElementById(id).classList.add('show');}
+function closeDialog(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');}));
+
+function openBatch(){if(selRows.size===0){showToast('请先选择货品','warning');return;}openDialog('ov-batch');}
+function openImport(){document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));openDialog('ov-import');}
+function saveBatch(){closeDialog('ov-batch');showToast(`已批量更新 ${selRows.size} 件货品`,'success');}
+
+// ─── TABS ───
+function switchTab(pfx,idx,el){
+  el.closest('.tabs').querySelectorAll('.tab-item').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  document.querySelectorAll(`#${pfx}-${idx}`).forEach(p=>p);
+  // show/hide panes: find sibling panes
+  const panes=document.querySelectorAll(`[id^="${pfx}-"]`);
+  panes.forEach((p,i)=>p.classList.toggle('active',i===idx));
+}
+function switchLT(pfx,idx,el){
+  el.closest('.left-tab-nav').querySelectorAll('.left-tab-nav-item').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  for(let i=0;i<7;i++){const e=document.getElementById(`${pfx}-${i}`);if(e)e.style.display=i===idx?'block':'none';}
+}
+
+// ─── INLINE TABLE ROWS ───
+function addRow(tbodyId){
+  document.getElementById(tbodyId).insertAdjacentHTML('beforeend',`
+    <tr><td><select style="width:120px;height:28px;font-size:12px"><option>SG-WH01</option><option>SG-WH02</option></select></td>
+    <td><input type="number" placeholder="10" style="width:80px;height:28px;font-size:12px" min="0" max="100"></td>
+    <td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>`);
+}
+function addBomRow(){
+  document.getElementById('bom-mat-body').insertAdjacentHTML('beforeend',`
+    <tr><td><select style="width:160px;height:28px;font-size:12px"><option value="">请选择</option><option>柠檬汁</option><option>小葱</option><option>生姜</option></select></td>
+    <td><input type="number" placeholder="用量" style="width:80px;height:28px;font-size:12px" step="0.01"></td>
+    <td><span style="font-size:12px;color:var(--t3)">—</span></td>
+    <td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>`);
+}
+function addBomDlgRow(){
+  document.getElementById('bom-dlg-body').insertAdjacentHTML('beforeend',`
+    <tr><td><select style="width:180px;height:28px;font-size:12px"><option value="">请选择</option><option>三文鱼原条</option><option>柠檬汁</option><option>鳕鱼柳</option></select></td>
+    <td><input type="number" placeholder="用量" style="width:70px;height:28px;font-size:12px" step="0.01"></td>
+    <td><span style="font-size:12px;color:var(--t3)">KG</span></td>
+    <td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>`);
+}
+function saveBomDlg(){closeDialog('ov-create-bom');showToast('BOM 创建成功','success');}
+function addBomEditRow(){
+  document.getElementById('bom-edit-body').insertAdjacentHTML('beforeend',`
+    <tr><td><select style="width:160px;height:28px;font-size:12px"><option>三文鱼原条</option><option>柠檬汁</option></select></td>
+    <td><input type="number" value="1" style="width:80px;height:28px;font-size:12px"></td>
+    <td><span style="font-size:12px;color:var(--t3)">KG</span></td>
+    <td><button class="btn-text danger" onclick="this.closest('tr').remove()">删除</button></td></tr>`);
+}
+
+function toggleShelf(id,show){document.getElementById(id).style.display=show?'':'none';}
+
+// ─── WIZARD ───
+function startWizard(type){
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  wizType=type; wizSrc='new'; wizStep=0; wizExtended=false; wizRawOnly=false;
+  // Update UI elements
+  document.getElementById('wiz-title').textContent=type==='std'?'新建货品（标品）—分步向导':'非标品一站式建档';
+  document.getElementById('wiz-src-bar').style.display=type==='nonstd'?'flex':'none';
+  if(type==='std'){
+    document.getElementById('wiz-type-display').value='标品';
+    document.getElementById('wiz-attr-display').value='成品货品';  // 标品固定=成品货品
+    document.getElementById('ws-basic-notice').textContent='标品货品属性固定为「成品货品」，可采状态可设置';
+  } else {
+    document.getElementById('wiz-type-display').value='非标品';
+    document.getElementById('wiz-attr-display').value='原料货品';  // 非标品第一步固定=原料货品
+    document.getElementById('ws-basic-notice').textContent='非标品原料货品属性固定为「原料货品」，是否可采可设置';
+    document.querySelector('input[name="wiz-src"][value="new"]').checked=true;
+  }
+  renderStepBar();
+  showWizPanel(0);
+  gotoPage('wizard');
+}
+
+function setWizSrc(src){
+  wizSrc=src; wizStep=0; wizExtended=false; wizRawOnly=false;
+  renderStepBar();
+  showWizPanel(0);
+}
+
+function renderStepBar(){
+  const steps=getSteps();
+  let html='';
+  steps.forEach((s,i)=>{
+    const done=i<wizStep, active=i===wizStep;
+    html+=`<div class="step-item">
+      <div class="step-circle ${done?'done':active?'active':''}">${done?'✓':i+1}</div>
+      <div class="step-label ${done?'done':active?'active':''}">${s}</div>
+      ${i<steps.length-1?`<div class="step-line ${done?'done':''}"></div>`:''}
+    </div>`;
+  });
+  document.getElementById('step-bar').innerHTML=html;
+}
+
+function showWizPanel(step){
+  const panels=getPanels();
+  // Hide all panels
+  ['ws-basic','ws-storage','ws-bom','ws-sku','ws-exist-raw'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display='none';
+  });
+  // Show current panel（ws-basic 同时显示 ws-storage，合为一步）
+  if(panels[step]){
+    const el=document.getElementById(panels[step]);
+    if(el)el.style.display='block';
+    if(panels[step]==='ws-basic'){
+      const s=document.getElementById('ws-storage');
+      if(s)s.style.display='block';
+    }
+  }
+  // Footer buttons
+  const isFirst=step===0, isLast=step===panels.length-1;
+  // 非标品新建、仓储信息完成后出现分叉
+  const isNsNewFork=wizType==='nonstd'&&wizSrc==='new'&&!wizExtended&&isLast;
+  document.getElementById('btn-prev').style.display=isFirst?'none':'';
+  document.getElementById('btn-next').style.display=(!isLast)?'':'none';
+  document.getElementById('btn-finish-raw').style.display=isNsNewFork?'':'none';
+  document.getElementById('btn-continue-fin').style.display=isNsNewFork?'':'none';
+  const btnConfirm=document.getElementById('btn-confirm');
+  btnConfirm.style.display=(isLast&&!isNsNewFork)?'':'none';
+  btnConfirm.textContent=panels[step]==='ws-bom'?'完成货品建档':'完成建档';
+  // 进入「创建成品货品」面板时，同步原料信息到只读卡片
+  if(panels[step]==='ws-bom'){
+    let rawCode='—', rawName='—', rawUnit='—', rawShelf='是', rawDays='—', rawStorage='—';
+    if(wizType==='nonstd'&&wizSrc==='new'){
+      rawName=document.getElementById('wiz-raw-name').value||'（原料货品）';
+      rawUnit=document.getElementById('wiz-raw-unit').value||'—';
+      // 新建原料时编码系统自动生成，显示占位
+      rawCode='（建档后自动生成）';
+      const shelfYes=document.querySelector('input[name="wiz-shelf"][value="yes"]');
+      rawShelf=shelfYes&&shelfYes.checked?'是':'否';
+      const shelfDayEl=document.querySelector('#wiz-shelf-ext input[type=number]');
+      const shelfUnitEl=document.querySelector('#wiz-shelf-ext select');
+      rawDays=shelfDayEl&&shelfDayEl.value?(shelfDayEl.value+' '+(shelfUnitEl?shelfUnitEl.value:'天')):'—';
+      const storageEl=document.querySelector('#ws-storage select.iw100');
+      rawStorage=storageEl&&storageEl.value?storageEl.value:'—';
+    } else if(wizSrc==='exist'){
+      rawCode=document.getElementById('exist-raw-code')?.textContent||'—';
+      rawName=document.getElementById('exist-raw-name')?.textContent||'—';
+      rawUnit=document.getElementById('exist-raw-unit')?.textContent||'—';
+    }
+    document.getElementById('bom-raw-code').textContent=rawCode;
+    document.getElementById('bom-raw-label').textContent=rawName;
+    document.getElementById('bom-raw-unit-display').textContent=rawUnit;
+    document.getElementById('bom-raw-shelf').textContent=rawShelf;
+    document.getElementById('bom-raw-days').textContent=rawDays;
+    document.getElementById('bom-raw-storage').textContent=rawStorage;
+  }
+}
+
+function wizNext(){
+  const panels=getPanels();
+  if(wizStep<panels.length-1){
+    wizStep++;
+    renderStepBar();
+    showWizPanel(wizStep);
+  }
+}
+function wizPrev(){
+  if(wizStep>0){
+    wizStep--;
+    // 如果从 ws-bom 退回到货品信息步骤，收回扩展
+    if(wizType==='nonstd'&&wizSrc==='new'&&wizExtended&&wizStep===0){
+      wizExtended=false;
+    }
+    renderStepBar();
+    showWizPanel(wizStep);
+  }
+}
+// 完成原料建单（仅创建原料货品，不继续建成品）
+function finishRawOnly(){
+  wizRawOnly=true;
+  const rawName=document.getElementById('wiz-raw-name')?.value||'原料货品';
+  const items=[{
+    txt:`创建原料货品「${rawName}」`,
+    sub:'· 货品属性：原料货品 · BOM 关系后续可通过「新建成品货品」建立'
+  }];
+  document.getElementById('confirm-list').innerHTML=items.map(it=>`
+    <li><span class="ci">✓</span><div><div>${it.txt}</div>${it.sub?`<div class="sub">${it.sub}</div>`:''}</div></li>`).join('');
+  document.getElementById('confirm-skip-tip').style.display='none';
+  openDialog('ov-confirm-build');
+}
+// 完成并建货品（进入第三步创建成品）
+function continueToFinished(){
+  wizRawOnly=false;
+  wizExtended=true;
+  wizStep++;
+  renderStepBar();
+  showWizPanel(wizStep);
+}
+function resetWiz(){
+  wizType='std';wizSrc='new';wizStep=0;wizExtended=false;wizRawOnly=false;
+  // 重置成品块为初始1个
+  const wrap=document.getElementById('fin-blocks-wrap');
+  if(wrap){
+    const first=document.getElementById('fin-block-0');
+    wrap.innerHTML='';
+    if(first)wrap.appendChild(first);
+    // 清空第一个成品块的输入
+    first&&first.querySelectorAll('input[type=text],input[type=number]').forEach(el=>el.value='');
+  }
+}
+
+// 添加成品货品块
+let finBlockCount=1;
+function addFinishedBlock(){
+  finBlockCount++;
+  const idx=finBlockCount;
+  const wrap=document.getElementById('fin-blocks-wrap');
+  const div=document.createElement('div');
+  div.className='fin-block';
+  div.id=`fin-block-${idx}`;
+  div.style.cssText='border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:12px;position:relative';
+  div.innerHTML=`
+    <div class="flex justify-between items-center" style="margin-bottom:12px">
+      <span style="font-size:13px;font-weight:600;color:var(--t1)">成品货品 #${idx}</span>
+      <button class="btn-text danger" onclick="this.closest('.fin-block').remove();updateFinBlockNums()">删除</button>
+    </div>
+    <div class="form-row">
+      <div class="form-field w2"><label class="required">成品货品名称</label><input type="text" class="iw100 fin-name" placeholder="请输入成品名称"></div>
+      <div class="form-field w2"><label class="required">后台类目</label><select class="iw100"><option value="">请选择（默认继承原料）</option><option>水产加工品</option><option>水产原料</option><option>蔬菜</option><option>肉类</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100 fin-unit-sel"><option value="">请选择</option><option>份</option><option>盒</option><option>袋</option><option>KG</option></select></div>
+      <div class="form-field w3"><label class="required">包装规格</label><select class="iw100"><option value="">请选择</option><option>盒</option><option>袋</option><option>箱</option></select></div>
+      <div class="form-field w3"><label class="required">包装数量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field w3">
+        <label>是否可采</label>
+        <div class="flex gap8 items-center" style="height:32px">
+          <span class="tag tag-gray">不可采</span>
+          <span class="text-sm text-gray">（系统默认，不可修改）</span>
+        </div>
+      </div>
+    </div>
+    <div style="border-top:1px dashed var(--border);padding-top:12px;margin-top:4px">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:10px">仓储信息（继承自原料，可修改）</div>
+      <div class="form-row">
+        <div class="form-field w3"><label>效期管理</label><div class="radio-group"><label class="radio-option"><input type="radio" name="fin-shelf-${idx}" checked> 是</label><label class="radio-option"><input type="radio" name="fin-shelf-${idx}"> 否</label></div></div>
+        <div class="form-field w3"><label>保质期</label><div class="flex gap8"><input type="number" placeholder="—" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option></select></div></div>
+        <div class="form-field w3"><label>保存条件</label><select class="iw100"><option value="">请选择</option><option>常温</option><option>冷藏</option><option>冷冻</option><option>冷鲜</option></select></div>
+      </div>
+    </div>`;
+  wrap.appendChild(div);
+}
+function updateFinBlockNums(){
+  document.querySelectorAll('.fin-block').forEach((b,i)=>{
+    const title=b.querySelector('span[style*="font-weight:600"]');
+    if(title)title.textContent=`成品货品 #${i+1}`;
+  });
+}
+
+function syncSku(val){
+  document.getElementById('sku-name').value=val;
+}
+function updateSkuUnit(val){
+  document.getElementById('sku-unit').value=val||'—';
+}
+
+function fillExistRaw(val){
+  if(!val)return;
+  const map={r1:{name:'三文鱼原条',code:'item-20260418-0012',unit:'KG',cat:'水产原料'},r2:{name:'柠檬汁',code:'item-20260401-0008',unit:'L',cat:'调味品'},r3:{name:'鳕鱼柳',code:'item-20260310-0005',unit:'KG',cat:'水产原料'}};
+  const d=map[val];if(!d)return;
+  document.getElementById('exist-raw-name').textContent=d.name;
+  document.getElementById('exist-raw-code').textContent=d.code;
+  document.getElementById('exist-raw-unit').textContent=d.unit;
+  document.getElementById('exist-raw-cat').textContent=d.cat;
+  document.getElementById('exist-raw-card').style.display='';
+  document.getElementById('bom-raw-label').textContent=`${d.name} (${d.code})`;
+  document.getElementById('bom-main-cell').textContent=d.name;
+  document.getElementById('bom-main-unit').textContent=d.unit;
+  showToast(`已选「${d.name}」作为原料`,'success');
+}
+
+// ─── CONFIRM BUILD ───
+function openConfirmBuild(){
+  wizRawOnly=false;
+  const isStd=wizType==='std';
+  const rawName=document.getElementById('wiz-raw-name')?.value||'原料货品';
+  const finNames=[...document.querySelectorAll('.fin-name')].map(el=>el.value||'（未填写）');
+  let items=[];
+  if(isStd){
+    items=[
+      {txt:`创建货品「${rawName}」（标品 · 成品货品）`,sub:'· 是否可采取决于您的设置'},
+    ];
+  } else {
+    const rawLabel=wizSrc==='exist'?(document.getElementById('exist-raw-name')?.textContent||rawName):rawName;
+    if(wizSrc==='new') items.push({txt:`创建原料货品「${rawLabel}」`,sub:'· 货品属性：原料货品，可采'});
+    else items.push({txt:`使用已有原料「${rawLabel}」`,sub:''});
+    finNames.forEach((fn,i)=>{
+      items.push({txt:`创建成品货品 #${i+1}「${fn}」`,sub:'· 自动标记为不可采；BOM 关系由系统自动建立'});
+    });
+  }
+  document.getElementById('confirm-list').innerHTML=items.map(it=>`
+    <li><span class="ci">✓</span><div><div>${it.txt}</div>${it.sub?`<div class="sub">${it.sub}</div>`:''}</div></li>`).join('');
+  document.getElementById('confirm-skip-tip').style.display='none';
+  openDialog('ov-confirm-build');
+}
+
+function submitBuild(){
+  closeDialog('ov-confirm-build');
+  const isStd=wizType==='std';
+  const id1='item-20260424-'+String(Math.floor(Math.random()*9000)+1000);
+  const rawName=isStd?(document.getElementById('wiz-raw-name')?.value||'货品名称'):(wizSrc==='exist'?document.getElementById('exist-raw-name')?.textContent||'原料':(document.getElementById('wiz-raw-name')?.value||'原料'));
+  const finNames=[...document.querySelectorAll('.fin-name')].map(el=>el.value||'成品货品');
+  const resultCard=document.querySelector('.result-card');
+  resultCard.querySelectorAll('.dyn-result').forEach(el=>el.remove());
+  // 隐藏所有固定行，全部用动态渲染
+  ['res-raw-row','res-arrow1','res-fin-row','res-std-row','res-arrow2','res-sku-row'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  if(isStd){
+    // 标品：仅建档货品
+    document.getElementById('res-std-row').style.display='';
+    document.getElementById('res-std').textContent=`${id1} | ${rawName} | 可采`;
+  } else if(wizRawOnly){
+    // 仅建原料货品
+    document.getElementById('res-raw-row').style.display='';
+    document.getElementById('res-raw').textContent=`${id1} | ${rawName} | KG | 可采`;
+    const tip=document.createElement('div');
+    tip.className='dyn-result';tip.style.cssText='font-size:12px;color:var(--t3);margin-top:8px;padding-left:8px';
+    tip.textContent='💡 后续可通过货品列表「新建成品货品」继续建立 BOM 关系';
+    resultCard.appendChild(tip);
+  } else {
+    // 原料 + 成品货品
+    document.getElementById('res-raw-row').style.display=wizSrc==='new'?'':'none';
+    document.getElementById('res-arrow1').style.display=wizSrc==='new'?'':'none';
+    if(wizSrc==='new')document.getElementById('res-raw').textContent=`${id1} | ${rawName} | KG | 可采`;
+    finNames.forEach((fn,i)=>{
+      const finId='item-20260424-'+String(Math.floor(Math.random()*9000)+1000);
+      const arrowDiv=document.createElement('div');
+      arrowDiv.className='result-arrow dyn-result';
+      arrowDiv.textContent='↓ 系统自动建立 BOM';
+      const finDiv=document.createElement('div');
+      finDiv.className='result-row dyn-result';
+      finDiv.innerHTML=`<div class="result-row-icon">✓</div><div><div style="font-weight:500;margin-bottom:4px">成品货品 #${i+1}</div><div class="text-sm text-gray">${finId} | ${fn} | 份 | 不可采</div></div>`;
+      resultCard.appendChild(arrowDiv);
+      resultCard.appendChild(finDiv);
+    });
+  }
+  gotoPage('build-result');
+}
+
+// ─── TOAST ───
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show '+(type||'');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3000);
+}
+
+// ─── INIT ───
+renderGoods();
+renderBom();
+// Set default sidebar active
+document.getElementById('nav-goods').classList.add('active');
+</script>
+</body>
+</html>
