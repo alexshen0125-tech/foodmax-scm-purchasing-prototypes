@@ -562,10 +562,8 @@ label{font-size:13px;color:var(--t2)}
             <div class="form-field w2"><label class="required">后台类目</label><select class="iw100" id="wiz-raw-cat"><option value="">请选择类目</option><option>水产原料</option><option>水产加工品</option><option>蔬菜</option><option>肉类</option><option>调味品</option></select></div>
           </div>
           <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">库存单位</div>
-          <div class="form-row">
-            <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="syncRawNetUnit(this.value)"><option value="">请选择</option><option>KG</option><option>g</option></select></div>
-            <div class="form-field w3"><label class="required">净含量</label><input type="number" value="1" class="iw100 readonly-field" readonly></div>
-            <div class="form-field w3"><label class="required">净含量单位</label><input type="text" id="wiz-raw-net-unit" class="iw100 readonly-field" readonly placeholder="同计量单位"></div>
+          <div class="form-row" id="wiz-stock-row">
+            <!-- 由 setStockUnitFields(wizType) 动态注入：std→成品规则；nonstd→原料规则 -->
           </div>
           <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（选填）</span></div>
           <div class="form-row">
@@ -1291,6 +1289,23 @@ function syncRawNetUnit(val){
   const t=document.getElementById('wiz-raw-net-unit');
   if(t) t.value=val||'';
 }
+function setStockUnitFields(type){
+  const row=document.getElementById('wiz-stock-row');
+  if(!row) return;
+  if(type==='std'){
+    // 标品 → 货品属性=成品货品 → 成品规则
+    row.innerHTML=`
+      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+      <div class="form-field w3"><label class="required">净含量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
+      <div class="form-field w3"><label class="required">净含量单位</label><select class="iw100" id="wiz-raw-net-unit"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>`;
+  } else {
+    // 非标品 → 货品属性=原料货品 → 原料规则
+    row.innerHTML=`
+      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="syncRawNetUnit(this.value)"><option value="">请选择</option><option>KG</option><option>g</option></select></div>
+      <div class="form-field w3"><label class="required">净含量</label><input type="number" value="1" class="iw100 readonly-field" readonly></div>
+      <div class="form-field w3"><label class="required">净含量单位</label><input type="text" id="wiz-raw-net-unit" class="iw100 readonly-field" readonly placeholder="同计量单位"></div>`;
+  }
+}
 function addRow(tbodyId){
   document.getElementById(tbodyId).insertAdjacentHTML('beforeend',`
     <tr><td><select style="width:120px;height:28px;font-size:12px"><option>SG-WH01</option><option>SG-WH02</option></select></td>
@@ -1339,6 +1354,7 @@ function startWizard(type){
     document.getElementById('ws-basic-notice').textContent='非标品原料货品属性固定为「原料货品」，是否可采可设置';
     document.querySelector('input[name="wiz-src"][value="new"]').checked=true;
   }
+  setStockUnitFields(type);
   renderStepBar();
   showWizPanel(0);
   gotoPage('wizard');
