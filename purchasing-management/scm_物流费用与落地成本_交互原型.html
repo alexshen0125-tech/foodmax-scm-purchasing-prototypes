@@ -1,6 +1,11 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.10
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.11
      日期：2026-05-13
      变更：
+     - 【v1.11】重组左侧菜单结构：一级"跨境物流费"，二级 4 项
+       · 物流商管理（pg-vendor-list）
+       · 费用单管理（pg-cost-list — 新建/详情通过列表进入）
+       · 结算单管理（pg-logistics-settlement — 详情通过列表进入）
+       · 采购单详情页（pg-landed-cost）
      - 【v1.10】新增结算单详情页（pg-settlement-detail），参考供应商结算详情页结构：
        · 头部：单号、状态徽章、状态相关操作按钮（审核通过/驳回/确认付款）
        · 状态时间线：创建 → 待审核 → 待付款 → 已付款（含驳回旁支）
@@ -69,7 +74,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.10</title>
+  <title>物流费用与落地成本 — 交互原型 v1.11</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -291,21 +296,12 @@
 
 <!-- ═══════════════════ Sidebar ═══════════════════ -->
 <nav class="sidebar">
-  <div class="sidebar-logo">🚢 SCM 物流费用</div>
+  <div class="sidebar-logo">🚢 跨境物流费</div>
 
-  <div class="sidebar-group">物流商管理</div>
-  <div class="sidebar-item active" data-page="pg-vendor-list">📋 物流商列表</div>
-
-  <div class="sidebar-group">物流费用</div>
-  <div class="sidebar-item" data-page="pg-cost-list">📦 费用单列表</div>
-  <div class="sidebar-item" data-page="pg-cost-create">➕ 新建费用单</div>
-  <div class="sidebar-item" data-page="pg-cost-detail">📄 费用单详情</div>
-
-  <div class="sidebar-group">成本分析</div>
-  <div class="sidebar-item" data-page="pg-landed-cost">📊 落地成本</div>
-
-  <div class="sidebar-group">对账结算</div>
-  <div class="sidebar-item" data-page="pg-logistics-settlement">💰 物流费对账 <span class="sidebar-badge">3</span></div>
+  <div class="sidebar-item active" data-page="pg-vendor-list">🏢 物流商管理</div>
+  <div class="sidebar-item" data-page="pg-cost-list">📦 费用单管理</div>
+  <div class="sidebar-item" data-page="pg-logistics-settlement">💰 结算单管理 <span class="sidebar-badge">5</span></div>
+  <div class="sidebar-item" data-page="pg-landed-cost">📋 采购单详情页</div>
 </nav>
 
 <!-- ═══════════════════ Main Content ═══════════════════ -->
