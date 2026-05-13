@@ -1,6 +1,17 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.9
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.10
      日期：2026-05-13
      变更：
+     - 【v1.10】新增结算单详情页（pg-settlement-detail），参考供应商结算详情页结构：
+       · 头部：单号、状态徽章、状态相关操作按钮（审核通过/驳回/确认付款）
+       · 状态时间线：创建 → 待审核 → 待付款 → 已付款（含驳回旁支）
+       · 核心信息：物流商、结算金额、币种、关联费用单、创建人、支付方式、付款账户
+       · 4 个 Tab：关联费用单 / 发票信息 / 付款记录 / 操作日志
+       · 关联费用单 Tab：列表展示关联费用单 + 实际金额 + 录入完成时间
+       · 发票信息 Tab：金额校验、发票号/税号/税率/含税金额、附件预览
+       · 付款记录 Tab：付款单列表（待审核时为空状态）
+       · 操作日志 Tab：状态变更轨迹
+       · 驳回流程：内嵌驳回原因表单（500 字限制）
+     - 【v1.10】结算单列表的「详情」链接全部导向新详情页
      - 【v1.9】结算单状态机简化为 4 状态：待审核 → 待付款 → 已付款，旁支「审核拒绝」
      - 【v1.9】去掉中间状态（已审批·待开票、已开票·待付款），合并为「待付款」
      - 【v1.9】列表加"审核拒绝"示例 + 操作改为"审核通过/驳回"和"确认付款"
@@ -58,7 +69,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.9</title>
+  <title>物流费用与落地成本 — 交互原型 v1.10</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -443,7 +454,7 @@
             <td>按重量</td>
             <td><span class="badge badge-blue">待对账</span></td>
             <td>2026-04-12 15:20</td>
-            <td><span class="link">详情</span></td>
+            <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
           </tr>
           <tr>
             <td><span class="link">LC-20260411-001</span></td>
@@ -467,7 +478,7 @@
             <td>按金额</td>
             <td><span class="badge badge-green">待付款</span></td>
             <td>2026-04-10 14:00</td>
-            <td><span class="link">详情</span></td>
+            <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
           </tr>
           <tr>
             <td><span class="link">LC-20260410-001</span></td>
@@ -479,7 +490,7 @@
             <td>按金额</td>
             <td><span class="badge badge-purple">已付款</span></td>
             <td>2026-04-10 11:00</td>
-            <td><span class="link">详情</span></td>
+            <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
           </tr>
         </tbody>
       </table>
@@ -1419,7 +1430,7 @@
               <td>SGD 5,008.40</td>
               <td><span class="badge badge-blue">待审核</span></td>
               <td>2026-04-13 15:00</td>
-              <td><span class="link">审核通过</span> · <span class="link">驳回</span> · <span class="link">详情</span></td>
+              <td><span class="link">审核通过</span> · <span class="link">驳回</span> · <span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260412-001</span></td>
@@ -1429,7 +1440,7 @@
               <td>SGD 10,418.10</td>
               <td><span class="badge badge-amber">待付款</span></td>
               <td>2026-04-12 16:30</td>
-              <td><span class="link">确认付款</span> · <span class="link">详情</span></td>
+              <td><span class="link">确认付款</span> · <span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260411-DIFF</span></td>
@@ -1439,7 +1450,7 @@
               <td>SGD 67.65</td>
               <td><span class="badge badge-amber">待付款</span></td>
               <td>2026-04-11 09:20</td>
-              <td><span class="link">确认付款</span> · <span class="link">详情</span></td>
+              <td><span class="link">确认付款</span> · <span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260411-001</span></td>
@@ -1449,7 +1460,7 @@
               <td>SGD 1,200.00</td>
               <td><span class="badge badge-red" title="发票金额与实际不符，已驳回">审核拒绝</span></td>
               <td>2026-04-11 10:00</td>
-              <td><span class="link">查看驳回原因</span> · <span class="link">详情</span></td>
+              <td><span class="link">查看驳回原因</span> · <span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260410-001</span></td>
@@ -1459,11 +1470,253 @@
               <td>SGD 4,329.60</td>
               <td><span class="badge badge-purple">已付款</span></td>
               <td>2026-04-10 11:30</td>
-              <td><span class="link">详情</span></td>
+              <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
           </tbody>
         </table>
         <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 5 条</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: 结算单详情 ==================== -->
+<div class="page" id="pg-settlement-detail">
+  <!-- 返回 + 标题 -->
+  <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12.5px">
+    <span class="link" onclick="navTo('pg-logistics-settlement')">← 返回结算单据</span>
+    <span class="text-muted">/</span>
+    <span class="text-muted">结算单详情</span>
+  </div>
+
+  <!-- 头部卡片 -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div style="display:flex;align-items:center;gap:12px">
+        <h3>LS-20260413-001</h3>
+        <span class="badge badge-blue" id="settle-status-badge">待审核</span>
+      </div>
+      <div style="display:flex;gap:8px" id="settle-actions">
+        <button class="btn btn-outline btn-sm" onclick="onSettleReject()">↩️ 驳回</button>
+        <button class="btn btn-primary btn-sm" onclick="onSettleApprove()">✓ 审核通过</button>
+        <button class="btn btn-outline btn-sm">📥 导出</button>
+      </div>
+    </div>
+
+    <!-- 状态时间线 -->
+    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;background:#fafbfc">
+      <div style="display:flex;align-items:center;gap:0;font-size:12px" id="settle-timeline">
+        <span class="badge badge-green" style="font-size:12px;padding:4px 10px">✓ 创建</span>
+        <span style="flex:1;max-width:80px;height:2px;background:#16a34a;margin:0 8px"></span>
+        <span class="badge badge-blue" id="t-step-1" style="font-size:12px;padding:4px 10px">⏳ 待审核</span>
+        <span style="flex:1;max-width:80px;height:2px;background:#e2e8f0;margin:0 8px"></span>
+        <span class="badge badge-gray" id="t-step-2" style="font-size:12px;padding:4px 10px">待付款</span>
+        <span style="flex:1;max-width:80px;height:2px;background:#e2e8f0;margin:0 8px"></span>
+        <span class="badge badge-gray" id="t-step-3" style="font-size:12px;padding:4px 10px">已付款</span>
+        <span style="margin-left:auto;color:#94a3b8;font-size:11.5px">创建时间 2026-04-13 15:00</span>
+      </div>
+    </div>
+
+    <!-- 核心信息区 -->
+    <div class="card-body">
+      <div class="form-row" style="margin-bottom:0">
+        <div>
+          <table style="font-size:12.5px;border:none">
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">物流商</td><td style="font-weight:600;border:none">顺丰国际货运 (LV-001)</td></tr>
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">结算金额</td><td style="font-weight:700;color:#0c4a6e;border:none">USD 3,700.00 <span class="text-muted" style="font-weight:400;font-size:11.5px">≈ SGD 5,008.40 (锁定汇率 1.3536)</span></td></tr>
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">结算币种</td><td style="border:none">USD</td></tr>
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">关联费用单</td><td style="border:none">2 张（LC-20260402-001、LC-20260405-001）</td></tr>
+          </table>
+        </div>
+        <div>
+          <table style="font-size:12.5px;border:none">
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">创建人</td><td style="border:none">Alex 沈亮</td></tr>
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">创建时间</td><td style="border:none">2026-04-13 15:00</td></tr>
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">支付方式</td><td style="border:none">对公支付</td></tr>
+            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">付款账户</td><td style="border:none">招商银行 622202********1234</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card">
+    <div class="card-body" style="padding:16px 20px 0">
+      <div class="tabs" style="margin-bottom:0">
+        <div class="tab active" onclick="switchSettleDetailTab('order', this)">📋 关联费用单 (2)</div>
+        <div class="tab" onclick="switchSettleDetailTab('invoice', this)">🧾 发票信息 (1)</div>
+        <div class="tab" onclick="switchSettleDetailTab('payment', this)">💰 付款记录 (0)</div>
+        <div class="tab" onclick="switchSettleDetailTab('log', this)">📜 操作日志</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: 关联费用单 -->
+  <div class="card" style="margin-top:16px" id="tab-order">
+    <div class="card-header">
+      <h3>关联费用单</h3>
+      <span class="text-muted" style="font-size:12px">合计实际金额 USD 3,700.00</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>费用单号</th>
+            <th>关联 PO</th>
+            <th>费用摘要</th>
+            <th class="text-right">实际金额</th>
+            <th class="text-right">本位币(SGD)</th>
+            <th>实际录入完成时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="link" onclick="navTo('pg-cost-detail')">LC-20260402-001</span></td>
+            <td>PO-2026-0381</td>
+            <td>海运 + 报关</td>
+            <td class="text-right" style="font-weight:600">USD 2,000.00</td>
+            <td class="text-right">SGD 2,707.20</td>
+            <td>2026-04-12 18:00</td>
+            <td><span class="link" onclick="navTo('pg-cost-detail')">详情</span></td>
+          </tr>
+          <tr>
+            <td><span class="link">LC-20260405-001</span></td>
+            <td>PO-2026-0385、PO-2026-0386</td>
+            <td>海运 + 报关 + 港口费</td>
+            <td class="text-right" style="font-weight:600">USD 1,700.00</td>
+            <td class="text-right">SGD 2,301.12</td>
+            <td>2026-04-13 09:30</td>
+            <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
+          </tr>
+          <tr style="background:#f8fafc;font-weight:700">
+            <td colspan="3">合计</td>
+            <td class="text-right">USD 3,700.00</td>
+            <td class="text-right">SGD 5,008.32</td>
+            <td colspan="2"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: 发票信息 -->
+  <div class="card" style="margin-top:16px;display:none" id="tab-invoice">
+    <div class="card-header">
+      <h3>发票信息</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm">📎 重新上传</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <!-- 金额校验提示 -->
+      <div class="hint-card info" style="margin-bottom:14px;background:#dcfce7;border-color:#86efac;color:#15803d">
+        <span class="hint-icon">✅</span>
+        <div>
+          <strong>金额校验通过：</strong>发票金额 USD 3,700.00 = 关联费用单实际合计 USD 3,700.00（差异 0）
+        </div>
+      </div>
+
+      <!-- 发票详情 -->
+      <table>
+        <thead>
+          <tr>
+            <th>发票号</th>
+            <th>开票方</th>
+            <th>税号</th>
+            <th>税率</th>
+            <th class="text-right">金额（含税）</th>
+            <th class="text-right">税额</th>
+            <th class="text-right">金额（不含税）</th>
+            <th>开票日期</th>
+            <th>附件</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="link">INV-LV001-202604-A001</span></td>
+            <td>顺丰国际货运（深圳）有限公司</td>
+            <td>91440300****1234</td>
+            <td>6%</td>
+            <td class="text-right" style="font-weight:600">USD 3,700.00</td>
+            <td class="text-right">USD 209.43</td>
+            <td class="text-right">USD 3,490.57</td>
+            <td>2026-04-13</td>
+            <td><span class="link">📄 INV-001.pdf</span> · <span class="link">📷 预览</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: 付款记录 -->
+  <div class="card" style="margin-top:16px;display:none" id="tab-payment">
+    <div class="card-header">
+      <h3>付款记录</h3>
+      <button class="btn btn-primary btn-sm" disabled title="待审核通过后可登记付款">+ 登记付款</button>
+    </div>
+    <div class="card-body">
+      <div class="empty-state">
+        <div style="font-size:36px;margin-bottom:8px">💰</div>
+        <p>暂无付款记录</p>
+        <p style="font-size:11.5px;margin-top:4px">结算单审核通过后，财务在「待付款」状态登记付款</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: 操作日志 -->
+  <div class="card" style="margin-top:16px;display:none" id="tab-log">
+    <div class="card-header">
+      <h3>操作日志</h3>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>操作人</th>
+            <th>操作</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-04-13 15:00</td>
+            <td>Alex 沈亮</td>
+            <td><span class="badge badge-blue">创建结算单</span></td>
+            <td>合并 2 张费用单 · 上传发票 INV-LV001-202604-A001 · 金额校验通过</td>
+          </tr>
+          <tr>
+            <td>2026-04-13 09:30</td>
+            <td>Alex 沈亮</td>
+            <td><span class="badge badge-green">录入实际</span></td>
+            <td>LC-20260405-001 实际金额录入完毕</td>
+          </tr>
+          <tr>
+            <td>2026-04-12 18:00</td>
+            <td>Alex 沈亮</td>
+            <td><span class="badge badge-green">录入实际</span></td>
+            <td>LC-20260402-001 实际金额录入完毕</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 驳回弹窗（隐藏） -->
+  <div id="reject-form" style="display:none;margin-top:16px" class="card">
+    <div class="card-header">
+      <h3>填写驳回原因</h3>
+    </div>
+    <div class="card-body">
+      <div class="form-group">
+        <div class="form-label"><span class="required">*</span> 驳回原因（500字以内）</div>
+        <textarea rows="3" id="reject-reason" placeholder="如：发票金额与实际不符，发票号 INV-xxx 金额比实际合计少 USD 50，请重新核对"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="document.getElementById('reject-form').style.display='none'">取消</button>
+        <button class="btn btn-danger" onclick="confirmReject()">确认驳回</button>
       </div>
     </div>
   </div>
@@ -2283,6 +2536,89 @@ function onUploadInvoice(e) {
     title: '上传发票',
     msg: '请选择发票文件。<br/><span class="text-muted">支持 PDF / JPG / PNG，单文件 ≤ 10MB。</span>',
     onOk: () => showToast('success', '发票已上传', '系统将自动识别开票金额并匹配结算单')
+  });
+}
+
+/* ════════ 结算单详情页 ════════ */
+function switchSettleDetailTab(target, el) {
+  el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['order', 'invoice', 'payment', 'log'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === target ? 'block' : 'none';
+  });
+}
+
+function onSettleApprove() {
+  showConfirm({
+    icon: '✓',
+    title: '审核通过',
+    msg: '确认审核通过本结算单？<br/>状态将推进至「<strong>待付款</strong>」，等待财务付款。<br/><span class="text-muted">关联费用单状态保持「待付款」不变。</span>',
+    onOk: () => {
+      const badge = document.getElementById('settle-status-badge');
+      badge.className = 'badge badge-amber';
+      badge.textContent = '待付款';
+      // 时间线推进
+      document.getElementById('t-step-1').className = 'badge badge-green';
+      document.getElementById('t-step-1').style.fontSize = '12px';
+      document.getElementById('t-step-1').style.padding = '4px 10px';
+      document.getElementById('t-step-1').textContent = '✓ 已审核';
+      document.getElementById('t-step-2').className = 'badge badge-amber';
+      document.getElementById('t-step-2').style.fontSize = '12px';
+      document.getElementById('t-step-2').style.padding = '4px 10px';
+      document.getElementById('t-step-2').textContent = '⏳ 待付款';
+      // 按钮变更
+      document.getElementById('settle-actions').innerHTML = `
+        <button class="btn btn-primary btn-sm" onclick="onSettlePay()">💰 确认付款</button>
+        <button class="btn btn-outline btn-sm">📥 导出</button>
+      `;
+      showToast('success', '审核通过', '结算单进入「待付款」状态，请财务确认付款');
+    }
+  });
+}
+
+function onSettleReject() {
+  document.getElementById('reject-form').style.display = 'block';
+  document.getElementById('reject-reason').focus();
+}
+
+function confirmReject() {
+  const reason = document.getElementById('reject-reason').value.trim();
+  if (!reason) {
+    showToast('error', '请填写驳回原因');
+    return;
+  }
+  if (reason.length > 500) {
+    showToast('error', '驳回原因不超过 500 字', `当前 ${reason.length} 字`);
+    return;
+  }
+  document.getElementById('reject-form').style.display = 'none';
+  const badge = document.getElementById('settle-status-badge');
+  badge.className = 'badge badge-red';
+  badge.textContent = '审核拒绝';
+  document.getElementById('settle-actions').innerHTML = `
+    <button class="btn btn-outline btn-sm" disabled title="已驳回">已驳回 · 待重新提交</button>
+  `;
+  showToast('success', '已驳回', '驳回原因已记录，关联费用单需重新提交发票');
+}
+
+function onSettlePay() {
+  showConfirm({
+    icon: '💰',
+    title: '确认付款',
+    msg: '确认本结算单已完成付款？<br/>状态将推进至「<strong>已付款</strong>」，关联费用单同步推进至「已付款」。',
+    onOk: () => {
+      const badge = document.getElementById('settle-status-badge');
+      badge.className = 'badge badge-purple';
+      badge.textContent = '已付款';
+      document.getElementById('t-step-2').className = 'badge badge-green';
+      document.getElementById('t-step-2').textContent = '✓ 已付款';
+      document.getElementById('t-step-3').className = 'badge badge-green';
+      document.getElementById('t-step-3').style.fontSize = '12px';
+      document.getElementById('t-step-3').style.padding = '4px 10px';
+      document.getElementById('t-step-3').textContent = '✓ 完成';
+      document.getElementById('settle-actions').innerHTML = `<button class="btn btn-outline btn-sm">📥 导出</button>`;
+      showToast('success', '付款已完成', '关联费用单已同步推进至「已付款」');
+    }
   });
 }
 
