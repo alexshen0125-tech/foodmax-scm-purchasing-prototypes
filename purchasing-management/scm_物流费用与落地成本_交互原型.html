@@ -1,6 +1,15 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.12
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.13
      日期：2026-05-13
      变更：
+     - 【v1.13】按技术评审反馈修订（12 项业务决策）：
+       · 删除「保存草稿」「提交对账」按钮，统一为「创建费用单」（自动推进状态）
+       · 删除差异 ±10% 审批相关元素（一期不需要审批）
+       · 金额调整单合并状态：定稿同时入账，徽章改"已生成 · 已入账"
+       · 费用单管理列表顶部加 PO 入库前置规则提示
+       · 详情页费用明细加"📌 费用项不可增删"徽章（待对账状态约束）
+       · 多选合并发票文案：支持上传多张，校验"发票总额 = 费用单实际合计"
+       · 结算单驳回 toast：明确告知费用单回退至「待对账」
+       · 列表 LC-20260411-001 文案改"等待 PO 入库"，体现 BR-LC-19
      - 【v1.12】交互闭环自检 — 修复约 30 处缺失的按钮/链接交互
      - 【v1.12】删除「加入结算单」按钮（仅保留「上传发票创建结算单」+「导出」）
      - 【v1.12】所有 LC-xxx / LS-xxx / PO-xxx 单号链接 → 跳对应详情页
@@ -84,7 +93,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.12</title>
+  <title>物流费用与落地成本 — 交互原型 v1.13</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -398,6 +407,14 @@
       <button class="btn btn-primary" onclick="navTo('pg-cost-create')">+ 新建费用单</button>
     </div>
     <div class="card-body">
+      <div class="hint-card" style="margin-bottom:14px;font-size:12px">
+        <span class="hint-icon">⚠️</span>
+        <div>
+          <strong>入库前置规则（BR-LC-19）：</strong>PO 入库前必须先创建物流费用单（可全为预估金额）。
+          PO 准备入库时若未关联费用单，系统将拦截入库操作并提示"请先创建物流费用单"。
+        </div>
+      </div>
+
       <div class="filter-bar">
         <div class="form-group"><div class="form-label">费用单号</div><input type="text" placeholder="LC-..." /></div>
         <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
@@ -466,11 +483,11 @@
             <td><span class="link">LC-20260411-001</span></td>
             <td>顺丰国际货运</td>
             <td><span class="link">1 张</span></td>
-            <td>空运 (PO 未入库，无法录入实际)</td>
+            <td>空运（PO 准备入库，已预先创建费用单）</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 1,200.00</td>
             <td class="text-right text-muted" style="background:#f0fdf4">—</td>
             <td>按金额</td>
-            <td><span class="badge badge-amber" title="PO 入库后才可录入实际">待录入</span></td>
+            <td><span class="badge badge-amber" title="PO 入库后才可录入实际">待录入 · 等待 PO 入库</span></td>
             <td>2026-04-11 09:15</td>
             <td><span class="link">编辑预估</span> · <span class="link btn-danger btn-sm" style="border:none;padding:0">删除</span></td>
           </tr>
@@ -718,8 +735,7 @@
           <button class="btn btn-outline" onclick="goStep1Confirm()">← 上一步</button>
           <div style="display:flex;gap:8px">
             <button class="btn btn-outline" onclick="onPreviewAlloc()">👁 预览分摊</button>
-            <button class="btn btn-outline" onclick="onSaveDraft()">保存草稿</button>
-            <button class="btn btn-primary" onclick="onSubmitCost()">提交对账</button>
+            <button class="btn btn-primary" onclick="onSubmitCost()">创建费用单</button>
           </div>
         </div>
       </div>
@@ -831,6 +847,7 @@
       <div style="display:flex;align-items:center;gap:8px">
         <h3>费用明细（每项横向：预估 → 实际 → 差异）</h3>
         <span class="badge badge-gray" title="PO 已入库，预估金额已锁定">🔒 预估已锁定</span>
+        <span class="badge badge-gray" title="待对账状态：仅可改实际/备注/发票号，费用项不可增删">📌 费用项不可增删</span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="copyEstToActDetail()" title="把所有待录入项的实际金额填为预估值">⚡ 待录入项：实际同预估</button>
@@ -932,7 +949,7 @@
     <div class="card-header">
       <div style="display:flex;align-items:center;gap:12px">
         <h3>金额调整单 LC-ADJ-20260513-001</h3>
-        <span class="badge badge-green">✅ 已定稿</span>
+        <span class="badge badge-green">✅ 已生成 · 已入账</span>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-outline btn-sm">📥 导出</button>
@@ -1312,8 +1329,8 @@
         <div class="hint-card info" style="margin-bottom:12px;font-size:11.5px">
           <span class="hint-icon">ℹ️</span>
           <div>
-            <strong>多选规则：</strong>支持多选「<strong>同一物流商 + 同一币种</strong>」的费用单合并上传发票，
-            创建结算单；不同物流商或不同币种的费用单不可合并，系统自动禁用互斥项。
+            <strong>多选规则：</strong>支持多选「<strong>同一物流商 + 同一币种</strong>」的费用单合并上传发票（不同物流商/币种自动禁选）。
+            <strong>发票数量不限</strong>，发票总金额 = 已选费用单实际合计即可，系统校验通过自动创建结算单。
           </div>
         </div>
 
@@ -1925,7 +1942,7 @@
         <table style="font-size:12px">
           <tbody>
             <tr><td style="border:none;padding:4px 0;color:#64748b">本笔差异</td><td style="border:none;padding:4px 0;text-align:right" id="diff-amount" class="diff-negative">USD -20.00 (-6.7%)</td></tr>
-            <tr><td style="border:none;padding:4px 0;color:#64748b">阈值检查</td><td style="border:none;padding:4px 0;text-align:right">在 ±10% 范围内，无需主管审批</td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">说明</td><td style="border:none;padding:4px 0;text-align:right">所有项实际录完后自动生成金额调整单并入账（无需审批）</td></tr>
           </tbody>
         </table>
       </div>
@@ -2412,13 +2429,7 @@ function onPreviewAlloc() {
   showModal('modal-alloc-preview');
 }
 
-/* 【按钮】保存草稿 */
-function onSaveDraft() {
-  if (!validateFeeTable()) return;
-  showToast('success', '草稿已保存', '单号 LC-20260513-003，可在费用单列表查看');
-}
-
-/* 【按钮】创建费用单（提交后进入"待录入"状态） */
+/* 【按钮】创建费用单（创建后系统自动按实际录入情况推进状态） */
 function onSubmitCost() {
   if (!validateFeeTable()) return;
   // 检测是否有"实际待录入"项（即实际为空）
@@ -2433,11 +2444,12 @@ function onSubmitCost() {
       title: `创建费用单 - 含 ${pendingCount} 项实际待录入`,
       msg: `<strong>${pendingCount} 项</strong>实际金额尚未录入，费用单将进入「<strong>待录入</strong>」状态。<br/>
         ⚠️ <strong>实际费用必须等到所有关联 PO 完成入库后才可录入</strong>。<br/>
-        系统按<strong>预估金额</strong>暂估入库分摊；预估金额在任一 PO 入库后自动锁定。`,
+        系统按<strong>预估金额</strong>暂估入库分摊；预估金额在任一 PO 入库后自动锁定。<br/>
+        <span class="text-muted">实际全部录入后系统自动推进至「待对账」并生成金额调整单。</span>`,
       onOk: () => showToast('success', '费用单已创建', `单号 LC-20260513-003 · 状态：待录入 · 等待 PO 入库后录入实际`)
     });
   } else {
-    showToast('success', '费用单已创建', '单号 LC-20260513-003 · 状态：待对账（实际已全部录入）');
+    showToast('success', '费用单已创建', '单号 LC-20260513-003 · 实际已全录入，系统自动推进至「待对账」');
   }
 }
 
@@ -2723,7 +2735,7 @@ function confirmReject() {
   document.getElementById('settle-actions').innerHTML = `
     <button class="btn btn-outline btn-sm" disabled title="已驳回">已驳回 · 待重新提交</button>
   `;
-  showToast('success', '已驳回', '驳回原因已记录，关联费用单需重新提交发票');
+  showToast('success', '已驳回', '驳回原因已记录，关联费用单状态自动回退至「待对账」，可重新上传发票创建新结算单');
 }
 
 function onSettlePay() {
@@ -2841,8 +2853,8 @@ function onUploadCreateSettle() {
     title: `上传发票创建结算单`,
     msg: `<strong>合并 ${selected.length} 张费用单</strong>（${vendor} / ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}）<br/>
       <strong>步骤：</strong><br/>
-      1. 上传发票文件（PDF / JPG / PNG ≤ 10MB）<br/>
-      2. 系统校验：发票金额 = ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}<br/>
+      1. 上传发票文件（PDF / JPG / PNG ≤ 10MB），<strong>支持上传多张</strong><br/>
+      2. 系统校验：<strong>发票总金额 = 已选费用单实际合计 ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}</strong>（金额对得上即可，不限发票数量）<br/>
       3. 创建结算单 <strong>LS-${new Date().getTime().toString().slice(-8)}</strong><br/>
       4. 关联费用单状态推进至「待付款」<br/>
       5. 结算单进入「结算单据」Tab，状态：待审核`,
@@ -2910,7 +2922,7 @@ function simulateAllActualEntered() {
   const btn = document.getElementById('btn-upload-invoice');
   btn.disabled = false;
   btn.removeAttribute('title');
-  showToast('success', '保险费实际 USD 280 已录入', '总差异 +USD 30 已生成调整单，状态：待对账，可上传发票');
+  showToast('success', '保险费实际 USD 280 已录入', '总差异 +USD 30 → 自动生成并入账调整单 LC-ADJ-xxx；费用单状态自动推进至「待对账」，可上传发票');
   // 滚动到调整单
   document.getElementById('adj-card').scrollIntoView({behavior:'smooth', block:'center'});
 }
