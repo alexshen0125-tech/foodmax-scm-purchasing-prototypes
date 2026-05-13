@@ -1,6 +1,10 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.3
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.4
      日期：2026-05-13
      变更：
+     - 【v1.4】差异调整改为 PO 维度：总差异 = Σ实际 - Σ预估，按 PO 占比分摊，再按"在库/已出库"拆分
+     - 【v1.4】"差异调整记录"卡片改为"金额调整单"（独立单据，可定稿）
+     - 【v1.4】实际录入弹窗：预览本笔差异 + 录入后金额调整单（PO 维度）
+     - 【v1.4】SKU 分摊表底部澄清：SKU 维度为展示口径，正式差异处理走 PO 维度调整单
      - 【v1.3】数据模型重构：预估/实际是同一笔费用的两个时点（入库前估算 / 入库后实际），不再是横向加和的两类
      - 【v1.3】每行费用横向有"预估金额 / 实际金额 / 差异"三列；差异 = 实际 - 预估
      - 【v1.3】SKU 分摊表删除"合计分摊=实际+预估"错误聚合，改为"预估分摊 / 实际分摊 / 差异"
@@ -30,7 +34,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.3</title>
+  <title>物流费用与落地成本 — 交互原型 v1.4</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -791,39 +795,149 @@
     </div>
   </div>
 
-  <!-- 差异调整记录（仅预估转实际后展示） -->
+  <!-- 金额调整单（PO 维度，总差异按 PO 占比分摊） -->
   <div class="card" style="margin-bottom:16px">
     <div class="card-header">
-      <h3>差异调整记录</h3>
-      <span class="text-muted" style="font-size:12px">实际费用与预估差异的拆分轨迹</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <h3>金额调整单 LC-ADJ-20260513-001</h3>
+        <span class="badge badge-amber">⏳ 暂态（待 1 项实际录入后定稿）</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" disabled title="所有项实际录入后可定稿">📌 定稿调整单</button>
+      </div>
     </div>
-    <div class="card-body" style="padding:0">
+    <div class="card-body">
+      <!-- 总差异概览 -->
+      <div style="background:#f8fafc;border-radius:8px;padding:14px 18px;margin-bottom:14px;display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">预估合计</div>
+          <div style="font-size:14px;font-weight:600;color:#92400e">USD 3,050.00</div>
+        </div>
+        <div style="color:#94a3b8;font-size:18px;align-self:center">→</div>
+        <div>
+          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">实际合计（已录入）</div>
+          <div style="font-size:14px;font-weight:600;color:#15803d">USD 2,800.00</div>
+          <div style="font-size:10.5px;color:#92400e">+ 1 项待录入</div>
+        </div>
+        <div style="border-left:1px solid #cbd5e1;padding-left:24px;margin-left:8px">
+          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">当前已知差异（暂态）</div>
+          <div style="font-size:18px;font-weight:700" class="diff-positive">+USD 50.00</div>
+          <div style="font-size:10.5px;color:#64748b">实际录入完毕后定稿</div>
+        </div>
+      </div>
+
+      <div class="hint-card info" style="margin-bottom:14px;font-size:11.5px">
+        <span class="hint-icon">📐</span>
+        <div>
+          <strong>计算公式：</strong>总差异 = Σ 实际 − Σ 预估；
+          按关联 PO 的<strong>采购金额占比</strong>分摊总差异；
+          PO 内再按"在库 / 已出库"比例拆分到库存成本与销售成本（BR-LC-03）。
+        </div>
+      </div>
+
+      <!-- PO 维度分摊表 -->
       <table>
         <thead>
           <tr>
-            <th>调整时间</th>
-            <th>费用项</th>
-            <th class="text-right">预估</th>
-            <th class="text-right">实际</th>
-            <th class="text-right">差异</th>
-            <th class="text-right">在库部分 (调库存成本)</th>
-            <th class="text-right">已出库部分 (调销售成本)</th>
-            <th>操作人</th>
+            <th>采购单号</th>
+            <th class="text-right">采购金额</th>
+            <th class="text-right">占比</th>
+            <th class="text-right">差异分摊</th>
+            <th class="text-right">在库比例</th>
+            <th class="text-right" style="background:#dbeafe">→ 调库存成本</th>
+            <th class="text-right">已出库比例</th>
+            <th class="text-right" style="background:#fce7f3">→ 调销售成本</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>2026-05-08 14:22</td>
-            <td>🏗 港口费</td>
-            <td class="text-right">USD 250.00</td>
-            <td class="text-right">USD 300.00</td>
+            <td><span class="link">PO-2026-0401</span></td>
+            <td class="text-right">USD 10,000</td>
+            <td class="text-right">66.67%</td>
+            <td class="text-right diff-positive" style="font-weight:600">+33.34</td>
+            <td class="text-right">70%</td>
+            <td class="text-right" style="background:#eff6ff;color:#1e40af;font-weight:600">+23.34</td>
+            <td class="text-right">30%</td>
+            <td class="text-right" style="background:#fdf2f8;color:#9d174d;font-weight:600">+10.00</td>
+          </tr>
+          <tr>
+            <td><span class="link">PO-2026-0402</span></td>
+            <td class="text-right">USD 5,000</td>
+            <td class="text-right">33.33%</td>
+            <td class="text-right diff-positive" style="font-weight:600">+16.66</td>
+            <td class="text-right">60%</td>
+            <td class="text-right" style="background:#eff6ff;color:#1e40af;font-weight:600">+10.00</td>
+            <td class="text-right">40%</td>
+            <td class="text-right" style="background:#fdf2f8;color:#9d174d;font-weight:600">+6.66</td>
+          </tr>
+          <tr style="background:#f8fafc;font-weight:700">
+            <td>合计</td>
+            <td class="text-right">USD 15,000</td>
+            <td class="text-right">100%</td>
             <td class="text-right diff-positive">+50.00</td>
-            <td class="text-right">USD 35.00 <span class="text-muted">(70%)</span></td>
-            <td class="text-right">USD 15.00 <span class="text-muted">(30%)</span></td>
-            <td>Alex 沈亮</td>
+            <td class="text-right" colspan="1">—</td>
+            <td class="text-right" style="background:#dbeafe;color:#1e40af">+33.34</td>
+            <td class="text-right" colspan="1">—</td>
+            <td class="text-right" style="background:#fce7f3;color:#9d174d">+16.66</td>
           </tr>
         </tbody>
       </table>
+
+      <!-- 差异来源溯源（折叠区） -->
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:#475569;padding:8px 0">📜 差异来源溯源（点击展开）</summary>
+        <table style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>费用项</th>
+              <th class="text-right">预估</th>
+              <th class="text-right">实际</th>
+              <th class="text-right">差异</th>
+              <th>状态</th>
+              <th>录入人</th>
+              <th>录入时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>🚢 海运费</td>
+              <td class="text-right">2,000</td>
+              <td class="text-right">2,000</td>
+              <td class="text-right text-muted">0</td>
+              <td><span class="badge badge-green">已确认</span></td>
+              <td>Alex 沈亮</td>
+              <td>2026-04-13 14:00</td>
+            </tr>
+            <tr>
+              <td>📋 报关费</td>
+              <td class="text-right">500</td>
+              <td class="text-right">500</td>
+              <td class="text-right text-muted">0</td>
+              <td><span class="badge badge-green">已确认</span></td>
+              <td>Alex 沈亮</td>
+              <td>2026-04-13 14:00</td>
+            </tr>
+            <tr>
+              <td>🛡 保险费</td>
+              <td class="text-right">300</td>
+              <td class="text-right text-muted">待录入</td>
+              <td class="text-right text-muted">—</td>
+              <td><span class="badge badge-amber">⏳ 待确认</span></td>
+              <td class="text-muted">—</td>
+              <td class="text-muted">—</td>
+            </tr>
+            <tr>
+              <td>🏗 港口费</td>
+              <td class="text-right">250</td>
+              <td class="text-right">300</td>
+              <td class="text-right diff-positive">+50.00</td>
+              <td><span class="badge badge-green">已确认</span></td>
+              <td>Alex 沈亮</td>
+              <td>2026-05-08 14:22</td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
     </div>
   </div>
 
@@ -903,8 +1017,8 @@
         </tbody>
       </table>
       <div style="padding:12px 16px;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;color:#92400e">
-        ℹ️ <strong>实际分摊</strong>当前包含 1 项<strong>暂用预估</strong>（保险费 USD 300 待录入实际），
-        待实际单据到位后差异会重新结清；预估分摊为入库时写入的固定值。
+        ℹ️ <strong>SKU 分摊为展示口径</strong>（预估分摊=入库时点写入；实际分摊=随实际更新）。
+        正式的差异处理走<strong>金额调整单</strong>（PO 维度，下方卡片），按 PO 占比分摊总差异，再拆分到库存/销售成本。
       </div>
     </div>
   </div>
@@ -1338,7 +1452,8 @@
     <div class="modal-body">
       <div class="hint-card" style="margin-bottom:16px">
         <span class="hint-icon">📌</span>
-        <div>当前为<strong>预估金额 USD 300.00</strong>，请录入实际单据金额。系统将自动计算差异，并按"在库 / 已出库"比例分配到库存成本与销售成本（BR-LC-03）。</div>
+        <div>当前为<strong>预估金额 USD 300.00</strong>，请录入实际单据金额。
+        本笔差异会进入<strong>金额调整单</strong>（PO 维度聚合所有费用项差异），所有项实际录完后系统按 PO 占比统一分摊到库存成本与销售成本。</div>
       </div>
 
       <div class="form-row">
@@ -1368,29 +1483,62 @@
         <textarea rows="2" placeholder="如：保险费率按 0.28% 实际结算"></textarea>
       </div>
 
-      <!-- 差异自动计算 -->
+      <!-- 本笔差异计算 -->
       <div style="background:#f8fafc;border-radius:8px;padding:14px 16px;margin-top:8px">
-        <div style="font-size:12px;color:#475569;font-weight:600;margin-bottom:8px">差异自动分配预览</div>
+        <div style="font-size:12px;color:#475569;font-weight:600;margin-bottom:8px">本笔差异（仅保险费）</div>
         <table style="font-size:12px">
           <tbody>
-            <tr><td style="border:none;padding:4px 0;color:#64748b">差异金额</td><td style="border:none;padding:4px 0;text-align:right" id="diff-amount" class="diff-negative">USD -20.00 (-6.7%)</td></tr>
-            <tr><td style="border:none;padding:4px 0;color:#64748b">影响 SKU</td><td style="border:none;padding:4px 0;text-align:right">A001 红辣椒干、A002 花椒粒、B001 大蒜瓣、B002 生姜片（共 4 个 SKU）</td></tr>
-            <tr><td style="border:none;padding:4px 0;color:#64748b">在库数量占比</td><td style="border:none;padding:4px 0;text-align:right"><strong>65%</strong> → 调整库存成本 <strong class="diff-negative">USD -13.00</strong></td></tr>
-            <tr><td style="border:none;padding:4px 0;color:#64748b">已出库数量占比</td><td style="border:none;padding:4px 0;text-align:right"><strong>35%</strong> → 调整销售成本 <strong class="diff-negative">USD -7.00</strong></td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">本笔差异</td><td style="border:none;padding:4px 0;text-align:right" id="diff-amount" class="diff-negative">USD -20.00 (-6.7%)</td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">阈值检查</td><td style="border:none;padding:4px 0;text-align:right">在 ±10% 范围内，无需主管审批</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="hint-card info" style="margin-top:12px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
-        <span class="hint-icon">ℹ️</span>
-        <div>实际 vs 预估差异 -6.7%，在阈值 ±10% 范围内，无需主管审批。<br/>
-          <span class="text-muted text-sm">若差异 > ±10% 将触发 BR-LC-04 风控审批流程。</span>
+      <!-- 录入后金额调整单预览 -->
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-top:12px">
+        <div style="font-size:12px;color:#1e40af;font-weight:600;margin-bottom:8px">录入后金额调整单（PO 维度）</div>
+        <div style="font-size:11.5px;color:#475569;margin-bottom:8px">
+          所有项实际录入完毕，总差异 = 实际合计 − 预估合计 = <strong>+USD 30.00</strong>
+          <span class="text-muted">（港口费 +50 + 保险费 -20）</span>
         </div>
+        <table style="font-size:11.5px">
+          <thead>
+            <tr>
+              <th>PO</th>
+              <th class="text-right">占比</th>
+              <th class="text-right">差异分摊</th>
+              <th class="text-right">→ 库存成本</th>
+              <th class="text-right">→ 销售成本</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PO-2026-0401</td>
+              <td class="text-right">66.67%</td>
+              <td class="text-right diff-positive">+20.00</td>
+              <td class="text-right">+14.00 <span class="text-muted">(70%)</span></td>
+              <td class="text-right">+6.00 <span class="text-muted">(30%)</span></td>
+            </tr>
+            <tr>
+              <td>PO-2026-0402</td>
+              <td class="text-right">33.33%</td>
+              <td class="text-right diff-positive">+10.00</td>
+              <td class="text-right">+6.00 <span class="text-muted">(60%)</span></td>
+              <td class="text-right">+4.00 <span class="text-muted">(40%)</span></td>
+            </tr>
+            <tr style="font-weight:600">
+              <td colspan="2">合计</td>
+              <td class="text-right diff-positive">+30.00</td>
+              <td class="text-right">+20.00</td>
+              <td class="text-right">+10.00</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="hideModal('modal-actual-fee')">取消</button>
-      <button class="btn btn-primary" onclick="hideModal('modal-actual-fee');showToast('success','实际费用确认完成', '差异 USD -20 已按 65/35 拆分：库存成本 -13、销售成本 -7')">确认录入</button>
+      <button class="btn btn-primary" onclick="hideModal('modal-actual-fee');showToast('success','实际费用确认完成 + 金额调整单已生成','LC-ADJ-20260513-001：库存成本 +USD 20、销售成本 +USD 10')">确认录入并生成调整单</button>
     </div>
   </div>
 </div>
