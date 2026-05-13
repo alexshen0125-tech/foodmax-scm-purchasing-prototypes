@@ -1,6 +1,10 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.8
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.9
      日期：2026-05-13
      变更：
+     - 【v1.9】结算单状态机简化为 4 状态：待审核 → 待付款 → 已付款，旁支「审核拒绝」
+     - 【v1.9】去掉中间状态（已审批·待开票、已开票·待付款），合并为「待付款」
+     - 【v1.9】列表加"审核拒绝"示例 + 操作改为"审核通过/驳回"和"确认付款"
+     - 【v1.9】差异结算单（LS-DIFF）走相同状态机，加 DIFF 徽章标识
      - 【v1.8】物流费对账复用货款对账"待处理单据 / 结算单据"双 Tab 模式
      - 【v1.8】待处理单据 Tab：聚合状态=待对账的费用单，支持多选合并上传发票创建结算单
      - 【v1.8】多选互斥校验：同物流商 + 同币种才可一起合并，违反时系统自动禁选
@@ -54,7 +58,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.8</title>
+  <title>物流费用与落地成本 — 交互原型 v1.9</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -1377,15 +1381,19 @@
         <div class="filter-bar">
           <div class="form-group"><div class="form-label">结算单号</div><input type="text" placeholder="LS-..." /></div>
           <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
-          <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待审批</option><option>已审批·待开票</option><option>已开票·待付款</option><option>已付款</option></select></div>
+          <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待审核</option><option>待付款</option><option>已付款</option><option>审核拒绝</option></select></div>
           <button class="btn btn-primary btn-sm">查询</button>
         </div>
 
         <div class="hint-card info" style="margin-bottom:12px;font-size:11.5px">
           <span class="hint-icon">🔄</span>
           <div>
-            <strong>结算单生命周期：</strong>待审批 → 已审批·待开票 → 已开票·待付款 → 已付款。
-            差异结算单（LS-xxx-DIFF）由金额调整单单独触发，独立审批支付。
+            <strong>结算单状态机：</strong>
+            <span class="badge badge-blue">待审核</span> →
+            <span class="badge badge-amber">待付款</span>（审核通过）→
+            <span class="badge badge-purple">已付款</span>；
+            旁支 <span class="badge badge-red">审核拒绝</span>（审核驳回，可重新提交）。
+            <br/><span class="text-muted">差异结算单（LS-xxx-DIFF）由金额调整单单独触发，独立走相同状态机。</span>
           </div>
         </div>
 
@@ -1409,9 +1417,9 @@
               <td>2</td>
               <td class="text-right" style="font-weight:600">USD 3,700.00</td>
               <td>SGD 5,008.40</td>
-              <td><span class="badge badge-blue">待审批</span></td>
+              <td><span class="badge badge-blue">待审核</span></td>
               <td>2026-04-13 15:00</td>
-              <td><span class="link">审批</span> · <span class="link">驳回</span> · <span class="link">详情</span></td>
+              <td><span class="link">审核通过</span> · <span class="link">驳回</span> · <span class="link">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260412-001</span></td>
@@ -1419,19 +1427,29 @@
               <td>3</td>
               <td class="text-right" style="font-weight:600">USD 7,700.00</td>
               <td>SGD 10,418.10</td>
-              <td><span class="badge badge-amber">已审批·待开票</span></td>
+              <td><span class="badge badge-amber">待付款</span></td>
               <td>2026-04-12 16:30</td>
-              <td><span class="link">详情</span></td>
+              <td><span class="link">确认付款</span> · <span class="link">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260411-DIFF</span></td>
               <td>顺丰国际货运</td>
-              <td>1</td>
+              <td>1 <span class="badge badge-purple" style="font-size:10px" title="差异结算单">DIFF</span></td>
               <td class="text-right" style="font-weight:600;color:#b91c1c">USD +50.00</td>
               <td>SGD 67.65</td>
-              <td><span class="badge badge-purple" title="预估差异补结算">差异结算</span></td>
+              <td><span class="badge badge-amber">待付款</span></td>
               <td>2026-04-11 09:20</td>
-              <td><span class="link">详情</span></td>
+              <td><span class="link">确认付款</span> · <span class="link">详情</span></td>
+            </tr>
+            <tr>
+              <td><span class="link">LS-20260411-001</span></td>
+              <td>SG Customs Broker</td>
+              <td>1</td>
+              <td class="text-right" style="font-weight:600">SGD 1,200.00</td>
+              <td>SGD 1,200.00</td>
+              <td><span class="badge badge-red" title="发票金额与实际不符，已驳回">审核拒绝</span></td>
+              <td>2026-04-11 10:00</td>
+              <td><span class="link">查看驳回原因</span> · <span class="link">详情</span></td>
             </tr>
             <tr>
               <td><span class="link">LS-20260410-001</span></td>
@@ -1445,7 +1463,7 @@
             </tr>
           </tbody>
         </table>
-        <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 4 条</div>
+        <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 5 条</div>
       </div>
     </div>
   </div>
@@ -2379,7 +2397,7 @@ function onUploadCreateSettle() {
       2. 系统校验：发票金额 = ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}<br/>
       3. 创建结算单 <strong>LS-${new Date().getTime().toString().slice(-8)}</strong><br/>
       4. 关联费用单状态推进至「待付款」<br/>
-      5. 结算单进入「结算单据」Tab，待财务审批`,
+      5. 结算单进入「结算单据」Tab，状态：待审核`,
     onOk: () => {
       // 移除已选行
       selected.forEach(c => c.closest('tr').remove());
