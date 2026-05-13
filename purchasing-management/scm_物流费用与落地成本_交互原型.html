@@ -1,14 +1,21 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.0
-     日期：2026-04-13
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.1
+     日期：2026-05-13
+     变更：
+     - 新增「预估/实际」双轨费用模型（暂估入库 + 差异调整方案 A）
+     - 补齐 23 项异常交互提示（A-F 六组场景）
+     - 新增「实际费用录入」弹窗（含差异自动分配规则）
+     - 详情页增加预估 vs 实际对照表
+     - 落地成本页增加「含预估费用占比」标识
      覆盖页面：
      - pg-vendor-list：物流商列表（supplier管理下Tab切换）
      - pg-vendor-edit：物流商新建/编辑弹窗
      - pg-cost-list：物流费用单列表
      - pg-cost-create：新建物流费用单（2步：选单→填费用）
-     - pg-cost-detail：物流费用单详情
+     - pg-cost-detail：物流费用单详情（含预估/实际对照）
      - pg-alloc-preview：分摊预览弹窗
      - pg-landed-cost：采购单详情-落地成本Tab
      - pg-logistics-settlement：物流费对账（复用结算列表）
+     - modal-actual-fee：实际费用录入弹窗（新增）
      设计系统：Plus Jakarta Sans / Slate 色彩 / 8pt 间距 / WCAG AA
 -->
 <!DOCTYPE html>
@@ -16,7 +23,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.0</title>
+  <title>物流费用与落地成本 — 交互原型 v1.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -187,9 +194,54 @@
     .link:hover { text-decoration: underline; }
     ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #f1f5f9; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .alloc-highlight { background: #eff6ff !important; }
+
+    /* ─── Toast 提示系统（替代 alert） ─── */
+    .toast-container {
+      position: fixed; top: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+    }
+    .toast {
+      min-width: 280px; max-width: 420px; padding: 12px 16px;
+      border-radius: 8px; font-size: 12.5px; line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.18);
+      display: flex; gap: 10px; align-items: flex-start;
+      animation: toastIn .25s ease; pointer-events: auto;
+    }
+    @keyframes toastIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
+    .toast-icon { flex-shrink: 0; font-size: 16px; line-height: 1.2; }
+    .toast-body { flex: 1; }
+    .toast-title { font-weight: 700; margin-bottom: 2px; }
+    .toast-warn { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+    .toast-error { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; }
+    .toast-info { background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; }
+    .toast-success { background: #dcfce7; border: 1px solid #86efac; color: #15803d; }
+
+    /* ─── 预估/实际 标识 ─── */
+    .badge-estimate { background: #fef3c7; color: #92400e; border: 1px dashed #f59e0b; }
+    .badge-actual { background: #dcfce7; color: #15803d; }
+    .badge-diff-up { background: #fee2e2; color: #b91c1c; }
+    .badge-diff-down { background: #dbeafe; color: #1e40af; }
+    .diff-positive { color: #b91c1c; font-weight: 600; }
+    .diff-negative { color: #15803d; font-weight: 600; }
+    .row-estimate { background: #fffbeb; }
+    .row-estimate:hover td { background: #fef3c7 !important; }
+
+    /* 字段错误态 */
+    input.field-error, select.field-error { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+    .field-error-msg { color: #b91c1c; font-size: 11px; margin-top: 4px; }
+
+    /* 确认对话框（替代 confirm） */
+    .confirm-modal .modal { max-width: 480px; }
+    .confirm-body { padding: 24px; }
+    .confirm-icon { font-size: 36px; margin-bottom: 12px; }
+    .confirm-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .confirm-msg { font-size: 13px; color: #475569; line-height: 1.6; }
   </style>
 </head>
 <body>
+
+<!-- ═══════════════════ Toast 容器（异常/成功/警告提示） ═══════════════════ -->
+<div class="toast-container" id="toast-container"></div>
 
 <!-- ═══════════════════ Sidebar ═══════════════════ -->
 <nav class="sidebar">
@@ -403,37 +455,53 @@
         <h4 style="font-size:13px;font-weight:600;margin-bottom:10px">关联采购单（可多选 / 拼柜场景）</h4>
         <div class="filter-bar" style="margin-bottom:12px">
           <input type="text" placeholder="搜索采购单号 / 供应商..." style="width:260px" />
-          <button class="btn btn-outline btn-sm">搜索</button>
+          <button class="btn btn-outline btn-sm" onclick="onPoSearch(this)">搜索</button>
         </div>
 
         <table>
           <thead>
-            <tr><th style="width:40px"><input type="checkbox" class="ck" id="ckAll" onclick="toggleAll(this)" /></th><th>采购单号</th><th>供应商</th><th>贸易条款</th><th>采购金额</th><th>总重量</th><th>总体积</th><th>状态</th></tr>
+            <tr><th style="width:40px"><input type="checkbox" class="ck" id="ckAll" onclick="toggleAll(this)" /></th><th>采购单号</th><th>供应商</th><th>贸易条款</th><th>币种</th><th>采购金额</th><th>总重量</th><th>总体积</th><th>已关联费用单</th><th>状态</th></tr>
           </thead>
           <tbody>
             <tr>
-              <td><input type="checkbox" class="ck ck-po" checked /></td>
+              <td><input type="checkbox" class="ck ck-po" checked data-incoterm="FOB" data-currency="USD" data-amount="10000" data-weight="2500" data-volume="8.5" data-existing="" onchange="updatePoSummary()" /></td>
               <td><span class="link">PO-2026-0401</span></td><td>深圳鲜之道食品</td><td><span class="badge badge-blue">FOB</span></td>
+              <td>USD</td>
               <td style="font-weight:600">USD 10,000.00</td><td>2,500 kg</td><td>8.5 m³</td>
+              <td><span class="text-muted">—</span></td>
               <td><span class="badge badge-green">已入库</span></td>
             </tr>
             <tr>
-              <td><input type="checkbox" class="ck ck-po" checked /></td>
+              <td><input type="checkbox" class="ck ck-po" checked data-incoterm="FOB" data-currency="USD" data-amount="5000" data-weight="1200" data-volume="4.2" data-existing="" onchange="updatePoSummary()" /></td>
               <td><span class="link">PO-2026-0402</span></td><td>深圳鲜之道食品</td><td><span class="badge badge-blue">FOB</span></td>
+              <td>USD</td>
               <td style="font-weight:600">USD 5,000.00</td><td>1,200 kg</td><td>4.2 m³</td>
+              <td><span class="text-muted">—</span></td>
               <td><span class="badge badge-green">已入库</span></td>
             </tr>
             <tr>
-              <td><input type="checkbox" class="ck ck-po" /></td>
+              <td><input type="checkbox" class="ck ck-po" data-incoterm="CIF" data-currency="USD" data-amount="8000" data-weight="3000" data-volume="10.0" data-existing="LC-20260411-001" onchange="updatePoSummary()" /></td>
               <td><span class="link">PO-2026-0403</span></td><td>山东益海嘉里</td><td><span class="badge badge-amber">CIF</span></td>
+              <td>USD</td>
               <td style="font-weight:600">USD 8,000.00</td><td>3,000 kg</td><td>10.0 m³</td>
+              <td><span class="badge badge-amber" title="该 PO 已存在费用单">LC-20260411-001</span></td>
               <td><span class="badge badge-green">已入库</span></td>
             </tr>
             <tr>
-              <td><input type="checkbox" class="ck ck-po" /></td>
+              <td><input type="checkbox" class="ck ck-po" data-incoterm="EXW" data-currency="CNY" data-amount="3500" data-weight="800" data-volume="3.0" data-existing="" onchange="updatePoSummary()" /></td>
               <td><span class="link">PO-2026-0405</span></td><td>广州南沙进出口</td><td><span class="badge badge-blue">EXW</span></td>
-              <td style="font-weight:600">USD 3,500.00</td><td>800 kg</td><td>3.0 m³</td>
+              <td>CNY</td>
+              <td style="font-weight:600">CNY 3,500.00</td><td>800 kg</td><td>3.0 m³</td>
+              <td><span class="text-muted">—</span></td>
               <td><span class="badge badge-blue">运输中</span></td>
+            </tr>
+            <tr>
+              <td><input type="checkbox" class="ck ck-po" data-incoterm="FOB" data-currency="USD" data-amount="6000" data-weight="0" data-volume="2.5" data-existing="" onchange="updatePoSummary()" /></td>
+              <td><span class="link">PO-2026-0406</span></td><td>越南 ABC Foods</td><td><span class="badge badge-blue">FOB</span></td>
+              <td>USD</td>
+              <td style="font-weight:600">USD 6,000.00</td><td><span class="text-muted">— 缺数据</span></td><td>2.5 m³</td>
+              <td><span class="text-muted">—</span></td>
+              <td><span class="badge badge-green">已入库</span></td>
             </tr>
           </tbody>
         </table>
@@ -461,40 +529,84 @@
           </div>
         </div>
 
-        <h4 style="font-size:13px;font-weight:600;margin-bottom:10px">费用明细</h4>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h4 style="font-size:13px;font-weight:600">费用明细</h4>
+          <div style="font-size:11.5px;color:#64748b">
+            <span class="badge badge-actual" style="margin-right:6px">实际</span>有正式单据 ·
+            <span class="badge badge-estimate" style="margin-right:6px;margin-left:6px">预估</span>暂估金额，单据到位后录入实际值
+          </div>
+        </div>
+
         <table id="fee-table">
           <thead>
-            <tr><th style="width:200px">费用类型</th><th style="width:160px">金额</th><th>币种</th><th>备注</th><th style="width:40px"></th></tr>
+            <tr>
+              <th style="width:160px">费用类型</th>
+              <th style="width:100px">费用性质</th>
+              <th style="width:140px">金额</th>
+              <th>币种</th>
+              <th style="width:140px">预计确认日期</th>
+              <th>备注</th>
+              <th style="width:40px"></th>
+            </tr>
           </thead>
           <tbody>
             <tr>
-              <td><select style="width:180px"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
-              <td><input type="number" value="2000" style="text-align:right" /></td>
-              <td>USD</td><td><input type="text" placeholder="如：20GP×1" /></td>
-              <td><span class="link" style="color:#dc2626">✕</span></td>
+              <td><select style="width:150px" class="fee-type"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td><select class="fee-nature" onchange="onNatureChange(this)"><option value="actual" selected>实际</option><option value="estimate">预估</option></select></td>
+              <td><input type="number" value="2000" class="fee-amount" style="text-align:right" /></td>
+              <td>USD</td>
+              <td><input type="date" class="fee-eta" disabled placeholder="—" /></td>
+              <td><input type="text" placeholder="如：20GP×1" /></td>
+              <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
             </tr>
             <tr>
-              <td><select style="width:180px"><option>报关费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
-              <td><input type="number" value="500" style="text-align:right" /></td>
-              <td>USD</td><td><input type="text" placeholder="" /></td>
-              <td><span class="link" style="color:#dc2626">✕</span></td>
+              <td><select style="width:150px" class="fee-type"><option>报关费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td><select class="fee-nature" onchange="onNatureChange(this)"><option value="actual" selected>实际</option><option value="estimate">预估</option></select></td>
+              <td><input type="number" value="500" class="fee-amount" style="text-align:right" /></td>
+              <td>USD</td>
+              <td><input type="date" class="fee-eta" disabled placeholder="—" /></td>
+              <td><input type="text" placeholder="" /></td>
+              <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
             </tr>
-            <tr>
-              <td><select style="width:180px"><option>保险费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
-              <td><input type="number" value="300" style="text-align:right" /></td>
-              <td>USD</td><td><input type="text" value="0.3% of cargo value" /></td>
-              <td><span class="link" style="color:#dc2626">✕</span></td>
+            <tr class="row-estimate">
+              <td><select style="width:150px" class="fee-type"><option>港口费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td><select class="fee-nature" onchange="onNatureChange(this)"><option value="actual">实际</option><option value="estimate" selected>预估</option></select></td>
+              <td><input type="number" value="300" class="fee-amount" style="text-align:right" /></td>
+              <td>USD</td>
+              <td><input type="date" class="fee-eta" value="2026-05-25" /></td>
+              <td><input type="text" value="预估目的港杂费，入库后供应商补单" /></td>
+              <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
             </tr>
           </tbody>
         </table>
 
         <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="addFeeRow()">+ 添加费用项</button>
 
-        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 20px;margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+        <div class="hint-card info" style="margin-top:12px">
+          <span class="hint-icon">ℹ️</span>
           <div>
-            <span style="font-size:12px;color:#0369a1">费用合计</span><br/>
-            <span style="font-size:20px;font-weight:700;color:#0c4a6e">USD 2,800.00</span>
-            <span style="font-size:12px;color:#64748b;margin-left:8px">≈ SGD 3,786.40 (参考汇率 1.352)</span>
+            <strong>预估费用说明：</strong>入库时按"预估 + 实际"合计金额分摊到 SKU 落地成本；实际单据到位后录入实际值，
+            系统自动按"在库 / 已出库"比例拆分差异：在库部分调整库存成本，已出库部分调整销售成本（详见 BR-LC-03）。
+          </div>
+        </div>
+
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 20px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:24px">
+          <div style="flex:1">
+            <div style="display:flex;gap:32px;align-items:flex-end">
+              <div>
+                <span style="font-size:12px;color:#0369a1">费用合计</span><br/>
+                <span style="font-size:20px;font-weight:700;color:#0c4a6e">USD 2,800.00</span>
+                <span style="font-size:12px;color:#64748b;margin-left:8px">≈ SGD 3,786.40</span>
+              </div>
+              <div style="display:flex;gap:16px;font-size:11.5px">
+                <div><span class="badge badge-actual">实际</span> <strong>USD 2,500.00</strong> <span class="text-muted">(89.3%)</span></div>
+                <div><span class="badge badge-estimate">预估</span> <strong>USD 300.00</strong> <span class="text-muted">(10.7%)</span></div>
+              </div>
+            </div>
+            <div style="font-size:11.5px;color:#64748b;margin-top:6px">
+              🔒 锁定汇率 <strong>1 USD = 1.3520 SGD</strong>（锁定于 2026-05-13 10:30）
+              <span class="link" style="margin-left:8px" onclick="showToast('info','汇率已重新锁定为 1.3530，作用于本费用单的本位币换算')">重新锁定</span>
+            </div>
           </div>
           <div class="form-group" style="margin:0;min-width:180px">
             <div class="form-label"><span class="required">*</span> 分摊方式</div>
@@ -507,11 +619,11 @@
         </div>
 
         <div style="margin-top:20px;display:flex;justify-content:space-between">
-          <button class="btn btn-outline" onclick="goStep1()">← 上一步</button>
+          <button class="btn btn-outline" onclick="goStep1Confirm()">← 上一步</button>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-outline" onclick="showModal('modal-alloc-preview')">👁 预览分摊</button>
-            <button class="btn btn-outline">保存草稿</button>
-            <button class="btn btn-primary" onclick="alert('✅ 物流费用单已提交！\n单号：LC-20260413-003\n状态：待对账')">提交对账</button>
+            <button class="btn btn-outline" onclick="onPreviewAlloc()">👁 预览分摊</button>
+            <button class="btn btn-outline" onclick="onSaveDraft()">保存草稿</button>
+            <button class="btn btn-primary" onclick="onSubmitCost()">提交对账</button>
           </div>
         </div>
       </div>
@@ -556,14 +668,110 @@
 
   <!-- 费用明细 -->
   <div class="card" style="margin-bottom:16px">
-    <div class="card-header"><h3>费用明细</h3><span style="font-size:14px;font-weight:700;color:#0c4a6e">合计 USD 2,800.00 ≈ SGD 3,786.40</span></div>
+    <div class="card-header">
+      <h3>费用明细（预估 vs 实际）</h3>
+      <div style="display:flex;gap:16px;font-size:12px;align-items:center">
+        <span><span class="badge badge-actual">实际 3 项</span></span>
+        <span><span class="badge badge-estimate">预估 1 项</span></span>
+        <span style="font-size:14px;font-weight:700;color:#0c4a6e">合计 USD 3,100.00 ≈ SGD 4,191.40</span>
+      </div>
+    </div>
     <div class="card-body" style="padding:0">
       <table>
-        <thead><tr><th>费用类型</th><th>金额(USD)</th><th>本位币(SGD)</th><th>占比</th><th>备注</th></tr></thead>
+        <thead>
+          <tr>
+            <th>费用类型</th>
+            <th>性质</th>
+            <th class="text-right">预估金额(USD)</th>
+            <th class="text-right">实际金额(USD)</th>
+            <th class="text-right">差异</th>
+            <th class="text-right">本位币(SGD)</th>
+            <th>状态</th>
+            <th>备注</th>
+            <th>操作</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>🚢 海运费</td><td style="font-weight:600">2,000.00</td><td>2,706.00</td><td>71.4%</td><td>20GP × 1</td></tr>
-          <tr><td>📋 报关费</td><td style="font-weight:600">500.00</td><td>676.50</td><td>17.9%</td><td>—</td></tr>
-          <tr><td>🛡 保险费</td><td style="font-weight:600">300.00</td><td>405.90</td><td>10.7%</td><td>0.3% of cargo value</td></tr>
+          <tr>
+            <td>🚢 海运费</td>
+            <td><span class="badge badge-actual">实际</span></td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right" style="font-weight:600">2,000.00</td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right">2,706.00</td>
+            <td><span class="badge badge-green">已确认</span></td>
+            <td>20GP × 1</td>
+            <td><span class="text-muted">—</span></td>
+          </tr>
+          <tr>
+            <td>📋 报关费</td>
+            <td><span class="badge badge-actual">实际</span></td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right" style="font-weight:600">500.00</td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right">676.50</td>
+            <td><span class="badge badge-green">已确认</span></td>
+            <td>—</td>
+            <td><span class="text-muted">—</span></td>
+          </tr>
+          <tr class="row-estimate">
+            <td>🛡 保险费</td>
+            <td><span class="badge badge-estimate">预估</span></td>
+            <td class="text-right" style="font-weight:600">300.00</td>
+            <td class="text-right text-muted">待录入</td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right">405.90</td>
+            <td><span class="badge badge-amber">待确认 · ETA 2026-05-20</span></td>
+            <td>0.3% of cargo value</td>
+            <td><span class="link" onclick="showModal('modal-actual-fee')">✏️ 录入实际</span></td>
+          </tr>
+          <tr>
+            <td>🏗 港口费</td>
+            <td><span class="badge badge-actual">实际</span></td>
+            <td class="text-right" style="font-weight:600">250.00</td>
+            <td class="text-right" style="font-weight:600">300.00</td>
+            <td class="text-right diff-positive">+50.00 (+20%)</td>
+            <td class="text-right">405.90</td>
+            <td><span class="badge badge-green">已确认 · 已调差</span></td>
+            <td>实际单据 INV-PRT-202604-A</td>
+            <td><span class="link" onclick="showToast('info','差异 USD 50：在库 70% (USD 35) 调入库存成本；已出库 30% (USD 15) 计入销售成本')">📊 差异分配</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 差异调整记录（仅预估转实际后展示） -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <h3>差异调整记录</h3>
+      <span class="text-muted" style="font-size:12px">实际费用与预估差异的拆分轨迹</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>调整时间</th>
+            <th>费用项</th>
+            <th class="text-right">预估</th>
+            <th class="text-right">实际</th>
+            <th class="text-right">差异</th>
+            <th class="text-right">在库部分 (调库存成本)</th>
+            <th class="text-right">已出库部分 (调销售成本)</th>
+            <th>操作人</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-05-08 14:22</td>
+            <td>🏗 港口费</td>
+            <td class="text-right">USD 250.00</td>
+            <td class="text-right">USD 300.00</td>
+            <td class="text-right diff-positive">+50.00</td>
+            <td class="text-right">USD 35.00 <span class="text-muted">(70%)</span></td>
+            <td class="text-right">USD 15.00 <span class="text-muted">(30%)</span></td>
+            <td>Alex 沈亮</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -624,6 +832,16 @@
     </div>
   </div>
 
+  <!-- 含预估警示条 -->
+  <div class="hint-card" style="margin-bottom:16px">
+    <span class="hint-icon">⚠️</span>
+    <div>
+      <strong>含预估费用 10.7%（保险费 USD 200）</strong>
+      ：当前落地成本基于"实际 + 预估"合计计算，预计 <strong>2026-05-20</strong> 实际单据到位。
+      实际值确认后系统将自动按"在库 / 已出库"比例调整库存成本与销售成本（见 <span class="link">差异调整记录</span>）。
+    </div>
+  </div>
+
   <!-- 成本汇总 -->
   <div class="stat-grid">
     <div class="stat-card">
@@ -632,9 +850,9 @@
       <div class="stat-sub">≈ SGD 13,530.00 (锁定汇率)</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">物流费用合计</div>
+      <div class="stat-label">物流费用合计 <span class="badge badge-estimate" style="font-size:9px;padding:1px 5px;vertical-align:middle">含预估</span></div>
       <div class="stat-value" style="color:#b45309">USD 1,866.67</div>
-      <div class="stat-sub">≈ SGD 2,525.60 (含海运+报关+保险分摊)</div>
+      <div class="stat-sub">实际 1,666.67 + 预估 200.00 ≈ SGD 2,525.60</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">落地总成本</div>
@@ -887,9 +1105,119 @@
   </div>
 </div>
 
+<!-- ═══════════════════ Modal: 实际费用录入（预估转实际） ═══════════════════ -->
+<div class="modal-overlay" id="modal-actual-fee">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <h3>录入实际费用 — 🛡 保险费</h3>
+      <span class="modal-close" onclick="hideModal('modal-actual-fee')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="hint-card" style="margin-bottom:16px">
+        <span class="hint-icon">📌</span>
+        <div>当前为<strong>预估金额 USD 300.00</strong>，请录入实际单据金额。系统将自动计算差异，并按"在库 / 已出库"比例分配到库存成本与销售成本（BR-LC-03）。</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">预估金额</div>
+          <input type="text" value="USD 300.00" disabled />
+        </div>
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 实际金额</div>
+          <input type="number" id="actual-amount" value="280" style="text-align:right" oninput="recalcDiff()" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 供应商发票号</div>
+          <input type="text" placeholder="如：INV-2026-INS-008" />
+        </div>
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 实际确认日期</div>
+          <input type="date" value="2026-05-13" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="form-label">差异说明</div>
+        <textarea rows="2" placeholder="如：保险费率按 0.28% 实际结算"></textarea>
+      </div>
+
+      <!-- 差异自动计算 -->
+      <div style="background:#f8fafc;border-radius:8px;padding:14px 16px;margin-top:8px">
+        <div style="font-size:12px;color:#475569;font-weight:600;margin-bottom:8px">差异自动分配预览</div>
+        <table style="font-size:12px">
+          <tbody>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">差异金额</td><td style="border:none;padding:4px 0;text-align:right" id="diff-amount" class="diff-negative">USD -20.00 (-6.7%)</td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">影响 SKU</td><td style="border:none;padding:4px 0;text-align:right">A001 红辣椒干、A002 花椒粒、B001 大蒜瓣、B002 生姜片（共 4 个 SKU）</td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">在库数量占比</td><td style="border:none;padding:4px 0;text-align:right"><strong>65%</strong> → 调整库存成本 <strong class="diff-negative">USD -13.00</strong></td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">已出库数量占比</td><td style="border:none;padding:4px 0;text-align:right"><strong>35%</strong> → 调整销售成本 <strong class="diff-negative">USD -7.00</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="hint-card info" style="margin-top:12px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+        <span class="hint-icon">ℹ️</span>
+        <div>实际 vs 预估差异 -6.7%，在阈值 ±10% 范围内，无需主管审批。<br/>
+          <span class="text-muted text-sm">若差异 > ±10% 将触发 BR-LC-04 风控审批流程。</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="hideModal('modal-actual-fee')">取消</button>
+      <button class="btn btn-primary" onclick="hideModal('modal-actual-fee');showToast('success','实际费用确认完成', '差异 USD -20 已按 65/35 拆分：库存成本 -13、销售成本 -7')">确认录入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ Modal: 通用确认对话框 ═══════════════════ -->
+<div class="modal-overlay confirm-modal" id="modal-confirm">
+  <div class="modal">
+    <div class="confirm-body" style="text-align:center">
+      <div class="confirm-icon" id="confirm-icon">⚠️</div>
+      <div class="confirm-title" id="confirm-title">提示</div>
+      <div class="confirm-msg" id="confirm-msg">操作确认</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="hideModal('modal-confirm')">取消</button>
+      <button class="btn btn-primary" id="confirm-ok-btn">确定</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════ JavaScript ═══════════════════ -->
 <script>
-// Navigation
+/* ════════ 通用工具：Toast / Confirm 弹窗 ════════ */
+function showToast(type, title, msg) {
+  // type: warn | error | info | success
+  const icons = { warn:'⚠️', error:'❌', info:'ℹ️', success:'✅' };
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-' + type;
+  toast.innerHTML = `
+    <span class="toast-icon">${icons[type]||'ℹ️'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title||''}</div>
+      ${msg ? `<div>${msg}</div>` : ''}
+    </div>
+  `;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.transition='opacity .3s'; toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 4000);
+}
+
+function showConfirm(opts) {
+  // opts: { icon, title, msg, onOk }
+  document.getElementById('confirm-icon').textContent = opts.icon || '⚠️';
+  document.getElementById('confirm-title').textContent = opts.title || '请确认';
+  document.getElementById('confirm-msg').innerHTML = opts.msg || '';
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.onclick = () => { hideModal('modal-confirm'); opts.onOk && opts.onOk(); };
+  showModal('modal-confirm');
+}
+
+/* ════════ 导航 ════════ */
 document.querySelectorAll('.sidebar-item').forEach(item => {
   item.addEventListener('click', () => {
     const page = item.dataset.page;
@@ -905,31 +1233,143 @@ function navTo(pageId) {
   if (match) match.classList.add('active');
 }
 
-// Modal
+/* ════════ Modal ════════ */
 function showModal(id) { document.getElementById(id).classList.add('show'); }
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('show'); });
 });
 
-// Vendor select → currency auto-fill
+/* ════════ 步骤一：物流商 / 币种 / PO 选择 ════════ */
 function onVendorSelect() {
   const sel = document.getElementById('sel-logistics-vendor');
   const opt = sel.options[sel.selectedIndex];
+  sel.classList.remove('field-error');
   if (opt.dataset.currency) {
     document.getElementById('sel-currency').value = opt.dataset.currency;
   }
 }
 
-// Step navigation
+function onPoSearch(btn) {
+  const input = btn.previousElementSibling;
+  const kw = (input.value || '').trim();
+  if (!kw) { showToast('info', '请输入搜索关键词', '可搜索采购单号或供应商名称'); return; }
+  // 演示用：随机命中
+  if (kw.toLowerCase().includes('xxx')) {
+    showToast('warn', '未找到符合条件的采购单', '请调整筛选条件或检查关键词');
+  } else {
+    showToast('success', '搜索完成', '已为你高亮匹配项');
+  }
+}
+
+function toggleAll(el) {
+  document.querySelectorAll('.ck-po').forEach(ck => ck.checked = el.checked);
+  updatePoSummary();
+}
+
+function updatePoSummary() {
+  const checked = document.querySelectorAll('.ck-po:checked');
+  let amount = 0, weight = 0, volume = 0, missingWeight = false;
+  checked.forEach(ck => {
+    amount += parseFloat(ck.dataset.amount||0);
+    const w = parseFloat(ck.dataset.weight||0);
+    if (w === 0) missingWeight = true;
+    weight += w;
+    volume += parseFloat(ck.dataset.volume||0);
+  });
+  const cnt = document.getElementById('sel-count');
+  if (cnt) cnt.textContent = checked.length;
+}
+
+/* 【异常 #1-7】步骤一 → 步骤二 校验 */
 function goStep2() {
+  // #1 物流商必填
+  const vendor = document.getElementById('sel-logistics-vendor');
+  if (!vendor.value) {
+    vendor.classList.add('field-error');
+    showToast('error', '请选择物流商', '物流商为必填项');
+    vendor.focus();
+    return;
+  }
+  // #2 费用币种必填
+  const cur = document.getElementById('sel-currency');
+  if (!cur.value) {
+    cur.classList.add('field-error');
+    showToast('error', '请选择费用币种');
+    return;
+  }
+  // #3 至少 1 张 PO
+  const checked = document.querySelectorAll('.ck-po:checked');
+  if (checked.length === 0) {
+    showToast('error', '请至少选择 1 张要录入费用的采购单', '关联采购单不能为空');
+    return;
+  }
+  // #5 已存在费用单的 PO 提示
+  const existings = [];
+  checked.forEach(ck => { if (ck.dataset.existing) existings.push(ck.dataset.existing); });
+  if (existings.length > 0) {
+    showConfirm({
+      icon: '⚠️',
+      title: '所选采购单已存在费用单',
+      msg: `检测到关联 PO 已存在费用单：<strong>${existings.join(', ')}</strong>（状态：待对账）<br/><span class="text-muted">是否继续新建？同一 PO 多个费用单将合并计入落地成本。</span>`,
+      onOk: () => doStep1Checks2(checked)
+    });
+    return;
+  }
+  doStep1Checks2(checked);
+}
+
+function doStep1Checks2(checked) {
+  // #4 贸易条款不一致
+  const incoterms = new Set();
+  checked.forEach(ck => incoterms.add(ck.dataset.incoterm));
+  if (incoterms.size > 1) {
+    const list = Array.from(incoterms).join('、');
+    showConfirm({
+      icon: '⚠️',
+      title: '贸易条款不一致',
+      msg: `所选采购单包含 <strong>${list}</strong> 多种贸易条款，费用承担方可能不同（FOB=买方承担装船后；CIF=卖方承担运输+保险至目的港）。<br/><span class="text-muted">是否继续？</span>`,
+      onOk: () => doStep1Checks3(checked)
+    });
+    return;
+  }
+  doStep1Checks3(checked);
+}
+
+function doStep1Checks3(checked) {
+  // #7 跨币种提示
+  const currencies = new Set();
+  checked.forEach(ck => currencies.add(ck.dataset.currency));
+  if (currencies.size > 1) {
+    showToast('info', '所选采购单存在不同币种',
+      `(${Array.from(currencies).join(', ')}) 将按锁定汇率折算后分摊`);
+  }
+  switchToStep2();
+}
+
+function switchToStep2() {
   document.getElementById('create-step1').style.display = 'none';
   document.getElementById('create-step2').style.display = 'block';
   document.getElementById('step1-ind').classList.remove('active');
   document.getElementById('step1-ind').classList.add('done');
   document.getElementById('step2-ind').classList.add('active');
 }
-function goStep1() {
+
+/* 【异常 #16】步骤二 → 步骤一：已录入费用要确认 */
+function goStep1Confirm() {
+  const hasContent = document.querySelectorAll('#fee-table tbody tr').length > 0;
+  if (hasContent) {
+    showConfirm({
+      icon: '⚠️',
+      title: '返回上一步',
+      msg: '返回将保留当前已录入的费用明细，但若修改关联采购单可能导致分摊重算。<br/><span class="text-muted">是否继续？</span>',
+      onOk: () => switchToStep1()
+    });
+  } else {
+    switchToStep1();
+  }
+}
+function switchToStep1() {
   document.getElementById('create-step1').style.display = 'block';
   document.getElementById('create-step2').style.display = 'none';
   document.getElementById('step1-ind').classList.add('active');
@@ -937,22 +1377,266 @@ function goStep1() {
   document.getElementById('step2-ind').classList.remove('active');
 }
 
-// Toggle all checkboxes
-function toggleAll(el) {
-  document.querySelectorAll('.ck-po').forEach(ck => ck.checked = el.checked);
+/* ════════ 步骤二：费用明细 ════════ */
+/* 费用性质切换：预估时启用日期 */
+function onNatureChange(sel) {
+  const tr = sel.closest('tr');
+  const dateInput = tr.querySelector('.fee-eta');
+  if (sel.value === 'estimate') {
+    tr.classList.add('row-estimate');
+    dateInput.disabled = false;
+    if (!dateInput.value) {
+      const d = new Date(); d.setDate(d.getDate()+14);
+      dateInput.value = d.toISOString().slice(0,10);
+    }
+  } else {
+    tr.classList.remove('row-estimate');
+    dateInput.disabled = true;
+    dateInput.value = '';
+  }
 }
 
-// Add fee row
 function addFeeRow() {
   const tbody = document.querySelector('#fee-table tbody');
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td><select style="width:180px"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
-    <td><input type="number" value="" style="text-align:right" placeholder="0.00" /></td>
-    <td>USD</td><td><input type="text" placeholder="" /></td>
-    <td><span class="link" style="color:#dc2626" onclick="this.closest('tr').remove()">✕</span></td>
+    <td><select style="width:150px" class="fee-type"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+    <td><select class="fee-nature" onchange="onNatureChange(this)"><option value="actual" selected>实际</option><option value="estimate">预估</option></select></td>
+    <td><input type="number" value="" class="fee-amount" style="text-align:right" placeholder="0.00" /></td>
+    <td>USD</td>
+    <td><input type="date" class="fee-eta" disabled /></td>
+    <td><input type="text" placeholder="" /></td>
+    <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
   `;
   tbody.appendChild(row);
+}
+
+function removeFeeRow(span) {
+  const tbody = document.querySelector('#fee-table tbody');
+  if (tbody.children.length === 1) {
+    showToast('warn', '至少保留 1 条费用明细', '如需清空请直接关闭页面');
+    return;
+  }
+  span.closest('tr').remove();
+}
+
+/* 【异常 #8-15】校验费用明细 */
+function validateFeeTable() {
+  const rows = document.querySelectorAll('#fee-table tbody tr');
+  // #8 至少 1 项
+  if (rows.length === 0) {
+    showToast('error', '请至少录入 1 项费用明细');
+    return false;
+  }
+  for (let i = 0; i < rows.length; i++) {
+    const tr = rows[i];
+    const amountInput = tr.querySelector('.fee-amount');
+    const amount = parseFloat(amountInput.value);
+    // #9 金额 > 0
+    if (!amount || amount <= 0) {
+      amountInput.classList.add('field-error');
+      showToast('error', `第 ${i+1} 行：费用金额必须大于 0`);
+      amountInput.focus();
+      return false;
+    }
+    amountInput.classList.remove('field-error');
+    // #15 预估必须填确认日期
+    const nature = tr.querySelector('.fee-nature').value;
+    if (nature === 'estimate') {
+      const eta = tr.querySelector('.fee-eta');
+      if (!eta.value) {
+        eta.classList.add('field-error');
+        showToast('error', `第 ${i+1} 行：预估费用必须填写预计确认日期`);
+        eta.focus();
+        return false;
+      }
+      eta.classList.remove('field-error');
+    }
+  }
+  // #10/11 分摊方式与数据匹配
+  const mode = document.getElementById('sel-alloc-mode').value;
+  const checked = document.querySelectorAll('.ck-po:checked');
+  if (mode === 'weight') {
+    const missing = [];
+    checked.forEach(ck => { if (parseFloat(ck.dataset.weight) === 0) missing.push(ck.parentElement.parentElement.children[1].innerText.trim()); });
+    if (missing.length > 0) {
+      showToast('error', '按重量分摊缺少数据', `以下 PO 缺少重量：${missing.join('、')}，请补全数据或改用其他分摊方式`);
+      return false;
+    }
+  }
+  if (mode === 'volume') {
+    const missing = [];
+    checked.forEach(ck => { if (parseFloat(ck.dataset.volume) === 0) missing.push(ck.parentElement.parentElement.children[1].innerText.trim()); });
+    if (missing.length > 0) {
+      showToast('error', '按体积分摊缺少数据', `以下 PO 缺少体积：${missing.join('、')}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+/* 【按钮】预览分摊 */
+function onPreviewAlloc() {
+  if (!validateFeeTable()) return;
+  showModal('modal-alloc-preview');
+}
+
+/* 【按钮】保存草稿 */
+function onSaveDraft() {
+  if (!validateFeeTable()) return;
+  showToast('success', '草稿已保存', '单号 LC-20260513-003，可在费用单列表查看');
+}
+
+/* 【按钮】提交对账 */
+function onSubmitCost() {
+  if (!validateFeeTable()) return;
+  // 检测是否含预估
+  const hasEstimate = Array.from(document.querySelectorAll('.fee-nature')).some(s => s.value === 'estimate');
+  if (hasEstimate) {
+    showConfirm({
+      icon: '📌',
+      title: '含预估费用，确认提交？',
+      msg: '本次提交包含<strong>预估费用项</strong>。<br/>入库时将按"预估 + 实际"合计金额分摊到落地成本；实际单据到位后请在<strong>详情页录入实际值</strong>，系统将自动按在库/出库比例调整差异。',
+      onOk: () => showToast('success', '物流费用单已提交', '单号 LC-20260513-003 · 状态：待对账 · 含 1 项预估')
+    });
+  } else {
+    showToast('success', '物流费用单已提交', '单号 LC-20260513-003 · 状态：待对账');
+  }
+}
+
+/* ════════ 分摊预览弹窗：确认提交 ════════ */
+// 替换内嵌的 alert 改为 toast
+document.addEventListener('DOMContentLoaded', () => {
+  const previewSubmit = document.querySelector('#modal-alloc-preview .btn-primary');
+  if (previewSubmit) {
+    previewSubmit.onclick = () => {
+      hideModal('modal-alloc-preview');
+      showToast('success', '物流费用单已确认提交', '分摊结果将在确认后写入 SKU 落地成本');
+    };
+  }
+  // 物流商保存按钮
+  const vendorSaveBtn = document.querySelector('#modal-vendor-edit .btn-primary');
+  if (vendorSaveBtn) {
+    vendorSaveBtn.onclick = onVendorSave;
+  }
+  // 上传发票链接
+  document.querySelectorAll('#pg-logistics-settlement .link').forEach(a => {
+    if (a.textContent.trim() === '上传发票') {
+      a.onclick = onUploadInvoice;
+    }
+    if (a.textContent.trim() === '驳回') {
+      a.onclick = (e) => { e.preventDefault(); onSettlementReject(); };
+    }
+  });
+  // 物流商停用
+  document.querySelectorAll('#pg-vendor-list .link').forEach(a => {
+    if (a.textContent.trim() === '停用') {
+      a.onclick = (e) => { e.preventDefault(); onVendorDisable(a); };
+    }
+  });
+  // 费用单列表删除/编辑
+  document.querySelectorAll('#pg-cost-list .link').forEach(a => {
+    const txt = a.textContent.trim();
+    if (txt === '删除') a.onclick = (e) => { e.preventDefault(); onCostDelete(); };
+    if (txt === '编辑') a.onclick = (e) => {
+      e.preventDefault();
+      const status = a.closest('tr').querySelector('.badge')?.textContent.trim();
+      if (status === '待对账') {
+        showToast('warn','费用单已提交对账','需先驳回到草稿状态才能编辑');
+      } else if (status === '已确认' || status === '已付款') {
+        showToast('error','不可编辑',`状态为「${status}」的费用单不允许编辑，仅可查看`);
+      } else {
+        navTo('pg-cost-create');
+      }
+    };
+  });
+});
+
+/* 【异常 #21-22】物流商管理 */
+function onVendorSave() {
+  const modal = document.getElementById('modal-vendor-edit');
+  const inputs = modal.querySelectorAll('input[type="text"]');
+  const name = inputs[0]; const code = inputs[1];
+  if (!name.value.trim()) {
+    name.classList.add('field-error');
+    showToast('error', '请填写物流商名称');
+    return;
+  }
+  if (!code.value.trim()) {
+    code.classList.add('field-error');
+    showToast('error', '请填写物流商编码');
+    return;
+  }
+  // 模拟编码重复
+  if (['LV-001','LV-002','LV-003','LV-004'].includes(code.value.trim().toUpperCase())) {
+    code.classList.add('field-error');
+    showToast('error', '编码已存在', `「${code.value}」已被使用，请使用其他编码`);
+    return;
+  }
+  hideModal('modal-vendor-edit');
+  showToast('success', '物流商已保存');
+}
+
+function onVendorDisable(link) {
+  const row = link.closest('tr');
+  const vendor = row.children[1].textContent.trim();
+  showConfirm({
+    icon: '⚠️',
+    title: '停用物流商',
+    msg: `物流商「<strong>${vendor}</strong>」存在 <strong>2 张未结清费用单</strong>，停用后将无法新建新的费用单（已存在的不受影响）。<br/><span class="text-muted">是否继续停用？</span>`,
+    onOk: () => showToast('success', `${vendor} 已停用`)
+  });
+}
+
+/* 【异常 #23】上传发票 */
+function onUploadInvoice(e) {
+  e && e.preventDefault();
+  showConfirm({
+    icon: '📎',
+    title: '上传发票',
+    msg: '请选择发票文件。<br/><span class="text-muted">支持 PDF / JPG / PNG，单文件 ≤ 10MB。</span>',
+    onOk: () => showToast('success', '发票已上传', '系统将自动识别开票金额并匹配结算单')
+  });
+}
+
+/* 结算驳回 */
+function onSettlementReject() {
+  showConfirm({
+    icon: '↩️',
+    title: '驳回结算单',
+    msg: '驳回后结算单将退回到「草稿」状态，需关联的费用单重新提交。<br/><span class="text-muted">建议在驳回原因中说明具体问题。</span>',
+    onOk: () => showToast('success', '已驳回', '已通知创建人重新核对')
+  });
+}
+
+/* 【异常 #19】费用单删除：判断是否被入库引用 */
+function onCostDelete() {
+  showConfirm({
+    icon: '🗑',
+    title: '删除费用单',
+    msg: '该费用单状态为「草稿」，可删除。<br/><strong class="diff-positive">注意：</strong>若已用于入库成本核算，将仅允许冲销而非删除。',
+    onOk: () => showToast('success', '费用单已删除')
+  });
+}
+
+/* ════════ 实际费用录入弹窗：差异实时计算 ════════ */
+function recalcDiff() {
+  const actual = parseFloat(document.getElementById('actual-amount').value) || 0;
+  const estimate = 300;
+  const diff = actual - estimate;
+  const pct = (diff / estimate * 100).toFixed(1);
+  const el = document.getElementById('diff-amount');
+  if (!el) return;
+  if (diff > 0) {
+    el.className = 'diff-positive';
+    el.textContent = `USD +${diff.toFixed(2)} (+${pct}%)`;
+  } else if (diff < 0) {
+    el.className = 'diff-negative';
+    el.textContent = `USD ${diff.toFixed(2)} (${pct}%)`;
+  } else {
+    el.className = '';
+    el.textContent = 'USD 0.00 (0%)';
+  }
 }
 </script>
 
