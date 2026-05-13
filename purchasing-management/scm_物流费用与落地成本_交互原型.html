@@ -1,6 +1,11 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.4
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.5
      日期：2026-05-13
      变更：
+     - 【v1.5】金额调整单简化：去掉"在库比例""已出库比例"列、去掉"差异来源溯源"折叠
+     - 【v1.5】金额调整单仅在所有项实际录入完毕后显示（去暂态），未录完时显示 placeholder + 演示按钮
+     - 【v1.5】费用单列表去掉"待录入"列（状态列已承载该信息）
+     - 【v1.5】结算闭环：详情页加结算流程进度条（8 步），加"上传发票"按钮
+     - 【v1.5】上传发票流程：上传 → 校验金额 → 生成结算单 → 复用供应商采购单结算流程
      - 【v1.4】差异调整改为 PO 维度：总差异 = Σ实际 - Σ预估，按 PO 占比分摊，再按"在库/已出库"拆分
      - 【v1.4】"差异调整记录"卡片改为"金额调整单"（独立单据，可定稿）
      - 【v1.4】实际录入弹窗：预览本笔差异 + 录入后金额调整单（PO 维度）
@@ -34,7 +39,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.4</title>
+  <title>物流费用与落地成本 — 交互原型 v1.5</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -390,7 +395,6 @@
             <th>费用摘要</th>
             <th class="text-right" style="background:#fef3c7">预估合计<br/><span class="text-muted" style="font-weight:400;font-size:10px">(入库前)</span></th>
             <th class="text-right" style="background:#dcfce7">实际合计<br/><span class="text-muted" style="font-weight:400;font-size:10px">(已录入)</span></th>
-            <th class="text-right">待录入<br/><span class="text-muted" style="font-weight:400;font-size:10px">(项数)</span></th>
             <th>分摊方式</th>
             <th>状态</th>
             <th>创建时间</th>
@@ -405,7 +409,6 @@
             <td>海运 + 报关 + 保险 + 港口费 (差异+50已结清)</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 3,050.00</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 2,800.00</td>
-            <td class="text-right"><span class="badge badge-amber">1 项</span></td>
             <td>按金额</td>
             <td><span class="badge badge-amber" title="保险费实际待录入">待 1 项实际</span></td>
             <td>2026-04-13 10:30</td>
@@ -418,7 +421,6 @@
             <td>海运 + 清关 + 内陆运输（全部已确认）</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 4,500.00</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 4,500.00</td>
-            <td class="text-right text-muted">—</td>
             <td>按重量</td>
             <td><span class="badge badge-blue">待对账</span></td>
             <td>2026-04-12 15:20</td>
@@ -431,7 +433,6 @@
             <td>空运</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 1,200.00</td>
             <td class="text-right text-muted" style="background:#f0fdf4">—</td>
-            <td class="text-right text-muted">1 项</td>
             <td>按金额</td>
             <td><span class="badge badge-amber">草稿</span></td>
             <td>2026-04-11 09:15</td>
@@ -444,7 +445,6 @@
             <td>海运 + 报关 + 港口费 <span class="badge badge-actual" style="font-size:10px">差异已结清</span></td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 3,200.00</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 3,250.00</td>
-            <td class="text-right text-muted">—</td>
             <td>按金额</td>
             <td><span class="badge badge-purple">已付款</span></td>
             <td>2026-04-10 11:00</td>
@@ -683,10 +683,31 @@
     <div class="card-header">
       <div style="display:flex;align-items:center;gap:12px">
         <h3>LC-20260413-001</h3>
-        <span class="badge badge-green">已确认</span>
+        <span class="badge badge-amber" id="cost-status-badge">已确认 · 待 1 项实际</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline btn-sm">导出</button>
+        <button class="btn btn-outline btn-sm" id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="所有费用实际录入并定稿调整单后可上传发票">📎 上传发票</button>
+        <button class="btn btn-outline btn-sm">📥 导出</button>
+      </div>
+    </div>
+    <!-- 结算流程进度条 -->
+    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;background:#fafbfc">
+      <div style="display:flex;align-items:center;gap:0;font-size:11.5px" id="settlement-progress">
+        <span class="badge badge-green">✓ 1. 草稿</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-green">✓ 2. 待对账</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-green">✓ 3. 已确认</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-amber" id="step-actual">⏳ 4. 实际录入</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-gray" id="step-adj">5. 金额调整单</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-gray" id="step-invoice">6. 上传发票</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-gray" id="step-settlement">7. 生成结算单</span>
+        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
+        <span class="badge badge-gray" id="step-paid">8. 已付款</span>
       </div>
     </div>
     <div class="card-body">
@@ -795,47 +816,58 @@
     </div>
   </div>
 
-  <!-- 金额调整单（PO 维度，总差异按 PO 占比分摊） -->
-  <div class="card" style="margin-bottom:16px">
+  <!-- 金额调整单 Placeholder（仅在所有项实际录入完毕后切换为真实卡片） -->
+  <div class="card" style="margin-bottom:16px" id="adj-placeholder">
+    <div class="card-header">
+      <h3>金额调整单</h3>
+      <span class="badge badge-gray">未生成</span>
+    </div>
+    <div class="card-body" style="text-align:center;padding:32px 20px;color:#64748b">
+      <div style="font-size:36px;margin-bottom:8px">⏳</div>
+      <div style="font-size:13px;margin-bottom:4px;font-weight:600;color:#475569">所有费用实际录入完毕后将自动生成金额调整单</div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:16px">当前还有 <strong style="color:#92400e">1 项</strong>实际待录入（保险费 ETA 2026-05-20）</div>
+      <button class="btn btn-outline btn-sm" onclick="simulateAllActualEntered()">🎬 演示：模拟保险费实际录入 USD 280</button>
+    </div>
+  </div>
+
+  <!-- 金额调整单（真实，仅在所有项已录入时显示） -->
+  <div class="card" style="margin-bottom:16px;display:none" id="adj-card">
     <div class="card-header">
       <div style="display:flex;align-items:center;gap:12px">
         <h3>金额调整单 LC-ADJ-20260513-001</h3>
-        <span class="badge badge-amber">⏳ 暂态（待 1 项实际录入后定稿）</span>
+        <span class="badge badge-green">✅ 已定稿</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline btn-sm" disabled title="所有项实际录入后可定稿">📌 定稿调整单</button>
+        <button class="btn btn-outline btn-sm">📥 导出</button>
       </div>
     </div>
     <div class="card-body">
       <!-- 总差异概览 -->
-      <div style="background:#f8fafc;border-radius:8px;padding:14px 18px;margin-bottom:14px;display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap">
+      <div style="background:#f8fafc;border-radius:8px;padding:14px 18px;margin-bottom:14px;display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap">
         <div>
           <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">预估合计</div>
           <div style="font-size:14px;font-weight:600;color:#92400e">USD 3,050.00</div>
         </div>
         <div style="color:#94a3b8;font-size:18px;align-self:center">→</div>
         <div>
-          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">实际合计（已录入）</div>
-          <div style="font-size:14px;font-weight:600;color:#15803d">USD 2,800.00</div>
-          <div style="font-size:10.5px;color:#92400e">+ 1 项待录入</div>
+          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">实际合计</div>
+          <div style="font-size:14px;font-weight:600;color:#15803d">USD 3,080.00</div>
         </div>
         <div style="border-left:1px solid #cbd5e1;padding-left:24px;margin-left:8px">
-          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">当前已知差异（暂态）</div>
-          <div style="font-size:18px;font-weight:700" class="diff-positive">+USD 50.00</div>
-          <div style="font-size:10.5px;color:#64748b">实际录入完毕后定稿</div>
+          <div style="font-size:11.5px;color:#64748b;margin-bottom:2px">总差异</div>
+          <div style="font-size:20px;font-weight:700" class="diff-positive">+USD 30.00</div>
         </div>
       </div>
 
       <div class="hint-card info" style="margin-bottom:14px;font-size:11.5px">
         <span class="hint-icon">📐</span>
         <div>
-          <strong>计算公式：</strong>总差异 = Σ 实际 − Σ 预估；
-          按关联 PO 的<strong>采购金额占比</strong>分摊总差异；
-          PO 内再按"在库 / 已出库"比例拆分到库存成本与销售成本（BR-LC-03）。
+          <strong>计算公式：</strong>总差异 = Σ 实际 − Σ 预估；按关联 PO 的<strong>采购金额占比</strong>分摊总差异；
+          PO 内按"在库 / 已出库"比例拆分到库存成本与销售成本（BR-LC-03）。
         </div>
       </div>
 
-      <!-- PO 维度分摊表 -->
+      <!-- PO 维度分摊表（简化版） -->
       <table>
         <thead>
           <tr>
@@ -843,9 +875,7 @@
             <th class="text-right">采购金额</th>
             <th class="text-right">占比</th>
             <th class="text-right">差异分摊</th>
-            <th class="text-right">在库比例</th>
             <th class="text-right" style="background:#dbeafe">→ 调库存成本</th>
-            <th class="text-right">已出库比例</th>
             <th class="text-right" style="background:#fce7f3">→ 调销售成本</th>
           </tr>
         </thead>
@@ -854,90 +884,33 @@
             <td><span class="link">PO-2026-0401</span></td>
             <td class="text-right">USD 10,000</td>
             <td class="text-right">66.67%</td>
-            <td class="text-right diff-positive" style="font-weight:600">+33.34</td>
-            <td class="text-right">70%</td>
-            <td class="text-right" style="background:#eff6ff;color:#1e40af;font-weight:600">+23.34</td>
-            <td class="text-right">30%</td>
-            <td class="text-right" style="background:#fdf2f8;color:#9d174d;font-weight:600">+10.00</td>
+            <td class="text-right diff-positive" style="font-weight:600">+20.00</td>
+            <td class="text-right" style="background:#eff6ff;color:#1e40af;font-weight:600">+14.00</td>
+            <td class="text-right" style="background:#fdf2f8;color:#9d174d;font-weight:600">+6.00</td>
           </tr>
           <tr>
             <td><span class="link">PO-2026-0402</span></td>
             <td class="text-right">USD 5,000</td>
             <td class="text-right">33.33%</td>
-            <td class="text-right diff-positive" style="font-weight:600">+16.66</td>
-            <td class="text-right">60%</td>
-            <td class="text-right" style="background:#eff6ff;color:#1e40af;font-weight:600">+10.00</td>
-            <td class="text-right">40%</td>
-            <td class="text-right" style="background:#fdf2f8;color:#9d174d;font-weight:600">+6.66</td>
+            <td class="text-right diff-positive" style="font-weight:600">+10.00</td>
+            <td class="text-right" style="background:#eff6ff;color:#1e40af;font-weight:600">+6.00</td>
+            <td class="text-right" style="background:#fdf2f8;color:#9d174d;font-weight:600">+4.00</td>
           </tr>
           <tr style="background:#f8fafc;font-weight:700">
             <td>合计</td>
             <td class="text-right">USD 15,000</td>
             <td class="text-right">100%</td>
-            <td class="text-right diff-positive">+50.00</td>
-            <td class="text-right" colspan="1">—</td>
-            <td class="text-right" style="background:#dbeafe;color:#1e40af">+33.34</td>
-            <td class="text-right" colspan="1">—</td>
-            <td class="text-right" style="background:#fce7f3;color:#9d174d">+16.66</td>
+            <td class="text-right diff-positive">+30.00</td>
+            <td class="text-right" style="background:#dbeafe;color:#1e40af">+20.00</td>
+            <td class="text-right" style="background:#fce7f3;color:#9d174d">+10.00</td>
           </tr>
         </tbody>
       </table>
 
-      <!-- 差异来源溯源（折叠区） -->
-      <details style="margin-top:14px">
-        <summary style="cursor:pointer;font-size:12.5px;font-weight:600;color:#475569;padding:8px 0">📜 差异来源溯源（点击展开）</summary>
-        <table style="margin-top:8px">
-          <thead>
-            <tr>
-              <th>费用项</th>
-              <th class="text-right">预估</th>
-              <th class="text-right">实际</th>
-              <th class="text-right">差异</th>
-              <th>状态</th>
-              <th>录入人</th>
-              <th>录入时间</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>🚢 海运费</td>
-              <td class="text-right">2,000</td>
-              <td class="text-right">2,000</td>
-              <td class="text-right text-muted">0</td>
-              <td><span class="badge badge-green">已确认</span></td>
-              <td>Alex 沈亮</td>
-              <td>2026-04-13 14:00</td>
-            </tr>
-            <tr>
-              <td>📋 报关费</td>
-              <td class="text-right">500</td>
-              <td class="text-right">500</td>
-              <td class="text-right text-muted">0</td>
-              <td><span class="badge badge-green">已确认</span></td>
-              <td>Alex 沈亮</td>
-              <td>2026-04-13 14:00</td>
-            </tr>
-            <tr>
-              <td>🛡 保险费</td>
-              <td class="text-right">300</td>
-              <td class="text-right text-muted">待录入</td>
-              <td class="text-right text-muted">—</td>
-              <td><span class="badge badge-amber">⏳ 待确认</span></td>
-              <td class="text-muted">—</td>
-              <td class="text-muted">—</td>
-            </tr>
-            <tr>
-              <td>🏗 港口费</td>
-              <td class="text-right">250</td>
-              <td class="text-right">300</td>
-              <td class="text-right diff-positive">+50.00</td>
-              <td><span class="badge badge-green">已确认</span></td>
-              <td>Alex 沈亮</td>
-              <td>2026-05-08 14:22</td>
-            </tr>
-          </tbody>
-        </table>
-      </details>
+      <div style="margin-top:14px;padding:10px 14px;background:#eff6ff;border-radius:6px;font-size:11.5px;color:#1e40af">
+        ✓ 库存成本调整 <strong>+USD 20.00</strong> 已写入对应 SKU 落地成本（PO-0401 +14、PO-0402 +6）；
+        销售成本调整 <strong>+USD 10.00</strong> 已计入对应出库单损益（PO-0401 +6、PO-0402 +4）。
+      </div>
     </div>
   </div>
 
@@ -1216,11 +1189,12 @@
       </div>
 
       <div class="hint-card info" style="margin-bottom:12px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af;font-size:12px">
-        <span class="hint-icon">ℹ️</span>
+        <span class="hint-icon">🔄</span>
         <div>
-          <strong>结算口径：</strong>结算金额 = 关联费用单的<strong>实际金额合计</strong>（须所有项已录入实际值）。
-          若有项目实际待录入，该费用单暂不可参与结算；
-          后续实际值与初始记录的预估差异会自动按"在库/已出库"拆分调整成本，不影响结算。
+          <strong>结算流程闭环（复用供应商采购单结算逻辑）：</strong><br/>
+          ① 费用单全部实际录入 → ② 金额调整单定稿 → ③ 在费用单详情页<strong>上传发票</strong>（系统校验金额=实际合计）
+          → ④ 自动生成<strong>结算单</strong>（含费用单 + 调整单）→ ⑤ 财务审批 → ⑥ 开票 → ⑦ 付款。
+          <span class="text-muted">差异结算单（如 LS-DIFF）由金额调整单单独触发，独立审批支付。</span>
         </div>
       </div>
 
@@ -1964,7 +1938,7 @@ function onVendorDisable(link) {
   });
 }
 
-/* 【异常 #23】上传发票 */
+/* 【异常 #23】物流费对账列表上传发票 */
 function onUploadInvoice(e) {
   e && e.preventDefault();
   showConfirm({
@@ -1973,6 +1947,57 @@ function onUploadInvoice(e) {
     msg: '请选择发票文件。<br/><span class="text-muted">支持 PDF / JPG / PNG，单文件 ≤ 10MB。</span>',
     onOk: () => showToast('success', '发票已上传', '系统将自动识别开票金额并匹配结算单')
   });
+}
+
+/* 费用单详情页 - 上传发票 → 生成结算单（复用供应商采购单结算流程） */
+function onCostUploadInvoice() {
+  showConfirm({
+    icon: '📎',
+    title: '上传发票并生成结算单',
+    msg: `<strong>步骤：</strong><br/>
+      1. 上传发票文件（PDF / JPG / PNG ≤ 10MB）<br/>
+      2. 系统校验发票金额 = 实际合计 USD 3,080<br/>
+      3. 自动生成结算单 <strong>LS-20260513-005</strong>（含本费用单 + 金额调整单）<br/>
+      4. 流转至「物流费对账」待财务审批<br/>
+      <span class="text-muted">复用供应商采购单结算流程，状态：草稿 → 待审批 → 待开票 → 已开票 → 已付款</span>`,
+    onOk: () => {
+      // 状态推进
+      document.getElementById('step-invoice').className = 'badge badge-green';
+      document.getElementById('step-invoice').textContent = '✓ 6. 已上传发票';
+      document.getElementById('step-settlement').className = 'badge badge-blue';
+      document.getElementById('step-settlement').textContent = '⏳ 7. 待审批';
+      const statusBadge = document.getElementById('cost-status-badge');
+      statusBadge.className = 'badge badge-blue';
+      statusBadge.textContent = '已上传发票 · 待审批';
+      document.getElementById('btn-upload-invoice').disabled = true;
+      showToast('success', '发票已上传，结算单已生成', '单号 LS-20260513-005，已流转至物流费对账');
+    }
+  });
+}
+
+/* 演示按钮：模拟保险费实际录入 USD 280 → 触发金额调整单定稿 */
+function simulateAllActualEntered() {
+  // 隐藏 placeholder，显示真实调整单
+  document.getElementById('adj-placeholder').style.display = 'none';
+  document.getElementById('adj-card').style.display = 'block';
+  // 更新状态徽章
+  const statusBadge = document.getElementById('cost-status-badge');
+  statusBadge.className = 'badge badge-green';
+  statusBadge.textContent = '已确认 · 全部已录入';
+  // 推进流程
+  document.getElementById('step-actual').className = 'badge badge-green';
+  document.getElementById('step-actual').textContent = '✓ 4. 实际录入';
+  document.getElementById('step-adj').className = 'badge badge-green';
+  document.getElementById('step-adj').textContent = '✓ 5. 调整单定稿';
+  document.getElementById('step-invoice').className = 'badge badge-amber';
+  document.getElementById('step-invoice').textContent = '⏳ 6. 上传发票';
+  // 启用上传发票按钮
+  const btn = document.getElementById('btn-upload-invoice');
+  btn.disabled = false;
+  btn.removeAttribute('title');
+  showToast('success', '保险费实际 USD 280 已录入', '总差异 +USD 30，金额调整单 LC-ADJ-20260513-001 已定稿');
+  // 滚动到调整单
+  document.getElementById('adj-card').scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 /* 结算驳回 */
