@@ -1,6 +1,12 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.5
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.6
      日期：2026-05-13
      变更：
+     - 【v1.6】费用单状态机重构为 4 状态：待录入 → 待对账 → 待付款 → 已付款（去掉草稿和已确认）
+     - 【v1.6】实际费用录入前置：所有关联 PO 必须完成入库后才可录入实际
+     - 【v1.6】预估金额在任一 PO 入库后自动锁定，不可修改（已参与库存成本计算）
+     - 【v1.6】详情页新增「PO 入库进度」卡片，展示前置约束
+     - 【v1.6】结算进度条从 8 步简化为 4 步（对齐新状态机）
+     - 【v1.6】费用单列表加状态筛选 + "编辑预估" 按钮（仅 PO 未入库时可编辑）
      - 【v1.5】金额调整单简化：去掉"在库比例""已出库比例"列、去掉"差异来源溯源"折叠
      - 【v1.5】金额调整单仅在所有项实际录入完毕后显示（去暂态），未录完时显示 placeholder + 演示按钮
      - 【v1.5】费用单列表去掉"待录入"列（状态列已承载该信息）
@@ -39,7 +45,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.5</title>
+  <title>物流费用与落地成本 — 交互原型 v1.6</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -365,7 +371,7 @@
       <div class="filter-bar">
         <div class="form-group"><div class="form-label">费用单号</div><input type="text" placeholder="LC-..." /></div>
         <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
-        <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>草稿</option><option>待对账</option><option>已确认</option><option>已付款</option></select></div>
+        <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待录入</option><option>待对账</option><option>待付款</option><option>已付款</option></select></div>
         <div class="form-group"><div class="form-label">费用币种</div><select><option>全部</option><option>USD</option><option>SGD</option><option>CNY</option></select></div>
         <div class="form-group"><div class="form-label">创建日期</div><input type="date" /></div>
         <button class="btn btn-primary btn-sm">查询</button>
@@ -406,11 +412,11 @@
             <td><span class="link" onclick="navTo('pg-cost-detail')">LC-20260413-001</span></td>
             <td>顺丰国际货运</td>
             <td><span title="PO-2026-0401, PO-2026-0402" class="link">2 张</span></td>
-            <td>海运 + 报关 + 保险 + 港口费 (差异+50已结清)</td>
+            <td>海运 + 报关 + 保险 + 港口费</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 3,050.00</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 2,800.00</td>
             <td>按金额</td>
-            <td><span class="badge badge-amber" title="保险费实际待录入">待 1 项实际</span></td>
+            <td><span class="badge badge-amber" title="3 项实际已录入，保险费待录入">待录入</span></td>
             <td>2026-04-13 10:30</td>
             <td><span class="link" onclick="navTo('pg-cost-detail')">详情</span></td>
           </tr>
@@ -424,19 +430,31 @@
             <td>按重量</td>
             <td><span class="badge badge-blue">待对账</span></td>
             <td>2026-04-12 15:20</td>
-            <td><span class="link">编辑</span> · <span class="link">详情</span></td>
+            <td><span class="link">详情</span></td>
           </tr>
           <tr>
             <td><span class="link">LC-20260411-001</span></td>
             <td>顺丰国际货运</td>
             <td><span class="link">1 张</span></td>
-            <td>空运</td>
+            <td>空运 (PO 未入库，无法录入实际)</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 1,200.00</td>
             <td class="text-right text-muted" style="background:#f0fdf4">—</td>
             <td>按金额</td>
-            <td><span class="badge badge-amber">草稿</span></td>
+            <td><span class="badge badge-amber" title="PO 入库后才可录入实际">待录入</span></td>
             <td>2026-04-11 09:15</td>
-            <td><span class="link">编辑</span> · <span class="link btn-danger btn-sm" style="border:none;padding:0">删除</span></td>
+            <td><span class="link">编辑预估</span> · <span class="link btn-danger btn-sm" style="border:none;padding:0">删除</span></td>
+          </tr>
+          <tr>
+            <td><span class="link">LC-20260410-002</span></td>
+            <td>顺丰国际货运</td>
+            <td><span class="link">2 张</span></td>
+            <td>海运 + 报关（已上传发票，待财务付款）</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 2,500.00</td>
+            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 2,500.00</td>
+            <td>按金额</td>
+            <td><span class="badge badge-green">待付款</span></td>
+            <td>2026-04-10 14:00</td>
+            <td><span class="link">详情</span></td>
           </tr>
           <tr>
             <td><span class="link">LC-20260410-001</span></td>
@@ -452,7 +470,7 @@
           </tr>
         </tbody>
       </table>
-      <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 4 条</div>
+      <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 5 条</div>
     </div>
   </div>
 </div>
@@ -683,31 +701,26 @@
     <div class="card-header">
       <div style="display:flex;align-items:center;gap:12px">
         <h3>LC-20260413-001</h3>
-        <span class="badge badge-amber" id="cost-status-badge">已确认 · 待 1 项实际</span>
+        <span class="badge badge-amber" id="cost-status-badge">待录入</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline btn-sm" id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="所有费用实际录入并定稿调整单后可上传发票">📎 上传发票</button>
+        <button class="btn btn-outline btn-sm" id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="所有费用实际录入完毕后可上传发票">📎 上传发票</button>
         <button class="btn btn-outline btn-sm">📥 导出</button>
       </div>
     </div>
-    <!-- 结算流程进度条 -->
+    <!-- 结算流程进度条（4 状态） -->
     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;background:#fafbfc">
-      <div style="display:flex;align-items:center;gap:0;font-size:11.5px" id="settlement-progress">
-        <span class="badge badge-green">✓ 1. 草稿</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-green">✓ 2. 待对账</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-green">✓ 3. 已确认</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-amber" id="step-actual">⏳ 4. 实际录入</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-gray" id="step-adj">5. 金额调整单</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-gray" id="step-invoice">6. 上传发票</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-gray" id="step-settlement">7. 生成结算单</span>
-        <span style="width:24px;height:1px;background:#cbd5e1;margin:0 4px"></span>
-        <span class="badge badge-gray" id="step-paid">8. 已付款</span>
+      <div style="display:flex;align-items:center;gap:0;font-size:12px" id="settlement-progress">
+        <span class="badge badge-amber" id="step-1" style="font-size:12px;padding:4px 10px">⏳ 1. 待录入</span>
+        <span style="flex:1;max-width:60px;height:2px;background:#e2e8f0;margin:0 8px"></span>
+        <span class="badge badge-gray" id="step-2" style="font-size:12px;padding:4px 10px">2. 待对账</span>
+        <span style="flex:1;max-width:60px;height:2px;background:#e2e8f0;margin:0 8px"></span>
+        <span class="badge badge-gray" id="step-3" style="font-size:12px;padding:4px 10px">3. 待付款</span>
+        <span style="flex:1;max-width:60px;height:2px;background:#e2e8f0;margin:0 8px"></span>
+        <span class="badge badge-gray" id="step-4" style="font-size:12px;padding:4px 10px">4. 已付款</span>
+        <span style="margin-left:auto;color:#94a3b8;font-size:11.5px">
+          状态机：<strong>待录入 → 待对账 → 待付款 → 已付款</strong>
+        </span>
       </div>
     </div>
     <div class="card-body">
@@ -732,20 +745,67 @@
     </div>
   </div>
 
+  <!-- PO 入库进度（实际费用录入前置） -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <h3>关联 PO 入库进度</h3>
+      <span class="badge badge-green">✅ 全部已入库（可录入实际）</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>采购单号</th>
+            <th>供应商</th>
+            <th class="text-right">采购金额</th>
+            <th>入库状态</th>
+            <th>入库时间</th>
+            <th>在库数量</th>
+            <th>已出库数量</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="link">PO-2026-0401</span></td>
+            <td>深圳鲜之道食品</td>
+            <td class="text-right">USD 10,000</td>
+            <td><span class="badge badge-green">✓ 已入库</span></td>
+            <td>2026-04-25</td>
+            <td>2,450 kg <span class="text-muted">(70%)</span></td>
+            <td>1,050 kg <span class="text-muted">(30%)</span></td>
+          </tr>
+          <tr>
+            <td><span class="link">PO-2026-0402</span></td>
+            <td>深圳鲜之道食品</td>
+            <td class="text-right">USD 5,000</td>
+            <td><span class="badge badge-green">✓ 已入库</span></td>
+            <td>2026-04-28</td>
+            <td>1,320 kg <span class="text-muted">(60%)</span></td>
+            <td>880 kg <span class="text-muted">(40%)</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="padding:12px 16px;background:#eff6ff;border-top:1px solid #bfdbfe;font-size:11.5px;color:#1e40af">
+        ℹ️ <strong>规则：</strong>实际费用录入需等到所有关联 PO 完成入库；
+        <strong>预估金额在任一 PO 入库后自动锁定</strong>（已参与库存成本计算，不可修改）。
+      </div>
+    </div>
+  </div>
+
   <!-- 费用明细 -->
   <div class="card" style="margin-bottom:16px">
     <div class="card-header">
-      <h3>费用明细（每项横向：预估 → 实际 → 差异）</h3>
+      <div style="display:flex;align-items:center;gap:8px">
+        <h3>费用明细（每项横向：预估 → 实际 → 差异）</h3>
+        <span class="badge badge-gray" title="PO 已入库，预估金额已锁定">🔒 预估已锁定</span>
+      </div>
       <div style="display:flex;gap:14px;font-size:12px;align-items:center;flex-wrap:wrap">
         <span class="text-muted">预估合计</span>
         <strong style="color:#92400e">USD 3,050.00</strong>
         <span class="text-muted">→</span>
-        <span class="text-muted">实际合计（已确认 3 项）</span>
+        <span class="text-muted">实际合计（已录入 3 项）</span>
         <strong style="color:#15803d">USD 2,800.00</strong>
         <span class="badge badge-amber" title="保险费待录入">+ 1 项待录入</span>
-        <span class="text-muted">|</span>
-        <span class="text-muted">差异已结清</span>
-        <strong class="diff-positive">+USD 50.00</strong>
       </div>
     </div>
     <div class="card-body" style="padding:0">
@@ -1160,8 +1220,9 @@
     <div>
       <strong>数据来源说明：</strong>
       货款成本基于采购单锁定汇率（1 USD = 1.353 SGD）；
-      物流费用来自费用单 <span class="link" onclick="navTo('pg-cost-detail')">LC-20260413-001</span>（已确认，按金额占比分摊）。
-      如需调整分摊方式，请联系财务驳回费用单后重新提交。
+      物流费用来自费用单 <span class="link" onclick="navTo('pg-cost-detail')">LC-20260413-001</span>（按金额占比分摊）。
+      预估金额已在本 PO 入库时锁定（2026-04-25）；
+      待实际费用全部录入后，差异通过<strong>金额调整单</strong>按 PO 占比拆分到库存成本与销售成本。
     </div>
   </div>
 </div>
@@ -1183,7 +1244,7 @@
       <div class="filter-bar">
         <div class="form-group"><div class="form-label">结算单号</div><input type="text" placeholder="LS-..." /></div>
         <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
-        <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待确认</option><option>已确认</option><option>已开票</option><option>已付款</option></select></div>
+        <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待审批</option><option>已审批·待开票</option><option>已开票·待付款</option><option>已付款</option></select></div>
         <div class="form-group"><div class="form-label">含预估</div><select><option>全部</option><option>仅含预估</option><option>仅全部实际</option></select></div>
         <button class="btn btn-primary btn-sm">查询</button>
       </div>
@@ -1833,7 +1894,7 @@ function onSaveDraft() {
   showToast('success', '草稿已保存', '单号 LC-20260513-003，可在费用单列表查看');
 }
 
-/* 【按钮】提交对账 */
+/* 【按钮】创建费用单（提交后进入"待录入"状态） */
 function onSubmitCost() {
   if (!validateFeeTable()) return;
   // 检测是否有"实际待录入"项（即实际为空）
@@ -1845,12 +1906,14 @@ function onSubmitCost() {
   if (pendingCount > 0) {
     showConfirm({
       icon: '📌',
-      title: `有 ${pendingCount} 项实际金额待录入，确认提交？`,
-      msg: `当前 <strong>${pendingCount} 项</strong>费用的实际金额尚未录入。<br/>提交后系统将按<strong>预估金额</strong>暂估入库分摊；待实际单据到位后请在详情页补录实际值，<strong>结算需所有项都已录入实际</strong>。`,
-      onOk: () => showToast('success', '物流费用单已提交', `单号 LC-20260513-003 · 状态：待对账 · ${pendingCount} 项待录入实际`)
+      title: `创建费用单 - 含 ${pendingCount} 项实际待录入`,
+      msg: `<strong>${pendingCount} 项</strong>实际金额尚未录入，费用单将进入「<strong>待录入</strong>」状态。<br/>
+        ⚠️ <strong>实际费用必须等到所有关联 PO 完成入库后才可录入</strong>。<br/>
+        系统按<strong>预估金额</strong>暂估入库分摊；预估金额在任一 PO 入库后自动锁定。`,
+      onOk: () => showToast('success', '费用单已创建', `单号 LC-20260513-003 · 状态：待录入 · 等待 PO 入库后录入实际`)
     });
   } else {
-    showToast('success', '物流费用单已提交', '单号 LC-20260513-003 · 状态：待对账（全部实际已录入）');
+    showToast('success', '费用单已创建', '单号 LC-20260513-003 · 状态：待对账（实际已全部录入）');
   }
 }
 
@@ -1884,21 +1947,29 @@ document.addEventListener('DOMContentLoaded', () => {
       a.onclick = (e) => { e.preventDefault(); onVendorDisable(a); };
     }
   });
-  // 费用单列表删除/编辑
+  // 费用单列表删除/编辑（按新状态机校验）
   document.querySelectorAll('#pg-cost-list .link').forEach(a => {
     const txt = a.textContent.trim();
     if (txt === '删除') a.onclick = (e) => { e.preventDefault(); onCostDelete(); };
-    if (txt === '编辑') a.onclick = (e) => {
+    if (txt === '编辑预估') a.onclick = (e) => {
       e.preventDefault();
-      const status = a.closest('tr').querySelector('.badge')?.textContent.trim();
-      if (status === '待对账') {
-        showToast('warn','费用单已提交对账','需先驳回到草稿状态才能编辑');
-      } else if (status === '已确认' || status === '已付款') {
-        showToast('error','不可编辑',`状态为「${status}」的费用单不允许编辑，仅可查看`);
+      const row = a.closest('tr');
+      const status = row.querySelector('.badge')?.textContent.trim();
+      // 编辑预估仅在 PO 未入库时可用
+      if (status === '待录入') {
+        // 简化逻辑：演示用，假设 LC-20260411-001 PO 未入库才可编辑
+        const orderNo = row.children[0].innerText.trim();
+        if (orderNo === 'LC-20260411-001') {
+          navTo('pg-cost-create');
+          showToast('info', '编辑预估金额', 'PO 未入库，预估可修改');
+        } else {
+          showToast('error', '预估已锁定', '关联 PO 已开始入库，预估金额不可修改（已参与库存成本计算）');
+        }
       } else {
-        navTo('pg-cost-create');
+        showToast('error', '不可编辑', `状态为「${status}」的费用单不允许编辑预估`);
       }
     };
+    if (txt === '详情') a.onclick = (e) => { e.preventDefault(); navTo('pg-cost-detail'); };
   });
 });
 
@@ -1958,44 +2029,49 @@ function onCostUploadInvoice() {
       1. 上传发票文件（PDF / JPG / PNG ≤ 10MB）<br/>
       2. 系统校验发票金额 = 实际合计 USD 3,080<br/>
       3. 自动生成结算单 <strong>LS-20260513-005</strong>（含本费用单 + 金额调整单）<br/>
-      4. 流转至「物流费对账」待财务审批<br/>
-      <span class="text-muted">复用供应商采购单结算流程，状态：草稿 → 待审批 → 待开票 → 已开票 → 已付款</span>`,
+      4. 费用单状态推进至「<strong>待付款</strong>」，结算单流转至「物流费对账」<br/>
+      <span class="text-muted">复用供应商采购单结算流程</span>`,
     onOk: () => {
-      // 状态推进
-      document.getElementById('step-invoice').className = 'badge badge-green';
-      document.getElementById('step-invoice').textContent = '✓ 6. 已上传发票';
-      document.getElementById('step-settlement').className = 'badge badge-blue';
-      document.getElementById('step-settlement').textContent = '⏳ 7. 待审批';
+      // 状态机推进：待对账 → 待付款
       const statusBadge = document.getElementById('cost-status-badge');
-      statusBadge.className = 'badge badge-blue';
-      statusBadge.textContent = '已上传发票 · 待审批';
+      statusBadge.className = 'badge badge-green';
+      statusBadge.textContent = '待付款';
+      // 进度条 3 步亮起
+      document.getElementById('step-3').className = 'badge badge-green';
+      document.getElementById('step-3').style.fontSize = '12px';
+      document.getElementById('step-3').style.padding = '4px 10px';
+      document.getElementById('step-3').textContent = '✓ 3. 待付款';
       document.getElementById('btn-upload-invoice').disabled = true;
-      showToast('success', '发票已上传，结算单已生成', '单号 LS-20260513-005，已流转至物流费对账');
+      showToast('success', '发票已上传，结算单已生成', '单号 LS-20260513-005 · 费用单状态：待付款');
     }
   });
 }
 
-/* 演示按钮：模拟保险费实际录入 USD 280 → 触发金额调整单定稿 */
+/* 演示按钮：模拟保险费实际录入 USD 280 → 状态机推进到「待对账」 */
 function simulateAllActualEntered() {
   // 隐藏 placeholder，显示真实调整单
   document.getElementById('adj-placeholder').style.display = 'none';
   document.getElementById('adj-card').style.display = 'block';
-  // 更新状态徽章
+  // 状态机推进：待录入 → 待对账
   const statusBadge = document.getElementById('cost-status-badge');
-  statusBadge.className = 'badge badge-green';
-  statusBadge.textContent = '已确认 · 全部已录入';
-  // 推进流程
-  document.getElementById('step-actual').className = 'badge badge-green';
-  document.getElementById('step-actual').textContent = '✓ 4. 实际录入';
-  document.getElementById('step-adj').className = 'badge badge-green';
-  document.getElementById('step-adj').textContent = '✓ 5. 调整单定稿';
-  document.getElementById('step-invoice').className = 'badge badge-amber';
-  document.getElementById('step-invoice').textContent = '⏳ 6. 上传发票';
+  statusBadge.className = 'badge badge-blue';
+  statusBadge.textContent = '待对账';
+  // 进度条 1 完成，2 进行中
+  const step1 = document.getElementById('step-1');
+  step1.className = 'badge badge-green';
+  step1.style.fontSize = '12px';
+  step1.style.padding = '4px 10px';
+  step1.textContent = '✓ 1. 待录入';
+  const step2 = document.getElementById('step-2');
+  step2.className = 'badge badge-blue';
+  step2.style.fontSize = '12px';
+  step2.style.padding = '4px 10px';
+  step2.textContent = '⏳ 2. 待对账';
   // 启用上传发票按钮
   const btn = document.getElementById('btn-upload-invoice');
   btn.disabled = false;
   btn.removeAttribute('title');
-  showToast('success', '保险费实际 USD 280 已录入', '总差异 +USD 30，金额调整单 LC-ADJ-20260513-001 已定稿');
+  showToast('success', '保险费实际 USD 280 已录入', '总差异 +USD 30 已生成调整单，状态：待对账，可上传发票');
   // 滚动到调整单
   document.getElementById('adj-card').scrollIntoView({behavior:'smooth', block:'center'});
 }
