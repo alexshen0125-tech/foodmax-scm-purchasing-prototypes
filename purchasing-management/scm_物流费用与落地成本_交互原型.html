@@ -1,6 +1,16 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.11
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.12
      日期：2026-05-13
      变更：
+     - 【v1.12】交互闭环自检 — 修复约 30 处缺失的按钮/链接交互
+     - 【v1.12】删除「加入结算单」按钮（仅保留「上传发票创建结算单」+「导出」）
+     - 【v1.12】所有 LC-xxx / LS-xxx / PO-xxx 单号链接 → 跳对应详情页
+     - 【v1.12】所有「N 张」PO 数量链接 / LV-xxx 物流商编号 → toast 占位
+     - 【v1.12】结算单据 Tab 行内操作（审核通过/确认付款/查看驳回原因）→ 闭环绑定
+     - 【v1.12】外层 Tab（货款对账/预付管理/商品供应商）→ toast 占位
+     - 【v1.12】pg-landed-cost 顶部 6 个 Tab → toast 占位
+     - 【v1.12】所有"📥 导出 / 📎 重新上传 / 发票号 / 附件预览"按钮 → toast 占位
+     - 【v1.12】所有"查询 / 重置"按钮 → toast 占位
+     - 【v1.12】修复 pg-settlement-detail 内 LC-20260405-001"详情"自指向错误
      - 【v1.11】重组左侧菜单结构：一级"跨境物流费"，二级 4 项
        · 物流商管理（pg-vendor-list）
        · 费用单管理（pg-cost-list — 新建/详情通过列表进入）
@@ -74,7 +84,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.11</title>
+  <title>物流费用与落地成本 — 交互原型 v1.12</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -336,8 +346,8 @@
           <div class="form-label">状态</div>
           <select><option>全部</option><option>启用</option><option>停用</option></select>
         </div>
-        <button class="btn btn-primary btn-sm">查询</button>
-        <button class="btn btn-outline btn-sm">重置</button>
+        <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
+        <button class="btn btn-outline btn-sm" onclick="showToast('info','筛选已重置')">重置</button>
       </div>
 
       <table>
@@ -394,7 +404,7 @@
         <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待录入</option><option>待对账</option><option>待付款</option><option>已付款</option></select></div>
         <div class="form-group"><div class="form-label">费用币种</div><select><option>全部</option><option>USD</option><option>SGD</option><option>CNY</option></select></div>
         <div class="form-group"><div class="form-label">创建日期</div><input type="date" /></div>
-        <button class="btn btn-primary btn-sm">查询</button>
+        <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
       </div>
 
       <div class="filter-bar" style="margin-top:-4px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed #e2e8f0">
@@ -1280,8 +1290,8 @@
           <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option><option>SG Customs Broker</option></select></div>
           <div class="form-group"><div class="form-label">结算币种</div><select><option>全部</option><option>USD</option><option>SGD</option><option>CNY</option></select></div>
           <div class="form-group"><div class="form-label">实际录入时间</div><input type="date" /></div>
-          <button class="btn btn-primary btn-sm">查询</button>
-          <button class="btn btn-outline btn-sm">重置</button>
+          <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
+          <button class="btn btn-outline btn-sm" onclick="showToast('info','筛选已重置')">重置</button>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border-radius:8px">
@@ -1294,9 +1304,8 @@
             </span>
           </div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-outline btn-sm" id="btn-add-to-settle" onclick="onAddToSettle()" disabled>加入结算单</button>
             <button class="btn btn-primary btn-sm" id="btn-upload-create" onclick="onUploadCreateSettle()" disabled>📎 上传发票创建结算单</button>
-            <button class="btn btn-outline btn-sm">📥 导出</button>
+            <button class="btn btn-outline btn-sm" onclick="showToast('info','导出待结算列表','已导出 5 条记录至下载列表')">📥 导出</button>
           </div>
         </div>
 
@@ -1389,7 +1398,7 @@
           <div class="form-group"><div class="form-label">结算单号</div><input type="text" placeholder="LS-..." /></div>
           <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
           <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待审核</option><option>待付款</option><option>已付款</option><option>审核拒绝</option></select></div>
-          <button class="btn btn-primary btn-sm">查询</button>
+          <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
         </div>
 
         <div class="hint-card info" style="margin-bottom:12px;font-size:11.5px">
@@ -1578,13 +1587,13 @@
             <td><span class="link" onclick="navTo('pg-cost-detail')">详情</span></td>
           </tr>
           <tr>
-            <td><span class="link">LC-20260405-001</span></td>
+            <td><span class="link" onclick="navTo('pg-cost-detail')">LC-20260405-001</span></td>
             <td>PO-2026-0385、PO-2026-0386</td>
             <td>海运 + 报关 + 港口费</td>
             <td class="text-right" style="font-weight:600">USD 1,700.00</td>
             <td class="text-right">SGD 2,301.12</td>
             <td>2026-04-13 09:30</td>
-            <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
+            <td><span class="link" onclick="navTo('pg-cost-detail')">详情</span></td>
           </tr>
           <tr style="background:#f8fafc;font-weight:700">
             <td colspan="3">合计</td>
@@ -2462,6 +2471,17 @@ document.addEventListener('DOMContentLoaded', () => {
       a.onclick = (e) => { e.preventDefault(); onVendorDisable(a); };
     }
   });
+  // 批量绑定：所有 LC-xxx / LS-xxx / PO-xxx 单号链接 → 对应详情页
+  bindOrderNumberLinks();
+  // 批量绑定：所有外层 Tab（货款对账/预付管理）→ toast 占位
+  bindOuterTabs();
+  // 批量绑定：pg-landed-cost 顶部 7 个 Tab → toast 占位
+  bindLandedCostTabs();
+  // 批量绑定：结算单据表内操作链接（审核通过/确认付款/查看驳回原因）
+  bindSettledRowActions();
+  // 批量绑定：纯占位按钮（导出/重新上传/+登记付款/发票号/预览/附件等）
+  bindPlaceholderButtons();
+
   // 费用单列表删除/编辑（按新状态机校验）
   document.querySelectorAll('#pg-cost-list .link').forEach(a => {
     const txt = a.textContent.trim();
@@ -2487,6 +2507,115 @@ document.addEventListener('DOMContentLoaded', () => {
     if (txt === '详情') a.onclick = (e) => { e.preventDefault(); navTo('pg-cost-detail'); };
   });
 });
+
+/* ════════ 批量绑定：兜底交互闭环 ════════ */
+function bindOrderNumberLinks() {
+  // 所有 LC-xxx 跳费用单详情 / LS-xxx 跳结算单详情 / PO-xxx 跳采购单详情
+  document.querySelectorAll('span.link').forEach(el => {
+    const txt = el.textContent.trim();
+    if (el.onclick || el.dataset.bound) return;
+    if (/^LC-\d{8}-\d{3,}$/.test(txt)) {
+      el.onclick = () => navTo('pg-cost-detail');
+      el.dataset.bound = '1';
+    } else if (/^LS-/.test(txt)) {
+      el.onclick = () => navTo('pg-settlement-detail');
+      el.dataset.bound = '1';
+    } else if (/^PO-\d{4}-\d{4}$/.test(txt)) {
+      el.onclick = () => navTo('pg-landed-cost');
+      el.dataset.bound = '1';
+    } else if (/^\d+\s*张$/.test(txt)) {
+      // "N 张" 关联 PO 数量
+      el.onclick = () => showToast('info', '关联采购单', `本费用单关联 ${txt}，请在详情页查看`);
+      el.dataset.bound = '1';
+    } else if (/^LV-/.test(txt)) {
+      // 物流商编号
+      el.onclick = () => showToast('info', '物流商详情', `查看 ${txt} 的服务路线、报价、合同信息`);
+      el.dataset.bound = '1';
+    }
+  });
+}
+
+function bindOuterTabs() {
+  // 外层 Tab：货款对账 / 预付管理（本原型仅演示物流费对账）
+  document.querySelectorAll('#pg-logistics-settlement > .card > .card-body > .tabs > .tab, #pg-vendor-list .tabs .tab, #pg-landed-cost .tabs .tab').forEach(tab => {
+    if (tab.onclick || tab.classList.contains('active')) return;
+    const txt = tab.textContent.trim();
+    // 仅处理外层主 Tab（非 sub-tab、非 detail-tab）
+    if (['货款对账', '预付管理', '商品供应商'].includes(txt)) {
+      tab.onclick = () => showToast('info', `${txt}`, '本原型仅演示「物流费对账」相关流程');
+    }
+  });
+}
+
+function bindLandedCostTabs() {
+  // pg-landed-cost 顶部 7 个 Tab（基本信息/商品明细/入库记录/结算记录/预付记录/物流追踪/落地成本）
+  document.querySelectorAll('#pg-landed-cost .tabs .tab').forEach(tab => {
+    if (tab.onclick || tab.classList.contains('active')) return;
+    const txt = tab.textContent.trim();
+    tab.onclick = () => showToast('info', `${txt}`, '该 Tab 不在本原型范围内，仅"落地成本"为演示重点');
+  });
+}
+
+function bindSettledRowActions() {
+  // 结算单据 Tab 内的操作链接（审核通过/确认付款/查看驳回原因）
+  document.querySelectorAll('#sub-settled-content .link').forEach(a => {
+    if (a.onclick || a.dataset.bound) return;
+    const txt = a.textContent.trim();
+    if (txt === '审核通过') {
+      a.onclick = (e) => { e.preventDefault(); onSettleApprove(); };
+      a.dataset.bound = '1';
+    } else if (txt === '确认付款') {
+      a.onclick = (e) => { e.preventDefault(); onSettlePay(); };
+      a.dataset.bound = '1';
+    } else if (txt === '查看驳回原因') {
+      a.onclick = (e) => {
+        e.preventDefault();
+        showConfirm({
+          icon: '❌',
+          title: '驳回原因',
+          msg: '<strong>驳回时间：</strong>2026-04-11 14:30<br/><strong>驳回人：</strong>财务·张三<br/><strong>驳回原因：</strong>发票金额 SGD 1,150 与实际合计 SGD 1,200 不符，差额 SGD 50。请核对发票后重新提交。',
+          onOk: () => showToast('info', '查看完毕', '请联系物流商更正发票后重新提交')
+        });
+      };
+      a.dataset.bound = '1';
+    }
+  });
+}
+
+function bindPlaceholderButtons() {
+  // 1. 详情页"📥 导出"按钮（多处）
+  document.querySelectorAll('button.btn').forEach(btn => {
+    if (btn.onclick || btn.dataset.bound) return;
+    const txt = btn.textContent.trim();
+    if (txt === '📥 导出' || txt === '📥 导出 Excel') {
+      btn.onclick = () => showToast('info', '导出中', '文件已生成，可在下载列表查看');
+      btn.dataset.bound = '1';
+    } else if (txt === '📎 重新上传') {
+      btn.onclick = () => showToast('info', '重新上传发票', '请联系财务驳回当前结算单后重新上传');
+      btn.dataset.bound = '1';
+    } else if (txt === '+ 登记付款') {
+      // disabled 时 title 已说明，无需 onclick
+    }
+  });
+  // 2. 详情页 PO 链接 / 发票文件链接
+  document.querySelectorAll('span.link').forEach(el => {
+    if (el.onclick || el.dataset.bound) return;
+    const txt = el.textContent.trim();
+    if (/^INV-/.test(txt)) {
+      el.onclick = () => showToast('info', '发票详情', `${txt} · 已上传至发票库`);
+      el.dataset.bound = '1';
+    } else if (/\.pdf$/.test(txt) || /\.jpg$/.test(txt) || /\.png$/.test(txt) || txt.includes('📄 INV-')) {
+      el.onclick = () => showToast('info', '附件下载', '演示原型不支持附件下载');
+      el.dataset.bound = '1';
+    } else if (txt === '📷 预览') {
+      el.onclick = () => showToast('info', '附件预览', '演示原型不支持附件预览');
+      el.dataset.bound = '1';
+    } else if (txt === '差异调整记录') {
+      el.onclick = () => navTo('pg-cost-detail');
+      el.dataset.bound = '1';
+    }
+  });
+}
 
 /* 【异常 #21-22】物流商管理 */
 function onVendorSave() {
@@ -2689,30 +2818,17 @@ function getVendorName(code) {
 function updatePendingSelection() {
   const selected = Array.from(document.querySelectorAll('.ck-pending:checked'));
   document.getElementById('pending-sel-count').textContent = selected.length;
-  const btnAdd = document.getElementById('btn-add-to-settle');
   const btnUpload = document.getElementById('btn-upload-create');
   if (selected.length === 0) {
     document.getElementById('pending-sel-amount').textContent = '—';
-    btnAdd.disabled = true;
     btnUpload.disabled = true;
   } else {
     const total = selected.reduce((s, c) => s + parseFloat(c.dataset.amount), 0);
     const totalSgd = selected.reduce((s, c) => s + parseFloat(c.dataset.sgd), 0);
     const currency = selected[0].dataset.currency;
     document.getElementById('pending-sel-amount').textContent = `${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} (≈ SGD ${totalSgd.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})})`;
-    btnAdd.disabled = false;
     btnUpload.disabled = false;
   }
-}
-
-function onAddToSettle() {
-  const selected = Array.from(document.querySelectorAll('.ck-pending:checked'));
-  showConfirm({
-    icon: '📋',
-    title: `加入已有结算单`,
-    msg: `将 <strong>${selected.length}</strong> 张费用单加入现有结算单（同物流商 ${getVendorName(selected[0].dataset.vendor)} / ${selected[0].dataset.currency}）。<br/><span class="text-muted">如无可加入的结算单，请使用"上传发票创建结算单"。</span>`,
-    onOk: () => showToast('success', '已加入结算单', `${selected.length} 张费用单已合并`)
-  });
 }
 
 function onUploadCreateSettle() {
