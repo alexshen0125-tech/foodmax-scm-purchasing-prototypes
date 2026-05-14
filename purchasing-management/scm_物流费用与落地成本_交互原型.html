@@ -1393,7 +1393,7 @@
         <div class="filter-bar">
           <div class="form-group"><div class="form-label">结算单号</div><input type="text" placeholder="LS-..." /></div>
           <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
-          <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待审核</option><option>待付款</option><option>已付款</option><option>审核拒绝</option></select></div>
+          <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待审核</option><option>待付款</option><option>已付款</option><option>推送失败</option><option>审核拒绝</option></select></div>
           <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
         </div>
 
@@ -1403,8 +1403,9 @@
             <strong>结算单状态机：</strong>
             <span class="badge badge-blue">待审核</span> →
             <span class="badge badge-amber">待付款</span>（审核通过）→
-            <span class="badge badge-purple">已付款</span>；
-            旁支 <span class="badge badge-red">审核拒绝</span>（审核驳回，可重新提交）。
+            <span class="badge badge-purple">已付款</span>（自动推送 FMS）→ FMS 同步成功为终态；
+            旁支 <span class="badge badge-red">审核拒绝</span>（审核驳回，可重新提交）；
+            <span class="badge badge-red">推送失败</span>（FMS 推送失败，运营可手动「重推 FMS」，BR-LC-31）。
           </div>
         </div>
 
@@ -1452,14 +1453,24 @@
               <td>2026-04-11 10:00</td>
               <td><span class="link">查看驳回原因</span> · <span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
-            <tr>
+            <tr id="row-ls-20260410-001">
               <td><span class="link">LS-20260410-001</span></td>
               <td>PIL Shipping</td>
               <td>2</td>
               <td class="text-right" style="font-weight:600">USD 3,200.00</td>
               <td>SGD 4,329.60</td>
-              <td><span class="badge badge-purple">已付款</span></td>
+              <td><span class="badge badge-red" id="badge-ls-20260410-001" title="已完成付款；FMS 自动推送失败（第 3 次重试超时），可手动重推">⚠ 推送失败</span></td>
               <td>2026-04-10 11:30</td>
+              <td id="ops-ls-20260410-001"><span class="link" onclick="onReFmsPush('LS-20260410-001')">重推 FMS</span> · <span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
+            </tr>
+            <tr>
+              <td><span class="link">LS-20260409-001</span></td>
+              <td>顺丰国际货运</td>
+              <td>1</td>
+              <td class="text-right" style="font-weight:600">USD 1,500.00</td>
+              <td>SGD 2,029.50</td>
+              <td><span class="badge badge-purple" title="已付款且 FMS 已同步（终态）">已付款</span></td>
+              <td>2026-04-09 14:20</td>
               <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
             </tr>
           </tbody>
@@ -2198,6 +2209,24 @@ function onAllocModeChange() {
   const mode = document.getElementById('sel-alloc-mode').value;
   const hint = document.getElementById('alloc-weight-hint');
   if (hint) hint.style.display = (mode === 'weight') ? 'block' : 'none';
+}
+
+/* ════════ 结算单 FMS 推送重试（BR-LC-31）════════ */
+function onReFmsPush(settlementNo) {
+  showToast('info', '正在重推 FMS', `结算单 ${settlementNo} 推送中…`);
+  setTimeout(() => {
+    const badge = document.getElementById('badge-' + settlementNo.toLowerCase());
+    const ops = document.getElementById('ops-' + settlementNo.toLowerCase());
+    if (badge) {
+      badge.className = 'badge badge-purple';
+      badge.title = '已付款且 FMS 已同步（终态）';
+      badge.textContent = '已付款';
+    }
+    if (ops) {
+      ops.innerHTML = '<span class="link" onclick="navTo(\'pg-settlement-detail\')">详情</span>';
+    }
+    showToast('success', 'FMS 推送成功', `结算单 ${settlementNo} 已同步至 FMS（流水号 FMS-PUSH-${Date.now().toString().slice(-6)}）`);
+  }, 1500);
 }
 
 function onPoSearch(btn) {
