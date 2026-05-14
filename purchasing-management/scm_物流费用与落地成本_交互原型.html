@@ -763,10 +763,14 @@
           </div>
           <div class="form-group" style="margin:0;min-width:180px">
             <div class="form-label"><span class="required">*</span> 分摊方式</div>
-            <select id="sel-alloc-mode">
+            <select id="sel-alloc-mode" onchange="onAllocModeChange()">
               <option value="amount" selected>按金额占比（默认）</option>
               <option value="weight">按重量占比</option>
             </select>
+            <div id="alloc-weight-hint" class="text-muted" style="font-size:11.5px;line-height:1.5;margin-top:6px;display:none">
+              ⚠️ <strong>按重量分摊规则（BR-LC-30）</strong>：仅 <strong>KG / G</strong> 单位 SKU 参与重量分摊；
+              单位为<strong>箱 / 件 / 瓶 / 袋</strong> 等非重量单位的 SKU <strong>不参与分摊</strong>（落地成本=货款，不含运费）。
+            </div>
           </div>
         </div>
 
@@ -971,6 +975,8 @@
       <div style="font-size:11.5px;color:#64748b">
         <span class="badge badge-estimate">预估分摊</span> 入库时点写入 ·
         <span class="badge badge-actual">实际分摊</span> 实际单据到位后更新（含 1 项暂用预估）
+        <br/>
+        <span style="color:#92400e">⚠️ BR-LC-30：按重量分摊时，单位非 KG/G 的 SKU 不参与分摊（落地成本 = 货款，不含运费）。</span>
       </div>
     </div>
     <div class="card-body" style="padding:0">
@@ -1030,6 +1036,16 @@
             <td class="text-right" style="background:#f0fdf4;font-weight:600">838.86</td>
             <td class="text-right diff-positive">+13.53</td>
             <td class="text-right" style="font-weight:600;color:#0c4a6e">4.0824/kg</td>
+          </tr>
+          <tr style="background:#f1f5f9;color:#64748b" title="单位非 KG/G，按重量分摊时不参与（BR-LC-30）">
+            <td>PO-2026-0402</td><td>B003</td><td>香辣腌料罐</td><td>50 箱</td>
+            <td class="text-right">27.060/箱</td>
+            <td class="text-right">1,353.00</td>
+            <td class="text-right"><span class="badge badge-gray" style="font-size:10px">⊘ 不参与</span></td>
+            <td class="text-right" style="background:#f1f5f9">—</td>
+            <td class="text-right" style="background:#f1f5f9">—</td>
+            <td class="text-right">—</td>
+            <td class="text-right" style="font-weight:600">27.0600/箱 <span class="text-muted" style="font-size:10.5px;font-weight:400">（无运费）</span></td>
           </tr>
           <tr style="background:#f8fafc;font-weight:700">
             <td colspan="4">合计</td>
@@ -2176,6 +2192,12 @@ function onVendorSelect() {
   if (opt.dataset.currency) {
     document.getElementById('sel-currency').value = opt.dataset.currency;
   }
+}
+
+function onAllocModeChange() {
+  const mode = document.getElementById('sel-alloc-mode').value;
+  const hint = document.getElementById('alloc-weight-hint');
+  if (hint) hint.style.display = (mode === 'weight') ? 'block' : 'none';
 }
 
 function onPoSearch(btn) {
