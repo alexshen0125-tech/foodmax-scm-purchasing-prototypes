@@ -304,6 +304,17 @@
     .toast-error { background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; }
     .toast-info { background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; }
     .toast-success { background: #dcfce7; border: 1px solid #86efac; color: #15803d; }
+    /* 费用单详情页模式 banner + 编辑控件可见性 */
+    .detail-mode-banner { margin: 0 0 14px; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; line-height: 1.55; display: none; }
+    .detail-mode-banner.mode-view { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; display: block; }
+    .detail-mode-banner.mode-edit-estimate { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; display: block; }
+    .detail-mode-banner.mode-edit-actual { background: #dcfce7; border: 1px solid #86efac; color: #14532d; display: block; }
+    /* 默认隐藏编辑控件；进入 detail-edit-mode 后显示 */
+    body:not(.detail-edit-mode) [data-detail-edit] { display: none !important; }
+    body.detail-edit-mode [data-detail-view] { display: none !important; }
+    body.detail-edit-mode [data-detail-view-action] { display: none !important; }
+    /* 录入实际/编辑预估模式下，预估行高亮 */
+    body.detail-edit-mode tr.row-estimate { background: #fefce8; }
 
     /* ─── 预估/实际 标识 ─── */
     .badge-estimate { background: #fef3c7; color: #92400e; border: 1px dashed #f59e0b; }
@@ -484,7 +495,7 @@
             <td>按金额</td>
             <td><span class="badge badge-amber" title="3 项实际已录入，保险费待录入">待录入</span></td>
             <td>2026-04-13 10:30</td>
-            <td><span class="link" onclick="navTo('pg-cost-detail')">详情</span></td>
+            <td><span class="link" onclick="enterCostDetail('edit-actual','LC-20260413-001')">录入实际</span> · <span class="link" onclick="enterCostDetail('view','LC-20260413-001')">详情</span></td>
           </tr>
           <tr>
             <td><span class="link">LC-20260413-002</span></td>
@@ -508,7 +519,7 @@
             <td>按金额</td>
             <td><span class="badge badge-amber" title="PO 入库后才可录入实际">待录入 · 等待 PO 入库</span></td>
             <td>2026-04-11 09:15</td>
-            <td><span class="link">编辑预估</span> · <span class="link btn-danger btn-sm" style="border:none;padding:0">删除</span></td>
+            <td><span class="link" onclick="enterCostDetail('edit-estimate','LC-20260411-001')">编辑预估</span> · <span class="link btn-danger btn-sm" style="border:none;padding:0">删除</span></td>
           </tr>
           <tr>
             <td><span class="link">LC-20260410-003</span></td>
@@ -772,6 +783,7 @@
 
 <!-- ==================== PAGE: 费用单详情 ==================== -->
 <div class="page" id="pg-cost-detail">
+  <div id="detail-mode-banner" class="detail-mode-banner mode-view">👁️ <b>查看模式</b>：详情页仅供查看；如需<b>编辑预估</b>或<b>录入实际费用</b>，请返回列表点击对应入口按钮。</div>
   <div class="card" style="margin-bottom:16px">
     <div class="card-header">
       <div style="display:flex;align-items:center;gap:12px">
@@ -779,7 +791,8 @@
         <span class="badge badge-amber" id="cost-status-badge">待录入</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline btn-sm" id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="所有费用实际录入完毕后可上传发票">📎 上传发票</button>
+        <button class="btn btn-outline btn-sm" data-detail-edit id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="所有费用实际录入完毕后可上传发票">📎 上传发票</button>
+        <button class="btn btn-outline btn-sm" data-detail-view-action onclick="navTo('pg-cost-list')">← 返回列表</button>
         <button class="btn btn-outline btn-sm">📥 导出</button>
       </div>
     </div>
@@ -878,7 +891,7 @@
         <span class="badge badge-gray" title="待对账状态：仅可改实际/备注/发票号，费用项不可增删">📌 费用项不可增删</span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="copyEstToActDetail()" title="把所有待录入项的实际金额填为预估值">⚡ 待录入项：实际同预估</button>
+        <button class="btn btn-outline btn-sm" data-detail-edit onclick="copyEstToActDetail()" title="把所有待录入项的实际金额填为预估值">⚡ 待录入项：实际同预估</button>
         <span style="font-size:11.5px;color:#64748b">
           预估合计 <strong style="color:#92400e">USD 3,050</strong> →
           实际合计 <strong style="color:#15803d">USD 2,800</strong>
@@ -930,9 +943,10 @@
             <td><span class="badge badge-amber">⏳ 待确认 · ETA 2026-05-20</span></td>
             <td>0.3% of cargo value</td>
             <td>
-              <span class="link" onclick="showModal('modal-actual-fee')">✏️ 录入</span>
-              <span style="margin:0 4px;color:#cbd5e1">|</span>
-              <span class="link" onclick="copyEstToActRow('row-insurance', 300)" title="实际同预估 USD 300">⚡ =预估</span>
+              <span class="link" data-detail-edit onclick="showModal('modal-actual-fee')">✏️ 录入</span>
+              <span data-detail-edit style="margin:0 4px;color:#cbd5e1">|</span>
+              <span class="link" data-detail-edit onclick="copyEstToActRow('row-insurance', 300)" title="实际同预估 USD 300">⚡ =预估</span>
+              <span data-detail-view class="text-muted" style="font-size:11px">查看模式</span>
             </td>
           </tr>
           <tr>
@@ -2128,6 +2142,29 @@ function navTo(pageId) {
   document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
   const match = document.querySelector(`.sidebar-item[data-page="${pageId}"]`);
   if (match) match.classList.add('active');
+  // 详情页默认只读模式（编辑必须通过列表编辑入口进入）
+  if (pageId === 'pg-cost-detail') setDetailMode('view');
+}
+
+/* ════════ 费用单详情页模式切换 ════════ */
+function setDetailMode(mode, costNo) {
+  const body = document.body;
+  body.classList.toggle('detail-view-mode', mode === 'view');
+  body.classList.toggle('detail-edit-mode', mode !== 'view');
+  const banner = document.getElementById('detail-mode-banner');
+  if (!banner) return;
+  banner.className = 'detail-mode-banner mode-' + mode;
+  if (mode === 'view') {
+    banner.innerHTML = '👁️ <b>查看模式</b>：详情页仅供查看；如需<b>编辑预估</b>或<b>录入实际费用</b>，请返回列表点击对应入口按钮。';
+  } else if (mode === 'edit-estimate') {
+    banner.innerHTML = '✏️ <b>编辑预估模式</b>' + (costNo ? '（' + costNo + '）' : '') + '：预估金额可修改，状态须为「待录入·等待 PO 入库」且任一 PO 未入库（BR-LC-11）。';
+  } else if (mode === 'edit-actual') {
+    banner.innerHTML = '✏️ <b>录入实际费用模式</b>' + (costNo ? '（' + costNo + '）' : '') + '：所有关联 PO 已完成入库，可逐项录入实际值或使用「⚡ 待录入项：实际同预估」一键填充。';
+  }
+}
+function enterCostDetail(mode, costNo) {
+  navTo('pg-cost-detail');
+  setDetailMode(mode || 'view', costNo);
 }
 
 /* ════════ Modal ════════ */
@@ -2618,29 +2655,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 批量绑定：纯占位按钮（导出/重新上传/+登记付款/发票号/预览/附件等）
   bindPlaceholderButtons();
 
-  // 费用单列表删除/编辑（按新状态机校验）
+  // 费用单列表删除：仅给"删除"链接绑事件
+  // 编辑入口（编辑预估 / 录入实际 / 详情）通过行内 onclick 调用 enterCostDetail()
   document.querySelectorAll('#pg-cost-list .link').forEach(a => {
     const txt = a.textContent.trim();
     if (txt === '删除') a.onclick = (e) => { e.preventDefault(); onCostDelete(); };
-    if (txt === '编辑预估') a.onclick = (e) => {
-      e.preventDefault();
-      const row = a.closest('tr');
-      const status = row.querySelector('.badge')?.textContent.trim();
-      // 编辑预估仅在 PO 未入库时可用
-      if (status === '待录入') {
-        // 简化逻辑：演示用，假设 LC-20260411-001 PO 未入库才可编辑
-        const orderNo = row.children[0].innerText.trim();
-        if (orderNo === 'LC-20260411-001') {
-          navTo('pg-cost-create');
-          showToast('info', '编辑预估金额', 'PO 未入库，预估可修改');
-        } else {
-          showToast('error', '预估已锁定', '关联 PO 已开始入库，预估金额不可修改（已参与库存成本计算）');
-        }
-      } else {
-        showToast('error', '不可编辑', `状态为「${status}」的费用单不允许编辑预估`);
-      }
-    };
-    if (txt === '详情') a.onclick = (e) => { e.preventDefault(); navTo('pg-cost-detail'); };
   });
 });
 
