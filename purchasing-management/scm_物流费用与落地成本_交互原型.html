@@ -1,6 +1,14 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.13
-     日期：2026-05-13
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.14
+     日期：2026-05-14
      变更：
+     - 【v1.14】按 8 张截图反馈修订：
+       · 物流商弹窗加 7 个银行字段（账户名称/英文名/SWIFT/国家/收款号/银行大类/账号）
+       · 步骤二合计区删除"入库分摊基数"模块（保留预估+实际合计）
+       · 结算管理删除外层 Tab（货款对账/物流费对账/预付管理），「待处理单据」「结算单据」直接作为主 Tab
+       · 运费分摊预览弹窗：从 SKU 维度改为 PO 维度（按采购单聚合）
+       · SKU 落地成本明细：删除"差异"列 + "采购单价(USD)"列（差异走调整单，单价用本位币）
+       · SKU 运费分摊结果：加"采购单价"列，所有金额改为 SGD 本位币
+       · 采购单详情→落地成本 Tab：新增"关联费用单"列表
      - 【v1.13】按技术评审反馈修订（12 项业务决策）：
        · 删除「保存草稿」「提交对账」按钮，统一为「创建费用单」（自动推进状态）
        · 删除差异 ±10% 审批相关元素（一期不需要审批）
@@ -93,7 +101,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.13</title>
+  <title>物流费用与落地成本 — 交互原型 v1.14</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -711,11 +719,6 @@
                 <span style="font-size:18px;font-weight:700;color:#15803d">USD 2,500.00</span>
                 <span class="badge badge-amber" style="margin-left:6px">+ 1 项待录入</span>
               </div>
-              <div style="border-left:1px dashed #bae6fd;padding-left:20px">
-                <span style="font-size:11.5px;color:#0369a1">入库分摊基数</span><br/>
-                <span style="font-size:18px;font-weight:700;color:#0c4a6e">USD 2,800.00</span>
-                <span class="text-muted" style="font-size:11px;margin-left:4px">= 实际 + 暂用预估</span>
-              </div>
             </div>
             <div style="font-size:11.5px;color:#64748b;margin-top:8px">
               🔒 锁定汇率 <strong>1 USD = 1.3520 SGD</strong>（锁定于 2026-05-13 10:30）·
@@ -1045,67 +1048,71 @@
             <th>SKU</th>
             <th>名称</th>
             <th>数量</th>
-            <th class="text-right">采购金额</th>
+            <th class="text-right">采购单价(SGD)</th>
+            <th class="text-right">采购金额(SGD)</th>
             <th class="text-right">占比</th>
-            <th class="text-right" style="background:#fef3c7">预估分摊(USD)</th>
-            <th class="text-right" style="background:#dcfce7">实际分摊(USD)</th>
-            <th class="text-right">差异</th>
-            <th class="text-right">实际运费单价</th>
+            <th class="text-right" style="background:#fef3c7">预估分摊(SGD)</th>
+            <th class="text-right" style="background:#dcfce7">实际分摊(SGD)</th>
+            <th class="text-right">差异(SGD)</th>
             <th class="text-right" style="color:#0c4a6e">落地单价(SGD)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>PO-2026-0401</td><td>A001</td><td>红辣椒干</td><td>2,000 kg</td>
-            <td class="text-right">USD 4,000</td><td class="text-right">26.67%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">813.34</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">826.77</td>
-            <td class="text-right diff-positive">+13.43</td>
-            <td class="text-right">0.4134/kg</td>
-            <td class="text-right" style="font-weight:600;color:#0c4a6e">3.2589/kg</td>
+            <td class="text-right">2.706/kg</td>
+            <td class="text-right">5,412.00</td>
+            <td class="text-right">26.67%</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e">1,100.45</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">1,118.62</td>
+            <td class="text-right diff-positive">+18.17</td>
+            <td class="text-right" style="font-weight:600;color:#0c4a6e">3.2649/kg</td>
           </tr>
           <tr>
             <td>PO-2026-0401</td><td>A002</td><td>花椒粒</td><td>1,500 kg</td>
-            <td class="text-right">USD 6,000</td><td class="text-right">40.00%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">1,220.00</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">1,240.00</td>
-            <td class="text-right diff-positive">+20.00</td>
-            <td class="text-right">0.8267/kg</td>
-            <td class="text-right" style="font-weight:600;color:#0c4a6e">6.5178/kg</td>
+            <td class="text-right">5.412/kg</td>
+            <td class="text-right">8,118.00</td>
+            <td class="text-right">40.00%</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e">1,650.66</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">1,677.72</td>
+            <td class="text-right diff-positive">+27.06</td>
+            <td class="text-right" style="font-weight:600;color:#0c4a6e">6.5298/kg</td>
           </tr>
           <tr>
             <td>PO-2026-0402</td><td>B001</td><td>大蒜瓣</td><td>1,000 kg</td>
-            <td class="text-right">USD 2,000</td><td class="text-right">13.33%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">406.66</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">413.33</td>
-            <td class="text-right diff-positive">+6.67</td>
-            <td class="text-right">0.4133/kg</td>
-            <td class="text-right" style="font-weight:600;color:#0c4a6e">3.2589/kg</td>
+            <td class="text-right">2.706/kg</td>
+            <td class="text-right">2,706.00</td>
+            <td class="text-right">13.33%</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e">550.21</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">559.23</td>
+            <td class="text-right diff-positive">+9.02</td>
+            <td class="text-right" style="font-weight:600;color:#0c4a6e">3.2649/kg</td>
           </tr>
           <tr>
             <td>PO-2026-0402</td><td>B002</td><td>生姜片</td><td>1,200 kg</td>
-            <td class="text-right">USD 3,000</td><td class="text-right">20.00%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">610.00</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">620.00</td>
-            <td class="text-right diff-positive">+10.00</td>
-            <td class="text-right">0.5167/kg</td>
-            <td class="text-right" style="font-weight:600;color:#0c4a6e">4.0726/kg</td>
+            <td class="text-right">3.383/kg</td>
+            <td class="text-right">4,059.00</td>
+            <td class="text-right">20.00%</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e">825.33</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">838.86</td>
+            <td class="text-right diff-positive">+13.53</td>
+            <td class="text-right" style="font-weight:600;color:#0c4a6e">4.0824/kg</td>
           </tr>
           <tr style="background:#f8fafc;font-weight:700">
             <td colspan="4">合计</td>
-            <td class="text-right">USD 15,000</td>
-            <td class="text-right">100%</td>
-            <td class="text-right" style="background:#fef3c7;color:#92400e">3,050.00</td>
-            <td class="text-right" style="background:#dcfce7;color:#15803d">3,100.00</td>
-            <td class="text-right diff-positive">+50.00</td>
             <td class="text-right">—</td>
+            <td class="text-right">20,295.00</td>
+            <td class="text-right">100%</td>
+            <td class="text-right" style="background:#fef3c7;color:#92400e">4,126.65</td>
+            <td class="text-right" style="background:#dcfce7;color:#15803d">4,194.30</td>
+            <td class="text-right diff-positive">+67.65</td>
             <td class="text-right">—</td>
           </tr>
         </tbody>
       </table>
       <div style="padding:12px 16px;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;color:#92400e">
-        ℹ️ <strong>SKU 分摊为展示口径</strong>（预估分摊=入库时点写入；实际分摊=随实际更新）。
-        正式的差异处理走<strong>金额调整单</strong>（PO 维度，下方卡片），按 PO 占比分摊总差异，再拆分到库存/销售成本。
+        ℹ️ 表内金额均为<strong>本位币 SGD</strong>（按锁定汇率 1 USD = 1.353 SGD 折算）。
+        <strong>SKU 分摊为展示口径</strong>，正式差异处理走<strong>金额调整单</strong>（PO 维度）。
       </div>
     </div>
   </div>
@@ -1131,6 +1138,44 @@
         <div class="tab">物流追踪</div>
         <div class="tab active">落地成本</div>
       </div>
+    </div>
+  </div>
+
+  <!-- 关联费用单列表 -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <h3>关联费用单</h3>
+      <span class="text-muted" style="font-size:12px">本 PO 关联的所有物流费用单</span>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>费用单号</th>
+            <th>物流商</th>
+            <th>费用摘要</th>
+            <th class="text-right">预估金额</th>
+            <th class="text-right">实际金额</th>
+            <th class="text-right">分摊至本 PO</th>
+            <th>状态</th>
+            <th>创建时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="link" onclick="navTo('pg-cost-detail')">LC-20260413-001</span></td>
+            <td>顺丰国际货运</td>
+            <td>海运 + 报关 + 保险 + 港口费</td>
+            <td class="text-right" style="color:#92400e">USD 3,050</td>
+            <td class="text-right" style="color:#15803d;font-weight:600">USD 2,800 <span class="badge badge-amber" style="font-size:10px">+ 1 项待录入</span></td>
+            <td class="text-right">USD 1,866.67<br/><span class="text-muted" style="font-size:10.5px">≈ SGD 2,525.60</span></td>
+            <td><span class="badge badge-amber">待录入</span></td>
+            <td>2026-04-13 10:30</td>
+            <td><span class="link" onclick="navTo('pg-cost-detail')">详情</span></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -1219,11 +1264,9 @@
             <th>SKU</th>
             <th>名称</th>
             <th>数量</th>
-            <th class="text-right">采购单价(USD)</th>
             <th class="text-right">采购单价(SGD)</th>
             <th class="text-right" style="background:#fef3c7">预估运费单价(SGD)</th>
             <th class="text-right" style="background:#dcfce7">实际运费单价(SGD)</th>
-            <th class="text-right">差异</th>
             <th class="text-right">落地单价(SGD)</th>
             <th class="text-right">落地总额(SGD)</th>
           </tr>
@@ -1231,21 +1274,17 @@
         <tbody>
           <tr>
             <td>A001</td><td>红辣椒干</td><td>2,000 kg</td>
-            <td class="text-right">2.00</td>
             <td class="text-right">2.706</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:500">0.5498</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:500">0.5589</td>
-            <td class="text-right diff-positive">+0.0091</td>
             <td class="text-right" style="font-weight:700;color:#0c4a6e">3.2649</td>
             <td class="text-right" style="font-weight:600">6,529.78</td>
           </tr>
           <tr>
             <td>A002</td><td>花椒粒</td><td>1,500 kg</td>
-            <td class="text-right">4.00</td>
             <td class="text-right">5.412</td>
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:500">1.0997</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:500">1.1178</td>
-            <td class="text-right diff-positive">+0.0181</td>
             <td class="text-right" style="font-weight:700;color:#0c4a6e">6.5298</td>
             <td class="text-right" style="font-weight:600">9,794.67</td>
           </tr>
@@ -1253,10 +1292,8 @@
             <td colspan="2">合计</td>
             <td>3,500 kg</td>
             <td class="text-right">—</td>
-            <td class="text-right">—</td>
             <td class="text-right" style="background:#fef3c7;color:#92400e">预估总分摊 SGD 2,748.50</td>
             <td class="text-right" style="background:#dcfce7;color:#15803d">实际总分摊 SGD 2,793.20</td>
-            <td class="text-right diff-positive">+44.70</td>
             <td class="text-right">—</td>
             <td class="text-right">16,324.45</td>
           </tr>
@@ -1288,15 +1325,8 @@
       <h3>结算管理</h3>
     </div>
     <div class="card-body">
-      <!-- 外层 Tabs -->
+      <!-- Sub-tabs（复用货款对账双 Tab 模式） -->
       <div class="tabs">
-        <div class="tab">货款对账</div>
-        <div class="tab active">物流费对账</div>
-        <div class="tab">预付管理</div>
-      </div>
-
-      <!-- 内层 Sub-tabs（复用货款对账双 Tab 模式） -->
-      <div class="tabs" style="border-bottom-width:1px;margin-top:-4px">
         <div class="tab active" id="sub-tab-pending" onclick="switchSettleSub('pending')">待处理单据 <span class="sidebar-badge" style="background:#fef3c7;color:#92400e">5</span></div>
         <div class="tab" id="sub-tab-settled" onclick="switchSettleSub('settled')">结算单据</div>
       </div>
@@ -1780,9 +1810,28 @@
         <div class="form-group"><div class="form-label">联系人</div><input type="text" placeholder="姓名" /></div>
         <div class="form-group"><div class="form-label">联系电话</div><input type="text" placeholder="+86 138..." /></div>
       </div>
+      <h4 style="font-size:13px;font-weight:600;color:#475569;margin-top:8px;margin-bottom:8px;padding-top:12px;border-top:1px solid #f1f5f9">银行账户信息</h4>
       <div class="form-row">
-        <div class="form-group"><div class="form-label">银行户名</div><input type="text" /></div>
-        <div class="form-group"><div class="form-label">银行账号</div><input type="text" /></div>
+        <div class="form-group"><div class="form-label"><span class="required">*</span> 账户名称</div><input type="text" placeholder="请输入" /></div>
+        <div class="form-group"><div class="form-label"><span class="required">*</span> 账户名称-英文</div><input type="text" placeholder="请输入" /></div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group"><div class="form-label"><span class="required">*</span> SWIFT 代码</div><input type="text" placeholder="请输入" /></div>
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 所属国家</div>
+          <select><option value="">请选择</option><option>新加坡 (SG)</option><option>中国 (CN)</option><option>马来西亚 (MY)</option><option>印尼 (ID)</option><option>越南 (VN)</option></select>
+        </div>
+        <div class="form-group"><div class="form-label"><span class="required">*</span> 银行收款号</div><input type="text" placeholder="请输入" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 银行大类</div>
+          <select><option value="">请选择</option><option>商业银行</option><option>政策性银行</option><option>外资银行</option><option>其他</option></select>
+        </div>
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 银行账号</div>
+          <select><option value="">请选择</option><option>主账户</option><option>子账户</option></select>
+        </div>
       </div>
       <div class="form-group"><div class="form-label">备注</div><textarea rows="2" placeholder=""></textarea></div>
     </div>
@@ -1811,8 +1860,8 @@
       <div class="hint-card info" style="margin-bottom:12px;font-size:11.5px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span class="hint-icon">ℹ️</span>
         <div>
-          <strong>分摊口径：</strong>每个 SKU 同时展示「预估分摊」（入库时点）和「实际分摊」（含暂用预估，实际到位后会调差）。
-          差异 = 实际分摊 − 预估分摊，最终结算以实际为准。
+          <strong>分摊口径：</strong>展示到<strong>采购单（PO）维度</strong>，不展开 SKU 明细。
+          每个 PO 同时展示「预估分摊」（入库时点）和「实际分摊」（含暂用预估），差异 = 实际 − 预估。
         </div>
       </div>
 
@@ -1820,70 +1869,46 @@
         <thead>
           <tr>
             <th>采购单号</th>
-            <th>SKU</th>
-            <th>名称</th>
-            <th>数量</th>
+            <th>供应商</th>
             <th class="text-right alloc-highlight">采购金额(USD)</th>
             <th class="text-right alloc-highlight">占比</th>
             <th class="text-right" style="background:#fef3c7">预估分摊(USD)</th>
             <th class="text-right" style="background:#dcfce7">实际分摊(USD)</th>
             <th class="text-right">差异</th>
-            <th class="text-right">实际运费单价</th>
-            <th class="text-right" style="color:#0c4a6e;font-weight:700">落地单价(SGD)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>PO-2026-0401</td><td>A001</td><td>红辣椒干</td><td>2,000 kg</td>
-            <td class="text-right alloc-highlight" style="font-weight:600">4,000.00</td>
-            <td class="text-right alloc-highlight">26.67%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">746.67</td>
-            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:600">746.67</td>
+            <td>PO-2026-0401</td>
+            <td>深圳鲜之道食品</td>
+            <td class="text-right alloc-highlight" style="font-weight:600">10,000.00</td>
+            <td class="text-right alloc-highlight">66.67%</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e">1,866.67</td>
+            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:600">1,866.67</td>
             <td class="text-right text-muted">0</td>
-            <td class="text-right">0.3734/kg</td>
-            <td class="text-right" style="font-weight:700;color:#0c4a6e">3.2188/kg</td>
           </tr>
           <tr>
-            <td>PO-2026-0401</td><td>A002</td><td>花椒粒</td><td>1,500 kg</td>
-            <td class="text-right alloc-highlight" style="font-weight:600">6,000.00</td>
-            <td class="text-right alloc-highlight">40.00%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">1,120.00</td>
-            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:600">1,120.00</td>
+            <td>PO-2026-0402</td>
+            <td>深圳鲜之道食品</td>
+            <td class="text-right alloc-highlight" style="font-weight:600">5,000.00</td>
+            <td class="text-right alloc-highlight">33.33%</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e">933.33</td>
+            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:600">933.33</td>
             <td class="text-right text-muted">0</td>
-            <td class="text-right">0.7467/kg</td>
-            <td class="text-right" style="font-weight:700;color:#0c4a6e">6.4376/kg</td>
-          </tr>
-          <tr>
-            <td>PO-2026-0402</td><td>B001</td><td>大蒜瓣</td><td>1,000 kg</td>
-            <td class="text-right alloc-highlight" style="font-weight:600">2,000.00</td>
-            <td class="text-right alloc-highlight">13.33%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">373.33</td>
-            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:600">373.33</td>
-            <td class="text-right text-muted">0</td>
-            <td class="text-right">0.3733/kg</td>
-            <td class="text-right" style="font-weight:700;color:#0c4a6e">3.2188/kg</td>
-          </tr>
-          <tr>
-            <td>PO-2026-0402</td><td>B002</td><td>生姜片</td><td>1,200 kg</td>
-            <td class="text-right alloc-highlight" style="font-weight:600">3,000.00</td>
-            <td class="text-right alloc-highlight">20.00%</td>
-            <td class="text-right" style="background:#fffbeb;color:#92400e">560.00</td>
-            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:600">560.00</td>
-            <td class="text-right text-muted">0</td>
-            <td class="text-right">0.4667/kg</td>
-            <td class="text-right" style="font-weight:700;color:#0c4a6e">4.0235/kg</td>
           </tr>
           <tr style="background:#f0f9ff;font-weight:700">
-            <td colspan="4">合计</td>
+            <td colspan="2">合计</td>
             <td class="text-right">15,000.00</td>
             <td class="text-right">100%</td>
             <td class="text-right" style="background:#fef3c7;color:#92400e">2,800.00</td>
             <td class="text-right" style="background:#dcfce7;color:#15803d">2,800.00</td>
             <td class="text-right text-muted">0</td>
-            <td colspan="2" style="text-align:center;color:#16a34a;font-weight:600">✓ 当前预估=实际（保险费实际录入后会重算）</td>
           </tr>
         </tbody>
       </table>
+      <div style="margin-top:10px;padding:10px 14px;background:#f0f9ff;border-radius:6px;font-size:11.5px;color:#0369a1">
+        ✓ 分摊合计 = 费用总额，无误差 · SKU 维度的落地单价在采购单详情→落地成本 Tab 查看
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="hideModal('modal-alloc-preview')">返回修改</button>
