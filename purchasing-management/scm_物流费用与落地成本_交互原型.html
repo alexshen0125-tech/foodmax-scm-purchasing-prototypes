@@ -826,7 +826,6 @@
         <div>
           <table style="font-size:12.5px;border:none">
             <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">分摊方式</td><td style="font-weight:600;border:none">按金额占比</td></tr>
-            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">关联采购单</td><td style="font-weight:600;border:none">PO-2026-0401, PO-2026-0402 (2张)</td></tr>
             <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">创建人</td><td style="border:none">Alex 沈亮</td></tr>
             <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">确认时间</td><td style="border:none">2026-04-13 14:00</td></tr>
           </table>
@@ -850,8 +849,8 @@
             <th class="text-right">采购金额</th>
             <th>入库状态</th>
             <th>入库时间</th>
-            <th>在库数量</th>
-            <th>已出库数量</th>
+            <th class="text-right">计划采购数量</th>
+            <th class="text-right">实际入库数量</th>
           </tr>
         </thead>
         <tbody>
@@ -861,8 +860,8 @@
             <td class="text-right">USD 10,000</td>
             <td><span class="badge badge-green">✓ 已入库</span></td>
             <td>2026-04-25</td>
-            <td>2,450 kg <span class="text-muted">(70%)</span></td>
-            <td>1,050 kg <span class="text-muted">(30%)</span></td>
+            <td class="text-right">3,500 kg</td>
+            <td class="text-right">3,500 kg <span class="text-muted">(100%)</span></td>
           </tr>
           <tr>
             <td><span class="link">PO-2026-0402</span></td>
@@ -870,8 +869,8 @@
             <td class="text-right">USD 5,000</td>
             <td><span class="badge badge-green">✓ 已入库</span></td>
             <td>2026-04-28</td>
-            <td>1,320 kg <span class="text-muted">(60%)</span></td>
-            <td>880 kg <span class="text-muted">(40%)</span></td>
+            <td class="text-right">2,200 kg</td>
+            <td class="text-right">2,200 kg <span class="text-muted">(100%)</span></td>
           </tr>
         </tbody>
       </table>
@@ -908,56 +907,46 @@
             <th class="text-right" style="background:#dcfce7">实际金额(USD)</th>
             <th class="text-right">差异</th>
             <th class="text-right">实际本位币(SGD)</th>
-            <th>状态</th>
             <th>备注</th>
-            <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>🚢 海运费</td>
             <td class="text-right" style="background:#fffbeb">2,000.00</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">2,000.00</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">2,000.00 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span></td>
             <td class="text-right text-muted">0</td>
             <td class="text-right">2,706.00</td>
-            <td><span class="badge badge-green">✅ 已确认</span></td>
             <td>20GP × 1</td>
-            <td><span class="text-muted">—</span></td>
           </tr>
           <tr>
             <td>📋 报关费</td>
             <td class="text-right" style="background:#fffbeb">500.00</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">500.00</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">500.00 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span></td>
             <td class="text-right text-muted">0</td>
             <td class="text-right">676.50</td>
-            <td><span class="badge badge-green">✅ 已确认</span></td>
             <td>—</td>
-            <td><span class="text-muted">—</span></td>
           </tr>
           <tr class="row-estimate" id="row-insurance">
             <td>🛡 保险费</td>
             <td class="text-right" style="background:#fffbeb">300.00</td>
-            <td class="text-right text-muted">待录入</td>
-            <td class="text-right text-muted">—</td>
-            <td class="text-right text-muted">—</td>
-            <td><span class="badge badge-amber">⏳ 待确认 · ETA 2026-05-20</span></td>
-            <td>0.3% of cargo value</td>
-            <td>
-              <span class="link" data-detail-edit onclick="showModal('modal-actual-fee')">✏️ 录入</span>
+            <td class="text-right" style="background:#f0fdf4">
+              <span data-detail-view class="text-muted">⏳ 待录入</span>
+              <span class="link" data-detail-edit onclick="showModal('modal-actual-fee')">✏️ 录入实际</span>
               <span data-detail-edit style="margin:0 4px;color:#cbd5e1">|</span>
               <span class="link" data-detail-edit onclick="copyEstToActRow('row-insurance', 300)" title="实际同预估 USD 300">⚡ =预估</span>
-              <span data-detail-view class="text-muted" style="font-size:11px">查看模式</span>
             </td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right text-muted">—</td>
+            <td>0.3% of cargo value · ETA 2026-05-20</td>
           </tr>
           <tr>
             <td>🏗 港口费</td>
             <td class="text-right" style="background:#fffbeb">250.00</td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">300.00</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">300.00 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已调差</span></td>
             <td class="text-right diff-positive">+50.00 (+20%)</td>
             <td class="text-right">405.90</td>
-            <td><span class="badge badge-green">✅ 已确认 · 已调差</span></td>
-            <td>实际单据 INV-PRT-202604-A</td>
-            <td><span class="text-muted">差异 +USD 50（已通过 DMS 推送链路更新入库成本）</span></td>
+            <td>实际单据 INV-PRT-202604-A · 差异 +USD 50（已通过 DMS 推送链路更新入库成本）</td>
           </tr>
           <tr style="background:#f8fafc;font-weight:700">
             <td>合计</td>
@@ -965,7 +954,7 @@
             <td class="text-right" style="background:#dcfce7;color:#15803d">2,800.00 <span class="text-muted" style="font-weight:400;font-size:10.5px">+ 1 项待录入</span></td>
             <td class="text-right diff-positive">+50.00</td>
             <td class="text-right">3,788.40 <span class="text-muted" style="font-weight:400;font-size:10.5px">待录入后更新</span></td>
-            <td colspan="3" style="color:#64748b;font-weight:400">结算金额 = 实际合计（须全部已确认）</td>
+            <td style="color:#64748b;font-weight:400">结算金额 = 实际合计（须全部已确认）</td>
           </tr>
         </tbody>
       </table>
@@ -1507,7 +1496,6 @@
             <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">物流商</td><td style="font-weight:600;border:none">顺丰国际货运 (LV-001)</td></tr>
             <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">结算金额</td><td style="font-weight:700;color:#0c4a6e;border:none">USD 3,700.00 <span class="text-muted" style="font-weight:400;font-size:11.5px">≈ SGD 5,008.40 (锁定汇率 1.3536)</span></td></tr>
             <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">结算币种</td><td style="border:none">USD</td></tr>
-            <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">关联费用单</td><td style="border:none">2 张（LC-20260402-001、LC-20260405-001）</td></tr>
           </table>
         </div>
         <div>
