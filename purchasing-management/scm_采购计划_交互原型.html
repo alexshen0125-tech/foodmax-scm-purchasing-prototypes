@@ -201,6 +201,7 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
     <div class="tbl-toolbar">
       <div class="tbl-toolbar-left"><span>已选 <b id="checked-count">2</b> 项</span><span class="tag tag-orange">17 项待分配</span><span class="tag tag-red">8 项当日缺货</span><span class="tag tag-blue">42 项主供应商优先</span></div>
       <div class="tbl-toolbar-right">
+        <button class="btn btn-sm" onclick="openBatchAdjust()">批量调整</button>
         <button class="btn btn-sm" onclick="showToast('已批量按默认策略重新分配')">批量分配</button>
         <button class="btn btn-sm" onclick="showToast('已批量确认建议量和供应商分配')">确认系统建议</button>
       </div>
@@ -448,6 +449,48 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
   <div class="drawer-footer"><button class="btn" onclick="closeDrawer()">关闭</button><button class="btn btn-primary" onclick="closeDrawer();showToast('已确认该建议量','success')">确认建议</button></div>
 </div>
 
+<div class="overlay" id="batch-adjust-dialog">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3>批量调整订货量</h3><div class="dialog-close" onclick="closeDialog('batch-adjust-dialog')">×</div></div>
+    <div class="dialog-body">
+      <div class="notice-box">已选 <b id="batch-adjust-count">2</b> 个商品。订货量按「箱」固定增减，规整后系统将按各自分配策略自动重算供应商分配。</div>
+      <div class="flex items-center gap12 mb12" style="flex-wrap:wrap">
+        <div class="filter-item"><label>调整方式</label><select class="iw160"><option>订货量固定增减</option></select></div>
+        <div class="filter-item"><label>增减量（箱，负数为减）</label><input class="iw160" type="number" value="2" oninput="previewBatchAdjust(this.value)"></div>
+        <div class="filter-item"><label>调整原因</label><select class="iw160"><option>节前备货</option><option>销量异常</option><option>缺货补货</option><option>数据存疑</option><option>其它</option></select></div>
+      </div>
+      <table>
+        <thead><tr><th>商品</th><th>类型</th><th>箱规</th><th class="num">系统建议量</th><th class="num">增减量</th><th class="num">调整后</th><th>偏差</th></tr></thead>
+        <tbody id="batch-adjust-rows">
+          <tr data-suggest="9500" data-pack="5">
+            <td><div>金针菇</div><div class="text-sm text-gray">spu00004574</div></td>
+            <td><span class="tag tag-green">蔬果原料</span></td>
+            <td class="num">5 KG/箱</td>
+            <td class="num">9,500</td>
+            <td class="num adj-delta">+10</td>
+            <td class="num adj-after">9,510</td>
+            <td><span class="tag tag-green adj-dev">+0.1%</span></td>
+          </tr>
+          <tr data-suggest="1500" data-pack="10">
+            <td><div>（原箱）大白菜</div><div class="text-sm text-gray">spu00003821</div></td>
+            <td><span class="tag tag-green">蔬果原料</span></td>
+            <td class="num">10 KG/箱</td>
+            <td class="num">1,500</td>
+            <td class="num adj-delta">+20</td>
+            <td class="num adj-after">1,520</td>
+            <td><span class="tag tag-green adj-dev">+1.3%</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="notice-warn notice-box mt12">偏差超过 ±50% 的商品将在生成采购单前再次弹窗确认（BR-25）。</div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('batch-adjust-dialog')">取消</button>
+      <button class="btn btn-primary" onclick="closeDialog('batch-adjust-dialog');showToast('已批量调整订货量，供应商分配已按策略重算','success')">确认调整</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="create-po-dialog">
   <div class="dialog dialog-md">
     <div class="dialog-header"><h3>生成草稿采购单</h3><div class="dialog-close" onclick="closeDialog('create-po-dialog')">×</div></div>
@@ -542,6 +585,25 @@ function changePage(page,btn){
   document.querySelectorAll('.pagination .page-btn').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   showToast('已切换到第 '+page+' 页','success');
+}
+function openBatchAdjust(){
+  const n=document.querySelectorAll('.row-chk:checked').length;
+  if(n===0){showToast('请先勾选要调整的商品','warning');return;}
+  document.getElementById('batch-adjust-count').textContent=n;
+  openDialog('batch-adjust-dialog');
+}
+function previewBatchAdjust(boxes){
+  boxes=parseFloat(boxes)||0;
+  document.querySelectorAll('#batch-adjust-rows tr').forEach(tr=>{
+    const suggest=parseFloat(tr.dataset.suggest), pack=parseFloat(tr.dataset.pack);
+    const delta=boxes*pack, after=Math.max(0,suggest+delta);
+    const pct=suggest>0?delta/suggest*100:0;
+    tr.querySelector('.adj-delta').textContent=(delta>=0?'+':'')+delta;
+    tr.querySelector('.adj-after').textContent=after.toLocaleString();
+    const dev=tr.querySelector('.adj-dev');
+    dev.textContent=(pct>=0?'+':'')+pct.toFixed(1)+'%';
+    dev.className='tag adj-dev '+(Math.abs(pct)>50?'tag-red':Math.abs(pct)>20?'tag-orange':'tag-green');
+  });
 }
 function openWhitelistDialog(title){
   document.getElementById('whitelist-dialog-title').textContent=title || '新增白名单';
