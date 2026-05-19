@@ -383,7 +383,7 @@
       <div>
         <h3>供应商管理</h3>
       </div>
-      <button class="btn btn-primary" onclick="showModal('modal-vendor-edit')">+ 新建物流商</button>
+      <button class="btn btn-primary" id="btn-new-vendor" onclick="showModal('modal-vendor-edit')">+ 新建物流商</button>
     </div>
     <div class="card-body">
       <!-- Tabs: 商品供应商 / 物流商 -->
@@ -409,7 +409,7 @@
         <button class="btn btn-outline btn-sm" onclick="showToast('info','筛选已重置')">重置</button>
       </div>
 
-      <table>
+      <table id="vendor-table">
         <thead>
           <tr><th>物流商编码</th><th>物流商名称</th><th>服务类型</th><th>服务路线</th><th>报价模式</th><th>默认结算币种</th><th>联系人</th><th>状态</th><th>操作</th></tr>
         </thead>
@@ -457,7 +457,7 @@
       <button class="btn btn-primary" onclick="navTo('pg-cost-create')">+ 新建费用单</button>
     </div>
     <div class="card-body">
-      <div class="hint-card" style="margin-bottom:14px;font-size:12px">
+      <div class="hint-card" id="costlist-precreate-hint" style="margin-bottom:14px;font-size:12px">
         <span class="hint-icon">⚠️</span>
         <div>
           <strong>入库前置规则（BR-LC-19）：</strong>PO 入库前必须先创建物流费用单（可全为预估金额）。
@@ -474,7 +474,7 @@
         <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
       </div>
 
-      <div class="hint-card info" style="margin-bottom:12px;font-size:12px">
+      <div class="hint-card info" id="costlist-caliber-hint" style="margin-bottom:12px;font-size:12px">
         <span class="hint-icon">ℹ️</span>
         <div>
           <strong>口径说明：</strong>同一笔费用有<strong>预估</strong>（入库前估算）和<strong>实际</strong>（入库后真实值）两个时点。
@@ -482,7 +482,7 @@
         </div>
       </div>
 
-      <table>
+      <table id="costlist-table">
         <thead>
           <tr>
             <th>费用单号</th>
@@ -3820,6 +3820,72 @@ const ANNOTATIONS = [
       { type: "交互", text: "待审核 → 待付款（审核通过）→ 已付款（自动推送 FMS）→ FMS 同步成功为终态" },
       { type: "交互", text: "旁支：审核拒绝（审核驳回，可重新提交）" },
       { type: "BR", id: "BR-LC-31", text: "推送失败（FMS 推送失败）时运营可手动「重推 FMS」" }
+    ]
+  },
+
+  /* ───── 范围：物流商管理（pg-vendor-list）───── */
+  {
+    sel: "#btn-new-vendor", title: "新建物流商",
+    rules: [
+      { type: "交互", text: "点击弹出物流商编辑弹窗，录入物流商主数据：编码 / 名称 / 服务类型 / 服务路线 / 报价模式 / 默认结算币种" }
+    ]
+  },
+  {
+    sel: "#vendor-table", title: "物流商列表",
+    rules: [
+      { type: "校验", text: "服务类型枚举：海运 / 空运 / 报关 / 综合；报价模式枚举：按票 / 按柜" },
+      { type: "交互", text: "「默认结算币种」在新建费用单选中该物流商时自动带出为费用币种" }
+    ]
+  },
+
+  /* ───── 范围：物流费用单列表（pg-cost-list）───── */
+  {
+    sel: "#costlist-precreate-hint", title: "入库前置规则",
+    rules: [
+      { type: "BR", id: "BR-LC-19", text: "PO 入库前必须先创建物流费用单（可全为预估金额）" },
+      { type: "交互", text: "PO 准备入库时若未关联费用单，系统拦截入库操作并提示「请先创建物流费用单」" }
+    ]
+  },
+  {
+    sel: "#costlist-caliber-hint", title: "预估 / 实际口径",
+    rules: [
+      { type: "交互", text: "同一笔费用有预估（入库前估算）和实际（入库后真实值）两个时点" },
+      { type: "交互", text: "预估合计用于暂估入库分摊；实际合计用于结算，须全部录入实际值才可结算" }
+    ]
+  },
+  {
+    sel: "#costlist-table", title: "费用单列表",
+    rules: [
+      { type: "校验", text: "状态枚举：待录入 / 费用待审核 / 待对账 / 发票待审核 / 待付款 / 已付款" },
+      { type: "交互", text: "操作列随状态变化：待录入→录入实际/编辑预估/删除；费用待审核→查看审批；其余→详情" }
+    ]
+  },
+
+  /* ───── 范围：结算单详情（pg-settlement-detail）───── */
+  {
+    sel: "#settle-status-badge", title: "结算单状态",
+    rules: [
+      { type: "交互", text: "状态机：待审核 → 待付款（审核通过）→ 已付款（推送 FMS）；旁支审核拒绝 / 推送失败" }
+    ]
+  },
+  {
+    sel: "#settle-actions", title: "审核操作",
+    rules: [
+      { type: "交互", text: "「✓ 审核通过」→ 结算单进入「待付款」" },
+      { type: "交互", text: "「↩️ 驳回」→ 结算单进入「审核拒绝」，可重新提交" }
+    ]
+  },
+  {
+    sel: "#tab-invoice", title: "发票信息",
+    rules: [
+      { type: "校验", text: "发票总金额必须 = 关联费用单实际合计（差异 0）才校验通过" },
+      { type: "交互", text: "不限发票张数，金额对得上即可；支持批量编辑 / 单张编辑发票" }
+    ]
+  },
+  {
+    sel: "#tab-payment", title: "付款记录",
+    rules: [
+      { type: "校验", text: "结算单审核通过（待付款状态）后，财务才能登记付款" }
     ]
   }
 ];
