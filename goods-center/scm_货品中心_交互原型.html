@@ -346,16 +346,16 @@ label{font-size:13px;color:var(--t2)}
           <div class="form-field w2"><div class="detail-label">货品名称</div><div class="detail-value" id="dv-name">三文鱼原条</div></div>
           <div class="form-field w2"><div class="detail-label">后台类目</div><div class="detail-value">水产原料</div></div>
         </div>
-        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">库存单位</div>
+        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">净含量</div>
+        <div class="form-row">
+          <div class="form-field w3"><div class="detail-label">数量</div><div class="detail-value">1</div></div>
+          <div class="form-field w3"><div class="detail-label">单位</div><div class="detail-value">KG</div></div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">箱规</div>
         <div class="form-row">
           <div class="form-field w3"><div class="detail-label">计量单位</div><div class="detail-value">KG</div></div>
-          <div class="form-field w3"><div class="detail-label">净含量</div><div class="detail-value">1</div></div>
-          <div class="form-field w3"><div class="detail-label">净含量单位</div><div class="detail-value">KG</div></div>
-        </div>
-        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（选填）</span></div>
-        <div class="form-row">
           <div class="form-field w3"><div class="detail-label">包装数量</div><div class="detail-value">10</div></div>
-          <div class="form-field w3"><div class="detail-label">包装单位</div><div class="detail-value">箱</div></div>
+          <div class="form-field w3"><div class="detail-label">包装规格</div><div class="detail-value">箱</div></div>
         </div>
         <div class="form-row">
           <div class="form-field w2"><div class="detail-label">产地</div><div class="detail-value text-gray">—</div></div>
@@ -451,16 +451,16 @@ label{font-size:13px;color:var(--t2)}
           <div class="form-field w2"><label class="required">货品名称</label><input type="text" value="三文鱼原条"></div>
           <div class="form-field w2"><label class="required">后台类目</label><select><option>水产原料</option><option>水产加工品</option></select></div>
         </div>
-        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">库存单位</div>
+        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">净含量</div>
+        <div class="form-row">
+          <div class="form-field w3"><label class="required">数量</label><input type="number" value="1" class="readonly-field" readonly></div>
+          <div class="form-field w3"><label class="required">单位</label><input type="text" value="KG" class="readonly-field" readonly></div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">箱规</div>
         <div class="form-row">
           <div class="form-field w3"><label class="required">计量单位</label><select><option>KG</option><option>g</option></select></div>
-          <div class="form-field w3"><label class="required">净含量</label><input type="number" value="1" class="readonly-field" readonly></div>
-          <div class="form-field w3"><label class="required">净含量单位</label><input type="text" value="KG" class="readonly-field" readonly></div>
-        </div>
-        <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（选填）</span></div>
-        <div class="form-row">
           <div class="form-field w3"><label>包装数量</label><input type="number" value="10" min="1" step="1"></div>
-          <div class="form-field w3"><label>包装单位</label><select><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option selected>箱</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+          <div class="form-field w3"><label>包装规格</label><select><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option selected>箱</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
         </div>
         <div class="form-row">
           <div class="form-field w2"><label>产地</label><input type="text" placeholder="选填"></div>
@@ -561,14 +561,15 @@ label{font-size:13px;color:var(--t2)}
             <div class="form-field w2"><label class="required">货品名称</label><input type="text" id="wiz-raw-name" class="iw100" placeholder="请输入货品名称"></div>
             <div class="form-field w2"><label class="required">后台类目</label><select class="iw100" id="wiz-raw-cat"><option value="">请选择类目</option><option>水产原料</option><option>水产加工品</option><option>蔬菜</option><option>肉类</option><option>调味品</option></select></div>
           </div>
-          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">库存单位</div>
+          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">净含量</div>
           <div class="form-row" id="wiz-stock-row">
-            <!-- 由 setStockUnitFields(wizType) 动态注入：std→成品规则；nonstd→原料规则 -->
+            <!-- 由 setStockUnitFields(wizType) 动态注入：净含量数量 + 净含量单位 -->
           </div>
-          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（选填）</span></div>
+          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">箱规</div>
           <div class="form-row">
+            <div class="form-field w3" id="wiz-measure-cell"><!-- 由 setStockUnitFields(wizType) 动态注入：计量单位 --></div>
             <div class="form-field w3"><label>包装数量</label><input type="number" class="iw100" placeholder="请输入" min="1" step="1"></div>
-            <div class="form-field w3"><label>包装单位</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+            <div class="form-field w3"><label>包装规格</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
           </div>
           <div class="form-row">
             <div class="form-field w2"><label>产地</label><input type="text" class="iw100" placeholder="选填"></div>
@@ -688,16 +689,16 @@ label{font-size:13px;color:var(--t2)}
               <div class="form-field w2"><label class="required">成品货品名称</label><input type="text" class="iw100 fin-name" placeholder="请输入成品名称"></div>
               <div class="form-field w2"><label class="required">后台类目</label><select class="iw100"><option value="">请选择（默认继承原料）</option><option>水产加工品</option><option>水产原料</option><option>蔬菜</option><option>肉类</option></select></div>
             </div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">库存单位</div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">净含量</div>
+            <div class="form-row">
+              <div class="form-field w3"><label class="required">数量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
+              <div class="form-field w3"><label class="required">单位</label><select class="iw100"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">箱规</div>
             <div class="form-row">
               <div class="form-field w3"><label class="required">计量单位</label><select class="iw100 fin-unit-sel"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
-              <div class="form-field w3"><label class="required">净含量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
-              <div class="form-field w3"><label class="required">净含量单位</label><select class="iw100"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>
-            </div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（选填）</span></div>
-            <div class="form-row">
               <div class="form-field w3"><label>包装数量</label><input type="number" class="iw100" placeholder="请输入" min="1" step="1"></div>
-              <div class="form-field w3"><label>包装单位</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+              <div class="form-field w3"><label>包装规格</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
             </div>
             <div class="form-row">
               <div class="form-field w3">
@@ -1291,19 +1292,20 @@ function syncRawNetUnit(val){
 }
 function setStockUnitFields(type){
   const row=document.getElementById('wiz-stock-row');
-  if(!row) return;
+  const cell=document.getElementById('wiz-measure-cell');
+  if(!row||!cell) return;
   if(type==='std'){
     // 标品 → 货品属性=成品货品 → 成品规则
     row.innerHTML=`
-      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
-      <div class="form-field w3"><label class="required">净含量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
-      <div class="form-field w3"><label class="required">净含量单位</label><select class="iw100" id="wiz-raw-net-unit"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>`;
+      <div class="form-field w3"><label class="required">数量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
+      <div class="form-field w3"><label class="required">单位</label><select class="iw100" id="wiz-raw-net-unit"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>`;
+    cell.innerHTML=`<label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select>`;
   } else {
     // 非标品 → 货品属性=原料货品 → 原料规则
     row.innerHTML=`
-      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="syncRawNetUnit(this.value)"><option value="">请选择</option><option>KG</option><option>g</option></select></div>
-      <div class="form-field w3"><label class="required">净含量</label><input type="number" value="1" class="iw100 readonly-field" readonly></div>
-      <div class="form-field w3"><label class="required">净含量单位</label><input type="text" id="wiz-raw-net-unit" class="iw100 readonly-field" readonly placeholder="同计量单位"></div>`;
+      <div class="form-field w3"><label class="required">数量</label><input type="number" value="1" class="iw100 readonly-field" readonly></div>
+      <div class="form-field w3"><label class="required">单位</label><input type="text" id="wiz-raw-net-unit" class="iw100 readonly-field" readonly placeholder="同计量单位"></div>`;
+    cell.innerHTML=`<label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="syncRawNetUnit(this.value)"><option value="">请选择</option><option>KG</option><option>g</option></select>`;
   }
 }
 function addRow(tbodyId){
@@ -1508,16 +1510,16 @@ function addFinishedBlock(){
       <div class="form-field w2"><label class="required">成品货品名称</label><input type="text" class="iw100 fin-name" placeholder="请输入成品名称"></div>
       <div class="form-field w2"><label class="required">后台类目</label><select class="iw100"><option value="">请选择（默认继承原料）</option><option>水产加工品</option><option>水产原料</option><option>蔬菜</option><option>肉类</option></select></div>
     </div>
-    <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">库存单位</div>
+    <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">净含量</div>
+    <div class="form-row">
+      <div class="form-field w3"><label class="required">数量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
+      <div class="form-field w3"><label class="required">单位</label><select class="iw100"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>
+    </div>
+    <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">箱规</div>
     <div class="form-row">
       <div class="form-field w3"><label class="required">计量单位</label><select class="iw100 fin-unit-sel"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
-      <div class="form-field w3"><label class="required">净含量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
-      <div class="form-field w3"><label class="required">净含量单位</label><select class="iw100"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>
-    </div>
-    <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（选填）</span></div>
-    <div class="form-row">
       <div class="form-field w3"><label>包装数量</label><input type="number" class="iw100" placeholder="请输入" min="1" step="1"></div>
-      <div class="form-field w3"><label>包装单位</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+      <div class="form-field w3"><label>包装规格</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
     </div>
     <div class="form-row">
       <div class="form-field w3">
