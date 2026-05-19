@@ -270,6 +270,7 @@ label{font-size:13px;color:var(--t2)}
             <div class="dropdown-item" onclick="startWizard('nonstd')">非标品</div>
           </div>
         </div>
+        <button class="btn" onclick="newSkuCreate()">+ 新建商品</button>
         <div class="dropdown-wrap">
           <button class="btn" onclick="toggleDD('dd-batch')">批量操作 ▾</button>
           <div class="dropdown-menu" id="dd-batch">
@@ -837,25 +838,21 @@ label{font-size:13px;color:var(--t2)}
             <div class="form-field w3"><div class="detail-label">箱规</div><div class="detail-value" id="sk-box">—</div></div>
           </div>
 
-          <!-- 售卖规格（多 SKU）-->
+          <!-- 售卖规格列表（每行 = 一个 SKU）-->
           <div class="form-row">
             <div class="form-field full">
-              <label class="required">售卖规格</label>
-              <div class="radio-group">
-                <label class="radio-option"><input type="checkbox" id="skc-chk-measure" checked onchange="skcRenderSku()"> <span id="skc-opt-measure">计量单位</span></label>
-                <label class="radio-option"><input type="checkbox" id="skc-chk-box" onchange="skcRenderSku()"> <span id="skc-opt-box">包装规格单位</span></label>
-              </div>
-              <div class="form-hint" id="skc-sell-hint">勾选客户可下单的售卖单位，每勾选一项生成一个独立 SKU；至少选 1 项。货品未维护箱规时，仅可选「计量单位」。</div>
-            </div>
-          </div>
-          <!-- SKU 预览 -->
-          <div class="form-row">
-            <div class="form-field full">
-              <label>将生成的 SKU（共 <span id="skc-sku-count">1</span> 个）</label>
-              <table class="inline-table" style="max-width:680px">
-                <thead><tr><th style="width:190px">售卖规格</th><th>换算与库存扣减说明</th></tr></thead>
-                <tbody id="skc-sku-tbody"></tbody>
+              <label class="required">售卖规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">每行生成一个独立 SKU，如「单瓶 / 4 瓶装 / 8 瓶装」</span></label>
+              <table class="inline-table" id="skc-spec-table" style="max-width:820px">
+                <thead><tr>
+                  <th style="width:200px">规格名称</th>
+                  <th style="width:230px">1 份规格 = 数量</th>
+                  <th>库存扣减说明</th>
+                  <th style="width:64px">操作</th>
+                </tr></thead>
+                <tbody id="skc-spec-tbody"></tbody>
               </table>
+              <button type="button" class="btn-text" style="margin-top:8px" onclick="skcAddSpec()">+ 添加规格</button>
+              <div class="form-hint" id="skc-spec-hint">每行 = 一个 SKU；数量为该规格包含的「计量单位」个数，下单时按此数量扣减货品库存。</div>
             </div>
           </div>
         </div>
@@ -1816,7 +1813,7 @@ function showToast(msg,type=''){
 }
 
 // ─── 新建商品（货品关联建商品）───
-let skcBox={qty:0,unit:''};
+let skcSpecUnit='',skcSpecs=[];
 function initSkuBindSelect(){
   const sel=document.getElementById('sku-bind-select');
   if(!sel) return;
@@ -1851,20 +1848,11 @@ function bindSkuGoods(val){
   document.getElementById('sk-box').textContent=o.box;
   document.getElementById('skc-attr').value=o.gtype;
   document.getElementById('skc-spu-name').value=o.name;
-  document.getElementById('skc-opt-measure').textContent=`${o.measure}（计量单位）`;
-  const boxChk=document.getElementById('skc-chk-box'),boxLabel=document.getElementById('skc-opt-box');
-  document.getElementById('skc-chk-measure').checked=true;
-  skcBox={qty:o.boxQty,unit:o.boxUnit};
-  if(o.boxQty>0){
-    boxChk.disabled=false;
-    boxLabel.textContent=`${o.boxUnit}（包装规格单位）`;
-    boxLabel.style.color='';
-  }else{
-    boxChk.disabled=true;boxChk.checked=false;
-    boxLabel.textContent='包装规格单位（货品未维护箱规，不可选）';
-    boxLabel.style.color='var(--t3)';
-  }
-  skcRenderSku();
+  skcSpecUnit=o.measure;
+  // 默认预置「单计量单位」一行；货品维护了箱规时再预置「整箱」一行，可继续增删
+  skcSpecs=[{name:'单'+o.measure,qty:1}];
+  if(o.boxQty>0) skcSpecs.push({name:'整箱',qty:o.boxQty});
+  skcRenderSpecs();
   wrap.style.display='';tip.style.display='none';
   spu.style.display='';disp.style.display='';
 }
@@ -1872,25 +1860,45 @@ function unbindSkuGoods(){
   document.getElementById('sku-bind-select').value='';
   bindSkuGoods('');
 }
-// 渲染 SKU 预览：每勾选一个售卖单位 = 一个独立 SKU
-function skcRenderSku(){
-  const measureChk=document.getElementById('skc-chk-measure'),boxChk=document.getElementById('skc-chk-box');
-  const measure=document.getElementById('skc-opt-measure').textContent.replace(/（[^）]*）/,'');
-  const rows=[];
-  if(measureChk.checked)
-    rows.push([`${measure}（计量单位）`,`客户最少购买 1 ${measure}；下单按 1 ${measure} 扣减 1 货品库存。售价、起订量按 ${measure} 计。`]);
-  if(boxChk.checked&&!boxChk.disabled)
-    rows.push([`${skcBox.unit}（包装规格单位）`,`客户最少购买 1 ${skcBox.unit}；下单按 1 ${skcBox.unit} 扣减 ${skcBox.qty} 个「${measure}」库存。售价、起订量按 ${skcBox.unit} 计。`]);
-  document.getElementById('skc-sku-count').textContent=rows.length;
-  document.getElementById('skc-sku-tbody').innerHTML=rows.length
-    ? rows.map(r=>`<tr><td><strong>${r[0]}</strong></td><td style="color:var(--t2)">${r[1]}</td></tr>`).join('')
-    : '<tr><td colspan="2" style="text-align:center;color:var(--danger,#e54545);padding:12px">请至少勾选一个售卖规格</td></tr>';
+// ─── 售卖规格列表：每行 = 一个 SKU ───
+function skcDesc(qty){
+  const u=skcSpecUnit||'件';
+  return (!qty||qty<1)?'数量需为 ≥1 的整数':`下单 1 份扣减 ${qty} ${u} 货品库存`;
+}
+function skcRenderSpecs(){
+  const u=skcSpecUnit||'件';
+  document.getElementById('skc-spec-tbody').innerHTML=skcSpecs.map((s,i)=>`<tr>
+    <td><input type="text" class="iw100" value="${s.name}" placeholder="如 4${u}装" oninput="skcSyncSpec(${i},'name',this.value)"></td>
+    <td><div class="flex gap8 items-center"><input type="number" min="1" value="${s.qty}" style="width:90px" oninput="skcSyncSpec(${i},'qty',this.value)"><span style="color:var(--t2)">${u}</span></div></td>
+    <td id="skc-desc-${i}" style="color:var(--t2)">${skcDesc(s.qty)}</td>
+    <td><button class="btn-text danger" onclick="skcDelSpec(${i})">删除</button></td>
+  </tr>`).join('');
+  document.getElementById('skc-spec-hint').textContent=`共 ${skcSpecs.length} 个规格，将生成 ${skcSpecs.length} 个 SKU；数量为该规格包含的「${u}」个数，下单按此数量扣减货品库存。`;
+}
+function skcSyncSpec(i,field,val){
+  if(field==='qty'){
+    val=parseInt(val,10)||0;
+    skcSpecs[i].qty=val;
+    document.getElementById('skc-desc-'+i).textContent=skcDesc(val);
+  }else{
+    skcSpecs[i].name=val;
+  }
+}
+function skcAddSpec(){ skcSpecs.push({name:'',qty:1}); skcRenderSpecs(); }
+function skcDelSpec(i){
+  if(skcSpecs.length<=1){showToast('至少保留一个售卖规格','warning');return;}
+  skcSpecs.splice(i,1); skcRenderSpecs();
 }
 function saveSkuCreate(){
   if(document.getElementById('sku-bind-select').value===''){showToast('请先绑定货品','warning');return;}
-  const n=+document.getElementById('skc-sku-count').textContent;
-  if(n===0){showToast('请至少勾选一个售卖规格','warning');return;}
-  showToast(`商品创建成功，已生成 ${n} 个 SKU`,'success');
+  if(skcSpecs.length===0){showToast('请至少添加一个售卖规格','warning');return;}
+  for(const s of skcSpecs){
+    if(!s.name.trim()){showToast('规格名称不能为空','warning');return;}
+    if(!s.qty||s.qty<1){showToast('规格数量必须为 ≥1 的整数','warning');return;}
+  }
+  const qtys=skcSpecs.map(s=>s.qty);
+  if(new Set(qtys).size!==qtys.length){showToast('存在重复的规格数量，请合并','warning');return;}
+  showToast(`商品创建成功，已生成 ${skcSpecs.length} 个 SKU`,'success');
   setTimeout(()=>gotoPage('goods-list'),800);
 }
 function openSkuCreate(i){
@@ -1898,6 +1906,12 @@ function openSkuCreate(i){
   const sel=document.getElementById('sku-bind-select');
   sel.value=String(i);
   bindSkuGoods(String(i));
+}
+// 工具栏「+ 新建商品」：进入空白新建商品页，由用户在页内选择货品
+function newSkuCreate(){
+  gotoPage('sku-create');
+  document.getElementById('sku-bind-select').value='';
+  bindSkuGoods('');
 }
 
 // ─── INIT ───
