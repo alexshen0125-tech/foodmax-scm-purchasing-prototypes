@@ -1,6 +1,16 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.15
-     日期：2026-05-14
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.16
+     日期：2026-05-19
      变更：
+     - 【v1.16】跨境物流费用录入费用 2 项改动：
+       · 改动 1｜选择采购单改为「搜索驱动」：新建费用单步骤一先搜索供应商或采购单号，
+         命中后才出现采购单列表供勾选；未搜索时显示空状态引导，不再默认全量展示
+       · 改动 2｜实际费用录入后走审批流：费用明细全部录入实际后出现「提交费用审批」按钮，
+         提交后对接「流程审批中心」，状态机由 5 状态扩为 6 状态
+         （待录入 → 费用待审核 → 待对账 → 发票待审核 → 待付款 → 已付款）
+       · 新增「审批中心」页面（pg-approval-center）：审批人视角，查看待审批费用单列表、
+         点进去看费用明细与预估/实际差异、通过 / 驳回
+       · 新增「费用审批」弹窗（modal-fee-approval）：费用明细 + 审批意见 + 通过 / 驳回
+       · 原「待审核」重命名为「发票待审核」，与新增「费用待审核」区分
      - 【v1.15】按 2026-05-13 研发评审会议记录修订：
        · 🚨 取消金额调整单：删除 placeholder 卡片 + 真实卡片 + 演示按钮，差异通过 DMS 推送链路同步
        · 🚨 删除差异结算单 LS-DIFF 数据示例
@@ -359,6 +369,7 @@
   <div class="sidebar-item active" data-page="pg-vendor-list">🏢 物流商管理</div>
   <div class="sidebar-item" data-page="pg-cost-list">📦 费用单管理</div>
   <div class="sidebar-item" data-page="pg-logistics-settlement">💰 结算单管理 <span class="sidebar-badge">5</span></div>
+  <div class="sidebar-item" data-page="pg-approval-center">✅ 审批中心 <span class="sidebar-badge" id="approval-badge">2</span></div>
   <div class="sidebar-item" data-page="pg-landed-cost">📋 采购单详情页</div>
 </nav>
 
@@ -457,7 +468,7 @@
       <div class="filter-bar">
         <div class="form-group"><div class="form-label">费用单号</div><input type="text" placeholder="LC-..." /></div>
         <div class="form-group"><div class="form-label">物流商</div><select><option>全部</option><option>顺丰国际货运</option><option>PIL Shipping</option></select></div>
-        <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待录入</option><option>待对账</option><option>待审核</option><option>待付款</option><option>已付款</option></select></div>
+        <div class="form-group"><div class="form-label">状态</div><select><option>全部</option><option>待录入</option><option>费用待审核</option><option>待对账</option><option>发票待审核</option><option>待付款</option><option>已付款</option></select></div>
         <div class="form-group"><div class="form-label">费用币种</div><select><option>全部</option><option>USD</option><option>SGD</option><option>CNY</option></select></div>
         <div class="form-group"><div class="form-label">创建日期</div><input type="date" /></div>
         <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
@@ -512,6 +523,18 @@
             <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
           </tr>
           <tr>
+            <td><span class="link">LC-20260413-007</span></td>
+            <td>PIL Shipping</td>
+            <td><span class="link">2 张</span></td>
+            <td>海运 + 报关 + 港口费（实际已录入，审批中）</td>
+            <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 4,200.00</td>
+            <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 4,560.00</td>
+            <td>按金额</td>
+            <td><span class="badge badge-amber" title="实际费用已提交流程审批中心，待审批人确认">费用待审核</span></td>
+            <td>2026-04-13 09:40</td>
+            <td><span class="link" onclick="navTo('pg-approval-center')">查看审批</span></td>
+          </tr>
+          <tr>
             <td><span class="link">LC-20260411-001</span></td>
             <td>顺丰国际货运</td>
             <td><span class="link">1 张</span></td>
@@ -531,7 +554,7 @@
             <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 1,800.00</td>
             <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 1,800.00</td>
             <td>按金额</td>
-            <td><span class="badge badge-blue">待审核</span></td>
+            <td><span class="badge badge-blue">发票待审核</span></td>
             <td>2026-04-10 16:00</td>
             <td><span class="link" onclick="navTo('pg-settlement-detail')">详情</span></td>
           </tr>
@@ -561,7 +584,7 @@
           </tr>
         </tbody>
       </table>
-      <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 6 条</div>
+      <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px;">共 7 条</div>
     </div>
   </div>
 </div>
@@ -603,69 +626,89 @@
           <input type="text" placeholder="如 SF1234567890" />
         </div>
 
-        <h4 style="font-size:13px;font-weight:600;margin-bottom:10px">关联采购单（可多选 / 拼柜场景）</h4>
+        <h4 style="font-size:13px;font-weight:600;margin-bottom:6px">关联采购单（可多选 / 拼柜场景）</h4>
+        <div class="text-muted" style="font-size:11.5px;margin-bottom:10px">先按<strong>供应商</strong>或<strong>采购单号</strong>搜索，命中后勾选需要添加费用的采购单。</div>
         <div class="filter-bar" style="margin-bottom:12px">
-          <input type="text" placeholder="搜索采购单号 / 供应商..." style="width:260px" />
-          <button class="btn btn-outline btn-sm" onclick="onPoSearch(this)">搜索</button>
+          <input type="text" id="po-search-kw" placeholder="输入供应商名称 或 采购单号（如 深圳鲜之道 / PO-2026-0401）" style="width:340px" onkeydown="if(event.key==='Enter'){onPoSearch();return false;}" />
+          <button class="btn btn-primary btn-sm" onclick="onPoSearch()">🔍 搜索</button>
+          <button class="btn btn-outline btn-sm" onclick="resetPoSearch()">重置</button>
         </div>
 
-        <table>
-          <thead>
-            <tr><th style="width:40px"><input type="checkbox" class="ck" id="ckAll" onclick="toggleAll(this)" /></th><th>采购单号</th><th>供应商</th><th>贸易条款</th><th>币种</th><th>采购金额</th><th>总重量</th><th>总体积</th><th>已关联费用单</th><th>状态</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><input type="checkbox" class="ck ck-po" checked data-incoterm="FOB" data-currency="USD" data-amount="10000" data-weight="2500" data-volume="8.5" data-existing="" onchange="updatePoSummary()" /></td>
-              <td><span class="link">PO-2026-0401</span></td><td>深圳鲜之道食品</td><td><span class="badge badge-blue">FOB</span></td>
-              <td>USD</td>
-              <td style="font-weight:600">USD 10,000.00</td><td>2,500 kg</td><td>8.5 m³</td>
-              <td><span class="text-muted">—</span></td>
-              <td><span class="badge badge-green">已入库</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="ck ck-po" checked data-incoterm="FOB" data-currency="USD" data-amount="5000" data-weight="1200" data-volume="4.2" data-existing="" onchange="updatePoSummary()" /></td>
-              <td><span class="link">PO-2026-0402</span></td><td>深圳鲜之道食品</td><td><span class="badge badge-blue">FOB</span></td>
-              <td>USD</td>
-              <td style="font-weight:600">USD 5,000.00</td><td>1,200 kg</td><td>4.2 m³</td>
-              <td><span class="text-muted">—</span></td>
-              <td><span class="badge badge-green">已入库</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="ck ck-po" data-incoterm="CIF" data-currency="USD" data-amount="8000" data-weight="3000" data-volume="10.0" data-existing="LC-20260411-001" onchange="updatePoSummary()" /></td>
-              <td><span class="link">PO-2026-0403</span></td><td>山东益海嘉里</td><td><span class="badge badge-amber">CIF</span></td>
-              <td>USD</td>
-              <td style="font-weight:600">USD 8,000.00</td><td>3,000 kg</td><td>10.0 m³</td>
-              <td><span class="badge badge-amber" title="该 PO 已存在费用单">LC-20260411-001</span></td>
-              <td><span class="badge badge-green">已入库</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="ck ck-po" data-incoterm="EXW" data-currency="CNY" data-amount="3500" data-weight="800" data-volume="3.0" data-existing="" onchange="updatePoSummary()" /></td>
-              <td><span class="link">PO-2026-0405</span></td><td>广州南沙进出口</td><td><span class="badge badge-blue">EXW</span></td>
-              <td>CNY</td>
-              <td style="font-weight:600">CNY 3,500.00</td><td>800 kg</td><td>3.0 m³</td>
-              <td><span class="text-muted">—</span></td>
-              <td><span class="badge badge-blue">运输中</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" class="ck ck-po" data-incoterm="FOB" data-currency="USD" data-amount="6000" data-weight="0" data-volume="2.5" data-existing="" onchange="updatePoSummary()" /></td>
-              <td><span class="link">PO-2026-0406</span></td><td>越南 ABC Foods</td><td><span class="badge badge-blue">FOB</span></td>
-              <td>USD</td>
-              <td style="font-weight:600">USD 6,000.00</td><td><span class="text-muted">— 缺数据</span></td><td>2.5 m³</td>
-              <td><span class="text-muted">—</span></td>
-              <td><span class="badge badge-green">已入库</span></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="background:#f8fafc;border-radius:8px;padding:12px 16px;margin-top:12px;display:flex;gap:24px;font-size:12.5px">
-          <span>已选：<strong id="sel-count">2</strong> 张采购单</span>
-          <span>采购金额合计：<strong>USD 15,000.00</strong></span>
-          <span>总重量合计：<strong>3,700 kg</strong></span>
-          <span>总体积合计：<strong>12.7 m³</strong></span>
+        <!-- 未搜索：空状态引导 -->
+        <div id="po-empty" style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:36px 20px;text-align:center;color:#64748b">
+          <div style="font-size:28px;margin-bottom:6px">🔍</div>
+          <div style="font-size:13px;font-weight:600;color:#475569">请先搜索供应商或采购单号</div>
+          <div style="font-size:11.5px;margin-top:4px">输入关键词后，匹配的采购单将在此处展示，再勾选添加费用。</div>
         </div>
 
-        <div style="margin-top:16px;text-align:right">
-          <button class="btn btn-primary" onclick="goStep2()">下一步：录入费用明细 →</button>
+        <!-- 搜索无结果 -->
+        <div id="po-noresult" style="display:none;background:#fffbeb;border:1px dashed #fde68a;border-radius:8px;padding:36px 20px;text-align:center;color:#92400e">
+          <div style="font-size:28px;margin-bottom:6px">📭</div>
+          <div style="font-size:13px;font-weight:600">未找到符合条件的采购单</div>
+          <div style="font-size:11.5px;margin-top:4px">请检查供应商名称或采购单号关键词后重试。</div>
+        </div>
+
+        <!-- 搜索结果区 -->
+        <div id="po-results" style="display:none">
+          <div class="text-muted" style="font-size:11.5px;margin-bottom:6px">搜索结果：命中 <strong id="po-hit-count">0</strong> 张采购单</div>
+          <table>
+            <thead>
+              <tr><th style="width:40px"><input type="checkbox" class="ck" id="ckAll" onclick="toggleAll(this)" /></th><th>采购单号</th><th>供应商</th><th>贸易条款</th><th>币种</th><th>采购金额</th><th>总重量</th><th>总体积</th><th>已关联费用单</th><th>状态</th></tr>
+            </thead>
+            <tbody id="po-tbody">
+              <tr class="po-row" data-po="PO-2026-0401" data-supplier="深圳鲜之道食品">
+                <td><input type="checkbox" class="ck ck-po" data-incoterm="FOB" data-currency="USD" data-amount="10000" data-weight="2500" data-volume="8.5" data-existing="" onchange="updatePoSummary()" /></td>
+                <td><span class="link">PO-2026-0401</span></td><td>深圳鲜之道食品</td><td><span class="badge badge-blue">FOB</span></td>
+                <td>USD</td>
+                <td style="font-weight:600">USD 10,000.00</td><td>2,500 kg</td><td>8.5 m³</td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="badge badge-green">已入库</span></td>
+              </tr>
+              <tr class="po-row" data-po="PO-2026-0402" data-supplier="深圳鲜之道食品">
+                <td><input type="checkbox" class="ck ck-po" data-incoterm="FOB" data-currency="USD" data-amount="5000" data-weight="1200" data-volume="4.2" data-existing="" onchange="updatePoSummary()" /></td>
+                <td><span class="link">PO-2026-0402</span></td><td>深圳鲜之道食品</td><td><span class="badge badge-blue">FOB</span></td>
+                <td>USD</td>
+                <td style="font-weight:600">USD 5,000.00</td><td>1,200 kg</td><td>4.2 m³</td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="badge badge-green">已入库</span></td>
+              </tr>
+              <tr class="po-row" data-po="PO-2026-0403" data-supplier="山东益海嘉里">
+                <td><input type="checkbox" class="ck ck-po" data-incoterm="CIF" data-currency="USD" data-amount="8000" data-weight="3000" data-volume="10.0" data-existing="LC-20260411-001" onchange="updatePoSummary()" /></td>
+                <td><span class="link">PO-2026-0403</span></td><td>山东益海嘉里</td><td><span class="badge badge-amber">CIF</span></td>
+                <td>USD</td>
+                <td style="font-weight:600">USD 8,000.00</td><td>3,000 kg</td><td>10.0 m³</td>
+                <td><span class="badge badge-amber" title="该 PO 已存在费用单">LC-20260411-001</span></td>
+                <td><span class="badge badge-green">已入库</span></td>
+              </tr>
+              <tr class="po-row" data-po="PO-2026-0405" data-supplier="广州南沙进出口">
+                <td><input type="checkbox" class="ck ck-po" data-incoterm="EXW" data-currency="CNY" data-amount="3500" data-weight="800" data-volume="3.0" data-existing="" onchange="updatePoSummary()" /></td>
+                <td><span class="link">PO-2026-0405</span></td><td>广州南沙进出口</td><td><span class="badge badge-blue">EXW</span></td>
+                <td>CNY</td>
+                <td style="font-weight:600">CNY 3,500.00</td><td>800 kg</td><td>3.0 m³</td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="badge badge-blue">运输中</span></td>
+              </tr>
+              <tr class="po-row" data-po="PO-2026-0406" data-supplier="越南 ABC Foods">
+                <td><input type="checkbox" class="ck ck-po" data-incoterm="FOB" data-currency="USD" data-amount="6000" data-weight="0" data-volume="2.5" data-existing="" onchange="updatePoSummary()" /></td>
+                <td><span class="link">PO-2026-0406</span></td><td>越南 ABC Foods</td><td><span class="badge badge-blue">FOB</span></td>
+                <td>USD</td>
+                <td style="font-weight:600">USD 6,000.00</td><td><span class="text-muted">— 缺数据</span></td><td>2.5 m³</td>
+                <td><span class="text-muted">—</span></td>
+                <td><span class="badge badge-green">已入库</span></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="background:#f8fafc;border-radius:8px;padding:12px 16px;margin-top:12px;display:flex;gap:24px;font-size:12.5px">
+            <span>已选：<strong id="sel-count">0</strong> 张采购单</span>
+            <span>采购金额合计：<strong id="sum-amount">—</strong></span>
+            <span>总重量合计：<strong id="sum-weight">—</strong></span>
+            <span>总体积合计：<strong id="sum-volume">—</strong></span>
+          </div>
+
+          <div style="margin-top:16px;text-align:right">
+            <button class="btn btn-primary" onclick="goStep2()">下一步：录入费用明细 →</button>
+          </div>
         </div>
       </div>
 
@@ -797,26 +840,30 @@
         <span class="badge badge-amber" id="cost-status-badge">待录入</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-outline btn-sm" data-detail-edit id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="所有费用实际录入完毕后可上传发票">📎 上传发票</button>
+        <button class="btn btn-primary btn-sm" data-detail-edit data-only-edit-actual id="btn-submit-approval" onclick="onSubmitFeeApproval()" disabled title="所有费用录入实际后可提交审批">📤 提交费用审批</button>
+        <button class="btn btn-outline btn-sm" data-detail-edit id="btn-upload-invoice" onclick="onCostUploadInvoice()" disabled title="费用审批通过后可上传发票">📎 上传发票</button>
         <button class="btn btn-outline btn-sm" data-detail-view-action onclick="navTo('pg-cost-list')">← 返回列表</button>
         <button class="btn btn-outline btn-sm">📥 导出</button>
       </div>
     </div>
-    <!-- 结算流程进度条（4 状态） -->
+    <!-- 结算流程进度条（6 状态） -->
     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;background:#fafbfc">
-      <div style="display:flex;align-items:center;gap:0;font-size:11.5px" id="settlement-progress">
-        <span class="badge badge-amber" id="step-1" style="font-size:11.5px;padding:4px 8px">⏳ 1. 待录入</span>
-        <span style="flex:1;max-width:40px;height:2px;background:#e2e8f0;margin:0 6px"></span>
-        <span class="badge badge-gray" id="step-2" style="font-size:11.5px;padding:4px 8px">2. 待对账</span>
-        <span style="flex:1;max-width:40px;height:2px;background:#e2e8f0;margin:0 6px"></span>
-        <span class="badge badge-gray" id="step-3" style="font-size:11.5px;padding:4px 8px">3. 待审核</span>
-        <span style="flex:1;max-width:40px;height:2px;background:#e2e8f0;margin:0 6px"></span>
-        <span class="badge badge-gray" id="step-4" style="font-size:11.5px;padding:4px 8px">4. 待付款</span>
-        <span style="flex:1;max-width:40px;height:2px;background:#e2e8f0;margin:0 6px"></span>
-        <span class="badge badge-gray" id="step-5" style="font-size:11.5px;padding:4px 8px">5. 已付款</span>
+      <div style="display:flex;align-items:center;gap:0;font-size:11px;flex-wrap:wrap" id="settlement-progress">
+        <span class="badge badge-amber" id="step-1" style="font-size:11px;padding:4px 8px">⏳ 1. 待录入</span>
+        <span style="flex:1;max-width:28px;height:2px;background:#e2e8f0;margin:0 5px"></span>
+        <span class="badge badge-gray" id="step-2" style="font-size:11px;padding:4px 8px">2. 费用待审核</span>
+        <span style="flex:1;max-width:28px;height:2px;background:#e2e8f0;margin:0 5px"></span>
+        <span class="badge badge-gray" id="step-3" style="font-size:11px;padding:4px 8px">3. 待对账</span>
+        <span style="flex:1;max-width:28px;height:2px;background:#e2e8f0;margin:0 5px"></span>
+        <span class="badge badge-gray" id="step-4" style="font-size:11px;padding:4px 8px">4. 发票待审核</span>
+        <span style="flex:1;max-width:28px;height:2px;background:#e2e8f0;margin:0 5px"></span>
+        <span class="badge badge-gray" id="step-5" style="font-size:11px;padding:4px 8px">5. 待付款</span>
+        <span style="flex:1;max-width:28px;height:2px;background:#e2e8f0;margin:0 5px"></span>
+        <span class="badge badge-gray" id="step-6" style="font-size:11px;padding:4px 8px">6. 已付款</span>
       </div>
       <div style="margin-top:6px;color:#94a3b8;font-size:11px">
-        状态机：<strong>待录入 → 待对账 → 待审核 → 待付款 → 已付款</strong>
+        状态机：<strong>待录入 → 费用待审核 → 待对账 → 发票待审核 → 待付款 → 已付款</strong>
+        　<span style="color:#64748b">费用待审核 = 实际费用走流程审批中心；发票待审核 = 财务审核发票/结算单</span>
       </div>
     </div>
     <div class="card-body">
@@ -898,7 +945,7 @@
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" data-detail-edit data-only-edit-actual onclick="copyEstToActDetail()" title="把所有待录入项的实际金额填为预估值">⚡ 待录入项：实际同预估</button>
-        <span style="font-size:11.5px;color:#64748b">
+        <span style="font-size:11.5px;color:#64748b" id="fee-header-summary">
           预估合计 <strong style="color:#92400e">USD 3,050</strong> →
           实际合计 <strong style="color:#15803d">USD 2,800</strong>
           <span class="badge badge-amber" style="margin-left:4px">+ 1 项待录入</span>
@@ -955,7 +1002,7 @@
             <td class="text-right">405.90</td>
             <td>实际单据 INV-PRT-202604-A · 差异 +USD 50（已通过 DMS 推送链路更新入库成本）</td>
           </tr>
-          <tr style="background:#f8fafc;font-weight:700">
+          <tr style="background:#f8fafc;font-weight:700" id="fee-total-row">
             <td>合计</td>
             <td class="text-right" style="background:#fef3c7;color:#92400e">3,050.00</td>
             <td class="text-right" style="background:#dcfce7;color:#15803d">2,800.00 <span class="text-muted" style="font-weight:400;font-size:10.5px">+ 1 项待录入</span></td>
@@ -1062,6 +1109,106 @@
       <div style="padding:12px 16px;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;color:#92400e">
         ℹ️ 表内金额均为<strong>本位币 SGD</strong>（按锁定汇率 1 USD = 1.353 SGD 折算）。
         差异值通过<strong>物流费推送 DMS 链路</strong>同步至下游系统，DMS 自行重算入库成本（不再生成调整单）。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE: 审批中心（审批人视角） ==================== -->
+<div class="page" id="pg-approval-center">
+  <div class="card">
+    <div class="card-header">
+      <h3>审批中心 — 物流费用审批</h3>
+      <span class="text-muted" style="font-size:11.5px">数据来源：流程审批中心 · 审批人：李敏（财务主管）</span>
+    </div>
+    <div class="card-body">
+      <div class="hint-card info" style="margin-bottom:14px;font-size:12px">
+        <span class="hint-icon">ℹ️</span>
+        <div>
+          费用单录入实际费用并提交后，进入<strong>「费用待审核」</strong>状态并推送至本审批中心。
+          审批人点进单据核对费用明细与预估/实际差异后<strong>通过</strong>或<strong>驳回</strong>；
+          通过后费用单推进至「待对账」，驳回后退回提交人「待录入」重新录入。
+        </div>
+      </div>
+
+      <!-- Tabs: 待我审批 / 已审批 -->
+      <div class="tabs">
+        <div class="tab active" onclick="switchApprovalTab('pending',this)">待我审批 <span class="badge badge-amber" id="tab-pending-count" style="margin-left:4px">2</span></div>
+        <div class="tab" onclick="switchApprovalTab('done',this)">已审批</div>
+      </div>
+
+      <!-- 待我审批 -->
+      <div id="approval-pending">
+        <table>
+          <thead>
+            <tr>
+              <th>费用单号</th>
+              <th>物流商</th>
+              <th>关联 PO</th>
+              <th class="text-right" style="background:#fef3c7">预估合计</th>
+              <th class="text-right" style="background:#dcfce7">实际合计</th>
+              <th class="text-right">差异</th>
+              <th>提交人</th>
+              <th>提交时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="approval-tbody">
+            <tr id="appr-row-LC-20260413-007">
+              <td><span class="link">LC-20260413-007</span></td>
+              <td>PIL Shipping</td>
+              <td><span class="link">2 张</span></td>
+              <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">USD 4,200.00</td>
+              <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">USD 4,560.00</td>
+              <td class="text-right diff-positive">+360.00 (+8.6%)</td>
+              <td>王采购</td>
+              <td>2026-05-18 16:40</td>
+              <td><span class="link" onclick="openFeeApproval('LC-20260413-007')">审批</span></td>
+            </tr>
+            <tr id="appr-row-LC-20260413-008">
+              <td><span class="link">LC-20260413-008</span></td>
+              <td>SG Customs Broker</td>
+              <td><span class="link">1 张</span></td>
+              <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">SGD 1,500.00</td>
+              <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">SGD 1,500.00</td>
+              <td class="text-right text-muted">0.00 (0%)</td>
+              <td>王采购</td>
+              <td>2026-05-18 11:05</td>
+              <td><span class="link" onclick="openFeeApproval('LC-20260413-008')">审批</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div id="approval-empty" style="display:none;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:36px 20px;text-align:center;color:#64748b">
+          <div style="font-size:28px;margin-bottom:6px">✅</div>
+          <div style="font-size:13px;font-weight:600;color:#475569">暂无待审批费用单</div>
+        </div>
+        <div style="text-align:right;padding-top:12px;color:#64748b;font-size:12px">共 <span id="approval-total">2</span> 条</div>
+      </div>
+
+      <!-- 已审批 -->
+      <div id="approval-done" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>费用单号</th><th>物流商</th><th class="text-right">实际合计</th>
+              <th>审批结果</th><th>审批意见</th><th>审批时间</th>
+            </tr>
+          </thead>
+          <tbody id="approval-done-tbody">
+            <tr>
+              <td><span class="link">LC-20260413-002</span></td><td>PIL Shipping</td>
+              <td class="text-right" style="font-weight:600">USD 4,500.00</td>
+              <td><span class="badge badge-green">✓ 通过</span></td>
+              <td>差异在合理范围，准予对账</td><td>2026-05-15 09:20</td>
+            </tr>
+            <tr>
+              <td><span class="link">LC-20260410-003</span></td><td>PIL Shipping</td>
+              <td class="text-right" style="font-weight:600">USD 1,800.00</td>
+              <td><span class="badge badge-green">✓ 通过</span></td>
+              <td>—</td><td>2026-05-12 14:30</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -1917,7 +2064,7 @@
             <span class="required">*</span> 实际金额
             <span class="link" style="font-weight:400;margin-left:8px;font-size:11px" onclick="document.getElementById('actual-amount').value=300;recalcDiff();showToast('info','实际同预估 USD 300','差异 = 0')">⚡ 同预估</span>
           </div>
-          <input type="number" id="actual-amount" value="280" style="text-align:right" oninput="recalcDiff()" />
+          <input type="number" id="actual-amount" value="300" style="text-align:right" oninput="recalcDiff()" />
         </div>
       </div>
 
@@ -1942,7 +2089,7 @@
         <div style="font-size:12px;color:#475569;font-weight:600;margin-bottom:8px">本笔差异（仅保险费）</div>
         <table style="font-size:12px">
           <tbody>
-            <tr><td style="border:none;padding:4px 0;color:#64748b">本笔差异</td><td style="border:none;padding:4px 0;text-align:right" id="diff-amount" class="diff-negative">USD -20.00 (-6.7%)</td></tr>
+            <tr><td style="border:none;padding:4px 0;color:#64748b">本笔差异</td><td style="border:none;padding:4px 0;text-align:right" id="diff-amount">USD 0.00 (0%)</td></tr>
             <tr><td style="border:none;padding:4px 0;color:#64748b">说明</td><td style="border:none;padding:4px 0;text-align:right">所有项实际录完后差异自动通过 DMS 推送链路同步入库成本</td></tr>
           </tbody>
         </table>
@@ -1951,14 +2098,73 @@
       <!-- 录入后说明 -->
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-top:12px;font-size:11.5px;color:#1e40af">
         <strong>📌 录入说明：</strong><br/>
-        - 所有实际项录完后，费用单状态自动推进至「待对账」<br/>
-        - 此时取<strong>最新财务汇率</strong>作为本费用单最终汇率，重算本位币（SGD）金额<br/>
+        - 所有实际项录完后，点击页面顶部「<strong>提交费用审批</strong>」推送至流程审批中心<br/>
+        - 审批通过后费用单进入「待对账」，此时取<strong>最新财务汇率</strong>作为最终汇率重算本位币（SGD）<br/>
         - 差异值通过<strong>物流费推送链路</strong>同步至 DMS，DMS 自行重算入库成本
       </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="hideModal('modal-actual-fee')">取消</button>
-      <button class="btn btn-primary" onclick="hideModal('modal-actual-fee');showToast('success','实际费用 USD 280 已录入','差异 USD -20 已通过 DMS 推送链路同步；费用单进入「待对账」')">确认录入</button>
+      <button class="btn btn-primary" onclick="onConfirmActualFee()">确认录入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ Modal: 费用审批（审批人视角） ═══════════════════ -->
+<div class="modal-overlay" id="modal-fee-approval">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-header">
+      <h3>费用审批 — <span id="appr-cost-no">LC-20260413-007</span></h3>
+      <span class="modal-close" onclick="hideModal('modal-fee-approval')">✕</span>
+    </div>
+    <div class="modal-body">
+      <div class="hint-card" style="margin-bottom:16px">
+        <span class="hint-icon">📌</span>
+        <div>请核对实际费用与预估的差异。<strong>通过</strong>后费用单推进至「待对账」；
+        <strong>驳回</strong>后退回提交人「待录入」，需重新录入实际费用再提交。</div>
+      </div>
+
+      <table style="font-size:12.5px;border:none;margin-bottom:14px">
+        <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">物流商</td><td style="font-weight:600;border:none" id="appr-vendor">PIL Shipping</td>
+            <td style="color:#64748b;padding:4px 16px;border:none">提交人</td><td style="font-weight:600;border:none" id="appr-submitter">王采购</td></tr>
+        <tr><td style="color:#64748b;padding:4px 16px 4px 0;border:none">关联 PO</td><td style="font-weight:600;border:none" id="appr-po">PO-2026-0411、PO-2026-0412</td>
+            <td style="color:#64748b;padding:4px 16px;border:none">提交时间</td><td style="font-weight:600;border:none" id="appr-time">2026-05-18 16:40</td></tr>
+      </table>
+
+      <h4 style="font-size:12.5px;font-weight:600;margin-bottom:8px">费用明细（预估 → 实际 → 差异）</h4>
+      <table style="font-size:12px">
+        <thead>
+          <tr>
+            <th>费用类型</th>
+            <th class="text-right" style="background:#fef3c7">预估金额</th>
+            <th class="text-right" style="background:#dcfce7">实际金额</th>
+            <th class="text-right">差异</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody id="appr-fee-tbody">
+          <tr><td>🚢 海运费</td><td class="text-right" style="background:#fffbeb">3,200.00</td><td class="text-right" style="background:#f0fdf4;font-weight:600">3,480.00</td><td class="text-right diff-positive">+280.00</td><td>运价上调</td></tr>
+          <tr><td>📋 报关费</td><td class="text-right" style="background:#fffbeb">600.00</td><td class="text-right" style="background:#f0fdf4;font-weight:600">680.00</td><td class="text-right diff-positive">+80.00</td><td>—</td></tr>
+          <tr><td>🏗 港口费</td><td class="text-right" style="background:#fffbeb">400.00</td><td class="text-right" style="background:#f0fdf4;font-weight:600">400.00</td><td class="text-right text-muted">0</td><td>—</td></tr>
+          <tr style="background:#f8fafc;font-weight:700">
+            <td>合计</td>
+            <td class="text-right" style="background:#fef3c7;color:#92400e">4,200.00</td>
+            <td class="text-right" style="background:#dcfce7;color:#15803d">4,560.00</td>
+            <td class="text-right diff-positive">+360.00 (+8.6%)</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="form-group" style="margin-top:14px">
+        <div class="form-label">审批意见<span class="text-muted" style="font-weight:400;font-size:11px;margin-left:6px">（驳回时必填）</span></div>
+        <textarea id="appr-comment" rows="2" placeholder="如：差异在合理范围，准予对账 / 海运费差异过大，请补充承运商对账单后重新提交"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="hideModal('modal-fee-approval')">取消</button>
+      <button class="btn btn-danger" onclick="onFeeApprovalReject()">驳回</button>
+      <button class="btn btn-primary" onclick="onFeeApprovalPass()">✓ 通过</button>
     </div>
   </div>
 </div>
@@ -2229,35 +2435,76 @@ function onReFmsPush(settlementNo) {
   }, 1500);
 }
 
-function onPoSearch(btn) {
-  const input = btn.previousElementSibling;
-  const kw = (input.value || '').trim();
-  if (!kw) { showToast('info', '请输入搜索关键词', '可搜索采购单号或供应商名称'); return; }
-  // 演示用：随机命中
-  if (kw.toLowerCase().includes('xxx')) {
-    showToast('warn', '未找到符合条件的采购单', '请调整筛选条件或检查关键词');
+/* 改动 1：搜索驱动 —— 先搜供应商/采购单号，命中后才展示采购单列表 */
+function onPoSearch() {
+  const kw = (document.getElementById('po-search-kw').value || '').trim().toLowerCase();
+  if (!kw) { showToast('info', '请输入搜索关键词', '可搜索供应商名称或采购单号'); return; }
+  const rows = document.querySelectorAll('#po-tbody .po-row');
+  let hit = 0;
+  rows.forEach(tr => {
+    const po = (tr.dataset.po || '').toLowerCase();
+    const sup = (tr.dataset.supplier || '').toLowerCase();
+    const match = po.includes(kw) || sup.includes(kw);
+    tr.style.display = match ? '' : 'none';
+    if (match) { hit++; }
+    tr.querySelector('.ck-po').checked = false;  // 重新搜索后清空勾选
+  });
+  document.getElementById('po-empty').style.display = 'none';
+  const ckAll = document.getElementById('ckAll');
+  if (ckAll) ckAll.checked = false;
+  if (hit === 0) {
+    document.getElementById('po-results').style.display = 'none';
+    document.getElementById('po-noresult').style.display = 'block';
+    showToast('warn', '未找到符合条件的采购单', '请检查供应商名称或采购单号');
   } else {
-    showToast('success', '搜索完成', '已为你高亮匹配项');
+    document.getElementById('po-noresult').style.display = 'none';
+    document.getElementById('po-results').style.display = 'block';
+    document.getElementById('po-hit-count').textContent = hit;
+    updatePoSummary();
+    showToast('success', '搜索完成', `命中 ${hit} 张采购单，请勾选需要添加费用的采购单`);
   }
 }
 
+function resetPoSearch() {
+  document.getElementById('po-search-kw').value = '';
+  document.getElementById('po-results').style.display = 'none';
+  document.getElementById('po-noresult').style.display = 'none';
+  document.getElementById('po-empty').style.display = 'block';
+  document.querySelectorAll('#po-tbody .po-row').forEach(tr => {
+    tr.style.display = '';
+    tr.querySelector('.ck-po').checked = false;
+  });
+  const ckAll = document.getElementById('ckAll');
+  if (ckAll) ckAll.checked = false;
+}
+
 function toggleAll(el) {
-  document.querySelectorAll('.ck-po').forEach(ck => ck.checked = el.checked);
+  // 仅对当前搜索结果中可见的行生效
+  document.querySelectorAll('#po-tbody .po-row').forEach(tr => {
+    if (tr.style.display !== 'none') tr.querySelector('.ck-po').checked = el.checked;
+  });
   updatePoSummary();
 }
 
 function updatePoSummary() {
   const checked = document.querySelectorAll('.ck-po:checked');
-  let amount = 0, weight = 0, volume = 0, missingWeight = false;
+  let amount = 0, weight = 0, volume = 0;
   checked.forEach(ck => {
     amount += parseFloat(ck.dataset.amount||0);
-    const w = parseFloat(ck.dataset.weight||0);
-    if (w === 0) missingWeight = true;
-    weight += w;
+    weight += parseFloat(ck.dataset.weight||0);
     volume += parseFloat(ck.dataset.volume||0);
   });
   const cnt = document.getElementById('sel-count');
   if (cnt) cnt.textContent = checked.length;
+  const fmt = n => n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const setTxt = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  if (checked.length === 0) {
+    setTxt('sum-amount', '—'); setTxt('sum-weight', '—'); setTxt('sum-volume', '—');
+  } else {
+    setTxt('sum-amount', 'USD ' + fmt(amount));
+    setTxt('sum-weight', weight.toLocaleString('en-US') + ' kg');
+    setTxt('sum-volume', volume.toFixed(1) + ' m³');
+  }
 }
 
 /* 【异常 #1-7】步骤一 → 步骤二 校验 */
@@ -2451,7 +2698,7 @@ function copyEstToActDetail() {
   showConfirm({
     icon: '⚡',
     title: '一键填充：待录入项实际 = 预估',
-    msg: '将把 <strong>1 项</strong>待录入项目的实际金额填入预估值：<br/>🛡 保险费 USD 300 → 实际 USD 300<br/><span class="text-muted">填充后所有项实际已录入，状态推进至「待对账」，最终汇率锁定，差异通过 DMS 推送链路同步。</span>',
+    msg: '将把 <strong>1 项</strong>待录入项目的实际金额填入预估值：<br/>🛡 保险费 USD 300 → 实际 USD 300<br/><span class="text-muted">填充后所有项实际已录入，可点「提交费用审批」走流程审批中心。</span>',
     onOk: () => {
       // 更新保险费行
       const row = document.getElementById('row-insurance');
@@ -2467,9 +2714,9 @@ function copyEstToActDetail() {
         row.children[5].innerHTML = '<span class="badge badge-green">✅ 已确认（实际=预估）</span>';
         row.children[7].innerHTML = '<span class="text-muted">—</span>';
       }
-      // 触发状态机推进
-      advanceToReconcileState();
-      showToast('success', '1 项实际已填充', '保险费 USD 300（实际=预估）· 状态：待对账，最终汇率已锁定');
+      // 所有实际录完 → 启用「提交费用审批」
+      onAllActualEntered();
+      showToast('success', '1 项实际已填充', '保险费 USD 300（实际=预估）· 可点「提交费用审批」走审批流');
     }
   });
 }
@@ -2539,26 +2786,191 @@ function onBatchInvoiceSubmit() {
   showToast('success', '发票已批量更新', `共 ${inputs.length} 张发票，总金额 USD ${total.toFixed(2)} 校验通过`);
 }
 
-/* 统一状态推进函数：待录入 → 待对账 */
+/* 改动 2：所有实际费用录完 → 启用「提交费用审批」按钮（状态仍为待录入，未提交） */
+function onAllActualEntered() {
+  const btn = document.getElementById('btn-submit-approval');
+  if (btn) {
+    btn.disabled = false;
+    btn.removeAttribute('title');
+  }
+}
+
+/* 改动 2：提交费用审批 —— 待录入 → 费用待审核，推送流程审批中心 */
+function onSubmitFeeApproval() {
+  showConfirm({
+    icon: '📤',
+    title: '提交费用审批',
+    msg: `<strong>LC-20260413-001</strong> 实际费用已全部录入（实际合计 USD 3,100）。<br/>
+      提交后：<br/>
+      1. 费用单状态推进至「<strong>费用待审核</strong>」<br/>
+      2. 推送至<strong>流程审批中心</strong>，由财务主管审批实际费用与预估差异<br/>
+      3. 审批<strong>通过</strong> → 进入「待对账」可上传发票；<strong>驳回</strong> → 退回「待录入」重新录入`,
+    onOk: () => {
+      const statusBadge = document.getElementById('cost-status-badge');
+      statusBadge.className = 'badge badge-amber';
+      statusBadge.textContent = '费用待审核';
+      const step1 = document.getElementById('step-1');
+      step1.className = 'badge badge-green'; step1.textContent = '✓ 1. 待录入';
+      const step2 = document.getElementById('step-2');
+      step2.className = 'badge badge-amber'; step2.textContent = '⏳ 2. 费用待审核';
+      document.getElementById('btn-submit-approval').disabled = true;
+      // 推送审批中心：新增一条待审批行
+      addApprovalRow('LC-20260413-001', '顺丰国际货运', '2 张', 'USD 3,050.00', 'USD 3,100.00', '+50.00 (+1.6%)', '王采购', '2026-05-19 10:30');
+      showToast('success', '已提交流程审批中心', '费用单 LC-20260413-001 状态：费用待审核 · 审批人：李敏（财务主管）');
+    }
+  });
+}
+
+/* 统一状态推进函数：费用待审核 → 待对账（费用审批通过后调用） */
 function advanceToReconcileState() {
   const statusBadge = document.getElementById('cost-status-badge');
   statusBadge.className = 'badge badge-blue';
   statusBadge.textContent = '待对账';
-  const step1 = document.getElementById('step-1');
-  step1.className = 'badge badge-green';
-  step1.style.fontSize = '11.5px';
-  step1.style.padding = '4px 8px';
-  step1.textContent = '✓ 1. 待录入';
   const step2 = document.getElementById('step-2');
-  step2.className = 'badge badge-blue';
-  step2.style.fontSize = '11.5px';
-  step2.style.padding = '4px 8px';
-  step2.textContent = '⏳ 2. 待对账';
+  step2.className = 'badge badge-green'; step2.textContent = '✓ 2. 费用待审核';
+  const step3 = document.getElementById('step-3');
+  step3.className = 'badge badge-blue'; step3.textContent = '⏳ 3. 待对账';
   const btn = document.getElementById('btn-upload-invoice');
   if (btn) {
     btn.disabled = false;
     btn.removeAttribute('title');
   }
+}
+
+/* ════════ 审批中心（审批人视角）════════ */
+function switchApprovalTab(tab, el) {
+  document.querySelectorAll('#pg-approval-center .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('approval-pending').style.display = (tab === 'pending') ? 'block' : 'none';
+  document.getElementById('approval-done').style.display = (tab === 'done') ? 'block' : 'none';
+}
+
+/* 各待审批费用单的明细数据（演示用） */
+const FEE_APPROVAL_DATA = {
+  'LC-20260413-007': { vendor:'PIL Shipping', submitter:'王采购', po:'PO-2026-0411、PO-2026-0412', time:'2026-05-18 16:40', cur:'USD',
+    rows:[['🚢 海运费',3200,3480,'运价上调'],['📋 报关费',600,680,'—'],['🏗 港口费',400,400,'—']] },
+  'LC-20260413-008': { vendor:'SG Customs Broker', submitter:'王采购', po:'PO-2026-0420', time:'2026-05-18 11:05', cur:'SGD',
+    rows:[['📋 报关费',900,900,'—'],['🛃 清关杂费',600,600,'—']] },
+  'LC-20260413-001': { vendor:'顺丰国际货运', submitter:'王采购', po:'PO-2026-0401、PO-2026-0402', time:'2026-05-19 10:30', cur:'USD',
+    rows:[['🚢 海运费',2000,2000,'20GP × 1'],['📋 报关费',500,500,'—'],['🛡 保险费',300,300,'实际=预估'],['🏗 港口费',250,300,'差异 +50']] },
+};
+let currentApprovalNo = null;
+
+function addApprovalRow(no, vendor, poCount, estTotal, actTotal, diff, submitter, time) {
+  if (document.getElementById('appr-row-' + no)) return;
+  const tbody = document.getElementById('approval-tbody');
+  const tr = document.createElement('tr');
+  tr.id = 'appr-row-' + no;
+  const diffCls = diff.includes('+') ? 'diff-positive' : (diff.includes('-') ? 'diff-negative' : 'text-muted');
+  tr.innerHTML = `
+    <td><span class="link">${no}</span></td>
+    <td>${vendor}</td>
+    <td><span class="link">${poCount}</span></td>
+    <td class="text-right" style="background:#fffbeb;color:#92400e;font-weight:600">${estTotal}</td>
+    <td class="text-right" style="background:#f0fdf4;color:#15803d;font-weight:700">${actTotal}</td>
+    <td class="text-right ${diffCls}">${diff}</td>
+    <td>${submitter}</td>
+    <td>${time}</td>
+    <td><span class="link" onclick="openFeeApproval('${no}')">审批</span></td>`;
+  tbody.appendChild(tr);
+  refreshApprovalCount();
+}
+
+function refreshApprovalCount() {
+  const n = document.querySelectorAll('#approval-tbody tr').length;
+  document.getElementById('tab-pending-count').textContent = n;
+  document.getElementById('approval-total').textContent = n;
+  document.getElementById('approval-badge').textContent = n;
+  document.getElementById('approval-empty').style.display = n === 0 ? 'block' : 'none';
+}
+
+function openFeeApproval(no) {
+  currentApprovalNo = no;
+  const d = FEE_APPROVAL_DATA[no];
+  document.getElementById('appr-cost-no').textContent = no;
+  document.getElementById('appr-comment').value = '';
+  if (!d) { showModal('modal-fee-approval'); return; }
+  document.getElementById('appr-vendor').textContent = d.vendor;
+  document.getElementById('appr-submitter').textContent = d.submitter;
+  document.getElementById('appr-po').textContent = d.po;
+  document.getElementById('appr-time').textContent = d.time;
+  // 重建费用明细表
+  let estSum = 0, actSum = 0;
+  let html = '';
+  d.rows.forEach(r => {
+    const [name, est, act, note] = r;
+    estSum += est; actSum += act;
+    const diff = act - est;
+    const diffTxt = diff > 0 ? `+${diff.toFixed(2)}` : (diff < 0 ? diff.toFixed(2) : '0');
+    const diffCls = diff > 0 ? 'diff-positive' : (diff < 0 ? 'diff-negative' : 'text-muted');
+    html += `<tr><td>${name}</td><td class="text-right" style="background:#fffbeb">${est.toFixed(2)}</td>
+      <td class="text-right" style="background:#f0fdf4;font-weight:600">${act.toFixed(2)}</td>
+      <td class="text-right ${diffCls}">${diffTxt}</td><td>${note}</td></tr>`;
+  });
+  const totalDiff = actSum - estSum;
+  const pct = estSum ? (totalDiff / estSum * 100).toFixed(1) : '0';
+  const tdCls = totalDiff > 0 ? 'diff-positive' : (totalDiff < 0 ? 'diff-negative' : 'text-muted');
+  const tdTxt = (totalDiff > 0 ? '+' : '') + totalDiff.toFixed(2) + ` (${totalDiff > 0 ? '+' : ''}${pct}%)`;
+  html += `<tr style="background:#f8fafc;font-weight:700">
+    <td>合计</td><td class="text-right" style="background:#fef3c7;color:#92400e">${estSum.toFixed(2)}</td>
+    <td class="text-right" style="background:#dcfce7;color:#15803d">${actSum.toFixed(2)}</td>
+    <td class="text-right ${tdCls}">${tdTxt}</td><td>—</td></tr>`;
+  document.getElementById('appr-fee-tbody').innerHTML = html;
+  showModal('modal-fee-approval');
+}
+
+function onFeeApprovalPass() {
+  const no = currentApprovalNo;
+  const comment = document.getElementById('appr-comment').value.trim();
+  hideModal('modal-fee-approval');
+  finishApproval(no, '通过', comment || '差异在合理范围，准予对账');
+  // 若为详情页当前单据，同步推进详情页状态机
+  if (no === 'LC-20260413-001') advanceToReconcileState();
+  showToast('success', `费用单 ${no} 审批通过`, '费用单状态推进至「待对账」，提交人可上传发票');
+}
+
+function onFeeApprovalReject() {
+  const comment = document.getElementById('appr-comment').value.trim();
+  if (!comment) {
+    showToast('error', '请填写审批意见', '驳回时审批意见必填，便于提交人定位问题');
+    return;
+  }
+  const no = currentApprovalNo;
+  hideModal('modal-fee-approval');
+  finishApproval(no, '驳回', comment);
+  if (no === 'LC-20260413-001') {
+    const statusBadge = document.getElementById('cost-status-badge');
+    statusBadge.className = 'badge badge-red';
+    statusBadge.textContent = '已驳回·待重录';
+    const step1 = document.getElementById('step-1');
+    step1.className = 'badge badge-amber'; step1.textContent = '⏳ 1. 待录入';
+    const step2 = document.getElementById('step-2');
+    step2.className = 'badge badge-gray'; step2.textContent = '2. 费用待审核';
+    document.getElementById('btn-submit-approval').disabled = false;
+  }
+  showToast('warn', `费用单 ${no} 已驳回`, '已退回提交人「待录入」，需重新录入实际费用后再提交');
+}
+
+/* 审批完成：从待审批移除，写入已审批 Tab */
+function finishApproval(no, result, comment) {
+  const row = document.getElementById('appr-row-' + no);
+  let vendor = '—', actTotal = '—';
+  if (row) {
+    vendor = row.children[1].textContent;
+    actTotal = row.children[4].textContent;
+    row.remove();
+  }
+  refreshApprovalCount();
+  const doneTbody = document.getElementById('approval-done-tbody');
+  const tr = document.createElement('tr');
+  const badge = result === '通过'
+    ? '<span class="badge badge-green">✓ 通过</span>'
+    : '<span class="badge badge-red">✗ 驳回</span>';
+  const now = '2026-05-19 ' + new Date().toTimeString().slice(0,5);
+  tr.innerHTML = `<td><span class="link">${no}</span></td><td>${vendor}</td>
+    <td class="text-right" style="font-weight:600">${actTotal}</td>
+    <td>${badge}</td><td>${comment}</td><td>${now}</td>`;
+  doneTbody.insertBefore(tr, doneTbody.firstChild);
 }
 
 /* 快捷操作：行级别 — 单行实际=预估（直接执行填充，无需二次 confirm） */
@@ -2577,9 +2989,9 @@ function copyEstToActRow(rowId, estValue) {
     row.children[5].innerHTML = '<span class="badge badge-green">✅ 已确认（实际=预估）</span>';
     row.children[7].innerHTML = '<span class="text-muted">—</span>';
   }
-  // 推进状态机
-  advanceToReconcileState();
-  showToast('success', `实际同预估 USD ${estValue} 已填充`, '差异 = 0 · 状态：待对账，最终汇率已锁定');
+  // 所有实际录完 → 启用「提交费用审批」
+  onAllActualEntered();
+  showToast('success', `实际同预估 USD ${estValue} 已填充`, '差异 = 0 · 所有实际已录完，可点「提交费用审批」走审批流');
 }
 
 /* 【异常 #8-15】校验费用明细（新口径：预估必填，实际可空） */
@@ -3068,46 +3480,69 @@ function onCostUploadInvoice() {
       1. 上传发票文件（PDF / JPG / PNG ≤ 10MB，<strong>支持多张</strong>）<br/>
       2. 系统校验发票总金额 = 实际合计 USD 3,100<br/>
       3. 自动生成结算单 <strong>LS-20260513-005</strong><br/>
-      4. 费用单状态推进至「<strong>待审核</strong>」，结算单进入「结算单据」Tab<br/>
+      4. 费用单状态推进至「<strong>发票待审核</strong>」，结算单进入「结算单据」Tab<br/>
       5. 财务审核通过后费用单和结算单同步进入「待付款」`,
     onOk: () => {
-      // 状态机推进：待对账 → 待审核
+      // 状态机推进：待对账 → 发票待审核
       const statusBadge = document.getElementById('cost-status-badge');
       statusBadge.className = 'badge badge-blue';
-      statusBadge.textContent = '待审核';
-      // 进度条第 3 步：待审核
-      document.getElementById('step-3').className = 'badge badge-blue';
-      document.getElementById('step-3').style.fontSize = '11.5px';
-      document.getElementById('step-3').style.padding = '4px 8px';
-      document.getElementById('step-3').textContent = '⏳ 3. 待审核';
+      statusBadge.textContent = '发票待审核';
+      // 进度条第 3 步完成，第 4 步进行中
+      const step3 = document.getElementById('step-3');
+      step3.className = 'badge badge-green'; step3.textContent = '✓ 3. 待对账';
+      const step4 = document.getElementById('step-4');
+      step4.className = 'badge badge-blue'; step4.textContent = '⏳ 4. 发票待审核';
       document.getElementById('btn-upload-invoice').disabled = true;
-      showToast('success', '发票已上传，结算单已生成', '单号 LS-20260513-005 · 费用单状态：待审核');
+      showToast('success', '发票已上传，结算单已生成', '单号 LS-20260513-005 · 费用单状态：发票待审核');
     }
   });
 }
 
-/* 演示按钮：模拟保险费实际录入 USD 280 → 状态机推进到「待对账」 */
-function simulateAllActualEntered() {
-  // 状态机推进：待录入 → 待对账（此时按最新财务汇率重新锁定为最终汇率）
-  const statusBadge = document.getElementById('cost-status-badge');
-  statusBadge.className = 'badge badge-blue';
-  statusBadge.textContent = '待对账';
-  // 进度条 1 完成，2 进行中
-  const step1 = document.getElementById('step-1');
-  step1.className = 'badge badge-green';
-  step1.style.fontSize = '11.5px';
-  step1.style.padding = '4px 8px';
-  step1.textContent = '✓ 1. 待录入';
-  const step2 = document.getElementById('step-2');
-  step2.className = 'badge badge-blue';
-  step2.style.fontSize = '11.5px';
-  step2.style.padding = '4px 8px';
-  step2.textContent = '⏳ 2. 待对账';
-  // 启用上传发票按钮
-  const btn = document.getElementById('btn-upload-invoice');
-  btn.disabled = false;
-  btn.removeAttribute('title');
-  showToast('success', '保险费实际 USD 280 已录入', '所有实际已录完，最终汇率按当前财务汇率锁定；状态推进至「待对账」，可上传发票');
+/* 改动 2：modal-actual-fee 确认录入 —— 录入保险费实际值，所有项录完后启用「提交费用审批」 */
+function onConfirmActualFee() {
+  const actual = parseFloat(document.getElementById('actual-amount').value) || 0;
+  if (actual <= 0) { showToast('error', '请填写实际金额', '实际金额必须大于 0'); return; }
+  hideModal('modal-actual-fee');
+  // 更新保险费行（row-insurance）
+  const row = document.getElementById('row-insurance');
+  if (row) {
+    row.classList.remove('row-estimate');
+    const diff = actual - 300;
+    row.children[2].innerHTML = `<span style="font-weight:600">${actual.toFixed(2)}</span> <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span>`;
+    row.children[2].className = 'text-right';
+    row.children[2].style.background = '#f0fdf4';
+    if (diff === 0) {
+      row.children[3].innerHTML = '<span class="text-muted">0</span>';
+      row.children[3].className = 'text-right';
+    } else {
+      const cls = diff > 0 ? 'diff-positive' : 'diff-negative';
+      const pct = (diff / 300 * 100).toFixed(1);
+      row.children[3].innerHTML = `${diff > 0 ? '+' : ''}${diff.toFixed(2)} (${diff > 0 ? '+' : ''}${pct}%)`;
+      row.children[3].className = 'text-right ' + cls;
+    }
+    row.children[4].innerHTML = (actual * 1.353).toFixed(2);
+    row.children[4].className = 'text-right';
+  }
+  // 联动更新费用明细「合计」行
+  const totalRow = document.getElementById('fee-total-row');
+  if (totalRow) {
+    const actTotal = 2800 + actual;          // 已确认 2,800 + 本次保险费
+    const sgdTotal = 3788.40 + actual * 1.353;
+    const diffTotal = 50 + (actual - 300);   // 港口 +50 + 保险差异
+    totalRow.children[2].innerHTML = actTotal.toFixed(2);
+    totalRow.children[3].innerHTML = (diffTotal >= 0 ? '+' : '') + diffTotal.toFixed(2);
+    totalRow.children[3].className = 'text-right ' + (diffTotal > 0 ? 'diff-positive' : (diffTotal < 0 ? 'diff-negative' : 'text-muted'));
+    totalRow.children[4].innerHTML = sgdTotal.toFixed(2);
+    const hdr = document.getElementById('fee-header-summary');
+    if (hdr) {
+      hdr.innerHTML = '预估合计 <strong style="color:#92400e">USD 3,050</strong> → '
+        + '实际合计 <strong style="color:#15803d">USD ' + actTotal.toLocaleString('en-US') + '</strong> '
+        + '<span class="badge badge-green" style="margin-left:4px">✓ 全部已录入</span>';
+    }
+  }
+  // 所有实际录完 → 启用「提交费用审批」
+  onAllActualEntered();
+  showToast('success', `实际费用 USD ${actual} 已录入`, '所有实际已录完，可点顶部「提交费用审批」走流程审批中心');
 }
 
 /* 结算驳回 */
