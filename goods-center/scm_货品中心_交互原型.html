@@ -787,6 +787,129 @@ label{font-size:13px;color:var(--t2)}
 </div>
 
 <!-- ══════════════════════════════════════════════
+     PAGE: 新建商品（货品关联建商品）
+══════════════════════════════════════════════ -->
+<div class="page" id="page-sku-create">
+  <div class="breadcrumb">
+    <a onclick="gotoPage('goods-list')">货品管理</a>
+    <span>›</span>
+    <span>新建商品</span>
+  </div>
+  <div class="card">
+    <div class="card-body">
+
+      <!-- ─── SKU 规格 ─── -->
+      <div class="form-section">
+        <div class="form-section-title">SKU 规格</div>
+        <div class="form-hint" style="margin-bottom:12px">需先绑定货品；绑定后商品规格、产地、品牌等信息自动从货品带入，无需重复录入</div>
+        <div class="form-row">
+          <div class="form-field full">
+            <label class="required">绑定货品</label>
+            <select class="iw100" id="sku-bind-select" style="max-width:480px" onchange="bindSkuGoods(this.value)">
+              <option value="">搜索货品编码 / 名称并选择</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="notice-box notice-info" id="sku-unbound-tip">请先绑定货品，绑定后可继续填写商品规格与信息。</div>
+
+        <div id="sku-bound-wrap" style="display:none">
+          <!-- 已绑定货品卡 -->
+          <div style="background:#f5f7fa;border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin:12px 0">
+            <div class="flex justify-between items-center" style="margin-bottom:12px">
+              <span style="font-size:12px;color:var(--t3);font-weight:500;letter-spacing:.3px">已绑定货品</span>
+              <button class="btn-text danger" onclick="unbindSkuGoods()">解除绑定</button>
+            </div>
+            <div class="flex" style="flex-wrap:wrap;gap:8px 28px;font-size:13px;color:var(--t2)">
+              <div><span class="text-gray">货品编码：</span><span id="sk-code" style="font-family:monospace;font-size:12px;color:var(--primary)">—</span></div>
+              <div><span class="text-gray">货品名称：</span><strong id="sk-name" style="color:var(--t1)">—</strong></div>
+              <div><span class="text-gray">计量单位：</span><span id="sk-unit">—</span></div>
+              <div><span class="text-gray">货品类型：</span><span id="sk-gtype">—</span></div>
+              <div><span class="text-gray">启用状态：</span><span id="sk-status">—</span></div>
+            </div>
+          </div>
+
+          <!-- 规格信息（继承自货品，只读）-->
+          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:16px 0 8px 0">规格信息 <span style="font-weight:normal;color:var(--t3);font-size:12px">（继承自货品，只读）</span></div>
+          <div class="form-row">
+            <div class="form-field w3"><div class="detail-label">净含量</div><div class="detail-value" id="sk-net">—</div></div>
+            <div class="form-field w3"><div class="detail-label">计量单位</div><div class="detail-value" id="sk-measure">—</div></div>
+            <div class="form-field w3"><div class="detail-label">箱规</div><div class="detail-value" id="sk-box">—</div></div>
+          </div>
+
+          <!-- 最小售卖单位 -->
+          <div class="form-row">
+            <div class="form-field full">
+              <label class="required">最小售卖单位</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="skc-sell" id="skc-radio-measure" checked onchange="skcSellUnit('measure')"> <span id="skc-opt-measure">计量单位</span></label>
+                <label class="radio-option"><input type="radio" name="skc-sell" id="skc-radio-box" onchange="skcSellUnit('box')"> <span id="skc-opt-box">包装规格单位</span></label>
+              </div>
+              <div class="form-hint" id="skc-sell-hint">客户下单的最小单位。货品未维护箱规时，仅可选计量单位。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SPU 基础信息 ─── -->
+      <div class="form-section" id="sku-spu-section" style="display:none">
+        <div class="form-section-title">SPU 基础信息</div>
+        <div class="form-row">
+          <div class="form-field w3"><label>商品属性</label><input type="text" id="skc-attr" value="标品" class="readonly-field" readonly><div class="form-hint">继承自货品，不可修改</div></div>
+          <div class="form-field w3">
+            <label class="required">销售类型</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="skc-saletype" checked> 售卖品</label>
+              <label class="radio-option"><input type="radio" name="skc-saletype"> 非卖品</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w2"><label class="required">商品名称</label><input type="text" id="skc-spu-name" class="iw100"><div class="form-hint">默认=货品名称，可修改</div></div>
+          <div class="form-field w2"><label class="required">前台类目</label><select class="iw100"><option value="">请选择</option><option>海鲜水产</option><option>新鲜蔬菜</option><option>肉禽蛋品</option><option>调味品</option></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field full"><label>商品别名</label><input type="text" class="iw100" placeholder="多个别名用英文逗号隔开，最多 400 字"><div class="form-hint">别名用于辅助客户端搜索</div></div>
+        </div>
+        <div class="form-row">
+          <div class="form-field w3"><label>税率</label><div class="flex gap8 items-center" style="height:32px"><span id="skc-tax">9%</span><span class="text-gray text-sm">（按前台类目带出，只读）</span></div></div>
+          <div class="form-field w3"><label>产地</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
+          <div class="form-field w3"><label>品牌</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
+        </div>
+        <div class="form-row"><div class="form-field full"><label>商品描述</label><textarea class="iw100" placeholder="面向客户的描述，最多 500 字（选填）"></textarea></div></div>
+        <div class="form-row">
+          <div class="form-field full">
+            <label>商品主图</label>
+            <div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片')"><span style="font-size:20px">+</span><span>上传图片</span></div></div>
+            <div class="form-hint">第一张为白底图，尺寸 ≥800×800；单张 ≤8MB，最多 15 张（可拖动排序）</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field full">
+            <label>商品详情</label>
+            <div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片')"><span style="font-size:20px">+</span><span>上传图片</span></div></div>
+            <div class="form-hint">单张宽 750–1242px，单张 ≤8MB，最多 10 张；若无商品详情，系统默认展示</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── SPU 展示配置 ─── -->
+      <div class="form-section" id="sku-display-section" style="display:none">
+        <div class="form-section-title">SPU 展示配置 <span style="font-weight:normal;color:var(--t3);font-size:12px">APP 端字段展示配置</span></div>
+        <div class="form-row">
+          <div class="form-field w3"><label class="required">保质期展示</label><select class="iw100"><option value="">请选择</option><option>展示生产日期 + 保质期</option><option>展示到期日期</option><option>不展示</option></select></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="flex justify-between items-center" style="padding:8px 0 24px">
+    <button class="btn" onclick="gotoPage('goods-list')">返回</button>
+    <button class="btn btn-primary" onclick="if(document.getElementById('sku-bind-select').value===''){showToast('请先绑定货品','warning');return;}showToast('商品创建成功','success');setTimeout(()=>gotoPage('goods-list'),800)">保存并创建</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
      PAGE: BOM 管理列表
 ══════════════════════════════════════════════ -->
 <div class="page" id="page-bom-list">
@@ -1161,7 +1284,7 @@ function renderGoods(){
   tbody.innerHTML=GD.map((r,i)=>{
     // Operations: 标品→新建商品；非标品→新建成品货品
     const lastOp=r.type==='标品'
-      ?`<button class="btn-text" onclick="showToast('跳转新建商品','success')">新建商品</button>`
+      ?`<button class="btn-text" onclick="openSkuCreate(${i})">新建商品</button>`
       :`<button class="btn-text" onclick="startNonstdExist(${i})">新建成品货品</button>`;
     const ops=`<button class="btn-text" onclick="viewDetail(${i})">详情</button> <button class="btn-text" onclick="editGoods(${i})">编辑</button> ${lastOp}`;
     return `<tr>
@@ -1270,7 +1393,7 @@ function gotoPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
   document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));
-  if(id==='goods-list'||id==='goods-detail'||id==='goods-edit'||id==='wizard'||id==='build-result') document.getElementById('nav-goods').classList.add('active');
+  if(id==='goods-list'||id==='goods-detail'||id==='goods-edit'||id==='wizard'||id==='build-result'||id==='sku-create') document.getElementById('nav-goods').classList.add('active');
   if(id==='bom-list'||id==='bom-detail'||id==='bom-edit') document.getElementById('nav-bom').classList.add('active');
   document.getElementById('main-wrap').scrollTop=0;
 }
@@ -1682,9 +1805,83 @@ function showToast(msg,type=''){
   clearTimeout(t._t);t._t=setTimeout(()=>t.className='toast',3000);
 }
 
+// ─── 新建商品（货品关联建商品）───
+let skcBox={qty:0,unit:''};
+function initSkuBindSelect(){
+  const sel=document.getElementById('sku-bind-select');
+  if(!sel) return;
+  sel.innerHTML='<option value="">搜索货品编码 / 名称并选择</option>'+
+    GD.map((r,i)=>r.type==='标品'?`<option value="${i}">${r.code} ｜ ${r.name} ｜ ${r.pack}</option>`:'').join('');
+}
+function goodsToBind(r){
+  const parts=(r.pack||'').split('/');
+  const net=(parts[0]||'1').replace(/([\d.]+)\s*/,'$1 ');
+  const measure=(parts[1]||'件').trim();
+  const countable=['瓶','罐','袋','包','盒','个','只'].includes(measure);
+  return {code:r.code,name:r.name,measure:measure,enable:'启用',gtype:r.type,net:net,
+    boxQty:countable?12:0,boxUnit:countable?'箱':'',
+    box:countable?`12 ${measure} / 箱`:'—（货品未维护箱规）'};
+}
+function bindSkuGoods(val){
+  const wrap=document.getElementById('sku-bound-wrap'),tip=document.getElementById('sku-unbound-tip');
+  const spu=document.getElementById('sku-spu-section'),disp=document.getElementById('sku-display-section');
+  if(val===''){
+    wrap.style.display='none';tip.style.display='';
+    spu.style.display='none';disp.style.display='none';
+    return;
+  }
+  const o=goodsToBind(GD[+val]);
+  document.getElementById('sk-code').textContent=o.code;
+  document.getElementById('sk-name').textContent=o.name;
+  document.getElementById('sk-unit').textContent=o.measure;
+  document.getElementById('sk-gtype').textContent=o.gtype;
+  document.getElementById('sk-status').textContent=o.enable;
+  document.getElementById('sk-net').textContent=o.net;
+  document.getElementById('sk-measure').textContent=o.measure;
+  document.getElementById('sk-box').textContent=o.box;
+  document.getElementById('skc-attr').value=o.gtype;
+  document.getElementById('skc-spu-name').value=o.name;
+  document.getElementById('skc-opt-measure').textContent=`${o.measure}（计量单位）`;
+  const boxRadio=document.getElementById('skc-radio-box'),boxLabel=document.getElementById('skc-opt-box');
+  document.getElementById('skc-radio-measure').checked=true;
+  skcBox={qty:o.boxQty,unit:o.boxUnit};
+  if(o.boxQty>0){
+    boxRadio.disabled=false;
+    boxLabel.textContent=`${o.boxUnit}（包装规格单位）`;
+    boxLabel.style.color='';
+  }else{
+    boxRadio.disabled=true;
+    boxLabel.textContent='包装规格单位（货品未维护箱规，不可选）';
+    boxLabel.style.color='var(--t3)';
+  }
+  skcSellUnit('measure');
+  wrap.style.display='';tip.style.display='none';
+  spu.style.display='';disp.style.display='';
+}
+function unbindSkuGoods(){
+  document.getElementById('sku-bind-select').value='';
+  bindSkuGoods('');
+}
+function skcSellUnit(mode){
+  const hint=document.getElementById('skc-sell-hint');
+  const measure=document.getElementById('skc-opt-measure').textContent.replace(/（[^）]*）/,'');
+  if(mode==='box'){
+    hint.textContent=`客户最少购买 1 ${skcBox.unit}；下单按 1 ${skcBox.unit} 扣减 ${skcBox.qty} 个「${measure}」库存。售价、起订量均按 ${skcBox.unit} 计。`;
+  }else{
+    hint.textContent=`客户最少购买 1 ${measure}；下单按 1 ${measure} 扣减 1 货品库存。售价、起订量均按 ${measure} 计。`;
+  }
+}
+function openSkuCreate(i){
+  gotoPage('sku-create');
+  const sel=document.getElementById('sku-bind-select');
+  sel.value=String(i);
+  bindSkuGoods(String(i));
+}
+
 // ─── INIT ───
 renderGoods();
 renderBom();
+initSkuBindSelect();
 // Set default sidebar active
 document.getElementById('nav-goods').classList.add('active');
 </script>
