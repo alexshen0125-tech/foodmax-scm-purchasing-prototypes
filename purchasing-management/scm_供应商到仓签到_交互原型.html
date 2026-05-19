@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 供应商到仓签到 · 交互原型 v1.0</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:#303133;background:#e9ebef;min-height:100vh}
+:root{--primary:#07B77D;--primary-hover:#05A06D;--primary-light:#e8f9f4;--danger:#F56C6C;--danger-light:#fef0f0;--warning:#E6A23C;--warning-light:#fdf6ec;--info:#409EFF;--info-light:#ecf5ff;--border:#DCDFE6;--t1:#303133;--t2:#606266;--t3:#909399;--bg:#F5F7FA}
+button{font-family:inherit}
+/* ====== 顶部原型切换条 ====== */
+.proto-bar{background:#1f2733;color:#fff;padding:10px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;position:sticky;top:0;z-index:500}
+.proto-title{font-size:14px;font-weight:600;letter-spacing:.3px}
+.proto-title small{color:#9aa4b2;font-weight:400;margin-left:8px}
+.proto-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.proto-tab{height:30px;padding:0 14px;border-radius:6px;border:1px solid #3a4555;background:#2a3340;color:#c3cad6;font-size:13px;cursor:pointer;transition:all .15s}
+.proto-tab:hover{color:#fff;border-color:var(--primary)}
+.proto-tab.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:500}
+.stage{padding:28px 16px 60px;min-height:calc(100vh - 52px)}
+.screen{display:none}
+.screen.active{display:block}
+.screen-hint{text-align:center;color:#7b8494;font-size:12px;margin-bottom:18px;line-height:1.7}
+.screen-hint b{color:#3a4250}
+/* ====== 手机外壳 ====== */
+.phone{position:relative;width:390px;height:806px;background:#fff;border:10px solid #11161d;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 16px 44px rgba(0,0,0,.22);margin:0 auto}
+.phone-status{height:30px;background:var(--primary);display:flex;align-items:center;justify-content:space-between;padding:0 22px;color:#fff;font-size:12px;flex-shrink:0}
+.phone-status .dots{letter-spacing:1px}
+.h5-nav{background:var(--primary);color:#fff;padding:6px 14px 14px;flex-shrink:0}
+.h5-nav-top{display:flex;align-items:center;gap:8px;height:30px}
+.h5-back{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:6px}
+.h5-back:hover{background:rgba(255,255,255,.15)}
+.h5-title{font-size:16px;font-weight:600}
+.h5-nav-sub{font-size:12px;color:rgba(255,255,255,.85);margin-top:6px;padding-left:2px;display:flex;align-items:center;gap:6px}
+.dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.6)}
+.h5-body{flex:1;overflow-y:auto;background:#f3f4f6;padding:12px 12px 96px}
+.h5-body::-webkit-scrollbar{width:0}
+/* ====== H5 表单卡片 ====== */
+.fcard{background:#fff;border-radius:12px;padding:14px 14px 4px;margin-bottom:12px}
+.fcard.tight{padding-bottom:14px}
+.fcard-h{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.fcard-h .req{color:var(--danger);font-size:14px}
+.fcard-h .opt{font-size:11px;color:var(--t3);font-weight:400;background:var(--bg);padding:1px 7px;border-radius:8px}
+.fcard-h .stepno{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.field{margin-bottom:14px}
+.field-label{font-size:13px;color:var(--t2);margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.field-label .req{color:var(--danger)}
+.field-hint{font-size:11px;color:var(--t3);margin-top:5px;display:flex;align-items:center;gap:4px}
+.h5-input{width:100%;height:44px;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;color:var(--t1);background:#fff;outline:none;transition:border .15s}
+.h5-input:focus{border-color:var(--primary)}
+.h5-input::placeholder{color:#bcc0c9}
+.h5-textarea{width:100%;min-height:74px;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--t1);outline:none;resize:none;font-family:inherit}
+.h5-textarea:focus{border-color:var(--primary)}
+/* 供应商搜索 */
+.search-wrap{position:relative}
+.search-box{display:flex;align-items:center;height:44px;border:1px solid var(--border);border-radius:8px;padding:0 12px;gap:8px;background:#fff;transition:border .15s}
+.search-box.focus{border-color:var(--primary)}
+.search-box svg{flex-shrink:0}
+.search-box input{flex:1;border:none;outline:none;font-size:14px;height:42px;background:transparent}
+.search-clear{color:var(--t3);font-size:16px;cursor:pointer;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.search-drop{position:absolute;left:0;right:0;top:48px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:230px;overflow-y:auto;z-index:30;display:none}
+.search-drop.show{display:block}
+.drop-item{padding:11px 13px;cursor:pointer;border-bottom:1px solid #f2f3f5;display:flex;flex-direction:column;gap:2px}
+.drop-item:last-child{border-bottom:none}
+.drop-item:active,.drop-item:hover{background:var(--primary-light)}
+.drop-item .nm{font-size:14px;color:var(--t1)}
+.drop-item .nm em{font-style:normal;color:var(--primary);font-weight:600}
+.drop-item .meta{font-size:11px;color:var(--t3)}
+.drop-empty{padding:20px;text-align:center;color:var(--t3);font-size:13px}
+.supplier-chip{display:flex;align-items:center;gap:10px;background:var(--primary-light);border:1px solid #b3e8d8;border-radius:8px;padding:10px 12px}
+.supplier-chip .avt{width:34px;height:34px;border-radius:8px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+.supplier-chip .info{flex:1}
+.supplier-chip .info .nm{font-size:14px;font-weight:600;color:var(--t1)}
+.supplier-chip .info .code{font-size:11px;color:var(--t3)}
+.supplier-chip .change{font-size:12px;color:var(--primary);cursor:pointer;padding:4px 8px}
+/* 采购单多选 */
+.po-locked{text-align:center;padding:22px 12px;color:var(--t3);font-size:13px;background:var(--bg);border-radius:8px;border:1px dashed var(--border)}
+.po-item{display:flex;gap:10px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;cursor:pointer;transition:all .15s;align-items:flex-start}
+.po-item:last-child{margin-bottom:0}
+.po-item.checked{border-color:var(--primary);background:var(--primary-light)}
+.po-check{width:20px;height:20px;border:1.5px solid #c4c8d0;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .15s}
+.po-item.checked .po-check{background:var(--primary);border-color:var(--primary)}
+.po-check svg{display:none}
+.po-item.checked .po-check svg{display:block}
+.po-main{flex:1;min-width:0}
+.po-no{font-size:14px;font-weight:600;color:var(--t1);font-family:Menlo,Consolas,monospace}
+.po-desc{font-size:12px;color:var(--t2);margin-top:5px;display:flex;flex-wrap:wrap;gap:4px 10px}
+.po-desc .eta{color:var(--warning)}
+/* 上传 */
+.up-grid{display:flex;gap:10px;flex-wrap:wrap}
+.up-tile{width:74px;height:74px;border-radius:8px;border:1px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t3);font-size:11px;cursor:pointer;background:var(--bg);gap:3px}
+.up-tile:hover{border-color:var(--primary);color:var(--primary)}
+.up-thumb{width:74px;height:74px;border-radius:8px;position:relative;overflow:hidden;background:linear-gradient(135deg,#cfe9dd,#a7d8c4);display:flex;align-items:center;justify-content:center;color:#fff}
+.up-thumb .del{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,.55);border-radius:50%;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+/* H5 底部操作条 */
+.h5-footer{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eef0f2;padding:10px 14px 14px;flex-shrink:0}
+.h5-btn{width:100%;height:46px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
+.h5-btn-primary{background:var(--primary);color:#fff}
+.h5-btn-primary:active{background:var(--primary-hover)}
+.h5-btn-primary:disabled{background:#c4e8da;cursor:not-allowed}
+.h5-btn-ghost{background:#fff;border:1px solid var(--border);color:var(--t2)}
+.h5-btn-danger{background:#fff;border:1px solid var(--danger);color:var(--danger)}
+.h5-foot-row{display:flex;gap:10px}
+.foot-tip{font-size:11px;color:var(--t3);text-align:center;margin-bottom:8px}
+/* 签到成功 */
+.succ-wrap{flex:1;overflow-y:auto;background:#f3f4f6;display:flex;flex-direction:column;align-items:center;padding:30px 16px 40px}
+.succ-circle{width:78px;height:78px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;margin-bottom:14px}
+.succ-title{font-size:19px;font-weight:700;color:var(--t1)}
+.succ-sub{font-size:13px;color:var(--t2);margin-top:6px;text-align:center;line-height:1.6}
+.info-card{background:#fff;border-radius:12px;width:100%;margin-top:20px;overflow:hidden}
+.info-row{display:flex;padding:12px 14px;border-bottom:1px solid #f2f3f5;font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-row .k{color:var(--t3);width:78px;flex-shrink:0}
+.info-row .v{color:var(--t1);flex:1;text-align:right;font-weight:500}
+.info-row .v.mono{font-family:Menlo,Consolas,monospace}
+.status-line{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:var(--warning-light);border:1px solid #f5dab1;border-radius:10px;padding:12px;margin-top:14px;font-size:13px;color:var(--warning);font-weight:500}
+.tip-line{width:100%;background:var(--info-light);border:1px solid #b3d8ff;border-radius:10px;padding:11px 13px;margin-top:12px;font-size:12px;color:#3a7bd0;line-height:1.6;display:flex;gap:7px}
+/* 收货员确认 */
+.recv-banner{background:var(--info-light);border:1px solid #b3d8ff;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#3a7bd0;display:flex;gap:7px;line-height:1.6}
+.kv-card{background:#fff;border-radius:12px;margin-bottom:12px;overflow:hidden}
+.kv-head{padding:11px 14px;font-size:13px;font-weight:600;border-bottom:1px solid #f2f3f5;display:flex;align-items:center;gap:6px}
+.kv-body{padding:4px 14px 8px}
+.po-readonly{padding:11px 0;border-bottom:1px solid #f2f3f5}
+.po-readonly:last-child{border-bottom:none}
+.recv-photos{display:flex;gap:8px;padding:10px 14px 12px}
+.recv-photos .p{width:58px;height:58px;border-radius:7px;background:linear-gradient(135deg,#cfe9dd,#a7d8c4);display:flex;align-items:center;justify-content:center;color:#fff}
+.reason-panel{background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;border:1px solid #f5dab1;display:none}
+.reason-panel.show{display:block}
+.reason-quick{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.reason-tag{padding:6px 12px;border:1px solid var(--border);border-radius:16px;font-size:12px;color:var(--t2);cursor:pointer}
+.reason-tag.on{background:var(--danger-light);border-color:var(--danger);color:var(--danger)}
+.result-banner{display:none;flex-direction:column;align-items:center;gap:6px;padding:18px;border-radius:12px;margin-bottom:12px}
+.result-banner.show{display:flex}
+.result-banner.ok{background:var(--primary-light);border:1px solid #b3e8d8}
+.result-banner.no{background:var(--danger-light);border:1px solid #fbc4c4}
+.result-banner .rt{font-size:15px;font-weight:600}
+.result-banner.ok .rt{color:var(--primary)}
+.result-banner.no .rt{color:var(--danger)}
+.result-banner .rs{font-size:12px;color:var(--t2)}
+/* ====== 飞书群消息 ====== */
+.phone-status.light{background:#fff;color:#1f2329}
+.fs-header{background:#fff;border-bottom:1px solid #e8eaed;padding:6px 12px 10px;flex-shrink:0}
+.fs-header .row{display:flex;align-items:center;gap:8px;height:32px}
+.fs-header .back{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:21px;color:#1f2329;cursor:pointer;border-radius:6px}
+.fs-header .back:hover{background:#f2f3f5}
+.fs-gname{font-size:16px;font-weight:600;color:#1f2329;flex:1}
+.fs-more{color:#646a73;font-size:20px;letter-spacing:1px;cursor:pointer}
+.fs-body{flex:1;overflow-y:auto;background:#f0f1f3;padding:14px 12px}
+.fs-body::-webkit-scrollbar{width:0}
+.fs-daytag{text-align:center;font-size:11px;color:#9aa1ab;margin:2px 0 16px}
+.fs-msg{display:flex;gap:8px;margin-bottom:16px}
+.fs-msg.self{flex-direction:row-reverse}
+.fs-avt{width:36px;height:36px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600}
+.fs-msg-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.fs-msg.self .fs-msg-main{align-items:flex-end}
+.fs-name{font-size:11px;color:#9aa1ab;margin-bottom:5px}
+.fs-bubble{background:#fff;border-radius:8px;padding:9px 12px;font-size:13px;color:#1f2329;max-width:230px;line-height:1.5}
+.fs-msg.self .fs-bubble{background:#07B77D;color:#fff}
+.fs-card{background:#fff;border-radius:10px;overflow:hidden;width:268px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.fs-card-head{padding:11px 14px;font-size:13px;font-weight:600;color:#fff;background:var(--primary);display:flex;align-items:center;gap:7px}
+.fs-card-body{padding:11px 14px 12px}
+.fs-kv{display:flex;font-size:13px;padding:5px 0}
+.fs-kv .k{color:#8a909c;width:64px;flex-shrink:0}
+.fs-kv .v{color:#1f2329;flex:1;font-weight:500}
+.fs-card-note{font-size:11px;color:#9aa1ab;margin-top:6px;padding-top:8px;border-top:1px dashed #eef0f2}
+.fs-card-btn{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:11px;background:#fff;color:var(--primary);font-size:14px;font-weight:600;border:none;border-top:1px solid #eef0f2;cursor:pointer}
+.fs-card-btn:hover{background:#f4fdf9}
+/* ====== 联系仓库入口 + 底部弹层 ====== */
+.h5-contact{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:12px;color:#fff;background:rgba(255,255,255,.2);padding:5px 10px;border-radius:14px;cursor:pointer;white-space:nowrap}
+.h5-contact:active{background:rgba(255,255,255,.32)}
+.sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:60;display:none}
+.sheet-mask.show{display:block}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;z-index:61;transform:translateY(105%);transition:transform .26s;padding:16px 16px 22px}
+.sheet.show{transform:translateY(0)}
+.sheet-title{font-size:15px;font-weight:600;text-align:center}
+.sheet-sub{font-size:12px;color:var(--t3);text-align:center;margin:5px 0 14px}
+.contact-item{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
+.contact-item .ci-icon{width:38px;height:38px;border-radius:9px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.contact-item .ci-main{flex:1;min-width:0}
+.contact-item .ci-role{font-size:13px;color:var(--t1);font-weight:500}
+.contact-item .ci-num{font-size:13px;color:var(--t3);font-family:Menlo,Consolas,monospace;margin-top:2px}
+.contact-item .ci-call{height:34px;padding:0 16px;border-radius:8px;background:var(--primary);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.contact-item .ci-call:active{background:var(--primary-hover)}
+.sheet-close{width:100%;height:42px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--t2);font-size:14px;margin-top:2px;cursor:pointer}
+/* ====== PC 后台 ====== */
+.pc{max-width:1280px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 6px 26px rgba(0,0,0,.1)}
+.topbar{height:50px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px}
+.topbar-logo{font-weight:700;font-size:16px;color:#fff;background:var(--primary);padding:4px 12px;border-radius:4px;margin-right:24px}
+.topbar-nav{display:flex;align-items:stretch;height:50px}
+.topbar-nav a{display:flex;align-items:center;padding:0 16px;color:var(--t2);text-decoration:none;font-size:13px;border-bottom:2px solid transparent;cursor:pointer}
+.topbar-nav a:hover{color:var(--primary)}
+.topbar-nav a.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px;color:var(--t2);font-size:13px}
+.topbar-right span{cursor:pointer;padding:4px 8px;border-radius:3px}
+.topbar-right span:hover{background:var(--bg)}
+.body-wrap{display:flex;height:720px}
+.sidebar{width:196px;background:#fff;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sidebar-group-title{padding:12px 16px 6px;font-size:12px;color:var(--t3);letter-spacing:.5px}
+.sidebar-item{display:flex;align-items:center;padding:10px 20px;color:var(--t2);cursor:pointer;font-size:13px;border-left:3px solid transparent}
+.sidebar-item:hover{background:var(--primary-light);color:var(--primary)}
+.sidebar-item.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:500}
+.main{flex:1;overflow:auto;padding:16px;background:#f0f2f5}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.page-title{font-size:16px;font-weight:600;color:var(--t1)}
+.page-sub{font-size:12px;color:var(--t3);margin-top:4px}
+.card{background:#fff;border-radius:4px;border:1px solid var(--border);margin-bottom:12px}
+.card-body{padding:14px 16px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.stat-label{font-size:12px;color:var(--t3);margin-bottom:8px}
+.stat-value{font-size:24px;font-weight:600;color:var(--t1)}
+.stat-desc{font-size:12px;color:var(--t3);margin-top:6px}
+.filter-form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.filter-item{display:flex;flex-direction:column;gap:4px}
+.filter-item label{font-size:12px;color:var(--t2)}
+.filter-btns{display:flex;gap:8px}
+.pc input[type=text],.pc input[type=date],.pc select{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;font-size:13px;color:var(--t1);background:#fff;outline:none}
+.pc input:focus,.pc select:focus{border-color:var(--primary)}
+.iw120{width:120px}.iw150{width:150px}.iw170{width:170px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:32px;padding:0 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--t1)}
+.btn:hover{color:var(--primary);border-color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);color:#fff}
+.btn-text{border:none;background:none;color:var(--primary);padding:0 4px;cursor:pointer;font-size:13px}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.tbl-toolbar-left{display:flex;align-items:center;gap:8px;color:var(--t2);font-size:13px}
+.table-scroll{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fafafa;color:var(--t2);font-weight:500;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0f0f0;color:var(--t1);vertical-align:middle;white-space:nowrap}
+tr:hover td{background:#fafafa}
+.mono{font-family:Menlo,Consolas,monospace}
+.tag{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500}
+.tag-green{background:#e8f9f4;color:#07B77D;border:1px solid #b3e8d8}
+.tag-blue{background:#ecf5ff;color:#409EFF;border:1px solid #b3d8ff}
+.tag-gray{background:#f4f4f5;color:#909399;border:1px solid #d3d4d6}
+.tag-orange{background:#fdf6ec;color:#E6A23C;border:1px solid #f5dab1}
+.tag-red{background:#fef0f0;color:#F56C6C;border:1px solid #fbc4c4}
+.pagination{display:flex;align-items:center;gap:4px;padding:12px 16px;justify-content:flex-end;border-top:1px solid var(--border)}
+.page-btn{min-width:32px;height:32px;border:1px solid var(--border);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;background:#fff;color:var(--t2);padding:0 6px}
+.page-btn:hover,.page-btn.active{border-color:var(--primary);color:var(--primary)}
+.page-btn.active{background:var(--primary);color:#fff}
+.page-info{font-size:13px;color:var(--t2);padding:0 4px}
+.po-cell{display:flex;flex-direction:column;gap:2px}
+.po-cell span{font-size:12px}
+/* 抽屉 */
+.drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:none}
+.drawer-mask.show{display:block}
+.drawer{position:fixed;top:0;right:-560px;width:560px;height:100vh;background:#fff;z-index:901;box-shadow:-4px 0 18px rgba(0,0,0,.12);transition:right .22s;display:flex;flex-direction:column}
+.drawer.show{right:0}
+.drawer-header{height:54px;padding:0 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.drawer-title{font-size:15px;font-weight:600}
+.drawer-close{width:26px;height:26px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:19px}
+.drawer-close:hover{background:var(--bg);color:var(--t1)}
+.drawer-body{flex:1;overflow:auto;padding:16px 20px}
+.detail-sec{margin-bottom:18px}
+.detail-sec h4{font-size:13px;color:var(--t2);font-weight:600;margin-bottom:8px;padding-left:8px;border-left:3px solid var(--primary)}
+.dl{display:grid;grid-template-columns:90px 1fr;gap:8px 12px;font-size:13px}
+.dl dt{color:var(--t3)}
+.dl dd{color:var(--t1)}
+.timeline{position:relative;padding-left:18px}
+.timeline::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:#e8eaed}
+.tl-item{position:relative;padding-bottom:14px}
+.tl-item:last-child{padding-bottom:0}
+.tl-dot{position:absolute;left:-17px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--primary);border:2px solid #fff;box-shadow:0 0 0 1px var(--primary)}
+.tl-dot.gray{background:#c4c8d0;box-shadow:0 0 0 1px #c4c8d0}
+.tl-t{font-size:13px;color:var(--t1);font-weight:500}
+.tl-time{font-size:12px;color:var(--t3);margin-top:2px}
+/* toast */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:12px 22px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;max-width:280px;text-align:center;line-height:1.5}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <div class="proto-title">供应商到仓签到 · 交互原型 <small>v1.0 · 2026-05-19</small></div>
+  <div class="proto-tabs">
+    <button class="proto-tab active" data-screen="s1" onclick="switchScreen('s1',this)">① 司机签到 H5</button>
+    <button class="proto-tab" data-screen="s2" onclick="switchScreen('s2',this)">② 签到成功 H5</button>
+    <button class="proto-tab" data-screen="fs" onclick="switchScreen('fs',this)">③ 飞书群消息</button>
+    <button class="proto-tab" data-screen="s3" onclick="switchScreen('s3',this)">④ 收货员确认 H5</button>
+    <button class="proto-tab" data-screen="s4" onclick="switchScreen('s4',this)">⑤ 后台签到记录</button>
+  </div>
+</div>
+
+<div class="stage">
+
+<!-- ============ 屏 1：H5 司机签到页 ============ -->
+<div class="screen active" id="screen-s1">
+  <div class="screen-hint">供应商司机用 <b>WhatsApp / 微信</b> 扫仓库门口固定二维码打开 · 免安装 · 提交时间即到货时间</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span class="dots">5G ▪ ▪ ▪ 100%</span></div>
+    <div class="h5-nav">
+      <div class="h5-nav-top">
+        <div class="h5-back" onclick="toast('返回上一页')">‹</div>
+        <div class="h5-title">供应商到仓签到</div>
+        <div class="h5-contact" onclick="showSheet('contactSheet1')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3.5C3 3 3.4 2.5 4 2.5h2.2c.4 0 .8.3.9.7l.6 2.3c.1.4 0 .8-.3 1L6.2 7.6c.8 1.7 2.2 3.1 3.9 3.9l1.1-1.2c.3-.3.7-.4 1-.3l2.3.6c.4.1.7.5.7.9V14c0 .6-.5 1-1 1C8.6 15 3 9.4 3 3.5z" fill="#fff"/></svg>
+          联系仓库
+        </div>
+      </div>
+      <div class="h5-nav-sub">
+        <span>新加坡-B端仓</span><span class="dot"></span><span>扫码门点：1 号卸货区</span>
+      </div>
+    </div>
+    <div class="h5-body">
+
+      <!-- 步骤1 选择供应商 -->
+      <div class="fcard tight">
+        <div class="fcard-h"><span class="stepno">1</span>选择供应商<span class="req">*</span></div>
+        <div id="supplier-search-block">
+          <div class="search-wrap">
+            <div class="search-box" id="searchBox">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="#909399" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="#909399" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <input id="supplierInput" type="text" placeholder="输入供应商名称精准搜索" autocomplete="off"
+                     oninput="onSupplierSearch(this.value)" onfocus="onSearchFocus()">
+              <span class="search-clear" id="searchClear" style="display:none" onclick="clearSearch()">✕</span>
+            </div>
+            <div class="search-drop" id="searchDrop"></div>
+          </div>
+          <div class="field-hint">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#909399"/><path d="M6 5.2v3M6 3.4h.01" stroke="#909399" stroke-width="1.3" stroke-linecap="round"/></svg>
+            需输入完整名称匹配，避免选错供应商
+          </div>
+        </div>
+        <div id="supplier-chosen" style="display:none">
+          <div class="supplier-chip">
+            <div class="avt" id="supAvt">鲜</div>
+            <div class="info">
+              <div class="nm" id="supName">鲜丰蔬果（Fresh & Green）</div>
+              <div class="code" id="supCode">供应商编码：SUP-00128</div>
+            </div>
+            <div class="change" onclick="resetSupplier()">重新选择</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤2 待入库采购单 -->
+      <div class="fcard tight">
+        <div class="fcard-h"><span class="stepno">2</span>待入库采购单<span class="req">*</span></div>
+        <div id="po-locked" class="po-locked">请先选择供应商，再勾选本次到货的采购单</div>
+        <div id="po-list" style="display:none"></div>
+        <div class="field-hint" id="po-hint" style="display:none;margin-top:8px">
+          <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#909399"/><path d="M6 5.2v3M6 3.4h.01" stroke="#909399" stroke-width="1.3" stroke-linecap="round"/></svg>
+          仅显示该供应商「待入库」的采购单；已到货的不再出现
+        </div>
+      </div>
+
+      <!-- 步骤3 送货信息 -->
+      <div class="fcard">
+        <div class="fcard-h"><span class="stepno">3</span>送货信息</div>
+        <div class="field">
+          <div class="field-label">送货人<span class="req">*</span></div>
+          <input class="h5-input" id="driverName" type="text" placeholder="请输入送货人姓名">
+        </div>
+        <div class="field">
+          <div class="field-label">送货电话<span class="req">*</span></div>
+          <input class="h5-input" id="driverPhone" type="tel" placeholder="请输入送货电话">
+          <div class="field-hint">
+            <svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.4" fill="none" stroke="#909399"/><path d="M6 5.2v3M6 3.4h.01" stroke="#909399" stroke-width="1.3" stroke-linecap="round"/></svg>
+            默认带出采购单预约填写的信息，可修改
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤4 现场图片 -->
+      <div class="fcard">
+        <div class="fcard-h">现场图片<span class="opt">选填</span></div>
+        <div class="up-grid" id="upGrid">
+          <div class="up-thumb">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 16l5-5 4 4 4-6 5 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="7" r="2" fill="#fff"/></svg>
+            <div class="del" onclick="this.parentElement.remove()">✕</div>
+          </div>
+          <div class="up-tile" onclick="addPhoto()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 6v12M6 12h12" stroke="#909399" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span>上传</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤5 备注 -->
+      <div class="fcard">
+        <div class="fcard-h">备注<span class="opt">选填</span></div>
+        <textarea class="h5-textarea" id="remark" placeholder="如：分两车送达、部分商品需冷链等"></textarea>
+      </div>
+
+    </div>
+    <div class="h5-footer">
+      <div class="foot-tip">提交后系统记录「签到时间」并通知仓库收货员</div>
+      <button class="h5-btn h5-btn-primary" id="submitBtn" onclick="submitCheckin()">提交签到</button>
+    </div>
+    <div class="sheet-mask" id="contactSheet1-mask" onclick="hideSheet('contactSheet1')"></div>
+    <div class="sheet" id="contactSheet1">
+      <div class="sheet-title">联系仓库</div>
+      <div class="sheet-sub">新加坡-B端仓 · 找不到收货员时可直接拨打</div>
+      <div class="contact-item">
+        <div class="ci-icon"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3.5C3 3 3.4 2.5 4 2.5h2.2c.4 0 .8.3.9.7l.6 2.3c.1.4 0 .8-.3 1L6.2 7.6c.8 1.7 2.2 3.1 3.9 3.9l1.1-1.2c.3-.3.7-.4 1-.3l2.3.6c.4.1.7.5.7.9V14c0 .6-.5 1-1 1C8.6 15 3 9.4 3 3.5z" fill="#07B77D"/></svg></div>
+        <div class="ci-main"><div class="ci-role">收货值班（07:00–22:00）</div><div class="ci-num">+65 6789 1234</div></div>
+        <button class="ci-call" onclick="toast('正在拨打 收货值班…')">拨打</button>
+      </div>
+      <div class="contact-item">
+        <div class="ci-icon"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3.5C3 3 3.4 2.5 4 2.5h2.2c.4 0 .8.3.9.7l.6 2.3c.1.4 0 .8-.3 1L6.2 7.6c.8 1.7 2.2 3.1 3.9 3.9l1.1-1.2c.3-.3.7-.4 1-.3l2.3.6c.4.1.7.5.7.9V14c0 .6-.5 1-1 1C8.6 15 3 9.4 3 3.5z" fill="#07B77D"/></svg></div>
+        <div class="ci-main"><div class="ci-role">仓库主管 · 林伟</div><div class="ci-num">+65 9876 5432</div></div>
+        <button class="ci-call" onclick="toast('正在拨打 仓库主管…')">拨打</button>
+      </div>
+      <button class="sheet-close" onclick="hideSheet('contactSheet1')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 屏 2：H5 签到成功页 ============ -->
+<div class="screen" id="screen-s2">
+  <div class="screen-hint">司机提交后的反馈页 · 展示签到回执与待确认状态</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span class="dots">5G ▪ ▪ ▪ 100%</span></div>
+    <div class="h5-nav">
+      <div class="h5-nav-top">
+        <div class="h5-back" onclick="switchScreen('s1',document.querySelector('[data-screen=s1]'))">‹</div>
+        <div class="h5-title">签到成功</div>
+        <div class="h5-contact" onclick="showSheet('contactSheet2')">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 3.5C3 3 3.4 2.5 4 2.5h2.2c.4 0 .8.3.9.7l.6 2.3c.1.4 0 .8-.3 1L6.2 7.6c.8 1.7 2.2 3.1 3.9 3.9l1.1-1.2c.3-.3.7-.4 1-.3l2.3.6c.4.1.7.5.7.9V14c0 .6-.5 1-1 1C8.6 15 3 9.4 3 3.5z" fill="#fff"/></svg>
+          联系仓库
+        </div>
+      </div>
+    </div>
+    <div class="succ-wrap">
+      <div class="succ-circle">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><path d="M11 21l6 6 13-14" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="succ-title">签到成功</div>
+      <div class="succ-sub">已通知「新加坡-B端仓」收货员<br>请将车辆停靠至卸货区等待确认</div>
+
+      <div class="info-card">
+        <div class="info-row"><span class="k">签到时间</span><span class="v mono" id="s2-time">2026-05-19 14:32:08</span></div>
+        <div class="info-row"><span class="k">供应商</span><span class="v" id="s2-supplier">鲜丰蔬果（Fresh & Green）</span></div>
+        <div class="info-row"><span class="k">到货仓库</span><span class="v">新加坡-B端仓</span></div>
+        <div class="info-row"><span class="k">采购单</span><span class="v" id="s2-pos">PO-20260519-001<br>PO-20260519-007</span></div>
+        <div class="info-row"><span class="k">送货人</span><span class="v" id="s2-driver">张建国 · 138****6621</span></div>
+      </div>
+
+      <div class="status-line">
+        <svg width="15" height="15" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6.6" fill="none" stroke="#E6A23C" stroke-width="1.3"/><path d="M7.5 4v4l2.6 1.6" stroke="#E6A23C" stroke-width="1.3" stroke-linecap="round"/></svg>
+        当前状态：待仓库收货员确认
+      </div>
+      <div class="tip-line">
+        <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;margin-top:1px"><circle cx="7" cy="7" r="6.3" fill="none" stroke="#3a7bd0"/><path d="M7 6v4M7 4h.01" stroke="#3a7bd0" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>收货员确认后，本次到货时间将正式生效。如长时间未确认或找不到现场人员，可点右上角「联系仓库」拨打。</span>
+      </div>
+    </div>
+    <div class="h5-footer">
+      <div class="h5-foot-row">
+        <button class="h5-btn h5-btn-ghost" onclick="switchScreen('s1',document.querySelector('[data-screen=s1]'))">再签一单</button>
+        <button class="h5-btn h5-btn-primary" onclick="toast('刷新中…当前仍为待确认')">刷新状态</button>
+      </div>
+    </div>
+    <div class="sheet-mask" id="contactSheet2-mask" onclick="hideSheet('contactSheet2')"></div>
+    <div class="sheet" id="contactSheet2">
+      <div class="sheet-title">联系仓库</div>
+      <div class="sheet-sub">新加坡-B端仓 · 长时间未确认可直接拨打</div>
+      <div class="contact-item">
+        <div class="ci-icon"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3.5C3 3 3.4 2.5 4 2.5h2.2c.4 0 .8.3.9.7l.6 2.3c.1.4 0 .8-.3 1L6.2 7.6c.8 1.7 2.2 3.1 3.9 3.9l1.1-1.2c.3-.3.7-.4 1-.3l2.3.6c.4.1.7.5.7.9V14c0 .6-.5 1-1 1C8.6 15 3 9.4 3 3.5z" fill="#07B77D"/></svg></div>
+        <div class="ci-main"><div class="ci-role">收货值班（07:00–22:00）</div><div class="ci-num">+65 6789 1234</div></div>
+        <button class="ci-call" onclick="toast('正在拨打 收货值班…')">拨打</button>
+      </div>
+      <div class="contact-item">
+        <div class="ci-icon"><svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M3 3.5C3 3 3.4 2.5 4 2.5h2.2c.4 0 .8.3.9.7l.6 2.3c.1.4 0 .8-.3 1L6.2 7.6c.8 1.7 2.2 3.1 3.9 3.9l1.1-1.2c.3-.3.7-.4 1-.3l2.3.6c.4.1.7.5.7.9V14c0 .6-.5 1-1 1C8.6 15 3 9.4 3 3.5z" fill="#07B77D"/></svg></div>
+        <div class="ci-main"><div class="ci-role">仓库主管 · 林伟</div><div class="ci-num">+65 9876 5432</div></div>
+        <button class="ci-call" onclick="toast('正在拨打 仓库主管…')">拨打</button>
+      </div>
+      <button class="sheet-close" onclick="hideSheet('contactSheet2')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 屏 3：飞书群消息推送 ============ -->
+<div class="screen" id="screen-fs">
+  <div class="screen-hint">司机签到后系统机器人自动推送消息卡片到飞书「B仓收货群」 · 收货员点卡片按钮进入确认页</div>
+  <div class="phone">
+    <div class="phone-status light"><span>9:41</span><span class="dots">5G ▪ ▪ ▪ 100%</span></div>
+    <div class="fs-header">
+      <div class="row">
+        <div class="back" onclick="toast('返回飞书会话列表')">‹</div>
+        <div class="fs-gname">B仓收货群（8）</div>
+        <div class="fs-more">⋯</div>
+      </div>
+    </div>
+    <div class="fs-body">
+      <div class="fs-daytag">今天 14:32</div>
+
+      <div class="fs-msg">
+        <div class="fs-avt" style="background:#07B77D">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3a4 4 0 0 1 4 4v3l1.5 2.5h-11L6 10V7a4 4 0 0 1 4-4zM8 16a2 2 0 0 0 4 0" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="fs-msg-main">
+          <div class="fs-name">到货签到助手</div>
+          <div class="fs-card">
+            <div class="fs-card-head">
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><path d="M10 3a4 4 0 0 1 4 4v3l1.5 2.5h-11L6 10V7a4 4 0 0 1 4-4zM8 16a2 2 0 0 0 4 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              供应商到货签到提醒
+            </div>
+            <div class="fs-card-body">
+              <div class="fs-kv"><span class="k">供应商</span><span class="v">鲜丰蔬果（Fresh & Green）</span></div>
+              <div class="fs-kv"><span class="k">签到时间</span><span class="v">2026-05-19 14:32</span></div>
+              <div class="fs-kv"><span class="k">卸货区</span><span class="v">新加坡-B端仓 · 1 号卸货区</span></div>
+              <div class="fs-kv"><span class="k">采购单</span><span class="v">PO-20260519-001 等 2 张</span></div>
+              <div class="fs-kv"><span class="k">送货人</span><span class="v">张建国 · 138****6621</span></div>
+              <div class="fs-card-note">请收货员核对后确认到货，确认前状态为「待确认」</div>
+            </div>
+            <button class="fs-card-btn" onclick="switchScreen('s3')">查看并确认到货 ›</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="fs-msg self">
+        <div class="fs-avt" style="background:#7c8aa0">林伟</div>
+        <div class="fs-msg-main">
+          <div class="fs-name">林伟（收货员）</div>
+          <div class="fs-bubble">收到，我去 1 号卸货区核对</div>
+        </div>
+      </div>
+
+      <div class="fs-daytag" style="margin:2px 0 12px">14:46</div>
+      <div class="fs-msg">
+        <div class="fs-avt" style="background:#07B77D">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l3.5 3.5L16 6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="fs-msg-main">
+          <div class="fs-name">到货签到助手</div>
+          <div class="fs-bubble" style="background:#e8f9f4;color:#07975f">林伟 已确认鲜丰蔬果到货 · 14:46</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ 屏 4：H5 收货员确认页 ============ -->
+<div class="screen" id="screen-s3">
+  <div class="screen-hint">仓库收货员点飞书群消息直接打开 · 核对司机签到信息后一次性确认</div>
+  <div class="phone">
+    <div class="phone-status"><span>9:41</span><span class="dots">5G ▪ ▪ ▪ 100%</span></div>
+    <div class="h5-nav">
+      <div class="h5-nav-top">
+        <div class="h5-back" onclick="switchScreen('fs')">‹</div>
+        <div class="h5-title">供应商到货确认</div>
+      </div>
+      <div class="h5-nav-sub"><span>收货员：林伟（Wilson）</span></div>
+    </div>
+    <div class="h5-body" style="padding-bottom:108px">
+
+      <div class="recv-banner">
+        <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;margin-top:1px"><circle cx="7" cy="7" r="6.3" fill="none" stroke="#3a7bd0"/><path d="M7 6v4M7 4h.01" stroke="#3a7bd0" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>来自飞书「B仓收货群」消息 · 鲜丰蔬果 14:32 已在 1 号卸货区签到</span>
+      </div>
+
+      <!-- 已确认结果横幅 -->
+      <div class="result-banner" id="resultOk">
+        <svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#07B77D"/><path d="M11 21l6 6 13-14" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        <div class="rt">已确认到货</div>
+        <div class="rs">确认到货时间：2026-05-19 14:46:30 · 收货员 林伟</div>
+      </div>
+      <div class="result-banner no" id="resultNo">
+        <svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#F56C6C"/><path d="M14 14l12 12M26 14L14 26" stroke="#fff" stroke-width="3.2" stroke-linecap="round" fill="none"/></svg>
+        <div class="rt">已标记未到货</div>
+        <div class="rs" id="resultNoReason">原因：—</div>
+      </div>
+
+      <div class="kv-card">
+        <div class="kv-head">
+          <svg width="15" height="15" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none" stroke="#07B77D" stroke-width="1.4"/><path d="M5.5 7.5l1.6 1.6L11 5.5" stroke="#07B77D" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+          签到信息
+        </div>
+        <div class="kv-body">
+          <div class="info-row"><span class="k" style="color:#909399;width:78px">供应商</span><span class="v" style="flex:1;text-align:right;font-weight:500">鲜丰蔬果（Fresh & Green）</span></div>
+          <div class="info-row"><span class="k" style="color:#909399;width:78px">签到时间</span><span class="v mono" style="flex:1;text-align:right;font-weight:500">2026-05-19 14:32:08</span></div>
+          <div class="info-row"><span class="k" style="color:#909399;width:78px">送货人</span><span class="v" style="flex:1;text-align:right;font-weight:500">张建国</span></div>
+          <div class="info-row"><span class="k" style="color:#909399;width:78px">送货电话</span><span class="v mono" style="flex:1;text-align:right;font-weight:500">138 8800 6621</span></div>
+          <div class="info-row" style="border-bottom:none"><span class="k" style="color:#909399;width:78px">备注</span><span class="v" style="flex:1;text-align:right">分两车送达，水果车随后到</span></div>
+        </div>
+        <div class="recv-photos">
+          <div class="p"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 16l5-5 4 4 4-6 5 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="7" r="2" fill="#fff"/></svg></div>
+          <div class="p"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 16l5-5 4 4 4-6 5 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="7" r="2" fill="#fff"/></svg></div>
+        </div>
+      </div>
+
+      <div class="kv-card">
+        <div class="kv-head">
+          <svg width="15" height="15" viewBox="0 0 16 16"><path d="M3 4h10v9H3z" fill="none" stroke="#07B77D" stroke-width="1.4"/><path d="M3 7h10M6 4v9" stroke="#07B77D" stroke-width="1.2"/></svg>
+          本次签到采购单（2 张）
+        </div>
+        <div class="kv-body">
+          <div class="po-readonly">
+            <div class="po-no">PO-20260519-001</div>
+            <div class="po-desc"><span class="eta">期望到货 05-19</span><span>新鲜蔬菜 · 8 个 SKU</span></div>
+          </div>
+          <div class="po-readonly">
+            <div class="po-no">PO-20260519-007</div>
+            <div class="po-desc"><span class="eta">期望到货 05-19</span><span>新鲜水果 · 3 个 SKU</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 未到货原因面板 -->
+      <div class="reason-panel" id="reasonPanel">
+        <div class="field-label" style="color:#303133;font-weight:600;margin-bottom:8px">未到货原因<span class="req" style="color:#F56C6C">*</span></div>
+        <div class="reason-quick">
+          <span class="reason-tag" onclick="pickReason(this,'供应商实际未到仓')">供应商实际未到仓</span>
+          <span class="reason-tag" onclick="pickReason(this,'采购单选择有误')">采购单选择有误</span>
+          <span class="reason-tag" onclick="pickReason(this,'重复签到')">重复签到</span>
+        </div>
+        <textarea class="h5-textarea" id="reasonText" placeholder="可补充说明，便于后续核对（必填）"></textarea>
+      </div>
+
+    </div>
+    <div class="h5-footer" id="recvFooter">
+      <div class="h5-foot-row">
+        <button class="h5-btn h5-btn-danger" id="noBtn" onclick="onMarkNoArrive()">未到货</button>
+        <button class="h5-btn h5-btn-primary" id="okBtn" onclick="confirmArrive()">确认到货</button>
+      </div>
+    </div>
+    <div class="h5-footer" id="recvFooterDone" style="display:none">
+      <button class="h5-btn h5-btn-ghost" onclick="resetRecv()">重置原型状态</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 屏 5：PC 后台签到记录 ============ -->
+<div class="screen" id="screen-s4">
+  <div class="screen-hint">供应商签到记录后台 · 供采购 / 仓库主管查看与追溯，记录均含「签到时间 + 确认到货时间」双字段</div>
+  <div class="pc">
+    <div class="topbar">
+      <div class="topbar-logo">Foodmax</div>
+      <nav class="topbar-nav">
+        <a onclick="toast('切换到商城模块')">商城(MALL)</a>
+        <a class="active" onclick="toast('当前位于采购模块')">采购(SCM)</a>
+        <a onclick="toast('切换到仓储模块')">仓储(WMS)</a>
+      </nav>
+      <div class="topbar-right"><span>小美新加坡(SG)</span><span>简体中文</span><span>退出</span></div>
+    </div>
+    <div class="body-wrap">
+      <div class="sidebar">
+        <div class="sidebar-group-title">采购管理</div>
+        <div class="sidebar-item" onclick="toast('跳转采购单管理')">采购单管理</div>
+        <div class="sidebar-item" onclick="toast('跳转采购计划')">采购计划</div>
+        <div class="sidebar-group-title">供应商到货</div>
+        <div class="sidebar-item active">供应商签到记录</div>
+        <div class="sidebar-item" onclick="toast('跳转到货预约（规划中）')">到货预约</div>
+        <div class="sidebar-item" onclick="toast('跳转准时率分析（二期）')">到货准时率分析</div>
+        <div class="sidebar-group-title">供应商管理</div>
+        <div class="sidebar-item" onclick="toast('跳转供应商列表')">供应商列表</div>
+      </div>
+      <div class="main">
+        <div class="page-header">
+          <div>
+            <div class="page-title">供应商签到记录</div>
+            <div class="page-sub">司机扫码签到 + 收货员确认全程留痕，作为到货时间认定与扯皮追溯依据</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn" onclick="toast('已加入导出队列')">导出</button>
+            <button class="btn" onclick="toast('二维码：新加坡-B端仓 · 1号卸货区')">查看仓库二维码</button>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-label">今日签到次数</div><div class="stat-value">24</div><div class="stat-desc">覆盖 19 家供应商</div></div>
+          <div class="stat-card"><div class="stat-label">待收货员确认</div><div class="stat-value" style="color:#E6A23C">5</div><div class="stat-desc">已推送飞书收货群</div></div>
+          <div class="stat-card"><div class="stat-label">已确认到货</div><div class="stat-value" style="color:#07B77D">17</div><div class="stat-desc">含 41 张采购单</div></div>
+          <div class="stat-card"><div class="stat-label">标记未到货</div><div class="stat-value" style="color:#F56C6C">2</div><div class="stat-desc">采购单已退回待签到</div></div>
+        </div>
+
+        <div class="card"><div class="card-body">
+          <div class="filter-form">
+            <div class="filter-item"><label>签到日期</label><input class="iw150" type="date" value="2026-05-19"></div>
+            <div class="filter-item"><label>到货仓库</label><select class="iw150"><option>新加坡-B端仓</option><option>全部仓库</option></select></div>
+            <div class="filter-item"><label>供应商</label><input class="iw170" type="text" placeholder="供应商名称/编码"></div>
+            <div class="filter-item"><label>采购单号</label><input class="iw170" type="text" placeholder="PO 单号"></div>
+            <div class="filter-item"><label>确认状态</label><select class="iw120"><option>全部</option><option>待确认</option><option>已到货</option><option>未到货</option></select></div>
+            <div class="filter-btns">
+              <button class="btn btn-primary" onclick="toast('查询成功，共 24 条')">查询</button>
+              <button class="btn" onclick="toast('筛选条件已重置')">重置</button>
+            </div>
+          </div>
+        </div></div>
+
+        <div class="card">
+          <div class="tbl-toolbar">
+            <div class="tbl-toolbar-left">
+              <span>共 <b>24</b> 条签到记录</span>
+              <span class="tag tag-orange">5 待确认</span>
+              <span class="tag tag-green">17 已到货</span>
+              <span class="tag tag-red">2 未到货</span>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>签到时间</th><th>供应商</th><th>关联采购单</th><th>送货人</th><th>送货电话</th>
+                  <th>确认到货时间</th><th>确认结果</th><th>收货员</th><th>未到货原因</th><th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">14:32:08</td>
+                  <td>鲜丰蔬果<br><span style="font-size:12px;color:#909399">SUP-00128</span></td>
+                  <td><div class="po-cell"><span>PO-20260519-001</span><span>PO-20260519-007</span></div></td>
+                  <td>张建国</td><td class="mono">138****6621</td>
+                  <td class="mono" style="color:#909399">待确认</td>
+                  <td><span class="tag tag-orange">● 待确认</span></td>
+                  <td style="color:#909399">—</td><td style="color:#909399">—</td>
+                  <td><button class="btn-text" onclick="openDetail('pending')">详情</button></td>
+                </tr>
+                <tr>
+                  <td class="mono">11:05:44</td>
+                  <td>海德蔬菜<br><span style="font-size:12px;color:#909399">SUP-00073</span></td>
+                  <td><div class="po-cell"><span>PO-20260519-003</span></div></td>
+                  <td>王志强</td><td class="mono">139****2087</td>
+                  <td class="mono">11:18:20</td>
+                  <td><span class="tag tag-green">● 已到货</span></td>
+                  <td>林伟</td><td style="color:#909399">—</td>
+                  <td><button class="btn-text" onclick="openDetail('done')">详情</button></td>
+                </tr>
+                <tr>
+                  <td class="mono">10:48:12</td>
+                  <td>新元农场<br><span style="font-size:12px;color:#909399">SUP-00091</span></td>
+                  <td><div class="po-cell"><span>PO-20260519-002</span><span>PO-20260519-005</span></div></td>
+                  <td>陈大文</td><td class="mono">138****5519</td>
+                  <td class="mono">11:02:55</td>
+                  <td><span class="tag tag-green">● 已到货</span></td>
+                  <td>林伟</td><td style="color:#909399">—</td>
+                  <td><button class="btn-text" onclick="openDetail('done')">详情</button></td>
+                </tr>
+                <tr>
+                  <td class="mono">09:20:31</td>
+                  <td>德昌粮油<br><span style="font-size:12px;color:#909399">SUP-00045</span></td>
+                  <td><div class="po-cell"><span>PO-20260519-004</span></div></td>
+                  <td>李国华</td><td class="mono">138****7733</td>
+                  <td class="mono" style="color:#F56C6C">未到货</td>
+                  <td><span class="tag tag-red">● 未到货</span></td>
+                  <td>周敏</td>
+                  <td>采购单选择有误</td>
+                  <td><button class="btn-text" onclick="openDetail('no')">详情</button></td>
+                </tr>
+                <tr>
+                  <td class="mono">08:55:09</td>
+                  <td>利源面食<br><span style="font-size:12px;color:#909399">SUP-00112</span></td>
+                  <td><div class="po-cell"><span>PO-20260518-029</span></div></td>
+                  <td>黄文彬</td><td class="mono">139****6640</td>
+                  <td class="mono">09:09:48</td>
+                  <td><span class="tag tag-green">● 已到货</span></td>
+                  <td>周敏</td><td style="color:#909399">—</td>
+                  <td><button class="btn-text" onclick="openDetail('done')">详情</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span class="page-info">共 24 条</span>
+            <div class="page-btn" onclick="toast('已经是第一页')">‹</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn" onclick="toast('已切换到第 2 页')">2</div>
+            <div class="page-btn" onclick="toast('已切换到第 3 页')">3</div>
+            <div class="page-btn" onclick="toast('已切换到下一页')">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /stage -->
+
+<!-- ====== 详情抽屉 ====== -->
+<div class="drawer-mask" id="drawerMask" onclick="closeDetail()"></div>
+<div class="drawer" id="detailDrawer">
+  <div class="drawer-header">
+    <div class="drawer-title">签到记录详情</div>
+    <div class="drawer-close" onclick="closeDetail()">×</div>
+  </div>
+  <div class="drawer-body">
+    <div class="detail-sec">
+      <h4>基本信息</h4>
+      <dl class="dl">
+        <dt>供应商</dt><dd>鲜丰蔬果（Fresh & Green）· SUP-00128</dd>
+        <dt>到货仓库</dt><dd>新加坡-B端仓 · 1 号卸货区</dd>
+        <dt>送货人</dt><dd>张建国</dd>
+        <dt>送货电话</dt><dd>138 8800 6621</dd>
+        <dt>签到方式</dt><dd>扫仓库固定二维码（H5）</dd>
+        <dt>确认结果</dt><dd id="d-result"><span class="tag tag-orange">● 待确认</span></dd>
+        <dt id="d-reason-k" style="display:none">未到货原因</dt><dd id="d-reason-v" style="display:none">—</dd>
+      </dl>
+    </div>
+    <div class="detail-sec">
+      <h4>关联采购单</h4>
+      <table style="border:1px solid var(--border);border-radius:4px;overflow:hidden">
+        <thead><tr><th>采购单号</th><th>期望到货日</th><th>商品概要</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">PO-20260519-001</td><td>2026-05-19</td><td>新鲜蔬菜 · 8 个 SKU</td></tr>
+          <tr><td class="mono">PO-20260519-007</td><td>2026-05-19</td><td>新鲜水果 · 3 个 SKU</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="detail-sec">
+      <h4>时间留痕</h4>
+      <div class="timeline" id="d-timeline">
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-t">司机扫码签到</div><div class="tl-time">2026-05-19 14:32:08 · 张建国</div></div>
+        <div class="tl-item" id="d-tl-confirm"><div class="tl-dot gray"></div><div class="tl-t" style="color:#909399">收货员确认到货</div><div class="tl-time">待确认</div></div>
+      </div>
+    </div>
+    <div class="detail-sec">
+      <h4>现场图片 / 备注</h4>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="width:64px;height:64px;border-radius:6px;background:linear-gradient(135deg,#cfe9dd,#a7d8c4);display:flex;align-items:center;justify-content:center;color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 16l5-5 4 4 4-6 5 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="7" r="2" fill="#fff"/></svg></div>
+        <div style="width:64px;height:64px;border-radius:6px;background:linear-gradient(135deg,#cfe9dd,#a7d8c4);display:flex;align-items:center;justify-content:center;color:#fff"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 16l5-5 4 4 4-6 5 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="7" r="2" fill="#fff"/></svg></div>
+      </div>
+      <div style="font-size:13px;color:var(--t2);background:var(--bg);border-radius:6px;padding:10px">备注：分两车送达，水果车随后到</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========= 模拟数据 ========= */
+const SUPPLIERS = [
+  {name:'鲜丰蔬果（Fresh & Green）', code:'SUP-00128', avt:'鲜', contact:'张建国', phone:'13888006621',
+    pos:[
+      {no:'PO-20260519-001', eta:'05-19', cat:'新鲜蔬菜', sku:8},
+      {no:'PO-20260519-007', eta:'05-19', cat:'新鲜水果', sku:3},
+      {no:'PO-20260520-014', eta:'05-20', cat:'新鲜蔬菜', sku:5}
+    ]},
+  {name:'海德蔬菜（Hattah）', code:'SUP-00073', avt:'海', contact:'王志强', phone:'13900002087',
+    pos:[{no:'PO-20260519-003', eta:'05-19', cat:'新鲜蔬菜', sku:6}]},
+  {name:'新元农场（SG Local Farm）', code:'SUP-00091', avt:'新', contact:'陈大文', phone:'13855005519',
+    pos:[
+      {no:'PO-20260519-002', eta:'05-19', cat:'叶菜类', sku:4},
+      {no:'PO-20260519-005', eta:'05-19', cat:'根茎类', sku:7}
+    ]},
+  {name:'德昌粮油（TECK SANG）', code:'SUP-00045', avt:'德', contact:'李国华', phone:'13877007733',
+    pos:[]},
+  {name:'利源面食（Leong Guan）', code:'SUP-00112', avt:'利', contact:'黄文彬', phone:'13966006640',
+    pos:[{no:'PO-20260519-009', eta:'05-19', cat:'非蔬果短保', sku:2}]}
+];
+let currentSupplier = null;
+
+/* ========= 屏幕切换 ========= */
+function switchScreen(id, el){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  document.querySelectorAll('.proto-tab').forEach(t=>t.classList.remove('active'));
+  (el||document.querySelector('[data-screen="'+id+'"]')).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* ========= 屏1：供应商搜索 ========= */
+function onSearchFocus(){document.getElementById('searchBox').classList.add('focus');onSupplierSearch(document.getElementById('supplierInput').value)}
+function onSupplierSearch(kw){
+  const drop=document.getElementById('searchDrop');
+  document.getElementById('searchClear').style.display=kw?'flex':'none';
+  if(!kw.trim()){drop.classList.remove('show');return;}
+  const matched=SUPPLIERS.filter(s=>s.name.includes(kw)||s.code.includes(kw));
+  if(matched.length===0){
+    drop.innerHTML='<div class="drop-empty">未找到匹配的供应商<br>请输入完整名称</div>';
+  }else{
+    drop.innerHTML=matched.map(s=>{
+      const hl=s.name.replace(kw,'<em>'+kw+'</em>');
+      return '<div class="drop-item" onclick="pickSupplier(\''+s.code+'\')">'+
+        '<div class="nm">'+hl+'</div>'+
+        '<div class="meta">'+s.code+' · 待入库采购单 '+s.pos.length+' 张</div></div>';
+    }).join('');
+  }
+  drop.classList.add('show');
+}
+function clearSearch(){
+  document.getElementById('supplierInput').value='';
+  document.getElementById('searchClear').style.display='none';
+  document.getElementById('searchDrop').classList.remove('show');
+}
+function pickSupplier(code){
+  currentSupplier=SUPPLIERS.find(s=>s.code===code);
+  document.getElementById('searchDrop').classList.remove('show');
+  document.getElementById('supplier-search-block').style.display='none';
+  document.getElementById('supplier-chosen').style.display='block';
+  document.getElementById('supAvt').textContent=currentSupplier.avt;
+  document.getElementById('supName').textContent=currentSupplier.name;
+  document.getElementById('supCode').textContent='供应商编码：'+currentSupplier.code;
+  // 预约信息回填送货人/电话
+  document.getElementById('driverName').value=currentSupplier.contact;
+  const p=currentSupplier.phone;
+  document.getElementById('driverPhone').value=p;
+  renderPOList();
+}
+function resetSupplier(){
+  currentSupplier=null;
+  document.getElementById('supplier-search-block').style.display='block';
+  document.getElementById('supplier-chosen').style.display='none';
+  clearSearch();
+  document.getElementById('po-locked').style.display='block';
+  document.getElementById('po-list').style.display='none';
+  document.getElementById('po-hint').style.display='none';
+}
+function renderPOList(){
+  const list=document.getElementById('po-list');
+  document.getElementById('po-locked').style.display='none';
+  if(currentSupplier.pos.length===0){
+    list.innerHTML='<div class="po-locked" style="border-style:solid">该供应商当前没有「待入库」的采购单<br>如有疑问请联系采购对接人</div>';
+  }else{
+    list.innerHTML=currentSupplier.pos.map((p,i)=>
+      '<div class="po-item" data-no="'+p.no+'" onclick="togglePO(this)">'+
+        '<div class="po-check"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.2l2.6 2.6L10 3" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
+        '<div class="po-main">'+
+          '<div class="po-no">'+p.no+'</div>'+
+          '<div class="po-desc"><span class="eta">期望到货 '+p.eta+'</span><span>'+p.cat+' · '+p.sku+' 个 SKU</span></div>'+
+        '</div>'+
+      '</div>'
+    ).join('');
+    document.getElementById('po-hint').style.display='flex';
+  }
+  list.style.display='block';
+}
+function togglePO(el){el.classList.toggle('checked')}
+
+/* ========= 屏1：图片 / 提交 ========= */
+function addPhoto(){
+  const grid=document.getElementById('upGrid');
+  if(grid.querySelectorAll('.up-thumb').length>=6){toast('最多上传 6 张');return;}
+  const t=document.createElement('div');
+  t.className='up-thumb';
+  t.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 16l5-5 4 4 4-6 5 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="7" r="2" fill="#fff"/></svg><div class="del" onclick="this.parentElement.remove()">✕</div>';
+  grid.insertBefore(t,grid.querySelector('.up-tile'));
+  toast('已添加示例图片');
+}
+function submitCheckin(){
+  if(!currentSupplier){toast('请先选择供应商');return;}
+  const checked=[...document.querySelectorAll('#po-list .po-item.checked')];
+  if(checked.length===0){toast('请至少勾选 1 张待入库采购单');return;}
+  const name=document.getElementById('driverName').value.trim();
+  const phone=document.getElementById('driverPhone').value.trim();
+  if(!name){toast('请填写送货人');return;}
+  if(!phone){toast('请填写送货电话');return;}
+  // 写入签到成功页
+  document.getElementById('s2-supplier').textContent=currentSupplier.name;
+  document.getElementById('s2-pos').innerHTML=checked.map(c=>c.dataset.no).join('<br>');
+  const mask=phone.slice(0,3)+'****'+phone.slice(-4);
+  document.getElementById('s2-driver').textContent=name+' · '+mask;
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  document.getElementById('s2-time').textContent=
+    '2026-05-19 '+pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+  toast('签到提交成功');
+  switchScreen('s2');
+}
+
+/* ========= 屏3：收货员确认 ========= */
+let noArriveMode=false, pickedReason='';
+function onMarkNoArrive(){
+  const panel=document.getElementById('reasonPanel');
+  if(!noArriveMode){
+    noArriveMode=true;
+    panel.classList.add('show');
+    document.getElementById('noBtn').textContent='提交未到货';
+    document.getElementById('okBtn').textContent='取消';
+    panel.scrollIntoView({behavior:'smooth',block:'center'});
+  }else{
+    const txt=document.getElementById('reasonText').value.trim();
+    if(!pickedReason && !txt){toast('请选择或填写未到货原因');return;}
+    const reason=[pickedReason,txt].filter(Boolean).join('：');
+    document.getElementById('resultNoReason').textContent='原因：'+reason;
+    finishRecv('no');
+  }
+}
+function pickReason(el,txt){
+  document.querySelectorAll('.reason-tag').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  pickedReason=txt;
+}
+function confirmArrive(){
+  if(noArriveMode){ // 此时按钮为「取消」
+    noArriveMode=false;
+    document.getElementById('reasonPanel').classList.remove('show');
+    document.getElementById('noBtn').textContent='未到货';
+    document.getElementById('okBtn').textContent='确认到货';
+    return;
+  }
+  finishRecv('ok');
+}
+function finishRecv(type){
+  document.getElementById('resultOk').classList.toggle('show',type==='ok');
+  document.getElementById('resultNo').classList.toggle('show',type==='no');
+  document.getElementById('recvFooter').style.display='none';
+  document.getElementById('recvFooterDone').style.display='block';
+  document.querySelector('#screen-s3 .h5-body').scrollTo({top:0,behavior:'smooth'});
+  toast(type==='ok'?'已确认到货，采购单状态更新为「已到货」':'已标记未到货，采购单退回待签到');
+}
+function resetRecv(){
+  noArriveMode=false;pickedReason='';
+  document.getElementById('reasonPanel').classList.remove('show');
+  document.getElementById('reasonText').value='';
+  document.querySelectorAll('.reason-tag').forEach(t=>t.classList.remove('on'));
+  document.getElementById('resultOk').classList.remove('show');
+  document.getElementById('resultNo').classList.remove('show');
+  document.getElementById('noBtn').textContent='未到货';
+  document.getElementById('okBtn').textContent='确认到货';
+  document.getElementById('recvFooter').style.display='block';
+  document.getElementById('recvFooterDone').style.display='none';
+}
+
+/* ========= 屏4：详情抽屉 ========= */
+function openDetail(type){
+  const resEl=document.getElementById('d-result');
+  const rk=document.getElementById('d-reason-k'), rv=document.getElementById('d-reason-v');
+  const tlc=document.getElementById('d-tl-confirm');
+  rk.style.display='none';rv.style.display='none';
+  if(type==='pending'){
+    resEl.innerHTML='<span class="tag tag-orange">● 待确认</span>';
+    tlc.innerHTML='<div class="tl-dot gray"></div><div class="tl-t" style="color:#909399">收货员确认到货</div><div class="tl-time">待确认</div>';
+  }else if(type==='done'){
+    resEl.innerHTML='<span class="tag tag-green">● 已到货</span>';
+    tlc.innerHTML='<div class="tl-dot"></div><div class="tl-t">收货员确认到货</div><div class="tl-time">2026-05-19 14:46:30 · 林伟</div>';
+  }else{
+    resEl.innerHTML='<span class="tag tag-red">● 未到货</span>';
+    rk.style.display='block';rv.style.display='block';
+    rv.textContent='采购单选择有误：司机误选了其他批次的采购单';
+    tlc.innerHTML='<div class="tl-dot" style="background:#F56C6C;box-shadow:0 0 0 1px #F56C6C"></div><div class="tl-t">收货员标记未到货</div><div class="tl-time">2026-05-19 14:50:12 · 周敏</div>';
+  }
+  document.getElementById('drawerMask').classList.add('show');
+  document.getElementById('detailDrawer').classList.add('show');
+}
+function closeDetail(){
+  document.getElementById('drawerMask').classList.remove('show');
+  document.getElementById('detailDrawer').classList.remove('show');
+}
+
+/* ========= 通用 ========= */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1900);
+}
+function showSheet(id){
+  document.getElementById(id+'-mask').classList.add('show');
+  document.getElementById(id).classList.add('show');
+}
+function hideSheet(id){
+  document.getElementById(id+'-mask').classList.remove('show');
+  document.getElementById(id).classList.remove('show');
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search-wrap')){
+    document.getElementById('searchDrop').classList.remove('show');
+    document.getElementById('searchBox').classList.remove('focus');
+  }
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
+</script>
+</body>
+</html>
