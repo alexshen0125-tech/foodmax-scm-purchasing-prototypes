@@ -726,7 +726,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
           <h4 style="font-size:13px;font-weight:600">费用明细（每项有"预估 / 实际"两个时点）</h4>
           <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn btn-outline btn-sm" onclick="copyEstToActAll()" title="把所有待录入的实际金额一键填充为同行预估金额">⚡ 实际同预估（一键填充）</button>
+            <button class="btn btn-outline btn-sm" id="btn-copy-est" onclick="copyEstToActAll()" title="把所有待录入的实际金额一键填充为同行预估金额">⚡ 实际同预估（一键填充）</button>
             <span style="font-size:11.5px;color:#64748b">
               <span class="badge badge-estimate" style="margin-right:4px">预估</span>必填 ·
               <span class="badge badge-actual" style="margin-left:4px;margin-right:4px">实际</span>可后补
@@ -738,8 +738,8 @@
           <thead>
             <tr>
               <th style="width:140px">费用类型</th>
-              <th class="text-right" style="width:130px;background:#fef3c7">预估金额(USD)</th>
-              <th class="text-right" style="width:130px;background:#dcfce7">实际金额(USD)</th>
+              <th class="text-right" id="th-fee-est" style="width:130px;background:#fef3c7">预估金额(USD)</th>
+              <th class="text-right" id="th-fee-act" style="width:130px;background:#dcfce7">实际金额(USD)</th>
               <th class="text-right" style="width:80px">差异</th>
               <th>备注</th>
               <th style="width:40px"></th>
@@ -799,7 +799,7 @@
                 <span class="badge badge-amber" style="margin-left:6px">+ 1 项待录入</span>
               </div>
             </div>
-            <div style="font-size:11.5px;color:#64748b;margin-top:8px">
+            <div id="rate-info" style="font-size:11.5px;color:#64748b;margin-top:8px">
               📊 初始汇率 <strong>1 USD = 1.3520 SGD</strong>（创建于 2026-05-13 10:30，用于预估分摊）<br/>
               <span class="text-muted" style="font-size:11px">所有实际录完后取最新财务汇率作为<strong>最终汇率</strong>，本位币重算；结算金额 = 实际合计</span>
             </div>
@@ -821,7 +821,7 @@
           <button class="btn btn-outline" onclick="goStep1Confirm()">← 上一步</button>
           <div style="display:flex;gap:8px">
             <button class="btn btn-outline" onclick="onPreviewAlloc()">👁 预览分摊</button>
-            <button class="btn btn-primary" onclick="onSubmitCost()">创建费用单</button>
+            <button class="btn btn-primary" id="btn-submit-cost" onclick="onSubmitCost()">创建费用单</button>
           </div>
         </div>
       </div>
@@ -888,7 +888,7 @@
   </div>
 
   <!-- PO 入库进度（实际费用录入前置） -->
-  <div class="card" style="margin-bottom:16px">
+  <div class="card" id="po-receipt-card" style="margin-bottom:16px">
     <div class="card-header">
       <h3>关联 PO 入库进度</h3>
       <span class="badge badge-green">✅ 全部已入库（可录入实际）</span>
@@ -1276,7 +1276,7 @@
   </div>
 
   <!-- 含预估警示条 -->
-  <div class="hint-card" style="margin-bottom:16px">
+  <div class="hint-card" id="landed-estimate-warn" style="margin-bottom:16px">
     <span class="hint-icon">⚠️</span>
     <div>
       <strong>含预估费用 10.7%（保险费 USD 200）</strong>
@@ -1344,7 +1344,7 @@
   <!-- SKU 落地成本明细 -->
   <div class="card">
     <div class="card-header">
-      <h3>SKU 落地成本明细（预估 → 实际）</h3>
+      <h3 id="landed-sku-detail">SKU 落地成本明细（预估 → 实际）</h3>
       <div style="display:flex;gap:12px;align-items:center">
         <span style="font-size:11.5px;color:#64748b">
           <span class="badge badge-estimate">预估</span> 入库时写入 ·
@@ -1544,7 +1544,7 @@
           <button class="btn btn-primary btn-sm" onclick="showToast('info','已应用筛选','演示数据未变化')">查询</button>
         </div>
 
-        <div class="hint-card info" style="margin-bottom:12px;font-size:11.5px">
+        <div class="hint-card info" id="settle-statemachine" style="margin-bottom:12px;font-size:11.5px">
           <span class="hint-icon">🔄</span>
           <div>
             <strong>结算单状态机：</strong>
@@ -3586,5 +3586,312 @@ function recalcDiff() {
 }
 </script>
 
+<!-- ════════════════ 规则标注层 / prototype-annotate ════════════════ -->
+<style>
+  .anno-badge{position:absolute;z-index:9990;width:18px;height:18px;
+    background:#ff7a18;color:#fff;font-size:11px;line-height:18px;
+    text-align:center;border-radius:50%;font-weight:700;cursor:help;
+    box-shadow:0 1px 4px rgba(0,0,0,.3);display:none;
+    font-family:-apple-system,Segoe UI,sans-serif;}
+  body.anno-on .anno-badge{display:block;}
+  .anno-badge.anno-hidden{display:none!important;}
+  body.anno-on [data-anno-marked]{outline:1px dashed #ff7a18;outline-offset:1px;}
+  #anno-tip{position:fixed;z-index:9999;max-width:320px;display:none;
+    background:#1f2430;color:#e6e6e6;border-radius:8px;padding:0;
+    box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:12.5px;line-height:1.6;
+    font-family:-apple-system,Segoe UI,Helvetica,sans-serif;}
+  #anno-tip .anno-tip-hd{padding:8px 12px;font-weight:700;font-size:13px;
+    border-bottom:1px solid #353b48;color:#fff;}
+  #anno-tip .anno-row{padding:6px 12px;display:flex;gap:8px;
+    border-bottom:1px solid #2a2f3a;}
+  #anno-tip .anno-row:last-child{border-bottom:none;}
+  #anno-tip .anno-tag{flex:0 0 auto;font-weight:700;font-size:10.5px;
+    padding:1px 6px;border-radius:4px;height:16px;line-height:14px;
+    align-self:flex-start;white-space:nowrap;}
+  #anno-tip .t-BR{background:#ff7a18;color:#fff;}
+  #anno-tip .t-AC{background:#3b82f6;color:#fff;}
+  #anno-tip .t-校验{background:#10b981;color:#fff;}
+  #anno-tip .t-交互{background:#8b5cf6;color:#fff;}
+  #anno-tip .anno-txt{flex:1;}
+  #anno-toggle{position:fixed;right:16px;bottom:16px;z-index:9998;
+    background:#1f2430;color:#fff;border:1px solid #ff7a18;
+    padding:7px 14px;border-radius:20px;font-size:12.5px;cursor:pointer;
+    font-family:-apple-system,Segoe UI,sans-serif;user-select:none;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  #anno-toggle .dot{display:inline-block;width:7px;height:7px;
+    border-radius:50%;background:#ff7a18;margin-right:6px;vertical-align:1px;}
+  body:not(.anno-on) #anno-toggle .dot{background:#555;}
+</style>
+
+<div id="anno-toggle"><span class="dot"></span>规则标注</div>
+<div id="anno-tip"></div>
+
+<script>
+/* 标注数据 —— 范围：新建物流费用单页（pg-cost-create）Step1 + Step2 */
+const ANNOTATIONS = [
+  {
+    sel: "#sel-logistics-vendor", title: "物流商",
+    rules: [
+      { type: "校验", text: "必填，不可为空" },
+      { type: "交互", text: "选中物流商后，费用币种按该物流商默认币种自动联动，可手动改" }
+    ]
+  },
+  {
+    sel: "#sel-currency", title: "费用币种",
+    rules: [
+      { type: "校验", text: "必填，枚举：USD / SGD / CNY / EUR" },
+      { type: "交互", text: "随物流商选择自动带出默认值，允许手动覆盖" }
+    ]
+  },
+  {
+    sel: "#po-search-kw", title: "关联采购单 — 搜索",
+    rules: [
+      { type: "交互", text: "须先按供应商名称或采购单号搜索，命中后才能勾选；支持回车触发" },
+      { type: "交互", text: "关联采购单可多选 —— 拼柜场景下多张 PO 共用一张物流费用单" }
+    ]
+  },
+  {
+    sel: "#po-results", title: "关联采购单 — 结果区",
+    rules: [
+      { type: "BR", id: "BR-LC-19", text: "PO 入库前必须先创建物流费用单（可全部为预估金额）" },
+      { type: "交互", text: "「已关联费用单」列有值=该 PO 已有 LC 单，仍允许重复关联，不拦截" },
+      { type: "校验", text: "至少勾选 1 张采购单才能进入下一步（假设前提，待确认）" }
+    ]
+  },
+  {
+    sel: "#fee-table", title: "费用明细表",
+    rules: [
+      { type: "交互", text: "每项费用含「预估 / 实际」两个时点；支持 + 添加费用项、✕ 删除行" },
+      { type: "校验", text: "费用类型为枚举：海运费 / 空运费 / 陆运费 / 报关费 / 保险费 / 港口费 / 清关杂费 / 仓储费 / 其他" }
+    ]
+  },
+  {
+    sel: "#th-fee-est", title: "预估金额（入库前）",
+    rules: [
+      { type: "BR", id: "BR-LC-19", text: "每项费用预估金额必填，入库前估算，用于暂估入库分摊" },
+      { type: "BR", id: "BR-LC-11", text: "状态「待录入」且 PO 未入库时预估可逐项修改；PO 一旦入库预估自动锁定" },
+      { type: "校验", text: "数值，≥ 0" }
+    ]
+  },
+  {
+    sel: "#th-fee-act", title: "实际金额（入库后）",
+    rules: [
+      { type: "交互", text: "可后补：单据已到时随预估同填，或后续在详情页补录" },
+      { type: "BR", id: "BR-LC-03", text: "实际录入后系统自动计算差异，按「在库 / 已出库」比例拆分" }
+    ]
+  },
+  {
+    sel: "#btn-copy-est", title: "实际同预估（一键填充）",
+    rules: [
+      { type: "交互", text: "把所有「待录入」的实际金额一键填充为同行预估金额" }
+    ]
+  },
+  {
+    sel: "#sel-alloc-mode", title: "分摊方式",
+    rules: [
+      { type: "校验", text: "必填，枚举：按金额占比（默认）/ 按重量占比" },
+      { type: "BR", id: "BR-LC-30", text: "按重量分摊时仅 KG / G 单位 SKU 参与；箱/件/瓶/袋等非重量单位 SKU 不参与分摊（落地成本=货款，不含运费）" }
+    ]
+  },
+  {
+    sel: "#rate-info", title: "汇率规则",
+    rules: [
+      { type: "交互", text: "初始汇率在创建时锁定，用于预估分摊" },
+      { type: "交互", text: "所有实际费用录完后取最新财务汇率作为最终汇率，本位币重算；结算金额=实际合计" }
+    ]
+  },
+  {
+    sel: "#btn-submit-cost", title: "创建费用单",
+    rules: [
+      { type: "校验", text: "每项费用预估金额必填，校验通过才可创建" },
+      { type: "交互", text: "提交后生成 LC 单，进入「待录入」状态" }
+    ]
+  },
+
+  /* ───── 范围：费用单详情页（pg-cost-detail）───── */
+  {
+    sel: "#detail-mode-banner", title: "详情页 — 查看模式",
+    rules: [
+      { type: "交互", text: "详情页默认只读" },
+      { type: "交互", text: "编辑预估 / 录入实际费用须返回列表，点对应入口按钮进入" }
+    ]
+  },
+  {
+    sel: "#cost-status-badge", title: "费用单状态",
+    rules: [
+      { type: "交互", text: "状态机：待录入 → 费用待审核 → 待对账 → 发票待审核 → 待付款 → 已付款" },
+      { type: "交互", text: "当前状态决定页面可编辑范围与可用按钮" }
+    ]
+  },
+  {
+    sel: "#settlement-progress", title: "结算流程进度条",
+    rules: [
+      { type: "交互", text: "6 状态：1 待录入 / 2 费用待审核 / 3 待对账 / 4 发票待审核 / 5 待付款 / 6 已付款" },
+      { type: "交互", text: "费用待审核=实际费用走审批中心；发票待审核=财务审核发票/结算单" }
+    ]
+  },
+  {
+    sel: "#po-receipt-card", title: "关联 PO 入库进度",
+    rules: [
+      { type: "校验", text: "实际费用录入需等所有关联 PO 完成入库" },
+      { type: "BR", id: "BR-LC-11", text: "预估金额在任一 PO 入库后自动锁定（已参与库存成本计算，不可修改）" }
+    ]
+  },
+  {
+    sel: "#fee-header-summary", title: "费用合计汇总",
+    rules: [
+      { type: "交互", text: "实时显示 预估合计 → 实际合计，未录入项标「+N 项待录入」" },
+      { type: "交互", text: "「⚡待录入项：实际同预估」一键把待录入项实际金额填为预估值" }
+    ]
+  },
+  {
+    sel: "#btn-submit-approval", title: "提交费用审批",
+    rules: [
+      { type: "校验", text: "所有费用项录入实际后才可点击，否则置灰" },
+      { type: "交互", text: "提交后费用单进入「费用待审核」，实际费用进入审批中心" }
+    ]
+  },
+  {
+    sel: "#btn-upload-invoice", title: "上传发票",
+    rules: [
+      { type: "校验", text: "费用审批通过后才可点击，否则置灰" },
+      { type: "交互", text: "上传后进入「发票待审核」，由财务审核发票 / 结算单" }
+    ]
+  },
+  {
+    sel: "#row-insurance", title: "待录入费用行",
+    rules: [
+      { type: "交互", text: "「✏️ 录入实际」弹窗录入；「⚡ =预估」一键填为同行预估值" },
+      { type: "BR", id: "BR-LC-03", text: "实际录入后系统自动计算差异，按「在库 / 已出库」比例拆分" }
+    ]
+  },
+  {
+    sel: "#fee-total-row", title: "费用合计行",
+    rules: [
+      { type: "交互", text: "结算金额 = 实际合计（须全部已确认）" },
+      { type: "交互", text: "差异值通过物流费推送 DMS 链路同步下游，DMS 自行重算入库成本，不生成调整单" }
+    ]
+  },
+
+  /* ───── 范围：审批中心（pg-approval-center）───── */
+  {
+    sel: "#approval-pending", title: "待我审批",
+    rules: [
+      { type: "交互", text: "费用单录入实际并提交后进入「费用待审核」，推送至本审批中心" },
+      { type: "交互", text: "审批人核对费用明细与预估/实际差异后通过或驳回" },
+      { type: "交互", text: "通过 → 费用单推进至「待对账」；驳回 → 退回提交人「待录入」重新录入" }
+    ]
+  },
+
+  /* ───── 范围：落地成本（pg-landed-cost）───── */
+  {
+    sel: "#landed-estimate-warn", title: "含预估费用警示",
+    rules: [
+      { type: "交互", text: "含预估时落地成本基于「实际 + 预估」合计计算" },
+      { type: "BR", id: "BR-LC-03", text: "实际值确认后系统按「在库 / 已出库」比例自动调整库存成本与销售成本" }
+    ]
+  },
+  {
+    sel: "#landed-sku-detail", title: "SKU 落地成本明细",
+    rules: [
+      { type: "交互", text: "落地单价 = 采购单价 + 分摊运费单价" },
+      { type: "交互", text: "预估运费单价入库时写入，实际单据到位后更新" }
+    ]
+  },
+
+  /* ───── 范围：结算管理（pg-logistics-settlement）───── */
+  {
+    sel: "#pending-table", title: "待结算列表",
+    rules: [
+      { type: "校验", text: "仅可多选「同一物流商 + 同一币种」的费用单合并；不同物流商/币种自动禁选" },
+      { type: "交互", text: "费用单实际录入完成后进入待结算列表" }
+    ]
+  },
+  {
+    sel: "#btn-upload-create", title: "上传发票创建结算单",
+    rules: [
+      { type: "校验", text: "须先勾选至少 1 张费用单才可点击，否则置灰" },
+      { type: "校验", text: "发票数量不限，发票总金额 = 已选费用单实际合计，校验通过自动创建结算单" }
+    ]
+  },
+  {
+    sel: "#settle-statemachine", title: "结算单状态机",
+    rules: [
+      { type: "交互", text: "待审核 → 待付款（审核通过）→ 已付款（自动推送 FMS）→ FMS 同步成功为终态" },
+      { type: "交互", text: "旁支：审核拒绝（审核驳回，可重新提交）" },
+      { type: "BR", id: "BR-LC-31", text: "推送失败（FMS 推送失败）时运营可手动「重推 FMS」" }
+    ]
+  }
+];
+
+(function () {
+  const tip = document.getElementById('anno-tip');
+  const toggle = document.getElementById('anno-toggle');
+  document.body.classList.add('anno-on');
+
+  toggle.addEventListener('click', () => {
+    document.body.classList.toggle('anno-on');
+    if (!document.body.classList.contains('anno-on')) hideTip();
+  });
+
+  function renderTip(a) {
+    let h = '<div class="anno-tip-hd">' + esc(a.title) + '</div>';
+    a.rules.forEach(r => {
+      const label = r.id ? r.id : r.type;
+      h += '<div class="anno-row">'
+         + '<span class="anno-tag t-' + r.type + '">' + esc(label) + '</span>'
+         + '<span class="anno-txt">' + esc(r.text) + '</span></div>';
+    });
+    tip.innerHTML = h;
+  }
+  function showTip(e, a) {
+    if (!document.body.classList.contains('anno-on')) return;
+    renderTip(a);
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + r.width > innerWidth)  x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight) y = e.clientY - r.height - 14;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top  = Math.max(8, y) + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+  function esc(s) { return String(s).replace(/[&<>]/g,
+    c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+
+  const entries = [];
+  ANNOTATIONS.forEach((a, i) => {
+    const el = document.querySelector(a.sel);
+    if (!el) { console.warn('[规则标注] 选择器未命中：' + a.sel); return; }
+    el.setAttribute('data-anno-marked', '');
+
+    const badge = document.createElement('div');
+    badge.className = 'anno-badge';
+    badge.textContent = i + 1;
+    document.body.appendChild(badge);
+
+    [el, badge].forEach(t => {
+      t.addEventListener('mousemove', e => showTip(e, a));
+      t.addEventListener('mouseleave', hideTip);
+    });
+    entries.push({ el, badge });
+  });
+
+  function refresh() {
+    entries.forEach(({ el, badge }) => {
+      if (el.getClientRects().length === 0) { badge.classList.add('anno-hidden'); return; }
+      badge.classList.remove('anno-hidden');
+      const r = el.getBoundingClientRect();
+      badge.style.left = (r.right + scrollX - 9) + 'px';
+      badge.style.top  = (r.top + scrollY - 9) + 'px';
+    });
+  }
+  refresh();
+  addEventListener('scroll', refresh, true);
+  addEventListener('resize', refresh);
+  setInterval(refresh, 500);
+})();
+</script>
+<!-- ══════════════ 规则标注层 结束 ══════════════ -->
 </body>
 </html>
