@@ -723,7 +723,28 @@ label{font-size:13px;color:var(--t2)}
 
       <!-- ─── 商品信息（标品 Step 3 / 非标品新建 Step 4 / 非标品已有 Step 2）───-->
       <div id="ws-sku" style="display:none">
-        <div class="notice-box notice-info" id="sku-notice">将基于货品创建商品 SKU，建立 1:1 映射（换算系数=1）</div>
+        <div class="notice-box notice-info" id="sku-notice">将基于货品创建商品 SKU。货品已维护的规格、产地、品牌等信息自动带入，无需重复录入。</div>
+        <div class="form-section">
+          <div class="form-section-title">规格信息 <span style="font-weight:normal;color:var(--t3);font-size:12px">（继承自货品，只读）</span></div>
+          <div class="form-row">
+            <div class="form-field w3"><div class="detail-label">净含量</div><div class="detail-value" id="sku-net">1 KG</div></div>
+            <div class="form-field w3"><div class="detail-label">计量单位</div><div class="detail-value" id="sku-measure">袋</div></div>
+            <div class="form-field w3"><div class="detail-label">箱规</div><div class="detail-value" id="sku-box">12 袋 / 箱</div></div>
+          </div>
+          <div class="form-row">
+            <div class="form-field full">
+              <label class="required">最小售卖单位</label>
+              <div class="radio-group">
+                <label class="radio-option"><input type="radio" name="sku-sell-unit" checked onchange="syncSellUnit('measure')"> 袋（计量单位）</label>
+                <label class="radio-option"><input type="radio" name="sku-sell-unit" onchange="syncSellUnit('box')"> 箱（包装规格单位）</label>
+              </div>
+              <div class="form-hint" id="sku-sell-hint">客户最少购买 1 袋；下单按 1 袋扣减 1 货品库存。货品未维护箱规时仅可选计量单位。</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field w3"><label>换算系数</label><div class="flex gap8 items-center"><input type="text" id="sku-coef" value="1" class="readonly-field" readonly style="width:60px"><span class="text-gray text-sm" id="sku-coef-desc">1 售卖单位 = 1 货品计量单位</span></div></div>
+          </div>
+        </div>
         <div class="form-section">
           <div class="form-section-title">商品基础信息</div>
           <div class="form-row">
@@ -731,8 +752,8 @@ label{font-size:13px;color:var(--t2)}
             <div class="form-field w2"><label class="required">前台类目</label><select class="iw100"><option value="">请选择</option><option>海鲜水产</option><option>新鲜蔬菜</option><option>肉禽蛋品</option><option>调味品</option></select></div>
           </div>
           <div class="form-row">
-            <div class="form-field w3"><label>售卖单位</label><div class="flex gap8 items-center"><input type="text" id="sku-unit" value="—" class="readonly-field" readonly style="width:80px"><span class="text-gray text-sm">= 货品计量单位</span></div></div>
-            <div class="form-field w3"><label>换算系数</label><div class="flex gap8 items-center"><input type="text" value="1" class="readonly-field" readonly style="width:60px"><span class="text-gray text-sm">1 SKU = 1 货品</span></div></div>
+            <div class="form-field w3"><label>产地</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
+            <div class="form-field w3"><label>品牌</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
           </div>
           <div class="form-row"><div class="form-field full"><label>商品描述</label><textarea class="iw100" placeholder="面向客户的描述（选填）"></textarea></div></div>
           <div class="form-row">
@@ -744,7 +765,7 @@ label{font-size:13px;color:var(--t2)}
           </div>
           <div class="form-section-title" style="margin-top:8px">售卖信息</div>
           <div class="form-row">
-            <div class="form-field w3"><label>默认售价</label><div class="flex gap8 items-center"><input type="number" placeholder="0.00" style="width:120px;height:32px" step="0.01"><span class="text-gray">SGD</span></div></div>
+            <div class="form-field w3"><label>默认售价</label><div class="flex gap8 items-center"><input type="number" placeholder="0.00" style="width:120px;height:32px" step="0.01"><span class="text-gray" id="sku-price-unit">SGD / 袋</span></div></div>
             <div class="form-field w3"><label class="required">商品状态</label><div class="radio-group"><label class="radio-option"><input type="radio" name="sku-status" checked> 暂不上架</label><label class="radio-option"><input type="radio" name="sku-status"> 立即上架</label></div></div>
           </div>
         </div>
@@ -1548,10 +1569,26 @@ function updateFinBlockNums(){
 }
 
 function syncSku(val){
-  document.getElementById('sku-name').value=val;
+  const n=document.getElementById('sku-name');
+  if(n) n.value=val;
 }
-function updateSkuUnit(val){
-  document.getElementById('sku-unit').value=val||'—';
+// 最小售卖单位切换：计量单位 ↔ 包装规格单位，联动换算系数 / 售价单位 / 库存扣减说明
+function syncSellUnit(mode){
+  const coef=document.getElementById('sku-coef');
+  const desc=document.getElementById('sku-coef-desc');
+  const hint=document.getElementById('sku-sell-hint');
+  const priceUnit=document.getElementById('sku-price-unit');
+  if(mode==='box'){
+    if(coef) coef.value='12';
+    if(desc) desc.textContent='1 售卖单位（箱）= 12 货品计量单位（袋）';
+    if(hint) hint.textContent='客户最少购买 1 箱；下单按 1 箱扣减 12 货品库存。';
+    if(priceUnit) priceUnit.textContent='SGD / 箱';
+  }else{
+    if(coef) coef.value='1';
+    if(desc) desc.textContent='1 售卖单位 = 1 货品计量单位';
+    if(hint) hint.textContent='客户最少购买 1 袋；下单按 1 袋扣减 1 货品库存。';
+    if(priceUnit) priceUnit.textContent='SGD / 袋';
+  }
 }
 
 function fillExistRaw(val){
