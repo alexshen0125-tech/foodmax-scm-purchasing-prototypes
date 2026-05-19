@@ -166,7 +166,6 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
     </div>
     <div class="btn-group">
       <button class="btn" onclick="showToast('已加入导出队列')">导出</button>
-      <button class="btn" onclick="openDialog('regen-dialog')">重新生成</button>
       <button class="btn btn-primary" onclick="openDialog('create-po-dialog')">生成采购单</button>
     </div>
   </div>
@@ -174,7 +173,7 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
   <div class="stat-row">
     <div class="stat-card"><div class="stat-label">今日计划 SKU</div><div class="stat-value">386</div><div class="stat-desc">蔬果 312 / 标品 24 / 短保 50</div></div>
     <div class="stat-card"><div class="stat-label">自动建议总量</div><div class="stat-value">12,840</div><div class="stat-desc">KG/份混合统计，仅用于趋势</div></div>
-    <div class="stat-card"><div class="stat-label">供应商待分配</div><div class="stat-value text-orange">17</div><div class="stat-desc">含赶不上缺货、供货上限不足</div></div>
+    <div class="stat-card"><div class="stat-label">分配待处理</div><div class="stat-value text-orange">17</div><div class="stat-desc">含待确认、供货上限不足异常</div></div>
     <div class="stat-card"><div class="stat-label">已生成采购单</div><div class="stat-value text-green">71%</div><div class="stat-desc">按供应商 + 仓库 + 到货日拆单</div></div>
   </div>
 
@@ -186,7 +185,7 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
         <div class="filter-item"><label>商品类型</label><select class="iw140"><option>全部</option><option>蔬果原料</option><option>蔬菜标品</option><option>非蔬果短保</option></select></div>
         <div class="filter-item"><label>品类</label><select class="iw140"><option>全部</option><option>新鲜蔬菜</option><option>新鲜水果</option><option>米面粮油</option></select></div>
         <div class="filter-item"><label>风险状态</label><select class="iw140"><option>全部</option><option>当日缺货</option><option>高预警</option><option>低预警</option><option>数据缺失</option></select></div>
-        <div class="filter-item"><label>分配状态</label><select class="iw120"><option>全部</option><option>待分配</option><option>已分配</option><option>异常</option></select></div>
+        <div class="filter-item"><label>分配状态</label><select class="iw120"><option>全部</option><option>待确认</option><option>已确认</option><option>异常</option><option>无需分配</option></select></div>
         <div class="filter-item"><label>分配策略</label><select class="iw120"><option>全部</option><option>履约优先</option><option>成本优先</option><option>主供应商优先</option><option>配额分摊</option></select></div>
         <div class="filter-item"><label>商品</label><input class="iw200" type="text" placeholder="SPU/SKU/名称"></div>
         <div class="filter-btns">
@@ -199,7 +198,7 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
 
   <div class="card">
     <div class="tbl-toolbar">
-      <div class="tbl-toolbar-left"><span>已选 <b id="checked-count">2</b> 项</span><span class="tag tag-orange">17 项待分配</span><span class="tag tag-red">8 项当日缺货</span><span class="tag tag-blue">42 项主供应商优先</span></div>
+      <div class="tbl-toolbar-left"><span>已选 <b id="checked-count">2</b> 项</span><span class="tag tag-orange">17 项待确认</span><span class="tag tag-red">8 项当日缺货</span><span class="tag tag-blue">42 项主供应商优先</span></div>
       <div class="tbl-toolbar-right">
         <button class="btn btn-sm" onclick="openBatchAdjust()">批量调整</button>
         <button class="btn btn-sm" onclick="showToast('已批量按默认策略重新分配')">批量分配</button>
@@ -227,14 +226,14 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
             <td><div>（原箱）大白菜</div><div class="text-sm text-gray">spu00003821</div></td>
             <td><span class="tag tag-green">蔬果原料</span></td>
             <td>L2 中销</td><td>5 天</td><td class="num">382</td><td class="num">96</td><td class="num">66</td><td><span class="tag tag-orange">明日 12:00</span></td><td class="num">3.5</td><td class="num">1,500</td><td><span class="tag tag-green">主供应商优先</span></td>
-            <td><div class="split-lines"><span class="supplier-pill"><b>Fresh&Green</b> 今日不接单</span><span class="supplier-pill"><b>Hattah</b> 1,500 / T+1</span></div></td><td><span class="tag tag-orange">已切备用</span></td><td><span class="tag tag-orange">主供不接单</span></td><td><button class="btn-text" onclick="openDrawer('大白菜')">详情</button><button class="btn-text" onclick="openAllocationDialog('大白菜')">分配</button></td>
+            <td><div class="split-lines"><span class="supplier-pill"><b>Fresh&Green</b> 今日不接单</span><span class="supplier-pill"><b>Hattah</b> 1,500 / T+1</span></div></td><td><span class="tag tag-orange">待确认</span></td><td><span class="tag tag-orange">主供不接单</span></td><td><button class="btn-text" onclick="openDrawer('大白菜')">详情</button><button class="btn-text" onclick="openAllocationDialog('大白菜')">分配</button></td>
           </tr>
           <tr>
             <td class="tbl-check"><input class="row-chk" type="checkbox" onchange="syncChecked()"></td>
             <td><div>四方豆 1KG/份</div><div class="text-sm text-gray">sku00005917</div></td>
             <td><span class="tag tag-blue">蔬菜标品</span></td>
             <td>L3 低销</td><td>2 天</td><td class="num">12</td><td class="num">9</td><td class="num">5</td><td><span class="tag tag-gray">2 天后</span></td><td class="num">1.5</td><td class="num">20</td><td><span class="tag tag-blue">成本优先</span></td>
-            <td><div class="split-lines"><span class="supplier-pill"><b>默认供应商</b> 20 / T+2</span></div></td><td><span class="tag tag-green">已分配</span></td><td><span class="tag tag-gray">正常</span></td><td><button class="btn-text" onclick="openDrawer('四方豆 1KG/份')">详情</button><button class="btn-text" onclick="openAllocationDialog('四方豆')">分配</button></td>
+            <td><div class="split-lines"><span class="supplier-pill"><b>默认供应商</b> 20 / T+2</span></div></td><td><span class="tag tag-green">已确认</span></td><td><span class="tag tag-gray">正常</span></td><td><button class="btn-text" onclick="openDrawer('四方豆 1KG/份')">详情</button><button class="btn-text" onclick="openAllocationDialog('四方豆')">分配</button></td>
           </tr>
           <tr>
             <td class="tbl-check"><input class="row-chk" type="checkbox" onchange="syncChecked()"></td>
@@ -340,8 +339,7 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
 
 <div class="page" id="page-batch-monitor">
   <div class="page-header">
-    <div><div class="page-title">计划生成批次</div><div class="page-sub">监控销售、售罄、库存、在途等数据源状态</div></div>
-    <button class="btn btn-primary" onclick="openDialog('rerun-dialog')">手动重跑</button>
+    <div><div class="page-title">计划生成批次</div><div class="page-sub">监控销售、售罄、库存、在途数据源状态；批次失败系统自动重试（30 分钟间隔，最多 3 次），无需手动干预</div></div>
   </div>
   <div class="card"><div class="card-body"><div class="filter-form">
     <div class="filter-item"><label>计划日期</label><input class="iw140" value="2026-05-14"></div>
@@ -400,6 +398,7 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
 
 <div class="page" id="page-product-param">
   <div class="page-header"><div><div class="page-title">商品采购参数</div><div class="page-sub">维护采购计划计算所需的 VLT、VCT、箱规、安全库存、默认供应商</div></div><button class="btn btn-primary" onclick="showToast('商品采购参数已批量保存','success')">批量保存</button></div>
+  <div class="notice-box">此处 VLT/VCT 取默认供应商，仅用于「备货天数」的提前期修正；供应商分配时的实际提前期按供应商在「备货策略配置 → 供应商供货规则」维护。</div>
   <div class="card"><div class="card-body"><div class="filter-form">
     <div class="filter-item"><label>商品</label><input class="iw240" placeholder="SPU/SKU/名称"></div>
     <div class="filter-item"><label>品类</label><select class="iw140"><option>全部</option><option>新鲜蔬菜</option></select></div>
@@ -529,8 +528,6 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
   </div>
 </div>
 
-<div class="overlay" id="regen-dialog"><div class="dialog dialog-sm"><div class="dialog-header"><h3>重新生成采购计划</h3><div class="dialog-close" onclick="closeDialog('regen-dialog')">×</div></div><div class="dialog-body"><div class="notice-warn notice-box">仅覆盖未提交草稿；已生成采购单的明细不会被覆盖。</div><div class="filter-item"><label>重跑范围</label><select><option>当前筛选结果</option><option>整仓全部商品</option></select></div></div><div class="dialog-footer"><button class="btn" onclick="closeDialog('regen-dialog')">取消</button><button class="btn btn-primary" onclick="closeDialog('regen-dialog');showToast('已提交重新生成任务','success')">确认</button></div></div></div>
-<div class="overlay" id="rerun-dialog"><div class="dialog dialog-sm"><div class="dialog-header"><h3>手动重跑批次</h3><div class="dialog-close" onclick="closeDialog('rerun-dialog')">×</div></div><div class="dialog-body"><div class="filter-item"><label>计划日期</label><input value="2026-05-14"></div><div class="filter-item mt12"><label>仓库</label><select><option>新加坡-B端仓</option></select></div></div><div class="dialog-footer"><button class="btn" onclick="closeDialog('rerun-dialog')">取消</button><button class="btn btn-primary" onclick="closeDialog('rerun-dialog');showToast('批次重跑已开始','success')">开始重跑</button></div></div></div>
 <div class="overlay" id="batch-detail-dialog"><div class="dialog dialog-lg"><div class="dialog-header"><h3>批次详情</h3><div class="dialog-close" onclick="closeDialog('batch-detail-dialog')">×</div></div><div class="dialog-body"><table><thead><tr><th>数据源</th><th>拉取时间</th><th>记录数</th><th>状态</th><th>失败原因</th></tr></thead><tbody><tr><td>销售实时</td><td>17:00:03</td><td>8,420</td><td><span class="tag tag-green">成功</span></td><td>-</td></tr><tr><td>售罄</td><td>17:00:08</td><td>2,427</td><td><span class="tag tag-red">失败</span></td><td>BI 接口超时</td></tr></tbody></table></div><div class="dialog-footer"><button class="btn" onclick="closeDialog('batch-detail-dialog')">关闭</button></div></div></div>
 <div class="overlay" id="whitelist-dialog"><div class="dialog dialog-md"><div class="dialog-header"><h3 id="whitelist-dialog-title">新增白名单</h3><div class="dialog-close" onclick="closeDialog('whitelist-dialog')">×</div></div><div class="dialog-body"><div class="grid-2"><div class="filter-item"><label>白名单类型</label><select><option>蔬菜标品</option><option>非蔬果短保</option></select></div><div class="filter-item"><label>SKU</label><input placeholder="输入 SKU 编码"></div><div class="filter-item"><label>可售期</label><input value="3"></div><div class="filter-item"><label>是否读批次</label><select><option>否</option><option>是</option></select></div></div></div><div class="dialog-footer"><button class="btn" onclick="closeDialog('whitelist-dialog')">取消</button><button class="btn btn-primary" onclick="closeDialog('whitelist-dialog');showToast('白名单配置已保存','success')">保存</button></div></div></div>
 <div class="toast" id="toast"></div>
