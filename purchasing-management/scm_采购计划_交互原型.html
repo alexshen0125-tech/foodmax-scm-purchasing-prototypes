@@ -3,405 +3,623 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Food Max 采购计划 · 决策工作台</title>
+<title>SCM 采购计划 · 交互原型 v2.0</title>
 <style>
-:root{
-  --green:#0f8f68;
-  --green-2:#087653;
-  --mint:#e9f7f2;
-  --ink:#172033;
-  --text:#344054;
-  --muted:#667085;
-  --light:#f6f8fb;
-  --line:#d8dee8;
-  --line-2:#edf0f5;
-  --red:#c83f49;
-  --red-bg:#fff1f2;
-  --amber:#c77718;
-  --amber-bg:#fff6e6;
-  --blue:#2563eb;
-  --blue-bg:#edf4ff;
-  --violet:#7654c8;
-  --violet-bg:#f3efff;
-  --panel:#fff;
-  --shadow:0 24px 60px rgba(16,24,40,.2);
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#eef2f6;color:var(--ink);font-size:13px}
-button,input,select{font:inherit}
-.app{height:100vh;display:grid;grid-template-columns:88px 1fr;overflow:hidden}
-.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:18px}
-.logo{width:44px;height:44px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800}
-.rail button{width:58px;height:54px;border:0;border-radius:8px;background:transparent;color:#cbd5e1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px}
-.rail button.active,.rail button:hover{background:#1d2939;color:#fff}
-.dot{width:7px;height:7px;border-radius:50%;background:#475467}.rail button.active .dot{background:var(--green)}
-.main{height:100vh;overflow:auto}
-.hero{background:#fff;border-bottom:1px solid var(--line);padding:18px 26px 16px}
-.hero-top{display:flex;align-items:center;justify-content:space-between;gap:18px}
-.title{font-size:24px;font-weight:800;letter-spacing:0}
-.subtitle{margin-top:7px;color:var(--muted)}
-.hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.btn{height:34px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:0 13px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px}
-.btn:hover{border-color:var(--green);color:var(--green)}
-.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
-.btn.primary:hover{background:var(--green-2);color:#fff}
-.btn.text{border:0;background:transparent;color:var(--green);padding:0 6px}
-.btn.small{height:28px;padding:0 9px;font-size:12px}
-.date-chip{height:34px;border:1px solid var(--line);border-radius:5px;padding:0 11px;background:#fff;color:var(--text)}
-.health{display:grid;grid-template-columns:1.15fr 2fr 1.15fr;gap:14px;margin-top:16px}
-.health-card{border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;min-height:96px}
-.health-card h3{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:650}
-.big{font-size:28px;font-weight:800;line-height:1}.big.red{color:var(--red)}.big.green{color:var(--green)}.big.amber{color:var(--amber)}
-.micro{margin-top:8px;color:var(--muted);font-size:12px}
-.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.pipe-step{border:1px solid var(--line-2);border-radius:6px;padding:10px;background:#fafbfc}
-.pipe-step strong{display:block;margin-bottom:6px}.pipe-step span{font-size:12px;color:var(--muted)}
-.ok{color:var(--green)}.warn{color:var(--amber)}
-.workspace{padding:18px 26px 44px}
-.board{display:grid;grid-template-columns:340px minmax(720px,1fr) 330px;gap:14px;align-items:start}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.panel-head{height:48px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-2)}
-.panel-title{font-weight:750}
-.panel-body{padding:14px}
-.queue{display:flex;flex-direction:column;gap:10px}
-.queue-card{border:1px solid var(--line);border-radius:7px;padding:12px;cursor:pointer;background:#fff}
-.queue-card:hover{border-color:var(--green);box-shadow:0 8px 20px rgba(16,24,40,.08)}
-.queue-card.active{border-color:var(--green);background:var(--mint)}
-.queue-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.sku{font-weight:800;margin-bottom:3px}.code{font-size:12px;color:var(--muted)}
-.pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;border:1px solid transparent;white-space:nowrap}
-.pill.red{color:var(--red);background:var(--red-bg);border-color:#ffc9cf}
-.pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
-.pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
-.pill.blue{color:var(--blue);background:var(--blue-bg);border-color:#c8d9ff}
-.pill.violet{color:var(--violet);background:var(--violet-bg);border-color:#d7caff}
-.queue-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-.metric{background:#fafbfc;border:1px solid var(--line-2);border-radius:5px;padding:8px}
-.metric label{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}.metric b{font-size:15px}
-.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.filters select,.filters input{height:30px;border:1px solid var(--line);border-radius:5px;background:#fff;padding:0 9px;color:var(--text)}
-.decision-main{display:grid;grid-template-rows:auto auto 1fr;gap:12px}
-.focus{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.focus-box{border:1px solid var(--line-2);border-radius:7px;background:#fafbfc;padding:12px}
-.focus-box label{display:block;color:var(--muted);margin-bottom:7px}.focus-box b{font-size:20px}
-.formula{display:flex;align-items:center;gap:8px;overflow:auto;padding-bottom:2px}
-.formula span{white-space:nowrap}
-.token{height:34px;border:1px solid var(--line);border-radius:5px;background:#fff;padding:0 10px;display:inline-flex;align-items:center;gap:6px}
-.token b{font-family:Menlo,Consolas,monospace}
-.token.red b{color:var(--red)}.token.green b{color:var(--green)}
-.equals{font-size:18px;color:var(--muted)}
-.table-wrap{overflow:auto}
-table{width:100%;border-collapse:collapse;min-width:780px}
-th,td{padding:10px;border-bottom:1px solid var(--line-2);text-align:left;white-space:nowrap;vertical-align:middle}
-th{background:#f8fafc;color:var(--muted);font-weight:650}
-tr:hover td{background:#fbfcfd}
-.num{text-align:right;font-family:Menlo,Consolas,monospace}
-.input-num{width:86px;height:28px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 8px}
-.supplier{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;border:1px solid var(--line);border-radius:7px;padding:12px;margin-bottom:10px}
-.supplier.active{border-color:var(--green);background:var(--mint)}
-.supplier h4{margin:0 0 5px;font-size:14px}.supplier p{margin:0;color:var(--muted);line-height:1.55}
-.rank{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#101828;color:#fff;font-weight:800}
-.sim{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.slider-row{display:flex;align-items:center;gap:10px;margin:10px 0}.slider-row input{flex:1;accent-color:var(--green)}
-.footer-bar{position:sticky;bottom:0;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:8px;margin-top:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 -8px 30px rgba(16,24,40,.08)}
-.summary{display:flex;align-items:center;gap:12px;color:var(--muted)}.summary b{color:var(--ink)}
-.view{display:none}.view.active{display:block}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.compact-list{display:flex;flex-direction:column}
-.compact-item{display:grid;grid-template-columns:1.2fr .8fr .8fr auto;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line-2);align-items:center}
-.plan-map{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.map-card{border:1px solid var(--line);border-radius:8px;background:#fff;padding:13px}
-.map-card h4{margin:0 0 8px}.map-card p{margin:0;color:var(--muted);line-height:1.6}
-.drawer-mask{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;z-index:20}
-.drawer-mask.show{display:block}
-.drawer{position:absolute;right:0;top:0;width:min(760px,92vw);height:100%;background:#fff;box-shadow:var(--shadow);display:grid;grid-template-rows:58px 1fr 62px}
-.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line)}
-.drawer-title{font-size:16px;font-weight:800}
-.close{border:0;background:transparent;font-size:24px;color:var(--muted);cursor:pointer}
-.drawer-body{overflow:auto;padding:16px 18px}
-.drawer-foot{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);padding:13px 18px}
-.toast{position:fixed;right:24px;top:22px;background:#172033;color:#fff;padding:11px 14px;border-radius:6px;box-shadow:0 10px 28px rgba(16,24,40,.22);display:none;z-index:30}
-.toast.show{display:block}
-@media(max-width:1280px){.board{grid-template-columns:300px minmax(620px,1fr)}.right-stack{grid-column:1/-1}.health{grid-template-columns:1fr}.plan-map{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:860px){.app{grid-template-columns:1fr}.rail{display:none}.hero,.workspace{padding-left:14px;padding-right:14px}.board,.two-col,.focus,.sim,.plan-map{grid-template-columns:1fr}.hero-top{align-items:flex-start;flex-direction:column}.footer-bar{align-items:flex-start;flex-direction:column}.pipeline{grid-template-columns:1fr}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:#303133;background:#f0f2f5;min-height:100vh}
+:root{--primary:#07B77D;--primary-hover:#05A06D;--primary-light:#e8f9f4;--danger:#F56C6C;--warning:#E6A23C;--info:#409EFF;--border:#DCDFE6;--t1:#303133;--t2:#606266;--t3:#909399;--bg:#F5F7FA}
+.layout{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:50px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;flex-shrink:0}
+.topbar-logo{font-weight:700;font-size:16px;color:#fff;background:var(--primary);padding:4px 12px;border-radius:4px;margin-right:24px}
+.topbar-nav{display:flex;align-items:stretch;height:100%}
+.topbar-nav a{display:flex;align-items:center;padding:0 16px;color:var(--t2);text-decoration:none;font-size:13px;border-bottom:2px solid transparent;cursor:pointer;transition:all .2s}
+.topbar-nav a:hover{color:var(--primary)}
+.topbar-nav a.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px;color:var(--t2);font-size:13px}
+.topbar-right span{cursor:pointer;padding:4px 8px;border-radius:3px}
+.topbar-right span:hover{background:var(--bg)}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:#fff;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sidebar-group-title{padding:12px 16px 6px;font-size:12px;color:var(--t3);letter-spacing:.5px}
+.sidebar-item{display:flex;align-items:center;padding:10px 20px;color:var(--t2);cursor:pointer;font-size:13px;border-left:3px solid transparent;transition:all .15s}
+.sidebar-item:hover{background:var(--primary-light);color:var(--primary)}
+.sidebar-item.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:500}
+.main{flex:1;overflow:auto;padding:16px}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.page-title{font-size:16px;font-weight:600;color:var(--t1)}
+.page-sub{font-size:12px;color:var(--t3);margin-top:4px}
+.breadcrumb{font-size:13px;color:var(--t3);display:flex;align-items:center;gap:6px;margin-bottom:16px}
+.breadcrumb a{color:var(--primary);cursor:pointer;text-decoration:none}
+.card{background:#fff;border-radius:4px;border:1px solid var(--border);margin-bottom:12px}
+.card-body{padding:16px}
+.filter-form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.filter-item{display:flex;flex-direction:column;gap:4px}
+.filter-item label{font-size:12px;color:var(--t2)}
+.filter-btns{display:flex;gap:8px;align-items:flex-end}
+input[type=text],input[type=number],select,textarea{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;font-size:13px;color:var(--t1);background:#fff;outline:none;width:100%;transition:border .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23909399'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+textarea{height:72px;resize:vertical;padding:8px 10px}
+.iw80{width:80px}.iw100{width:100px}.iw120{width:120px}.iw140{width:140px}.iw160{width:160px}.iw200{width:200px}.iw240{width:240px}.iw280{width:280px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:32px;padding:0 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--t1);transition:all .15s;white-space:nowrap;text-decoration:none}
+.btn:hover{color:var(--primary);border-color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);color:#fff}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+.btn-danger{color:var(--danger);border-color:var(--danger)}
+.btn-text{border:none;background:none;color:var(--primary);padding:0 4px;height:auto;cursor:pointer;font-size:13px}
+.btn-text:hover{color:var(--primary-hover)}
+.btn-text.danger{color:var(--danger)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.tbl-toolbar-left{display:flex;align-items:center;gap:8px;color:var(--t2);font-size:13px}
+.tbl-toolbar-right{display:flex;align-items:center;gap:8px}
+.table-scroll{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fafafa;color:var(--t2);font-weight:500;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0f0f0;color:var(--t1);vertical-align:middle;white-space:nowrap}
+tr:hover td{background:#fafafa}
+.tbl-check{width:40px;text-align:center}
+input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--primary)}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500}
+.tag-green{background:#e8f9f4;color:#07B77D;border:1px solid #b3e8d8}
+.tag-blue{background:#ecf5ff;color:#409EFF;border:1px solid #b3d8ff}
+.tag-gray{background:#f4f4f5;color:#909399;border:1px solid #d3d4d6}
+.tag-orange{background:#fdf6ec;color:#E6A23C;border:1px solid #f5dab1}
+.tag-red{background:#fef0f0;color:#F56C6C;border:1px solid #fbc4c4}
+.tag-purple{background:#f0eeff;color:#8B5CF6;border:1px solid #c4b5fd}
+.num{font-family:Menlo,Consolas,monospace;text-align:right}
+.input-mini{width:72px;height:28px;font-size:12px;padding:0 8px}
+.select-mini{width:96px;height:28px;font-size:12px;padding-left:8px}
+.pagination{display:flex;align-items:center;gap:4px;padding:12px 16px;justify-content:flex-end;border-top:1px solid var(--border)}
+.page-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;background:#fff;color:var(--t2)}
+.page-btn:hover,.page-btn.active{border-color:var(--primary);color:var(--primary)}
+.page-btn.active{background:var(--primary);color:#fff}
+.page-info{font-size:13px;color:var(--t2);padding:0 4px}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab-item{padding:10px 18px;cursor:pointer;font-size:13px;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab-item:hover{color:var(--primary)}
+.tab-item.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.tab-pane{display:none;padding-top:16px}.tab-pane.active{display:block}
+.stat-row{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:12px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.stat-label{font-size:12px;color:var(--t3);margin-bottom:8px}
+.stat-value{font-size:22px;font-weight:600;color:var(--t1)}
+.stat-desc{font-size:12px;color:var(--t3);margin-top:6px}
+.notice-box{background:#ecf5ff;border:1px solid #b3d8ff;border-radius:4px;padding:10px 14px;font-size:13px;color:#409EFF;margin-bottom:12px}
+.notice-warn{background:#fdf6ec;border-color:#f5dab1;color:#E6A23C}
+.formula-box{background:#fafafa;border:1px solid var(--border);border-radius:4px;padding:12px;font-size:13px;color:var(--t2);line-height:1.8}
+.formula-line{display:flex;gap:12px;align-items:flex-start;border-bottom:1px dashed #e6e6e6;padding:6px 0}
+.formula-line:last-child{border-bottom:none}
+.formula-k{width:120px;color:var(--t3);flex-shrink:0}
+.formula-v{color:var(--t1)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.progress{height:8px;background:#ebeef5;border-radius:10px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--primary)}
+.split-lines{display:flex;flex-direction:column;gap:4px}
+.supplier-pill{display:inline-flex;align-items:center;gap:4px;color:var(--t2);font-size:12px}
+.supplier-pill b{color:var(--t1);font-weight:500}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.dialog{background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.15);max-height:90vh;overflow:hidden;display:flex;flex-direction:column}
+.dialog-sm{width:480px}.dialog-md{width:640px}.dialog-lg{width:920px}
+.dialog-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dialog-header h3{font-size:15px;font-weight:600}
+.dialog-close{width:24px;height:24px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:18px;line-height:1}
+.dialog-close:hover{background:var(--bg);color:var(--t1)}
+.dialog-body{padding:20px;overflow-y:auto;flex:1}
+.dialog-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+.drawer{position:fixed;top:0;right:-760px;width:760px;height:100vh;background:#fff;z-index:1100;box-shadow:-4px 0 18px rgba(0,0,0,.12);transition:right .2s;display:flex;flex-direction:column}
+.drawer.show{right:0}
+.drawer-header{height:56px;padding:0 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.drawer-title{font-size:16px;font-weight:600}
+.drawer-body{flex:1;overflow:auto;padding:16px 20px}
+.drawer-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#303133;color:#fff;padding:10px 20px;border-radius:4px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s}
+.toast.show{opacity:1}
+.toast.success{background:#67C23A}.toast.warning{background:#E6A23C}.toast.error{background:#F56C6C}
+.flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap8{gap:8px}.gap12{gap:12px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mb12{margin-bottom:12px}.text-gray{color:var(--t3)}.text-sm{font-size:12px}.text-red{color:var(--danger)}.text-green{color:var(--primary)}.text-orange{color:var(--warning)}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside class="rail">
-    <div class="logo">FM</div>
-    <button class="active" data-view="today"><span class="dot"></span>今日</button>
-    <button data-view="exceptions"><span class="dot"></span>异常</button>
-    <button data-view="simulation"><span class="dot"></span>模拟</button>
-    <button data-view="rules"><span class="dot"></span>规则</button>
-  </aside>
-  <main class="main">
-    <section class="hero">
-      <div class="hero-top">
-        <div>
-          <div class="title">采购计划决策工作台</div>
-          <div class="subtitle">先处理会缺货的 SKU，再确认可自动通过的建议，最后按供应商拆成草稿采购单。</div>
-        </div>
-        <div class="hero-actions">
-          <select class="date-chip"><option>West Hub</option><option>East Hub</option></select>
-          <input class="date-chip" value="2026-05-20">
-          <button class="btn" onclick="toast('已重新拉取库存与在途，销售数据保持 17:00 批次')">刷新数据</button>
-          <button class="btn primary" onclick="openDrawer('create')">生成采购单</button>
-        </div>
-      </div>
-      <div class="health">
-        <div class="health-card">
-          <h3>今天必须人工决策</h3>
-          <div class="big red">9</div>
-          <div class="micro">7 个当日缺货，2 个默认供应商不接单</div>
-        </div>
-        <div class="health-card">
-          <h3>数据准备度</h3>
-          <div class="pipeline">
-            <div class="pipe-step"><strong class="ok">销售实时</strong><span>17:00 完成</span></div>
-            <div class="pipe-step"><strong class="ok">历史销量</strong><span>近 7 日完成</span></div>
-            <div class="pipe-step"><strong class="ok">售罄日</strong><span>已剔除</span></div>
-            <div class="pipe-step"><strong class="ok">库存批次</strong><span>含短保</span></div>
-            <div class="pipe-step"><strong class="warn">采购在途</strong><span>重试 1 次</span></div>
-          </div>
-        </div>
-        <div class="health-card">
-          <h3>可一键通过</h3>
-          <div class="big green">83%</div>
-          <div class="micro">106 个 SKU 无风险，可直接确认系统建议</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="workspace">
-      <div class="view active" id="today">
-        <div class="board">
-          <section class="panel">
-            <div class="panel-head">
-              <div class="panel-title">风险队列</div>
-              <span class="pill red">按缺货时间排序</span>
-            </div>
-            <div class="panel-body">
-              <div class="filters" style="margin-bottom:12px">
-                <select><option>全部风险</option><option>当日缺货</option><option>默认供应商不接单</option><option>数据异常</option></select>
-                <select><option>全部品类</option><option>菇类</option><option>叶菜</option><option>肉禽</option></select>
-              </div>
-              <div class="queue" id="riskQueue"></div>
-            </div>
-          </section>
-
-          <section class="decision-main">
-            <div class="panel">
-              <div class="panel-head">
-                <div class="panel-title" id="focusTitle">金针菇 · SPU-10021</div>
-                <div class="filters"><span class="pill red" id="focusRisk">预计 21:30 缺货</span><span class="pill amber" id="focusMode">默认供应商不接单</span></div>
-              </div>
-              <div class="panel-body">
-                <div class="focus">
-                  <div class="focus-box"><label>系统建议采购量</label><b id="suggestQty">620 KG</b></div>
-                  <div class="focus-box"><label>若不下单，预计缺口</label><b class="big red" style="font-size:20px" id="gapQty">84 KG</b></div>
-                  <div class="focus-box"><label>推荐动作</label><b id="actionText">请从今日接单候选中选择</b></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-head"><div class="panel-title">计算不是黑盒</div><button class="btn text small" onclick="openDrawer('calc')">查看完整明细</button></div>
-              <div class="panel-body">
-                <div class="formula">
-                  <span class="token">均销 <b id="fMu">535</b></span>
-                  <span class="token">目标天数 <b id="fDays">3.5</b></span>
-                  <span class="token red">预计剩余 <b id="fLeft">-84</b></span>
-                  <span class="token">在途 <b id="fTransit">120</b></span>
-                  <span class="equals">=</span>
-                  <span class="token green">建议量 <b id="fSuggest">620</b></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-head">
-                <div class="panel-title">供应商分配</div>
-                <div class="filters"><button class="btn small" onclick="rebalance()">重置选择</button></div>
-              </div>
-              <div class="table-wrap">
-                <table>
-                  <thead><tr><th>供应商</th><th>系统判断</th><th class="num">系统建议</th><th class="num">采购员确认</th><th>原因</th><th>结果</th></tr></thead>
-                  <tbody id="supplierRows"></tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <aside class="right-stack">
-            <section class="panel">
-              <div class="panel-head"><div class="panel-title">决策建议</div></div>
-              <div class="panel-body">
-                <div class="supplier active">
-                  <div><h4 id="recommendTitle">推荐：从今日接单候选中选择</h4><p id="recommendReason">默认供应商 GreenFarm 今日不接单（VLT=1，已过 17:30 截单）。下表是今日仍接单且 VLT=1 的候选供应商，采购请选一个。</p></div>
-                  <div class="rank">1</div>
-                </div>
-                <div class="supplier">
-                  <div><h4>备选：减少采购量</h4><p>把目标天数从 3.5 天压到 2 天，等默认供应商明天恢复接单再补。代价是把缺货风险转移到明天午市。</p></div>
-                  <div class="rank">2</div>
-                </div>
-              </div>
-            </section>
-            <section class="panel" style="margin-top:14px">
-              <div class="panel-head"><div class="panel-title">影响预览</div></div>
-              <div class="panel-body">
-                <div class="sim">
-                  <div class="focus-box"><label>预计覆盖</label><b id="coverDays">3.5 天</b></div>
-                  <div class="focus-box"><label>预计成本</label><b id="costText">$1,465</b></div>
-                </div>
-                <div class="slider-row"><span>保守</span><input type="range" min="0" max="2" value="1" onchange="toast('已切换模拟档位，建议量同步重算')"><span>激进</span></div>
-              </div>
-            </section>
-          </aside>
-        </div>
-
-        <div class="footer-bar">
-          <div class="summary"><span>本轮已确认 <b id="confirmed">0</b> 个 SKU</span><span>待人工决策 <b>9</b></span><span>预计生成 <b>14</b> 张草稿采购单</span></div>
-          <div class="hero-actions">
-            <button class="btn" onclick="toast('已批量通过 106 个无风险 SKU')">通过无风险建议</button>
-            <button class="btn primary" onclick="confirmCurrent()">确认当前 SKU</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="view" id="exceptions">
-        <div class="two-col">
-          <section class="panel">
-            <div class="panel-head"><div class="panel-title">异常按处理方式聚合</div></div>
-            <div class="compact-list">
-              <div class="compact-item"><b>默认供应商今日不接单</b><span>4 SKU</span><span class="pill amber">选今日接单候选</span><button class="btn small">处理</button></div>
-              <div class="compact-item"><b>销售异常加速</b><span>3 SKU</span><span class="pill red">需确认量</span><button class="btn small">处理</button></div>
-              <div class="compact-item"><b>库存批次少保质期</b><span>2 SKU</span><span class="pill blue">补数据</span><button class="btn small">处理</button></div>
-              <div class="compact-item"><b>建议量低于 MOQ</b><span>6 SKU</span><span class="pill violet">合并下单</span><button class="btn small">处理</button></div>
-            </div>
-          </section>
-          <section class="panel">
-            <div class="panel-head"><div class="panel-title">异常处理原则</div></div>
-            <div class="panel-body">
-              <div class="plan-map">
-                <div class="map-card"><h4>默认优先</h4><p>默认供应商今日接单且 VLT 可赶上，系统直接选默认。</p></div>
-                <div class="map-card"><h4>候选兜底</h4><p>默认供应商不接单时，列出今日接单的候选供应商，采购人工挑一个。</p></div>
-                <div class="map-card"><h4>短保控损</h4><p>库存剩余货架天数 &lt; 周转天数时，按较小值参与计算。</p></div>
-                <div class="map-card"><h4>留痕</h4><p>切换供应商、人工改量都必须选原因，进入计划效果复盘。</p></div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-
-      <div class="view" id="simulation">
-        <section class="panel">
-          <div class="panel-head"><div class="panel-title">策略模拟器</div><button class="btn primary" onclick="toast('模拟结果已应用到当前筛选 SKU，待确认后生效')">应用到当前批次</button></div>
-          <div class="panel-body">
-            <div class="focus">
-              <div class="focus-box"><label>目标缺货风险</label><b>从 7 降到 2</b></div>
-              <div class="focus-box"><label>额外采购成本</label><b class="big amber" style="font-size:20px">+$428</b></div>
-              <div class="focus-box"><label>短保报废风险</label><b class="big red" style="font-size:20px">+3.2%</b></div>
-            </div>
-            <div class="two-col" style="margin-top:14px">
-              <div class="panel"><div class="panel-head"><div class="panel-title">调节参数</div></div><div class="panel-body">
-                <div class="slider-row"><span>缺货系数</span><input type="range" min="0" max="4" value="2"><b>+2 天</b></div>
-                <div class="slider-row"><span>周末系数</span><input type="range" min="0" max="3" value="1"><b>+1 天</b></div>
-                <div class="slider-row"><span>安全库存</span><input type="range" min="0" max="25" value="10"><b>10%</b></div>
-              </div></div>
-              <div class="panel"><div class="panel-head"><div class="panel-title">受影响 SKU</div></div><div class="table-wrap"><table><thead><tr><th>商品</th><th class="num">原建议</th><th class="num">新建议</th><th>影响</th></tr></thead><tbody><tr><td>金针菇</td><td class="num">620</td><td class="num">700</td><td><span class="pill green">缺货风险下降</span></td></tr><tr><td>鲜鸡胸肉</td><td class="num">260</td><td class="num">310</td><td><span class="pill amber">短保压力上升</span></td></tr></tbody></table></div></div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div class="view" id="rules">
-        <section class="panel">
-          <div class="panel-head"><div class="panel-title">规则不是配置表，是采购策略地图</div><button class="btn primary" onclick="toast('规则草稿已保存，下次 17:00 批次生效')">保存草稿</button></div>
-          <div class="panel-body">
-            <div class="plan-map">
-              <div class="map-card"><h4>算量公式</h4><p>备货目标 = 备货天数 × 均销 ÷ (1 − SS%)；SKU 建议量 = 备货目标 − 预计剩余 − 在途，按箱规规整。</p></div>
-              <div class="map-card"><h4>默认供应商</h4><p>每个 SKU 维护一个默认供应商；今日接单 → 系统直接选默认。</p></div>
-              <div class="map-card"><h4>候选清单</h4><p>默认供应商不接单时，列出所有今日接单的供应商作为候选，采购单选一个。</p></div>
-              <div class="map-card"><h4>短保控损</h4><p>白名单内短保 SKU 取 MIN(WMS 可用, 批次剩余货架天数 × 均销) 参与计算。</p></div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </section>
-  </main>
+<div class="layout">
+<div class="topbar">
+  <div class="topbar-logo">Foodmax</div>
+  <nav class="topbar-nav">
+    <a onclick="showToast('切换到商城模块')">商城(MALL)</a>
+    <a class="active" onclick="showToast('当前位于采购模块')">采购(SCM)</a>
+    <a onclick="showToast('切换到仓储模块')">仓储(WMS)</a>
+  </nav>
+  <div class="topbar-right">
+    <span>小美新加坡(SG)</span><span>简体中文</span><span>SG</span><span>退出</span>
+  </div>
+</div>
+<div class="body-wrap">
+<div class="sidebar">
+  <div class="sidebar-group-title">采购管理</div>
+  <div class="sidebar-item active" data-nav="plan-workbench" onclick="gotoPage('plan-workbench')">采购计划</div>
+  <div class="sidebar-item" data-nav="batch-monitor" onclick="gotoPage('batch-monitor')">计划生成批次</div>
+  <div class="sidebar-item" onclick="showToast('跳转采购单管理')">采购单管理</div>
+  <div class="sidebar-item" onclick="showToast('采购分析保留为查询页')">采购分析</div>
+  <div class="sidebar-group-title">采购配置</div>
+  <div class="sidebar-item" data-nav="strategy-config" onclick="gotoPage('strategy-config')">备货策略配置</div>
+  <div class="sidebar-item" data-nav="whitelist-config" onclick="gotoPage('whitelist-config')">标品/短保白名单</div>
+  <div class="sidebar-item" data-nav="product-param" onclick="gotoPage('product-param')">商品采购参数</div>
+  <div class="sidebar-group-title">运营分析</div>
+  <div class="sidebar-item" data-nav="effect-review" onclick="gotoPage('effect-review')">计划效果复盘</div>
+  <div class="sidebar-group-title">货品中心</div>
+  <div class="sidebar-item" onclick="showToast('跳转货品管理')">货品管理</div>
+  <div class="sidebar-item" onclick="showToast('跳转BOM关系管理')">BOM关系管理</div>
+  <div class="sidebar-group-title">供应商管理</div>
+  <div class="sidebar-item" onclick="showToast('跳转供应商列表')">供应商列表</div>
 </div>
 
-<div class="drawer-mask" id="drawerMask">
-  <aside class="drawer">
-    <div class="drawer-head"><div class="drawer-title" id="drawerTitle">详情</div><button class="close" onclick="closeDrawer()">×</button></div>
-    <div class="drawer-body" id="drawerBody"></div>
-    <div class="drawer-foot"><button class="btn" onclick="closeDrawer()">关闭</button><button class="btn primary" onclick="closeDrawer();toast('操作已确认')">确认</button></div>
-  </aside>
+<div class="main">
+
+<div class="page active" id="page-plan-workbench">
+  <div class="page-header">
+    <div>
+      <div class="page-title">采购计划工作台</div>
+      <div class="page-sub">每日 17:00 自动生成；先判断 SKU 补货需求，再按供应商提前期、成本和供货能力分配采购量</div>
+    </div>
+    <div class="btn-group">
+      <button class="btn" onclick="showToast('已加入导出队列')">导出</button>
+      <button class="btn btn-primary" onclick="openDialog('create-po-dialog')">生成采购单</button>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-label">今日计划 SKU</div><div class="stat-value">386</div><div class="stat-desc">蔬果 312 / 标品 24 / 短保 50</div></div>
+    <div class="stat-card"><div class="stat-label">自动建议总量</div><div class="stat-value">12,840</div><div class="stat-desc">KG/份混合统计，仅用于趋势</div></div>
+    <div class="stat-card"><div class="stat-label">分配待处理</div><div class="stat-value text-orange">17</div><div class="stat-desc">含待确认、供货上限不足异常</div></div>
+    <div class="stat-card"><div class="stat-label">已生成采购单</div><div class="stat-value text-green">71%</div><div class="stat-desc">按供应商 + 仓库 + 到货日拆单</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="filter-form">
+        <div class="filter-item"><label>仓库</label><select class="iw160"><option>新加坡-B端仓</option></select></div>
+        <div class="filter-item"><label>计划日期</label><input class="iw140" type="text" value="2026-05-14"></div>
+        <div class="filter-item"><label>商品类型</label><select class="iw140"><option>全部</option><option>蔬果原料</option><option>蔬菜标品</option><option>非蔬果短保</option></select></div>
+        <div class="filter-item"><label>品类</label><select class="iw140"><option>全部</option><option>新鲜蔬菜</option><option>新鲜水果</option><option>米面粮油</option></select></div>
+        <div class="filter-item"><label>风险状态</label><select class="iw140"><option>全部</option><option>当日缺货</option><option>高预警</option><option>低预警</option></select></div>
+        <div class="filter-item"><label>分配状态</label><select class="iw120"><option>全部</option><option>待确认</option><option>已确认</option><option>异常</option><option>无需分配</option></select></div>
+        <div class="filter-item"><label>分配策略</label><select class="iw120"><option>全部</option><option>履约优先</option><option>成本优先</option><option>主供应商优先</option><option>配额分摊</option></select></div>
+        <div class="filter-item"><label>商品</label><input class="iw200" type="text" placeholder="SPU/SKU/名称"></div>
+        <div class="filter-btns">
+          <button class="btn btn-primary" onclick="showToast('查询成功，共 386 条','success')">查询</button>
+          <button class="btn" onclick="resetForm(this)">重置</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tbl-toolbar">
+      <div class="tbl-toolbar-left"><span>已选 <b id="checked-count">2</b> 项</span><span class="tag tag-orange">17 项待确认</span><span class="tag tag-red">8 项当日缺货</span><span class="tag tag-blue">42 项主供应商优先</span></div>
+      <div class="tbl-toolbar-right">
+        <button class="btn btn-sm" onclick="openBatchAdjust()">批量调整</button>
+        <button class="btn btn-sm" onclick="showToast('已批量按默认策略重新分配')">批量分配</button>
+        <button class="btn btn-sm" onclick="showToast('已批量确认建议量和供应商分配')">确认系统建议</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="tbl-check"><input type="checkbox" checked onclick="toggleAll(this)"></th>
+            <th>商品</th><th>类型</th><th>销售分层</th><th>保质期</th><th class="num">μ_demand</th><th class="num">销售可用</th><th class="num">预计剩余</th><th>预计缺货</th><th class="num">目标天数</th><th class="num">SKU建议量</th><th>分配策略</th><th>供应商分配</th><th>分配状态</th><th>风险</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="tbl-check"><input class="row-chk" type="checkbox" checked onchange="syncChecked()"></td>
+            <td><div>金针菇</div><div class="text-sm text-gray">spu00004574</div></td>
+            <td><span class="tag tag-green">蔬果原料</span></td>
+            <td>L1 高销</td><td>7 天</td><td class="num">1,722</td><td class="num">345</td><td class="num text-red">-135</td><td><span class="tag tag-red">今日 20:00</span></td><td class="num">4.5</td><td class="num">9,500</td><td><span class="tag tag-red">履约优先</span></td>
+            <td><div class="split-lines"><span class="supplier-pill"><b>Fresh&Green</b> 6,000 / T+1</span><span class="supplier-pill"><b>Hattah</b> 3,500 / T+2</span></div></td><td><span class="tag tag-orange">待确认</span></td><td><span class="tag tag-red">当日缺货</span></td><td><button class="btn-text" onclick="openDrawer('金针菇')">详情</button><button class="btn-text" onclick="openAllocationDialog('金针菇')">分配</button></td>
+          </tr>
+          <tr>
+            <td class="tbl-check"><input class="row-chk" type="checkbox" checked onchange="syncChecked()"></td>
+            <td><div>（原箱）大白菜</div><div class="text-sm text-gray">spu00003821</div></td>
+            <td><span class="tag tag-green">蔬果原料</span></td>
+            <td>L2 中销</td><td>5 天</td><td class="num">382</td><td class="num">96</td><td class="num">66</td><td><span class="tag tag-orange">明日 12:00</span></td><td class="num">3.5</td><td class="num">1,500</td><td><span class="tag tag-green">主供应商优先</span></td>
+            <td><div class="split-lines"><span class="supplier-pill"><b>Fresh&Green</b> 今日不接单</span><span class="supplier-pill"><b>Hattah</b> 1,500 / T+1</span></div></td><td><span class="tag tag-orange">待确认</span></td><td><span class="tag tag-orange">主供不接单</span></td><td><button class="btn-text" onclick="openDrawer('大白菜')">详情</button><button class="btn-text" onclick="openAllocationDialog('大白菜')">分配</button></td>
+          </tr>
+          <tr>
+            <td class="tbl-check"><input class="row-chk" type="checkbox" onchange="syncChecked()"></td>
+            <td><div>四方豆 1KG/份</div><div class="text-sm text-gray">sku00005917</div></td>
+            <td><span class="tag tag-blue">蔬菜标品</span></td>
+            <td>L3 低销</td><td>2 天</td><td class="num">12</td><td class="num">9</td><td class="num">5</td><td><span class="tag tag-gray">2 天后</span></td><td class="num">1.5</td><td class="num">20</td><td><span class="tag tag-blue">成本优先</span></td>
+            <td><div class="split-lines"><span class="supplier-pill"><b>默认供应商</b> 20 / T+2</span></div></td><td><span class="tag tag-green">已确认</span></td><td><span class="tag tag-gray">正常</span></td><td><button class="btn-text" onclick="openDrawer('四方豆 1KG/份')">详情</button><button class="btn-text" onclick="openAllocationDialog('四方豆')">分配</button></td>
+          </tr>
+          <tr>
+            <td class="tbl-check"><input class="row-chk" type="checkbox" onchange="syncChecked()"></td>
+            <td><div>Leong Guan 黄面 3公斤</div><div class="text-sm text-gray">spu00005664</div></td>
+            <td><span class="tag tag-purple">非蔬果短保</span></td>
+            <td>L4 微销</td><td>5 天</td><td class="num">3</td><td class="num">8</td><td class="num">6</td><td><span class="tag tag-gray">无需补货</span></td><td class="num">2</td><td class="num">0</td><td><span class="tag tag-gray">不采购</span></td>
+            <td><div class="split-lines"><span class="supplier-pill"><b>TECK SANG</b> 箱规不足</span></div></td><td><span class="tag tag-gray">无需分配</span></td><td><span class="tag tag-gray">箱规不足</span></td><td><button class="btn-text" onclick="openDrawer('Leong Guan 黄面 3公斤')">详情</button><button class="btn-text" onclick="openAllocationDialog('黄面')">分配</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination"><span class="page-info">共 386 条</span><div class="page-btn" onclick="changePage('prev')">‹</div><div class="page-btn active" onclick="changePage(1,this)">1</div><div class="page-btn" onclick="changePage(2,this)">2</div><div class="page-btn" onclick="changePage(3,this)">3</div><div class="page-btn" onclick="changePage('next')">›</div></div>
+  </div>
 </div>
+
+<div class="page" id="page-strategy-config">
+  <div class="page-header">
+    <div><div class="page-title">备货策略配置</div><div class="page-sub">销售分层、供应商履约、分配策略、VLT/VCT、缺货和周末节假日系数</div></div>
+    <button class="btn btn-primary" onclick="showToast('策略保存成功，下次生成生效','success')">保存策略</button>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <div class="tabs">
+        <div class="tab-item active" onclick="tab('strategy',0,this)">基础备货天数</div>
+        <div class="tab-item" onclick="tab('strategy',1,this)">VLT/VCT</div>
+        <div class="tab-item" onclick="tab('strategy',2,this)">缺货系数</div>
+        <div class="tab-item" onclick="tab('strategy',3,this)">周末/节假日</div>
+        <div class="tab-item" onclick="tab('strategy',4,this)">供应商供货规则</div>
+        <div class="tab-item" onclick="tab('strategy',5,this)">分配策略</div>
+        <div class="tab-item" onclick="tab('strategy',6,this)">变更日志</div>
+      </div>
+      <div class="tab-pane strategy active">
+        <div class="notice-box">销售分层阈值和备货天数均可配置；矩阵调整后不会影响已生成计划，仅对下一批计算生效。</div>
+        <table class="inline-table">
+          <thead>
+            <tr>
+              <th>分层</th>
+              <th>分层名称</th>
+              <th>销量下限</th>
+              <th>销量上限</th>
+              <th>短保 &lt;7天</th>
+              <th>中保 7-15天</th>
+              <th>长保 &gt;15天</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>L1</td><td><input class="iw100" value="高销"></td><td><input class="input-mini" value="500"></td><td><input class="input-mini" value="不限"></td><td><input class="input-mini" value="1.5"></td><td><input class="input-mini" value="3"></td><td><input class="input-mini" value="4"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="validateRange(this)">校验区间</button></td></tr>
+            <tr><td>L2</td><td><input class="iw100" value="中销"></td><td><input class="input-mini" value="100"></td><td><input class="input-mini" value="500"></td><td><input class="input-mini" value="1.5"></td><td><input class="input-mini" value="2.5"></td><td><input class="input-mini" value="3.5"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="validateRange(this)">校验区间</button></td></tr>
+            <tr><td>L3</td><td><input class="iw100" value="低销"></td><td><input class="input-mini" value="20"></td><td><input class="input-mini" value="100"></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="2"></td><td><input class="input-mini" value="3"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="validateRange(this)">校验区间</button></td></tr>
+            <tr><td>L4</td><td><input class="iw100" value="微销"></td><td><input class="input-mini" value="0"></td><td><input class="input-mini" value="20"></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="1.5"></td><td><input class="input-mini" value="2"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="validateRange(this)">校验区间</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tab-pane strategy">
+        <table><thead><tr><th>VLT</th><th>说明</th><th>修正天数</th><th>状态</th><th>操作</th></tr></thead><tbody>
+          <tr><td>T+1</td><td>今天定明天到</td><td><input class="input-mini" value="0"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('已进入 T+1 编辑态')">编辑</button></td></tr>
+          <tr><td>T+2</td><td>两天到货</td><td><input class="input-mini" value="1"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('已进入 T+2 编辑态')">编辑</button></td></tr>
+          <tr><td>T+3以上</td><td>按 VLT - 1 叠加</td><td><input class="input-mini" value="VLT-1"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('已进入 T+3 编辑态')">编辑</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="tab-pane strategy">
+        <div class="grid-2">
+          <div class="card"><div class="card-body"><div class="stat-label">保质期 ≥ 3 天</div><div class="flex items-center gap8"><input class="iw80" value="+2"><span>天</span></div></div></div>
+          <div class="card"><div class="card-body"><div class="stat-label">保质期 &lt; 3 天</div><div class="flex items-center gap8"><input class="iw80" value="+1.5"><span>天</span></div></div></div>
+        </div>
+      </div>
+      <div class="tab-pane strategy">
+        <table><thead><tr><th>场景</th><th>适用 VLT</th><th>叠加天数</th><th>生效状态</th><th>操作</th></tr></thead><tbody>
+          <tr><td>周五，周日不到货</td><td>VLT=1</td><td><input class="input-mini" value="+1"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('已进入周末规则编辑态')">编辑</button></td></tr>
+          <tr><td>法定假日前一天</td><td>全部</td><td><input class="input-mini" value="+1"></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('已进入节日前规则编辑态')">编辑</button></td></tr>
+          <tr><td>法定假日当天</td><td>全部</td><td><input class="input-mini" value="假期天数-1"></td><td><span class="tag tag-orange">待确认</span></td><td><button class="btn-text" onclick="showToast('已进入节日当天规则编辑态')">编辑</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="tab-pane strategy">
+        <div class="notice-box">维护 SKU 与多个供应商的供货关系，补货分配会基于提前期、截单、价格、供货上限和主备关系自动推荐。</div>
+        <table><thead><tr><th>商品</th><th>供应商</th><th>角色</th><th>今日接单</th><th>VLT</th><th>截单时间</th><th>起订量</th><th>供货上限</th><th>价格</th><th>稳定性</th><th>状态</th><th>操作</th></tr></thead><tbody>
+          <tr><td>金针菇</td><td>Fresh&Green</td><td><span class="tag tag-green">主供应商</span></td><td><select class="iw100"><option>接单</option><option>不接单</option></select></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="18:00"></td><td>500</td><td><input class="input-mini" value="6000"></td><td>S$3.6/kg</td><td>96%</td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('供货规则已保存','success')">保存</button></td></tr>
+          <tr><td>金针菇</td><td>Hattah</td><td><span class="tag tag-blue">备用</span></td><td><select class="iw100"><option>接单</option><option>不接单</option></select></td><td><input class="input-mini" value="2"></td><td><input class="input-mini" value="17:30"></td><td>300</td><td><input class="input-mini" value="5000"></td><td>S$3.2/kg</td><td>91%</td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('供货规则已保存','success')">保存</button></td></tr>
+          <tr><td>大白菜</td><td>Fresh&Green</td><td><span class="tag tag-green">主供应商</span></td><td><select class="iw100"><option>不接单</option><option>接单</option></select></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="18:00"></td><td>200</td><td><input class="input-mini" value="3000"></td><td>S$1.2/kg</td><td>95%</td><td><span class="tag tag-orange">今日停单</span></td><td><button class="btn-text" onclick="showToast('今日不接单，系统将自动跳过该供应商','warning')">查看</button></td></tr>
+          <tr><td>四方豆</td><td>默认供应商</td><td><span class="tag tag-green">主供应商</span></td><td><select class="iw100"><option>接单</option><option>不接单</option></select></td><td><input class="input-mini" value="2"></td><td><input class="input-mini" value="16:00"></td><td>10</td><td><input class="input-mini" value="200"></td><td>S$4.1/份</td><td>89%</td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('供货规则已保存','success')">保存</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="tab-pane strategy">
+        <div class="notice-box">不同风险场景可绑定不同分配策略；运营仍可在工作台人工调整，调整原因会进入复盘。</div>
+        <table><thead><tr><th>触发场景</th><th>默认策略</th><th>排序逻辑</th><th>超上限处理</th><th>晚到处理</th><th>状态</th><th>操作</th></tr></thead><tbody>
+          <tr><td>当日/明日缺货、短保高销</td><td><select class="iw140"><option>履约优先</option></select></td><td>今日接单 &gt; 可赶上缺货 &gt; 稳定性 &gt; 主供应商 &gt; 价格</td><td>自动拆给备用供应商</td><td><span class="tag tag-red">高亮待确认</span></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('分配策略已保存','success')">保存</button></td></tr>
+          <tr><td>正常补货</td><td><select class="iw140"><option>主供应商优先</option></select></td><td>主供应商 &gt; 稳定性 &gt; 价格 &gt; 提前期</td><td>备用补足</td><td><span class="tag tag-orange">提示</span></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('分配策略已保存','success')">保存</button></td></tr>
+          <tr><td>库存充足、成本敏感</td><td><select class="iw140"><option>成本优先</option></select></td><td>价格 &gt; 稳定性达标 &gt; 提前期可接受</td><td>按价格顺序拆分</td><td><span class="tag tag-gray">允许</span></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('分配策略已保存','success')">保存</button></td></tr>
+          <tr><td>指定多供应商商品</td><td><select class="iw140"><option>配额分摊</option></select></td><td>按配置比例分摊，异常时转给备用</td><td>剩余转给下一供应商</td><td><span class="tag tag-orange">提示</span></td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="showToast('分配策略已保存','success')">保存</button></td></tr>
+        </tbody></table>
+      </div>
+      <div class="tab-pane strategy">
+        <table><thead><tr><th>时间</th><th>操作人</th><th>模块</th><th>变更内容</th></tr></thead><tbody>
+          <tr><td>2026-05-14 16:21</td><td>Forrest</td><td>基础矩阵</td><td>L1 中保从 2.5 调整为 3</td></tr>
+          <tr><td>2026-05-13 18:03</td><td>沈亮</td><td>缺货系数</td><td>短保缺货系数从 +1 调整为 +1.5</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-batch-monitor">
+  <div class="page-header">
+    <div><div class="page-title">计划生成批次</div><div class="page-sub">监控销售、售罄、库存、在途数据源状态；批次失败系统自动重试（30 分钟间隔，最多 3 次），无需手动干预</div></div>
+  </div>
+  <div class="card"><div class="card-body"><div class="filter-form">
+    <div class="filter-item"><label>计划日期</label><input class="iw140" value="2026-05-14"></div>
+    <div class="filter-item"><label>仓库</label><select class="iw160"><option>新加坡-B端仓</option></select></div>
+    <div class="filter-item"><label>批次状态</label><select class="iw120"><option>全部</option><option>成功</option><option>失败</option><option>运行中</option></select></div>
+    <div class="filter-btns"><button class="btn btn-primary" onclick="showToast('批次查询成功','success')">查询</button><button class="btn" onclick="resetForm(this)">重置</button></div>
+  </div></div></div>
+  <div class="card">
+    <div class="table-scroll">
+      <table><thead><tr><th>批次号</th><th>仓库</th><th>触发时间</th><th>销售实时</th><th>销售历史</th><th>售罄</th><th>库存</th><th>在途</th><th>计算状态</th><th>记录数</th><th>操作</th></tr></thead><tbody>
+        <tr><td>PPB20260514001</td><td>新加坡-B端仓</td><td>17:00:02</td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td>386</td><td><button class="btn-text" onclick="openDialog('batch-detail-dialog')">详情</button></td></tr>
+        <tr><td>PPB20260513001</td><td>新加坡-B端仓</td><td>17:00:01</td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-red">失败</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-green">成功</span></td><td><span class="tag tag-red">中断</span></td><td>-</td><td><button class="btn-text" onclick="openDialog('batch-detail-dialog')">详情</button></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-whitelist-config">
+  <div class="page-header">
+    <div><div class="page-title">标品/短保白名单</div><div class="page-sub">维护按 SKU 计算的蔬菜标品和非蔬果短保商品；备货天数统一由备货策略矩阵决定，此处不单独配置</div></div>
+    <div class="btn-group"><button class="btn" onclick="showToast('已打开导入模板上传入口')">批量导入</button><button class="btn btn-primary" onclick="openWhitelistDialog('新增白名单')">新增白名单</button></div>
+  </div>
+  <div class="card"><div class="card-body"><div class="filter-form">
+    <div class="filter-item"><label>白名单类型</label><select class="iw140"><option>全部</option><option>蔬菜标品</option><option>非蔬果短保</option></select></div>
+    <div class="filter-item"><label>商品</label><input class="iw240" placeholder="SKU/SPU/名称"></div>
+    <div class="filter-item"><label>状态</label><select class="iw120"><option>全部</option><option>启用</option><option>停用</option></select></div>
+    <div class="filter-btns"><button class="btn btn-primary" onclick="showToast('白名单查询成功','success')">查询</button><button class="btn" onclick="resetForm(this)">重置</button></div>
+  </div></div></div>
+  <div class="card"><div class="table-scroll"><table><thead><tr><th>类型</th><th>SKU</th><th>商品名称</th><th>计算粒度</th><th>可售期</th><th>是否读批次</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <tr><td><span class="tag tag-blue">蔬菜标品</span></td><td>sku00005917</td><td>四方豆 1KG/份</td><td>SKU</td><td>2 天</td><td>否</td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="openWhitelistDialog('编辑白名单 - 四方豆')">编辑</button></td></tr>
+    <tr><td><span class="tag tag-purple">非蔬果短保</span></td><td>sku00008351</td><td>茶花菇3公斤</td><td>SKU+批次</td><td>5 天</td><td>是</td><td><span class="tag tag-green">启用</span></td><td><button class="btn-text" onclick="openWhitelistDialog('编辑白名单 - 茶花菇')">编辑</button></td></tr>
+  </tbody></table></div></div>
+</div>
+
+<div class="page" id="page-effect-review">
+  <div class="page-header"><div><div class="page-title">计划效果复盘</div><div class="page-sub">对比系统建议、人工调整、采购单生成和缺货改善情况</div></div></div>
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-label">采购计划生成采购单占比</div><div class="stat-value">71%</div><div class="stat-desc">目标 ≥ 80%</div></div>
+    <div class="stat-card"><div class="stat-label">单 SKU 调整率</div><div class="stat-value text-orange">34%</div><div class="stat-desc">目标 &lt; 30%</div></div>
+    <div class="stat-card"><div class="stat-label">周末缺货 SKU</div><div class="stat-value text-green">-42%</div><div class="stat-desc">较上周下降</div></div>
+    <div class="stat-card"><div class="stat-label">高偏差 SKU</div><div class="stat-value text-red">18</div><div class="stat-desc">需复盘策略</div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><div class="tbl-toolbar"><div class="tbl-toolbar-left">调整原因分布</div></div><div class="card-body">
+      <div class="formula-line"><div class="formula-k">节前备货</div><div class="formula-v" style="flex:1"><div class="progress"><span style="width:42%"></span></div></div><div>42%</div></div>
+      <div class="formula-line"><div class="formula-k">销量异常</div><div class="formula-v" style="flex:1"><div class="progress"><span style="width:31%"></span></div></div><div>31%</div></div>
+      <div class="formula-line"><div class="formula-k">数据存疑</div><div class="formula-v" style="flex:1"><div class="progress"><span style="width:17%"></span></div></div><div>17%</div></div>
+    </div></div>
+    <div class="card"><div class="tbl-toolbar"><div class="tbl-toolbar-left">建议量偏差 Top</div></div><table><thead><tr><th>商品</th><th>建议</th><th>调整</th><th>偏差</th></tr></thead><tbody>
+      <tr><td>金针菇</td><td>9,500</td><td>12,000</td><td class="text-red">+26%</td></tr>
+      <tr><td>大白菜</td><td>1,500</td><td>1,800</td><td class="text-orange">+20%</td></tr>
+      <tr><td>黄面 3公斤</td><td>0</td><td>12</td><td class="text-red">人工加单</td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+
+<div class="page" id="page-product-param">
+  <div class="page-header"><div><div class="page-title">商品采购参数</div><div class="page-sub">维护采购计划计算所需的 VLT、VCT、箱规、安全库存、默认供应商</div></div><button class="btn btn-primary" onclick="showToast('商品采购参数已批量保存','success')">批量保存</button></div>
+  <div class="notice-box">此处 VLT/VCT 取默认供应商，仅用于「备货天数」的提前期修正；供应商分配时的实际提前期按供应商在「备货策略配置 → 供应商供货规则」维护。</div>
+  <div class="card"><div class="card-body"><div class="filter-form">
+    <div class="filter-item"><label>商品</label><input class="iw240" placeholder="SPU/SKU/名称"></div>
+    <div class="filter-item"><label>品类</label><select class="iw140"><option>全部</option><option>新鲜蔬菜</option></select></div>
+    <div class="filter-item"><label>是否参与计划</label><select class="iw140"><option>全部</option><option>是</option><option>否</option></select></div>
+    <div class="filter-btns"><button class="btn btn-primary" onclick="showToast('商品参数查询成功','success')">查询</button><button class="btn" onclick="resetForm(this)">重置</button></div>
+  </div></div></div>
+  <div class="card"><div class="table-scroll"><table><thead><tr><th>商品</th><th>默认供应商</th><th>VLT</th><th>VCT</th><th>箱规</th><th>安全库存比例</th><th>商品类型</th><th>参与计划</th><th>操作</th></tr></thead><tbody>
+    <tr><td>金针菇 / spu00004574</td><td><select class="iw160"><option>Fresh&Green</option></select></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="5"></td><td><input class="input-mini" value="5%"></td><td>蔬果原料</td><td><span class="tag tag-green">是</span></td><td><button class="btn-text" onclick="showToast('金针菇参数已保存','success')">保存</button></td></tr>
+    <tr><td>四方豆 / sku00005917</td><td><select class="iw160"><option>默认供应商</option></select></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="1"></td><td><input class="input-mini" value="10%"></td><td>蔬菜标品</td><td><span class="tag tag-green">是</span></td><td><button class="btn-text" onclick="showToast('四方豆参数已保存','success')">保存</button></td></tr>
+  </tbody></table></div></div>
+</div>
+
+</div>
+</div>
+</div>
+
+<div class="drawer" id="detail-drawer">
+  <div class="drawer-header"><div class="drawer-title" id="drawer-title">采购计划计算详情 - 金针菇</div><div class="dialog-close" onclick="closeDrawer()">×</div></div>
+  <div class="drawer-body">
+    <div class="notice-box">用于解释 SKU 为什么需要补货，以及系统为什么选择当前供应商分配方案。</div>
+    <div class="grid-3 mb12">
+      <div class="stat-card"><div class="stat-label">系统建议量</div><div class="stat-value">9,500</div><div class="stat-desc">按箱规规整后</div></div>
+      <div class="stat-card"><div class="stat-label">预计剩余库存</div><div class="stat-value text-red">-135</div><div class="stat-desc">触发缺货系数</div></div>
+      <div class="stat-card"><div class="stat-label">预计缺货时间</div><div class="stat-value text-red">今日</div><div class="stat-desc">20:00 前后</div></div>
+    </div>
+    <div class="card"><div class="tbl-toolbar"><div class="tbl-toolbar-left">公式拆解</div></div><div class="card-body">
+      <div class="formula-box">
+        <div class="formula-line"><div class="formula-k">均销</div><div class="formula-v">(近7日均销 1,680 + 近3日均销 1,764) / 2 = 1,722</div></div>
+        <div class="formula-line"><div class="formula-k">剩余销量</div><div class="formula-v">今日进度高于大盘 20%，取近7日最大销量 - 今日已售 = 480</div></div>
+        <div class="formula-line"><div class="formula-k">预计剩余</div><div class="formula-v">销售可用 345 + 今日在途 0 - 剩余预估 480 = -135</div></div>
+        <div class="formula-line"><div class="formula-k">备货目标</div><div class="formula-v">4.5 × 1,722 ÷ (1 - 16%) = 9,225.9</div></div>
+        <div class="formula-line"><div class="formula-k">订货量</div><div class="formula-v">按箱规 5KG 规整，半箱以上向上取整 = 9,500</div></div>
+      </div>
+    </div></div>
+    <div class="card"><div class="tbl-toolbar"><div class="tbl-toolbar-left">供应商履约匹配</div><div class="tbl-toolbar-right"><button class="btn btn-sm" onclick="openAllocationDialog('金针菇')">调整分配</button></div></div>
+      <table><thead><tr><th>供应商</th><th>角色</th><th>提前期</th><th>截单</th><th>可赶上缺货</th><th>价格</th><th>供货上限</th><th>建议量</th><th>原因</th></tr></thead><tbody>
+        <tr><td>Fresh&Green</td><td><span class="tag tag-green">主供应商</span></td><td>T+1</td><td>18:00</td><td><span class="tag tag-green">是</span></td><td>S$3.6/kg</td><td>6,000</td><td>6,000</td><td>今日接单，最快可达，优先覆盖缺货风险</td></tr>
+        <tr><td>Hattah</td><td><span class="tag tag-blue">备用</span></td><td>T+2</td><td>17:30</td><td><span class="tag tag-orange">部分晚到</span></td><td>S$3.2/kg</td><td>5,000</td><td>3,500</td><td>补足主供应商上限后的剩余量</td></tr>
+        <tr><td>SG Local Farm</td><td><span class="tag tag-gray">备用</span></td><td>T+3</td><td>16:00</td><td><span class="tag tag-red">否</span></td><td>S$3.0/kg</td><td>不限</td><td>0</td><td>今日不接单且到货晚于缺货点，本次不可下单</td></tr>
+      </tbody></table>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="tbl-toolbar"><div class="tbl-toolbar-left">近 7 日销售/售罄</div></div><table><thead><tr><th>日期</th><th>销量</th><th>售罄</th></tr></thead><tbody><tr><td>05-07</td><td>1,640</td><td>否</td></tr><tr><td>05-08</td><td>售罄</td><td>是</td></tr><tr><td>05-09</td><td>1,850</td><td>否</td></tr></tbody></table></div>
+      <div class="card"><div class="tbl-toolbar"><div class="tbl-toolbar-left">调整记录</div></div><table><thead><tr><th>时间</th><th>调整前</th><th>调整后</th><th>原因</th></tr></thead><tbody><tr><td>05-13</td><td>8,400</td><td>9,000</td><td>节前备货</td></tr><tr><td>05-12</td><td>7,500</td><td>7,500</td><td>系统建议</td></tr></tbody></table></div>
+    </div>
+  </div>
+  <div class="drawer-footer"><button class="btn" onclick="closeDrawer()">关闭</button><button class="btn btn-primary" onclick="closeDrawer();showToast('已确认该建议量','success')">确认建议</button></div>
+</div>
+
+<div class="overlay" id="batch-adjust-dialog">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3>批量调整订货量</h3><div class="dialog-close" onclick="closeDialog('batch-adjust-dialog')">×</div></div>
+    <div class="dialog-body">
+      <div class="notice-box">已选 <b id="batch-adjust-count">2</b> 个商品。订货量按「箱」固定增减，规整后系统将按各自分配策略自动重算供应商分配。</div>
+      <div class="flex items-center gap12 mb12" style="flex-wrap:wrap">
+        <div class="filter-item"><label>调整方式</label><select class="iw160"><option>订货量固定增减</option></select></div>
+        <div class="filter-item"><label>增减量（箱，负数为减）</label><input class="iw160" type="number" value="2" oninput="previewBatchAdjust(this.value)"></div>
+        <div class="filter-item"><label>调整原因</label><select class="iw160"><option>节前备货</option><option>销量异常</option><option>缺货补货</option><option>数据存疑</option><option>其它</option></select></div>
+      </div>
+      <table>
+        <thead><tr><th>商品</th><th>类型</th><th>箱规</th><th class="num">系统建议量</th><th class="num">增减量</th><th class="num">调整后</th><th>偏差</th></tr></thead>
+        <tbody id="batch-adjust-rows">
+          <tr data-suggest="9500" data-pack="5">
+            <td><div>金针菇</div><div class="text-sm text-gray">spu00004574</div></td>
+            <td><span class="tag tag-green">蔬果原料</span></td>
+            <td class="num">5 KG/箱</td>
+            <td class="num">9,500</td>
+            <td class="num adj-delta">+10</td>
+            <td class="num adj-after">9,510</td>
+            <td><span class="tag tag-green adj-dev">+0.1%</span></td>
+          </tr>
+          <tr data-suggest="1500" data-pack="10">
+            <td><div>（原箱）大白菜</div><div class="text-sm text-gray">spu00003821</div></td>
+            <td><span class="tag tag-green">蔬果原料</span></td>
+            <td class="num">10 KG/箱</td>
+            <td class="num">1,500</td>
+            <td class="num adj-delta">+20</td>
+            <td class="num adj-after">1,520</td>
+            <td><span class="tag tag-green adj-dev">+1.3%</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="notice-warn notice-box mt12">偏差超过 ±50% 的商品将在生成采购单前再次弹窗确认（BR-25）。</div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('batch-adjust-dialog')">取消</button>
+      <button class="btn btn-primary" onclick="closeDialog('batch-adjust-dialog');showToast('已批量调整订货量，供应商分配已按策略重算','success')">确认调整</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="create-po-dialog">
+  <div class="dialog dialog-md">
+    <div class="dialog-header"><h3>生成草稿采购单</h3><div class="dialog-close" onclick="closeDialog('create-po-dialog')">×</div></div>
+    <div class="dialog-body">
+      <div class="notice-warn notice-box">已选择 2 个商品，将按仓库 + 供应商 + 到货日期拆分生成多张草稿采购单。</div>
+      <table><thead><tr><th>供应商</th><th>到货日期</th><th>商品数</th><th>预计采购金额</th><th>风险</th></tr></thead><tbody>
+        <tr><td>Fresh&Green</td><td>2026-05-15</td><td>1</td><td>S$ 21,600.00</td><td><span class="tag tag-green">正常</span></td></tr>
+        <tr><td>Hattah</td><td>2026-05-16</td><td>2</td><td>S$ 12,320.00</td><td><span class="tag tag-orange">1 个商品晚到</span></td></tr>
+      </tbody></table>
+    </div>
+    <div class="dialog-footer"><button class="btn" onclick="closeDialog('create-po-dialog')">取消</button><button class="btn btn-primary" onclick="closeDialog('create-po-dialog');showToast('草稿采购单已生成','success')">确认生成</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="allocation-dialog">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3 id="allocation-dialog-title">供应商分配确认</h3><div class="dialog-close" onclick="closeDialog('allocation-dialog')">×</div></div>
+    <div class="dialog-body">
+      <div class="notice-box">SKU 建议补货量 9,500；当前策略为履约优先。系统先排除今日不接单供应商，再选择能赶上缺货点的供应商，并用备用供应商补足供货上限缺口。</div>
+      <div class="grid-3 mb12">
+        <div class="stat-card"><div class="stat-label">SKU 建议量</div><div class="stat-value">9,500</div><div class="stat-desc">按箱规规整后</div></div>
+        <div class="stat-card"><div class="stat-label">预计缺货</div><div class="stat-value text-red">今日 20:00</div><div class="stat-desc">优先匹配 T+1 供应商</div></div>
+        <div class="stat-card"><div class="stat-label">分配合计</div><div class="stat-value text-green">9,500</div><div class="stat-desc">已满足建议量</div></div>
+      </div>
+      <table>
+        <thead><tr><th>供应商</th><th>角色</th><th>今日接单</th><th>提前期</th><th>预计到货</th><th>价格</th><th>供货上限</th><th>建议量</th><th>人工调整量</th><th>调整原因</th><th>校验</th></tr></thead>
+        <tbody>
+          <tr><td><select class="iw160"><option>Fresh&Green</option></select></td><td><span class="tag tag-green">主供应商</span></td><td><span class="tag tag-green">接单</span></td><td>T+1</td><td>05-15</td><td>S$3.6/kg</td><td>6,000</td><td>6,000</td><td><input class="input-mini" value="6000"></td><td><select class="select-mini"><option>系统建议</option><option>人工改量</option></select></td><td><span class="tag tag-green">通过</span></td></tr>
+          <tr><td><select class="iw160"><option>Hattah</option></select></td><td><span class="tag tag-blue">备用</span></td><td><span class="tag tag-green">接单</span></td><td>T+2</td><td>05-16</td><td>S$3.2/kg</td><td>5,000</td><td>3,500</td><td><input class="input-mini" value="3500"></td><td><select class="select-mini"><option>补足上限</option><option>成本更优</option></select></td><td><span class="tag tag-orange">晚到</span></td></tr>
+          <tr><td><select class="iw160"><option>SG Local Farm</option></select></td><td><span class="tag tag-gray">备用</span></td><td><span class="tag tag-red">不接单</span></td><td>T+3</td><td>05-17</td><td>S$3.0/kg</td><td>不限</td><td>0</td><td><input class="input-mini" value="0"></td><td><select class="select-mini"><option>不可下单</option></select></td><td><span class="tag tag-red">阻断</span></td></tr>
+        </tbody>
+      </table>
+      <div class="mt12"><button class="btn btn-sm" onclick="showToast('已新增一行供应商')">新增供应商行</button><button class="btn btn-sm" onclick="showToast('已按履约优先重新计算')">重新分配</button></div>
+    </div>
+    <div class="dialog-footer"><button class="btn" onclick="closeDialog('allocation-dialog')">取消</button><button class="btn btn-primary" onclick="closeDialog('allocation-dialog');showToast('供应商分配已确认','success')">确认分配</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="batch-detail-dialog"><div class="dialog dialog-lg"><div class="dialog-header"><h3>批次详情</h3><div class="dialog-close" onclick="closeDialog('batch-detail-dialog')">×</div></div><div class="dialog-body"><table><thead><tr><th>数据源</th><th>拉取时间</th><th>记录数</th><th>状态</th><th>失败原因</th></tr></thead><tbody><tr><td>销售实时</td><td>17:00:03</td><td>8,420</td><td><span class="tag tag-green">成功</span></td><td>-</td></tr><tr><td>售罄</td><td>17:00:08</td><td>2,427</td><td><span class="tag tag-red">失败</span></td><td>BI 接口超时</td></tr></tbody></table></div><div class="dialog-footer"><button class="btn" onclick="closeDialog('batch-detail-dialog')">关闭</button></div></div></div>
+<div class="overlay" id="whitelist-dialog"><div class="dialog dialog-md"><div class="dialog-header"><h3 id="whitelist-dialog-title">新增白名单</h3><div class="dialog-close" onclick="closeDialog('whitelist-dialog')">×</div></div><div class="dialog-body"><div class="grid-2"><div class="filter-item"><label>白名单类型</label><select><option>蔬菜标品</option><option>非蔬果短保</option></select></div><div class="filter-item"><label>SKU</label><input placeholder="输入 SKU 编码"></div><div class="filter-item"><label>可售期</label><input value="3"></div><div class="filter-item"><label>是否读批次</label><select><option>否</option><option>是</option></select></div></div></div><div class="dialog-footer"><button class="btn" onclick="closeDialog('whitelist-dialog')">取消</button><button class="btn btn-primary" onclick="closeDialog('whitelist-dialog');showToast('白名单配置已保存','success')">保存</button></div></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
-const risks=[
- {name:'金针菇',code:'SPU-10021',risk:'预计 21:30 缺货',tag:'red',status:'默认供应商不接单',statusTag:'amber',mu:535,days:3.5,left:-84,transit:120,suggest:620,gap:84,unit:'KG',action:'请从今日接单候选中选择',cover:'3.5 天',cost:'$1,465',reason:'默认供应商 GreenFarm 今日不接单（VLT=1，已过 17:30 截单）。下表是今日仍接单且 VLT=1 的候选供应商，采购请选一个。',suppliers:[['FreshGo','今日接单 / VLT=1 / 截单 18:30 / $5.50','620','620','选为本次供应商','待确认','amber'],['BlueLeaf','今日接单 / VLT=1 / 截单 17:00 / $5.80','620','0','价格略高','未选','']]},
- {name:'鲜鸡胸肉 1kg',code:'SKU-78120',risk:'预计 22:10 缺货',tag:'red',status:'默认供应商接单',statusTag:'green',mu:145,days:2.5,left:-30,transit:40,suggest:260,gap:30,unit:'KG',action:'确认默认供应商',cover:'2.5 天',cost:'$912',reason:'默认供应商 MeatPro 今日接单（VLT=1），明日午市前可到。建议直接通过系统建议量。',suppliers:[['MeatPro（默认）','今日接单 / VLT=1','260','260','确认系统建议','通过','green']]},
- {name:'上海青 250g',code:'SKU-30087',risk:'高预警',tag:'amber',status:'默认供应商接单',statusTag:'green',mu:280,days:1.5,left:96,transit:60,suggest:360,gap:0,unit:'份',action:'确认默认供应商',cover:'1.5 天',cost:'$428',reason:'默认供应商 FreshGo 今日接单，库存可覆盖目标天数，建议直接通过。',suppliers:[['FreshGo（默认）','今日接单 / VLT=1','360','360','确认系统建议','通过','green']]},
- {name:'番茄 500g',code:'SKU-32011',risk:'默认供应商不接单',tag:'amber',status:'默认供应商不接单',statusTag:'amber',mu:610,days:1.5,left:18,transit:180,suggest:420,gap:0,unit:'份',action:'请从今日接单候选中选择',cover:'1.4 天',cost:'$588',reason:'默认供应商 TomatoKing 已过 17:30 截单。RedSun 今日 19:00 截单、VLT=1，明日早高峰前可到。',suppliers:[['RedSun','今日接单 / 截单 19:00 / VLT=1','420','420','选为本次供应商','待确认','amber']]},
- {name:'白玉菇',code:'SPU-10032',risk:'正常',tag:'green',status:'无需采购',statusTag:'green',mu:86,days:1,left:124,transit:30,suggest:0,gap:0,unit:'KG',action:'无需下单',cover:'1.8 天',cost:'$0',reason:'预计剩余库存足够覆盖目标天数，今日无需采购。',suppliers:[['—','本次无需采购','0','0','无需下单','跳过','']]}
-];
-let current=0, confirmed=0;
-function renderQueue(){
- const q=document.getElementById('riskQueue');
- q.innerHTML=risks.map((r,i)=>`
-  <div class="queue-card ${i===current?'active':''}" onclick="selectRisk(${i})">
-    <div class="queue-top"><div><div class="sku">${r.name}</div><div class="code">${r.code}</div></div><span class="pill ${r.tag}">${r.risk}</span></div>
-    <div class="queue-metrics">
-      <div class="metric"><label>均销</label><b>${r.mu}</b></div>
-      <div class="metric"><label>预计剩余</label><b style="${r.left<0?'color:var(--red)':''}">${r.left}</b></div>
-      <div class="metric"><label>建议</label><b>${r.suggest}</b></div>
-    </div>
-  </div>`).join('');
+function gotoPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.sidebar-item').forEach(n=>n.classList.remove('active'));
+  const nav=document.querySelector('[data-nav="'+id+'"]');
+  if(nav) nav.classList.add('active');
 }
-function selectRisk(i){
- current=i; const r=risks[i]; renderQueue();
- document.getElementById('focusTitle').textContent=`${r.name} · ${r.code}`;
- document.getElementById('focusRisk').textContent=r.risk; document.getElementById('focusRisk').className='pill '+r.tag;
- document.getElementById('focusMode').textContent=r.status;
- document.getElementById('focusMode').className='pill '+r.statusTag;
- document.getElementById('suggestQty').textContent=`${r.suggest} ${r.unit}`;
- document.getElementById('gapQty').textContent=`${r.gap} ${r.unit}`;
- document.getElementById('actionText').textContent=r.action;
- document.getElementById('fMu').textContent=r.mu; document.getElementById('fDays').textContent=r.days;
- document.getElementById('fLeft').textContent=r.left; document.getElementById('fTransit').textContent=r.transit; document.getElementById('fSuggest').textContent=r.suggest;
- document.getElementById('coverDays').textContent=r.cover; document.getElementById('costText').textContent=r.cost;
- document.getElementById('recommendReason').textContent=r.reason;
- document.getElementById('recommendTitle').textContent=({'默认供应商接单':'推荐：确认默认供应商','默认供应商不接单':'推荐：从今日接单候选中选择','无需采购':'推荐：本次无需下单'})[r.status]||'推荐';
- renderSuppliers(r);
+function tab(group,idx,el){
+  const panes=document.querySelectorAll('.'+group);
+  const current=el || event.currentTarget;
+  const items=current.parentElement.querySelectorAll('.tab-item');
+  items.forEach(i=>i.classList.remove('active')); current.classList.add('active');
+  panes.forEach(p=>p.classList.remove('active')); panes[idx].classList.add('active');
 }
-function renderSuppliers(r){
- document.getElementById('supplierRows').innerHTML=r.suppliers.map(s=>`
-  <tr><td><b>${s[0]}</b></td><td>${s[1]}</td><td class="num">${s[2]}</td><td class="num"><input class="input-num" value="${s[3]}" oninput="updateAlloc()"></td><td><select><option>${s[4]}</option><option>销量异常</option><option>供应商沟通</option><option>节前备货</option></select></td><td><span class="pill ${s[6]}">${s[5]}</span></td></tr>
- `).join('');
+function openDialog(id){document.getElementById(id).classList.add('show')}
+function closeDialog(id){document.getElementById(id).classList.remove('show')}
+function openDrawer(name){
+  document.getElementById('drawer-title').textContent='采购计划计算详情 - '+(name||'金针菇');
+  document.getElementById('detail-drawer').classList.add('show');
 }
-function updateAlloc(){toast('确认量已变化，影响预览已更新')}
-function rebalance(){toast('已按当前策略重新分配供应商')}
-function confirmCurrent(){confirmed++;document.getElementById('confirmed').textContent=confirmed;toast(`已确认 ${risks[current].name}`)}
-function switchView(id){document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id))}
-document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
-function openDrawer(type){
- const title=document.getElementById('drawerTitle'), body=document.getElementById('drawerBody'), r=risks[current];
- if(type==='calc'){
-  title.textContent=`${r.name} 计算与证据`;
-  body.innerHTML=`<div class="panel"><div class="panel-head"><div class="panel-title">计算链路</div></div><div class="table-wrap"><table><tbody><tr><td>均销</td><td>(近 7 日均销 + 近 3 日均销) / 2，售罄日不计入分母</td><td class="num">${r.mu}</td></tr><tr><td>预计剩余</td><td>销售可用 + 今日在途 - 当日剩余销量预估</td><td class="num">${r.left}</td></tr><tr><td>目标天数</td><td>基础备货天数 + VLT 修正 + 缺货/周末系数</td><td class="num">${r.days}</td></tr><tr><td>建议量</td><td>按箱规规整后输出</td><td class="num">${r.suggest}</td></tr></tbody></table></div></div><div class="panel" style="margin-top:12px"><div class="panel-head"><div class="panel-title">最近 7 日销量</div></div><div class="panel-body"><div class="pipeline"><div class="pipe-step"><strong>Mon</strong><span>480</span></div><div class="pipe-step"><strong>Tue</strong><span>520</span></div><div class="pipe-step"><strong>Wed</strong><span>售罄剔除</span></div><div class="pipe-step"><strong>Thu</strong><span>560</span></div><div class="pipe-step"><strong>Fri</strong><span>610</span></div></div></div></div><div class="panel" style="margin-top:12px"><div class="panel-head"><div class="panel-title">未来 N 天展开</div></div><div class="table-wrap"><table><thead><tr><th>日期</th><th class="num">预估销量</th><th class="num">期初库存</th><th class="num">当日在途</th><th class="num">本次下单到货</th><th class="num">期末库存</th><th>状态</th></tr></thead><tbody><tr><td>D1 05-21</td><td class="num">540</td><td class="num">345</td><td class="num">620</td><td class="num">0</td><td class="num">425</td><td><span class="pill green">正常</span></td></tr><tr><td>D2 05-22</td><td class="num">530</td><td class="num">425</td><td class="num">0</td><td class="num">0</td><td class="num">-105</td><td><span class="pill red">缺货</span></td></tr><tr><td>D3 05-23</td><td class="num">520</td><td class="num">-105</td><td class="num">0</td><td class="num">0</td><td class="num">-625</td><td><span class="pill red">缺货</span></td></tr></tbody></table></div></div>`;
- }else{
-  title.textContent='生成草稿采购单';
-  body.innerHTML=`<div class="panel"><div class="panel-head"><div class="panel-title">拆单结果预览</div></div><div class="table-wrap"><table><thead><tr><th>草稿单</th><th>仓库</th><th>供应商</th><th>到货日</th><th class="num">SKU</th><th class="num">采购额</th></tr></thead><tbody><tr><td>PO-DRAFT-001</td><td>West Hub</td><td>GreenFarm</td><td>2026-05-21</td><td class="num">18</td><td class="num">$8,420</td></tr><tr><td>PO-DRAFT-002</td><td>West Hub</td><td>FreshGo</td><td>2026-05-21</td><td class="num">7</td><td class="num">$2,180</td></tr><tr><td>PO-DRAFT-003</td><td>West Hub</td><td>RedSun</td><td>2026-05-21</td><td class="num">5</td><td class="num">$1,660</td></tr></tbody></table></div></div><div class="panel" style="margin-top:12px"><div class="panel-body">系统按仓库 + 供应商 + 到货日拆单。异常 SKU 未确认前不会进入草稿采购单。</div></div>`;
- }
- document.getElementById('drawerMask').classList.add('show');
+function closeDrawer(){document.getElementById('detail-drawer').classList.remove('show')}
+function showToast(msg,type){
+  const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+(type||'');
+  setTimeout(()=>t.className='toast',1800);
 }
-function closeDrawer(){document.getElementById('drawerMask').classList.remove('show')}
-let timer;function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>el.classList.remove('show'),2300)}
-renderQueue();selectRisk(0);
+function syncChecked(){document.getElementById('checked-count').textContent=document.querySelectorAll('.row-chk:checked').length}
+function toggleAll(chk){document.querySelectorAll('.row-chk').forEach(c=>c.checked=chk.checked);syncChecked()}
+function resetForm(btn){
+  const form=btn.closest('.filter-form');
+  if(form){
+    form.querySelectorAll('input').forEach(i=>{if(!i.value.match(/^2026-/)) i.value=''});
+    form.querySelectorAll('select').forEach(s=>s.selectedIndex=0);
+  }
+  showToast('筛选条件已重置');
+}
+function validateRange(btn){
+  const row=btn.closest('tr');
+  const level=row.cells[0].textContent;
+  const name=row.querySelector('input').value;
+  showToast(level+' '+name+' 销量区间校验通过','success');
+}
+function changePage(page,btn){
+  if(page==='prev' || page==='next'){
+    showToast(page==='prev'?'已经是第一页':'已切换到下一页');
+    return;
+  }
+  document.querySelectorAll('.pagination .page-btn').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  showToast('已切换到第 '+page+' 页','success');
+}
+function openBatchAdjust(){
+  const n=document.querySelectorAll('.row-chk:checked').length;
+  if(n===0){showToast('请先勾选要调整的商品','warning');return;}
+  document.getElementById('batch-adjust-count').textContent=n;
+  openDialog('batch-adjust-dialog');
+}
+function previewBatchAdjust(boxes){
+  boxes=parseFloat(boxes)||0;
+  document.querySelectorAll('#batch-adjust-rows tr').forEach(tr=>{
+    const suggest=parseFloat(tr.dataset.suggest), pack=parseFloat(tr.dataset.pack);
+    const delta=boxes*pack, after=Math.max(0,suggest+delta);
+    const pct=suggest>0?delta/suggest*100:0;
+    tr.querySelector('.adj-delta').textContent=(delta>=0?'+':'')+delta;
+    tr.querySelector('.adj-after').textContent=after.toLocaleString();
+    const dev=tr.querySelector('.adj-dev');
+    dev.textContent=(pct>=0?'+':'')+pct.toFixed(1)+'%';
+    dev.className='tag adj-dev '+(Math.abs(pct)>50?'tag-red':Math.abs(pct)>20?'tag-orange':'tag-green');
+  });
+}
+function openWhitelistDialog(title){
+  document.getElementById('whitelist-dialog-title').textContent=title || '新增白名单';
+  openDialog('whitelist-dialog');
+}
+function openAllocationDialog(name){
+  document.getElementById('allocation-dialog-title').textContent='供应商分配确认 - '+(name||'金针菇');
+  openDialog('allocation-dialog');
+}
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o) o.classList.remove('show')});
+});
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('button,.btn-text,.page-btn,.topbar-right span,.topbar-nav a');
+  if(!btn || btn.hasAttribute('onclick')) return;
+  const text=btn.textContent.trim() || '操作';
+  showToast(text+' 操作已触发');
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.overlay.show').forEach(o=>o.classList.remove('show'));closeDrawer()}});
 </script>
 </body>
 </html>
