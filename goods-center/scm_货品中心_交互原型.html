@@ -1569,9 +1569,8 @@ function saveBatch(){closeDialog('ov-batch');showToast(`已批量更新 ${selRow
 // ─── TABS ───
 function switchTab(pfx,idx,el){
   el.closest('.tabs').querySelectorAll('.tab-item').forEach((t,i)=>t.classList.toggle('active',i===idx));
-  document.querySelectorAll(`#${pfx}-${idx}`).forEach(p=>p);
-  // show/hide panes: find sibling panes
-  const panes=document.querySelectorAll(`[id^="${pfx}-"]`);
+  // 只匹配同前缀的 tab-pane，避免命中辅助元素（如 #dt-tab-bom-count）导致索引错位
+  const panes=el.closest('.card').querySelectorAll(`.tab-pane[id^="${pfx}-"]`);
   panes.forEach((p,i)=>p.classList.toggle('active',i===idx));
 }
 function switchLT(pfx,idx,el){
