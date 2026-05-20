@@ -344,7 +344,8 @@ label{font-size:13px;color:var(--t2)}
       <div class="tab-item active" onclick="switchTab('dt',0,this)">基础信息</div>
       <div class="tab-item" onclick="switchTab('dt',1,this)">仓储信息</div>
       <div class="tab-item" onclick="switchTab('dt',2,this)">供应商信息</div>
-      <div class="tab-item" onclick="switchTab('dt',3,this)">操作记录</div>
+      <div class="tab-item" id="dt-tab-bom" onclick="switchTab('dt',3,this)"><span id="dt-tab-bom-label">BOM 关系</span> <span class="tag tag-purple" style="margin-left:4px;font-size:11px;padding:1px 6px" id="dt-tab-bom-count">0</span></div>
+      <div class="tab-item" onclick="switchTab('dt',4,this)">操作记录</div>
     </div>
     <div class="card-body">
       <div class="tab-pane active" id="dt-0">
@@ -422,6 +423,27 @@ label{font-size:13px;color:var(--t2)}
         </table>
       </div>
       <div class="tab-pane" id="dt-3">
+        <div class="tbl-toolbar" style="padding:0 0 12px">
+          <div id="dt-bom-summary" style="font-size:13px;color:var(--t2)"></div>
+          <button class="btn btn-sm btn-primary" id="dt-bom-add" onclick="showToast('新建 BOM 关系')">+ 新建 BOM 关系</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>BOM 编码</th>
+              <th>对端货品编码</th>
+              <th>对端货品名称</th>
+              <th>关系</th>
+              <th>用量</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th style="min-width:120px">操作</th>
+            </tr>
+          </thead>
+          <tbody id="dt-bom-tbody"></tbody>
+        </table>
+      </div>
+      <div class="tab-pane" id="dt-4">
         <table>
           <thead><tr><th>操作时间</th><th>操作人</th><th>操作类型</th><th>变更内容</th></tr></thead>
           <tbody>
@@ -1421,7 +1443,64 @@ function viewDetail(i){
     txt.innerHTML=`<b>原料货品</b><div class="sub">${links.length>0?`被 ${links.length} 个成品关联`:'当前无成品关联'}</div>`;
     btn.style.display=links.length>0?'':'none';
   }
+  // BOM 关系 tab：成品手动创建无关联时隐藏；原料/成品有关联时展示
+  renderBomTab(r,links);
   gotoPage('goods-detail');
+}
+
+// 渲染详情页 BOM 关系 tab
+function renderBomTab(r,links){
+  const tabItem=document.getElementById('dt-tab-bom');
+  const tabLabel=document.getElementById('dt-tab-bom-label');
+  const tabCount=document.getElementById('dt-tab-bom-count');
+  const pane=document.getElementById('dt-3');
+  const summary=document.getElementById('dt-bom-summary');
+  const addBtn=document.getElementById('dt-bom-add');
+  // STANDALONE 成品（无 BOM）→ 隐藏 tab + 隐藏 pane；若当前 active 切回基础信息
+  if(r.source==='STANDALONE'){
+    tabItem.style.display='none';
+    pane.style.display='none';
+    if(tabItem.classList.contains('active')){
+      document.querySelectorAll('#page-goods-detail .tab-item').forEach((t,i)=>t.classList.toggle('active',i===0));
+      document.querySelectorAll('#page-goods-detail .tab-pane').forEach((p,i)=>p.classList.toggle('active',i===0));
+    }
+    return;
+  }
+  tabItem.style.display='';
+  // 动态标题
+  const isRaw=r.attr==='原料货品';
+  tabLabel.textContent=isRaw?'关联成品':'关联原料';
+  tabCount.textContent=links.length;
+  summary.textContent=isRaw
+    ? `该原料被 ${links.length} 个成品货品关联使用`
+    : `该成品由 ${links.length} 条 BOM 关系组成`;
+  addBtn.textContent=isRaw?'+ 关联新成品':'+ 关联新原料';
+  // 渲染对端列表
+  const tbody=document.getElementById('dt-bom-tbody');
+  if(links.length===0){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:32px">暂无关联，点右上角按钮新建</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=links.map(b=>{
+    const isSrc=b.scode===r.code;
+    const peer={code:isSrc?b.tcode:b.scode, name:isSrc?b.tname:b.sname};
+    const roleTag=isSrc
+      ? '<span class="tag tag-blue" style="font-size:11px">下游</span>'
+      : '<span class="tag tag-purple" style="font-size:11px">上游</span>';
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px;color:var(--t3)">${b.bcode}</td>
+      <td style="font-family:monospace;font-size:12px;color:var(--t3)">${peer.code}</td>
+      <td><strong>${peer.name}</strong></td>
+      <td>${roleTag}</td>
+      <td>${b.usage}</td>
+      <td><span class="tag ${b.status==='启用'?'tag-green':'tag-gray'}">${b.status}</span></td>
+      <td style="font-size:12px;color:var(--t2)">${b.ct}</td>
+      <td>
+        <button class="btn-text" onclick="gotoPage('bom-detail')">详情</button>
+        <button class="btn-text" onclick="gotoPage('bom-edit')">编辑</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function editGoods(i){
