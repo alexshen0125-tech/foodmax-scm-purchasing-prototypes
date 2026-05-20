@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Food Max 采购计划 · 补货管理</title>
+<title>Food Max · 补货预测决策工作台</title>
 <style>
 :root{
   --green:#0f8f68;--green-2:#087653;--mint:#e9f7f2;
@@ -12,13 +12,14 @@
   --red:#c83f49;--red-bg:#fff1f2;
   --amber:#c77718;--amber-bg:#fff6e6;
   --blue:#2563eb;--blue-bg:#edf4ff;
+  --violet:#7654c8;--violet-bg:#f3efff;
   --panel:#fff;--shadow:0 24px 60px rgba(16,24,40,.2);
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#eef2f6;color:var(--ink);font-size:13px}
-button,input,select{font:inherit}
+button,input,select,textarea{font:inherit}
 .app{height:100vh;display:grid;grid-template-columns:96px 1fr;overflow:hidden}
-.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:center;padding:18px 6px;gap:12px}
+.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:center;padding:18px 6px;gap:10px}
 .logo{width:44px;height:44px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800}
 .rail button{width:80px;height:60px;border:0;border-radius:8px;background:transparent;color:#cbd5e1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;padding:6px;line-height:1.3;text-align:center}
 .rail button.active,.rail button:hover{background:#1d2939;color:#fff}
@@ -28,7 +29,7 @@ button,input,select{font:inherit}
 .hero{background:#fff;border-bottom:1px solid var(--line);padding:18px 26px 16px}
 .hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .title{font-size:22px;font-weight:800}
-.subtitle{margin-top:7px;color:var(--muted);max-width:680px;line-height:1.55}
+.subtitle{margin-top:7px;color:var(--muted);max-width:760px;line-height:1.55}
 .hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn{height:34px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:0 13px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn:hover{border-color:var(--green);color:var(--green)}
@@ -39,262 +40,590 @@ button,input,select{font:inherit}
 .btn.text.danger{color:var(--red)}
 .btn.small{height:28px;padding:0 9px;font-size:12px}
 .chip{height:34px;border:1px solid var(--line);border-radius:5px;padding:0 11px;background:#fff;color:var(--text)}
+.health{display:grid;grid-template-columns:1.1fr 1.9fr 1.1fr;gap:14px;margin-top:16px}
+.h-card{border:1px solid var(--line);border-radius:8px;background:#fff;padding:14px;min-height:96px}
+.h-card h3{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:650}
+.big{font-size:28px;font-weight:800;line-height:1}
+.big.red{color:var(--red)}.big.green{color:var(--green)}.big.amber{color:var(--amber)}
+.micro{margin-top:8px;color:var(--muted);font-size:12px;line-height:1.5}
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.pipe{border:1px solid var(--line-2);border-radius:6px;padding:8px;background:#fafbfc}
+.pipe strong{display:block;margin-bottom:4px;font-size:12px}
+.pipe span{font-size:11px;color:var(--muted)}
+.ok{color:var(--green)}.warn{color:var(--amber)}.err{color:var(--red)}
 .workspace{padding:18px 26px 44px}
+.board{display:grid;grid-template-columns:340px minmax(720px,1fr) 340px;gap:14px;align-items:start}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.panel-head{height:46px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-2)}
+.panel-title{font-weight:750}
 .panel-body{padding:14px}
-.filter-form{display:grid;grid-template-columns:repeat(6,1fr);gap:10px 12px}
-.filter-item{display:flex;flex-direction:column;gap:4px}
-.filter-item label{font-size:12px;color:var(--muted)}
-.filter-form input,.filter-form select{height:30px;border:1px solid var(--line);border-radius:5px;padding:0 9px;background:#fff;color:var(--text);width:100%;outline:none}
-.filter-form input:focus,.filter-form select:focus{border-color:var(--green)}
-.filter-actions{display:flex;align-items:flex-end;justify-content:flex-end;gap:8px;grid-column:span 6}
-.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;white-space:nowrap;vertical-align:top}
-th{background:#f8fafc;color:var(--muted);font-weight:650;font-size:12px}
-tr:hover td{background:#fbfcfd}
-.num{font-family:Menlo,Consolas,monospace;text-align:right}
-.cell-block{font-size:12px;line-height:1.85}
-.cell-block .k{color:var(--muted);font-weight:500;display:inline-block;width:96px}
-.cell-block .v{color:var(--ink)}
-.cell-sales{font-size:11px;line-height:1.5}
-.cell-sales .group-title{color:var(--muted);font-weight:600;margin-bottom:4px;font-size:12px}
-.cell-sales .group-title b{color:var(--ink);margin-left:4px}
-.day-bar{display:flex;flex-wrap:wrap;gap:4px 8px;margin-bottom:6px}
-.day-bar .day{display:inline-flex;flex-direction:column;align-items:center;min-width:38px}
-.day-bar .day .d{color:var(--muted);font-size:10px}
-.day-bar .day .q{color:var(--ink);font-weight:600;font-size:12px}
-.day-bar .day .q.s{color:var(--amber);font-size:10px;font-weight:500}
-.sku-block{margin-top:4px;padding-top:4px;border-top:1px dashed var(--line-2)}
-.sku-label{color:var(--muted);font-size:11px;margin-bottom:3px}
-.divider-row{border-top:1px dashed var(--line-2);margin:6px 0}
+.queue{display:flex;flex-direction:column;gap:10px}
+.q-card{border:1px solid var(--line);border-radius:7px;padding:12px;cursor:pointer;background:#fff;transition:all .15s}
+.q-card:hover{border-color:var(--green);box-shadow:0 8px 20px rgba(16,24,40,.08)}
+.q-card.active{border-color:var(--green);background:var(--mint)}
+.q-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.sku{font-weight:800;margin-bottom:3px;font-size:13px}
+.code{font-size:11px;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;border:1px solid transparent;white-space:nowrap}
-.pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
-.pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
 .pill.red{color:var(--red);background:var(--red-bg);border-color:#ffc9cf}
+.pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
+.pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
 .pill.blue{color:var(--blue);background:var(--blue-bg);border-color:#c8d9ff}
-.tag-default{display:inline-block;padding:1px 6px;border-radius:3px;background:var(--blue-bg);color:var(--blue);font-size:11px;margin-left:6px;font-weight:500}
-.input-num{width:88px;height:28px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 8px;outline:none}
+.pill.violet{color:var(--violet);background:var(--violet-bg);border-color:#d7caff}
+.pill.gray{color:var(--muted);background:#f1f3f6;border-color:#dde1e8}
+.q-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.metric{background:#fafbfc;border:1px solid var(--line-2);border-radius:5px;padding:7px}
+.metric label{display:block;color:var(--muted);font-size:11px;margin-bottom:3px}
+.metric b{font-size:14px}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.filters select,.filters input{height:30px;border:1px solid var(--line);border-radius:5px;background:#fff;padding:0 9px;color:var(--text);outline:none}
+.filters select:focus,.filters input:focus{border-color:var(--green)}
+.decision{display:grid;grid-template-rows:auto auto auto;gap:12px}
+.focus{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.f-box{border:1px solid var(--line-2);border-radius:7px;background:#fafbfc;padding:12px}
+.f-box label{display:block;color:var(--muted);margin-bottom:7px;font-size:12px}
+.f-box b{font-size:20px}
+.formula{display:flex;align-items:center;gap:8px;overflow:auto;padding-bottom:2px}
+.token{height:32px;border:1px solid var(--line);border-radius:5px;background:#fff;padding:0 10px;display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.token b{font-family:Menlo,Consolas,monospace}
+.token.red b{color:var(--red)}.token.green b{color:var(--green)}
+.equals{font-size:18px;color:var(--muted)}
+.table-wrap{overflow:auto}
+table.dense{width:100%;border-collapse:collapse;min-width:780px}
+table.dense th,table.dense td{padding:8px 10px;border-bottom:1px solid var(--line-2);text-align:left;white-space:nowrap;vertical-align:middle;font-size:12px}
+table.dense th{background:#f8fafc;color:var(--muted);font-weight:650;font-size:11px}
+table.dense tr:hover td{background:#fbfcfd}
+.num{text-align:right;font-family:Menlo,Consolas,monospace}
+.input-num{width:80px;height:26px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 8px;outline:none}
 .input-num:focus{border-color:var(--green)}
-.check-btn{width:24px;height:24px;border:1px solid var(--green);background:var(--green);color:#fff;border-radius:4px;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center}
-.check-btn.show{display:inline-flex}
-.pagination{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:14px 0;color:var(--muted)}
-.page-info{margin-right:8px;font-size:12px}
-.page-size{height:28px;border:1px solid var(--line);border-radius:4px;padding:0 6px;background:#fff;font-size:12px}
-.page-btn{height:28px;min-width:28px;padding:0 8px;border:1px solid var(--line);background:#fff;border-radius:4px;cursor:pointer;color:var(--ink);font-size:12px}
-.page-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
-.page-btn:hover:not(.active){border-color:var(--green);color:var(--green)}
+.supplier-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:7px;padding:12px;margin-bottom:8px}
+.supplier-row.active{border-color:var(--green);background:var(--mint)}
+.supplier-row h4{margin:0 0 4px;font-size:13px}
+.supplier-row p{margin:0;color:var(--muted);line-height:1.55;font-size:12px}
+.rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#101828;color:#fff;font-weight:800;font-size:12px}
+.sim{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.slider-row{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:12px}
+.slider-row input[type=range]{flex:1;accent-color:var(--green)}
+.footer-bar{position:sticky;bottom:0;background:rgba(255,255,255,.96);border:1px solid var(--line);border-radius:8px;margin-top:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 -8px 30px rgba(16,24,40,.08);z-index:5}
+.summary{display:flex;align-items:center;gap:16px;color:var(--muted);font-size:13px}
+.summary b{color:var(--ink)}
 .view{display:none}.view.active{display:block}
-.muted{color:var(--muted);font-size:11px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compact-list{display:flex;flex-direction:column}
+.compact-item{display:grid;grid-template-columns:1.6fr .6fr .8fr auto;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line-2);align-items:center}
+.compact-item:hover{background:#fbfcfd}
+.map{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.map-card{border:1px solid var(--line);border-radius:8px;background:#fff;padding:13px}
+.map-card h4{margin:0 0 6px}
+.map-card p{margin:0;color:var(--muted);line-height:1.55;font-size:12px}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{padding:10px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-size:13px}
+.tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.indicator-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.bar{height:8px;background:var(--line-2);border-radius:6px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--green);border-radius:6px}
 .drawer-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;z-index:20;align-items:center;justify-content:center}
 .drawer-mask.show{display:flex}
-.modal{background:#fff;border-radius:8px;width:min(620px,92vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
-.modal.lg{width:min(820px,94vw)}
-.modal-head{height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.drawer-mask.right{justify-content:flex-end}
+.modal{background:#fff;border-radius:8px;width:min(660px,92vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal.lg{width:min(880px,94vw)}
+.drawer-pane{background:#fff;width:min(780px,92vw);height:100vh;display:flex;flex-direction:column;box-shadow:-12px 0 36px rgba(15,23,42,.2)}
+.modal-head,.drawer-head{height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);flex-shrink:0}
 .modal-title{font-size:15px;font-weight:700}
 .close{border:0;background:transparent;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
-.modal-body{padding:18px;overflow:auto}
-.modal-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
-.form-row{display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center}
+.modal-body,.drawer-body{padding:18px;overflow:auto;flex:1}
+.modal-foot,.drawer-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.form-row{display:grid;grid-template-columns:128px 1fr;gap:12px;margin-bottom:14px;align-items:center}
 .form-row label.l{color:var(--text);font-size:13px;text-align:right}
 .form-row.req label.l::after{content:" *";color:var(--red)}
 .form-control{height:34px;border:1px solid var(--line);border-radius:5px;padding:0 10px;width:100%;background:#fff;color:var(--text);outline:none}
 .form-control:focus{border-color:var(--green)}
-.radio-group{display:flex;gap:14px}
-.radio-group label{font-weight:normal;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
-.checkbox-week{display:flex;gap:6px;flex-wrap:wrap}
-.checkbox-week label{display:inline-flex;align-items:center;justify-content:center;width:38px;height:32px;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-size:12px;background:#fff;color:var(--text)}
-.checkbox-week input{display:none}
-.checkbox-week label.on{border-color:var(--green);background:var(--mint);color:var(--green);font-weight:600}
-.tip{color:var(--muted);font-size:12px;margin:6px 0 0;line-height:1.6}
+.tip{color:var(--muted);font-size:12px;margin:6px 0 0;line-height:1.55}
+.tip.warn{color:var(--amber)}
+.tip.err{color:var(--red)}
 .toast{position:fixed;top:22px;right:24px;background:#172033;color:#fff;padding:11px 14px;border-radius:6px;display:none;z-index:30;box-shadow:0 10px 28px rgba(16,24,40,.22)}
 .toast.show{display:block}
 .toast.success{background:var(--green)}
-@media(max-width:1280px){.filter-form{grid-template-columns:repeat(3,1fr)}.filter-actions{grid-column:span 3}}
-@media(max-width:860px){.app{grid-template-columns:1fr}.rail{display:none}.filter-form{grid-template-columns:1fr 1fr}.filter-actions{grid-column:span 2}}
+.toast.warn{background:var(--amber)}
+.muted{color:var(--muted);font-size:11px}
+.kv{display:flex;gap:8px;font-size:12px;color:var(--text);line-height:1.6}
+.kv .k{color:var(--muted);min-width:88px}
+.kv .v{color:var(--ink)}
+.divider{border-top:1px dashed var(--line-2);margin:8px 0}
+@media(max-width:1280px){.board{grid-template-columns:320px minmax(560px,1fr)}.decision-right{grid-column:1/-1}.health{grid-template-columns:1fr}.map,.indicator-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:860px){.app{grid-template-columns:1fr}.rail{display:none}.hero,.workspace{padding-left:14px;padding-right:14px}.board,.two-col,.focus,.sim,.map,.indicator-row{grid-template-columns:1fr}.hero-top{flex-direction:column}.footer-bar{flex-direction:column;align-items:flex-start;gap:8px}}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="rail">
     <div class="logo">FM</div>
-    <button class="active" data-view="plan"><span class="dot"></span>采购计划</button>
-    <button data-view="param"><span class="dot"></span>补货参数<br>配置</button>
-    <button data-view="moq"><span class="dot"></span>最小起订量</button>
+    <button class="active" data-view="today"><span class="dot"></span>今日补货</button>
+    <button data-view="exceptions"><span class="dot"></span>异常</button>
+    <button data-view="rules"><span class="dot"></span>规则配置</button>
+    <button data-view="review"><span class="dot"></span>效果复盘</button>
+    <button data-view="simulation"><span class="dot"></span>模拟</button>
   </aside>
   <main class="main">
 
-    <div class="view active" id="plan">
+    <!-- ===== 1. 今日补货预测工作台 ===== -->
+    <div class="view active" id="today">
       <section class="hero">
         <div class="hero-top">
           <div>
-            <div class="title">采购计划</div>
-            <div class="subtitle">每天 17:00 自动生成。系统按预测销量、当时库内/在途、安全库存推算初始建议量，再按订货上下限给出最终建议，运营可在行内人工调整。</div>
+            <div class="title">补货预测工作台</div>
+            <div class="subtitle">每天 17:00 生成。决策链路：SKU 是否补货 → 缺货风险 → 供应商可用性 → 履约匹配 → 量分配 → 运营确认 → 生成采购单。</div>
           </div>
           <div class="hero-actions">
             <select class="chip"><option>West Hub</option><option>East Hub</option></select>
-            <input class="chip" value="2026-05-20">
-            <button class="btn primary" onclick="confirmAction('确认提交全局重算？','已提交全局重算任务')">全局重算</button>
-            <button class="btn" onclick="toast('导出任务已加入队列')">导出</button>
+            <input class="chip" value="2026-05-21">
+            <button class="btn" onclick="toast('已重新拉取库存与在途，销售保持 17:00 批次')">刷新数据</button>
+            <button class="btn primary" onclick="openModal('createPO')">生成采购单</button>
+          </div>
+        </div>
+        <div class="health">
+          <div class="h-card">
+            <h3>今天必须人工决策</h3>
+            <div class="big red">9</div>
+            <div class="micro">5 当日缺货 · 2 主供不接单 · 1 无可用供应商 · 1 晚到风险</div>
+          </div>
+          <div class="h-card">
+            <h3>数据准备度</h3>
+            <div class="pipeline">
+              <div class="pipe"><strong class="ok">销售实时</strong><span>17:00 完成</span></div>
+              <div class="pipe"><strong class="ok">历史销量</strong><span>近 7 日完成</span></div>
+              <div class="pipe"><strong class="ok">售罄日</strong><span>已剔除</span></div>
+              <div class="pipe"><strong class="ok">库存批次</strong><span>含短保</span></div>
+              <div class="pipe"><strong class="warn">采购在途</strong><span>重试 1 次</span></div>
+            </div>
+          </div>
+          <div class="h-card">
+            <h3>可一键通过</h3>
+            <div class="big green">83%</div>
+            <div class="micro">106 个 SKU 无风险，可直接确认系统建议</div>
           </div>
         </div>
       </section>
+
       <section class="workspace">
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-body">
-            <div class="filter-form">
-              <div class="filter-item"><label>商品 SPU（≤20）</label><input placeholder="选择或输入 SPU"></div>
-              <div class="filter-item"><label>类目</label><select><option>全部</option><option>蔬菜</option><option>水果</option><option>肉禽</option></select></div>
-              <div class="filter-item"><label>供应商</label><input placeholder="选择供应商"></div>
-              <div class="filter-item"><label>仓库</label><select><option>West Hub</option><option>East Hub</option></select></div>
-              <div class="filter-item"><label>下单日期</label><input value="2026-05-20 ~ 2026-05-20"></div>
-              <div class="filter-item"><label>建议量剔除 0</label><select><option>否</option><option>是</option></select></div>
-              <div class="filter-actions">
-                <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
-                <button class="btn" onclick="toast('已重置筛选')">重置</button>
+        <div class="board">
+          <section class="panel">
+            <div class="panel-head">
+              <div class="panel-title">风险队列</div>
+              <span class="pill red">按预计缺货时间排序</span>
+            </div>
+            <div class="panel-body">
+              <div class="filters" style="margin-bottom:12px">
+                <select><option>全部风险</option><option>当日缺货</option><option>主供不接单</option><option>晚到风险</option><option>低于 MOQ</option><option>无可用供应商</option></select>
+                <select><option>全部品类</option><option>蔬菜</option><option>水果</option><option>肉禽</option></select>
+              </div>
+              <div class="queue" id="riskQueue"></div>
+            </div>
+          </section>
+
+          <section class="decision">
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title" id="focusTitle">金针菇 · SPU-10021</div>
+                <div class="filters">
+                  <span class="pill red" id="focusRisk">预计 21:30 缺货</span>
+                  <span class="pill violet" id="focusMode">履约优先</span>
+                  <button class="btn small" onclick="openDrawer('detail')">补货详情</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="focus">
+                  <div class="f-box"><label>系统建议补货量</label><b id="suggestQty">620 KG</b></div>
+                  <div class="f-box"><label>若不下单，预计缺口</label><b class="red" style="font-size:20px" id="gapQty">84 KG</b></div>
+                  <div class="f-box"><label>推荐动作</label><b id="actionText">切备用 + 补足上限</b></div>
+                </div>
               </div>
             </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">计算不是黑盒</div>
+                <button class="btn text small" onclick="openDrawer('detail')">查看完整明细</button>
+              </div>
+              <div class="panel-body">
+                <div class="formula">
+                  <span class="token">均销 <b id="fMu">535</b></span>
+                  <span class="token">目标天数 <b id="fDays">3.5</b></span>
+                  <span class="token red">预计剩余 <b id="fLeft">-84</b></span>
+                  <span class="token">在途 <b id="fTransit">120</b></span>
+                  <span class="equals">=</span>
+                  <span class="token green">建议量 <b id="fSuggest">620</b></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">供应商分配</div>
+                <div class="filters">
+                  <button class="btn small" onclick="openModal('allocate')">调整分配</button>
+                  <button class="btn small" onclick="toast('已按当前策略重新分配')">重新分配</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="dense">
+                  <thead><tr>
+                    <th>供应商</th><th>角色</th><th>今日接单</th><th>VLT</th><th>预计到货</th>
+                    <th>价格</th><th class="num">供货上限</th><th class="num">系统建议</th>
+                    <th>校验</th>
+                  </tr></thead>
+                  <tbody id="supplierRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <aside class="decision-right">
+            <section class="panel">
+              <div class="panel-head"><div class="panel-title">决策建议</div></div>
+              <div class="panel-body">
+                <div class="supplier-row active">
+                  <div>
+                    <h4 id="recoTitle">推荐：保持总量，主供 + 备用拆分</h4>
+                    <p id="recoReason">GreenFarm 供货上限 500 KG，剩余 120 KG 给 FreshGo，预计明日早高峰前到货，覆盖未来 3.5 天。</p>
+                  </div>
+                  <div class="rank">1</div>
+                </div>
+                <div class="supplier-row">
+                  <div><h4>备选：减少采购量</h4><p>把目标天数从 3.5 压到 2，等明天主供恢复接单。代价是缺货风险后移到明天午市。</p></div>
+                  <div class="rank">2</div>
+                </div>
+              </div>
+            </section>
+            <section class="panel" style="margin-top:14px">
+              <div class="panel-head"><div class="panel-title">影响预览</div></div>
+              <div class="panel-body">
+                <div class="sim">
+                  <div class="f-box"><label>预计覆盖</label><b id="coverDays">3.5 天</b></div>
+                  <div class="f-box"><label>预计成本</label><b id="costText">$1,465</b></div>
+                </div>
+                <div class="slider-row"><span>保守</span><input type="range" min="0" max="2" value="1" onchange="toast('已切换模拟档位，建议量同步重算')"><span>激进</span></div>
+                <div class="tip">滑动会即时模拟备货天数 ±0.5，自动重算建议量与供应商分配。</div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <div class="footer-bar">
+          <div class="summary">
+            <span>本轮已确认 <b id="confirmed">0</b> 个 SKU</span>
+            <span>待人工决策 <b>9</b></span>
+            <span>预计生成 <b>14</b> 张草稿采购单</span>
           </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:38px"><input type="checkbox"></th>
-                <th style="width:200px">下单日期</th>
-                <th style="width:280px">商品</th>
-                <th style="min-width:500px">销售数据</th>
-                <th style="width:260px">采购下单日数据</th>
-                <th style="width:340px">采购建议量</th>
-              </tr>
-            </thead>
-            <tbody id="planRows"></tbody>
-          </table>
-        </div>
-
-        <div class="pagination">
-          <span class="page-info">共 386 条</span>
-          <select class="page-size"><option>25 / 页</option><option>50 / 页</option><option>100 / 页</option></select>
-          <button class="page-btn">‹</button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">3</button>
-          <button class="page-btn">…</button>
-          <button class="page-btn">16</button>
-          <button class="page-btn">›</button>
+          <div class="hero-actions">
+            <button class="btn" onclick="toast('已批量通过 106 个无风险 SKU','success')">通过无风险建议</button>
+            <button class="btn primary" onclick="confirmCurrent()">确认当前 SKU</button>
+          </div>
         </div>
       </section>
     </div>
 
-    <div class="view" id="param">
+    <!-- ===== 2. 异常 ===== -->
+    <div class="view" id="exceptions">
       <section class="hero">
         <div class="hero-top">
           <div>
-            <div class="title">补货参数配置</div>
-            <div class="subtitle">维护 SPU × 仓库 × 供应商 的接单日、提前期、品供绑定、默认供应商、增长系数等参数。修改后下次定时任务生效。</div>
-          </div>
-          <div class="hero-actions">
-            <button class="btn" onclick="openModal('paramDefaultVendor')">批设默认供应商</button>
-            <button class="btn" onclick="openModal('paramGrowth')">批设增长系数</button>
-            <button class="btn primary" onclick="openModal('paramEdit','新增配置')">新增配置</button>
+            <div class="title">异常处理</div>
+            <div class="subtitle">按文档 2「供应商可用性校验」分类聚合，先处理阻断项，再处理预警。</div>
           </div>
         </div>
       </section>
       <section class="workspace">
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-body">
-            <div class="filter-form">
-              <div class="filter-item"><label>商品 SPU</label><input placeholder="选择 SPU"></div>
-              <div class="filter-item"><label>类目</label><select><option>全部</option><option>蔬菜</option><option>肉禽</option></select></div>
-              <div class="filter-item"><label>供应商名称/ID</label><input placeholder="搜索供应商"></div>
-              <div class="filter-item"><label>仓库</label><select><option>全部</option><option>West Hub</option><option>East Hub</option></select></div>
-              <div class="filter-item"><label>配置状态</label><select><option>全部</option><option>启用</option><option>停用</option></select></div>
-              <div class="filter-actions">
-                <button class="btn primary" onclick="toast('查询成功，共 248 条','success')">查询</button>
-                <button class="btn" onclick="toast('已重置')">重置</button>
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">异常按处理方式聚合</div></div>
+            <div class="compact-list">
+              <div class="compact-item"><div><b>默认供应商今日不接单</b><div class="muted">阻断：直接排除，需切备用</div></div><span>4 SKU</span><span class="pill amber">切备用</span><button class="btn small" onclick="switchView('today')">去处理</button></div>
+              <div class="compact-item"><div><b>无可用供应商</b><div class="muted">阻断：候选清单为空</div></div><span>1 SKU</span><span class="pill red">人工介入</span><button class="btn small">处理</button></div>
+              <div class="compact-item"><div><b>到货晚于预计缺货时间</b><div class="muted">预警：允许下单但需确认</div></div><span>3 SKU</span><span class="pill amber">确认风险</span><button class="btn small">处理</button></div>
+              <div class="compact-item"><div><b>建议量低于 MOQ</b><div class="muted">预警：合并下单或拉高量</div></div><span>6 SKU</span><span class="pill violet">合并下单</span><button class="btn small">处理</button></div>
+              <div class="compact-item"><div><b>超过截单时间</b><div class="muted">顺延：到货日 +1 或预警</div></div><span>2 SKU</span><span class="pill amber">顺延</span><button class="btn small">处理</button></div>
+              <div class="compact-item"><div><b>销售异常加速</b><div class="muted">P_now &gt; 7 日同时段进度 +20%</div></div><span>3 SKU</span><span class="pill red">需确认量</span><button class="btn small">处理</button></div>
+              <div class="compact-item"><div><b>库存批次少保质期</b><div class="muted">短保 SKU 取较小值</div></div><span>2 SKU</span><span class="pill blue">补数据</span><button class="btn small">处理</button></div>
+              <div class="compact-item"><div><b>数据采集失败</b><div class="muted">5 数据源任一失败 → 整批中断</div></div><span>—</span><span class="pill gray">飞书告警</span><button class="btn small" onclick="toast('未发现失败批次')">查看</button></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">异常处理原则（文档 2）</div></div>
+            <div class="panel-body">
+              <div class="map">
+                <div class="map-card"><h4>阻断优先</h4><p>今日不接单、供应商停用直接排除，即使是主供也不能下单。</p></div>
+                <div class="map-card"><h4>赶上为先</h4><p>能赶上缺货时间的供应商先排序，再比较主备和价格。</p></div>
+                <div class="map-card"><h4>短保控损</h4><p>库存剩余货架天数 &lt; 周转天数时按较小值参与计算。</p></div>
+                <div class="map-card"><h4>留痕</h4><p>人工改量、切换供应商必须填写原因，进入复盘。</p></div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:38px"><input type="checkbox"></th>
-                <th>供应商</th>
-                <th>SPU</th>
-                <th>类目</th>
-                <th>仓库</th>
-                <th>接单日设置</th>
-                <th>提前期</th>
-                <th>处理状态</th>
-                <th>品供绑定</th>
-                <th style="width:120px">操作</th>
-              </tr>
-            </thead>
-            <tbody id="paramRows"></tbody>
-          </table>
-        </div>
-
-        <div class="pagination">
-          <span class="page-info">共 248 条</span>
-          <select class="page-size"><option>25 / 页</option><option>50 / 页</option></select>
-          <button class="page-btn">‹</button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">2</button>
-          <button class="page-btn">›</button>
+          </section>
         </div>
       </section>
     </div>
 
-    <div class="view" id="moq">
+    <!-- ===== 3. 规则配置 ===== -->
+    <div class="view" id="rules">
       <section class="hero">
         <div class="hero-top">
           <div>
-            <div class="title">最小起订量配置</div>
-            <div class="subtitle">维护「供应商 × 仓库」的订货下限、订货上限（金额）。采购计划计算「采购建议量」时按此约束。</div>
+            <div class="title">规则配置</div>
+            <div class="subtitle">配置 SKU 算量规则与供应商分配规则。修改后下次定时任务生效，并写入变更日志。</div>
           </div>
           <div class="hero-actions">
-            <button class="btn primary" onclick="openModal('moqEdit','新增配置')">新增配置</button>
+            <button class="btn primary" onclick="toast('规则草稿已保存，下次 17:00 批次生效','success')">保存草稿</button>
           </div>
         </div>
       </section>
       <section class="workspace">
-        <div class="panel" style="margin-bottom:12px">
-          <div class="panel-body">
-            <div class="filter-form">
-              <div class="filter-item"><label>供应商</label><input placeholder="选择供应商"></div>
-              <div class="filter-item"><label>仓库</label><select><option>全部</option><option>West Hub</option><option>East Hub</option></select></div>
-              <div class="filter-item"><label>供应商负责人</label><input placeholder="模糊查询，多选"></div>
-              <div class="filter-actions">
-                <button class="btn primary" onclick="toast('查询成功')">查询</button>
-                <button class="btn" onclick="toast('已重置')">重置</button>
-              </div>
+        <div class="tabs">
+          <div class="tab active" data-tab="r-tier">销售分层</div>
+          <div class="tab" data-tab="r-shelf">保质期分层</div>
+          <div class="tab" data-tab="r-matrix">备货天数矩阵</div>
+          <div class="tab" data-tab="r-factor">系数表</div>
+          <div class="tab" data-tab="r-supply">供应商供货规则</div>
+          <div class="tab" data-tab="r-strategy">分配策略</div>
+        </div>
+
+        <div class="tab-pane active" id="r-tier">
+          <section class="panel"><div class="table-wrap"><table class="dense">
+            <thead><tr><th>分层</th><th>名称</th><th class="num">销量下限</th><th class="num">销量上限</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td>L1</td><td>高销</td><td class="num">500</td><td class="num">不限</td><td><span class="pill green">启用</span></td></tr>
+              <tr><td>L2</td><td>中销</td><td class="num">100</td><td class="num">500</td><td><span class="pill green">启用</span></td></tr>
+              <tr><td>L3</td><td>低销</td><td class="num">20</td><td class="num">100</td><td><span class="pill green">启用</span></td></tr>
+              <tr><td>L4</td><td>微销</td><td class="num">0</td><td class="num">20</td><td><span class="pill green">启用</span></td></tr>
+            </tbody>
+          </table></div></section>
+        </div>
+
+        <div class="tab-pane" id="r-shelf">
+          <section class="panel"><div class="table-wrap"><table class="dense">
+            <thead><tr><th>分层</th><th>保质期范围</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td>短保</td><td>shelf_life &lt; 7 天</td><td><span class="pill green">启用</span></td></tr>
+              <tr><td>中保</td><td>7 ≤ shelf_life ≤ 15 天</td><td><span class="pill green">启用</span></td></tr>
+              <tr><td>长保</td><td>shelf_life &gt; 15 天</td><td><span class="pill green">启用</span></td></tr>
+            </tbody>
+          </table></div></section>
+        </div>
+
+        <div class="tab-pane" id="r-matrix">
+          <section class="panel">
+            <div class="panel-body">
+              <p class="tip">行 = 销售分层，列 = 保质期分层。单元格为基础备货天数（最终天数 = 基础 + VLT 修正 + 缺货 + 周末节假日系数）。</p>
+              <div class="table-wrap" style="margin-top:8px"><table class="dense">
+                <thead><tr><th></th><th>短保（&lt;7 天）</th><th>中保（7–15 天）</th><th>长保（&gt;15 天）</th></tr></thead>
+                <tbody>
+                  <tr><td>L1 高销</td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="3"></td><td><input class="input-num" value="4"></td></tr>
+                  <tr><td>L2 中销</td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2.5"></td><td><input class="input-num" value="3.5"></td></tr>
+                  <tr><td>L3 低销</td><td><input class="input-num" value="1"></td><td><input class="input-num" value="2"></td><td><input class="input-num" value="3"></td></tr>
+                  <tr><td>L4 微销</td><td><input class="input-num" value="1"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2"></td></tr>
+                </tbody>
+              </table></div>
             </div>
+          </section>
+        </div>
+
+        <div class="tab-pane" id="r-factor">
+          <div class="two-col">
+            <section class="panel">
+              <div class="panel-head"><div class="panel-title">VLT/VCT 修正</div></div>
+              <div class="table-wrap"><table class="dense">
+                <thead><tr><th>VLT</th><th>说明</th><th class="num">修正天数</th></tr></thead>
+                <tbody>
+                  <tr><td>T+1</td><td>今天定明天到</td><td class="num"><input class="input-num" value="0"></td></tr>
+                  <tr><td>T+2</td><td>两天到货</td><td class="num"><input class="input-num" value="1"></td></tr>
+                  <tr><td>T+3 以上</td><td>VLT − 1</td><td class="num"><input class="input-num" value="VLT-1"></td></tr>
+                </tbody>
+              </table></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div class="panel-title">缺货系数</div></div>
+              <div class="table-wrap"><table class="dense">
+                <thead><tr><th>条件</th><th class="num">叠加天数</th></tr></thead>
+                <tbody>
+                  <tr><td>保质期 ≥ 3 天</td><td class="num"><input class="input-num" value="2"></td></tr>
+                  <tr><td>保质期 &lt; 3 天</td><td class="num"><input class="input-num" value="1.5"></td></tr>
+                </tbody>
+              </table></div>
+            </section>
+          </div>
+          <section class="panel" style="margin-top:14px">
+            <div class="panel-head"><div class="panel-title">周末 / 节假日</div></div>
+            <div class="table-wrap"><table class="dense">
+              <thead><tr><th>场景</th><th>适用 VLT</th><th class="num">叠加天数</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr><td>周五（周日不到货）</td><td>VLT=1</td><td class="num"><input class="input-num" value="1"></td><td><span class="pill green">启用</span></td></tr>
+                <tr><td>周六</td><td>VLT=1</td><td class="num"><input class="input-num" value="1"></td><td><span class="pill green">启用</span></td></tr>
+                <tr><td>法定假日前 1 天</td><td>全部</td><td class="num"><input class="input-num" value="1"></td><td><span class="pill green">启用</span></td></tr>
+                <tr><td>法定假日当天</td><td>全部</td><td class="num"><input class="input-num" value="假期天数-1"></td><td><span class="pill amber">待确认</span></td></tr>
+              </tbody>
+            </table></div>
+          </section>
+        </div>
+
+        <div class="tab-pane" id="r-supply">
+          <section class="panel">
+            <div class="panel-body">
+              <p class="tip">维护 SKU × 供应商的供货关系，分配引擎以此排序。<b>今日是否接单</b>为最高优先级阻断条件。</p>
+              <div class="table-wrap" style="margin-top:8px"><table class="dense">
+                <thead><tr>
+                  <th>商品</th><th>供应商</th><th>角色</th><th>今日接单</th><th>VLT</th><th>截单时间</th>
+                  <th class="num">起订量</th><th class="num">供货上限</th><th class="num">价格</th><th>稳定性</th><th>状态</th><th>操作</th>
+                </tr></thead>
+                <tbody>
+                  <tr><td>金针菇 SPU-10021</td><td>GreenFarm</td><td><span class="pill green">主供</span></td><td><span class="pill green">接单</span></td><td>1</td><td>18:00</td><td class="num">500</td><td class="num">500</td><td class="num">$3.6/kg</td><td>96%</td><td><span class="pill green">启用</span></td><td><button class="btn text">编辑</button></td></tr>
+                  <tr><td>金针菇 SPU-10021</td><td>FreshGo</td><td><span class="pill blue">备用</span></td><td><span class="pill green">接单</span></td><td>1</td><td>18:30</td><td class="num">200</td><td class="num">5,000</td><td class="num">$3.8/kg</td><td>92%</td><td><span class="pill green">启用</span></td><td><button class="btn text">编辑</button></td></tr>
+                  <tr><td>金针菇 SPU-10021</td><td>Hattah</td><td><span class="pill blue">备用</span></td><td><span class="pill amber">不接单</span></td><td>2</td><td>17:30</td><td class="num">300</td><td class="num">5,000</td><td class="num">$3.2/kg</td><td>91%</td><td><span class="pill green">启用</span></td><td><button class="btn text">编辑</button></td></tr>
+                  <tr><td>大白菜 SPU-03821</td><td>FreshGo</td><td><span class="pill green">主供</span></td><td><span class="pill amber">不接单</span></td><td>1</td><td>18:00</td><td class="num">200</td><td class="num">3,000</td><td class="num">$1.2/kg</td><td>95%</td><td><span class="pill amber">今日停单</span></td><td><button class="btn text">编辑</button></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="tab-pane" id="r-strategy">
+          <section class="panel">
+            <div class="panel-body">
+              <p class="tip">不同业务场景绑定不同分配策略。同 SKU 的策略可在补货预测工作台手动切换。</p>
+              <div class="table-wrap" style="margin-top:8px"><table class="dense">
+                <thead><tr><th>策略</th><th>适用场景</th><th>排序逻辑</th><th>超上限处理</th><th>晚到处理</th><th>状态</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="pill violet">履约优先</span></td><td>当日/明日缺货、短保高销</td><td>今日接单 &gt; 可赶上缺货 &gt; 稳定性 &gt; 主供 &gt; 价格</td><td>拆给备用</td><td><span class="pill red">高亮待确认</span></td><td><span class="pill green">启用</span></td></tr>
+                  <tr><td><span class="pill green">主供应商优先</span></td><td>正常补货</td><td>今日接单 &gt; 主供 &gt; 稳定性 &gt; 价格 &gt; 提前期</td><td>备用补足</td><td><span class="pill amber">提示</span></td><td><span class="pill green">启用</span></td></tr>
+                  <tr><td><span class="pill blue">成本优先</span></td><td>库存充足、成本敏感</td><td>今日接单 &gt; 价格 &gt; 稳定性 &gt; 提前期</td><td>按价格顺序</td><td><span class="pill gray">允许</span></td><td><span class="pill green">启用</span></td></tr>
+                  <tr><td><span class="pill amber">配额分摊</span></td><td>多供应商共供</td><td>按配置比例分摊</td><td>剩余转下一家</td><td><span class="pill amber">提示</span></td><td><span class="pill green">启用</span></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 4. 效果复盘 ===== -->
+    <div class="view" id="review">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">效果复盘</div>
+            <div class="subtitle">用文档 2「十、效果复盘指标」对照系统建议、人工调整与到货实绩，反哺规则优化。</div>
+          </div>
+          <div class="hero-actions">
+            <select class="chip"><option>近 7 天</option><option>近 30 天</option></select>
+            <button class="btn" onclick="toast('已导出复盘报表')">导出报表</button>
           </div>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>供应商编码</th>
-                <th>供应商名称</th>
-                <th>供应商负责人</th>
-                <th>仓库</th>
-                <th class="num">订货下限 (SGD)</th>
-                <th class="num">订货上限 (SGD)</th>
-                <th style="width:140px">操作</th>
-              </tr>
-            </thead>
-            <tbody id="moqRows"></tbody>
-          </table>
+      </section>
+      <section class="workspace">
+        <div class="indicator-row">
+          <div class="h-card"><h3>采购计划生成单占比</h3><div class="big green">71%</div><div class="micro">目标 ≥ 80%</div></div>
+          <div class="h-card"><h3>单 SKU 调整率</h3><div class="big amber">34%</div><div class="micro">目标 &lt; 30%</div></div>
+          <div class="h-card"><h3>周末缺货 SKU</h3><div class="big green">-42%</div><div class="micro">较上周下降</div></div>
+          <div class="h-card"><h3>主供应商不接单次数</h3><div class="big red">11</div><div class="micro">关注备用供应商池健康度</div></div>
         </div>
 
-        <div class="pagination">
-          <span class="page-info">共 4 条</span>
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">调整原因分布</div></div>
+            <div class="panel-body">
+              <div class="kv" style="margin-bottom:6px"><span class="k">节前备货</span><div style="flex:1"><div class="bar"><span style="width:42%"></span></div></div><span>42%</span></div>
+              <div class="kv" style="margin-bottom:6px"><span class="k">销量异常</span><div style="flex:1"><div class="bar"><span style="width:31%"></span></div></div><span>31%</span></div>
+              <div class="kv" style="margin-bottom:6px"><span class="k">数据存疑</span><div style="flex:1"><div class="bar"><span style="width:17%"></span></div></div><span>17%</span></div>
+              <div class="kv" style="margin-bottom:6px"><span class="k">缺货补货</span><div style="flex:1"><div class="bar"><span style="width:10%"></span></div></div><span>10%</span></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">建议量偏差 Top 5</div></div>
+            <div class="table-wrap"><table class="dense">
+              <thead><tr><th>商品</th><th class="num">系统建议</th><th class="num">实际下单</th><th>偏差</th></tr></thead>
+              <tbody>
+                <tr><td>金针菇 SPU-10021</td><td class="num">9,500</td><td class="num">12,000</td><td><span class="pill red">+26%</span></td></tr>
+                <tr><td>大白菜 SPU-03821</td><td class="num">1,500</td><td class="num">1,800</td><td><span class="pill amber">+20%</span></td></tr>
+                <tr><td>Leong Guan 黄面</td><td class="num">0</td><td class="num">12</td><td><span class="pill red">人工加单</span></td></tr>
+                <tr><td>番茄 SPU-32011</td><td class="num">420</td><td class="num">360</td><td><span class="pill amber">-14%</span></td></tr>
+                <tr><td>上海青 SPU-30087</td><td class="num">360</td><td class="num">380</td><td><span class="pill gray">+6%</span></td></tr>
+              </tbody>
+            </table></div>
+          </section>
+        </div>
+
+        <div class="two-col" style="margin-top:14px">
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">预测 vs 实际销量（近 7 日）</div></div>
+            <div class="panel-body">
+              <div class="kv"><span class="k">05/14</span><div style="flex:1"><div class="bar"><span style="width:87%"></span></div></div><span>87%</span></div>
+              <div class="kv"><span class="k">05/15</span><div style="flex:1"><div class="bar"><span style="width:92%"></span></div></div><span>92%</span></div>
+              <div class="kv"><span class="k">05/16</span><div style="flex:1"><div class="bar"><span style="width:81%"></span></div></div><span>81%</span></div>
+              <div class="kv"><span class="k">05/17</span><div style="flex:1"><div class="bar"><span style="width:95%"></span></div></div><span>95%</span></div>
+              <div class="kv"><span class="k">05/18</span><div style="flex:1"><div class="bar"><span style="width:89%"></span></div></div><span>89%</span></div>
+              <div class="kv"><span class="k">05/19</span><div style="flex:1"><div class="bar"><span style="width:91%"></span></div></div><span>91%</span></div>
+              <div class="kv"><span class="k">05/20</span><div style="flex:1"><div class="bar"><span style="width:84%"></span></div></div><span>84%</span></div>
+              <div class="tip">条形长度 = 预测命中率（实际 / 预测，越接近 100% 越准）</div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">供应商履约</div></div>
+            <div class="table-wrap"><table class="dense">
+              <thead><tr><th>供应商</th><th class="num">应到</th><th class="num">实到</th><th>准时率</th><th>不接单次数</th></tr></thead>
+              <tbody>
+                <tr><td>GreenFarm</td><td class="num">22</td><td class="num">21</td><td><span class="pill green">95%</span></td><td>1</td></tr>
+                <tr><td>FreshGo</td><td class="num">18</td><td class="num">17</td><td><span class="pill green">94%</span></td><td>0</td></tr>
+                <tr><td>MeatPro</td><td class="num">14</td><td class="num">14</td><td><span class="pill green">100%</span></td><td>0</td></tr>
+                <tr><td>Hattah</td><td class="num">9</td><td class="num">8</td><td><span class="pill amber">89%</span></td><td>4</td></tr>
+                <tr><td>TomatoKing</td><td class="num">6</td><td class="num">5</td><td><span class="pill amber">83%</span></td><td>6</td></tr>
+              </tbody>
+            </table></div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 5. 模拟 ===== -->
+    <div class="view" id="simulation">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">策略模拟器</div>
+            <div class="subtitle">调节系数/参数，预览对当前批次 SKU 的影响，再决定是否应用。</div>
+          </div>
+          <div class="hero-actions">
+            <button class="btn primary" onclick="toast('模拟结果已应用到当前批次，待运营确认后生效','success')">应用到当前批次</button>
+          </div>
+        </div>
+      </section>
+      <section class="workspace">
+        <div class="focus" style="margin-bottom:14px">
+          <div class="h-card"><h3>目标缺货风险</h3><div class="big green" style="font-size:22px">从 7 降到 2</div></div>
+          <div class="h-card"><h3>额外采购成本</h3><div class="big amber" style="font-size:22px">+$428</div></div>
+          <div class="h-card"><h3>短保报废风险</h3><div class="big red" style="font-size:22px">+3.2%</div></div>
+        </div>
+        <div class="two-col">
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">调节参数</div></div>
+            <div class="panel-body">
+              <div class="slider-row"><span>缺货系数</span><input type="range" min="0" max="4" value="2"><b>+2 天</b></div>
+              <div class="slider-row"><span>周末系数</span><input type="range" min="0" max="3" value="1"><b>+1 天</b></div>
+              <div class="slider-row"><span>安全库存</span><input type="range" min="0" max="25" value="16"><b>16%</b></div>
+              <div class="slider-row"><span>目标天数</span><input type="range" min="1" max="6" value="3" step="0.5"><b>3 天</b></div>
+              <p class="tip">参数调整后仅模拟当前批次的影响，不会写入规则配置。</p>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div class="panel-title">受影响 SKU</div></div>
+            <div class="table-wrap"><table class="dense">
+              <thead><tr><th>商品</th><th class="num">原建议</th><th class="num">新建议</th><th>影响</th></tr></thead>
+              <tbody>
+                <tr><td>金针菇</td><td class="num">620</td><td class="num">700</td><td><span class="pill green">缺货风险下降</span></td></tr>
+                <tr><td>鲜鸡胸肉</td><td class="num">260</td><td class="num">310</td><td><span class="pill amber">短保压力上升</span></td></tr>
+                <tr><td>上海青</td><td class="num">360</td><td class="num">400</td><td><span class="pill green">余量增加</span></td></tr>
+                <tr><td>大白菜</td><td class="num">420</td><td class="num">420</td><td><span class="pill gray">无变化</span></td></tr>
+              </tbody>
+            </table></div>
+          </section>
         </div>
       </section>
     </div>
@@ -302,313 +631,275 @@ tr:hover td{background:#fbfcfd}
   </main>
 </div>
 
+<!-- ===== Drawer: SKU 补货详情 ===== -->
+<div class="drawer-mask right" id="drawerMask">
+  <aside class="drawer-pane">
+    <div class="drawer-head">
+      <div class="modal-title" id="drawerTitle">SKU 补货详情</div>
+      <button class="close" onclick="closeDrawer()">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+    <div class="drawer-foot">
+      <button class="btn" onclick="closeDrawer()">关闭</button>
+      <button class="btn primary" onclick="closeDrawer();toast('已确认该 SKU 系统建议','success')">确认建议</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ===== Modal: 供应商分配确认 / 生成采购单 ===== -->
 <div class="drawer-mask" id="modalMask"><div class="modal" id="modalBox"></div></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const planData=[
-  {id:1,
-    orderCalculationDate:'2026-05-20 17:00:02',salesStartDate:'2026-05-21',salesEndDate:'2026-05-23',
-    categoryName:'蔬菜',subCategoryName:'菇类',spuName:'金针菇',spuCode:'SPU-10021',
-    vendorName:'GreenFarm',vendorCode:'V-001',isDefaultVendor:true,
-    warehouseName:'West Hub',warehouseCode:'WH-W',
-    orderReceivingDayType:1,setByWeekDesc:'周一、周三、周五',orderLeadTime:1,
-    minOrderAmount:500,
-    updateTime:'2026-05-20 17:01',
-    currentWarehouseQty:345,currentInTransitQty:120,
-    dailyCompletedSalesQty:312,estimatedUnfinishedSalesQty:223,estimatedDailyEndingQty:-70,
-    estimatedSalesQtySum:1610,safetyInventorySum:268,estimatedEndingInventory:-86,
-    initSuggestPurchaseQty:1964,considerLimitSuggestPurchaseQty:1965,manuallySuggestPurchaseQty:1965,
-    estimatedSalesRecordList:[
-      {estimatedSalesDate:'2026-05-21',estimatedSalesQty:540},
-      {estimatedSalesDate:'2026-05-22',estimatedSalesQty:535},
-      {estimatedSalesDate:'2026-05-23',estimatedSalesQty:535}
-    ],
-    historyByDate:[['05/13',480],['05/14',520],['05/15','售罄'],['05/16',560],['05/17',610],['05/18',590],['05/19',605]],
-    historyBySku:[
-      {skuCode:'SKU-10021-A',skuName:'金针菇 200g',sales:[['05/13',180],['05/14',200],['05/16',210],['05/17',230]]},
-      {skuCode:'SKU-10021-B',skuName:'金针菇 500g',sales:[['05/13',300],['05/14',320],['05/16',350],['05/17',380]]}
-    ]
-  },
-  {id:2,
-    orderCalculationDate:'2026-05-20 17:00:02',salesStartDate:'2026-05-21',salesEndDate:'2026-05-22',
-    categoryName:'肉禽',subCategoryName:'禽肉',spuName:'鲜鸡胸肉',spuCode:'SPU-78120',
-    vendorName:'MeatPro',vendorCode:'V-007',isDefaultVendor:true,
-    warehouseName:'West Hub',warehouseCode:'WH-W',
-    orderReceivingDayType:2,everyFewDays:1,orderLeadTime:1,
-    minOrderAmount:200,
-    updateTime:'2026-05-20 17:01',
-    currentWarehouseQty:90,currentInTransitQty:40,
-    dailyCompletedSalesQty:95,estimatedUnfinishedSalesQty:50,estimatedDailyEndingQty:-15,
-    estimatedSalesQtySum:290,safetyInventorySum:58,estimatedEndingInventory:-22,
-    initSuggestPurchaseQty:280,considerLimitSuggestPurchaseQty:280,manuallySuggestPurchaseQty:280,
-    estimatedSalesRecordList:[
-      {estimatedSalesDate:'2026-05-21',estimatedSalesQty:145},
-      {estimatedSalesDate:'2026-05-22',estimatedSalesQty:145}
-    ],
-    historyByDate:[['05/13',130],['05/14',140],['05/15',148],['05/16',150],['05/17',155]],
-    historyBySku:[{skuCode:'SKU-78120',skuName:'鲜鸡胸肉 1kg',sales:[['05/13',130],['05/14',140],['05/15',148],['05/16',150],['05/17',155]]}]
-  },
-  {id:3,
-    orderCalculationDate:'2026-05-20 17:00:02',salesStartDate:'2026-05-21',salesEndDate:'2026-05-22',
-    categoryName:'蔬菜',subCategoryName:'叶菜',spuName:'上海青',spuCode:'SPU-30087',
-    vendorName:'FreshGo',vendorCode:'V-003',isDefaultVendor:true,
-    warehouseName:'West Hub',warehouseCode:'WH-W',
-    orderReceivingDayType:1,setByWeekDesc:'周一至周六',orderLeadTime:1,
-    minOrderAmount:100,
-    updateTime:'2026-05-20 17:01',
-    currentWarehouseQty:240,currentInTransitQty:60,
-    dailyCompletedSalesQty:195,estimatedUnfinishedSalesQty:85,estimatedDailyEndingQty:20,
-    estimatedSalesQtySum:560,safetyInventorySum:84,estimatedEndingInventory:108,
-    initSuggestPurchaseQty:476,considerLimitSuggestPurchaseQty:480,manuallySuggestPurchaseQty:480,
-    estimatedSalesRecordList:[
-      {estimatedSalesDate:'2026-05-21',estimatedSalesQty:280},
-      {estimatedSalesDate:'2026-05-22',estimatedSalesQty:280}
-    ],
-    historyByDate:[['05/13',260],['05/14',275],['05/15',290],['05/16',285],['05/17',300]],
-    historyBySku:[{skuCode:'SKU-30087',skuName:'上海青 250g',sales:[['05/13',260],['05/14',275],['05/15',290],['05/16',285],['05/17',300]]}]
-  }
+// ============ 数据：5 个 SKU + 各自分配 ============
+const risks=[
+  {name:'金针菇',code:'SPU-10021',risk:'预计 21:30 缺货',tag:'red',mode:'履约优先',modeTag:'violet',
+    mu:535,days:3.5,left:-84,transit:120,suggest:620,gap:84,unit:'KG',action:'切备用 + 补足上限',cover:'3.5 天',cost:'$1,465',
+    recoTitle:'推荐：保持总量，主供 + 备用拆分',
+    recoReason:'GreenFarm 供货上限 500 KG，剩余 120 KG 给 FreshGo，预计明日早高峰前到货，覆盖未来 3.5 天。',
+    suppliers:[
+      ['GreenFarm','主供','接单','1','05-22','$3.6/kg','500','500','通过','green'],
+      ['FreshGo','备用','接单','1','05-22','$3.8/kg','5,000','120','通过','green'],
+      ['Hattah','备用','不接单','2','05-23','$3.2/kg','5,000','0','阻断','red']
+    ]},
+  {name:'鲜鸡胸肉 1kg',code:'SKU-78120',risk:'预计 22:10 缺货',tag:'red',mode:'履约优先',modeTag:'violet',
+    mu:145,days:2.5,left:-30,transit:40,suggest:260,gap:30,unit:'KG',action:'减少晚到量',cover:'2.5 天',cost:'$912',
+    recoTitle:'推荐：主供承担大头，备用补足',
+    recoReason:'MeatPro 主供今日接单，能赶上明日午市；PrimeFood 备用 VLT=2 会晚到，建议减少备用量。',
+    suppliers:[
+      ['MeatPro','主供','接单','1','05-22','$5.4/kg','3,000','200','通过','green'],
+      ['PrimeFood','备用','接单','2','05-23','$5.1/kg','2,000','60','晚到','amber']
+    ]},
+  {name:'上海青 250g',code:'SKU-30087',risk:'高预警',tag:'amber',mode:'主供应商优先',modeTag:'green',
+    mu:280,days:1.5,left:96,transit:60,suggest:360,gap:0,unit:'份',action:'确认系统建议',cover:'1.5 天',cost:'$428',
+    recoTitle:'推荐：直接通过',
+    recoReason:'库存可覆盖今天，主供 FreshGo 今日接单且稳定性 94%，建议一键确认。',
+    suppliers:[['FreshGo','主供','接单','1','05-22','$2.2/份','3,000','360','通过','green']]},
+  {name:'番茄 500g',code:'SKU-32011',risk:'主供截单',tag:'amber',mode:'履约优先',modeTag:'violet',
+    mu:610,days:1.5,left:18,transit:180,suggest:420,gap:0,unit:'份',action:'切备用 RedSun',cover:'1.4 天',cost:'$588',
+    recoTitle:'推荐：切换备用 RedSun',
+    recoReason:'主供 TomatoKing 已过 17:30 截单。RedSun 备用 19:00 截单、VLT=1，可在明日早高峰前到货。',
+    suppliers:[
+      ['TomatoKing','主供','不接单','1','—','$1.4/份','3,000','0','阻断','red'],
+      ['RedSun','备用','接单','1','05-22','$1.5/份','2,500','420','通过','green']
+    ]},
+  {name:'白玉菇',code:'SPU-10032',risk:'正常',tag:'green',mode:'成本优先',modeTag:'blue',
+    mu:86,days:1,left:124,transit:30,suggest:0,gap:0,unit:'KG',action:'无需下单',cover:'1.8 天',cost:'$0',
+    recoTitle:'推荐：本次无需下单',
+    recoReason:'预计剩余库存足够覆盖目标天数，今日无需采购。',
+    suppliers:[['—','—','—','—','—','—','—','0','跳过','gray']]}
 ];
+let current=0, confirmed=0;
 
-const paramData=[
-  {id:1,vendorName:'GreenFarm',vendorCode:'V-001',spuName:'金针菇',spuCode:'SPU-10021',categoryName:'蔬菜 / 菇类',warehouseName:'West Hub',warehouseCode:'WH-W',receivingType:1,setByWeekDesc:'周一、周三、周五',leadTime:1,status:'启用',binding:'已绑定'},
-  {id:2,vendorName:'MeatPro',vendorCode:'V-007',spuName:'鲜鸡胸肉',spuCode:'SPU-78120',categoryName:'肉禽 / 禽肉',warehouseName:'West Hub',warehouseCode:'WH-W',receivingType:2,everyFewDays:1,firstOrderDate:'2026-05-01',leadTime:1,status:'启用',binding:'已绑定'},
-  {id:3,vendorName:'FreshGo',vendorCode:'V-003',spuName:'上海青',spuCode:'SPU-30087',categoryName:'蔬菜 / 叶菜',warehouseName:'West Hub',warehouseCode:'WH-W',receivingType:1,setByWeekDesc:'周一至周六',leadTime:1,status:'启用',binding:'已绑定'},
-  {id:4,vendorName:'RedSun',vendorCode:'V-012',spuName:'番茄',spuCode:'SPU-32011',categoryName:'蔬菜 / 果菜',warehouseName:'West Hub',warehouseCode:'WH-W',receivingType:2,everyFewDays:2,firstOrderDate:'2026-05-02',leadTime:1,status:'停用',binding:'已绑定'}
-];
+function renderQueue(){
+  const html=risks.map((r,i)=>`
+    <div class="q-card ${i===current?'active':''}" onclick="selectRisk(${i})">
+      <div class="q-top"><div><div class="sku">${r.name}</div><div class="code">${r.code}</div></div><span class="pill ${r.tag}">${r.risk}</span></div>
+      <div class="q-metrics">
+        <div class="metric"><label>均销</label><b>${r.mu}</b></div>
+        <div class="metric"><label>预计剩余</label><b style="${r.left<0?'color:var(--red)':''}">${r.left}</b></div>
+        <div class="metric"><label>建议</label><b>${r.suggest}</b></div>
+      </div>
+    </div>`).join('');
+  document.getElementById('riskQueue').innerHTML=html;
+}
 
-const moqData=[
-  {id:1,vendorCode:'V-001',vendorName:'GreenFarm',contactName:'李明',warehouseName:'West Hub',min:500,max:8000},
-  {id:2,vendorCode:'V-003',vendorName:'FreshGo',contactName:'张芳',warehouseName:'West Hub',min:100,max:3000},
-  {id:3,vendorCode:'V-007',vendorName:'MeatPro',contactName:'王伟',warehouseName:'West Hub',min:200,max:5000},
-  {id:4,vendorCode:'V-012',vendorName:'RedSun',contactName:'刘洋',warehouseName:'East Hub',min:150,max:4000}
-];
+function selectRisk(i){
+  current=i; const r=risks[i]; renderQueue();
+  document.getElementById('focusTitle').textContent=r.name+' · '+r.code;
+  const fr=document.getElementById('focusRisk'); fr.textContent=r.risk; fr.className='pill '+r.tag;
+  const fm=document.getElementById('focusMode'); fm.textContent=r.mode; fm.className='pill '+r.modeTag;
+  document.getElementById('suggestQty').textContent=r.suggest+' '+r.unit;
+  document.getElementById('gapQty').textContent=r.gap+' '+r.unit;
+  document.getElementById('actionText').textContent=r.action;
+  document.getElementById('fMu').textContent=r.mu;
+  document.getElementById('fDays').textContent=r.days;
+  document.getElementById('fLeft').textContent=r.left;
+  document.getElementById('fTransit').textContent=r.transit;
+  document.getElementById('fSuggest').textContent=r.suggest;
+  document.getElementById('coverDays').textContent=r.cover;
+  document.getElementById('costText').textContent=r.cost;
+  document.getElementById('recoTitle').textContent=r.recoTitle;
+  document.getElementById('recoReason').textContent=r.recoReason;
+  renderSuppliers(r);
+}
 
-function renderPlanRows(){
-  const rows=planData.map(r=>{
-    const receivingDay = r.orderReceivingDayType===1
-      ? '按周 '+(r.setByWeekDesc||'')
-      : '按日 每 '+(r.everyFewDays||0)+' 天';
-    const forecastBar=r.estimatedSalesRecordList.map(s=>'<div class="day"><div class="d">'+s.estimatedSalesDate.slice(5)+'</div><div class="q">'+s.estimatedSalesQty+'</div></div>').join('');
-    const historyBar=r.historyByDate.map(p=>{
-      const d=p[0],q=p[1];
-      const isOut = q==='售罄';
-      return '<div class="day"><div class="d">'+d+'</div><div class="q '+(isOut?'s':'')+'">'+(isOut?'售罄':q)+'</div></div>';
-    }).join('');
-    const skuBars=r.historyBySku.map(s=>{
-      const bar=s.sales.map(p=>'<div class="day"><div class="d">'+p[0]+'</div><div class="q">'+p[1]+'</div></div>').join('');
-      return '<div class="sku-block"><div class="sku-label">'+s.skuCode+' · '+s.skuName+'</div><div class="day-bar">'+bar+'</div></div>';
-    }).join('');
-    const defaultTag = r.isDefaultVendor?'<span class="tag-default">默认</span>':'';
-    return '<tr>'+
-      '<td><input type="checkbox"></td>'+
-      '<td class="cell-block">'+
-        '<div><span class="k">下单计算日期</span><span class="v">'+r.orderCalculationDate+'</span></div>'+
-        '<div><span class="k">销售开始日期</span><span class="v">'+r.salesStartDate+'</span></div>'+
-        '<div><span class="k">销售结束日期</span><span class="v">'+r.salesEndDate+'</span></div>'+
-      '</td>'+
-      '<td class="cell-block">'+
-        '<div><span class="k">商品类目</span><span class="v">'+r.categoryName+' - '+r.subCategoryName+'</span></div>'+
-        '<div><span class="k">商品名称</span><span class="v">'+r.spuName+'</span></div>'+
-        '<div><span class="k">SPU ID</span><span class="v">'+r.spuCode+'</span></div>'+
-        '<div><span class="k">供应商</span><span class="v">'+r.vendorName+'('+r.vendorCode+')'+defaultTag+'</span></div>'+
-        '<div><span class="k">仓库</span><span class="v">'+r.warehouseName+'('+r.warehouseCode+')</span></div>'+
-        '<div><span class="k">下单周期</span><span class="v">'+receivingDay+'</span></div>'+
-        '<div><span class="k">提前期</span><span class="v">'+r.orderLeadTime+' 天</span></div>'+
-        '<div><span class="k">最小起订量</span><span class="v">'+r.minOrderAmount+' SGD</span></div>'+
-      '</td>'+
-      '<td class="cell-sales">'+
-        '<div class="group-title">预测销售（锚定物总计 <b>'+r.estimatedSalesQtySum+'</b>）</div>'+
-        '<div class="day-bar">'+forecastBar+'</div>'+
-        '<div class="group-title" style="margin-top:8px">实际历史销售</div>'+
-        '<div class="sku-label">锚定物总计</div>'+
-        '<div class="day-bar">'+historyBar+'</div>'+
-        skuBars+
-      '</td>'+
-      '<td class="cell-block">'+
-        '<div><span class="k">数据更新时间</span><span class="v">'+r.updateTime+'</span></div>'+
-        '<div><span class="k">当时库内量</span><span class="v">'+r.currentWarehouseQty+'</span></div>'+
-        '<div><span class="k">当时在途量</span><span class="v">'+r.currentInTransitQty+'</span></div>'+
-        '<div class="divider-row"></div>'+
-        '<div><span class="k">全天已完成</span><span class="v">'+r.dailyCompletedSalesQty+'</span></div>'+
-        '<div><span class="k">预估未完成</span><span class="v">'+r.estimatedUnfinishedSalesQty+'</span></div>'+
-        '<div><span class="k">预估期末</span><span class="v" style="'+(r.estimatedDailyEndingQty<0?'color:var(--red);font-weight:700':'')+'">'+r.estimatedDailyEndingQty+'</span></div>'+
-      '</td>'+
-      '<td class="cell-block">'+
-        '<div><span class="k">预测销量和</span><span class="v">'+r.estimatedSalesQtySum+'</span></div>'+
-        '<div><span class="k">安全库存和</span><span class="v">'+r.safetyInventorySum+'</span></div>'+
-        '<div><span class="k">预估期末库存</span><span class="v" style="'+(r.estimatedEndingInventory<0?'color:var(--red);font-weight:700':'')+'">'+r.estimatedEndingInventory+'</span></div>'+
-        '<div><span class="k">采购建议量</span><span class="v" style="font-weight:700;color:var(--green)">'+r.considerLimitSuggestPurchaseQty+'</span></div>'+
-        '<div><span class="k">初始建议量</span><span class="v" style="color:var(--muted)">'+r.initSuggestPurchaseQty+'</span></div>'+
-        '<div style="display:flex;align-items:center;gap:6px;margin-top:4px">'+
-          '<span class="k">人工调整量</span>'+
-          '<input class="input-num" value="'+(r.manuallySuggestPurchaseQty||0)+'" oninput="markDirty('+r.id+')">'+
-          '<button class="check-btn" id="commit-'+r.id+'" onclick="commitManually('+r.id+')">✓</button>'+
+function renderSuppliers(r){
+  const html=r.suppliers.map(s=>`<tr>
+    <td><b>${s[0]}</b></td>
+    <td><span class="pill ${s[1]==='主供'?'green':(s[1]==='备用'?'blue':'gray')}">${s[1]}</span></td>
+    <td><span class="pill ${s[2]==='接单'?'green':(s[2]==='不接单'?'red':'gray')}">${s[2]}</span></td>
+    <td>${s[3]}</td><td>${s[4]}</td><td>${s[5]}</td>
+    <td class="num">${s[6]}</td><td class="num"><b>${s[7]}</b></td>
+    <td><span class="pill ${s[9]}">${s[8]}</span></td>
+  </tr>`).join('');
+  document.getElementById('supplierRows').innerHTML=html;
+}
+
+function confirmCurrent(){
+  confirmed++;
+  document.getElementById('confirmed').textContent=confirmed;
+  toast('已确认 '+risks[current].name,'success');
+}
+
+// ============ Drawer: SKU 补货详情 ============
+function openDrawer(type){
+  const r=risks[current];
+  const body=document.getElementById('drawerBody');
+  document.getElementById('drawerTitle').textContent=r.name+' · 补货详情';
+  body.innerHTML=`
+    <section class="panel">
+      <div class="panel-head"><div class="panel-title">为什么进入风险队列</div></div>
+      <div class="panel-body">
+        <div class="kv"><span class="k">风险标签</span><span class="v"><span class="pill ${r.tag}">${r.risk}</span></span></div>
+        <div class="kv"><span class="k">分配策略</span><span class="v"><span class="pill ${r.modeTag}">${r.mode}</span></span></div>
+        <div class="kv"><span class="k">推荐动作</span><span class="v">${r.action}</span></div>
+      </div>
+    </section>
+    <section class="panel" style="margin-top:12px">
+      <div class="panel-head"><div class="panel-title">公式拆解</div></div>
+      <div class="table-wrap"><table class="dense">
+        <tbody>
+          <tr><td>均销 μ_demand</td><td>(近 7 日均销 + 近 3 日均销) / 2，售罄日不计入</td><td class="num">${r.mu}</td></tr>
+          <tr><td>预计剩余</td><td>销售可用 + 今日在途 − 当日剩余销量预估</td><td class="num">${r.left}</td></tr>
+          <tr><td>目标天数</td><td>基础（销售分层 × 保质期）+ VLT 修正 + 缺货 + 周末</td><td class="num">${r.days}</td></tr>
+          <tr><td>今日在途</td><td>已下单未到货明细汇总</td><td class="num">${r.transit}</td></tr>
+          <tr><td>建议量</td><td>max(0, 目标库存 − 预计可用) 按箱规规整</td><td class="num"><b>${r.suggest}</b></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+    <section class="panel" style="margin-top:12px">
+      <div class="panel-head"><div class="panel-title">近 7 日销量与售罄</div></div>
+      <div class="panel-body">
+        <div class="pipeline">
+          <div class="pipe"><strong>05/13</strong><span>480</span></div>
+          <div class="pipe"><strong>05/14</strong><span>520</span></div>
+          <div class="pipe"><strong class="warn">05/15</strong><span>售罄剔除</span></div>
+          <div class="pipe"><strong>05/16</strong><span>560</span></div>
+          <div class="pipe"><strong>05/17</strong><span>610</span></div>
+        </div>
+      </div>
+    </section>
+    <section class="panel" style="margin-top:12px">
+      <div class="panel-head"><div class="panel-title">在途明细</div></div>
+      <div class="table-wrap"><table class="dense">
+        <thead><tr><th>预计到货日</th><th>供应商</th><th class="num">在途量</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td>2026-05-21</td><td>GreenFarm</td><td class="num">120</td><td><span class="pill green">待入库</span></td></tr>
+          <tr><td>2026-05-22</td><td>—</td><td class="num">0</td><td><span class="pill gray">—</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+    <section class="panel" style="margin-top:12px">
+      <div class="panel-head"><div class="panel-title">历史调整记录</div></div>
+      <div class="table-wrap"><table class="dense">
+        <thead><tr><th>日期</th><th class="num">系统建议</th><th class="num">人工调整</th><th>原因</th></tr></thead>
+        <tbody>
+          <tr><td>2026-05-19</td><td class="num">580</td><td class="num">600</td><td>节前备货</td></tr>
+          <tr><td>2026-05-18</td><td class="num">540</td><td class="num">540</td><td>系统建议</td></tr>
+        </tbody>
+      </table></div>
+    </section>`;
+  document.getElementById('drawerMask').classList.add('show');
+}
+function closeDrawer(){document.getElementById('drawerMask').classList.remove('show')}
+
+// ============ Modal: 供应商分配确认 + 生成采购单 ============
+const modalTemplates={
+  allocate:function(){
+    const r=risks[current];
+    const rows=r.suppliers.map((s,i)=>`<tr>
+      <td><input type="checkbox" ${s[7]!=='0'?'checked':''}></td>
+      <td>${s[0]}</td>
+      <td><span class="pill ${s[1]==='主供'?'green':(s[1]==='备用'?'blue':'gray')}">${s[1]}</span></td>
+      <td><span class="pill ${s[2]==='接单'?'green':(s[2]==='不接单'?'red':'gray')}">${s[2]}</span></td>
+      <td>${s[3]}</td><td>${s[4]}</td><td>${s[5]}</td>
+      <td class="num">${s[6]}</td>
+      <td class="num">${s[7]}</td>
+      <td><input class="input-num" value="${s[7]}"></td>
+      <td><select class="form-control" style="height:28px"><option>系统建议</option><option>补足上限</option><option>成本更优</option><option>不可下单</option></select></td>
+      <td><span class="pill ${s[9]}">${s[8]}</span></td>
+    </tr>`).join('');
+    return ''+
+      '<div class="modal-head"><div class="modal-title">供应商分配确认 · '+r.name+'</div><button class="close" onclick="closeModal()">×</button></div>'+
+      '<div class="modal-body">'+
+        '<div class="focus" style="margin-bottom:12px">'+
+          '<div class="f-box"><label>SKU 建议量</label><b>'+r.suggest+' '+r.unit+'</b></div>'+
+          '<div class="f-box"><label>预计缺货时间</label><b class="red" style="font-size:18px">'+r.risk+'</b></div>'+
+          '<div class="f-box"><label>分配合计 / 校验</label><b class="green" style="font-size:18px">'+r.suggest+' / 通过</b></div>'+
         '</div>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
-  document.getElementById('planRows').innerHTML=rows;
-}
-
-function markDirty(id){document.getElementById('commit-'+id).classList.add('show')}
-function commitManually(id){
-  document.getElementById('commit-'+id).classList.remove('show');
-  toast('人工调整量已保存','success');
-}
-
-function renderParamRows(){
-  const rows=paramData.map(r=>{
-    const receiving = r.receivingType===1
-      ? '按周 '+(r.setByWeekDesc||'')
-      : '按日 每 '+(r.everyFewDays||0)+' 天<div class="muted">首次：'+(r.firstOrderDate||'-')+'</div>';
-    const statusPill = r.status==='启用'?'<span class="pill green">启用</span>':'<span class="pill amber">停用</span>';
-    return '<tr>'+
-      '<td><input type="checkbox"></td>'+
-      '<td>'+r.vendorName+'<div class="muted">'+r.vendorCode+'</div></td>'+
-      '<td>'+r.spuName+'<div class="muted">'+r.spuCode+'</div></td>'+
-      '<td>'+r.categoryName+'</td>'+
-      '<td>'+r.warehouseName+'<div class="muted">'+r.warehouseCode+'</div></td>'+
-      '<td>'+receiving+'</td>'+
-      '<td>'+r.leadTime+' 天</td>'+
-      '<td>'+statusPill+'</td>'+
-      '<td><span class="pill blue">'+r.binding+'</span></td>'+
-      '<td>'+
-        '<button class="btn text" onclick="openModal(\'paramEdit\',\'编辑配置\')">编辑</button>'+
-        '<button class="btn text danger" onclick="confirmAction(\'确定要删除该条配置吗？\',\'删除成功\')">删除</button>'+
-      '</td>'+
-    '</tr>';
-  }).join('');
-  document.getElementById('paramRows').innerHTML=rows;
-}
-
-function renderMoqRows(){
-  const rows=moqData.map(r=>'<tr>'+
-    '<td>'+r.vendorCode+'</td>'+
-    '<td>'+r.vendorName+'</td>'+
-    '<td>'+r.contactName+'</td>'+
-    '<td>'+r.warehouseName+'</td>'+
-    '<td class="num">'+r.min.toLocaleString()+'</td>'+
-    '<td class="num">'+r.max.toLocaleString()+'</td>'+
-    '<td>'+
-      '<button class="btn text" onclick="openModal(\'moqEdit\',\'编辑配置\')">编辑</button>'+
-      '<button class="btn text danger" onclick="confirmAction(\'确定删除？\',\'删除成功\')">删除</button>'+
-    '</td>'+
-  '</tr>').join('');
-  document.getElementById('moqRows').innerHTML=rows;
-}
-
-const modalTemplates = {
-  paramEdit: function(title){return ''+
-    '<div class="modal-head"><div class="modal-title">'+(title||'新增配置')+'</div><button class="close" onclick="closeModal()">×</button></div>'+
-    '<div class="modal-body">'+
-      '<div class="form-row req"><label class="l">仓库名称/ID</label><select class="form-control"><option>West Hub (WH-W)</option><option>East Hub (WH-E)</option></select></div>'+
-      '<div class="form-row req"><label class="l">商品名称/ID</label><input class="form-control" placeholder="搜索 SPU"></div>'+
-      '<div class="form-row req"><label class="l">供应商名称/ID</label><input class="form-control" placeholder="搜索供应商"></div>'+
-      '<div class="form-row req"><label class="l">接单日配置</label>'+
-        '<div class="radio-group">'+
-          '<label><input type="radio" name="rcv" value="1" checked onchange="toggleRcv(1)">按周</label>'+
-          '<label><input type="radio" name="rcv" value="2" onchange="toggleRcv(2)">按日（每 N 天）</label>'+
-        '</div>'+
+        '<p class="tip">当前策略：<b>'+r.mode+'</b>。排序：今日接单 &gt; 可赶上缺货 &gt; 稳定性 &gt; 主供 &gt; 价格。</p>'+
+        '<div class="table-wrap" style="margin-top:8px"><table class="dense">'+
+          '<thead><tr><th></th><th>供应商</th><th>角色</th><th>今日接单</th><th>VLT</th><th>预计到货</th><th>价格</th><th class="num">供货上限</th><th class="num">系统建议</th><th class="num">人工调整</th><th>调整原因</th><th>校验</th></tr></thead>'+
+          '<tbody>'+rows+'</tbody>'+
+        '</table></div>'+
+        '<div style="margin-top:10px;display:flex;gap:8px"><button class="btn small" onclick="toast(\'已新增供应商行\')">新增供应商行</button><button class="btn small" onclick="toast(\'已按当前策略重新分配\')">重新分配</button></div>'+
       '</div>'+
-      '<div class="form-row req" id="rcvWeek"><label class="l">接单日期</label>'+
-        '<div class="checkbox-week" id="weekDays">'+
-          '<label class="on"><input type="checkbox" checked>一</label>'+
-          '<label><input type="checkbox">二</label>'+
-          '<label class="on"><input type="checkbox" checked>三</label>'+
-          '<label><input type="checkbox">四</label>'+
-          '<label class="on"><input type="checkbox" checked>五</label>'+
-          '<label><input type="checkbox">六</label>'+
-          '<label><input type="checkbox">日</label>'+
-        '</div>'+
+      '<div class="modal-foot"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'供应商分配已确认\',\'success\')">确认分配</button></div>';
+  },
+  createPO:function(){
+    return ''+
+      '<div class="modal-head"><div class="modal-title">生成草稿采购单</div><button class="close" onclick="closeModal()">×</button></div>'+
+      '<div class="modal-body">'+
+        '<p class="tip">按 <b>仓库 + 供应商 + 到货日期</b> 拆分生成，异常 SKU 未确认前不进入草稿。</p>'+
+        '<div class="table-wrap" style="margin-top:8px"><table class="dense">'+
+          '<thead><tr><th>草稿单</th><th>仓库</th><th>供应商</th><th>到货日</th><th class="num">SKU 数</th><th class="num">采购额</th><th>风险</th></tr></thead>'+
+          '<tbody>'+
+            '<tr><td>PO-DRAFT-001</td><td>West Hub</td><td>GreenFarm</td><td>2026-05-22</td><td class="num">8</td><td class="num">$4,820</td><td><span class="pill green">正常</span></td></tr>'+
+            '<tr><td>PO-DRAFT-002</td><td>West Hub</td><td>FreshGo</td><td>2026-05-22</td><td class="num">3</td><td class="num">$1,560</td><td><span class="pill amber">含晚到</span></td></tr>'+
+            '<tr><td>PO-DRAFT-003</td><td>West Hub</td><td>MeatPro</td><td>2026-05-22</td><td class="num">2</td><td class="num">$1,180</td><td><span class="pill green">正常</span></td></tr>'+
+            '<tr><td>PO-DRAFT-004</td><td>West Hub</td><td>RedSun</td><td>2026-05-22</td><td class="num">1</td><td class="num">$588</td><td><span class="pill amber">主供切备用</span></td></tr>'+
+          '</tbody>'+
+        '</table></div>'+
+        '<p class="tip warn" style="margin-top:10px">⚠️ 还有 2 个 SKU 调整偏差超过 ±50%，生成前请确认。</p>'+
       '</div>'+
-      '<div class="form-row req" id="rcvDay" style="display:none"><label class="l">间隔日 / 首次</label>'+
-        '<div style="display:flex;gap:8px"><input class="form-control" type="number" value="1" min="1" placeholder="每 N 天" style="width:140px"><input class="form-control" type="date" value="2026-05-21"></div>'+
-      '</div>'+
-      '<div class="form-row req"><label class="l">提前期（天）</label><input class="form-control" type="number" value="1" min="0" style="width:140px"></div>'+
-    '</div>'+
-    '<div class="modal-foot"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
-  },
-  paramDefaultVendor: function(){return ''+
-    '<div class="modal-head"><div class="modal-title">批量设置默认供应商</div><button class="close" onclick="closeModal()">×</button></div>'+
-    '<div class="modal-body">'+
-      '<div class="form-row req"><label class="l">SPU 列表</label><input class="form-control" placeholder="多选 SPU"></div>'+
-      '<div class="form-row req"><label class="l">仓库</label><select class="form-control"><option>West Hub</option><option>East Hub</option></select></div>'+
-      '<div class="form-row req"><label class="l">默认供应商</label><select class="form-control"><option>GreenFarm (V-001)</option><option>FreshGo (V-003)</option><option>MeatPro (V-007)</option></select></div>'+
-      '<p class="tip">系统会把同 SPU + 仓库下其他供应商的「默认」标记自动取消。</p>'+
-    '</div>'+
-    '<div class="modal-foot"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'已批量设置默认供应商\',\'success\')">确认</button></div>';
-  },
-  paramGrowth: function(){return ''+
-    '<div class="modal-head"><div class="modal-title">批量设置增长系数</div><button class="close" onclick="closeModal()">×</button></div>'+
-    '<div class="modal-body">'+
-      '<div class="form-row req"><label class="l">SPU 列表</label><input class="form-control" placeholder="多选 SPU"></div>'+
-      '<div class="form-row req"><label class="l">仓库</label><select class="form-control"><option>West Hub</option></select></div>'+
-      '<div class="form-row req"><label class="l">生效日期</label><input class="form-control" type="date" value="2026-05-21" style="width:200px"></div>'+
-      '<div class="form-row req"><label class="l">增长系数</label><input class="form-control" type="number" step="0.01" value="1.2" style="width:140px"></div>'+
-      '<p class="tip">增长系数按日应用到预测销量。例如：1.2 表示节前预测放大 20%。</p>'+
-    '</div>'+
-    '<div class="modal-foot"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'已批量设置增长系数\',\'success\')">确认</button></div>';
-  },
-  moqEdit: function(title){return ''+
-    '<div class="modal-head"><div class="modal-title">'+(title||'新增配置')+'</div><button class="close" onclick="closeModal()">×</button></div>'+
-    '<div class="modal-body">'+
-      '<div class="form-row req"><label class="l">供应商</label><input class="form-control" placeholder="选择供应商" value="GreenFarm (V-001)"></div>'+
-      '<div class="form-row req"><label class="l">仓库</label><select class="form-control"><option>West Hub</option><option>East Hub</option></select></div>'+
-      '<div class="form-row req"><label class="l">供应商负责人</label><input class="form-control" placeholder="姓名" value="李明"></div>'+
-      '<div class="form-row req"><label class="l">订货下限 (SGD)</label><input class="form-control" type="number" value="500" style="width:160px"></div>'+
-      '<div class="form-row req"><label class="l">订货上限 (SGD)</label><input class="form-control" type="number" value="8000" style="width:160px"></div>'+
-      '<p class="tip">采购计划计算建议量时，按该规则约束 SPU 的最终建议量。</p>'+
-    '</div>'+
-    '<div class="modal-foot"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
+      '<div class="modal-foot"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'4 张草稿采购单已生成\',\'success\')">确认生成</button></div>';
   }
 };
 
-function openModal(type,arg){
-  document.getElementById('modalBox').innerHTML=modalTemplates[type](arg);
+function openModal(type){
+  document.getElementById('modalBox').innerHTML=modalTemplates[type]();
+  document.getElementById('modalMask').classList.remove('right');
   document.getElementById('modalMask').classList.add('show');
-  bindWeekDays();
 }
 function closeModal(){document.getElementById('modalMask').classList.remove('show')}
-function toggleRcv(t){
-  document.getElementById('rcvWeek').style.display=t===1?'grid':'none';
-  document.getElementById('rcvDay').style.display=t===2?'grid':'none';
-}
-function bindWeekDays(){
-  const wd=document.getElementById('weekDays'); if(!wd) return;
-  wd.querySelectorAll('label').forEach(function(lbl){
-    lbl.addEventListener('click',function(){
-      const cb=lbl.querySelector('input');
-      setTimeout(function(){lbl.classList.toggle('on',cb.checked)},0);
-    });
+
+// ============ Tabs ============
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',function(){
+    const id=t.dataset.tab;
+    t.parentElement.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.toggle('active',p.id===id));
   });
-}
-function confirmAction(msg,successMsg){
-  if(confirm(msg)) toast(successMsg||'操作成功','success');
-}
+});
 
+// ============ View switch ============
 function switchView(id){
-  document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('active',v.id===id)});
-  document.querySelectorAll('[data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view===id)});
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
 }
-document.querySelectorAll('[data-view]').forEach(function(b){b.addEventListener('click',function(){switchView(b.dataset.view)})});
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
 
+// ============ Toast & mask ============
 let toastTimer;
 function toast(msg,type){
   const el=document.getElementById('toast');
   el.textContent=msg;
   el.className='toast show'+(type?' '+type:'');
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(function(){el.classList.remove('show')},2300);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2300);
 }
-
-document.getElementById('modalMask').addEventListener('click',function(e){
-  if(e.target.id==='modalMask') closeModal();
+['drawerMask','modalMask'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{
+    if(e.target.id===id){
+      if(id==='drawerMask') closeDrawer(); else closeModal();
+    }
+  });
 });
 
-renderPlanRows();
-renderParamRows();
-renderMoqRows();
+renderQueue();
+selectRisk(0);
 </script>
 </body>
 </html>
