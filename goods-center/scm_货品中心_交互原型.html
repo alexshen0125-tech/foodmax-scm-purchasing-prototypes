@@ -68,6 +68,16 @@ input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:var(--pr
 .tag-gray{background:#f4f4f5;color:#909399;border:1px solid #d3d4d6}
 .tag-orange{background:#fdf6ec;color:#E6A23C;border:1px solid #f5dab1}
 .tag-purple{background:#f0eeff;color:#8B5CF6;border:1px solid #c4b5fd}
+.link-icon{display:inline-flex;align-items:center;margin-left:6px;color:#8B5CF6;vertical-align:-2px;cursor:help}
+.source-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#f5f3ff;border:1px solid #e9d5ff;border-radius:8px;margin:0 0 14px}
+.source-banner.standalone{background:#f8fafc;border-color:#e2e8f0}
+.source-banner.raw{background:#eff6ff;border-color:#bfdbfe}
+.source-banner .sb-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff;border:1px solid currentColor;color:#8B5CF6}
+.source-banner.standalone .sb-ico{color:#64748B}
+.source-banner.raw .sb-ico{color:#409EFF}
+.source-banner .sb-txt{flex:1;font-size:13px;color:var(--t1);line-height:1.5}
+.source-banner .sb-txt b{font-weight:700}
+.source-banner .sb-txt .sub{font-size:12px;color:var(--t3);margin-top:2px}
 .switch{position:relative;display:inline-block;width:40px;height:20px;cursor:pointer}
 .switch input{opacity:0;width:0;height:0}
 .switch-slider{position:absolute;inset:0;background:#ccc;border-radius:10px;transition:.2s}
@@ -242,6 +252,10 @@ label{font-size:13px;color:var(--t2)}
           <select class="iw120"><option value="">全部</option><option>原料货品</option><option>成品货品</option></select>
         </div>
         <div class="filter-item">
+          <label>创建方式</label>
+          <select class="iw160"><option value="">全部</option><option>原料关联（含 BOM）</option><option>手动创建</option></select>
+        </div>
+        <div class="filter-item">
           <label>是否可采</label>
           <select class="iw120"><option value="">全部</option><option>可采</option><option>不可采</option></select>
         </div>
@@ -293,6 +307,7 @@ label{font-size:13px;color:var(--t2)}
           <th>包装规格</th>
           <th>后台类目</th>
           <th>货品类型</th>
+          <th>创建方式</th>
           <th>是否可采</th>
           <th>创建时间</th>
           <th style="min-width:180px">操作</th>
@@ -333,6 +348,12 @@ label{font-size:13px;color:var(--t2)}
     </div>
     <div class="card-body">
       <div class="tab-pane active" id="dt-0">
+        <!-- 创建方式来源横幅：原料关联 / 手动创建 / 原料货品 -->
+        <div class="source-banner" id="dv-source-banner">
+          <div class="sb-ico" id="dv-source-ico"></div>
+          <div class="sb-txt" id="dv-source-txt"></div>
+          <button class="btn btn-sm" id="dv-source-btn" style="display:none" onclick="gotoPage('bom-list')">查看 BOM</button>
+        </div>
         <div class="form-row">
           <div class="form-field w3"><div class="detail-label">货品编码</div><div class="detail-value" style="font-family:monospace;font-size:12px" id="dv-code">item-20260418-0012</div></div>
           <div class="form-field w3"><div class="detail-label">旧编码</div><div class="detail-value" style="color:var(--t3);font-size:12px" id="dv-oldcode">spucode00000718</div></div>
@@ -1266,6 +1287,23 @@ const BOM_DATA = [
   {bcode:'BOM-20260310-0002',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260418-0014',tname:'三文鱼刺身',usage:'0.3 KG/份',status:'禁用',ct:'2026-03-15 09:00'},
 ];
 
+// 创建方式（source）派生：成品货品 + 出现在 BOM 关系中 → 原料关联 BOM_LINKED；
+// 成品货品 + 无 BOM 关联 → 手动创建 STANDALONE；原料货品 → RAW。
+const LINK_SVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07L11.71 5.21"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07L11.29 18.79"/></svg>';
+function initSourceField(){
+  const linked = new Set();
+  BOM_DATA.forEach(b=>{linked.add(b.scode);linked.add(b.tcode);});
+  GD.forEach(r=>{
+    if(r.attr==='原料货品') r.source='RAW';
+    else r.source = linked.has(r.code) ? 'BOM_LINKED' : 'STANDALONE';
+  });
+}
+function getBomLinks(code){
+  // 返回该货品参与的 BOM 关系列表（任一方向）
+  return BOM_DATA.filter(b=>b.scode===code||b.tcode===code);
+}
+initSourceField();
+
 let selRows = new Set();
 // Wizard state
 let wizType='std', wizSrc='new', wizStep=0, wizExtended=false, wizRawOnly=false;
@@ -1298,11 +1336,14 @@ function renderGoods(){
       <td class="tbl-check"><input type="checkbox" class="rc" data-i="${i}" onchange="selRow(this,${i})"></td>
       <td style="font-family:monospace;font-size:11px;color:var(--t3)">${r.old}</td>
       <td style="font-family:monospace;font-size:12px;color:var(--t3)">${r.code}</td>
-      <td><strong>${r.name}</strong></td>
+      <td><strong>${r.name}</strong>${r.source==='BOM_LINKED'?`<span class="link-icon" title="原料关联建档（含 BOM 关系）">${LINK_SVG}</span>`:''}</td>
       <td><span class="tag ${r.attr==='原料货品'?'tag-blue':'tag-purple'}">${r.attr}</span></td>
       <td>${r.pack}</td>
       <td>${r.cat}</td>
       <td><span class="tag ${r.type==='标品'?'tag-green':'tag-orange'}">${r.type}</span></td>
+      <td>${r.attr==='成品货品'
+        ? `<span class="tag ${r.source==='BOM_LINKED'?'tag-purple':'tag-gray'}">${r.source==='BOM_LINKED'?'原料关联':'手动创建'}</span>`
+        : '<span class="text-gray text-sm">—</span>'}</td>
       <td>
         <label class="switch">
           <input type="checkbox" ${r.pur?'checked':''} onchange="togglePur(${i},this.checked)">
@@ -1357,6 +1398,29 @@ function viewDetail(i){
   document.getElementById('dv-attr').textContent=r.attr;
   document.getElementById('dv-name').textContent=r.name;
   document.getElementById('dv-pur').innerHTML=r.pur?'<span class="tag tag-green">可采</span>':'<span class="tag tag-gray">不可采</span>';
+  // 创建方式来源横幅
+  const banner=document.getElementById('dv-source-banner');
+  const ico=document.getElementById('dv-source-ico');
+  const txt=document.getElementById('dv-source-txt');
+  const btn=document.getElementById('dv-source-btn');
+  const links=getBomLinks(r.code);
+  banner.className='source-banner';
+  if(r.source==='BOM_LINKED'){
+    const related=links.map(b=>b.scode===r.code?b.tname:b.sname);
+    ico.innerHTML=LINK_SVG.replace(/width="11" height="11"/,'width="16" height="16"');
+    txt.innerHTML=`<b>原料关联创建（含 BOM）</b><div class="sub">关联 ${links.length} 条 BOM 关系：${related.slice(0,3).join('、')}${related.length>3?` 等 ${related.length} 项`:''}</div>`;
+    btn.style.display='';
+  }else if(r.source==='STANDALONE'){
+    banner.classList.add('standalone');
+    ico.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+    txt.innerHTML='<b>手动创建（无原料关联）</b><div class="sub">该成品货品独立建档，未挂任何 BOM 关系</div>';
+    btn.style.display='none';
+  }else{
+    banner.classList.add('raw');
+    ico.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5V8z"/><path d="M3 8l9 5 9-5"/></svg>';
+    txt.innerHTML=`<b>原料货品</b><div class="sub">${links.length>0?`被 ${links.length} 个成品关联`:'当前无成品关联'}</div>`;
+    btn.style.display=links.length>0?'':'none';
+  }
   gotoPage('goods-detail');
 }
 
