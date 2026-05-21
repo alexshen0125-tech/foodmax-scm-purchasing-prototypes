@@ -453,20 +453,23 @@ tr:hover td{background:#fbfcfd}
           <div class="panel">
             <div class="panel-head">
               <div class="panel-title">周末 / 节假日系数</div>
-              <div style="display:flex;gap:8px">
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn small pane-edit-only" disabled onclick="addWeekdayRule()">+ 新增周末场景</button>
                 <button class="btn small" onclick="enterEdit('c-weekend',this)">编辑</button>
                 <button class="btn primary small" disabled onclick="saveAndExit('c-weekend','周末 / 节假日系数',this)">保存</button>
               </div>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>场景</th><th class="num">叠加天数</th></tr></thead>
-              <tbody>
-                <tr><td>周五（周日不到货）</td><td class="num"><input class="input-num" value="1"></td></tr>
-                <tr><td>周六</td><td class="num"><input class="input-num" value="1"></td></tr>
-                <tr><td>法定假日前 1 天</td><td class="num"><input class="input-num" value="1"></td></tr>
-                <tr><td>法定假日当天</td><td class="num"><input class="input-num" value="假期天数-1"></td></tr>
+              <thead><tr><th style="width:60%">场景</th><th class="num">叠加天数</th><th style="width:80px;text-align:center">操作</th></tr></thead>
+              <tbody id="weekend-tbody">
+                <!-- 渲染：按周规则（可增删）+ 法定节假日（固定 2 行） -->
               </tbody>
-            </table></div>
+            </table>
+            <div class="muted" style="padding:8px 14px;font-size:12px;border-top:1px solid var(--line-2);background:#fafbfc;line-height:1.6">
+              <div>· 按周规则：当采购下单日落在所选星期时，按「叠加天数」加进预测覆盖天数。</div>
+              <div>· 法定节假日为系统兜底规则，仅可改叠加天数，不可删除。</div>
+            </div>
+            </div>
           </div>
         </div>
       </section>
@@ -910,7 +913,7 @@ function closeModal(){document.getElementById('modalMask').classList.remove('sho
 // 配置页：默认查看模式，编辑→可改，保存→回到查看
 const paneEditState={'c-matrix':false,'c-vlt':false,'c-oos':false,'c-weekend':false};
 function setPaneDisabled(paneId, disabled){
-  document.querySelectorAll(`#${paneId} .table-wrap input`).forEach(i=>i.disabled=disabled);
+  document.querySelectorAll(`#${paneId} .table-wrap input, #${paneId} .table-wrap select`).forEach(i=>i.disabled=disabled);
   document.querySelectorAll(`#${paneId} .pane-edit-only`).forEach(b=>b.disabled=disabled);
 }
 function getPaneBtns(paneId){
@@ -1042,8 +1045,66 @@ function delShelfTier(idx){
   toast('已删除保质期分层');
 }
 
+// ===== 周末 / 节假日系数 =====
+const WEEK_NAMES=['周一','周二','周三','周四','周五','周六','周日'];
+const weekendState={
+  weekdayRules:[
+    {day:4, desc:'周日不到货', stack:'1'},  // 周五
+    {day:5, desc:'',           stack:'1'}   // 周六
+  ],
+  holidayPre:'1',
+  holidayDay:'假期天数-1'
+};
+function renderWeekend(){
+  const tbody=document.getElementById('weekend-tbody');
+  if(!tbody) return;
+  const inEdit=paneEditState['c-weekend'];
+  const dis=inEdit?'':'disabled';
+  // 按周规则
+  const weeklyRows=weekendState.weekdayRules.map(function(r,i){
+    const opts=WEEK_NAMES.map(function(n,j){
+      return '<option value="'+j+'"'+(j===r.day?' selected':'')+'>'+n+'</option>';
+    }).join('');
+    return '<tr>'+
+      '<td>'+
+        '<span style="display:inline-flex;align-items:center;gap:8px">'+
+          '<select class="chip" style="height:28px;width:78px" '+dis+' onchange="weekendState.weekdayRules['+i+'].day=parseInt(this.value)">'+opts+'</select>'+
+          '<input class="input-num" style="width:200px;text-align:left" placeholder="备注（选填，如：周日不到货）" value="'+escAttr(r.desc||'')+'" '+dis+' onchange="weekendState.weekdayRules['+i+'].desc=this.value">'+
+        '</span>'+
+      '</td>'+
+      '<td class="num"><input class="input-num" type="number" min="0" step="1" value="'+escAttr(r.stack)+'" '+dis+' onchange="weekendState.weekdayRules['+i+'].stack=this.value"></td>'+
+      '<td style="text-align:center"><button class="btn text danger pane-edit-only" '+dis+' onclick="delWeekdayRule('+i+')">删除</button></td>'+
+    '</tr>';
+  }).join('');
+  // 法定节假日分组分隔
+  const holidayDivider='<tr><td colspan="3" style="background:#fafbfc;padding:6px 14px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);border-bottom:1px solid var(--line-2)">法定节假日（系统兜底规则，仅可改叠加天数）</td></tr>';
+  const holidayRows=
+    '<tr><td><span style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">🔒</span>法定假日前 1 天</span></td>'+
+      '<td class="num"><input class="input-num" type="number" min="0" step="1" value="'+escAttr(weekendState.holidayPre)+'" '+dis+' onchange="weekendState.holidayPre=this.value"></td>'+
+      '<td style="text-align:center"><span class="muted" style="font-size:11px">—</span></td></tr>'+
+    '<tr><td><span style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">🔒</span>法定假日当天</span></td>'+
+      '<td class="num"><input class="input-num" style="width:104px;text-align:right" value="'+escAttr(weekendState.holidayDay)+'" '+dis+' onchange="weekendState.holidayDay=this.value"></td>'+
+      '<td style="text-align:center"><span class="muted" style="font-size:11px">—</span></td></tr>';
+  tbody.innerHTML=weeklyRows+holidayDivider+holidayRows;
+}
+function addWeekdayRule(){
+  // 推荐一个尚未使用的星期
+  const used=weekendState.weekdayRules.map(function(r){return r.day});
+  let pick=0;
+  for(let i=0;i<7;i++){if(used.indexOf(i)===-1){pick=i;break;}}
+  weekendState.weekdayRules.push({day:pick, desc:'', stack:'1'});
+  renderWeekend();
+  toast('已新增周末场景，请选择星期');
+}
+function delWeekdayRule(idx){
+  weekendState.weekdayRules.splice(idx,1);
+  renderWeekend();
+  toast('已删除');
+}
+
 // 初始：4 个 tab-pane 都置为只读
 renderMatrix();
+renderWeekend();
 ['c-matrix','c-vlt','c-oos','c-weekend'].forEach(id=>setPaneDisabled(id, true));
 
 renderPlanRows();
