@@ -193,7 +193,6 @@ tr:hover td{background:#fbfcfd}
           <table>
             <thead>
               <tr>
-                <th style="width:64px"></th>
                 <th style="width:38px"><input type="checkbox"></th>
                 <th style="min-width:200px">原料货品</th>
                 <th class="num">最终备货天数</th>
@@ -203,6 +202,7 @@ tr:hover td{background:#fbfcfd}
                 <th class="num">备货目标</th>
                 <th class="num">T 期末库存</th>
                 <th class="num" style="background:#eaf6f0;color:var(--green)">总采购量</th>
+                <th style="width:80px">操作</th>
               </tr>
             </thead>
             <tbody id="planRows"></tbody>
@@ -590,7 +590,6 @@ function renderPlanRows(){
   const rows=data.map(r=>{
     return `
     <tr data-id="${r.id}">
-      <td><button class="btn text small" onclick="openSkuDrawer(${r.id})" style="padding:0 6px">详情</button></td>
       <td><input type="checkbox"></td>
       <td>
         <div style="font-weight:600">${r.name}</div>
@@ -603,6 +602,7 @@ function renderPlanRows(){
       <td class="num">${fmt(r.stockTarget)}</td>
       <td class="${numCls(r.endingT)}">${fmt(r.endingT)}</td>
       <td class="num" style="background:#eaf6f0;color:var(--green);font-weight:700">${fmt(r.totalQty)}</td>
+      <td><button class="btn text small" onclick="openSkuDrawer(${r.id})" style="padding:0 6px">详情</button></td>
     </tr>`;
   }).join('');
   document.getElementById('planRows').innerHTML=rows;
