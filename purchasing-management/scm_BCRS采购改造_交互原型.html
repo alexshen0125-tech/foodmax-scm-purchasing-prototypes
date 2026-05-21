@@ -419,7 +419,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">商品列表</div>
-          <button class="btn small primary" onclick="openSkuPicker()">+ 添加商品</button>
+          <button class="btn small primary" id="btnAddSku" onclick="openSkuPicker()">+ 添加商品</button>
         </div>
         <div class="table-wrap" style="border-radius:0;border:0">
           <table>
@@ -444,13 +444,13 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                   <div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-BV-COKE-500 · 24 瓶/箱</div>
                 </td>
                 <td>箱</td>
-                <td class="num"><input type="number" class="input-num" value="50" min="0" onchange="syncDepositRow(1,this.value)"></td>
+                <td class="num"><input id="mainQty1" type="number" class="input-num" value="50" min="0" onchange="syncDepositRow(1,this.value)"></td>
                 <td class="num"><input type="number" class="input-num" value="18.50" step="0.01" onchange="recalcRow(1)"></td>
                 <td class="num pos" id="sub-1">925.00</td>
                 <td><span class="pill blue">手动</span></td>
                 <td><button class="btn small danger" onclick="removeRow(1)">×</button></td>
               </tr>
-              <tr class="bcrs-row" data-row="1-dep" data-parent="1">
+              <tr class="bcrs-row" id="depRow1" data-row="1-dep" data-parent="1">
                 <td>—</td>
                 <td>
                   <div class="linked-tag">BCRS 押金</div>
@@ -458,7 +458,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 </td>
                 <td>个</td>
                 <td class="num"><input type="number" class="input-num" id="dep-qty-1" value="1200" disabled></td>
-                <td class="num"><input type="number" class="input-num" value="0.10" disabled></td>
+                <td class="num"><input id="depPriceCell1" type="number" class="input-num" value="0.10" disabled></td>
                 <td class="num pos" id="dep-amt-1">120.00</td>
                 <td><span class="pill green">系统</span></td>
                 <td><span style="color:var(--muted);font-size:11px">联动</span></td>
@@ -634,7 +634,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head"><div class="panel-title">财务挂账拆分（参考）</div></div>
         <div class="panel-body">
-          <div class="formula-line">
+          <div class="formula-line" id="accountingSplit">
             <b>存货成本：</b>S$2,009.00（仅商品金额）<br>
             <b>应付供应商：</b>S$2,009.00（不含押金）<br>
             <b>应付押金（独立科目）：</b>S$192.00（待 NEA 申报对账冲销）<br>
@@ -706,12 +706,12 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 </td>
                 <td>箱</td>
                 <td class="num" style="color:var(--muted)">50</td>
-                <td class="num"><input type="number" class="input-num" value="5" min="0" max="50" onchange="syncRejectDeposit('r1',this.value)"></td>
+                <td class="num"><input id="rejQtyR1" type="number" class="input-num" value="5" min="0" max="50" onchange="syncRejectDeposit('r1',this.value)"></td>
                 <td class="num">18.50</td>
                 <td class="num" style="color:var(--red);font-weight:700" id="rej-sub-r1">-92.50</td>
                 <td><span class="pill blue">商品</span></td>
               </tr>
-              <tr class="bcrs-row" data-row="r1-dep" data-parent="r1">
+              <tr class="bcrs-row" id="rejDepRow1" data-row="r1-dep" data-parent="r1">
                 <td>—</td>
                 <td>
                   <div class="linked-tag">BCRS 押金返还</div>
@@ -1050,5 +1050,213 @@ function addSku(sku,name,isBcrs,boxSize,deposit,boxLabel,price){
   toast(isBcrs?`已添加 ${name} + 押金行（自动追加 BR-05）`:'已添加商品','success');
 }
 </script>
+<!-- ════════════════ 规则标注层 / prototype-annotate ════════════════ -->
+<style>
+  .anno-badge{position:absolute;z-index:9990;width:18px;height:18px;background:#ff7a18;color:#fff;font-size:11px;line-height:18px;text-align:center;border-radius:50%;font-weight:700;cursor:help;box-shadow:0 1px 4px rgba(0,0,0,.3);display:none;font-family:-apple-system,Segoe UI,sans-serif;}
+  body.anno-on .anno-badge{display:block;}
+  .anno-badge.anno-hidden{display:none!important;}
+  body.anno-on [data-anno-marked]{outline:1px dashed #ff7a18;outline-offset:1px;}
+  #anno-tip{position:fixed;z-index:9999;max-width:340px;display:none;background:#1f2430;color:#e6e6e6;border-radius:8px;padding:0;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:12.5px;line-height:1.6;font-family:-apple-system,Segoe UI,Helvetica,sans-serif;}
+  #anno-tip .anno-tip-hd{padding:8px 12px;font-weight:700;font-size:13px;border-bottom:1px solid #353b48;color:#fff;}
+  #anno-tip .anno-row{padding:6px 12px;display:flex;gap:8px;border-bottom:1px solid #2a2f3a;}
+  #anno-tip .anno-row:last-child{border-bottom:none;}
+  #anno-tip .anno-tag{flex:0 0 auto;font-weight:700;font-size:10.5px;padding:1px 6px;border-radius:4px;height:16px;line-height:14px;align-self:flex-start;white-space:nowrap;}
+  #anno-tip .t-BR{background:#ff7a18;color:#fff;}
+  #anno-tip .t-AC{background:#3b82f6;color:#fff;}
+  #anno-tip .t-校验{background:#10b981;color:#fff;}
+  #anno-tip .t-交互{background:#8b5cf6;color:#fff;}
+  #anno-tip .anno-txt{flex:1;}
+  #anno-toggle{position:fixed;right:16px;bottom:16px;z-index:9998;background:#1f2430;color:#fff;border:1px solid #ff7a18;padding:7px 14px;border-radius:20px;font-size:12.5px;cursor:pointer;font-family:-apple-system,Segoe UI,sans-serif;user-select:none;box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  #anno-toggle .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff7a18;margin-right:6px;vertical-align:1px;}
+  body:not(.anno-on) #anno-toggle .dot{background:#555;}
+</style>
+<div id="anno-toggle"><span class="dot"></span>规则标注</div>
+<div id="anno-tip"></div>
+<script>
+const ANNOTATIONS = [
+  /* === 视图 2：货品编辑 === */
+  {
+    sel: "#bcrsEnabled",
+    title: "是否支持 BCRS（开关）",
+    rules: [
+      { type: "BR", id: "BR-01", text: "货品主数据 BCRS 部分仅新增 2 个字段：bcrsEnabled(boolean, 默认 false) + depositPrice(decimal, S$)" },
+      { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时 depositPrice 必填且 > 0；false 时该字段隐藏并清空" },
+      { type: "AC", id: "AC-01", text: "Given SGP / SKU=Coca-Cola 500ml / 箱规=24，When 切 ON+押金=0.10→保存，Then 保存成功且列表显示「✓ 支持」" },
+      { type: "校验", text: "boolean 类型，默认 false" },
+      { type: "交互", text: "切换 ON 时下方表单激活，OFF 时整体灰化(disabled)" }
+    ]
+  },
+  {
+    sel: "#depositPrice",
+    title: "押金单价 (S$)",
+    rules: [
+      { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时必填且必须 > 0" },
+      { type: "AC", id: "AC-02", text: "Given 开关=ON，When 押金单价留空→保存，Then 阻断并提示「BCRS 支持时押金单价为必填项，且必须 > 0」" },
+      { type: "校验", text: "decimal(8,2)，> 0，最大 2 位小数，默认值 0.10（NEA 标准）" },
+      { type: "交互", text: "失焦校验 + 保存时再次校验；联动「预览」行重算" }
+    ]
+  },
+  {
+    sel: "#siteSwitch",
+    title: "站点切换（演示）",
+    rules: [
+      { type: "BR", id: "BR-04", text: "仅 stationInfo.countryCode === 'SGP' 时显示 BCRS 字段与押金行；其他站点完全隐藏" },
+      { type: "AC", id: "AC-06", text: "Given 切站点到 MYS，When 进入货品编辑/采购单，Then BCRS 信息区整体不可见，PO 表格不显示押金行（原数据保留但不展示）" },
+      { type: "交互", text: "复用现有 isSingaporeSite 计算属性（order-detail.vue:607-610）" }
+    ]
+  },
+  {
+    sel: "#previewLine",
+    title: "押金预览（采购 1 箱）",
+    rules: [
+      { type: "BR", id: "BR-02", text: "押金行数量 = 主商品采购数量 × 货品主数据 boxSize（箱规为现有字段，非本期新增）" },
+      { type: "交互", text: "随箱规/押金单价变化实时刷新预览文案" }
+    ]
+  },
+
+  /* === 视图 3：采购单新建 === */
+  {
+    sel: "#btnAddSku",
+    title: "+ 添加商品",
+    rules: [
+      { type: "BR", id: "BR-05", text: "采购支持 BCRS 的商品时，系统在该商品行下方追加独立押金行；押金行商品名固定为「BCRS 押金」" },
+      { type: "AC", id: "AC-03", text: "Given 新建PO/SGP/空商品，When 选 Coca-Cola(bcrsEnabled=true,boxSize=24,deposit=0.10)数量=50箱，Then 主行+押金行(数量=50×24=1200,单价=0.10,小计=120.00)，押金行 disabled 绿色高亮来源=系统" },
+      { type: "交互", text: "弹出 SKU Picker，强制走选择器以防绕过 BCRS 联动" }
+    ]
+  },
+  {
+    sel: "#mainQty1",
+    title: "主商品采购数量",
+    rules: [
+      { type: "BR", id: "BR-06", text: "押金行数量 = 主商品采购数量(箱) × 主商品 boxSize；单位「个」" },
+      { type: "BR", id: "BR-08", text: "主商品数量变更（含 PO 编辑、退回修改）→ 押金行数量与金额自动刷新" },
+      { type: "AC", id: "AC-04", text: "Given AC-03 完成，When 数量从 50→80，Then 押金行数量自动刷新 80×24=1920，小计=192.00" },
+      { type: "校验", text: "正整数 ≥ 0" },
+      { type: "交互", text: "onchange 触发 syncDepositRow(rowId)；同步刷新汇总区" }
+    ]
+  },
+  {
+    sel: "#depRow1",
+    title: "BCRS 押金独立行（系统自动追加）",
+    rules: [
+      { type: "BR", id: "BR-05", text: "在 BCRS 商品行下方追加独立押金行（不增加价格列）；本期统一一个「BCRS 押金」虚拟商品，不区分容器类型" },
+      { type: "BR", id: "BR-07", text: "押金行单价取自货品主数据 depositPrice，PO 中 disabled 不可编辑" },
+      { type: "BR", id: "BR-09", text: "删除主商品行 → 自动删除关联押金行；用户不能单独删除押金行" },
+      { type: "AC", id: "AC-05", text: "Given 表格有主行+押金行，When 点主行删除，Then 主行与押金行一同移除，汇总区实时刷新" },
+      { type: "交互", text: "绿色 ↳ 缩进高亮；来源=系统；操作列显示「联动」不可点击" }
+    ]
+  },
+  {
+    sel: "#depPriceCell1",
+    title: "押金行单价（disabled）",
+    rules: [
+      { type: "BR", id: "BR-07", text: "押金行单价直接取主商品货品主数据 depositPrice，PO 中 disabled" },
+      { type: "AC", id: "AC-08", text: "Given PO 有 BCRS 押金行，When 点击押金单价输入框，Then 输入框 disabled，悬浮 tooltip「押金单价来自货品主数据，PO 中不可编辑」" }
+    ]
+  },
+  {
+    sel: "#sumDeposit",
+    title: "BCRS 押金合计",
+    rules: [
+      { type: "BR", id: "BR-10", text: "押金金额不进存货成本，独立挂「应付押金」往来科目；底部汇总区独立列示 BCRS 押金合计" },
+      { type: "AC", id: "AC-07", text: "Given PO 含 BCRS 商品+押金行，When 提交单据，Then 底部汇总区「BCRS 押金合计」单独列示；财务挂账：商品金额进存货成本，押金金额挂「应付押金」" }
+    ]
+  },
+
+  /* === 视图 4：采购单详情 === */
+  {
+    sel: "#accountingSplit",
+    title: "财务挂账拆分",
+    rules: [
+      { type: "BR", id: "BR-10", text: "存货成本=商品金额；应付押金=押金合计；GST 仅按商品金额×9%（押金不计 GST，待财务确认）" },
+      { type: "AC", id: "AC-07", text: "提交单据后财务侧自动拆分入账：存货 / 应付供应商 / 应付押金 / 应付总额四笔" },
+      { type: "交互", text: "明细可导出 CSV 供财务对账" }
+    ]
+  },
+
+  /* === 视图 5：退供单 === */
+  {
+    sel: "#rejQtyR1",
+    title: "退货数量",
+    rules: [
+      { type: "BR", id: "BR-13", text: "退货数量变更 → 押金返还行数量与金额实时同步" },
+      { type: "BR", id: "BR-14", text: "退货数量 ≤ 关联 PO 的原采购数量；超出时阻断提交并提示" },
+      { type: "AC", id: "AC-10", text: "Given AC-09 完成，When 数量从 5→10，Then 押金返还行数量自动刷新 10×24=240，金额=-S$24.00" },
+      { type: "AC", id: "AC-11", text: "Given 原 PO 采购 50 箱，When 退货数量=60，Then 阻断提交并提示「退货数量不能超过原采购数量 50 箱」" },
+      { type: "校验", text: "正整数；0 ≤ 退货数量 ≤ 原采购数量" }
+    ]
+  },
+  {
+    sel: "#rejDepRow1",
+    title: "BCRS 押金返还行（系统自动追加）",
+    rules: [
+      { type: "BR", id: "BR-11", text: "退供 BCRS 商品时，系统在该退货行下方追加押金返还独立行；金额为负数（红色显示）" },
+      { type: "BR", id: "BR-12", text: "押金返还数量 = 退货数量(箱) × 主商品 boxSize；单位「个」" },
+      { type: "BR", id: "BR-15", text: "押金返还金额冲销原 PO 的「应付押金」往来科目，不影响存货成本" },
+      { type: "BR", id: "BR-16", text: "押金返还行随主商品退货行级联存在，用户不能单独删除" },
+      { type: "AC", id: "AC-09", text: "Given 关联 PO=PO-SGP-0142(Coca-Cola 50箱 BCRS)，When 新建退供单退 5 箱，Then 自动追加押金返还行(数量=120,金额=-S$12.00 红色,来源=系统)" }
+    ]
+  }
+];
+(function () {
+  const tip = document.getElementById('anno-tip');
+  const toggle = document.getElementById('anno-toggle');
+  document.body.classList.add('anno-on');
+  toggle.addEventListener('click', () => {
+    document.body.classList.toggle('anno-on');
+    if (!document.body.classList.contains('anno-on')) hideTip();
+  });
+  function renderTip(a) {
+    let h = '<div class="anno-tip-hd">' + esc(a.title) + '</div>';
+    a.rules.forEach(r => {
+      const label = r.id ? r.id : r.type;
+      h += '<div class="anno-row"><span class="anno-tag t-' + r.type + '">' + esc(label) + '</span><span class="anno-txt">' + esc(r.text) + '</span></div>';
+    });
+    tip.innerHTML = h;
+  }
+  function showTip(e, a) {
+    if (!document.body.classList.contains('anno-on')) return;
+    renderTip(a);
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + r.width > innerWidth)  x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight) y = e.clientY - r.height - 14;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top  = Math.max(8, y) + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+  function esc(s) { return String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+  const entries = [];
+  ANNOTATIONS.forEach((a, i) => {
+    const el = document.querySelector(a.sel);
+    if (!el) { console.warn('[规则标注] 选择器未命中：' + a.sel); return; }
+    el.setAttribute('data-anno-marked', '');
+    const badge = document.createElement('div');
+    badge.className = 'anno-badge';
+    badge.textContent = i + 1;
+    document.body.appendChild(badge);
+    [el, badge].forEach(t => {
+      t.addEventListener('mousemove', e => showTip(e, a));
+      t.addEventListener('mouseleave', hideTip);
+    });
+    entries.push({ el, badge });
+  });
+  function refresh() {
+    entries.forEach(({ el, badge }) => {
+      if (el.getClientRects().length === 0) { badge.classList.add('anno-hidden'); return; }
+      badge.classList.remove('anno-hidden');
+      const r = el.getBoundingClientRect();
+      badge.style.left = (r.right + scrollX - 9) + 'px';
+      badge.style.top  = (r.top + scrollY - 9) + 'px';
+    });
+  }
+  refresh();
+  addEventListener('scroll', refresh, true);
+  addEventListener('resize', refresh);
+  setInterval(refresh, 500);
+})();
+</script>
+<!-- ══════════════ 规则标注层 结束 ══════════════ -->
 </body>
 </html>
