@@ -918,7 +918,9 @@ function setPaneDisabled(paneId, disabled){
 }
 function getPaneBtns(paneId){
   const head=document.querySelector(`#${paneId} .panel-head`);
-  return head?head.querySelectorAll('button'):[];
+  if(!head) return [];
+  // 仅取 编辑 / 保存 两个固定按钮（排除 + 新增 类的 pane-edit-only 按钮）
+  return head.querySelectorAll('button:not(.pane-edit-only)');
 }
 function enterEdit(paneId, btn){
   paneEditState[paneId]=true;
