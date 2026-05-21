@@ -348,20 +348,41 @@ tr:hover td{background:#fbfcfd}
         <div class="tab-pane" id="c-vlt">
           <div class="panel">
             <div class="panel-head">
-              <div class="panel-title">VLT/VCT 修正</div>
+              <div class="panel-title">VLT/VCT 修正（按 SPU × 供应商）</div>
               <div style="display:flex;gap:8px">
                 <button class="btn small" onclick="enterEdit('c-vlt',this)">编辑</button>
                 <button class="btn primary small" disabled onclick="saveAndExit('c-vlt','VLT/VCT 修正',this)">保存</button>
               </div>
             </div>
+            <div class="panel-body" style="padding-bottom:8px">
+              <p class="muted" style="margin-bottom:10px">同一商品在不同供应商的 VLT 可能不同。修正天数规则：T+1 → 0；T+2 → +1；T+3 以上 → VLT−1（系统按 VLT 自动计算）。</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <input class="chip" placeholder="搜索商品 SPU / 名称" style="height:30px;width:220px">
+                <input class="chip" placeholder="搜索供应商" style="height:30px;width:200px">
+                <select class="chip" style="height:30px"><option>全部仓库</option><option>West Hub</option><option>East Hub</option></select>
+              </div>
+            </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>VLT</th><th>说明</th><th class="num">修正天数</th></tr></thead>
+              <thead><tr>
+                <th>商品</th>
+                <th>供应商</th>
+                <th>仓库</th>
+                <th class="num">VLT (天)</th>
+                <th class="num">VCT (天)</th>
+                <th class="num">修正天数</th>
+              </tr></thead>
               <tbody>
-                <tr><td>T+1</td><td>今天下单明天到</td><td class="num"><input class="input-num" value="0"></td></tr>
-                <tr><td>T+2</td><td>两天到货</td><td class="num"><input class="input-num" value="1"></td></tr>
-                <tr><td>T+3 以上</td><td>VLT − 1</td><td class="num"><input class="input-num" value="VLT-1"></td></tr>
+                <tr><td>金针菇 SPU-10021</td><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
+                <tr><td>金针菇 SPU-10021</td><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
+                <tr><td>金针菇 SPU-10021</td><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td></tr>
+                <tr><td>鲜鸡胸肉 SPU-78120</td><td>MeatPro (V-007)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
+                <tr><td>上海青 SPU-30087</td><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
+                <tr><td>番茄 SPU-32011</td><td>RedSun (V-012)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
+                <tr><td>番茄 SPU-32011</td><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td></tr>
+                <tr><td>白玉菇 SPU-10032</td><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
               </tbody>
             </table></div>
+            <div style="display:flex;justify-content:flex-end;padding:12px 16px;color:var(--muted);font-size:12px">共 8 条</div>
           </div>
         </div>
 
@@ -609,7 +630,8 @@ document.getElementById('modalMask').addEventListener('click',e=>{
 
 // 配置页：默认查看模式，编辑→可改，保存→回到查看
 function setPaneDisabled(paneId, disabled){
-  document.querySelectorAll(`#${paneId} input`).forEach(i=>i.disabled=disabled);
+  // 只切换表格内的输入，筛选/搜索框不受影响
+  document.querySelectorAll(`#${paneId} .table-wrap input`).forEach(i=>i.disabled=disabled);
 }
 function getPaneBtns(paneId){
   const head=document.querySelector(`#${paneId} .panel-head`);
