@@ -639,12 +639,8 @@ function renderSkuDetail(r){
         <div class="row" style="border-top:1px dashed var(--line-2);margin-top:4px;padding-top:4px"><b>剩余销量</b><span class="v" style="color:var(--green)">${r.todayRemain}</span></div>
       </div>
       <div class="detail-block">
-        <h5>④ 今日在途库存（按日分桶）</h5>
+        <h5>④ 今日在途库存</h5>
         <div class="row"><span>今日在途</span><span class="v">${r.inTransit.today}</span></div>
-        <div class="row"><span>T+1 在途</span><span class="v">${r.inTransit.t1}</span></div>
-        <div class="row"><span>T+2 在途</span><span class="v">${r.inTransit.t2}</span></div>
-        <div class="row"><span>T+3 在途</span><span class="v">${r.inTransit.t3}</span></div>
-        <div class="row"><span>T+4 在途</span><span class="v">${r.inTransit.t4}</span></div>
         <div class="muted" style="margin-top:6px">来源：待下单 / 待发货 / 待入库 / 入库中</div>
       </div>
       <div class="detail-block">
