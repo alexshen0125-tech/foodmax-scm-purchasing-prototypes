@@ -147,6 +147,7 @@ tr:hover td{background:#fbfcfd}
     <button class="active" data-view="plan"><span class="dot"></span>采购计划</button>
     <button data-view="flow"><span class="dot"></span>算量流程</button>
     <button data-view="cfg"><span class="dot"></span>覆盖天数<br>配置</button>
+    <button data-view="rp"><span class="dot"></span>补货参数<br>配置</button>
   </aside>
   <main class="main">
 
@@ -374,9 +375,9 @@ tr:hover td{background:#fbfcfd}
                 <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
                 <tr><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
                 <tr><td>MeatPro (V-007)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="toast('跳转到「补货参数配置」筛选 Hattah，显示 1 条 SPU 级覆盖')">1 条 →</a></td></tr>
+                <tr><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('Hattah')">1 条 →</a></td></tr>
                 <tr><td>RedSun (V-012)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="toast('跳转到「补货参数配置」筛选 TomatoKing，显示 1 条 SPU 级覆盖')">1 条 →</a></td></tr>
+                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('TomatoKing')">1 条 →</a></td></tr>
               </tbody>
             </table></div>
             <div style="padding:10px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between">
@@ -423,6 +424,70 @@ tr:hover td{background:#fbfcfd}
                 <tr><td>法定假日当天</td><td>全部</td><td class="num"><input class="input-num" value="假期天数-1"></td></tr>
               </tbody>
             </table></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 4. 补货参数配置（现有功能页，复用）===== -->
+    <div class="view" id="rp">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">补货参数配置</div>
+            <div class="subtitle">维护 SPU × 供应商 × 仓库 的接单日、提前期、增长系数、品供绑定。<b style="color:var(--green)">已支持 SPU 级 VLT 覆盖</b>（优先于「覆盖天数配置 → 供应商默认 VLT」）。— 现有页面，本期不重做。</div>
+          </div>
+        </div>
+      </section>
+      <section class="workspace">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px 12px">
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">商品 SPU</label><input id="rp-filter-spu" class="chip" style="height:30px" placeholder="搜索 SPU"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>肉禽</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商名称/ID</label><input id="rp-filter-vendor" class="chip" style="height:30px" placeholder="搜索供应商"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>全部</option><option>West Hub</option><option>East Hub</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">配置状态</label><select class="chip" style="height:30px"><option>全部</option><option>启用</option><option>停用</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">品供绑定关系</label><select class="chip" style="height:30px"><option>全部</option><option>已绑定</option><option>未绑定</option></select></div>
+              <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px">
+                <button class="btn primary" onclick="renderRpRows();toast('查询成功')">查询</button>
+                <button class="btn" onclick="document.getElementById('rp-filter-spu').value='';document.getElementById('rp-filter-vendor').value='';renderRpRows();toast('已重置')">重置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head" style="padding:0 14px;height:48px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn primary small" onclick="openRpModal('rpAdd')">新增</button>
+              <button class="btn small" onclick="openRpModal('rpGrowth')">批量修改 · 设置增长系数</button>
+            </div>
+            <span class="muted">共 <b id="rp-count">8</b> 条</span>
+          </div>
+          <div class="table-wrap" style="border-radius:0;border-left:0;border-right:0;border-top:0;border-bottom:0"><table>
+            <thead><tr>
+              <th style="width:38px"><input type="checkbox"></th>
+              <th>供应商名称</th>
+              <th>供应商ID</th>
+              <th>SPU 名称</th>
+              <th>SPU 编号</th>
+              <th>类目</th>
+              <th>仓库名称</th>
+              <th>仓库ID</th>
+              <th>接单日设置</th>
+              <th>提前期</th>
+              <th>处理状态</th>
+              <th>品供绑定</th>
+              <th style="width:120px">操作</th>
+            </tr></thead>
+            <tbody id="rpRows"></tbody>
+          </table></div>
+          <div style="padding:12px 14px;display:flex;justify-content:flex-end;color:var(--muted);font-size:12px;gap:6px;align-items:center">
+            <span>共 8 条</span>
+            <button class="btn small" disabled>‹</button>
+            <button class="btn small primary">1</button>
+            <button class="btn small">›</button>
           </div>
         </div>
       </section>
@@ -628,6 +693,103 @@ document.getElementById('modalMask').addEventListener('click',e=>{
   if(e.target.id==='modalMask') e.target.classList.remove('show');
 });
 
+// ============ 补货参数配置（现有功能页，含 SPU 级 VLT 覆盖）============
+const rpData=[
+  {id:1, vendorName:'GreenFarm', vendorCode:'V-001', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周三、周五', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:2, vendorName:'FreshGo', vendorCode:'V-003', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一至周六', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:3, vendorName:'Hattah', vendorCode:'V-021', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周二、周五', orderLeadTime:3, status:'启用', binding:'已绑定', isOverride:true},
+  {id:4, vendorName:'MeatPro', vendorCode:'V-007', spuName:'鲜鸡胸肉', spuCode:'SPU-78120', categoryName:'肉禽 / 禽肉', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:2, everyFewDays:1, firstOrderDate:'2026-05-01', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:5, vendorName:'FreshGo', vendorCode:'V-003', spuName:'上海青', spuCode:'SPU-30087', categoryName:'蔬菜 / 叶菜', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一至周六', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:6, vendorName:'RedSun', vendorCode:'V-012', spuName:'番茄', spuCode:'SPU-32011', categoryName:'蔬菜 / 果菜', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:2, everyFewDays:2, firstOrderDate:'2026-05-02', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:7, vendorName:'TomatoKing', vendorCode:'V-018', spuName:'番茄', spuCode:'SPU-32011', categoryName:'蔬菜 / 果菜', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周四', orderLeadTime:3, status:'启用', binding:'已绑定', isOverride:true},
+  {id:8, vendorName:'GreenFarm', vendorCode:'V-001', spuName:'白玉菇', spuCode:'SPU-10032', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周三、周五', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false}
+];
+
+function renderRpRows(){
+  const spuQ=(document.getElementById('rp-filter-spu')?.value||'').trim().toLowerCase();
+  const vendorQ=(document.getElementById('rp-filter-vendor')?.value||'').trim().toLowerCase();
+  const filtered=rpData.filter(r=>{
+    const matchSpu=!spuQ||r.spuName.toLowerCase().includes(spuQ)||r.spuCode.toLowerCase().includes(spuQ);
+    const matchVendor=!vendorQ||r.vendorName.toLowerCase().includes(vendorQ)||r.vendorCode.toLowerCase().includes(vendorQ);
+    return matchSpu && matchVendor;
+  });
+  const rows=filtered.map(r=>{
+    const receiving = r.receivingType===1
+      ? '按周 '+(r.setByWeekDesc||'')
+      : '按日 每 '+(r.everyFewDays||0)+' 天<div class="muted">首次：'+(r.firstOrderDate||'-')+'</div>';
+    const vlt = r.isOverride
+      ? `<b style="color:var(--blue)">${r.orderLeadTime} 天</b> <span class="pill blue" style="margin-left:4px;height:18px;padding:0 5px;font-size:10px">SPU 级覆盖</span>`
+      : `${r.orderLeadTime} 天`;
+    const statusPill = r.status==='启用'?'<span class="pill green">启用</span>':'<span class="pill amber">停用</span>';
+    return `<tr>
+      <td><input type="checkbox"></td>
+      <td>${r.vendorName}</td>
+      <td>${r.vendorCode}</td>
+      <td>${r.spuName}</td>
+      <td>${r.spuCode}</td>
+      <td>${r.categoryName}</td>
+      <td>${r.warehouseName}</td>
+      <td>${r.warehouseCode}</td>
+      <td>${receiving}</td>
+      <td>${vlt}</td>
+      <td>${statusPill}</td>
+      <td><span class="pill blue">${r.binding}</span></td>
+      <td>
+        <button class="btn text" onclick="openRpModal('rpAdd','编辑配置')">编辑</button>
+        <button class="btn text danger" onclick="if(confirm('确定要删除该条配置吗？'))toast('删除成功','success')">删除</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rpRows').innerHTML=rows;
+  document.getElementById('rp-count').textContent=filtered.length;
+}
+
+function jumpToRp(vendor){
+  document.getElementById('rp-filter-vendor').value=vendor;
+  switchView('rp');
+  renderRpRows();
+  toast(`已跳转到补货参数配置，按 ${vendor} 过滤显示 SPU 级 VLT 覆盖`,'success');
+}
+
+const rpModals = {
+  rpAdd: function(title){return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">'+(title||'新增配置')+'</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">仓库名称/ID *</label><select class="chip" style="width:100%;height:34px"><option>West Hub (WH-W)</option><option>East Hub (WH-E)</option></select></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">商品名称/ID *</label><input class="chip" style="width:100%;height:34px" placeholder="搜索 SPU"></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">供应商名称/ID *</label><input class="chip" style="width:100%;height:34px" placeholder="搜索供应商"></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日配置 *</label><div style="display:flex;gap:14px"><label><input type="radio" name="rcv" checked> 按周</label><label><input type="radio" name="rcv"> 按日（每 N 天）</label></div></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日期 *</label><div style="display:flex;gap:6px">'+
+        '<label style="border:1px solid var(--green);background:var(--mint);color:var(--green);padding:5px 9px;border-radius:5px;cursor:pointer">一</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">二</label>'+
+        '<label style="border:1px solid var(--green);background:var(--mint);color:var(--green);padding:5px 9px;border-radius:5px;cursor:pointer">三</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">四</label>'+
+        '<label style="border:1px solid var(--green);background:var(--mint);color:var(--green);padding:5px 9px;border-radius:5px;cursor:pointer">五</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">六</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">日</label>'+
+      '</div></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">增长系数 *</label><input class="chip" style="width:160px;height:34px" type="number" step="0.01" value="1.00"></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">提前期 (天) *</label><input class="chip" style="width:160px;height:34px" type="number" value="1" min="0"></div>'+
+      '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期</b> 是 SPU + 供应商 + 仓库 维度的 VLT，<b style="color:var(--green)">优先级高于</b>「覆盖天数配置 → 供应商默认 VLT」。如果不填（或与供应商默认相同），算量时回退到供应商默认。</p>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
+  },
+  rpGrowth: function(){return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">设置增长系数</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<p class="muted" style="margin-bottom:14px">将选中行的增长系数批量更新为以下值。</p>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">增长系数 *</label><input class="chip" style="width:160px;height:34px" type="number" step="0.01" value="1.20"></div>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'操作成功\',\'success\')">提交</button></div>';
+  }
+};
+
+function openRpModal(type, title){
+  document.getElementById('modalBox').innerHTML=rpModals[type](title);
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal(){document.getElementById('modalMask').classList.remove('show')}
+
 // 配置页：默认查看模式，编辑→可改，保存→回到查看
 function setPaneDisabled(paneId, disabled){
   // 只切换表格内的输入，筛选/搜索框不受影响
@@ -656,6 +818,7 @@ function saveAndExit(paneId, label, btn){
 ['c-matrix','c-vlt','c-oos','c-weekend'].forEach(id=>setPaneDisabled(id, true));
 
 renderPlanRows();
+renderRpRows();
 </script>
 </body>
 </html>
