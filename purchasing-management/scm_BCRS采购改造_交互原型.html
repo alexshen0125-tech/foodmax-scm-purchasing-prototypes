@@ -595,11 +595,11 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>箱</td><td class="num">50</td><td class="num">18.50</td><td class="num pos">925.00</td>
                 <td><span class="pill blue">商品</span></td>
               </tr>
-              <tr class="bcrs-row">
+              <tr class="bcrs-row" id="detailDepRow1">
                 <td>—</td>
                 <td><div class="linked-tag">BCRS 押金</div><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
                 <td>个</td><td class="num">1,200</td><td class="num">0.10</td><td class="num pos">120.00</td>
-                <td><span class="pill green">押金</span></td>
+                <td><span class="pill green" id="detailDepPill1">押金</span></td>
               </tr>
               <tr>
                 <td>2</td>
@@ -625,8 +625,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 
         <div class="summary">
           <div class="summary-card"><div class="k">商品行数</div><div class="v">3</div></div>
-          <div class="summary-card"><div class="k">商品金额（进存货）</div><div class="v">S$2,009.00</div></div>
-          <div class="summary-card green"><div class="k">BCRS 押金（应付押金）</div><div class="v">S$192.00</div></div>
+          <div class="summary-card" id="detailSumGoods"><div class="k">商品金额（进存货）</div><div class="v">S$2,009.00</div></div>
+          <div class="summary-card green" id="detailSumDeposit"><div class="k">BCRS 押金（应付押金）</div><div class="v">S$192.00</div></div>
           <div class="summary-card"><div class="k">应付总额</div><div class="v">S$2,201.00</div></div>
         </div>
       </div>
@@ -1164,6 +1164,35 @@ const ANNOTATIONS = [
   },
 
   /* === 视图 4：采购单详情 === */
+  {
+    sel: "#detailDepRow1",
+    title: "BCRS 押金行（详情页只读展示）",
+    rules: [
+      { type: "BR", id: "BR-05", text: "押金作为独立商品行展示，不并入主商品价格列；商品名固定「BCRS 押金」" },
+      { type: "BR", id: "BR-06", text: "押金数量 = 主商品采购数量 × boxSize（详情页显示「50 箱 × 24 瓶/箱」回溯计算依据）" },
+      { type: "BR", id: "BR-09", text: "押金行随主商品行级联存在，详情页不可单独编辑/删除" },
+      { type: "AC", id: "AC-07", text: "详情商品明细中押金行以 ↳ 缩进 + 绿色高亮独立展示，与主商品行视觉区分" },
+      { type: "交互", text: "鼠标悬浮可展开关联主商品 SKU 和换算式；打印 PDF 时押金行作为独立行项" }
+    ]
+  },
+  {
+    sel: "#detailDepPill1",
+    title: "类型标识：押金",
+    rules: [
+      { type: "BR", id: "BR-10", text: "押金行打「押金」绿色 pill，财务侧据此识别为应付押金科目；商品行打「商品」蓝色 pill 进存货成本" },
+      { type: "校验", text: "枚举：商品 / 押金；押金行固定为「押金」不可改" },
+      { type: "交互", text: "导出/打印 PDF 时按 type 字段筛选汇总" }
+    ]
+  },
+  {
+    sel: "#detailSumDeposit",
+    title: "BCRS 押金合计（应付押金）",
+    rules: [
+      { type: "BR", id: "BR-10", text: "押金金额不进存货成本，独立挂「应付押金」往来科目；底部汇总区独立列示" },
+      { type: "AC", id: "AC-07", text: "Given PO 含 BCRS 商品+押金行，When 提交单据，Then 底部汇总「BCRS 押金合计」单独列示" },
+      { type: "交互", text: "金额=Σ 所有 BCRS 押金行小计；联动主商品数量实时刷新" }
+    ]
+  },
   {
     sel: "#accountingSplit",
     title: "财务挂账拆分",
