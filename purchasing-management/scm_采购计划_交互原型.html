@@ -319,7 +319,7 @@ tr:hover td{background:#fbfcfd}
       <section class="workspace">
         <div class="tabs cfg-tabs">
           <div class="tab active" data-tab="c-matrix">基础备货天数矩阵</div>
-          <div class="tab" data-tab="c-vlt">VLT/VCT 修正</div>
+          <div class="tab" data-tab="c-vlt">接单日 / VCT</div>
           <div class="tab" data-tab="c-oos">缺货系数</div>
           <div class="tab" data-tab="c-weekend">周末 / 节假日系数</div>
         </div>
@@ -351,41 +351,39 @@ tr:hover td{background:#fbfcfd}
         <div class="tab-pane" id="c-vlt">
           <div class="panel">
             <div class="panel-head">
-              <div class="panel-title">供应商默认 VLT/VCT</div>
+              <div class="panel-title">供应商接单日 / VCT</div>
               <div style="display:flex;gap:8px">
                 <button class="btn small" onclick="enterEdit('c-vlt',this)">编辑</button>
-                <button class="btn primary small" disabled onclick="saveAndExit('c-vlt','供应商默认 VLT/VCT',this)">保存</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-vlt','供应商接单日 / VCT',this)">保存</button>
               </div>
             </div>
             <div class="panel-body" style="padding-bottom:8px">
               <div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:12px;line-height:1.7;color:var(--text)">
                 <div style="font-weight:700;margin-bottom:4px;color:var(--blue)">💡 与现有功能的关系</div>
-                <div>本页只维护「<b>供应商维度</b>」默认 VLT/VCT —— 每供应商一行，作为该供应商所有 SPU 的默认值。</div>
-                <div>「<b>SPU × 供应商维度</b>」的覆盖（每个 SPU+供应商一行的 VLT）<b>已在「补货参数配置」页支持</b>，列字段 <code>orderLeadTime</code>，直接复用，不在此重复维护。</div>
-                <div style="margin-top:4px"><b style="color:var(--green)">优先级：</b>算量时先查「补货参数配置」是否有该 SPU+供应商组合，有则用 SPU 级 VLT；没有则回退到本页的供应商默认 VLT。</div>
+                <div>本页维护「<b>供应商维度</b>」的接单日与 VCT（每供应商一行）。</div>
+                <div><b>VLT（提前期）已在「补货参数配置」页按 SPU × 供应商 × 仓库 维护</b>（字段 <code>orderLeadTime</code>），不在此重复维护。</div>
+                <div style="margin-top:4px">接单日只在供应商维度维护，无需 SPU 级覆盖。</div>
               </div>
-              <p class="muted">修正天数规则：T+1 → 0；T+2 → +1；T+3 以上 → VLT − 1（系统按 VLT 自动计算）。供应商接单日同样只在供应商维度维护，无需 SPU 级覆盖。</p>
             </div>
 
             <div class="table-wrap" style="border-top:1px solid var(--line-2);border-radius:0;border-left:0;border-right:0;border-bottom:0"><table>
               <thead><tr>
                 <th>供应商</th><th>仓库</th>
                 <th style="min-width:240px">接单日设置</th>
-                <th class="num">VLT (天)</th><th class="num">VCT (天)</th><th class="num">修正天数</th>
-                <th class="num">SPU 级覆盖数</th>
+                <th class="num">VCT (天)</th>
               </tr></thead>
               <tbody>
-                <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周三、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · GreenFarm (V-001)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>FreshGo (V-003)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一至周六 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · FreshGo (V-003)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>MeatPro (V-007)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 1 天 · 首次 2026-05-01 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · MeatPro (V-007)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>Hattah (V-021)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周二、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · Hattah (V-021)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('Hattah')">1 条 →</a></td></tr>
-                <tr><td>RedSun (V-012)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 2 天 · 首次 2026-05-02 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · RedSun (V-012)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周四 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · TomatoKing (V-018)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('TomatoKing')">1 条 →</a></td></tr>
+                <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周三、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · GreenFarm (V-001)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>FreshGo (V-003)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一至周六 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · FreshGo (V-003)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td></tr>
+                <tr><td>MeatPro (V-007)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 1 天 · 首次 2026-05-01 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · MeatPro (V-007)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>Hattah (V-021)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周二、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · Hattah (V-021)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="3"></td></tr>
+                <tr><td>RedSun (V-012)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 2 天 · 首次 2026-05-02 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · RedSun (V-012)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td></tr>
+                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周四 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · TomatoKing (V-018)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td></tr>
               </tbody>
             </table></div>
             <div style="padding:10px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between">
               <span>共 6 条供应商默认</span>
-              <span>SPU 级覆盖维护 →「补货参数配置」页（已有功能）</span>
+              <span>VLT 维护 →「补货参数配置」页（已有功能）</span>
             </div>
           </div>
         </div>
