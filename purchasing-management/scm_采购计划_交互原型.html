@@ -185,14 +185,13 @@ tr:hover td{background:#fbfcfd}
       <section class="workspace">
         <div class="panel" style="margin-bottom:12px">
           <div class="panel-body">
-            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px 12px">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px 12px">
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品编码</label><input class="chip" style="height:30px" placeholder="搜索 SPU 编码"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品名称</label><input class="chip" style="height:30px" placeholder="搜索货品名称"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>水果</option><option>肉禽</option></select></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商</label><input class="chip" style="height:30px" placeholder="选择供应商"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>West Hub</option><option>East Hub</option></select></div>
-              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">下单日期</label><input class="chip" style="height:30px" value="2026-05-20 ~ 2026-05-20"></div>
-              <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px;align-items:center">
+              <div style="grid-column:span 5;display:flex;justify-content:flex-end;gap:8px;align-items:center">
                 <span id="plan-selected-tip" class="muted" style="display:none;margin-right:8px">已勾选 <b id="plan-selected-count" style="color:var(--ink)">0</b> 项</span>
                 <button class="btn primary" id="btn-create-po" onclick="openCreatePoModal()">生成采购单</button>
                 <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
