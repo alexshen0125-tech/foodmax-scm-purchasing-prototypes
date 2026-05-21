@@ -69,8 +69,9 @@ tr:hover td{background:#fbfcfd}
 .day-cell{background:#fafbfc}
 .day-cell.has{background:var(--mint)}
 .day-th{background:#eaf6f0;color:var(--green);font-weight:700}
-.input-num{width:84px;height:26px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 6px;outline:none}
+.input-num{width:84px;height:26px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 6px;outline:none;background:#fff;color:var(--ink)}
 .input-num:focus{border-color:var(--green)}
+.input-num:disabled,input:disabled{background:#f8fafc;color:var(--ink);cursor:default;border-color:var(--line-2)}
 .pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;border:1px solid transparent;white-space:nowrap;font-weight:500}
 .pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
 .pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
@@ -324,7 +325,10 @@ tr:hover td{background:#fbfcfd}
           <div class="panel">
             <div class="panel-head">
               <div class="panel-title">基础备货天数矩阵</div>
-              <button class="btn primary small" onclick="toast('基础备货天数矩阵已保存','success')">保存</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-matrix',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-matrix','基础备货天数矩阵',this)">保存</button>
+              </div>
             </div>
             <div class="panel-body">
               <p class="muted" style="margin-bottom:8px">行 = 销售分层（名称 / 销量下限 / 上限可自定义），列 = 保质期分层。单元格为基础备货天数。</p>
@@ -345,7 +349,10 @@ tr:hover td{background:#fbfcfd}
           <div class="panel">
             <div class="panel-head">
               <div class="panel-title">VLT/VCT 修正</div>
-              <button class="btn primary small" onclick="toast('VLT/VCT 修正已保存','success')">保存</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-vlt',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-vlt','VLT/VCT 修正',this)">保存</button>
+              </div>
             </div>
             <div class="table-wrap"><table>
               <thead><tr><th>VLT</th><th>说明</th><th class="num">修正天数</th></tr></thead>
@@ -362,7 +369,10 @@ tr:hover td{background:#fbfcfd}
           <div class="panel">
             <div class="panel-head">
               <div class="panel-title">缺货系数</div>
-              <button class="btn primary small" onclick="toast('缺货系数已保存','success')">保存</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-oos',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-oos','缺货系数',this)">保存</button>
+              </div>
             </div>
             <div class="table-wrap"><table>
               <thead><tr><th>条件（预计剩余库存 ≤ 0 时触发）</th><th class="num">叠加天数</th></tr></thead>
@@ -378,7 +388,10 @@ tr:hover td{background:#fbfcfd}
           <div class="panel">
             <div class="panel-head">
               <div class="panel-title">周末 / 节假日系数</div>
-              <button class="btn primary small" onclick="toast('周末 / 节假日系数已保存','success')">保存</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-weekend',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-weekend','周末 / 节假日系数',this)">保存</button>
+              </div>
             </div>
             <div class="table-wrap"><table>
               <thead><tr><th>场景</th><th>适用 VLT</th><th class="num">叠加天数</th></tr></thead>
@@ -593,6 +606,30 @@ function toast(msg,type){
 document.getElementById('modalMask').addEventListener('click',e=>{
   if(e.target.id==='modalMask') e.target.classList.remove('show');
 });
+
+// 配置页：默认查看模式，编辑→可改，保存→回到查看
+function setPaneDisabled(paneId, disabled){
+  document.querySelectorAll(`#${paneId} input`).forEach(i=>i.disabled=disabled);
+}
+function getPaneBtns(paneId){
+  const head=document.querySelector(`#${paneId} .panel-head`);
+  return head?head.querySelectorAll('button'):[];
+}
+function enterEdit(paneId, btn){
+  setPaneDisabled(paneId, false);
+  const btns=getPaneBtns(paneId);
+  if(btns[0]) btns[0].disabled=true;
+  if(btns[1]) btns[1].disabled=false;
+}
+function saveAndExit(paneId, label, btn){
+  setPaneDisabled(paneId, true);
+  const btns=getPaneBtns(paneId);
+  if(btns[0]) btns[0].disabled=false;
+  if(btns[1]) btns[1].disabled=true;
+  toast(label+' 已保存','success');
+}
+// 初始：4 个 tab-pane 都置为只读
+['c-matrix','c-vlt','c-oos','c-weekend'].forEach(id=>setPaneDisabled(id, true));
 
 renderPlanRows();
 </script>
