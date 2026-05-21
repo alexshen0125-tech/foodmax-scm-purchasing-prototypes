@@ -72,6 +72,8 @@ tr:hover td{background:#fbfcfd}
 .input-num{width:84px;height:26px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 6px;outline:none;background:#fff;color:var(--ink)}
 .input-num:focus{border-color:var(--green)}
 .input-num:disabled,input:disabled{background:#f8fafc;color:var(--ink);cursor:default;border-color:var(--line-2)}
+.rd-day{display:inline-flex;align-items:center;justify-content:center;width:36px;height:32px;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-size:12px;background:#fff;color:var(--text)}
+.rd-day.on{border-color:var(--green);background:var(--mint);color:var(--green);font-weight:600}
 .pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;border:1px solid transparent;white-space:nowrap;font-weight:500}
 .pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
 .pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
@@ -368,16 +370,17 @@ tr:hover td{background:#fbfcfd}
             <div class="table-wrap" style="border-top:1px solid var(--line-2);border-radius:0;border-left:0;border-right:0;border-bottom:0"><table>
               <thead><tr>
                 <th>供应商</th><th>仓库</th>
+                <th style="min-width:240px">接单日设置</th>
                 <th class="num">VLT (天)</th><th class="num">VCT (天)</th><th class="num">修正天数</th>
                 <th class="num">SPU 级覆盖数</th>
               </tr></thead>
               <tbody>
-                <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>MeatPro (V-007)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('Hattah')">1 条 →</a></td></tr>
-                <tr><td>RedSun (V-012)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
-                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('TomatoKing')">1 条 →</a></td></tr>
+                <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周三、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · GreenFarm (V-001)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
+                <tr><td>FreshGo (V-003)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一至周六 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · FreshGo (V-003)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
+                <tr><td>MeatPro (V-007)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 1 天 · 首次 2026-05-01 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · MeatPro (V-007)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td><td class="num">0</td></tr>
+                <tr><td>Hattah (V-021)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周二、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · Hattah (V-021)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('Hattah')">1 条 →</a></td></tr>
+                <tr><td>RedSun (V-012)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 2 天 · 首次 2026-05-02 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · RedSun (V-012)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td><td class="num">0</td></tr>
+                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周四 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · TomatoKing (V-018)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td><td class="num"><a href="#" style="color:var(--blue);text-decoration:none" onclick="event.preventDefault();jumpToRp('TomatoKing')">1 条 →</a></td></tr>
               </tbody>
             </table></div>
             <div style="padding:10px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between">
@@ -773,6 +776,34 @@ const rpModals = {
       '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期</b> 是 SPU + 供应商 + 仓库 维度的 VLT，<b style="color:var(--green)">优先级高于</b>「覆盖天数配置 → 供应商默认 VLT」。如果不填（或与供应商默认相同），算量时回退到供应商默认。</p>'+
     '</div>'+
     '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
+  },
+  receivingDay: function(title){return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">'+(title||'编辑接单日')+'</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<p class="muted" style="margin-bottom:14px;line-height:1.6">接单日维护到供应商维度即可，无需 SPU 级覆盖。同供应商对所有 SPU 共用一个接单日配置。</p>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日配置 *</label>'+
+        '<div style="display:flex;gap:14px">'+
+          '<label><input type="radio" name="rd-type" checked onchange="document.getElementById(\'rd-byweek\').style.display=\'\';document.getElementById(\'rd-byday\').style.display=\'none\'"> 按周</label>'+
+          '<label><input type="radio" name="rd-type" onchange="document.getElementById(\'rd-byweek\').style.display=\'none\';document.getElementById(\'rd-byday\').style.display=\'\'"> 按日（每 N 天）</label>'+
+        '</div>'+
+      '</div>'+
+      '<div id="rd-byweek" style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日期 *</label>'+
+        '<div style="display:flex;gap:6px">'+
+          '<label class="rd-day on" onclick="this.classList.toggle(\'on\')">一</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">二</label>'+
+          '<label class="rd-day on" onclick="this.classList.toggle(\'on\')">三</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">四</label>'+
+          '<label class="rd-day on" onclick="this.classList.toggle(\'on\')">五</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">六</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">日</label>'+
+        '</div>'+
+      '</div>'+
+      '<div id="rd-byday" style="display:none">'+
+        '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">间隔日 *</label><div style="display:flex;align-items:center;gap:6px"><span>每</span><input class="chip" style="width:80px;height:34px" type="number" value="1" min="1"><span>天</span></div></div>'+
+        '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">第一次开始下单日 *</label><input class="chip" style="width:200px;height:34px" type="date" value="2026-05-21"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'接单日已保存\',\'success\')">保存</button></div>';
   },
   rpGrowth: function(){return ''+
     '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">设置增长系数</div><button class="close" onclick="closeModal()">×</button></div>'+
