@@ -309,9 +309,7 @@ tr:hover td{background:#fbfcfd}
             <div class="title">覆盖天数配置</div>
             <div class="subtitle">「预测覆盖天数逻辑」的 4 个输入：基础备货天数矩阵 / VLT 修正 / 缺货系数 / 周末节假日系数。修改后下次重算生效。</div>
           </div>
-          <div class="hero-actions">
-            <button class="btn primary" onclick="toast('配置已保存，下次重算生效','success')">保存</button>
-          </div>
+          <div class="hero-actions"></div>
         </div>
       </section>
       <section class="workspace">
@@ -323,51 +321,75 @@ tr:hover td{background:#fbfcfd}
         </div>
 
         <div class="tab-pane active" id="c-matrix">
-          <div class="panel"><div class="panel-body">
-            <p class="muted" style="margin-bottom:8px">行 = 销售分层，列 = 保质期分层。单元格为基础备货天数。</p>
-            <div class="table-wrap matrix-table"><table>
-              <thead><tr><th></th><th>短保 (&lt;7 天)</th><th>中保 (7–15 天)</th><th>长保 (&gt;15 天)</th></tr></thead>
-              <tbody>
-                <tr><td>L1 高销 (μ ≥ 500)</td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="3"></td><td><input class="input-num" value="4"></td></tr>
-                <tr><td>L2 中销 (100 ≤ μ &lt; 500)</td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2.5"></td><td><input class="input-num" value="3.5"></td></tr>
-                <tr><td>L3 低销 (20 ≤ μ &lt; 100)</td><td><input class="input-num" value="1"></td><td><input class="input-num" value="2"></td><td><input class="input-num" value="3"></td></tr>
-                <tr><td>L4 微销 (μ &lt; 20)</td><td><input class="input-num" value="1"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2"></td></tr>
-              </tbody>
-            </table></div>
-          </div></div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">基础备货天数矩阵</div>
+              <button class="btn primary small" onclick="toast('基础备货天数矩阵已保存','success')">保存</button>
+            </div>
+            <div class="panel-body">
+              <p class="muted" style="margin-bottom:8px">行 = 销售分层（名称 / 销量下限 / 上限可自定义），列 = 保质期分层。单元格为基础备货天数。</p>
+              <div class="table-wrap matrix-table"><table>
+                <thead><tr><th>分层</th><th>名称</th><th class="num">销量下限</th><th class="num">销量上限</th><th>短保 (&lt;7 天)</th><th>中保 (7–15 天)</th><th>长保 (&gt;15 天)</th></tr></thead>
+                <tbody>
+                  <tr><td><b>L1</b></td><td><input class="input-num" style="width:84px;text-align:left" value="高销"></td><td class="num"><input class="input-num" value="500"></td><td class="num"><input class="input-num" value="不限"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="3"></td><td><input class="input-num" value="4"></td></tr>
+                  <tr><td><b>L2</b></td><td><input class="input-num" style="width:84px;text-align:left" value="中销"></td><td class="num"><input class="input-num" value="100"></td><td class="num"><input class="input-num" value="500"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2.5"></td><td><input class="input-num" value="3.5"></td></tr>
+                  <tr><td><b>L3</b></td><td><input class="input-num" style="width:84px;text-align:left" value="低销"></td><td class="num"><input class="input-num" value="20"></td><td class="num"><input class="input-num" value="100"></td><td><input class="input-num" value="1"></td><td><input class="input-num" value="2"></td><td><input class="input-num" value="3"></td></tr>
+                  <tr><td><b>L4</b></td><td><input class="input-num" style="width:84px;text-align:left" value="微销"></td><td class="num"><input class="input-num" value="0"></td><td class="num"><input class="input-num" value="20"></td><td><input class="input-num" value="1"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2"></td></tr>
+                </tbody>
+              </table></div>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane" id="c-vlt">
-          <div class="panel"><div class="table-wrap"><table>
-            <thead><tr><th>VLT</th><th>说明</th><th class="num">修正天数</th></tr></thead>
-            <tbody>
-              <tr><td>T+1</td><td>今天下单明天到</td><td class="num"><input class="input-num" value="0"></td></tr>
-              <tr><td>T+2</td><td>两天到货</td><td class="num"><input class="input-num" value="1"></td></tr>
-              <tr><td>T+3 以上</td><td>VLT − 1</td><td class="num"><input class="input-num" value="VLT-1"></td></tr>
-            </tbody>
-          </table></div></div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">VLT/VCT 修正</div>
+              <button class="btn primary small" onclick="toast('VLT/VCT 修正已保存','success')">保存</button>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>VLT</th><th>说明</th><th class="num">修正天数</th></tr></thead>
+              <tbody>
+                <tr><td>T+1</td><td>今天下单明天到</td><td class="num"><input class="input-num" value="0"></td></tr>
+                <tr><td>T+2</td><td>两天到货</td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>T+3 以上</td><td>VLT − 1</td><td class="num"><input class="input-num" value="VLT-1"></td></tr>
+              </tbody>
+            </table></div>
+          </div>
         </div>
 
         <div class="tab-pane" id="c-oos">
-          <div class="panel"><div class="table-wrap"><table>
-            <thead><tr><th>条件（预计剩余库存 ≤ 0 时触发）</th><th class="num">叠加天数</th></tr></thead>
-            <tbody>
-              <tr><td>保质期 ≥ 3 天</td><td class="num"><input class="input-num" value="2"></td></tr>
-              <tr><td>保质期 &lt; 3 天</td><td class="num"><input class="input-num" value="1.5"></td></tr>
-            </tbody>
-          </table></div></div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">缺货系数</div>
+              <button class="btn primary small" onclick="toast('缺货系数已保存','success')">保存</button>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>条件（预计剩余库存 ≤ 0 时触发）</th><th class="num">叠加天数</th></tr></thead>
+              <tbody>
+                <tr><td>保质期 ≥ 3 天</td><td class="num"><input class="input-num" value="2"></td></tr>
+                <tr><td>保质期 &lt; 3 天</td><td class="num"><input class="input-num" value="1.5"></td></tr>
+              </tbody>
+            </table></div>
+          </div>
         </div>
 
         <div class="tab-pane" id="c-weekend">
-          <div class="panel"><div class="table-wrap"><table>
-            <thead><tr><th>场景</th><th>适用 VLT</th><th class="num">叠加天数</th></tr></thead>
-            <tbody>
-              <tr><td>周五（周日不到货）</td><td>VLT=1</td><td class="num"><input class="input-num" value="1"></td></tr>
-              <tr><td>周六</td><td>VLT=1</td><td class="num"><input class="input-num" value="1"></td></tr>
-              <tr><td>法定假日前 1 天</td><td>全部</td><td class="num"><input class="input-num" value="1"></td></tr>
-              <tr><td>法定假日当天</td><td>全部</td><td class="num"><input class="input-num" value="假期天数-1"></td></tr>
-            </tbody>
-          </table></div></div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">周末 / 节假日系数</div>
+              <button class="btn primary small" onclick="toast('周末 / 节假日系数已保存','success')">保存</button>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>场景</th><th>适用 VLT</th><th class="num">叠加天数</th></tr></thead>
+              <tbody>
+                <tr><td>周五（周日不到货）</td><td>VLT=1</td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>周六</td><td>VLT=1</td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>法定假日前 1 天</td><td>全部</td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>法定假日当天</td><td>全部</td><td class="num"><input class="input-num" value="假期天数-1"></td></tr>
+              </tbody>
+            </table></div>
+          </div>
         </div>
       </section>
     </div>
