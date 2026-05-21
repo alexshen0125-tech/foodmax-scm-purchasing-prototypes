@@ -182,7 +182,9 @@ tr:hover td{background:#fbfcfd}
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商</label><input class="chip" style="height:30px" placeholder="选择供应商"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>West Hub</option><option>East Hub</option></select></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">下单日期</label><input class="chip" style="height:30px" value="2026-05-20 ~ 2026-05-20"></div>
-              <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px">
+              <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px;align-items:center">
+                <span id="plan-selected-tip" class="muted" style="display:none;margin-right:8px">已勾选 <b id="plan-selected-count" style="color:var(--ink)">0</b> 项</span>
+                <button class="btn primary" id="btn-create-po" disabled onclick="openCreatePoModal()">建采购单</button>
                 <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
                 <button class="btn" onclick="toast('已重置筛选')">重置</button>
               </div>
@@ -193,7 +195,7 @@ tr:hover td{background:#fbfcfd}
           <table>
             <thead>
               <tr>
-                <th style="width:38px"><input type="checkbox"></th>
+                <th style="width:38px"><input type="checkbox" id="plan-check-all" onchange="toggleAllPlanRows(this)"></th>
                 <th style="min-width:200px">原料货品</th>
                 <th class="num">最终备货天数</th>
                 <th class="num">μ 日均销</th>
@@ -590,7 +592,7 @@ function renderPlanRows(){
   const rows=data.map(r=>{
     return `
     <tr data-id="${r.id}">
-      <td><input type="checkbox"></td>
+      <td><input type="checkbox" class="plan-row-check" data-id="${r.id}" data-name="${r.name}" data-code="${r.code}" data-qty="${r.totalQty}" onchange="updatePlanSelection()"></td>
       <td>
         <div style="font-weight:600">${r.name}</div>
         <div class="muted">${r.code} · ${r.category}</div>
@@ -654,6 +656,52 @@ function renderSkuDetail(r){
         <div class="formula-line" style="background:var(--mint);border-color:var(--green);color:var(--green)">总采购量 = ${r.stockTarget} − ${r.endingT} = <b>${r.totalQty}</b></div>
       </div>
     </div>`;
+}
+
+// 行选 / 全选 / 「建采购单」按钮 disabled 联动（对齐现有 analyse.vue 行为）
+function updatePlanSelection(){
+  const rows=document.querySelectorAll('.plan-row-check');
+  const checked=Array.from(rows).filter(c=>c.checked);
+  const count=checked.length;
+  document.getElementById('btn-create-po').disabled=(count===0);
+  const tip=document.getElementById('plan-selected-tip');
+  tip.style.display=count>0?'inline':'none';
+  document.getElementById('plan-selected-count').textContent=count;
+  // 全选 checkbox 状态
+  const master=document.getElementById('plan-check-all');
+  if(master){
+    master.checked=(count===rows.length && count>0);
+    master.indeterminate=(count>0 && count<rows.length);
+  }
+}
+function toggleAllPlanRows(master){
+  document.querySelectorAll('.plan-row-check').forEach(c=>c.checked=master.checked);
+  updatePlanSelection();
+}
+function openCreatePoModal(){
+  const checked=Array.from(document.querySelectorAll('.plan-row-check:checked'));
+  if(!checked.length) return;
+  const items=checked.map(c=>({id:c.dataset.id,name:c.dataset.name,code:c.dataset.code,qty:c.dataset.qty}));
+  document.getElementById('modalBox').innerHTML=createPoModalHtml(items);
+  document.getElementById('modalMask').classList.add('show');
+}
+function createPoModalHtml(items){
+  const rows=items.map(it=>`<tr><td>${it.name}</td><td class="muted">${it.code}</td><td class="num">${parseInt(it.qty).toLocaleString()}</td></tr>`).join('');
+  return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">建采购单</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
+        '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 处理逻辑（复用现有「采购分析 → 生成采购单」）</div>'+
+        '<div>已勾选 <b style="color:var(--ink)">'+items.length+'</b> 个 SPU，将<b>合并生成一张</b>草稿采购单。</div>'+
+        '<div>必须共用<b>同一供应商</b>与<b>同一结算主体</b>；每行 requireQty 取「总采购量」。</div>'+
+        '<div>提交后跳转至「采购单列表」可查看草稿单。</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">默认供应商 *</label><select class="chip" style="width:100%;height:34px"><option>GreenFarm (V-001)</option><option>FreshGo (V-003)</option><option>MeatPro (V-007)</option><option>RedSun (V-012)</option><option>Hattah (V-021)</option></select></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">结算主体 *</label><select class="chip" style="width:100%;height:34px"><option>小满新加坡 (SG Xiaoman)</option><option>小满马来西亚 (MY Xiaoman)</option></select></div>'+
+      '<div style="margin-top:10px;font-size:12px;color:var(--muted);margin-bottom:4px">采购明细预览</div>'+
+      '<div class="table-wrap" style="border-radius:6px"><table class="dense"><thead><tr><th>商品</th><th>SPU</th><th class="num">建议采购量</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'草稿采购单已生成，跳转至采购单列表...\',\'success\')">确认生成</button></div>';
 }
 
 function openSkuDrawer(id){
@@ -927,6 +975,7 @@ renderMatrix();
 
 renderPlanRows();
 renderRpRows();
+updatePlanSelection();
 </script>
 </body>
 </html>
