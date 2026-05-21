@@ -436,7 +436,7 @@ tr:hover td{background:#fbfcfd}
         <div class="hero-top">
           <div>
             <div class="title">补货参数配置</div>
-            <div class="subtitle">维护 SPU × 供应商 × 仓库 的接单日、提前期、增长系数、品供绑定。<b style="color:var(--green)">已支持 SPU 级 VLT 覆盖</b>（优先于「覆盖天数配置 → 供应商默认 VLT」）。— 现有页面，本期不重做。</div>
+            <div class="subtitle">维护 SPU × 供应商 × 仓库 的<b style="color:var(--green)">提前期（VLT）</b>、增长系数、品供绑定。每个 SPU + 供应商 + 仓库 一条记录。接单日与 VCT 在「覆盖天数配置 → 接单日 / VCT」按供应商维度统一维护。— 现有页面，本期不重做。</div>
           </div>
         </div>
       </section>
@@ -771,7 +771,7 @@ const rpModals = {
       '</div></div>'+
       '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">增长系数 *</label><input class="chip" style="width:160px;height:34px" type="number" step="0.01" value="1.00"></div>'+
       '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">提前期 (天) *</label><input class="chip" style="width:160px;height:34px" type="number" value="1" min="0"></div>'+
-      '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期</b> 是 SPU + 供应商 + 仓库 维度的 VLT，<b style="color:var(--green)">优先级高于</b>「覆盖天数配置 → 供应商默认 VLT」。如果不填（或与供应商默认相同），算量时回退到供应商默认。</p>'+
+      '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期 (VLT)</b> 是 SPU + 供应商 + 仓库 维度的唯一维护点（系统不另设供应商默认 VLT）。接单日与 VCT 在「覆盖天数配置 → 接单日 / VCT」按供应商维度维护。</p>'+
     '</div>'+
     '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
   },
