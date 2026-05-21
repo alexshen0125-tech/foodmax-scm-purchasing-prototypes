@@ -178,6 +178,22 @@ tr:hover td{background:#fbfcfd}
       </section>
 
       <section class="workspace">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px 12px">
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品编码</label><input class="chip" style="height:30px" placeholder="搜索 SPU 编码"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品名称</label><input class="chip" style="height:30px" placeholder="搜索货品名称"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>水果</option><option>肉禽</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商</label><input class="chip" style="height:30px" placeholder="选择供应商"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>West Hub</option><option>East Hub</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">下单日期</label><input class="chip" style="height:30px" value="2026-05-20 ~ 2026-05-20"></div>
+              <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px">
+                <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
+                <button class="btn" onclick="toast('已重置筛选')">重置</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -334,15 +350,14 @@ tr:hover td{background:#fbfcfd}
               </div>
             </div>
             <div class="panel-body">
-              <p class="muted" style="margin-bottom:8px">行 = 销售分层（名称 / 销量下限 / 上限可自定义），列 = 保质期分层。单元格为基础备货天数。</p>
+              <p class="muted" style="margin-bottom:8px">行 = 销售分层（名称 / 销量下限 / 上限可自定义），列 = 保质期分层（可修改名称 / 范围）。单元格为基础备货天数。编辑模式下支持新增 / 删除行列。</p>
+              <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button class="btn small pane-edit-only" disabled onclick="addSalesTier()">+ 新增销售分层</button>
+                <button class="btn small pane-edit-only" disabled onclick="addShelfTier()">+ 新增保质期分层</button>
+              </div>
               <div class="table-wrap matrix-table"><table>
-                <thead><tr><th>分层</th><th>名称</th><th class="num">销量下限</th><th class="num">销量上限</th><th>短保 (&lt;7 天)</th><th>中保 (7–15 天)</th><th>长保 (&gt;15 天)</th></tr></thead>
-                <tbody>
-                  <tr><td><b>L1</b></td><td><input class="input-num" style="width:84px;text-align:left" value="高销"></td><td class="num"><input class="input-num" value="500"></td><td class="num"><input class="input-num" value="不限"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="3"></td><td><input class="input-num" value="4"></td></tr>
-                  <tr><td><b>L2</b></td><td><input class="input-num" style="width:84px;text-align:left" value="中销"></td><td class="num"><input class="input-num" value="100"></td><td class="num"><input class="input-num" value="500"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2.5"></td><td><input class="input-num" value="3.5"></td></tr>
-                  <tr><td><b>L3</b></td><td><input class="input-num" style="width:84px;text-align:left" value="低销"></td><td class="num"><input class="input-num" value="20"></td><td class="num"><input class="input-num" value="100"></td><td><input class="input-num" value="1"></td><td><input class="input-num" value="2"></td><td><input class="input-num" value="3"></td></tr>
-                  <tr><td><b>L4</b></td><td><input class="input-num" style="width:84px;text-align:left" value="微销"></td><td class="num"><input class="input-num" value="0"></td><td class="num"><input class="input-num" value="20"></td><td><input class="input-num" value="1"></td><td><input class="input-num" value="1.5"></td><td><input class="input-num" value="2"></td></tr>
-                </tbody>
+                <thead id="matrix-head"></thead>
+                <tbody id="matrix-body"></tbody>
               </table></div>
             </div>
           </div>
@@ -444,7 +459,8 @@ tr:hover td{background:#fbfcfd}
         <div class="panel" style="margin-bottom:12px">
           <div class="panel-body">
             <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px 12px">
-              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">商品 SPU</label><input id="rp-filter-spu" class="chip" style="height:30px" placeholder="搜索 SPU"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品编码</label><input id="rp-filter-code" class="chip" style="height:30px" placeholder="搜索 SPU 编码"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品名称</label><input id="rp-filter-name" class="chip" style="height:30px" placeholder="搜索货品名称"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>肉禽</option></select></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商名称/ID</label><input id="rp-filter-vendor" class="chip" style="height:30px" placeholder="搜索供应商"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>全部</option><option>West Hub</option><option>East Hub</option></select></div>
@@ -452,7 +468,7 @@ tr:hover td{background:#fbfcfd}
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">品供绑定关系</label><select class="chip" style="height:30px"><option>全部</option><option>已绑定</option><option>未绑定</option></select></div>
               <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px">
                 <button class="btn primary" onclick="renderRpRows();toast('查询成功')">查询</button>
-                <button class="btn" onclick="document.getElementById('rp-filter-spu').value='';document.getElementById('rp-filter-vendor').value='';renderRpRows();toast('已重置')">重置</button>
+                <button class="btn" onclick="document.getElementById('rp-filter-code').value='';document.getElementById('rp-filter-name').value='';document.getElementById('rp-filter-vendor').value='';renderRpRows();toast('已重置')">重置</button>
               </div>
             </div>
           </div>
@@ -707,12 +723,14 @@ const rpData=[
 ];
 
 function renderRpRows(){
-  const spuQ=(document.getElementById('rp-filter-spu')?.value||'').trim().toLowerCase();
+  const codeQ=(document.getElementById('rp-filter-code')?.value||'').trim().toLowerCase();
+  const nameQ=(document.getElementById('rp-filter-name')?.value||'').trim().toLowerCase();
   const vendorQ=(document.getElementById('rp-filter-vendor')?.value||'').trim().toLowerCase();
   const filtered=rpData.filter(r=>{
-    const matchSpu=!spuQ||r.spuName.toLowerCase().includes(spuQ)||r.spuCode.toLowerCase().includes(spuQ);
+    const matchCode=!codeQ||r.spuCode.toLowerCase().includes(codeQ);
+    const matchName=!nameQ||r.spuName.toLowerCase().includes(nameQ);
     const matchVendor=!vendorQ||r.vendorName.toLowerCase().includes(vendorQ)||r.vendorCode.toLowerCase().includes(vendorQ);
-    return matchSpu && matchVendor;
+    return matchCode && matchName && matchVendor;
   });
   const rows=filtered.map(r=>{
     const receiving = r.receivingType===1
@@ -746,6 +764,8 @@ function renderRpRows(){
 }
 
 function jumpToRp(vendor){
+  document.getElementById('rp-filter-code').value='';
+  document.getElementById('rp-filter-name').value='';
   document.getElementById('rp-filter-vendor').value=vendor;
   switchView('rp');
   renderRpRows();
@@ -820,10 +840,9 @@ function openRpModal(type, title){
 function closeModal(){document.getElementById('modalMask').classList.remove('show')}
 
 // 配置页：默认查看模式，编辑→可改，保存→回到查看
+const paneEditState={'c-matrix':false,'c-vlt':false,'c-oos':false,'c-weekend':false};
 function setPaneDisabled(paneId, disabled){
-  // 只切换表格内的输入，筛选/搜索框不受影响
   document.querySelectorAll(`#${paneId} .table-wrap input`).forEach(i=>i.disabled=disabled);
-  // 新增/删除等仅编辑态可用的按钮也跟着切换
   document.querySelectorAll(`#${paneId} .pane-edit-only`).forEach(b=>b.disabled=disabled);
 }
 function getPaneBtns(paneId){
@@ -831,19 +850,89 @@ function getPaneBtns(paneId){
   return head?head.querySelectorAll('button'):[];
 }
 function enterEdit(paneId, btn){
+  paneEditState[paneId]=true;
   setPaneDisabled(paneId, false);
   const btns=getPaneBtns(paneId);
   if(btns[0]) btns[0].disabled=true;
   if(btns[1]) btns[1].disabled=false;
 }
 function saveAndExit(paneId, label, btn){
+  paneEditState[paneId]=false;
   setPaneDisabled(paneId, true);
   const btns=getPaneBtns(paneId);
   if(btns[0]) btns[0].disabled=false;
   if(btns[1]) btns[1].disabled=true;
   toast(label+' 已保存','success');
 }
+
+// ====== 基础备货天数矩阵 动态渲染 ======
+const matrixState={
+  shelfTiers:[
+    {name:'短保 (<7 天)'},
+    {name:'中保 (7–15 天)'},
+    {name:'长保 (>15 天)'}
+  ],
+  salesTiers:[
+    {label:'L1',name:'高销',lower:'500',upper:'不限',days:['1.5','3','4']},
+    {label:'L2',name:'中销',lower:'100',upper:'500',days:['1.5','2.5','3.5']},
+    {label:'L3',name:'低销',lower:'20',upper:'100',days:['1','2','3']},
+    {label:'L4',name:'微销',lower:'0',upper:'20',days:['1','1.5','2']}
+  ]
+};
+function escAttr(s){return String(s).replace(/"/g,'&quot;')}
+function renderMatrix(){
+  const shelfHeads=matrixState.shelfTiers.map(function(t,i){
+    return '<th><div style="display:inline-flex;align-items:center;gap:4px"><input class="input-num" style="width:130px;text-align:left" value="'+escAttr(t.name)+'" onchange="matrixState.shelfTiers['+i+'].name=this.value"><button class="btn text danger pane-edit-only" disabled onclick="delShelfTier('+i+')" style="font-size:14px;padding:0 4px;height:auto">✕</button></div></th>';
+  }).join('');
+  document.getElementById('matrix-head').innerHTML='<tr><th style="width:60px">分层</th><th style="width:120px">名称</th><th class="num" style="width:110px">销量下限</th><th class="num" style="width:110px">销量上限</th>'+shelfHeads+'<th style="width:80px">操作</th></tr>';
+  const rows=matrixState.salesTiers.map(function(s,i){
+    const dayCells=s.days.map(function(d,j){
+      return '<td class="num"><input class="input-num" value="'+escAttr(d)+'" onchange="matrixState.salesTiers['+i+'].days['+j+']=this.value"></td>';
+    }).join('');
+    return '<tr>'+
+      '<td><b>'+s.label+'</b></td>'+
+      '<td><input class="input-num" style="width:96px;text-align:left" value="'+escAttr(s.name)+'" onchange="matrixState.salesTiers['+i+'].name=this.value"></td>'+
+      '<td class="num"><input class="input-num" value="'+escAttr(s.lower)+'" onchange="matrixState.salesTiers['+i+'].lower=this.value"></td>'+
+      '<td class="num"><input class="input-num" value="'+escAttr(s.upper)+'" onchange="matrixState.salesTiers['+i+'].upper=this.value"></td>'+
+      dayCells+
+      '<td><button class="btn text danger pane-edit-only" disabled onclick="delSalesTier('+i+')">删除</button></td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('matrix-body').innerHTML=rows;
+  setPaneDisabled('c-matrix', !paneEditState['c-matrix']);
+}
+function addSalesTier(){
+  const idx=matrixState.salesTiers.length;
+  matrixState.salesTiers.push({
+    label:'L'+(idx+1),name:'新分层',lower:'0',upper:'0',
+    days:matrixState.shelfTiers.map(function(){return '1'})
+  });
+  renderMatrix();
+  toast('已新增销售分层 L'+(idx+1));
+}
+function addShelfTier(){
+  matrixState.shelfTiers.push({name:'新分层 (天数范围)'});
+  matrixState.salesTiers.forEach(function(s){s.days.push('1')});
+  renderMatrix();
+  toast('已新增保质期分层');
+}
+function delSalesTier(idx){
+  if(matrixState.salesTiers.length<=1){toast('至少保留 1 个销售分层','warn');return;}
+  matrixState.salesTiers.splice(idx,1);
+  matrixState.salesTiers.forEach(function(s,i){s.label='L'+(i+1)});
+  renderMatrix();
+  toast('已删除销售分层');
+}
+function delShelfTier(idx){
+  if(matrixState.shelfTiers.length<=1){toast('至少保留 1 个保质期分层','warn');return;}
+  matrixState.shelfTiers.splice(idx,1);
+  matrixState.salesTiers.forEach(function(s){s.days.splice(idx,1)});
+  renderMatrix();
+  toast('已删除保质期分层');
+}
+
 // 初始：4 个 tab-pane 都置为只读
+renderMatrix();
 ['c-matrix','c-vlt','c-oos','c-weekend'].forEach(id=>setPaneDisabled(id, true));
 
 renderPlanRows();
