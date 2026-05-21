@@ -184,7 +184,7 @@ tr:hover td{background:#fbfcfd}
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">下单日期</label><input class="chip" style="height:30px" value="2026-05-20 ~ 2026-05-20"></div>
               <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px;align-items:center">
                 <span id="plan-selected-tip" class="muted" style="display:none;margin-right:8px">已勾选 <b id="plan-selected-count" style="color:var(--ink)">0</b> 项</span>
-                <button class="btn primary" id="btn-create-po" disabled onclick="openCreatePoModal()">建采购单</button>
+                <button class="btn primary" id="btn-create-po" onclick="openCreatePoModal()">生成采购单</button>
                 <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
                 <button class="btn" onclick="toast('已重置筛选')">重置</button>
               </div>
@@ -663,7 +663,6 @@ function updatePlanSelection(){
   const rows=document.querySelectorAll('.plan-row-check');
   const checked=Array.from(rows).filter(c=>c.checked);
   const count=checked.length;
-  document.getElementById('btn-create-po').disabled=(count===0);
   const tip=document.getElementById('plan-selected-tip');
   tip.style.display=count>0?'inline':'none';
   document.getElementById('plan-selected-count').textContent=count;
@@ -680,7 +679,7 @@ function toggleAllPlanRows(master){
 }
 function openCreatePoModal(){
   const checked=Array.from(document.querySelectorAll('.plan-row-check:checked'));
-  if(!checked.length) return;
+  if(!checked.length){toast('请先勾选要生成采购单的货品','warn');return;}
   const items=checked.map(c=>({id:c.dataset.id,name:c.dataset.name,code:c.dataset.code,qty:c.dataset.qty}));
   document.getElementById('modalBox').innerHTML=createPoModalHtml(items);
   document.getElementById('modalMask').classList.add('show');
@@ -701,7 +700,7 @@ function createPoModalHtml(items){
       '<div style="margin-top:10px;font-size:12px;color:var(--muted);margin-bottom:4px">采购明细预览</div>'+
       '<div class="table-wrap" style="border-radius:6px"><table class="dense"><thead><tr><th>商品</th><th>SPU</th><th class="num">建议采购量</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '</div>'+
-    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'草稿采购单已生成，跳转至采购单列表...\',\'success\')">确认生成</button></div>';
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'草稿采购单已创建，跳转至采购单列表...\',\'success\')">创建采购单</button></div>';
 }
 
 function openSkuDrawer(id){
