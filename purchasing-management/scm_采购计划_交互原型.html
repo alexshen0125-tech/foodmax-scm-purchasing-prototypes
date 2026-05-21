@@ -901,9 +901,9 @@ function saveAndExit(paneId, label, btn){
 // ====== 基础备货天数矩阵 动态渲染 ======
 const matrixState={
   shelfTiers:[
-    {name:'短保 (<7 天)'},
-    {name:'中保 (7–15 天)'},
-    {name:'长保 (>15 天)'}
+    {name:'短保',lower:'0',upper:'7'},
+    {name:'中保',lower:'7',upper:'15'},
+    {name:'长保',lower:'15',upper:'不限'}
   ],
   salesTiers:[
     {label:'L1',name:'高销',lower:'500',upper:'不限',days:['1.5','3','4']},
@@ -915,7 +915,18 @@ const matrixState={
 function escAttr(s){return String(s).replace(/"/g,'&quot;')}
 function renderMatrix(){
   const shelfHeads=matrixState.shelfTiers.map(function(t,i){
-    return '<th><div style="display:inline-flex;align-items:center;gap:4px"><input class="input-num" style="width:130px;text-align:left" value="'+escAttr(t.name)+'" onchange="matrixState.shelfTiers['+i+'].name=this.value"><button class="btn text danger pane-edit-only" disabled onclick="delShelfTier('+i+')" style="font-size:14px;padding:0 4px;height:auto">✕</button></div></th>';
+    return '<th style="vertical-align:top">'+
+      '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">'+
+        '<input class="input-num" style="width:104px;text-align:left" value="'+escAttr(t.name)+'" placeholder="名称" onchange="matrixState.shelfTiers['+i+'].name=this.value">'+
+        '<div style="display:inline-flex;align-items:center;gap:4px">'+
+          '<input class="input-num" style="width:48px" value="'+escAttr(t.lower||'')+'" placeholder="下限" onchange="matrixState.shelfTiers['+i+'].lower=this.value">'+
+          '<span style="color:var(--muted)">~</span>'+
+          '<input class="input-num" style="width:48px" value="'+escAttr(t.upper||'')+'" placeholder="上限" onchange="matrixState.shelfTiers['+i+'].upper=this.value">'+
+          '<span class="muted" style="font-size:11px">天</span>'+
+          '<button class="btn text danger pane-edit-only" disabled onclick="delShelfTier('+i+')" style="font-size:14px;padding:0 4px;height:auto;margin-left:2px">✕</button>'+
+        '</div>'+
+      '</div>'+
+    '</th>';
   }).join('');
   document.getElementById('matrix-head').innerHTML='<tr><th style="width:60px">分层</th><th style="width:120px">名称</th><th class="num" style="width:110px">销量下限</th><th class="num" style="width:110px">销量上限</th>'+shelfHeads+'<th style="width:80px">操作</th></tr>';
   const rows=matrixState.salesTiers.map(function(s,i){
@@ -944,7 +955,7 @@ function addSalesTier(){
   toast('已新增销售分层 L'+(idx+1));
 }
 function addShelfTier(){
-  matrixState.shelfTiers.push({name:'新分层 (天数范围)'});
+  matrixState.shelfTiers.push({name:'新分层',lower:'0',upper:'0'});
   matrixState.salesTiers.forEach(function(s){s.days.push('1')});
   renderMatrix();
   toast('已新增保质期分层');
