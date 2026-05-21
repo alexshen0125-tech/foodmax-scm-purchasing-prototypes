@@ -152,7 +152,6 @@ tr:hover td{background:#fbfcfd}
     <button class="active" data-view="plan"><span class="dot"></span>采购计划</button>
     <button data-view="flow"><span class="dot"></span>算量流程</button>
     <button data-view="cfg"><span class="dot"></span>覆盖天数<br>配置</button>
-    <button data-view="rp"><span class="dot"></span>补货参数<br>配置</button>
   </aside>
   <main class="main">
 
@@ -466,11 +465,7 @@ tr:hover td{background:#fbfcfd}
         </div>
 
         <div class="panel">
-          <div class="panel-head" style="padding:0 14px;height:48px">
-            <div style="display:flex;gap:8px;align-items:center">
-              <button class="btn primary small" onclick="openRpModal('rpAdd')">新增</button>
-              <button class="btn small" onclick="openRpModal('rpGrowth')">批量修改 · 设置增长系数</button>
-            </div>
+          <div class="panel-head" style="padding:0 14px;height:48px;justify-content:flex-end">
             <span class="muted">共 <b id="rp-count">8</b> 条</span>
           </div>
           <div class="table-wrap" style="border-radius:0;border-left:0;border-right:0;border-top:0;border-bottom:0"><table>
