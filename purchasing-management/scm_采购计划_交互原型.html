@@ -348,41 +348,60 @@ tr:hover td{background:#fbfcfd}
         <div class="tab-pane" id="c-vlt">
           <div class="panel">
             <div class="panel-head">
-              <div class="panel-title">VLT/VCT 修正（按 SPU × 供应商）</div>
+              <div class="panel-title">VLT/VCT 修正</div>
               <div style="display:flex;gap:8px">
                 <button class="btn small" onclick="enterEdit('c-vlt',this)">编辑</button>
                 <button class="btn primary small" disabled onclick="saveAndExit('c-vlt','VLT/VCT 修正',this)">保存</button>
               </div>
             </div>
             <div class="panel-body" style="padding-bottom:8px">
-              <p class="muted" style="margin-bottom:10px">同一商品在不同供应商的 VLT 可能不同。修正天数规则：T+1 → 0；T+2 → +1；T+3 以上 → VLT−1（系统按 VLT 自动计算）。</p>
-              <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <input class="chip" placeholder="搜索商品 SPU / 名称" style="height:30px;width:220px">
-                <input class="chip" placeholder="搜索供应商" style="height:30px;width:200px">
-                <select class="chip" style="height:30px"><option>全部仓库</option><option>West Hub</option><option>East Hub</option></select>
-              </div>
+              <p class="muted" style="margin-bottom:6px">提前期 VLT 同时支持「<b>供应商维度</b>」（默认，每供应商一行）与「<b>SPU × 供应商维度</b>」（覆盖，仅特殊组合）。<b style="color:var(--green)">同一 SPU + 供应商若两处都配置，SPU 级优先生效。</b></p>
+              <p class="muted">修正天数规则：T+1 → 0；T+2 → +1；T+3 以上 → VLT − 1（系统按 VLT 自动计算）。供应商接单日维护到供应商维度即可，无需 SPU 级覆盖（在补货参数页配置）。</p>
             </div>
-            <div class="table-wrap"><table>
+
+            <!-- Section 1: 供应商默认 -->
+            <div style="padding:6px 14px 8px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line-2);background:#fafbfc">
+              <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px">
+                <span class="pill green">供应商默认</span>
+                每供应商一行，作为该供应商所有 SPU 的 VLT/VCT 默认
+              </div>
+              <span class="muted">共 6 条</span>
+            </div>
+            <div class="table-wrap" style="border-radius:0;border-left:0;border-right:0;border-top:0"><table>
               <thead><tr>
-                <th>商品</th>
-                <th>供应商</th>
-                <th>仓库</th>
-                <th class="num">VLT (天)</th>
-                <th class="num">VCT (天)</th>
-                <th class="num">修正天数</th>
+                <th>供应商</th><th>仓库</th>
+                <th class="num">VLT (天)</th><th class="num">VCT (天)</th><th class="num">修正天数</th>
               </tr></thead>
               <tbody>
-                <tr><td>金针菇 SPU-10021</td><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
-                <tr><td>金针菇 SPU-10021</td><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
-                <tr><td>金针菇 SPU-10021</td><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td></tr>
-                <tr><td>鲜鸡胸肉 SPU-78120</td><td>MeatPro (V-007)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
-                <tr><td>上海青 SPU-30087</td><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
-                <tr><td>番茄 SPU-32011</td><td>RedSun (V-012)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
-                <tr><td>番茄 SPU-32011</td><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td></tr>
-                <tr><td>白玉菇 SPU-10032</td><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
+                <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
+                <tr><td>FreshGo (V-003)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
+                <tr><td>MeatPro (V-007)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="1"></td><td class="num">0</td></tr>
+                <tr><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+1</td></tr>
+                <tr><td>RedSun (V-012)</td><td>West Hub</td><td class="num"><input class="input-num" value="1"></td><td class="num"><input class="input-num" value="2"></td><td class="num">0</td></tr>
+                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="2"></td><td class="num"><input class="input-num" value="2"></td><td class="num">+1</td></tr>
               </tbody>
             </table></div>
-            <div style="display:flex;justify-content:flex-end;padding:12px 16px;color:var(--muted);font-size:12px">共 8 条</div>
+
+            <!-- Section 2: SPU × 供应商 覆盖 -->
+            <div style="padding:10px 14px 8px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);background:#fafbfc">
+              <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px">
+                <span class="pill blue">SPU × 供应商 覆盖</span>
+                仅特殊组合（远程基地、冷链异常等），优先级高于供应商默认
+              </div>
+              <button class="btn small pane-edit-only" disabled onclick="toast('打开新增 SPU 覆盖弹窗')">+ 新增覆盖</button>
+            </div>
+            <div class="table-wrap" style="border-radius:0;border-left:0;border-right:0;border-top:0;border-bottom:0"><table>
+              <thead><tr>
+                <th>商品</th><th>供应商</th><th>仓库</th>
+                <th class="num">VLT (天)</th><th class="num">VCT (天)</th><th class="num">修正天数</th>
+                <th>备注</th><th style="width:60px">操作</th>
+              </tr></thead>
+              <tbody>
+                <tr><td>金针菇 SPU-10021</td><td>Hattah (V-021)</td><td>West Hub</td><td class="num"><input class="input-num" value="3"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+2</td><td><input class="input-num" style="width:160px;text-align:left" value="远程基地，慢一天"></td><td><button class="btn text danger small pane-edit-only" disabled onclick="toast('已删除该 SPU 覆盖')">删除</button></td></tr>
+                <tr><td>番茄 SPU-32011</td><td>TomatoKing (V-018)</td><td>West Hub</td><td class="num"><input class="input-num" value="3"></td><td class="num"><input class="input-num" value="3"></td><td class="num">+2</td><td><input class="input-num" style="width:160px;text-align:left" value="冷链路由特殊"></td><td><button class="btn text danger small pane-edit-only" disabled onclick="toast('已删除该 SPU 覆盖')">删除</button></td></tr>
+              </tbody>
+            </table></div>
+            <div style="padding:8px 14px 12px;color:var(--muted);font-size:12px;display:flex;justify-content:flex-end">共 2 条覆盖</div>
           </div>
         </div>
 
@@ -632,6 +651,8 @@ document.getElementById('modalMask').addEventListener('click',e=>{
 function setPaneDisabled(paneId, disabled){
   // 只切换表格内的输入，筛选/搜索框不受影响
   document.querySelectorAll(`#${paneId} .table-wrap input`).forEach(i=>i.disabled=disabled);
+  // 新增/删除等仅编辑态可用的按钮也跟着切换
+  document.querySelectorAll(`#${paneId} .pane-edit-only`).forEach(b=>b.disabled=disabled);
 }
 function getPaneBtns(paneId){
   const head=document.querySelector(`#${paneId} .panel-head`);
