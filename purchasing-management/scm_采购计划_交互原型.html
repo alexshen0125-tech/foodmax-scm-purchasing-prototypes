@@ -405,12 +405,37 @@ tr:hover td{background:#fbfcfd}
               </div>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>条件（预计剩余库存 ≤ 0 时触发）</th><th class="num">叠加天数</th></tr></thead>
+              <thead><tr><th style="width:65%">条件（预计剩余库存 ≤ 0 时触发）</th><th class="num">叠加天数</th></tr></thead>
               <tbody>
-                <tr><td>保质期 ≥ 3 天</td><td class="num"><input class="input-num" value="2"></td></tr>
-                <tr><td>保质期 &lt; 3 天</td><td class="num"><input class="input-num" value="1.5"></td></tr>
+                <tr>
+                  <td>
+                    <span style="display:inline-flex;align-items:center;gap:6px">
+                      <span class="pill green" style="min-width:44px;text-align:center">长保</span>
+                      <span>保质期 ≥</span>
+                      <input class="input-num thr-oos" type="number" min="0" step="1" style="width:56px;text-align:center" value="3" oninput="syncOosThr(this)" onblur="validOosThr(this)">
+                      <span>天</span>
+                    </span>
+                  </td>
+                  <td class="num"><input class="input-num" type="number" min="0" step="0.5" value="2"></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span style="display:inline-flex;align-items:center;gap:6px">
+                      <span class="pill blue" style="min-width:44px;text-align:center">短保</span>
+                      <span>保质期 &lt;</span>
+                      <input class="input-num thr-oos" type="number" min="0" step="1" style="width:56px;text-align:center" value="3" oninput="syncOosThr(this)" onblur="validOosThr(this)">
+                      <span>天</span>
+                    </span>
+                  </td>
+                  <td class="num"><input class="input-num" type="number" min="0" step="0.5" value="1.5"></td>
+                </tr>
               </tbody>
-            </table></div>
+            </table>
+            <div class="muted" style="padding:8px 14px;font-size:12px;border-top:1px solid var(--line-2);background:#fafbfc;line-height:1.6">
+              <div>· 阈值用于区分长保 / 短保；两个阈值输入框联动，修改任一即同步。</div>
+              <div>· 叠加天数会加进当 SKU 的「预测覆盖天数」，从而提升备货目标。</div>
+            </div>
+            </div>
           </div>
         </div>
 
@@ -896,6 +921,15 @@ function saveAndExit(paneId, label, btn){
   if(btns[0]) btns[0].disabled=false;
   if(btns[1]) btns[1].disabled=true;
   toast(label+' 已保存','success');
+}
+// 缺货系数 阈值联动：≥ 与 < 同步
+function syncOosThr(src){
+  document.querySelectorAll('.thr-oos').forEach(function(i){if(i!==src) i.value=src.value});
+}
+// 阈值校验：失焦时空值或负数回退为 1
+function validOosThr(src){
+  const v=parseFloat(src.value);
+  if(isNaN(v)||v<0){src.value='1';syncOosThr(src);toast('阈值需为非负数，已重置为 1','warn');}
 }
 
 // ====== 基础备货天数矩阵 动态渲染 ======
