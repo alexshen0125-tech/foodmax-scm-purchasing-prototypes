@@ -136,9 +136,16 @@ tr:hover td{background:#fbfcfd}
 .modal-body{padding:18px;overflow:auto}
 .modal-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
 .close{border:0;background:transparent;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
-.toast{position:fixed;top:22px;right:24px;background:#172033;color:#fff;padding:11px 14px;border-radius:6px;display:none;z-index:30;box-shadow:0 10px 28px rgba(16,24,40,.22)}
+.toast{position:fixed;top:22px;right:24px;background:#172033;color:#fff;padding:11px 14px;border-radius:6px;display:none;z-index:30;box-shadow:0 10px 28px rgba(16,24,40,.22);max-width:360px}
 .toast.show{display:block}
 .toast.success{background:var(--green)}
+.toast.warn{background:var(--amber)}
+.dot-st{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:2px}
+.dot-st.green{background:var(--green);box-shadow:0 0 0 2px rgba(16,179,131,.18)}
+.dot-st.amber{background:var(--amber);animation:dotPulse 1.4s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.spin-w{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-1px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
 .muted{color:var(--muted);font-size:11px}
 
 @media(max-width:1280px){.detail-grid,.flow-blocks{grid-template-columns:repeat(2,1fr)}.flow-day{grid-template-columns:1fr}}
@@ -164,9 +171,13 @@ tr:hover td{background:#fbfcfd}
             <div class="subtitle">5 大计算块 → 备货目标 + T 期末库存 → 总采购量。每行点「详情」查看完整算量取数。</div>
           </div>
           <div class="hero-actions">
+            <span id="recalc-status" class="muted" style="font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0 6px">
+              <span class="dot-st green"></span>
+              <span>上次重算 今天 09:32 · 用时 32 秒</span>
+            </span>
             <input class="chip" value="2026-05-21">
             <button class="btn" onclick="toast('数据已重新拉取')">刷新数据</button>
-            <button class="btn primary" onclick="toast('已提交全量重算','success')">重算</button>
+            <button id="btn-recalc" class="btn primary" onclick="triggerRecalc()">重算</button>
           </div>
         </div>
       </section>
@@ -920,6 +931,29 @@ function saveAndExit(paneId, label, btn){
   if(btns[0]) btns[0].disabled=false;
   if(btns[1]) btns[1].disabled=true;
   toast(label+' 已保存','success');
+}
+// 全量重算：按钮 loading + 状态文案 + 完成 toast + 持久化「上次重算」时间
+function triggerRecalc(){
+  const btn=document.getElementById('btn-recalc');
+  const st=document.getElementById('recalc-status');
+  if(btn.disabled) return;
+  // 1) 提交：按钮 loading + 状态文案切「进行中」
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin-w"></span>重算中...';
+  st.innerHTML='<span class="dot-st amber"></span><span>正在重算 1,247 个 SPU · 预计 30 秒</span>';
+  toast('已提交全量重算，约 30 秒后完成','success');
+  // 2) 模拟后台 3 秒后完成（真实环境由后端推送 / 轮询触发）
+  const startTs=Date.now();
+  setTimeout(function(){
+    const cost=Math.round((Date.now()-startTs)/1000)+29; // demo 显示 ~32s
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,'0');
+    const mm=String(now.getMinutes()).padStart(2,'0');
+    btn.disabled=false;
+    btn.innerHTML='重算';
+    st.innerHTML='<span class="dot-st green"></span><span>上次重算 今天 '+hh+':'+mm+' · 用时 '+cost+' 秒</span>';
+    toast('✓ 重算完成，已更新 1,247 个 SPU 的备货建议','success');
+  },3000);
 }
 // 缺货系数 阈值联动：≥ 与 < 同步
 function syncOosThr(src){
