@@ -556,6 +556,7 @@ tr:hover td{background:#fbfcfd}
 const data=[
   {
     id:1, name:'金针菇原料', code:'SPU-10021',
+    vendorName:'GreenFarm', vendorCode:'V-001', corpName:'小满新加坡', corpCode:'SG-XM',
     category:'蔬菜 / 菇类', shelfTier:'中保', salesTier:'L1 高销', shelf:7, ss:0.16,
     baseDays:3, extraVlt:0, extraOos:0, extraWeekend:0.5, finalDays:3.5,
     mu:535, todaySold:312, salesD7:[480,520,'售罄',560,610,590,605], salesD3:[560,610,590],
@@ -570,6 +571,7 @@ const data=[
   },
   {
     id:2, name:'鲜鸡胸肉原料', code:'SPU-78120',
+    vendorName:'MeatPro', vendorCode:'V-007', corpName:'小满新加坡', corpCode:'SG-XM',
     category:'肉禽 / 禽肉', shelfTier:'短保', salesTier:'L2 中销', shelf:5, ss:0.12,
     baseDays:1.5, extraVlt:0, extraOos:1.5, extraWeekend:0, finalDays:3,
     mu:145, todaySold:95, salesD7:[130,140,148,150,155,140,150], salesD3:[150,155,140],
@@ -581,6 +583,7 @@ const data=[
   },
   {
     id:3, name:'上海青原料', code:'SPU-30087',
+    vendorName:'FreshGo', vendorCode:'V-003', corpName:'小满新加坡', corpCode:'SG-XM',
     category:'蔬菜 / 叶菜', shelfTier:'短保', salesTier:'L2 中销', shelf:3, ss:0.10,
     baseDays:1.5, extraVlt:0, extraOos:0, extraWeekend:0, finalDays:1.5,
     mu:280, todaySold:195, salesD7:[260,275,290,285,300,278,290], salesD3:[285,300,278],
@@ -592,6 +595,7 @@ const data=[
   },
   {
     id:4, name:'番茄原料', code:'SPU-32011',
+    vendorName:'RedSun', vendorCode:'V-012', corpName:'小满新加坡', corpCode:'SG-XM',
     category:'蔬菜 / 果菜', shelfTier:'中保', salesTier:'L1 高销', shelf:10, ss:0.16,
     baseDays:3, extraVlt:1, extraOos:0, extraWeekend:0, finalDays:4,
     mu:610, todaySold:240, salesD7:[580,590,610,615,620,605,610], salesD3:[615,620,605],
@@ -603,6 +607,7 @@ const data=[
   },
   {
     id:5, name:'白玉菇原料', code:'SPU-10032',
+    vendorName:'GreenFarm', vendorCode:'V-001', corpName:'小满新加坡', corpCode:'SG-XM',
     category:'蔬菜 / 菇类', shelfTier:'中保', salesTier:'L3 低销', shelf:7, ss:0.10,
     baseDays:2, extraVlt:0, extraOos:0, extraWeekend:0, finalDays:2,
     mu:86, todaySold:42, salesD7:[80,84,86,88,90,85,88], salesD3:[88,90,85],
@@ -630,10 +635,13 @@ function renderPlanRows(){
   const rows=data.map(r=>{
     return `
     <tr data-id="${r.id}">
-      <td><input type="checkbox" class="plan-row-check" data-id="${r.id}" data-name="${r.name}" data-code="${r.code}" data-qty="${r.totalQty}" onchange="updatePlanSelection()"></td>
+      <td><input type="checkbox" class="plan-row-check" data-id="${r.id}" data-name="${r.name}" data-code="${r.code}" data-qty="${r.totalQty}" data-vendor-name="${r.vendorName}" data-vendor-code="${r.vendorCode}" data-corp-name="${r.corpName}" data-corp-code="${r.corpCode}" onchange="updatePlanSelection()"></td>
       <td>
         <div style="font-weight:600">${r.name}</div>
-        <div class="muted">${r.code} · ${r.category}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+          <span class="muted" style="font-size:11px">${r.code} · ${r.category}</span>
+          <span class="pill green" style="font-size:10px">${r.vendorName} (${r.vendorCode})</span>
+        </div>
       </td>
       <td class="num"><b>${r.finalDays}</b><div class="muted">基础 ${r.baseDays}</div></td>
       <td class="num">${fmt(r.mu)}</td>
@@ -714,23 +722,44 @@ function toggleAllPlanRows(master){
 function openCreatePoModal(){
   const checked=Array.from(document.querySelectorAll('.plan-row-check:checked'));
   if(!checked.length){toast('请先勾选要生成采购单的货品','warn');return;}
+  // 校验：所有勾选行必须同一供应商
+  const vendorSet=new Set(checked.map(c=>c.dataset.vendorCode));
+  if(vendorSet.size>1){
+    const vendors=Array.from(new Set(checked.map(c=>c.dataset.vendorName+' ('+c.dataset.vendorCode+')')));
+    toast('勾选的货品来自 '+vendorSet.size+' 个供应商（'+vendors.join('、')+'），需先取消差异行，仅保留同一供应商','warn');
+    return;
+  }
+  // 校验：所有勾选行必须同一结算主体
+  const corpSet=new Set(checked.map(c=>c.dataset.corpCode));
+  if(corpSet.size>1){
+    toast('勾选的货品来自不同结算主体，需保留同一结算主体后再生成','warn');
+    return;
+  }
   const items=checked.map(c=>({id:c.dataset.id,name:c.dataset.name,code:c.dataset.code,qty:c.dataset.qty}));
-  document.getElementById('modalBox').innerHTML=createPoModalHtml(items);
+  const vendor={name:checked[0].dataset.vendorName, code:checked[0].dataset.vendorCode};
+  const corp={name:checked[0].dataset.corpName, code:checked[0].dataset.corpCode};
+  document.getElementById('modalBox').innerHTML=createPoModalHtml(items, vendor, corp);
   document.getElementById('modalMask').classList.add('show');
 }
-function createPoModalHtml(items){
+function createPoModalHtml(items, vendor, corp){
   const rows=items.map(it=>`<tr><td>${it.name}</td><td class="muted">${it.code}</td><td class="num">${parseInt(it.qty).toLocaleString()}</td></tr>`).join('');
   return ''+
-    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">建采购单</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">生成采购单</div><button class="close" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body" style="padding:18px;overflow:auto">'+
       '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
         '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 处理逻辑（复用现有「采购分析 → 生成采购单」）</div>'+
         '<div>已勾选 <b style="color:var(--ink)">'+items.length+'</b> 个 SPU，将<b>合并生成一张</b>草稿采购单。</div>'+
-        '<div>必须共用<b>同一供应商</b>与<b>同一结算主体</b>；每行 requireQty 取「总采购量」。</div>'+
+        '<div>供应商与结算主体由勾选行<b>自动锁定</b>（已校验一致），每行 requireQty 取「总采购量」。</div>'+
         '<div>提交后跳转至「采购单列表」可查看草稿单。</div>'+
       '</div>'+
-      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">默认供应商 *</label><select class="chip" style="width:100%;height:34px"><option>GreenFarm (V-001)</option><option>FreshGo (V-003)</option><option>MeatPro (V-007)</option><option>RedSun (V-012)</option><option>Hattah (V-021)</option></select></div>'+
-      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">结算主体 *</label><select class="chip" style="width:100%;height:34px"><option>小满新加坡 (SG Xiaoman)</option><option>小满马来西亚 (MY Xiaoman)</option></select></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:12px;align-items:center">'+
+        '<label style="text-align:right;font-size:13px;color:var(--muted)">供应商</label>'+
+        '<div style="display:inline-flex;align-items:center;gap:6px"><span class="pill green">'+vendor.name+' ('+vendor.code+')</span><span class="muted" style="font-size:11px">已锁定，不可修改</span></div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center">'+
+        '<label style="text-align:right;font-size:13px;color:var(--muted)">结算主体</label>'+
+        '<div style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">'+corp.name+' ('+corp.code+')</span><span class="muted" style="font-size:11px">已锁定，不可修改</span></div>'+
+      '</div>'+
       '<div style="margin-top:10px;font-size:12px;color:var(--muted);margin-bottom:4px">采购明细预览</div>'+
       '<div class="table-wrap" style="border-radius:6px"><table class="dense"><thead><tr><th>商品</th><th>SPU</th><th class="num">建议采购量</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '</div>'+
