@@ -410,6 +410,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             <div class="fld"><label>仓库<span class="req">*</span></label><select><option>SG-West Hub</option><option>SG-East Hub</option></select></div>
             <div class="fld"><label>预计到货</label><input type="date" value="2026-05-24"></div>
             <div class="fld"><label>付款方式</label><select><option>月结 30 天</option></select></div>
+            <div class="fld"><label>定价方式<span class="req">*</span></label><select><option>含税定价</option><option>未税定价</option></select></div>
             <div class="fld"><label>采购员</label><input value="沈亮" disabled></div>
           </div>
         </div>
@@ -421,90 +422,136 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           <div class="panel-title">商品列表</div>
           <button class="btn small primary" id="btnAddSku" onclick="openSkuPicker()">+ 添加商品</button>
         </div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-create.vue（含税定价口径）。BCRS 押金作为「包装物」类型独立行（materialType≠0），不增加列。横向可滚动查看全部 18 列。</div>
         <div class="table-wrap" style="border-radius:0;border:0">
-          <table>
+          <table style="min-width:2100px">
             <thead>
               <tr>
-                <th style="width:50px">#</th>
-                <th style="min-width:280px">商品 / SKU</th>
-                <th style="width:90px">单位</th>
-                <th class="num" style="width:130px">数量</th>
-                <th class="num" style="width:110px">单价 (S$)</th>
-                <th class="num" style="width:120px">小计 (S$)</th>
-                <th style="width:80px">来源</th>
-                <th style="width:60px">操作</th>
+                <th style="width:120px">采购类型</th>
+                <th style="width:140px">商品编码</th>
+                <th style="min-width:200px">商品名称</th>
+                <th class="num" style="width:90px">超收比例</th>
+                <th style="width:90px">销售类型</th>
+                <th style="width:130px">商品分类</th>
+                <th class="num" style="width:130px">成本均价(含税)</th>
+                <th class="num" style="width:130px">成本均价(未税)</th>
+                <th class="num" style="width:150px">采购单价(含税)</th>
+                <th class="num" style="width:130px">采购单价(未税)</th>
+                <th class="num" style="width:180px">采购数量</th>
+                <th class="num" style="width:140px">采购金额(含税)</th>
+                <th class="num" style="width:130px">采购金额(未税)</th>
+                <th style="width:80px">税率</th>
+                <th class="num" style="width:110px">采购金额税额</th>
+                <th style="width:130px">选择箱规</th>
+                <th style="min-width:160px">商品备注</th>
+                <th style="width:70px">操作</th>
               </tr>
             </thead>
             <tbody id="poRows">
               <!-- 主商品 1：可乐 -->
-              <tr data-row="1" data-sku="SKU-BV-COKE-500" data-bcrs="true" data-box-size="24" data-deposit="0.10">
-                <td>1</td>
-                <td>
-                  <div><b>Coca-Cola 可口可乐 500ml</b><span class="tag-bcrs">BCRS</span></div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-BV-COKE-500 · 24 瓶/箱</div>
-                </td>
-                <td>箱</td>
-                <td class="num"><input id="mainQty1" type="number" class="input-num" value="50" min="0" onchange="syncDepositRow(1,this.value)"></td>
-                <td class="num"><input type="number" class="input-num" value="18.50" step="0.01" onchange="recalcRow(1)"></td>
-                <td class="num pos" id="sub-1">925.00</td>
-                <td><span class="pill blue">手动</span></td>
-                <td><button class="btn small danger" onclick="removeRow(1)">×</button></td>
+              <tr data-row="1" data-sku="SKU-BV-COKE-500" data-bcrs="true" data-box-size="24" data-deposit="0.10" data-price="18.50" data-tax="0.09">
+                <td>商品</td>
+                <td><b>SKU-BV-COKE-500</b></td>
+                <td>Coca-Cola 可口可乐 500ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td>
+                <td>正常</td>
+                <td>饮料/碳酸</td>
+                <td class="num">17.20/箱</td>
+                <td class="num">15.78/箱</td>
+                <td class="num"><input id="price1" type="number" class="input-num" value="18.50" step="0.01" onchange="recalcRow(1)">/箱</td>
+                <td class="num" id="exPrice1">16.97/箱</td>
+                <td class="num"><input id="mainQty1" type="number" class="input-num" value="50" min="0" onchange="syncDepositRow(1,this.value)">箱</td>
+                <td class="num pos" id="amt1">925.00</td>
+                <td class="num" id="exAmt1">848.62</td>
+                <td>9%</td>
+                <td class="num" id="tax1">76.38</td>
+                <td>24 瓶/箱</td>
+                <td>—</td>
+                <td><button class="btn small danger" onclick="removeRow(1)">删除</button></td>
               </tr>
               <tr class="bcrs-row" id="depRow1" data-row="1-dep" data-parent="1">
-                <td>—</td>
-                <td>
-                  <div class="linked-tag">BCRS 押金</div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">关联主商品 SKU-BV-COKE-500 · 自动追加 <span class="auto-tag">系统</span></div>
-                </td>
-                <td>个</td>
-                <td class="num"><input type="number" class="input-num" id="dep-qty-1" value="1200" disabled></td>
-                <td class="num"><input id="depPriceCell1" type="number" class="input-num" value="0.10" disabled></td>
+                <td>包装物·BCRS押金</td>
+                <td><b>DEP-BCRS</b></td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 自动追加 <span class="auto-tag">系统</span></div></td>
+                <td class="num">--</td>
+                <td>--</td>
+                <td>--</td>
+                <td class="num">--</td>
+                <td class="num">--</td>
+                <td class="num"><input id="depPriceCell1" type="number" class="input-num" value="0.10" disabled>/个</td>
+                <td class="num">0.10/个</td>
+                <td class="num"><input type="number" class="input-num" id="dep-qty-1" value="1200" disabled>个</td>
                 <td class="num pos" id="dep-amt-1">120.00</td>
-                <td><span class="pill green">系统</span></td>
+                <td class="num">120.00</td>
+                <td>0%</td>
+                <td class="num">0.00</td>
+                <td>--</td>
+                <td>自动追加</td>
                 <td><span style="color:var(--muted);font-size:11px">联动</span></td>
               </tr>
 
               <!-- 主商品 2：100Plus -->
-              <tr data-row="2" data-sku="SKU-BV-100PLUS-325" data-bcrs="true" data-box-size="24" data-deposit="0.10">
-                <td>2</td>
-                <td>
-                  <div><b>100Plus Isotonic Drink 325ml</b><span class="tag-bcrs">BCRS</span></div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-BV-100PLUS-325 · 24 罐/箱</div>
-                </td>
-                <td>箱</td>
-                <td class="num"><input type="number" class="input-num" value="30" min="0" onchange="syncDepositRow(2,this.value)"></td>
-                <td class="num"><input type="number" class="input-num" value="14.80" step="0.01" onchange="recalcRow(2)"></td>
-                <td class="num pos" id="sub-2">444.00</td>
-                <td><span class="pill blue">手动</span></td>
-                <td><button class="btn small danger" onclick="removeRow(2)">×</button></td>
+              <tr data-row="2" data-sku="SKU-BV-100PLUS-325" data-bcrs="true" data-box-size="24" data-deposit="0.10" data-price="14.80" data-tax="0.09">
+                <td>商品</td>
+                <td><b>SKU-BV-100PLUS-325</b></td>
+                <td>100Plus Isotonic Drink 325ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td>
+                <td>正常</td>
+                <td>饮料/运动</td>
+                <td class="num">13.50/箱</td>
+                <td class="num">12.39/箱</td>
+                <td class="num"><input id="price2" type="number" class="input-num" value="14.80" step="0.01" onchange="recalcRow(2)">/箱</td>
+                <td class="num" id="exPrice2">13.58/箱</td>
+                <td class="num"><input type="number" class="input-num" value="30" min="0" onchange="syncDepositRow(2,this.value)">箱</td>
+                <td class="num pos" id="amt2">444.00</td>
+                <td class="num" id="exAmt2">407.34</td>
+                <td>9%</td>
+                <td class="num" id="tax2">36.66</td>
+                <td>24 罐/箱</td>
+                <td>—</td>
+                <td><button class="btn small danger" onclick="removeRow(2)">删除</button></td>
               </tr>
               <tr class="bcrs-row" data-row="2-dep" data-parent="2">
-                <td>—</td>
-                <td>
-                  <div class="linked-tag">BCRS 押金</div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">关联主商品 SKU-BV-100PLUS-325 · 自动追加 <span class="auto-tag">系统</span></div>
-                </td>
-                <td>个</td>
-                <td class="num"><input type="number" class="input-num" id="dep-qty-2" value="720" disabled></td>
-                <td class="num"><input type="number" class="input-num" value="0.10" disabled></td>
+                <td>包装物·BCRS押金</td>
+                <td><b>DEP-BCRS</b></td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 自动追加 <span class="auto-tag">系统</span></div></td>
+                <td class="num">--</td>
+                <td>--</td>
+                <td>--</td>
+                <td class="num">--</td>
+                <td class="num">--</td>
+                <td class="num"><input type="number" class="input-num" value="0.10" disabled>/个</td>
+                <td class="num">0.10/个</td>
+                <td class="num"><input type="number" class="input-num" id="dep-qty-2" value="720" disabled>个</td>
                 <td class="num pos" id="dep-amt-2">72.00</td>
-                <td><span class="pill green">系统</span></td>
+                <td class="num">72.00</td>
+                <td>0%</td>
+                <td class="num">0.00</td>
+                <td>--</td>
+                <td>自动追加</td>
                 <td><span style="color:var(--muted);font-size:11px">联动</span></td>
               </tr>
 
               <!-- 非 BCRS 商品 -->
-              <tr data-row="3" data-sku="SKU-FD-RICE-5KG" data-bcrs="false">
-                <td>3</td>
-                <td>
-                  <div><b>Jasmine Rice 茉莉香米 5kg</b><span class="tag-bcrs tag-non">非 BCRS</span></div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-FD-RICE-5KG · 4 袋/箱</div>
-                </td>
-                <td>箱</td>
-                <td class="num"><input type="number" class="input-num" value="20" min="0"></td>
-                <td class="num"><input type="number" class="input-num" value="32.00" step="0.01"></td>
-                <td class="num pos">640.00</td>
-                <td><span class="pill blue">手动</span></td>
-                <td><button class="btn small danger" onclick="removeRow(3)">×</button></td>
+              <tr data-row="3" data-sku="SKU-FD-RICE-5KG" data-bcrs="false" data-price="32.00" data-tax="0.09">
+                <td>商品</td>
+                <td><b>SKU-FD-RICE-5KG</b></td>
+                <td>Jasmine Rice 茉莉香米 5kg<span class="tag-bcrs tag-non">非 BCRS</span></td>
+                <td class="num">3%</td>
+                <td>正常</td>
+                <td>粮油/米</td>
+                <td class="num">30.50/箱</td>
+                <td class="num">27.98/箱</td>
+                <td class="num"><input id="price3" type="number" class="input-num" value="32.00" step="0.01" onchange="recalcRow(3)">/箱</td>
+                <td class="num" id="exPrice3">29.36/箱</td>
+                <td class="num"><input type="number" class="input-num" value="20" min="0" onchange="recalcRow(3)">箱</td>
+                <td class="num pos" id="amt3">640.00</td>
+                <td class="num" id="exAmt3">587.16</td>
+                <td>9%</td>
+                <td class="num" id="tax3">52.84</td>
+                <td>4 袋/箱</td>
+                <td>—</td>
+                <td><button class="btn small danger" onclick="removeRow(3)">删除</button></td>
               </tr>
             </tbody>
           </table>
@@ -858,23 +905,23 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     <div class="modal-body">
       <input class="chip" style="width:100%;margin-bottom:10px;height:36px" placeholder="搜索 SKU 编码 / 商品名称">
       <div class="sku-list">
-        <div class="sku-item bcrs" onclick="addSku('SKU-BV-SPRITE-500','Sprite 雪碧 500ml',true,24,0.10,'24 瓶/箱',16.20)">
+        <div class="sku-item bcrs" onclick="addSku('SKU-BV-SPRITE-500','Sprite 雪碧 500ml',true,24,0.10,'24 瓶/箱',16.20,'饮料/碳酸')">
           <div class="sku-img">饮</div>
           <div class="sku-info"><div class="n">Sprite 雪碧 500ml <span class="tag-bcrs">BCRS</span></div><div class="m">SKU-BV-SPRITE-500 · 24 瓶/箱 · S$16.20/箱 · 押金 S$0.10/瓶</div></div>
         </div>
-        <div class="sku-item bcrs" onclick="addSku('SKU-BV-FANTA-1500','Fanta Orange 芬达 1.5L',true,8,0.10,'8 瓶/箱',22.40)">
+        <div class="sku-item bcrs" onclick="addSku('SKU-BV-FANTA-1500','Fanta Orange 芬达 1.5L',true,8,0.10,'8 瓶/箱',22.40,'饮料/碳酸')">
           <div class="sku-img">饮</div>
           <div class="sku-info"><div class="n">Fanta Orange 芬达 1.5L <span class="tag-bcrs">BCRS</span></div><div class="m">SKU-BV-FANTA-1500 · 8 瓶/箱 · S$22.40/箱 · 押金 S$0.10/瓶</div></div>
         </div>
-        <div class="sku-item bcrs" onclick="addSku('SKU-BV-TIGER-330','Tiger Beer 虎牌啤酒 330ml',true,24,0.10,'24 罐/箱',38.50)">
+        <div class="sku-item bcrs" onclick="addSku('SKU-BV-TIGER-330','Tiger Beer 虎牌啤酒 330ml',true,24,0.10,'24 罐/箱',38.50,'饮料/啤酒')">
           <div class="sku-img">啤</div>
           <div class="sku-info"><div class="n">Tiger Beer 虎牌啤酒 330ml <span class="tag-bcrs">BCRS</span></div><div class="m">SKU-BV-TIGER-330 · 24 罐/箱 · S$38.50/箱 · 押金 S$0.10/罐</div></div>
         </div>
-        <div class="sku-item" onclick="addSku('SKU-BV-WATER-GLASS','San Pellegrino 玻璃瓶 750ml',false,12,0,'12 瓶/件',7.80)">
+        <div class="sku-item" onclick="addSku('SKU-BV-WATER-GLASS','San Pellegrino 玻璃瓶 750ml',false,12,0,'12 瓶/件',7.80,'饮料/水')">
           <div class="sku-img">水</div>
           <div class="sku-info"><div class="n">San Pellegrino 玻璃瓶 750ml <span class="tag-bcrs tag-non">非 BCRS</span></div><div class="m">SKU-BV-WATER-GLASS · 12 瓶/件 · 玻璃瓶不参与 BCRS</div></div>
         </div>
-        <div class="sku-item" onclick="addSku('SKU-FD-OIL-5L','Knife Cooking Oil 食用油 5L',false,4,0,'4 桶/箱',54.00)">
+        <div class="sku-item" onclick="addSku('SKU-FD-OIL-5L','Knife Cooking Oil 食用油 5L',false,4,0,'4 桶/箱',54.00,'粮油/油')">
           <div class="sku-img">油</div>
           <div class="sku-info"><div class="n">Knife Cooking Oil 5L <span class="tag-bcrs tag-non">非 BCRS</span></div><div class="m">SKU-FD-OIL-5L · 4 桶/箱 · S$54.00/桶</div></div>
         </div>
@@ -956,24 +1003,34 @@ function syncDepositRow(rowId, qty){
   refreshSummary();
   toast(`押金行已联动：${depQty} 个 × S$${deposit.toFixed(2)} = S$${depAmt}`,'success');
 }
+// 列索引（采购单新建 18 列，含税定价）：9=采购单价含税 10=采购单价未税 11=采购数量 12=采购金额含税 13=采购金额未税 15=税额
 function recalcRow(rowId){
   const main=document.querySelector(`tr[data-row="${rowId}"]`);
   if(!main) return;
-  const qty=parseInt(main.querySelector('td:nth-child(4) input').value,10)||0;
-  const price=parseFloat(main.querySelector('td:nth-child(5) input').value)||0;
-  const sub=document.getElementById('sub-'+rowId);
-  if(sub) sub.textContent=(qty*price).toFixed(2);
+  const qty=parseFloat(main.querySelector('td:nth-child(11) input').value)||0;
+  const price=parseFloat(main.querySelector('td:nth-child(9) input').value)||0;
+  const tax=parseFloat(main.dataset.tax)||0;
+  const amt=qty*price;                       // 采购金额(含税)
+  const exAmt=amt/(1+tax);                    // 采购金额(未税)
+  const taxAmt=amt-exAmt;                      // 税额
+  const exPrice=price/(1+tax);                 // 采购单价(未税)
+  const set=(id,v)=>{const el=document.getElementById(id+rowId);if(el)el.textContent=v;};
+  set('amt',amt.toFixed(2));
+  set('exAmt',exAmt.toFixed(2));
+  set('tax',taxAmt.toFixed(2));
+  const exP=document.getElementById('exPrice'+rowId);
+  if(exP) exP.textContent=exPrice.toFixed(2)+'/箱';
   refreshSummary();
 }
 function refreshSummary(){
   let goods=0, deposit=0, count=0;
   document.querySelectorAll('#poRows tr:not(.bcrs-row)').forEach(r=>{
     count++;
-    const sub=r.querySelector('td:nth-child(6)');
-    if(sub) goods+=parseFloat(sub.textContent.replace(/,/g,''))||0;
+    const amt=r.querySelector('td:nth-child(12)');
+    if(amt) goods+=parseFloat(amt.textContent.replace(/,/g,''))||0;
   });
   document.querySelectorAll('#poRows tr.bcrs-row').forEach(r=>{
-    const amt=r.querySelector('td:nth-child(6)');
+    const amt=r.querySelector('td:nth-child(12)');
     if(amt) deposit+=parseFloat(amt.textContent.replace(/,/g,''))||0;
   });
   document.querySelector('#summary .summary-card:nth-child(1) .v').textContent=count;
@@ -1015,32 +1072,46 @@ function syncRejectDeposit(rowId, qty){
 // ===== SKU Picker =====
 function openSkuPicker(){document.getElementById('skuPickerMask').classList.add('show');}
 function closeSkuPicker(){document.getElementById('skuPickerMask').classList.remove('show');}
-function addSku(sku,name,isBcrs,boxSize,deposit,boxLabel,price){
+function addSku(sku,name,isBcrs,boxSize,deposit,boxLabel,price,category){
   const tbody=document.getElementById('poRows');
   const rowId=Date.now();
-  const idx=tbody.querySelectorAll('tr:not(.bcrs-row)').length+1;
+  const tax=0.09, qty=10;
   const tagBcrs=isBcrs?'<span class="tag-bcrs">BCRS</span>':'<span class="tag-bcrs tag-non">非 BCRS</span>';
-  let html=`<tr data-row="${rowId}" data-sku="${sku}" data-bcrs="${isBcrs}" data-box-size="${boxSize}" data-deposit="${deposit}">
-    <td>${idx}</td>
-    <td><div><b>${name}</b>${tagBcrs}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${sku} · ${boxLabel}</div></td>
-    <td>箱</td>
-    <td class="num"><input type="number" class="input-num" value="10" min="0" onchange="syncDepositRow(${rowId},this.value)"></td>
-    <td class="num"><input type="number" class="input-num" value="${price.toFixed(2)}" step="0.01" onchange="recalcRow(${rowId})"></td>
-    <td class="num pos" id="sub-${rowId}">${(10*price).toFixed(2)}</td>
-    <td><span class="pill blue">手动</span></td>
-    <td><button class="btn small danger" onclick="removeRow(${rowId})">×</button></td>
+  const amt=qty*price, exAmt=amt/(1+tax), taxAmt=amt-exAmt, exPrice=price/(1+tax);
+  let html=`<tr data-row="${rowId}" data-sku="${sku}" data-bcrs="${isBcrs}" data-box-size="${boxSize}" data-deposit="${deposit}" data-price="${price}" data-tax="${tax}">
+    <td>商品</td>
+    <td><b>${sku}</b></td>
+    <td>${name}${tagBcrs}</td>
+    <td class="num">5%</td>
+    <td>正常</td>
+    <td>${category||'--'}</td>
+    <td class="num">${(price*0.93).toFixed(2)}/箱</td>
+    <td class="num">${(price*0.93/(1+tax)).toFixed(2)}/箱</td>
+    <td class="num"><input type="number" class="input-num" value="${price.toFixed(2)}" step="0.01" onchange="recalcRow(${rowId})">/箱</td>
+    <td class="num" id="exPrice${rowId}">${exPrice.toFixed(2)}/箱</td>
+    <td class="num"><input type="number" class="input-num" value="${qty}" min="0" onchange="${isBcrs?`syncDepositRow(${rowId},this.value)`:`recalcRow(${rowId})`}">箱</td>
+    <td class="num pos" id="amt${rowId}">${amt.toFixed(2)}</td>
+    <td class="num" id="exAmt${rowId}">${exAmt.toFixed(2)}</td>
+    <td>9%</td>
+    <td class="num" id="tax${rowId}">${taxAmt.toFixed(2)}</td>
+    <td>${boxLabel}</td>
+    <td>—</td>
+    <td><button class="btn small danger" onclick="removeRow(${rowId})">删除</button></td>
   </tr>`;
   if(isBcrs){
-    const dq=10*boxSize;
+    const dq=qty*boxSize;
     const da=(dq*deposit).toFixed(2);
     html += `<tr class="bcrs-row" data-row="${rowId}-dep" data-parent="${rowId}">
-      <td>—</td>
-      <td><div class="linked-tag">BCRS 押金</div><div style="font-size:11px;color:var(--muted);margin-top:2px">关联主商品 ${sku} · 10 箱 × ${boxSize} 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
-      <td>个</td>
-      <td class="num"><input type="number" class="input-num" id="dep-qty-${rowId}" value="${dq}" disabled></td>
-      <td class="num"><input type="number" class="input-num" value="${deposit.toFixed(2)}" disabled></td>
+      <td>包装物·BCRS押金</td>
+      <td><b>DEP-BCRS</b></td>
+      <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 ${sku} · ${qty} 箱 × ${boxSize} 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
+      <td class="num">--</td><td>--</td><td>--</td><td class="num">--</td><td class="num">--</td>
+      <td class="num"><input type="number" class="input-num" value="${deposit.toFixed(2)}" disabled>/个</td>
+      <td class="num">${deposit.toFixed(2)}/个</td>
+      <td class="num"><input type="number" class="input-num" id="dep-qty-${rowId}" value="${dq}" disabled>个</td>
       <td class="num pos" id="dep-amt-${rowId}">${da}</td>
-      <td><span class="pill green">系统</span></td>
+      <td class="num">${da}</td>
+      <td>0%</td><td class="num">0.00</td><td>--</td><td>自动追加</td>
       <td><span style="color:var(--muted);font-size:11px">联动</span></td>
     </tr>`;
   }
