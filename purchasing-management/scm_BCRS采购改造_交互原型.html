@@ -592,10 +592,10 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">采购单详情 — PO-SGP-20260520-0142</div>
-          <div class="subtitle">已提交 / 待入库。商品明细中 BCRS 押金行以独立行展示，底部汇总将「BCRS 押金合计」单独列示。</div>
+          <div class="subtitle">已完成（已入库）。商品明细字段严格对齐系统 order-detail.vue 21 列；均摊后单价仅订单状态=已完成时显示。BCRS 押金行以「包装物」类型独立行展示。</div>
         </div>
         <div class="hero-actions">
-          <span class="pill amber" style="height:28px">待入库</span>
+          <span class="pill green" style="height:28px">已完成</span>
           <button class="btn" onclick="toast('已打印 PDF','success')">打印</button>
           <button class="btn primary" onclick="toast('已通知供应商','success')">通知供应商</button>
         </div>
@@ -615,56 +615,116 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             <div class="fld"><label>付款方式</label><input value="月结 30 天" disabled></div>
             <div class="fld"><label>采购员</label><input value="沈亮" disabled></div>
             <div class="fld"><label>提交时间</label><input value="2026-05-20 11:38" disabled></div>
-            <div class="fld"><label>状态</label><input value="待入库" disabled></div>
+            <div class="fld"><label>状态</label><input value="已完成" disabled></div>
           </div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head"><div class="panel-title">商品明细</div><span class="pill gray">5 行 · 含 2 行 BCRS 押金</span></div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-detail.vue（21 列，只读）。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
-          <table>
+          <table style="min-width:2560px">
             <thead>
               <tr>
-                <th style="width:50px">#</th>
-                <th style="min-width:280px">商品 / SKU</th>
-                <th style="width:90px">单位</th>
-                <th class="num" style="width:120px">数量</th>
-                <th class="num" style="width:110px">单价 (S$)</th>
-                <th class="num" style="width:120px">小计 (S$)</th>
-                <th style="width:90px">类型</th>
+                <th style="width:120px">采购类型</th>
+                <th style="width:130px">SPU编码</th>
+                <th style="min-width:180px">SPU名称</th>
+                <th class="num" style="width:80px">超收比例</th>
+                <th style="width:90px">销售类型</th>
+                <th style="width:120px">发票类型</th>
+                <th style="width:140px">SKU编码</th>
+                <th style="min-width:200px">SKU名称</th>
+                <th style="width:70px">税率</th>
+                <th style="width:120px">商品分类</th>
+                <th class="num" style="width:130px">采购单价(含税)</th>
+                <th class="num" style="width:130px">采购单价(未税)</th>
+                <th class="num" style="width:140px">均摊后单价(含税)</th>
+                <th class="num" style="width:140px">均摊后单价(未税)</th>
+                <th class="num" style="width:100px">税额</th>
+                <th class="num" style="width:110px">采购数量</th>
+                <th class="num" style="width:120px">实际采购数量</th>
+                <th class="num" style="width:130px">采购金额(含税)</th>
+                <th class="num" style="width:130px">采购金额(未税)</th>
+                <th style="width:110px">箱规</th>
+                <th style="min-width:140px">商品备注</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>1</td>
-                <td><div><b>Coca-Cola 可口可乐 500ml</b><span class="tag-bcrs">BCRS</span></div><div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-BV-COKE-500</div></td>
-                <td>箱</td><td class="num">50</td><td class="num">18.50</td><td class="num pos">925.00</td>
-                <td><span class="pill blue">商品</span></td>
+                <td>商品</td>
+                <td>SPU-COKE-500</td>
+                <td>Coca-Cola 可口可乐 500ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td><td>正常</td><td>增值税专用</td>
+                <td><b>SKU-BV-COKE-500</b></td>
+                <td>Coca-Cola 可口可乐 500ml (PET)</td>
+                <td>9%</td><td>饮料/碳酸</td>
+                <td class="num">18.50/箱</td><td class="num">16.97/箱</td>
+                <td class="num">19.20/箱</td><td class="num">17.61/箱</td>
+                <td class="num">76.38</td>
+                <td class="num">50箱</td><td class="num">50箱</td>
+                <td class="num pos">925.00</td><td class="num">848.62</td>
+                <td>24 瓶/箱</td><td>—</td>
               </tr>
               <tr class="bcrs-row" id="detailDepRow1">
-                <td>—</td>
-                <td><div class="linked-tag">BCRS 押金</div><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
-                <td>个</td><td class="num">1,200</td><td class="num">0.10</td><td class="num pos">120.00</td>
-                <td><span class="pill green" id="detailDepPill1">押金</span></td>
+                <td id="detailDepPill1">包装物·BCRS押金</td>
+                <td>--</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
+                <td class="num">--</td><td>--</td><td>--</td>
+                <td><b>DEP-BCRS</b></td>
+                <td>BCRS 押金</td>
+                <td>0%</td><td>--</td>
+                <td class="num">0.10/个</td><td class="num">0.10/个</td>
+                <td class="num">--</td><td class="num">--</td>
+                <td class="num">0.00</td>
+                <td class="num">1,200个</td><td class="num">1,200个</td>
+                <td class="num pos">120.00</td><td class="num">120.00</td>
+                <td>--</td><td>自动追加</td>
               </tr>
               <tr>
-                <td>2</td>
-                <td><div><b>100Plus Isotonic Drink 325ml</b><span class="tag-bcrs">BCRS</span></div><div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-BV-100PLUS-325</div></td>
-                <td>箱</td><td class="num">30</td><td class="num">14.80</td><td class="num pos">444.00</td>
-                <td><span class="pill blue">商品</span></td>
+                <td>商品</td>
+                <td>SPU-100PLUS-325</td>
+                <td>100Plus Isotonic Drink 325ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td><td>正常</td><td>增值税专用</td>
+                <td><b>SKU-BV-100PLUS-325</b></td>
+                <td>100Plus Isotonic Drink 325ml</td>
+                <td>9%</td><td>饮料/运动</td>
+                <td class="num">14.80/箱</td><td class="num">13.58/箱</td>
+                <td class="num">15.30/箱</td><td class="num">14.04/箱</td>
+                <td class="num">36.66</td>
+                <td class="num">30箱</td><td class="num">30箱</td>
+                <td class="num pos">444.00</td><td class="num">407.34</td>
+                <td>24 罐/箱</td><td>—</td>
               </tr>
               <tr class="bcrs-row">
-                <td>—</td>
-                <td><div class="linked-tag">BCRS 押金</div><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
-                <td>个</td><td class="num">720</td><td class="num">0.10</td><td class="num pos">72.00</td>
-                <td><span class="pill green">押金</span></td>
+                <td>包装物·BCRS押金</td>
+                <td>--</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
+                <td class="num">--</td><td>--</td><td>--</td>
+                <td><b>DEP-BCRS</b></td>
+                <td>BCRS 押金</td>
+                <td>0%</td><td>--</td>
+                <td class="num">0.10/个</td><td class="num">0.10/个</td>
+                <td class="num">--</td><td class="num">--</td>
+                <td class="num">0.00</td>
+                <td class="num">720个</td><td class="num">720个</td>
+                <td class="num pos">72.00</td><td class="num">72.00</td>
+                <td>--</td><td>自动追加</td>
               </tr>
               <tr>
-                <td>3</td>
-                <td><div><b>Jasmine Rice 茉莉香米 5kg</b><span class="tag-bcrs tag-non">非 BCRS</span></div><div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-FD-RICE-5KG</div></td>
-                <td>箱</td><td class="num">20</td><td class="num">32.00</td><td class="num pos">640.00</td>
-                <td><span class="pill blue">商品</span></td>
+                <td>商品</td>
+                <td>SPU-RICE-5KG</td>
+                <td>Jasmine Rice 茉莉香米 5kg<span class="tag-bcrs tag-non">非 BCRS</span></td>
+                <td class="num">3%</td><td>正常</td><td>增值税专用</td>
+                <td><b>SKU-FD-RICE-5KG</b></td>
+                <td>Jasmine Rice 茉莉香米 5kg</td>
+                <td>9%</td><td>粮油/米</td>
+                <td class="num">32.00/箱</td><td class="num">29.36/箱</td>
+                <td class="num">32.80/箱</td><td class="num">30.09/箱</td>
+                <td class="num">52.84</td>
+                <td class="num">20箱</td><td class="num">20箱</td>
+                <td class="num pos">640.00</td><td class="num">587.16</td>
+                <td>4 袋/箱</td><td>—</td>
               </tr>
             </tbody>
           </table>
@@ -699,7 +759,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">退供单 — BCRS 押金冲销</div>
-          <div class="subtitle">退供时主商品行下方自动追加押金返还行（金额负数 / 红色显示），数量随退货数量同步。押金返还冲销原 PO 的「应付押金」科目。</div>
+          <div class="subtitle">字段严格对齐系统 reject-detail.vue（11 列）。退供 BCRS 商品时自动追加「包装物·BCRS押金」返还行，数量随退货数量同步；押金返还冲销原 PO 的「应付押金」科目。</div>
         </div>
         <div class="hero-actions">
           <span class="site-flag">● SGP 新加坡站点</span>
@@ -730,70 +790,74 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           <div class="panel-title">退货明细</div>
           <span class="pill gray">3 行 · 含 1 行 BCRS 押金返还</span>
         </div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 reject-detail.vue（11 列）。BCRS 押金返还为「包装物」类型独立行。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
-          <table>
+          <table style="min-width:1500px">
             <thead>
               <tr>
-                <th style="width:50px">#</th>
-                <th style="min-width:280px">商品 / SKU</th>
-                <th style="width:90px">单位</th>
-                <th class="num" style="width:130px">采购数量</th>
-                <th class="num" style="width:130px">退货数量</th>
-                <th class="num" style="width:110px">单价 (S$)</th>
-                <th class="num" style="width:130px">退款金额 (S$)</th>
-                <th style="width:80px">类型</th>
+                <th style="width:130px">退货类型</th>
+                <th style="width:140px">SKU编码</th>
+                <th style="min-width:200px">SKU名称</th>
+                <th style="width:90px">销售类型</th>
+                <th style="width:120px">商品分类</th>
+                <th class="num" style="width:130px">退货单价</th>
+                <th class="num" style="width:150px">退货数量</th>
+                <th class="num" style="width:130px">实际退货数量</th>
+                <th class="num" style="width:120px">退货金额</th>
+                <th style="width:110px">箱规</th>
+                <th style="min-width:140px">商品备注</th>
               </tr>
             </thead>
             <tbody id="rejectRows">
-              <tr data-row="r1" data-sku="SKU-BV-COKE-500" data-bcrs="true" data-box-size="24" data-deposit="0.10">
-                <td>1</td>
-                <td>
-                  <div><b>Coca-Cola 可口可乐 500ml</b><span class="tag-bcrs">BCRS</span></div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-BV-COKE-500 · 24 瓶/箱 · 原 PO 50 箱</div>
-                </td>
-                <td>箱</td>
-                <td class="num" style="color:var(--muted)">50</td>
-                <td class="num"><input id="rejQtyR1" type="number" class="input-num" value="5" min="0" max="50" onchange="syncRejectDeposit('r1',this.value)"></td>
-                <td class="num">18.50</td>
-                <td class="num" style="color:var(--red);font-weight:700" id="rej-sub-r1">-92.50</td>
-                <td><span class="pill blue">商品</span></td>
+              <tr data-row="r1" data-sku="SKU-BV-COKE-500" data-bcrs="true" data-box-size="24" data-deposit="0.10" data-price="18.50" data-maxqty="50">
+                <td>商品</td>
+                <td><b>SKU-BV-COKE-500</b></td>
+                <td>Coca-Cola 可口可乐 500ml<span class="tag-bcrs">BCRS</span></td>
+                <td>正常</td>
+                <td>饮料/碳酸</td>
+                <td class="num">18.50/箱</td>
+                <td class="num"><input id="rejQtyR1" type="number" class="input-num" value="5" min="0" max="50" onchange="syncRejectDeposit('r1',this.value)">箱<div style="font-size:11px;color:var(--muted)">原 PO 50 箱</div></td>
+                <td class="num" id="rejOut-r1">5箱</td>
+                <td class="num pos" id="rej-sub-r1">92.50</td>
+                <td>24 瓶/箱</td>
+                <td>—</td>
               </tr>
               <tr class="bcrs-row" id="rejDepRow1" data-row="r1-dep" data-parent="r1">
-                <td>—</td>
-                <td>
-                  <div class="linked-tag">BCRS 押金返还</div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div>
-                </td>
-                <td>个</td>
-                <td class="num" style="color:var(--muted)">1,200</td>
-                <td class="num"><input type="number" class="input-num" id="rej-dep-qty-r1" value="120" disabled></td>
-                <td class="num">0.10</td>
-                <td class="num" style="color:var(--red);font-weight:700" id="rej-dep-amt-r1">-12.00</td>
-                <td><span class="pill green">押金</span></td>
+                <td>包装物·BCRS押金</td>
+                <td><b>DEP-BCRS</b></td>
+                <td><span class="linked-tag">BCRS 押金返还</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
+                <td>--</td>
+                <td>--</td>
+                <td class="num">0.10/个</td>
+                <td class="num"><input type="number" class="input-num" id="rej-dep-qty-r1" value="120" disabled>个</td>
+                <td class="num">120个</td>
+                <td class="num pos" id="rej-dep-amt-r1">12.00</td>
+                <td>--</td>
+                <td>自动追加</td>
               </tr>
 
-              <tr data-row="r2" data-sku="SKU-FD-RICE-5KG" data-bcrs="false">
-                <td>2</td>
-                <td>
-                  <div><b>Jasmine Rice 茉莉香米 5kg</b><span class="tag-bcrs tag-non">非 BCRS</span></div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px">SKU-FD-RICE-5KG · 4 袋/箱 · 原 PO 20 箱</div>
-                </td>
-                <td>箱</td>
-                <td class="num" style="color:var(--muted)">20</td>
-                <td class="num"><input type="number" class="input-num" value="2" min="0" max="20"></td>
-                <td class="num">32.00</td>
-                <td class="num" style="color:var(--red);font-weight:700">-64.00</td>
-                <td><span class="pill blue">商品</span></td>
+              <tr data-row="r2" data-sku="SKU-FD-RICE-5KG" data-bcrs="false" data-price="32.00" data-maxqty="20">
+                <td>商品</td>
+                <td><b>SKU-FD-RICE-5KG</b></td>
+                <td>Jasmine Rice 茉莉香米 5kg<span class="tag-bcrs tag-non">非 BCRS</span></td>
+                <td>正常</td>
+                <td>粮油/米</td>
+                <td class="num">32.00/箱</td>
+                <td class="num"><input type="number" class="input-num" value="2" min="0" max="20">箱<div style="font-size:11px;color:var(--muted)">原 PO 20 箱</div></td>
+                <td class="num">2箱</td>
+                <td class="num pos">64.00</td>
+                <td>4 袋/箱</td>
+                <td>—</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div class="summary">
-          <div class="summary-card"><div class="k">退货行数</div><div class="v">2</div></div>
-          <div class="summary-card"><div class="k">商品退款</div><div class="v" style="color:var(--red)">-S$156.50</div></div>
-          <div class="summary-card green"><div class="k">BCRS 押金返还</div><div class="v" style="color:var(--red)">-S$12.00</div></div>
-          <div class="summary-card"><div class="k">应收供应商合计</div><div class="v" style="color:var(--red)">-S$168.50</div></div>
+          <div class="summary-card"><div class="k">商品数</div><div class="v">2</div></div>
+          <div class="summary-card"><div class="k">商品总金额（退货）</div><div class="v">S$156.50</div></div>
+          <div class="summary-card green"><div class="k">包装物数（BCRS 押金）</div><div class="v">1</div></div>
+          <div class="summary-card green"><div class="k">包装物金额（押金返还）</div><div class="v">S$12.00</div></div>
         </div>
       </div>
 
@@ -801,9 +865,9 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-head"><div class="panel-title">退供单 BCRS 联动逻辑</div></div>
         <div class="panel-body">
           <div class="formula-line">
-            <b>BR-11 退货押金自动追加：</b>退供 BCRS 商品时，系统在该退货行下方追加押金返还独立行<br>
+            <b>BR-11 退货押金自动追加：</b>退供 BCRS 商品时，系统在该退货行下方追加「包装物·BCRS押金」返还独立行<br>
             <b>BR-12 退货押金数量公式：</b>押金返还数量 = 退货数量(箱) × 主商品 boxSize<br>
-            &nbsp;&nbsp;· 行 1：5 箱 × 24 瓶/箱 = <b>120</b> 个 × S$0.10 = <b>-S$12.00</b><br>
+            &nbsp;&nbsp;· 行 1：5 箱 × 24 瓶/箱 = <b>120</b> 个 × S$0.10 = <b>S$12.00</b>（退货金额按系统正数显示）<br>
             <b>BR-13 退货数量联动：</b>退货数量变更 → 押金返还行数量与金额实时同步<br>
             <b>BR-14 退货押金校验：</b>退货数量 ≤ 原采购数量；超出阻断提交<br>
             <b>BR-15 财务冲销：</b>押金返还金额冲销原 PO 的「应付押金」往来科目，不影响存货成本科目
@@ -852,7 +916,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head"><div class="panel-title">退供单 — 业务规则</div></div>
         <div class="panel-body">
-          <div class="rule-row"><code>BR-11</code><div><b>退货押金行</b>：退供 BCRS 商品时，系统在该退货行下方追加押金返还独立行；金额为负数（红色显示）</div></div>
+          <div class="rule-row"><code>BR-11</code><div><b>退货押金行</b>：退供 BCRS 商品时，系统在该退货行下方追加「包装物·BCRS押金」返还独立行；退货金额按系统口径正数显示（filterAmount）</div></div>
           <div class="rule-row"><code>BR-12</code><div><b>退货押金数量公式</b>：押金返还数量 = 退货数量(箱) × 主商品 boxSize；单位「个」</div></div>
           <div class="rule-row"><code>BR-13</code><div><b>退货数量联动</b>：退货数量变更 → 押金返还行数量与金额实时同步</div></div>
           <div class="rule-row"><code>BR-14</code><div><b>退货数量校验</b>：退货数量 ≤ 关联 PO 的原采购数量；超出时阻断提交并提示</div></div>
@@ -1048,15 +1112,18 @@ function removeRow(rowId){
 }
 function submitPo(){toast('采购单已提交 ✓','success');}
 
-// ===== 退供单联动 =====
+// ===== 退供单联动（11 列，退货金额正数显示，对齐系统 filterAmount）=====
 function syncRejectDeposit(rowId, qty){
   const main=document.querySelector(`tr[data-row="${rowId}"]`);
   if(!main) return;
-  const q=parseInt(qty,10)||0;
-  // 主退货金额
-  const price=parseFloat(main.querySelector('td:nth-child(6)').textContent)||0;
+  let q=parseInt(qty,10)||0;
+  const maxQty=parseInt(main.dataset.maxqty,10)||Infinity;
+  if(q>maxQty){ toast(`退货数量不能超过原采购数量 ${maxQty} 箱（BR-14）`,'error'); }
+  const price=parseFloat(main.dataset.price)||0;
   const sub=document.getElementById('rej-sub-'+rowId);
-  if(sub) sub.textContent='-'+(q*price).toFixed(2);
+  if(sub) sub.textContent=(q*price).toFixed(2);          // 退货金额（正数）
+  const out=document.getElementById('rejOut-'+rowId);
+  if(out) out.textContent=q+'箱';                          // 实际退货数量联动
   if(main.dataset.bcrs!=='true') return;
   const boxSize=parseInt(main.dataset.boxSize,10);
   const deposit=parseFloat(main.dataset.deposit);
@@ -1065,8 +1132,8 @@ function syncRejectDeposit(rowId, qty){
   const qtyInput=document.getElementById('rej-dep-qty-'+rowId);
   const amtCell=document.getElementById('rej-dep-amt-'+rowId);
   if(qtyInput) qtyInput.value=depQty;
-  if(amtCell) amtCell.textContent='-'+depAmt;
-  toast(`押金返还已联动：${depQty} 个 × S$${deposit.toFixed(2)} = -S$${depAmt}`,'success');
+  if(amtCell) amtCell.textContent=depAmt;
+  toast(`押金返还已联动：${depQty} 个 × S$${deposit.toFixed(2)} = S$${depAmt}`,'success');
 }
 
 // ===== SKU Picker =====
