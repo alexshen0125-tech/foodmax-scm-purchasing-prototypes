@@ -1186,7 +1186,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-head"><div class="panel-title">商品明细</div><span class="muted">字段对齐 VMS purchase-detail.vue</span></div>
         <div class="muted" style="padding:8px 14px 0">BCRS 押金作为「押金」类型独立行，订单金额含押金。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
-          <table style="min-width:1900px">
+          <table style="min-width:2120px">
             <thead><tr>
               <th style="width:90px">商品类型</th>
               <th style="min-width:160px">SPU信息</th>
@@ -1202,6 +1202,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
               <th style="width:60px">单位</th>
               <th class="num" style="width:120px">订单金额(含税)</th>
               <th class="num" style="width:120px">订单金额(未税)</th>
+              <th class="num" style="width:90px">已出签数</th>
+              <th class="num" style="width:100px">本次出签数</th>
             </tr></thead>
             <tbody>
               <tr>
@@ -1212,6 +1214,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td class="num">18.50</td><td class="num">16.97</td>
                 <td class="num">50</td><td class="num">50</td><td class="num">50</td><td>箱</td>
                 <td class="num pos">925.00</td><td class="num">848.62</td>
+                <td class="num">50</td><td class="num">50</td>
               </tr>
               <tr class="bcrs-row">
                 <td>押金</td>
@@ -1221,6 +1224,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td class="num">0.10</td><td class="num">0.10</td>
                 <td class="num">1,200</td><td class="num">1,200</td><td class="num">1,200</td><td>个</td>
                 <td class="num pos">120.00</td><td class="num">120.00</td>
+                <td class="num">--</td><td class="num">--</td>
               </tr>
               <tr>
                 <td>商品</td>
@@ -1230,6 +1234,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td class="num">14.80</td><td class="num">13.58</td>
                 <td class="num">30</td><td class="num">30</td><td class="num">30</td><td>箱</td>
                 <td class="num pos">444.00</td><td class="num">407.34</td>
+                <td class="num">30</td><td class="num">30</td>
               </tr>
               <tr class="bcrs-row">
                 <td>押金</td>
@@ -1239,6 +1244,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td class="num">0.10</td><td class="num">0.10</td>
                 <td class="num">720</td><td class="num">720</td><td class="num">720</td><td>个</td>
                 <td class="num pos">72.00</td><td class="num">72.00</td>
+                <td class="num">--</td><td class="num">--</td>
               </tr>
             </tbody>
           </table>
