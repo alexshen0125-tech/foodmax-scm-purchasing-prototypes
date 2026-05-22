@@ -465,7 +465,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             <div class="card-stats">
               <span class="stat-item">含税商品金额：<span class="value" id="sumGoods">S$2,009.00</span></span>
               <span class="stat-item">未税商品金额：<span class="value" id="sumGoodsEx">S$1,843.12</span></span>
-              <span class="stat-item dep">包装物金额：<span class="value" id="sumDeposit">S$192.00</span></span>
+              <span class="stat-item dep">押金金额：<span class="value" id="sumDeposit">S$192.00</span></span>
             </div>
           </div>
           <div class="card-header-buttons">
@@ -671,9 +671,9 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-head"><div class="panel-title">商品明细</div><span class="pill gray">5 行 · 含 2 行 BCRS 押金</span></div>
         <div class="stats">
           <span class="stat-item">商品数：<span class="value">3</span></span>
-          <span class="stat-item">包装物数：<span class="value">2</span></span>
+          <span class="stat-item">押金笔数：<span class="value">2</span></span>
           <span class="stat-item">商品总金额(含税)：<span class="value">S$2,009.00</span></span>
-          <span class="stat-item dep">包装物总金额(含税)：<span class="value" id="detailSumDeposit">S$192.00</span></span>
+          <span class="stat-item dep">押金金额(含税)：<span class="value" id="detailSumDeposit">S$192.00</span></span>
           <span class="stat-item">采购总金额(含税)：<span class="value">S$2,201.00</span></span>
         </div>
         <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-detail.vue（21 列，只读）。横向可滚动查看全部列。</div>
@@ -841,8 +841,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="stats">
           <span class="stat-item">商品数：<span class="value">2</span></span>
           <span class="stat-item">商品总金额：<span class="value">S$156.50</span></span>
-          <span class="stat-item dep">包装物数：<span class="value">1</span></span>
-          <span class="stat-item dep">包装物金额：<span class="value">S$12.00</span></span>
+          <span class="stat-item dep">押金笔数：<span class="value">1</span></span>
+          <span class="stat-item dep">押金金额：<span class="value">S$12.00</span></span>
         </div>
         <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 reject-detail.vue（11 列）。BCRS 押金返还为「包装物」类型独立行。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
@@ -932,7 +932,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">上传发票 — BCRS 押金展示</div>
-          <div class="subtitle">字段对齐系统 create-invoice.vue。关联采购单只要有一个商品带 BCRS 标识，本页展示「BCRS 押金（包装物）」金额，且发票应开 / 已开金额汇总包含该押金。</div>
+          <div class="subtitle">字段对齐系统 create-invoice.vue。关联采购单只要有一个商品带 BCRS 标识，本页展示「押金金额」，且发票应开 / 已开金额汇总包含该押金。</div>
         </div>
         <div class="hero-actions">
           <span class="site-flag">● SGP 新加坡站点</span>
@@ -963,12 +963,12 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-body">
           <div class="summary" style="grid-template-columns:repeat(4,1fr);padding:0">
             <div class="summary-card"><div class="k">商品总额(含税)</div><div class="v">S$2,009.00</div></div>
-            <div class="summary-card green" id="invBcrsCard"><div class="k">BCRS 押金（包装物）</div><div class="v">S$192.00</div></div>
+            <div class="summary-card green" id="invBcrsCard"><div class="k">押金金额</div><div class="v">S$192.00</div></div>
             <div class="summary-card"><div class="k">供应商应开票金额</div><div class="v">S$2,201.00</div></div>
             <div class="summary-card amber"><div class="k">已开票金额</div><div class="v">S$0.00</div></div>
           </div>
           <div class="formula-line" style="margin-top:14px">
-            <b>应开票金额 = 商品总额(含税) + BCRS 押金（包装物）</b> = S$2,009.00 + S$192.00 = <b>S$2,201.00</b><br>
+            <b>应开票金额 = 商品总额(含税) + 押金金额</b> = S$2,009.00 + S$192.00 = <b>S$2,201.00</b><br>
             BR-17：关联 PO 含 BCRS 时，应开票金额计入 BCRS 押金；上传发票需覆盖该金额
           </div>
         </div>
@@ -985,7 +985,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             <div class="fld"><label>发票税额<span class="req">*</span></label><input type="number" value="180.81" step="0.01"></div>
             <div class="fld"><label>发票不含税金额<span class="req">*</span></label><input type="number" value="2020.19" step="0.01"></div>
             <div class="fld"><label>发票含税金额<span class="req">*</span></label><input type="number" value="2201.00" step="0.01"></div>
-            <div class="fld span2"><label>BCRS 押金（包装物）<span class="auto-tag">系统带入 · 含在发票含税金额内</span></label><input value="S$192.00（押金不计 GST）" disabled style="background:var(--mint);color:var(--green)"></div>
+            <div class="fld span2"><label>押金金额<span class="auto-tag">系统带入 · 含在发票含税金额内</span></label><input value="S$192.00（押金不计 GST）" disabled style="background:var(--mint);color:var(--green)"></div>
           </div>
           <div class="formula-line" style="margin-top:6px">
             BR-18：发票含税金额须 ≥ 应开票金额（含 BCRS 押金 S$192.00），否则提示金额不足
@@ -1002,7 +1002,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">结算单据详情</div>
-          <div class="subtitle">布局 100% 还原系统结算单据详情页。BCRS 押金作为「包装物总额 / 包装物应开收据总金额」体现，并计入采购单据总额与结算金额总计。</div>
+          <div class="subtitle">布局 100% 还原系统结算单据详情页。BCRS 押金以「押金金额 / 押金应开收据总金额」展示（底层存于系统包装物字段），并计入采购单据总额与结算金额总计。</div>
         </div>
         <div class="hero-actions">
           <button class="btn" onclick="switchView('settle')">返回</button>
@@ -1082,7 +1082,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
               <div class="bc-kv"><span>总额(未税)：</span><span class="v">2,020.19</span></div>
               <div class="bc-kv"><span>商品总额(含税)：</span><span class="v">2,009.00</span></div>
               <div class="bc-kv"><span>商品总额(未税)：</span><span class="v">1,843.12</span></div>
-              <div class="bc-kv dep-kv"><span>包装物总额：</span><span class="v">192.00</span></div>
+              <div class="bc-kv dep-kv"><span>押金金额：</span><span class="v">192.00</span></div>
             </div>
             <div class="bill-cell">
               <div class="bc-title">退供单据总额</div>
@@ -1090,7 +1090,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
               <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
               <div class="bc-kv"><span>商品总额(含税)：</span><span class="v">0.00</span></div>
               <div class="bc-kv"><span>商品总额(未税)：</span><span class="v">0.00</span></div>
-              <div class="bc-kv"><span>包装物总额：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>押金金额：</span><span class="v">0.00</span></div>
             </div>
             <div class="bill-cell">
               <div class="bc-title">调整单-固定扣点总额(票扣)</div>
@@ -1139,13 +1139,13 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             </div>
             <!-- Row4 -->
             <div class="bill-cell dep" style="grid-column:1/-1">
-              <div class="bc-title">包装物应开收据总金额（BCRS 押金）</div>
+              <div class="bc-title">押金应开收据总金额</div>
               <div class="big" style="color:var(--green)">192.00</div>
             </div>
           </div>
           <div class="formula-line" style="margin-top:14px">
-            <b>BR-19：</b>BCRS 押金计入「包装物总额」（采购单据总额块）→ 计入结算金额总计与应付金额总计；复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code> 字段<br>
-            <b>BR-20：</b>关联 PO 任一商品含 BCRS 标识 → 「包装物总额」「包装物应开收据总金额」显示押金；否则为 0<br>
+            <b>BR-19：</b>BCRS 押金以「押金金额」展示（采购单据总额块）→ 计入结算金额总计与应付金额总计；底层复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code>（包装物总额）字段<br>
+            <b>BR-20：</b>关联 PO 任一商品含 BCRS 标识 → 「押金金额」「押金应开收据总金额」显示押金；否则为 0<br>
             <b>BR-21：</b>BCRS 押金不计 GST（含税额 = 未税额）
           </div>
         </div>
@@ -1204,10 +1204,10 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head"><div class="panel-title">结算单 / 上传发票 — 业务规则</div></div>
         <div class="panel-body">
-          <div class="rule-row"><code>BR-17</code><div><b>BCRS 判定（结算侧）</b>：结算单关联的采购单只要有<b>一个商品</b>含 BCRS 标识，即判定该结算单含 BCRS；上传发票页与结算单详情页均展示 BCRS 押金（包装物）字段</div></div>
-          <div class="rule-row"><code>BR-18</code><div><b>发票金额含押金</b>：应开票金额 = 商品总额(含税) + BCRS 押金（包装物）；上传发票时发票含税金额须 ≥ 应开票金额，否则提示金额不足</div></div>
-          <div class="rule-row"><code>BR-19</code><div><b>结算金额含押金</b>：BCRS 押金计入「包装物总额」→ 计入采购单据总额 → 计入结算金额总计与应付金额总计（复用系统 purchaseOrderPackageTotalAmount 字段）</div></div>
-          <div class="rule-row"><code>BR-20</code><div><b>无 BCRS 时隐藏</b>：关联 PO 无任何 BCRS 商品时，「包装物总额(BCRS 押金)」「包装物应开收据总金额」为 0，可隐藏 BCRS 相关字段</div></div>
+          <div class="rule-row"><code>BR-17</code><div><b>BCRS 判定（结算侧）</b>：结算单关联的采购单只要有<b>一个商品</b>含 BCRS 标识，即判定该结算单含 BCRS；上传发票页与结算单详情页均展示「押金金额」字段</div></div>
+          <div class="rule-row"><code>BR-18</code><div><b>发票金额含押金</b>：应开票金额 = 商品总额(含税) + 押金金额；上传发票时发票含税金额须 ≥ 应开票金额，否则提示金额不足</div></div>
+          <div class="rule-row"><code>BR-19</code><div><b>结算金额含押金</b>：押金金额计入采购单据总额 → 计入结算金额总计与应付金额总计（底层复用系统 purchaseOrderPackageTotalAmount / 包装物总额 字段）</div></div>
+          <div class="rule-row"><code>BR-20</code><div><b>无 BCRS 时隐藏</b>：关联 PO 无任何 BCRS 商品时，「押金金额」「押金应开收据总金额」为 0，可隐藏 BCRS 相关字段</div></div>
           <div class="rule-row"><code>BR-21</code><div><b>押金不计 GST</b>：BCRS 押金部分含税额 = 未税额（税额 0），发票税额仅按商品金额计算</div></div>
         </div>
       </div>
@@ -1226,10 +1226,10 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           <div class="rule-row ac"><code>AC-09</code><div><b>正向 · 退供单押金返还自动追加</b><br>Given 关联 PO=PO-SGP-0142（含 Coca-Cola 50 箱 BCRS） <br>When 新建退供单，选择 Coca-Cola 退货 5 箱<br>Then 退货行下方自动追加押金返还行，数量=5×24=120 个，金额=-S$12.00（红色），来源=系统</div></div>
           <div class="rule-row ac"><code>AC-10</code><div><b>正向 · 退货押金联动</b><br>Given AC-09 完成<br>When 把退货数量从 5 改为 10<br>Then 押金返还行数量自动刷新为 10×24=240，金额=-S$24.00</div></div>
           <div class="rule-row ac"><code>AC-11</code><div><b>异常 · 退货数量超出原采购</b><br>Given 原 PO 行 Coca-Cola 采购 50 箱<br>When 退货数量输入 60<br>Then 阻断提交，提示「退货数量不能超过原采购数量 50 箱」</div></div>
-          <div class="rule-row ac"><code>AC-12</code><div><b>正向 · 含 BCRS 的结算上传发票</b><br>Given 结算单关联 PO-SGP-0142（2 个 BCRS 商品，押金合计 S$192.00）<br>When 进入上传发票页<br>Then 展示「BCRS 押金（包装物）S$192.00」，应开票金额=商品 2,009.00 + 押金 192.00=S$2,201.00</div></div>
-          <div class="rule-row ac"><code>AC-13</code><div><b>正向 · 结算单详情展示押金</b><br>Given 同上结算单<br>When 打开结算单详情开票信息<br>Then「包装物总额」=S$192.00 并标注其中 BCRS 押金；结算金额总计 / 应付金额总计 / 包装物应开收据总金额 均含该押金</div></div>
+          <div class="rule-row ac"><code>AC-12</code><div><b>正向 · 含 BCRS 的结算上传发票</b><br>Given 结算单关联 PO-SGP-0142（2 个 BCRS 商品，押金合计 S$192.00）<br>When 进入上传发票页<br>Then 展示「押金金额 S$192.00」，应开票金额=商品 2,009.00 + 押金 192.00=S$2,201.00</div></div>
+          <div class="rule-row ac"><code>AC-13</code><div><b>正向 · 结算单详情展示押金</b><br>Given 同上结算单<br>When 打开结算单详情开票信息<br>Then「押金金额」=S$192.00；结算金额总计 / 应付金额总计 / 押金应开收据总金额 均含该押金</div></div>
           <div class="rule-row ac"><code>AC-14</code><div><b>异常 · 发票金额不足</b><br>Given 应开票金额 S$2,201.00（含押金）<br>When 上传发票含税金额填 2,009.00（漏押金）<br>Then 提示「发票金额不足，需 ≥ 应开票金额 S$2,201.00（含 BCRS 押金 S$192.00）」</div></div>
-          <div class="rule-row ac"><code>AC-15</code><div><b>正向 · 无 BCRS 不展示</b><br>Given 关联 PO 无任何 BCRS 商品<br>When 进入上传发票 / 结算单详情<br>Then 不展示 BCRS 押金字段，包装物相关金额为 0</div></div>
+          <div class="rule-row ac"><code>AC-15</code><div><b>正向 · 无 BCRS 不展示</b><br>Given 关联 PO 无任何 BCRS 商品<br>When 进入上传发票 / 结算单详情<br>Then 不展示 BCRS 押金字段，押金相关金额为 0</div></div>
         </div>
       </div>
 
