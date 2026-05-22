@@ -18,12 +18,14 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#eef2f6;color:var(--ink);font-size:13px}
 button,input,select,textarea{font:inherit}
-.app{height:100vh;display:grid;grid-template-columns:96px 1fr;overflow:hidden}
-.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:center;padding:18px 6px;gap:12px}
-.logo{width:44px;height:44px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800}
-.rail button{width:80px;border:0;border-radius:8px;background:transparent;color:#cbd5e1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;padding:10px 6px;line-height:1.3;text-align:center}
+.app{height:100vh;display:grid;grid-template-columns:156px 1fr;overflow:hidden}
+.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:stretch;padding:14px 8px;gap:2px;overflow-y:auto}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800;margin:0 auto 6px}
+.rail-group{font-size:10px;color:#64748b;padding:10px 10px 4px;font-weight:700;letter-spacing:.5px;border-top:1px solid #1d2939;margin-top:4px}
+.rail-group:first-of-type{border-top:0;margin-top:2px}
+.rail button{width:100%;border:0;border-radius:7px;background:transparent;color:#cbd5e1;cursor:pointer;display:flex;flex-direction:row;align-items:center;gap:8px;font-size:12px;padding:8px 10px;line-height:1.3;text-align:left}
 .rail button.active,.rail button:hover{background:#1d2939;color:#fff}
-.dot{width:7px;height:7px;border-radius:50%;background:#475467}
+.dot{width:6px;height:6px;border-radius:50%;background:#475467;flex:0 0 auto}
 .rail button.active .dot{background:var(--green)}
 .main{height:100vh;overflow:auto}
 
@@ -209,18 +211,20 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 <div class="app">
   <aside class="rail">
     <div class="logo">FM</div>
-    <button class="active" data-view="goods-list"><span class="dot"></span>货品<br>列表</button>
-    <button data-view="goods-edit"><span class="dot"></span>货品<br>编辑</button>
-    <button data-view="po-create"><span class="dot"></span>采购单<br>新建</button>
-    <button data-view="po-detail"><span class="dot"></span>采购单<br>详情</button>
-    <button data-view="reject"><span class="dot"></span>退供单<br>BCRS</button>
-    <button data-view="invoice"><span class="dot"></span>上传<br>发票</button>
-    <button data-view="settle"><span class="dot"></span>结算单<br>详情</button>
-    <button data-view="vms-po"><span class="dot"></span>VMS<br>采购单</button>
-    <button data-view="vms-refund"><span class="dot"></span>VMS<br>退货单</button>
-    <button data-view="vms-invoice"><span class="dot"></span>VMS<br>上传发票</button>
-    <button data-view="vms-settle"><span class="dot"></span>VMS<br>结算单</button>
-    <button data-view="rules"><span class="dot"></span>规则<br>验收</button>
+    <div class="rail-group">采购 SCM</div>
+    <button class="active" data-view="goods-list"><span class="dot"></span>货品</button>
+    <button data-view="po-create"><span class="dot"></span>采购单</button>
+    <button data-view="po-detail"><span class="dot"></span>采购单详情</button>
+    <button data-view="reject"><span class="dot"></span>退供单</button>
+    <button data-view="invoice"><span class="dot"></span>上传发票</button>
+    <button data-view="settle"><span class="dot"></span>结算单</button>
+    <div class="rail-group">供应商 VMS</div>
+    <button data-view="vms-po"><span class="dot"></span>采购单</button>
+    <button data-view="vms-refund"><span class="dot"></span>退货单</button>
+    <button data-view="vms-invoice"><span class="dot"></span>上传发票</button>
+    <button data-view="vms-settle"><span class="dot"></span>结算单</button>
+    <div class="rail-group">文档</div>
+    <button data-view="rules"><span class="dot"></span>规则验收</button>
   </aside>
 
   <main class="main">
