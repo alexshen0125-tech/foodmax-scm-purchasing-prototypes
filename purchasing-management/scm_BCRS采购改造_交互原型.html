@@ -476,7 +476,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             <button class="btn small" onclick="toast('导入将替换现有商品','warn')">导入采购商品</button>
           </div>
         </div>
-        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-create.vue（含税定价口径）。BCRS 押金作为「包装物」类型独立行（materialType≠0），不增加列。横向可滚动查看全部 18 列。</div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-create.vue（含税定价口径）。BCRS 押金作为独立行（系统底层 materialType≠0），不增加列。横向可滚动查看全部 18 列。</div>
         <div class="table-wrap" style="border-radius:0;border:0">
           <table style="min-width:2100px">
             <thead>
@@ -524,7 +524,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td><button class="btn small danger" onclick="removeRow(1)">删除</button></td>
               </tr>
               <tr class="bcrs-row" id="depRow1" data-row="1-dep" data-parent="1">
-                <td>包装物</td>
+                <td>押金</td>
                 <td class="muted">系统生成</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 自动追加 <span class="auto-tag">系统</span></div></td>
                 <td class="num">--</td>
@@ -566,7 +566,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td><button class="btn small danger" onclick="removeRow(2)">删除</button></td>
               </tr>
               <tr class="bcrs-row" data-row="2-dep" data-parent="2">
-                <td>包装物</td>
+                <td>押金</td>
                 <td class="muted">系统生成</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 自动追加 <span class="auto-tag">系统</span></div></td>
                 <td class="num">--</td>
@@ -639,7 +639,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">采购单详情 — PO-SGP-20260520-0142</div>
-          <div class="subtitle">已完成（已入库）。商品明细字段严格对齐系统 order-detail.vue 21 列；均摊后单价仅订单状态=已完成时显示。BCRS 押金行以「包装物」类型独立行展示。</div>
+          <div class="subtitle">已完成（已入库）。商品明细字段严格对齐系统 order-detail.vue 21 列；均摊后单价仅订单状态=已完成时显示。BCRS 押金行以独立行展示。</div>
         </div>
         <div class="hero-actions">
           <span class="pill green" style="height:28px">已完成</span>
@@ -721,7 +721,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>24 瓶/箱</td><td>—</td>
               </tr>
               <tr class="bcrs-row" id="detailDepRow1">
-                <td id="detailDepPill1">包装物</td>
+                <td id="detailDepPill1">押金</td>
                 <td>--</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
                 <td class="num">--</td><td>--</td><td>--</td>
@@ -751,7 +751,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>24 罐/箱</td><td>—</td>
               </tr>
               <tr class="bcrs-row">
-                <td>包装物</td>
+                <td>押金</td>
                 <td>--</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
                 <td class="num">--</td><td>--</td><td>--</td>
@@ -807,7 +807,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">退供单 — BCRS 押金冲销</div>
-          <div class="subtitle">字段严格对齐系统 reject-detail.vue（11 列）。退供 BCRS 商品时自动追加「包装物·BCRS押金」返还行，数量随退货数量同步；押金返还冲销原 PO 的「应付押金」科目。</div>
+          <div class="subtitle">字段严格对齐系统 reject-detail.vue（11 列）。退供 BCRS 商品时自动追加「BCRS 押金」返还独立行，数量随退货数量同步；押金返还冲销原 PO 的「应付押金」科目。</div>
         </div>
         <div class="hero-actions">
           <span class="site-flag">● SGP 新加坡站点</span>
@@ -844,7 +844,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           <span class="stat-item dep">押金笔数：<span class="value">1</span></span>
           <span class="stat-item dep">押金金额：<span class="value">S$12.00</span></span>
         </div>
-        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 reject-detail.vue（11 列）。BCRS 押金返还为「包装物」类型独立行。横向可滚动查看全部列。</div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 reject-detail.vue（11 列）。BCRS 押金返还为独立行。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
           <table style="min-width:1500px">
             <thead>
@@ -877,7 +877,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>—</td>
               </tr>
               <tr class="bcrs-row" id="rejDepRow1" data-row="r1-dep" data-parent="r1">
-                <td>包装物</td>
+                <td>押金</td>
                 <td class="muted">系统生成</td>
                 <td><span class="linked-tag">BCRS 押金返还</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
                 <td>--</td>
@@ -913,7 +913,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-head"><div class="panel-title">退供单 BCRS 联动逻辑</div></div>
         <div class="panel-body">
           <div class="formula-line">
-            <b>BR-11 退货押金自动追加：</b>退供 BCRS 商品时，系统在该退货行下方追加「包装物·BCRS押金」返还独立行<br>
+            <b>BR-11 退货押金自动追加：</b>退供 BCRS 商品时，系统在该退货行下方追加「BCRS 押金」返还独立行<br>
             <b>BR-12 退货押金数量公式：</b>押金返还数量 = 退货数量(箱) × 主商品 boxSize<br>
             &nbsp;&nbsp;· 行 1：5 箱 × 24 瓶/箱 = <b>120</b> 个 × S$0.10 = <b>S$12.00</b>（退货金额按系统正数显示）<br>
             <b>BR-13 退货数量联动：</b>退货数量变更 → 押金返还行数量与金额实时同步<br>
@@ -1002,7 +1002,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">结算单据详情</div>
-          <div class="subtitle">布局 100% 还原系统结算单据详情页。BCRS 押金以「押金金额 / 押金应开收据总金额」展示（底层存于系统包装物字段），并计入采购单据总额与结算金额总计。</div>
+          <div class="subtitle">布局 100% 还原系统结算单据详情页。BCRS 押金以「押金金额 / 押金应开收据总金额」展示（底层复用系统 purchaseOrderPackageTotalAmount 字段），并计入采购单据总额与结算金额总计。</div>
         </div>
         <div class="hero-actions">
           <button class="btn" onclick="switchView('settle')">返回</button>
@@ -1144,7 +1144,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             </div>
           </div>
           <div class="formula-line" style="margin-top:14px">
-            <b>BR-19：</b>BCRS 押金以「押金金额」展示（采购单据总额块）→ 计入结算金额总计与应付金额总计；底层复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code>（包装物总额）字段<br>
+            <b>BR-19：</b>BCRS 押金以「押金金额」展示（采购单据总额块）→ 计入结算金额总计与应付金额总计；底层复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code> 字段<br>
             <b>BR-20：</b>关联 PO 任一商品含 BCRS 标识 → 「押金金额」「押金应开收据总金额」显示押金；否则为 0<br>
             <b>BR-21：</b>BCRS 押金不计 GST（含税额 = 未税额）
           </div>
@@ -1192,7 +1192,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head"><div class="panel-title">退供单 — 业务规则</div></div>
         <div class="panel-body">
-          <div class="rule-row"><code>BR-11</code><div><b>退货押金行</b>：退供 BCRS 商品时，系统在该退货行下方追加「包装物·BCRS押金」返还独立行；退货金额按系统口径正数显示（filterAmount）</div></div>
+          <div class="rule-row"><code>BR-11</code><div><b>退货押金行</b>：退供 BCRS 商品时，系统在该退货行下方追加「BCRS 押金」返还独立行；退货金额按系统口径正数显示（filterAmount）</div></div>
           <div class="rule-row"><code>BR-12</code><div><b>退货押金数量公式</b>：押金返还数量 = 退货数量(箱) × 主商品 boxSize；单位「个」</div></div>
           <div class="rule-row"><code>BR-13</code><div><b>退货数量联动</b>：退货数量变更 → 押金返还行数量与金额实时同步</div></div>
           <div class="rule-row"><code>BR-14</code><div><b>退货数量校验</b>：退货数量 ≤ 关联 PO 的原采购数量；超出时阻断提交并提示</div></div>
@@ -1206,7 +1206,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-body">
           <div class="rule-row"><code>BR-17</code><div><b>BCRS 判定（结算侧）</b>：结算单关联的采购单只要有<b>一个商品</b>含 BCRS 标识，即判定该结算单含 BCRS；上传发票页与结算单详情页均展示「押金金额」字段</div></div>
           <div class="rule-row"><code>BR-18</code><div><b>发票金额含押金</b>：应开票金额 = 商品总额(含税) + 押金金额；上传发票时发票含税金额须 ≥ 应开票金额，否则提示金额不足</div></div>
-          <div class="rule-row"><code>BR-19</code><div><b>结算金额含押金</b>：押金金额计入采购单据总额 → 计入结算金额总计与应付金额总计（底层复用系统 purchaseOrderPackageTotalAmount / 包装物总额 字段）</div></div>
+          <div class="rule-row"><code>BR-19</code><div><b>结算金额含押金</b>：押金金额计入采购单据总额 → 计入结算金额总计与应付金额总计（底层复用系统 purchaseOrderPackageTotalAmount 字段）</div></div>
           <div class="rule-row"><code>BR-20</code><div><b>无 BCRS 时隐藏</b>：关联 PO 无任何 BCRS 商品时，「押金金额」「押金应开收据总金额」为 0，可隐藏 BCRS 相关字段</div></div>
           <div class="rule-row"><code>BR-21</code><div><b>押金不计 GST</b>：BCRS 押金部分含税额 = 未税额（税额 0），发票税额仅按商品金额计算</div></div>
         </div>
@@ -1378,7 +1378,7 @@ function recalcRow(rowId){
   refreshSummary();
 }
 function refreshSummary(){
-  let goods=0, goodsEx=0, deposit=0;          // 含税商品 / 未税商品 / 包装物(押金)
+  let goods=0, goodsEx=0, deposit=0;          // 含税商品 / 未税商品 / 押金
   document.querySelectorAll('#poRows tr:not(.bcrs-row)').forEach(r=>{
     const amt=r.querySelector('td:nth-child(12)');     // 采购金额(含税)
     const amtEx=r.querySelector('td:nth-child(13)');    // 采购金额(未税)
@@ -1460,7 +1460,7 @@ function addSku(sku,name,isBcrs,boxSize,deposit,boxLabel,price,category){
     const dq=qty*boxSize;
     const da=(dq*deposit).toFixed(2);
     html += `<tr class="bcrs-row" data-row="${rowId}-dep" data-parent="${rowId}">
-      <td>包装物</td>
+      <td>押金</td>
       <td class="muted">系统生成</td>
       <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 ${sku} · ${qty} 箱 × ${boxSize} 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
       <td class="num">--</td><td>--</td><td>--</td><td class="num">--</td><td class="num">--</td>
