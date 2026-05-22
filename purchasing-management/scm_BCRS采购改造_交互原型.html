@@ -156,6 +156,29 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 .bill-cell .big{font-size:18px;font-weight:700;font-family:Menlo,Consolas,monospace;color:var(--ink)}
 .bill-cell.dep{background:#f5fbf8}
 .bill-cell.dep .bc-kv.dep-kv .v{color:var(--green)}
+/* 新建货品建档表单（还原系统 货品基础信息）*/
+.gd-form{max-width:1180px}
+.gd-row{display:flex;gap:16px;margin-bottom:18px;align-items:flex-start}
+.gd-label{width:104px;flex:0 0 auto;text-align:right;font-size:13px;color:var(--ink);padding-top:8px}
+.gd-label .req{color:var(--red);margin-right:3px}
+.gd-ctrl{flex:1;max-width:900px}
+.gd-ctrl>input,.gd-ctrl>select,.gd-ctrl>textarea{width:100%;border:1px solid var(--line);border-radius:5px;padding:8px 10px;outline:none;background:#fff;color:var(--ink)}
+.gd-ctrl>input:focus,.gd-ctrl>select:focus,.gd-ctrl>textarea:focus{border-color:var(--green)}
+.gd-ctrl input:disabled,.gd-ctrl select:disabled{background:#f8fafc;color:var(--muted)}
+.gd-radio{display:flex;gap:28px;padding-top:7px;font-size:13px}
+.gd-radio label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.gd-subtable{width:100%;border:1px solid var(--line);border-radius:6px;border-collapse:collapse;overflow:hidden}
+.gd-subtable th{background:#f8fafc;padding:10px;font-size:12px;color:var(--muted);font-weight:600;text-align:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+.gd-subtable th:last-child{border-right:0}
+.gd-subtable td{padding:10px;border-right:1px solid var(--line-2)}
+.gd-subtable td:last-child{border-right:0}
+.gd-subtable td input,.gd-subtable td select{width:100%;border:1px solid var(--line);border-radius:5px;padding:7px 9px;outline:none}
+.gd-err{color:var(--red);font-size:11px;margin-top:4px}
+.gd-count{font-size:11px;color:var(--muted);text-align:right;margin-top:2px}
+.gd-bcrs{background:linear-gradient(0deg,#f5fbf8,#fff);border:1px solid #b9e3d4;border-radius:8px;padding:14px 16px}
+.gd-bcrs-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;background:var(--green);color:#fff;border-radius:3px;font-size:10px;font-weight:700;margin-left:8px}
+.gd-img{width:88px;height:88px;border:1px dashed var(--line);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:24px;cursor:pointer}
+.gd-foot{display:flex;justify-content:flex-end;gap:12px;padding:14px 26px;border-top:1px solid var(--line);background:#fff;position:sticky;bottom:0}
 
 /* summary */
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 18px;background:#fafbfc;border-top:1px solid var(--line)}
@@ -319,19 +342,16 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     </section>
   </div>
 
-  <!-- ========== 视图 2：货品编辑 ========== -->
+  <!-- ========== 视图 2：新建货品（建档）========== -->
   <div class="view" id="goods-edit">
     <section class="hero">
       <div class="hero-top">
         <div>
-          <div class="title">货品编辑 — SKU-BV-COKE-500</div>
-          <div class="subtitle">第一阶段 BCRS 改造只在原有货品主数据上新增 2 个字段：是否支持 BCRS 与押金单价。其余字段保持现状。</div>
+          <div class="title">新建货品</div>
+          <div class="subtitle">布局对齐系统「新建货品 · 货品基础信息」。在现有字段基础上新增 BCRS 字段（是否支持 BCRS + 押金单价），仅 SGP 站点显示。</div>
         </div>
         <div class="hero-actions">
-          <span class="site-flag">● SGP 新加坡站点</span>
           <button class="btn" onclick="switchView('goods-list')">返回列表</button>
-          <button class="btn" onclick="toast('已恢复原值','warn')">重置</button>
-          <button class="btn primary" onclick="saveGoods()">保存</button>
         </div>
       </div>
     </section>
@@ -339,7 +359,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     <section class="workspace">
 
       <div class="site-switch sg" id="siteSwitch">
-        <span>当前站点：<b>新加坡 (SGP)</b> — BCRS 字段对本 SKU 可见且可编辑</span>
+        <span>当前站点：<b>新加坡 (SGP)</b> — BCRS 字段可见且可编辑</span>
         <select onchange="switchSite(this.value)">
           <option value="SGP">SGP 新加坡（启用 BCRS）</option>
           <option value="MYS">MYS 马来西亚（关闭 BCRS）</option>
@@ -347,88 +367,122 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         </select>
       </div>
 
-      <!-- 基础信息（保持现状，仅展示） -->
       <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">基础信息 <span class="pill gray">现状字段</span></div>
-          <span class="pill green">已发布</span>
-        </div>
+        <div class="panel-head"><div class="panel-title">货品基础信息</div></div>
         <div class="panel-body">
-          <div class="form-grid">
-            <div class="fld"><label>SKU 编码<span class="req">*</span></label><input value="SKU-BV-COKE-500" disabled></div>
-            <div class="fld span2"><label>商品名称<span class="req">*</span></label><input value="Coca-Cola 可口可乐 500ml (PET)"></div>
-            <div class="fld"><label>分类<span class="req">*</span></label><select><option>饮料 / 碳酸饮料</option></select></div>
-            <div class="fld"><label>采购单位<span class="req">*</span></label><select><option>箱</option><option>瓶</option></select></div>
-            <div class="fld"><label>箱规 (boxSize)<span class="req">*</span></label><input value="24" type="number" min="1"><span class="hint">瓶/箱（押金行数量按此换算）</span></div>
-            <div class="fld"><label>保质期（天）</label><input value="270" type="number"></div>
-            <div class="fld"><label>默认供应商</label><input value="Coca-Cola Singapore Pte Ltd"></div>
-          </div>
-        </div>
-      </div>
+          <div class="gd-form">
 
-      <!-- BCRS 新增字段（仅 2 个） -->
-      <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">BCRS 押金信息 <span class="pill green" style="font-size:10px">本期新增 · 仅 SGP</span></div>
-          <div style="display:flex;align-items:center;gap:10px;font-size:12px">
-            <span>是否支持 BCRS</span>
-            <label class="switch"><input type="checkbox" id="bcrsEnabled" checked onchange="onBcrsToggle()"><span class="slider"></span></label>
-          </div>
-        </div>
-        <div class="panel-body" style="padding-top:8px">
-
-          <div class="bcrs-zone" id="bcrsZone">
-            <div class="bcrs-zone-head">
-              <div class="bcrs-zone-title">
-                <span class="badge">BCRS</span>
-                <span>Beverage Container Return Scheme — 新加坡饮料容器押金回收</span>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品类型</div>
+              <div class="gd-ctrl" style="max-width:300px"><select><option>标品</option><option>非标品</option></select></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品属性</div>
+              <div class="gd-ctrl gd-radio">
+                <label><input type="radio" name="goodsAttr"> 原料货品</label>
+                <label><input type="radio" name="goodsAttr" checked> 成品货品</label>
               </div>
-              <span class="pill green" id="bcrsStatusTip">已启用 — 采购该商品时自动追加押金独立行</span>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品名称</div>
+              <div class="gd-ctrl"><input maxlength="50" placeholder="请输入货品名称" value="Coca-Cola 可口可乐 500ml (PET)"><div class="gd-count">35/50</div></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>库存单位</div>
+              <div class="gd-ctrl">
+                <table class="gd-subtable">
+                  <thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th></tr></thead>
+                  <tbody><tr>
+                    <td><select><option>瓶</option><option>罐</option></select></td>
+                    <td><input value="500"></td>
+                    <td><select><option>ml</option><option>L</option></select></td>
+                  </tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label">包装规格<br><span style="font-size:11px;color:var(--muted)">（选填）</span></div>
+              <div class="gd-ctrl">
+                <table class="gd-subtable">
+                  <thead><tr><th>包装数量</th><th>包装单位</th></tr></thead>
+                  <tbody><tr>
+                    <td><input id="packQty" value="24" type="number" min="1"></td>
+                    <td><select><option>箱</option><option>件</option></select></td>
+                  </tr></tbody>
+                </table>
+                <div class="gd-count" style="text-align:left;color:var(--green)">↳ BCRS 押金数量按此「包装数量」换算：采购箱数 × 24</div>
+              </div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>后台类目</div>
+              <div class="gd-ctrl" style="max-width:420px"><select><option value="">请选择</option><option selected>饮料 / 碳酸饮料</option></select></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>是否可采</div>
+              <div class="gd-ctrl gd-radio">
+                <label><input type="radio" name="canBuy"> 否</label>
+                <label><input type="radio" name="canBuy" checked> 是</label>
+              </div>
             </div>
 
-            <div class="form-grid">
-              <div class="fld">
-                <label>押金单价 (S$)<span class="req">*</span></label>
-                <div style="display:flex;gap:6px;align-items:center">
-                  <span style="font-size:12px;color:var(--muted)">S$</span>
-                  <input id="depositPrice" value="0.10" type="number" step="0.01" min="0" style="flex:1">
+            <!-- ===== BCRS 新增字段 ===== -->
+            <div class="gd-row" id="bcrsRow">
+              <div class="gd-label"><span class="req">*</span>是否支持 BCRS</div>
+              <div class="gd-ctrl">
+                <div class="gd-bcrs">
+                  <div class="gd-radio" style="padding-top:0">
+                    <label><input type="radio" name="bcrs" onchange="onBcrsRadio(false)"> 否</label>
+                    <label><input type="radio" name="bcrs" id="bcrsEnabled" checked onchange="onBcrsRadio(true)"> 是<span class="gd-bcrs-tag">本期新增 · 仅 SGP</span></label>
+                  </div>
+                  <div id="bcrsZone" style="margin-top:14px">
+                    <div class="gd-row" style="margin-bottom:10px">
+                      <div class="gd-label" style="width:84px"><span class="req">*</span>押金单价</div>
+                      <div class="gd-ctrl" style="max-width:260px;display:flex;align-items:center;gap:6px">
+                        <span style="font-size:12px;color:var(--muted)">S$</span>
+                        <input id="depositPrice" value="0.10" type="number" step="0.01" min="0">
+                      </div>
+                    </div>
+                    <div class="gd-row" style="margin-bottom:0">
+                      <div class="gd-label" style="width:84px">押金预览</div>
+                      <div class="gd-ctrl" style="max-width:420px"><input id="previewLine" value="采购 1 箱 = 24 个 × S$0.10 = S$2.40" disabled></div>
+                    </div>
+                    <div class="formula-line" style="margin-top:12px">
+                      <b>BR-01：</b>BCRS 仅新增 2 字段（是否支持 BCRS + 押金单价）<br>
+                      <b>BR-02：</b>押金数量 = 采购数量(箱) × 包装数量；<b>BR-03：</b>押金金额 = 押金数量 × 押金单价<br>
+                      <b>BR-04：</b>仅 SGP 站点显示
+                    </div>
+                  </div>
                 </div>
-                <span class="hint">NEA 标准默认 S$0.10 / 容器，可按需调整</span>
-              </div>
-              <div class="fld span2">
-                <label>预览：采购 1 箱（箱规 24）时押金</label>
-                <input id="previewLine" value="24 个 × S$0.10 = S$2.40" disabled>
-                <span class="hint">押金数量按瓶级换算；本期不在主数据维护容器类型，押金行统一用「BCRS 押金」虚拟商品</span>
               </div>
             </div>
+            <!-- ===== BCRS 字段结束 ===== -->
 
-            <div class="formula-line" style="margin-top:14px">
-              <b>BR-02 押金计算：</b> 押金行数量 = 主商品采购数量(按箱) × 箱规(boxSize) <br>
-              <b>BR-03 押金行金额：</b> 金额 = 押金行数量 × 货品主数据「押金单价」<br>
-              <b>BR-04 站点开关：</b> 仅 SGP 站点显示 BCRS 字段与押金行（其他站点完全隐藏）
+            <div class="gd-row">
+              <div class="gd-label">货品描述</div>
+              <div class="gd-ctrl"><textarea rows="3" maxlength="500" placeholder="请输入货品描述"></textarea><div class="gd-count">0/500</div></div>
             </div>
-          </div>
+            <div class="gd-row">
+              <div class="gd-label">产地</div>
+              <div class="gd-ctrl"><input placeholder="请输入产地"></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label">品牌</div>
+              <div class="gd-ctrl"><input value="Coca-Cola"></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品图片</div>
+              <div class="gd-ctrl"><div class="gd-img" onclick="toast('选择图片')">+</div></div>
+            </div>
 
-        </div>
-      </div>
-
-      <!-- 变更记录 -->
-      <div class="panel">
-        <div class="panel-head"><div class="panel-title">变更记录</div></div>
-        <div class="panel-body" style="padding:0">
-          <div class="table-wrap" style="border:0">
-            <table>
-              <thead><tr><th>时间</th><th>操作人</th><th>变更内容</th></tr></thead>
-              <tbody>
-                <tr><td>2026-05-20 11:24</td><td>沈亮</td><td>启用「是否支持 BCRS」；押金单价 = S$0.10</td></tr>
-                <tr><td>2026-04-08 14:10</td><td>系统</td><td>SKU 创建</td></tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </div>
-
     </section>
+
+    <div class="gd-foot">
+      <button class="btn" onclick="switchView('goods-list')">取消</button>
+      <button class="btn primary" onclick="saveGoods()">完成建档</button>
+    </div>
   </div>
 
   <!-- ========== 视图 3：采购单新建 ========== -->
@@ -1615,11 +1669,8 @@ function toast(msg, type){
 }
 
 // ===== 货品编辑：开关 =====
-function onBcrsToggle(){
-  const checked=document.getElementById('bcrsEnabled').checked;
-  document.getElementById('bcrsZone').classList.toggle('disabled', !checked);
-  document.getElementById('bcrsStatusTip').className='pill ' + (checked?'green':'gray');
-  document.getElementById('bcrsStatusTip').textContent = checked?'已启用 — 采购该商品时自动追加押金独立行':'未启用 — 采购该商品时不带押金行';
+function onBcrsRadio(enabled){
+  document.getElementById('bcrsZone').style.display = enabled ? '' : 'none';
 }
 function saveGoods(){
   const enabled=document.getElementById('bcrsEnabled').checked;
@@ -1627,24 +1678,22 @@ function saveGoods(){
     const dep=parseFloat(document.getElementById('depositPrice').value);
     if(!dep||dep<=0){return toast('押金单价为 BCRS 支持时必填项，必须 > 0','error');}
   }
-  toast('已保存（含 BCRS 字段）','success');
+  toast('已完成建档（含 BCRS 字段）','success');
 }
 function gotoEdit(sku){switchView('goods-edit');}
 
 // ===== 站点切换 =====
 function switchSite(code){
   const w=document.getElementById('siteSwitch');
+  const bcrsRow=document.getElementById('bcrsRow');
   if(code==='SGP'){
     w.className='site-switch sg';
-    w.querySelector('span').innerHTML='当前站点：<b>新加坡 (SGP)</b> — BCRS 字段对本 SKU 可见且可编辑';
-    document.querySelectorAll('.view#goods-edit .panel').forEach(p=>p.style.display='');
+    w.querySelector('span').innerHTML='当前站点：<b>新加坡 (SGP)</b> — BCRS 字段可见且可编辑';
+    if(bcrsRow) bcrsRow.style.display='';
   } else {
     w.className='site-switch';
     w.querySelector('span').innerHTML=`当前站点：<b>${code}</b> — BCRS 字段已隐藏（BR-04）`;
-    document.querySelectorAll('.view#goods-edit .panel').forEach(p=>{
-      const t=p.querySelector('.panel-title');
-      if(t&&t.textContent.indexOf('BCRS 押金信息')>-1) p.style.display='none';
-    });
+    if(bcrsRow) bcrsRow.style.display='none';
   }
 }
 
