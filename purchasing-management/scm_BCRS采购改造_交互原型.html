@@ -127,6 +127,33 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 .stats .stat-item{font-size:12px;color:var(--muted);white-space:nowrap}
 .stats .stat-item .value{color:var(--ink);font-weight:700;font-family:Menlo,Consolas,monospace;margin-left:4px}
 .stats .stat-item.dep .value{color:var(--green)}
+/* 结算单详情：基础信息 label:value（还原系统 el-descriptions） */
+.info-block{margin-bottom:18px}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 28px}
+.info-item{display:flex;align-items:flex-start;gap:8px;font-size:13px}
+.info-item .lbl{color:var(--muted);white-space:nowrap;min-width:96px;text-align:right;padding-top:6px}
+.info-item .val{color:var(--ink);flex:1;background:#f8fafc;border:1px solid var(--line-2);border-radius:4px;padding:6px 10px;min-height:32px;word-break:break-all}
+.info-sep{height:1px;background:var(--line-2);margin:18px 0}
+/* 进度条 stepper */
+.stepper{display:flex;align-items:flex-start;padding:20px 8px 8px}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.step:not(:last-child):after{content:"";position:absolute;top:13px;left:50%;width:100%;height:2px;background:var(--line)}
+.step.done:not(:last-child):after{background:var(--green)}
+.step .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;z-index:1}
+.step.done .dot{background:var(--green);border-color:var(--green);color:#fff}
+.step.active .dot{border-color:var(--ink);color:var(--ink)}
+.step .step-t{margin-top:8px;font-size:13px;color:var(--ink);font-weight:600;text-align:center}
+.step.done .step-t{color:var(--green)}
+.step .step-d{font-size:11px;color:var(--muted);margin-top:3px}
+/* 开票信息 边框网格 */
+.bill-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.bill-cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 16px;min-height:70px}
+.bill-cell .bc-title{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.bill-cell .bc-kv{display:flex;justify-content:space-between;gap:16px;font-size:12px;line-height:2}
+.bill-cell .bc-kv .v{font-family:Menlo,Consolas,monospace;color:var(--ink);font-weight:600;white-space:nowrap}
+.bill-cell .big{font-size:18px;font-weight:700;font-family:Menlo,Consolas,monospace;color:var(--ink)}
+.bill-cell.dep{background:#f5fbf8}
+.bill-cell.dep .bc-kv.dep-kv .v{color:var(--green)}
 
 /* summary */
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 18px;background:#fafbfc;border-top:1px solid var(--line)}
@@ -974,64 +1001,152 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     <section class="hero">
       <div class="hero-top">
         <div>
-          <div class="title">结算单详情 — 开票信息</div>
-          <div class="subtitle">金额汇总字段严格对齐系统 settlement/detail.vue。BCRS 押金作为「包装物总额」计入采购单据总额与结算金额总计；关联 PO 含 BCRS 时明确标识其中押金金额。</div>
+          <div class="title">结算单据详情</div>
+          <div class="subtitle">布局 100% 还原系统结算单据详情页。BCRS 押金作为「包装物总额 / 包装物应开收据总金额」体现，并计入采购单据总额与结算金额总计。</div>
         </div>
         <div class="hero-actions">
-          <span class="pill green" style="height:28px">含 BCRS 货品</span>
+          <button class="btn" onclick="switchView('settle')">返回</button>
           <button class="btn" onclick="toast('已导出','success')">导出</button>
+          <button class="btn" onclick="toast('已打印','success')">打印</button>
+          <button class="btn danger">作废</button>
+          <button class="btn">对账操作 ▾</button>
+          <button class="btn primary">发票审核 ▾</button>
         </div>
       </div>
     </section>
 
     <section class="workspace">
 
+      <!-- 内容 tab（还原系统：基础信息/单据信息/票据管理/操作记录）-->
+      <div class="tabs" style="display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px">
+        <div style="padding:10px 16px;color:var(--green);border-bottom:2px solid var(--green);font-weight:600">基础信息</div>
+        <div style="padding:10px 16px;color:var(--muted)">单据信息</div>
+        <div style="padding:10px 16px;color:var(--muted)">票据管理</div>
+        <div style="padding:10px 16px;color:var(--muted)">操作记录</div>
+      </div>
+
+      <!-- 基本信息 -->
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">基本信息</div></div>
+        <div class="panel-head"><div class="panel-title">基本信息</div><span class="pill green">含 BCRS 货品</span></div>
         <div class="panel-body">
-          <div class="form-grid">
-            <div class="fld"><label>结算单号</label><input value="ST-SGP-20260522-0007" disabled></div>
-            <div class="fld"><label>关联采购单</label><input value="PO-SGP-20260520-0142" disabled></div>
-            <div class="fld"><label>供应商</label><input value="Coca-Cola Singapore Pte Ltd" disabled></div>
-            <div class="fld"><label>结算总金额</label><input value="S$2,201.00（含 BCRS 押金）" disabled></div>
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">结款单号：</span><span class="val">FS2026052100021</span></div>
+            <div class="info-item"><span class="lbl">总应付金额：</span><span class="val">2,201.00</span></div>
+            <div class="info-item"><span class="lbl">结算币种：</span><span class="val">SGD</span></div>
+            <div class="info-item"><span class="lbl">结款单状态：</span><span class="val">正常</span></div>
+            <div class="info-item"><span class="lbl">对账单状态：</span><span class="val">对账通过</span></div>
+            <div class="info-item"><span class="lbl">收付款状态：</span><span class="val">待付款</span></div>
+            <div class="info-item"><span class="lbl">发票状态：</span><span class="val">待审核</span></div>
+            <div class="info-item"><span class="lbl">收据状态：</span><span class="val">审核通过</span></div>
+            <div class="info-item"><span class="lbl">发票驳回原因：</span><span class="val">—</span></div>
+            <div class="info-item"><span class="lbl">统计区间：</span><span class="val">2026-05-20~2026-05-20</span></div>
+            <div class="info-item"><span class="lbl">财务内部备注：</span><span class="val">&nbsp;</span></div>
+          </div>
+          <div class="info-sep"></div>
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">供应商编号：</span><span class="val">S2025091500001</span></div>
+            <div class="info-item"><span class="lbl">供应商名称：</span><span class="val">Coca-Cola Singapore Pte Ltd</span></div>
+            <div class="info-item"><span class="lbl">结算主体：</span><span class="val">10X AI TECHNOLOGY PTE. LTD.</span></div>
+            <div class="info-item"><span class="lbl">结算方式：</span><span class="val">月结</span></div>
+            <div class="info-item"><span class="lbl">开户银行：</span><span class="val">HLBB</span></div>
+            <div class="info-item"><span class="lbl">供应商支行：</span><span class="val">HONG LEONG BANK BERHAD</span></div>
+            <div class="info-item"><span class="lbl">账户名称：</span><span class="val">hello world</span></div>
+            <div class="info-item"><span class="lbl">银行账号：</span><span class="val">9000900000</span></div>
+            <div class="info-item"><span class="lbl">SWIFT 代码：</span><span class="val">HLBBMYKLXXX</span></div>
           </div>
         </div>
       </div>
 
+      <!-- 进度条 -->
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">开票信息 — 金额汇总</div><span class="muted">字段对齐 settlement/detail.vue</span></div>
-        <div class="panel-body" style="padding:0">
-          <div class="table-wrap" style="border:0;border-radius:0">
-            <table style="min-width:1100px">
-              <thead><tr><th style="min-width:240px">金额项</th><th class="num">含税</th><th class="num">未税</th><th>说明</th></tr></thead>
-              <tbody>
-                <tr><td><b>采购单据总额</b></td><td class="num">2,201.00</td><td class="num">2,020.19</td><td class="muted">含商品 + 包装物</td></tr>
-                <tr><td>· 商品总额</td><td class="num">2,009.00</td><td class="num">1,843.12</td><td>—</td></tr>
-                <tr class="bcrs-row" id="settleBcrsRow"><td><span class="linked-tag">· 包装物总额（其中 BCRS 押金）</span></td><td class="num">192.00</td><td class="num">192.00</td><td><span class="auto-tag">押金不计 GST</span></td></tr>
-                <tr><td><b>退供单据总额</b></td><td class="num">0.00</td><td class="num">0.00</td><td class="muted">含商品 + 包装物</td></tr>
-                <tr><td>· 商品总额</td><td class="num">0.00</td><td class="num">0.00</td><td>—</td></tr>
-                <tr><td>· 包装物总额（BCRS 押金返还）</td><td class="num">0.00</td><td class="num">0.00</td><td>—</td></tr>
-                <tr><td>调整单-固定扣点总额(票扣)</td><td class="num">0.00</td><td class="num">0.00</td><td>—</td></tr>
-                <tr><td>调整单-违约金(收据)</td><td class="num">0.00</td><td class="num">0.00</td><td>—</td></tr>
-                <tr><td>调整单-尾差调整总额(票扣)</td><td class="num">0.00</td><td class="num">0.00</td><td>—</td></tr>
-              </tbody>
-            </table>
+        <div class="panel-body">
+          <div class="stepper">
+            <div class="step done"><div class="dot">✓</div><div class="step-t">创建结算单</div><div class="step-d">2026-05-21 14:27:16</div></div>
+            <div class="step done"><div class="dot">✓</div><div class="step-t">小满&供应商对账</div><div class="step-d">2026-05-21 14:27:21</div></div>
+            <div class="step done"><div class="dot">✓</div><div class="step-t">供应商上传发票</div><div class="step-d">2026-05-21 14:27:21</div></div>
+            <div class="step active"><div class="dot">4</div><div class="step-t">发票审核</div><div class="step-d">—</div></div>
+            <div class="step"><div class="dot">5</div><div class="step-t">付款完成</div><div class="step-d">—</div></div>
           </div>
-          <div class="summary" style="grid-template-columns:repeat(4,1fr)">
-            <div class="summary-card green" id="settleTotalCard"><div class="k">结算金额总计</div><div class="v">S$2,201.00</div></div>
-            <div class="summary-card"><div class="k">已预付金额总计</div><div class="v">S$0.00</div></div>
-            <div class="summary-card"><div class="k">资金余额抵扣</div><div class="v">S$0.00</div></div>
-            <div class="summary-card amber"><div class="k">应付金额总计</div><div class="v">S$2,201.00</div></div>
-          </div>
-          <div class="summary" style="grid-template-columns:repeat(4,1fr)">
-            <div class="summary-card"><div class="k">供应商应开票金额</div><div class="v">S$2,201.00</div></div>
-            <div class="summary-card"><div class="k">供应商实际开票金额</div><div class="v">S$0.00</div></div>
-            <div class="summary-card"><div class="k">应开票与实际开票差异</div><div class="v">S$2,201.00</div></div>
-            <div class="summary-card green"><div class="k">包装物应开收据总金额</div><div class="v">S$192.00</div></div>
+        </div>
+      </div>
+
+      <!-- 开票信息 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">开票信息</div><span class="muted">字段与布局对齐 settlement/detail.vue</span></div>
+        <div class="panel-body" style="padding:14px">
+          <div class="bill-grid">
+            <!-- Row1 -->
+            <div class="bill-cell">
+              <div class="bc-title">采购单据总额</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">2,201.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">2,020.19</span></div>
+              <div class="bc-kv"><span>商品总额(含税)：</span><span class="v">2,009.00</span></div>
+              <div class="bc-kv"><span>商品总额(未税)：</span><span class="v">1,843.12</span></div>
+              <div class="bc-kv dep-kv"><span>包装物总额：</span><span class="v">192.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">退供单据总额</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>商品总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>商品总额(未税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>包装物总额：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">调整单-固定扣点总额(票扣)</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">调整单-违约金(收据)</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+            </div>
+            <!-- Row2 -->
+            <div class="bill-cell">
+              <div class="bc-title">调整单-尾差调整总额(票扣)</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">结算金额总计</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">已预付金额总计</div>
+              <div class="big">0.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">资金余额抵扣</div>
+              <div class="big">0.00</div>
+            </div>
+            <!-- Row3 -->
+            <div class="bill-cell">
+              <div class="bc-title">应付金额总计</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">供应商应开票金额</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">供应商实际开票金额</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">供应商实际开票与应开票金额差异</div>
+              <div class="big">0.00</div>
+            </div>
+            <!-- Row4 -->
+            <div class="bill-cell dep" style="grid-column:1/-1">
+              <div class="bc-title">包装物应开收据总金额（BCRS 押金）</div>
+              <div class="big" style="color:var(--green)">192.00</div>
+            </div>
           </div>
           <div class="formula-line" style="margin-top:14px">
-            <b>BR-19：</b>包装物总额 = 关联 PO 的 BCRS 押金合计（S$192.00），计入采购单据总额与结算金额总计<br>
-            <b>BR-20：</b>关联 PO 任一商品含 BCRS 标识 → 本页展示「包装物总额（BCRS 押金）」与「包装物应开收据总金额」，否则该两项为 0 且可隐藏
+            <b>BR-19：</b>BCRS 押金计入「包装物总额」（采购单据总额块）→ 计入结算金额总计与应付金额总计；复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code> 字段<br>
+            <b>BR-20：</b>关联 PO 任一商品含 BCRS 标识 → 「包装物总额」「包装物应开收据总金额」显示押金；否则为 0<br>
+            <b>BR-21：</b>BCRS 押金不计 GST（含税额 = 未税额）
           </div>
         </div>
       </div>
