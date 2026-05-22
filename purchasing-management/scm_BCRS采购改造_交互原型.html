@@ -115,6 +115,18 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 
 /* SKU table inline switch */
 .list-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+/* 采购明细 card-stats（对齐系统 order-create.vue）*/
+.detail-head{height:auto;min-height:46px;padding:10px 14px;align-items:center;flex-wrap:wrap;gap:10px}
+.card-stats{display:inline-flex;gap:18px;margin-left:18px;flex-wrap:wrap;align-items:center}
+.card-stats .stat-item{font-size:12px;color:var(--muted);white-space:nowrap}
+.card-stats .stat-item .value{color:var(--ink);font-weight:700;font-family:Menlo,Consolas,monospace;margin-left:4px}
+.card-stats .stat-item.dep .value{color:var(--green)}
+.card-header-buttons{display:flex;gap:8px;flex-wrap:wrap}
+/* 详情/退供 商品tab 表格上方 stats 横排（对齐系统 .stats）*/
+.stats{display:flex;gap:24px;flex-wrap:wrap;padding:12px 14px;background:#fafbfc;border-bottom:1px solid var(--line-2)}
+.stats .stat-item{font-size:12px;color:var(--muted);white-space:nowrap}
+.stats .stat-item .value{color:var(--ink);font-weight:700;font-family:Menlo,Consolas,monospace;margin-left:4px}
+.stats .stat-item.dep .value{color:var(--green)}
 
 /* summary */
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 18px;background:#fafbfc;border-top:1px solid var(--line)}
@@ -418,11 +430,24 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         </div>
       </div>
 
-      <!-- 商品列表 -->
+      <!-- 采购明细（结构对齐系统：标题 + card-stats 横排 + 右侧按钮组，底部无汇总卡片） -->
       <div class="panel">
-        <div class="panel-head">
-          <div class="panel-title">商品列表</div>
-          <button class="btn small primary" id="btnAddSku" onclick="openSkuPicker()">+ 添加商品</button>
+        <div class="panel-head detail-head">
+          <div style="display:flex;align-items:center;flex-wrap:wrap">
+            <div class="panel-title">采购明细</div>
+            <div class="card-stats">
+              <span class="stat-item">含税商品金额：<span class="value" id="sumGoods">S$2,009.00</span></span>
+              <span class="stat-item">未税商品金额：<span class="value" id="sumGoodsEx">S$1,843.12</span></span>
+              <span class="stat-item dep">包装物金额：<span class="value" id="sumDeposit">S$192.00</span></span>
+            </div>
+          </div>
+          <div class="card-header-buttons">
+            <button class="btn small" onclick="toast('新增包装物（演示）')">新增包装物</button>
+            <button class="btn small primary" id="btnAddSku" onclick="openSkuPicker()">新增商品</button>
+            <button class="btn small primary" onclick="openSkuPicker()">批量新增商品</button>
+            <button class="btn small" onclick="toast('已导出并存为草稿','success')">导出采购商品</button>
+            <button class="btn small" onclick="toast('导入将替换现有商品','warn')">导入采购商品</button>
+          </div>
         </div>
         <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-create.vue（含税定价口径）。BCRS 押金作为「包装物」类型独立行（materialType≠0），不增加列。横向可滚动查看全部 18 列。</div>
         <div class="table-wrap" style="border-radius:0;border:0">
@@ -559,13 +584,6 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           </table>
         </div>
 
-        <!-- 汇总 -->
-        <div class="summary" id="summary">
-          <div class="summary-card"><div class="k">含税商品金额</div><div class="v" id="sumGoods">S$2,009.00</div></div>
-          <div class="summary-card"><div class="k">未税商品金额</div><div class="v" id="sumGoodsEx">S$1,843.12</div></div>
-          <div class="summary-card green"><div class="k">包装物金额（BCRS 押金）</div><div class="v" id="sumDeposit">S$192.00</div></div>
-          <div class="summary-card"><div class="k">应付总额（含税商品+包装物）</div><div class="v" id="sumTotal">S$2,201.00</div></div>
-        </div>
       </div>
 
       <!-- 联动说明 -->
@@ -624,6 +642,13 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 
       <div class="panel">
         <div class="panel-head"><div class="panel-title">商品明细</div><span class="pill gray">5 行 · 含 2 行 BCRS 押金</span></div>
+        <div class="stats">
+          <span class="stat-item">商品数：<span class="value">3</span></span>
+          <span class="stat-item">包装物数：<span class="value">2</span></span>
+          <span class="stat-item">商品总金额(含税)：<span class="value">S$2,009.00</span></span>
+          <span class="stat-item dep">包装物总金额(含税)：<span class="value" id="detailSumDeposit">S$192.00</span></span>
+          <span class="stat-item">采购总金额(含税)：<span class="value">S$2,201.00</span></span>
+        </div>
         <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-detail.vue（21 列，只读）。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
           <table style="min-width:2560px">
@@ -732,12 +757,6 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           </table>
         </div>
 
-        <div class="summary">
-          <div class="summary-card"><div class="k">商品行数</div><div class="v">3</div></div>
-          <div class="summary-card" id="detailSumGoods"><div class="k">商品金额（进存货）</div><div class="v">S$2,009.00</div></div>
-          <div class="summary-card green" id="detailSumDeposit"><div class="k">BCRS 押金（应付押金）</div><div class="v">S$192.00</div></div>
-          <div class="summary-card"><div class="k">应付总额</div><div class="v">S$2,201.00</div></div>
-        </div>
       </div>
 
       <div class="panel">
@@ -791,6 +810,12 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-head">
           <div class="panel-title">退货明细</div>
           <span class="pill gray">3 行 · 含 1 行 BCRS 押金返还</span>
+        </div>
+        <div class="stats">
+          <span class="stat-item">商品数：<span class="value">2</span></span>
+          <span class="stat-item">商品总金额：<span class="value">S$156.50</span></span>
+          <span class="stat-item dep">包装物数：<span class="value">1</span></span>
+          <span class="stat-item dep">包装物金额：<span class="value">S$12.00</span></span>
         </div>
         <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 reject-detail.vue（11 列）。BCRS 押金返还为「包装物」类型独立行。横向可滚动查看全部列。</div>
         <div class="table-wrap" style="border:0;border-radius:0">
@@ -855,12 +880,6 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           </table>
         </div>
 
-        <div class="summary">
-          <div class="summary-card"><div class="k">商品数</div><div class="v">2</div></div>
-          <div class="summary-card"><div class="k">商品总金额（退货）</div><div class="v">S$156.50</div></div>
-          <div class="summary-card green"><div class="k">包装物数（BCRS 押金）</div><div class="v">1</div></div>
-          <div class="summary-card green"><div class="k">包装物金额（押金返还）</div><div class="v">S$12.00</div></div>
-        </div>
       </div>
 
       <div class="panel">
@@ -1258,7 +1277,6 @@ function refreshSummary(){
   document.getElementById('sumGoods').textContent='S$'+goods.toFixed(2);
   document.getElementById('sumGoodsEx').textContent='S$'+goodsEx.toFixed(2);
   document.getElementById('sumDeposit').textContent='S$'+deposit.toFixed(2);
-  document.getElementById('sumTotal').textContent='S$'+(goods+deposit).toFixed(2);
 }
 function removeRow(rowId){
   const main=document.querySelector(`tr[data-row="${rowId}"]`);
