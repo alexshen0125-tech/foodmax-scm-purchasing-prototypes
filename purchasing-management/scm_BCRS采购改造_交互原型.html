@@ -218,6 +218,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     <button data-view="settle"><span class="dot"></span>结算单<br>详情</button>
     <button data-view="vms-po"><span class="dot"></span>VMS<br>采购单</button>
     <button data-view="vms-refund"><span class="dot"></span>VMS<br>退货单</button>
+    <button data-view="vms-invoice"><span class="dot"></span>VMS<br>上传发票</button>
+    <button data-view="vms-settle"><span class="dot"></span>VMS<br>结算单</button>
     <button data-view="rules"><span class="dot"></span>规则<br>验收</button>
   </aside>
 
@@ -1326,7 +1328,121 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     </section>
   </div>
 
-  <!-- ========== 视图 10：业务规则 ========== -->
+  <!-- ========== 视图 10：VMS 上传发票（供应商端）========== -->
+  <div class="view" id="vms-invoice">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 上传发票（供应商端）</div>
+          <div class="subtitle">字段对齐系统 VMS bill/settlement/dialogs/create-invoice.vue。供应商上传发票时，关联采购单含 BCRS 则展示「押金金额」，应开票金额含押金。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('OCR 识别中','success')">OCR 识别</button>
+          <button class="btn primary" onclick="toast('发票已上传 ✓','success')">提交</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">应开票金额（系统计算）</div><span class="pill green">关联 PO 含 BCRS</span></div>
+        <div class="panel-body" style="padding:14px">
+          <div class="bill-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="bill-cell"><div class="bc-title">商品总额(含税)</div><div class="big">2,009.00</div></div>
+            <div class="bill-cell dep"><div class="bc-title">押金金额</div><div class="big" style="color:var(--green)">192.00</div></div>
+            <div class="bill-cell"><div class="bc-title">应开票金额</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">已开票金额</div><div class="big" style="color:var(--amber)">0.00</div></div>
+          </div>
+          <div class="formula-line" style="margin-top:14px"><b>应开票金额 = 商品总额(含税) + 押金金额</b> = 2,009.00 + 192.00 = <b>S$2,201.00</b>（BR-18）</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">发票信息</div><span class="muted">字段对齐 VMS create-invoice.vue</span></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>发票号码<span class="req">*</span></label><input placeholder="请输入发票号码"></div>
+            <div class="fld"><label>发票类型<span class="req">*</span></label><select><option>增值税专用发票</option><option>普通发票</option></select></div>
+            <div class="fld"><label>开票日期<span class="req">*</span></label><input type="date" value="2026-05-22"></div>
+            <div class="fld"><label>商品一级分类<span class="req">*</span></label><select><option>饮料</option></select></div>
+            <div class="fld"><label>发票税额<span class="req">*</span></label><input type="number" value="180.81" step="0.01"></div>
+            <div class="fld"><label>发票不含税金额<span class="req">*</span></label><input type="number" value="2020.19" step="0.01"></div>
+            <div class="fld"><label>发票含税金额<span class="req">*</span></label><input type="number" value="2201.00" step="0.01"></div>
+            <div class="fld"><label>发票币种</label><select><option>SGD</option></select></div>
+            <div class="fld"><label>开票人名称</label><input value="Coca-Cola Singapore Pte Ltd"></div>
+            <div class="fld"><label>供应商税号</label><input value="NEA-BCRS-SG-002214"></div>
+            <div class="fld"><label>税率</label><input value="9%" disabled></div>
+            <div class="fld span2"><label>押金金额<span class="auto-tag">系统带入 · 含在发票含税金额内</span></label><input value="S$192.00（押金不计 GST）" disabled style="background:var(--mint);color:var(--green)"></div>
+          </div>
+          <div class="formula-line" style="margin-top:6px">BR-18：发票含税金额须 ≥ 应开票金额（含押金 S$192.00），否则提示金额不足</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 11：VMS 结算单详情（供应商端）========== -->
+  <div class="view" id="vms-settle">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 结算单详情（供应商端）</div>
+          <div class="subtitle">字段对齐系统 VMS bill/settlement/settlement-detail-tabs/base-info.vue。供应商视角金额汇总，BCRS 押金以「押金金额 / 押金应开收据总金额」展示，计入单据总金额与结算金额总计。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('已导出','success')">导出</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">基本信息</div></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">结算单号：</span><span class="val">FS2026052100021</span></div>
+            <div class="info-item"><span class="lbl">结算方式：</span><span class="val">月结</span></div>
+            <div class="info-item"><span class="lbl">结算主体：</span><span class="val">10X AI TECHNOLOGY PTE. LTD.</span></div>
+            <div class="info-item"><span class="lbl">发票状态：</span><span class="val">待审核</span></div>
+            <div class="info-item"><span class="lbl">收据状态：</span><span class="val">审核通过</span></div>
+            <div class="info-item"><span class="lbl">折让金额：</span><span class="val">0.00</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">开票信息 — 金额汇总</div><span class="muted">字段对齐 VMS base-info.vue</span></div>
+        <div class="panel-body" style="padding:14px">
+          <div class="bill-grid">
+            <div class="bill-cell">
+              <div class="bc-title">单据总金额</div>
+              <div class="bc-kv"><span>总金额：</span><span class="v">2,201.00</span></div>
+              <div class="bc-kv"><span>商品总额：</span><span class="v">2,009.00</span></div>
+              <div class="bc-kv dep-kv"><span>押金金额：</span><span class="v">192.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">退货单据总金额</div>
+              <div class="bc-kv"><span>总金额：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>商品总额：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>押金金额：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell"><div class="bc-title">调整单固定扣点总金额</div><div class="big">0.00</div></div>
+            <div class="bill-cell"><div class="bc-title">调整单罚款总金额</div><div class="big">0.00</div></div>
+            <div class="bill-cell"><div class="bc-title">调整单-尾差调整总额(票扣)</div><div class="big">0.00</div></div>
+            <div class="bill-cell"><div class="bc-title">结算金额总计</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">应付金额总计</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell dep"><div class="bc-title">押金应开收据总金额</div><div class="big" style="color:var(--green)">192.00</div></div>
+            <div class="bill-cell"><div class="bc-title">应开票金额</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">实际开票金额</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">实际开票与应开票差异金额</div><div class="big">0.00</div></div>
+          </div>
+          <div class="formula-line" style="margin-top:14px">
+            <b>BR-19：</b>押金金额计入「单据总金额」→ 结算金额总计 / 应付金额总计；底层复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code> 字段<br>
+            <b>BR-24：</b>VMS（供应商端）与 SCM（采购员端）的结算押金金额同源一致
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 12：业务规则 ========== -->
   <div class="view" id="rules">
     <section class="hero">
       <div class="hero-top">
@@ -1389,7 +1505,9 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-body">
           <div class="rule-row"><code>BR-22</code><div><b>VMS 采购单展示</b>：供应商端采购单详情（purchase-detail.vue）中，BCRS 押金作为「押金」类型独立行展示（商品类型列=押金）；订单金额(含税/未税)包含押金</div></div>
           <div class="rule-row"><code>BR-23</code><div><b>VMS 退货单展示</b>：供应商端退货单详情（refund-detail.vue）中，BCRS 押金返还作为「押金」类型独立行展示（退货类型列=押金）；退货金额(含税/未税)包含押金返还</div></div>
-          <div class="rule-row"><code>BR-24</code><div><b>SCM/VMS 数据一致</b>：同一采购单/退货单在 SCM（采购员端）与 VMS（供应商端）展示的 BCRS 押金行、数量、金额必须一致（同源数据）</div></div>
+          <div class="rule-row"><code>BR-24</code><div><b>SCM/VMS 数据一致</b>：同一采购单/退货单/结算单在 SCM（采购员端）与 VMS（供应商端）展示的 BCRS 押金行、数量、金额必须一致（同源数据）</div></div>
+          <div class="rule-row"><code>BR-25</code><div><b>VMS 上传发票</b>：供应商端上传发票（create-invoice.vue）时，关联 PO 含 BCRS 则展示「押金金额」，应开票金额 = 商品总额(含税) + 押金金额；发票含税金额须 ≥ 应开票金额</div></div>
+          <div class="rule-row"><code>BR-26</code><div><b>VMS 结算单展示</b>：供应商端结算单详情（base-info.vue）的开票信息中，押金以「押金金额 / 押金应开收据总金额」展示，计入单据总金额→结算金额总计→应付金额总计（底层复用 purchaseOrderPackageTotalAmount 字段）</div></div>
         </div>
       </div>
 
@@ -1413,6 +1531,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           <div class="rule-row ac"><code>AC-15</code><div><b>正向 · 无 BCRS 不展示</b><br>Given 关联 PO 无任何 BCRS 商品<br>When 进入上传发票 / 结算单详情<br>Then 不展示 BCRS 押金字段，押金相关金额为 0</div></div>
           <div class="rule-row ac"><code>AC-16</code><div><b>正向 · VMS 采购单展示押金</b><br>Given 供应商登录 VMS / 采购单 PO-SGP-0142 含 2 个 BCRS 商品<br>When 打开 VMS 采购单详情<br>Then 商品明细出现「押金」类型独立行（数量 1200/720 个），订单金额(含税)含押金；与 SCM 端数据一致</div></div>
           <div class="rule-row ac"><code>AC-17</code><div><b>正向 · VMS 退货单展示押金</b><br>Given 供应商登录 VMS / 退货单含 BCRS 商品退 5 箱<br>When 打开 VMS 退货单详情<br>Then 退货明细出现「押金」类型返还独立行（数量 120 个，退货金额 12.00），退货金额含押金返还</div></div>
+          <div class="rule-row ac"><code>AC-18</code><div><b>正向 · VMS 上传发票含押金</b><br>Given 供应商登录 VMS / 关联 PO 含 BCRS（押金 S$192.00）<br>When 进入 VMS 上传发票页<br>Then 展示「押金金额 S$192.00」，应开票金额=商品 2,009.00 + 押金 192.00=S$2,201.00；发票含税金额须 ≥ 2,201.00</div></div>
+          <div class="rule-row ac"><code>AC-19</code><div><b>正向 · VMS 结算单展示押金</b><br>Given 供应商登录 VMS / 结算单含 BCRS<br>When 打开 VMS 结算单详情开票信息<br>Then「单据总金额」含押金金额 S$192.00；结算金额总计/应付金额总计/押金应开收据总金额 均含该押金；与 SCM 端数据一致</div></div>
         </div>
       </div>
 
