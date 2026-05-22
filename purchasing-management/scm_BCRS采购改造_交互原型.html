@@ -472,8 +472,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td><button class="btn small danger" onclick="removeRow(1)">删除</button></td>
               </tr>
               <tr class="bcrs-row" id="depRow1" data-row="1-dep" data-parent="1">
-                <td>包装物·BCRS押金</td>
-                <td><b>DEP-BCRS</b></td>
+                <td>包装物</td>
+                <td class="muted">系统生成</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 自动追加 <span class="auto-tag">系统</span></div></td>
                 <td class="num">--</td>
                 <td>--</td>
@@ -514,8 +514,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td><button class="btn small danger" onclick="removeRow(2)">删除</button></td>
               </tr>
               <tr class="bcrs-row" data-row="2-dep" data-parent="2">
-                <td>包装物·BCRS押金</td>
-                <td><b>DEP-BCRS</b></td>
+                <td>包装物</td>
+                <td class="muted">系统生成</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 自动追加 <span class="auto-tag">系统</span></div></td>
                 <td class="num">--</td>
                 <td>--</td>
@@ -561,10 +561,10 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 
         <!-- 汇总 -->
         <div class="summary" id="summary">
-          <div class="summary-card"><div class="k">商品行数</div><div class="v">3</div></div>
-          <div class="summary-card"><div class="k">商品金额</div><div class="v" id="sumGoods">S$2,009.00</div></div>
-          <div class="summary-card green"><div class="k">BCRS 押金合计</div><div class="v" id="sumDeposit">S$192.00</div></div>
-          <div class="summary-card"><div class="k">应付总额</div><div class="v" id="sumTotal">S$2,201.00</div></div>
+          <div class="summary-card"><div class="k">含税商品金额</div><div class="v" id="sumGoods">S$2,009.00</div></div>
+          <div class="summary-card"><div class="k">未税商品金额</div><div class="v" id="sumGoodsEx">S$1,843.12</div></div>
+          <div class="summary-card green"><div class="k">包装物金额（BCRS 押金）</div><div class="v" id="sumDeposit">S$192.00</div></div>
+          <div class="summary-card"><div class="k">应付总额（含税商品+包装物）</div><div class="v" id="sumTotal">S$2,201.00</div></div>
         </div>
       </div>
 
@@ -669,11 +669,11 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>24 瓶/箱</td><td>—</td>
               </tr>
               <tr class="bcrs-row" id="detailDepRow1">
-                <td id="detailDepPill1">包装物·BCRS押金</td>
+                <td id="detailDepPill1">包装物</td>
                 <td>--</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
                 <td class="num">--</td><td>--</td><td>--</td>
-                <td><b>DEP-BCRS</b></td>
+                <td class="muted">系统生成</td>
                 <td>BCRS 押金</td>
                 <td>0%</td><td>--</td>
                 <td class="num">0.10/个</td><td class="num">0.10/个</td>
@@ -699,11 +699,11 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>24 罐/箱</td><td>—</td>
               </tr>
               <tr class="bcrs-row">
-                <td>包装物·BCRS押金</td>
+                <td>包装物</td>
                 <td>--</td>
                 <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
                 <td class="num">--</td><td>--</td><td>--</td>
-                <td><b>DEP-BCRS</b></td>
+                <td class="muted">系统生成</td>
                 <td>BCRS 押金</td>
                 <td>0%</td><td>--</td>
                 <td class="num">0.10/个</td><td class="num">0.10/个</td>
@@ -825,8 +825,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <td>—</td>
               </tr>
               <tr class="bcrs-row" id="rejDepRow1" data-row="r1-dep" data-parent="r1">
-                <td>包装物·BCRS押金</td>
-                <td><b>DEP-BCRS</b></td>
+                <td>包装物</td>
+                <td class="muted">系统生成</td>
                 <td><span class="linked-tag">BCRS 押金返还</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
                 <td>--</td>
                 <td>--</td>
@@ -1244,18 +1244,19 @@ function recalcRow(rowId){
   refreshSummary();
 }
 function refreshSummary(){
-  let goods=0, deposit=0, count=0;
+  let goods=0, goodsEx=0, deposit=0;          // 含税商品 / 未税商品 / 包装物(押金)
   document.querySelectorAll('#poRows tr:not(.bcrs-row)').forEach(r=>{
-    count++;
-    const amt=r.querySelector('td:nth-child(12)');
+    const amt=r.querySelector('td:nth-child(12)');     // 采购金额(含税)
+    const amtEx=r.querySelector('td:nth-child(13)');    // 采购金额(未税)
     if(amt) goods+=parseFloat(amt.textContent.replace(/,/g,''))||0;
+    if(amtEx) goodsEx+=parseFloat(amtEx.textContent.replace(/,/g,''))||0;
   });
   document.querySelectorAll('#poRows tr.bcrs-row').forEach(r=>{
     const amt=r.querySelector('td:nth-child(12)');
     if(amt) deposit+=parseFloat(amt.textContent.replace(/,/g,''))||0;
   });
-  document.querySelector('#summary .summary-card:nth-child(1) .v').textContent=count;
   document.getElementById('sumGoods').textContent='S$'+goods.toFixed(2);
+  document.getElementById('sumGoodsEx').textContent='S$'+goodsEx.toFixed(2);
   document.getElementById('sumDeposit').textContent='S$'+deposit.toFixed(2);
   document.getElementById('sumTotal').textContent='S$'+(goods+deposit).toFixed(2);
 }
@@ -1326,8 +1327,8 @@ function addSku(sku,name,isBcrs,boxSize,deposit,boxLabel,price,category){
     const dq=qty*boxSize;
     const da=(dq*deposit).toFixed(2);
     html += `<tr class="bcrs-row" data-row="${rowId}-dep" data-parent="${rowId}">
-      <td>包装物·BCRS押金</td>
-      <td><b>DEP-BCRS</b></td>
+      <td>包装物</td>
+      <td class="muted">系统生成</td>
       <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 ${sku} · ${qty} 箱 × ${boxSize} 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
       <td class="num">--</td><td>--</td><td>--</td><td class="num">--</td><td class="num">--</td>
       <td class="num"><input type="number" class="input-num" value="${deposit.toFixed(2)}" disabled>/个</td>
