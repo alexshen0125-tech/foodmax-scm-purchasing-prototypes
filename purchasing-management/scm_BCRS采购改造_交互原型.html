@@ -216,6 +216,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     <button data-view="reject"><span class="dot"></span>退供单<br>BCRS</button>
     <button data-view="invoice"><span class="dot"></span>上传<br>发票</button>
     <button data-view="settle"><span class="dot"></span>结算单<br>详情</button>
+    <button data-view="vms-po"><span class="dot"></span>VMS<br>采购单</button>
+    <button data-view="vms-refund"><span class="dot"></span>VMS<br>退货单</button>
     <button data-view="rules"><span class="dot"></span>规则<br>验收</button>
   </aside>
 
@@ -1154,7 +1156,171 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
     </section>
   </div>
 
-  <!-- ========== 视图 8：业务规则 ========== -->
+  <!-- ========== 视图 8：VMS 采购单详情（供应商端）========== -->
+  <div class="view" id="vms-po">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 采购单详情（供应商端）</div>
+          <div class="subtitle">字段严格对齐系统 VMS purchase-detail.vue（15 列）。供应商视角下，BCRS 押金作为「押金」类型独立行展示，金额计入订单金额。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('已预约送达','success')">预约送达</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">采购单信息</div></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">采购单号：</span><span class="val">PO-SGP-20260520-0142</span></div>
+            <div class="info-item"><span class="lbl">供应商：</span><span class="val">Coca-Cola Singapore Pte Ltd</span></div>
+            <div class="info-item"><span class="lbl">送达仓库：</span><span class="val">SG-West Hub</span></div>
+            <div class="info-item"><span class="lbl">要求到货：</span><span class="val">2026-05-24</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">商品明细</div><span class="muted">字段对齐 VMS purchase-detail.vue</span></div>
+        <div class="muted" style="padding:8px 14px 0">BCRS 押金作为「押金」类型独立行，订单金额含押金。横向可滚动查看全部列。</div>
+        <div class="table-wrap" style="border:0;border-radius:0">
+          <table style="min-width:1900px">
+            <thead><tr>
+              <th style="width:90px">商品类型</th>
+              <th style="min-width:160px">SPU信息</th>
+              <th style="min-width:200px">SKU信息</th>
+              <th style="width:120px">类目</th>
+              <th style="width:110px">发票类型</th>
+              <th style="width:70px">税率</th>
+              <th class="num" style="width:110px">单价(含税)</th>
+              <th class="num" style="width:110px">单价(未税)</th>
+              <th class="num" style="width:90px">需求数量</th>
+              <th class="num" style="width:100px">可送达数量</th>
+              <th class="num" style="width:100px">已送达数量</th>
+              <th style="width:60px">单位</th>
+              <th class="num" style="width:120px">订单金额(含税)</th>
+              <th class="num" style="width:120px">订单金额(未税)</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td>商品</td>
+                <td>Coca-Cola 可口可乐 500ml<div style="font-size:11px;color:var(--muted)">SPU-COKE-500</div></td>
+                <td>Coca-Cola 可口可乐 500ml (PET)<span class="tag-bcrs">含包装物</span><div style="font-size:11px;color:var(--muted)">SKU-BV-COKE-500</div></td>
+                <td>饮料/碳酸</td><td>增值税专用</td><td>9%</td>
+                <td class="num">18.50</td><td class="num">16.97</td>
+                <td class="num">50</td><td class="num">50</td><td class="num">50</td><td>箱</td>
+                <td class="num pos">925.00</td><td class="num">848.62</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted)">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
+                <td>--</td><td>--</td><td>0%</td>
+                <td class="num">0.10</td><td class="num">0.10</td>
+                <td class="num">1,200</td><td class="num">1,200</td><td class="num">1,200</td><td>个</td>
+                <td class="num pos">120.00</td><td class="num">120.00</td>
+              </tr>
+              <tr>
+                <td>商品</td>
+                <td>100Plus Isotonic Drink 325ml<div style="font-size:11px;color:var(--muted)">SPU-100PLUS-325</div></td>
+                <td>100Plus Isotonic Drink 325ml<span class="tag-bcrs">含包装物</span><div style="font-size:11px;color:var(--muted)">SKU-BV-100PLUS-325</div></td>
+                <td>饮料/运动</td><td>增值税专用</td><td>9%</td>
+                <td class="num">14.80</td><td class="num">13.58</td>
+                <td class="num">30</td><td class="num">30</td><td class="num">30</td><td>箱</td>
+                <td class="num pos">444.00</td><td class="num">407.34</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted)">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
+                <td>--</td><td>--</td><td>0%</td>
+                <td class="num">0.10</td><td class="num">0.10</td>
+                <td class="num">720</td><td class="num">720</td><td class="num">720</td><td>个</td>
+                <td class="num pos">72.00</td><td class="num">72.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 9：VMS 退货单详情（供应商端）========== -->
+  <div class="view" id="vms-refund">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 退货单详情（供应商端）</div>
+          <div class="subtitle">字段严格对齐系统 VMS refund-detail.vue（14 列）。供应商视角下，BCRS 押金返还作为「押金」类型独立行，金额计入退货金额。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('已确认取回','success')">确认取回</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">退货单信息</div></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">退货单号：</span><span class="val">RF-SGP-20260522-0015</span></div>
+            <div class="info-item"><span class="lbl">关联采购单：</span><span class="val">PO-SGP-20260520-0142</span></div>
+            <div class="info-item"><span class="lbl">供应商：</span><span class="val">Coca-Cola Singapore Pte Ltd</span></div>
+            <div class="info-item"><span class="lbl">退货原因：</span><span class="val">质量问题</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">退货明细</div><span class="muted">字段对齐 VMS refund-detail.vue</span></div>
+        <div class="muted" style="padding:8px 14px 0">BCRS 押金返还作为「押金」类型独立行，退货金额含押金返还。横向可滚动查看全部列。</div>
+        <div class="table-wrap" style="border:0;border-radius:0">
+          <table style="min-width:1700px">
+            <thead><tr>
+              <th style="width:90px">退货类型</th>
+              <th style="min-width:160px">SPU名称</th>
+              <th style="min-width:180px">SKU名称</th>
+              <th style="width:110px">商品规格</th>
+              <th style="width:110px">类目</th>
+              <th style="width:110px">发票类型</th>
+              <th style="width:70px">税率</th>
+              <th class="num" style="width:120px">退货单价(含税)</th>
+              <th class="num" style="width:120px">退货单价(未税)</th>
+              <th class="num" style="width:90px">退货数量</th>
+              <th class="num" style="width:100px">已取回数量</th>
+              <th style="width:60px">单位</th>
+              <th class="num" style="width:120px">退货金额(含税)</th>
+              <th class="num" style="width:120px">退货金额(未税)</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td>商品</td>
+                <td>Coca-Cola 可口可乐 500ml<div style="font-size:11px;color:var(--muted)">SPU-COKE-500</div></td>
+                <td>Coca-Cola 可口可乐 500ml<div style="font-size:11px;color:var(--muted)">SKU-BV-COKE-500</div></td>
+                <td>500ml/瓶</td><td>饮料/碳酸</td><td>增值税专用</td><td>9%</td>
+                <td class="num">18.50</td><td class="num">16.97</td>
+                <td class="num">5</td><td class="num">5</td><td>箱</td>
+                <td class="num pos">92.50</td><td class="num">84.86</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金返还</span><div style="font-size:11px;color:var(--muted)">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱</div></td>
+                <td>--</td><td>--</td><td>--</td><td>0%</td>
+                <td class="num">0.10</td><td class="num">0.10</td>
+                <td class="num">120</td><td class="num">120</td><td>个</td>
+                <td class="num pos">12.00</td><td class="num">12.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 10：业务规则 ========== -->
   <div class="view" id="rules">
     <section class="hero">
       <div class="hero-top">
@@ -1213,6 +1379,15 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       </div>
 
       <div class="panel">
+        <div class="panel-head"><div class="panel-title">VMS 供应商端 — 业务规则</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code>BR-22</code><div><b>VMS 采购单展示</b>：供应商端采购单详情（purchase-detail.vue）中，BCRS 押金作为「押金」类型独立行展示（商品类型列=押金）；订单金额(含税/未税)包含押金</div></div>
+          <div class="rule-row"><code>BR-23</code><div><b>VMS 退货单展示</b>：供应商端退货单详情（refund-detail.vue）中，BCRS 押金返还作为「押金」类型独立行展示（退货类型列=押金）；退货金额(含税/未税)包含押金返还</div></div>
+          <div class="rule-row"><code>BR-24</code><div><b>SCM/VMS 数据一致</b>：同一采购单/退货单在 SCM（采购员端）与 VMS（供应商端）展示的 BCRS 押金行、数量、金额必须一致（同源数据）</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
         <div class="panel-head"><div class="panel-title">验收标准（Acceptance Criteria）</div></div>
         <div class="panel-body">
           <div class="rule-row ac"><code>AC-01</code><div><b>正向 · 货品启用 BCRS</b><br>Given SGP 站点 / SKU=Coca-Cola 500ml / 箱规=24<br>When 切换「是否支持 BCRS」=ON，押金单价=0.10 → 点保存<br>Then 保存成功；列表「BCRS 支持」列显示「✓ 支持」；变更记录新增一条</div></div>
@@ -1230,6 +1405,8 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
           <div class="rule-row ac"><code>AC-13</code><div><b>正向 · 结算单详情展示押金</b><br>Given 同上结算单<br>When 打开结算单详情开票信息<br>Then「押金金额」=S$192.00；结算金额总计 / 应付金额总计 / 押金应开收据总金额 均含该押金</div></div>
           <div class="rule-row ac"><code>AC-14</code><div><b>异常 · 发票金额不足</b><br>Given 应开票金额 S$2,201.00（含押金）<br>When 上传发票含税金额填 2,009.00（漏押金）<br>Then 提示「发票金额不足，需 ≥ 应开票金额 S$2,201.00（含 BCRS 押金 S$192.00）」</div></div>
           <div class="rule-row ac"><code>AC-15</code><div><b>正向 · 无 BCRS 不展示</b><br>Given 关联 PO 无任何 BCRS 商品<br>When 进入上传发票 / 结算单详情<br>Then 不展示 BCRS 押金字段，押金相关金额为 0</div></div>
+          <div class="rule-row ac"><code>AC-16</code><div><b>正向 · VMS 采购单展示押金</b><br>Given 供应商登录 VMS / 采购单 PO-SGP-0142 含 2 个 BCRS 商品<br>When 打开 VMS 采购单详情<br>Then 商品明细出现「押金」类型独立行（数量 1200/720 个），订单金额(含税)含押金；与 SCM 端数据一致</div></div>
+          <div class="rule-row ac"><code>AC-17</code><div><b>正向 · VMS 退货单展示押金</b><br>Given 供应商登录 VMS / 退货单含 BCRS 商品退 5 箱<br>When 打开 VMS 退货单详情<br>Then 退货明细出现「押金」类型返还独立行（数量 120 个，退货金额 12.00），退货金额含押金返还</div></div>
         </div>
       </div>
 
