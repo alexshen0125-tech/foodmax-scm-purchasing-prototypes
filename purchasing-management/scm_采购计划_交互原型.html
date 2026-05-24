@@ -158,7 +158,7 @@ tr:hover td{background:#fbfcfd}
     <div class="logo">FM</div>
     <button class="active" data-view="plan"><span class="dot"></span>采购计划</button>
     <button data-view="flow"><span class="dot"></span>算量流程</button>
-    <button data-view="cfg"><span class="dot"></span>覆盖天数<br>配置</button>
+    <button data-view="cfg"><span class="dot"></span>补货参数<br>配置</button>
   </aside>
   <main class="main">
 
@@ -175,12 +175,6 @@ tr:hover td{background:#fbfcfd}
               <span class="dot-st green"></span>
               <span>上次重算 今天 09:32 · 用时 32 秒</span>
             </span>
-            <button class="btn" onclick="openSsConfigModal()" title="全局安全库存比例 — 用于「可用库存 − 安全库存」扣减"
-              style="display:inline-flex;align-items:center;gap:6px;font-size:12px">
-              <span class="muted">安全库存比例</span>
-              <b id="ss-ratio-display" style="color:var(--ink)">16%</b>
-              <span style="font-size:11px;color:var(--muted)">⚙</span>
-            </button>
             <input class="chip" value="2026-05-21">
             <button id="btn-recalc" class="btn primary" onclick="triggerRecalc()">重算</button>
           </div>
@@ -328,13 +322,13 @@ tr:hover td{background:#fbfcfd}
       </section>
     </div>
 
-    <!-- ===== 3. 覆盖天数配置 ===== -->
+    <!-- ===== 3. 补货参数配置（前称覆盖天数配置；v2.1 起合入安全库存比例）===== -->
     <div class="view" id="cfg">
       <section class="hero">
         <div class="hero-top">
           <div>
-            <div class="title">覆盖天数配置</div>
-            <div class="subtitle">「预测覆盖天数逻辑」的 4 个输入：基础备货天数矩阵 / VLT 修正 / 缺货系数 / 周末节假日系数。修改后下次重算生效。</div>
+            <div class="title">补货参数配置</div>
+            <div class="subtitle">采购计划「预测覆盖天数 + 备货目标」的 5 项全局配置：基础备货天数矩阵 / 接单日 · VCT / 缺货系数 / 周末节假日系数 / 安全库存比例。修改后下次重算生效。SPU × 供应商 × 仓库 维度的 VLT / 品供绑定见「SPU 品供参数」页。</div>
           </div>
           <div class="hero-actions"></div>
         </div>
@@ -345,6 +339,7 @@ tr:hover td{background:#fbfcfd}
           <div class="tab" data-tab="c-vlt">接单日 / VCT</div>
           <div class="tab" data-tab="c-oos">缺货系数</div>
           <div class="tab" data-tab="c-weekend">周末 / 节假日系数</div>
+          <div class="tab" data-tab="c-ss">安全库存比例</div>
         </div>
 
         <div class="tab-pane active" id="c-matrix">
@@ -383,7 +378,7 @@ tr:hover td{background:#fbfcfd}
               <div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:12px;line-height:1.7;color:var(--text)">
                 <div style="font-weight:700;margin-bottom:4px;color:var(--blue)">💡 与现有功能的关系</div>
                 <div>本页维护「<b>供应商维度</b>」的接单日与 VCT（每供应商一行）。</div>
-                <div><b>VLT（提前期）已在「补货参数配置」页按 SPU × 供应商 × 仓库 维护</b>（字段 <code>orderLeadTime</code>），不在此重复维护。</div>
+                <div><b>VLT（提前期）已在「SPU 品供参数」页按 SPU × 供应商 × 仓库 维护</b>（字段 <code>orderLeadTime</code>），不在此重复维护。</div>
                 <div style="margin-top:4px">接单日只在供应商维度维护，无需 SPU 级覆盖。</div>
               </div>
             </div>
@@ -405,7 +400,7 @@ tr:hover td{background:#fbfcfd}
             </table></div>
             <div style="padding:10px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between">
               <span>共 6 条供应商默认</span>
-              <span>VLT 维护 →「补货参数配置」页（已有功能）</span>
+              <span>VLT 维护 →「SPU 品供参数」页（已有功能）</span>
             </div>
           </div>
         </div>
@@ -477,16 +472,47 @@ tr:hover td{background:#fbfcfd}
             </div>
           </div>
         </div>
+
+        <!-- 安全库存比例 -->
+        <div class="tab-pane" id="c-ss">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">安全库存比例 · 全局</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEditSs(this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveSsRatio(this)">保存</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:16px">
+                <div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 作用范围</div>
+                <div>全局生效。采购计划主表的<b>「可用库存 − 安全库存」</b>按此比例扣减后再算备货量。</div>
+                <div>一期全局写死，后续可按 <b>类目 / 仓库 / SPU</b> 分级覆盖。</div>
+                <div>修改后<b>下次重算</b>生效，已生成的采购单不受影响。</div>
+              </div>
+              <div style="display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center;max-width:640px">
+                <label style="text-align:right;font-size:13px;color:var(--text)">安全库存比例</label>
+                <div style="display:inline-flex;align-items:center;gap:8px">
+                  <input id="ss-ratio-input-cfg" class="input-num" type="number" min="0" max="100" step="1" value="16" disabled style="width:84px;text-align:right">
+                  <span style="font-size:13px;color:var(--ink)">%</span>
+                  <span class="muted" style="font-size:11px;margin-left:8px">建议 10% – 30%</span>
+                </div>
+                <label style="text-align:right;font-size:13px;color:var(--muted)">示例</label>
+                <div class="muted" style="font-size:12px">若某 SPU 可用库存 = 1000 kg，按 <b id="ss-preview-pct-cfg" style="color:var(--ink)">16%</b> 扣减 → 实际可用 = <b id="ss-preview-val-cfg" style="color:var(--ink)">840</b> kg</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
 
-    <!-- ===== 4. 补货参数配置（现有功能页，复用）===== -->
+    <!-- ===== 4. SPU 品供参数（前称补货参数配置；维护 SPU 维度的 VLT / 品供绑定）===== -->
     <div class="view" id="rp">
       <section class="hero">
         <div class="hero-top">
           <div>
-            <div class="title">补货参数配置</div>
-            <div class="subtitle">维护 SPU × 供应商 × 仓库 的<b style="color:var(--green)">提前期（VLT）</b>、增长系数、品供绑定。每个 SPU + 供应商 + 仓库 一条记录。接单日与 VCT 在「覆盖天数配置 → 接单日 / VCT」按供应商维度统一维护。— 现有页面，本期不重做。</div>
+            <div class="title">SPU 品供参数</div>
+            <div class="subtitle">维护 SPU × 供应商 × 仓库 的<b style="color:var(--green)">提前期（VLT）</b>、增长系数、品供绑定。每个 SPU + 供应商 + 仓库 一条记录。接单日与 VCT 在「补货参数配置 → 接单日 / VCT」按供应商维度统一维护。— 现有页面，本期不重做。</div>
           </div>
         </div>
       </section>
@@ -887,7 +913,7 @@ document.getElementById('skuDrawerMask').addEventListener('click',e=>{
   if(e.target.id==='skuDrawerMask') closeSkuDrawer();
 });
 
-// ============ 补货参数配置（现有功能页，含 SPU 级 VLT 覆盖）============
+// ============ SPU 品供参数（前称补货参数配置；SPU × 供应商 × 仓库 维度的 VLT / 品供绑定）============
 const rpData=[
   {id:1, vendorName:'GreenFarm', vendorCode:'V-001', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周三、周五', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
   {id:2, vendorName:'FreshGo', vendorCode:'V-003', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一至周六', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
@@ -946,7 +972,7 @@ function jumpToRp(vendor){
   document.getElementById('rp-filter-vendor').value=vendor;
   switchView('rp');
   renderRpRows();
-  toast(`已跳转到补货参数配置，按 ${vendor} 过滤显示 SPU 级 VLT 覆盖`,'success');
+  toast(`已跳转到「SPU 品供参数」，按 ${vendor} 过滤显示 SPU 级 VLT 覆盖`,'success');
 }
 
 const rpModals = {
@@ -968,7 +994,7 @@ const rpModals = {
       '</div></div>'+
       '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">增长系数 *</label><input class="chip" style="width:160px;height:34px" type="number" step="0.01" value="1.00"></div>'+
       '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">提前期 (天) *</label><input class="chip" style="width:160px;height:34px" type="number" value="1" min="0"></div>'+
-      '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期 (VLT)</b> 是 SPU + 供应商 + 仓库 维度的唯一维护点（系统不另设供应商默认 VLT）。接单日与 VCT 在「覆盖天数配置 → 接单日 / VCT」按供应商维度维护。</p>'+
+      '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期 (VLT)</b> 是 SPU + 供应商 + 仓库 维度的唯一维护点（系统不另设供应商默认 VLT）。接单日与 VCT 在「补货参数配置 → 接单日 / VCT」按供应商维度维护。</p>'+
     '</div>'+
     '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
   },
@@ -1023,50 +1049,31 @@ function exportPlan(){
   toast(`导出任务已提交：${scope}\n含【商品 / SPU / 仓库 / 供应商 / 总采购量 / 建议采购量(箱规) / 上次采购单价】，完成后右上角下载`, 'success');
 }
 
-// ============ 全局安全库存比例 配置 ============
-function openSsConfigModal(){
-  const cur = parseInt(document.getElementById('ss-ratio-display').textContent) || 16;
-  document.getElementById('modalBox').innerHTML = ssConfigModalHtml(cur);
-  document.getElementById('modalBox').style.width = 'min(520px, 92vw)';
-  document.getElementById('modalMask').classList.add('show');
+// ============ 补货参数配置 · 安全库存比例 Tab ============
+function enterEditSs(btn){
+  document.getElementById('ss-ratio-input-cfg').disabled = false;
+  document.getElementById('ss-ratio-input-cfg').focus();
+  const head = btn.closest('.panel-head');
+  const btns = head.querySelectorAll('button');
+  if(btns[0]) btns[0].disabled = true;
+  if(btns[1]) btns[1].disabled = false;
 }
-function ssConfigModalHtml(cur){
-  return ''+
-    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">安全库存比例 · 全局配置</div><button class="close" onclick="closeModal()">×</button></div>'+
-    '<div class="modal-body" style="padding:18px;overflow:auto">'+
-      '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:16px">'+
-        '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 作用范围</div>'+
-        '<div>全局生效。采购计划主表的<b>「可用库存 − 安全库存」</b>按此比例扣减后再算备货量。</div>'+
-        '<div>一期全局写死，后续可按 <b>类目 / 仓库 / SPU</b> 分级覆盖。</div>'+
-        '<div>修改后<b>下次重算</b>生效，已生成的采购单不受影响。</div>'+
-      '</div>'+
-      '<div style="display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center">'+
-        '<label style="text-align:right;font-size:13px;color:var(--text)">安全库存比例</label>'+
-        '<div style="display:inline-flex;align-items:center;gap:8px">'+
-          '<input id="ss-ratio-input" class="chip" type="number" min="0" max="100" step="1" value="'+cur+'" style="width:84px;height:32px;text-align:right">'+
-          '<span style="font-size:13px;color:var(--ink)">%</span>'+
-          '<span class="muted" style="font-size:11px;margin-left:8px">建议 10% – 30%</span>'+
-        '</div>'+
-        '<label style="text-align:right;font-size:13px;color:var(--muted)">示例</label>'+
-        '<div class="muted" style="font-size:12px">若某 SPU 可用库存 = 1000 kg，按 <b id="ss-preview-pct" style="color:var(--ink)">'+cur+'%</b> 扣减 → 实际可用 = <b id="ss-preview-val" style="color:var(--ink)">'+(1000-1000*cur/100)+'</b> kg</div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px">'+
-      '<button class="btn" onclick="closeModal()">取消</button>'+
-      '<button class="btn primary" onclick="saveSsRatio()">保存</button>'+
-    '</div>';
-}
-function saveSsRatio(){
-  const v = Math.max(0, Math.min(100, parseInt(document.getElementById('ss-ratio-input').value) || 0));
-  document.getElementById('ss-ratio-display').textContent = v+'%';
-  closeModal();
+function saveSsRatio(btn){
+  const input = document.getElementById('ss-ratio-input-cfg');
+  const v = Math.max(0, Math.min(100, parseInt(input.value) || 0));
+  input.value = v;
+  input.disabled = true;
+  const head = btn.closest('.panel-head');
+  const btns = head.querySelectorAll('button');
+  if(btns[0]) btns[0].disabled = false;
+  if(btns[1]) btns[1].disabled = true;
   toast('安全库存比例已保存：'+v+'%（下次重算生效）', 'success');
 }
 document.addEventListener('input', e=>{
-  if(e.target && e.target.id==='ss-ratio-input'){
+  if(e.target && e.target.id==='ss-ratio-input-cfg'){
     const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
-    const p = document.getElementById('ss-preview-pct');
-    const r = document.getElementById('ss-preview-val');
+    const p = document.getElementById('ss-preview-pct-cfg');
+    const r = document.getElementById('ss-preview-val-cfg');
     if(p) p.textContent = v+'%';
     if(r) r.textContent = (1000 - 1000*v/100);
   }
