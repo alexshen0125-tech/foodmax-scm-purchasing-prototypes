@@ -484,12 +484,6 @@ tr:hover td{background:#fbfcfd}
               </div>
             </div>
             <div class="panel-body">
-              <div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:16px">
-                <div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 作用范围</div>
-                <div>全局生效。采购计划主表的<b>「可用库存 − 安全库存」</b>按此比例扣减后再算备货量。</div>
-                <div>一期全局写死，后续可按 <b>类目 / 仓库 / SPU</b> 分级覆盖。</div>
-                <div>修改后<b>下次重算</b>生效，已生成的采购单不受影响。</div>
-              </div>
               <div style="display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center;max-width:640px">
                 <label style="text-align:right;font-size:13px;color:var(--text)">安全库存比例</label>
                 <div style="display:inline-flex;align-items:center;gap:8px">
@@ -497,8 +491,6 @@ tr:hover td{background:#fbfcfd}
                   <span style="font-size:13px;color:var(--ink)">%</span>
                   <span class="muted" style="font-size:11px;margin-left:8px">建议 10% – 30%</span>
                 </div>
-                <label style="text-align:right;font-size:13px;color:var(--muted)">示例</label>
-                <div class="muted" style="font-size:12px">若某 SPU 可用库存 = 1000 kg，按 <b id="ss-preview-pct-cfg" style="color:var(--ink)">16%</b> 扣减 → 实际可用 = <b id="ss-preview-val-cfg" style="color:var(--ink)">840</b> kg</div>
               </div>
             </div>
           </div>
@@ -1069,15 +1061,6 @@ function saveSsRatio(btn){
   if(btns[1]) btns[1].disabled = true;
   toast('安全库存比例已保存：'+v+'%（下次重算生效）', 'success');
 }
-document.addEventListener('input', e=>{
-  if(e.target && e.target.id==='ss-ratio-input-cfg'){
-    const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
-    const p = document.getElementById('ss-preview-pct-cfg');
-    const r = document.getElementById('ss-preview-val-cfg');
-    if(p) p.textContent = v+'%';
-    if(r) r.textContent = (1000 - 1000*v/100);
-  }
-});
 
 // 配置页：默认查看模式，编辑→可改，保存→回到查看
 const paneEditState={'c-matrix':false,'c-vlt':false,'c-oos':false,'c-weekend':false};
