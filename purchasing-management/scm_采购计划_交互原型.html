@@ -175,8 +175,13 @@ tr:hover td{background:#fbfcfd}
               <span class="dot-st green"></span>
               <span>上次重算 今天 09:32 · 用时 32 秒</span>
             </span>
+            <button class="btn" onclick="openSsConfigModal()" title="全局安全库存比例 — 用于「可用库存 − 安全库存」扣减"
+              style="display:inline-flex;align-items:center;gap:6px;font-size:12px">
+              <span class="muted">安全库存比例</span>
+              <b id="ss-ratio-display" style="color:var(--ink)">16%</b>
+              <span style="font-size:11px;color:var(--muted)">⚙</span>
+            </button>
             <input class="chip" value="2026-05-21">
-            <button class="btn" onclick="toast('数据已重新拉取')">刷新数据</button>
             <button id="btn-recalc" class="btn primary" onclick="triggerRecalc()">重算</button>
           </div>
         </div>
@@ -193,6 +198,7 @@ tr:hover td{background:#fbfcfd}
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>West Hub</option><option>East Hub</option></select></div>
               <div style="grid-column:span 5;display:flex;justify-content:flex-end;gap:8px;align-items:center">
                 <span id="plan-selected-tip" class="muted" style="display:none;margin-right:8px">已勾选 <b id="plan-selected-count" style="color:var(--ink)">0</b> 项</span>
+                <button class="btn" onclick="exportPlan()" title="导出当前筛选条件下的采购建议量列表，用于线下找供应商谈量谈价">⬇ 导出</button>
                 <button class="btn primary" id="btn-create-po" onclick="openCreatePoModal()">生成采购单</button>
                 <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
                 <button class="btn" onclick="toast('已重置筛选')">重置</button>
@@ -738,29 +744,101 @@ function openCreatePoModal(){
   const vendor={name:checked[0].dataset.vendorName, code:checked[0].dataset.vendorCode};
   const corp={name:checked[0].dataset.corpName, code:checked[0].dataset.corpCode};
   document.getElementById('modalBox').innerHTML=createPoModalHtml(items, vendor, corp);
+  document.getElementById('modalBox').style.width='min(960px, 96vw)';
   document.getElementById('modalMask').classList.add('show');
 }
 function createPoModalHtml(items, vendor, corp){
-  const rows=items.map(it=>`<tr><td>${it.name}</td><td class="muted">${it.code}</td><td class="num">${parseInt(it.qty).toLocaleString()}</td></tr>`).join('');
+  // SPU 箱规 + 最近一次采购价（mock；真实接入后由 SPU 主数据 + 采购单历史给出）
+  const PACK_INFO = {
+    '1':{packSize:10, baseUnit:'kg', lastPrice:2.80},
+    '2':{packSize:5,  baseUnit:'kg', lastPrice:8.50},
+    '3':{packSize:5,  baseUnit:'kg', lastPrice:1.20},
+    '4':{packSize:10, baseUnit:'kg', lastPrice:2.30},
+    '5':{packSize:0,  baseUnit:'kg', lastPrice:2.60}  // 演示：未维护箱规
+  };
+  // 箱规取整：<半箱向下、≥半箱向上
+  function roundByPack(qty, pack){
+    if(!pack) return 0;
+    const r=qty/pack, intPart=Math.floor(r), frac=r-intPart;
+    return frac<0.5 ? intPart : intPart+1;
+  }
+  // 候选供应商（演示用）
+  const CAND_VENDORS = [
+    {code:'V-001', name:'GreenFarm'}, {code:'V-003', name:'FreshGo'},
+    {code:'V-007', name:'MeatPro'},   {code:'V-012', name:'RedSun'},
+    {code:'V-018', name:'TomatoKing'},{code:'V-021', name:'Hattah'}
+  ];
+  const optList=[{code:vendor.code,name:vendor.name}].concat(CAND_VENDORS.filter(v=>v.code!==vendor.code));
+  const vendorOpts=optList.map((v,i)=>`<option value="${v.code}" ${i===0?'selected':''}>${v.name} (${v.code})</option>`).join('');
+
+  const rows=items.map((it,idx)=>{
+    const qty=parseInt(it.qty);
+    const info=PACK_INFO[String(it.id)] || {packSize:0, baseUnit:'kg', lastPrice:0};
+    const boxQty=roundByPack(qty, info.packSize);
+    const boxCell=info.packSize>0
+      ? `<b>${boxQty}</b> 箱 <span class="muted" style="font-size:11px">(${info.packSize}${info.baseUnit}/箱)</span>`
+      : `<span class="muted">未维护箱规</span>`;
+    const defaultOrderQty=info.packSize>0 ? boxQty : qty;
+    const defaultUnit=info.packSize>0 ? 'box' : 'base';
+    return `<tr>`+
+      `<td>${it.name}</td>`+
+      `<td class="muted">${it.code}</td>`+
+      `<td class="num">${qty.toLocaleString()} <span class="muted" style="font-size:11px">${info.baseUnit}</span></td>`+
+      `<td class="num">${boxCell}</td>`+
+      `<td>`+
+        `<div style="display:flex;gap:6px;align-items:center;justify-content:flex-end">`+
+          `<input class="chip" style="width:78px;height:28px;text-align:right" type="number" min="0" value="${defaultOrderQty}" id="orderQty-${idx}">`+
+          `<select class="chip" style="width:64px;height:28px;padding:0 6px" id="orderUnit-${idx}" ${info.packSize>0?'':'disabled'}>`+
+            `<option value="box" ${defaultUnit==='box'?'selected':''}>箱</option>`+
+            `<option value="base" ${defaultUnit==='base'?'selected':''}>${info.baseUnit}</option>`+
+          `</select>`+
+        `</div>`+
+      `</td>`+
+      `<td class="num">`+
+        `<div style="display:inline-flex;gap:4px;align-items:center;justify-content:flex-end">`+
+          `<input class="chip" style="width:84px;height:28px;text-align:right" type="number" step="0.01" min="0" value="${info.lastPrice.toFixed(2)}" id="orderPrice-${idx}">`+
+          `<span class="muted" style="font-size:11px">SGD/${info.baseUnit}</span>`+
+        `</div>`+
+      `</td>`+
+    `</tr>`;
+  }).join('');
+
   return ''+
     '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">生成采购单</div><button class="close" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body" style="padding:18px;overflow:auto">'+
       '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
         '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 处理逻辑（复用现有「采购分析 → 生成采购单」）</div>'+
         '<div>已勾选 <b style="color:var(--ink)">'+items.length+'</b> 个 SPU，将<b>合并生成一张</b>草稿采购单。</div>'+
-        '<div>供应商与结算主体由勾选行<b>自动锁定</b>（已校验一致），每行 requireQty 取「总采购量」。</div>'+
-        '<div>提交后跳转至「采购单列表」可查看草稿单。</div>'+
+        '<div>默认供应商 = 勾选行所属供应商，<b>可改为其他供应商</b>；结算主体随供应商带出。</div>'+
+        '<div>「建议采购量（箱规）」= 建议量按箱规取整：<b>&lt; 半箱向下、≥ 半箱向上</b>；未维护箱规按最小单位原样下单。</div>'+
+        '<div>「采购下单量」默认 = 建议采购量（箱规），可手动改，单位可在「箱 / 最小单位」间切换。</div>'+
+        '<div>「采购单价（未税）」默认 = 该 SPU <b>最近一次采购单价</b>，可改。</div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:12px;align-items:center">'+
         '<label style="text-align:right;font-size:13px;color:var(--muted)">供应商</label>'+
-        '<div style="display:inline-flex;align-items:center;gap:6px"><span class="pill green">'+vendor.name+' ('+vendor.code+')</span><span class="muted" style="font-size:11px">已锁定，不可修改</span></div>'+
+        '<div style="display:inline-flex;align-items:center;gap:8px">'+
+          '<select class="chip" style="height:32px;min-width:220px;padding:0 8px" id="po-vendor-select">'+vendorOpts+'</select>'+
+          '<span class="muted" style="font-size:11px">默认为勾选行供应商，可改</span>'+
+        '</div>'+
       '</div>'+
       '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center">'+
         '<label style="text-align:right;font-size:13px;color:var(--muted)">结算主体</label>'+
-        '<div style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">'+corp.name+' ('+corp.code+')</span><span class="muted" style="font-size:11px">已锁定，不可修改</span></div>'+
+        '<div style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">'+corp.name+' ('+corp.code+')</span><span class="muted" style="font-size:11px">由供应商带出</span></div>'+
       '</div>'+
       '<div style="margin-top:10px;font-size:12px;color:var(--muted);margin-bottom:4px">采购明细预览</div>'+
-      '<div class="table-wrap" style="border-radius:6px"><table class="dense"><thead><tr><th>商品</th><th>SPU</th><th class="num">建议采购量</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="table-wrap" style="border-radius:6px">'+
+        '<table class="dense">'+
+          '<thead><tr>'+
+            '<th>商品</th>'+
+            '<th>SPU</th>'+
+            '<th class="num" style="min-width:96px">建议采购量</th>'+
+            '<th class="num" style="min-width:150px">建议采购量（箱规）</th>'+
+            '<th class="num" style="min-width:170px">采购下单量</th>'+
+            '<th class="num" style="min-width:170px">采购单价（未税）</th>'+
+          '</tr></thead>'+
+          '<tbody>'+rows+'</tbody>'+
+        '</table>'+
+      '</div>'+
     '</div>'+
     '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'草稿采购单已创建，跳转至采购单列表...\',\'success\')">创建采购单</button></div>';
 }
@@ -936,7 +1014,63 @@ function openRpModal(type, title){
   document.getElementById('modalBox').innerHTML=rpModals[type](title);
   document.getElementById('modalMask').classList.add('show');
 }
-function closeModal(){document.getElementById('modalMask').classList.remove('show')}
+function closeModal(){document.getElementById('modalMask').classList.remove('show');document.getElementById('modalBox').style.width='';}
+
+// ============ 采购建议量 导出 ============
+function exportPlan(){
+  const checked = document.querySelectorAll('.plan-row-check:checked').length;
+  const scope = checked>0 ? `已勾选 ${checked} 项` : '当前筛选条件下全部 386 项';
+  toast(`导出任务已提交：${scope}\n含【商品 / SPU / 仓库 / 供应商 / 总采购量 / 建议采购量(箱规) / 上次采购单价】，完成后右上角下载`, 'success');
+}
+
+// ============ 全局安全库存比例 配置 ============
+function openSsConfigModal(){
+  const cur = parseInt(document.getElementById('ss-ratio-display').textContent) || 16;
+  document.getElementById('modalBox').innerHTML = ssConfigModalHtml(cur);
+  document.getElementById('modalBox').style.width = 'min(520px, 92vw)';
+  document.getElementById('modalMask').classList.add('show');
+}
+function ssConfigModalHtml(cur){
+  return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">安全库存比例 · 全局配置</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:16px">'+
+        '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 作用范围</div>'+
+        '<div>全局生效。采购计划主表的<b>「可用库存 − 安全库存」</b>按此比例扣减后再算备货量。</div>'+
+        '<div>一期全局写死，后续可按 <b>类目 / 仓库 / SPU</b> 分级覆盖。</div>'+
+        '<div>修改后<b>下次重算</b>生效，已生成的采购单不受影响。</div>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center">'+
+        '<label style="text-align:right;font-size:13px;color:var(--text)">安全库存比例</label>'+
+        '<div style="display:inline-flex;align-items:center;gap:8px">'+
+          '<input id="ss-ratio-input" class="chip" type="number" min="0" max="100" step="1" value="'+cur+'" style="width:84px;height:32px;text-align:right">'+
+          '<span style="font-size:13px;color:var(--ink)">%</span>'+
+          '<span class="muted" style="font-size:11px;margin-left:8px">建议 10% – 30%</span>'+
+        '</div>'+
+        '<label style="text-align:right;font-size:13px;color:var(--muted)">示例</label>'+
+        '<div class="muted" style="font-size:12px">若某 SPU 可用库存 = 1000 kg，按 <b id="ss-preview-pct" style="color:var(--ink)">'+cur+'%</b> 扣减 → 实际可用 = <b id="ss-preview-val" style="color:var(--ink)">'+(1000-1000*cur/100)+'</b> kg</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px">'+
+      '<button class="btn" onclick="closeModal()">取消</button>'+
+      '<button class="btn primary" onclick="saveSsRatio()">保存</button>'+
+    '</div>';
+}
+function saveSsRatio(){
+  const v = Math.max(0, Math.min(100, parseInt(document.getElementById('ss-ratio-input').value) || 0));
+  document.getElementById('ss-ratio-display').textContent = v+'%';
+  closeModal();
+  toast('安全库存比例已保存：'+v+'%（下次重算生效）', 'success');
+}
+document.addEventListener('input', e=>{
+  if(e.target && e.target.id==='ss-ratio-input'){
+    const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+    const p = document.getElementById('ss-preview-pct');
+    const r = document.getElementById('ss-preview-val');
+    if(p) p.textContent = v+'%';
+    if(r) r.textContent = (1000 - 1000*v/100);
+  }
+});
 
 // 配置页：默认查看模式，编辑→可改，保存→回到查看
 const paneEditState={'c-matrix':false,'c-vlt':false,'c-oos':false,'c-weekend':false};
