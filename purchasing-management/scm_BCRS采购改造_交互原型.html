@@ -254,7 +254,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
 
     <div class="phase-banner">
       <span class="phase-pill">第一阶段</span>
-      <span>BCRS 采购侧最小可用版本 — <b>货品主数据只新增 2 个 BCRS 字段</b>：是否支持 BCRS + 押金单价。容器类型 / 容量 / 关联押金 SKU 等留待后续阶段。</span>
+      <span>BCRS 采购侧最小可用版本 — <b>货品主数据只新增 2 个 BCRS 字段</b>：是否支持 BCRS + 押金金额（按计量单位）。容器类型 / 容量 / 关联押金 SKU 等留待后续阶段。</span>
     </div>
 
   <!-- ========== 视图 1：货品列表 ========== -->
@@ -263,7 +263,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">货品列表</div>
-          <div class="subtitle">SGP 站点的货品基础信息表。新增「BCRS 支持」与「押金单价」两列。点任意行进入编辑页维护。</div>
+          <div class="subtitle">SGP 站点的货品基础信息表。新增「BCRS 支持」与「押金金额」两列。点任意行进入编辑页维护。</div>
         </div>
         <div class="hero-actions">
           <span class="site-flag">● SGP 新加坡站点</span>
@@ -348,7 +348,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">新建货品</div>
-          <div class="subtitle">布局对齐系统「新建货品 · 货品基础信息」。在现有字段基础上新增 BCRS 字段（是否支持 BCRS + 押金单价），仅 SGP 站点显示。</div>
+          <div class="subtitle">布局对齐系统「新建货品 · 货品基础信息」。在现有字段基础上新增 BCRS 字段（是否支持 BCRS + 押金金额），仅 SGP 站点显示；押金金额单位跟随「计量单位」。</div>
         </div>
         <div class="hero-actions">
           <button class="btn" onclick="switchView('goods-list')">返回列表</button>
@@ -393,7 +393,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <table class="gd-subtable">
                   <thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th></tr></thead>
                   <tbody><tr>
-                    <td><select><option>瓶</option><option>罐</option></select></td>
+                    <td><select id="uomSel" onchange="refreshPreview()"><option>瓶</option><option>罐</option></select></td>
                     <td><input value="500"></td>
                     <td><select><option>ml</option><option>L</option></select></td>
                   </tr></tbody>
@@ -406,11 +406,11 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                 <table class="gd-subtable">
                   <thead><tr><th>包装数量</th><th>包装单位</th></tr></thead>
                   <tbody><tr>
-                    <td><input id="packQty" value="24" type="number" min="1"></td>
+                    <td><input id="packQty" value="24" type="number" min="1" oninput="refreshPreview()"></td>
                     <td><select><option>箱</option><option>件</option></select></td>
                   </tr></tbody>
                 </table>
-                <div class="gd-count" style="text-align:left;color:var(--green)">↳ BCRS 押金数量按此「包装数量」换算：采购箱数 × 24</div>
+                <div class="gd-count" style="text-align:left;color:var(--green)">↳ BCRS 押金按此「包装数量」换算：押金金额 × 包装数量 = 每箱押金</div>
               </div>
             </div>
             <div class="gd-row">
@@ -436,20 +436,21 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
                   </div>
                   <div id="bcrsZone" style="margin-top:14px">
                     <div class="gd-row" style="margin-bottom:10px">
-                      <div class="gd-label" style="width:84px"><span class="req">*</span>押金单价</div>
-                      <div class="gd-ctrl" style="max-width:260px;display:flex;align-items:center;gap:6px">
+                      <div class="gd-label" style="width:84px"><span class="req">*</span>押金金额</div>
+                      <div class="gd-ctrl" style="max-width:320px;display:flex;align-items:center;gap:6px">
                         <span style="font-size:12px;color:var(--muted)">S$</span>
-                        <input id="depositPrice" value="0.10" type="number" step="0.01" min="0">
+                        <input id="depositPrice" value="0.10" type="number" step="0.01" min="0" oninput="refreshPreview()">
+                        <span style="font-size:12px;color:var(--muted)">/ <span id="uomLabel">瓶</span></span>
                       </div>
                     </div>
                     <div class="gd-row" style="margin-bottom:0">
                       <div class="gd-label" style="width:84px">押金预览</div>
-                      <div class="gd-ctrl" style="max-width:420px"><input id="previewLine" value="采购 1 箱 = 24 个 × S$0.10 = S$2.40" disabled></div>
+                      <div class="gd-ctrl" style="max-width:460px"><input id="previewLine" value="押金金额 S$0.10 × 包装数量 24 瓶 = 每箱押金 S$2.40" disabled></div>
                     </div>
                     <div class="formula-line" style="margin-top:12px">
-                      <b>BR-01：</b>BCRS 仅新增 2 字段（是否支持 BCRS + 押金单价）<br>
-                      <b>BR-02：</b>押金数量 = 采购数量(箱) × 包装数量；<b>BR-03：</b>押金金额 = 押金数量 × 押金单价<br>
-                      <b>BR-04：</b>仅 SGP 站点显示
+                      <b>BR-01：</b>BCRS 仅新增 2 字段（是否支持 BCRS + 押金金额）<br>
+                      <b>BR-02：</b>每箱押金 = 押金金额 × 包装数量；<b>BR-03：</b>采购单押金合计 = 每箱押金 × 采购数量(箱)<br>
+                      <b>BR-04：</b>押金金额单位跟随「计量单位」（瓶 / 罐 / 个 …）；仅 SGP 站点显示
                     </div>
                   </div>
                 </div>
@@ -491,7 +492,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="hero-top">
         <div>
           <div class="title">采购单新建 — BCRS 押金联动</div>
-          <div class="subtitle">选择支持 BCRS 的商品后，系统自动在该商品行下方追加押金独立行（不增加列）。押金行数量随主商品数量联动，押金单价取自货品主数据，PO 中不可编辑。</div>
+          <div class="subtitle">选择支持 BCRS 的商品后，系统自动在该商品行下方追加押金独立行（不增加列）。押金行数量随主商品数量联动，押金行单价取自货品主数据「押金金额」，PO 中不可编辑。</div>
         </div>
         <div class="hero-actions">
           <span class="site-flag">● SGP 新加坡站点</span>
@@ -684,7 +685,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
             <b>BR-06 押金数量公式：</b>押金行数量 = 主商品采购数量(箱) × 箱规(boxSize)<br>
             &nbsp;&nbsp;· 行 1：50 箱 × 24 瓶/箱 = <b>1200</b> 个 × S$0.10 = <b>S$120.00</b><br>
             &nbsp;&nbsp;· 行 2：30 箱 × 24 罐/箱 = <b>720</b> 个 × S$0.10 = <b>S$72.00</b><br>
-            <b>BR-07 押金单价：</b>取自货品主数据「押金单价」字段，PO 中不可编辑<br>
+            <b>BR-07 押金行单价：</b>取自货品主数据「押金金额」字段（按计量单位计），PO 中不可编辑<br>
             <b>BR-08 数量联动：</b>主商品数量变更 → 押金行数量与金额实时同步刷新<br>
             <b>BR-09 级联删除：</b>删除主商品行 → 自动删除关联押金行<br>
             <b>BR-10 财务挂账：</b>押金金额不进存货成本，独立挂「应付押金」往来科目
@@ -1516,9 +1517,9 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head"><div class="panel-title">货品主数据 — 业务规则</div></div>
         <div class="panel-body">
-          <div class="rule-row"><code>BR-01</code><div><b>新增字段范围</b>：本期货品主数据 BCRS 部分仅新增 2 个字段 —「是否支持 BCRS」(bcrsEnabled, boolean, 默认 false) 与「押金单价」(depositPrice, decimal, S$)</div></div>
+          <div class="rule-row"><code>BR-01</code><div><b>新增字段范围</b>：本期货品主数据 BCRS 部分仅新增 2 个字段 —「是否支持 BCRS」(bcrsEnabled, boolean, 默认 false) 与「押金金额」(depositPrice, decimal, S$ / 计量单位；单位跟随货品 UOM)</div></div>
           <div class="rule-row"><code>BR-02</code><div><b>押金计算依赖现有箱规</b>：押金行数量 = 主商品采购数量 × 货品主数据 <code style="background:#fff;color:var(--ink)">boxSize</code>（箱规字段为现有字段，非本期新增）</div></div>
-          <div class="rule-row"><code>BR-03</code><div><b>押金单价校验</b>：当 bcrsEnabled = true 时，depositPrice 为必填且必须 > 0；为 false 时该字段隐藏并清空</div></div>
+          <div class="rule-row"><code>BR-03</code><div><b>押金金额校验</b>：当 bcrsEnabled = true 时，depositPrice 为必填且必须 > 0，单位跟随计量单位展示；为 false 时该字段隐藏并清空。预览：每箱押金 = 押金金额 × 包装数量</div></div>
           <div class="rule-row"><code>BR-04</code><div><b>站点开关</b>：仅 <code style="background:#fff;color:var(--ink)">stationInfo.countryCode === 'SGP'</code> 时显示 BCRS 字段与押金行；其他站点完全隐藏</div></div>
         </div>
       </div>
@@ -1528,7 +1529,7 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
         <div class="panel-body">
           <div class="rule-row"><code>BR-05</code><div><b>押金独立行</b>：采购支持 BCRS 的商品时，系统在该商品行下方追加独立押金行（不增加价格列）；押金行商品名固定为「BCRS 押金」</div></div>
           <div class="rule-row"><code>BR-06</code><div><b>押金数量公式</b>：押金行数量 = 主商品采购数量(箱) × 主商品 boxSize；单位「个」</div></div>
-          <div class="rule-row"><code>BR-07</code><div><b>押金单价不可编辑</b>：押金行单价直接取主商品货品主数据 depositPrice，PO 中 disabled</div></div>
+          <div class="rule-row"><code>BR-07</code><div><b>押金行单价不可编辑</b>：押金行单价直接取主商品货品主数据「押金金额」(depositPrice)，PO 中 disabled</div></div>
           <div class="rule-row"><code>BR-08</code><div><b>数量联动</b>：主商品数量变更（含 PO 编辑、退回修改）→ 押金行数量与金额自动刷新</div></div>
           <div class="rule-row"><code>BR-09</code><div><b>级联删除</b>：删除主商品行 → 自动删除关联押金行；用户不能单独删除押金行</div></div>
           <div class="rule-row"><code>BR-10</code><div><b>财务挂账分离</b>：押金金额不进存货成本，单独挂「应付押金」往来科目；底部汇总区独立列示 BCRS 押金合计</div></div>
@@ -1572,14 +1573,14 @@ tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
       <div class="panel">
         <div class="panel-head"><div class="panel-title">验收标准（Acceptance Criteria）</div></div>
         <div class="panel-body">
-          <div class="rule-row ac"><code>AC-01</code><div><b>正向 · 货品启用 BCRS</b><br>Given SGP 站点 / SKU=Coca-Cola 500ml / 箱规=24<br>When 切换「是否支持 BCRS」=ON，押金单价=0.10 → 点保存<br>Then 保存成功；列表「BCRS 支持」列显示「✓ 支持」；变更记录新增一条</div></div>
-          <div class="rule-row ac"><code>AC-02</code><div><b>异常 · 押金单价为空</b><br>Given 「是否支持 BCRS」=ON<br>When 押金单价留空 → 点保存<br>Then 阻断保存，定位押金单价字段并提示「BCRS 支持时押金单价为必填项，且必须 > 0」</div></div>
+          <div class="rule-row ac"><code>AC-01</code><div><b>正向 · 货品启用 BCRS</b><br>Given SGP 站点 / SKU=Coca-Cola 500ml / 计量单位=瓶 / 包装数量=24<br>When 切换「是否支持 BCRS」=ON，押金金额=0.10（S$/瓶）→ 点保存<br>Then 保存成功；列表「BCRS 支持」列显示「✓ 支持」；预览显示「押金金额 S$0.10 × 包装数量 24 瓶 = 每箱押金 S$2.40」；变更记录新增一条</div></div>
+          <div class="rule-row ac"><code>AC-02</code><div><b>异常 · 押金金额为空</b><br>Given 「是否支持 BCRS」=ON<br>When 押金金额留空 → 点保存<br>Then 阻断保存，定位押金金额字段并提示「BCRS 支持时押金金额为必填项，且必须 > 0」</div></div>
           <div class="rule-row ac"><code>AC-03</code><div><b>正向 · 选择 BCRS 商品自动追加押金行</b><br>Given 新建采购单 / SGP / 空商品列表<br>When 选择 Coca-Cola 500ml（bcrsEnabled=true / boxSize=24 / deposit=0.10）数量=50 箱<br>Then 表格出现主行 + 押金行，押金行数量=50×24=1200，单价=0.10，小计=120.00；押金行 disabled、绿色高亮、来源=系统</div></div>
           <div class="rule-row ac"><code>AC-04</code><div><b>正向 · 数量联动</b><br>Given AC-03 完成<br>When 主商品数量从 50 改为 80<br>Then 押金行数量自动刷新为 80×24=1920，小计=192.00，无需手动操作</div></div>
           <div class="rule-row ac"><code>AC-05</code><div><b>正向 · 级联删除</b><br>Given 表格有主行 + 押金行<br>When 点主商品行删除按钮<br>Then 主商品行与押金行一同移除，汇总区数据实时刷新</div></div>
           <div class="rule-row ac"><code>AC-06</code><div><b>异常 · 非 SGP 站点</b><br>Given 切换站点到 MYS<br>When 进入货品编辑 / 采购单<br>Then BCRS 信息区整体不可见，PO 表格不显示押金行（即使原数据存在也不展示）</div></div>
           <div class="rule-row ac"><code>AC-07</code><div><b>正向 · 汇总与挂账分离</b><br>Given 采购单含 BCRS 商品 + 押金行<br>When 提交单据<br>Then 底部汇总区「BCRS 押金合计」单独列示；财务挂账：商品金额进存货成本、押金金额挂「应付押金」</div></div>
-          <div class="rule-row ac"><code>AC-08</code><div><b>正向 · 押金单价 PO 不可编辑</b><br>Given 采购单有 BCRS 押金行<br>When 鼠标点击押金单价输入框<br>Then 输入框 disabled，鼠标悬浮 tooltip「押金单价来自货品主数据，PO 中不可编辑」</div></div>
+          <div class="rule-row ac"><code>AC-08</code><div><b>正向 · 押金行单价 PO 不可编辑</b><br>Given 采购单有 BCRS 押金行<br>When 鼠标点击押金行单价输入框<br>Then 输入框 disabled，鼠标悬浮 tooltip「押金行单价取自货品主数据『押金金额』，PO 中不可编辑」</div></div>
           <div class="rule-row ac"><code>AC-09</code><div><b>正向 · 退供单押金返还自动追加</b><br>Given 关联 PO=PO-SGP-0142（含 Coca-Cola 50 箱 BCRS） <br>When 新建退供单，选择 Coca-Cola 退货 5 箱<br>Then 退货行下方自动追加押金返还行，数量=5×24=120 个，金额=-S$12.00（红色），来源=系统</div></div>
           <div class="rule-row ac"><code>AC-10</code><div><b>正向 · 退货押金联动</b><br>Given AC-09 完成<br>When 把退货数量从 5 改为 10<br>Then 押金返还行数量自动刷新为 10×24=240，金额=-S$24.00</div></div>
           <div class="rule-row ac"><code>AC-11</code><div><b>异常 · 退货数量超出原采购</b><br>Given 原 PO 行 Coca-Cola 采购 50 箱<br>When 退货数量输入 60<br>Then 阻断提交，提示「退货数量不能超过原采购数量 50 箱」</div></div>
@@ -1672,11 +1673,19 @@ function toast(msg, type){
 function onBcrsRadio(enabled){
   document.getElementById('bcrsZone').style.display = enabled ? '' : 'none';
 }
+function refreshPreview(){
+  const uom=(document.getElementById('uomSel')?.value)||'瓶';
+  const pack=parseInt(document.getElementById('packQty')?.value)||0;
+  const dep=parseFloat(document.getElementById('depositPrice')?.value)||0;
+  const lbl=document.getElementById('uomLabel'); if(lbl) lbl.textContent=uom;
+  const pv=document.getElementById('previewLine');
+  if(pv) pv.value=`押金金额 S$${dep.toFixed(2)} × 包装数量 ${pack} ${uom} = 每箱押金 S$${(dep*pack).toFixed(2)}`;
+}
 function saveGoods(){
   const enabled=document.getElementById('bcrsEnabled').checked;
   if(enabled){
     const dep=parseFloat(document.getElementById('depositPrice').value);
-    if(!dep||dep<=0){return toast('押金单价为 BCRS 支持时必填项，必须 > 0','error');}
+    if(!dep||dep<=0){return toast('押金金额为 BCRS 支持时必填项，必须 > 0','error');}
   }
   toast('已完成建档（含 BCRS 字段）','success');
 }
@@ -1864,21 +1873,21 @@ const ANNOTATIONS = [
     sel: "#bcrsEnabled",
     title: "是否支持 BCRS（开关）",
     rules: [
-      { type: "BR", id: "BR-01", text: "货品主数据 BCRS 部分仅新增 2 个字段：bcrsEnabled(boolean, 默认 false) + depositPrice(decimal, S$)" },
+      { type: "BR", id: "BR-01", text: "货品主数据 BCRS 部分仅新增 2 个字段：bcrsEnabled(boolean, 默认 false) + depositPrice(decimal, S$ / 计量单位)" },
       { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时 depositPrice 必填且 > 0；false 时该字段隐藏并清空" },
-      { type: "AC", id: "AC-01", text: "Given SGP / SKU=Coca-Cola 500ml / 箱规=24，When 切 ON+押金=0.10→保存，Then 保存成功且列表显示「✓ 支持」" },
+      { type: "AC", id: "AC-01", text: "Given SGP / SKU=Coca-Cola 500ml / 计量单位=瓶 / 包装数量=24，When 切 ON+押金金额=0.10→保存，Then 预览显示「× 24 瓶 = 每箱 S$2.40」、列表显示「✓ 支持」" },
       { type: "校验", text: "boolean 类型，默认 false" },
       { type: "交互", text: "切换 ON 时下方表单激活，OFF 时整体灰化(disabled)" }
     ]
   },
   {
     sel: "#depositPrice",
-    title: "押金单价 (S$)",
+    title: "押金金额 (S$ / 计量单位)",
     rules: [
-      { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时必填且必须 > 0" },
-      { type: "AC", id: "AC-02", text: "Given 开关=ON，When 押金单价留空→保存，Then 阻断并提示「BCRS 支持时押金单价为必填项，且必须 > 0」" },
+      { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时必填且必须 > 0；单位跟随计量单位（瓶/罐/个 …）" },
+      { type: "AC", id: "AC-02", text: "Given 开关=ON，When 押金金额留空→保存，Then 阻断并提示「BCRS 支持时押金金额为必填项，且必须 > 0」" },
       { type: "校验", text: "decimal(8,2)，> 0，最大 2 位小数，默认值 0.10（NEA 标准）" },
-      { type: "交互", text: "失焦校验 + 保存时再次校验；联动「预览」行重算" }
+      { type: "交互", text: "失焦校验 + 保存时再次校验；联动「押金预览」实时重算" }
     ]
   },
   {
@@ -1892,10 +1901,10 @@ const ANNOTATIONS = [
   },
   {
     sel: "#previewLine",
-    title: "押金预览（采购 1 箱）",
+    title: "押金预览（每箱）",
     rules: [
-      { type: "BR", id: "BR-02", text: "押金行数量 = 主商品采购数量 × 货品主数据 boxSize（箱规为现有字段，非本期新增）" },
-      { type: "交互", text: "随箱规/押金单价变化实时刷新预览文案" }
+      { type: "BR", id: "BR-02", text: "每箱押金 = 押金金额 × 包装数量；采购单押金合计 = 每箱押金 × 采购数量(箱)" },
+      { type: "交互", text: "随计量单位 / 包装数量 / 押金金额变化实时刷新预览文案" }
     ]
   },
 
@@ -1925,7 +1934,7 @@ const ANNOTATIONS = [
     title: "BCRS 押金独立行（系统自动追加）",
     rules: [
       { type: "BR", id: "BR-05", text: "在 BCRS 商品行下方追加独立押金行（不增加价格列）；本期统一一个「BCRS 押金」虚拟商品，不区分容器类型" },
-      { type: "BR", id: "BR-07", text: "押金行单价取自货品主数据 depositPrice，PO 中 disabled 不可编辑" },
+      { type: "BR", id: "BR-07", text: "押金行单价取自货品主数据「押金金额」(depositPrice)，PO 中 disabled 不可编辑" },
       { type: "BR", id: "BR-09", text: "删除主商品行 → 自动删除关联押金行；用户不能单独删除押金行" },
       { type: "AC", id: "AC-05", text: "Given 表格有主行+押金行，When 点主行删除，Then 主行与押金行一同移除，汇总区实时刷新" },
       { type: "交互", text: "绿色 ↳ 缩进高亮；来源=系统；操作列显示「联动」不可点击" }
@@ -1935,8 +1944,8 @@ const ANNOTATIONS = [
     sel: "#depPriceCell1",
     title: "押金行单价（disabled）",
     rules: [
-      { type: "BR", id: "BR-07", text: "押金行单价直接取主商品货品主数据 depositPrice，PO 中 disabled" },
-      { type: "AC", id: "AC-08", text: "Given PO 有 BCRS 押金行，When 点击押金单价输入框，Then 输入框 disabled，悬浮 tooltip「押金单价来自货品主数据，PO 中不可编辑」" }
+      { type: "BR", id: "BR-07", text: "押金行单价直接取主商品货品主数据「押金金额」(depositPrice)，PO 中 disabled" },
+      { type: "AC", id: "AC-08", text: "Given PO 有 BCRS 押金行，When 点击押金行单价输入框，Then 输入框 disabled，悬浮 tooltip「押金行单价取自货品主数据『押金金额』，PO 中不可编辑」" }
     ]
   },
   {
