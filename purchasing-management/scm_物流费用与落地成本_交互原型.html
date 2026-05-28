@@ -1,6 +1,15 @@
-<!-- SCM 物流费用与落地成本 — 交互原型 v1.16
-     日期：2026-05-19
+<!-- SCM 物流费用与落地成本 — 交互原型 v1.17
+     日期：2026-05-28
      变更：
+     - 【v1.17】费用税务口径全链路补充（未税 + 税率 → 含税）：
+       · 费用录入（创建页 + 详情页）：每项费用按「未税金额 + 税率」录入，系统自动算
+         税额（=未税×税率）与含税（=未税+税额）；预估、实际两个时点都拆税；税率按费用项单独维护
+         （国际海运/空运等零税率填 0%，本地服务/境外增值税按 6% / 9%）
+       · 落地成本 & 结算 / 付款统一按「含税金额」：跨境物流商境外税在新加坡不可作进项抵扣，
+         全额计入库存成本（BR-LC-31~33）
+       · 费用单合计区显示 未税合计 / 税额合计 / 含税合计；差异按含税计算
+       · 结算发票校验两道门：①每张发票「未税 + 税额 = 含税」单张一致性；
+         ②所有发票「含税总额 = 费用单实际含税合计」；批量/单条编辑发票弹窗均加未税/税额列与校验
      - 【v1.16】跨境物流费用录入费用 2 项改动：
        · 改动 1｜选择采购单改为「搜索驱动」：新建费用单步骤一先搜索供应商或采购单号，
          命中后才出现采购单列表供勾选；未搜索时显示空状态引导，不再默认全量展示
@@ -36,7 +45,7 @@
        · 金额调整单合并状态：定稿同时入账，徽章改"已生成 · 已入账"
        · 费用单管理列表顶部加 PO 入库前置规则提示
        · 详情页费用明细加"📌 费用项不可增删"徽章（待对账状态约束）
-       · 多选合并发票文案：支持上传多张，校验"发票总额 = 费用单实际合计"
+       · 多选合并发票文案：支持上传多张，校验"发票总额 = 费用单实际含税合计"
        · 结算单驳回 toast：明确告知费用单回退至「待对账」
        · 列表 LC-20260411-001 文案改"等待 PO 入库"，体现 BR-LC-19
      - 【v1.12】交互闭环自检 — 修复约 30 处缺失的按钮/链接交互
@@ -122,7 +131,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>物流费用与落地成本 — 交互原型 v1.15</title>
+  <title>物流费用与落地成本 — 交互原型 v1.17</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -477,8 +486,8 @@
       <div class="hint-card info" id="costlist-caliber-hint" style="margin-bottom:12px;font-size:12px">
         <span class="hint-icon">ℹ️</span>
         <div>
-          <strong>口径说明：</strong>同一笔费用有<strong>预估</strong>（入库前估算）和<strong>实际</strong>（入库后真实值）两个时点。
-          预估合计用于暂估入库分摊；实际合计用于结算（须全部已录入实际值才可结算）。
+          <strong>口径说明：</strong>同一笔费用有<strong>预估</strong>（入库前估算）和<strong>实际</strong>（入库后真实值）两个时点，每项按未税+税率录入、系统自动算含税。
+          列表合计均为<strong>含税</strong>：预估含税合计用于暂估入库分摊；实际含税合计用于结算（须全部已录入实际值才可结算）。
         </div>
       </div>
 
@@ -489,8 +498,8 @@
             <th>物流商</th>
             <th>关联 PO</th>
             <th>费用摘要</th>
-            <th class="text-right" style="background:#fef3c7">预估合计<br/><span class="text-muted" style="font-weight:400;font-size:10px">(入库前)</span></th>
-            <th class="text-right" style="background:#dcfce7">实际合计<br/><span class="text-muted" style="font-weight:400;font-size:10px">(已录入)</span></th>
+            <th class="text-right" style="background:#fef3c7">预估含税合计<br/><span class="text-muted" style="font-weight:400;font-size:10px">(入库前)</span></th>
+            <th class="text-right" style="background:#dcfce7">实际含税合计<br/><span class="text-muted" style="font-weight:400;font-size:10px">(已录入)</span></th>
             <th>分摊方式</th>
             <th>状态</th>
             <th>创建时间</th>
@@ -737,35 +746,47 @@
         <table id="fee-table">
           <thead>
             <tr>
-              <th style="width:140px">费用类型</th>
-              <th class="text-right" id="th-fee-est" style="width:130px;background:#fef3c7">预估金额(USD)</th>
-              <th class="text-right" id="th-fee-act" style="width:130px;background:#dcfce7">实际金额(USD)</th>
-              <th class="text-right" style="width:80px">差异</th>
+              <th style="width:120px">费用类型</th>
+              <th class="text-right" style="width:64px" id="th-fee-rate">税率</th>
+              <th class="text-right" style="width:108px;background:#fef3c7" id="th-fee-est">预估未税(USD)</th>
+              <th class="text-right" style="width:100px;background:#fef9e7">预估含税(USD)</th>
+              <th class="text-right" style="width:108px;background:#dcfce7" id="th-fee-act">实际未税(USD)</th>
+              <th class="text-right" style="width:100px;background:#eafbf0">实际含税(USD)</th>
+              <th class="text-right" style="width:74px">差异(含税)</th>
               <th>备注</th>
-              <th style="width:40px"></th>
+              <th style="width:36px"></th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><select style="width:130px" class="fee-type"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td><select style="width:110px" class="fee-type"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td style="background:#fff"><div style="display:flex;align-items:center;justify-content:flex-end"><input type="number" value="0" class="fee-rate" style="text-align:right;width:42px" step="1" min="0" oninput="recalcRow(this)" /><span style="color:#94a3b8;margin-left:2px">%</span></div></td>
               <td style="background:#fffbeb"><input type="number" value="2000" class="fee-est" style="text-align:right" oninput="recalcRow(this)" /></td>
+              <td class="text-right fee-est-incl" style="background:#fef9e7;color:#92400e;font-weight:600">2,000.00</td>
               <td style="background:#f0fdf4"><input type="number" value="2000" class="fee-act" style="text-align:right" oninput="recalcRow(this)" placeholder="待录入" /></td>
+              <td class="text-right fee-act-incl" style="background:#eafbf0;color:#15803d;font-weight:600">2,000.00</td>
               <td class="text-right fee-diff text-muted">0</td>
-              <td><input type="text" placeholder="如：20GP×1" /></td>
+              <td><input type="text" placeholder="如：20GP×1，国际海运零税率" /></td>
               <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
             </tr>
             <tr>
-              <td><select style="width:130px" class="fee-type"><option>报关费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td><select style="width:110px" class="fee-type"><option>报关费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td style="background:#fff"><div style="display:flex;align-items:center;justify-content:flex-end"><input type="number" value="6" class="fee-rate" style="text-align:right;width:42px" step="1" min="0" oninput="recalcRow(this)" /><span style="color:#94a3b8;margin-left:2px">%</span></div></td>
               <td style="background:#fffbeb"><input type="number" value="500" class="fee-est" style="text-align:right" oninput="recalcRow(this)" /></td>
+              <td class="text-right fee-est-incl" style="background:#fef9e7;color:#92400e;font-weight:600">530.00</td>
               <td style="background:#f0fdf4"><input type="number" value="500" class="fee-act" style="text-align:right" oninput="recalcRow(this)" placeholder="待录入" /></td>
+              <td class="text-right fee-act-incl" style="background:#eafbf0;color:#15803d;font-weight:600">530.00</td>
               <td class="text-right fee-diff text-muted">0</td>
               <td><input type="text" placeholder="" /></td>
               <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
             </tr>
             <tr class="row-estimate">
-              <td><select style="width:130px" class="fee-type"><option>保险费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td><select style="width:110px" class="fee-type"><option>保险费</option><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+              <td style="background:#fff"><div style="display:flex;align-items:center;justify-content:flex-end"><input type="number" value="6" class="fee-rate" style="text-align:right;width:42px" step="1" min="0" oninput="recalcRow(this)" /><span style="color:#94a3b8;margin-left:2px">%</span></div></td>
               <td style="background:#fffbeb"><input type="number" value="300" class="fee-est" style="text-align:right" oninput="recalcRow(this)" /></td>
+              <td class="text-right fee-est-incl" style="background:#fef9e7;color:#92400e;font-weight:600">318.00</td>
               <td style="background:#f0fdf4"><input type="number" value="" class="fee-act" style="text-align:right" oninput="recalcRow(this)" placeholder="待录入" /></td>
+              <td class="text-right fee-act-incl text-muted">—</td>
               <td class="text-right fee-diff text-muted">—</td>
               <td><input type="text" value="0.3% of cargo value，单据 5-7 天到" /></td>
               <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
@@ -778,9 +799,9 @@
         <div class="hint-card info" style="margin-top:12px">
           <span class="hint-icon">ℹ️</span>
           <div>
-            <strong>录入规则：</strong>每项费用须填<strong>预估金额</strong>（入库前估算，用于暂估入库分摊）；
-            <strong>实际金额</strong>可在录入时同填（若单据已到），也可后续在详情页补录。
-            实际录入后系统自动计算差异，按"在库 / 已出库"比例拆分（详见 BR-LC-03）。
+            <strong>录入规则：</strong>每项费用录入<strong>未税金额 + 税率</strong>，系统自动算出含税（税额=未税×税率，含税=未税+税额）。
+            <strong>预估未税</strong>入库前必填（用于暂估入库分摊）；<strong>实际未税</strong>可录入时同填或后续在详情页补录。
+            实际录入后系统按含税金额计算差异，并按"在库 / 已出库"比例拆分（详见 BR-LC-03）。
           </div>
         </div>
 
@@ -789,19 +810,22 @@
             <div style="display:flex;gap:28px;align-items:flex-end;flex-wrap:wrap">
               <div>
                 <span style="font-size:11.5px;color:#92400e">预估合计（入库前）</span><br/>
-                <span style="font-size:18px;font-weight:700;color:#92400e">USD 2,800.00</span>
+                <span style="font-size:11px;color:#a16207">未税 <strong id="sum-est-net">USD 2,800.00</strong> + 税额 <strong id="sum-est-tax">USD 48.00</strong></span><br/>
+                <span style="font-size:18px;font-weight:700;color:#92400e">含税 <span id="sum-est-incl">USD 2,848.00</span></span>
                 <span class="text-muted" style="font-size:11px;margin-left:4px">3 项</span>
               </div>
               <div style="font-size:18px;color:#94a3b8">→</div>
               <div>
                 <span style="font-size:11.5px;color:#15803d">实际合计（入库后）</span><br/>
-                <span style="font-size:18px;font-weight:700;color:#15803d">USD 2,500.00</span>
+                <span style="font-size:11px;color:#15803d">未税 <strong id="sum-act-net">USD 2,500.00</strong> + 税额 <strong id="sum-act-tax">USD 30.00</strong></span><br/>
+                <span style="font-size:18px;font-weight:700;color:#15803d">含税 <span id="sum-act-incl">USD 2,530.00</span></span>
                 <span class="badge badge-amber" style="margin-left:6px">+ 1 项待录入</span>
               </div>
             </div>
             <div id="rate-info" style="font-size:11.5px;color:#64748b;margin-top:8px">
+              💡 <strong>税额自动计算：</strong>税额 = 未税 × 税率，含税 = 未税 + 税额（每项税率单独维护，海运国际段可填 0%）<br/>
               📊 初始汇率 <strong>1 USD = 1.3520 SGD</strong>（创建于 2026-05-13 10:30，用于预估分摊）<br/>
-              <span class="text-muted" style="font-size:11px">所有实际录完后取最新财务汇率作为<strong>最终汇率</strong>，本位币重算；结算金额 = 实际合计</span>
+              <span class="text-muted" style="font-size:11px"><strong>落地成本与结算均按"含税金额"</strong>计入（跨境物流商境外税不可在新加坡抵扣）；所有实际录完后取最新财务汇率作为<strong>最终汇率</strong>本位币重算，结算金额 = 实际含税合计</span>
             </div>
           </div>
           <div class="form-group" style="margin:0;min-width:180px">
@@ -946,8 +970,8 @@
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" data-detail-edit data-only-edit-actual onclick="copyEstToActDetail()" title="把所有待录入项的实际金额填为预估值">⚡ 待录入项：实际同预估</button>
         <span style="font-size:11.5px;color:#64748b" id="fee-header-summary">
-          预估合计 <strong style="color:#92400e">USD 3,050</strong> →
-          实际合计 <strong style="color:#15803d">USD 2,800</strong>
+          预估含税合计 <strong style="color:#92400e">USD 3,050</strong> →
+          实际含税合计 <strong style="color:#15803d">USD 2,800</strong>
           <span class="badge badge-amber" style="margin-left:4px">+ 1 项待录入</span>
         </span>
       </div>
@@ -957,9 +981,12 @@
         <thead>
           <tr>
             <th>费用类型</th>
-            <th class="text-right" style="background:#fef3c7">预估金额(USD)</th>
-            <th class="text-right" style="background:#dcfce7">实际金额(USD)</th>
-            <th class="text-right">差异</th>
+            <th class="text-right" style="width:56px">税率</th>
+            <th class="text-right" style="background:#fef3c7">预估未税(USD)</th>
+            <th class="text-right" style="background:#fef9e7">预估含税(USD)</th>
+            <th class="text-right" style="background:#dcfce7">实际未税(USD)</th>
+            <th class="text-right" style="background:#eafbf0">实际含税(USD)</th>
+            <th class="text-right">差异(含税)</th>
             <th class="text-right">实际本位币(SGD)</th>
             <th>备注</th>
           </tr>
@@ -967,48 +994,63 @@
         <tbody>
           <tr>
             <td>🚢 海运费</td>
+            <td class="text-right text-muted">0%</td>
             <td class="text-right cell-estimate" style="background:#fffbeb">2,000.00 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
+            <td class="text-right" style="background:#fef9e7;color:#92400e">2,000.00</td>
             <td class="text-right" style="background:#f0fdf4;font-weight:600">2,000.00 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span></td>
+            <td class="text-right" style="background:#eafbf0;color:#15803d;font-weight:600">2,000.00</td>
             <td class="text-right text-muted">0</td>
             <td class="text-right">2,706.00</td>
-            <td>20GP × 1</td>
+            <td>20GP × 1，国际海运零税率</td>
           </tr>
           <tr>
             <td>📋 报关费</td>
-            <td class="text-right cell-estimate" style="background:#fffbeb">500.00 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">500.00 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span></td>
+            <td class="text-right text-muted">6%</td>
+            <td class="text-right cell-estimate" style="background:#fffbeb">471.70 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
+            <td class="text-right" style="background:#fef9e7;color:#92400e">500.00</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">471.70 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span></td>
+            <td class="text-right" style="background:#eafbf0;color:#15803d;font-weight:600">500.00</td>
             <td class="text-right text-muted">0</td>
             <td class="text-right">676.50</td>
-            <td>—</td>
+            <td>税额 USD 28.30</td>
           </tr>
           <tr class="row-estimate" id="row-insurance">
             <td>🛡 保险费</td>
-            <td class="text-right cell-estimate" style="background:#fffbeb">300.00 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
+            <td class="text-right text-muted">6%</td>
+            <td class="text-right cell-estimate" style="background:#fffbeb">283.02 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
+            <td class="text-right" style="background:#fef9e7;color:#92400e">300.00</td>
             <td class="text-right" style="background:#f0fdf4">
               <span class="text-muted" data-hide-on-edit-actual>⏳ 待录入</span>
               <span class="link" data-detail-edit data-only-edit-actual onclick="showModal('modal-actual-fee')">✏️ 录入实际</span>
               <span data-detail-edit data-only-edit-actual style="margin:0 4px;color:#cbd5e1">|</span>
-              <span class="link" data-detail-edit data-only-edit-actual onclick="copyEstToActRow('row-insurance', 300)" title="实际同预估 USD 300">⚡ =预估</span>
+              <span class="link" data-detail-edit data-only-edit-actual onclick="copyEstToActRow('row-insurance', 300)" title="实际同预估 含税 USD 300">⚡ =预估</span>
             </td>
+            <td class="text-right text-muted">—</td>
             <td class="text-right text-muted">—</td>
             <td class="text-right text-muted">—</td>
             <td>0.3% of cargo value · ETA 2026-05-20</td>
           </tr>
           <tr>
             <td>🏗 港口费</td>
-            <td class="text-right cell-estimate" style="background:#fffbeb">250.00 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
-            <td class="text-right" style="background:#f0fdf4;font-weight:600">300.00 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已调差</span></td>
+            <td class="text-right text-muted">6%</td>
+            <td class="text-right cell-estimate" style="background:#fffbeb">235.85 <span class="link estimate-edit-link" onclick="showToast('info','编辑预估','演示模式：实际场景为可编辑输入框')" style="font-size:11px">✏️</span></td>
+            <td class="text-right" style="background:#fef9e7;color:#92400e">250.00</td>
+            <td class="text-right" style="background:#f0fdf4;font-weight:600">283.02 <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已调差</span></td>
+            <td class="text-right" style="background:#eafbf0;color:#15803d;font-weight:600">300.00</td>
             <td class="text-right diff-positive">+50.00 (+20%)</td>
             <td class="text-right">405.90</td>
-            <td>实际单据 INV-PRT-202604-A · 差异 +USD 50（已通过 DMS 推送链路更新入库成本）</td>
+            <td>实际单据 INV-PRT-202604-A · 含税差异 +USD 50（已通过 DMS 推送链路更新入库成本）</td>
           </tr>
           <tr style="background:#f8fafc;font-weight:700" id="fee-total-row">
             <td>合计</td>
-            <td class="text-right" style="background:#fef3c7;color:#92400e">3,050.00</td>
-            <td class="text-right" style="background:#dcfce7;color:#15803d">2,800.00 <span class="text-muted" style="font-weight:400;font-size:10.5px">+ 1 项待录入</span></td>
+            <td class="text-right text-muted">—</td>
+            <td class="text-right" style="background:#fef3c7;color:#92400e">2,990.57</td>
+            <td class="text-right" style="background:#fef9e7;color:#92400e">3,050.00</td>
+            <td class="text-right" style="background:#dcfce7;color:#15803d">2,754.72 <span class="text-muted" style="font-weight:400;font-size:10.5px">+ 1 项待录入</span></td>
+            <td class="text-right" style="background:#eafbf0;color:#15803d">2,800.00 <span class="text-muted" style="font-weight:400;font-size:10.5px">+ 1 项待录入</span></td>
             <td class="text-right diff-positive">+50.00</td>
             <td class="text-right">3,788.40 <span class="text-muted" style="font-weight:400;font-size:10.5px">待录入后更新</span></td>
-            <td style="color:#64748b;font-weight:400">结算金额 = 实际合计（须全部已确认）</td>
+            <td style="color:#64748b;font-weight:400">结算金额 = 实际含税合计（须全部已确认）</td>
           </tr>
         </tbody>
       </table>
@@ -1107,7 +1149,7 @@
         </tbody>
       </table>
       <div style="padding:12px 16px;background:#fffbeb;border-top:1px solid #fde68a;font-size:11.5px;color:#92400e">
-        ℹ️ 表内金额均为<strong>本位币 SGD</strong>（按锁定汇率 1 USD = 1.353 SGD 折算）。
+        ℹ️ 表内金额均为<strong>本位币 SGD</strong>（按锁定汇率 1 USD = 1.353 SGD 折算），物流费按<strong>含税金额</strong>分摊计入落地成本。
         差异值通过<strong>物流费推送 DMS 链路</strong>同步至下游系统，DMS 自行重算入库成本（不再生成调整单）。
       </div>
     </div>
@@ -1250,9 +1292,9 @@
             <th>费用单号</th>
             <th>物流商</th>
             <th>费用摘要</th>
-            <th class="text-right">预估金额</th>
-            <th class="text-right">实际金额</th>
-            <th class="text-right">分摊至本 PO</th>
+            <th class="text-right">预估含税</th>
+            <th class="text-right">实际含税</th>
+            <th class="text-right">分摊至本 PO（含税）</th>
             <th>状态</th>
             <th>创建时间</th>
             <th>操作</th>
@@ -1293,9 +1335,9 @@
       <div class="stat-sub">≈ SGD 13,530.00 (锁定汇率)</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">分摊到本 PO 的物流费 <span class="badge badge-estimate" style="font-size:9px;padding:1px 5px;vertical-align:middle">含暂估</span></div>
+      <div class="stat-label">分摊到本 PO 的物流费（含税） <span class="badge badge-estimate" style="font-size:9px;padding:1px 5px;vertical-align:middle">含暂估</span></div>
       <div class="stat-value" style="color:#b45309">USD 1,866.67</div>
-      <div class="stat-sub">实际 1,666.67 + 暂用预估 200.00（保险费实际录入后调差）</div>
+      <div class="stat-sub">含税口径：实际 1,666.67 + 暂用预估 200.00（保险费实际录入后调差）</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">落地总成本</div>
@@ -1407,9 +1449,10 @@
     <div>
       <strong>数据来源说明：</strong>
       货款成本基于采购单锁定汇率（1 USD = 1.353 SGD）；
-      物流费用来自费用单 <span class="link" onclick="navTo('pg-cost-detail')">LC-20260413-001</span>（按金额占比分摊）。
-      预估金额已在本 PO 入库时锁定（2026-04-25）；
-      待实际费用全部录入后，差异通过<strong>物流费推送 DMS 链路</strong>同步至下游，DMS 自行重算入库成本。
+      物流费用来自费用单 <span class="link" onclick="navTo('pg-cost-detail')">LC-20260413-001</span>，<strong>按含税金额</strong>占比分摊。
+      <strong>落地成本计入含税</strong>：跨境物流商开具的境外税（如中国增值税 6%）在新加坡不可作进项抵扣，故全额计入库存成本；国际海运等零税率项含税=未税。
+      预估含税已在本 PO 入库时锁定（2026-04-25）；
+      待实际费用全部录入后，差异（含税）通过<strong>物流费推送 DMS 链路</strong>同步至下游，DMS 自行重算入库成本。
     </div>
   </div>
 </div>
@@ -1456,7 +1499,7 @@
           <span class="hint-icon">ℹ️</span>
           <div>
             <strong>多选规则：</strong>支持多选「<strong>同一物流商 + 同一币种</strong>」的费用单合并上传发票（不同物流商/币种自动禁选）。
-            <strong>发票数量不限</strong>，发票总金额 = 已选费用单实际合计即可，系统校验通过自动创建结算单。
+            <strong>发票数量不限</strong>，发票含税总额 = 已选费用单实际含税合计即可，系统校验通过自动创建结算单。
           </div>
         </div>
 
@@ -1703,7 +1746,7 @@
   <div class="card" style="margin-top:16px" id="tab-order">
     <div class="card-header">
       <h3>关联费用单</h3>
-      <span class="text-muted" style="font-size:12px">合计实际金额 USD 3,700.00</span>
+      <span class="text-muted" style="font-size:12px">合计实际含税金额 USD 3,700.00（结算/付款基准）</span>
     </div>
     <div class="card-body" style="padding:0">
       <table>
@@ -1712,7 +1755,7 @@
             <th>费用单号</th>
             <th>关联 PO</th>
             <th>费用摘要</th>
-            <th class="text-right">实际金额</th>
+            <th class="text-right">实际含税金额</th>
             <th class="text-right">本位币(SGD)</th>
             <th>实际录入完成时间</th>
             <th>操作</th>
@@ -1762,8 +1805,8 @@
       <div class="hint-card info" style="margin-bottom:14px;background:#dcfce7;border-color:#86efac;color:#15803d">
         <span class="hint-icon">✅</span>
         <div>
-          <strong>金额校验通过：</strong>发票总金额 USD 3,700.00 = 关联费用单实际合计 USD 3,700.00（差异 0）
-          <span class="text-muted" style="font-size:11px">·共 3 张发票，金额对得上即可，不限发票数量</span>
+          <strong>金额校验通过：</strong>发票<strong>含税</strong>总金额 USD 3,700.00 = 关联费用单<strong>实际含税合计</strong> USD 3,700.00（差异 0）
+          <span class="text-muted" style="font-size:11px">·每张发票均满足「未税 + 税额 = 含税」；共 3 张发票，含税对得上即可，不限发票数量</span>
         </div>
       </div>
 
@@ -2050,23 +2093,28 @@
     <div class="modal-body">
       <div class="hint-card" style="margin-bottom:16px">
         <span class="hint-icon">📌</span>
-        <div>当前为<strong>预估金额 USD 300.00</strong>，请录入实际单据金额。
-        所有项实际录完后费用单自动推进至「待对账」，<strong>最终汇率</strong>以此时财务汇率为准，差异通过 DMS 推送链路同步入库成本。</div>
+        <div>当前预估为<strong>未税 USD 283.02 + 税率 6% = 含税 USD 300.00</strong>，请录入实际单据的<strong>未税金额</strong>，系统按税率自动算含税。
+        所有项实际录完后费用单自动推进至「待对账」，<strong>最终汇率</strong>以此时财务汇率为准，差异（按含税）通过 DMS 推送链路同步入库成本。</div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row-3">
         <div class="form-group">
-          <div class="form-label">预估金额</div>
-          <input type="text" value="USD 300.00" disabled />
+          <div class="form-label">预估未税 / 含税</div>
+          <input type="text" value="283.02 / 300.00" disabled />
         </div>
         <div class="form-group">
           <div class="form-label">
-            <span class="required">*</span> 实际金额
-            <span class="link" style="font-weight:400;margin-left:8px;font-size:11px" onclick="document.getElementById('actual-amount').value=300;recalcDiff();showToast('info','实际同预估 USD 300','差异 = 0')">⚡ 同预估</span>
+            <span class="required">*</span> 实际未税(USD)
+            <span class="link" style="font-weight:400;margin-left:8px;font-size:11px" onclick="document.getElementById('actual-amount').value=283.02;recalcDiff();showToast('info','实际未税同预估 USD 283.02','含税 300.00 · 差异 = 0')">⚡ 同预估</span>
           </div>
-          <input type="number" id="actual-amount" value="300" style="text-align:right" oninput="recalcDiff()" />
+          <input type="number" id="actual-amount" value="283.02" style="text-align:right" oninput="recalcDiff()" />
+        </div>
+        <div class="form-group">
+          <div class="form-label">税率</div>
+          <input type="text" id="actual-rate" value="6%" disabled style="text-align:right" />
         </div>
       </div>
+      <div style="font-size:11.5px;color:#15803d;margin:-6px 0 12px 0">实际含税 = <strong id="actual-incl">USD 300.00</strong>（未税 × 1.06）</div>
 
       <div class="form-row">
         <div class="form-group">
@@ -2171,7 +2219,7 @@
 
 <!-- ═══════════════════ Modal: 批量编辑发票 ═══════════════════ -->
 <div class="modal-overlay" id="modal-batch-edit-invoice">
-  <div class="modal" style="max-width:1000px">
+  <div class="modal" style="max-width:1140px">
     <div class="modal-header">
       <h3>批量编辑发票 — LS-20260413-001</h3>
       <span class="modal-close" onclick="hideModal('modal-batch-edit-invoice')">✕</span>
@@ -2180,22 +2228,24 @@
       <div class="hint-card" style="margin-bottom:14px">
         <span class="hint-icon">📌</span>
         <div>
-          <strong>编辑规则：</strong>支持增加/删除/修改发票，提交时校验<strong>所有发票总金额 = 费用单实际合计 USD 3,700</strong>。
-          单张发票金额、发票号、开票方、税号、税率等都可修改；附件可重新上传。
+          <strong>编辑规则：</strong>按发票实际录入<strong>未税金额 / 税额 / 含税金额</strong>，提交时两道校验：①每张发票<strong>未税 + 税额 = 含税</strong>；②所有发票<strong>含税总额 = 费用单实际含税合计 USD 3,700</strong>。
+          发票号、开票方、税号等可修改；附件可重新上传。
         </div>
       </div>
 
       <table>
         <thead>
           <tr>
-            <th style="width:24px">#</th>
+            <th style="width:20px">#</th>
             <th>发票号</th>
             <th>开票方</th>
             <th>税号</th>
-            <th class="text-right">金额（含税）</th>
-            <th>开票日期</th>
-            <th>附件</th>
-            <th style="width:60px">操作</th>
+            <th class="text-right" style="width:96px">未税金额</th>
+            <th class="text-right" style="width:84px">税额</th>
+            <th class="text-right" style="width:96px">含税金额</th>
+            <th class="text-center" style="width:52px">校验</th>
+            <th style="width:118px">开票日期</th>
+            <th style="width:44px">操作</th>
           </tr>
         </thead>
         <tbody id="batch-invoice-tbody">
@@ -2204,9 +2254,11 @@
             <td><input type="text" value="INV-LV001-202604-A001" /></td>
             <td><input type="text" value="顺丰国际货运（深圳）有限公司" /></td>
             <td><input type="text" value="91440300****1234" /></td>
+            <td><input type="number" value="1886.79" class="batch-inv-net" style="text-align:right" oninput="recalcBatchTotal()" /></td>
+            <td><input type="number" value="113.21" class="batch-inv-tax" style="text-align:right" oninput="recalcBatchTotal()" /></td>
             <td><input type="number" value="2000" class="batch-inv-amount" style="text-align:right" oninput="recalcBatchTotal()" /></td>
+            <td class="text-center batch-inv-check"></td>
             <td><input type="date" value="2026-04-13" /></td>
-            <td><button class="btn btn-outline btn-sm">📎 重传</button></td>
             <td><span class="link" style="color:#dc2626" onclick="removeBatchInvoiceRow(this)">✕</span></td>
           </tr>
           <tr>
@@ -2214,9 +2266,11 @@
             <td><input type="text" value="INV-LV001-202604-A002" /></td>
             <td><input type="text" value="顺丰国际货运（深圳）有限公司" /></td>
             <td><input type="text" value="91440300****1234" /></td>
+            <td><input type="number" value="1132.08" class="batch-inv-net" style="text-align:right" oninput="recalcBatchTotal()" /></td>
+            <td><input type="number" value="67.92" class="batch-inv-tax" style="text-align:right" oninput="recalcBatchTotal()" /></td>
             <td><input type="number" value="1200" class="batch-inv-amount" style="text-align:right" oninput="recalcBatchTotal()" /></td>
+            <td class="text-center batch-inv-check"></td>
             <td><input type="date" value="2026-04-13" /></td>
-            <td><button class="btn btn-outline btn-sm">📎 重传</button></td>
             <td><span class="link" style="color:#dc2626" onclick="removeBatchInvoiceRow(this)">✕</span></td>
           </tr>
           <tr>
@@ -2224,9 +2278,11 @@
             <td><input type="text" value="INV-LV001-202604-A003" /></td>
             <td><input type="text" value="顺丰国际货运（深圳）有限公司" /></td>
             <td><input type="text" value="91440300****1234" /></td>
+            <td><input type="number" value="471.70" class="batch-inv-net" style="text-align:right" oninput="recalcBatchTotal()" /></td>
+            <td><input type="number" value="28.30" class="batch-inv-tax" style="text-align:right" oninput="recalcBatchTotal()" /></td>
             <td><input type="number" value="500" class="batch-inv-amount" style="text-align:right" oninput="recalcBatchTotal()" /></td>
+            <td class="text-center batch-inv-check"></td>
             <td><input type="date" value="2026-04-13" /></td>
-            <td><button class="btn btn-outline btn-sm">📎 重传</button></td>
             <td><span class="link" style="color:#dc2626" onclick="removeBatchInvoiceRow(this)">✕</span></td>
           </tr>
         </tbody>
@@ -2236,9 +2292,9 @@
 
       <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px 16px;margin-top:14px;display:flex;justify-content:space-between;align-items:center">
         <div>
-          <span style="font-size:12px;color:#0369a1">校验合计</span><br/>
+          <span style="font-size:12px;color:#0369a1">含税总额校验</span><br/>
           <span style="font-size:16px;font-weight:700;color:#0c4a6e">USD <span id="batch-total">3,700.00</span></span>
-          <span class="text-muted" style="font-size:12px;margin-left:8px">应等于费用单实际合计 USD 3,700.00</span>
+          <span class="text-muted" style="font-size:12px;margin-left:8px">应等于费用单实际含税合计 USD 3,700.00 · 未税合计 <span id="batch-net-total">3,490.57</span> + 税额合计 <span id="batch-tax-total">209.43</span></span>
         </div>
         <div id="batch-validate-status">
           <span class="badge badge-green" style="font-size:12px;padding:4px 10px">✓ 校验通过</span>
@@ -2262,7 +2318,7 @@
     <div class="modal-body">
       <div class="hint-card info" style="margin-bottom:14px;background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
         <span class="hint-icon">ℹ️</span>
-        <div>单条编辑<strong>仅校验单张发票金额格式</strong>（≥ 0）；提交审核时再校验所有发票总金额匹配。</div>
+        <div>按发票实际录入<strong>未税金额 / 税额 / 含税金额</strong>，保存时校验<strong>未税 + 税额 = 含税</strong>；提交审核时再校验所有发票含税总额匹配费用单实际含税合计。</div>
       </div>
       <div class="form-group">
         <div class="form-label"><span class="required">*</span> 发票号</div>
@@ -2280,12 +2336,23 @@
       </div>
       <div class="form-row-3">
         <div class="form-group">
-          <div class="form-label"><span class="required">*</span> 金额（含税）</div>
-          <input type="number" value="2000" />
+          <div class="form-label"><span class="required">*</span> 未税金额(USD)</div>
+          <input type="number" id="single-inv-net" value="1886.79" style="text-align:right" oninput="recalcSingleInvoice()" />
         </div>
         <div class="form-group">
-          <div class="form-label">税率</div>
-          <input type="text" value="6%" />
+          <div class="form-label"><span class="required">*</span> 税额(USD)</div>
+          <input type="number" id="single-inv-tax" value="113.21" style="text-align:right" oninput="recalcSingleInvoice()" />
+        </div>
+        <div class="form-group">
+          <div class="form-label"><span class="required">*</span> 含税金额(USD)</div>
+          <input type="number" id="single-inv-incl" value="2000" style="text-align:right" oninput="recalcSingleInvoice()" />
+        </div>
+      </div>
+      <div id="single-inv-check" style="font-size:11.5px;margin:-4px 0 12px 0;color:#15803d">✓ 未税 + 税额 = 含税</div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">税率（参考，按税额/未税推算）</div>
+          <input type="text" id="single-inv-rate" value="6.00%" disabled style="text-align:right" />
         </div>
         <div class="form-group">
           <div class="form-label"><span class="required">*</span> 开票日期</div>
@@ -2302,7 +2369,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="hideModal('modal-edit-single-invoice')">取消</button>
-      <button class="btn btn-primary" onclick="hideModal('modal-edit-single-invoice');showToast('success','发票已保存','单张金额校验通过；提交审核时会校验总金额')">保存</button>
+      <button class="btn btn-primary" onclick="onSingleInvoiceSave()">保存</button>
     </div>
   </div>
 </div>
@@ -2605,23 +2672,39 @@ function switchToStep1() {
 
 /* ════════ 步骤二：费用明细（预估/实际双时点） ════════ */
 /* 实时计算单行差异：差异 = 实际 - 预估 */
+const fmtUSD = n => 'USD ' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtNum = n => n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+
 function recalcRow(input) {
   const tr = input.closest('tr');
+  const rate = (parseFloat(tr.querySelector('.fee-rate')?.value) || 0) / 100;
   const est = parseFloat(tr.querySelector('.fee-est').value) || 0;
   const actInput = tr.querySelector('.fee-act');
   const actVal = actInput.value.trim();
+  const estIncl = est * (1 + rate);
+  const estInclCell = tr.querySelector('.fee-est-incl');
+  const actInclCell = tr.querySelector('.fee-act-incl');
   const diffCell = tr.querySelector('.fee-diff');
+  // 预估含税
+  estInclCell.textContent = fmtNum(estIncl);
   if (actVal === '') {
+    actInclCell.textContent = '—';
+    actInclCell.className = 'text-right fee-act-incl text-muted';
     diffCell.textContent = '—';
     diffCell.className = 'text-right fee-diff text-muted';
     tr.classList.add('row-estimate');
   } else {
     const act = parseFloat(actVal) || 0;
-    const diff = act - est;
-    if (diff > 0) {
+    const actIncl = act * (1 + rate);
+    actInclCell.textContent = fmtNum(actIncl);
+    actInclCell.className = 'text-right fee-act-incl';
+    actInclCell.style.color = '#15803d';
+    actInclCell.style.fontWeight = '600';
+    const diff = actIncl - estIncl;
+    if (diff > 0.005) {
       diffCell.textContent = '+' + diff.toFixed(2);
       diffCell.className = 'text-right fee-diff diff-positive';
-    } else if (diff < 0) {
+    } else if (diff < -0.005) {
       diffCell.textContent = diff.toFixed(2);
       diffCell.className = 'text-right fee-diff diff-negative';
     } else {
@@ -2630,15 +2713,39 @@ function recalcRow(input) {
     }
     tr.classList.remove('row-estimate');
   }
+  recalcFeeTotals();
+}
+
+/* 重算费用单合计：未税 / 税额 / 含税（预估 & 实际） */
+function recalcFeeTotals() {
+  let estNet=0, estTax=0, actNet=0, actTax=0, pending=0;
+  document.querySelectorAll('#fee-table tbody tr').forEach(tr => {
+    const rate = (parseFloat(tr.querySelector('.fee-rate')?.value) || 0) / 100;
+    const est = parseFloat(tr.querySelector('.fee-est')?.value) || 0;
+    const actVal = (tr.querySelector('.fee-act')?.value || '').trim();
+    estNet += est; estTax += est * rate;
+    if (actVal === '') { pending++; }
+    else { const act = parseFloat(actVal) || 0; actNet += act; actTax += act * rate; }
+  });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('sum-est-net', fmtUSD(estNet));
+  set('sum-est-tax', fmtUSD(estTax));
+  set('sum-est-incl', fmtUSD(estNet + estTax));
+  set('sum-act-net', fmtUSD(actNet));
+  set('sum-act-tax', fmtUSD(actTax));
+  set('sum-act-incl', fmtUSD(actNet + actTax));
 }
 
 function addFeeRow() {
   const tbody = document.querySelector('#fee-table tbody');
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td><select style="width:130px" class="fee-type"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+    <td><select style="width:110px" class="fee-type"><option>海运费</option><option>空运费</option><option>陆运费/内陆运输</option><option>报关费</option><option>保险费</option><option>港口费</option><option>清关杂费</option><option>仓储费</option><option>其他</option></select></td>
+    <td style="background:#fff"><div style="display:flex;align-items:center;justify-content:flex-end"><input type="number" value="6" class="fee-rate" style="text-align:right;width:42px" step="1" min="0" oninput="recalcRow(this)" /><span style="color:#94a3b8;margin-left:2px">%</span></div></td>
     <td style="background:#fffbeb"><input type="number" value="" class="fee-est" style="text-align:right" placeholder="0.00" oninput="recalcRow(this)" /></td>
+    <td class="text-right fee-est-incl text-muted">—</td>
     <td style="background:#f0fdf4"><input type="number" value="" class="fee-act" style="text-align:right" placeholder="待录入" oninput="recalcRow(this)" /></td>
+    <td class="text-right fee-act-incl text-muted">—</td>
     <td class="text-right fee-diff text-muted">—</td>
     <td><input type="text" placeholder="" /></td>
     <td><span class="link" style="color:#dc2626" onclick="removeFeeRow(this)">✕</span></td>
@@ -2700,19 +2807,20 @@ function copyEstToActDetail() {
     title: '一键填充：待录入项实际 = 预估',
     msg: '将把 <strong>1 项</strong>待录入项目的实际金额填入预估值：<br/>🛡 保险费 USD 300 → 实际 USD 300<br/><span class="text-muted">填充后所有项实际已录入，可点「提交费用审批」走流程审批中心。</span>',
     onOk: () => {
-      // 更新保险费行
+      // 更新保险费行（含税口径：未税 283.02 / 含税 300.00 / 本位币 405.90）
       const row = document.getElementById('row-insurance');
       if (row) {
         row.classList.remove('row-estimate');
-        row.children[2].innerHTML = '<span style="font-weight:600">300.00</span>';
-        row.children[2].className = 'text-right';
-        row.children[2].style.background = '#f0fdf4';
-        row.children[3].innerHTML = '<span class="text-muted">0</span>';
-        row.children[3].className = 'text-right';
-        row.children[4].innerHTML = '405.90';
+        row.children[4].innerHTML = '<span style="font-weight:600">283.02</span> <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span>';
         row.children[4].className = 'text-right';
-        row.children[5].innerHTML = '<span class="badge badge-green">✅ 已确认（实际=预估）</span>';
-        row.children[7].innerHTML = '<span class="text-muted">—</span>';
+        row.children[4].style.background = '#f0fdf4';
+        row.children[5].innerHTML = '<span style="font-weight:600;color:#15803d">300.00</span>';
+        row.children[5].className = 'text-right';
+        row.children[5].style.background = '#eafbf0';
+        row.children[6].innerHTML = '<span class="text-muted">0</span>';
+        row.children[6].className = 'text-right';
+        row.children[7].innerHTML = '405.90';
+        row.children[7].className = 'text-right';
       }
       // 所有实际录完 → 启用「提交费用审批」
       onAllActualEntered();
@@ -2721,19 +2829,38 @@ function copyEstToActDetail() {
   });
 }
 
-/* 批量编辑发票：实时校验总金额 */
+/* 批量编辑发票：实时校验 ①单张 未税+税额=含税 ②含税总额=费用单含税合计 */
 function recalcBatchTotal() {
-  const inputs = document.querySelectorAll('.batch-inv-amount');
-  let total = 0;
-  inputs.forEach(i => total += parseFloat(i.value || 0));
-  document.getElementById('batch-total').textContent = total.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const rows = document.querySelectorAll('#batch-invoice-tbody tr');
+  let totalIncl = 0, totalNet = 0, totalTax = 0, rowMismatch = false;
+  rows.forEach(tr => {
+    const net = parseFloat(tr.querySelector('.batch-inv-net')?.value || 0);
+    const tax = parseFloat(tr.querySelector('.batch-inv-tax')?.value || 0);
+    const incl = parseFloat(tr.querySelector('.batch-inv-amount')?.value || 0);
+    totalIncl += incl; totalNet += net; totalTax += tax;
+    const checkCell = tr.querySelector('.batch-inv-check');
+    if (checkCell) {
+      if (Math.abs(net + tax - incl) < 0.01) {
+        checkCell.innerHTML = '<span style="color:#15803d;font-weight:700">✓</span>';
+      } else {
+        checkCell.innerHTML = '<span style="color:#dc2626;font-weight:700" title="未税 + 税额 ≠ 含税">✗</span>';
+        rowMismatch = true;
+      }
+    }
+  });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); };
+  set('batch-total', totalIncl);
+  set('batch-net-total', totalNet);
+  set('batch-tax-total', totalTax);
   const expected = 3700;
   const statusEl = document.getElementById('batch-validate-status');
-  if (Math.abs(total - expected) < 0.01) {
+  if (rowMismatch) {
+    statusEl.innerHTML = '<span class="badge badge-red" style="font-size:12px;padding:4px 10px">✗ 有发票未税+税额≠含税</span>';
+  } else if (Math.abs(totalIncl - expected) < 0.01) {
     statusEl.innerHTML = '<span class="badge badge-green" style="font-size:12px;padding:4px 10px">✓ 校验通过</span>';
   } else {
-    const diff = total - expected;
-    statusEl.innerHTML = `<span class="badge badge-red" style="font-size:12px;padding:4px 10px">✗ 总金额差额 USD ${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`;
+    const diff = totalIncl - expected;
+    statusEl.innerHTML = `<span class="badge badge-red" style="font-size:12px;padding:4px 10px">✗ 含税总额差额 USD ${diff > 0 ? '+' : ''}${diff.toFixed(2)}</span>`;
   }
 }
 
@@ -2746,9 +2873,11 @@ function addBatchInvoiceRow() {
     <td><input type="text" placeholder="INV-..." /></td>
     <td><input type="text" placeholder="开票方名称" /></td>
     <td><input type="text" placeholder="税号" /></td>
+    <td><input type="number" value="" class="batch-inv-net" style="text-align:right" oninput="recalcBatchTotal()" placeholder="0.00" /></td>
+    <td><input type="number" value="" class="batch-inv-tax" style="text-align:right" oninput="recalcBatchTotal()" placeholder="0.00" /></td>
     <td><input type="number" value="" class="batch-inv-amount" style="text-align:right" oninput="recalcBatchTotal()" placeholder="0.00" /></td>
+    <td class="text-center batch-inv-check"></td>
     <td><input type="date" /></td>
-    <td><button class="btn btn-outline btn-sm">📎 上传</button></td>
     <td><span class="link" style="color:#dc2626" onclick="removeBatchInvoiceRow(this)">✕</span></td>
   `;
   tbody.appendChild(row);
@@ -2768,22 +2897,64 @@ function removeBatchInvoiceRow(el) {
 }
 
 function onBatchInvoiceSubmit() {
-  const inputs = document.querySelectorAll('.batch-inv-amount');
-  let total = 0;
-  inputs.forEach(i => total += parseFloat(i.value || 0));
+  const rows = document.querySelectorAll('#batch-invoice-tbody tr');
+  let total = 0, badRow = 0;
+  rows.forEach((tr, i) => {
+    const net = parseFloat(tr.querySelector('.batch-inv-net')?.value || 0);
+    const tax = parseFloat(tr.querySelector('.batch-inv-tax')?.value || 0);
+    const incl = parseFloat(tr.querySelector('.batch-inv-amount')?.value || 0);
+    total += incl;
+    if (Math.abs(net + tax - incl) >= 0.01) badRow = i + 1;
+  });
+  // 校验①：单张 未税+税额=含税（硬拦截）
+  if (badRow > 0) {
+    showToast('error', `第 ${badRow} 张发票未税 + 税额 ≠ 含税`, '请核对发票面额后再提交');
+    return;
+  }
+  // 校验②：含税总额=费用单实际含税合计（可强提交，财务可驳回）
   const expected = 3700;
   if (Math.abs(total - expected) >= 0.01) {
     const diff = total - expected;
     showConfirm({
       icon: '⚠️',
-      title: '总金额不匹配',
-      msg: `发票总金额 <strong>USD ${total.toFixed(2)}</strong> 与费用单实际合计 <strong>USD ${expected.toFixed(2)}</strong> 不一致，差额 <strong>USD ${diff > 0 ? '+' : ''}${diff.toFixed(2)}</strong>。<br/>是否继续提交？`,
-      onOk: () => { hideModal('modal-batch-edit-invoice'); showToast('warn', '已提交（金额不匹配）', '财务审核时可能驳回'); }
+      title: '含税总额不匹配',
+      msg: `发票含税总额 <strong>USD ${total.toFixed(2)}</strong> 与费用单实际含税合计 <strong>USD ${expected.toFixed(2)}</strong> 不一致，差额 <strong>USD ${diff > 0 ? '+' : ''}${diff.toFixed(2)}</strong>。<br/>是否继续提交？`,
+      onOk: () => { hideModal('modal-batch-edit-invoice'); showToast('warn', '已提交（含税总额不匹配）', '财务审核时可能驳回'); }
     });
     return;
   }
   hideModal('modal-batch-edit-invoice');
-  showToast('success', '发票已批量更新', `共 ${inputs.length} 张发票，总金额 USD ${total.toFixed(2)} 校验通过`);
+  showToast('success', '发票已批量更新', `共 ${rows.length} 张发票，含税总额 USD ${total.toFixed(2)} 校验通过（每张未税+税额=含税）`);
+}
+
+/* 单条编辑发票：实时校验 未税+税额=含税，并推算税率 */
+function recalcSingleInvoice() {
+  const net = parseFloat(document.getElementById('single-inv-net')?.value || 0);
+  const tax = parseFloat(document.getElementById('single-inv-tax')?.value || 0);
+  const incl = parseFloat(document.getElementById('single-inv-incl')?.value || 0);
+  const rateEl = document.getElementById('single-inv-rate');
+  if (rateEl) rateEl.value = net > 0 ? (tax / net * 100).toFixed(2) + '%' : '—';
+  const checkEl = document.getElementById('single-inv-check');
+  if (!checkEl) return;
+  if (Math.abs(net + tax - incl) < 0.01) {
+    checkEl.style.color = '#15803d';
+    checkEl.textContent = '✓ 未税 + 税额 = 含税';
+  } else {
+    checkEl.style.color = '#dc2626';
+    checkEl.textContent = `✗ 未税 + 税额 = ${(net + tax).toFixed(2)}，与含税 ${incl.toFixed(2)} 不一致`;
+  }
+}
+function onSingleInvoiceSave() {
+  const net = parseFloat(document.getElementById('single-inv-net')?.value || 0);
+  const tax = parseFloat(document.getElementById('single-inv-tax')?.value || 0);
+  const incl = parseFloat(document.getElementById('single-inv-incl')?.value || 0);
+  if (net <= 0 || incl <= 0) { showToast('error', '未税金额与含税金额必须大于 0'); return; }
+  if (Math.abs(net + tax - incl) >= 0.01) {
+    showToast('error', '未税 + 税额 ≠ 含税', `未税 ${net.toFixed(2)} + 税额 ${tax.toFixed(2)} = ${(net+tax).toFixed(2)}，与含税 ${incl.toFixed(2)} 不符`);
+    return;
+  }
+  hideModal('modal-edit-single-invoice');
+  showToast('success', '发票已保存', '未税 + 税额 = 含税 校验通过；提交审核时会校验含税总额');
 }
 
 /* 改动 2：所有实际费用录完 → 启用「提交费用审批」按钮（状态仍为待录入，未提交） */
@@ -2800,7 +2971,7 @@ function onSubmitFeeApproval() {
   showConfirm({
     icon: '📤',
     title: '提交费用审批',
-    msg: `<strong>LC-20260413-001</strong> 实际费用已全部录入（实际合计 USD 3,100）。<br/>
+    msg: `<strong>LC-20260413-001</strong> 实际费用已全部录入（实际含税合计 USD 3,100）。<br/>
       提交后：<br/>
       1. 费用单状态推进至「<strong>费用待审核</strong>」<br/>
       2. 推送至<strong>流程审批中心</strong>，由财务主管审批实际费用与预估差异<br/>
@@ -2978,20 +3149,25 @@ function copyEstToActRow(rowId, estValue) {
   // 直接复用 detail 的执行逻辑（不再 confirm）
   const row = document.getElementById(rowId);
   if (row) {
+    // estValue = 含税金额；税率取该行展示值（保险费 6%）
+    const rateText = row.children[1] ? row.children[1].textContent.trim() : '0%';
+    const rate = (parseFloat(rateText) || 0) / 100;
+    const net = estValue / (1 + rate);
     row.classList.remove('row-estimate');
-    row.children[2].innerHTML = '<span style="font-weight:600">' + estValue.toFixed(2) + '</span>';
-    row.children[2].className = 'text-right';
-    row.children[2].style.background = '#f0fdf4';
-    row.children[3].innerHTML = '<span class="text-muted">0</span>';
-    row.children[3].className = 'text-right';
-    row.children[4].innerHTML = (estValue * 1.353).toFixed(2);
+    row.children[4].innerHTML = '<span style="font-weight:600">' + net.toFixed(2) + '</span> <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span>';
     row.children[4].className = 'text-right';
-    row.children[5].innerHTML = '<span class="badge badge-green">✅ 已确认（实际=预估）</span>';
-    row.children[7].innerHTML = '<span class="text-muted">—</span>';
+    row.children[4].style.background = '#f0fdf4';
+    row.children[5].innerHTML = '<span style="font-weight:600;color:#15803d">' + estValue.toFixed(2) + '</span>';
+    row.children[5].className = 'text-right';
+    row.children[5].style.background = '#eafbf0';
+    row.children[6].innerHTML = '<span class="text-muted">0</span>';
+    row.children[6].className = 'text-right';
+    row.children[7].innerHTML = (estValue * 1.353).toFixed(2);
+    row.children[7].className = 'text-right';
   }
   // 所有实际录完 → 启用「提交费用审批」
   onAllActualEntered();
-  showToast('success', `实际同预估 USD ${estValue} 已填充`, '差异 = 0 · 所有实际已录完，可点「提交费用审批」走审批流');
+  showToast('success', `实际同预估 含税 USD ${estValue} 已填充`, '差异 = 0 · 所有实际已录完，可点「提交费用审批」走审批流');
 }
 
 /* 【异常 #8-15】校验费用明细（新口径：预估必填，实际可空） */
@@ -3454,7 +3630,7 @@ function onUploadCreateSettle() {
     msg: `<strong>合并 ${selected.length} 张费用单</strong>（${vendor} / ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}）<br/>
       <strong>步骤：</strong><br/>
       1. 上传发票文件（PDF / JPG / PNG ≤ 10MB），<strong>支持上传多张</strong><br/>
-      2. 系统校验：<strong>发票总金额 = 已选费用单实际合计 ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}</strong>（金额对得上即可，不限发票数量）<br/>
+      2. 系统校验：<strong>发票含税总额 = 已选费用单实际含税合计 ${currency} ${total.toLocaleString('en-US',{minimumFractionDigits:2})}</strong>（金额对得上即可，不限发票数量）<br/>
       3. 创建结算单 <strong>LS-${new Date().getTime().toString().slice(-8)}</strong><br/>
       4. 关联费用单状态推进至「待付款」<br/>
       5. 结算单进入「结算单据」Tab，状态：待审核`,
@@ -3478,7 +3654,7 @@ function onCostUploadInvoice() {
     title: '上传发票并生成结算单',
     msg: `<strong>步骤：</strong><br/>
       1. 上传发票文件（PDF / JPG / PNG ≤ 10MB，<strong>支持多张</strong>）<br/>
-      2. 系统校验发票总金额 = 实际合计 USD 3,100<br/>
+      2. 系统校验发票含税总额 = 实际含税合计 USD 3,100<br/>
       3. 自动生成结算单 <strong>LS-20260513-005</strong><br/>
       4. 费用单状态推进至「<strong>发票待审核</strong>」，结算单进入「结算单据」Tab<br/>
       5. 财务审核通过后费用单和结算单同步进入「待付款」`,
@@ -3500,49 +3676,56 @@ function onCostUploadInvoice() {
 
 /* 改动 2：modal-actual-fee 确认录入 —— 录入保险费实际值，所有项录完后启用「提交费用审批」 */
 function onConfirmActualFee() {
-  const actual = parseFloat(document.getElementById('actual-amount').value) || 0;
-  if (actual <= 0) { showToast('error', '请填写实际金额', '实际金额必须大于 0'); return; }
+  const net = parseFloat(document.getElementById('actual-amount').value) || 0;   // 实际未税
+  if (net <= 0) { showToast('error', '请填写实际未税金额', '实际未税必须大于 0'); return; }
+  const rate = 0.06;                       // 保险费税率 6%
+  const actIncl = net * (1 + rate);        // 实际含税
   hideModal('modal-actual-fee');
-  // 更新保险费行（row-insurance）
+  // 更新保险费行（row-insurance）：4=实际未税 5=实际含税 6=差异(含税) 7=本位币
   const row = document.getElementById('row-insurance');
   if (row) {
     row.classList.remove('row-estimate');
-    const diff = actual - 300;
-    row.children[2].innerHTML = `<span style="font-weight:600">${actual.toFixed(2)}</span> <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span>`;
-    row.children[2].className = 'text-right';
-    row.children[2].style.background = '#f0fdf4';
-    if (diff === 0) {
-      row.children[3].innerHTML = '<span class="text-muted">0</span>';
-      row.children[3].className = 'text-right';
+    const diff = actIncl - 300;            // 含税差异（预估含税 300）
+    row.children[4].innerHTML = `<span style="font-weight:600">${net.toFixed(2)}</span> <span class="text-muted" style="font-weight:400;font-size:11px">✓ 已确认</span>`;
+    row.children[4].className = 'text-right';
+    row.children[4].style.background = '#f0fdf4';
+    row.children[5].innerHTML = `<span style="font-weight:600;color:#15803d">${actIncl.toFixed(2)}</span>`;
+    row.children[5].className = 'text-right';
+    row.children[5].style.background = '#eafbf0';
+    if (Math.abs(diff) < 0.005) {
+      row.children[6].innerHTML = '<span class="text-muted">0</span>';
+      row.children[6].className = 'text-right';
     } else {
       const cls = diff > 0 ? 'diff-positive' : 'diff-negative';
       const pct = (diff / 300 * 100).toFixed(1);
-      row.children[3].innerHTML = `${diff > 0 ? '+' : ''}${diff.toFixed(2)} (${diff > 0 ? '+' : ''}${pct}%)`;
-      row.children[3].className = 'text-right ' + cls;
+      row.children[6].innerHTML = `${diff > 0 ? '+' : ''}${diff.toFixed(2)} (${diff > 0 ? '+' : ''}${pct}%)`;
+      row.children[6].className = 'text-right ' + cls;
     }
-    row.children[4].innerHTML = (actual * 1.353).toFixed(2);
-    row.children[4].className = 'text-right';
+    row.children[7].innerHTML = (actIncl * 1.353).toFixed(2);
+    row.children[7].className = 'text-right';
   }
-  // 联动更新费用明细「合计」行
+  // 联动更新费用明细「合计」行：4=实际未税 5=实际含税 6=差异 7=本位币
   const totalRow = document.getElementById('fee-total-row');
   if (totalRow) {
-    const actTotal = 2800 + actual;          // 已确认 2,800 + 本次保险费
-    const sgdTotal = 3788.40 + actual * 1.353;
-    const diffTotal = 50 + (actual - 300);   // 港口 +50 + 保险差异
-    totalRow.children[2].innerHTML = actTotal.toFixed(2);
-    totalRow.children[3].innerHTML = (diffTotal >= 0 ? '+' : '') + diffTotal.toFixed(2);
-    totalRow.children[3].className = 'text-right ' + (diffTotal > 0 ? 'diff-positive' : (diffTotal < 0 ? 'diff-negative' : 'text-muted'));
-    totalRow.children[4].innerHTML = sgdTotal.toFixed(2);
+    const actNetTotal = 2754.72 + net;       // 已确认未税 2,754.72 + 本次保险费未税
+    const actInclTotal = 2800 + actIncl;     // 已确认含税 2,800 + 本次保险费含税
+    const sgdTotal = 3788.40 + actIncl * 1.353;
+    const diffTotal = 50 + (actIncl - 300);  // 港口 +50 + 保险含税差异
+    totalRow.children[4].innerHTML = actNetTotal.toFixed(2);
+    totalRow.children[5].innerHTML = actInclTotal.toFixed(2);
+    totalRow.children[6].innerHTML = (diffTotal >= 0 ? '+' : '') + diffTotal.toFixed(2);
+    totalRow.children[6].className = 'text-right ' + (diffTotal > 0 ? 'diff-positive' : (diffTotal < 0 ? 'diff-negative' : 'text-muted'));
+    totalRow.children[7].innerHTML = sgdTotal.toFixed(2);
     const hdr = document.getElementById('fee-header-summary');
     if (hdr) {
-      hdr.innerHTML = '预估合计 <strong style="color:#92400e">USD 3,050</strong> → '
-        + '实际合计 <strong style="color:#15803d">USD ' + actTotal.toLocaleString('en-US') + '</strong> '
+      hdr.innerHTML = '预估含税合计 <strong style="color:#92400e">USD 3,050</strong> → '
+        + '实际含税合计 <strong style="color:#15803d">USD ' + actInclTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) + '</strong> '
         + '<span class="badge badge-green" style="margin-left:4px">✓ 全部已录入</span>';
     }
   }
   // 所有实际录完 → 启用「提交费用审批」
   onAllActualEntered();
-  showToast('success', `实际费用 USD ${actual} 已录入`, '所有实际已录完，可点顶部「提交费用审批」走流程审批中心');
+  showToast('success', `实际未税 USD ${net.toFixed(2)}（含税 ${actIncl.toFixed(2)}）已录入`, '所有实际已录完，可点顶部「提交费用审批」走流程审批中心');
 }
 
 /* 结算驳回 */
@@ -3567,21 +3750,25 @@ function onCostDelete() {
 
 /* ════════ 实际费用录入弹窗：差异实时计算 ════════ */
 function recalcDiff() {
-  const actual = parseFloat(document.getElementById('actual-amount').value) || 0;
-  const estimate = 300;
-  const diff = actual - estimate;
-  const pct = (diff / estimate * 100).toFixed(1);
+  const net = parseFloat(document.getElementById('actual-amount').value) || 0;
+  const rate = 0.06;                       // 保险费税率 6%
+  const actIncl = net * (1 + rate);
+  const estIncl = 300;                      // 预估含税
+  const inclEl = document.getElementById('actual-incl');
+  if (inclEl) inclEl.textContent = 'USD ' + actIncl.toFixed(2);
+  const diff = actIncl - estIncl;           // 差异按含税
+  const pct = (diff / estIncl * 100).toFixed(1);
   const el = document.getElementById('diff-amount');
   if (!el) return;
-  if (diff > 0) {
+  if (diff > 0.005) {
     el.className = 'diff-positive';
-    el.textContent = `USD +${diff.toFixed(2)} (+${pct}%)`;
-  } else if (diff < 0) {
+    el.textContent = `含税 USD +${diff.toFixed(2)} (+${pct}%)`;
+  } else if (diff < -0.005) {
     el.className = 'diff-negative';
-    el.textContent = `USD ${diff.toFixed(2)} (${pct}%)`;
+    el.textContent = `含税 USD ${diff.toFixed(2)} (${pct}%)`;
   } else {
     el.className = '';
-    el.textContent = 'USD 0.00 (0%)';
+    el.textContent = '含税 USD 0.00 (0%)';
   }
 }
 </script>
@@ -3661,23 +3848,32 @@ const ANNOTATIONS = [
   {
     sel: "#fee-table", title: "费用明细表",
     rules: [
-      { type: "交互", text: "每项费用含「预估 / 实际」两个时点；支持 + 添加费用项、✕ 删除行" },
+      { type: "交互", text: "每项费用含「预估 / 实际」两个时点，每个时点录未税→自动算含税；支持 + 添加费用项、✕ 删除行" },
       { type: "校验", text: "费用类型为枚举：海运费 / 空运费 / 陆运费 / 报关费 / 保险费 / 港口费 / 清关杂费 / 仓储费 / 其他" }
     ]
   },
   {
-    sel: "#th-fee-est", title: "预估金额（入库前）",
+    sel: "#th-fee-rate", title: "税率（按费用项维护）",
     rules: [
-      { type: "BR", id: "BR-LC-19", text: "每项费用预估金额必填，入库前估算，用于暂估入库分摊" },
+      { type: "BR", id: "BR-LC-31", text: "税率按每条费用项单独维护；国际海运/空运等零税率项填 0%，本地服务/境外增值税项按实际税率（如 6% / 9%）" },
+      { type: "BR", id: "BR-LC-32", text: "税额 = 未税 × 税率；含税 = 未税 + 税额（系统自动计算，不手填）" },
+      { type: "校验", text: "数值，≥ 0，单位 %" }
+    ]
+  },
+  {
+    sel: "#th-fee-est", title: "预估未税（入库前）",
+    rules: [
+      { type: "BR", id: "BR-LC-19", text: "每项费用预估未税必填，入库前估算，用于暂估入库分摊（按含税）" },
       { type: "BR", id: "BR-LC-11", text: "状态「待录入」且 PO 未入库时预估可逐项修改；PO 一旦入库预估自动锁定" },
+      { type: "BR", id: "BR-LC-33", text: "落地成本与结算均按「含税金额」：跨境物流商境外税在新加坡不可抵扣，全额计入库存成本" },
       { type: "校验", text: "数值，≥ 0" }
     ]
   },
   {
-    sel: "#th-fee-act", title: "实际金额（入库后）",
+    sel: "#th-fee-act", title: "实际未税（入库后）",
     rules: [
-      { type: "交互", text: "可后补：单据已到时随预估同填，或后续在详情页补录" },
-      { type: "BR", id: "BR-LC-03", text: "实际录入后系统自动计算差异，按「在库 / 已出库」比例拆分" }
+      { type: "交互", text: "录实际未税→自动算含税；可后补：单据已到时随预估同填，或后续在详情页补录" },
+      { type: "BR", id: "BR-LC-03", text: "实际录入后系统按含税金额计算差异，按「在库 / 已出库」比例拆分" }
     ]
   },
   {
@@ -3694,16 +3890,17 @@ const ANNOTATIONS = [
     ]
   },
   {
-    sel: "#rate-info", title: "汇率规则",
+    sel: "#rate-info", title: "税额与汇率规则",
     rules: [
-      { type: "交互", text: "初始汇率在创建时锁定，用于预估分摊" },
-      { type: "交互", text: "所有实际费用录完后取最新财务汇率作为最终汇率，本位币重算；结算金额=实际合计" }
+      { type: "BR", id: "BR-LC-32", text: "税额 = 未税 × 税率，含税 = 未税 + 税额；合计区显示未税合计 / 税额合计 / 含税合计" },
+      { type: "BR", id: "BR-LC-33", text: "落地成本与结算金额均按含税金额计" },
+      { type: "交互", text: "初始汇率创建时锁定用于预估分摊；实际录完取最新财务汇率为最终汇率重算本位币，结算金额=实际含税合计" }
     ]
   },
   {
     sel: "#btn-submit-cost", title: "创建费用单",
     rules: [
-      { type: "校验", text: "每项费用预估金额必填，校验通过才可创建" },
+      { type: "校验", text: "每项费用预估未税必填（>0），校验通过才可创建；含税由系统按税率自动算出" },
       { type: "交互", text: "提交后生成 LC 单，进入「待录入」状态" }
     ]
   },
@@ -3811,7 +4008,7 @@ const ANNOTATIONS = [
     sel: "#btn-upload-create", title: "上传发票创建结算单",
     rules: [
       { type: "校验", text: "须先勾选至少 1 张费用单才可点击，否则置灰" },
-      { type: "校验", text: "发票数量不限，发票总金额 = 已选费用单实际合计，校验通过自动创建结算单" }
+      { type: "校验", text: "发票数量不限，发票含税总额 = 已选费用单实际含税合计，校验通过自动创建结算单" }
     ]
   },
   {
@@ -3878,7 +4075,7 @@ const ANNOTATIONS = [
   {
     sel: "#tab-invoice", title: "发票信息",
     rules: [
-      { type: "校验", text: "发票总金额必须 = 关联费用单实际合计（差异 0）才校验通过" },
+      { type: "校验", text: "发票含税总额必须 = 关联费用单实际含税合计（差异 0）才校验通过" },
       { type: "交互", text: "不限发票张数，金额对得上即可；支持批量编辑 / 单张编辑发票" }
     ]
   },
