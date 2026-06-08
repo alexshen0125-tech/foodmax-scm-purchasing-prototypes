@@ -284,7 +284,6 @@ label{font-size:13px;color:var(--t2)}
             <div class="dropdown-item" onclick="startWizard('nonstd')">非标品</div>
           </div>
         </div>
-        <button class="btn" onclick="newSkuCreate()">+ 新建商品</button>
         <div class="dropdown-wrap">
           <button class="btn" onclick="toggleDD('dd-batch')">批量操作 ▾</button>
           <div class="dropdown-menu" id="dd-batch">
@@ -602,18 +601,20 @@ label{font-size:13px;color:var(--t2)}
             </div>
           </div>
           <div class="form-row">
-            <div class="form-field w2"><label class="required">货品名称</label><input type="text" id="wiz-raw-name" class="iw100" placeholder="请输入货品名称"></div>
+            <div class="form-field w2"><label class="required">货品名称</label><input type="text" id="wiz-raw-name" class="iw100" placeholder="请输入基础名称（如：三文鱼原条）" oninput="wizUpdateFullName()"><div class="form-hint" id="wiz-name-preview">货品全称 = 基础名称 + 净含量/计量单位（系统自动拼接，无需手输）</div></div>
             <div class="form-field w2"><label class="required">后台类目</label><select class="iw100" id="wiz-raw-cat"><option value="">请选择类目</option><option>水产原料</option><option>水产加工品</option><option>蔬菜</option><option>肉类</option><option>调味品</option></select></div>
           </div>
-          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">净含量</div>
+          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0"><span style="color:var(--danger)">*</span> 库存单位</div>
           <div class="form-row" id="wiz-stock-row">
-            <!-- 由 setStockUnitFields(wizType) 动态注入：净含量数量 + 净含量单位 -->
+            <!-- 由 setStockUnitFields(wizType) 动态注入：计量单位 + 净含量 + 净含量单位 -->
           </div>
-          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">箱规</div>
           <div class="form-row">
-            <div class="form-field w3" id="wiz-measure-cell"><!-- 由 setStockUnitFields(wizType) 动态注入：计量单位 --></div>
-            <div class="form-field w3"><label>包装数量</label><input type="number" class="iw100" placeholder="请输入" min="1" step="1"></div>
-            <div class="form-field w3"><label>包装规格</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+            <div class="form-field w3"><label>备注</label><input type="text" class="iw100" maxlength="20" placeholder="选填，≤20 字"></div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--t1);margin:12px 0 8px 0">包装规格（选填）</div>
+          <div class="form-row">
+            <div class="form-field w3"><label>包装数量</label><input type="number" class="iw100" placeholder="请输入" min="0" step="0.01"></div>
+            <div class="form-field w3"><label>包装单位</label><select class="iw100"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>箱</option><option>桶</option><option>管</option></select></div>
           </div>
           <div class="form-row">
             <div class="form-field w2"><label>产地</label><input type="text" class="iw100" placeholder="选填"></div>
@@ -765,55 +766,7 @@ label{font-size:13px;color:var(--t2)}
         </div>
       </div>
 
-      <!-- ─── 商品信息（标品 Step 3 / 非标品新建 Step 4 / 非标品已有 Step 2）───-->
-      <div id="ws-sku" style="display:none">
-        <div class="notice-box notice-info" id="sku-notice">将基于货品创建商品 SKU。货品已维护的规格、产地、品牌等信息自动带入，无需重复录入。</div>
-        <div class="form-section">
-          <div class="form-section-title">规格信息 <span style="font-weight:normal;color:var(--t3);font-size:12px">（继承自货品，只读）</span></div>
-          <div class="form-row">
-            <div class="form-field w3"><div class="detail-label">净含量</div><div class="detail-value" id="sku-net">1 KG</div></div>
-            <div class="form-field w3"><div class="detail-label">计量单位</div><div class="detail-value" id="sku-measure">袋</div></div>
-            <div class="form-field w3"><div class="detail-label">箱规</div><div class="detail-value" id="sku-box">12 袋 / 箱</div></div>
-          </div>
-          <div class="form-row">
-            <div class="form-field full">
-              <label class="required">最小售卖单位</label>
-              <div class="radio-group">
-                <label class="radio-option"><input type="radio" name="sku-sell-unit" checked onchange="syncSellUnit('measure')"> 袋（计量单位）</label>
-                <label class="radio-option"><input type="radio" name="sku-sell-unit" onchange="syncSellUnit('box')"> 箱（包装规格单位）</label>
-              </div>
-              <div class="form-hint" id="sku-sell-hint">客户最少购买 1 袋；下单按 1 袋扣减 1 货品库存。货品未维护箱规时仅可选计量单位。</div>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field w3"><label>换算系数</label><div class="flex gap8 items-center"><input type="text" id="sku-coef" value="1" class="readonly-field" readonly style="width:60px"><span class="text-gray text-sm" id="sku-coef-desc">1 售卖单位 = 1 货品计量单位</span></div></div>
-          </div>
-        </div>
-        <div class="form-section">
-          <div class="form-section-title">商品基础信息</div>
-          <div class="form-row">
-            <div class="form-field w2"><label class="required">商品名称</label><input type="text" id="sku-name" class="iw100" placeholder="默认=货品名称，可修改"><div class="form-hint">默认=货品名称，可修改</div></div>
-            <div class="form-field w2"><label class="required">前台类目</label><select class="iw100"><option value="">请选择</option><option>海鲜水产</option><option>新鲜蔬菜</option><option>肉禽蛋品</option><option>调味品</option></select></div>
-          </div>
-          <div class="form-row">
-            <div class="form-field w3"><label>产地</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
-            <div class="form-field w3"><label>品牌</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
-          </div>
-          <div class="form-row"><div class="form-field full"><label>商品描述</label><textarea class="iw100" placeholder="面向客户的描述（选填）"></textarea></div></div>
-          <div class="form-row">
-            <div class="form-field full">
-              <label>商品图片</label>
-              <div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片')"><span style="font-size:20px">+</span><span>上传图片</span></div></div>
-              <div class="form-hint">最多5张，jpg/png，≤5MB</div>
-            </div>
-          </div>
-          <div class="form-section-title" style="margin-top:8px">售卖信息</div>
-          <div class="form-row">
-            <div class="form-field w3"><label>默认售价</label><div class="flex gap8 items-center"><input type="number" placeholder="0.00" style="width:120px;height:32px" step="0.01"><span class="text-gray" id="sku-price-unit">SGD / 袋</span></div></div>
-            <div class="form-field w3"><label class="required">商品状态</label><div class="radio-group"><label class="radio-option"><input type="radio" name="sku-status" checked> 暂不上架</label><label class="radio-option"><input type="radio" name="sku-status"> 立即上架</label></div></div>
-          </div>
-        </div>
-      </div>
+      <!-- 商品信息/SKU 步骤已移除：建货品流程不含 SKU（对齐线上 product-create），SKU 由列表「新建商品」独立入口创建 -->
 
     </div><!-- /wiz-body -->
 
@@ -833,14 +786,10 @@ label{font-size:13px;color:var(--t2)}
 <!-- ══════════════════════════════════════════════
      PAGE: 新建商品（货品关联建商品）
 ══════════════════════════════════════════════ -->
-<div class="page" id="page-sku-create">
-  <div class="breadcrumb">
-    <a onclick="gotoPage('goods-list')">货品管理</a>
-    <span>›</span>
-    <span>新建商品</span>
-  </div>
-  <div class="card">
-    <div class="card-body">
+<div class="overlay" id="ov-sku-create">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3 id="sku-dlg-title">新建商品</h3><div class="dialog-close" onclick="closeDialog('ov-sku-create')">×</div></div>
+    <div class="dialog-body">
 
       <!-- ─── SKU 规格 ─── -->
       <div class="form-section">
@@ -862,7 +811,7 @@ label{font-size:13px;color:var(--t2)}
           <div style="background:#f5f7fa;border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin:12px 0">
             <div class="flex justify-between items-center" style="margin-bottom:12px">
               <span style="font-size:12px;color:var(--t3);font-weight:500;letter-spacing:.3px">已绑定货品</span>
-              <button class="btn-text danger" onclick="unbindSkuGoods()">解除绑定</button>
+              <button class="btn-text danger" id="sku-unbind-btn" onclick="unbindSkuGoods()">解除绑定</button>
             </div>
             <div class="flex" style="flex-wrap:wrap;gap:8px 28px;font-size:13px;color:var(--t2)">
               <div><span class="text-gray">货品编码：</span><span id="sk-code" style="font-family:monospace;font-size:12px;color:var(--primary)">—</span></div>
@@ -923,8 +872,8 @@ label{font-size:13px;color:var(--t2)}
         </div>
         <div class="form-row">
           <div class="form-field w3"><label>税率</label><div class="flex gap8 items-center" style="height:32px"><span id="skc-tax">9%</span><span class="text-gray text-sm">（按前台类目带出，只读）</span></div></div>
-          <div class="form-field w3"><label>产地</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
-          <div class="form-field w3"><label>品牌</label><input type="text" class="iw100" placeholder="继承自货品，可修改"></div>
+          <div class="form-field w3"><label>产地</label><input type="text" id="skc-origin" class="iw100" placeholder="选填"><div class="form-hint">已从货品自动带入，可修改</div></div>
+          <div class="form-field w3"><label>品牌</label><input type="text" id="skc-brand" class="iw100" placeholder="选填"><div class="form-hint">已从货品自动带入，可修改</div></div>
         </div>
         <div class="form-row"><div class="form-field full"><label>商品描述</label><textarea class="iw100" placeholder="面向客户的描述，最多 500 字（选填）"></textarea></div></div>
         <div class="form-row">
@@ -952,10 +901,10 @@ label{font-size:13px;color:var(--t2)}
       </div>
 
     </div>
-  </div>
-  <div class="flex justify-between items-center" style="padding:8px 0 24px">
-    <button class="btn" onclick="gotoPage('goods-list')">返回</button>
-    <button class="btn btn-primary" onclick="saveSkuCreate()">保存并创建</button>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-sku-create')">取消</button>
+      <button class="btn btn-primary" onclick="saveSkuCreate()">保存并创建</button>
+    </div>
   </div>
 </div>
 
@@ -1143,45 +1092,20 @@ label{font-size:13px;color:var(--t2)}
     <div class="dialog-body" style="padding:0">
       <div class="left-tabs">
         <div class="left-tab-nav">
-          <div class="left-tab-nav-item active" onclick="switchLT('bt',0,this)">效期管理</div>
-          <div class="left-tab-nav-item" onclick="switchLT('bt',1,this)">入仓超收</div>
-          <div class="left-tab-nav-item" onclick="switchLT('bt',2,this)">质检扣点</div>
-          <div class="left-tab-nav-item" onclick="switchLT('bt',3,this)">质检拒收下限</div>
-          <div class="left-tab-nav-item" onclick="switchLT('bt',4,this)">是否可采</div>
-          <div class="left-tab-nav-item" onclick="switchLT('bt',5,this)">默认供应商</div>
-          <div class="left-tab-nav-item" onclick="switchLT('bt',6,this)">其他检测报告</div>
+          <div class="left-tab-nav-item active" onclick="switchLT('bt',0,this)">是否可采</div>
+          <div class="left-tab-nav-item" onclick="switchLT('bt',1,this)">默认供应商</div>
         </div>
         <div class="left-tab-content">
           <div id="bt-0">
-            <div class="form-row"><div class="form-field w2"><label class="required">效期管理</label><div class="radio-group"><label class="radio-option"><input type="radio" name="b-shelf" checked> 是</label><label class="radio-option"><input type="radio" name="b-shelf"> 否</label></div></div></div>
-            <div class="form-row">
-              <div class="form-field w3"><label>保质期</label><div class="flex gap8"><input type="number" placeholder="时长" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option><option>年</option></select></div></div>
-              <div class="form-field w3"><label>保存条件</label><select class="iw100"><option value="">请选择</option><option>常温</option><option>冷藏</option><option>冷冻</option><option>冷鲜</option></select></div>
-            </div>
-          </div>
-          <div id="bt-1" style="display:none">
-            <table class="inline-table"><thead><tr><th>仓库</th><th>超收比例(%)</th><th>操作</th></tr></thead><tbody id="b-overstock"></tbody></table>
-            <button class="btn btn-sm mt8" onclick="addRow('b-overstock')">+ 添加</button>
-          </div>
-          <div id="bt-2" style="display:none">
-            <div class="form-row"><div class="form-field w3"><label>质检扣点</label><div class="flex gap8 items-center"><input type="number" placeholder="0" style="width:100px;height:32px" min="0" max="100"><span class="text-gray">%</span></div><div class="form-hint">将批量更新所选货品的质检扣点</div></div></div>
-          </div>
-          <div id="bt-3" style="display:none">
-            <div class="form-row"><div class="form-field w3"><label>质检拒收下限</label><div class="flex gap8 items-center"><input type="number" placeholder="0" style="width:100px;height:32px" min="0" max="100"><span class="text-gray">%</span></div><div class="form-hint">将批量更新所选货品的质检拒收下限</div></div></div>
-          </div>
-          <div id="bt-4" style="display:none">
             <div class="form-row"><div class="form-field w2"><label class="required">采购状态</label><div class="radio-group"><label class="radio-option"><input type="radio" name="b-pur" checked> 可采</label><label class="radio-option"><input type="radio" name="b-pur"> 不可采</label></div><div class="form-hint mt8">将批量更新所选货品的采购状态</div></div></div>
           </div>
-          <div id="bt-5" style="display:none">
+          <div id="bt-1" style="display:none">
             <table class="inline-table"><thead><tr><th>仓库</th><th>默认供应商</th></tr></thead>
               <tbody>
                 <tr><td>SG-WH01</td><td><select style="width:200px;height:28px;font-size:12px"><option value="">请选择供应商</option><option>新加坡海鲜批发商 Pte Ltd</option><option>优鲜食材供应商</option></select></td></tr>
                 <tr><td>SG-WH02</td><td><select style="width:200px;height:28px;font-size:12px"><option value="">请选择供应商</option><option>新加坡海鲜批发商 Pte Ltd</option><option>优鲜食材供应商</option></select></td></tr>
               </tbody>
             </table>
-          </div>
-          <div id="bt-6" style="display:none">
-            <div class="form-row"><div class="form-field w2"><label>其他检测报告</label><select class="iw100"><option value="">请选择</option><option>清真认证</option><option>有机认证</option><option>食品安全检测</option></select><div class="form-hint mt8">将批量更新所选货品的检测报告类型</div></div></div>
           </div>
         </div>
       </div>
@@ -1389,18 +1313,18 @@ label{font-size:13px;color:var(--t2)}
 // ─── DATA ───
 // 业务规则：标品固定=成品货品；非标品固定=原料货品
 const GD = [
-  {code:'item-20260418-0012',old:'spucode00000718',name:'三文鱼原条',attr:'成品货品',pack:'10KG/箱',cat:'水产原料',type:'标品',pur:true,ct:'2026-04-18 10:23'},
-  {code:'item-20260418-0013',old:'spucode00000719',name:'三文鱼柳原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,ct:'2026-04-18 10:31'},
-  {code:'item-20260418-0014',old:'spucode00000720',name:'三文鱼刺身原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,ct:'2026-04-20 14:02'},
-  {code:'item-20260410-0001',old:'spucode00000688',name:'柠檬汁',attr:'成品货品',pack:'500ml/瓶',cat:'调味品',type:'标品',pur:true,ct:'2026-04-10 09:00'},
-  {code:'item-20260410-0002',old:'spucode00000689',name:'青柠',attr:'成品货品',pack:'1KG/袋',cat:'蔬菜',type:'标品',pur:true,ct:'2026-04-10 09:05'},
-  {code:'item-20260401-0008',old:'spucode00000650',name:'小葱',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,ct:'2026-04-01 08:30'},
-  {code:'item-20260401-0009',old:'spucode00000651',name:'生姜',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,ct:'2026-04-01 08:35'},
-  {code:'item-20260323-0003',old:'spucode00000620',name:'鸡腿（冷冻）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,ct:'2026-03-23 11:00'},
-  {code:'item-20260323-0004',old:'spucode00000621',name:'猪五花（冷藏）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,ct:'2026-03-23 11:10'},
-  {code:'item-20260310-0005',old:'spucode00000600',name:'鳕鱼柳',attr:'成品货品',pack:'1KG/袋',cat:'水产原料',type:'标品',pur:true,ct:'2026-03-10 14:00'},
-  {code:'item-20260310-0006',old:'spucode00000601',name:'鳕鱼排原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,ct:'2026-03-10 14:30'},
-  {code:'item-20260305-0007',old:'spucode00000580',name:'芝麻酱',attr:'成品货品',pack:'500g/瓶',cat:'调味品',type:'标品',pur:true,ct:'2026-03-05 10:00'},
+  {code:'item-20260418-0012',old:'spucode00000718',name:'三文鱼原条',attr:'成品货品',pack:'10KG/箱',cat:'水产原料',type:'标品',pur:true,origin:'挪威',brand:'SalMar',ct:'2026-04-18 10:23'},
+  {code:'item-20260418-0013',old:'spucode00000719',name:'三文鱼柳原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,origin:'挪威',brand:'SalMar',ct:'2026-04-18 10:31'},
+  {code:'item-20260418-0014',old:'spucode00000720',name:'三文鱼刺身原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,origin:'挪威',brand:'SalMar',ct:'2026-04-20 14:02'},
+  {code:'item-20260410-0001',old:'spucode00000688',name:'柠檬汁',attr:'成品货品',pack:'500ml/瓶',cat:'调味品',type:'标品',pur:true,origin:'泰国',brand:'鲜活',ct:'2026-04-10 09:00'},
+  {code:'item-20260410-0002',old:'spucode00000689',name:'青柠',attr:'成品货品',pack:'1KG/袋',cat:'蔬菜',type:'标品',pur:true,origin:'越南',brand:'',ct:'2026-04-10 09:05'},
+  {code:'item-20260401-0008',old:'spucode00000650',name:'小葱',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,origin:'本地',brand:'',ct:'2026-04-01 08:30'},
+  {code:'item-20260401-0009',old:'spucode00000651',name:'生姜',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,origin:'山东',brand:'',ct:'2026-04-01 08:35'},
+  {code:'item-20260323-0003',old:'spucode00000620',name:'鸡腿（冷冻）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,origin:'巴西',brand:'BRF',ct:'2026-03-23 11:00'},
+  {code:'item-20260323-0004',old:'spucode00000621',name:'猪五花（冷藏）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,origin:'本地',brand:'',ct:'2026-03-23 11:10'},
+  {code:'item-20260310-0005',old:'spucode00000600',name:'鳕鱼柳',attr:'成品货品',pack:'1KG/袋',cat:'水产原料',type:'标品',pur:true,origin:'俄罗斯',brand:'Ocean',ct:'2026-03-10 14:00'},
+  {code:'item-20260310-0006',old:'spucode00000601',name:'鳕鱼排原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,origin:'俄罗斯',brand:'Ocean',ct:'2026-03-10 14:30'},
+  {code:'item-20260305-0007',old:'spucode00000580',name:'芝麻酱',attr:'成品货品',pack:'500g/瓶',cat:'调味品',type:'标品',pur:true,origin:'河北',brand:'六必居',ct:'2026-03-05 10:00'},
 ];
 
 const BOM_DATA = [
@@ -1747,23 +1671,46 @@ function switchLT(pfx,idx,el){
 function syncRawNetUnit(val){
   const t=document.getElementById('wiz-raw-net-unit');
   if(t) t.value=val||'';
+  wizUpdateFullName();
+}
+// 货品名称自动拼净含量到结尾（货品已标准化，业务只填基础名）
+function wizFullRawName(){
+  const base=(document.getElementById('wiz-raw-name')?.value||'').trim();
+  if(!base) return '';
+  const q=document.getElementById('wiz-raw-net-qty');
+  const nu=document.getElementById('wiz-raw-net-unit');
+  const mu=document.getElementById('wiz-raw-unit');
+  const qty=q?String(q.value).trim():'';
+  const netUnit=nu?String(nu.value).trim():'';
+  const measure=mu?String(mu.value).trim():'';
+  // 净含量+净含量单位，再加「/计量单位」→ 如 10kg/瓶
+  let suffix=(qty&&netUnit)?(qty+netUnit):'';
+  if(suffix&&measure) suffix=suffix+'/'+measure;
+  return suffix?(base+' '+suffix):base;
+}
+function wizUpdateFullName(){
+  const p=document.getElementById('wiz-name-preview');
+  if(!p) return;
+  const full=wizFullRawName();
+  if(!full){p.innerHTML='货品全称 = 基础名称 + 净含量/计量单位（系统自动拼接，无需手输）';return;}
+  const suf=wizFullRawName()!==(document.getElementById('wiz-raw-name').value||'').trim();
+  p.innerHTML='货品全称：<b style="color:var(--primary)">'+full+'</b>'+(suf?'':'（请填净含量后自动追加）');
 }
 function setStockUnitFields(type){
   const row=document.getElementById('wiz-stock-row');
-  const cell=document.getElementById('wiz-measure-cell');
-  if(!row||!cell) return;
+  if(!row) return;
   if(type==='std'){
-    // 标品 → 货品属性=成品货品 → 成品规则
+    // 标品 → 成品货品：计量单位可选；净含量+净含量单位用户填（对齐线上「库存单位」）
     row.innerHTML=`
-      <div class="form-field w3"><label class="required">数量</label><input type="number" class="iw100" placeholder="请输入" min="0.01" step="0.01"></div>
-      <div class="form-field w3"><label class="required">单位</label><select class="iw100" id="wiz-raw-net-unit"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>`;
-    cell.innerHTML=`<label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select>`;
+      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="wizUpdateFullName()"><option value="">请选择</option><option>瓶</option><option>罐</option><option>包</option><option>袋</option><option>盒</option><option>杯</option><option>桶</option><option>管</option></select></div>
+      <div class="form-field w3"><label class="required">净含量</label><input type="number" id="wiz-raw-net-qty" class="iw100" placeholder="请输入" min="0.01" step="0.01" oninput="wizUpdateFullName()"></div>
+      <div class="form-field w3"><label class="required">净含量单位</label><select class="iw100" id="wiz-raw-net-unit" onchange="wizUpdateFullName()"><option value="">请选择</option><option>g</option><option>kg</option><option>ml</option><option>L</option><option>cm</option><option>m</option><option>个</option><option>只</option><option>条</option><option>颗</option><option>片</option><option>根</option><option>包</option><option>瓶</option><option>罐</option><option>盒</option></select></div>`;
   } else {
-    // 非标品 → 货品属性=原料货品 → 原料规则
+    // 非标品 → 原料货品：净含量固定 1，净含量单位随计量单位
     row.innerHTML=`
-      <div class="form-field w3"><label class="required">数量</label><input type="number" value="1" class="iw100 readonly-field" readonly></div>
-      <div class="form-field w3"><label class="required">单位</label><input type="text" id="wiz-raw-net-unit" class="iw100 readonly-field" readonly placeholder="同计量单位"></div>`;
-    cell.innerHTML=`<label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="syncRawNetUnit(this.value)"><option value="">请选择</option><option>KG</option><option>g</option></select>`;
+      <div class="form-field w3"><label class="required">计量单位</label><select class="iw100" id="wiz-raw-unit" onchange="syncRawNetUnit(this.value)"><option value="">请选择</option><option>KG</option><option>g</option></select></div>
+      <div class="form-field w3"><label class="required">净含量</label><input type="number" id="wiz-raw-net-qty" value="1" class="iw100 readonly-field" readonly></div>
+      <div class="form-field w3"><label class="required">净含量单位</label><input type="text" id="wiz-raw-net-unit" class="iw100 readonly-field" readonly placeholder="同计量单位"></div>`;
   }
 }
 function addRow(tbodyId){
@@ -1871,7 +1818,7 @@ function showWizPanel(step){
   if(panels[step]==='ws-bom'){
     let rawCode='—', rawName='—', rawUnit='—', rawShelf='是', rawDays='—', rawStorage='—';
     if(wizType==='nonstd'&&wizSrc==='new'){
-      rawName=document.getElementById('wiz-raw-name').value||'（原料货品）';
+      rawName=wizFullRawName()||'（原料货品）';
       rawUnit=document.getElementById('wiz-raw-unit').value||'—';
       // 新建原料时编码系统自动生成，显示占位
       rawCode='（建档后自动生成）';
@@ -1918,7 +1865,7 @@ function wizPrev(){
 // 完成原料建单（仅创建原料货品，不继续建成品）
 function finishRawOnly(){
   wizRawOnly=true;
-  const rawName=document.getElementById('wiz-raw-name')?.value||'原料货品';
+  const rawName=wizFullRawName()||'原料货品';
   const items=[{
     txt:`创建原料货品「${rawName}」`,
     sub:'· 货品属性：原料货品 · BOM 关系后续可通过「新建成品货品」建立'
@@ -2047,7 +1994,7 @@ function fillExistRaw(val){
 function openConfirmBuild(){
   wizRawOnly=false;
   const isStd=wizType==='std';
-  const rawName=document.getElementById('wiz-raw-name')?.value||'原料货品';
+  const rawName=wizFullRawName()||'原料货品';
   const finNames=[...document.querySelectorAll('.fin-name')].map(el=>el.value||'（未填写）');
   let items=[];
   if(isStd){
@@ -2072,7 +2019,7 @@ function submitBuild(){
   closeDialog('ov-confirm-build');
   const isStd=wizType==='std';
   const id1='item-20260424-'+String(Math.floor(Math.random()*9000)+1000);
-  const rawName=isStd?(document.getElementById('wiz-raw-name')?.value||'货品名称'):(wizSrc==='exist'?document.getElementById('exist-raw-name')?.textContent||'原料':(document.getElementById('wiz-raw-name')?.value||'原料'));
+  const rawName=isStd?(wizFullRawName()||'货品名称'):(wizSrc==='exist'?document.getElementById('exist-raw-name')?.textContent||'原料':(wizFullRawName()||'原料'));
   const finNames=[...document.querySelectorAll('.fin-name')].map(el=>el.value||'成品货品');
   const resultCard=document.querySelector('.result-card');
   resultCard.querySelectorAll('.dyn-result').forEach(el=>el.remove());
@@ -2133,6 +2080,7 @@ function goodsToBind(r){
   const measure=(parts[1]||'件').trim();
   const countable=['瓶','罐','袋','包','盒','个','只'].includes(measure);
   return {code:r.code,name:r.name,measure:measure,enable:'启用',gtype:r.type,net:net,
+    origin:r.origin||'',brand:r.brand||'',
     boxQty:countable?12:0,boxUnit:countable?'箱':'',
     box:countable?`12 ${measure} / 箱`:'—（货品未维护箱规）'};
 }
@@ -2142,6 +2090,8 @@ function bindSkuGoods(val){
   if(val===''){
     wrap.style.display='none';tip.style.display='';
     spu.style.display='none';disp.style.display='none';
+    var oo=document.getElementById('skc-origin'); if(oo) oo.value='';
+    var bb=document.getElementById('skc-brand'); if(bb) bb.value='';
     return;
   }
   const o=goodsToBind(GD[+val]);
@@ -2155,6 +2105,8 @@ function bindSkuGoods(val){
   document.getElementById('sk-box').textContent=o.box;
   document.getElementById('skc-attr').value=o.gtype;
   document.getElementById('skc-spu-name').value=o.name;
+  document.getElementById('skc-origin').value=o.origin;
+  document.getElementById('skc-brand').value=o.brand;
   skcSpecUnit=o.measure;
   // 默认预置「单计量单位」一行；货品维护了箱规时再预置「整箱」一行，可继续增删
   skcSpecs=[{name:'单'+o.measure,qty:1}];
@@ -2206,18 +2158,31 @@ function saveSkuCreate(){
   const qtys=skcSpecs.map(s=>s.qty);
   if(new Set(qtys).size!==qtys.length){showToast('存在重复的规格数量，请合并','warning');return;}
   showToast(`商品创建成功，已生成 ${skcSpecs.length} 个 SKU`,'success');
-  setTimeout(()=>gotoPage('goods-list'),800);
+  setTimeout(()=>closeDialog('ov-sku-create'),800);
 }
+// 成品行操作列「新建商品」：弹窗方式，自动预绑该成品货品
 function openSkuCreate(i){
-  gotoPage('sku-create');
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  const t=document.getElementById('sku-dlg-title');
+  if(t) t.textContent='新建商品（关联货品：'+(GD[i]?GD[i].name:'')+'）';
+  openDialog('ov-sku-create');
   const sel=document.getElementById('sku-bind-select');
   sel.value=String(i);
   bindSkuGoods(String(i));
+  // 关联模式：货品固定，锁定下拉并隐藏「解除绑定」
+  sel.disabled=true;
+  const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
 }
-// 工具栏「+ 新建商品」：进入空白新建商品页，由用户在页内选择货品
+// 工具栏「+ 新建商品」：弹窗方式，由用户在弹窗内选择货品
 function newSkuCreate(){
-  gotoPage('sku-create');
-  document.getElementById('sku-bind-select').value='';
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  const t=document.getElementById('sku-dlg-title');
+  if(t) t.textContent='新建商品';
+  openDialog('ov-sku-create');
+  const sel=document.getElementById('sku-bind-select');
+  sel.disabled=false;
+  sel.value='';
+  const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='';
   bindSkuGoods('');
 }
 
