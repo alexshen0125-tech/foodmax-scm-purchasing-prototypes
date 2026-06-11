@@ -284,6 +284,7 @@ label{font-size:13px;color:var(--t2)}
             <div class="dropdown-item" onclick="startWizard('nonstd')">非标品</div>
           </div>
         </div>
+        <button class="btn" onclick="openSkuGlobal()">+ 新建商品</button>
         <div class="dropdown-wrap">
           <button class="btn" onclick="toggleDD('dd-batch')">批量操作 ▾</button>
           <div class="dropdown-menu" id="dd-batch">
@@ -896,10 +897,10 @@ label{font-size:13px;color:var(--t2)}
     <div class="dialog-header"><h3 id="sku-dlg-title">新建商品</h3><div class="dialog-close" onclick="closeDialog('ov-sku-create')">×</div></div>
     <div class="dialog-body">
 
-      <!-- ─── 原料模式提示：创建的是商品，成品货品按商品信息自动派生 ─── -->
+      <!-- ─── 原料模式提示（与成品模式同结构，仅多此提示）─── -->
       <div class="form-section" id="sku-raw-section" style="display:none">
         <div class="notice-box notice-info" style="margin:0">
-          本次由原料「<b id="srw-raw-name">—</b>」<b>新建商品</b>。提交后系统将<b>根据下方商品信息自动创建成品货品</b>（成品名称、规格取自商品），并建立 <b>BOM 关系（原料 → 成品）</b>；该成品创建方式=原料制造、默认<b>不可采</b>。<br><b>商品最终绑定该自动创建的成品货品（非原料）</b>，原料仅作为 BOM 上游来源。
+          本次由原料「<b id="srw-raw-name">—</b>」新建商品：将<b>根据下方商品信息自动创建成品货品</b>（成品名称、规格取自商品），并与该原料建立 <b>BOM 关系（原料 → 成品）</b>；成品创建方式=原料制造、默认<b>不可采</b>。<b>商品最终绑定该成品货品（非原料）</b>，原料仅作为 BOM 上游来源。
         </div>
       </div>
 
@@ -909,10 +910,11 @@ label{font-size:13px;color:var(--t2)}
         <div class="form-hint" style="margin-bottom:12px">需先绑定货品；绑定后商品规格、产地、品牌等信息自动从货品带入，无需重复录入</div>
         <div class="form-row" id="sku-bind-row">
           <div class="form-field full">
-            <label class="required">绑定货品</label>
-            <select class="iw100" id="sku-bind-select" style="max-width:480px" onchange="bindSkuGoods(this.value)">
+            <label class="required" id="sku-bind-label">绑定货品</label>
+            <select class="iw100" id="sku-bind-select" style="max-width:480px" onchange="onSkuBindSelect(this.value)">
               <option value="">搜索货品编码 / 名称并选择</option>
             </select>
+            <div class="form-hint" id="sku-bind-hint">选择后自动识别：原料货品→自动创建成品货品+BOM；成品货品→直接绑定。</div>
           </div>
         </div>
 
@@ -922,7 +924,7 @@ label{font-size:13px;color:var(--t2)}
           <!-- 已绑定货品卡 -->
           <div id="sku-bound-card" style="background:#f5f7fa;border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin:12px 0">
             <div class="flex justify-between items-center" style="margin-bottom:12px">
-              <span style="font-size:12px;color:var(--t3);font-weight:500;letter-spacing:.3px">已绑定货品</span>
+              <span id="sku-bound-label" style="font-size:12px;color:var(--t3);font-weight:500;letter-spacing:.3px">已绑定货品</span>
               <button class="btn-text danger" id="sku-unbind-btn" onclick="unbindSkuGoods()">解除绑定</button>
             </div>
             <div class="flex" style="flex-wrap:wrap;gap:8px 28px;font-size:13px;color:var(--t2)">
@@ -2415,12 +2417,8 @@ function skcDelSpec(i){
   skcSpecs.splice(i,1); skcRenderSpecs();
 }
 function saveSkuCreate(){
-  if(skuRawMode){
-    const pn=(document.getElementById('skc-spu-name').value||'').trim();
-    if(!pn){showToast('请输入商品名称','warning');return;}
-  }else{
-    if(document.getElementById('sku-bind-select').value===''){showToast('请先绑定货品','warning');return;}
-  }
+  if(document.getElementById('sku-bind-select').value===''){showToast(skuRawMode?'请先绑定原料':'请先绑定货品','warning');return;}
+  if(skuRawMode && !(document.getElementById('skc-spu-name').value||'').trim()){showToast('请输入商品名称','warning');return;}
   if(skcSpecs.length===0){showToast('请至少添加一个售卖规格','warning');return;}
   for(const s of skcSpecs){
     if(!s.name.trim()){showToast('规格名称不能为空','warning');return;}
@@ -2433,62 +2431,102 @@ function saveSkuCreate(){
     const rawName=GD[skuRawIdx]?GD[skuRawIdx].name:'原料';
     showToast(`已新建商品（${skcSpecs.length} 个 SKU，绑定成品货品「${pn}」），并按商品信息自动创建成品货品「${pn}」+ BOM 关系（${rawName}→${pn}）`,'success');
   }else{
-    showToast(`商品创建成功，已生成 ${skcSpecs.length} 个 SKU`,'success');
+    const g=GD[+document.getElementById('sku-bind-select').value];
+    showToast(`已新建商品（${skcSpecs.length} 个 SKU，绑定成品货品「${g?g.name:''}」）`,'success');
   }
   setTimeout(()=>closeDialog('ov-sku-create'),900);
 }
-let skuRawMode=false, skuRawIdx=null;
-// 重置弹窗为「普通模式」（成品行/常规绑定）
+let skuRawMode=false, skuRawIdx=null, skuGlobalMode=false;
 function resetSkuRawUI(){
-  skuRawMode=false; skuRawIdx=null;
+  skuRawMode=false; skuRawIdx=null; skuGlobalMode=false;
   document.getElementById('sku-raw-section').style.display='none';
   document.getElementById('sku-bind-row').style.display='';
   document.getElementById('sku-bound-card').style.display='';
+  document.getElementById('sku-bound-label').textContent='已绑定货品';
+  document.getElementById('sku-bind-label').textContent='绑定货品';
+  const sel=document.getElementById('sku-bind-select'); sel.disabled=false;
+  const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='';
 }
-// 成品行操作列「新建商品」：弹窗方式，自动预绑该成品货品
-function openSkuCreate(i){
-  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
-  resetSkuRawUI();
-  const t=document.getElementById('sku-dlg-title');
-  if(t) t.textContent='新建商品（关联货品：'+(GD[i]?GD[i].name:'')+'）';
-  openDialog('ov-sku-create');
-  const sel=document.getElementById('sku-bind-select');
-  sel.value=String(i);
-  bindSkuGoods(String(i));
-  // 关联模式：货品固定，锁定下拉并隐藏「解除绑定」
-  sel.disabled=true;
-  const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
-}
-// 原料行操作列「新建商品」：同时创建成品货品 + BOM 关系 + 商品
-function openSkuCreateFromRaw(i){
-  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
-  const r=GD[i]; if(!r) return;
+// 绑定原料并据此准备成品货品（与成品模式同结构）
+function bindRawForSku(v){
+  const wrap=document.getElementById('sku-bound-wrap'),spu=document.getElementById('sku-spu-section'),disp=document.getElementById('sku-display-section');
+  if(v===''){ skuRawMode=true; skuRawIdx=null; document.getElementById('sku-raw-section').style.display='none'; wrap.style.display='none'; spu.style.display='none'; if(disp)disp.style.display='none'; return; }
+  const i=+v, r=GD[i];
   skuRawMode=true; skuRawIdx=i;
-  document.getElementById('sku-dlg-title').textContent=`新建商品（由原料「${r.name}」创建成品货品 + BOM）`;
-  openDialog('ov-sku-create');
   const measure=(r.pack.split('/')[0]||'').replace(/[\d.]/g,'').trim()||'KG';
   const baseName=r.name.replace(/原料$/,'').trim()||r.name;
-  // 原料模式提示
   document.getElementById('sku-raw-section').style.display='';
   document.getElementById('srw-raw-name').textContent=r.name;
-  // 隐藏「绑定货品」选择与已绑卡：创建的是商品，成品货品按商品信息自动派生
-  document.getElementById('sku-bind-row').style.display='none';
-  document.getElementById('sku-unbound-tip').style.display='none';
-  document.getElementById('sku-bound-card').style.display='none';
-  document.getElementById('sku-bound-wrap').style.display='';
-  document.getElementById('sku-spu-section').style.display='';
-  const disp=document.getElementById('sku-display-section'); if(disp) disp.style.display='';
-  // 规格信息从原料带入
+  document.getElementById('sku-bound-card').style.display='';
+  document.getElementById('sku-bound-label').textContent='关联原料（BOM 上游）';
+  document.getElementById('sk-code').textContent=r.code;
+  document.getElementById('sk-name').textContent=r.name;
+  document.getElementById('sk-unit').textContent=measure;
+  document.getElementById('sk-gtype').textContent='非标品（原料货品）';
+  document.getElementById('sk-status').textContent=r.pur?'可采':'不可采';
+  const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
   document.getElementById('sk-net').textContent=r.pack.split('/')[0]||'—';
   document.getElementById('sk-measure').textContent=measure;
   document.getElementById('sk-box').textContent=r.pack;
-  // 商品基础信息默认
   document.getElementById('skc-attr').value='标品';
   document.getElementById('skc-spu-name').value=baseName;
   const oo=document.getElementById('skc-origin'); if(oo) oo.value=r.origin||'';
   const bb=document.getElementById('skc-brand'); if(bb) bb.value=r.brand||'';
-  // 售卖规格预置
   skcSpecUnit=measure; skcSpecs=[{name:'单'+measure,qty:1}]; skcRenderSpecs();
+  wrap.style.display=''; spu.style.display=''; if(disp)disp.style.display='';
+}
+// select 路由：按所选货品属性自动识别（原料→建成品+BOM；成品→直接绑）
+function onSkuBindSelect(v){
+  if(v!=='' && GD[+v] && GD[+v].attr==='原料货品'){
+    bindRawForSku(v);
+  }else{
+    skuRawMode=false;
+    document.getElementById('sku-raw-section').style.display='none';
+    document.getElementById('sku-bound-label').textContent='已绑定货品';
+    const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='';
+    bindSkuGoods(v);
+  }
+}
+// 全局「+ 新建商品」：选货品（原料/成品采购，自动识别）→ 填商品
+function openSkuGlobal(){
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  resetSkuRawUI(); skuGlobalMode=true;
+  document.getElementById('sku-dlg-title').textContent='新建商品';
+  const sel=document.getElementById('sku-bind-select'); sel.disabled=false;
+  sel.innerHTML='<option value="">请选择货品（原料 或 成品采购，系统自动识别）</option>'
+    +GD.map((g,i)=>(g.attr==='原料货品'||createMethodOf(g)==='成品采购')?`<option value="${i}">${g.code} ｜ ${g.name} ｜ ${createMethodOf(g)}</option>`:'').join('');
+  sel.value='';
+  document.getElementById('sku-bind-label').textContent='绑定货品';
+  openDialog('ov-sku-create');
+  onSkuBindSelect('');
+}
+// 成品行操作列「新建商品」：预绑该成品货品（锁定）
+function openSkuCreate(i){
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  resetSkuRawUI();
+  document.getElementById('sku-dlg-title').textContent='新建商品（关联货品：'+(GD[i]?GD[i].name:'')+'）';
+  document.getElementById('sku-bound-label').textContent='已绑定货品';
+  openDialog('ov-sku-create');
+  const sel=document.getElementById('sku-bind-select');
+  sel.innerHTML='<option value="'+i+'">'+(GD[i]?GD[i].code+' ｜ '+GD[i].name:'')+'</option>';
+  sel.value=String(i);
+  bindSkuGoods(String(i));
+  sel.disabled=true;
+  const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
+}
+// 原料行操作列「新建商品」：预绑该原料（锁定）→ 自动建成品+BOM
+function openSkuCreateFromRaw(i){
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  const r=GD[i]; if(!r) return;
+  resetSkuRawUI();
+  document.getElementById('sku-dlg-title').textContent=`新建商品（由原料「${r.name}」创建成品货品 + BOM）`;
+  openDialog('ov-sku-create');
+  const sel=document.getElementById('sku-bind-select');
+  sel.innerHTML='<option value="'+i+'">'+r.code+' ｜ '+r.name+'</option>';
+  sel.value=String(i); sel.disabled=true;
+  document.getElementById('sku-bind-row').style.display='none'; // 行级锁定，原料展示在卡片
+  document.getElementById('sku-unbound-tip').style.display='none';
+  bindRawForSku(String(i));
 }
 // 工具栏「+ 新建商品」：弹窗方式，由用户在弹窗内选择货品
 function newSkuCreate(){
