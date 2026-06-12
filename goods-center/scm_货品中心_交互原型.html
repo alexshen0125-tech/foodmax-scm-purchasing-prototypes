@@ -1086,6 +1086,103 @@ label{font-size:13px;color:var(--t2)}
 </div>
 
 <!-- ══════════════════════════════════════════════
+     PAGE: 新建商品 · 2 步向导（原料行入口：创建成品货品[多规格] → 1:1 创建商品并绑定）
+══════════════════════════════════════════════ -->
+<div class="overlay" id="ov-sku-wizard">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3 id="wz-title">新建商品</h3><div class="dialog-close" onclick="closeDialog('ov-sku-wizard')">×</div></div>
+    <div class="dialog-body">
+      <!-- 步骤条 -->
+      <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px">
+        <div id="wz-s1" style="padding:10px 16px;font-size:14px;font-weight:600;border-bottom:2px solid var(--primary);color:var(--primary)">① 创建成品货品</div>
+        <div id="wz-s2" style="padding:10px 16px;font-size:14px;color:var(--t3)">② 创建商品并绑定货品</div>
+      </div>
+
+      <!-- Step ①: 创建成品货品（原料头部 + 共用基础信息 + 成品多规格）-->
+      <div class="wz-pane" id="wz-pane-1">
+        <!-- 原料头部（只读）-->
+        <div style="background:#f5f7fa;border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-bottom:16px">
+          <div class="flex" style="flex-wrap:wrap;gap:6px 24px;font-size:13px;color:var(--t2)">
+            <div><span class="text-gray">来源原料：</span><strong id="wz1-name" style="color:var(--t1)">—</strong></div>
+            <div><span class="text-gray">编码：</span><span id="wz1-code" style="font-family:monospace;font-size:12px;color:var(--t3)">—</span></div>
+            <div><span class="text-gray">计量单位：</span><span id="wz1-unit">—</span></div>
+            <div><span class="text-gray">类目：</span><span id="wz1-cat">—</span></div>
+            <div><span class="text-gray">产地：</span><span id="wz1-origin">—</span></div>
+            <div><span class="text-gray">品牌：</span><span id="wz1-brand">—</span></div>
+          </div>
+        </div>
+        <div class="notice-box notice-warn" style="margin-bottom:16px">〔系统锁定〕创建方式 = <b>原料制造</b> · 是否可采 = <b>不可采</b>（不可修改）；每个规格各建一个成品货品并建立 BOM（原料 → 成品）。</div>
+
+        <!-- 共用基础信息 -->
+        <div class="form-section">
+          <div class="form-section-title">基础信息 <span style="font-weight:normal;color:var(--t3);font-size:12px">（货品级，所有规格共用，录一次；第②步商品按此带入）</span></div>
+          <div class="form-row">
+            <div class="form-field w2"><label class="required">后台类目</label><select id="wz-cat-back" class="iw100"><option value="">请选择（默认继承原料）</option><option>水产加工品</option><option>水产原料</option><option>蔬菜</option><option>肉类</option><option>调味品</option></select></div>
+          </div>
+          <div style="border-top:1px dashed var(--border);padding-top:12px;margin-top:4px">
+            <div style="font-size:12px;color:var(--t3);margin-bottom:10px">仓储信息（继承自原料，可修改）</div>
+            <div class="form-row">
+              <div class="form-field w3"><label>效期管理</label><div class="radio-group"><label class="radio-option"><input type="radio" name="wz-shelf" checked> 是</label><label class="radio-option"><input type="radio" name="wz-shelf"> 否</label></div></div>
+              <div class="form-field w3"><label>保质期</label><div class="flex gap8"><input type="number" id="wz-shelf-days" placeholder="—" style="width:80px;height:32px"><select style="width:70px;height:32px;font-size:13px;border:1px solid var(--border);border-radius:4px;padding:0 6px"><option>天</option><option>月</option></select></div></div>
+              <div class="form-field w3"><label>保存条件</label><select id="wz-storage" class="iw100"><option value="">请选择</option><option>常温</option><option>冷藏</option><option>冷冻</option><option>冷鲜</option></select></div>
+            </div>
+            <div class="form-row">
+              <div class="form-field w3"><label class="required">履约方式</label><select id="wz-fulfill" class="iw100"><option value="">请选择</option><option>冷链配送</option><option>冷藏配送</option><option>常温配送</option><option>客户自提</option></select></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 成品规格列表（多规格，每行=一个成品=一个商品）-->
+        <div class="form-section">
+          <div class="form-section-title">成品规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（每行 = 一个成品货品；成品名称 = 原料货品名称 + 规格信息，自动生成；下一步 1:1 各生成一个商品）</span></div>
+          <table class="inline-table" style="max-width:860px">
+            <thead><tr><th style="width:230px">成品名称（自动）</th><th style="width:130px">计量单位</th><th style="width:140px">净含量·数量</th><th style="width:130px">净含量·单位</th><th style="width:60px">操作</th></tr></thead>
+            <tbody id="wz-rows-tbody"></tbody>
+          </table>
+          <button type="button" class="btn-text" style="margin-top:8px" onclick="wzAddRow()">+ 添加规格</button>
+          <div class="form-hint" id="wz-rows-hint"></div>
+        </div>
+      </div>
+
+      <!-- Step ②: 创建商品并绑定货品（每个成品 1:1 一个商品；商品信息共用）-->
+      <div class="wz-pane" id="wz-pane-2" style="display:none">
+        <div class="notice-box notice-info" style="margin-bottom:16px">以下每个成品 <b>1:1 生成一个商品</b>并绑定（成品 : 商品 : SKU = 1:1:1）；与<b>成品采购</b>「一个商品挂多 SKU」不同。商品信息字段<b>对齐标品「新建商品」</b>：除商品名称外<b>所有商品共用、填一次</b>；产地 / 品牌 / 规格随货品继承（不展示）。BOM：<b id="wz2-raw">原料</b> ──▶ 各成品。</div>
+
+        <!-- 共用商品信息（对齐标品「新建商品」SPU 基础信息；所有商品共用，填一次）-->
+        <div class="form-section">
+          <div class="form-section-title">商品信息 <span style="font-weight:normal;color:var(--t3);font-size:12px">（对齐标品「新建商品」；所有商品共用，填一次。商品名称按各成品在下方单独带入）</span></div>
+          <div class="form-row">
+            <div class="form-field w3"><label>商品属性</label><input type="text" value="标品" class="readonly-field" readonly><div class="form-hint">继承自成品货品，不可修改</div></div>
+            <div class="form-field w3"><label class="required">销售类型</label><div class="radio-group"><label class="radio-option"><input type="radio" name="wz-saletype" checked> 售卖品</label><label class="radio-option"><input type="radio" name="wz-saletype"> 非卖品</label></div></div>
+            <div class="form-field w3"><label class="required">前台类目</label><select id="wz-cat-front" class="iw100" onchange="wzTaxSync()"><option value="">请选择</option><option>海鲜水产</option><option>新鲜蔬菜</option><option>肉禽蛋品</option><option>调味品</option></select></div>
+          </div>
+          <div class="form-row"><div class="form-field full"><label>商品别名</label><input type="text" class="iw100" placeholder="多个别名用英文逗号隔开，最多 400 字"><div class="form-hint">别名用于辅助客户端搜索</div></div></div>
+          <div class="form-row">
+            <div class="form-field w3"><label>税率</label><div class="flex gap8 items-center" style="height:32px"><span id="wz-tax">—</span><span class="text-gray text-sm">（按前台类目带出，只读）</span></div></div>
+            <div class="form-field w3"><label class="required">保质期展示</label><select class="iw100"><option value="">请选择</option><option>展示生产日期 + 保质期</option><option>展示到期日期</option><option>不展示</option></select></div>
+          </div>
+          <div class="form-row"><div class="form-field full"><label>商品描述</label><textarea class="iw100" placeholder="面向客户的描述，最多 500 字（选填）"></textarea></div></div>
+          <div class="form-row"><div class="form-field full"><label>商品主图</label><div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片')"><span style="font-size:20px">+</span><span>上传图片</span></div></div><div class="form-hint">第一张为白底图，尺寸 ≥800×800；单张 ≤8MB，最多 15 张（可拖动排序）</div></div></div>
+          <div class="form-row"><div class="form-field full"><label>商品详情</label><div class="upload-list"><div class="upload-add" onclick="showToast('请选择图片')"><span style="font-size:20px">+</span><span>上传图片</span></div></div><div class="form-hint">单张宽 750–1242px，单张 ≤8MB，最多 10 张；若无商品详情，系统默认展示</div></div></div>
+        </div>
+
+        <!-- N 个 成品 → 商品（1:1），仅商品名称按成品各自可改 -->
+        <div class="form-section-title" style="margin-top:4px">成品 → 商品（1:1，逐个绑定 · 仅商品名称按成品各填）</div>
+        <div id="wz-pairs-wrap"></div>
+      </div>
+
+    </div>
+    <div class="dialog-footer" style="display:flex;align-items:center">
+      <button class="btn" onclick="closeDialog('ov-sku-wizard')">取消</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="wz-prev" style="display:none" onclick="wzGo(-1)">◂ 上一步</button>
+      <button class="btn btn-primary" id="wz-next" onclick="wzNext()">下一步 ▸</button>
+      <button class="btn btn-primary" id="wz-submit" style="display:none" onclick="wzSubmit()">提交建档</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
      PAGE: BOM 管理列表
 ══════════════════════════════════════════════ -->
 <div class="page" id="page-bom-list">
@@ -2629,7 +2726,8 @@ function editFinish(){
 // select 路由：按所选货品属性自动识别（原料→建成品+BOM；成品→直接绑）
 function onSkuBindSelect(v){
   if(v!=='' && GD[+v] && GD[+v].attr==='原料货品'){
-    bindRawForSku(v);
+    closeDialog('ov-sku-create');
+    openSkuWizard(+v);
   }else{
     skuRawMode=false; finishConfirmed=false;
     document.getElementById('sku-raw-section').style.display='none';
@@ -2667,19 +2765,9 @@ function openSkuCreate(i){
   sel.disabled=true;
   const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
 }
-// 原料行操作列「新建商品」：预绑该原料（锁定）→ 自动建成品+BOM
+// 原料行操作列「新建商品」：进入 2 步向导（创建成品货品[多规格] → 1:1 创建商品并绑定）
 function openSkuCreateFromRaw(i){
-  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
-  const r=GD[i]; if(!r) return;
-  resetSkuRawUI();
-  document.getElementById('sku-dlg-title').textContent=`新建商品（由原料「${r.name}」创建成品货品 + BOM）`;
-  openDialog('ov-sku-create');
-  const sel=document.getElementById('sku-bind-select');
-  sel.innerHTML='<option value="'+i+'">'+r.code+' ｜ '+r.name+'</option>';
-  sel.value=String(i); sel.disabled=true;
-  document.getElementById('sku-bind-row').style.display='none'; // 行级锁定，原料展示在卡片
-  document.getElementById('sku-unbound-tip').style.display='none';
-  bindRawForSku(String(i));
+  openSkuWizard(i);
 }
 // 工具栏「+ 新建商品」：弹窗方式，由用户在弹窗内选择货品
 function newSkuCreate(){
@@ -2692,6 +2780,117 @@ function newSkuCreate(){
   sel.value='';
   const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='';
   bindSkuGoods('');
+}
+
+// ─── 新建商品 · 2 步向导（原料行入口：创建成品货品[多规格] → 1:1 创建商品并绑定）───
+let wzRawIdx=null, wzStep=1, wzRows=[], wzPairs=[], wzBase='';
+function openSkuWizard(i){
+  document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));
+  const r=GD[i]; if(!r) return;
+  wzRawIdx=i;
+  const measure=(r.pack.split('/')[0]||'').replace(/[\d.]/g,'').trim()||'KG';
+  const baseName=r.name.replace(/原料$/,'').trim()||r.name;
+  const netNum=((r.pack.split('/')[0]||'').match(/[\d.]+/)||[''])[0];
+  const boxUnit=(r.pack.split('/')[1]||'').trim();
+  document.getElementById('wz-title').textContent='新建商品（由原料「'+r.name+'」创建）';
+  document.getElementById('wz1-name').textContent=r.name;
+  document.getElementById('wz1-code').textContent=r.code;
+  document.getElementById('wz1-unit').textContent=measure;
+  document.getElementById('wz1-cat').textContent=r.cat||'—';
+  document.getElementById('wz1-origin').textContent=r.origin||'—';
+  document.getElementById('wz1-brand').textContent=r.brand||'—';
+  document.getElementById('wz2-raw').textContent=r.name;
+  wzBase=baseName;
+  setSelectByText('wz-cat-back', r.cat);
+  const ff=document.getElementById('wz-fulfill'); if(ff) ff.selectedIndex=0;
+  document.getElementById('wz-cat-front').selectedIndex=0;
+  document.getElementById('wz-tax').textContent='—';
+  const sp=document.getElementById('wz-sellpoint'); if(sp) sp.value='';
+  wzRows=[{munit:boxUnit, qty:netNum, unit:measure}];
+  wzRenderRows();
+  openDialog('ov-sku-wizard');
+  wzShowStep(1);
+}
+function wzTaxSync(){ document.getElementById('wz-tax').textContent=selText('wz-cat-front')?'9%':'—'; }
+const WZ_UNITS=['','g','kg','KG','ml','L','个','只','条','片','包','袋','瓶','盒'];
+const WZ_BOX=['','瓶','罐','包','袋','盒','杯','桶','箱'];
+const WZ_MUNITS=['','袋','瓶','罐','盒','包','杯','桶','个','只','条','片','KG','g','件'];
+function wzOpts(list,sel){ return list.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(''); }
+function wzRowsHint(){ document.getElementById('wz-rows-hint').textContent=`共 ${wzRows.length} 个规格 → 将创建 ${wzRows.length} 个成品货品 + ${wzRows.length} 个商品（1:1）。`; }
+function wzFinName(r){ const net=((r.qty||'')+''+(r.unit||'')); let tail=net; if(r.munit && r.munit!==r.unit) tail=net+(net?'/':'')+r.munit; return ((wzBase||'')+(tail?(' '+tail):'')).trim()||'（待填规格）'; }
+function wzRenderRows(){
+  document.getElementById('wz-rows-tbody').innerHTML=wzRows.map((r,i)=>`<tr>
+    <td id="wz-fin-${i}" style="color:var(--t2)">${wzFinName(r)}</td>
+    <td><select class="iw100" onchange="wzSyncRow(${i},'munit',this.value)">${wzOpts(WZ_MUNITS,r.munit)}</select></td>
+    <td><input type="number" class="iw100" min="0.01" step="0.01" value="${r.qty}" oninput="wzSyncRow(${i},'qty',this.value)"></td>
+    <td><select class="iw100" onchange="wzSyncRow(${i},'unit',this.value)">${wzOpts(WZ_UNITS,r.unit)}</select></td>
+    <td><button class="btn-text danger" onclick="wzDelRow(${i})">删除</button></td>
+  </tr>`).join('');
+  wzRowsHint();
+}
+function wzSyncRow(i,f,v){ wzRows[i][f]=v; const c=document.getElementById('wz-fin-'+i); if(c) c.textContent=wzFinName(wzRows[i]); }
+function wzAddRow(){ wzRows.push({munit:'',qty:'',unit:''}); wzRenderRows(); }
+function wzDelRow(i){ if(wzRows.length<=1){showToast('至少保留一个规格','warning');return;} wzRows.splice(i,1); wzRenderRows(); }
+function wzShowStep(n){
+  wzStep=n;
+  document.getElementById('wz-pane-1').style.display=(n===1)?'':'none';
+  document.getElementById('wz-pane-2').style.display=(n===2)?'':'none';
+  const s1=document.getElementById('wz-s1'), s2=document.getElementById('wz-s2');
+  s1.style.color=(n===1)?'var(--primary)':'var(--t1)'; s1.style.fontWeight=(n===1)?'600':'500'; s1.style.borderBottom=(n===1)?'2px solid var(--primary)':'2px solid transparent';
+  s2.style.color=(n===2)?'var(--primary)':'var(--t3)'; s2.style.fontWeight=(n===2)?'600':'400'; s2.style.borderBottom=(n===2)?'2px solid var(--primary)':'2px solid transparent';
+  document.getElementById('wz-prev').style.display=(n>1)?'':'none';
+  document.getElementById('wz-next').style.display=(n<2)?'':'none';
+  document.getElementById('wz-submit').style.display=(n===2)?'':'none';
+}
+function wzGo(d){ const t=wzStep+d; if(t>=1&&t<=2) wzShowStep(t); }
+function wzNext(){
+  if(wzStep!==1) return;
+  if(!selText('wz-cat-back')){showToast('请选择后台类目','warning');return;}
+  if(!selText('wz-fulfill')){showToast('请选择履约方式','warning');return;}
+  for(let k=0;k<wzRows.length;k++){ const r=wzRows[k];
+    if(!r.munit){showToast(`第 ${k+1} 个规格：请选计量单位`,'warning');return;}
+    if(!r.qty||+r.qty<=0){showToast(`第 ${k+1} 个规格：请填净含量数量`,'warning');return;}
+    if(!r.unit){showToast(`第 ${k+1} 个规格：请选净含量单位`,'warning');return;}
+  }
+  const keys=wzRows.map(r=>(r.munit+''+r.qty+''+r.unit));
+  if(new Set(keys).size!==keys.length){showToast('存在重复规格，请区分计量单位或净含量','warning');return;}
+  const rr=GD[wzRawIdx]||{};
+  const rawName=rr.name||'原料';
+  const cOrigin=rr.origin||'';
+  const cBrand=rr.brand||'';
+  const cCatBack=selText('wz-cat-back');
+  wzPairs=wzRows.map(r=>{
+    const finName=wzFinName(r);
+    return {finName:finName, spuName:finName, net:r.qty+' '+r.unit, munit:r.munit, catBack:cCatBack, raw:rawName, origin:cOrigin, brand:cBrand};
+  });
+  document.getElementById('wz-pairs-wrap').innerHTML=wzPairs.map((p,i)=>`
+    <div style="border:1px solid var(--border);border-radius:6px;padding:12px 16px;margin-bottom:10px">
+      <div class="flex items-center" style="gap:10px;flex-wrap:wrap;font-size:13px;margin-bottom:10px">
+        <span style="background:#ecfdf5;border:1px solid #6ee7b7;color:#059669;border-radius:4px;padding:1px 8px;font-size:12px">成品 #${i+1} · 不可采</span>
+        <strong style="color:var(--t1)">${p.finName}</strong>
+        <span class="text-gray">BOM：${p.raw} ──▶ ${p.finName}</span>
+      </div>
+      <div style="background:#f5f7fa;border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:13px;color:var(--t2)">
+        <span style="color:var(--t3)">规格信息（继承自成品货品，只读，便于核对）：</span>
+        <span style="margin-left:6px">计量单位 <b style="color:var(--t1)">${p.munit||'—'}</b></span>
+        <span style="margin-left:16px">净含量 <b style="color:var(--t1)">${p.net}</b></span>
+        <span style="margin-left:16px">后台类目 <b style="color:var(--t1)">${p.catBack||'—'}</b></span>
+      </div>
+      <div class="flex items-center" style="gap:8px">
+        <span style="color:var(--primary);font-size:13px;white-space:nowrap">绑定 ──▶ 商品名称<span style="color:var(--danger)">*</span></span>
+        <input type="text" class="iw100" style="max-width:360px" value="${p.spuName}" oninput="wzPairs[${i}].spuName=this.value" placeholder="货品带入（=成品名），可改">
+      </div>
+    </div>`).join('');
+  wzShowStep(2);
+}
+function wzSubmit(){
+  if(!selText('wz-cat-front')){showToast('请选择前台类目（商品共用）','warning');return;}
+  for(let i=0;i<wzPairs.length;i++){
+    if(!(wzPairs[i].spuName||'').trim()){showToast(`第 ${i+1} 个商品名称不能为空`,'warning');return;}
+  }
+  const n=wzPairs.length, rawName=wzPairs[0]?wzPairs[0].raw:'原料';
+  showToast(`已提交：由原料「${rawName}」创建 ${n} 个成品货品（原料制造·不可采）+ ${n} 条 BOM + ${n} 个商品（1:1 绑定）`,'success');
+  setTimeout(()=>closeDialog('ov-sku-wizard'),1100);
 }
 
 // ─── INIT ───
