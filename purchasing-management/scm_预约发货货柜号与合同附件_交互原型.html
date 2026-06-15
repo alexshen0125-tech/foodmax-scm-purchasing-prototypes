@@ -162,7 +162,8 @@ table.att td a:hover{text-decoration:underline;}
       <div class="tab-pane" id="pane2">
         <div class="att-bar">
           <span class="hint">单文件 ≤ 5MB，支持 pdf/jpg/jpeg/png/doc/docx/xls/xlsx，单采购单累计 ≤ 20 个 · 任意采购单状态可上传</span>
-          <button class="btn primary" id="uploadBtn" onclick="fakeUpload()">上传合同附件</button>
+          <input type="file" id="fileInput" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onchange="onFilePicked(event)">
+          <button class="btn primary" id="uploadBtn" onclick="document.getElementById('fileInput').click()">上传合同附件</button>
         </div>
         <table class="att">
           <thead><tr><th style="width:48px;">序号</th><th>文件名</th><th style="width:100px;">大小</th><th style="width:120px;">上传人</th><th style="width:160px;">上传时间</th><th style="width:80px;" class="opcol">操作</th></tr></thead>
@@ -236,11 +237,28 @@ function del(id){
     atts=atts.filter(a=>a.id!==id);renderAtt();toast('已删除');
   }
 }
-function fakeUpload(){
+const WHITELIST=['pdf','jpg','jpeg','png','doc','docx','xls','xlsx'];
+const MAX_BYTES=5*1024*1024;
+function fmtSize(b){return b<1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';}
+function onFilePicked(e){
+  const f=e.target.files[0];
+  e.target.value='';            // 允许重复选同一文件
+  if(!f)return;
   if(atts.length>=20){toast('单采购单最多上传 20 个附件');return;}
-  uploadSeq++;
-  atts.push({id:uploadSeq,name:`新合同附件_${uploadSeq}.pdf`,size:'2.1 MB',user:'白金萍',time:'2026-06-15 14:30'});
-  renderAtt();toast('上传成功');
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  if(!WHITELIST.includes(ext)){toast('仅支持 pdf/jpg/jpeg/png/doc/docx/xls/xlsx');return;}
+  if(f.size===0){toast('文件不能为空');return;}
+  if(f.size>MAX_BYTES){toast('单文件不能超过 5MB');return;}
+  // 模拟上传中 -> 成功
+  const btn=document.getElementById('uploadBtn');
+  btn.disabled=true;const old=btn.textContent;btn.textContent='上传中…';
+  setTimeout(()=>{
+    uploadSeq++;
+    atts.push({id:uploadSeq,name:f.name,size:fmtSize(f.size),user:'白金萍',time:'2026-06-15 14:30'});
+    renderAtt();
+    btn.disabled=false;btn.textContent=old;
+    toast('上传成功');
+  },600);
 }
 
 setBiz(2);setRole('scm');setTab(2);renderAtt();
