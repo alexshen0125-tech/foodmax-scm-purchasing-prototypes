@@ -1974,6 +1974,7 @@ function lockSpuForAdd(lock){
     if(el.tagName==='SELECT'||el.type==='radio'||el.type==='checkbox'){ el.disabled=lock; }
     else { el.readOnly=lock; el.classList.toggle('readonly-field',lock); }
   });
+  sec.querySelectorAll('.upload-add').forEach(el=>{ el.style.display=lock?'none':''; });  // 商品已存在：图片上传入口一并隐藏
 }
 // 保存新增 SKU：追加到当前 SPU，沿用同一成品货品，不新建货品 / 不变更 BOM
 function saveAddSku(){
