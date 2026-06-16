@@ -944,7 +944,7 @@ label{font-size:13px;color:var(--t2)}
       <!-- ─── SKU 规格 ─── -->
       <div class="form-section">
         <div class="form-section-title">SKU 规格</div>
-        <div class="form-hint" style="margin-bottom:12px">需先绑定货品；绑定后商品规格、产地、品牌等信息自动从货品带入，无需重复录入</div>
+        <div class="form-hint" style="margin-bottom:12px" id="sku-bind-section-hint">需先绑定货品；绑定后商品规格、产地、品牌等信息自动从货品带入，无需重复录入</div>
         <div class="form-row" id="sku-bind-row">
           <div class="form-field full">
             <label class="required" id="sku-bind-label">绑定货品</label>
@@ -1951,6 +1951,9 @@ function openAddSku(){
   sel.value=String(i);
   bindSkuGoods(String(i));                         // 复用关联新建：带出货品卡 + 规格信息 + 商品信息
   sel.disabled=true;
+  // 成品已锁定：隐藏「绑定货品」选择行 + 关联新建专用的选货品提示（避免“原料→自动创建成品”等误导文案）
+  const bindRow=document.getElementById('sku-bind-row'); if(bindRow) bindRow.style.display='none';
+  const secHint=document.getElementById('sku-bind-section-hint'); if(secHint) secHint.style.display='none';
   const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
   document.getElementById('sku-bound-label').textContent='已绑定成品货品（商品已创建，不可更改）';
   const tip=document.getElementById('sku-unbound-tip'); if(tip) tip.style.display='none';
@@ -2618,6 +2621,7 @@ function resetSkuRawUI(){
   const fe=document.getElementById('fin-edit-wrap'); if(fe) fe.style.display='';
   const fsm=document.getElementById('fin-summary'); if(fsm) fsm.style.display='none';
   document.getElementById('sku-bind-row').style.display='';
+  const _sh=document.getElementById('sku-bind-section-hint'); if(_sh) _sh.style.display='';
   document.getElementById('sku-bound-card').style.display='';
   document.getElementById('sku-bound-label').textContent='已绑定货品';
   document.getElementById('sku-bind-label').textContent='绑定货品';
