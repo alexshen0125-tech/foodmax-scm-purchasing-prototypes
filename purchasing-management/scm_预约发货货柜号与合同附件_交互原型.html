@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCM 采购单·预约发货货柜号 + 合同附件 — 交互原型 v1.0</title>
+<title>SCM 采购单·预约发货货柜号 + 合同附件 + 跨境物流追踪 — 交互原型 v1.1</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -81,12 +81,46 @@ table.att td a:hover{text-decoration:underline;}
 #toast.show{opacity:1;}
 .spec{font-size:12px;color:var(--text-3);margin-top:10px;line-height:1.7;}
 .spec code{background:var(--bg);padding:1px 5px;border-radius:3px;color:var(--text-2);}
+
+/* logistics timeline */
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,119,6,.45);}70%{box-shadow:0 0 0 8px rgba(217,119,6,0);}100%{box-shadow:0 0 0 0 rgba(217,119,6,0);}}
+.lg-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.lg-hd .t{font-size:14px;font-weight:600;color:var(--text);}
+.lg-hd .sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+.lg-warn{font-size:12px;color:var(--warning);background:#FDF6EC;border:1px solid #F5DAB1;padding:3px 10px;border-radius:10px;font-weight:600;}
+.lg-node{display:flex;gap:16px;align-items:flex-start;}
+.lg-rail{display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;}
+.lg-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.lg-dot.done{background:var(--primary);}
+.lg-dot.active{background:var(--warning);animation:pulse 2s infinite;}
+.lg-dot.todo{background:#EBEEF2;border:2px solid #CDD3DB;}
+.lg-dot.todo i{width:8px;height:8px;border-radius:50%;background:#CDD3DB;display:block;}
+.lg-line{width:2px;height:40px;margin:4px 0;}
+.lg-line.done{background:var(--primary-border);}
+.lg-line.warn{background:#F5DAB1;}
+.lg-line.todo{background:#EBEEF2;}
+.lg-body{padding-top:4px;padding-bottom:20px;flex:1;}
+.lg-body.last{padding-bottom:0;}
+.lg-title{font-size:13.5px;font-weight:600;}
+.lg-title.done{color:var(--primary-hover);}
+.lg-title.active{color:var(--warning);}
+.lg-title.todo{color:var(--text-3);}
+.lg-tag{font-size:11px;background:#FDF6EC;color:var(--warning);border:1px solid #F5DAB1;padding:1px 7px;border-radius:8px;font-weight:600;margin-left:4px;}
+.lg-time{font-size:12.5px;margin-top:2px;}
+.lg-time.muted{color:var(--text-3);}
+.lg-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+.lg-entry{margin-top:8px;display:flex;gap:8px;}
+.lg-entry input{border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:12.5px;font-family:inherit;color:var(--text);height:32px;}
+.lg-entry input:focus{outline:none;border-color:var(--primary);}
+.lg-entry input.date{width:150px;}
+.lg-entry input.memo{flex:1;}
+.btn.sm{padding:0 14px;height:32px;font-size:12.5px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="note">
-    交互原型 · <b>SCM 采购单：跨境单预约发货货柜号/车牌号 + 合同附件上传</b>。下方两块均可交互：①切换采购单业务类型，观察「货柜号/车牌号」字段显隐与必填校验；②在合同附件 Tab 上传/删除文件，并切换采购/供应商视角。
+    交互原型 · <b>SCM 采购单：跨境单预约发货货柜号/车牌号 + 合同附件上传 + 跨境物流追踪</b>。下方两块均可交互：①切换采购单业务类型，观察「货柜号/车牌号」字段显隐与必填校验；②在合同附件 Tab 上传/删除文件，并切换采购/供应商视角；③切到「物流追踪」Tab——6 节点手动录入时间轴，点「确认到港/清关」逐节点推进，到港预警随节点联动（仅跨境采购展示、仅采购视角可录入）。
   </div>
 
   <!-- ① 预约发货弹窗 -->
@@ -151,10 +185,11 @@ table.att td a:hover{text-decoration:underline;}
 
       <!-- tabs -->
       <div class="tabs">
-        <div class="tab" onclick="setTab(0)">采购商品</div>
-        <div class="tab" onclick="setTab(1)">预付记录</div>
-        <div class="tab active" onclick="setTab(2)">合同附件<span class="new-badge">本期新增</span></div>
-        <div class="tab" onclick="setTab(3)">操作记录</div>
+        <div class="tab" data-pane="0" onclick="setTab(0)">采购商品</div>
+        <div class="tab" data-pane="1" onclick="setTab(1)">预付记录</div>
+        <div class="tab active" data-pane="2" onclick="setTab(2)">合同附件<span class="new-badge">本期新增</span></div>
+        <div class="tab" id="tabLogistics" data-pane="4" onclick="setTab(4)">物流追踪<span class="new-badge">本期新增</span></div>
+        <div class="tab" data-pane="3" onclick="setTab(3)">操作记录</div>
       </div>
 
       <div class="tab-pane hide" id="pane0"><div class="empty">（采购商品列表 — 原型省略）</div></div>
@@ -172,6 +207,19 @@ table.att td a:hover{text-decoration:underline;}
         <div class="empty" id="attEmpty" style="display:none;">暂无合同附件</div>
       </div>
       <div class="tab-pane hide" id="pane3"><div class="empty">（操作记录 — 原型省略）</div></div>
+      <div class="tab-pane hide" id="pane4">
+        <div class="lg-hd">
+          <div>
+            <div class="t">跨境物流追踪</div>
+            <div class="sub">手动录入各节点实际完成时间，系统不对接货代 API（运单号仅参考、不自动同步）</div>
+          </div>
+          <span class="lg-warn" id="lgWarn">⚠ 到港预警：距预计到港还剩 2 天</span>
+        </div>
+        <div id="lgTimeline"></div>
+        <div class="spec">
+          规则：6 节点中「下单」由系统自动落时间、「入库」由 WMS 回调自动触发，其余节点需采购在到货后手动录入实际完成时间；任一手动节点实际时间晚于预计即标红逾期；本 Tab 仅跨境采购单展示，供应商视角只读、不可录入。
+        </div>
+      </div>
 
       <div class="spec">
         规则：合同附件不受采购单状态限制（含已作废）均可上传；仅采购可上传/删除/替换（替换 = 删旧 + 传新），供应商端只读、可下载；删除走软删并写操作记录。
@@ -199,6 +247,9 @@ function setBiz(b){biz=b;
   // sync detail base info
   document.getElementById('detailBiz').textContent = b===2?'跨境采购':'本地采购';
   document.getElementById('detailContainerKv').style.display = b===2?'':'none';
+  // 物流追踪 Tab 仅跨境采购展示；本地采购隐藏，若正停留在该 Tab 则回退到合同附件
+  document.getElementById('tabLogistics').style.display = b===2?'':'none';
+  if(b===1 && !document.getElementById('pane4').classList.contains('hide')) setTab(2);
   clearErr();
 }
 function clearErr(){document.getElementById('containerInput').classList.remove('err');document.getElementById('containerErr').classList.remove('show');}
@@ -218,10 +269,11 @@ function setRole(r){role=r;
   document.getElementById('uploadBtn').style.display = r==='scm'?'':'none';
   document.querySelectorAll('.opcol').forEach(e=>e.style.display = r==='scm'?'':'none');
   renderAtt();
+  renderLogistics();   // 录入入口随视角联动
 }
 function setTab(i){
-  document.querySelectorAll('.tabs .tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
-  for(let k=0;k<4;k++)document.getElementById('pane'+k).classList.toggle('hide',k!==i);
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.toggle('active',+t.dataset.pane===i));
+  for(let k=0;k<5;k++){const p=document.getElementById('pane'+k);if(p)p.classList.toggle('hide',k!==i);}
 }
 function renderAtt(){
   const tb=document.getElementById('attBody');tb.innerHTML='';
@@ -261,7 +313,81 @@ function onFilePicked(e){
   },600);
 }
 
-setBiz(2);setRole('scm');setTab(2);renderAtt();
+/* ===== ③ 跨境物流追踪 ===== */
+// 6 节点；下单=系统自动、入库=WMS 回调自动，其余手动录入。logiStep 指向当前待处理节点
+let logiStep = 3;
+const logi = [
+  {name:'下单',     expected:'',          actual:'2026-04-01 09:32', actualNote:'（系统自动）', auto:true},
+  {name:'供应商确认', expected:'2026-04-03', actual:'2026-04-03 16:20 · Alex Chen', auto:false},
+  {name:'发货',     expected:'2026-04-20', actual:'2026-04-20 10:05 · Alex Chen', sub:'运单号：COSCO-2026-04-88821（仅参考，不自动同步）', auto:false},
+  {name:'到港',     expected:'2026-04-28', actual:'', auto:false, confirm:'确认到港', eta:'2天后预计到港'},
+  {name:'清关',     expected:'2026-04-30', actual:'', auto:false, confirm:'确认清关'},
+  {name:'入库',     expected:'',          actual:'', auto:true, titleNote:'（WMS 回调自动触发）'},
+];
+function renderLogistics(){
+  const box=document.getElementById('lgTimeline');if(!box)return;
+  // 到港预警：仅当「到港」节点为当前待录入节点时展示
+  document.getElementById('lgWarn').style.display = (logiStep===3 && !logi[3].actual) ? '' : 'none';
+  let html='';
+  logi.forEach((n,i)=>{
+    const done = i<logiStep || !!n.actual;
+    const active = i===logiStep && !done;
+    const st = done?'done':(active?'active':'todo');
+    const dotCls = done?'done':(active && !n.auto ?'active':'todo');
+    const last = i===logi.length-1;
+    const dotInner = done
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : (active && !n.auto)
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+        : '<i></i>';
+    const lineCls = done?'done':(active?'warn':'todo');
+    // 时间行
+    const expTxt = n.expected?('预计：'+n.expected):'预计：—';
+    const actTxt = n.actual?('实际：'+n.actual+(n.actualNote||'')):'实际：—';
+    const timeMuted = (!done && !active) ? ' muted' : '';
+    // 待录入标签
+    let tag='';
+    if(active && !n.auto) tag=`<span class="lg-tag">待录入${n.eta?' · '+n.eta:''}</span>`;
+    if(active && n.auto)  tag=`<span class="lg-tag">待回调</span>`;
+    // 录入行：当前手动节点 + 采购视角才出现
+    let entry='';
+    if(active && !n.auto && role==='scm'){
+      entry=`<div class="lg-entry">
+        <input type="date" class="date" id="lgDate" value="${n.expected||''}">
+        <input type="text" class="memo" id="lgMemo" placeholder="备注（选填）">
+        <button class="btn primary sm" onclick="confirmLogistics()">${n.confirm}</button>
+      </div>`;
+    } else if(active && !n.auto && role!=='scm'){
+      entry=`<div class="lg-sub">供应商视角只读，待采购录入${n.name}时间</div>`;
+    }
+    html+=`<div class="lg-node">
+      <div class="lg-rail">
+        <div class="lg-dot ${dotCls}">${dotInner}</div>
+        ${last?'':`<div class="lg-line ${lineCls}"></div>`}
+      </div>
+      <div class="lg-body${last?' last':''}">
+        <div class="lg-title ${st}">${n.name}${n.titleNote?`<span style="font-size:11px;font-weight:400;color:var(--text-3);">${n.titleNote}</span>`:''}${tag}</div>
+        <div class="lg-time${timeMuted}">${expTxt} &nbsp;·&nbsp; ${actTxt}</div>
+        ${n.sub?`<div class="lg-sub">${n.sub}</div>`:''}
+        ${entry}
+      </div>
+    </div>`;
+  });
+  box.innerHTML=html;
+}
+function confirmLogistics(){
+  const n=logi[logiStep];if(!n||n.auto)return;
+  const d=document.getElementById('lgDate').value;
+  if(!d){toast('请选择实际'+n.name+'日期');return;}
+  const memo=(document.getElementById('lgMemo').value||'').trim();
+  n.actual = d + ' 14:30 · 白金萍' + (memo?(' · '+memo):'');
+  logiStep++;
+  // 跳过自动节点（入库由 WMS 回调，无需手动确认）
+  renderLogistics();
+  toast(n.name+'已确认，实际时间已记录');
+}
+
+setBiz(2);setRole('scm');setTab(2);renderAtt();renderLogistics();
 </script>
 </body>
 </html>
