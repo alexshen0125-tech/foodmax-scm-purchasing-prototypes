@@ -970,6 +970,7 @@ label{font-size:13px;color:var(--t2)}
               <div><span class="text-gray">计量单位：</span><span id="sk-unit">—</span></div>
               <div><span class="text-gray">货品类型：</span><span id="sk-gtype">—</span></div>
               <div><span class="text-gray">启用状态：</span><span id="sk-status">—</span></div>
+              <div id="sk-bom-item" style="display:none"><span class="text-gray">来源原料（BOM 上游）：</span><span id="sk-raw" style="color:var(--t1)">—</span><span class="text-gray" style="margin-left:6px">（创建方式=原料制造，本次仅追加售卖规格，不变更 BOM）</span></div>
             </div>
           </div>
 
@@ -1953,6 +1954,14 @@ function openAddSku(){
   const ub=document.getElementById('sku-unbind-btn'); if(ub) ub.style.display='none';
   document.getElementById('sku-bound-label').textContent='已绑定成品货品（商品已创建，不可更改）';
   const tip=document.getElementById('sku-unbound-tip'); if(tip) tip.style.display='none';
+  // 原料制造（BOM_LINKED）成品：显示来源原料，明确本次不变更 BOM
+  const bound=pdState.skus[0]||{};
+  const bomItem=document.getElementById('sk-bom-item');
+  if(bomItem){
+    const isRawMade=bound.rawName && bound.rawName!=='—';
+    bomItem.style.display=isRawMade?'':'none';
+    if(isRawMade) document.getElementById('sk-raw').textContent=bound.rawName;
+  }
   lockSpuForAdd(true);                             // 商品已存在 → SPU 基础信息整段只读
   // 售卖规格从空开始：仅录入“新增”的规格（现有规格已在详情页展示），复用 skc 表的加行/自动命名/去重
   skcSpecs=[]; skcAddSpec();
@@ -2601,6 +2610,7 @@ let skuRawMode=false, skuRawIdx=null, skuGlobalMode=false, finishConfirmed=false
 function resetSkuRawUI(){
   skuRawMode=false; skuRawIdx=null; skuGlobalMode=false; finishConfirmed=false; finishData=null; skuAddMode=false;
   lockSpuForAdd(false);
+  const _bom=document.getElementById('sk-bom-item'); if(_bom) _bom.style.display='none';
   document.getElementById('sku-raw-section').style.display='none';
   const fin=document.getElementById('sku-finish-section'); if(fin) fin.style.display='none';
   const h2=document.getElementById('sku-step2-header'); if(h2) h2.style.display='none';
