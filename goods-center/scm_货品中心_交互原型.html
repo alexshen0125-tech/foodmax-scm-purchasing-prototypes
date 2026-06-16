@@ -535,17 +535,19 @@ label{font-size:13px;color:var(--t2)}
         <div class="form-field w2"><div class="detail-label">关联商品（SPU）</div><div class="detail-value" id="ns-bound-spu">—</div></div>
         <div class="form-field w2"><div class="detail-label">绑定成品货品</div><div class="detail-value" style="color:var(--primary)" id="ns-bound-item">—</div></div>
       </div>
-      <div class="form-hint" style="margin-bottom:10px">以上商品与成品货品为本 SPU 已创建并绑定，新增规格沿用，不在此修改。</div>
-      <div class="form-row"><div class="form-field full"><label class="required">规格名称</label><input type="text" id="ns-name" class="iw100" placeholder="如 1 公斤装 / 4 包装"></div></div>
+      <!-- 净含量 / 计量规格 / 包装规格：随成品货品继承，只读带出 -->
       <div class="form-row">
-        <div class="form-field w3"><label class="required">净含量</label><input type="text" id="ns-net" class="iw100" placeholder="如 1"></div>
-        <div class="form-field w3"><label class="required">计量规格 <span style="font-weight:normal;color:var(--t3);font-size:12px">（继承成品货品）</span></label><input type="text" id="ns-measure" class="iw100 readonly-field" readonly placeholder="随成品货品"></div>
-        <div class="form-field w3"><label class="required">包装规格</label><input type="text" id="ns-pack" class="iw100" placeholder="如 1 包/份"></div>
+        <div class="form-field w3"><div class="detail-label">净含量</div><div class="detail-value" id="ns-net">—</div></div>
+        <div class="form-field w3"><div class="detail-label">计量规格</div><div class="detail-value" id="ns-measure">—</div></div>
+        <div class="form-field w3"><div class="detail-label">包装规格</div><div class="detail-value" id="ns-pack">—</div></div>
       </div>
+      <div class="form-hint" style="margin-bottom:14px">以上商品、成品货品与规格信息均随成品货品继承，新增规格沿用、不在此修改。</div>
+      <!-- 售卖规格：仅填数量 N，规格名称自动生成（对齐「关联新建商品」售卖规格逻辑）-->
       <div class="form-row">
-        <div class="form-field w2"><label class="required">1 份规格 = 数量（计量单位）</label><div class="flex gap8 items-center"><input type="number" id="ns-qty" min="1" value="1" style="width:120px"><span class="text-gray" id="ns-qty-unit">—</span></div></div>
+        <div class="form-field w2"><label class="required">1 份规格 = 数量（计量单位）</label><div class="flex gap8 items-center"><input type="number" id="ns-qty" min="1" value="1" style="width:120px" oninput="onNsQtyChange()"><span class="text-gray" id="ns-qty-unit">—</span></div></div>
+        <div class="form-field w2"><div class="detail-label">规格名称（自动 = 商品名 + 数量单位）</div><div class="detail-value" id="ns-name-auto" style="color:var(--primary)">—</div></div>
       </div>
-      <div class="form-hint">该规格 1 份 = N 个计量单位，下单按此扣减绑定成品货品库存。</div>
+      <div class="form-hint" id="ns-deduct-hint">该规格 1 份 = N 个计量单位，下单按此扣减绑定成品货品库存。</div>
     </div>
     <div class="dialog-footer">
       <button class="btn" onclick="closeDialog('ov-new-sku')">取消</button>
@@ -1965,28 +1967,38 @@ function showPdSku(){
   document.getElementById('pd-item-unit').textContent=s.measure;
   document.getElementById('pd-raw').textContent=s.rawName||'—';
 }
+function nsUnit(){ return (pdState.skus[0]||{}).measure||'件'; }
+// 规格名称自动 = 商品名 + 数量+计量单位（对齐「关联新建商品」售卖规格命名 skcSpecName）
+function nsAutoName(qty){ const u=nsUnit(); return (!qty||qty<1)?pdState.name:`${pdState.name} ${qty}${u}`; }
 function openNewSku(){
-  // 沿用本 SPU 已绑定的成品货品（取首个 SKU 的绑定，全 SPU 一致），带出商品与成品货品（只读）
+  // 沿用本 SPU 已绑定的成品货品（取首个 SKU 的绑定，全 SPU 一致），带出商品/成品货品/规格信息（只读）
   const bound=pdState.skus[0]||{};
   document.getElementById('ns-bound-spu').textContent=pdState.name+'（'+pdState.spu+'）';
   document.getElementById('ns-bound-item').textContent=(bound.itemCode||'—')+' ｜ '+(bound.itemName||'—');
-  document.getElementById('ns-measure').value=bound.measure||'';      // 计量规格继承成品货品，只读
+  document.getElementById('ns-net').textContent=bound.net||'—';
+  document.getElementById('ns-measure').textContent=bound.measure||'—';
+  document.getElementById('ns-pack').textContent=bound.pack||'—';
   document.getElementById('ns-qty-unit').textContent=bound.measure||'—';
-  document.getElementById('ns-name').value='';
-  document.getElementById('ns-net').value='';
-  document.getElementById('ns-pack').value='';
   document.getElementById('ns-qty').value=1;
+  onNsQtyChange();
   openDialog('ov-new-sku');
 }
+function onNsQtyChange(){
+  const qty=parseInt(document.getElementById('ns-qty').value,10)||0;
+  document.getElementById('ns-name-auto').textContent=nsAutoName(qty);
+  const u=nsUnit();
+  document.getElementById('ns-deduct-hint').textContent=(qty<1)
+    ? '数量需为 ≥1 的整数'
+    : `该规格 1 份 = ${qty} 个计量单位，下单按此扣减绑定成品货品库存（1 份扣 ${qty} ${u}）。`;
+}
 function saveNewSku(){
-  const name=(document.getElementById('ns-name').value||'').trim();
-  if(!name){showToast('请输入规格名称','warning');return;}
   const qty=parseInt(document.getElementById('ns-qty').value,10)||0;
   if(qty<1){showToast('数量必须为 ≥1 的整数','warning');return;}
   if(pdState.skus.some(s=>s.qty===qty)){showToast('已存在相同数量的规格，请合并','warning');return;}
-  // 沿用同一成品货品：itemCode / itemName / measure / rawName 全部继承首个 SKU 的绑定，不新建货品、不变更 BOM
+  // 沿用同一成品货品：itemCode / itemName / measure / rawName / net / pack 全部继承首个 SKU 的绑定，不新建货品、不变更 BOM
   const bound=pdState.skus[0]||{};
-  pdState.skus.push({name, qty, net:document.getElementById('ns-net').value||'', pack:document.getElementById('ns-pack').value||'',
+  const name=nsAutoName(qty);
+  pdState.skus.push({name, qty, net:bound.net||'', pack:bound.pack||'',
     code:'sku'+(Math.floor(Math.random()*90000)+10000),
     itemCode:bound.itemCode, itemName:bound.itemName, measure:bound.measure, rawName:bound.rawName});
   pdState.sel=pdState.skus.length-1;
