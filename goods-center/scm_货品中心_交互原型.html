@@ -456,7 +456,6 @@ label{font-size:13px;color:var(--t2)}
   </div>
   <div class="flex" style="padding:8px 0 24px;gap:10px">
     <button class="btn" onclick="gotoPage('goods-list')">返回列表</button>
-    <button class="btn btn-primary" onclick="gotoProductDetail()">查看关联商品 ▸</button>
   </div>
 </div>
 
@@ -1574,11 +1573,11 @@ const GD = [
   {code:'item-20260418-0012',old:'spucode00000718',name:'三文鱼原条',attr:'成品货品',pack:'10KG/箱',cat:'水产原料',type:'标品',pur:true,origin:'挪威',brand:'SalMar',desc:'挪威进口大西洋三文鱼原条，冷冻锁鲜，适合切柳、刺身加工',ct:'2026-04-18 10:23'},
   {code:'item-20260418-0013',old:'spucode00000719',name:'三文鱼柳原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,origin:'挪威',brand:'SalMar',desc:'三文鱼柳加工原料，需经成品工序后销售',ct:'2026-04-18 10:31'},
   {code:'item-20260418-0014',old:'spucode00000720',name:'三文鱼刺身原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,origin:'挪威',brand:'SalMar',desc:'刺身级三文鱼原料，需经成品工序后销售',ct:'2026-04-20 14:02'},
-  {code:'item-20260410-0001',old:'spucode00000688',name:'柠檬汁',attr:'成品货品',pack:'500ml/瓶',cat:'调味品',type:'标品',pur:true,origin:'泰国',brand:'鲜活',desc:'泰国鲜榨柠檬汁，酸度适中，餐饮调味、饮品用',ct:'2026-04-10 09:00'},
+  {code:'item-20260410-0001',old:'spucode00000688',name:'柠檬汁',attr:'成品货品',pack:'500ml/瓶',cat:'调味品',type:'标品',pur:true,origin:'泰国',brand:'鲜活',desc:'泰国鲜榨柠檬汁，酸度适中，餐饮调味、饮品用',ct:'2026-04-10 09:00',hasSpu:true},
   {code:'item-20260410-0002',old:'spucode00000689',name:'青柠',attr:'成品货品',pack:'1KG/袋',cat:'蔬菜',type:'标品',pur:true,origin:'越南',brand:'',desc:'越南进口青柠，皮薄多汁，餐饮饮品、调味常用',ct:'2026-04-10 09:05'},
   {code:'item-20260401-0008',old:'spucode00000650',name:'小葱',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,origin:'本地',brand:'',desc:'本地新鲜小葱，洗净分扎，可直接使用',ct:'2026-04-01 08:30'},
   {code:'item-20260401-0009',old:'spucode00000651',name:'生姜',attr:'成品货品',pack:'500g/袋',cat:'蔬菜',type:'标品',pur:true,origin:'山东',brand:'',desc:'山东老姜，姜味浓郁，去皮可用',ct:'2026-04-01 08:35'},
-  {code:'item-20260323-0003',old:'spucode00000620',name:'鸡腿（冷冻）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,origin:'巴西',brand:'BRF',desc:'巴西冷冻鸡腿，单冻锁鲜，规格均匀',ct:'2026-03-23 11:00'},
+  {code:'item-20260323-0003',old:'spucode00000620',name:'鸡腿（冷冻）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,origin:'巴西',brand:'BRF',desc:'巴西冷冻鸡腿，单冻锁鲜，规格均匀',ct:'2026-03-23 11:00',hasSpu:true},
   {code:'item-20260323-0004',old:'spucode00000621',name:'猪五花（冷藏）',attr:'成品货品',pack:'2KG/袋',cat:'肉类',type:'标品',pur:true,origin:'本地',brand:'',desc:'本地冷藏猪五花，肥瘦相间，适合红烧、烤制',ct:'2026-03-23 11:10'},
   {code:'item-20260310-0005',old:'spucode00000600',name:'鳕鱼柳',attr:'成品货品',pack:'1KG/袋',cat:'水产原料',type:'标品',pur:true,origin:'俄罗斯',brand:'Ocean',desc:'俄罗斯鳕鱼柳，去刺去皮，开袋即用',ct:'2026-03-10 14:00'},
   {code:'item-20260310-0006',old:'spucode00000601',name:'鳕鱼排原料',attr:'原料货品',pack:'1KG/袋',cat:'水产原料',type:'非标品',pur:true,origin:'俄罗斯',brand:'Ocean',desc:'鳕鱼排加工原料，需经成品工序后销售',ct:'2026-03-10 14:30'},
@@ -1643,13 +1642,16 @@ function getPanels(){
 function renderGoods(){
   const tbody=document.getElementById('goods-tbody');
   tbody.innerHTML=GD.map((r,i)=>{
-    // 仅「原料采购」「成品采购」支持新建商品；「原料制造」无新建商品入口
+    // 新建商品入口：仅「原料采购/成品采购」且【未关联商品】才展示；已关联商品不展示（2026-06-17）
     const _cm=createMethodOf(r);
+    const hasSpu = r.hasSpu || r.source==='BOM_LINKED';  // 是否已关联商品（原料制造=由原料关联建商品、已关联）
     let lastOp='';
-    if(_cm==='原料采购') lastOp=`<button class="btn-text" onclick="openSkuCreateFromRaw(${i})">新建商品</button>`;
-    else if(_cm==='成品采购') lastOp=`<button class="btn-text" onclick="openSkuCreate(${i})">新建商品</button>`;
-    const prodOp = r.attr==='成品货品' ? `<button class="btn-text" onclick="viewProductFromList(${i})">查看商品</button>` : '';
-    const ops=`<button class="btn-text" onclick="viewDetail(${i})">详情</button> <button class="btn-text" onclick="editGoods(${i})">编辑</button> ${lastOp} ${prodOp}`;
+    if(!hasSpu){
+      if(_cm==='原料采购') lastOp=`<button class="btn-text" onclick="openSkuCreateFromRaw(${i})">新建商品</button>`;
+      else if(_cm==='成品采购') lastOp=`<button class="btn-text" onclick="openSkuCreate(${i})">新建商品</button>`;
+    }
+    // 「查看商品」列表入口已去除（2026-06-17）：查看关联商品改走货品详情页
+    const ops=`<button class="btn-text" onclick="viewDetail(${i})">详情</button> <button class="btn-text" onclick="editGoods(${i})">编辑</button> ${lastOp}`;
     return `<tr>
       <td class="tbl-check"><input type="checkbox" class="rc" data-i="${i}" onchange="selRow(this,${i})"></td>
       <td style="font-family:monospace;font-size:11px;color:var(--t3)">${r.old}</td>
