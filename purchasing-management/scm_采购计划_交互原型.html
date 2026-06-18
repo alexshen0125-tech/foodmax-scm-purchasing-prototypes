@@ -190,9 +190,16 @@ tr:hover td{background:#fbfcfd}
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>水果</option><option>肉禽</option></select></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商</label><input class="chip" style="height:30px" placeholder="选择供应商"></div>
               <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>West Hub</option><option>East Hub</option></select></div>
-              <div style="grid-column:span 5;display:flex;justify-content:flex-end;gap:8px;align-items:center">
+              <div style="grid-column:span 5;display:flex;gap:8px;align-items:center">
+                <label class="muted" style="font-size:12px">计划日</label>
+                <select class="chip" style="height:30px;width:170px" id="plan-date-sel" onchange="setPlanDate(this.value)">
+                  <option value="2026-06-18">2026-06-18（今天）</option>
+                  <option value="2026-06-17">2026-06-17</option>
+                  <option value="2026-06-16">2026-06-16</option>
+                </select>
+                <span class="muted" style="font-size:11px">采纳率按计划日<b>快照</b>，切换日期可回看历史</span>
                 <span id="plan-selected-tip" class="muted" style="display:none;margin-right:8px">已勾选 <b id="plan-selected-count" style="color:var(--ink)">0</b> 项</span>
-                <button class="btn" onclick="exportPlan()" title="导出当前筛选条件下的采购建议量列表，用于线下找供应商谈量谈价">⬇ 导出</button>
+                <button class="btn" onclick="exportPlan()" style="margin-left:auto" title="导出当前筛选条件下的采购建议量列表，用于线下找供应商谈量谈价">⬇ 导出</button>
                 <button class="btn primary" id="btn-create-po" onclick="openCreatePoModal()">生成采购单</button>
                 <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
                 <button class="btn" onclick="toast('已重置筛选')">重置</button>
@@ -645,23 +652,28 @@ const data=[
   }
 ];
 
-// ── 已下单量(演示) + 「该供应商×该货品」上次采购价 + 采纳率渲染（本期新增）──
-const ORDERED={1:1000,2:0,3:252,4:2700,5:40};   // 演示：已下单量
-data.forEach(r=>{ r.ordered=ORDERED[r.id]||0; });
-const CAND_VENDORS=[{code:'V-001',name:'GreenFarm'},{code:'V-003',name:'FreshGo'},{code:'V-007',name:'MeatPro'},{code:'V-012',name:'RedSun'},{code:'V-018',name:'TomatoKing'},{code:'V-021',name:'Hattah'}];
-const LAST_PRICE={  // itemId|vendorCode -> 上次该供应商该货品采购价（取不到=无历史，留空手填）
-  '1|V-001':2.80,'1|V-003':2.75,'1|V-018':2.90,
-  '2|V-007':1.20,'2|V-012':1.25,
-  '3|V-003':2.30,'3|V-001':2.35,
-  '4|V-012':2.30,'4|V-018':2.22,'4|V-021':2.40,
-  '5|V-001':2.60
+// ── 计划日快照 + 采纳率 + 多供应商上次价 + 品供绑定（本期新增）──
+let curPlanDate='2026-06-18';
+// 按计划日快照：itemId -> { 计划日 -> {total 总采购量, ordered 已下单量} }。每天独立快照、不覆盖、可回看历史
+const SNAP={
+  1:{'2026-06-18':{total:1723,ordered:1000},'2026-06-17':{total:1680,ordered:1680},'2026-06-16':{total:1540,ordered:920}},
+  2:{'2026-06-18':{total:414, ordered:0},   '2026-06-17':{total:430, ordered:430}, '2026-06-16':{total:390, ordered:200}},
+  3:{'2026-06-18':{total:252, ordered:252}, '2026-06-17':{total:260, ordered:210}, '2026-06-16':{total:240, ordered:240}},
+  4:{'2026-06-18':{total:2565,ordered:2700},'2026-06-17':{total:2480,ordered:2480},'2026-06-16':{total:2300,ordered:1500}},
+  5:{'2026-06-18':{total:87,  ordered:40},  '2026-06-17':{total:90,  ordered:90},  '2026-06-16':{total:82,  ordered:0}}
 };
+function snapOf(r){const m=SNAP[r.id];const s=m&&m[curPlanDate];return s?{total:s.total,ordered:s.ordered}:{total:r.totalQty||0,ordered:0};}
+function setPlanDate(d){curPlanDate=d;renderPlanRows();}
+const CAND_VENDORS=[{code:'V-001',name:'GreenFarm'},{code:'V-003',name:'FreshGo'},{code:'V-007',name:'MeatPro'},{code:'V-012',name:'RedSun'},{code:'V-018',name:'TomatoKing'},{code:'V-021',name:'Hattah'}];
+// 品供绑定：vendorCode -> 可供货品 id（来自「SPU 品供参数」），决定供应商分组里挂哪些货品
+const VENDOR_ITEMS={'V-001':[1,5],'V-003':[1,3],'V-007':[2],'V-012':[4],'V-018':[4],'V-021':[1,4]};
+const LAST_PRICE={'1|V-001':2.80,'1|V-003':2.75,'1|V-018':2.90,'2|V-007':1.20,'2|V-012':1.25,'3|V-003':2.30,'3|V-001':2.35,'4|V-012':2.30,'4|V-018':2.22,'4|V-021':2.40,'5|V-001':2.60};
 function rateCell(r){
-  const t=r.totalQty||0,o=r.ordered||0,pct=t?Math.round(o/t*1000)/10:0,over=o>t,w=Math.min(100,pct);
+  const sn=snapOf(r),t=sn.total,o=sn.ordered,pct=t?Math.round(o/t*1000)/10:0,over=o>t,w=Math.min(100,pct);
   return `<div style="display:flex;align-items:center;gap:8px;min-width:140px"><div style="flex:1;height:7px;background:#eef0f3;border-radius:4px;overflow:hidden"><i style="display:block;height:100%;width:${w}%;background:${over?'#f56c6c':'var(--green)'}"></i></div><span class="num" style="font-size:12px;min-width:50px;text-align:right">${pct}%</span></div>`;
 }
 function statusTag(r){
-  const t=r.totalQty||0,o=r.ordered||0;
+  const sn=snapOf(r),t=sn.total,o=sn.ordered;
   if(o>t) return '<span class="pill" style="background:#fef0f0;color:#f56c6c">超采</span>';
   if(o<=0) return '<span class="pill gray">待下单</span>';
   if(o>=t) return '<span class="pill green">已下单完</span>';
@@ -698,8 +710,8 @@ function renderPlanRows(){
       <td class="num">${fmt(r.available)}</td>
       <td class="num">${fmt(r.stockTarget)}</td>
       <td class="${numCls(r.endingT)}">${fmt(r.endingT)}</td>
-      <td class="num" style="background:#eaf6f0;color:var(--green);font-weight:700">${fmt(r.totalQty)}</td>
-      <td class="num">${fmt(r.ordered||0)}</td>
+      <td class="num" style="background:#eaf6f0;color:var(--green);font-weight:700">${fmt(snapOf(r).total)}</td>
+      <td class="num">${fmt(snapOf(r).ordered)}</td>
       <td>${rateCell(r)}</td>
       <td>${statusTag(r)}</td>
       <td><button class="btn text small" onclick="openSkuDrawer(${r.id})" style="padding:0 6px">详情</button></td>
@@ -771,87 +783,97 @@ function toggleAllPlanRows(master){
   document.querySelectorAll('.plan-row-check').forEach(c=>c.checked=master.checked);
   updatePlanSelection();
 }
-let genItems=[];
+// ── 生成采购单 · 按供应商分组（一供应商一组/一张单、挂多品；本期改）──
+let genGroups=[], genSelIds=[];
 function openCreatePoModal(){
   const checked=Array.from(document.querySelectorAll('.plan-row-check:checked'));
   if(!checked.length){toast('请先勾选要生成采购单的货品','warn');return;}
-  // 多供应商：不再强制同一供应商；仅校验同一结算主体
   const corpSet=new Set(checked.map(c=>c.dataset.corpCode));
   if(corpSet.size>1){toast('勾选的货品来自不同结算主体，需保留同一结算主体后再生成','warn');return;}
-  genItems=checked.map(c=>{
-    const r=data.find(x=>String(x.id)===String(c.dataset.id))||{};
-    const total=r.totalQty||parseInt(c.dataset.qty)||0, ordered=r.ordered||0, remain=Math.max(0,total-ordered);
-    const dv=r.vendorCode||'';
-    return {id:r.id,name:r.name||c.dataset.name,code:r.code||c.dataset.code,total,ordered,remain,
-      allocs:[{vendor:dv,qty:remain,price:(LAST_PRICE[r.id+'|'+dv]!=null?LAST_PRICE[r.id+'|'+dv]:''),eta:'2026-06-21'}]};
-  });
-  document.getElementById('modalBox').style.width='min(1000px, 96vw)';
+  genSelIds=checked.map(c=>Number(c.dataset.id));
+  // 按勾选货品的推荐供应商自动建组（一供应商一张单），其余可手动加
+  const recos=[...new Set(genSelIds.map(id=>(data.find(x=>x.id===id)||{}).vendorCode).filter(Boolean))];
+  genGroups=recos.length?recos.map(v=>({vendor:v,items:groupItems(v)})):[{vendor:'',items:[]}];
+  document.getElementById('modalBox').style.width='min(1060px, 96vw)';
   document.getElementById('modalMask').classList.add('show');
   renderGenModal();
 }
-// ── 多供应商生成采购单（本期新增）──
-function genAdd(i){genItems[i].allocs.push({vendor:'',qty:'',price:'',eta:'2026-06-21'});renderGenModal();}
-function genDel(i,k){genItems[i].allocs.splice(k,1);renderGenModal();}
-function genVendor(i,k,code){genItems[i].allocs[k].vendor=code;const lp=LAST_PRICE[genItems[i].id+'|'+code];genItems[i].allocs[k].price=(lp!=null?lp:'');renderGenModal();}
-function genQty(i,k,v){genItems[i].allocs[k].qty=v===''?'':Number(v);renderGenSummary();}
-function genPrice(i,k,v){genItems[i].allocs[k].price=v===''?'':Number(v);}
-function genEta(i,k,v){genItems[i].allocs[k].eta=v;}
-function vendorOptions(sel){return '<option value="">请选择供应商</option>'+CAND_VENDORS.map(v=>`<option value="${v.code}" ${sel===v.code?'selected':''}>${v.name} (${v.code})</option>`).join('');}
-function poCount(){const s=new Set();genItems.forEach(it=>it.allocs.forEach(a=>{if(a.vendor&&Number(a.qty)>0)s.add(a.vendor);}));return s.size;}
+function gAllocated(id){let s=0;genGroups.forEach(g=>g.items.forEach(it=>{if(it.id===id)s+=Number(it.qty)||0;}));return s;}
+function groupItems(vendor){
+  if(!vendor) return [];
+  return genSelIds.filter(id=>(VENDOR_ITEMS[vendor]||[]).includes(id)).map(id=>{
+    const r=data.find(x=>x.id===id),sn=snapOf(r),remain=Math.max(0,sn.total-sn.ordered);
+    const def=Math.max(0,remain-gAllocated(id)),lp=LAST_PRICE[id+'|'+vendor];
+    return {id,name:r.name,code:r.code,total:sn.total,ordered:sn.ordered,remain,qty:def,price:(lp!=null?lp:'')};
+  });
+}
+function gAddGroup(){genGroups.push({vendor:'',items:[]});renderGenModal();}
+function gDelGroup(gi){genGroups.splice(gi,1);renderGenModal();}
+function gSetVendor(gi,v){
+  if(v&&genGroups.some((g,i)=>i!==gi&&g.vendor===v)){toast('该供应商已添加，请勿重复','warn');renderGenModal();return;}
+  genGroups[gi].vendor=v;genGroups[gi].items=groupItems(v);renderGenModal();
+}
+function gDelItem(gi,id){genGroups[gi].items=genGroups[gi].items.filter(x=>x.id!==id);renderGenModal();}
+function gQty(gi,id,v){const it=genGroups[gi].items.find(x=>x.id===id);if(it)it.qty=v===''?'':Number(v);renderGenSummary();}
+function gPrice(gi,id,v){const it=genGroups[gi].items.find(x=>x.id===id);if(it)it.price=v===''?'':Number(v);}
+function gVendorOpts(gi){
+  const used=genGroups.filter((g,i)=>i!==gi&&g.vendor).map(g=>g.vendor),cur=genGroups[gi].vendor;
+  return '<option value="">请选择供应商</option>'+CAND_VENDORS.map(v=>`<option value="${v.code}" ${cur===v.code?'selected':''} ${used.includes(v.code)?'disabled':''}>${v.name} (${v.code})</option>`).join('');
+}
+function poCount(){return genGroups.filter(g=>g.vendor&&g.items.some(it=>Number(it.qty)>0)).length;}
 function renderGenModal(){
-  const cards=genItems.map((it,i)=>{
-    const rate=it.total?Math.round(it.ordered/it.total*1000)/10:0;
-    const rows=it.allocs.map((a,k)=>{
-      const lp=a.vendor?LAST_PRICE[it.id+'|'+a.vendor]:null;
+  const groups=genGroups.map((g,gi)=>{
+    let body;
+    if(!g.vendor) body=`<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">选择供应商后，自动列出它可供货的勾选货品（不用逐货品选供应商）</td></tr>`;
+    else if(!g.items.length) body=`<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">该供应商无可供货的勾选货品（按品供绑定）</td></tr>`;
+    else body=g.items.map(it=>{
+      const lp=LAST_PRICE[it.id+'|'+g.vendor];
       return `<tr>`+
-        `<td>${k+1}<span class="pill" style="background:#e8f0ff;color:#2b6fff;font-size:10px;margin-left:4px">单${k+1}</span></td>`+
-        `<td><select class="chip" style="height:30px;min-width:200px;padding:0 6px" onchange="genVendor(${i},${k},this.value)">${vendorOptions(a.vendor)}</select></td>`+
-        `<td class="num"><input class="chip" style="width:96px;height:30px;text-align:right" type="number" min="0" value="${a.qty}" placeholder="不限" oninput="genQty(${i},${k},this.value)"></td>`+
-        `<td><div style="display:flex;gap:5px;align-items:center"><input class="chip" style="width:84px;height:30px;text-align:right" type="number" step="0.01" value="${a.price}" placeholder="留空手填" oninput="genPrice(${i},${k},this.value)"><span class="muted" style="font-size:11px">${lp!=null?('上次 '+lp):(a.vendor?'无历史':'')}</span></div></td>`+
-        `<td><input class="chip" style="width:140px;height:30px" type="date" value="${a.eta}" onchange="genEta(${i},${k},this.value)"></td>`+
-        `<td>${it.allocs.length>1?`<button class="btn text small" style="color:#f56c6c" onclick="genDel(${i},${k})">删除</button>`:''}</td>`+
+        `<td>${it.name}<div class="muted" style="font-size:11px">${it.code}</div></td>`+
+        `<td class="num muted" style="font-size:12px">${it.total} / ${it.ordered} / ${it.remain}</td>`+
+        `<td class="num"><input class="chip" style="width:92px;height:28px;text-align:right" type="number" min="0" value="${it.qty}" placeholder="不限" oninput="gQty(${gi},${it.id},this.value)"></td>`+
+        `<td><div style="display:flex;gap:5px;align-items:center"><input class="chip" style="width:80px;height:28px;text-align:right" type="number" step="0.01" value="${it.price}" placeholder="留空手填" oninput="gPrice(${gi},${it.id},this.value)"><span class="muted" style="font-size:11px">${lp!=null?('上次 '+lp):'无历史'}</span></div></td>`+
+        `<td><button class="btn text small" style="color:#f56c6c" onclick="gDelItem(${gi},${it.id})">移除</button></td>`+
       `</tr>`;
     }).join('');
-    return `<div style="border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px">`+
-      `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:8px">`+
-        `<div style="font-weight:700">${it.name} <span class="muted" style="font-size:11px;font-weight:400">${it.code}</span></div>`+
-        `<div class="muted" style="font-size:12px">总采购量 <b style="color:var(--green)">${it.total}</b> · 已下单 ${it.ordered} · 剩余 ${it.remain} · 当前采纳率 ${rate}%</div>`+
-        `<button class="btn text small" style="margin-left:auto" onclick="genAdd(${i})">+ 添加供应商</button>`+
+    return `<div style="border:1px solid var(--line);border-radius:8px;margin-bottom:12px;overflow:hidden">`+
+      `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f7f9fc;border-bottom:1px solid var(--line)">`+
+        `<span class="pill" style="background:#e8f0ff;color:#2b6fff">采购单 ${gi+1}</span>`+
+        `<select class="chip" style="height:30px;min-width:220px;padding:0 6px" onchange="gSetVendor(${gi},this.value)">${gVendorOpts(gi)}</select>`+
+        `<span class="muted" style="font-size:11px">= 一张草稿采购单</span>`+
+        `<button class="btn text small" style="margin-left:auto;color:#f56c6c" onclick="gDelGroup(${gi})">删除该单</button>`+
       `</div>`+
-      `<div class="table-wrap" style="border-radius:6px"><table class="dense">`+
-        `<thead><tr><th style="width:60px">#</th><th>供应商</th><th class="num" style="width:110px">本次下单量</th><th style="width:200px">采购单价(未税)</th><th style="width:160px">预计到货</th><th style="width:54px"></th></tr></thead>`+
-        `<tbody>${rows}</tbody></table></div>`+
+      `<table class="dense"><thead><tr><th>货品</th><th class="num" style="width:130px">总/已下单/剩余</th><th class="num" style="width:110px">本次下单量</th><th style="width:190px">采购单价(未税)</th><th style="width:60px"></th></tr></thead><tbody>${body}</tbody></table>`+
     `</div>`;
   }).join('');
   document.getElementById('modalBox').innerHTML=
-    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">生成采购单 · 多供应商分配</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">生成采购单 · 按供应商分组</div><button class="close" onclick="closeModal()">×</button></div>'+
     '<div class="modal-body" style="padding:18px;overflow:auto;max-height:64vh">'+
       '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
-        '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 处理逻辑（多供应商）</div>'+
-        '<div>一个货品的总采购量可拆给<b>多个供应商</b>分别下单；<b>每个供应商生成 1 张草稿采购单</b>。</div>'+
-        '<div><b>数量不校验</b>——各供应商下单量合计可少于、等于或大于剩余量（允许分批 / 超采）。</div>'+
-        '<div>采购单价默认带出<b>「该供应商 × 该货品」上次采购价</b>，可改；无历史则留空手填。</div>'+
-        '<div>提交后，已下单量按<b>审核通过</b>的采购单累计，回写计划「采纳率」。</div>'+
+        '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 处理逻辑（供应商分组）</div>'+
+        '<div><b>一个供应商加一次</b>，下面自动挂出它可供货的勾选货品，批量填量——不用逐货品重复选供应商。</div>'+
+        '<div>一个货品可出现在<b>多个供应商</b>下（拆单）；<b>每个供应商生成 1 张草稿采购单</b>。</div>'+
+        '<div><b>数量不校验</b>（可少 / 等 / 超）；采购单价默认带<b>「该供应商×该货品」上次价</b>，可改、无历史留空手填。</div>'+
       '</div>'+
-      cards+
+      groups+
+      '<button class="btn" onclick="gAddGroup()">+ 添加供应商（再开一张采购单）</button>'+
     '</div>'+
     '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="muted" id="gen-summary" style="font-size:12px"></div><div style="display:flex;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="genConfirm()">创建采购单</button></div></div>';
   renderGenSummary();
 }
 function renderGenSummary(){
-  let totalQ=0;genItems.forEach(it=>it.allocs.forEach(a=>{if(a.vendor&&Number(a.qty)>0)totalQ+=Number(a.qty);}));
+  let totalQ=0;genGroups.forEach(g=>g.items.forEach(it=>{if(g.vendor&&Number(it.qty)>0)totalQ+=Number(it.qty);}));
   const el=document.getElementById('gen-summary');
-  if(el) el.innerHTML='本次下单合计 <b>'+totalQ+'</b> · 按供应商去重生成 <b>'+poCount()+'</b> 张采购单（每供应商一张）';
+  if(el) el.innerHTML='本次下单合计 <b>'+totalQ+'</b> · 生成 <b>'+poCount()+'</b> 张采购单（每供应商一张）';
 }
 function genConfirm(){
   const n=poCount();
-  if(!n){toast('请至少填一个供应商 + 下单量','warn');return;}
-  genItems.forEach(it=>{
-    const add=it.allocs.filter(a=>a.vendor&&Number(a.qty)>0).reduce((s,a)=>s+Number(a.qty),0);
-    const r=data.find(x=>x.id===it.id); if(r) r.ordered=(r.ordered||0)+add;
-  });
+  if(!n){toast('请至少给一个供应商填下单量','warn');return;}
+  const addById={};
+  genGroups.forEach(g=>{if(g.vendor)g.items.forEach(it=>{if(Number(it.qty)>0)addById[it.id]=(addById[it.id]||0)+Number(it.qty);});});
+  Object.keys(addById).forEach(id=>{const s=SNAP[id]&&SNAP[id][curPlanDate];if(s)s.ordered+=addById[id];});
   renderPlanRows(); closeModal();
-  toast('已生成 '+n+' 张草稿采购单，采纳率已更新（演示：实际待审核通过后回写）','success');
+  toast('已生成 '+n+' 张草稿采购单；采纳率（'+curPlanDate+'）已更新（演示：实际待审核通过后回写）','success');
 }
 
 function openSkuDrawer(id){
