@@ -573,6 +573,7 @@ tr:hover td{background:#fbfcfd}
 </div>
 
 <div class="drawer-mask" id="modalMask"><div class="modal" id="modalBox"></div></div>
+<div class="drawer-mask" id="splitMask" style="z-index:30"><div class="modal" id="splitBox" style="width:min(560px,94vw)"></div></div>
 <div class="drawer-side-mask" id="skuDrawerMask">
   <div class="drawer-side-pane">
     <div style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
@@ -834,7 +835,7 @@ function renderGenModal(){
         `<td style="font-size:12px"><div class="muted">总 ${it.total} · 计划剩 ${it.remain}</div><div style="color:${left<0?'#f56c6c':'var(--green)'}">本次已分配 ${sess} · 剩 ${left}</div></td>`+
         `<td class="num"><input class="chip" style="width:92px;height:28px;text-align:right" type="number" min="0" value="${it.qty}" placeholder="不限" oninput="gQty(${gi},${it.id},this.value)" onchange="renderGenModal()"></td>`+
         `<td><div style="display:flex;gap:5px;align-items:center"><input class="chip" style="width:80px;height:28px;text-align:right" type="number" step="0.01" value="${it.price}" placeholder="留空手填" oninput="gPrice(${gi},${it.id},this.value)"><span class="muted" style="font-size:11px">${lp!=null?('上次 '+lp):'无历史'}</span></div></td>`+
-        `<td><button class="btn text small" style="color:#f56c6c" onclick="gDelItem(${gi},${it.id})">移除</button></td>`+
+        `<td><button class="btn text small" onclick="openSplit(${it.id})" title="把该货品一次拆给它的多个供应商">拆供应商</button> <button class="btn text small" style="color:#f56c6c" onclick="gDelItem(${gi},${it.id})">移除</button></td>`+
       `</tr>`;
     }).join('');
     return `<div style="border:1px solid var(--line);border-radius:8px;margin-bottom:12px;overflow:hidden">`+
@@ -844,7 +845,7 @@ function renderGenModal(){
         `<span class="muted" style="font-size:11px">= 一张草稿采购单</span>`+
         `<button class="btn text small" style="margin-left:auto;color:#f56c6c" onclick="gDelGroup(${gi})">删除该单</button>`+
       `</div>`+
-      `<table class="dense"><thead><tr><th>货品</th><th style="width:170px">本品分配（跨供应商）</th><th class="num" style="width:110px">本次下单量</th><th style="width:190px">采购单价(未税)</th><th style="width:60px"></th></tr></thead><tbody>${body}</tbody></table>`+
+      `<table class="dense"><thead><tr><th>货品</th><th style="width:170px">本品分配（跨供应商）</th><th class="num" style="width:110px">本次下单量</th><th style="width:190px">采购单价(未税)</th><th style="width:130px">操作</th></tr></thead><tbody>${body}</tbody></table>`+
     `</div>`;
   }).join('');
   document.getElementById('modalBox').innerHTML=
@@ -875,6 +876,51 @@ function genConfirm(){
   Object.keys(addById).forEach(id=>{const s=SNAP[id]&&SNAP[id][curPlanDate];if(s)s.ordered+=addById[id];});
   renderPlanRows(); closeModal();
   toast('已生成 '+n+' 张草稿采购单；采纳率（'+curPlanDate+'）已更新（演示：实际待审核通过后回写）','success');
+}
+// ── 货品级一键拆供应商（货品优先：选货品 → 一处拆给它的多个供应商 → 回填到分组）──
+let splitId=null, splitRows=[];
+function openSplit(id){
+  splitId=id;
+  splitRows=CAND_VENDORS.filter(v=>(VENDOR_ITEMS[v.code]||[]).includes(id)).map(v=>{
+    const grp=genGroups.find(g=>g.vendor===v.code), it=grp&&grp.items.find(x=>x.id===id), lp=LAST_PRICE[id+'|'+v.code];
+    return {vendor:v.code,name:v.name,qty:(it&&it.qty!==''&&it.qty!=null?it.qty:''),price:(it&&it.price!==''&&it.price!=null?it.price:(lp!=null?lp:''))};
+  });
+  renderSplit(); document.getElementById('splitMask').classList.add('show');
+}
+function closeSplit(){document.getElementById('splitMask').classList.remove('show');}
+function splitQty(k,v){splitRows[k].qty=v===''?'':Number(v);renderSplit();}
+function splitPrice(k,v){splitRows[k].price=v===''?'':Number(v);}
+function renderSplit(){
+  const r=data.find(x=>x.id===splitId),sn=snapOf(r),planRemain=Math.max(0,sn.total-sn.ordered);
+  const sum=splitRows.reduce((s,x)=>s+(Number(x.qty)||0),0),left=planRemain-sum;
+  const rows=splitRows.map((x,k)=>{
+    const lp=LAST_PRICE[splitId+'|'+x.vendor];
+    return `<tr><td>${x.name} <span class="muted" style="font-size:11px">${x.vendor}</span></td>`+
+      `<td class="num"><input class="chip" style="width:90px;height:28px;text-align:right" type="number" min="0" value="${x.qty}" placeholder="0" oninput="splitQty(${k},this.value)"></td>`+
+      `<td><div style="display:flex;gap:5px;align-items:center"><input class="chip" style="width:78px;height:28px;text-align:right" type="number" step="0.01" value="${x.price}" placeholder="留空手填" oninput="splitPrice(${k},this.value)"><span class="muted" style="font-size:11px">${lp!=null?('上次 '+lp):'无历史'}</span></div></td></tr>`;
+  }).join('');
+  document.getElementById('splitBox').innerHTML=
+    '<div class="modal-head" style="height:50px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">按供应商拆分 · '+r.name+'</div><button class="close" onclick="closeSplit()">×</button></div>'+
+    '<div class="modal-body" style="padding:16px 18px">'+
+      '<div class="muted" style="font-size:12px;margin-bottom:10px">总采购量 <b style="color:var(--green)">'+sn.total+'</b> · 计划剩 '+planRemain+' · 本次已分配 <b>'+sum+'</b> · 剩 <b style="color:'+(left<0?'#f56c6c':'var(--green)')+'">'+left+'</b>（数量不校验，可超）</div>'+
+      '<table class="dense"><thead><tr><th>供应商（候选）</th><th class="num" style="width:110px">下单量</th><th style="width:180px">采购单价(未税)</th></tr></thead><tbody>'+(rows||'<tr><td colspan="3" class="muted" style="text-align:center;padding:14px">该货品无可供货供应商（品供绑定为空）</td></tr>')+'</tbody></table>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeSplit()">取消</button><button class="btn primary" onclick="confirmSplit()">应用到供应商分组</button></div>';
+}
+function confirmSplit(){
+  const id=splitId,r=data.find(x=>x.id===id),sn=snapOf(r),remain=Math.max(0,sn.total-sn.ordered);
+  splitRows.forEach(sr=>{
+    const q=Number(sr.qty)||0; let grp=genGroups.find(g=>g.vendor===sr.vendor);
+    if(q>0){
+      if(!grp){grp={vendor:sr.vendor,items:[]};genGroups.push(grp);}
+      let it=grp.items.find(x=>x.id===id);
+      if(!it){it={id,name:r.name,code:r.code,total:sn.total,ordered:sn.ordered,remain,qty:0,price:''};grp.items.push(it);}
+      it.qty=q; if(sr.price!=='') it.price=sr.price;
+    } else if(grp){ grp.items=grp.items.filter(x=>x.id!==id); }
+  });
+  genGroups=genGroups.filter(g=>g.vendor); if(!genGroups.length) genGroups=[{vendor:'',items:[]}];
+  closeSplit(); renderGenModal();
+  toast('已按供应商拆分「'+r.name+'」并回填到分组','success');
 }
 
 function openSkuDrawer(id){
