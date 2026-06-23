@@ -434,7 +434,7 @@ label{font-size:13px;color:var(--t2)}
               <th>对端货品编码</th>
               <th>对端货品名称</th>
               <th>关系</th>
-              <th>用量</th>
+              <th>原料比例</th>
               <th>状态</th>
               <th>创建时间</th>
               <th style="min-width:120px">操作</th>
@@ -1185,7 +1185,14 @@ label{font-size:13px;color:var(--t2)}
   </div>
   <div class="card">
     <div class="tbl-toolbar">
-      <div class="tbl-toolbar-left"></div>
+      <div class="tbl-toolbar-left">
+        <button class="btn btn-sm" id="bom-batch-enable" onclick="bomBatchEnable('启用')">批量启用</button>
+        <button class="btn btn-sm btn-danger" id="bom-batch-disable" onclick="bomBatchEnable('禁用')">批量禁用</button>
+        <button class="btn btn-sm" id="bom-batch-prop" onclick="bomOpenImport()">批量改原料比例</button>
+        <span id="bom-sel-info" style="display:none;margin-left:4px">已选 <b id="bom-sel-cnt" style="color:var(--primary)">0</b> 项</span>
+        <span id="bom-sel-all" style="display:none"></span>
+        <button class="btn-text" id="bom-sel-clear" style="display:none" onclick="bomClearSel()">取消选择</button>
+      </div>
       <div class="tbl-toolbar-right">
         <button class="btn btn-primary" onclick="openDialog('ov-create-bom')">+ 新建 BOM</button>
       </div>
@@ -1193,9 +1200,10 @@ label{font-size:13px;color:var(--t2)}
     <table>
       <thead>
         <tr>
+          <th class="tbl-check"><input type="checkbox" id="bom-ckall" onclick="bomToggleAllPage(this)"></th>
           <th>来源货品编码</th><th>来源货品名称</th>
           <th>目标货品编码</th><th>目标货品名称</th>
-          <th>原料用量</th><th>状态</th><th>创建时间</th><th>操作</th>
+          <th>原料比例</th><th>状态</th><th>创建时间</th><th>操作</th>
         </tr>
       </thead>
       <tbody id="bom-tbody"></tbody>
@@ -1548,6 +1556,69 @@ label{font-size:13px;color:var(--t2)}
   </div>
 </div>
 
+<!-- 批量启禁用 确认 -->
+<div class="overlay" id="ov-bom-enable">
+  <div class="dialog dialog-sm">
+    <div class="dialog-header"><h3 id="bom-en-title">批量启用</h3><div class="dialog-close" onclick="closeDialog('ov-bom-enable')">×</div></div>
+    <div class="dialog-body">
+      <div style="font-size:13px;color:var(--t1);margin-bottom:10px">将对所选 <b id="bom-en-cnt">0</b> 个 BOM 关系执行<b id="bom-en-act"></b>。</div>
+      <div class="source-banner raw" style="margin:0"><div class="sb-txt" style="font-size:12px;line-height:1.6">
+        <b>整体事务</b>：任一 BOM 不存在/已删除或状态值非法，<b>全部不生效</b>并提示失败原因（BR-02）。<br>「已是目标状态」按无需变更跳过，不算失败；禁用<b>不校验下游</b>引用（BR-03）。
+      </div></div>
+      <div id="bom-en-result" style="margin-top:10px"></div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-bom-enable')">取消</button>
+      <button class="btn btn-primary" id="bom-en-confirm" onclick="bomConfirmEnable()">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批量改原料比例 导入 -->
+<div class="overlay" id="ov-bom-prop">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header"><h3>批量修改原料比例 · 导入清单</h3><div class="dialog-close" onclick="closeDialog('ov-bom-prop')">×</div></div>
+    <div class="dialog-body">
+      <div class="source-banner raw" style="margin:0 0 14px"><div class="sb-txt" style="font-size:13px;line-height:1.7">
+        推荐闭环：<b>① 导出模板（带现比例）</b> → <b>② 填「新比例」列</b> → <b>③ 上传回传校验提交</b>。
+        <a class="btn-text" style="margin-left:8px" onclick="bomExportTpl()">⬇ 导出模板（<span id="bom-tpl-scope">所选</span> <b id="bom-tpl-cnt">0</b> 条）</a>
+      </div></div>
+
+      <div id="bom-prop-input">
+        <div class="form-hint" style="margin-bottom:8px">
+          上传填好「新比例」列的模板（<b>.csv</b>，由上方导出）。比例 <b>&gt;0、最多两位小数</b>；<b>新比例为空的行自动跳过</b>（不修改）。
+        </div>
+        <div id="bom-upload-zone" onclick="document.getElementById('bom-file').click()"
+             style="border:1px dashed var(--border);border-radius:6px;padding:28px;text-align:center;cursor:pointer;color:var(--t3);background:var(--bg)">
+          <div style="font-size:24px;line-height:1">⬆</div>
+          <div style="margin-top:6px;font-size:13px">点击选择文件　<span style="color:var(--t3)">（支持 .csv，UTF-8）</span></div>
+          <input type="file" id="bom-file" accept=".csv,text/csv" style="display:none" onchange="bomFileChosen(this)">
+        </div>
+        <div style="margin-top:10px"><a class="btn-text" onclick="bomDemoPreview()">▶ 没有文件？用示例数据预览拦截效果</a></div>
+      </div>
+
+      <div id="bom-prop-result" style="display:none">
+        <div style="display:flex;gap:18px;font-size:13px;margin:4px 0 8px">
+          <span>总行数 <b id="bom-s-total">0</b></span>
+          <span style="color:var(--primary)">可更新 <b id="bom-s-ok">0</b></span>
+          <span style="color:var(--t3)">跳过(无变化) <b id="bom-s-skip">0</b></span>
+          <span style="color:var(--danger)">异常 <b id="bom-s-err">0</b></span>
+        </div>
+        <div class="source-banner standalone" id="bom-prop-tip" style="margin:0 0 8px"><div class="sb-txt" style="font-size:12px"></div></div>
+        <table class="inline-table">
+          <thead><tr><th>#</th><th>BOM编码</th><th>来源原料</th><th>原比例</th><th>新比例</th><th>校验结果</th></tr></thead>
+          <tbody id="bom-pv-body"></tbody>
+        </table>
+        <div style="margin-top:8px"><a class="btn-text" onclick="bomBackToInput()">← 返回修改清单</a></div>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="closeDialog('ov-bom-prop')">取消</button>
+      <button class="btn btn-primary" id="bom-prop-submit" disabled onclick="bomSubmitImport()">提交（更新 0 条）</button>
+    </div>
+  </div>
+</div>
+
 <!-- 确认建档 -->
 <div class="overlay" id="ov-confirm-build">
   <div class="dialog dialog-sm">
@@ -1585,10 +1656,11 @@ const GD = [
 ];
 
 const BOM_DATA = [
-  {bcode:'BOM-20260418-0001',scode:'item-20260418-0012',sname:'三文鱼原条',tcode:'item-20260418-0013',tname:'三文鱼柳',usage:'1.2 KG/份',status:'启用',ct:'2026-04-18 10:30'},
-  {bcode:'BOM-20260418-0002',scode:'item-20260418-0012',sname:'三文鱼原条',tcode:'item-20260418-0014',tname:'三文鱼刺身',usage:'0.8 KG/份',status:'启用',ct:'2026-04-20 14:00'},
-  {bcode:'BOM-20260310-0001',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260310-0006',tname:'鳕鱼排（成品）',usage:'1.0 KG/份',status:'启用',ct:'2026-03-10 14:35'},
-  {bcode:'BOM-20260310-0002',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260418-0014',tname:'三文鱼刺身',usage:'0.3 KG/份',status:'禁用',ct:'2026-03-15 09:00'},
+  {bcode:'BOM-20260418-0001',scode:'item-20260418-0012',sname:'三文鱼原条',tcode:'item-20260418-0013',tname:'三文鱼柳',prop:1.20,status:'启用',ct:'2026-04-18 10:30'},
+  {bcode:'BOM-20260418-0002',scode:'item-20260418-0012',sname:'三文鱼原条',tcode:'item-20260418-0014',tname:'三文鱼刺身',prop:0.80,status:'启用',ct:'2026-04-20 14:00'},
+  {bcode:'BOM-20260310-0001',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260310-0006',tname:'鳕鱼排（成品）',prop:1.00,status:'启用',ct:'2026-03-10 14:35'},
+  {bcode:'BOM-20260310-0002',scode:'item-20260310-0005',sname:'鳕鱼柳',tcode:'item-20260418-0014',tname:'三文鱼刺身',prop:0.30,status:'禁用',ct:'2026-03-15 09:00'},
+  {bcode:'BOM-20260520-0009',scode:'item-20260520-0021',sname:'冻虾仁',tcode:'item-20260520-0022',tname:'虾仁(净)',prop:0.95,status:'禁用',ct:'2026-05-20 11:00',deleted:true},
 ];
 
 // 创建方式（source）派生：成品货品 + 出现在 BOM 关系中 → 原料关联 BOM_LINKED；
@@ -1675,14 +1747,17 @@ function renderGoods(){
   }).join('');
 }
 
+const bomSel = new Set();      // 选中的 bcode
+let bomSelAllFiltered = false; // 是否「选择全部筛选结果」
 function renderBom(){
   document.getElementById('bom-tbody').innerHTML=BOM_DATA.map((r,i)=>`
     <tr>
+      <td class="tbl-check"><input type="checkbox" ${bomSel.has(r.bcode)?'checked':''} onclick="bomToggleRow('${r.bcode}',this)"></td>
       <td style="font-family:monospace;font-size:12px;color:var(--t3)">${r.scode}</td>
       <td>${r.sname}</td>
       <td style="font-family:monospace;font-size:12px;color:var(--t3)">${r.tcode}</td>
       <td>${r.tname}</td>
-      <td>${r.usage}</td>
+      <td><b>${r.prop.toFixed(2)}</b></td>
       <td><span class="tag ${r.status==='启用'?'tag-green':'tag-gray'}">${r.status}</span></td>
       <td style="font-size:12px;color:var(--t2)">${r.ct}</td>
       <td>
@@ -1692,7 +1767,29 @@ function renderBom(){
       </td>
     </tr>
   `).join('');
+  bomSyncBar();
 }
+// —— 选择 ——
+function bomToggleRow(code,ck){ ck.checked?bomSel.add(code):(bomSel.delete(code),bomSelAllFiltered=false); bomSyncBar(); }
+function bomToggleAllPage(ck){ bomSelAllFiltered=false; BOM_DATA.forEach(r=> ck.checked?bomSel.add(r.bcode):bomSel.delete(r.bcode)); renderBom(); }
+function bomSelectAllFiltered(){ bomSelAllFiltered=true; BOM_DATA.forEach(r=>bomSel.add(r.bcode)); renderBom(); }
+function bomClearSel(){ bomSel.clear(); bomSelAllFiltered=false; const c=document.getElementById('bom-ckall'); if(c)c.checked=false; renderBom(); }
+function bomSyncBar(){
+  const has=bomSel.size>0;
+  ['bom-sel-info','bom-sel-clear'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=has?'':'none';});
+  const cnt=document.getElementById('bom-sel-cnt'); if(cnt)cnt.textContent=bomSel.size;
+  const ck=document.getElementById('bom-ckall'); if(ck)ck.checked=BOM_DATA.length>0&&BOM_DATA.every(r=>bomSel.has(r.bcode));
+  const allEl=document.getElementById('bom-sel-all');
+  if(allEl){
+    if(BOM_DATA.length>0&&BOM_DATA.every(r=>bomSel.has(r.bcode))){
+      allEl.style.display='';
+      allEl.innerHTML = bomSelAllFiltered
+        ? `已选中全部筛选结果 ${BOM_DATA.length} 条 <a class="btn-text" onclick="bomClearSel()">清除</a>`
+        : `<a class="btn-text" onclick="bomSelectAllFiltered()">选择全部筛选结果 ${BOM_DATA.length} 条</a>`;
+    } else allEl.style.display='none';
+  }
+}
+function bomSelectedRows(){ return BOM_DATA.filter(r=>bomSel.has(r.bcode)); }
 
 function togglePur(i,val){
   const r=GD[i];
@@ -1718,6 +1815,147 @@ function toggleBomStatus(i){
   BOM_DATA[i].status=BOM_DATA[i].status==='启用'?'禁用':'启用';
   showToast(`BOM 已${BOM_DATA[i].status}`,'success');
   renderBom();
+}
+
+// ============ 批量启禁用 ============
+function bomBatchEnable(act){
+  if(bomSel.size===0){ showToast('请先勾选要操作的 BOM 关系','warning'); return; }
+  document.getElementById('bom-en-title').textContent=`批量${act}`;
+  document.getElementById('bom-en-act').textContent=act;
+  document.getElementById('bom-en-cnt').textContent=bomSel.size;
+  document.getElementById('bom-en-result').innerHTML='';
+  const c=document.getElementById('bom-en-confirm'); c.style.display=''; c.dataset.act=act;
+  openDialog('ov-bom-enable');
+}
+function bomConfirmEnable(){
+  const act=document.getElementById('bom-en-confirm').dataset.act;
+  const rows=bomSelectedRows();
+  const res=document.getElementById('bom-en-result');
+  // 整体回滚触发：BOM 不存在/已删除（deleted 标记）。同状态=无需变更，跳过不算失败。
+  const bad=rows.filter(r=>r.deleted);
+  if(bad.length){
+    res.innerHTML=`<div style="color:var(--danger);font-size:13px">❌ 操作失败，已整体回滚（无任何变更）。失败原因：</div>`+
+      `<ul style="margin:6px 0 0 18px;font-size:12px;color:var(--danger)">`+
+      bad.map(b=>`<li><span style="font-family:monospace">${b.bcode}</span> —— BOM 不存在或已删除</li>`).join('')+`</ul>`+
+      `<div class="form-hint" style="margin-top:6px">请刷新列表后重试。</div>`;
+    document.getElementById('bom-en-confirm').style.display='none';
+    return;
+  }
+  const changed=rows.filter(r=>r.status!==act), skipped=rows.length-changed.length;
+  changed.forEach(r=>r.status=act);
+  closeDialog('ov-bom-enable');
+  showToast(`已${act} ${changed.length} 个 BOM${skipped?`，${skipped} 个已是${act}状态已跳过`:''}，并逐条写入操作日志`,'success');
+  bomClearSel();
+}
+
+// ============ 批量改原料比例 · 导入 ============
+let bomParsed=[];
+// 导出模板范围：勾选了→所选；未勾选→默认仅「启用」的 BOM
+function bomImpScope(){ return bomSel.size>0 ? bomSelectedRows() : BOM_DATA.filter(r=>r.status==='启用'); }
+function bomOpenImport(){
+  // 改比例＝导入即改（按文件内 BOM 编码更新），与勾选无关，直接进导入
+  bomBackToInput();
+  document.getElementById('bom-file').value='';
+  document.getElementById('bom-tpl-scope').textContent = bomSel.size>0?'所选':'启用';
+  document.getElementById('bom-tpl-cnt').textContent = bomImpScope().length;
+  openDialog('ov-bom-prop');
+}
+function bomExportTpl(){
+  const rows=bomImpScope();
+  const head=['BOM编码','BOM名称','来源原料','当前比例','新比例(填写)'];
+  const body=rows.map(r=>[r.bcode, r.sname+'→'+r.tname, r.sname, r.prop.toFixed(2), '']);
+  const csv='﻿'+[head,...body].map(a=>a.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`BOM原料比例模板_${rows.length}条.csv`; a.click(); URL.revokeObjectURL(a.href);
+  showToast(`已导出 ${rows.length} 条模板，填好「新比例」列后回传`,'success');
+}
+function bomFileChosen(input){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=e=>bomParseImport(e.target.result, f.name);
+  rd.readAsText(f,'utf-8');
+}
+function bomDemoPreview(){
+  // 覆盖：有效改 / 值无变化跳过 / BOM不存在 / 三位小数 / 科学计数
+  const demo=['BOM编码,BOM名称,来源原料,当前比例,新比例(填写)',
+    'BOM-20260418-0001,,,1.20,1.30',   // 有效
+    'BOM-20260418-0002,,,0.80,0.80',   // 无变化→跳过
+    'BOM-9999-0000,,,,1.00',           // BOM不存在
+    'BOM-20260310-0001,,,1.00,1.234',  // 三位小数
+    'BOM-20260310-0002,,,0.30,7.8E-01' // 科学计数
+  ].join('\n');
+  bomParseImport(demo,'示例数据.csv');
+}
+function bomBackToInput(){ document.getElementById('bom-prop-input').style.display=''; document.getElementById('bom-prop-result').style.display='none'; const s=document.getElementById('bom-prop-submit'); s.disabled=true; s.textContent='提交（更新 0 条）'; }
+function bomParseImport(raw, fname){
+  raw=(raw||'').trim();
+  if(!raw){ showToast('文件为空','warning'); return; }
+  let lines=raw.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length && !/^"?BOM-/i.test(lines[0].trim())) lines=lines.slice(1); // 跳过表头
+  // 全角转半角
+  const toHalf=s=>s.replace(/[！-～]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/　/g,' ');
+  bomParsed=[];
+  // 先收集编码出现次数（归一化 trim+大写）用于重复检测
+  const rows=[];
+  lines.forEach((l,i)=>{
+    const p=l.split(/[,\t]/).map(x=>x.replace(/^"|"$/g,'').trim());
+    const no=(p[0]||'').trim().toUpperCase();
+    let propStr=(p.length>=5?(p[4]||''):(p[1]||'')).trim();
+    if(propStr==='') return; // 新比例为空 → 跳过不改
+    rows.push({row:i+1,no,propStr});
+  });
+  const cnt={}; rows.forEach(r=>cnt[r.no]=(cnt[r.no]||0)+1);
+  rows.forEach(r=>{
+    const norm=toHalf(r.propStr);                 // 归一化：全角→半角
+    const prop=Number(norm);
+    const f=BOM_DATA.find(d=>d.bcode.toUpperCase()===r.no);  // trim+大小写不敏感匹配
+    const o={row:r.row,no:r.no,propStr:r.propStr,prop,found:f};
+    if(!r.no){o.ok=false;o.msg='BOM编码为空';}
+    else if(cnt[r.no]>1){o.ok=false;o.msg='同一BOM多次出现';}
+    else if(/[eE]/.test(norm)){o.ok=false;o.msg='比例疑似科学计数法';}
+    else if(/[,，]/.test(r.propStr)){o.ok=false;o.msg='勿用千分位';}
+    else if(!f){o.ok=false;o.msg=/[eE+]/.test(r.no)?'编码疑似被Excel转科学计数':'BOM不存在';}
+    else if(isNaN(prop)){o.ok=false;o.msg='比例非数字';}
+    else if(prop<=0){o.ok=false;o.msg='比例须>0';}
+    else if(!/^\d+(\.\d{1,2})?$/.test(norm)){o.ok=false;o.msg='最多两位小数';}
+    else if(prop===f.prop){o.skip=true;o.msg='与现比例相同，跳过';}  // 值无变化 no-op
+    else {o.ok=true;o.msg='可更新';}
+    bomParsed.push(o);
+  });
+  if(!bomParsed.length){ showToast('无可更新行（请确认已填「新比例」列）','warning'); return; }
+  const okN=bomParsed.filter(p=>p.ok).length;
+  const skipN=bomParsed.filter(p=>p.skip).length;
+  const errN=bomParsed.filter(p=>!p.ok&&!p.skip).length;
+  document.getElementById('bom-s-total').textContent=bomParsed.length;
+  document.getElementById('bom-s-ok').textContent=okN;
+  document.getElementById('bom-s-skip').textContent=skipN;
+  document.getElementById('bom-s-err').textContent=errN;
+  document.getElementById('bom-pv-body').innerHTML=bomParsed.map(p=>{
+    const bg = p.ok ? '' : (p.skip ? ' style="background:#f7f8fa;color:var(--t3)"' : ' style="background:#fef0f0"');
+    const rc = p.ok ? 'var(--primary)' : (p.skip ? 'var(--t3)' : 'var(--danger)');
+    const icon = p.ok ? '✓ 可更新' : (p.skip ? '○ '+p.msg : '✗ '+p.msg);
+    return `<tr${bg}>
+      <td>${p.row}</td><td style="font-family:monospace;font-size:12px">${p.no||'—'}</td>
+      <td>${p.found?p.found.sname:'—'}</td>
+      <td>${p.found?p.found.prop.toFixed(2):'—'}</td>
+      <td>${(p.ok||p.skip)&&!isNaN(p.prop)?'<b>'+p.prop.toFixed(2)+'</b>':(p.propStr||'—')}</td>
+      <td style="color:${rc}">${icon}</td>
+    </tr>`;}).join('');
+  const fileTag = fname ? `<span style="color:var(--t3)">已读取 <b>${fname}</b> · </span>` : '';
+  document.getElementById('bom-prop-tip').querySelector('.sb-txt').innerHTML = fileTag + (errN>0
+    ? '<b style="color:var(--danger)">存在异常行 → 整单不可提交</b>，请修正后重新上传（BR-05 整体回滚）。'
+    : '✓ 全部校验通过，可整单提交。仅影响之后的采购分析/加工，历史单据不回算（BR-06）。');
+  document.getElementById('bom-prop-input').style.display='none';
+  document.getElementById('bom-prop-result').style.display='';
+  const sub=document.getElementById('bom-prop-submit');
+  sub.disabled = errN>0||okN===0; sub.textContent=`提交（更新 ${okN} 条）`;
+}
+function bomSubmitImport(){
+  const oks=bomParsed.filter(p=>p.ok); if(!oks.length) return;
+  oks.forEach(p=>{ p.found.prop=p.prop; });
+  closeDialog('ov-bom-prop'); bomClearSel();
+  showToast(`已更新 ${oks.length} 个 BOM 的原料比例，并逐条写入操作日志`,'success');
 }
 
 let detailIdx=null;
@@ -1804,7 +2042,7 @@ function renderBomTab(r,links){
       <td style="font-family:monospace;font-size:12px;color:var(--t3)">${peer.code}</td>
       <td><strong>${peer.name}</strong></td>
       <td>${roleTag}</td>
-      <td>${b.usage}</td>
+      <td><b>${b.prop.toFixed(2)}</b></td>
       <td><span class="tag ${b.status==='启用'?'tag-green':'tag-gray'}">${b.status}</span></td>
       <td style="font-size:12px;color:var(--t2)">${b.ct}</td>
       <td>
