@@ -1580,13 +1580,18 @@ label{font-size:13px;color:var(--t2)}
     <div class="dialog-header"><h3>批量修改原料比例 · 导入清单</h3><div class="dialog-close" onclick="closeDialog('ov-bom-prop')">×</div></div>
     <div class="dialog-body">
       <div class="source-banner raw" style="margin:0 0 14px"><div class="sb-txt" style="font-size:13px;line-height:1.7">
-        推荐闭环：<b>① 导出模板（带现比例）</b> → <b>② 填「新比例」列</b> → <b>③ 上传回传校验提交</b>。
-        <a class="btn-text" style="margin-left:8px" onclick="bomExportTpl()">⬇ 导出模板（<span id="bom-tpl-scope">所选</span> <b id="bom-tpl-cnt">0</b> 条）</a>
+        操作三步：<b>① 下载导入模板（带现比例）</b> → <b>② 填「新比例」列</b> → <b>③ 上传回传校验提交</b>。
       </div></div>
 
       <div id="bom-prop-input">
-        <div class="form-hint" style="margin-bottom:8px">
-          上传填好「新比例」列的模板（<b>.csv</b>，由上方导出）。比例 <b>&gt;0、最多两位小数</b>；<b>新比例为空的行自动跳过</b>（不修改）。
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">1</div>
+          <button class="btn btn-primary btn-sm" onclick="bomExportTpl()">⬇ 下载导入模板</button>
+          <span class="form-hint">范围：<span id="bom-tpl-scope">所选</span> <b id="bom-tpl-cnt">0</b> 条，已带「当前比例」对照列</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">2</div>
+          <span class="form-hint">上传填好「新比例」列的模板（<b>.csv，UTF-8</b>）。比例 <b>&gt;0、最多两位小数</b>；<b>新比例为空的行自动跳过</b>。</span>
         </div>
         <div id="bom-upload-zone" onclick="document.getElementById('bom-file').click()"
              style="border:1px dashed var(--border);border-radius:6px;padding:28px;text-align:center;cursor:pointer;color:var(--t3);background:var(--bg)">
