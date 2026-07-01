@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Food Max · 商家端 v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* 数据驱动基线：ui-ux-pro-max grocery 配色 + Wellness Calm 字体配对(Lora+Raleway) */
+:root{
+  --emerald:#059669; --emerald-2:#047857; --emerald-d:#065F46;
+  --mint:#10B981; --mint-soft:#D1FAE5; --amber:#D97706; --amber-soft:#FEF3C7;
+  --bg:#F4FBF7; --card:#FFFFFF; --ink:#0F172A; --sub:#64748B; --line:#E4F0E9; --muted:#F0F8F6;
+  --red:#DC2626; --red-soft:#FEE2E2;
+  --sh:0 12px 30px rgba(6,95,70,.10); --sh-sm:0 4px 14px rgba(6,95,70,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Raleway',-apple-system,"PingFang SC",sans-serif;color:var(--ink);min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 30% 0%,#243B31,#161D19 65%);}
+.disp{font-family:'Lora','PingFang SC',serif;}
+.phone{width:390px;height:844px;border-radius:48px;position:relative;overflow:hidden;background:var(--bg);
+  border:11px solid #0A120D;box-shadow:0 32px 80px rgba(0,0,0,.5);display:flex;flex-direction:column;}
+.statusbar{height:52px;flex:0 0 52px;display:flex;align-items:center;justify-content:space-between;padding:0 30px 0 34px;font-weight:700;font-size:15px;position:relative;z-index:30;}
+.statusbar .island{position:absolute;left:50%;top:11px;transform:translateX(-50%);width:116px;height:33px;background:#0A120D;border-radius:20px;}
+.statusbar .r{display:flex;gap:6px;align-items:center;font-size:13px;}
+.statusbar .batt{width:24px;height:12px;border:1.5px solid var(--ink);border-radius:3px;padding:1.5px;}
+.statusbar .batt i{display:block;height:100%;width:72%;background:var(--ink);border-radius:1px;}
+.screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;z-index:5;}
+.screen::-webkit-scrollbar{display:none;}
+.view{display:none;}.view.on{display:block;}
+.tabbar{flex:0 0 84px;height:84px;background:rgba(255,255,255,.93);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding:10px 8px 0;z-index:20;}
+.tabbar .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--sub);cursor:pointer;position:relative;padding-top:4px;min-height:44px;}
+.tabbar .tab svg{width:24px;height:24px;stroke:var(--sub);fill:none;stroke-width:1.8;}
+.tabbar .tab.active{color:var(--emerald);}.tabbar .tab.active svg{stroke:var(--emerald);}
+.tabbar .tab.active::before{content:"";position:absolute;top:-1px;width:22px;height:3px;border-radius:3px;background:var(--emerald);}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.stagger>*{animation:rise .5s both}
+.stagger>*:nth-child(1){animation-delay:.02s}.stagger>*:nth-child(2){animation-delay:.08s}.stagger>*:nth-child(3){animation-delay:.14s}.stagger>*:nth-child(4){animation-delay:.2s}.stagger>*:nth-child(5){animation-delay:.26s}.stagger>*:nth-child(6){animation-delay:.32s}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+.sk{background:linear-gradient(90deg,#EAF3EE 25%,#F4FBF7 37%,#EAF3EE 63%);background-size:400px 100%;animation:shimmer 1.2s infinite;border-radius:8px;}
+
+/* 工作台 */
+.hm-top{display:flex;align-items:center;gap:11px;padding:8px 20px 14px;}
+.hm-logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--emerald),var(--emerald-d));display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(5,150,105,.32);}
+.hm-logo svg{width:23px;height:23px;stroke:#fff;fill:none;stroke-width:2;}
+.hm-store{flex:1;min-width:0;}
+.hm-store .nm{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hm-store .sub{font-size:11.5px;color:var(--sub);margin-top:2px;display:flex;align-items:center;gap:5px;}
+.hm-store .sub .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);}
+.hm-bell{width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:center;position:relative;}
+.hm-bell svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:1.8;}
+.hm-bell .rd{position:absolute;top:11px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid #fff;}
+.hero{margin:0 16px;border-radius:24px;padding:22px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(150deg,#0AA06A 0%,#047857 52%,#065F46 100%);box-shadow:0 18px 40px rgba(6,95,70,.34);}
+.hero::before{content:"";position:absolute;right:-50px;top:-60px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(217,119,6,.45),transparent 70%);}
+.hero .lab{font-size:12.5px;opacity:.88;display:flex;align-items:center;gap:8px;position:relative;}
+.hero .lab .ln{flex:1;height:1px;background:rgba(255,255,255,.22);}
+.hero .big{font-size:46px;font-weight:600;line-height:1;margin:11px 0 3px;position:relative;letter-spacing:-.01em;}
+.hero .big .c{font-size:22px;opacity:.82;margin-right:4px;}
+.hero .trend{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;background:rgba(255,255,255,.17);padding:4px 10px;border-radius:20px;position:relative;}
+.hero .row2{display:flex;gap:24px;margin-top:18px;position:relative;}
+.hero .row2 .m .v{font-size:21px;font-weight:600;}.hero .row2 .m .k{font-size:11.5px;opacity:.82;}
+.hero .row2 .ar{margin-left:auto;align-self:center;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.17);display:flex;align-items:center;justify-content:center;}
+.hero .row2 .ar svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.4;}
+.todobar{display:flex;gap:10px;margin:16px;overflow-x:auto;}.todobar::-webkit-scrollbar{display:none;}
+.todo{flex:0 0 auto;background:#fff;border-radius:16px;padding:12px 16px;box-shadow:var(--sh-sm);min-width:98px;cursor:pointer;position:relative;}
+.todo .n{font-size:23px;font-weight:700;color:var(--emerald-2);line-height:1;}.todo .n.warn{color:var(--red);}
+.todo .t{font-size:12px;color:var(--sub);margin-top:3px;}
+.todo .pin{position:absolute;top:12px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--amber);}
+.block{background:#fff;margin:0 16px 16px;border-radius:22px;padding:18px 16px 8px;box-shadow:var(--sh-sm);}
+.block.flush{padding-bottom:18px;}
+.bhead{display:flex;align-items:baseline;margin:0 4px 15px;}.bhead .h{font-size:18px;font-weight:700;}.bhead .more{margin-left:auto;font-size:12.5px;color:var(--sub);}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px 0;padding-bottom:12px;}
+.gi{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;position:relative;min-height:44px;}
+.gi .tile{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;transition:transform .15s;}
+.gi:active .tile{transform:scale(.92);}
+.gi .tile svg{width:25px;height:25px;fill:none;stroke-width:1.7;}
+.gi .gl{font-size:12px;color:#27433A;font-weight:500;}
+.gi .bdg{position:absolute;top:-7px;left:50%;margin-left:6px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;white-space:nowrap;}
+.gi .bdg.amber{background:var(--amber);}
+.deliver{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 0;}
+.di{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;position:relative;min-height:44px;}
+.di .ic{width:46px;height:46px;border-radius:14px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;}
+.di .ic svg{width:22px;height:22px;stroke:var(--emerald-2);fill:none;stroke-width:1.7;}
+.di .dl{font-size:11.5px;color:#27433A;}
+.di .bdg{position:absolute;top:-6px;left:50%;margin-left:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;}
+.growth{margin:0 16px 22px;border-radius:20px;padding:18px;background:linear-gradient(120deg,var(--amber-soft),#FDEBC8);position:relative;overflow:hidden;}
+.growth .gt{font-size:11.5px;font-weight:700;color:#B45309;letter-spacing:.05em;}
+.growth h4{font-size:16px;font-weight:700;margin:5px 0 10px;}
+.growth .chips{display:flex;flex-wrap:wrap;gap:6px;}
+.growth .chips span{background:rgba(255,255,255,.72);border-radius:20px;padding:4px 11px;font-size:11px;color:#92600F;font-weight:600;}
+
+/* 页面栈 */
+.navbar{height:52px;flex:0 0 52px;display:flex;align-items:center;padding:0 14px;position:relative;z-index:10;background:var(--bg);}
+.navbar .back{width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.navbar .back svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2.4;}
+.navbar .nt{position:absolute;left:50%;transform:translateX(-50%);font-size:17px;font-weight:700;}
+.navbar .nr{margin-left:auto;font-size:14px;color:var(--emerald);font-weight:600;}
+.page-stack{position:absolute;inset:52px 0 0;z-index:25;pointer-events:none;}
+.page{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.3,.8,.3,1);pointer-events:auto;}
+.page.show{transform:none;}
+.page-footer{flex:0 0 auto;background:#fff;border-top:1px solid var(--line);padding:12px 16px 16px;}
+.btn{width:100%;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;min-height:48px;}
+.btn.primary{background:var(--emerald);color:#fff;box-shadow:0 8px 20px rgba(5,150,105,.3);}
+.btn.ghost{background:var(--muted);color:var(--ink);}
+.btn:disabled{background:#BFD8CD;color:#fff;box-shadow:none;}
+.btn.loading{color:transparent;position:relative;}
+.btn.loading::after{content:"";position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ph{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;text-align:center;padding:0 40px;}
+.ph .pic{width:100px;height:100px;border-radius:30px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;}
+.ph .pic svg{width:46px;height:46px;stroke:var(--emerald-2);fill:none;stroke-width:1.5;}
+.ph h3{font-size:20px;font-weight:700;}.ph p{font-size:13.5px;color:var(--sub);line-height:1.7;}
+.ph .pill{margin-top:4px;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;background:var(--amber-soft);color:#B45309;}
+/* 确认弹窗 / toast */
+.modal-mask{position:absolute;inset:0;z-index:120;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:34px;animation:fade .2s;}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{background:#fff;border-radius:20px;width:100%;max-width:300px;overflow:hidden;animation:rise .25s;}
+.modal .mt{padding:24px 22px 8px;text-align:center;font-size:17px;font-weight:700;}
+.modal .mb{padding:0 22px 22px;text-align:center;font-size:13.5px;color:var(--sub);line-height:1.6;}
+.modal .mf{display:flex;border-top:1px solid var(--line);}
+.modal .mf .mbn{flex:1;text-align:center;padding:15px;font-size:16px;font-weight:600;cursor:pointer;}
+.modal .mf .mbn.cancel{color:var(--sub);border-right:1px solid var(--line);}
+.modal .mf .mbn.danger{color:var(--red);font-weight:700;}
+.modal .mf .mbn.ok{color:var(--emerald);font-weight:700;}
+.toast{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:200;background:rgba(15,23,42,.92);color:#fff;padding:13px 22px;border-radius:14px;font-size:14px;font-weight:600;animation:rise .2s;}
+.sheet-mask{position:absolute;inset:0;z-index:120;background:rgba(15,23,42,.42);display:flex;align-items:flex-end;animation:fade .2s;}
+.sheet{width:100%;background:#fff;border-radius:22px 22px 0 0;padding:8px 0 16px;animation:rise .25s;}
+.sheet .si{padding:16px;text-align:center;font-size:16px;border-bottom:1px solid var(--line);cursor:pointer;}
+.sheet .si.danger{color:var(--red);}.sheet .si.cancel{color:var(--sub);}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="island"></span><span class="r"><span>•••</span><span>令</span><span class="batt"><i></i></span></span></div>
+  <div class="screen view on" id="v-home"></div>
+  <div class="screen view" id="v-orders"></div>
+  <div class="screen view" id="v-goods"></div>
+  <div class="screen view" id="v-mine"></div>
+  <div class="page-stack" id="stack"></div>
+  <div class="tabbar" id="tabbar"></div>
+</div>
+<script>
+const I={
+  box:'<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+  layers:'<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+  receipt:'<path d="M5 3v18l2-1.5L9 21l2-1.5L13 21l2-1.5L17 21l2-1.5V3l-2 1.5L15 3l-2 1.5L11 3 9 4.5 7 3 5 3z"/><path d="M8 8h8M8 12h8"/>',
+  refund:'<path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/><path d="M12 8v4l3 2"/>',
+  invoice:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  tag:'<path d="M20 12l-8 8-9-9V3h8l9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  wallet:'<rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="17" cy="13.5" r="1.3"/>',
+  mega:'<path d="M3 11v2a1 1 0 001 1h2l5 4V6L6 10H4a1 1 0 00-1 1z"/><path d="M15 8a5 5 0 010 8"/>',
+  trend:'<path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/>',
+  alert:'<path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4M12 18h.01"/>',
+  shieldcheck:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/>',
+  truck:'<rect x="2" y="7" width="12" height="9" rx="1"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',
+  ticket:'<path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4V7z"/>',
+  sign:'<path d="M4 17l4 1 10-10a2 2 0 00-3-3L5 15z"/>',
+  swap:'<path d="M7 4L3 8l4 4"/><path d="M3 8h13a4 4 0 014 4"/><path d="M17 20l4-4-4-4"/><path d="M21 16H8a4 4 0 01-4-4"/>',
+  progress:'<circle cx="12" cy="12" r="9"/><path d="M12 12V7M12 12l4 2"/>',
+  home:'<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6"/>',
+  bell:'<path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 004 0"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>', back:'<path d="M15 6l-6 6 6 6"/>',
+  leaf:'<path d="M5 19C4 12 9 5 20 4c0 11-7 16-14 15z"/><path d="M5 19c2-5 6-8 10-9"/>',
+};
+const svg=(k,x='')=>`<svg viewBox="0 0 24 24" ${x}>${I[k]}</svg>`;
+const TILES=[
+  {k:'goods',l:'商品管理',ic:'box',bg:'#D1FAE5',st:'var(--emerald-2)'},
+  {k:'stock',l:'库存管理',ic:'layers',bg:'#D1FAE5',st:'var(--emerald-2)'},
+  {k:'order',l:'订单明细',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
+  {k:'after',l:'售后管理',ic:'refund',bg:'#FEE2E2',st:'var(--red)',dot:1},
+  {k:'invoice',l:'开票管理',ic:'invoice',bg:'#D1FAE5',st:'var(--emerald-2)',badge:'99+'},
+  {k:'price',l:'价格分析',ic:'tag',bg:'#FEF3C7',st:'#B45309',badge:'50',amber:1},
+  {k:'analysis',l:'经营分析',ic:'chart',bg:'#D1FAE5',st:'var(--emerald-2)'},
+  {k:'finance',l:'财务对账',ic:'wallet',bg:'#FEF3C7',st:'#B45309'},
+  {k:'mkt',l:'营销活动',ic:'mega',bg:'#FEE2E2',st:'var(--red)'},
+  {k:'biz',l:'商机推荐',ic:'trend',bg:'#FEF3C7',st:'#B45309',badge:'加流量',amber:1},
+  {k:'violate',l:'违规记录',ic:'alert',bg:'#FEE2E2',st:'var(--red)',dot:1},
+  {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
+];
+const DELIVER=[{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'pack',l:'装筐送货',ic:'box'},{k:'signin',l:'送货签到',ic:'sign'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'},{k:'return',l:'退库取回',ic:'refund',dot:1}];
+const READY=new Set(['goods']);
+
+/* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
+const stack=[],stackEl=document.getElementById('stack');
+function pushPage(o){const el=document.createElement('div');el.className='page';
+  el.innerHTML=(o.navbar===false?'':`<div class="navbar"><span class="back">${svg('back')}</span><span class="nt">${o.title||''}</span><span class="nr" id="nr">${o.right||''}</span></div>`)
+    +`<div class="screen">${o.body||''}</div>`+(o.footer?`<div class="page-footer">${o.footer}</div>`:'');
+  if(o.navbar!==false)el.querySelector('.back').onclick=popPage;
+  stackEl.appendChild(el);stack.push(el);requestAnimationFrame(()=>el.classList.add('show'));o.mount&&o.mount(el);return el;}
+function popPage(){const el=stack.pop();if(!el)return;el.classList.remove('show');setTimeout(()=>el.remove(),300);}
+function resetStack(){while(stack.length)popPage();}
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.querySelector('.phone').appendChild(e);setTimeout(()=>e.remove(),1300);}
+function confirmDialog({title,body,danger,okText='确定',onOk}){
+  const m=document.createElement('div');m.className='modal-mask';
+  m.innerHTML=`<div class="modal"><div class="mt">${title}</div>${body?`<div class="mb">${body}</div>`:''}
+    <div class="mf"><div class="mbn cancel">取消</div><div class="mbn ${danger?'danger':'ok'}">${okText}</div></div></div>`;
+  document.querySelector('.phone').appendChild(m);
+  m.querySelector('.cancel').onclick=()=>m.remove();
+  m.querySelector('.mbn:last-child').onclick=()=>{m.remove();onOk&&onOk();};
+  m.onclick=e=>{if(e.target===m)m.remove();};
+}
+function sheet(items){const m=document.createElement('div');m.className='sheet-mask';
+  m.innerHTML=`<div class="sheet">${items.map(i=>`<div class="si ${i.danger?'danger':''}" >${i.label}</div>`).join('')}<div class="si cancel">取消</div></div>`;
+  document.querySelector('.phone').appendChild(m);
+  m.querySelectorAll('.si').forEach((el,idx)=>el.onclick=()=>{m.remove();if(idx<items.length&&items[idx].onClick)items[idx].onClick();});
+  m.onclick=e=>{if(e.target===m)m.remove();};}
+const skel=(n=3)=>Array.from({length:n}).map(()=>`<div style="background:#fff;border-radius:20px;padding:15px;margin-bottom:13px;box-shadow:var(--sh-sm)"><div style="display:flex;gap:13px"><div class="sk" style="width:66px;height:66px;border-radius:14px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:9px"></div><div class="sk" style="height:12px;width:40%"></div></div></div><div class="sk" style="height:46px;margin-top:13px"></div></div>`).join('');
+window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel};
+
+function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
+  const r=READY.has(k);
+  pushPage({title:label,body:`<div class="ph"><div class="pic">${svg('leaf')}</div><h3>${label}</h3>
+    <p>${r?'该模块已纳入 Food Max 商家端 v2 设计系统，正在铺开。':'该模块将在 Food Max 商家端规划中上线。'}</p>
+    <span class="pill">${r?'设计系统 · 铺开中':'规划中 · 即将上线'}</span></div>`});}
+window.FM.openModule=openModule;
+
+function renderHome(){
+  const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${t.badge?`<span class="bdg ${t.amber?'amber':''}">${t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
+  const deliver=DELIVER.map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${d.badge?`<span class="bdg">${d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
+  document.getElementById('v-home').innerHTML=`<div class="stagger">
+    <div class="hm-top"><div class="hm-logo">${svg('leaf')}</div>
+      <div class="hm-store"><div class="nm">鲜丰食材 · Fresh Harvest Pte Ltd</div><div class="sub"><span class="dot"></span>正常营业 · Food Max 优选商家</div></div>
+      <div class="hm-bell">${svg('bell')}<span class="rd"></span></div></div>
+    <div class="hero"><div class="lab">今日实时销售额 <span class="ln"></span> 截至 09:41</div>
+      <div class="big disp"><span class="c">S$</span>3,852.33</div>
+      <span class="trend">${svg('trend','style="width:13px;height:13px;stroke:#fff"')} 较昨日 +18.5%</span>
+      <div class="row2"><div class="m"><div class="v disp">345</div><div class="k">销量</div></div>
+        <div class="m"><div class="v disp">98</div><div class="k">活跃客户</div></div>
+        <div class="m"><div class="v disp">62%</div><div class="k">动销覆盖</div></div>
+        <div class="ar">${svg('arrow')}</div></div></div>
+    <div class="todobar"><div class="todo"><div class="n">12</div><div class="t">待发货</div><span class="pin"></span></div>
+      <div class="todo"><div class="n warn">3</div><div class="t">待处理售后</div></div>
+      <div class="todo"><div class="n warn">8</div><div class="t">缺货商品</div></div>
+      <div class="todo"><div class="n">2</div><div class="t">待开票</div></div></div>
+    <div class="block"><div class="bhead"><span class="h">经营工具</span></div><div class="grid" id="g">${tiles}</div></div>
+    <div class="block flush"><div class="bhead"><span class="h">送货 · 退货</span><span class="more">全部 ›</span></div><div class="deliver" id="d">${deliver}</div></div>
+    <div class="growth"><div class="gt">商家成长中心</div><h4>完成本周任务，解锁更多平台权益</h4>
+      <div class="chips"><span>流量加权</span><span>客服绿色通道</span><span>严选标</span><span>品控绿通</span></div></div>
+    <div style="height:8px"></div></div>`;
+  document.querySelectorAll('#g .gi,#d .di').forEach(g=>g.onclick=()=>openModule(g.dataset.k,g.dataset.l));
+  const bell=document.querySelector('#v-home .hm-bell');
+  if(bell)bell.onclick=()=>window.FM_MESSAGE&&window.FM_MESSAGE();
+}
+function renderMine(){document.getElementById('v-mine').innerHTML=`<div class="hm-top" style="padding-top:16px"><div class="hm-store"><div class="nm disp" style="font-size:24px">我的</div></div></div>
+  <div class="block" style="margin-top:4px"><div class="bhead"><span class="h">账号 · merchant-sg-0125</span><span class="more">基本信息 ›</span></div>
+  <div class="deliver">${[['营业信息','sign'],['合同管理','invoice'],['服务能力','shieldcheck'],['平台规则','box'],['联系客服','bell'],['账号管理','user']].map(m=>`<div class="di"><div class="ic">${svg(m[1])}</div><span class="dl">${m[0]}</span></div>`).join('')}</div></div>`;}
+function renderOrders(){document.getElementById('v-orders').innerHTML=`<div class="ph" style="height:740px"><div class="pic">${svg('receipt')}</div><h3>订单</h3><p>订单模块按 v2 系统铺开中</p><span class="pill">设计系统 · 铺开中</span></div>`;}
+
+const TABS=[['home','工作台','home'],['orders','订单','receipt'],['goods','商品','box'],['mine','我的','user']];
+const tb=document.getElementById('tabbar');
+tb.innerHTML=TABS.map((t,i)=>`<div class="tab ${i===0?'active':''}" data-v="${t[0]}">${svg(t[2])}<span>${t[1]}</span></div>`).join('');
+const views={home:'v-home',orders:'v-orders',goods:'v-goods',mine:'v-mine'};
+tb.querySelectorAll('.tab').forEach(tab=>tab.onclick=()=>{resetStack();
+  tb.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));tab.classList.add('active');
+  Object.values(views).forEach(id=>document.getElementById(id).classList.remove('on'));
+  const v=tab.dataset.v;document.getElementById(views[v]).classList.add('on');
+  if(v==='mine'){const c=document.getElementById('v-mine');if(window.FM_MOD&&window.FM_MOD.mineInline){c.innerHTML='';window.FM_MOD.mineInline(c);}else renderMine();}
+  if(v==='orders'){const c=document.getElementById('v-orders');if(window.FM_MOD&&window.FM_MOD.orderInline){c.innerHTML='';window.FM_MOD.orderInline(c);}else renderOrders();}
+  if(v==='goods'&&window.FM_MOD&&window.FM_MOD.goodsInline){document.getElementById('v-goods').innerHTML='';window.FM_MOD.goodsInline(document.getElementById('v-goods'));}});
+renderHome();
+</script>
+<script src="goods.js"></script>
+<script src="stock.js"></script>
+<script src="order.js"></script>
+<script src="after.js"></script>
+<script src="invoice.js"></script>
+<script src="analysis.js"></script>
+<script src="ticket.js"></script>
+<script src="mine.js"></script>
+<script src="finance.js"></script>
+<script src="biz.js"></script>
+<script src="deliver.js"></script>
+<script src="message.js"></script>
+<script src="publish.js"></script>
+</body>
+</html>
