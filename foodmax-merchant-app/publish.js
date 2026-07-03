@@ -1,15 +1,18 @@
 /* Food Max 商家端 v2 · 发布商品(创建商品)模块
    关键约束(沈亮定)：交互流程形态照快驴 App 录屏走，但字段与校验规则一律用 PC 那套，不照搬 App 的字段。
    App 流程形态：选择建品方式 → (商品库)搜索→找品结果→修改复用 / (手动)→ 创建商品表单。
-   PC 规则落点：必填(autoCheck)=商品名称/前台类目/计量单位/保质期展示/售卖规格(≥1)；
-   前台类目仅取 PC 的 CATS(税率+指导价)；售卖规格按 PC=数量(正整数≥1、不可重复)+单位；
-   提交跑 9 条校验；价格异常=偏离类目指导价 0.5~2 倍。
+   PC 规则落点：必填(autoCheck)=商品名称/后台类目/税率/最小售卖单位/售卖规格(≥1)；
+   后台类目取 PC 的 CATS(默认税率+指导价，税率手填可改)；售卖规格按 PC=数量(正整数≥1、不可重复)，售卖单位只读=最小售卖单位；
+   提交跑校验；价格异常=偏离类目指导价 0.5~2 倍。前台不出现货品(Item)，后台据 SPU/SKU 自动建货品。
+   PC 对齐(2026-07)：价格+库存落到每个售卖规格(SKU)，非整商品一个售价。
+   PC 对齐(2026-07-03)：前台类目→后台类目、计量单位→最小售卖单位(+净含量/单位/备注)、税率手填、
+   销售类型固定「售卖品」只读、效期管理(默认是)+保质期+单位+APP是否展示效期(展示/不展示)、储存条件、履约方式；去「保存为草稿」。
    评审修复内建：即时校验失败标红 / 提交 loading / 破坏性退出 confirmDialog / ≥44px / 加载态 / SG 数据。 */
 (function(){
 const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
 
 /* ========== PC 规则数据(承重墙，照 PC 那套) ========== */
-// 前台类目(单级简化)：税率 + 指导价(S$)，价格异常以指导价为基准
+// 后台类目(单级简化)：税率(默认值，手填可改) + 指导价(S$)，价格异常以指导价为基准
 const CATS=[
   {n:'新鲜蔬菜',tax:0, guide:6},
   {n:'肉禽蛋品',tax:9, guide:14},
@@ -18,12 +21,16 @@ const CATS=[
 ];
 // 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖
 const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产']);
-// 售卖规格单位网格(照 App 选售卖规格单位形态)
-const SELL_UNITS=['袋','盒','箱','包','个','筐','瓶','桶','件','组','把','捆','罐','提','根','片','板','只','份','托','袋装','听'];
-// 计量单位(PC 基础计量单位)
-const MEASURE_UNITS=['斤','公斤(kg)','克(g)','个','只','件','包','袋','盒','箱'];
-// 保质期展示(PC 字段，选择优于输入)
-const SHELF=['3天','7天','15天','30天','90天','180天','365天','常温保存','冷藏7天','冷冻12个月'];
+// 最小售卖单位(PC 基础计量单位；SKU 售卖单位只读 = 最小售卖单位)
+const MEASURE_UNITS=['斤','公斤(kg)','克(g)','毫升(ml)','升(L)','个','只','件','包','袋','盒','箱','瓶','桶','罐'];
+// 净含量单位
+const NET_UNITS=['g','kg','ml','L','斤','个'];
+// 效期单位
+const SHELF_UNITS=['天','月','年'];
+// 储存条件
+const STORAGES=['常温','阴凉干燥','冷藏(0~4℃)','冷冻(-18℃)'];
+// 履约方式
+const FULFILLS=['次日达','当日达','商家自配','到店自提'];
 // 已存在(非草稿)商品名库，用于 BR-09 同名校验(取自 goods.js 销售中/未上架)
 const EXISTING=['鲜丰 · 嫩豆腐 1kg','鲜丰 · 老豆腐','鲜丰 · 小油豆腐','冻 · 盐渍海带丝','萝卜丸子'];
 
@@ -120,9 +127,6 @@ css.textContent=`
 .pb-cell.err{background:var(--red-soft);}
 .pb-cell.err .lab{color:var(--red);}
 .pb-cell.warn{background:#FFFBEB;}
-.pb-price-tip{font-size:12px;color:var(--sub);padding:0 16px 12px;min-height:14px;}
-.pb-price-tip.abn{color:var(--red);}.pb-price-tip.abn b{background:var(--red-soft);padding:1px 7px;border-radius:6px;}
-.pb-price-tip.ok{color:#46604F;}
 /* 售卖规格 */
 .pb-spec{margin:10px 14px 0;border:1px solid var(--line);border-radius:14px;padding:12px 13px;}
 .pb-spec.err{border-color:var(--red);background:var(--red-soft);}
@@ -270,16 +274,27 @@ function openLibResults(kw){
 
 /* ========== 创建商品表单(字段+校验=PC 规则) ========== */
 function openForm(prefill){
-  // 表单状态(PC 字段)
+  // 解析商品库预填的保质期(如 "30天" → 30 + 天)
+  let pfLife='',pfUnit='天';
+  if(prefill&&prefill.shelf){const mm=/^(\d+)\s*(天|月|年)?/.exec(prefill.shelf);if(mm){pfLife=mm[1];pfUnit=mm[2]||'天';}}
+  // 表单状态(PC 字段)。前台不出现货品(Item)，后台据 SPU/SKU 自动建货品
   const f={
     name: prefill?`[${prefill.brand}] ${prefill.name}`:'',
+    alias:'',
     cat:  prefill?CATS.find(c=>c.n===prefill.cat)||null:null,
-    measure: prefill?prefill.measure:'',
-    shelf: prefill?prefill.shelf:'',
-    price:'',
-    specs: prefill?[{qty:'1',unit:prefill.measure}]:[{qty:'',unit:''}],
+    tax:  prefill?String((CATS.find(c=>c.n===prefill.cat)||{}).tax??''):'', // 手填，默认取类目
+    measure: prefill?prefill.measure:'',   // 最小售卖单位
+    netQty:'', netUnit:'', measureNote:'',
+    sellType:'售卖品',                      // 销售类型固定，不可改
+    validEnable:'是',                       // 效期管理默认「是」
+    shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
+    appShowShelf:'展示',                    // APP 是否展示效期(展示/不展示)，放保质期后
+    storage:'', fulfill:'', origin:'', brand: prefill?prefill.brand:'', desc:'',
+    specs: prefill?[{qty:'1',price:'',stock:''}]:[{qty:'',price:'',stock:''}], // 售卖单位只读=最小售卖单位
     imgs:{head:false,more:[false,false],video:false,label:false,detail:[false,false,false,false]},
   };
+  const row=(id,lab,valHtml,req)=>`<div class="pb-cell" id="${id}"><div class="lab">${req?'<span class="rq">*</span>':''}${lab}</div><div class="val">${valHtml}</div><span class="ch">${svg('arrow')}</span></div>`;
+  const picker=(id,vid,val,req,lab)=>`<div class="pb-cell" id="${id}"><div class="lab">${req?'<span class="rq">*</span>':''}${lab}</div><div class="val"><span class="vtxt" id="${vid}">${val||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>`;
 
   pbPush({title:'创建商品',onBack:()=>confirmExit(f),
     body:`<div class="pb-note">请认真核对信息，提交后将由专人审核</div>
@@ -287,14 +302,30 @@ function openForm(prefill){
       <div class="pb-card">
         <div class="ct">基本信息</div>
         <div class="pb-cell" id="pb-name-row"><div class="lab"><span class="rq">*</span>商品名称</div><div class="val"><input id="pb-name" placeholder="请输入商品名称" maxlength="60" value="${f.name.replace(/"/g,'&quot;')}"></div></div>
-        <div class="pb-cell" id="pb-cat-row"><div class="lab"><span class="rq">*</span>前台类目</div><div class="val"><span class="vtxt" id="pb-cat-v">${f.cat?f.cat.n:'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-cell" id="pb-measure-row"><div class="lab"><span class="rq">*</span>计量单位</div><div class="val"><span class="vtxt" id="pb-measure-v">${f.measure||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-cell" id="pb-shelf-row"><div class="lab"><span class="rq">*</span>保质期展示</div><div class="val"><span class="vtxt" id="pb-shelf-v">${f.shelf||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-cell" id="pb-price-row"><div class="lab">售价</div><div class="val"><span class="pre">S$</span><input id="pb-price" inputmode="decimal" placeholder="选填"></div></div>
-        <div class="pb-price-tip" id="pb-price-tip"></div>
+        <div class="pb-cell" id="pb-alias-row"><div class="lab">别名</div><div class="val"><input id="pb-alias" placeholder="选填" maxlength="60" value="${f.alias.replace(/"/g,'&quot;')}"></div></div>
+        ${picker('pb-cat-row','pb-cat-v',f.cat?f.cat.n:'',1,'后台类目')}
+        <div class="pb-cell" id="pb-tax-row"><div class="lab"><span class="rq">*</span>税率</div><div class="val"><input id="pb-tax" inputmode="decimal" placeholder="选择类目后自动带出，可改" value="${f.tax}"><span class="pre">%</span></div></div>
+        ${picker('pb-measure-row','pb-measure-v',f.measure,1,'最小售卖单位')}
+        <div class="pb-cell" id="pb-net-row"><div class="lab">净含量</div><div class="val"><input id="pb-netqty" inputmode="decimal" placeholder="选填" value="${f.netQty}"><span class="vtxt" id="pb-netunit" style="flex:0 0 auto;max-width:70px">${f.netUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
+        <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="最小售卖单位备注，选填" maxlength="40" value="${f.measureNote}"></div></div>
+        <div class="pb-cell" id="pb-selltype-row"><div class="lab">销售类型</div><div class="val"><span class="vtxt" style="color:var(--sub)">售卖品</span></div></div>
       </div>
       <div class="pb-card">
-        <div class="ct"><span><span class="rq" style="color:var(--red)">*</span>售卖规格</span><span style="font-weight:400;color:var(--sub);font-size:11.5px">数量为正整数 ≥1 且互不重复</span></div>
+        <div class="ct">效期与履约</div>
+        ${picker('pb-valid-row','pb-valid-v',f.validEnable,0,'效期管理')}
+        <div class="pb-cell" id="pb-shelf-row"><div class="lab">保质期</div><div class="val"><input id="pb-shelflife" inputmode="numeric" placeholder="选填" value="${f.shelfLife}"><span class="vtxt" id="pb-shelfunit" style="flex:0 0 auto;max-width:60px">${f.shelfUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
+        ${picker('pb-appshow-row','pb-appshow-v',f.appShowShelf,0,'APP是否展示效期')}
+        ${picker('pb-storage-row','pb-storage-v',f.storage,0,'储存条件')}
+        ${picker('pb-fulfill-row','pb-fulfill-v',f.fulfill,0,'履约方式')}
+      </div>
+      <div class="pb-card">
+        <div class="ct">产地品牌</div>
+        <div class="pb-cell" id="pb-origin-row"><div class="lab">产地</div><div class="val"><input id="pb-origin" placeholder="选填" maxlength="40" value="${f.origin}"></div></div>
+        <div class="pb-cell" id="pb-brand-row"><div class="lab">品牌</div><div class="val"><input id="pb-brand" placeholder="选填" maxlength="40" value="${f.brand.replace(/"/g,'&quot;')}"></div></div>
+        <div class="pb-cell" id="pb-desc-row"><div class="lab">描述</div><div class="val"><input id="pb-desc" placeholder="选填" maxlength="200" value="${f.desc}"></div></div>
+      </div>
+      <div class="pb-card">
+        <div class="ct"><span><span class="rq" style="color:var(--red)">*</span>售卖规格</span><span style="font-weight:400;color:var(--sub);font-size:11.5px">数量为正整数 ≥1 且互不重复 · 单位=最小售卖单位</span></div>
         <div id="pb-specs"></div>
         <div class="pb-addspec" id="pb-addspec">＋ 添加售卖规格</div>
         <div style="height:14px"></div>
@@ -311,34 +342,41 @@ function openForm(prefill){
         </div>
       </div>
       <div style="height:8px"></div>`,
-    footer:`<div class="pb-foot2"><button class="btn ghost draft" id="pb-draft">保存为草稿</button><button class="btn primary sub" id="pb-sub">提交</button></div>`,
+    footer:`<button class="btn primary" id="pb-sub">提交</button>`,
     mount:(p)=>bindForm(p,f),
   });
 }
 
 function confirmExit(f){
-  const dirty=f.name||f.cat||f.measure||f.shelf||f.price||f.specs.some(s=>s.qty||s.unit);
+  const dirty=f.name||f.alias||f.cat||f.tax||f.measure||f.netQty||f.origin||f.brand||f.desc||f.specs.some(s=>s.qty||s.price||s.stock);
   const done=()=>{popPage();pbPages.pop();};
   if(!dirty)return done();
   confirmDialog({title:'是否退出建品？',body:'已填写的信息将不会保存。',danger:1,okText:'退出',onOk:done});
 }
 
-/* ---- 售卖规格渲染 ---- */
-function specRow(s,i,total){
+/* ---- 售卖规格渲染(售卖单位只读 = 最小售卖单位) ---- */
+function specRow(s,i,total,measure){
+  const uTxt=measure||'—';
   return `<div class="pb-spec" data-i="${i}">
     <div class="sh"><span class="sn">规格${i+1}</span>${total>1?'<span class="del" data-del>删除</span>':''}</div>
     <div class="sbody">
       <div class="qty"><span class="lb">数量</span><input data-qty inputmode="numeric" value="${s.qty}" placeholder="如 2"></div>
-      <div class="unit" data-unit><span class="lb">单位</span><span class="uv ${s.unit?'':'ph'}">${s.unit||'请选择'}</span><span class="ch">${svg('arrow','style="width:14px;height:14px"')}</span></div>
+      <div class="unit" style="cursor:default;background:var(--muted);opacity:.9"><span class="lb">售卖单位</span><span class="uv ${measure?'':'ph'}">${uTxt}</span></div>
     </div>
-    <div class="serr" data-serr></div></div>`;
+    <div class="sbody" style="margin-top:10px">
+      <div class="qty"><span class="lb">价格</span><span class="lb" style="flex:0 0 auto;padding-left:2px">S$</span><input data-price inputmode="decimal" value="${s.price}" placeholder="选填"></div>
+      <div class="qty"><span class="lb">库存</span><input data-stock inputmode="numeric" value="${s.stock}" placeholder="选填"></div>
+    </div>
+    <div class="serr" data-serr></div>
+    <div class="serr" data-pnote style="color:#46604F"></div></div>`;
 }
 function renderSpecs(p,f){
   const box=p.querySelector('#pb-specs');
-  box.innerHTML=f.specs.map((s,i)=>specRow(s,i,f.specs.length)).join('');
+  box.innerHTML=f.specs.map((s,i)=>specRow(s,i,f.specs.length,f.measure)).join('');
   box.querySelectorAll('.pb-spec').forEach((row,i)=>{
     row.querySelector('[data-qty]').oninput=e=>{f.specs[i].qty=e.target.value;paint(p,f);};
-    row.querySelector('[data-unit]').onclick=()=>pbGridPicker('选择售卖规格单位',SELL_UNITS,f.specs[i].unit,v=>{f.specs[i].unit=v;renderSpecs(p,f);paint(p,f);});
+    row.querySelector('[data-price]').oninput=e=>{f.specs[i].price=e.target.value;paint(p,f);};
+    row.querySelector('[data-stock]').oninput=e=>{f.specs[i].stock=e.target.value;paint(p,f);};
     const del=row.querySelector('[data-del]');
     if(del)del.onclick=()=>{f.specs.splice(i,1);renderSpecs(p,f);paint(p,f);};
   });
@@ -367,23 +405,15 @@ function renderImgs(p,f){
   f.imgs.detail.forEach((_,i)=>p.querySelector('#pb-detail').children[i].onclick=toggle(()=>f.imgs.detail[i],v=>f.imgs.detail[i]=v));
 }
 
-/* ---- 价格异常(参考类目指导价) ---- */
-function priceState(f){
-  const v=parseFloat(f.price);
-  if(!String(f.price).trim()||isNaN(v)||!f.cat)return null;
-  const g=f.cat.guide;
-  return {v,guide:g,abnormal:(v<g*0.5||v>g*2)};
-}
-
 /* ---- 即时校验标红(H6)；submitted=true 时连必填空值一并标红 ---- */
 function paint(p,f,submitted){
   // 商品名称(同名 BR-09 即时红；空值仅提交时红)
   const nameDup=!!(f.name.trim()&&EXISTING.includes(f.name.trim()));
   p.querySelector('#pb-name-row').classList.toggle('err',nameDup||(submitted&&!f.name.trim()));
-  // 前台类目(空值提交时红；资质未覆盖 BR-08 即时红)
+  // 后台类目(空值提交时红；资质未覆盖 BR-08 即时红)
   p.querySelector('#pb-cat-row').classList.toggle('err',(submitted&&!f.cat)||(!!f.cat&&!LICENSE.has(f.cat.n)));
+  p.querySelector('#pb-tax-row').classList.toggle('err',submitted&&!String(f.tax).trim());
   p.querySelector('#pb-measure-row').classList.toggle('err',submitted&&!f.measure);
-  p.querySelector('#pb-shelf-row').classList.toggle('err',submitted&&!f.shelf);
   // 售卖规格：正整数≥1 + 不可重复
   const qtys=f.specs.map(s=>String(s.qty).trim());
   p.querySelectorAll('.pb-spec').forEach((row,i)=>{
@@ -392,21 +422,21 @@ function paint(p,f,submitted){
     else if(submitted&&!q)msg='数量必须为正整数 ≥1';
     else if(q&&/^[1-9]\d*$/.test(q)&&qtys.filter(x=>x===q).length>1)msg='数量与其他规格重复';
     serr.textContent=msg;row.classList.toggle('err',!!msg);
+    const pn=row.querySelector('[data-pnote]');
+    if(pn){const pv=parseFloat(f.specs[i].price);
+      if(!String(f.specs[i].price).trim()||isNaN(pv)||!f.cat){pn.textContent='';}
+      else if(pv<f.cat.guide*0.5||pv>f.cat.guide*2){pn.textContent=`价格异常 · 偏离指导价 S$${f.cat.guide.toFixed(2)}（合理区间 S$${(f.cat.guide*0.5).toFixed(2)}~S$${(f.cat.guide*2).toFixed(2)}）`;pn.style.color='var(--red)';}
+      else{pn.textContent=`参考指导价 S$${f.cat.guide.toFixed(2)} · 正常`;pn.style.color='#46604F';}}
   });
-  // 价格异常
-  const tip=p.querySelector('#pb-price-tip'),row=p.querySelector('#pb-price-row'),ps=priceState(f);
-  if(!ps){tip.className='pb-price-tip';tip.innerHTML=f.cat?`参考指导价 S$${f.cat.guide.toFixed(2)}`:'';row.classList.remove('warn');}
-  else if(ps.abnormal){tip.className='pb-price-tip abn';tip.innerHTML=`<b>价格异常</b> · 偏离参考指导价 S$${ps.guide.toFixed(2)}（合理区间 S$${(ps.guide*0.5).toFixed(2)}~S$${(ps.guide*2).toFixed(2)}）`;row.classList.add('warn');}
-  else{tip.className='pb-price-tip ok';tip.innerHTML=`参考指导价 S$${ps.guide.toFixed(2)} · 价格正常`;row.classList.remove('warn');}
 }
 
 /* ---- 提交校验(9 条，逐条对应 PC 规则) ---- */
 function runChecks(f){
   const fails=[];
   if(!f.name.trim())            fails.push(['必填','缺少「商品名称」']);
-  if(!f.cat)                    fails.push(['必填','缺少「前台类目」']);
-  if(!f.measure)               fails.push(['必填','缺少「计量单位」']);
-  if(!f.shelf)                 fails.push(['必填','缺少「保质期展示」']);
+  if(!f.cat)                    fails.push(['必填','缺少「后台类目」']);
+  if(!String(f.tax).trim())     fails.push(['必填','缺少「税率」']);
+  if(!f.measure)               fails.push(['必填','缺少「最小售卖单位」']);
   if(!f.specs.length)          fails.push(['规格','至少添加 1 个售卖规格']);
   f.specs.forEach((s,i)=>{const q=String(s.qty).trim();if(!/^[1-9]\d*$/.test(q))fails.push(['规格',`规格${i+1} 数量必须为正整数 ≥1`]);});
   const qtys=f.specs.map(s=>String(s.qty).trim()).filter(q=>/^[1-9]\d*$/.test(q));
@@ -429,21 +459,33 @@ function bindForm(p,f){
   const setPH=(el,txt,filled)=>{el.innerHTML=filled?txt:`<span class="ph">${txt}</span>`;};
   renderSpecs(p,f);renderImgs(p,f);paint(p,f);
 
+  // 文本输入
   p.querySelector('#pb-name').oninput=e=>{f.name=e.target.value;paint(p,f);};
-  p.querySelector('#pb-price').oninput=e=>{f.price=e.target.value;paint(p,f);};
-  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);paint(p,f);});
-  p.querySelector('#pb-measure-row').onclick=()=>pbGridPicker('选择计量单位',MEASURE_UNITS,f.measure,v=>{f.measure=v;setPH(p.querySelector('#pb-measure-v'),v,1);paint(p,f);});
-  p.querySelector('#pb-shelf-row').onclick=()=>pbGridPicker('选择保质期展示',SHELF,f.shelf,v=>{f.shelf=v;setPH(p.querySelector('#pb-shelf-v'),v,1);paint(p,f);});
-  // 输入框单元格点击空白不抢焦点：仅 picker 行才触发；name/price 行 onclick 不绑
-  ['pb-name-row','pb-price-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
+  p.querySelector('#pb-alias').oninput=e=>{f.alias=e.target.value;};
+  p.querySelector('#pb-tax').oninput=e=>{f.tax=e.target.value;paint(p,f);};
+  p.querySelector('#pb-netqty').oninput=e=>{f.netQty=e.target.value;};
+  p.querySelector('#pb-mnote').oninput=e=>{f.measureNote=e.target.value;};
+  p.querySelector('#pb-shelflife').oninput=e=>{f.shelfLife=e.target.value;};
+  p.querySelector('#pb-origin').oninput=e=>{f.origin=e.target.value;};
+  p.querySelector('#pb-brand').oninput=e=>{f.brand=e.target.value;};
+  p.querySelector('#pb-desc').oninput=e=>{f.desc=e.target.value;};
+  // 后台类目(选中后自动带出默认税率，手填可改)
+  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}paint(p,f);});
+  // 最小售卖单位(变更后 SKU 售卖单位联动只读)
+  p.querySelector('#pb-measure-row').onclick=()=>pbGridPicker('选择最小售卖单位',MEASURE_UNITS,f.measure,v=>{f.measure=v;setPH(p.querySelector('#pb-measure-v'),v,1);renderSpecs(p,f);paint(p,f);});
+  // 净含量单位
+  p.querySelector('#pb-net-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('净含量单位',NET_UNITS,f.netUnit,v=>{f.netUnit=v;setPH(p.querySelector('#pb-netunit'),v,1);});};
+  // 效期管理 / 保质期单位 / APP是否展示效期 / 储存条件 / 履约方式
+  p.querySelector('#pb-valid-row').onclick=()=>pbGridPicker('效期管理',['是','否'],f.validEnable,v=>{f.validEnable=v;setPH(p.querySelector('#pb-valid-v'),v,1);});
+  p.querySelector('#pb-shelf-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('保质期单位',SHELF_UNITS,f.shelfUnit,v=>{f.shelfUnit=v;setPH(p.querySelector('#pb-shelfunit'),v,1);});};
+  p.querySelector('#pb-appshow-row').onclick=()=>pbGridPicker('APP是否展示效期',['展示','不展示'],f.appShowShelf,v=>{f.appShowShelf=v;setPH(p.querySelector('#pb-appshow-v'),v,1);});
+  p.querySelector('#pb-storage-row').onclick=()=>pbGridPicker('储存条件',STORAGES,f.storage,v=>{f.storage=v;setPH(p.querySelector('#pb-storage-v'),v,1);});
+  p.querySelector('#pb-fulfill-row').onclick=()=>pbGridPicker('履约方式',FULFILLS,f.fulfill,v=>{f.fulfill=v;setPH(p.querySelector('#pb-fulfill-v'),v,1);});
+  // 输入框单元格点击空白不抢焦点
+  ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
 
-  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',unit:''});renderSpecs(p,f);paint(p,f);};
+  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:''});renderSpecs(p,f);paint(p,f);};
 
-  // 保存为草稿(不校验)
-  p.querySelector('#pb-draft').onclick=()=>{
-    const b=p.querySelector('#pb-draft');b.classList.add('loading');
-    setTimeout(()=>{b.classList.remove('loading');toast('已保存为草稿');setTimeout(pbCloseAll,600);},600);
-  };
   // 提交(跑 autoCheck)
   p.querySelector('#pb-sub').onclick=()=>{
     const fails=runChecks(f);

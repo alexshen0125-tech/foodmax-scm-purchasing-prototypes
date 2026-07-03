@@ -490,6 +490,17 @@ const DB = {
   ],
   // 订单履约配置（商家自履约：汇总拣货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
   orderCfg:{cutoff:'18:00',commRate:0.05},
+  // 佣金率配置（运营平台配置 · 佣金=服务佣金svc+物流佣金logi 两项分开 · 分层：品类默认→商家覆盖 · 取值 商家×品类 > 商家默认 > 品类默认 · 免佣期内两项均0）
+  commCfg:{
+    catBase:{                                                                // 品类默认佣金率（全平台兜底），svc=服务佣金 logi=物流佣金
+      '新鲜蔬菜':{svc:0.03,logi:0.02}, '肉禽蛋品':{svc:0.05,logi:0.03},
+      '海鲜水产':{svc:0.06,logi:0.04}, '调味品':{svc:0.08,logi:0.04},
+    },
+    merchants:{                                                              // 商家专属覆盖（key=店铺编号）
+      'M2026-0815':{name:'绿鲜源蔬果旗舰店',shopDefault:{svc:0.025,logi:0.015},cats:{'海鲜水产':{svc:0.05,logi:0.03}},freeUntil:'2026-09-25'},
+      'M2026-0805':{name:'椰丰食品旗舰店',shopDefault:{svc:0.04,logi:0.02},cats:{},freeUntil:''},
+    },
+  },
   // 订单（餐厅下单即自动接单进入待发货，不可拒单）
   orders:[
     {id:'#SG20260630001',client:'海底捞（新加坡）',contact:'陈经理',phone:'+65 8123 4427',addr:'Clarke Quay River Valley Rd #01-08',orderTime:'06-30 09:12',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'新加坡B端仓',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'kg',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'kg',price:3.50}],status:'pending',labels:[],note:'分拣前请去黄叶'},
@@ -498,13 +509,13 @@ const DB = {
     {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'新加坡B端仓',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'kg',price:3.50}],status:'packed',labels:[{code:'LBL-30004-8802',name:'白菜',qty:40,unit:'kg',arrived:false}],note:''},
   ],
   // 结算
-  bill:{period:'2026年6月', status:'none', gross:0, reverse:0, fee:0, net:0, dispute:'', items:[]},
+  bill:{period:'2026年6月', status:'none', gross:0, reverse:0, fee:0, feeSvc:0, feeLogi:0, net:0, dispute:'', items:[]},
   invoices:[],
   payment:'none',                 // none|plan|approving|paid
-  // 售后
+  // 售后（逆向）：餐厅对「已收货」订单在时效内发起；退款不退货 / 退货退款两类；平台三方判责；商家可申诉；判商家责逆向扣减货款
   afterSales:[
-    {id:'AS-26062801', client:'食为天餐厅', order:'#20260627018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'12小时', status:'pending', liable:'', refundType:'', amt:116.00},
-    {id:'AS-26062802', client:'海底捞（新加坡）', order:'#20260627005', item:'小棠菜 24kg', reason:'称重短缺约2kg', age:'8小时', status:'pending', liable:'', refundType:'', amt:18.60},
+    {id:'AS-26070201', client:'食为天餐厅', order:'#SG20260701018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'签收后12小时', type:'退款不退货', amt:116.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
+    {id:'AS-26070202', client:'海底捞（新加坡）', order:'#SG20260701005', item:'白菜 24kg', reason:'误发精品装，规格不符，要求退回', age:'签收后8小时', type:'退货退款', amt:84.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:'待退货'},
   ],
   // 违规
   violations:[],
@@ -540,9 +551,13 @@ function spuStock(p){return (p.skus||[]).reduce((a,s)=>a+(+s.stock||0),0);}
 function spuWarn(p){return p.status=='onsale'&&(p.skus||[]).some(s=>s.stock>0&&s.stock<s.safe);}
 function spuOut(p){return p.status=='onsale'&&(p.skus||[]).length&&(p.skus||[]).every(s=>s.stock<=0);}
 function isOnShelf(p){return p.status=='onsale'&&(p.skus||[]).some(s=>!s.off);}
-function act_skuToggle(pi,ki){const p=DB.products[pi];const s=p.skus[ki];s.off=!s.off;render();toast(`「${p.name} ${s.qty}${p.unit}」规格已${s.off?'下架':'上架'}（上下架无需审核）`,s.off?'info':'ok');}
+let CONFIRM_CB=null;
+function askConfirm(msg,onOk){CONFIRM_CB=onOk;modal(`<div class="mc-hd"><h3>操作确认</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>${msg}</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doConfirm()">确认</button></div>`);}
+function doConfirm(){const f=CONFIRM_CB;CONFIRM_CB=null;closeModal();if(f)f();}
+function act_spuShelf(i,off){const p=DB.products[i];const n=(p.skus||[]).length;const label=off?'下架':'上架';askConfirm(`确认${label}商品「${p.name}」的<b>全部 ${n} 个规格</b>？`,()=>{(p.skus||[]).forEach(s=>{s.off=off;s.updatedAt=ts();});p.updatedAt=ts();render();toast(`「${p.name}」全部规格已${label}`,off?'info':'ok');});}
+function act_skuToggle(pi,ki){const p=DB.products[pi];const s=p.skus[ki];const to=s.off?'上架':'下架';askConfirm(`确认${to}规格「${p.name} ${s.qty}${p.unit}」？`,()=>{s.off=!s.off;s.updatedAt=ts();render();toast(`「${p.name} ${s.qty}${p.unit}」规格已${s.off?'下架':'上架'}`,s.off?'info':'ok');});}
 function skuState(p,s){if(s.review)return ['新增待审核','t-b'];if(p.status!='onsale')return ['随商品','t-gr'];if(s.off)return ['已下架','t-gr'];if(s.stock<=0)return ['售罄','t-gr'];return ['可售','t-g'];}
-function autoCheck(p){const fails=[];const c=CATS[p.cat];if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.unit)fails.push(['必填完整性','缺少「计量单位」']);if(!p.showExp)fails.push(['必填完整性','缺少「保质期展示」']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{if(!(x.qty>0))fails.push(['售卖规格',`规格${k+1} 数量必须为正整数 ≥1`]);});const qs=sk.map(x=>x.qty);if(new Set(qs).size!=qs.length)fails.push(['售卖规格','各规格「数量」不可重复']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);return fails;}
+function autoCheck(p){const fails=[];const c=CATS[p.cat];if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.unit)fails.push(['必填完整性','缺少「计量单位」']);if(!p.showExp)fails.push(['必填完整性','缺少「APP是否展示效期」']);if(!p.storage)fails.push(['必填完整性','缺少「储存条件」']);if(!p.fulfil)fails.push(['必填完整性','缺少「履约方式」']);if((p.expEn||'是')=='是'&&!p.qp)fails.push(['必填完整性','效期管理=是，需填保质期']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{if(!(x.qty>0))fails.push(['售卖规格',`规格${k+1} 数量必须为正整数 ≥1`]);});const qs=sk.map(x=>x.qty);if(new Set(qs).size!=qs.length)fails.push(['售卖规格','各规格「数量」不可重复']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);return fails;}
 function computeRisk(p){const c=CATS[p.cat];if(c&&c.baseRisk=='高')return '高';if((p.skus||[]).some(x=>x.price>0&&priceAbnormal(x.price,p.cat)))return '中';if(c&&c.baseRisk=='中')return '中';return '低';}
 
 /* ================= NAV CONFIG ================= */
@@ -577,6 +592,7 @@ const NAV={
     {id:'p-prodaudit',ic:'🔍',t:'商品审核',badge:()=>DB.products.filter(p=>p.status=='reviewing').length},
     {id:'p-auditcfg',ic:'⚙️',t:'审核配置'},
     {sec:'结算'},
+    {id:'p-commission',ic:'💹',t:'佣金配置'},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票校验付款',badge:()=>DB.invoices.filter(i=>i.status=='uploaded').length,by:'y'},
     {sec:'风控'},
@@ -896,25 +912,26 @@ PAGES['m-product']=()=>{
     <div class="tabs" style="margin:0;border:none">${[['onsale','销售中'],['off','未上架']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';render()">${x[1]}</div>`).join('')}</div>
     <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="expandAllOnsale()">${DB.exp.length?'收起规格':'展开规格'}</button><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button></div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th style="width:30px"></th><th>商品</th><th>品类</th><th>规格数</th><th>价格(SGD)</th><th>总库存</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th style="width:30px"></th><th>商品</th><th>品类</th><th>规格数</th><th>价格(SGD)</th><th>总库存</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
     ${filt.map(p=>{const i=DB.products.indexOf(p);const open=DB.exp.includes(p.id);return `<tr style="cursor:pointer" onclick="toggleExp('${p.id}')">
       <td><span class="exp-ic">${open?'▾':'▸'}</span></td>
       <td><b>${p.name}</b>${spuOut(p)?' <span class="tag t-gr" style="font-size:11px">全售罄</span>':''}<div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td>
       <td>${p.cat||'—'}</td><td>${p.skus.length}</td><td>${spuPriceRange(p)}</td><td>${spuStock(p)}</td>
       <td>${isOnShelf(p)?'<span class="tag t-g"><span class="dot"></span>销售中</span>':'<span class="tag t-gr"><span class="dot"></span>未上架</span>'}</td>
-      <td onclick="event.stopPropagation()">${mActions(p,i)}</td>
-    </tr>${open?`<tr><td colspan="8" style="padding:0;background:#FbFcFd">${skuSubTable(p,i)}</td></tr>`:''}`;}).join('')||`<tr><td colspan="9"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
+      <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${p.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${p.updatedAt||'—'}</td><td onclick="event.stopPropagation()">${mActions(p,i)}</td>
+    </tr>${open?`<tr><td colspan="10" style="padding:0;background:#FbFcFd">${skuSubTable(p,i)}</td></tr>`:''}`;}).join('')||`<tr><td colspan="9"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function toggleExp(id){const k=DB.exp.indexOf(id);if(k<0)DB.exp.push(id);else DB.exp.splice(k,1);render();}
 function toggleSel(id){const k=DB.sel.indexOf(id);if(k<0)DB.sel.push(id);else DB.sel.splice(k,1);render();}
 function toggleSelSpu(spuId){const p=DB.products.find(x=>x.id==spuId);if(!p)return;const ids=p.skus.map(s=>s.skuId);const allSel=ids.length&&ids.every(id=>DB.sel.includes(id));if(allSel)DB.sel=DB.sel.filter(id=>!ids.includes(id));else ids.forEach(id=>{if(!DB.sel.includes(id))DB.sel.push(id);});render();}
 function expandAllOnsale(){const ids=DB.products.filter(p=>p.status=='onsale').map(p=>p.id);DB.exp=DB.exp.length?[]:ids;render();}
-function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';return `<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th>价格</th><th>可售库存</th><th>SKU 状态</th><th>操作</th></tr></thead><tbody>
-  ${p.skus.map((s,k)=>{const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);return `<tr>${onsale?`<td><input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')"></td>`:''}<td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}</td><td>${s.qty}</td><td>${s.pack||p.unit}</td><td>${edit?`<input class="miniprice" value="${(s.price||0).toFixed(2)}" onchange="act_repriceSku(${i},${k},this.value)">`:money(s.price||0)}</td><td>${edit?`<input class="ministock" value="${s.stock||0}" onchange="act_restock(${i},${k},this.value)">`:(s.stock||0)}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td>${onsale?(s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`):'<span style="color:var(--ts)">—</span>'}</td></tr>`;}).join('')}
+function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';return `<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th>价格</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+  ${p.skus.map((s,k)=>{const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);return `<tr>${onsale?`<td><input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')"></td>`:''}<td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}</td><td>${s.qty}</td><td>${s.pack||p.unit}</td><td>${edit?`<input class="miniprice" value="${(s.price||0).toFixed(2)}" onchange="act_repriceSku(${i},${k},this.value)">`:money(s.price||0)}</td><td>${edit?`<input class="ministock" value="${s.stock||0}" onchange="act_restock(${i},${k},this.value)">`:(s.stock||0)}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td>${onsale?(s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`):'<span style="color:var(--ts)">—</span>'}</td></tr>`;}).join('')}
   </tbody></table>${edit?`<div style="padding:8px 12px;border-top:1px solid var(--bd2)"><button class="btn btn-o btn-sm" onclick="act_addSkusBatch(${i})">＋ 添加规格</button></div>`:''}`;}
 function mActions(p,i){
-  if(p.status=='onsale')return `<button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
+  if(p.status=='onsale')return `${isOnShelf(p)?`<button class="btn btn-o btn-sm" onclick="act_spuShelf(${i},true)">下架</button>`:`<button class="btn btn-p btn-sm" onclick="act_spuShelf(${i},false)">上架</button>`} <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
   if(p.status=='draft')return `<button class="btn btn-p btn-sm" onclick="act_submit(${i})">提交审核</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
   if(p.status=='offsale')return `<button class="btn btn-p btn-sm" onclick="act_relist(${i})">上架</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
   if(p.status=='reviewing')return `<span style="color:var(--ts);font-size:12.5px">平台审核中…</span>`;
@@ -923,8 +940,8 @@ function mActions(p,i){
 }
 function showReject(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>处理原因 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⛔</span>${p.reject}</div><p style="font-size:13px;color:var(--ts)">整改后点「整改重提」，重新走自动校验 + 平台 SPU 整体审核。</p></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">知道了</button></div>`);}
 /* 行内改价/改库存（SKU 维度） */
-function act_repriceSku(i,k,v){const p=DB.products[i];const np=parseFloat(v)||0;p.skus[k].price=np;const sp=`${p.name} ${p.skus[k].qty}${p.unit}`;const eff=p.status=='onsale'?'即时生效':(p.status=='reviewing'?'审核通过后生效':'已保存');render();if(priceAbnormal(np,p.cat))toast(`价格已更新（${eff}）；超指导价区间，已标记异常供平台监管`,'info');else toast(`「${sp}」价格已更新，${eff}`,'ok');}
-function act_restock(i,k,v){const p=DB.products[i];p.skus[k].stock=Math.max(0,parseInt(v)||0);render();toast(`「${p.name} ${p.skus[k].qty}${p.unit}」库存已更新为 ${p.skus[k].stock}`,'ok');}
+function act_repriceSku(i,k,v){const p=DB.products[i];const np=parseFloat(v)||0;p.skus[k].price=np;p.skus[k].updatedAt=ts();const sp=`${p.name} ${p.skus[k].qty}${p.unit}`;const eff=p.status=='onsale'?'即时生效':(p.status=='reviewing'?'审核通过后生效':'已保存');render();if(priceAbnormal(np,p.cat))toast(`价格已更新（${eff}）；超指导价区间，已标记异常供平台监管`,'info');else toast(`「${sp}」价格已更新，${eff}`,'ok');}
+function act_restock(i,k,v){const p=DB.products[i];p.skus[k].stock=Math.max(0,parseInt(v)||0);p.skus[k].updatedAt=ts();render();toast(`「${p.name} ${p.skus[k].qty}${p.unit}」库存已更新为 ${p.skus[k].stock}`,'ok');}
 /* 批量改价/改库存 */
 function selSkus(){const out=[];DB.products.forEach((p,i)=>p.skus.forEach((s,k)=>{if(DB.sel.includes(s.skuId))out.push({p,s});}));return out;}
 function act_batchPrice(){modal(`<div class="mc-hd"><h3>批量改价 · ${DB.sel.length} 个 SKU</h3><p>已审核商品改价即时生效、无需重审；超指导价区间仅标记异常供平台监管</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">方式</label><select id="bp-mode"><option value="set">设为固定价(SGD)</option><option value="pct">按比例涨跌(%)</option></select></div><div class="fr"><label class="fl">数值</label><input id="bp-val" type="number" step="0.01" value="0" placeholder="固定价如 6.50；涨跌如 -10 表示降 10%"></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doBatchPrice()">应用</button></div>`);}
@@ -951,111 +968,95 @@ function renderImpPreview(){IMP_ROWS=[];DB.products.forEach((p,pi)=>p.skus.forEa
   </tbody></table></div>`;document.getElementById('imp-confirm').style.display='';}
 function doImportUpdate(){let nP=0,nS=0,abn=0;IMP_ROWS.forEach(r=>{const sku=DB.products[r.pi].skus[r.ki];if(r.newP>0&&r.newP!=r.oldP){sku.price=r.newP;nP++;if(priceAbnormal(r.newP,r.cat))abn++;}if(r.newS!=r.oldS){sku.stock=Math.max(0,r.newS);nS++;}});closeModal();render();toast(`导入完成：改价 ${nP} · 改库存 ${nS}${abn?` · ${abn} 个 SKU 价格异常已标记`:''}，即时生效`,'ok');}
 /* 建档/编辑（SPU + 多 SKU 行） */
-function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',itemType:'标品',itemAttr:'成品货品',itemName:'',unit:'',netQty:'',netUnit:'',unitNote:'',packQty:'',packUnit:'',cat:'',purchasable:'是',desc:'',origin:'',brand:'',saleType:'售卖品',name:'',alias:'',showExp:'',img:false,detail:false,status:'draft'}:JSON.parse(JSON.stringify(DB.products[i]));
-  p.itemName=p.itemName||p.name||'';p.itemType=p.itemType||'标品';p.itemAttr='成品货品';p.purchasable=p.purchasable||'是';p.netUnit=p.netUnit||'';p.name=p.name||p.itemName||'';
+function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',unit:'',brand:'',origin:'',saleType:'售卖品',name:'',alias:'',showExp:'',desc:'',img:false,detail:false,status:'draft'}:JSON.parse(JSON.stringify(DB.products[i]));
+  p.name=p.name||p.itemName||'';
   EDIT_SKUS=isNew?[{qty:1}]:(p.skus&&p.skus.length?JSON.parse(JSON.stringify(p.skus)):[{qty:1}]);
   const approved=!isNew&&(p.status=='onsale'||p.status=='offsale');
-  const ITEMTYPE=['标品','非标品'],NETUNIT=['g','ml','kg','L'],PACKUNIT=['箱','袋','盒','组','件'];
+  const NETUNIT=['g','ml','kg','L'];
+  const QPUNIT=['天','月','年'],STORAGE=['常温','冷藏','冷冻','冷鲜'],FULFIL=['平台仓配','商家直送'];
   const radio=(name,val,opts)=>`<div class="row" style="gap:14px">${opts.map(t=>`<label class="chip-ck ${val==t?'on':''}"><input type="radio" name="${name}" value="${t}" ${val==t?'checked':''} onchange="this.closest('.row').querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));this.parentElement.classList.add('on')">${t}</label>`).join('')}</div>`;
   const opt=(arr,v)=>`<option value="">请选择</option>`+arr.map(x=>`<option ${v==x?'selected':''}>${x}</option>`).join('');
-  const ft=approved?`<button class="btn btn-p" onclick="doSaveSpu(${i},false)">保存（即时生效）</button>`:`<button class="btn btn-o" onclick="doSaveSpu(${isNew?-1:i},true)">存草稿</button><button class="btn btn-p" onclick="doSaveSpu(${isNew?-1:i},false)">保存并创建</button>`;
-  drawer(`<div class="drawer-hd"><h3>${isNew?'新建货品 + 关联商品':(p.status=='rejected'||p.status=='forced_off'?'整改重提 · ':'编辑 · ')+(p.name||p.itemName)}</h3><span class="x" onclick="closeDrawer()">×</span></div>
+  const ft=approved?`<button class="btn btn-p" onclick="doSaveSpu(${i},false)">保存（即时生效）</button>`:`<button class="btn btn-p" onclick="doSaveSpu(${isNew?-1:i},false)">保存并创建</button>`;
+  drawer(`<div class="drawer-hd"><h3>${isNew?'新建商品':(p.status=='rejected'||p.status=='forced_off'?'整改重提 · ':'编辑 · ')+p.name}</h3><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <h4 style="font-size:14px;margin-bottom:12px;color:var(--g)">① 货品基础信息</h4>
-    <div class="fr"><label class="fl"><b>*</b>货品类型</label><select id="f-itemtype" style="max-width:300px">${opt(ITEMTYPE,p.itemType)}</select></div>
-    <div class="fr"><label class="fl"><b>*</b>货品名称</label><input id="f-itemname" maxlength="50" value="${p.itemName}" placeholder="请输入货品名称，最多 50 字" oninput="itemNameSync()"></div>
-    <div class="fr"><label class="fl"><b>*</b>库存单位</label><table class="itbl"><thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td><select id="f-unit" onchange="refreshSkuNames();refreshInherit()">${opt(UNITS,p.unit)}</select></td><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 500" oninput="refreshInherit()"></td><td><select id="f-netunit" onchange="refreshInherit()">${opt(NETUNIT,p.netUnit)}</select></td><td><input id="f-unitnote" maxlength="20" value="${p.unitNote||''}" placeholder="选填"></td></tr></tbody></table></div>
-    <div class="fr"><label class="fl">包装规格 <span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span></label><table class="itbl"><thead><tr><th>包装数量</th><th>包装单位</th></tr></thead><tbody><tr><td><input id="f-packqty" value="${p.packQty||''}" placeholder="如 12"></td><td><select id="f-packunit">${opt(PACKUNIT,p.packUnit)}</select></td></tr></tbody></table></div>
-    <div class="fg3"><div class="fr"><label class="fl"><b>*</b>后台类目</label><select id="f-cat" onchange="catHint();refreshSkuNames();refreshInherit()">${opt(Object.keys(CATS),p.cat)}</select></div><div class="fr"><label class="fl"><b>*</b>是否可采</label>${radio('f-purchasable',p.purchasable,['否','是'])}</div><div class="fr"><label class="fl">品牌</label><input id="f-brand" value="${p.brand||''}" placeholder="选填"></div></div>
-    <div class="fg2"><div class="fr"><label class="fl">产地</label><input id="f-origin" value="${p.origin||''}" placeholder="选填"></div><div class="fr"><label class="fl">货品描述</label><input id="f-desc" value="${p.desc||''}" placeholder="最多 500 字（选填）"></div></div>
+    <h4 style="font-size:14px;margin-bottom:12px;color:var(--g)">① 商品信息（SPU）</h4>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>商品名称</label><input id="f-name" value="${p.name}" placeholder="请输入商品名称" oninput="refreshSkuNames()"></div><div class="fr"><label class="fl">商品别名</label><input id="f-alias" maxlength="400" value="${p.alias||''}" placeholder="多个别名用逗号隔开，辅助客户端搜索"></div></div>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>后台类目</label><select id="f-cat" onchange="catHint();refreshSkuNames()">${opt(Object.keys(CATS),p.cat)}</select></div><div class="fr"><label class="fl">税率</label><input id="f-tax" value="${p.tax||''}" placeholder="手动填写，如 9%"></div></div>
+    <div class="fr"><label class="fl"><b>*</b>最小售卖单位 <span style="font-weight:400;color:var(--ts);font-size:12px">（支持维护净含量）</span></label><table class="itbl"><thead><tr><th>最小售卖单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td><select id="f-unit" onchange="refreshSkuNames()">${opt(UNITS,p.unit)}</select></td><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 500"></td><td><select id="f-netunit">${opt(NETUNIT,p.netUnit)}</select></td><td><input id="f-unitnote" maxlength="20" value="${p.unitNote||''}" placeholder="选填"></td></tr></tbody></table></div>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl">产地</label><input id="f-origin" value="${p.origin||''}" placeholder="选填"></div></div>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>效期管理</label>${radio('f-expen',p.expEn||'是',['否','是'])}</div><div class="fr" id="qp-cell"><label class="fl">保质期</label><div class="row" style="gap:8px"><input id="f-qp" value="${p.qp||''}" placeholder="如 7" style="flex:1"><select id="f-qpu" style="max-width:88px">${opt(QPUNIT,p.qpu||'天')}</select></div></div></div>
+    <div class="fg3"><div class="fr"><label class="fl"><b>*</b>APP是否展示效期</label><select id="f-showexp">${opt(['展示','不展示'],p.showExp)}</select></div><div class="fr"><label class="fl"><b>*</b>储存条件</label><select id="f-storage">${opt(STORAGE,p.storage)}</select></div><div class="fr"><label class="fl"><b>*</b>履约方式</label><select id="f-fulfil">${opt(FULFIL,p.fulfil)}</select></div></div>
+    <div class="fg2"><div class="fr"><label class="fl">品牌</label><input id="f-brand" value="${p.brand||''}" placeholder="选填"></div><div class="fr"><label class="fl">商品描述</label><input id="f-desc" value="${p.desc||''}" placeholder="最多 500 字（选填）"></div></div>
     <div id="cat-hint"></div>
-
-    <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU · 绑定本货品）</h4>
-    <div class="ib ib-b" style="margin-bottom:8px"><span class="i">ℹ️</span>规格信息继承自货品（只读）：计量单位 <b id="inh-unit">—</b> · 净含量 <b id="inh-net">—</b> · 箱规 <b id="inh-pack">—</b>。每行 1 个 SKU，规格名称自动 = 商品名 + 数量 + 计量单位。<b>库存统一维护在货品级</b>（见上方「货品库存」），各规格按 1 份数量共享扣减该库存。</div>
+    <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU）</h4>
+    <div class="ib ib-gr" style="margin-bottom:8px"><span class="i">ℹ️</span>每行 1 个 SKU，规格名称自动 = 商品名 + 数量 + 最小售卖单位；价格与库存逐规格维护。</div>
     <div id="sku-editor"></div>
     <button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button>
-
-    <h4 style="font-size:14px;margin:18px 0 8px;color:var(--g)">③ 商品信息（SPU · 售卖侧，重复项继承货品）</h4>
-    <div class="fg3"><div class="fr"><label class="fl">商品属性</label><input value="${p.itemType} · 继承自货品" readonly style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl"><b>*</b>销售类型</label>${radio('f-saletype',p.saleType,SALETYPE)}</div><div class="fr"><label class="fl"><b>*</b>保质期展示</label><select id="f-showexp">${opt(SHOWEXP,p.showExp)}</select></div></div>
-    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>商品名称</label><input id="f-name" value="${p.name}" placeholder="默认=货品名称，可改" oninput="this.dataset.auto='0';refreshSkuNames()"></div><div class="fr"><label class="fl">商品别名</label><input id="f-alias" maxlength="400" value="${p.alias||''}" placeholder="多个别名用逗号隔开，辅助客户端搜索"></div></div>
-    <div class="fg3"><div class="fr"><label class="fl">前台类目</label><input value="继承货品后台类目" readonly style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl">税率</label><input id="f-tax" value="${p.cat&&CATS[p.cat]?(CATS[p.cat].tax*100)+'%':'—'}" readonly style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl">产地（继承货品）</label><input value="${p.origin||'—'}" readonly style="background:#F3F4F6;color:var(--ts)"></div></div>
+    <h4 style="font-size:14px;margin:18px 0 8px;color:var(--g)">③ 展示配置</h4>
     <div class="fg2"><div class="fr"><label class="fl">商品主图</label><div class="up ${p.img?'done':''}" id="f-img" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">🖼️</div><div class="ut">${p.img?'已上传 ✓':'上传主图'}</div><div class="us">首图白底 ≥800×800 · 最多 15 张</div></div></div><div class="fr"><label class="fl">商品详情</label><div class="up ${p.detail?'done':''}" id="f-detail" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">📄</div><div class="ut">${p.detail?'已上传 ✓':'上传详情图'}</div><div class="us">宽 750–1242px · 最多 10 张</div></div></div></div>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">取消</button>${ft}</div>`);
-  setTimeout(()=>{renderSkuEditor();catHint();refreshInherit();},0);
+  setTimeout(()=>{renderSkuEditor();catHint();document.querySelectorAll('input[name=f-expen]').forEach(r=>r.addEventListener('change',expToggle));expToggle();},0);
 }
 function itemNameSync(){const iv=(document.getElementById('f-itemname')||{}).value||'';const nm=document.getElementById('f-name');if(nm&&nm.dataset.auto!=='0'){nm.value=iv;refreshSkuNames();}}
 function refreshInherit(){const g=id=>(document.getElementById(id)||{}).value||'';const u=g('f-unit')||'—',nq=g('f-netqty'),nu=g('f-netunit'),pq=g('f-packqty'),pu=g('f-packunit');const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};set('inh-unit',u);set('inh-net',nq?nq+nu:'—');set('inh-pack',pq?pq+(pu||''):'—');document.querySelectorAll('.sku-unit-cell').forEach(el=>el.textContent=u);}
 function dedText(k){const unit=(document.getElementById('f-unit')||{}).value||'计量单位';const q=EDIT_SKUS[k].qty||0;return `下单 1 份扣减 ${q} ${unit} 货品库存`;}
 function skuName(k){const name=(document.getElementById('f-name')||{}).value||'商品名';const unit=(document.getElementById('f-unit')||{}).value||'';return `${name} ${EDIT_SKUS[k].qty||0}${unit}`;}
 function refreshSkuNames(){EDIT_SKUS.forEach((s,k)=>{const el=document.getElementById('skn-'+k);if(el)el.textContent=skuName(k);});const u=(document.getElementById('f-unit')||{}).value||'—';document.querySelectorAll('.sku-unit-cell').forEach(el=>el.textContent=u);}
-function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!box)return;const unit=(document.getElementById('f-unit')||{}).value||'—';const gc="grid-template-columns:1.6fr 1.2fr 0.95fr 0.95fr 36px";box.innerHTML=`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>1 份 = 数量</div><div>价格(SGD)</div><div>可售库存</div><div></div></div>`+EDIT_SKUS.map((s,k)=>`<div class="skued2" style="${gc};align-items:center"><div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div><div class="stepper"><button type="button" onclick="stepQty(${k},-1)">−</button><input type="number" min="1" value="${s.qty||''}" oninput="EDIT_SKUS[${k}].qty=parseInt(this.value)||0;skuRowSync(${k})"><button type="button" onclick="stepQty(${k},1)">＋</button></div><div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div><div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`).join('');}
-function addSkuRow(){EDIT_SKUS.push({qty:'',price:''});renderSkuEditor();}
-function delSkuRow(k){EDIT_SKUS.splice(k,1);if(!EDIT_SKUS.length)EDIT_SKUS.push({qty:''});renderSkuEditor();}
-function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS[cat];const box=document.getElementById('cat-hint');const tax=document.getElementById('f-tax');if(tax)tax.value=c?(c.tax*100)+'%':'—';if(!box)return;let h='';if(c&&!CAT_SCOPE.includes(cat))h=`<div class="ib ib-r" style="margin:10px 0"><span class="i">⛔</span>经营许可证未覆盖「${cat}」类目，提交将被资质校验拦截。</div>`;else if(c&&c.baseRisk=='高')h=`<div class="ib ib-gr" style="margin:10px 0"><span class="i">ℹ️</span>「${cat}」为高风险类目，首次建档默认进人工审核。</div>`;box.innerHTML=h;}
-function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{const e=document.querySelector('input[name='+n+']:checked');return e?e.value:'';};const p=i<0?{id:'SPU'+(++SPU_SEQ)}:{...DB.products[i]};p.itemType=g('f-itemtype').value;p.itemAttr='成品货品';p.itemName=g('f-itemname').value.trim();p.unit=g('f-unit').value;p.netQty=g('f-netqty').value.trim();p.netUnit=g('f-netunit').value;p.unitNote=g('f-unitnote').value.trim();p.packQty=g('f-packqty').value.trim();p.packUnit=g('f-packunit').value;p.cat=g('f-cat').value;p.purchasable=gr('f-purchasable')||'是';p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType=gr('f-saletype')||'售卖品';p.name=(g('f-name').value.trim())||p.itemName;p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';delete p.itemStock;const prev=(i>=0&&DB.products[i].skus)||[];p.skus=EDIT_SKUS.map((s,k)=>({skuId:(prev[k]&&prev[k].skuId)||('SKU'+(++SKU_SEQ)),qty:parseInt(s.qty)||0,price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(prev[k]&&prev[k].safe)||0}));return p;}
+function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!box)return;const unit=(document.getElementById('f-unit')||{}).value||'—';const gc="grid-template-columns:1.5fr 1fr 0.85fr 0.9fr 0.9fr 36px";box.innerHTML=`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>1 份 = 数量</div><div>售卖单位</div><div>价格(SGD)</div><div>可售库存</div><div></div></div>`+EDIT_SKUS.map((s,k)=>`<div class="skued2" style="${gc};align-items:center"><div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div><div class="stepper"><button type="button" onclick="stepQty(${k},-1)">−</button><input type="number" min="1" value="${s.qty||''}" oninput="EDIT_SKUS[${k}].qty=parseInt(this.value)||0;skuRowSync(${k})"><button type="button" onclick="stepQty(${k},1)">＋</button></div><div class="sku-unit-cell" title="取自最小售卖单位" style="height:32px;display:flex;align-items:center;justify-content:center;background:#F3F4F6;color:var(--ts);border-radius:4px;font-size:12.5px">${unit}</div><div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div><div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`).join('');}
+function addSkuRow(){EDIT_SKUS.push({qty:'',price:'',pack:''});renderSkuEditor();}
+function delSkuRow(k){EDIT_SKUS.splice(k,1);if(!EDIT_SKUS.length)EDIT_SKUS.push({qty:'',price:'',pack:''});renderSkuEditor();}
+function expToggle(){const e=document.querySelector('input[name=f-expen]:checked');const on=(!e||e.value=='是');['f-qp','f-qpu'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=!on;});const cell=document.getElementById('qp-cell');if(cell)cell.style.opacity=on?'1':'.45';}
+function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS[cat];const box=document.getElementById('cat-hint');if(!box)return;let h='';if(c&&!CAT_SCOPE.includes(cat))h=`<div class="ib ib-r" style="margin:10px 0"><span class="i">⛔</span>经营许可证未覆盖「${cat}」类目，提交将被资质校验拦截。</div>`;else if(c&&c.baseRisk=='高')h=`<div class="ib ib-gr" style="margin:10px 0"><span class="i">ℹ️</span>「${cat}」为高风险类目，首次建档默认进人工审核。</div>`;box.innerHTML=h;}
+function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{const e=document.querySelector('input[name='+n+']:checked');return e?e.value:'';};const p=i<0?{id:'SPU'+(++SPU_SEQ)}:{...DB.products[i]};p.cat=g('f-cat').value;p.tax=g('f-tax').value.trim();p.unit=g('f-unit').value;p.netQty=g('f-netqty').value.trim();p.netUnit=(g('f-netunit')||{}).value||'';p.unitNote=(g('f-unitnote')||{}).value||'';p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';const prev=(i>=0&&DB.products[i].skus)||[];p.skus=EDIT_SKUS.map((s,k)=>({skuId:(prev[k]&&prev[k].skuId)||('SKU'+(++SKU_SEQ)),qty:parseInt(s.qty)||0,pack:p.unit,price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(prev[k]&&prev[k].safe)||0,createdAt:(prev[k]&&prev[k].createdAt)||ts(),updatedAt:ts()}));p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
 function upsert(i,p){if(i<0)DB.products.unshift(p);else DB.products[i]=p;}
 function doSaveSpu(i,asDraft){const prev=i>=0?DB.products[i]:null;const approved=prev&&(prev.status=='onsale'||prev.status=='offsale');const p=collectSpu(i);if(asDraft){p.status='draft';upsert(i,p);closeModal();render();toast('已存草稿','info');return;}if(approved){p.status=prev.status;upsert(i,p);closeModal();render();toast('已保存，即时生效（已审核商品编辑无需重审）','ok');return;}submitForAudit(p,i);}
 function act_submit(i){const p=JSON.parse(JSON.stringify(DB.products[i]));submitForAudit(p,i);}
 function submitForAudit(p,i){if(DB.auditCfg.auto){closeModal();runFunnel(p,i,autoCheck(p));}else{p.status='reviewing';p.autoApproved=false;p.note='';p.risk=computeRisk(p);upsert(i,p);closeModal();render();modal(`<div class="mc-hd"><h3>📨 已提交人工审核</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📨</span>自动审核未开启，商品「${p.name||'新商品'}」建档信息已提交<b>平台人工审核</b>，审核通过后上架在售。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">留在商家端</button><button class="btn btn-p" onclick="closeModal();setRole('shop_ops')">去平台审核 →</button></div>`);toast('已提交人工审核','ok');}}
-function act_setStatus(i,st){DB.products[i].status=st;render();toast(`「${DB.products[i].name}」已下架（上下架无需审核）`,'info');}
-function act_relist(i){DB.products[i].status='onsale';render();toast(`「${DB.products[i].name}」已上架（上下架无需审核）`,'ok');}
+function act_setStatus(i,st){const p=DB.products[i];const label=st=='offsale'?'下架':'上架';askConfirm(`确认将商品「${p.name}」整体${label}？`,()=>{p.status=st;p.updatedAt=ts();render();toast(`「${p.name}」已${label}`,'info');});}
+function act_relist(i){const p=DB.products[i];askConfirm(`确认上架商品「${p.name}」（全部规格）？`,()=>{p.status='onsale';(p.skus||[]).forEach(s=>{s.off=false;s.updatedAt=ts();});p.updatedAt=ts();render();toast(`「${p.name}」已上架`,'ok');});}
 function runFunnel(p,i,fails){const items=['必填完整性','售卖规格','资质关联','重复建档'];const failMap={};fails.forEach(x=>{(failMap[x[0]]=failMap[x[0]]||[]).push(x[1]);});modalWide(`<div class="mc-hd"><h3>🔍 建档信息自动校验</h3><p>${p.name||'新商品'} · ${(p.skus||[]).length} 个 SKU · 提交即时校验（仅校验建档信息）</p></div><div class="mc-bd"><div id="chk-list">${items.map(it=>`<div class="ck run"><div class="cb">…</div>${it}<span class="cx">校验中…</span></div>`).join('')}</div><div id="chk-result"></div></div>`);let idx=0;const tick=()=>{const list=document.querySelectorAll('#chk-list .ck');if(idx<items.length){const el=list[idx];const it=items[idx];const fs=failMap[it];el.className='ck '+(fs?'no':'ok');el.querySelector('.cb').textContent=fs?'✕':'✓';el.querySelector('.cx').textContent=fs?fs.join('；'):'通过';idx++;setTimeout(tick,340);}else finishFunnel(p,i,fails);};setTimeout(tick,300);}
 function finishFunnel(p,i,fails){const box=document.getElementById('chk-result');if(fails.length){p.status='draft';upsert(i,p);box.innerHTML=`<div class="ib ib-r" style="margin-top:14px"><span class="i">⛔</span><div><b>自动校验未通过，已拦截</b><br>修正 ${fails.length} 项后重新提交，商品已存草稿。</div></div><div class="mc-ft" style="margin:14px -24px -22px"><button class="btn btn-o" onclick="closeModal();render()">关闭</button><button class="btn btn-p" onclick="closeModal();render();act_editSpu(${DB.products.indexOf(p)})">去修正</button></div>`;toast('自动校验拦截，已退回草稿','err');return;}p.risk=computeRisk(p);p.status='onsale';p.note='';p.autoApproved=true;upsert(i,p);box.innerHTML=`<div class="ib ib-g" style="margin-top:14px"><span class="i">✅</span>建档信息自动校验全部通过。</div><div class="card" style="box-shadow:none;margin:0"><div class="card-bd"><div class="ib ib-g" style="margin:0"><span class="i">🎉</span>自动审核已开启，商品建档审核<b>自动通过</b>，所有规格已直接上架在售。</div></div></div><div class="mc-ft" style="margin:14px -24px -22px"><button class="btn btn-p" onclick="closeModal();render()">完成</button></div>`;toast('自动通过，已上架','ok');}
 /* 批量导入（每行=SKU，按商品名聚合 SPU） */
 let IMP=null;
-PAGES['m-import']=()=>{
-  const m=DB.impMode||'build';
-  const back=`<div style="margin-bottom:14px"><button class="btn btn-o btn-sm" onclick="DB.prodTab='list';render()">← 返回商品列表</button></div>`;
-  const seg=`<div class="row" style="gap:0;margin-bottom:16px;border:1px solid var(--bd);border-radius:9px;overflow:hidden;width:fit-content">
-    <div onclick="DB.impMode='build';IMP=null;render()" style="padding:8px 20px;cursor:pointer;font-size:13.5px;font-weight:600;${m=='build'?'background:var(--g);color:#fff':'color:var(--ts)'}">批量建品</div>
-    <div onclick="DB.impMode='addsku';IMP=null;render()" style="padding:8px 20px;cursor:pointer;font-size:13.5px;font-weight:600;${m=='addsku'?'background:var(--g);color:#fff':'color:var(--ts)'}">批量新增 SKU</div>
-  </div>`;
-  return back+seg+(m=='build'?impBuildUI():impAddUI());
-};
+PAGES['m-import']=()=>{return impBuildUI();};
 function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载批量建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div></div></div>`;}
 function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
 function impParseBuild(){
   const spuRows=[
-    {ln:2,code:'T001',name:'芥蓝',attr:'标品',sale:'售卖品',expEn:'是',qp:'7',qpu:'天',showExp:'展示生产日期+保质期',storage:'冷藏',fulfil:'平台仓配',c1:'新鲜蔬菜',c2:'叶菜类'},
-    {ln:3,code:'T002',name:'冰鲜三文鱼',attr:'标品',sale:'售卖品',expEn:'是',qp:'3',qpu:'天',showExp:'展示到期日期',storage:'冷冻',fulfil:'平台仓配',c1:'海鲜水产',c2:'冷冻鱼'},
-    {ln:4,code:'T003',name:'金标酱油',attr:'标品',sale:'售卖品',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',c1:'调味品',c2:'酱料'},
-    {ln:5,code:'T004',name:'',attr:'标品',sale:'售卖品',expEn:'是',qp:'5',qpu:'天',showExp:'展示生产日期+保质期',storage:'冷藏',fulfil:'平台仓配',c1:'新鲜蔬菜',c2:'叶菜类'},
-    {ln:6,code:'T005',name:'娃娃菜',attr:'标品',sale:'售卖品',expEn:'是',qp:'',qpu:'',showExp:'展示生产日期+保质期',storage:'冷藏',fulfil:'平台仓配',c1:'新鲜蔬菜',c2:'叶菜类'}];
-  const skuRows=[
-    {ln:2,code:'T001',name:'芥蓝散装',refund:'是',qty:1,pack:'kg'},
-    {ln:3,code:'T001',name:'芥蓝5kg箱',refund:'是',qty:5,pack:'箱'},
-    {ln:4,code:'T002',name:'三文鱼盒装',refund:'否',qty:1,pack:'盒'},
-    {ln:5,code:'T003',name:'酱油瓶',refund:'是',qty:1,pack:'瓶'},
-    {ln:6,code:'T005',name:'娃娃菜扎',refund:'是',qty:0,pack:'扎'},
-    {ln:7,code:'T999',name:'孤儿规格',refund:'是',qty:1,pack:'kg'}];
+    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:''},
+    {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',unit:'盒',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord'},
+    {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',unit:'瓶',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:''},
+    {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:''},
+    {ln:6,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',unit:'扎',netQty:'',netUnit:'',expEn:'是',qp:'',qpu:'',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:''}];
+  const skuRows=[{ln:2,code:'T001',qty:1},{ln:3,code:'T001',qty:5},{ln:4,code:'T002',qty:1},{ln:5,code:'T003',qty:1},{ln:6,code:'T005',qty:0},{ln:7,code:'T999',qty:1}];
   const codes=new Set(),dup=new Set();spuRows.forEach(r=>{if(r.code){if(codes.has(r.code))dup.add(r.code);codes.add(r.code);}});
   const map={};
   const spus=spuRows.map(r=>{const errs=[];
     if(!r.code)errs.push('自定义SPU编号为空');
     else{if(dup.has(r.code))errs.push('SPU编号文件内重复');if(DB.products.some(p=>p.id==r.code))errs.push('SPU编号与系统已有商品冲突（请改用批量新增SKU）');}
-    if(!r.name)errs.push('缺少「SPU名称」');
-    if(!r.sale||!r.attr||!r.showExp||!r.fulfil||!r.c1||!r.c2)errs.push('SPU必填项缺失');
-    if(r.expEn=='是'&&(!r.qp||!r.qpu||!r.storage))errs.push('效期管理=是，保质期/单位/保存条件必填');
-    if(r.c1&&!CATS[r.c1])errs.push('一级分类不在分类字典');
-    else if(r.c1&&!CAT_SCOPE.includes(r.c1))errs.push('经营许可证未覆盖「'+r.c1+'」类目');
+    if(!r.name)errs.push('缺少「商品名称」');
+    if(!r.cat||!r.unit||!r.showExp||!r.storage||!r.fulfil)errs.push('SPU必填项缺失（后台类目/最小售卖单位/APP展示效期/储存条件/履约方式）');
+    if(r.expEn=='是'&&(!r.qp||!r.qpu))errs.push('效期管理=是，保质期/单位必填');
+    if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
+    else if(r.cat&&!CAT_SCOPE.includes(r.cat))errs.push('经营许可证未覆盖「'+r.cat+'」类目');
     const o={row:r,errs,skus:[],ok:false};if(r.code)map[r.code]=o;return o;});
   const orphans=[];
   skuRows.forEach(r=>{if(!r.code||!map[r.code]){orphans.push({row:r,err:!r.code?'SKU行未填SPU编号':'SPU编号「'+r.code+'」在商品表中不存在（孤儿行）'});return;}
-    const errs=[];if(!r.name)errs.push('缺少SKU名称');if(!r.refund)errs.push('缺少是否多退少补');if(!(r.qty>0))errs.push('内包规格_数量必须为正整数≥1');if(!r.pack)errs.push('缺少包装规格_单位');
-    const grp=map[r.code];if(grp.skus.some(x=>x.row.qty==r.qty&&x.row.pack==r.pack))errs.push('同商品规格重复');
+    const errs=[];if(!(r.qty>0))errs.push('数量必须为正整数≥1');
+    const grp=map[r.code];if(grp.skus.some(x=>x.row.qty==r.qty))errs.push('同商品规格(数量)重复');
     grp.skus.push({row:r,errs,ok:errs.length==0});});
   spus.forEach(o=>{const v=o.skus.filter(x=>x.ok).length;if(o.errs.length==0&&v==0)o.errs.push('无有效规格(SKU)，商品建不了');o.ok=o.errs.length==0&&o.skus.some(x=>x.ok);});
   IMP={mode:'build',spus,orphans};renderImpBuild();
 }
 function renderImpBuild(){const spus=IMP.spus,orphans=IMP.orphans;const okS=spus.filter(x=>x.ok);const box=document.getElementById('imp-out');
   box.innerHTML=`<div class="sg" style="grid-template-columns:repeat(4,1fr);margin:14px 0 12px"><div class="sc"><div class="sc-l">商品(SPU)</div><div class="sc-v">${spus.length}</div></div><div class="sc good"><div class="sc-l">可建</div><div class="sc-v">${okS.length}</div></div><div class="sc alert"><div class="sc-l">失败商品</div><div class="sc-v">${spus.length-okS.length}</div></div><div class="sc alert"><div class="sc-l">孤儿SKU行</div><div class="sc-v">${orphans.length}</div></div></div>
-  <div class="card" style="box-shadow:none;margin:0 0 14px"><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>SPU编号</th><th>商品</th><th>一级/二级分类</th><th>有效规格</th><th>校验</th></tr></thead><tbody>
-  ${spus.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td><b>${o.row.name||'—'}</b></td><td>${o.row.c1||'—'} / ${o.row.c2||'—'}</td><td>${o.skus.filter(x=>x.ok).length}/${o.skus.length}</td><td>${o.ok?`<span class="tag t-g">可建`:`<span class="tag t-r">${o.errs[0]||(o.skus.find(x=>!x.ok)?'规格:'+o.skus.find(x=>!x.ok).errs[0]:'失败')}`}</span></td></tr>`).join('')}
+  <div class="card" style="box-shadow:none;margin:0 0 14px"><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>SPU编号</th><th>商品</th><th>后台类目</th><th>有效规格</th><th>校验</th></tr></thead><tbody>
+  ${spus.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td><b>${o.row.name||'—'}</b></td><td>${o.row.cat||'—'}</td><td>${o.skus.filter(x=>x.ok).length}/${o.skus.length}</td><td>${o.ok?`<span class="tag t-g">可建`:`<span class="tag t-r">${o.errs[0]||(o.skus.find(x=>!x.ok)?'规格:'+o.skus.find(x=>!x.ok).errs[0]:'失败')}`}</span></td></tr>`).join('')}
   ${orphans.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td colspan="3" style="color:var(--ts)">孤儿SKU行 第${o.row.ln}行 · ${o.row.name}</td><td><span class="tag t-r">${o.err}</span></td></tr>`).join('')}
   </tbody></table></div></div></div>
   <button class="btn btn-p btn-lg" ${okS.length?'':'disabled'} onclick="impConfirmBuild()">确认建品 ${okS.length} 个商品（进首次建档审核）</button>`;}
-function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const p={id:r.code,name:r.name,cat:r.c1,cat2:r.c2,saleType:r.sale,attr:r.attr,showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,qp:r.qp,qpu:r.qpu,alias:'',origin:'',brand:'',desc:'',unit:vs[0].row.pack,img:false,detail:false,reject:'',note:'',skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,pack:x.row.pack,refund:x.row.refund,price:0,stock:0,safe:0}))};const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
+function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',unit:r.unit,netQty:r.netQty||'',netUnit:r.netUnit||'',unitNote:'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',img:false,detail:false,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,pack:r.unit,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
 function impParseAdd(){
   const P=DB.products;const e=P[0];
   const rows=e?[
@@ -1084,7 +1085,7 @@ function impConfirmAdd(){let n=0;IMP.rows.filter(x=>x.ok).forEach(x=>{const p=x.
 function parseQtys(v){return (v||'').split(/[,，\s]+/).map(x=>parseInt(x)).filter(x=>x>0);}
 function act_addSkusBatch(i){const p=DB.products[i];EDIT_SKUS=[{qty:'',price:'',stock:''}];modalWide(`<div class="mc-hd"><h3>添加规格 · ${p.name}</h3><p>为已有商品追加售卖规格(SKU)，即时生效、无需重审；交互同新建 — 规格名自动 = 商品名 + 数量 + 计量单位（${p.unit}）</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><input id="f-name" type="hidden" value="${p.name}"><input id="f-unit" type="hidden" value="${p.unit}"><div id="sku-editor"></div><div style="margin-top:8px"><button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doAddSkusBatch(${i})">确认追加</button></div>`);setTimeout(()=>renderSkuEditor(),0);}
 function previewAddSkus(i){const p=DB.products[i];const box=document.getElementById('add-preview');if(!box)return;const qs=parseQtys((document.getElementById('add-qtys')||{}).value);const ex=new Set(p.skus.map(s=>s.qty)),seen=new Set();const items=qs.map(q=>{let st;if(ex.has(q))st='exist';else if(seen.has(q))st='dup';else{seen.add(q);st='ok';}return {q,st};});const okN=items.filter(x=>x.st=='ok').length;box.innerHTML=qs.length?`<div class="card" style="box-shadow:none;margin:0"><div class="card-bd flush"><table class="subtbl"><thead><tr><th>规格名称</th><th>数量</th><th>状态</th></tr></thead><tbody>${items.map(x=>`<tr><td>${p.name} ${x.q}${p.unit}</td><td>${x.q}</td><td>${x.st=='ok'?'<span class="tag t-g">将追加</span>':x.st=='exist'?'<span class="tag t-gr">已存在，跳过</span>':'<span class="tag t-y">重复，跳过</span>'}</td></tr>`).join('')}</tbody></table></div></div><div style="font-size:12.5px;color:var(--ts);margin-top:8px">将追加 <b>${okN}</b> 个规格</div>`:'<div style="font-size:12.5px;color:var(--ts)">请输入数量</div>';}
-function doAddSkusBatch(i){const p=DB.products[i];const rows=EDIT_SKUS.filter(s=>parseInt(s.qty)>0);if(!rows.length){toast('请至少添加一个有效规格（数量≥1）','err');return;}const ex=new Set((p.skus||[]).map(s=>s.qty)),seen=new Set();let n=0,dup=0;rows.forEach(s=>{const q=parseInt(s.qty);if(ex.has(q)||seen.has(q)){dup++;return;}seen.add(q);p.skus.push({skuId:'SKU'+(++SKU_SEQ),qty:q,price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:0});n++;});closeModal();render();toast(n?(dup?`已追加 ${n} 个规格，${dup} 个数量重复已跳过`:`已追加 ${n} 个规格，即时生效`):'规格数量都已存在，未追加',n?'ok':'info');}
+function doAddSkusBatch(i){const p=DB.products[i];const rows=EDIT_SKUS.filter(s=>parseInt(s.qty)>0);if(!rows.length){toast('请至少添加一个有效规格（数量≥1）','err');return;}const ex=new Set((p.skus||[]).map(s=>s.qty)),seen=new Set();let n=0,dup=0;rows.forEach(s=>{const q=parseInt(s.qty);if(ex.has(q)||seen.has(q)){dup++;return;}seen.add(q);p.skus.push({skuId:'SKU'+(++SKU_SEQ),qty:q,price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:0,createdAt:ts(),updatedAt:ts()});n++;});if(n)p.updatedAt=ts();closeModal();render();toast(n?(dup?`已追加 ${n} 个规格，${dup} 个数量重复已跳过`:`已追加 ${n} 个规格，即时生效`):'规格数量都已存在，未追加',n?'ok':'info');}
 
 /* ---------- 商家端：拣货（按SKU汇总，按预计送达日圈波） ---------- */
 PAGES['m-pick']=()=>{
@@ -1148,14 +1149,29 @@ function ordTag(o){return tag('order',ordCoarse(o.status));}
 function ordTabCount(t){return t=='all'?DB.orders.length:DB.orders.filter(o=>ordCoarse(o.status)==t).length;}
 function ord_items(o){return o.lines?o.lines.map(l=>`${l.name} ${l.qty}${l.unit}`).join(' · '):(o.items||'');}
 function ord_mask(n){return n?n[0]+'****':'—';}                     // 客户信息脱敏：只保留首字
-function ord_fee(o){return o.amt*DB.orderCfg.commRate;}            // 平台基础服务费
+/* 佣金率解析：返回 {svc服务佣金率, logi物流佣金率}；取值 商家×品类 > 商家默认 > 品类默认；免佣期内两项均0（BR-C1~C5，运营平台「佣金配置」维护） */
+function commRates(code,cat,dateStr){
+  const cfg=DB.commCfg,mc=cfg.merchants[code];
+  if(mc&&mc.freeUntil&&dateStr&&dateStr<=mc.freeUntil)return {svc:0,logi:0}; // 免佣期内两项均0
+  let r=null;
+  if(mc){if(mc.cats&&mc.cats[cat])r=mc.cats[cat];else if(mc.shopDefault)r=mc.shopDefault;}
+  if(!r)r=cfg.catBase[cat];
+  return {svc:(r&&r.svc)||0,logi:(r&&r.logi)||0};
+}
+function commTotal(code,cat,dateStr){const r=commRates(code,cat,dateStr);return r.svc+r.logi;} // 合计佣金率
+function lineCat(l){const p=DB.products.find(x=>x.name==l.name)||DB.products.find(x=>(x.skus||[]).some(s=>s.skuId==l.sku));return p?p.cat:'新鲜蔬菜';}
+function ord_feeParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';return (o.lines||[]).reduce((a,l)=>{const r=commRates(code,lineCat(l),d),amt=l.qty*l.price;a.svc+=amt*r.svc;a.logi+=amt*r.logi;return a;},{svc:0,logi:0});} // 平台佣金=各行 品类费率(服务/物流)逐行计佣汇总
+function ord_feeSvc(o){return ord_feeParts(o).svc;}                  // 服务佣金
+function ord_feeLogi(o){return ord_feeParts(o).logi;}               // 物流佣金
+function ord_fee(o){const p=ord_feeParts(o);return p.svc+p.logi;}   // 佣金合计
+function ord_feePct(o){return o.amt?ord_fee(o)/o.amt:0;}            // 综合费率（展示用）
 function ord_disc(o){return o.discount||0;}                         // 合作商优惠（商家出，扣减项）
 function ord_income(o){return o.amt-ord_disc(o)-ord_fee(o);}        // 预计收入 = 商品总价 − 合作商优惠 − 平台基础服务费
 function ord_ops(o,i){
-  if(o.status=='pending')return `<button class="btn btn-p btn-sm" onclick="ord_relabel(${i})">🏷️ 打印条码</button> <button class="btn btn-o btn-sm" onclick="ord_shortage(${i})">缺货取消</button> <button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button>`;
+  if(o.status=='pending')return `<button class="btn btn-p btn-sm" onclick="ord_relabel(${i})">🏷️ 打印条码</button> <button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button>`;
   if(o.status=='packed')return `<button class="btn btn-o btn-sm" onclick="ord_printLabels(${i})">打印标签</button> <button class="btn btn-p btn-sm" onclick="ord_handover(${i})">交接收货</button>`;
   if(o.status=='shipped')return `<button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button> <button class="btn btn-link" onclick="ord_receive(${i})">模拟客户收货</button>`;
-  if(o.status=='received')return `<button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button> <button class="btn btn-link" onclick="ord_done(${i})">模拟订单完成</button>`;
+  if(o.status=='received')return `<button class="btn btn-o btn-sm" onclick="ord_afterSale(${i})">发起售后</button> <button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button> <button class="btn btn-link" onclick="ord_done(${i})">模拟订单完成</button>`;
   return `<button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button>`;
 }
 
@@ -1171,7 +1187,8 @@ PAGES['m-settle']=()=>{
     <div class="kv" style="margin-bottom:18px">
       <div><div class="k">订单总额（Gross）</div><div class="v">${money(b.gross)}</div></div>
       <div><div class="k">逆向扣减（退款/少货）</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div>
-      <div><div class="k">平台服务费（免佣期）</div><div class="v">${money(b.fee)}</div></div>
+      <div><div class="k">服务佣金${b.feeSvc>0?'':'（免佣期）'}</div><div class="v" style="color:var(--r)">-${money(b.feeSvc||0)}</div></div>
+      <div><div class="k">物流佣金${b.feeLogi>0?'':'（免佣期）'}</div><div class="v" style="color:var(--r)">-${money(b.feeLogi||0)}</div></div>
       <div><div class="k">应结净额（Net）</div><div class="v" style="color:var(--g);font-size:18px">${money(b.net)}</div></div>
     </div>
     ${b.dispute?`<div class="ib ib-y"><span class="i">📝</span>你提交的异议：${b.dispute}</div>`:''}
@@ -1209,21 +1226,39 @@ PAGES['m-invoice']=()=>{
 
 /* ---------- 商家端：售后记录 ---------- */
 PAGES['m-aftersale']=()=>{
-  const judged=DB.afterSales.filter(a=>a.status=='judged');
-  return `${flowTip(`餐厅发起的售后由<b>平台判责</b>。判为商家责的，退款将从你的货款中扣减并体现在对账单。`)}
-  <div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">待平台判责 ${DB.afterSales.filter(a=>a.status=='pending').length} · 已处理 ${judged.length}</span></div><div class="card-bd flush"><table>
-    <thead><tr><th>工单号</th><th>客户/订单</th><th>商品/原因</th><th>金额</th><th>判责结果</th></tr></thead><tbody>
-    ${DB.afterSales.map(a=>`<tr>
-      <td class="mono">${a.id}</td><td>${a.client}<div style="font-size:12px;color:var(--ts)">${a.order}</div></td>
-      <td>${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td>${money(a.amt)}</td>
-      <td>${a.status=='pending'?'<span class="tag t-y"><span class="dot"></span>平台判责中</span>':liableTag(a)}</td>
+  const pend=DB.afterSales.filter(a=>a.status=='pending').length;
+  return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
+    ${DB.afterSales.map((a,i)=>`<tr>
+      <td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>
+      <td><span class="tag ${a.type=='退货退款'?'t-pp':'t-y'}" style="font-size:11px">${a.type}</span></td>
+      <td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td>
+      <td>${money(a.amt)}</td>
+      <td>${afterStatus(a)}</td>
+      <td>${afterMerchantOps(a,i)}</td>
     </tr>`).join('')}
-    </tbody></table></div></div>`;
+    </tbody></table></div></div></div>`;
 };
-function liableTag(a){
+function liableTag(a){const m={'商家':'t-r','平台':'t-b','买家':'t-gr'}[a.liable];return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span>`;}
+function afterStatus(a){
+  if(a.status=='pending')return '<span class="tag t-y"><span class="dot"></span>平台判责中</span>';
+  if(a.status=='appealing')return '<span class="tag t-b"><span class="dot"></span>申诉复核中</span>';
   const m={'商家':'t-r','平台':'t-b','买家':'t-gr'}[a.liable];
-  return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span><div style="font-size:11.5px;color:var(--ts);margin-top:4px">${a.refundType}</div>`;
+  return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">${a.refundType}</div>${(a.returnStatus&&a.status!='closed')?`<div style="font-size:11.5px;color:var(--pp);margin-top:2px">退货：${a.returnStatus}</div>`:''}${a.status=='closed'?'<div style="font-size:11px;color:var(--gd);margin-top:2px">✓ 已结案</div>':''}`;
 }
+function afterMerchantOps(a,i){
+  const b=[];
+  if(a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&!a.appeal)b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉</button>`);
+  if(a.type=='退货退款'&&a.returnStatus=='退货在途')b.push(`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认退货回仓</button>`);
+  b.push(`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`);
+  return b.join(' ');
+}
+
+/* ---------- 商家端：送货退货（退货退款·回仓管理） ---------- */
+PAGES['m-delivery']=()=>{
+  const rs=DB.afterSales.filter(a=>a.type=='退货退款');
+  return `<div class="card"><div class="card-hd"><h3>退货回仓</h3><span class="sub">退货退款工单的退实物回仓管理（退款不退货类不在此）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>工单号</th><th>客户/订单</th><th>商品</th><th>金额</th><th>退货状态</th><th>操作</th></tr></thead><tbody>${rs.map(a=>{const i=DB.afterSales.indexOf(a);return `<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td>${a.returnStatus?`<span class="tag ${a.returnStatus=='已回仓'?'t-g':'t-pp'}"><span class="dot"></span>${a.returnStatus}</span>`:'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td>${a.returnStatus=='退货在途'?`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认回仓</button>`:a.returnStatus=='已回仓'?'<span style="color:var(--gd);font-size:12px">已结案</span>':`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`}</td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货工单</div><div class="e-s">退货退款类售后工单会在此管理退实物回仓</div></div>'}</div></div>`;
+};
 
 /* ---------- 商家端：违规整改（闭环F 商家侧） ---------- */
 PAGES['m-rectify']=()=>{
@@ -1277,7 +1312,7 @@ function exitChecks(){
     {t:'5. 无已结算未开票的单据',ok:DB.bill.status=='none'||DB.bill.status=='confirmed'&&DB.invoices.every(i=>i.status=='verified'),fix:'有发票未校验通过'},
     {t:'6. 无进行中的营销活动',ok:true,fix:''},
     {t:'7. 末笔订单完成满 30 天',ok:true,fix:''},
-    {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='judged'),fix:'有售后工单未结案'},
+    {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='closed'),fix:'有售后工单未结案'},
     {t:'9. 无欠款或负账单',ok:DB.merchant.vioScore<6,fix:'存在未处理违规/罚款'},
     {t:'10. 符合平台规则及法律法规',ok:true,fix:''},
   ];
@@ -1515,7 +1550,7 @@ PAGES['p-prodaudit']=()=>{
   <div class="card"><div class="card-hd"><h3>在售商品监管</h3><span class="sub">SPU 强制下架 · ${on.length} 在售</span></div><div class="card-bd flush"><table><thead><tr><th>商品</th><th>品类</th><th>规格数</th><th>状态</th><th>操作</th></tr></thead><tbody>${on.map(p=>{const i=DB.products.indexOf(p);return `<tr><td><b>${p.name}</b> <span class="mono" style="color:var(--ts)">${p.id}</span></td><td>${p.cat||'—'}</td><td>${p.skus.length}</td><td>${tag('product','onsale')}</td><td><button class="btn btn-d btn-sm" onclick="act_forceOff(${i})">强制下架</button></td></tr>`;}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--ts);padding:20px">暂无在售商品</td></tr>'}</tbody></table></div></div>`;
 };
 function auditSkuTable(p){return `<table class="subtbl"><thead><tr><th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th>价格</th><th>可售库存</th><th>价格校验</th></tr></thead><tbody>${p.skus.map(s=>{const abn=s.price>0&&priceAbnormal(s.price,p.cat);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}</td><td>${s.qty}</td><td>${s.pack||p.unit}</td><td>${money(s.price||0)}</td><td>${s.stock||0}</td><td>${abn?'<span class="tag t-y">价格异常</span>':'<span class="tag t-g">正常</span>'}</td></tr>`;}).join('')}</tbody></table>`;}
-function act_approveSku(pi,ki){delete DB.products[pi].skus[ki].review;render();toast('新增规格审核通过，已可售','ok');}
+function act_approveSku(pi,ki){delete DB.products[pi].skus[ki].review;DB.products[pi].skus[ki].updatedAt=ts();render();toast('新增规格审核通过，已可售','ok');}
 function act_rejectSku(pi,ki){const p=DB.products[pi];const sid=p.skus[ki].skuId;p.skus.splice(ki,1);render();toast('已驳回并移除规格 '+sid,'info');}
 function act_viewQC(id){const p=DB.products.find(x=>x.id==id);modalWide(`<div class="mc-hd"><h3>🧪 质检报告复核 · ${p.name}</h3><p>第三层品控前置 · ${p.cat}（高风险）</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ck ok"><div class="cb">✓</div>报告编号 QC-2026-${(6600+DB.products.indexOf(p))}<span class="cx">有效</span></div><div class="ck ok"><div class="cb">✓</div>检测机构 SGS 新加坡<span class="cx">认证</span></div><div class="ck ok"><div class="cb">✓</div>农残/微生物/重金属<span class="cx">全部合格</span></div><div class="ck ok"><div class="cb">✓</div>报告有效期内（2026-12-31）<span class="cx">通过</span></div><div class="up done" style="margin-top:6px"><div class="uic">📎</div><div class="ut">质检报告_${p.name}.pdf ✓</div></div></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">复核通过</button></div>`);}
 
@@ -1532,6 +1567,84 @@ PAGES['p-auditcfg']=()=>{
 };
 function toggleAuditCfg(k){DB.auditCfg[k]=!DB.auditCfg[k];render();toast('审核配置已更新','ok');}
 
+/* ---------- 平台：佣金配置（运营平台配置佣金率 · 分层：品类默认 + 商家专属覆盖 · 支持免佣期） ---------- */
+const COMM_SHOPS=[{code:'M2026-0815',name:'绿鲜源蔬果旗舰店'},{code:'M2026-0820',name:'阳光烘焙原料店'},{code:'M2026-0805',name:'椰丰食品旗舰店'}];
+function pctFmt(r){return (r*100).toFixed((r*100)%1?1:0)+'%';}
+function rateBadges(r){if(!r)return '<span style="color:var(--ts)">—</span>';const s=r.svc||0,l=r.logi||0;return `<span style="white-space:nowrap">服务 <b>${pctFmt(s)}</b> ＋ 物流 <b>${pctFmt(l)}</b> <span style="color:var(--ts)">= ${pctFmt(s+l)}</span></span>`;}
+/* 两输入（服务/物流）行；id 生成 <idp>-svc / <idp>-logi */
+function commPairInput(idp,svc,logi){return `<div style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin:0">服务佣金 <input type="number" step="0.5" min="0" max="50" id="${idp}-svc" value="${svc}" placeholder="0" style="max-width:82px"> %</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin:0">物流佣金 <input type="number" step="0.5" min="0" max="50" id="${idp}-logi" value="${logi}" placeholder="0" style="max-width:82px"> %</label></div>`;}
+/* 读取一组服务/物流输入；两项皆空→null；否则空项按0 */
+function readRatePair(idp){const se=document.getElementById(idp+'-svc'),le=document.getElementById(idp+'-logi');const s=se?parseFloat(se.value):NaN,l=le?parseFloat(le.value):NaN;if(isNaN(s)&&isNaN(l))return null;const cl=v=>isNaN(v)||v<0?0:(v>50?50:v);return {svc:+(cl(s)/100).toFixed(4),logi:+(cl(l)/100).toFixed(4)};}
+PAGES['p-commission']=()=>{
+  const cfg=DB.commCfg,cats=Object.keys(cfg.catBase);
+  const baseRows=cats.map(c=>{const r=cfg.catBase[c];return `<tr><td><b>${c}</b>${CATS[c]&&CATS[c].baseRisk=='高'?' <span class="tag t-r" style="font-size:10px">高风险</span>':''}</td><td class="mono">${pctFmt(r.svc)}</td><td class="mono">${pctFmt(r.logi)}</td><td class="mono"><b>${pctFmt(r.svc+r.logi)}</b></td><td style="color:var(--ts)">成交额 × 费率</td></tr>`;}).join('');
+  const merchRows=Object.entries(cfg.merchants).map(([code,m])=>{
+    const catList=Object.entries(m.cats||{});
+    return `<tr>
+      <td><b>${m.name}</b></td>
+      <td class="mono">${code}</td>
+      <td>${m.shopDefault?rateBadges(m.shopDefault):'<span style="color:var(--ts)">— 用品类默认</span>'}</td>
+      <td>${catList.length?catList.map(([c,r])=>`<div style="margin-bottom:3px"><span class="tag t-pp" style="font-size:11px">${c}</span> ${rateBadges(r)}</div>`).join(''):'<span style="color:var(--ts)">—</span>'}</td>
+      <td>${m.freeUntil?`<span class="tag t-y"><span class="dot"></span>至 ${m.freeUntil}</span>`:'<span style="color:var(--ts)">无</span>'}</td>
+      <td><button class="btn btn-link" onclick="act_editMerchComm('${code}')">编辑</button> <button class="btn btn-link" onclick="act_delMerchComm('${code}')">移除</button></td>
+    </tr>`;
+  }).join('');
+  return `${flowTip(`<b>佣金率分层配置</b>：佣金分<b>服务佣金</b>+<b>物流佣金</b>两项。平台先按<b>品类</b>设默认；再对<b>特定商家</b>整体或按品类<b>覆盖</b>。下单时按订单每行商品所属品类锁定生效费率。<b>生效优先级：商家×品类 > 商家默认 > 品类默认</b>；免佣期内两项均=0。`)}
+  <div class="card"><div class="card-hd"><h3>📦 品类默认佣金率</h3><span class="sub">全平台兜底 · ${cats.length} 个前台类目</span><button class="btn btn-o btn-sm" onclick="act_editCatBase()">编辑品类默认</button></div>
+    <div class="card-bd flush"><table><thead><tr><th>前台类目</th><th>服务佣金</th><th>物流佣金</th><th>合计</th><th>计费口径</th></tr></thead><tbody>${baseRows}</tbody></table></div>
+  </div>
+  <div class="card"><div class="card-hd"><h3>🏪 商家专属佣金率</h3><span class="sub">覆盖品类默认 · 已配置 ${Object.keys(cfg.merchants).length} 家</span><button class="btn btn-p btn-sm" onclick="act_addMerchComm()">＋ 新增商家配置</button></div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr><th>店铺</th><th>店铺编号</th><th>全店默认（服务/物流）</th><th>品类专属（覆盖全店默认）</th><th>免佣期</th><th>操作</th></tr></thead>
+      <tbody>${merchRows||'<tr><td colspan="6"><div class="empty" style="padding:26px"><div class="e-ic">🏪</div><div class="e-t">暂无商家专属配置</div><div class="e-s">未配置的商家按「品类默认佣金率」计佣</div></div></td></tr>'}</tbody>
+    </table></div></div>
+  </div>`;
+};
+function act_editCatBase(){
+  modal(`<div class="mc-hd"><h3>编辑品类默认佣金率</h3><p>作用于未配置专属费率的商家 · 服务佣金 + 物流佣金</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    ${Object.keys(DB.commCfg.catBase).map(c=>{const r=DB.commCfg.catBase[c];return `<div class="fr" style="margin-bottom:12px"><label class="fl">${c}</label>${commPairInput('cmb-'+c,r.svc*100,r.logi*100)}</div>`;}).join('')}
+    <div class="ib ib-gr"><span class="i">ℹ️</span>每项 0–50%，支持 0（免佣）。修改仅对<b>新下单</b>生效，已锁定订单不变。</div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_saveCatBase()">保存</button></div>`);
+}
+function act_saveCatBase(){
+  Object.keys(DB.commCfg.catBase).forEach(c=>{const r=readRatePair('cmb-'+c);if(r)DB.commCfg.catBase[c]=r;});
+  closeModal();render();toast('品类默认佣金率已保存','ok');
+}
+function merchCommForm(code,m){
+  const cats=Object.keys(DB.commCfg.catBase),sd=m.shopDefault;
+  return `<div class="fr"><label class="fl">全店默认佣金率（两项都留空则用品类默认）</label>${commPairInput('cm-shop',sd?sd.svc*100:'',sd?sd.logi*100:'')}</div>
+    <div class="fr"><label class="fl">免佣期截止日期（留空=无免佣期，期内两项均0）</label><input type="date" id="cm-free" value="${m.freeUntil||''}" style="max-width:220px"></div>
+    <div class="fr"><label class="fl">品类专属费率（勾选并填写将覆盖全店默认）</label>
+      ${cats.map(c=>{const on=m.cats&&m.cats[c]!=null,r=on?m.cats[c]:{svc:'',logi:''};return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:9px;flex-wrap:wrap"><label class="chip-ck ${on?'on':''}" style="min-width:118px"><input type="checkbox" id="cmc-ck-${c}" ${on?'checked':''} onchange="this.closest('.chip-ck').classList.toggle('on',this.checked)">${c}</label>${commPairInput('cmc-'+c,on?r.svc*100:'',on?r.logi*100:'')}</div>`;}).join('')}
+    </div>
+    <div class="ib ib-b"><span class="i">ℹ️</span>生效优先级：<b>品类专属 > 全店默认 > 品类默认</b>；免佣期内两项一律 0。修改仅对新下单生效。</div>`;
+}
+function act_editMerchComm(code){
+  const m=DB.commCfg.merchants[code];
+  modalWide(`<div class="mc-hd"><h3>商家专属佣金率 · ${m.name}</h3><p>${code}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">${merchCommForm(code,m)}</div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_saveMerchComm('${code}')">保存</button></div>`);
+}
+function act_saveMerchComm(code){
+  const m=DB.commCfg.merchants[code]||(DB.commCfg.merchants[code]={name:(COMM_SHOPS.find(s=>s.code==code)||{}).name||code,shopDefault:null,cats:{},freeUntil:''});
+  m.shopDefault=readRatePair('cm-shop');   // 两项皆空→null=用品类默认
+  m.freeUntil=document.getElementById('cm-free').value||'';
+  m.cats={};
+  Object.keys(DB.commCfg.catBase).forEach(c=>{if(document.getElementById('cmc-ck-'+c).checked){const r=readRatePair('cmc-'+c);if(r)m.cats[c]=r;}});
+  closeModal();render();toast('商家专属佣金率已保存','ok');
+}
+function act_delMerchComm(code){
+  modal(`<div class="mc-hd"><h3>移除商家专属配置</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>移除后 <b>${DB.commCfg.merchants[code].name}</b> 将按<b>品类默认佣金率</b>计佣。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="delete DB.commCfg.merchants['${code}'];closeModal();render();toast('已移除专属配置','info')">确认移除</button></div>`);
+}
+function act_addMerchComm(){
+  const avail=COMM_SHOPS.filter(s=>!DB.commCfg.merchants[s.code]);
+  if(!avail.length){toast('所有店铺均已配置专属费率','info');return;}
+  modal(`<div class="mc-hd"><h3>新增商家专属配置</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">选择店铺</label><select id="cm-newshop">${avail.map(s=>`<option value="${s.code}">${s.name}（${s.code}）</option>`).join('')}</select></div><div class="ib ib-gr"><span class="i">ℹ️</span>选定后进入费率编辑，可设全店默认 / 品类专属 / 免佣期。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_addMerchNext()">下一步 · 配置费率</button></div>`);
+}
+function act_addMerchNext(){
+  const code=document.getElementById('cm-newshop').value,name=(COMM_SHOPS.find(s=>s.code==code)||{}).name||code;
+  DB.commCfg.merchants[code]={name,shopDefault:null,cats:{},freeUntil:''};
+  closeModal();act_editMerchComm(code);
+}
+
 /* ---------- 平台：对账结算（闭环D 平台侧） ---------- */
 PAGES['p-settle']=()=>{
   const b=DB.bill;
@@ -1540,7 +1653,7 @@ PAGES['p-settle']=()=>{
   <div class="card"><div class="card-hd"><h3>${b.period} 结算</h3>${tag('bill',b.status)}</div><div class="card-bd">
     ${b.status=='none'?`<div class="ib ib-b"><span class="i">🧮</span>当前可结算订单 ${billable.length} 笔（已完成）。点击生成对账单并推送商家。${billable.length?'':'<br><b>提示：</b>请先在「商家端 → 订单履约」完成订单履约（打包贴码 → 交接发货 → 订单完成）。'}</div>
       <button class="btn btn-p btn-lg" ${billable.length?'':'disabled'} onclick="act_genBill()">生成对账单并推送</button>`
-    :`<div class="kv" style="margin-bottom:16px"><div><div class="k">订单总额</div><div class="v">${money(b.gross)}</div></div><div><div class="k">逆向扣减</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div><div><div class="k">服务费</div><div class="v">${money(b.fee)}</div></div><div><div class="k">应结净额</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>`}
+    :`<div class="kv" style="margin-bottom:16px"><div><div class="k">订单总额</div><div class="v">${money(b.gross)}</div></div><div><div class="k">逆向扣减</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div><div><div class="k">服务佣金</div><div class="v" style="color:var(--r)">-${money(b.feeSvc||0)}</div></div><div><div class="k">物流佣金</div><div class="v" style="color:var(--r)">-${money(b.feeLogi||0)}</div></div><div><div class="k">应结净额</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>`}
     ${b.status=='generated'?`<div class="ib ib-y"><span class="i">⏳</span>已推送商家，等待商家确认或提出异议。</div>`:''}
     ${b.status=='disputed'?`<div class="ib ib-r"><span class="i">📝</span>商家提出异议：<b>${b.dispute}</b><br>请核查后调整对账单（数量差异/价格差异/退货未冲减/单边账）。</div><button class="btn btn-p btn-lg" onclick="act_adjustBill()">核查并出具调整后对账单</button>`:''}
     ${b.status=='adjusted'?`<div class="ib ib-b"><span class="i">⏳</span>调整后对账单已推送，等待商家复核确认。</div>`:''}
@@ -1574,12 +1687,16 @@ PAGES['p-invoice']=()=>{
 
 /* ---------- 平台：售后判责（闭环E 平台侧） ---------- */
 PAGES['p-aftersale']=()=>{
-  return `${flowTip(`对餐厅售后申请进行<b>三方判责</b>（商家/平台/买家责）并决定退款方式。判商家责的从其货款扣减，回写商家端。`)}
-  <div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">待判责 ${DB.afterSales.filter(a=>a.status=='pending').length}</span></div><div class="card-bd flush"><table>
-    <thead><tr><th>工单号</th><th>客户/订单</th><th>商品/原因</th><th>时效</th><th>金额</th><th>操作</th></tr></thead><tbody>
-    ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${a.client}<div style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td><span class="tag ${a.age.includes('小时')?'t-g':'t-y'}">${a.age}</span></td><td>${money(a.amt)}</td><td>${a.status=='pending'?`<button class="btn btn-p btn-sm" onclick="act_judge(${i})">判责</button>`:liableTag(a)}</td></tr>`).join('')}
-  </tbody></table></div></div>`;
+  return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">三方判责（商家/平台/买家）· 待判责 ${DB.afterSales.filter(a=>a.status=='pending').length} · 待复核 ${DB.afterSales.filter(a=>a.status=='appealing').length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>时效</th><th>金额</th><th>操作</th></tr></thead><tbody>
+    ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td><span class="tag ${a.type=='退货退款'?'t-pp':'t-y'}" style="font-size:11px">${a.type}</span></td><td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td><span class="tag t-g">${a.age}</span></td><td>${money(a.amt)}</td><td>${afterPlatOps(a,i)}</td></tr>`).join('')}
+  </tbody></table></div></div></div>`;
 };
+function afterPlatOps(a,i){
+  if(a.status=='pending')return `<button class="btn btn-p btn-sm" onclick="act_judge(${i})">判责</button>`;
+  if(a.status=='appealing')return `<div style="font-size:11.5px;color:var(--b);margin-bottom:4px">申诉：${(a.appeal||'').slice(0,16)}…</div><button class="btn btn-p btn-sm" onclick="act_reviewAppeal(${i},false)">申诉成立·改判</button> <button class="btn btn-o btn-sm" onclick="act_reviewAppeal(${i},true)">维持原判</button>`;
+  return afterStatus(a);
+}
 
 /* ---------- 平台：违规处置（闭环F 平台侧） ---------- */
 PAGES['p-violation']=()=>{
@@ -1641,7 +1758,7 @@ function act_rejectTask(){
 // 资质
 function act_renewQual(i){DB.quals[i].status='valid';DB.quals[i].expire='2028-06-29';render();toast(`${DB.quals[i].name} 新证已上传，审核通过，自动恢复`,'ok');}
 // 闭环B 商品（平台侧）
-function act_approveProduct(i){const p=DB.products[i];p.status='onsale';p.reject='';p.note='';render();toast(`「${p.name}」审核通过，已上架在售（落商家商品表）`,'ok');}
+function act_approveProduct(i){const p=DB.products[i];p.status='onsale';p.reject='';p.note='';p.updatedAt=ts();render();toast(`「${p.name}」审核通过，已上架在售（落商家商品表）`,'ok');}
 function act_rejectProduct(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>驳回 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">驳回原因（回写商家端）</label><textarea id="pr-reason">商品主图不清晰，且产地信息与资质备案地不符，请补充后重新提报。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.products[${i}].status='rejected';DB.products[${i}].reject=document.getElementById('pr-reason').value;closeModal();render();toast('已驳回，原因已回写商家端','info')">确认驳回</button></div>`);}
 function act_forceOff(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>强制下架 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>强制下架立即生效并通知商家整改；恢复需整改重提 + 品控二次复核。</div><div class="fr"><label class="fl">下架原因</label><select id="fo-reason"><option>品控抽检农残超标</option><option>资质到期失效</option><option>价格/规格违规</option><option>食品安全投诉</option></select></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.products[${i}].status='forced_off';DB.products[${i}].reject=document.getElementById('fo-reason').value+'，已强制下架，整改后重新提报（需品控复核）。';closeModal();render();toast('已强制下架并通知商家','info')">确认强制下架</button></div>`);}
 // 闭环C 订单履约：待发货 →（汇总拣货·按SKU总量 + 分拣贴标·客户×SKU）已贴标 →（仓库确认收货·标签到齐）已发货 → 订单主状态；缺货整单取消退款
@@ -1713,16 +1830,14 @@ function ord_shortage(i){const o=DB.orders[i];
 }
 function ord_doShortage(i){DB.orders[i].status='canceled';closeModal();render();toast(`${DB.orders[i].id} 已整单取消并退款客户`,'info');}
 function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pending:0,packed:0,shipped:1,received:2,done:3};
-  modalWide(`<div class="mc-hd"><h3>订单 ${o.id}</h3><p>${o.client} · 下单 ${o.orderTime||''}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  drawer(`<div class="drawer-hd"><div><h3>订单 ${o.id}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ord_mask(o.client)} · 下单 ${o.orderTime||''}</div></div><span class="x" onclick="closeDrawer()">×</span></div><div class="drawer-bd">
     <div class="card" style="box-shadow:none;margin-bottom:14px"><div class="card-bd">${pipe(['待发货','待收货','已收货','已完成'],rej?0:map[o.status],rej?0:-1)}${o.status=='packed'?'<div style="text-align:center;font-size:12px;color:var(--pp);margin-top:4px">待发货内：已分拣贴标，待交接仓库收货</div>':''}</div></div>
-    <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden;margin-bottom:14px"><thead><tr><th>SKU</th><th>商品</th><th>数量</th><th>原价</th><th>小计</th></tr></thead><tbody>${(o.lines||[]).map(l=>`<tr><td class="mono">${l.sku}</td><td><b>${l.name}</b></td><td>${l.qty}${l.unit}${(o.status=='pending'||o.status=='packed')?' <span class="tag t-gr" style="font-size:10px">已预订</span>':''}</td><td>${money(l.price)}/${l.unit}</td><td>${money(l.qty*l.price)}</td></tr>`).join('')}</tbody></table>
-    <div style="border:1px solid var(--bd2);border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:13.5px">
-      <div style="display:flex;justify-content:space-between;padding:5px 0"><span>商品总价<span style="color:var(--ts)">（共 ${(o.lines||[]).length} 件）</span></span><span>${money(o.amt)}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0"><span>合作商优惠（商家出）</span><span style="color:var(--r)">-${money(ord_disc(o))}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:5px 0"><span>平台基础服务费（${(DB.orderCfg.commRate*100).toFixed(0)}%，预估）</span><span style="color:var(--r)">-${money(ord_fee(o))}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:9px 0 2px;border-top:1px solid var(--bd2);margin-top:6px;font-weight:700"><span>预计收入</span><span style="color:var(--gd);font-size:16px">${money(ord_income(o))}</span></div>
-      <div style="font-size:11.5px;color:var(--ts);margin-top:5px">预计收入仅供参考，实际以订单实际完成情况为准 · 结算时点：客户订单完成后 3 个自然日</div>
-    </div>
+    <div style="overflow-x:auto;margin-bottom:8px"><table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden">
+      <thead><tr><th>商品</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right">服务佣金(预估)</th><th style="text-align:right">物流佣金(预估)</th><th style="text-align:right">预计收入(预估)</th></tr></thead><tbody>
+      ${(()=>{const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';return (o.lines||[]).map(l=>{const amt=l.qty*l.price,r=commRates(code,lineCat(l),d),svc=amt*r.svc,logi=amt*r.logi,disc=o.amt?ord_disc(o)*amt/o.amt:0,inc=amt-disc-svc-logi;return `<tr><td><b>${l.name}</b> <span style="color:var(--ts);font-size:12px">${l.qty}${l.unit} · ${money(l.price)}/${l.unit}</span>${(o.status=='pending'||o.status=='packed')?' <span class="tag t-gr" style="font-size:10px">已预订</span>':''}</td><td style="text-align:right">${money(amt)}</td><td style="text-align:right;color:var(--r)">-${money(disc)}</td><td style="text-align:right;color:var(--r)">-${money(svc)}</td><td style="text-align:right;color:var(--r)">-${money(logi)}</td><td style="text-align:right;color:var(--gd)"><b>${money(inc)}</b></td></tr>`;}).join('');})()}
+      <tr style="font-weight:700;background:var(--gl)"><td>合计（共 ${(o.lines||[]).length} 件）</td><td style="text-align:right">${money(o.amt)}</td><td style="text-align:right;color:var(--r)">-${money(ord_disc(o))}</td><td style="text-align:right;color:var(--r)">-${money(ord_feeSvc(o))}</td><td style="text-align:right;color:var(--r)">-${money(ord_feeLogi(o))}</td><td style="text-align:right;color:var(--gd)">${money(ord_income(o))}</td></tr>
+      </tbody></table></div>
+    <div style="font-size:11.5px;color:var(--ts);margin-bottom:14px">服务佣金 + 物流佣金按各商品所属<b>品类佣金率</b>${ord_fee(o)>0?'（合计综合 '+(ord_feePct(o)*100).toFixed(1)+'%）':'（免佣期）'}逐行计 · 预计收入 = 订单金额 − 商家补贴 − 服务佣金 − 物流佣金,均为<b>预估</b>,以订单实际完成为准 · 结算：完成后 3 天</div>
     <div class="card" style="box-shadow:none;margin-bottom:0"><div class="card-hd"><h3 style="font-size:14px">订单信息</h3></div><div class="card-bd"><dl class="dl">
       <dt>收货信息</dt><dd>${ord_mask(o.client)}<span style="color:var(--ts);font-weight:400;font-size:12px;margin-left:6px">（信息已脱敏）</span></dd>
       <dt>下单时间</dt><dd>${o.orderTime||'—'}</dd>
@@ -1733,7 +1848,7 @@ function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pendin
     ${o.labels&&o.labels.length?`<div class="ib ib-b"><span class="i">🏷️</span>SKU 标签 ${o.labels.length} 张：${o.labels.map(p=>`<span class="mono">${p.code}</span>`).join('、')}</div>`:''}
     ${o.status=='done'?`<div class="ib ib-g"><span class="i">✅</span>订单已完成（${o.doneDate||''}）。预计结算日：完成后 3 天。</div>`:''}
     ${rej?`<div class="ib ib-r"><span class="i">⛔</span>缺货整单取消，已退款客户 ${money(o.amt)}。</div>`:''}
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button>${o.status=='pending'?`<button class="btn btn-d" onclick="closeModal();ord_shortage(${i})">缺货整单取消</button><button class="btn btn-p" onclick="closeModal();ord_relabel(${i})">🏷️ 打印条码</button>`:''}</div>`);
+  </div><div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${o.status=='pending'?`<button class="btn btn-p" onclick="closeDrawer();ord_relabel(${i})">🏷️ 打印条码</button>`:''}</div>`);
 }
 function ord_settings(){
   modal(`<div class="mc-hd"><h3>下单截止时间设置</h3><p>店铺统一配置一个截止时间，不分品类</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">⏰</span>截止<b>前</b>下单 → <b>次日</b>达；截止<b>后</b>下单 → <b>次次日</b>达。下单即锁定预计送达日，不可拒单。</div><div class="fr"><label class="fl">下单截止时间</label><input type="time" id="ord-cutoff" value="${DB.orderCfg.cutoff}"></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="ord_saveCutoff()">保存</button></div>`);
@@ -1745,15 +1860,18 @@ function ord_sim(){
   const clients=['鼎泰丰（ION）','翡翠拉面小笼包','松发肉骨茶','亚坤','珍宝海鲜'];
   DB.orderSeq=(DB.orderSeq||4)+1;const seq=DB.orderSeq,qty=10+seq;
   const o={id:'#SG20260630'+String(seq).padStart(3,'0'),client:clients[seq%clients.length],contact:'联系人',phone:'+65 8'+(100+seq)+' '+(1000+seq),addr:'Singapore #01-0'+seq,orderTime:`06-30 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,deliver:dl,deliverWindow:'06:00~10:00',warehouse:'新加坡B端仓',amt:+(qty*9.30).toFixed(2),discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty,unit:'kg',price:9.30}],status:'pending',labels:[],note:''};
-  DB.orders.unshift(o);render();toast(`新订单 ${o.id}：${before?'截止前→次日达':'截止后→次次日达'} ${dl}；佣金 ${(DB.orderCfg.commRate*100).toFixed(0)}% 已锁定`,'ok');
+  DB.orders.unshift(o);render();toast(`新订单 ${o.id}：${before?'截止前→次日达':'截止后→次次日达'} ${dl}；${ord_fee(o)>0?'佣金已按品类锁定（综合'+(ord_feePct(o)*100).toFixed(1)+'%）':'当前免佣期，佣金 0'}`,'ok');
 }
 // 闭环D 结算
 function act_genBill(){
   const signed=DB.orders.filter(o=>o.status=='done');
   const gross=signed.reduce((s,o)=>s+o.amt,0)+7280; // +历史已完成
-  const reverse=DB.afterSales.filter(a=>a.status=='judged'&&a.liable=='商家').reduce((s,a)=>s+a.amt,0);
-  const net=gross-reverse;
-  DB.bill={period:'2026年6月',status:'generated',gross,reverse,fee:0,net,dispute:'',items:[['订单货款（含历史）',signed.length+90,gross],['逆向扣减（售后判商家责）',DB.afterSales.filter(a=>a.status=='judged'&&a.liable=='商家').length,-reverse],['平台服务费（免佣期）',0,0]]};
+  const reverse=DB.afterSales.filter(a=>(a.status=='judged'||a.status=='closed')&&a.liable=='商家').reduce((s,a)=>s+a.amt,0);
+  const feeSvc=signed.reduce((s,o)=>s+ord_feeSvc(o),0);   // 服务佣金（按品类逐单计，免佣期内0）
+  const feeLogi=signed.reduce((s,o)=>s+ord_feeLogi(o),0); // 物流佣金
+  const fee=feeSvc+feeLogi;
+  const net=gross-reverse-fee;
+  DB.bill={period:'2026年6月',status:'generated',gross,reverse,fee,feeSvc,feeLogi,net,dispute:'',items:[['订单货款（含历史）',signed.length+90,gross],['逆向扣减（售后判商家责）',DB.afterSales.filter(a=>(a.status=='judged'||a.status=='closed')&&a.liable=='商家').length,-reverse],[feeSvc>0?'服务佣金（按品类佣金率）':'服务佣金（免佣期）',signed.length,-feeSvc],[feeLogi>0?'物流佣金（按品类佣金率）':'物流佣金（免佣期）',signed.length,-feeLogi]]};
   // 生成发票占位（每签收订单一张 + 历史合并一张）
   DB.invoices=signed.map(o=>({order:o.id,client:o.client,amt:o.amt,status:'none',no:'',reject:''}));
   DB.invoices.push({order:'#2026历史合并',client:'多客户(90笔)',amt:gross-signed.reduce((s,o)=>s+o.amt,0),status:'none',no:'',reject:''});
@@ -1785,19 +1903,50 @@ function act_pay(){DB.payment='paid';render();toast(`已打款 ${money(DB.bill.n
 function act_payFail(){
   modal(`<div class="mc-hd"><h3>打款失败处理</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⛔</span>银行返回：收款账户名与开户信息不一致。</div><p style="font-size:13px;color:var(--ts)">失败原因识别：账户有误 / 注销 / 冻结 / 限额。已通知商家更新账户（3 工作日内），可重试或转人工。</p></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">转人工介入</button><button class="btn btn-p" onclick="DB.payment='paid';closeModal();render();toast('账户已更新，重试打款成功','ok')">商家已更新·重试</button></div>`);
 }
-// 闭环E 售后
-function act_judge(i){
-  const a=DB.afterSales[i];
-  modalWide(`<div class="mc-hd"><h3>售后判责 · ${a.id}</h3><p>${a.client} · ${a.item} · ${a.reason}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="ib ib-gr"><span class="i">⚖️</span>外观可判直接认定；争议时聚类同类投诉核查。选择责任方与退款方式：</div>
+// 闭环E 逆向售后：餐厅发起(已收货) → 平台三方判责 → 商家申诉 → 退货退款回仓 → 逆向扣减对账
+// 商家端：模拟餐厅对已收货订单发起售后
+function ord_afterSale(i){const o=DB.orders[i];
+  modal(`<div class="mc-hd"><h3>发起售后 · ${o.id}</h3><p>已收货订单在时效内可申请（演示：模拟餐厅端发起）</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <div class="fg2"><div class="fr"><label class="fl">售后类型</label><select id="as-type"><option>退款不退货</option><option>退货退款</option></select></div><div class="fr"><label class="fl">申请商品</label><select id="as-item">${o.lines.map(l=>`<option>${l.name} ${l.qty}${l.unit}</option>`).join('')}</select></div></div>
+    <div class="fr"><label class="fl">原因（附图）</label><textarea id="as-reason">部分腐烂变质，附图 3 张</textarea></div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="ord_doAfterSale(${i})">提交售后申请</button></div>`);
+}
+function ord_doAfterSale(i){const o=DB.orders[i],type=document.getElementById('as-type').value,item=document.getElementById('as-item').value,reason=document.getElementById('as-reason').value;
+  DB.afterSales.unshift({id:'AS-'+o.id.slice(-6),client:o.client,order:o.id,item,reason,age:'签收后2小时',type,amt:o.amt,status:'pending',liable:'',refundType:'',appeal:'',returnStatus:type=='退货退款'?'待退货':''});
+  closeModal();render();toast(`已发起售后（${type}），等待平台判责`,'ok');
+}
+// 平台端：三方判责
+function act_judge(i){const a=DB.afterSales[i];
+  modalWide(`<div class="mc-hd"><h3>售后判责 · ${a.id}</h3><p>${ord_mask(a.client)} · ${a.item} · <span class="tag ${a.type=='退货退款'?'t-pp':'t-y'}" style="font-size:11px">${a.type}</span></p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <div class="ib ib-gr"><span class="i">⚖️</span>申请原因：${a.reason}（${a.age}）。${a.type=='退货退款'?'判非买家责后需餐厅退货回仓再结案。':'退款不退货，判责即结案。'}选择责任方：</div>
     <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
-      <div class="rc" style="background:var(--rl);border:1px solid #FCA5A5;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'商家','退款不退货·从货款扣减')"><div style="font-weight:700">商家责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">腐烂/缺斤/规格不符<br><b style="color:var(--r)">退款不退货，扣商家货款</b></p></div>
-      <div class="rc" style="background:var(--bl);border:1px solid #93C5FD;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'平台','平台承担·退款至餐厅')"><div style="font-weight:700">平台责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">配送损坏/描述有误<br><b style="color:var(--b)">平台退款，内部追责</b></p></div>
-      <div class="rc" style="background:#F3F4F6;border:1px solid var(--bd);border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'买家','驳回·买家承担')"><div style="font-weight:700">买家责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">主观认知差异<br><b>驳回申请</b></p></div>
+      <div class="rc" style="background:var(--rl);border:1px solid #FCA5A5;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'商家')"><div style="font-weight:700">商家责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">腐烂/缺斤/规格不符<br><b style="color:var(--r)">退款，扣商家货款${a.type=='退货退款'?'·货回商家仓':''}</b></p></div>
+      <div class="rc" style="background:var(--bl);border:1px solid #93C5FD;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'平台')"><div style="font-weight:700">平台责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">配送损坏/描述有误<br><b style="color:var(--b)">平台退款，内部追责</b></p></div>
+      <div class="rc" style="background:#F3F4F6;border:1px solid var(--bd);border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'买家')"><div style="font-weight:700">买家责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">主观认知差异<br><b>驳回申请</b></p></div>
     </div>
   </div>`);
 }
-function doJudge(i,liable,refundType){DB.afterSales[i].status='judged';DB.afterSales[i].liable=liable;DB.afterSales[i].refundType=refundType;closeModal();render();toast(`已判定为${liable}责`,liable=='商家'?'info':'ok');}
+function doJudge(i,liable){const a=DB.afterSales[i];a.liable=liable;
+  if(liable=='买家'){a.refundType='驳回·买家承担';a.status='closed';a.returnStatus='';}
+  else if(a.type=='退货退款'){a.refundType=liable=='商家'?'退货退款·货退回商家仓·扣商家货款':'平台承担·退款·平台回收';a.status='judged';a.returnStatus='退货在途';}
+  else{a.refundType=liable=='商家'?'退款不退货·扣商家货款':'平台承担·退款至餐厅';a.status='closed';}
+  closeModal();render();toast(`已判定为${liable}责`,liable=='商家'?'info':'ok');
+}
+// 商家端：申诉
+function act_appeal(i){const a=DB.afterSales[i];
+  modal(`<div class="mc-hd"><h3>申诉 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📣</span>对判责结果有异议可申诉，平台将复核。</div><div class="fr"><label class="fl">申诉理由（附证据）</label><textarea id="ap-reason">出库前已拍照留证，货品无质量问题，疑为配送环节导致，申请重新判责。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.afterSales[${i}].status='appealing';DB.afterSales[${i}].appeal=document.getElementById('ap-reason').value;closeModal();render();toast('申诉已提交，平台复核中','ok')">提交申诉</button></div>`);
+}
+// 平台端：复核申诉
+function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];
+  if(uphold){a.status='closed';a.appeal=(a.appeal||'')+'（平台复核：维持原判·商家责）';render();toast('复核完成：维持原判','info');}
+  else{a.liable='平台';a.refundType='申诉成立·改判平台责·退款至餐厅';a.status='closed';a.returnStatus='';render();toast('复核完成：申诉成立，改判平台责','ok');}
+}
+// 商家/仓：退货退款回仓确认
+function act_returnReceive(i){const a=DB.afterSales[i];a.returnStatus='已回仓';a.status='closed';render();toast(`${a.id} 退货已回仓，售后结案`,'ok');}
+// 售后详情
+function act_afterDetail(i){const a=DB.afterSales[i];
+  modal(`<div class="mc-hd"><h3>售后工单 ${a.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><dl class="dl"><dt>订单</dt><dd class="mono">${a.order}</dd><dt>客户</dt><dd>${ord_mask(a.client)}</dd><dt>类型</dt><dd>${a.type}</dd><dt>商品</dt><dd>${a.item}</dd><dt>原因</dt><dd>${a.reason}</dd><dt>金额</dt><dd>${money(a.amt)}</dd><dt>判责</dt><dd>${a.liable?a.liable+'责 · '+a.refundType:'待判责'}</dd>${a.appeal?`<dt>申诉</dt><dd>${a.appeal}</dd>`:''}${a.returnStatus?`<dt>退货</dt><dd>${a.returnStatus}</dd>`:''}</dl></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
+}
 // 闭环F 违规
 function act_addViolation(type,score,fine,detail){
   DB.violations.push({date:'2026-06-29',type,detail,score,fine});
@@ -1820,7 +1969,7 @@ function act_reviewRectify(pass){
 function act_clearExitBlocks(){
   DB.products.forEach(p=>{if(p.status=='onsale'||p.status=='reviewing')p.status='offsale';});
   DB.orders.forEach(o=>{if(o.status=='pending'||o.status=='packed'||o.status=='shipped'||o.status=='received')o.status='done';});
-  DB.afterSales.forEach(a=>{if(a.status=='pending'){a.status='judged';a.liable='买家';a.refundType='驳回·买家承担';}});
+  DB.afterSales.forEach(a=>{if(a.status!='closed'){a.status='closed';if(!a.liable){a.liable='买家';a.refundType='驳回·买家承担';}a.returnStatus='';}});
   if(DB.bill.status!='none'&&DB.bill.status!='confirmed'){DB.bill.status='confirmed';}
   DB.invoices.forEach(iv=>iv.status='verified');
   if(DB.merchant.vioScore>=6){DB.merchant.vioScore=0;DB.rectify='passed';}
@@ -1841,7 +1990,7 @@ function act_merchant360(){
   </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 
-function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','SPU名称','商品属性','销售类型','是否开启效期管理','保质期','保质期单位','保质期展示','保存条件','履约方式','一级分类','二级分类','三方质检报告有效期','商品描述','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['T001','芥蓝','标品','售卖品','是','7','天','展示生产日期+保质期','冷藏','平台仓配','新鲜蔬菜','叶菜类','','新鲜芥蓝','芥蓝散装','是','1','kg',''],['T001','','','','','','','','','','','','','','芥蓝5kg箱','是','5','箱','']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
+function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','商品名称','后台类目','税率','最小售卖单位','净含量','净含量单位','备注','是否开启效期管理','保质期','保质期单位','APP是否展示效期','储存条件','履约方式','产地','品牌','商品描述','规格数量'];rows=[['T001','芥蓝','新鲜蔬菜','9%','kg','','','','是','7','天','展示','冷藏','平台仓配','马来西亚','','新鲜芥蓝','1'],['T001','','','','','','','','','','','','','','','','','5']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
 /* init */
 goHome();
 </script>

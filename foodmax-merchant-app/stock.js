@@ -91,14 +91,13 @@ const GROUPS=[
 ];
 
 function kpiCard(g){
-  const leftWarn=g.level==='low'?' warn':'';
   return `<div class="skm-c">
     <div class="top"><div class="img">${g.ic}</div>
       <div style="flex:1;min-width:0"><div class="nm">${g.n}</div><div class="sp">${g.sp}</div></div></div>
     <div class="kpis">
       <div class="k"><div class="v">${g.total}</div><div class="l">总库存</div></div>
       <div class="k"><div class="v">${g.sold}</div><div class="l">已售库存</div></div>
-      <div class="k"><div class="v${leftWarn}">${g.left}</div><div class="l">剩余库存</div></div>
+      <div class="k"><div class="v">${g.left}</div><div class="l">剩余库存</div></div>
       <div class="k"><div class="v">${g.refund}</div><div class="l">待退库</div></div>
     </div>
     <div class="acts">
@@ -166,23 +165,17 @@ function renderList(container){
         <div class="skm-fd" data-f="sku">多规格sku聚合<span class="cv">▼</span></div>
         <div class="skm-fd lnk" data-f="pref">库存偏好设置 ›</div>
       </div>
-      <div class="skm-quick" id="qk">
-        <div class="skm-q" data-q="low">库存不足<span class="dot"></span></div>
-        <div class="skm-q" data-q="mid">库存偏低<span class="dot"></span></div>
-        <div class="skm-q" data-q="high">库存偏高</div>
-      </div>
     </div>
     <div class="skm-list" id="l"></div>`;
   const list=container.querySelector('#l');
-  const state={tab:'presell',quick:null};
+  const state={tab:'presell'};
 
   const drawData=()=>{
-    let data=state.tab==='presell'?PRESELL:CONSIGN;
-    if(state.quick) data=data.filter(g=>g.level===state.quick);
+    const data=state.tab==='presell'?PRESELL:CONSIGN;
     if(!data.length){
       const empty=state.tab==='consign'
         ?{t:'暂无寄售品',p:'将预售品「设为寄售」后会出现在这里，按实际销量结算'}
-        :{t:'暂无符合条件的商品',p:'调整筛选或快捷标签后再试'};
+        :{t:'暂无商品',p:'发布并上架商品后会出现在这里'};
       list.innerHTML=`<div class="empty"><div class="ei">${svg('layers')}</div><h4>${empty.t}</h4><p>${empty.p}</p></div>`;
       return;
     }
@@ -193,16 +186,10 @@ function renderList(container){
 
   container.querySelectorAll('.skm-tabs .t').forEach(t=>t.onclick=()=>{
     container.querySelectorAll('.skm-tabs .t').forEach(x=>x.classList.remove('on'));
-    t.classList.add('on');state.tab=t.dataset.tab;state.quick=null;
-    container.querySelectorAll('.skm-q').forEach(x=>x.classList.remove('on'));draw();
+    t.classList.add('on');state.tab=t.dataset.tab;draw();
   });
   container.querySelectorAll('#fd .skm-fd').forEach(f=>f.onclick=()=>{
     const map={wh:'选择仓库',state:'选择销售状态',sku:'选择聚合方式',pref:'库存偏好设置'};toast(map[f.dataset.f]);
-  });
-  container.querySelectorAll('#qk .skm-q').forEach(q=>q.onclick=()=>{
-    const v=q.dataset.q;const on=state.quick===v;
-    container.querySelectorAll('.skm-q').forEach(x=>x.classList.remove('on'));
-    state.quick=on?null:v;if(!on)q.classList.add('on');draw();
   });
 
   draw();
