@@ -492,12 +492,13 @@ const DB = {
   orderCfg:{cutoff:'18:00',commRate:0.05},
   // 佣金率配置（运营平台配置 · 佣金=服务佣金svc+物流佣金logi 两项分开 · 分层：品类默认→商家覆盖 · 取值 商家×品类 > 商家默认 > 品类默认 · 免佣期内两项均0）
   commCfg:{
-    catBase:{                                                                // 品类默认佣金率（全平台兜底），svc=服务佣金 logi=物流佣金
-      '新鲜蔬菜':{svc:0.03,logi:0.02}, '肉禽蛋品':{svc:0.05,logi:0.03},
-      '海鲜水产':{svc:0.06,logi:0.04}, '调味品':{svc:0.08,logi:0.04},
+    catBase:{                                                                // 品类默认佣金率（全平台兜底，键=后台类目 categoryId，可配任意层级），svc=服务佣金 logi=物流佣金
+      3:{svc:0.03,logi:0.02},                                                 // 蔬菜(一级)
+      31:{svc:0.025,logi:0.015},                                             // 绿叶菜(二级)：覆盖「蔬菜」下叶菜（就近命中）
+      4:{svc:0.05,logi:0.03}, 1:{svc:0.06,logi:0.04}, 5:{svc:0.08,logi:0.04},// 肉类 / 水产原料 / 调味品(一级)
     },
-    merchants:{                                                              // 商家专属覆盖（key=店铺编号）
-      'M2026-0815':{name:'绿鲜源蔬果旗舰店',shopDefault:{svc:0.025,logi:0.015},cats:{'海鲜水产':{svc:0.05,logi:0.03}},freeUntil:'2026-09-25'},
+    merchants:{                                                              // 商家专属覆盖（key=店铺编号），cats 键=后台类目 categoryId，可挂任意层级
+      'M2026-0815':{name:'绿鲜源蔬果旗舰店',shopDefault:{svc:0.025,logi:0.015},cats:{3:{svc:0.05,logi:0.03},31:{svc:0.02,logi:0.015}},freeUntil:'2026-09-25'}, // 绿叶菜(二级)覆盖蔬菜(一级)
       'M2026-0805':{name:'椰丰食品旗舰店',shopDefault:{svc:0.04,logi:0.02},cats:{},freeUntil:''},
     },
   },
@@ -1149,17 +1150,44 @@ function ordTag(o){return tag('order',ordCoarse(o.status));}
 function ordTabCount(t){return t=='all'?DB.orders.length:DB.orders.filter(o=>ordCoarse(o.status)==t).length;}
 function ord_items(o){return o.lines?o.lines.map(l=>`${l.name} ${l.qty}${l.unit}`).join(' · '):(o.items||'');}
 function ord_mask(n){return n?n[0]+'****':'—';}                     // 客户信息脱敏：只保留首字
-/* 佣金率解析：返回 {svc服务佣金率, logi物流佣金率}；取值 商家×品类 > 商家默认 > 品类默认；免佣期内两项均0（BR-C1~C5，运营平台「佣金配置」维护） */
-function commRates(code,cat,dateStr){
+/* 后台类目树（采购分类，货品中心维护）——真实模型 CategoryItem{id,name,parentId,parentName,path,pathName,children}；
+   正式对接货品服务 GET /admin/category/all（productService，按当前 Site，见 h5-ddxm-intl-scm apiGetCategories / category-select.vue）。
+   顶级取自货品中心真实枚举(水产原料/水产加工品/蔬菜/肉类/调味品)，二级(绿叶菜/根茎类/禽肉类)为样例；就近命中逻辑与层级数无关，支持一/二/三级（BR-CM-09） */
+const CAT_TREE=[
+  {id:1,name:'水产原料',parentId:0},
+  {id:2,name:'水产加工品',parentId:0},
+  {id:3,name:'蔬菜',parentId:0,children:[
+    {id:31,name:'绿叶菜',parentId:3},
+    {id:32,name:'根茎类',parentId:3},
+  ]},
+  {id:4,name:'肉类',parentId:0,children:[
+    {id:41,name:'禽肉类',parentId:4},
+  ]},
+  {id:5,name:'调味品',parentId:0},
+];
+const CAT_BY_ID={},CAT_PARENT={};
+(function _bp(list){list.forEach(n=>{CAT_BY_ID[n.id]=n;CAT_PARENT[n.id]=n.parentId||0;if(n.children)_bp(n.children);});})(CAT_TREE);
+function catPathIds(id){const p=[];let c=id;while(c&&CAT_BY_ID[c]){p.unshift(c);c=CAT_PARENT[c];}return p;}   // [根,...,自身] 的 categoryId
+function catPathName(id){return catPathIds(id).map(i=>CAT_BY_ID[i].name).join('/');}                        // 中文全路径 pathName
+function catLvl(id){return catPathIds(id).length;}
+function allCatNodes(){const out=[];(function _w(list){list.forEach(n=>{out.push(n.id);if(n.children)_w(n.children);});})(CAT_TREE);return out;} // 树前序(categoryId)
+function rateFromMap(map,leafId){if(!map)return null;const path=catPathIds(leafId);for(let i=path.length-1;i>=0;i--){if(map[path[i]]!=null)return {rate:map[path[i]],hitCat:path[i]};}return null;} // 就近命中：叶→根
+/* 佣金率解析：入参 leafCatId=货品后台类目叶子ID；就近上溯；取值 商家(就近) > 商家默认 > 品类默认(就近)；免佣期内0（BR-CM-03/04/09）
+   注：原型演示按当前配置实时算、且用全局 DB.merchant.code；正式须下单快照 svc/logi 到 order 并按 order.merchantCode 解析（BR-CM-07/§12） */
+function commRates(code,leafCatId,dateStr){
   const cfg=DB.commCfg,mc=cfg.merchants[code];
   if(mc&&mc.freeUntil&&dateStr&&dateStr<=mc.freeUntil)return {svc:0,logi:0}; // 免佣期内两项均0
-  let r=null;
-  if(mc){if(mc.cats&&mc.cats[cat])r=mc.cats[cat];else if(mc.shopDefault)r=mc.shopDefault;}
-  if(!r)r=cfg.catBase[cat];
+  let hit=null;
+  if(mc){hit=rateFromMap(mc.cats,leafCatId);if(!hit&&mc.shopDefault)hit={rate:mc.shopDefault};}
+  if(!hit)hit=rateFromMap(cfg.catBase,leafCatId);
+  const r=hit&&hit.rate;
   return {svc:(r&&r.svc)||0,logi:(r&&r.logi)||0};
 }
-function commTotal(code,cat,dateStr){const r=commRates(code,cat,dateStr);return r.svc+r.logi;} // 合计佣金率
-function lineCat(l){const p=DB.products.find(x=>x.name==l.name)||DB.products.find(x=>(x.skus||[]).some(s=>s.skuId==l.sku));return p?p.cat:'新鲜蔬菜';}
+function commTotal(code,leafId,dateStr){const r=commRates(code,leafId,dateStr);return r.svc+r.logi;} // 合计佣金率
+/* 订单行→货品后台类目叶子ID（正式取 sku/货品主数据 categoryId；原型按商品名映射，兜底前台类目→后台一级） */
+const PRODUCT_BACK_CAT={'小棠菜':31,'娃娃菜':31,'白菜':31,'菠菜':31,'芥蓝':31,'空心菜':31,'土豆':32,'冰鲜三文鱼':1,'三文鱼':1,'生蚝':1,'鸡胸肉':41};
+const FRONT2BACK={'新鲜蔬菜':3,'海鲜水产':1,'肉禽蛋品':4,'调味品':5};
+function lineCat(l){if(PRODUCT_BACK_CAT[l.name]!=null)return PRODUCT_BACK_CAT[l.name];const p=DB.products.find(x=>x.name==l.name)||DB.products.find(x=>(x.skus||[]).some(s=>s.skuId==l.sku));return (p&&FRONT2BACK[p.cat])||3;}
 function ord_feeParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';return (o.lines||[]).reduce((a,l)=>{const r=commRates(code,lineCat(l),d),amt=l.qty*l.price;a.svc+=amt*r.svc;a.logi+=amt*r.logi;return a;},{svc:0,logi:0});} // 平台佣金=各行 品类费率(服务/物流)逐行计佣汇总
 function ord_feeSvc(o){return ord_feeParts(o).svc;}                  // 服务佣金
 function ord_feeLogi(o){return ord_feeParts(o).logi;}               // 物流佣金
@@ -1571,65 +1599,88 @@ function toggleAuditCfg(k){DB.auditCfg[k]=!DB.auditCfg[k];render();toast('审核
 const COMM_SHOPS=[{code:'M2026-0815',name:'绿鲜源蔬果旗舰店'},{code:'M2026-0820',name:'阳光烘焙原料店'},{code:'M2026-0805',name:'椰丰食品旗舰店'}];
 function pctFmt(r){return (r*100).toFixed((r*100)%1?1:0)+'%';}
 function rateBadges(r){if(!r)return '<span style="color:var(--ts)">—</span>';const s=r.svc||0,l=r.logi||0;return `<span style="white-space:nowrap">服务 <b>${pctFmt(s)}</b> ＋ 物流 <b>${pctFmt(l)}</b> <span style="color:var(--ts)">= ${pctFmt(s+l)}</span></span>`;}
+function commToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function catIndent(id){return '　'.repeat(catLvl(id)-1);}   // 全角空格按层级缩进（catLvl 见后台类目树块）
+function catLvlTag(id){return `<span class="tag t-gr" style="font-size:10px">L${catLvl(id)}</span>`;}
+/* 层级节点勾选行（品类默认/商家专属共用）：勾选=在该节点配费率；idp='cmb'|'cmc' */
+function commNodeRow(idp,id,rate){const on=rate!=null,r=on?rate:{svc:'',logi:''};return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:9px;flex-wrap:wrap"><label class="chip-ck ${on?'on':''}" style="min-width:190px" title="${catPathName(id)}（ID ${id}）"><input type="checkbox" id="${idp}-ck-${id}" ${on?'checked':''} onchange="this.closest('.chip-ck').classList.toggle('on',this.checked)">${catIndent(id)}${CAT_BY_ID[id].name} ${catLvlTag(id)}</label>${commPairInput(idp+'-'+id,on?r.svc*100:'',on?r.logi*100:'')}</div>`;}
 /* 两输入（服务/物流）行；id 生成 <idp>-svc / <idp>-logi */
-function commPairInput(idp,svc,logi){return `<div style="display:flex;align-items:center;gap:16px"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin:0">服务佣金 <input type="number" step="0.5" min="0" max="50" id="${idp}-svc" value="${svc}" placeholder="0" style="max-width:82px"> %</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin:0">物流佣金 <input type="number" step="0.5" min="0" max="50" id="${idp}-logi" value="${logi}" placeholder="0" style="max-width:82px"> %</label></div>`;}
+function commPairInput(idp,svc,logi){const t=(svc!==''&&svc!=null?+svc:0)+(logi!==''&&logi!=null?+logi:0),show=(svc!==''&&svc!=null)||(logi!==''&&logi!=null);return `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin:0">服务佣金 <input type="number" step="0.5" min="0" max="50" id="${idp}-svc" value="${svc}" placeholder="0" oninput="commSum('${idp}')" style="max-width:82px"> %</label><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin:0">物流佣金 <input type="number" step="0.5" min="0" max="50" id="${idp}-logi" value="${logi}" placeholder="0" oninput="commSum('${idp}')" style="max-width:82px"> %</label><span id="${idp}-sum" style="font-size:12.5px;color:var(--gd);font-weight:600">${show?'= 合计 '+t+'%':''}</span></div>`;}
+function commSum(idp){const se=document.getElementById(idp+'-svc'),le=document.getElementById(idp+'-logi'),el=document.getElementById(idp+'-sum');if(!el)return;const s=parseFloat(se.value),l=parseFloat(le.value);if(isNaN(s)&&isNaN(l)){el.textContent='';return;}el.textContent='= 合计 '+((isNaN(s)?0:s)+(isNaN(l)?0:l))+'%';}
+/* 一组输入的填写状态：full=两项都填 / empty=都空 / partial=只填一项（需拦截） */
+function pairStatus(idp){const se=document.getElementById(idp+'-svc'),le=document.getElementById(idp+'-logi');const sf=se&&se.value.trim()!=='',lf=le&&le.value.trim()!=='';return sf&&lf?'full':(!sf&&!lf?'empty':'partial');}
 /* 读取一组服务/物流输入；两项皆空→null；否则空项按0 */
-function readRatePair(idp){const se=document.getElementById(idp+'-svc'),le=document.getElementById(idp+'-logi');const s=se?parseFloat(se.value):NaN,l=le?parseFloat(le.value):NaN;if(isNaN(s)&&isNaN(l))return null;const cl=v=>isNaN(v)||v<0?0:(v>50?50:v);return {svc:+(cl(s)/100).toFixed(4),logi:+(cl(l)/100).toFixed(4)};}
+let _commClamped=false;   // 本次保存是否发生过越界夹取
+function readRatePair(idp){const se=document.getElementById(idp+'-svc'),le=document.getElementById(idp+'-logi');const s=se?parseFloat(se.value):NaN,l=le?parseFloat(le.value):NaN;if(isNaN(s)&&isNaN(l))return null;const cl=v=>{if(isNaN(v)||v<0){if(!isNaN(v)&&v<0)_commClamped=true;return 0;}if(v>50){_commClamped=true;return 50;}return v;};return {svc:+(cl(s)/100).toFixed(4),logi:+(cl(l)/100).toFixed(4)};}
 PAGES['p-commission']=()=>{
   const cfg=DB.commCfg,cats=Object.keys(cfg.catBase);
-  const baseRows=cats.map(c=>{const r=cfg.catBase[c];return `<tr><td><b>${c}</b>${CATS[c]&&CATS[c].baseRisk=='高'?' <span class="tag t-r" style="font-size:10px">高风险</span>':''}</td><td class="mono">${pctFmt(r.svc)}</td><td class="mono">${pctFmt(r.logi)}</td><td class="mono"><b>${pctFmt(r.svc+r.logi)}</b></td><td style="color:var(--ts)">成交额 × 费率</td></tr>`;}).join('');
+  const baseRows=allCatNodes().filter(id=>cfg.catBase[id]).map(id=>{const r=cfg.catBase[id];return `<tr><td>${catIndent(id)}<b>${CAT_BY_ID[id].name}</b> ${catLvlTag(id)} <span style="font-size:11px;color:var(--ts)">${catPathName(id)} · ID ${id}</span></td><td class="mono">${pctFmt(r.svc)}</td><td class="mono">${pctFmt(r.logi)}</td><td class="mono"><b>${pctFmt(r.svc+r.logi)}</b></td><td style="color:var(--ts)">成交额 × 费率</td></tr>`;}).join('');
+  const today=commToday();
   const merchRows=Object.entries(cfg.merchants).map(([code,m])=>{
     const catList=Object.entries(m.cats||{});
+    const free=m.freeUntil&&today<=m.freeUntil;   // 免佣期内→费率暂不生效，视觉弱化
+    const dim=free?'opacity:.4;text-decoration:line-through':'';
     return `<tr>
       <td><b>${m.name}</b></td>
       <td class="mono">${code}</td>
-      <td>${m.shopDefault?rateBadges(m.shopDefault):'<span style="color:var(--ts)">— 用品类默认</span>'}</td>
-      <td>${catList.length?catList.map(([c,r])=>`<div style="margin-bottom:3px"><span class="tag t-pp" style="font-size:11px">${c}</span> ${rateBadges(r)}</div>`).join(''):'<span style="color:var(--ts)">—</span>'}</td>
-      <td>${m.freeUntil?`<span class="tag t-y"><span class="dot"></span>至 ${m.freeUntil}</span>`:'<span style="color:var(--ts)">无</span>'}</td>
+      <td style="${dim}">${m.shopDefault?rateBadges(m.shopDefault):'<span style="color:var(--ts)">— 用品类默认</span>'}</td>
+      <td style="${dim}">${catList.length?catList.map(([id,r])=>`<div style="margin-bottom:3px"><span class="tag t-pp" style="font-size:11px" title="${catPathName(id)}">${catPathName(id)}</span> ${catLvlTag(id)} ${rateBadges(r)}</div>`).join(''):'<span style="color:var(--ts)">—</span>'}</td>
+      <td>${m.freeUntil?`<span class="tag t-y"><span class="dot"></span>至 ${m.freeUntil}</span>${free?`<div style="font-size:11px;color:var(--y);margin-top:2px">免佣期内暂不生效，${m.freeUntil} 后启用</div>`:''}`:'<span style="color:var(--ts)">无</span>'}</td>
       <td><button class="btn btn-link" onclick="act_editMerchComm('${code}')">编辑</button> <button class="btn btn-link" onclick="act_delMerchComm('${code}')">移除</button></td>
     </tr>`;
   }).join('');
-  return `${flowTip(`<b>佣金率分层配置</b>：佣金分<b>服务佣金</b>+<b>物流佣金</b>两项。平台先按<b>品类</b>设默认；再对<b>特定商家</b>整体或按品类<b>覆盖</b>。下单时按订单每行商品所属品类锁定生效费率。<b>生效优先级：商家×品类 > 商家默认 > 品类默认</b>；免佣期内两项均=0。`)}
-  <div class="card"><div class="card-hd"><h3>📦 品类默认佣金率</h3><span class="sub">全平台兜底 · ${cats.length} 个前台类目</span><button class="btn btn-o btn-sm" onclick="act_editCatBase()">编辑品类默认</button></div>
-    <div class="card-bd flush"><table><thead><tr><th>前台类目</th><th>服务佣金</th><th>物流佣金</th><th>合计</th><th>计费口径</th></tr></thead><tbody>${baseRows}</tbody></table></div>
+  return `${flowTip(`<b>佣金率分层配置</b>：按<b>后台类目</b>（采购分类，货品中心维护 · GET /admin/category/all 按 Site）配置，非前台类目。佣金分<b>服务佣金</b>+<b>物流佣金</b>两项，可配到<b>一/二/三级</b>任意层级。生效取值：<b>商家(就近层级) > 商家默认 > 品类默认(就近层级)</b>——同一来源内<b>三级 > 二级 > 一级</b>就近命中；免佣期内两项均=0。`)}
+  <div class="card"><div class="card-hd"><h3>📦 后台类目默认佣金率</h3><span class="sub">全平台兜底 · 后台类目(采购分类) · 已配 ${cats.length} 个节点</span><button class="btn btn-o btn-sm" onclick="act_editCatBase()">编辑品类默认</button></div>
+    <div class="card-bd flush"><table><thead><tr><th>后台类目（全路径）</th><th>服务佣金</th><th>物流佣金</th><th>合计</th><th>计费口径</th></tr></thead><tbody>${baseRows}</tbody></table></div>
   </div>
   <div class="card"><div class="card-hd"><h3>🏪 商家专属佣金率</h3><span class="sub">覆盖品类默认 · 已配置 ${Object.keys(cfg.merchants).length} 家</span><button class="btn btn-p btn-sm" onclick="act_addMerchComm()">＋ 新增商家配置</button></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>店铺</th><th>店铺编号</th><th>全店默认（服务/物流）</th><th>品类专属（覆盖全店默认）</th><th>免佣期</th><th>操作</th></tr></thead>
+      <thead><tr><th>店铺</th><th>店铺编号</th><th>全店默认（服务/物流）</th><th>后台类目专属（全路径，覆盖全店默认）</th><th>免佣期</th><th>操作</th></tr></thead>
       <tbody>${merchRows||'<tr><td colspan="6"><div class="empty" style="padding:26px"><div class="e-ic">🏪</div><div class="e-t">暂无商家专属配置</div><div class="e-s">未配置的商家按「品类默认佣金率」计佣</div></div></td></tr>'}</tbody>
     </table></div></div>
   </div>`;
 };
 function act_editCatBase(){
-  modal(`<div class="mc-hd"><h3>编辑品类默认佣金率</h3><p>作用于未配置专属费率的商家 · 服务佣金 + 物流佣金</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    ${Object.keys(DB.commCfg.catBase).map(c=>{const r=DB.commCfg.catBase[c];return `<div class="fr" style="margin-bottom:12px"><label class="fl">${c}</label>${commPairInput('cmb-'+c,r.svc*100,r.logi*100)}</div>`;}).join('')}
-    <div class="ib ib-gr"><span class="i">ℹ️</span>每项 0–50%，支持 0（免佣）。修改仅对<b>新下单</b>生效，已锁定订单不变。</div>
+  modalWide(`<div class="mc-hd"><h3>编辑后台类目默认佣金率</h3><p>后台类目(采购分类，货品中心) · 可配到一级/二级/三级 · 勾选=在该节点设默认</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    ${allCatNodes().map(n=>commNodeRow('cmb',n,DB.commCfg.catBase[n]||null)).join('')}
+    <div class="ib ib-gr"><span class="i">ℹ️</span>每项 0–50%，支持 0（免佣）。货品按其<b>后台类目</b>命中最细层级默认（三级>二级>一级）。修改仅对<b>新下单</b>生效。</div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_saveCatBase()">保存</button></div>`);
 }
 function act_saveCatBase(){
-  Object.keys(DB.commCfg.catBase).forEach(c=>{const r=readRatePair('cmb-'+c);if(r)DB.commCfg.catBase[c]=r;});
-  closeModal();render();toast('品类默认佣金率已保存','ok');
+  const nodes=allCatNodes();
+  const bad=nodes.find(n=>document.getElementById('cmb-ck-'+n).checked&&pairStatus('cmb-'+n)=='partial');
+  if(bad){toast(`「${CAT_BY_ID[bad].name}」服务佣金与物流佣金需同时填写`,'err');return;}   // BR-CM-06 成对填写
+  _commClamped=false;
+  nodes.forEach(n=>{const ck=document.getElementById('cmb-ck-'+n);if(ck&&ck.checked){const r=readRatePair('cmb-'+n);if(r)DB.commCfg.catBase[n]=r;}else{delete DB.commCfg.catBase[n];}});
+  closeModal();render();toast('品类默认佣金率已保存','ok');if(_commClamped)toast('部分费率超范围，已按 0–50% 上下限保存','info');
 }
 function merchCommForm(code,m){
-  const cats=Object.keys(DB.commCfg.catBase),sd=m.shopDefault;
+  const sd=m.shopDefault;
   return `<div class="fr"><label class="fl">全店默认佣金率（两项都留空则用品类默认）</label>${commPairInput('cm-shop',sd?sd.svc*100:'',sd?sd.logi*100:'')}</div>
     <div class="fr"><label class="fl">免佣期截止日期（留空=无免佣期，期内两项均0）</label><input type="date" id="cm-free" value="${m.freeUntil||''}" style="max-width:220px"></div>
-    <div class="fr"><label class="fl">品类专属费率（勾选并填写将覆盖全店默认）</label>
-      ${cats.map(c=>{const on=m.cats&&m.cats[c]!=null,r=on?m.cats[c]:{svc:'',logi:''};return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:9px;flex-wrap:wrap"><label class="chip-ck ${on?'on':''}" style="min-width:118px"><input type="checkbox" id="cmc-ck-${c}" ${on?'checked':''} onchange="this.closest('.chip-ck').classList.toggle('on',this.checked)">${c}</label>${commPairInput('cmc-'+c,on?r.svc*100:'',on?r.logi*100:'')}</div>`;}).join('')}
+    <div class="fr"><label class="fl">后台类目专属费率（勾选并填写将覆盖全店默认，可配一级/二级/三级）</label>
+      ${allCatNodes().map(n=>commNodeRow('cmc',n,(m.cats&&m.cats[n])||null)).join('')}
     </div>
-    <div class="ib ib-b"><span class="i">ℹ️</span>生效优先级：<b>品类专属 > 全店默认 > 品类默认</b>；免佣期内两项一律 0。修改仅对新下单生效。</div>`;
+    <div class="ib ib-b"><span class="i">ℹ️</span>生效优先级：<b>品类专属(就近层级) > 全店默认 > 品类默认(就近层级)</b>，同一来源内三级>二级>一级；免佣期内两项一律 0。修改仅对新下单生效。</div>`;
 }
 function act_editMerchComm(code){
-  const m=DB.commCfg.merchants[code];
+  const m=DB.commCfg.merchants[code]||{name:(COMM_SHOPS.find(s=>s.code==code)||{}).name||code,shopDefault:null,cats:{},freeUntil:''};   // 新增时不预落库，保存时才创建
   modalWide(`<div class="mc-hd"><h3>商家专属佣金率 · ${m.name}</h3><p>${code}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">${merchCommForm(code,m)}</div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_saveMerchComm('${code}')">保存</button></div>`);
 }
 function act_saveMerchComm(code){
+  // 单项填写拦截（BR-CM-06）：全店默认 + 各勾选品类
+  if(pairStatus('cm-shop')=='partial'){toast('全店默认：服务佣金与物流佣金需同时填写','err');return;}
+  const nodes=allCatNodes();
+  const badCat=nodes.find(n=>document.getElementById('cmc-ck-'+n).checked&&pairStatus('cmc-'+n)=='partial');
+  if(badCat){toast(`后台类目「${CAT_BY_ID[badCat].name}」服务与物流需同时填写`,'err');return;}
+  _commClamped=false;
+  const shopDefault=readRatePair('cm-shop');   // 两项皆空→null=用品类默认
+  const freeUntil=document.getElementById('cm-free').value||'';
+  const catsObj={};nodes.forEach(n=>{if(document.getElementById('cmc-ck-'+n).checked){const r=readRatePair('cmc-'+n);if(r)catsObj[n]=r;}});
+  if(!shopDefault&&!freeUntil&&!Object.keys(catsObj).length){toast('请至少配置一项（全店默认 / 品类专属 / 免佣期）','err');return;}   // 不落空记录
   const m=DB.commCfg.merchants[code]||(DB.commCfg.merchants[code]={name:(COMM_SHOPS.find(s=>s.code==code)||{}).name||code,shopDefault:null,cats:{},freeUntil:''});
-  m.shopDefault=readRatePair('cm-shop');   // 两项皆空→null=用品类默认
-  m.freeUntil=document.getElementById('cm-free').value||'';
-  m.cats={};
-  Object.keys(DB.commCfg.catBase).forEach(c=>{if(document.getElementById('cmc-ck-'+c).checked){const r=readRatePair('cmc-'+c);if(r)m.cats[c]=r;}});
-  closeModal();render();toast('商家专属佣金率已保存','ok');
+  m.shopDefault=shopDefault;m.freeUntil=freeUntil;m.cats=catsObj;
+  closeModal();render();toast('商家专属佣金率已保存','ok');if(_commClamped)toast('部分费率超范围，已按 0–50% 上下限保存','info');
 }
 function act_delMerchComm(code){
   modal(`<div class="mc-hd"><h3>移除商家专属配置</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>移除后 <b>${DB.commCfg.merchants[code].name}</b> 将按<b>品类默认佣金率</b>计佣。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="delete DB.commCfg.merchants['${code}'];closeModal();render();toast('已移除专属配置','info')">确认移除</button></div>`);
@@ -1640,9 +1691,8 @@ function act_addMerchComm(){
   modal(`<div class="mc-hd"><h3>新增商家专属配置</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">选择店铺</label><select id="cm-newshop">${avail.map(s=>`<option value="${s.code}">${s.name}（${s.code}）</option>`).join('')}</select></div><div class="ib ib-gr"><span class="i">ℹ️</span>选定后进入费率编辑，可设全店默认 / 品类专属 / 免佣期。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_addMerchNext()">下一步 · 配置费率</button></div>`);
 }
 function act_addMerchNext(){
-  const code=document.getElementById('cm-newshop').value,name=(COMM_SHOPS.find(s=>s.code==code)||{}).name||code;
-  DB.commCfg.merchants[code]={name,shopDefault:null,cats:{},freeUntil:''};
-  closeModal();act_editMerchComm(code);
+  const code=document.getElementById('cm-newshop').value;
+  closeModal();act_editMerchComm(code);   // 不预落库，取消不留幽灵行；保存时校验至少1项后创建
 }
 
 /* ---------- 平台：对账结算（闭环D 平台侧） ---------- */
@@ -1784,12 +1834,12 @@ function ord_renderPicklist(){
 }
 // ===== 分拣贴标（每个客户×每个 SKU 一张标签）=====
 function ord_relabel(i){const o=DB.orders[i];
-  modalWide(`<div class="mc-hd"><h3>打印条码 · ${o.id}</h3><p>${o.client} · 每个 SKU 一张条码，用于把汇总拣的货分回本客户</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modalWide(`<div class="mc-hd"><h3>打印条码 · ${o.id}</h3><p>${ord_mask(o.client)} · 每个 SKU 一张条码，用于把汇总拣的货分回本客户</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div style="font-size:12.5px;color:var(--ts);margin-bottom:10px">本单 ${o.lines.length} 个 SKU → 生成 ${o.lines.length} 张标签</div>
     ${o.lines.map(l=>ord_labelTile(o,l.name,l.qty,l.unit,`LBL-${o.id.slice(-5)}-${l.sku.slice(-4)}`)).join('')}
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="ord_doRelabel(${i})">打印全部条码并完成</button></div>`);
 }
-function ord_labelTile(o,name,qty,unit,code){return `<div style="border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;gap:14px;align-items:center"><div style="width:56px;height:56px;border-radius:8px;background:repeating-linear-gradient(45deg,#111 0 4px,#fff 4px 8px);opacity:.85;flex-shrink:0"></div><div><div style="font-weight:700">${o.client} · <b>${name}</b> ${qty}${unit}</div><div class="mono" style="font-size:12.5px;margin:3px 0">${code}</div><div style="font-size:12px;color:var(--ts)">订单 ${o.id} · 送达 ${o.deliver}</div></div></div>`;}
+function ord_labelTile(o,name,qty,unit,code){return `<div style="border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;gap:14px;align-items:center"><div style="width:56px;height:56px;border-radius:8px;background:repeating-linear-gradient(45deg,#111 0 4px,#fff 4px 8px);opacity:.85;flex-shrink:0"></div><div><div style="font-weight:700">${ord_mask(o.client)} · <b>${name}</b> ${qty}${unit}</div><div class="mono" style="font-size:12.5px;margin:3px 0">${code}</div><div style="font-size:12px;color:var(--ts)">订单 ${o.id} · 送达 ${o.deliver}</div></div></div>`;}
 function ord_doRelabel(i){const o=DB.orders[i];
   o.stuck=o.stuck||{};o.lines.forEach(l=>o.stuck[l.sku]=true);
   o.labels=o.lines.map(l=>({code:`LBL-${o.id.slice(-5)}-${l.sku.slice(-4)}`,name:l.name,qty:l.qty,unit:l.unit,arrived:false}));
@@ -1808,7 +1858,7 @@ function ord_printLabels(i){const o=DB.orders[i];
 }
 // ===== 交接仓库收货（该客户所有 SKU 标签到齐）=====
 function ord_handover(i){const o=DB.orders[i];
-  modalWide(`<div class="mc-hd"><h3>交接仓库收货 · ${o.id}</h3><p>${o.client} · 共 ${o.labels.length} 张 SKU 标签</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modalWide(`<div class="mc-hd"><h3>交接仓库收货 · ${o.id}</h3><p>${ord_mask(o.client)} · 共 ${o.labels.length} 张 SKU 标签</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div class="ib ib-y"><span class="i">📋</span>仓库逐张标签确认到仓，<b>本客户所有 SKU 标签到齐</b>才能确认收货，缺任一张不可收货。<span style="font-size:11.5px;color:var(--pp)">（勾选模拟仓库扫码到仓）</span></div>
     <div id="ord-hov">${o.labels.map((p,k)=>`<label id="ord-ck-${k}" style="display:flex;align-items:center;gap:10px;padding:10px 13px;border:1px solid ${p.arrived?'#A7F3D0':'var(--bd2)'};border-radius:9px;margin-bottom:8px;font-size:13.5px;background:${p.arrived?'var(--gl)':'#fff'}"><span style="width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:${p.arrived?'var(--gl)':'var(--bd2)'};color:${p.arrived?'var(--gd)':'var(--ts)'}">${p.arrived?'✓':k+1}</span><div style="flex:1"><div class="mono" style="font-weight:600">${p.code}</div><div style="font-size:12px;color:var(--ts)">${p.name} ${p.qty}${p.unit}</div></div><input type="checkbox" style="width:auto" ${p.arrived?'checked':''} onchange="ord_hovCheck(${i},${k},this.checked)"></label>`).join('')}</div>
     <div id="ord-hov-msg"></div>
