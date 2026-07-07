@@ -171,7 +171,7 @@ const svg=(k,x='')=>`<svg viewBox="0 0 24 24" ${x}>${I[k]}</svg>`;
 const TILES=[
   {k:'goods',l:'商品管理',ic:'box',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'stock',l:'库存管理',ic:'layers',bg:'#D1FAE5',st:'var(--emerald-2)'},
-  {k:'order',l:'订单明细',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
+  {k:'order',l:'订单管理',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
   {k:'after',l:'售后管理',ic:'refund',bg:'#FEE2E2',st:'var(--red)',dot:1},
   {k:'invoice',l:'开票管理',ic:'invoice',bg:'#D1FAE5',st:'var(--emerald-2)',badge:'99+'},
   {k:'price',l:'价格分析',ic:'tag',bg:'#FEF3C7',st:'#B45309',badge:'50',amber:1},
@@ -182,7 +182,8 @@ const TILES=[
   {k:'violate',l:'违规记录',ic:'alert',bg:'#FEE2E2',st:'var(--red)',dot:1},
   {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
 ];
-const DELIVER=[{k:'pick',l:'拣货',ic:'layers'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'},{k:'return',l:'退库取回',ic:'refund',dot:1}];
+// 备货(拣货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
+const DELIVER=[{k:'pick',l:'备货管理',ic:'layers'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
 const READY=new Set(['goods']);
 
 /* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
@@ -283,7 +284,7 @@ function renderHome(){
       <div class="todo"><div class="n warn">8</div><div class="t">缺货商品</div></div>
       <div class="todo"><div class="n">2</div><div class="t">待开票</div></div></div>
     <div class="block"><div class="bhead"><span class="h">经营工具</span></div><div class="grid" id="g">${tiles}</div></div>
-    <div class="block flush"><div class="bhead"><span class="h">送货 · 退货</span><span class="more">全部 ›</span></div><div class="deliver" id="d">${deliver}</div></div>
+    <div class="block flush"><div class="bhead"><span class="h">送货管理</span><span class="more">全部 ›</span></div><div class="deliver" id="d">${deliver}</div></div>
     <div class="growth"><div class="gt">商家成长中心</div><h4>完成本周任务，解锁更多平台权益</h4>
       <div class="chips"><span>流量加权</span><span>客服绿色通道</span><span>严选标</span><span>品控绿通</span></div></div>
     <div style="height:8px"></div></div>`;

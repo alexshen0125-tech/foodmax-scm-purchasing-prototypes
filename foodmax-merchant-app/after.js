@@ -267,6 +267,7 @@ function renderList(container){
         <div class="nums"><div class="n"><div class="v">0</div><div class="l">高投预警</div></div>
           <div class="n"><div class="v">0</div><div class="l">高投商品</div></div></div></div>
     </div>
+    <div id="ret-card" style="margin:2px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退库单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退/滞销商品退回仓库 · 预约提货</div></div>${svg('arrow')}</div>
     <div class="as-filters"><span class="fl" id="f-city">全部城市 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="fl" id="f-date">履约日期 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="ft">支持按照履约日期筛选</span></div>
@@ -277,6 +278,7 @@ function renderList(container){
   const list=container.querySelector('#l');
   container.querySelector('#q-card').onclick=openQuality;
   container.querySelector('#hi-card').onclick=()=>toast('高投诉商品统计开发中');
+  container.querySelector('#ret-card').onclick=()=>{if(window.FM_MOD&&window.FM_MOD.return)window.FM_MOD.return();};
   container.querySelector('#f-city').onclick=()=>sheet([{label:'全部城市',onClick:()=>toast('全部城市')},{label:'中区',onClick:()=>toast('中区')},{label:'东区',onClick:()=>toast('东区')},{label:'西区',onClick:()=>toast('西区')},{label:'北区',onClick:()=>toast('北区')}]);
   container.querySelector('#f-date').onclick=()=>toast('选择履约日期');
 

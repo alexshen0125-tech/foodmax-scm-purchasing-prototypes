@@ -1308,8 +1308,15 @@ function act_svcInvPreview(no){
 
 /* ---------- 商家端：售后记录 ---------- */
 PAGES['m-aftersale']=()=>{
+  // 售后管理：售后记录 + 退库单(退货，自送货管理挪入，内容复用 delivery.js 的 deliv_tabReturn)
+  const t=DB.asTab||'record';
+  const top=`<div class="tabs" style="margin-bottom:14px">
+    <div class="tab ${t=='record'?'active':''}" onclick="DB.asTab='record';render()">↩️ 售后记录</div>
+    <div class="tab ${t=='return'?'active':''}" onclick="DB.asTab='return';render()">📦 退库单</div>
+  </div>`;
+  if(t=='return') return top+(window.deliv_tabReturn?window.deliv_tabReturn():'<div class="empty"><div class="e-ic">📦</div><div class="e-t">退库单模块未加载</div></div>');
   const pend=DB.afterSales.filter(a=>a.status=='pending').length;
-  return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+  return top+`<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
     ${DB.afterSales.map((a,i)=>`<tr>
       <td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>

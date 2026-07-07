@@ -298,13 +298,14 @@
   ============================================================ */
   PAGES['m-delivery']=()=>{
     const t=DB.delivTab||'sign';
-    // 「装筐送货」Tab 暂不要（2026-07 沈亮），tabBasket 函数保留备用
+    // 送货管理=正向送货：送货签到/交货进度。「退库单(退货)」已挪到售后管理(m-aftersale)；「装筐送货」暂不要（tabBasket/tabReturn 保留备用）
     const top=`<div class="tabs" style="margin-bottom:14px">
       <div class="tab ${t=='sign'?'active':''}" onclick="DB.delivTab='sign';render()">🚚 送货签到</div>
       <div class="tab ${t=='prog'?'active':''}" onclick="DB.delivTab='prog';render()">📊 交货进度</div>
-      <div class="tab ${t=='return'?'active':''}" onclick="DB.delivTab='return';render()">↩️ 退库单</div>
     </div>`;
-    const body=t=='prog'?tabProg():t=='return'?tabReturn():tabSign();
+    const body=t=='prog'?tabProg():tabSign();
     return top+body;
   };
+  // 退库单(退货)已归售后管理：暴露 tabReturn 供主文件 m-aftersale 的「退库单」Tab 调用
+  window.deliv_tabReturn=tabReturn;
 })();
