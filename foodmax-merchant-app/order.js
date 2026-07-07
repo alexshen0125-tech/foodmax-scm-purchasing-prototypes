@@ -79,7 +79,7 @@ function card(o){
       <span class="st ${STCLASS[st]}">${st}${o.status==='packed'?'<span class="sub2">已贴标</span>':''}</span></div>
     <div class="meta">
       <div class="ml"><span class="lk">订单号</span><span style="font-family:monospace">${o.id}</span></div>
-      <div class="ml"><span class="lk">送达时间</span><span>${o.deliver} ${o.window} · ${o.wave}</span></div>
+      <div class="ml"><span class="lk">送达时间</span><span>${o.deliver} ${o.window}</span></div>
       <div class="ml"><span class="lk">入库仓库</span><span>${o.warehouse}<i class="sg">SG仓</i></span></div>
     </div>
     <div class="it"><div class="img">${ICON[l0.name]||'📦'}</div>
@@ -111,7 +111,7 @@ function openDetail(o){
     <div class="odd-card">
       <div class="odd-row"><span class="k">订单号</span><span style="font-family:monospace">${o.id}</span></div>
       <div class="odd-row"><span class="k">预计送达日</span><span>${o.deliver}</span></div>
-      <div class="odd-row"><span class="k">波次 / 时段</span><span>${o.wave} · ${o.window}</span></div>
+      <div class="odd-row"><span class="k">送达时段</span><span>${o.window}</span></div>
       <div class="odd-row"><span class="k">入库仓库</span><span>${o.warehouse}</span></div>
       ${o.pickId?`<div class="odd-row"><span class="k">拣货单</span><span style="font-family:monospace">${o.pickId}</span></div>`:''}
       ${o.deliveryId?`<div class="odd-row"><span class="k">送货单</span><span style="font-family:monospace">${o.deliveryId}</span></div>`:''}

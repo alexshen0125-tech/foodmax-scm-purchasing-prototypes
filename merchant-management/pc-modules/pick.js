@@ -1,5 +1,5 @@
 /* PC · 拣货单（JH）—— 单据链核心枢纽：销售订单 → 拣货单 → 送货单。
-   拣货单由系统按「送达日+波次」自动成单（ensurePickOrders，定义在主文件全局）。
+   拣货单由系统按「送达日」自动成单（一天一张）（ensurePickOrders，定义在主文件全局）。
    本模块 = 拣货单列表 + 拣货单详情（① 按SKU汇总拣货 → ② 按订单×SKU 分拣贴码 → 贴码完触发送货单）。
    后加载覆盖主文件 PAGES['m-pick'] 占位。复用主文件全局：ensurePickOrders / pickAggr / pickOrdersOf /
    pickAllPacked / triggerDeliveries / ord_relabel / ord_doRelabel / ord_printLabels / ord_mask / toast / nav / render。 */
@@ -20,12 +20,12 @@
   /* ---------- 列表视图 ---------- */
   function listView(){
     const ps=DB.pickOrders;
-    if(!ps.length) return `<div class="empty"><div class="e-ic">🧺</div><div class="e-t">暂无拣货单</div><div class="e-s">有「待发货」订单时，系统按 <b>送达日+波次</b>自动汇总生成拣货单。<br>可到「订单履约」点「＋ 模拟来一单」。</div></div>`;
-    return `<div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧺</span><div><b>拣货单</b>：系统按「送达日+波次」把一波订单汇总成一张，跨仓按 SKU 拣一次；拣完按订单贴码，贴码完成后按<b>入库仓库</b>自动拆成送货单。</div></div>
+    if(!ps.length) return `<div class="empty"><div class="e-ic">🧺</div><div class="e-t">暂无拣货单</div><div class="e-s">有「待发货」订单时，系统按 <b>送达日</b>自动汇总生成拣货单。<br>可到「订单履约」点「＋ 模拟来一单」。</div></div>`;
+    return `<div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧺</span><div><b>拣货单</b>：系统按「送达日」把当天订单汇总成一张，跨仓按 SKU 拣一次；拣完按订单贴码，贴码完成后按<b>入库仓库</b>自动拆成送货单。</div></div>
     <div class="card"><div class="card-hd"><h3>拣货单</h3><span class="sub">共 ${ps.length} 张 · 拣货单:订单 = 1:N</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>拣货单号</th><th>预计送达日</th><th>波次</th><th>订单数</th><th>SKU数</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>拣货单号</th><th>预计送达日</th><th>订单数</th><th>SKU数</th><th>状态</th><th>操作</th></tr></thead><tbody>
       ${ps.map(p=>{const{rows}=pickAggr(p);return `<tr>
-        <td class="mono">${p.id}</td><td>${p.deliver||'—'}</td><td>${p.wave||'—'}</td>
+        <td class="mono">${p.id}</td><td>${p.deliver||'—'}</td>
         <td>${p.orderIds.length} 单</td><td>${rows.length} 项</td><td>${pkTag(p.status)}</td>
         <td><button class="btn btn-p btn-sm" onclick="pick_enter('${p.id}')">${p.status=='已送货'?'查看':'进入拣货'}</button></td>
       </tr>`;}).join('')}
@@ -43,7 +43,7 @@
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <button class="btn btn-o btn-sm" onclick="pick_back()">← 拣货单列表</button>
         <span class="mono" style="font-weight:700">${p.id}</span>${pkTag(p.status)}
-        <span style="font-size:12.5px;color:var(--ts)">${p.deliver} · ${p.wave} · ${os.length} 单 · ${rows.length} SKU</span>
+        <span style="font-size:12.5px;color:var(--ts)">${p.deliver} · ${os.length} 单 · ${rows.length} SKU</span>
       </div>
       <div style="display:flex;gap:8px">
         ${p.status=='拣货中'?`<button class="btn btn-p btn-sm" onclick="pick_done('${p.id}')">✓ 确认拣完（SKU拣齐）</button>`:''}

@@ -8,24 +8,23 @@
   ============================================================ */
   // 送货签到 · 预约送货单
   const SIGN=[
-    {no:'Y26070110736788',status:'signed', wh:'裕廊DC',  dc:'直送仓',wave:'上午达',time:'2026-07-01 23:00–02:00',addr:'裕廊西 Jurong Wholesale Centre Blk 14 #02-12, Singapore 一楼三号库',should:304,inbound:147,record:'第一车 00:08 裕廊DC 已通过'},
-    {no:'Y26070150475186',status:'booked', wh:'兀兰DC',  dc:'直送仓',wave:'上午达',time:'2026-07-01 23:00–02:00',addr:'兀兰 Woodlands Ind Park E1 #01-08, Singapore 8号库1楼9–11号门',should:403,inbound:0,  record:''},
-    {no:'Y26070100788924',status:'signed', wh:'盛港DC',  dc:'直送仓',wave:'凌晨达',time:'2026-07-01 02:00–05:00',addr:'盛港 Sengkang Logistics Hub #01-22, Singapore',should:114,inbound:30, record:'第一车 03:12 盛港DC 已通过'},
-    {no:'Y26070140037238',status:'booked', wh:'大巴窑DC',dc:'上门揽收',wave:'上午达',time:'2026-07-01 23:00–02:00',addr:'大巴窑 Toa Payoh Ind Park Lor 8 #01-05, Singapore',should:5,  inbound:0,  record:''},
+    {no:'Y26070110736788',status:'signed', wh:'裕廊DC',  dc:'直送仓',time:'2026-07-01 23:00–02:00',addr:'裕廊西 Jurong Wholesale Centre Blk 14 #02-12, Singapore 一楼三号库',should:304,inbound:147,record:'第一车 00:08 裕廊DC 已通过'},
+    {no:'Y26070150475186',status:'booked', wh:'兀兰DC',  dc:'直送仓',time:'2026-07-01 23:00–02:00',addr:'兀兰 Woodlands Ind Park E1 #01-08, Singapore 8号库1楼9–11号门',should:403,inbound:0,  record:''},
+    {no:'Y26070100788924',status:'signed', wh:'盛港DC',  dc:'直送仓',time:'2026-07-01 02:00–05:00',addr:'盛港 Sengkang Logistics Hub #01-22, Singapore',should:114,inbound:30, record:'第一车 03:12 盛港DC 已通过'},
+    {no:'Y26070140037238',status:'booked', wh:'大巴窑DC',dc:'上门揽收',time:'2026-07-01 23:00–02:00',addr:'大巴窑 Toa Payoh Ind Park Lor 8 #01-05, Singapore',should:5,  inbound:0,  record:''},
   ];
   // 交货进度 · 按仓统计（新加坡事业部）
   const PROG=[
-    {wh:'CKA新加坡履约中心',wave:'上午达',time:'06-30 23:00–02:00',should:33, printed:0,  delivered:0,  early:10,hasStation:false},
-    {wh:'裕廊DC',          wave:'上午达',time:'06-30 23:00–02:00',should:304,printed:290,delivered:147,early:3, hasStation:true,
+    {wh:'CKA新加坡履约中心',time:'06-30 23:00–02:00',should:33, printed:0,  delivered:0,  early:10,hasStation:false},
+    {wh:'裕廊DC',          time:'06-30 23:00–02:00',should:304,printed:290,delivered:147,early:3, hasStation:true,
       stations:[['裕廊西区',180,170,90],['裕廊东区',84,80,42],['文礼区',40,40,15]]},
-    {wh:'兀兰DC',          wave:'凌晨达',time:'06-30 23:00–02:00',should:403,printed:403,delivered:0,  early:0, hasStation:true,
+    {wh:'兀兰DC',          time:'06-30 23:00–02:00',should:403,printed:403,delivered:0,  early:0, hasStation:true,
       stations:[['兀兰中区',220,220,0],['三巴旺区',103,103,0],['义顺区',80,80,0]]},
-    {wh:'盛港DC',          wave:'上午达',time:'06-30 23:00–02:00',should:3,  printed:3,  delivered:0,  early:0, hasStation:true,
+    {wh:'盛港DC',          time:'06-30 23:00–02:00',should:3,  printed:3,  delivered:0,  early:0, hasStation:true,
       stations:[['盛港东区',2,2,0],['榜鹅区',1,1,0]]},
-    {wh:'大巴窑DC',        wave:'下午达',time:'07-01 11:00–14:00',should:55, printed:55, delivered:12, early:5, hasStation:true,
+    {wh:'大巴窑DC',        time:'07-01 11:00–14:00',should:55, printed:55, delivered:12, early:5, hasStation:true,
       stations:[['大巴窑区',30,30,8],['碧山区',25,25,4]]},
   ];
-  const WAVES=['全部','凌晨达','上午达','下午达'];
   // 退库单
   const RET=[
     {id:'TKD2026070108266685',wh:'裕廊DC',  status:'待出库',qty:1,code:'460439',order:'2026-07-01 02:51',deadline:'2026-07-04 02:51'},
@@ -75,7 +74,7 @@
         <td class="mono">${d.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">拣货单 ${d.pickId}</div></td>
         <td>${dvTag(d.status)}</td>
         <td><b>${d.warehouse}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${d.orderIds.length} 单</div></td>
-        <td>${d.deliver} · ${d.wave}<div style="font-size:11px;color:var(--ts)">${d.window}</div></td>
+        <td>${d.deliver}<div style="font-size:11px;color:var(--ts)">${d.window}</div></td>
         <td><b style="font-size:15px">${dvShould(d)}</b> <span style="color:var(--ts)">/ ${dvIn(d)}</span></td>
         <td>${d.status=='交接完成'
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
@@ -100,7 +99,7 @@
   // 商家后台不做此动作；此处为【演示】模拟仓库扫齐全部标签后交接（调用主文件 deliveryHandover）。
   window.deliv_handover=function(id){const d=dvGet(id);if(!d)return;(d.labels||[]).forEach(l=>l.arrived=true);deliveryHandover(id);render();toast(`【演示】仓库已扫码交接 ${id}，${d.orderIds.length} 个订单转「待收货」`,'ok');};
   window.deliv_signDetail=function(id){const d=dvGet(id);if(!d)return;
-    modalWide(`<div class="mc-hd"><h3>送货单详情 · ${d.warehouse}</h3><p>${d.id} · 拣货单 ${d.pickId} · ${d.deliver} ${d.wave} ${d.window}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modalWide(`<div class="mc-hd"><h3>送货单详情 · ${d.warehouse}</h3><p>${d.id} · 拣货单 ${d.pickId} · ${d.deliver} ${d.window}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv" style="margin:0 0 14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">已入库</div><div class="v" style="${dvIn(d)<dvShould(d)?'color:var(--r)':'color:var(--gd)'}">${dvIn(d)} 张</div></div></div>
       <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden"><thead><tr><th>条码</th><th>商品</th><th>所属订单</th><th>到仓</th></tr></thead><tbody>
         ${d.labels.map(p=>`<tr><td class="mono" style="font-size:12px">${p.code}</td><td><b>${p.name}</b> ${p.qty}${p.unit}</td><td class="mono" style="font-size:12px;color:var(--ts)">${p.orderId}</td><td style="${p.arrived?'color:var(--gd)':'color:var(--r)'}">${p.arrived?'✓ 已到':'待到仓'}</td></tr>`).join('')}
@@ -119,18 +118,16 @@
      子页 2 · 交货进度
   ============================================================ */
   function tabProg(){
-    const w=DB.delivWave||'全部';
-    const rows=PROG.filter(p=>w=='全部'||p.wave==w);
+    const rows=PROG;
     const total=rows.reduce((s,p)=>s+p.should,0);
-    const waveBar=`<div class="tabs" style="margin-bottom:14px">${WAVES.map(x=>`<div class="tab ${w==x?'active':''}" onclick="DB.delivWave='${x}';render()">${x}</div>`).join('')}</div>`;
     const filt=`<div class="card"><div class="card-bd" style="padding:12px 20px"><div class="row" style="gap:10px;align-items:center">
       <select style="max-width:150px"><option>${DB.delivDate||'2026-07-01'}</option></select>
       <select style="max-width:160px"><option>新加坡事业部</option></select>
       <select style="max-width:150px"><option>全部仓库</option>${SG_WH.map(x=>`<option>${x}</option>`).join('')}</select>
     </div></div></div>`;
-    if(!rows.length) return waveBar+filt+`<div class="empty"><div class="e-ic">📦</div><div class="e-t">该波次暂无交货数据</div><div class="e-s">切换波次或日期查看其它批次。</div></div>`;
-    return waveBar+filt+`
-    <div class="card"><div class="card-hd"><h3>新加坡事业部 · ${w}</h3><span class="sub">总销量 ${total}</span></div>
+    if(!rows.length) return filt+`<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无交货数据</div><div class="e-s">切换日期查看其它批次。</div></div>`;
+    return filt+`
+    <div class="card"><div class="card-hd"><h3>新加坡事业部 · 全部</h3><span class="sub">总销量 ${total}</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>仓库 / 交货时间</th><th>应送货</th><th>已打印</th><th>已交货</th><th>待交货</th><th>未送货</th><th>操作</th></tr></thead><tbody>
       ${rows.map((p,idx)=>{const wait=p.should-p.delivered,notsent=p.should-p.printed;return `<tr>
@@ -145,7 +142,7 @@
       </tbody></table></div></div></div>`;
   }
   window.deliv_station=function(i){const p=PROG[i];
-    modalWide(`<div class="mc-hd"><h3>站区明细 · ${p.wh}</h3><p>新加坡事业部 · ${p.wave} · 交货 ${p.time}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modalWide(`<div class="mc-hd"><h3>站区明细 · ${p.wh}</h3><p>新加坡事业部 · 交货 ${p.time}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden"><thead><tr><th>站区</th><th>应送货</th><th>已打印</th><th>已交货</th></tr></thead><tbody>
         ${(p.stations||[]).map(st=>`<tr><td><b>${st[0]}</b></td><td>${st[1]}</td><td>${st[2]}</td><td style="${st[3]<st[1]?'color:var(--r)':''}">${st[3]}</td></tr>`).join('')}
         <tr style="font-weight:700;background:var(--gl)"><td>合计</td><td>${p.stations.reduce((s,x)=>s+x[1],0)}</td><td>${p.stations.reduce((s,x)=>s+x[2],0)}</td><td>${p.stations.reduce((s,x)=>s+x[3],0)}</td></tr>
@@ -167,7 +164,6 @@
       <div class="row" style="gap:10px;align-items:center">
         <select style="max-width:140px"><option>${DB.delivDate||'2026-07-01'}</option></select>
         <select style="max-width:170px"><option>CKA新加坡履约中心</option>${SG_WH.map(x=>`<option>${x}</option>`).join('')}</select>
-        <select style="max-width:130px"><option>上午达</option><option>凌晨达</option><option>下午达</option></select>
         <span style="font-size:12.5px;color:var(--ts)">装筐方式：按品输入</span>
       </div>
       <button class="btn btn-p btn-sm" onclick="deliv_scan()">📷 扫描容器，开始装筐</button>

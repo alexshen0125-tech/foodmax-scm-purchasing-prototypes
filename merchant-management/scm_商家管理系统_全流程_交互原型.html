@@ -503,14 +503,14 @@ const DB = {
     },
   },
   // 订单（餐厅下单即自动接单进入待发货，不可拒单）
-  // 订单自带 入库仓库(具体DC，上游给)、送达日、波次；pickId/deliveryId 由拣货单/送货单回写
+  // 订单自带 入库仓库(具体DC，上游给)、送达日、送达时段；pickId/deliveryId 由拣货单/送货单回写（一天只送一次货，无波次）
   orders:[
-    {id:'#SG20260630001',client:'海底捞（新加坡）',contact:'陈经理',phone:'+65 8123 4427',addr:'Clarke Quay River Valley Rd #01-08',orderTime:'06-30 09:12',deliver:'07-01',wave:'上午达',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'kg',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:'分拣前请去黄叶'},
-    {id:'#SG20260630002',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'06-30 10:40',deliver:'07-01',wave:'上午达',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'kg',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
-    {id:'#SG20260630003',client:'丰盛轩',contact:'黄先生',phone:'+65 9001 7788',addr:'Bedok North Ave 1 #01-15',orderTime:'06-29 20:10',deliver:'07-01',wave:'下午达',deliverWindow:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'kg',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
-    {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',wave:'上午达',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260630001',client:'海底捞（新加坡）',contact:'陈经理',phone:'+65 8123 4427',addr:'Clarke Quay River Valley Rd #01-08',orderTime:'06-30 09:12',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'kg',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:'分拣前请去黄叶'},
+    {id:'#SG20260630002',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'06-30 10:40',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'kg',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260630003',client:'丰盛轩',contact:'黄先生',phone:'+65 9001 7788',addr:'Bedok North Ave 1 #01-15',orderTime:'06-29 20:10',deliver:'07-01',deliverWindow:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'kg',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
   ],
-  // 拣货单(JH)/送货单(SH)：拣货单按 送达日+波次 自动成单；贴码后按仓拆成送货单
+  // 拣货单(JH)/送货单(SH)：拣货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
   // 结算（预置：2026年6月账单已生成待商家确认。绿鲜源处免佣期 freeUntil 2026-09-25 → 抽佣两项=0，net=gross−逆向）
   bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'generated', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
@@ -1758,7 +1758,7 @@ PAGES['p-settle']=()=>{
     ${b.status=='none'?`<div class="ib ib-b"><span class="i">🧮</span>当前可结算订单 ${billable.length} 笔（已完成）。点击生成对账单并推送商家。${billable.length?'':'<br><b>提示：</b>请先在「商家端 → 订单履约」完成订单履约（打包贴码 → 交接发货 → 订单完成）。'}</div>
       <button class="btn btn-p btn-lg" ${billable.length?'':'disabled'} onclick="act_genBill()">生成对账单并推送</button>`
     :`<div class="kv" style="margin-bottom:16px"><div><div class="k">汇总总额（GMV）</div><div class="v">${money(b.gross)}</div></div><div><div class="k">逆向扣减</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div><div><div class="k">平台抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeSvc||0)}</div></div><div><div class="k">物流抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeLogi||0)}</div></div><div><div class="k">应清算给供应商</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>`}
-    ${b.status=='generated'?`<div class="ib ib-y"><span class="i">⏳</span>已推送商家，等待商家确认或提出异议。</div>`:''}
+    ${b.status=='generated'?`<div class="ib ib-y"><span class="i">⏳</span>已推送商家，等待商家确认；商家如有异议将线下联系运营核查，需纠错时可作废重出。</div>`:''}
     ${b.status=='disputed'?`<div class="ib ib-r"><span class="i">📝</span>商家提出异议：<b>${b.dispute}</b><br>请核查后调整对账单（数量差异/价格差异/退货未冲减/单边账）。</div><button class="btn btn-p btn-lg" onclick="act_adjustBill()">核查并出具调整后对账单</button>`:''}
     ${b.status=='adjusted'?`<div class="ib ib-b"><span class="i">⏳</span>调整后对账单已推送，等待商家复核确认。</div>`:''}
     ${b.status=='confirmed'?`<div class="ib ib-g"><span class="i">✅</span>商家已确认对账单。等待商家开票后在「发票校验付款」处理。</div>`:''}
@@ -1869,13 +1869,12 @@ function act_forceOff(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>�
 // ===== 汇总拣货（按预计送达日圈一波，按 SKU 拣总量）=====
 let ordPickDay=null;
 /* ===== 单据链：销售订单 → 拣货单(JH) → 送货单(SH) ===== */
-function waveWindow(w){return w=='凌晨达'?'02:00~05:00':w=='下午达'?'12:00~16:00':'06:00~10:00';}
-// 系统按「送达日+波次」自动成拣货单：扫 pending 且未挂拣货单的订单归组，一组一张（一个 送达日+波次 只一张）
+// 系统按「送达日」自动成拣货单：扫 pending 且未挂拣货单的订单归组，一送达日一张
 function ensurePickOrders(){
   DB.orders.filter(o=>o.status=='pending'&&!o.pickId).forEach(o=>{
-    let p=DB.pickOrders.find(x=>x.deliver==o.deliver&&x.wave==o.wave&&x.status!='已送货');
+    let p=DB.pickOrders.find(x=>x.deliver==o.deliver&&x.status!='已送货');
     if(!p){const id='JH2026'+(o.deliver||'').replace(/-/g,'')+String(++DB.pickSeq).padStart(3,'0');
-      p={id,deliver:o.deliver,wave:o.wave,orderIds:[],status:'待拣货',createTime:o.orderTime||''};DB.pickOrders.push(p);}
+      p={id,deliver:o.deliver,orderIds:[],status:'待拣货',createTime:o.orderTime||''};DB.pickOrders.push(p);}
     if(!p.orderIds.includes(o.id))p.orderIds.push(o.id);
     o.pickId=p.id;
   });
@@ -1893,7 +1892,7 @@ function triggerDeliveries(pick){
   Object.keys(byWh).forEach(wh=>{const list=byWh[wh];
     const id='SH2026'+(pick.deliver||'').replace(/-/g,'')+String(++DB.deliverySeq).padStart(3,'0');
     const labels=[];list.forEach(o=>(o.labels||[]).forEach(p=>labels.push({code:p.code,name:p.name,qty:p.qty,unit:p.unit,arrived:false,orderId:o.id})));
-    DB.deliveries.push({id,pickId:pick.id,warehouse:wh,deliver:pick.deliver,wave:pick.wave,window:waveWindow(pick.wave),orderIds:list.map(o=>o.id),labels,status:'待送货'});
+    DB.deliveries.push({id,pickId:pick.id,warehouse:wh,deliver:pick.deliver,window:(list[0]&&list[0].deliverWindow)||'',orderIds:list.map(o=>o.id),labels,status:'待送货'});
     list.forEach(o=>o.deliveryId=id);made.push(wh);});
   pick.status='已送货';return made;
 }
@@ -1996,10 +1995,10 @@ function ord_sim(){
   const d=new Date(now.getTime()+(before?1:2)*86400000),dl=`${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const clients=['鼎泰丰（ION）','翡翠拉面小笼包','松发肉骨茶','亚坤','珍宝海鲜'];
   DB.orderSeq=(DB.orderSeq||4)+1;const seq=DB.orderSeq,qty=10+seq;
-  const WHS=['裕廊DC','兀兰DC','盛港DC','大巴窑DC'],WAVES=['凌晨达','上午达','下午达'];
-  const wave=WAVES[seq%3],wh=WHS[seq%4];
-  const o={id:'#SG20260630'+String(seq).padStart(3,'0'),client:clients[seq%clients.length],contact:'联系人',phone:'+65 8'+(100+seq)+' '+(1000+seq),addr:'Singapore #01-0'+seq,orderTime:`06-30 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,deliver:dl,wave,deliverWindow:waveWindow(wave),warehouse:wh,amt:+(qty*9.30).toFixed(2),discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''};
-  DB.orders.unshift(o);ensurePickOrders();render();toast(`新订单 ${o.id}：${before?'截止前→次日达':'截止后→次次日达'} ${dl} · ${wave} · ${wh}`,'ok');
+  const WHS=['裕廊DC','兀兰DC','盛港DC','大巴窑DC'];
+  const wh=WHS[seq%4];
+  const o={id:'#SG20260630'+String(seq).padStart(3,'0'),client:clients[seq%clients.length],contact:'联系人',phone:'+65 8'+(100+seq)+' '+(1000+seq),addr:'Singapore #01-0'+seq,orderTime:`06-30 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,deliver:dl,deliverWindow:'06:00~10:00',warehouse:wh,amt:+(qty*9.30).toFixed(2),discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''};
+  DB.orders.unshift(o);ensurePickOrders();render();toast(`新订单 ${o.id}：${before?'截止前→次日达':'截止后→次次日达'} ${dl} · ${wh}`,'ok');
 }
 // 闭环D 结算
 function act_genBill(){
@@ -2024,7 +2023,7 @@ function act_billDetail(key){
   const idx=!isCur?5:sel.status=='generated'?1:sel.status=='disputed'?1:sel.status=='adjusted'?1:sel.status=='confirmed'?(DB.payment=='paid'?5:DB.payment=='none'?2:DB.payment=='plan'||DB.payment=='approving'?3:4):0;
   const payoutTag=(!isCur||DB.payment=='paid')?'<span class="tag t-g"><span class="dot"></span>已清分 · 已到账</span>':DB.payment=='none'?'<span class="tag t-y"><span class="dot"></span>已清分 · 待打款</span>':'<span class="tag t-b"><span class="dot"></span>已清分 · 付款中</span>';
   const ft=isCur
-    ?((sel.status=='generated'||sel.status=='adjusted')?`<button class="btn btn-o" onclick="closeDrawer();act_disputeBill()">提出异议</button><button class="btn btn-p" onclick="closeDrawer();act_confirmBill()">✓ 确认对账单</button>`
+    ?(sel.status=='generated'?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();act_confirmBillAsk()">✓ 确认对账单</button>`
       :sel.status=='confirmed'?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();nav('m-invoice')">去开票 →</button>`
       :`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`)
     :`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`;
@@ -2039,9 +2038,7 @@ function act_billDetail(key){
       <div><div class="k">应清算给供应商（应结净额）</div><div class="v" style="color:var(--g);font-size:18px">${money(sel.net)}</div></div>
     </div>
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣</b>；平台就抽佣部分向你开具佣金税票。</div>
-    ${isCur&&sel.dispute?`<div class="ib ib-y"><span class="i">📝</span>你提交的异议：${sel.dispute}</div>`:''}
-    ${isCur&&sel.status=='disputed'?`<div class="ib ib-b"><span class="i">⏳</span>平台财务核查中（7 工作日内出结论）。</div>`:''}
-    ${isCur&&sel.status=='adjusted'?`<div class="ib ib-g"><span class="i">✅</span>平台已根据你的异议调整对账单，请复核后确认。</div>`:''}
+    ${isCur&&sel.status=='generated'?`<div class="ib ib-b"><span class="i">ℹ️</span>如对本期账单有异议，请<b>线下联系平台运营/客服</b>核查；本期暂不支持线上提异议。</div>`:''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
       ${sel.items.map(it=>`<tr><td>${it[0]}</td><td>${it[1]}</td><td style="${it[2]<0?'color:var(--r)':''}">${it[2]<0?'-':''}${money(Math.abs(it[2]))}</td></tr>`).join('')}
@@ -2056,6 +2053,7 @@ function act_billDetail(key){
   </div>
   <div class="drawer-ft">${ft}</div>`);
 }
+function act_confirmBillAsk(){modal(`<div class="mc-hd"><h3>确认对账单</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>确认后视为对账无误，应清算 <b>${money(DB.bill.net)}</b> 进入付款流程，且不可再线上撤回（如有异议请先线下联系运营）。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="closeModal();act_confirmBill()">确认无误</button></div>`);}
 function act_confirmBill(){DB.bill.status='confirmed';render();toast('对账单已确认，请前往开票','ok');}
 function act_disputeBill(){
   modal(`<div class="mc-hd"><h3>提出账单异议</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">异议说明（附签收单/出库记录）</label><textarea id="dis-reason">6月25日 #20260625011 订单，系统记 18kg，实际送仓 20kg，请核查少计的 2kg 货款。</textarea></div><div class="up done"><div class="uic">📎</div><div class="ut">已附 出库记录.pdf ✓</div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.bill.status='disputed';DB.bill.dispute=document.getElementById('dis-reason').value;closeModal();render();toast('异议已提交，平台核查中','ok')">提交异议</button></div>`);

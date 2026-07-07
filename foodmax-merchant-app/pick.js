@@ -1,5 +1,5 @@
 /* Food Max 商家端 v2 · 拣货模块（按 SKU 汇总拣货 → 分拣贴码 → 生成送货单）
-   单据链：系统按 送达日+波次 自动成拣货单(一波一张)；拣货按SKU跨订单汇总；贴码按订单×SKU；
+   单据链：系统按 送达日 自动成拣货单(一天一张)；拣货按SKU跨订单汇总；贴码按订单×SKU；
    全订单贴完→拣货单「已贴码」→按订单入库仓库分组每仓一张送货单(N:1)。数据源=window.FM.DB。
    评审修复内建：骨架屏/空态/提交确认/44px/S$/买家脱敏；前缀 pk-。 */
 (function(){
@@ -52,7 +52,7 @@ function listCard(pk){
   const cnt=pickAggr(pk).length;
   return `<div class="pk-card" data-id="${pk.id}">
     <div class="pk-ch"><span class="no">${pk.id}</span><span class="pk-st ${stClass(pk.status)}">${pk.status}</span></div>
-    <div class="pk-tags"><span class="pk-tag">送达 ${pk.deliver}</span><span class="pk-tag">${pk.wave}</span></div>
+    <div class="pk-tags"><span class="pk-tag">送达 ${pk.deliver}</span></div>
     <div class="pk-kbox"><div class="k"><div class="v">${pk.orderIds.length}</div><div class="l">订单数</div></div><div class="k"><div class="v">${cnt}</div><div class="l">SKU 数</div></div><div class="k"><div class="v">${ordersOf(pk).filter(o=>o.status==='packed').length}/${pk.orderIds.length}</div><div class="l">已贴码</div></div></div>
   </div>`;
 }
@@ -64,7 +64,7 @@ function renderList(container){
   const list=container.querySelector('#pkl');
   list.innerHTML=skel(2);
   setTimeout(()=>{
-    if(!DB.pickOrders.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('layers')}</div><h4>暂无待拣货拣货单</h4><p>有「待发货」订单时，系统按 送达日+波次 自动汇总生成拣货单</p></div>`;return;}
+    if(!DB.pickOrders.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('layers')}</div><h4>暂无待拣货拣货单</h4><p>有「待发货」订单时，系统按 送达日 自动汇总生成拣货单</p></div>`;return;}
     list.innerHTML=DB.pickOrders.map(listCard).join('');
     list.querySelectorAll('.pk-card').forEach(c=>c.onclick=()=>openDetail(DB.pickOrders.find(p=>p.id===c.dataset.id)));
   },420);

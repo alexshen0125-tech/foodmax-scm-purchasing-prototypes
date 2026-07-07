@@ -55,10 +55,6 @@ css.textContent=`
 .dl-tabs .t{font-size:15px;color:var(--sub);font-weight:600;padding:10px 0 12px;position:relative;cursor:pointer;min-height:44px;}
 .dl-tabs .t.on{color:var(--emerald);font-weight:700;}
 .dl-tabs .t.on::after{content:"";position:absolute;left:50%;bottom:-1px;transform:translateX(-50%);width:26px;height:3px;border-radius:3px;background:var(--emerald);}
-/* 波次药丸 */
-.dl-waves{display:flex;gap:9px;padding:12px 16px 4px;overflow-x:auto;}.dl-waves::-webkit-scrollbar{display:none;}
-.dl-wave{flex:0 0 auto;min-height:40px;display:flex;align-items:center;padding:0 17px;border-radius:11px;font-size:14px;font-weight:600;background:var(--muted);color:#46604F;cursor:pointer;}
-.dl-wave.on{background:var(--mint-soft);color:var(--emerald-2);border:1px solid var(--emerald);}
 /* 详情 / 二维码 */
 .dl-head{background:var(--mint-soft);margin:0 0 2px;padding:14px 16px 16px;}
 .dl-head .no{font-size:12.5px;color:var(--emerald-2);}
@@ -183,7 +179,7 @@ function signinCard(d){
   const signed=d.status==='已签到'||d.status==='交接完成';
   return `<div class="dl-card">
     <div class="dl-ch"><span>预约送货单</span><span class="no">${d.id}</span><span class="st ${signed?'ok':'wait'}">${dvStName(d)}</span></div>
-    <div class="dl-tagline"><span class="dl-tag">${d.wave}</span><span class="v">${d.deliver} ${d.window}</span></div>
+    <div class="dl-tagline"><span class="v">${d.deliver} ${d.window}</span></div>
     <div class="dl-meta"><span class="k">拣货单</span><span class="vv" style="font-family:monospace">${d.pickId}</span></div>
     <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
     ${d.status==='已签到'?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
@@ -229,7 +225,7 @@ function openSignDetail(d){
   pushPage({title:'送货单详情',navbar:true,body:`
     <div class="dl-head"><div class="no">送货单 ${d.id} · 拣货单 ${d.pickId}</div>
       <div class="ware">${d.warehouse}</div>
-      <div class="ln"><span class="dl-tag">${d.wave}</span><span>${d.deliver} ${d.window}</span></div>
+      <div class="ln"><span>${d.deliver} ${d.window}</span></div>
       <div class="ln"><span class="k">订单数</span><span>${d.orderIds.length} 单</span></div></div>
     <div class="dl-qrcard"><div class="qt">送货签到码</div><div class="dl-qr">${qrGrid((d.id||'').length+3)}</div><div style="font-size:12px;color:var(--sub);margin-top:10px">到仓出示，随后由仓库逐张扫码交接入仓</div></div>
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货</div><div class="v">${d.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${dvArrived(d)}</div></div></div>
@@ -264,7 +260,6 @@ function progWh(w){
 }
 function openProgress(){
   pushPage({title:'交货进度',body:`
-    <div class="dl-waves" id="dl-wv"><span class="dl-wave on" data-w="all">全部波次</span><span class="dl-wave" data-w="dawn">凌晨达</span><span class="dl-wave" data-w="am">上午达</span><span class="dl-wave" data-w="pm">下午达</span></div>
     <div class="dl-filters"><span class="dl-drop" data-f="date">07月01日 <span class="ca">▾</span></span><span class="dl-drop" data-f="city">全部管理城市 <span class="ca">▾</span></span><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span></div>
     <div id="dl-pgbody"></div>`,
     mount:(p)=>{
@@ -272,7 +267,7 @@ function openProgress(){
       const draw=()=>{
         body.innerHTML=skel(2);
         setTimeout(()=>{
-          body.innerHTML=`<div class="dl-glabel">上午达</div>`+PROG.map(g=>`<div class="dl-pcard">
+          body.innerHTML=`<div class="dl-glabel">交货进度</div>`+PROG.map(g=>`<div class="dl-pcard">
             <div class="dept"><span class="nm">${g.dept}</span><span class="tot">总销量 ${g.total}</span></div>
             ${g.whs.map(progWh).join('')}</div>`).join('');
           body.querySelectorAll('[data-st]').forEach(e=>e.onclick=()=>stationPopup(e.dataset.st,'站区'));
@@ -280,7 +275,6 @@ function openProgress(){
         },420);
       };
       draw();
-      p.querySelectorAll('#dl-wv .dl-wave').forEach(w=>w.onclick=()=>{p.querySelectorAll('#dl-wv .dl-wave').forEach(x=>x.classList.remove('on'));w.classList.add('on');draw();});
       p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:'全部',onClick:()=>toast('已筛选')},{label:'裕廊DC',onClick:()=>toast('已筛选')}]));
     }});
 }
