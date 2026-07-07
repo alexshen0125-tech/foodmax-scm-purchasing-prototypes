@@ -550,7 +550,7 @@ const DB = {
 const S = {
   onboard:{scm_pending:['入驻审核中','t-b'],task:['待完成开店任务','t-y'],task_review:['开店任务审核中','t-b'],task_rejected:['开店任务被驳回','t-r'],active:['营业中','t-g']},
   product:{draft:['草稿','t-gr'],reviewing:['待审核','t-y'],onsale:['在售','t-g'],offsale:['已下架','t-gr'],rejected:['审核驳回','t-r'],forced_off:['强制下架','t-r']},
-  order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['待收货','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
+  order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['备货中','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
   bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['已确认','t-g']},
   invoice:{none:['待开票','t-y'],uploaded:['待校验','t-b'],verified:['校验通过','t-g'],rejected:['校验退回','t-r']},
 };
@@ -1174,7 +1174,7 @@ PAGES['m-order']=()=>{
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
 let ordTab='all';
-const ORD_TABS=[['all','全部'],['pending','待发货'],['shipped','待收货'],['received','已收货'],['done','已完成'],['canceled','已取消']];
+const ORD_TABS=[['all','全部'],['pending','待发货'],['shipped','备货中'],['received','已收货'],['done','已完成'],['canceled','已取消']];
 function ordCoarse(s){return s=='packed'?'pending':s;}                 // 已贴标为待发货内子态，状态列归“待发货”
 function ordTag(o){return tag('order',ordCoarse(o.status));}
 function ordTabCount(t){return t=='all'?DB.orders.length:DB.orders.filter(o=>ordCoarse(o.status)==t).length;}
@@ -2015,7 +2015,7 @@ function ord_shortage(i){const o=DB.orders[i];
 function ord_doShortage(i){DB.orders[i].status='canceled';closeModal();render();toast(`${DB.orders[i].id} 已整单取消并退款客户`,'info');}
 function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pending:0,packed:0,shipped:1,received:2,done:3};
   drawer(`<div class="drawer-hd"><div><h3>订单 ${o.id}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ord_mask(o.client)} · 下单 ${o.orderTime||''}</div></div><span class="x" onclick="closeDrawer()">×</span></div><div class="drawer-bd">
-    <div class="card" style="box-shadow:none;margin-bottom:14px"><div class="card-bd">${pipe(['待发货','待收货','已收货','已完成'],rej?0:map[o.status],rej?0:-1)}${o.status=='packed'?'<div style="text-align:center;font-size:12px;color:var(--pp);margin-top:4px">待发货内：已分拣贴标，待交接仓库收货</div>':''}</div></div>
+    <div class="card" style="box-shadow:none;margin-bottom:14px"><div class="card-bd">${pipe(['待发货','备货中','已收货','已完成'],rej?0:map[o.status],rej?0:-1)}${o.status=='packed'?'<div style="text-align:center;font-size:12px;color:var(--pp);margin-top:4px">待发货内：已分拣贴标，待交接仓库收货</div>':''}</div></div>
     <div style="overflow-x:auto;margin-bottom:8px"><table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden">
       <thead><tr><th>商品</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right">服务佣金(预估)</th><th style="text-align:right">物流佣金(预估)</th><th style="text-align:right">预计收入(预估)</th></tr></thead><tbody>
       ${(()=>{const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';return (o.lines||[]).map(l=>{const amt=l.qty*l.price,r=commRates(code,lineCat(l),d),svc=amt*r.svc,logi=amt*r.logi,disc=o.amt?ord_disc(o)*amt/o.amt:0,inc=amt-disc-svc-logi;return `<tr><td><b>${l.name}</b> <span style="color:var(--ts);font-size:12px">${l.qty}${l.unit} · ${money(l.price)}/${l.unit}</span>${(o.status=='pending'||o.status=='packed')?' <span class="tag t-gr" style="font-size:10px">已预订</span>':''}</td><td style="text-align:right">${money(amt)}</td><td style="text-align:right;color:var(--r)">-${money(disc)}</td><td style="text-align:right;color:var(--r)">-${money(svc)}</td><td style="text-align:right;color:var(--r)">-${money(logi)}</td><td style="text-align:right;color:var(--gd)"><b>${money(inc)}</b></td></tr>`;}).join('');})()}

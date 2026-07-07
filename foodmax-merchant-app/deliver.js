@@ -211,7 +211,7 @@ function renderSigninInto(list){
 }
 function openSignin(){
   pushPage({title:'送货签到',body:`
-    <div class="dl-banner"><span>送货单来自备货单贴码后按仓拆分。可转发给司机；签到后由<b>仓库扫码</b>逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</span></div>
+    <div class="dl-banner"><span>送货单来自备货单贴码后按仓拆分。可转发给司机；签到后由<b>仓库扫码</b>逐张核验交接入仓（标签到齐 → 订单转「备货中」）。</span></div>
     <div class="dl-priv"><span>转发隐私：不允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
     <div class="dl-list" id="dl-sgl"></div>`,
     mount:(p)=>{
@@ -236,7 +236,7 @@ function openSignDetail(d){
     mount:(p)=>{
       p.querySelector('#dl-dfwd').onclick=()=>sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')}]);
       const wms=p.querySelector('#dl-wms');
-      if(wms)wms.onclick=()=>confirmDialog({title:'模拟仓库扫码交接',body:`【演示】模拟仓库 WMS 扫齐 ${d.should} 张标签，${d.orderIds.length} 个订单将转「待收货」。真实由仓库端扫码，商家不操作。`,okText:'模拟交接',onOk:()=>{(d.labels||[]).forEach(l=>l.arrived=true);window.FM.deliveryHandover(d.id);toast('【演示】已交接入仓，订单转待收货');popPage();rerenderSignin();}});
+      if(wms)wms.onclick=()=>confirmDialog({title:'模拟仓库扫码交接',body:`【演示】模拟仓库 WMS 扫齐 ${d.should} 张标签，${d.orderIds.length} 个订单将转「备货中」。真实由仓库端扫码，商家不操作。`,okText:'模拟交接',onOk:()=>{(d.labels||[]).forEach(l=>l.arrived=true);window.FM.deliveryHandover(d.id);toast('【演示】已交接入仓，订单转备货中');popPage();rerenderSignin();}});
     }});
 }
 

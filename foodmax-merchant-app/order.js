@@ -60,11 +60,11 @@ css.textContent=`
 document.head.appendChild(css);
 
 const ICON={'小棠菜':'🥬','白菜':'🥬','空心菜':'🥬','菠菜':'🥬'};
-const STMAP={pending:'待发货',packed:'待发货',shipped:'待收货',received:'已收货',done:'已完成',canceled:'已取消'};
-const STCLASS={'待发货':'emerald','待收货':'amber','已收货':'mint','已完成':'sub','已取消':'red'};
+const STMAP={pending:'待发货',packed:'待发货',shipped:'备货中',received:'已收货',done:'已完成',canceled:'已取消'};
+const STCLASS={'待发货':'emerald','备货中':'amber','已收货':'mint','已完成':'sub','已取消':'red'};
 const TABS=[
   {k:'send',label:'待发货',match:o=>o.status==='pending'||o.status==='packed'},
-  {k:'recv',label:'待收货',match:o=>o.status==='shipped'},
+  {k:'recv',label:'备货中',match:o=>o.status==='shipped'},
   {k:'got',label:'已收货',match:o=>o.status==='received'},
   {k:'done',label:'已完成',match:o=>o.status==='done'},
   {k:'cancel',label:'已取消',match:o=>o.status==='canceled'},
@@ -93,7 +93,7 @@ function card(o){
 
 function openDetail(o){
   const st=STMAP[o.status]||'待发货';
-  const steps=['待发货','待收货','已收货','已完成'];
+  const steps=['待发货','备货中','已收货','已完成'];
   const cur=Math.max(0,steps.indexOf(st==='已取消'?'待发货':st));
   // 上游动作（客户取消/收货/订单完成/发起售后）不在订单列表行，挪进详情做“演示模拟”
   const foot=o.status==='pending'
