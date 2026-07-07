@@ -182,7 +182,7 @@ const TILES=[
   {k:'violate',l:'违规记录',ic:'alert',bg:'#FEE2E2',st:'var(--red)',dot:1},
   {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
 ];
-// 备货(拣货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
+// 备货(备货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
 const DELIVER=[{k:'pick',l:'备货管理',ic:'layers'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
 const READY=new Set(['goods']);
 
@@ -211,9 +211,9 @@ function sheet(items){const m=document.createElement('div');m.className='sheet-m
   m.querySelectorAll('.si').forEach((el,idx)=>el.onclick=()=>{m.remove();if(idx<items.length&&items[idx].onClick)items[idx].onClick();});
   m.onclick=e=>{if(e.target===m)m.remove();};}
 const skel=(n=3)=>Array.from({length:n}).map(()=>`<div style="background:#fff;border-radius:20px;padding:15px;margin-bottom:13px;box-shadow:var(--sh-sm)"><div style="display:flex;gap:13px"><div class="sk" style="width:66px;height:66px;border-radius:14px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:9px"></div><div class="sk" style="height:12px;width:40%"></div></div></div><div class="sk" style="height:46px;margin-top:13px"></div></div>`).join('');
-/* ===== 单据链中央状态 FM.DB（销售订单→拣货单 JH→送货单 SH，多仓 N:1）=====
-   订单自带 入库仓库(具体DC，上游给)/送达日/送达时段；pickId·deliveryId 由拣货单·送货单回写。（一天只送一次货，无波次）
-   拣货按 SKU 跨订单汇总(一波一张拣货单)；贴码按订单×SKU；贴码全完→按仓拆送货单；交接由仓库WMS。*/
+/* ===== 单据链中央状态 FM.DB（销售订单→备货单 JH→送货单 SH，多仓 N:1）=====
+   订单自带 入库仓库(具体DC，上游给)/送达日/送达时段；pickId·deliveryId 由备货单·送货单回写。（一天只送一次货，无波次）
+   备货按 SKU 跨订单汇总(一波一张备货单)；贴码按订单×SKU；贴码全完→按仓拆送货单；交接由仓库WMS。*/
 function ordMask(n){return n?n[0]+'***':'—';}                          // 买家昵称脱敏
 function ordIncome(o){return +(o.amt-(o.discount||0)-o.amt*0.05).toFixed(2);} // 预计收入(预估)=金额−补贴−综合佣金≈5%
 const DB={
@@ -226,12 +226,12 @@ const DB={
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
 };
 function ordersOf(pk){return pk.orderIds.map(id=>DB.orders.find(o=>o.id===id)).filter(Boolean);}
-function ensurePickOrders(){                                          // 按 送达日 自动成拣货单(一天一张·幂等)
+function ensurePickOrders(){                                          // 按 送达日 自动成备货单(一天一张·幂等)
   const groups={};
   DB.orders.filter(o=>o.status==='pending'&&!o.pickId).forEach(o=>{(groups[o.deliver]=groups[o.deliver]||[]).push(o);});
   Object.keys(groups).forEach(deliver=>{
     let pk=DB.pickOrders.find(p=>p.deliver===deliver&&p.status!=='已作废'&&p.status!=='已送货');
-    if(!pk){DB.pickSeq++;pk={id:'JH2026'+deliver.replace(/-/g,'')+String(DB.pickSeq).padStart(3,'0'),deliver,orderIds:[],status:'待拣货'};DB.pickOrders.push(pk);}
+    if(!pk){DB.pickSeq++;pk={id:'JH2026'+deliver.replace(/-/g,'')+String(DB.pickSeq).padStart(3,'0'),deliver,orderIds:[],status:'待备货'};DB.pickOrders.push(pk);}
     groups[deliver].forEach(o=>{if(!pk.orderIds.includes(o.id)){pk.orderIds.push(o.id);o.pickId=pk.id;}});});
 }
 function pickAggr(pk){const map={};ordersOf(pk).forEach(o=>o.lines.forEach(l=>{if(!map[l.sku])map[l.sku]={sku:l.sku,name:l.name,unit:l.unit,qty:0,allocs:[]};map[l.sku].qty+=l.qty;map[l.sku].allocs.push({client:o.client,id:o.id,qty:l.qty});}));return Object.values(map);}
@@ -249,7 +249,7 @@ function deliveryHandover(id){                                        // 仓库W
   const dv=DB.deliveries.find(d=>d.id===id);if(!dv)return;dv.status='交接完成';
   dv.orderIds.forEach(oid=>{const o=DB.orders.find(x=>x.id===oid);if(o&&o.status==='packed')o.status='shipped';});
 }
-// 客户取消（浅版·仅待发货未贴标 pending，BR-24）：整单取消退款 + 从拣货单移除该单(SKU应拣量实时扣减)，拣货单空则作废。返回受影响拣货单。
+// 客户取消（浅版·仅待发货未贴标 pending，BR-24）：整单取消退款 + 从备货单移除该单(SKU应备量实时扣减)，备货单空则作废。返回受影响备货单。
 function cancelOrder(id){const o=DB.orders.find(x=>x.id===id);if(!o||o.status!=='pending')return null;
   o.status='canceled';
   const pk=DB.pickOrders.find(p=>p.orderIds.includes(id));

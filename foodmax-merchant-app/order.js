@@ -1,5 +1,5 @@
 /* Food Max 商家端 v2 · 订单模块（监控视图）
-   单据链：订单由 拣货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归拣货单、交接归送货单）。
+   单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
 const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome}=window.FM;
@@ -115,7 +115,7 @@ function openDetail(o){
       <div class="odd-row"><span class="k">预计送达日</span><span>${o.deliver}</span></div>
       <div class="odd-row"><span class="k">送达时段</span><span>${o.window}</span></div>
       <div class="odd-row"><span class="k">入库仓库</span><span>${o.warehouse}</span></div>
-      ${o.pickId?`<div class="odd-row"><span class="k">拣货单</span><span style="font-family:monospace">${o.pickId}</span></div>`:''}
+      ${o.pickId?`<div class="odd-row"><span class="k">备货单</span><span style="font-family:monospace">${o.pickId}</span></div>`:''}
       ${o.deliveryId?`<div class="odd-row"><span class="k">送货单</span><span style="font-family:monospace">${o.deliveryId}</span></div>`:''}
     </div>
     <div class="odd-sec">金额（预估，以订单完成为准）</div>
@@ -131,9 +131,9 @@ function openDetail(o){
 window.od_receive=function(id){const o=(window.FM.DB.orders||[]).find(x=>x.id===id);if(!o)return;o.status='received';toast('客户已收货','ok');window.FM.popPage();openDetail(o);};
 window.od_done=function(id){const o=(window.FM.DB.orders||[]).find(x=>x.id===id);if(!o)return;o.status='done';o.doneDate='07-02';toast('订单已完成（完成后 3 天结算）','info');window.FM.popPage();openDetail(o);};
 window.od_after=function(id){toast('发起售后为客户端动作，此处演示占位','info');};
-// 演示：客户在待发货取消（BR-24）→ 整单退款 + 拣货单该单移除(SKU应拣量实时扣减)，拣货单空则作废
+// 演示：客户在待发货取消（BR-24）→ 整单退款 + 备货单该单移除(SKU应备量实时扣减)，备货单空则作废
 window.od_cancel=function(id){const o=(window.FM.DB.orders||[]).find(x=>x.id===id);if(!o||o.status!=='pending')return;
-  window.FM.confirmDialog({title:'模拟客户取消',danger:1,body:`客户在待发货取消 ${o.id}，整单取消并全额退款 S$${o.amt.toFixed(2)}；该单从拣货单移除、SKU 应拣量实时扣减，拣货单若无单则作废。`,okText:'确认取消并退款',onOk:()=>{const pk=window.FM.cancelOrder(id);toast('已取消，全额退款'+(pk&&pk.status==='已作废'?'；拣货单 '+pk.id+' 已作废':''),'ok');window.FM.popPage();openDetail(o);}});};
+  window.FM.confirmDialog({title:'模拟客户取消',danger:1,body:`客户在待发货取消 ${o.id}，整单取消并全额退款 S$${o.amt.toFixed(2)}；该单从备货单移除、SKU 应备量实时扣减，备货单若无单则作废。`,okText:'确认取消并退款',onOk:()=>{const pk=window.FM.cancelOrder(id);toast('已取消，全额退款'+(pk&&pk.status==='已作废'?'；备货单 '+pk.id+' 已作废':''),'ok');window.FM.popPage();openDetail(o);}});};
 
 function renderList(container,inTab){
   container.innerHTML=`

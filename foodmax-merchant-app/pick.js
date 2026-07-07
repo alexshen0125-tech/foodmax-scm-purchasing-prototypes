@@ -1,6 +1,6 @@
-/* Food Max 商家端 v2 · 拣货模块（按 SKU 汇总拣货 → 分拣贴码 → 生成送货单）
-   单据链：系统按 送达日 自动成拣货单(一天一张)；拣货按SKU跨订单汇总；贴码按订单×SKU；
-   全订单贴完→拣货单「已贴码」→按订单入库仓库分组每仓一张送货单(N:1)。数据源=window.FM.DB。
+/* Food Max 商家端 v2 · 备货模块（按 SKU 汇总备货 → 分拣贴码 → 生成送货单）
+   单据链：系统按 送达日 自动成备货单(一天一张)；备货按SKU跨订单汇总；贴码按订单×SKU；
+   全订单贴完→备货单「已贴码」→按订单入库仓库分组每仓一张送货单(N:1)。数据源=window.FM.DB。
    评审修复内建：骨架屏/空态/提交确认/44px/S$/买家脱敏；前缀 pk-。 */
 (function(){
 const {pushPage,toast,confirmDialog,svg,skel,ordMask,ensurePickOrders,ordersOf,pickAggr,pickAllPacked,labelOrder,triggerDeliveries}=window.FM;
@@ -46,7 +46,7 @@ css.textContent=`
 `;
 document.head.appendChild(css);
 
-function stClass(s){return s==='待拣货'?'wait':s==='已送货'||s==='已作废'?'done':'ing';}
+function stClass(s){return s==='待备货'?'wait':s==='已送货'||s==='已作废'?'done':'ing';}
 
 function listCard(pk){
   const cnt=pickAggr(pk).length;
@@ -64,15 +64,15 @@ function renderList(container){
   const list=container.querySelector('#pkl');
   list.innerHTML=skel(2);
   setTimeout(()=>{
-    if(!DB.pickOrders.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('layers')}</div><h4>暂无待拣货拣货单</h4><p>有「待发货」订单时，系统按 送达日 自动汇总生成拣货单</p></div>`;return;}
+    if(!DB.pickOrders.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('layers')}</div><h4>暂无待备货备货单</h4><p>有「待发货」订单时，系统按 送达日 自动汇总生成备货单</p></div>`;return;}
     list.innerHTML=DB.pickOrders.map(listCard).join('');
-    list.querySelectorAll('.pk-card').forEach(c=>c.onclick=()=>{const p=DB.pickOrders.find(x=>x.id===c.dataset.id);if(p&&p.status==='已作废'){window.FM.toast('该拣货单全部订单已取消，已作废','info');return;}openDetail(p);});
+    list.querySelectorAll('.pk-card').forEach(c=>c.onclick=()=>{const p=DB.pickOrders.find(x=>x.id===c.dataset.id);if(p&&p.status==='已作废'){window.FM.toast('该备货单全部订单已取消，已作废','info');return;}openDetail(p);});
   },420);
 }
 
 function openDetail(pk){
-  if(pk.status==='待拣货')pk.status='拣货中';
-  pushPage({title:'拣货单 '+pk.id,body:'<div id="pkd"></div>',mount:(p)=>{const box=p.querySelector('#pkd');draw(box,pk);}});
+  if(pk.status==='待备货')pk.status='备货中';
+  pushPage({title:'备货单 '+pk.id,body:'<div id="pkd"></div>',mount:(p)=>{const box=p.querySelector('#pkd');draw(box,pk);}});
 }
 
 function draw(box,pk){
@@ -80,7 +80,7 @@ function draw(box,pk){
   const allPacked=pickAllPacked(pk);
   if(allPacked&&pk.status!=='已送货')pk.status='已贴码';
   box.innerHTML=`
-    <div class="pk-sec">① 汇总拣货 · 按 SKU<span class="hint">跨订单合并拣总量；下方 = 该SKU拆到各订单</span></div>
+    <div class="pk-sec">① 汇总备货 · 按 SKU<span class="hint">跨订单合并备总量；下方 = 该SKU拆到各订单</span></div>
     <div class="pk-tbl">${aggr.map(r=>`<div class="pk-srow">
       <div class="top"><span class="nm">${r.name} <span style="font-size:11px;color:var(--sub);font-family:monospace">${r.sku}</span></span><span class="qty">${r.qty}${r.unit}</span></div>
       <div class="alloc">${r.allocs.map(a=>`<span class="chip">${ordMask(a.client)} <b>${a.qty}${r.unit}</b></span>`).join('')}</div>
@@ -117,5 +117,5 @@ function ocard(o){
 }
 
 window.FM_MOD=window.FM_MOD||{};
-window.FM_MOD.pick=()=>pushPage({title:'拣货单',body:'<div id="pkp"></div>',mount:(p)=>renderList(p.querySelector('#pkp'))});
+window.FM_MOD.pick=()=>pushPage({title:'备货单',body:'<div id="pkp"></div>',mount:(p)=>renderList(p.querySelector('#pkp'))});
 })();

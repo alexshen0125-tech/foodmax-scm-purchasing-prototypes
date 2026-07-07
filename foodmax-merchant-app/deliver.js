@@ -180,7 +180,7 @@ function signinCard(d){
   return `<div class="dl-card">
     <div class="dl-ch"><span>预约送货单</span><span class="no">${d.id}</span><span class="st ${signed?'ok':'wait'}">${dvStName(d)}</span></div>
     <div class="dl-tagline"><span class="v">${d.deliver} ${d.window}</span></div>
-    <div class="dl-meta"><span class="k">拣货单</span><span class="vv" style="font-family:monospace">${d.pickId}</span></div>
+    <div class="dl-meta"><span class="k">备货单</span><span class="vv" style="font-family:monospace">${d.pickId}</span></div>
     <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
     ${d.status==='已签到'?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
     <div class="dl-kbox"><div class="k"><div class="l">应送货</div><div class="v">${d.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${dvArrived(d)}</div></div></div>
@@ -204,14 +204,14 @@ function renderSigninInto(list){
   const DL=window.FM.DB.deliveries||[];
   list.innerHTML=skel(2);
   setTimeout(()=>{
-    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无预约送货单</h4><p>拣货单「分拣贴码」完成后，系统按入库仓库自动生成送货单</p></div>`;return;}
+    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无预约送货单</h4><p>备货单「分拣贴码」完成后，系统按入库仓库自动生成送货单</p></div>`;return;}
     list.innerHTML='';
     DL.forEach(d=>{const w=document.createElement('div');w.innerHTML=signinCard(d);const c=w.firstElementChild;list.appendChild(c);bindSignin(c,d);});
   },420);
 }
 function openSignin(){
   pushPage({title:'送货签到',body:`
-    <div class="dl-banner"><span>送货单来自拣货单贴码后按仓拆分。可转发给司机；签到后由<b>仓库扫码</b>逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</span></div>
+    <div class="dl-banner"><span>送货单来自备货单贴码后按仓拆分。可转发给司机；签到后由<b>仓库扫码</b>逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</span></div>
     <div class="dl-priv"><span>转发隐私：不允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
     <div class="dl-list" id="dl-sgl"></div>`,
     mount:(p)=>{
@@ -223,7 +223,7 @@ function openSignin(){
 /* ============ 送货单详情（条码逐张 + 交接由仓库WMS，演示占位）============ */
 function openSignDetail(d){
   pushPage({title:'送货单详情',navbar:true,body:`
-    <div class="dl-head"><div class="no">送货单 ${d.id} · 拣货单 ${d.pickId}</div>
+    <div class="dl-head"><div class="no">送货单 ${d.id} · 备货单 ${d.pickId}</div>
       <div class="ware">${d.warehouse}</div>
       <div class="ln"><span>${d.deliver} ${d.window}</span></div>
       <div class="ln"><span class="k">订单数</span><span>${d.orderIds.length} 单</span></div></div>

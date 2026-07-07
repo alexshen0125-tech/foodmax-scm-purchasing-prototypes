@@ -61,17 +61,17 @@
   function dvIn(d){return (d.labels||[]).filter(p=>p.arrived).length;} // 已入库 = 已核验到仓张数
   function tabSign(){
     const DL=DB.deliveries||[];
-    if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无预约送货单</div><div class="e-s">拣货单「分拣贴码」完成后，系统按<b>入库仓库</b>自动生成送货单。<br>可到「拣货(按SKU)」完成一张拣货单的贴码并「生成送货单」。</div></div>`;
-    return `<div class="ib ib-r" style="margin-bottom:12px"><span class="i">📣</span>送货单来自拣货单贴码后按仓拆分。可转发给司机，签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</div>
+    if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无预约送货单</div><div class="e-s">备货单「分拣贴码」完成后，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货(按SKU)」完成一张备货单的贴码并「生成送货单」。</div></div>`;
+    return `<div class="ib ib-r" style="margin-bottom:12px"><span class="i">📣</span>送货单来自备货单贴码后按仓拆分。可转发给司机，签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</div>
     <div class="card"><div class="card-bd" style="padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:13.5px"><b>转发隐私</b><span style="color:var(--ts);margin-left:8px">${DB.delivShareItems?'允许对方查看商品清单':'不允许对方查看商品清单'}</span></div>
       <button class="btn btn-link" onclick="deliv_togglePrivacy()">修改 ›</button>
     </div></div>
-    <div class="card"><div class="card-hd"><h3>预约送货单</h3><span class="sub">共 ${DL.length} 单 · 交接完成 ${DL.filter(d=>d.status=='交接完成').length} · 送货单:拣货单 = N:1（一仓一张）</span></div>
+    <div class="card"><div class="card-hd"><h3>预约送货单</h3><span class="sub">共 ${DL.length} 单 · 交接完成 ${DL.filter(d=>d.status=='交接完成').length} · 送货单:备货单 = N:1（一仓一张）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>预约送货单</th><th>状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>操作</th></tr></thead><tbody>
       ${DL.map(d=>`<tr>
-        <td class="mono">${d.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">拣货单 ${d.pickId}</div></td>
+        <td class="mono">${d.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">备货单 ${d.pickId}</div></td>
         <td>${dvTag(d.status)}</td>
         <td><b>${d.warehouse}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${d.orderIds.length} 单</div></td>
         <td>${d.deliver}<div style="font-size:11px;color:var(--ts)">${d.window}</div></td>
@@ -87,7 +87,7 @@
   window.deliv_togglePrivacy=function(){DB.delivShareItems=!DB.delivShareItems;render();toast(DB.delivShareItems?'已允许对方查看商品清单':'已关闭商品清单查看','info');};
   function dvGet(id){return (DB.deliveries||[]).find(x=>x.id==id);}
   window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
-    modal(`<div class="mc-hd"><h3>送货签到 · ${d.warehouse}</h3><p>送货单 ${d.id} · 拣货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modal(`<div class="mc-hd"><h3>送货签到 · ${d.warehouse}</h3><p>送货单 ${d.id} · 备货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv" style="margin-bottom:14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">送达时段</div><div class="v" style="font-size:13px">${d.deliver} ${d.window}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div></div>
       <div style="background:var(--gl);border-radius:12px;padding:18px 0 14px;text-align:center;margin-bottom:6px">
         <div style="font-weight:700;margin-bottom:12px">送货签到码</div>${qrBlock(d.id)}
@@ -99,7 +99,7 @@
   // 商家后台不做此动作；此处为【演示】模拟仓库扫齐全部标签后交接（调用主文件 deliveryHandover）。
   window.deliv_handover=function(id){const d=dvGet(id);if(!d)return;(d.labels||[]).forEach(l=>l.arrived=true);deliveryHandover(id);render();toast(`【演示】仓库已扫码交接 ${id}，${d.orderIds.length} 个订单转「待收货」`,'ok');};
   window.deliv_signDetail=function(id){const d=dvGet(id);if(!d)return;
-    modalWide(`<div class="mc-hd"><h3>送货单详情 · ${d.warehouse}</h3><p>${d.id} · 拣货单 ${d.pickId} · ${d.deliver} ${d.window}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modalWide(`<div class="mc-hd"><h3>送货单详情 · ${d.warehouse}</h3><p>${d.id} · 备货单 ${d.pickId} · ${d.deliver} ${d.window}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv" style="margin:0 0 14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">已入库</div><div class="v" style="${dvIn(d)<dvShould(d)?'color:var(--r)':'color:var(--gd)'}">${dvIn(d)} 张</div></div></div>
       <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden"><thead><tr><th>条码</th><th>商品</th><th>所属订单</th><th>到仓</th></tr></thead><tbody>
         ${d.labels.map(p=>`<tr><td class="mono" style="font-size:12px">${p.code}</td><td><b>${p.name}</b> ${p.qty}${p.unit}</td><td class="mono" style="font-size:12px;color:var(--ts)">${p.orderId}</td><td style="${p.arrived?'color:var(--gd)':'color:var(--r)'}">${p.arrived?'✓ 已到':'待到仓'}</td></tr>`).join('')}
