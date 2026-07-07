@@ -307,7 +307,7 @@ textarea{resize:vertical;min-height:72px}
       <div class="rc-icon">🏪</div>
       <h2>商家端</h2>
       <p>店铺视角：提交入驻、维护商品、备货发货、确认账单与开票、处理售后与整改、申请闭店。</p>
-      <div class="rc-tags"><span class="rc-tag">入驻申请</span><span class="rc-tag">商品管理</span><span class="rc-tag">订单履约</span><span class="rc-tag">对账开票</span></div>
+      <div class="rc-tags"><span class="rc-tag">入驻申请</span><span class="rc-tag">商品管理</span><span class="rc-tag">订单管理</span><span class="rc-tag">对账开票</span></div>
       <div class="rc-go">进入商家端 →</div>
     </div>
     <div class="rc" onclick="setRole('shop_ops')">
@@ -587,9 +587,9 @@ const NAV={
     {id:'m-dash',ic:'🏠',t:'工作台'},
     {id:'m-shop',ic:'🏪',t:'店铺信息',badge:()=>(DB.merchant.onboard=='task'||DB.merchant.onboard=='task_rejected')?1:0,by:'y'},
     {id:'m-product',ic:'🥦',t:'商品管理',badge:()=>DB.products.filter(p=>p.status=='forced_off'||p.status=='rejected').length},
-    {id:'m-order',ic:'📋',t:'订单履约',badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
-    {id:'m-pick',ic:'🧺',t:'拣货(按SKU)',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
-    {id:'m-delivery',ic:'🚚',t:'送货退货'},
+    {id:'m-order',ic:'📋',t:'订单管理',badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
+    {id:'m-pick',ic:'🧺',t:'备货管理',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
+    {id:'m-delivery',ic:'🚚',t:'送货管理'},
     {sec:'增长'},
     {id:'m-biz',ic:'💡',t:'商机推荐'},
     {id:'m-price',ic:'🏷️',t:'价格分析'},
@@ -598,7 +598,7 @@ const NAV={
     {id:'m-settle',ic:'💰',t:'对账结算',badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票开具',badge:()=>DB.invoices.filter(i=>i.status=='none'||i.status=='rejected').length,by:'y'},
     {sec:'合规'},
-    {id:'m-aftersale',ic:'↩️',t:'售后记录'},
+    {id:'m-aftersale',ic:'↩️',t:'售后管理'},
     {id:'m-quality',ic:'🔬',t:'质检管理'},
     {id:'m-rectify',ic:'⚠️',t:'违规整改',badge:()=>DB.rectify=='notified'?1:0},
     {id:'m-exit',ic:'🚪',t:'闭店申请'},
@@ -1755,7 +1755,7 @@ PAGES['p-settle']=()=>{
   const billable=DB.orders.filter(o=>o.status=='done');
   return `${flowTip(`账期日汇总 OMS 订单 + WMS 收货 + RMS 退货生成对账单，推送商家确认。商家异议则在此核查调整。`)}
   <div class="card"><div class="card-hd"><h3>${b.period} 结算</h3>${tag('bill',b.status)}</div><div class="card-bd">
-    ${b.status=='none'?`<div class="ib ib-b"><span class="i">🧮</span>当前可结算订单 ${billable.length} 笔（已完成）。点击生成对账单并推送商家。${billable.length?'':'<br><b>提示：</b>请先在「商家端 → 订单履约」完成订单履约（打包贴码 → 交接发货 → 订单完成）。'}</div>
+    ${b.status=='none'?`<div class="ib ib-b"><span class="i">🧮</span>当前可结算订单 ${billable.length} 笔（已完成）。点击生成对账单并推送商家。${billable.length?'':'<br><b>提示：</b>请先在「商家端 → 订单管理」完成订单履约（打包贴码 → 交接发货 → 订单完成）。'}</div>
       <button class="btn btn-p btn-lg" ${billable.length?'':'disabled'} onclick="act_genBill()">生成对账单并推送</button>`
     :`<div class="kv" style="margin-bottom:16px"><div><div class="k">汇总总额（GMV）</div><div class="v">${money(b.gross)}</div></div><div><div class="k">逆向扣减</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div><div><div class="k">平台抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeSvc||0)}</div></div><div><div class="k">物流抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeLogi||0)}</div></div><div><div class="k">应清算给供应商</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>`}
     ${b.status=='generated'?`<div class="ib ib-y"><span class="i">⏳</span>已推送商家，等待商家确认；商家如有异议将线下联系运营核查，需纠错时可作废重出。</div>`:''}
