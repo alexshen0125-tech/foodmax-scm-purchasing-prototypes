@@ -229,7 +229,7 @@ function ensurePickOrders(){                                          // 按 送
   const groups={};
   DB.orders.filter(o=>o.status==='pending'&&!o.pickId).forEach(o=>{(groups[o.deliver]=groups[o.deliver]||[]).push(o);});
   Object.keys(groups).forEach(deliver=>{
-    let pk=DB.pickOrders.find(p=>p.deliver===deliver);
+    let pk=DB.pickOrders.find(p=>p.deliver===deliver&&p.status!=='已作废'&&p.status!=='已送货');
     if(!pk){DB.pickSeq++;pk={id:'JH2026'+deliver.replace(/-/g,'')+String(DB.pickSeq).padStart(3,'0'),deliver,orderIds:[],status:'待拣货'};DB.pickOrders.push(pk);}
     groups[deliver].forEach(o=>{if(!pk.orderIds.includes(o.id)){pk.orderIds.push(o.id);o.pickId=pk.id;}});});
 }
@@ -248,8 +248,14 @@ function deliveryHandover(id){                                        // 仓库W
   const dv=DB.deliveries.find(d=>d.id===id);if(!dv)return;dv.status='交接完成';
   dv.orderIds.forEach(oid=>{const o=DB.orders.find(x=>x.id===oid);if(o&&o.status==='packed')o.status='shipped';});
 }
+// 客户取消（浅版·仅待发货未贴标 pending，BR-24）：整单取消退款 + 从拣货单移除该单(SKU应拣量实时扣减)，拣货单空则作废。返回受影响拣货单。
+function cancelOrder(id){const o=DB.orders.find(x=>x.id===id);if(!o||o.status!=='pending')return null;
+  o.status='canceled';
+  const pk=DB.pickOrders.find(p=>p.orderIds.includes(id));
+  if(pk){pk.orderIds=pk.orderIds.filter(x=>x!==id);if(!pk.orderIds.length)pk.status='已作废';}
+  o.pickId='';return pk;}
 window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel,
-  DB,ordMask,ordIncome,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,deliveryHandover};
+  DB,ordMask,ordIncome,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,deliveryHandover,cancelOrder};
 
 function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
   const r=READY.has(k);

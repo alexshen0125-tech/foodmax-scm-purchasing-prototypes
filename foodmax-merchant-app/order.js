@@ -95,8 +95,10 @@ function openDetail(o){
   const st=STMAP[o.status]||'待发货';
   const steps=['待发货','待收货','已收货','已完成'];
   const cur=Math.max(0,steps.indexOf(st==='已取消'?'待发货':st));
-  // 上游动作（客户收货/订单完成/发起售后）不在订单列表行，挪进详情做“演示模拟”
-  const foot=o.status==='shipped'
+  // 上游动作（客户取消/收货/订单完成/发起售后）不在订单列表行，挪进详情做“演示模拟”
+  const foot=o.status==='pending'
+    ?`<button class="btn" style="width:100%;background:var(--muted);color:var(--red)" onclick="od_cancel('${o.id}')">🔬 演示：模拟客户取消</button>`
+    :o.status==='shipped'
     ?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" onclick="od_receive('${o.id}')">🔬 演示：模拟客户收货</button>`
     :o.status==='received'
     ?`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" onclick="od_after('${o.id}')">发起售后</button><button class="btn" style="flex:1;background:var(--muted);color:#46604F" onclick="od_done('${o.id}')">🔬 演示：模拟订单完成</button></div>`
@@ -129,6 +131,9 @@ function openDetail(o){
 window.od_receive=function(id){const o=(window.FM.DB.orders||[]).find(x=>x.id===id);if(!o)return;o.status='received';toast('客户已收货','ok');window.FM.popPage();openDetail(o);};
 window.od_done=function(id){const o=(window.FM.DB.orders||[]).find(x=>x.id===id);if(!o)return;o.status='done';o.doneDate='07-02';toast('订单已完成（完成后 3 天结算）','info');window.FM.popPage();openDetail(o);};
 window.od_after=function(id){toast('发起售后为客户端动作，此处演示占位','info');};
+// 演示：客户在待发货取消（BR-24）→ 整单退款 + 拣货单该单移除(SKU应拣量实时扣减)，拣货单空则作废
+window.od_cancel=function(id){const o=(window.FM.DB.orders||[]).find(x=>x.id===id);if(!o||o.status!=='pending')return;
+  window.FM.confirmDialog({title:'模拟客户取消',danger:1,body:`客户在待发货取消 ${o.id}，整单取消并全额退款 S$${o.amt.toFixed(2)}；该单从拣货单移除、SKU 应拣量实时扣减，拣货单若无单则作废。`,okText:'确认取消并退款',onOk:()=>{const pk=window.FM.cancelOrder(id);toast('已取消，全额退款'+(pk&&pk.status==='已作废'?'；拣货单 '+pk.id+' 已作废':''),'ok');window.FM.popPage();openDetail(o);}});};
 
 function renderList(container,inTab){
   container.innerHTML=`

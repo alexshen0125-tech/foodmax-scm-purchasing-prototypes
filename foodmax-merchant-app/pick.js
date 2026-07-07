@@ -46,7 +46,7 @@ css.textContent=`
 `;
 document.head.appendChild(css);
 
-function stClass(s){return s==='待拣货'?'wait':s==='已送货'?'done':'ing';}
+function stClass(s){return s==='待拣货'?'wait':s==='已送货'||s==='已作废'?'done':'ing';}
 
 function listCard(pk){
   const cnt=pickAggr(pk).length;
@@ -66,7 +66,7 @@ function renderList(container){
   setTimeout(()=>{
     if(!DB.pickOrders.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('layers')}</div><h4>暂无待拣货拣货单</h4><p>有「待发货」订单时，系统按 送达日 自动汇总生成拣货单</p></div>`;return;}
     list.innerHTML=DB.pickOrders.map(listCard).join('');
-    list.querySelectorAll('.pk-card').forEach(c=>c.onclick=()=>openDetail(DB.pickOrders.find(p=>p.id===c.dataset.id)));
+    list.querySelectorAll('.pk-card').forEach(c=>c.onclick=()=>{const p=DB.pickOrders.find(x=>x.id===c.dataset.id);if(p&&p.status==='已作废'){window.FM.toast('该拣货单全部订单已取消，已作废','info');return;}openDetail(p);});
   },420);
 }
 

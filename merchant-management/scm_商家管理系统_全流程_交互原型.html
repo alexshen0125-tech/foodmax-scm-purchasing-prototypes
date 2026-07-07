@@ -1872,7 +1872,7 @@ let ordPickDay=null;
 // 系统按「送达日」自动成拣货单：扫 pending 且未挂拣货单的订单归组，一送达日一张
 function ensurePickOrders(){
   DB.orders.filter(o=>o.status=='pending'&&!o.pickId).forEach(o=>{
-    let p=DB.pickOrders.find(x=>x.deliver==o.deliver&&x.status!='已送货');
+    let p=DB.pickOrders.find(x=>x.deliver==o.deliver&&x.status!='已送货'&&x.status!='已作废');
     if(!p){const id='JH2026'+(o.deliver||'').replace(/-/g,'')+String(++DB.pickSeq).padStart(3,'0');
       p={id,deliver:o.deliver,orderIds:[],status:'待拣货',createTime:o.orderTime||''};DB.pickOrders.push(p);}
     if(!p.orderIds.includes(o.id))p.orderIds.push(o.id);
@@ -1961,6 +1961,16 @@ function ord_hovCheck(i,k,v){
 function ord_doHandover(i){const o=DB.orders[i];if(!o.labels.every(p=>p.arrived)){toast('标签未到齐，不可确认收货','err');return;}o.status='shipped';closeModal();render();toast(`${o.id} 仓库已确认收货，订单已发货（待客户收货）`,'ok');}
 function ord_receive(i){DB.orders[i].status='received';render();toast(`${DB.orders[i].id} 客户已收货`,'ok');}
 function ord_done(i){DB.orders[i].status='done';DB.orders[i].doneDate='07-02';render();toast(`${DB.orders[i].id} 订单已完成（完成后 3 天结算）`,'info');}
+// 客户取消（浅版·仅待发货未贴标 pending）：整单取消退款 + 从拣货单移除该单，SKU 应拣量实时扣减，拣货单空则作废（BR-24）
+function ord_customerCancel(i){const o=DB.orders[i];if(o.status!='pending'){toast('已进入分拣贴标，如需取消请走售后','err');return;}
+  modal(`<div class="mc-hd"><h3>模拟客户取消 · ${o.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>客户在<b>待发货</b>阶段取消：整单取消并<b>全额退款 ${money(o.amt)}</b>；该单从拣货单移除、SKU 应拣量实时扣减，拣货单若无单则作废。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-d" onclick="ord_doCustomerCancel(${i})">确认取消并退款</button></div>`);
+}
+function ord_doCustomerCancel(i){const o=DB.orders[i];if(o.status!='pending'){closeModal();return;}
+  o.status='canceled';
+  const p=DB.pickOrders.find(x=>x.orderIds.includes(o.id));
+  if(p){p.orderIds=p.orderIds.filter(x=>x!=o.id);if(!p.orderIds.length)p.status='已作废';}
+  o.pickId='';closeModal();render();toast(`${o.id} 已取消，全额退款 ${money(o.amt)}${p&&p.status=='已作废'?'；拣货单 '+p.id+' 已作废':''}`,'ok');
+}
 function ord_shortage(i){const o=DB.orders[i];
   modal(`<div class="mc-hd"><h3>缺货整单取消 · ${o.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>本期<b>不支持部分发货 / 缺货补发</b>。任一商品缺货且无法满足，只能整单取消并全额退款客户 ${money(o.amt)}。</div><div class="fr"><label class="fl">缺货原因（回传客户）</label><textarea id="ord-sh">今日到货不足，无法满足本单数量，已为您整单退款。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-d" onclick="ord_doShortage(${i})">确认整单取消并退款</button></div>`);
 }
@@ -1984,7 +1994,7 @@ function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pendin
     ${o.labels&&o.labels.length?`<div class="ib ib-b"><span class="i">🏷️</span>SKU 标签 ${o.labels.length} 张：${o.labels.map(p=>`<span class="mono">${p.code}</span>`).join('、')}</div>`:''}
     ${o.status=='done'?`<div class="ib ib-g"><span class="i">✅</span>订单已完成（${o.doneDate||''}）。预计结算日：完成后 3 天。</div>`:''}
     ${rej?`<div class="ib ib-r"><span class="i">⛔</span>缺货整单取消，已退款客户 ${money(o.amt)}。</div>`:''}
-  </div><div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${o.status=='shipped'?`<button class="btn btn-link" onclick="closeDrawer();ord_receive(${i})">🔬 演示：模拟客户收货</button>`:o.status=='received'?`<button class="btn btn-o btn-sm" onclick="closeDrawer();ord_afterSale(${i})">发起售后</button> <button class="btn btn-link" onclick="closeDrawer();ord_done(${i})">🔬 演示：模拟订单完成</button>`:''}</div>`);
+  </div><div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${o.status=='pending'?`<button class="btn btn-link" style="color:var(--r)" onclick="closeDrawer();ord_customerCancel(${i})">🔬 演示：模拟客户取消</button>`:o.status=='shipped'?`<button class="btn btn-link" onclick="closeDrawer();ord_receive(${i})">🔬 演示：模拟客户收货</button>`:o.status=='received'?`<button class="btn btn-o btn-sm" onclick="closeDrawer();ord_afterSale(${i})">发起售后</button> <button class="btn btn-link" onclick="closeDrawer();ord_done(${i})">🔬 演示：模拟订单完成</button>`:''}</div>`);
 }
 function ord_settings(){
   modal(`<div class="mc-hd"><h3>下单截止时间设置</h3><p>店铺统一配置一个截止时间，不分品类</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">⏰</span>截止<b>前</b>下单 → <b>次日</b>达；截止<b>后</b>下单 → <b>次次日</b>达。下单即锁定预计送达日，不可拒单。</div><div class="fr"><label class="fl">下单截止时间</label><input type="time" id="ord-cutoff" value="${DB.orderCfg.cutoff}"></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="ord_saveCutoff()">保存</button></div>`);

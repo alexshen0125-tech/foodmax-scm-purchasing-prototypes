@@ -4,7 +4,7 @@
    后加载覆盖主文件 PAGES['m-pick'] 占位。复用主文件全局：ensurePickOrders / pickAggr / pickOrdersOf /
    pickAllPacked / triggerDeliveries / ord_relabel / ord_doRelabel / ord_printLabels / ord_mask / toast / nav / render。 */
 (function(){
-  function pkTag(s){const m={'待拣货':'t-y','拣货中':'t-b','已拣货':'t-b','贴码中':'t-pp','已贴码':'t-pp','已送货':'t-g'}[s]||'t-gr';
+  function pkTag(s){const m={'待拣货':'t-y','拣货中':'t-b','已拣货':'t-b','贴码中':'t-pp','已贴码':'t-pp','已送货':'t-g','已作废':'t-gr'}[s]||'t-gr';
     return `<span class="tag ${m}"><span class="dot"></span>${s}</span>`;}
 
   // 进入某拣货单（待拣货→拣货中）
@@ -27,7 +27,7 @@
       ${ps.map(p=>{const{rows}=pickAggr(p);return `<tr>
         <td class="mono">${p.id}</td><td>${p.deliver||'—'}</td>
         <td>${p.orderIds.length} 单</td><td>${rows.length} 项</td><td>${pkTag(p.status)}</td>
-        <td><button class="btn btn-p btn-sm" onclick="pick_enter('${p.id}')">${p.status=='已送货'?'查看':'进入拣货'}</button></td>
+        <td>${p.status=='已作废'?'<span style="color:var(--ts);font-size:12px">全部订单已取消·作废</span>':`<button class="btn btn-p btn-sm" onclick="pick_enter('${p.id}')">${p.status=='已送货'?'查看':'进入拣货'}</button>`}</td>
       </tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   }
