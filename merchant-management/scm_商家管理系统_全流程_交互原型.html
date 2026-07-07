@@ -476,7 +476,7 @@ const DB = {
     {name:'法人身份证', no:'S87****21G', expire:'2029-03-01', status:'valid'},
     {name:'一般纳税人资格', no:'GST-2024-117', expire:'长期', status:'valid'},
   ],
-  // 商品（样例数据：入驻/开店走完后商家端可见；平台「商品审核」即时可见待审核项。含三类目/在售/待审核/低库存/售罄/价格异常，供库存·价格·质检·经营分析·拣货演示）
+  // 商品（样例数据：入驻/开店走完后商家端可见；平台「商品审核」即时可见待审核项。含三类目/在售/待审核/低库存/售罄/价格异常，供库存·价格·质检·经营分析·备货演示）
   products:[
     {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',qty:1,price:9.30,stock:220,safe:30}]},
     {id:'SPU8812',name:'娃娃菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚金马仑',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8816',qty:1,price:7.00,stock:18,safe:30}]},
@@ -488,7 +488,7 @@ const DB = {
     {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',qty:1,price:13.50,stock:0,safe:20}]},
     {id:'SPU8819',name:'生蚝',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'法国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8824',qty:1,price:0,stock:0,safe:10}]},
   ],
-  // 订单履约配置（商家自履约：汇总拣货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
+  // 订单履约配置（商家自履约：汇总备货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
   orderCfg:{cutoff:'18:00',commRate:0.05},
   // 佣金率配置（运营平台配置 · 佣金=服务佣金svc+物流佣金logi 两项分开 · 分层：品类默认→商家覆盖 · 取值 商家×品类 > 商家默认 > 品类默认 · 免佣期内两项均0）
   commCfg:{
@@ -503,14 +503,14 @@ const DB = {
     },
   },
   // 订单（餐厅下单即自动接单进入待发货，不可拒单）
-  // 订单自带 入库仓库(具体DC，上游给)、送达日、送达时段；pickId/deliveryId 由拣货单/送货单回写（一天只送一次货，无波次）
+  // 订单自带 入库仓库(具体DC，上游给)、送达日、送达时段；pickId/deliveryId 由备货单/送货单回写（一天只送一次货，无波次）
   orders:[
     {id:'#SG20260630001',client:'海底捞（新加坡）',contact:'陈经理',phone:'+65 8123 4427',addr:'Clarke Quay River Valley Rd #01-08',orderTime:'06-30 09:12',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'kg',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:'分拣前请去黄叶'},
     {id:'#SG20260630002',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'06-30 10:40',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'kg',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
     {id:'#SG20260630003',client:'丰盛轩',contact:'黄先生',phone:'+65 9001 7788',addr:'Bedok North Ave 1 #01-15',orderTime:'06-29 20:10',deliver:'07-01',deliverWindow:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'kg',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
     {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
   ],
-  // 拣货单(JH)/送货单(SH)：拣货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
+  // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
   // 结算（预置：2026年6月账单已生成待商家确认。绿鲜源处免佣期 freeUntil 2026-09-25 → 抽佣两项=0，net=gross−逆向）
   bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'generated', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
@@ -567,6 +567,7 @@ function riskTag(r){if(!r)return '';return `<span class="tag ${RISK_META[r][0]}"
 function assume(keys){return '';}  // 顶部说明横幅已按用户要求移除
 function priceAbnormal(price,cat){const c=CATS[cat];if(!c)return false;return price<c.guide*0.5||price>c.guide*2;}
 function spuPriceRange(p){const ps=(p.skus||[]).map(s=>s.price);if(!ps.length)return '—';const mn=Math.min(...ps),mx=Math.max(...ps);return mn==mx?money(mn):money(mn)+'–'+money(mx);}
+function spuInclRange(p){const ps=(p.skus||[]).map(s=>priceIncl(s.price,p));if(!ps.length)return '—';const mn=Math.min(...ps),mx=Math.max(...ps);return mn==mx?money(mn):money(mn)+'–'+money(mx);}   // 含税价区间（多规格取 min–max）
 function spuStock(p){return (p.skus||[]).reduce((a,s)=>a+(+s.stock||0),0);}
 function spuWarn(p){return p.status=='onsale'&&(p.skus||[]).some(s=>s.stock>0&&s.stock<s.safe);}
 function spuOut(p){return p.status=='onsale'&&(p.skus||[]).length&&(p.skus||[]).every(s=>s.stock<=0);}
@@ -932,14 +933,14 @@ PAGES['m-product']=()=>{
     <div class="tabs" style="margin:0;border:none">${[['onsale','销售中'],['off','未上架']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';render()">${x[1]}</div>`).join('')}</div>
     <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="expandAllOnsale()">${DB.exp.length?'收起规格':'展开规格'}</button><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button></div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th style="width:30px"></th><th>商品</th><th>品类</th><th>规格数</th><th>价格(SGD)</th><th>总库存</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th style="width:30px"></th><th>商品</th><th>品类</th><th>规格数</th><th title="商家维护未税价，多规格显示价格区间">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算，多规格显示区间">含税价(SGD)</th><th>总库存</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
     ${filt.map(p=>{const i=DB.products.indexOf(p);const open=DB.exp.includes(p.id);return `<tr style="cursor:pointer" onclick="toggleExp('${p.id}')">
       <td><span class="exp-ic">${open?'▾':'▸'}</span></td>
       <td><b>${p.name}</b>${spuOut(p)?' <span class="tag t-gr" style="font-size:11px">全售罄</span>':''}<div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td>
-      <td>${p.cat||'—'}</td><td>${p.skus.length}</td><td>${spuPriceRange(p)}</td><td>${spuStock(p)}</td>
+      <td>${p.cat||'—'}</td><td>${p.skus.length}</td><td>${spuPriceRange(p)}</td><td>${taxRate(p)}%</td><td style="color:var(--ts)">${spuInclRange(p)}</td><td>${spuStock(p)}</td>
       <td>${isOnShelf(p)?'<span class="tag t-g"><span class="dot"></span>销售中</span>':'<span class="tag t-gr"><span class="dot"></span>未上架</span>'}</td>
       <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${p.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${p.updatedAt||'—'}</td><td onclick="event.stopPropagation()">${mActions(p,i)}</td>
-    </tr>${open?`<tr><td colspan="10" style="padding:0;background:#FbFcFd">${skuSubTable(p,i)}</td></tr>`:''}`;}).join('')||`<tr><td colspan="9"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
+    </tr>${open?`<tr><td colspan="12" style="padding:0;background:#FbFcFd">${skuSubTable(p,i)}</td></tr>`:''}`;}).join('')||`<tr><td colspan="12"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function toggleExp(id){const k=DB.exp.indexOf(id);if(k<0)DB.exp.push(id);else DB.exp.splice(k,1);render();}
@@ -947,9 +948,39 @@ function toggleSel(id){const k=DB.sel.indexOf(id);if(k<0)DB.sel.push(id);else DB
 function toggleSelSpu(spuId){const p=DB.products.find(x=>x.id==spuId);if(!p)return;const ids=p.skus.map(s=>s.skuId);const allSel=ids.length&&ids.every(id=>DB.sel.includes(id));if(allSel)DB.sel=DB.sel.filter(id=>!ids.includes(id));else ids.forEach(id=>{if(!DB.sel.includes(id))DB.sel.push(id);});render();}
 function expandAllOnsale(){const ids=DB.products.filter(p=>p.status=='onsale').map(p=>p.id);DB.exp=DB.exp.length?[]:ids;render();}
 function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
-function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';return `<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th>价格</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
-  ${p.skus.map((s,k)=>{const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);return `<tr>${onsale?`<td><input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')"></td>`:''}<td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}</td><td>${s.qty}</td><td>${s.pack||p.unit}</td><td>${edit?`<input class="miniprice" value="${(s.price||0).toFixed(2)}" onchange="act_repriceSku(${i},${k},this.value)">`:money(s.price||0)}</td><td>${edit?`<input class="ministock" value="${s.stock||0}" onchange="act_restock(${i},${k},this.value)">`:(s.stock||0)}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td>${onsale?(s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`):'<span style="color:var(--ts)">—</span>'}</td></tr>`;}).join('')}
-  </tbody></table>${edit?`<div style="padding:8px 12px;border-top:1px solid var(--bd2)"><button class="btn btn-o btn-sm" onclick="act_addSkusBatch(${i})">＋ 添加规格</button></div>`:''}`;}
+/* GST：价格维护未税价，默认税率 9%，系统自动算含税价（仅展示、不可直接编辑） */
+const GST_DEFAULT=9;
+function taxRate(p){const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%',''));return isNaN(t)?GST_DEFAULT:t;}
+function priceIncl(net,p){return (+net||0)*(1+taxRate(p)/100);}   // 含税价 = 未税价 ×(1+税率)
+/* 每个字段单独改：未税价、可售库存各点各自的「编辑」，各弹各的窗，互不相干；含税价始终只读 */
+const effTxt=p=>p.status=='onsale'?'即时生效':(p.status=='reviewing'?'审核通过后生效':'已保存');
+function act_skuEditPrice(i,k){const p=DB.products[i],s=p.skus[k];const rate=taxRate(p);const factor=1+rate/100;
+  modal(`<div class="mc-hd"><h3>改未税价 · ${p.name} ${s.qty}${s.pack||p.unit}</h3><p>${s.skuId} · 维护未税价，系统按税率 ${rate}% 自动算含税价</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="fr"><label class="fl">未税价(SGD)</label><input id="se-price" type="number" step="0.01" min="0" value="${(s.price||0).toFixed(2)}" oninput="document.getElementById('se-incl').textContent='$'+((parseFloat(this.value)||0)*${factor}).toFixed(2)"></div>
+    <div class="fr"><label class="fl">含税价(SGD)</label><div style="flex:1;color:var(--ts)">≈ <b id="se-incl">${money(priceIncl(s.price,p))}</b> <span style="font-size:12px">（税率 ${rate}%，自动计算，不可编辑）</span></div></div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doSkuPrice(${i},${k})">保存</button></div>`);}
+function doSkuPrice(i,k){const p=DB.products[i],s=p.skus[k];const np=parseFloat((document.getElementById('se-price')||{}).value);
+  if(isNaN(np)||np<=0){toast('未税价需大于 0','err');return;}
+  s.price=np;s.updatedAt=ts();p.updatedAt=ts();closeModal();render();
+  if(priceAbnormal(np,p.cat))toast(`未税价已保存（${effTxt(p)}）；超指导价区间，已标记异常`,'info');
+  else toast(`「${p.name} ${s.qty}${p.unit}」未税价已保存，${effTxt(p)}`,'ok');}
+function act_skuEditStock(i,k){const p=DB.products[i],s=p.skus[k];
+  modal(`<div class="mc-hd"><h3>改库存 · ${p.name} ${s.qty}${s.pack||p.unit}</h3><p>${s.skuId} · 可售库存为 0 即售罄</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd"><div class="fr"><label class="fl">可售库存</label><input id="se-stock" type="number" min="0" value="${s.stock||0}"></div></div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doSkuStock(${i},${k})">保存</button></div>`);}
+function doSkuStock(i,k){const p=DB.products[i],s=p.skus[k];const ns=parseInt((document.getElementById('se-stock')||{}).value,10);
+  if(isNaN(ns)||ns<0){toast('可售库存不能为负','err');return;}
+  s.stock=ns;s.updatedAt=ts();p.updatedAt=ts();closeModal();render();
+  toast(`「${p.name} ${s.qty}${p.unit}」库存已保存为 ${ns}，${effTxt(p)}`,'ok');}
+function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const rate=taxRate(p);return `<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th title="商家维护未税价">未税价(SGD)</th><th title="含税价 = 未税价 ×(1+税率)，税率 ${rate}%，系统自动计算，不可直接编辑">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+  ${p.skus.map((s,k)=>{const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
+    const priceCell=`${money(s.price||0)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}`;
+    const stockCell=`${s.stock||0}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
+    const ops=`${onsale?(s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`):'<span style="color:var(--ts)">—</span>'}`;
+    return `<tr>${onsale?`<td><input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')"></td>`:''}<td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}</td><td>${s.qty}</td><td>${s.pack||p.unit}</td><td style="white-space:nowrap">${priceCell}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td><td style="white-space:nowrap">${stockCell}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td style="white-space:nowrap">${ops}</td></tr>`;}).join('')}
+  </tbody></table>${edit?`<div style="padding:8px 12px;border-top:1px solid var(--bd2);display:flex;align-items:center;gap:12px;flex-wrap:wrap"><button class="btn btn-o btn-sm" onclick="act_addSkusBatch(${i})">＋ 添加规格</button><span style="font-size:12px;color:var(--ts)">未税价、可售库存各点自己的「编辑」单独改；含税价按税率 ${rate}% 自动算、只读。</span></div>`:''}`;}
 function mActions(p,i){
   if(p.status=='onsale')return `${isOnShelf(p)?`<button class="btn btn-o btn-sm" onclick="act_spuShelf(${i},true)">下架</button>`:`<button class="btn btn-p btn-sm" onclick="act_spuShelf(${i},false)">上架</button>`} <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
   if(p.status=='draft')return `<button class="btn btn-p btn-sm" onclick="act_submit(${i})">提交审核</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
@@ -1001,7 +1032,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
   <div class="drawer-bd">
     <h4 style="font-size:14px;margin-bottom:12px;color:var(--g)">① 商品信息（SPU）</h4>
     <div class="fg2"><div class="fr"><label class="fl"><b>*</b>商品名称</label><input id="f-name" value="${p.name}" placeholder="请输入商品名称" oninput="refreshSkuNames()"></div><div class="fr"><label class="fl">商品别名</label><input id="f-alias" maxlength="400" value="${p.alias||''}" placeholder="多个别名用逗号隔开，辅助客户端搜索"></div></div>
-    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>后台类目</label><select id="f-cat" onchange="catHint();refreshSkuNames()">${opt(Object.keys(CATS),p.cat)}</select></div><div class="fr"><label class="fl">税率</label><input id="f-tax" value="${p.tax||''}" placeholder="手动填写，如 9%"></div></div>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>后台类目</label><select id="f-cat" onchange="catHint();refreshSkuNames()">${opt(Object.keys(CATS),p.cat)}</select></div><div class="fr"><label class="fl">税率</label><input id="f-tax" value="${p.tax||'9%'}" placeholder="默认 9%，可改，如 7%"></div></div>
     <div class="fr"><label class="fl"><b>*</b>最小售卖单位 <span style="font-weight:400;color:var(--ts);font-size:12px">（支持维护净含量）</span></label><table class="itbl"><thead><tr><th>最小售卖单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td><select id="f-unit" onchange="refreshSkuNames()">${opt(UNITS,p.unit)}</select></td><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 500"></td><td><select id="f-netunit">${opt(NETUNIT,p.netUnit)}</select></td><td><input id="f-unitnote" maxlength="20" value="${p.unitNote||''}" placeholder="选填"></td></tr></tbody></table></div>
     <div class="fg2"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl">产地</label><input id="f-origin" value="${p.origin||''}" placeholder="选填"></div></div>
     <div class="fg2"><div class="fr"><label class="fl"><b>*</b>效期管理</label>${radio('f-expen',p.expEn||'是',['否','是'])}</div><div class="fr" id="qp-cell"><label class="fl">保质期</label><div class="row" style="gap:8px"><input id="f-qp" value="${p.qp||''}" placeholder="如 7" style="flex:1"><select id="f-qpu" style="max-width:88px">${opt(QPUNIT,p.qpu||'天')}</select></div></div></div>
@@ -1023,7 +1054,7 @@ function refreshInherit(){const g=id=>(document.getElementById(id)||{}).value||'
 function dedText(k){const unit=(document.getElementById('f-unit')||{}).value||'计量单位';const q=EDIT_SKUS[k].qty||0;return `下单 1 份扣减 ${q} ${unit} 货品库存`;}
 function skuName(k){const name=(document.getElementById('f-name')||{}).value||'商品名';const unit=(document.getElementById('f-unit')||{}).value||'';return `${name} ${EDIT_SKUS[k].qty||0}${unit}`;}
 function refreshSkuNames(){EDIT_SKUS.forEach((s,k)=>{const el=document.getElementById('skn-'+k);if(el)el.textContent=skuName(k);});const u=(document.getElementById('f-unit')||{}).value||'—';document.querySelectorAll('.sku-unit-cell').forEach(el=>el.textContent=u);}
-function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!box)return;const unit=(document.getElementById('f-unit')||{}).value||'—';const gc="grid-template-columns:1.5fr 1fr 0.85fr 0.9fr 0.9fr 36px";box.innerHTML=`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>1 份 = 数量</div><div>售卖单位</div><div>价格(SGD)</div><div>可售库存</div><div></div></div>`+EDIT_SKUS.map((s,k)=>`<div class="skued2" style="${gc};align-items:center"><div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div><div class="stepper"><button type="button" onclick="stepQty(${k},-1)">−</button><input type="number" min="1" value="${s.qty||''}" oninput="EDIT_SKUS[${k}].qty=parseInt(this.value)||0;skuRowSync(${k})"><button type="button" onclick="stepQty(${k},1)">＋</button></div><div class="sku-unit-cell" title="取自最小售卖单位" style="height:32px;display:flex;align-items:center;justify-content:center;background:#F3F4F6;color:var(--ts);border-radius:4px;font-size:12.5px">${unit}</div><div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div><div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`).join('');}
+function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!box)return;const unit=(document.getElementById('f-unit')||{}).value||'—';const gc="grid-template-columns:1.5fr 1fr 0.85fr 0.9fr 0.9fr 36px";box.innerHTML=`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>1 份 = 数量</div><div>售卖单位</div><div>未税价(SGD)</div><div>可售库存</div><div></div></div>`+EDIT_SKUS.map((s,k)=>`<div class="skued2" style="${gc};align-items:center"><div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div><div class="stepper"><button type="button" onclick="stepQty(${k},-1)">−</button><input type="number" min="1" value="${s.qty||''}" oninput="EDIT_SKUS[${k}].qty=parseInt(this.value)||0;skuRowSync(${k})"><button type="button" onclick="stepQty(${k},1)">＋</button></div><div class="sku-unit-cell" title="取自最小售卖单位" style="height:32px;display:flex;align-items:center;justify-content:center;background:#F3F4F6;color:var(--ts);border-radius:4px;font-size:12.5px">${unit}</div><div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div><div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`).join('');}
 function addSkuRow(){EDIT_SKUS.push({qty:'',price:'',pack:''});renderSkuEditor();}
 function delSkuRow(k){EDIT_SKUS.splice(k,1);if(!EDIT_SKUS.length)EDIT_SKUS.push({qty:'',price:'',pack:''});renderSkuEditor();}
 function expToggle(){const e=document.querySelector('input[name=f-expen]:checked');const on=(!e||e.value=='是');['f-qp','f-qpu'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=!on;});const cell=document.getElementById('qp-cell');if(cell)cell.style.opacity=on?'1':'.45';}
@@ -1107,9 +1138,9 @@ function act_addSkusBatch(i){const p=DB.products[i];EDIT_SKUS=[{qty:'',price:'',
 function previewAddSkus(i){const p=DB.products[i];const box=document.getElementById('add-preview');if(!box)return;const qs=parseQtys((document.getElementById('add-qtys')||{}).value);const ex=new Set(p.skus.map(s=>s.qty)),seen=new Set();const items=qs.map(q=>{let st;if(ex.has(q))st='exist';else if(seen.has(q))st='dup';else{seen.add(q);st='ok';}return {q,st};});const okN=items.filter(x=>x.st=='ok').length;box.innerHTML=qs.length?`<div class="card" style="box-shadow:none;margin:0"><div class="card-bd flush"><table class="subtbl"><thead><tr><th>规格名称</th><th>数量</th><th>状态</th></tr></thead><tbody>${items.map(x=>`<tr><td>${p.name} ${x.q}${p.unit}</td><td>${x.q}</td><td>${x.st=='ok'?'<span class="tag t-g">将追加</span>':x.st=='exist'?'<span class="tag t-gr">已存在，跳过</span>':'<span class="tag t-y">重复，跳过</span>'}</td></tr>`).join('')}</tbody></table></div></div><div style="font-size:12.5px;color:var(--ts);margin-top:8px">将追加 <b>${okN}</b> 个规格</div>`:'<div style="font-size:12.5px;color:var(--ts)">请输入数量</div>';}
 function doAddSkusBatch(i){const p=DB.products[i];const rows=EDIT_SKUS.filter(s=>parseInt(s.qty)>0);if(!rows.length){toast('请至少添加一个有效规格（数量≥1）','err');return;}const ex=new Set((p.skus||[]).map(s=>s.qty)),seen=new Set();let n=0,dup=0;rows.forEach(s=>{const q=parseInt(s.qty);if(ex.has(q)||seen.has(q)){dup++;return;}seen.add(q);p.skus.push({skuId:'SKU'+(++SKU_SEQ),qty:q,price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:0,createdAt:ts(),updatedAt:ts()});n++;});if(n)p.updatedAt=ts();closeModal();render();toast(n?(dup?`已追加 ${n} 个规格，${dup} 个数量重复已跳过`:`已追加 ${n} 个规格，即时生效`):'规格数量都已存在，未追加',n?'ok':'info');}
 
-/* ---------- 商家端：拣货 —— 已重构为「拣货单实体」，实现见 pc-modules/pick.js（后加载覆盖本占位）。
+/* ---------- 商家端：备货 —— 已重构为「备货单实体」，实现见 pc-modules/pick.js（后加载覆盖本占位）。
    pick.js 复用本文件全局函数：ensurePickOrders / pickAggr / ord_relabel / ord_doRelabel / triggerDeliveries。 */
-PAGES['m-pick']=()=>{ ensurePickOrders(); return `<div class="empty"><div class="e-ic">🧺</div><div class="e-t">拣货模块加载中…</div><div class="e-s">如持续显示，请确认 pc-modules/pick.js 已加载。</div></div>`; };
+PAGES['m-pick']=()=>{ ensurePickOrders(); return `<div class="empty"><div class="e-ic">🧺</div><div class="e-t">备货模块加载中…</div><div class="e-s">如持续显示，请确认 pc-modules/pick.js 已加载。</div></div>`; };
 
 /* ---------- 商家端：订单履约（闭环C 商家侧） ---------- */
 PAGES['m-order']=()=>{
@@ -1118,7 +1149,7 @@ PAGES['m-order']=()=>{
   return `
   <div class="row" style="justify-content:flex-end;margin-bottom:14px;align-items:center">
     <div style="display:flex;gap:8px">
-      <button class="btn btn-o btn-sm" onclick="nav('m-pick')">🧺 去拣货</button>
+      <button class="btn btn-o btn-sm" onclick="nav('m-pick')">🧺 去备货</button>
       <button class="btn btn-o btn-sm" onclick="ord_sim()">＋ 模拟来一单</button>
       <button class="btn btn-o btn-sm" onclick="ord_settings()">⏰ 截止 ${cfg.cutoff}</button>
     </div>
@@ -1195,7 +1226,7 @@ function ord_feePct(o){return o.amt?ord_fee(o)/o.amt:0;}            // 综合费
 function ord_disc(o){return o.discount||0;}                         // 合作商优惠（商家出，扣减项）
 function ord_income(o){return o.amt-ord_disc(o)-ord_fee(o);}        // 预计收入 = 商品总价 − 合作商优惠 − 平台基础服务费
 function ord_ops(o,i){
-  // 订单履约=纯监控视图：所有状态行操作仅「详情」。打码归拣货单、交接归送货单、售后/客户收货/完成为上游动作，
+  // 订单履约=纯监控视图：所有状态行操作仅「详情」。打码归备货单、交接归送货单、售后/客户收货/完成为上游动作，
   // 均不在订单行；上游动作的“演示模拟”入口挪进订单详情抽屉（见 ord_detail 底部）。
   return `<button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button>`;
 }
@@ -1872,27 +1903,27 @@ function act_renewQual(i){DB.quals[i].status='valid';DB.quals[i].expire='2028-06
 function act_approveProduct(i){const p=DB.products[i];p.status='onsale';p.reject='';p.note='';p.updatedAt=ts();render();toast(`「${p.name}」审核通过，已上架在售（落商家商品表）`,'ok');}
 function act_rejectProduct(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>驳回 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">驳回原因（回写商家端）</label><textarea id="pr-reason">商品主图不清晰，且产地信息与资质备案地不符，请补充后重新提报。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.products[${i}].status='rejected';DB.products[${i}].reject=document.getElementById('pr-reason').value;closeModal();render();toast('已驳回，原因已回写商家端','info')">确认驳回</button></div>`);}
 function act_forceOff(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>强制下架 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>强制下架立即生效并通知商家整改；恢复需整改重提 + 品控二次复核。</div><div class="fr"><label class="fl">下架原因</label><select id="fo-reason"><option>品控抽检农残超标</option><option>资质到期失效</option><option>价格/规格违规</option><option>食品安全投诉</option></select></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.products[${i}].status='forced_off';DB.products[${i}].reject=document.getElementById('fo-reason').value+'，已强制下架，整改后重新提报（需品控复核）。';closeModal();render();toast('已强制下架并通知商家','info')">确认强制下架</button></div>`);}
-// 闭环C 订单履约：待发货 →（汇总拣货·按SKU总量 + 分拣贴标·客户×SKU）已贴标 →（仓库确认收货·标签到齐）已发货 → 订单主状态；缺货整单取消退款
-// ===== 汇总拣货（按预计送达日圈一波，按 SKU 拣总量）=====
+// 闭环C 订单履约：待发货 →（汇总备货·按SKU总量 + 分拣贴标·客户×SKU）已贴标 →（仓库确认收货·标签到齐）已发货 → 订单主状态；缺货整单取消退款
+// ===== 汇总备货（按预计送达日圈一波，按 SKU 备总量）=====
 let ordPickDay=null;
-/* ===== 单据链：销售订单 → 拣货单(JH) → 送货单(SH) ===== */
-// 系统按「送达日」自动成拣货单：扫 pending 且未挂拣货单的订单归组，一送达日一张
+/* ===== 单据链：销售订单 → 备货单(JH) → 送货单(SH) ===== */
+// 系统按「送达日」自动成备货单：扫 pending 且未挂备货单的订单归组，一送达日一张
 function ensurePickOrders(){
   DB.orders.filter(o=>o.status=='pending'&&!o.pickId).forEach(o=>{
     let p=DB.pickOrders.find(x=>x.deliver==o.deliver&&x.status!='已送货'&&x.status!='已作废');
     if(!p){const id='JH2026'+(o.deliver||'').replace(/-/g,'')+String(++DB.pickSeq).padStart(3,'0');
-      p={id,deliver:o.deliver,orderIds:[],status:'待拣货',createTime:o.orderTime||''};DB.pickOrders.push(p);}
+      p={id,deliver:o.deliver,orderIds:[],status:'待备货',createTime:o.orderTime||''};DB.pickOrders.push(p);}
     if(!p.orderIds.includes(o.id))p.orderIds.push(o.id);
     o.pickId=p.id;
   });
 }
 function pickOrdersOf(pick){return pick.orderIds.map(id=>DB.orders.find(o=>o.id==id)).filter(Boolean);}
-// 拣货单内按 SKU 汇总（跨订单）
+// 备货单内按 SKU 汇总（跨订单）
 function pickAggr(pick){const os=pickOrdersOf(pick),map={};
   os.forEach(o=>(o.lines||[]).forEach(l=>{const k=l.sku;if(!map[k])map[k]={sku:l.sku,name:l.name,unit:l.unit,qty:0,allocs:[]};map[k].qty+=l.qty;map[k].allocs.push({client:o.client,id:o.id,qty:l.qty,oi:DB.orders.indexOf(o)});}));
   return {os,rows:Object.values(map)};}
 function pickAllPacked(pick){const os=pickOrdersOf(pick);return os.length&&os.every(o=>o.status=='packed'||o.status=='shipped'||o.deliveryId);}
-// 贴码完成触发：按订单入库仓库分组，每仓一张送货单 SH（送货单:拣货单=N:1）
+// 贴码完成触发：按订单入库仓库分组，每仓一张送货单 SH（送货单:备货单=N:1）
 function triggerDeliveries(pick){
   const os=pickOrdersOf(pick),byWh={};os.forEach(o=>{(byWh[o.warehouse]=byWh[o.warehouse]||[]).push(o);});
   const made=[];
@@ -1918,16 +1949,16 @@ function ord_renderPicklist(){
   if(!days.length){closeModal();toast('当前无待发货订单','info');return;}
   if(!ordPickDay||!days.includes(ordPickDay))ordPickDay=days[0];
   const day=ordPickDay,{os,rows}=ord_aggr(day);
-  modalWide(`<div class="mc-hd"><h3>汇总拣货单</h3><p>按预计送达日圈一波订单，按 SKU 拣总量；拣完再分拣贴标</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modalWide(`<div class="mc-hd"><h3>汇总备货单</h3><p>按预计送达日圈一波订单，按 SKU 备总量；备完再分拣贴标</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div class="fr" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><label class="fl" style="margin:0">预计送达日</label><select style="width:200px" onchange="ordPickDay=this.value;ord_renderPicklist()">${days.map(d=>`<option value="${d}" ${d==day?'selected':''}>${d}（${DB.orders.filter(o=>o.status=='pending'&&o.deliver==d).length} 单待发货）</option>`).join('')}</select><span style="font-size:12.5px;color:var(--ts)">本波 <b>${os.length}</b> 单 · <b>${rows.length}</b> 个 SKU</span></div>
-    <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden"><thead><tr><th>SKU</th><th>商品</th><th style="text-align:right">拣货总量</th><th>涉及客户</th></tr></thead><tbody>
+    <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden"><thead><tr><th>SKU</th><th>商品</th><th style="text-align:right">备货总量</th><th>涉及客户</th></tr></thead><tbody>
     ${rows.map(r=>`<tr><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td style="text-align:right"><b>${r.qty}${r.unit}</b></td><td>${r.clients.size} 个客户</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--ts);padding:18px">该送达日无待发货订单</td></tr>'}
     </tbody></table>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button><button class="btn btn-p" onclick="closeModal();toast('汇总拣货单已发送至打印机','ok')">🖨 打印拣货单</button></div>`);
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button><button class="btn btn-p" onclick="closeModal();toast('汇总备货单已发送至打印机','ok')">🖨 打印备货单</button></div>`);
 }
 // ===== 分拣贴标（每个客户×每个 SKU 一张标签）=====
 function ord_relabel(i){const o=DB.orders[i];
-  modalWide(`<div class="mc-hd"><h3>打印条码 · ${o.id}</h3><p>${ord_mask(o.client)} · 每个 SKU 一张条码，用于把汇总拣的货分回本客户</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modalWide(`<div class="mc-hd"><h3>打印条码 · ${o.id}</h3><p>${ord_mask(o.client)} · 每个 SKU 一张条码，用于把汇总备的货分回本客户</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div style="font-size:12.5px;color:var(--ts);margin-bottom:10px">本单 ${o.lines.length} 个 SKU → 生成 ${o.lines.length} 张标签</div>
     ${o.lines.map(l=>ord_labelTile(o,l.name,l.qty,l.unit,`LBL-${o.id.slice(-5)}-${l.sku.slice(-4)}`)).join('')}
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="ord_doRelabel(${i})">打印全部条码并完成</button></div>`);
@@ -1938,7 +1969,7 @@ function ord_doRelabel(i){const o=DB.orders[i];
   o.labels=o.lines.map(l=>({code:`LBL-${o.id.slice(-5)}-${l.sku.slice(-4)}`,name:l.name,qty:l.qty,unit:l.unit,arrived:false}));
   o.status='packed';closeModal();render();toast(`已完成分拣贴标（${o.labels.length} 张标签），待交接仓库`,'ok');
 }
-// 拣货台：某订单某 SKU 分完就地打印贴码；该订单所有 SKU 贴齐 → 转已贴标待交接
+// 备货台：某订单某 SKU 分完就地打印贴码；该订单所有 SKU 贴齐 → 转已贴标待交接
 function ord_stick(oi,sku){
   const o=DB.orders[oi];o.stuck=o.stuck||{};o.stuck[sku]=true;
   if(o.lines.every(l=>o.stuck[l.sku])){
@@ -1968,15 +1999,15 @@ function ord_hovCheck(i,k,v){
 function ord_doHandover(i){const o=DB.orders[i];if(!o.labels.every(p=>p.arrived)){toast('标签未到齐，不可确认收货','err');return;}o.status='shipped';closeModal();render();toast(`${o.id} 仓库已确认收货，订单已发货（待客户收货）`,'ok');}
 function ord_receive(i){DB.orders[i].status='received';render();toast(`${DB.orders[i].id} 客户已收货`,'ok');}
 function ord_done(i){DB.orders[i].status='done';DB.orders[i].doneDate='07-02';render();toast(`${DB.orders[i].id} 订单已完成（完成后 3 天结算）`,'info');}
-// 客户取消（浅版·仅待发货未贴标 pending）：整单取消退款 + 从拣货单移除该单，SKU 应拣量实时扣减，拣货单空则作废（BR-24）
+// 客户取消（浅版·仅待发货未贴标 pending）：整单取消退款 + 从备货单移除该单，SKU 应备量实时扣减，备货单空则作废（BR-24）
 function ord_customerCancel(i){const o=DB.orders[i];if(o.status!='pending'){toast('已进入分拣贴标，如需取消请走售后','err');return;}
-  modal(`<div class="mc-hd"><h3>模拟客户取消 · ${o.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>客户在<b>待发货</b>阶段取消：整单取消并<b>全额退款 ${money(o.amt)}</b>；该单从拣货单移除、SKU 应拣量实时扣减，拣货单若无单则作废。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-d" onclick="ord_doCustomerCancel(${i})">确认取消并退款</button></div>`);
+  modal(`<div class="mc-hd"><h3>模拟客户取消 · ${o.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>客户在<b>待发货</b>阶段取消：整单取消并<b>全额退款 ${money(o.amt)}</b>；该单从备货单移除、SKU 应备量实时扣减，备货单若无单则作废。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-d" onclick="ord_doCustomerCancel(${i})">确认取消并退款</button></div>`);
 }
 function ord_doCustomerCancel(i){const o=DB.orders[i];if(o.status!='pending'){closeModal();return;}
   o.status='canceled';
   const p=DB.pickOrders.find(x=>x.orderIds.includes(o.id));
   if(p){p.orderIds=p.orderIds.filter(x=>x!=o.id);if(!p.orderIds.length)p.status='已作废';}
-  o.pickId='';closeModal();render();toast(`${o.id} 已取消，全额退款 ${money(o.amt)}${p&&p.status=='已作废'?'；拣货单 '+p.id+' 已作废':''}`,'ok');
+  o.pickId='';closeModal();render();toast(`${o.id} 已取消，全额退款 ${money(o.amt)}${p&&p.status=='已作废'?'；备货单 '+p.id+' 已作废':''}`,'ok');
 }
 function ord_shortage(i){const o=DB.orders[i];
   modal(`<div class="mc-hd"><h3>缺货整单取消 · ${o.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>本期<b>不支持部分发货 / 缺货补发</b>。任一商品缺货且无法满足，只能整单取消并全额退款客户 ${money(o.amt)}。</div><div class="fr"><label class="fl">缺货原因（回传客户）</label><textarea id="ord-sh">今日到货不足，无法满足本单数量，已为您整单退款。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-d" onclick="ord_doShortage(${i})">确认整单取消并退款</button></div>`);
