@@ -1,6 +1,7 @@
 /* Food Max 商家端 v2 · 商品模块
    数据驱动配色(emerald) + 评审修复内建：骨架屏/空态/破坏性确认/批量多选/44px/SG数据
-   PC 对齐(2026-07)：价格+库存到每个 SKU / 上下架细到 SKU / 状态只留销售中·未上架 / 去库存预警 */
+   PC 对齐(2026-07)：价格+库存到每个 SKU / 上下架细到 SKU / 状态只留销售中·未上架 / 去库存预警
+   税价对齐(2026-07)：价格维护未税价，默认税率 9%，SKU 行与改价页自动展示含税价（只读） */
 (function(){
 const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
 
@@ -90,6 +91,10 @@ const PRODUCTS=[
 ];
 const isOnShelf=p=>p.skus.some(s=>!s.off);           // 销售中 = 至少 1 个 SKU 在架
 const totalStock=p=>p.skus.reduce((a,s)=>a+(+s.stock||0),0);
+// GST：价格维护未税价，默认税率 9%，系统自动算含税价（仅展示、不可编辑）
+const GST_DEFAULT=9;
+const taxRate=p=>{const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%',''));return isNaN(t)?GST_DEFAULT:t;};
+const priceIncl=(net,p)=>(+net||0)*(1+taxRate(p)/100);   // 含税价 = 未税价 ×(1+税率)
 
 function card(g,manage){
   const skuHtml=g.skus.map((s,i)=>{
@@ -98,7 +103,8 @@ function card(g,manage){
     const stockTxt=s.off?'—':(oos?'<span class="oos">0（售罄）</span>':(+s.stock).toLocaleString());
     return `<div class="sku"><div class="sm">
         <div class="ss">${s.spec}</div>
-        <div class="sd"><b>S$${(+s.price||0).toFixed(2)}</b> · 库存 ${stockTxt}</div>
+        <div class="sd"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 库存 ${stockTxt}</div>
+        <div class="sd" style="font-size:11.5px;color:#94A3B8;margin-top:2px">含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%）</div>
         ${s.updatedAt?`<div class="sd" style="font-size:11px;color:#94A3B8;margin-top:2px">更新 ${s.updatedAt}</div>`:''}</div>
       <div class="rt"><div class="sk-tg ${s.off?'off':'on'}" data-sku="${i}">${s.off?'上架':'下架'}</div>
         <div class="sk-st">${st}</div></div></div>`;
@@ -208,19 +214,25 @@ function openGoodsPush(){pushPage({title:'商品管理',body:'<div id="gp"></div
 
 // 改价格（逐 SKU，即时生效）
 function openPrice(g){
+  const rate=taxRate(g),factor=1+rate/100;
   pushPage({title:'改价格',body:`<div style="height:4px"></div>
     <div class="sku-ed">${g.skus.map((s,i)=>`
       <div class="r"><div class="nm">${g.n}<div class="c">${s.spec}</div></div>
-        <div class="in"><span class="u">S$</span><input data-i="${i}" data-price value="${s.price||''}" inputmode="decimal" placeholder="价格"></div></div>`).join('')}</div>
-    <div class="sku-ed-tip">价格维护到每个售卖规格(SKU)，提交后即时生效、无需审核。</div>
+        <div style="text-align:right">
+          <div class="in"><span class="u">S$</span><input data-i="${i}" data-price value="${s.price||''}" inputmode="decimal" placeholder="未税价"></div>
+          <div class="incl" data-incl="${i}" style="font-size:11.5px;color:#94A3B8;margin-top:5px">含税 S$${priceIncl(s.price,g).toFixed(2)}</div></div></div>`).join('')}</div>
+    <div class="sku-ed-tip">价格维护到每个售卖规格(SKU)，录入<b>未税价</b>，系统按税率 ${rate}% 自动算含税价；提交后即时生效、无需审核。</div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="ps" disabled>提交改价</button>`,
     mount:(p)=>{
       const sub=p.querySelector('#ps');
       const check=()=>{let anyValid=false,anyErr=false;
         p.querySelectorAll('[data-price]').forEach(inp=>{const v=inp.value.trim();const box=inp.closest('.in');
+          const incl=p.querySelector(`[data-incl="${inp.dataset.i}"]`);
+          const n=parseFloat(v);
+          if(incl)incl.textContent='含税 S$'+((isNaN(n)?0:n)*factor).toFixed(2);
           if(!v){box.style.borderColor='';return;}
-          const n=parseFloat(v);const bad=isNaN(n)||n<=0||n>9999;box.style.borderColor=bad?'var(--red)':'';
+          const bad=isNaN(n)||n<=0||n>9999;box.style.borderColor=bad?'var(--red)':'';
           if(bad)anyErr=true;else anyValid=true;});
         sub.disabled=!(anyValid&&!anyErr);};
       p.querySelectorAll('[data-price]').forEach(i=>i.oninput=check);
