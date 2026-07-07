@@ -176,136 +176,71 @@ function qrPopup(title){
   m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
 }
 
-/* ============ 送货签到 ============ */
-const SIGNIN=[
- {no:'Y26063070736788',st:'已签到',ware:'裕廊DC',mode:'直送仓',wave:'上午达',time:'2026.06.30 23:00-02:00',
-  sign:'第一车 00:08 裕廊DC…',signSt:'已通过',should:304,inStock:147,qr:0},
- {no:'Y26063050475186',st:'已预约',ware:'兀兰DC',mode:'直送仓',wave:'上午达',time:'2026.06.30 23:00-02:00',
-  should:403,inStock:0,qr:0},
- {no:'Y26063081672805',st:'已预约',ware:'盛港DC',title:'盛港DC（代理人）',mode:'上门揽收',wave:'上午达',time:'2026.06.30 23:00-02:00',
-  should:1,inStock:0,qr:1},
-];
-function signinCard(g){
+/* ============ 送货签到（数据源=FM.DB.deliveries；交接归仓库WMS，商家不可点）============ */
+function dvStName(d){return {'待送货':'待送货','已预约':'已预约','已签到':'已签到','交接完成':'已入库'}[d.status]||d.status;}
+function dvArrived(d){return (d.labels||[]).filter(l=>l.arrived).length;}
+function signinCard(d){
+  const signed=d.status==='已签到'||d.status==='交接完成';
   return `<div class="dl-card">
-    <div class="dl-ch"><span>预约送货单</span><span class="no">${g.no}</span><span class="st ${g.st==='已签到'?'ok':'wait'}">${g.st}</span></div>
-    <div class="dl-tagline"><span class="dl-tag">${g.mode}</span><span class="dl-tag">${g.wave}</span><span class="v">${g.time}</span></div>
-    ${g.sign?`<div class="dl-sign"><span class="lb">签到记录</span>${g.sign} <b>${g.signSt}</b><span class="more">更多 ›</span></div>`:''}
-    <div class="dl-meta"><span class="k">详细地址</span><span class="vv">${ADDR[g.ware]}</span></div>
-    <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${g.title||g.ware}</span></div>
-    <div class="dl-kbox"><div class="k"><div class="l">应送货</div><div class="v">${g.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${g.inStock}</div></div></div>
-    <div class="dl-acts"><div class="a" data-a="call">联系收货人</div><div class="a key" data-a="${g.qr?'qr':'sign'}">${g.qr?'签到二维码':'签到'}</div><div class="a" data-a="detail">查看详情</div><div class="a" data-a="fwd">转发</div></div>
+    <div class="dl-ch"><span>预约送货单</span><span class="no">${d.id}</span><span class="st ${signed?'ok':'wait'}">${dvStName(d)}</span></div>
+    <div class="dl-tagline"><span class="dl-tag">${d.wave}</span><span class="v">${d.deliver} ${d.window}</span></div>
+    <div class="dl-meta"><span class="k">拣货单</span><span class="vv" style="font-family:monospace">${d.pickId}</span></div>
+    <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
+    ${d.status==='已签到'?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
+    <div class="dl-kbox"><div class="k"><div class="l">应送货</div><div class="v">${d.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${dvArrived(d)}</div></div></div>
+    <div class="dl-acts">${d.status==='交接完成'
+      ?`<div class="a" data-a="detail">查看详情</div>`
+      :d.status==='已签到'
+      ?`<div class="a" data-a="detail">查看详情</div><div class="a" data-a="fwd">转发</div>`
+      :`<div class="a key" data-a="sign">签到</div><div class="a" data-a="detail">详情</div><div class="a" data-a="fwd">转发</div>`}</div>
   </div>`;
 }
-function bindSignin(el,g){
-  el.querySelectorAll('.dl-acts .a').forEach(b=>b.onclick=()=>{
-    const a=b.dataset.a;
-    if(a==='call')sheet([{label:'拨打电话 收货人 陈***',onClick:()=>toast('正在拨号…')},{label:'站内消息',onClick:()=>toast('打开会话')}]);
-    else if(a==='sign')confirmDialog({title:'确认到仓签到？',body:`「${g.title||g.ware}」签到后将通知仓库收货并开始计入交货进度。`,okText:'签到',onOk:()=>toast('签到成功')});
-    else if(a==='qr')qrPopup((g.title||g.ware)+' （配送商）');
-    else if(a==='detail')openSignDetail(g);
-    else if(a==='fwd')sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')},{label:'复制送货单号',onClick:()=>toast('已复制')}]);
+function bindSignin(el,d){
+  el.querySelectorAll('.dl-acts .a').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
+    if(a==='sign')confirmDialog({title:'确认到仓签到？',body:`「${d.warehouse}」签到后由<b>仓库扫码</b>逐张核验交接入仓（商家不操作交接）。`,okText:'签到',onOk:()=>{if(d.status==='待送货'||d.status==='已预约')d.status='已签到';toast('签到成功，待仓库扫码交接');rerenderSignin();}});
+    else if(a==='detail')openSignDetail(d);
+    else if(a==='fwd')sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')},{label:'复制送货单号',onClick:()=>toast('已复制 '+d.id)}]);
   });
 }
-function renderSignin(p){
-  const list=p.querySelector('#dl-sgl');
+let _signList=null;
+function rerenderSignin(){if(_signList)renderSigninInto(_signList);}
+function renderSigninInto(list){
+  const DL=window.FM.DB.deliveries||[];
   list.innerHTML=skel(2);
   setTimeout(()=>{
+    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无预约送货单</h4><p>拣货单「分拣贴码」完成后，系统按入库仓库自动生成送货单</p></div>`;return;}
     list.innerHTML='';
-    SIGNIN.forEach(g=>{const w=document.createElement('div');w.innerHTML=signinCard(g);const c=w.firstElementChild;list.appendChild(c);bindSignin(c,g);});
+    DL.forEach(d=>{const w=document.createElement('div');w.innerHTML=signinCard(d);const c=w.firstElementChild;list.appendChild(c);bindSignin(c,d);});
   },420);
 }
 function openSignin(){
   pushPage({title:'送货签到',body:`
-    <div class="dl-bar"><span class="dt">2026.07.01</span><span class="rec" id="dl-rec">查看送货记录 ›</span></div>
-    <div class="dl-banner"><span>将送货单转发给送货司机，司机可签到并实时查看交货进度</span></div>
-    <div class="dl-priv"><span>转发隐私：允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
+    <div class="dl-banner"><span>送货单来自拣货单贴码后按仓拆分。可转发给司机；签到后由<b>仓库扫码</b>逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</span></div>
+    <div class="dl-priv"><span>转发隐私：不允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
     <div class="dl-list" id="dl-sgl"></div>`,
     mount:(p)=>{
-      renderSignin(p);
-      p.querySelector('#dl-rec').onclick=openRecord;
+      _signList=p.querySelector('#dl-sgl');renderSigninInto(_signList);
       p.querySelector('#dl-priv').onclick=()=>sheet([{label:'允许对方查看商品清单',onClick:()=>toast('已设置：允许查看')},{label:'仅展示送货单号与数量',onClick:()=>toast('已设置：隐藏清单')}]);
     }});
 }
 
-/* ============ 送货记录 ============ */
-const RECORD=[
- {no:'Y26063070736788',st:'已签到',ware:'裕廊DC',should:304,inStock:147},
- {no:'Y26063050475186',st:'已预约',ware:'兀兰DC',should:403,inStock:0},
- {no:'Y26063000788924',st:'已签到',ware:'盛港DC',should:114,inStock:0},
- {no:'Y26063070531969',st:'已预约',ware:'大巴窑DC',should:33,inStock:0},
- {no:'Y26063080932564',st:'已预约',ware:'淡滨尼DC',should:55,inStock:0},
-];
-function openRecord(){
-  pushPage({title:'送货记录',body:`
-    <div class="dl-filters"><span class="dl-drop" data-f="date">全部日期 <span class="ca">▾</span></span><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span></div>
-    <div class="dl-list" id="dl-rcl"></div>`,
-    mount:(p)=>{
-      const list=p.querySelector('#dl-rcl');
-      list.innerHTML=skel(3);
-      setTimeout(()=>{
-        list.innerHTML=RECORD.map(g=>`<div class="dl-rec">
-          <div class="r1"><span>预约送货单</span><span class="no">${g.no}</span><span class="st ${g.st==='已签到'?'ok':'wait'}">${g.st}</span></div>
-          <div class="r2"><span class="ware">${g.ware}</span><span class="w">7月1日 上午达</span></div>
-          <div class="r3"><span class="seg">应送货 ${g.should}　已入库 ${g.inStock}</span><span class="d" data-no="${g.no}">查看详情 ›</span></div>
-        </div>`).join('');
-        list.querySelectorAll('[data-no]').forEach(e=>e.onclick=()=>openSignDetail(SIGNIN.find(s=>s.no===e.dataset.no)||{no:e.dataset.no,ware:'裕廊DC',mode:'直送仓',wave:'上午达',time:'2026.06.30 23:00-02:00',should:0,inStock:0}));
-      },420);
-      p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:d.dataset.f==='date'?'今日':'裕廊DC',onClick:()=>toast('已筛选')},{label:d.dataset.f==='date'?'近7天':'兀兰DC',onClick:()=>toast('已筛选')}]));
-    }});
-}
-
-/* ============ 送货签到详情 ============ */
-const DETAIL_ITEMS=[
- {nm:'[达滋味]精品油豆泡',sp:'1.5kg/组(3袋)',should:1,inStock:0},
- {nm:'[鲜丰]嫩豆腐',sp:'2斤/袋',should:2,inStock:0},
- {nm:'[鲜丰]老豆腐',sp:'2.5kg/盒',should:2,inStock:0},
-];
-function openSignDetail(g){
-  const ware=g.title||g.ware||'裕廊DC';
-  pushPage({title:'送货签到详情',navbar:true,body:`
-    <div class="dl-head"><div class="no">预约单号 ${g.no}</div>
-      <div class="ware">${ware}（配送商）</div>
-      <div class="ln"><span class="dl-tag">${g.mode||'上门揽收'}</span><span>${g.ware||'裕廊DC'}-提揽点</span></div>
-      <div class="ln"><span class="dl-tag">${g.wave||'上午达'}</span><span>${g.time||'2026-06-30 23:00-02:00'}</span></div>
-      <div class="ln"><span class="k">送货地址</span><span>${ADDR[g.ware]||ADDR['裕廊DC']}</span></div>
-      <div class="ln"><span class="k">仓库地址</span><span style="color:var(--emerald-2);font-weight:600" id="dl-waddr">点击查看仓库地址详情</span></div></div>
-    <div class="dl-qrcard"><div class="qt">送货签到码</div><div class="dl-qr">${qrGrid((g.no||'').length+3)}</div></div>
-    <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货</div><div class="v">${g.should||5}</div></div><div class="k"><div class="l">已入库</div><div class="v">${g.inStock||0}</div></div></div>
-    <div class="dl-tabs" id="dl-dtab"><span class="t on" data-t="all">全部商品</span><span class="t" data-t="un">未入库商品</span></div>
-    <div id="dl-ditems"></div>
+/* ============ 送货单详情（条码逐张 + 交接由仓库WMS，演示占位）============ */
+function openSignDetail(d){
+  pushPage({title:'送货单详情',navbar:true,body:`
+    <div class="dl-head"><div class="no">送货单 ${d.id} · 拣货单 ${d.pickId}</div>
+      <div class="ware">${d.warehouse}</div>
+      <div class="ln"><span class="dl-tag">${d.wave}</span><span>${d.deliver} ${d.window}</span></div>
+      <div class="ln"><span class="k">订单数</span><span>${d.orderIds.length} 单</span></div></div>
+    <div class="dl-qrcard"><div class="qt">送货签到码</div><div class="dl-qr">${qrGrid((d.id||'').length+3)}</div><div style="font-size:12px;color:var(--sub);margin-top:10px">到仓出示，随后由仓库逐张扫码交接入仓</div></div>
+    <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货</div><div class="v">${d.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${dvArrived(d)}</div></div></div>
+    <div class="dl-tbl"><div class="th"><span class="c1">条码 · 商品</span><span class="c2">所属订单</span><span class="c3">到仓</span></div>
+      ${(d.labels||[]).map(l=>`<div class="tr"><span class="c1">${l.name} ${l.qty}${l.unit}<div class="sp" style="font-family:monospace">${l.code}</div></span><span class="c2" style="font-family:monospace;font-size:11px">${l.orderId}</span><span class="c3" style="${l.arrived?'color:var(--emerald)':'color:var(--red)'}">${l.arrived?'✓':'待到'}</span></div>`).join('')}</div>
     <div style="height:8px"></div>`,
-    footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" id="dl-dcall">联系收货人</button><button class="btn primary" style="flex:1" id="dl-dfwd">转发</button></div>`,
+    footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" id="dl-dfwd">转发给司机</button>${d.status==='已签到'?`<button class="btn" style="flex:1;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="flex:1" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}</div>`,
     mount:(p)=>{
-      const box=p.querySelector('#dl-ditems');
-      const draw=(t)=>{const data=t==='un'?DETAIL_ITEMS.filter(i=>i.inStock<i.should):DETAIL_ITEMS;
-        if(!data.length){box.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无未入库商品</h4><p>该送货单商品已全部入库</p></div>`;return;}
-        box.innerHTML=`<div class="dl-tbl"><div class="th"><span class="c1">商品名称</span><span class="c2">应送货</span><span class="c3">已入库</span></div>
-          ${data.map(i=>`<div class="tr"><span class="c1">${i.nm}<div class="sp">${i.sp}</div></span><span class="c2">${i.should}</span><span class="c3">${i.inStock}</span></div>`).join('')}</div>`;};
-      draw('all');
-      p.querySelectorAll('#dl-dtab .t').forEach(t=>t.onclick=()=>{p.querySelectorAll('#dl-dtab .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');draw(t.dataset.t);});
-      p.querySelector('#dl-waddr').onclick=()=>toast(ADDR[g.ware]||ADDR['裕廊DC']);
-      p.querySelector('#dl-dcall').onclick=()=>toast('正在拨号…');
       p.querySelector('#dl-dfwd').onclick=()=>sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')}]);
-    }});
-}
-
-/* ============ 装筐送货 ============ */
-function openPack(){
-  pushPage({title:'装筐送货',body:`
-    <div class="dl-banner"><span style="flex:1">超出数量仓库可能无法返还，请及时清理</span><span class="hp" id="dl-help">帮助 ⑦</span></div>
-    <div class="dl-tabs" id="dl-ptab"><span class="t on" data-t="todo">待装筐</span><span class="t" data-t="done">已装筐</span><span class="t" data-t="check">抽点结果</span></div>
-    <div class="dl-filters"><span class="dl-drop" data-f="date">07月01日 <span class="ca">▾</span></span><span class="dl-drop" data-f="ware">裕廊DC <span class="ca">▾</span></span><span class="dl-drop" data-f="wave">上午达 <span class="ca">▾</span></span></div>
-    <div style="padding:0 16px 10px;font-size:13.5px;color:#27433A"><span style="color:var(--sub)">装筐方式 ⑦</span> <b>按品输入</b></div>
-    <div id="dl-pbody"></div>`,
-    footer:`<button class="btn primary" id="dl-pscan">扫描容器，开始装筐</button>`,
-    mount:(p)=>{
-      const body=p.querySelector('#dl-pbody');
-      const draw=()=>{body.innerHTML=skel(0);body.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>当前仓库未开启本功能</h4><p>该仓库暂未开通装筐送货，请切换仓库或联系平台开通</p></div>`;};
-      draw();
-      p.querySelectorAll('#dl-ptab .t').forEach(t=>t.onclick=()=>{p.querySelectorAll('#dl-ptab .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');draw();});
-      p.querySelector('#dl-help').onclick=()=>confirmDialog({title:'装筐送货说明',body:'按平台容器规格装筐后扫描容器条码完成绑定；超出容器数量的货品仓库可能无法返还，请及时清理。',okText:'我知道了'});
-      p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:'裕廊DC',onClick:()=>toast('已切换仓库')},{label:'兀兰DC',onClick:()=>toast('已切换仓库')},{label:'盛港DC',onClick:()=>toast('已切换仓库')}]));
-      p.querySelector('#dl-pscan').onclick=()=>toast('请对准容器条码扫描');
+      const wms=p.querySelector('#dl-wms');
+      if(wms)wms.onclick=()=>confirmDialog({title:'模拟仓库扫码交接',body:`【演示】模拟仓库 WMS 扫齐 ${d.should} 张标签，${d.orderIds.length} 个订单将转「待收货」。真实由仓库端扫码，商家不操作。`,okText:'模拟交接',onOk:()=>{(d.labels||[]).forEach(l=>l.arrived=true);window.FM.deliveryHandover(d.id);toast('【演示】已交接入仓，订单转待收货');popPage();rerenderSignin();}});
     }});
 }
 
@@ -482,7 +417,6 @@ function openNewReturn(){
 
 window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.signin=openSignin;
-window.FM_MOD.pack=openPack;
 window.FM_MOD.progress=openProgress;
 window.FM_MOD.return=openReturn;
 })();

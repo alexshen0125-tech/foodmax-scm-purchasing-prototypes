@@ -7,6 +7,13 @@ const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
 const css=document.createElement('style');
 css.textContent=`
 .fn-note{margin:0 16px 12px;background:var(--red-soft);color:var(--red);font-size:13px;font-weight:600;padding:11px 14px;border-radius:12px;}
+.fn-entry{margin:0 16px 14px;background:linear-gradient(120deg,#059669,#047857);border-radius:18px;padding:15px 16px;box-shadow:0 10px 24px rgba(6,95,70,.24);display:flex;align-items:center;gap:12px;cursor:pointer;min-height:44px;}
+.fn-entry .fn-el{flex:1;color:#fff;}
+.fn-entry .fn-et{font-size:15.5px;font-weight:700;}
+.fn-entry .fn-es{font-size:11.5px;opacity:.9;margin-top:4px;line-height:1.4;}
+.fn-entry .fn-er{display:flex;align-items:center;gap:8px;color:#fff;}
+.fn-entry .fn-eb{font-size:11px;font-weight:700;background:rgba(255,255,255,.2);padding:3px 9px;border-radius:8px;white-space:nowrap;}
+.fn-entry .fn-er .ar{font-size:18px;font-weight:700;}
 .fn-sum{background:#fff;margin:0 16px 14px;border-radius:20px;padding:20px 16px 16px;box-shadow:var(--sh-sm);}
 .fn-sum .gh{text-align:center;font-size:14px;color:#27433A;font-weight:600;}
 .fn-sum .big{text-align:center;font-size:34px;font-weight:700;margin:6px 0 16px;display:flex;align-items:center;justify-content:center;gap:6px;}
@@ -125,6 +132,10 @@ const ARRIVALS=[
 function openFinance(){
   pushPage({title:'财务对账',body:`
     <div class="fn-note">订单配送完成的次日系统生成账单</div>
+    <div class="fn-entry" id="sentry">
+      <div class="fn-el"><div class="fn-et">结算单 · 按周期结算</div><div class="fn-es">应清算给供应商 + 平台抽佣 · 查看到手货款与清分进度</div></div>
+      <div class="fn-er"><span class="fn-eb">1 待付款</span><span class="ar">›</span></div>
+    </div>
     <div class="fn-sum">
       <div class="gh">7月1日生成账单</div>
       <div class="big disp">S$0.00 <span class="q">?</span></div>
@@ -153,6 +164,9 @@ function openFinance(){
     mount:(p)=>{
       // 进页开票提醒
       confirmDialog({title:'开票提醒',body:'您有未向 Food Max 开具的发票，请登录合作商电脑端及时开具，逾期将扣除逾期税损。',okText:'我知道了'});
+      // 结算单入口（复用清结算平台结算单·商家视角）
+      const se=p.querySelector('#sentry');
+      if(se)se.onclick=()=>{window.FM_MOD&&window.FM_MOD.settle?window.FM_MOD.settle():toast('结算单模块加载中');};
       // 筛选标签
       p.querySelectorAll('#ff .fn-pill').forEach(pill=>pill.onclick=()=>{
         const t=pill.dataset.t;

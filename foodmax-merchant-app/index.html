@@ -182,7 +182,7 @@ const TILES=[
   {k:'violate',l:'违规记录',ic:'alert',bg:'#FEE2E2',st:'var(--red)',dot:1},
   {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
 ];
-const DELIVER=[{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'pack',l:'装筐送货',ic:'box'},{k:'signin',l:'送货签到',ic:'sign'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'},{k:'return',l:'退库取回',ic:'refund',dot:1}];
+const DELIVER=[{k:'pick',l:'拣货',ic:'layers'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'},{k:'return',l:'退库取回',ic:'refund',dot:1}];
 const READY=new Set(['goods']);
 
 /* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
@@ -210,7 +210,47 @@ function sheet(items){const m=document.createElement('div');m.className='sheet-m
   m.querySelectorAll('.si').forEach((el,idx)=>el.onclick=()=>{m.remove();if(idx<items.length&&items[idx].onClick)items[idx].onClick();});
   m.onclick=e=>{if(e.target===m)m.remove();};}
 const skel=(n=3)=>Array.from({length:n}).map(()=>`<div style="background:#fff;border-radius:20px;padding:15px;margin-bottom:13px;box-shadow:var(--sh-sm)"><div style="display:flex;gap:13px"><div class="sk" style="width:66px;height:66px;border-radius:14px"></div><div style="flex:1"><div class="sk" style="height:16px;width:70%;margin-bottom:9px"></div><div class="sk" style="height:12px;width:40%"></div></div></div><div class="sk" style="height:46px;margin-top:13px"></div></div>`).join('');
-window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel};
+/* ===== 单据链中央状态 FM.DB（销售订单→拣货单 JH→送货单 SH，多仓 N:1）=====
+   订单自带 入库仓库(具体DC，上游给)/送达日/波次；pickId·deliveryId 由拣货单·送货单回写。
+   拣货按 SKU 跨订单汇总(一波一张拣货单)；贴码按订单×SKU；贴码全完→按仓拆送货单；交接由仓库WMS。*/
+function waveWindow(w){return {'凌晨达':'02:00~05:00','上午达':'06:00~10:00','下午达':'12:00~16:00'}[w]||'';}
+function ordMask(n){return n?n[0]+'***':'—';}                          // 买家昵称脱敏
+function ordIncome(o){return +(o.amt-(o.discount||0)-o.amt*0.05).toFixed(2);} // 预计收入(预估)=金额−补贴−综合佣金≈5%
+const DB={
+  orders:[
+    {id:'#SG20260701001',client:'海底捞（新加坡）',wave:'上午达',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'kg',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260701002',client:'食为天餐厅',wave:'上午达',deliver:'07-01',window:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'kg',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260701003',client:'丰盛轩',wave:'下午达',deliver:'07-01',window:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'kg',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260701004',client:'新味坊',wave:'上午达',deliver:'07-01',window:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
+  ],
+  pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
+};
+function ordersOf(pk){return pk.orderIds.map(id=>DB.orders.find(o=>o.id===id)).filter(Boolean);}
+function ensurePickOrders(){                                          // 按 送达日+波次 自动成拣货单(一波一张·幂等)
+  const groups={};
+  DB.orders.filter(o=>o.status==='pending'&&!o.pickId).forEach(o=>{(groups[o.deliver+'|'+o.wave]=groups[o.deliver+'|'+o.wave]||[]).push(o);});
+  Object.keys(groups).forEach(k=>{const [deliver,wave]=k.split('|');
+    let pk=DB.pickOrders.find(p=>p.deliver===deliver&&p.wave===wave);
+    if(!pk){DB.pickSeq++;pk={id:'JH2026'+deliver.replace(/-/g,'')+String(DB.pickSeq).padStart(3,'0'),deliver,wave,orderIds:[],status:'待拣货'};DB.pickOrders.push(pk);}
+    groups[k].forEach(o=>{if(!pk.orderIds.includes(o.id)){pk.orderIds.push(o.id);o.pickId=pk.id;}});});
+}
+function pickAggr(pk){const map={};ordersOf(pk).forEach(o=>o.lines.forEach(l=>{if(!map[l.sku])map[l.sku]={sku:l.sku,name:l.name,unit:l.unit,qty:0,allocs:[]};map[l.sku].qty+=l.qty;map[l.sku].allocs.push({client:o.client,id:o.id,qty:l.qty});}));return Object.values(map);}
+function pickAllPacked(pk){const os=ordersOf(pk);return os.length>0&&os.every(o=>o.status==='packed');}
+function labelOrder(o){o.labels=o.lines.map(l=>({code:'LBL-'+o.id.slice(-5)+'-'+l.sku.slice(-4),name:l.name,qty:l.qty,unit:l.unit,arrived:false}));o.status='packed';} // 贴码：一单每SKU一张码→已贴标(packed)
+function triggerDeliveries(pk){                                       // 贴码全完→按订单入库仓库分组，每仓一张送货单(N:1)
+  const byWh={};ordersOf(pk).forEach(o=>{(byWh[o.warehouse]=byWh[o.warehouse]||[]).push(o);});const made=[];
+  Object.keys(byWh).forEach(wh=>{const list=byWh[wh];DB.deliverySeq++;const id='SH2026'+pk.deliver.replace(/-/g,'')+String(DB.deliverySeq).padStart(3,'0');
+    const labels=[];list.forEach(o=>(o.labels||[]).forEach(l=>labels.push(Object.assign({},l,{orderId:o.id}))));
+    DB.deliveries.push({id,pickId:pk.id,warehouse:wh,deliver:pk.deliver,wave:pk.wave,window:waveWindow(pk.wave),orderIds:list.map(o=>o.id),labels,should:labels.length,status:'待送货'});
+    list.forEach(o=>o.deliveryId=id);made.push(id);});
+  pk.status='已送货';return made;
+}
+function deliveryHandover(id){                                        // 仓库WMS扫码标签到齐→送货单交接完成→关联订单转待收货
+  const dv=DB.deliveries.find(d=>d.id===id);if(!dv)return;dv.status='交接完成';
+  dv.orderIds.forEach(oid=>{const o=DB.orders.find(x=>x.id===oid);if(o&&o.status==='packed')o.status='shipped';});
+}
+window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel,
+  DB,waveWindow,ordMask,ordIncome,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,deliveryHandover};
 
 function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
   const r=READY.has(k);
@@ -267,12 +307,14 @@ renderHome();
 <script src="goods.js"></script>
 <script src="stock.js"></script>
 <script src="order.js"></script>
+<script src="pick.js"></script>
 <script src="after.js"></script>
 <script src="invoice.js"></script>
 <script src="analysis.js"></script>
 <script src="ticket.js"></script>
 <script src="mine.js"></script>
 <script src="finance.js"></script>
+<script src="settle.js"></script>
 <script src="biz.js"></script>
 <script src="deliver.js"></script>
 <script src="message.js"></script>
