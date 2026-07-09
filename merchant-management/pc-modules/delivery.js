@@ -33,6 +33,17 @@
     {id:'TKD2026062808299011',wh:'大巴窑DC',status:'已送达',qty:3,code:'330412',order:'2026-06-28 14:20',deadline:'2026-07-01 14:20'},
   ];
   const SG_WH=['裕廊DC','兀兰DC','盛港DC','大巴窑DC','淡滨尼DC','义顺DC'];
+  // 各 DC 交货地点信息（详细地址 / 白夜班收货人 / 入门·卸货位置）——SG 本地，演示用
+  const DC_META={
+    '裕廊DC':{addr:'Jurong Wholesale Centre Blk 14 #02-12, Singapore 619502',day:['王志明 8123****7813','陈伟 8456****6567'],night:['林国强 9012****0250'],gate:'裕廊西门可进，卸货位置 2 号库 3 号闸口，只收不卸'},
+    '兀兰DC':{addr:'Woodlands Ind Park E1 #01-08, Singapore 757710',day:['黄俊 8765****1122'],night:['李文 9033****3344'],gate:'兀兰北门进，8 号库 1 楼 9–11 号门'},
+    '盛港DC':{addr:'Sengkang Logistics Hub #01-22, Singapore 545078',day:['吴成 8201****5566'],night:['/ 9111****1111'],gate:'东门可进，卸货 1 号平台，只收不卸'},
+    '大巴窑DC':{addr:'Toa Payoh Ind Park Lor 8 #01-05, Singapore 319261',day:['许尚 8678****7788'],night:['史金超 9158****0250'],gate:'中门进，只收不卸'},
+    '淡滨尼DC':{addr:'Tampines Logispark #01-30, Singapore 528790',day:['周强 8299****9900'],night:['郑凯 9088****2233'],gate:'A 门进，3 号卸货区'},
+    '义顺DC':{addr:'Yishun Ind Park A #01-14, Singapore 768160',day:['马良 8322****4455'],night:['孙浩 9077****6677'],gate:'西门进，卸货 2 号库'},
+  };
+  // 每件体积（稳定伪随机，演示用，0.004–0.034 立方米/件）
+  function volPer(name){let h=7;for(const c of String(name))h=(h*31+c.charCodeAt(0))>>>0;return 0.004+(h%300)/10000;}
 
   /* ---------- 通用小工具 ---------- */
   function signTag(s){return s=='signed'?'<span class="tag t-g"><span class="dot"></span>已签到</span>':'<span class="tag t-y"><span class="dot"></span>已预约</span>';}
@@ -98,14 +109,94 @@
   // 交接入仓：真实由【仓库端 WMS 扫码】逐张核验标签到齐 → 送货单「交接完成」→ 关联订单转「待收货」。
   // 商家后台不做此动作；此处为【演示】模拟仓库扫齐全部标签后交接（调用主文件 deliveryHandover）。
   window.deliv_handover=function(id){const d=dvGet(id);if(!d)return;(d.labels||[]).forEach(l=>l.arrived=true);deliveryHandover(id);render();toast(`【演示】仓库已扫码交接 ${id}，${d.orderIds.length} 个订单转「待收货」`,'ok');};
-  window.deliv_signDetail=function(id){const d=dvGet(id);if(!d)return;
-    modalWide(`<div class="mc-hd"><h3>送货单详情 · ${d.warehouse}</h3><p>${d.id} · 备货单 ${d.pickId} · ${d.deliver} ${d.window}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-      <div class="kv" style="margin:0 0 14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">已入库</div><div class="v" style="${dvIn(d)<dvShould(d)?'color:var(--r)':'color:var(--gd)'}">${dvIn(d)} 张</div></div></div>
-      <table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden"><thead><tr><th>条码</th><th>商品</th><th>所属订单</th><th>到仓</th></tr></thead><tbody>
-        ${d.labels.map(p=>`<tr><td class="mono" style="font-size:12px">${p.code}</td><td><b>${p.name}</b> ${p.qty}${p.unit}</td><td class="mono" style="font-size:12px;color:var(--ts)">${p.orderId}</td><td style="${p.arrived?'color:var(--gd)':'color:var(--r)'}">${p.arrived?'✓ 已到':'待到仓'}</td></tr>`).join('')}
-      </tbody></table>
-    </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button>${d.status=='已签到'?`<button class="btn btn-link" onclick="closeModal();deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐）</button>`:''}</div>`);
-  };
+  /* ---------- 送货单详情（整页 · 快驴样式三段式）---------- */
+  window.deliv_open=function(id){DB.delivView=id;render();window.scrollTo(0,0);};
+  window.deliv_closeDetail=function(){DB.delivView=null;render();};
+  window.deliv_signDetail=window.deliv_open;   // 兼容旧调用
+  function kvItem(k,v){return `<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;}
+  function secBar(t,tag){return `<div style="display:flex;align-items:center;gap:10px;margin:2px 0 16px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:15px;font-weight:700">${t}</h3>${tag||''}</div>`;}
+  // 商品明细行：demo 单直接用 demoLines（已入库量按状态联动）；真实单由 orderIds→lines 聚合并从商品主数据补全
+  function dvDetailLines(d){
+    const inbound=d.status=='交接完成';
+    if(d.demoLines) return d.demoLines.map(l=>({...l,inQty:inbound?l.bookQty:0}));
+    const map={};
+    (d.orderIds||[]).forEach(oid=>{const o=DB.orders.find(x=>x.id==oid);if(!o)return;(o.lines||[]).forEach(l=>{const k=l.sku;if(!map[k])map[k]={sku:l.sku,name:l.name,unit:l.unit,qty:0};map[k].qty+=l.qty;});});
+    return Object.values(map).map(r=>{const p=DB.products.find(x=>x.name==r.name);const spec=p&&p.skus&&p.skus[0]?`${p.skus[0].qty}${p.unit}/${r.unit||'件'}`:'—';return {sku:r.sku,name:r.name,brand:(p&&p.brand)||'无',spec,skuUnit:r.unit||'件',box:1,orderQty:r.qty,bookQty:r.qty,inQty:inbound?r.qty:0,packQty:r.qty,vol:+(volPer(r.name)*r.qty).toFixed(6)};});
+  }
+  function detailPage(d){
+    const meta=DC_META[d.warehouse]||{};const lines=dvDetailLines(d);const inbound=d.status=='交接完成';
+    const ownerType=DB.merchant.channel=='平台商家'?'3P':'自营';
+    const signTxt=d.signTime?`第一车 ${d.deliver} ${d.signTime} 定位签到 ${d.warehouse} 已通过`:'未签到';
+    return `
+    <div class="row" style="align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn btn-o btn-sm" onclick="deliv_closeDetail()">← 返回送货单列表</button>
+      <span class="mono" style="font-weight:700">${d.id}</span>${dvTag(d.status)}
+      <span style="font-size:12.5px;color:var(--ts)">备货单 ${d.pickId||'-'} · ${d.deliver} ${d.window||''}</span>
+    </div>
+    <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:18px 22px">
+      ${secBar('单据信息',dvTag(d.status))}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px 40px">
+        ${kvItem('送货单号',`<span class="mono">${d.id}</span>`)}
+        ${kvItem('来源单号（备货单）',`<span class="mono">${d.pickId||'-'}</span>`)}
+        ${kvItem('预约类型',d.bizType||'预售品')}
+        ${kvItem('入库仓库',d.warehouse)}
+        ${kvItem('送货方',DB.merchant.name)}
+        ${kvItem('货主类型',ownerType)}
+        ${kvItem('货主（买手）名称',DB.merchant.name)}
+        ${kvItem('交货方式','直送仓')}
+        ${kvItem('交货地点',d.warehouse)}
+        ${kvItem('预约到货时间',`${d.deliver} ${d.window||''}`)}
+        ${kvItem('配送日期',d.deliver)}
+        ${kvItem('履约波次','全天达')}
+      </div>
+      <div style="border-top:1px dashed var(--bd2);margin-top:16px;padding-top:14px">${kvItem('签到时间',signTxt)}</div>
+    </div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:18px 22px">
+      ${secBar('交货地点信息')}
+      <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:18px 40px">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${kvItem('交货地点',d.warehouse)}
+          ${kvItem('白班收货人',(meta.day||[]).join('　'))}
+          ${kvItem('夜班收货人',(meta.night||[]).join('　'))}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${kvItem('详细地址',meta.addr)}
+          ${kvItem('园区可入门位置',meta.gate)}
+        </div>
+      </div>
+    </div></div>
+    <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 件数（成品）</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>品牌</th><th>规格</th><th>SKU单位</th><th>箱规</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">已入库数量</th><th style="text-align:right">本次预约整包装数量</th><th style="text-align:right">体积</th></tr></thead><tbody>
+      ${lines.map((r,i)=>`<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.brand}</td><td>${r.spec}</td><td>${r.skuUnit}</td><td>${r.box}</td><td style="text-align:right">${r.orderQty.toFixed(2)}</td><td style="text-align:right">${r.bookQty.toFixed(2)}</td><td style="text-align:right;${inbound?'color:var(--gd);font-weight:600':'color:var(--ts)'}">${r.inQty.toFixed(2)}</td><td style="text-align:right">${r.packQty.toFixed(1)} ${r.skuUnit}</td><td style="text-align:right">${r.vol.toFixed(6)} <span style="color:var(--ts);font-size:11px">立方米</span></td></tr>`).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+      </tbody></table></div></div>
+      ${d.status=='已签到'?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
+    </div>`;
+  }
+  // 演示数据：首次进入 seed 3 张送货单（已入库 / 已签到 / 已预约 各一），供直接查看详情
+  function ensureDeliveriesDemo(){
+    if(DB.deliveries&&DB.deliveries.length) return;
+    DB.deliveries=DB.deliveries||[];
+    const mk=(id,pick,wh,dl,win,status,ordN,signTime,demoLines)=>{
+      const labels=demoLines.map((l,k)=>({code:`LBL-${id.slice(-5)}-${l.sku.slice(-4)}-${k}`,name:l.name,qty:l.bookQty,unit:l.skuUnit,arrived:status=='交接完成',orderId:'#SG-DEMO'}));
+      return {id,pickId:pick,warehouse:wh,deliver:dl,window:win,orderIds:Array.from({length:ordN},(_,i)=>'#SG-DEMO-'+i),labels,status,signTime,bizType:'预售品',demoLines};
+    };
+    DB.deliveries.push(
+      mk('SH20260708001','JH20260708001','裕廊DC','2026-07-08','06:00~10:00','交接完成',3,'00:52:57',[
+        {sku:'SKU8815',name:'小棠菜',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:4,bookQty:4,inQty:4,packQty:4,vol:0.018241},
+        {sku:'SKU8817',name:'芥蓝',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:1,bookQty:1,inQty:1,packQty:1,vol:0.007598},
+        {sku:'SKU8819',name:'菠菜',brand:'绿鲜源',spec:'0.5kg/件',skuUnit:'件',box:1,orderQty:1,bookQty:1,inQty:1,packQty:1,vol:0.004560},
+        {sku:'SKU8821',name:'白菜',brand:'无',spec:'1kg/件',skuUnit:'件',box:1,orderQty:3,bookQty:3,inQty:3,packQty:3,vol:0.028851},
+      ]),
+      mk('SH20260708002','JH20260708001','兀兰DC','2026-07-08','06:00~10:00','已签到',2,'01:20:14',[
+        {sku:'SKU8816',name:'娃娃菜',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:6,bookQty:6,inQty:0,packQty:6,vol:0.016031},
+        {sku:'SKU8820',name:'土豆',brand:'无',spec:'1kg/件',skuUnit:'件',box:1,orderQty:2,bookQty:2,inQty:0,packQty:2,vol:0.031500},
+      ]),
+      mk('SH20260708003','JH20260708002','盛港DC','2026-07-08','12:00~16:00','待送货',1,'',[
+        {sku:'SKU8815',name:'小棠菜',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:8,bookQty:8,inQty:0,packQty:8,vol:0.018241},
+      ]),
+    );
+  }
+  window.ensureDeliveriesDemo=ensureDeliveriesDemo;
   window.deliv_forward=function(id){const d=dvGet(id);if(!d)return;
     modal(`<div class="mc-hd"><h3>转发送货单 · ${d.warehouse}</h3><p>送货单 ${d.id}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="ib ib-b"><span class="i">🚚</span>把送货单转发给送货司机，司机可签到并实时查看交货进度。</div>
@@ -297,6 +388,8 @@
      入口 · 顶部 Tab 分 4 子页
   ============================================================ */
   PAGES['m-delivery']=()=>{
+    ensureDeliveriesDemo();
+    if(DB.delivView){const d=dvGet(DB.delivView);if(d)return detailPage(d);DB.delivView=null;}
     const t=DB.delivTab||'sign';
     // 送货管理=正向送货：送货签到/交货进度。「退库单(退货)」已挪到售后管理(m-aftersale)；「装筐送货」暂不要（tabBasket/tabReturn 保留备用）
     const top=`<div class="tabs" style="margin-bottom:14px">

@@ -107,6 +107,10 @@ button{font-family:inherit}
 .nav-badge{margin-left:auto;background:var(--r);color:#fff;font-size:11px;padding:0 6px;height:18px;min-width:18px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
 .nav-p1{margin-left:6px;background:var(--gl);color:var(--gd);font-size:10px;padding:1px 5px;border-radius:6px;font-weight:600;line-height:1.5;white-space:nowrap}
 .nav-badge.y{background:var(--y)}.nav-badge.g{background:var(--g)}
+.nav-grp.grp-on{color:var(--tp);font-weight:600}
+.nav-caret{font-size:10px;color:var(--tt)}
+.nav-sub{padding-left:32px;font-size:13px}
+.nav-sub .nav-ic{font-size:14px}
 .sb-foot{padding:12px 16px;border-top:1px solid var(--bd2)}
 .sb-switch{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ts);cursor:pointer;padding:7px 9px;border-radius:8px;transition:.13s}
 .sb-switch:hover{background:var(--bd2);color:var(--tp)}
@@ -506,10 +510,10 @@ const DB = {
   // 订单（餐厅下单即自动接单进入待发货，不可拒单）
   // 订单自带 入库仓库(具体DC，上游给)、送达日、送达时段；pickId/deliveryId 由备货单/送货单回写（一天只送一次货，无波次）
   orders:[
-    {id:'#SG20260630001',client:'海底捞（新加坡）',contact:'陈经理',phone:'+65 8123 4427',addr:'Clarke Quay River Valley Rd #01-08',orderTime:'06-30 09:12',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'kg',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:'分拣前请去黄叶'},
-    {id:'#SG20260630002',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'06-30 10:40',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'kg',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
-    {id:'#SG20260630003',client:'丰盛轩',contact:'黄先生',phone:'+65 9001 7788',addr:'Bedok North Ave 1 #01-15',orderTime:'06-29 20:10',deliver:'07-01',deliverWindow:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'kg',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
-    {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'kg',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260630001',client:'海底捞（新加坡）',contact:'陈经理',phone:'+65 8123 4427',addr:'Clarke Quay River Valley Rd #01-08',orderTime:'06-30 09:12',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:'分拣前请去黄叶'},
+    {id:'#SG20260630002',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'06-30 10:40',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'件',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260630003',client:'丰盛轩',contact:'黄先生',phone:'+65 9001 7788',addr:'Bedok North Ave 1 #01-15',orderTime:'06-29 20:10',deliver:'07-01',deliverWindow:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'件',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
   ],
   // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
@@ -590,7 +594,11 @@ const NAV={
     {id:'m-shop',ic:'🏪',t:'店铺信息',p1:1,badge:()=>(DB.merchant.onboard=='task'||DB.merchant.onboard=='task_rejected')?1:0,by:'y'},
     {id:'m-product',ic:'🥦',t:'商品管理',p1:1,badge:()=>DB.products.filter(p=>p.status=='forced_off'||p.status=='rejected').length},
     {id:'m-order',ic:'📋',t:'订单管理',p1:1,badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
-    {id:'m-pick',ic:'🧺',t:'备货管理',p1:1,badge:()=>DB.orders.filter(o=>o.status=='pending').length},
+    {id:'m-pick-group',ic:'📦',t:'备货管理',p1:1,children:[
+      {id:'m-pick-ref',ic:'📊',t:'备货参考'},
+      {id:'m-pick',ic:'🧺',t:'备货单',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
+      {id:'m-pick-label',ic:'🏷️',t:'打印标签'},
+    ]},
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
     {sec:'增长'},
     {id:'m-biz',ic:'💡',t:'商机推荐'},
@@ -683,6 +691,8 @@ function setRole(r){
 function switchRole(){const next=ROLE_ORDER[(ROLE_ORDER.indexOf(DB.role)+1)%ROLE_ORDER.length];setRole(next);toast(`已切换到${ROLE_META[next].name}`,'info');}
 document.getElementById('sb-switch-btn').onclick=switchRole;
 function nav(p){DB.page=p;render();window.scrollTo(0,0);}
+function navToggle(id){DB.navOpen=DB.navOpen||{};const g=NAV[DB.role].find(n=>n.id==id);if(!g||!g.children)return;const childActive=g.children.some(k=>k.id==DB.page);const cur=(DB.navOpen[id]!==undefined)?DB.navOpen[id]:childActive;DB.navOpen[id]=!cur;render();}
+function navLeaf(r,id){for(const n of NAV[r]){if(n.id==id&&!n.children)return n;if(n.children){const k=n.children.find(c=>c.id==id);if(k)return k;}}return null;}
 
 function render(){
   const r=DB.role;if(!r)return;const meta=ROLE_META[r];
@@ -692,17 +702,31 @@ function render(){
   sr.innerHTML=r=='merchant'?`🏪 ${DB.merchant.name} · ${tagPlain(S.onboard[DB.merchant.onboard])}`:`${meta.ic} ${meta.name} · ${meta.who}`;
   const next=ROLE_META[ROLE_ORDER[(ROLE_ORDER.indexOf(r)+1)%ROLE_ORDER.length]];
   document.getElementById('sb-switch-txt').textContent='切换到'+next.name;
-  // nav
+  // nav（支持二级子菜单：含 children 的为一级分组，可展开/折叠）
+  DB.navOpen=DB.navOpen||{};
   let nh='';NAV[r].forEach(n=>{
     if(n.sec){nh+=`<div class="nav-sec">${n.sec}</div>`;return;}
+    if(n.children){
+      const childActive=n.children.some(k=>k.id==DB.page);
+      const open=(DB.navOpen[n.id]!==undefined)?DB.navOpen[n.id]:childActive;
+      const sumB=n.children.reduce((a,k)=>a+(k.badge?k.badge():0),0);
+      const right=`<span style="margin-left:auto;display:flex;align-items:center;gap:6px">${(!open&&sumB)?`<span class="nav-badge" style="margin-left:0">${sumB}</span>`:''}<span class="nav-caret">${open?'▾':'▸'}</span></span>`;
+      nh+=`<div class="nav-i nav-grp ${childActive?'grp-on':''}" onclick="navToggle('${n.id}')"><span class="nav-ic">${n.ic}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${right}</div>`;
+      if(open)n.children.forEach(k=>{
+        let kb='';if(k.badge){const c=k.badge();if(c>0)kb=`<span class="nav-badge ${k.by||''}">${c}</span>`;}
+        nh+=`<div class="nav-i nav-sub ${DB.page==k.id?'active':''}" onclick="nav('${k.id}')"><span class="nav-ic">${k.ic}</span>${k.t}${k.p1?'<span class="nav-p1">一期</span>':''}${kb}</div>`;
+      });
+      return;
+    }
     let b='';if(n.badge){const c=n.badge();if(c>0)b=`<span class="nav-badge ${n.by||''}">${c}</span>`;}
     nh+=`<div class="nav-i ${DB.page==n.id?'active':''}" onclick="nav('${n.id}')"><span class="nav-ic">${n.ic}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${b}</div>`;
   });
   document.getElementById('nav').innerHTML=nh;
   // topbar
   const SUBPG={'p-vendor-apply':'供应商信息确认','m-qual':'店铺信息 / 经营资质','m-import':'商品管理 / 批量导入'};
-  const cur=NAV[r].find(n=>n.id==DB.page)||{t:SUBPG[DB.page]||''};
-  document.getElementById('tb-crumb').textContent=meta.name+' / '+cur.t;
+  const cur=navLeaf(r,DB.page)||{t:SUBPG[DB.page]||''};
+  const par=NAV[r].find(n=>n.children&&n.children.some(k=>k.id==DB.page));
+  document.getElementById('tb-crumb').textContent=meta.name+' / '+(par?par.t+' / ':'')+cur.t;
   document.getElementById('tb-title').textContent=cur.t;
   document.getElementById('tb-r').innerHTML=topRight();
   // content
@@ -915,10 +939,10 @@ PAGES['m-qual']=()=>{
 PAGES['m-product']=()=>{
   const ptab=DB.prodTab||'list';
   if(ptab=='import') return `<div style="margin-bottom:14px"><button class="btn btn-o btn-sm" onclick="DB.prodTab='list';render()">← 返回商品列表</button></div>`+PAGES['m-import']();
-  DB.sel=DB.sel||[];DB.exp=DB.exp||[];DB.pFilter=DB.pFilter||{};const pf=DB.pFilter;
+  DB.sel=DB.sel||[];DB.pFilter=DB.pFilter||{};const pf=DB.pFilter;
   const f=DB.mTab||'onsale';
-  const match=p=>{if(f=='onsale'&&!isOnShelf(p))return false;if(f=='off'&&isOnShelf(p))return false;if(pf.cat&&p.cat!=pf.cat)return false;if(pf.name&&!(p.name||'').includes(pf.name)&&!(p.id||'').includes(pf.name))return false;if(pf.skuName&&!(p.skus||[]).some(x=>((p.name||'')+' '+x.qty+p.unit).includes(pf.skuName)))return false;if(pf.skuCode&&!(p.skus||[]).some(x=>(x.skuId||'').includes(pf.skuCode)))return false;return true;};
-  const filt=DB.products.filter(match);const cnt=fn=>DB.products.filter(fn).length;const selN=DB.sel.length;
+  const rows=productSkuRows();const selN=DB.sel.length;
+  const selIds=rows.filter(r=>r.p.status=='onsale').map(r=>r.s.skuId);const allSel=selIds.length&&selIds.every(id=>DB.sel.includes(id));
   return `${assume(['Q1','Q2','Q6'])}
   ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量改价/改库存。`)}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
@@ -932,22 +956,44 @@ PAGES['m-product']=()=>{
   ${selN?`<div class="selbar"><span>已选 <b>${selN}</b> 个 SKU</span><button class="btn btn-p btn-sm" onclick="act_batchPrice()">批量改价</button><button class="btn btn-o btn-sm" onclick="act_batchStock()">批量改库存</button><button class="btn btn-link" style="margin-left:auto" onclick="DB.sel=[];render()">取消选择</button></div>`:''}
   <div class="card"><div class="card-hd">
     <div class="tabs" style="margin:0;border:none">${[['onsale','销售中'],['off','未上架']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';render()">${x[1]}</div>`).join('')}</div>
-    <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="expandAllOnsale()">${DB.exp.length?'收起规格':'展开规格'}</button><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button></div>
+    <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button></div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th style="width:30px"></th><th>商品</th><th>品类</th><th>规格数</th><th title="商家维护未税价，多规格显示价格区间">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算，多规格显示区间">含税价(SGD)</th><th>总库存</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
-    ${filt.map(p=>{const i=DB.products.indexOf(p);const open=DB.exp.includes(p.id);return `<tr style="cursor:pointer" onclick="toggleExp('${p.id}')">
-      <td><span class="exp-ic">${open?'▾':'▸'}</span></td>
-      <td><b>${p.name}</b>${spuOut(p)?' <span class="tag t-gr" style="font-size:11px">全售罄</span>':''}<div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td>
-      <td>${p.cat||'—'}</td><td>${p.skus.length}</td><td>${spuPriceRange(p)}</td><td>${taxRate(p)}%</td><td style="color:var(--ts)">${spuInclRange(p)}</td><td>${spuStock(p)}</td>
-      <td>${isOnShelf(p)?'<span class="tag t-g"><span class="dot"></span>销售中</span>':'<span class="tag t-gr"><span class="dot"></span>未上架</span>'}</td>
-      <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${p.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${p.updatedAt||'—'}</td><td onclick="event.stopPropagation()">${mActions(p,i)}</td>
-    </tr>${open?`<tr><td colspan="12" style="padding:0;background:#FbFcFd">${skuSubTable(p,i)}</td></tr>`:''}`;}).join('')||`<tr><td colspan="12"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
+    <thead><tr><th style="width:30px"><input type="checkbox" class="skuchk" title="全选当前可选 SKU" ${allSel?'checked':''} onclick="selAllProducts()"></th><th>商品(SPU)</th><th>SKU 编码</th><th>规格名称</th><th>品类</th><th title="商家维护未税价">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+    ${rows.map(({p,i,s,k})=>{const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
+      const priceCell=`${money(s.price||0)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}`;
+      const stockCell=`${s.stock||0}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
+      return `<tr>
+      <td>${onsale?`<input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')">`:''}</td>
+      <td><b>${p.name}</b><div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td>
+      <td class="mono">${s.skuId}</td>
+      <td>${p.name} ${s.qty}${s.pack||p.unit}</td>
+      <td>${p.cat||'—'}</td>
+      <td style="white-space:nowrap">${priceCell}</td>
+      <td>${taxRate(p)}%</td>
+      <td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td>
+      <td style="white-space:nowrap">${stockCell}</td>
+      <td><span class="tag ${st[1]}">${st[0]}</span></td>
+      <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td style="white-space:nowrap">${skuRowOps(p,i,s,k)}</td>
+    </tr>`;}).join('')||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function toggleExp(id){const k=DB.exp.indexOf(id);if(k<0)DB.exp.push(id);else DB.exp.splice(k,1);render();}
 function toggleSel(id){const k=DB.sel.indexOf(id);if(k<0)DB.sel.push(id);else DB.sel.splice(k,1);render();}
 function toggleSelSpu(spuId){const p=DB.products.find(x=>x.id==spuId);if(!p)return;const ids=p.skus.map(s=>s.skuId);const allSel=ids.length&&ids.every(id=>DB.sel.includes(id));if(allSel)DB.sel=DB.sel.filter(id=>!ids.includes(id));else ids.forEach(id=>{if(!DB.sel.includes(id))DB.sel.push(id);});render();}
 function expandAllOnsale(){const ids=DB.products.filter(p=>p.status=='onsale').map(p=>p.id);DB.exp=DB.exp.length?[]:ids;render();}
+/* 商品列表 · SKU 铺开：每个 SKU 一行，无需点 SPU 展开。SPU 级过滤(品类/名称/上下架) + SKU 级过滤(规格名/编码) */
+function productSkuRows(){DB.sel=DB.sel||[];DB.pFilter=DB.pFilter||{};const pf=DB.pFilter;const f=DB.mTab||'onsale';
+  const spuMatch=p=>{if(f=='onsale'&&!isOnShelf(p))return false;if(f=='off'&&isOnShelf(p))return false;if(pf.cat&&p.cat!=pf.cat)return false;if(pf.name&&!(p.name||'').includes(pf.name)&&!(p.id||'').includes(pf.name))return false;return true;};
+  const rows=[];DB.products.forEach(p=>{if(!spuMatch(p))return;const i=DB.products.indexOf(p);(p.skus||[]).forEach((s,k)=>{if(pf.skuName&&!((p.name||'')+' '+s.qty+p.unit).includes(pf.skuName))return;if(pf.skuCode&&!(s.skuId||'').includes(pf.skuCode))return;rows.push({p,i,s,k});});});return rows;}
+function selAllProducts(){const ids=productSkuRows().filter(r=>r.p.status=='onsale').map(r=>r.s.skuId);const all=ids.length&&ids.every(id=>DB.sel.includes(id));if(all)DB.sel=DB.sel.filter(id=>!ids.includes(id));else ids.forEach(id=>{if(!DB.sel.includes(id))DB.sel.push(id);});render();}
+function skuRowOps(p,i,s,k){
+  if(p.status=='onsale')return `${s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`} <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
+  if(p.status=='draft')return `<button class="btn btn-p btn-sm" onclick="act_submit(${i})">提交审核</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
+  if(p.status=='offsale')return `<button class="btn btn-p btn-sm" onclick="act_relist(${i})">上架</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>`;
+  if(p.status=='reviewing')return `<span style="color:var(--ts);font-size:12.5px">平台审核中…</span>`;
+  if(p.status=='rejected'||p.status=='forced_off')return `<button class="btn btn-o btn-sm" onclick="showReject(${i})">原因</button> <button class="btn btn-p btn-sm" onclick="act_editSpu(${i})">整改重提</button>`;
+  return '';
+}
 function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
 /* GST：价格维护未税价，默认税率 9%，系统自动算含税价（仅展示、不可直接编辑） */
 const GST_DEFAULT=9;
@@ -955,11 +1001,28 @@ function taxRate(p){const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('
 function priceIncl(net,p){return (+net||0)*(1+taxRate(p)/100);}   // 含税价 = 未税价 ×(1+税率)
 /* 每个字段单独改：未税价、可售库存各点各自的「编辑」，各弹各的窗，互不相干；含税价始终只读 */
 const effTxt=p=>p.status=='onsale'?'即时生效':(p.status=='reviewing'?'审核通过后生效':'已保存');
-function act_skuEditPrice(i,k){const p=DB.products[i],s=p.skus[k];const rate=taxRate(p);const factor=1+rate/100;
+// 改价页 · 佣金/预计收入：商品佣金额 = 含税价 × 服务费率(commRates：商家×品类>商家默认>品类默认，免佣期内0)；上门揽收费=单独固定字段(与价格/比例无关)
+function pickupFeeOf(p){return (typeof p.pickupFee=='number')?p.pickupFee:0;}   // 上门揽收费：单独固定字段，默认0.00，按履约方式配置
+function skuCommInfo(p){const catId=(PRODUCT_BACK_CAT[p.name]!=null)?PRODUCT_BACK_CAT[p.name]:(FRONT2BACK[p.cat]||3);const r=commRates(DB.merchant.code,catId,ts().slice(0,10));return {svc:r.svc||0,pickup:pickupFeeOf(p)};}
+function skuPriceCalc(svc,pickup,factor){const v=parseFloat((document.getElementById('se-price')||{}).value)||0;const incl=v*factor;const c=incl*svc,inc=incl-c-pickup;const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t;};set('se-incl','$'+incl.toFixed(2));set('se-comm','$'+c.toFixed(2));set('se-income','$'+inc.toFixed(2));}
+function act_skuEditPrice(i,k){const p=DB.products[i],s=p.skus[k];const rate=taxRate(p);const factor=1+rate/100;const ci=skuCommInfo(p);const p0=s.price||0,incl0=p0*factor,c0=incl0*ci.svc,g0=ci.pickup,inc0=incl0-c0-g0;
   modal(`<div class="mc-hd"><h3>改未税价 · ${p.name} ${s.qty}${s.pack||p.unit}</h3><p>${s.skuId} · 维护未税价，系统按税率 ${rate}% 自动算含税价</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="fr"><label class="fl">未税价(SGD)</label><input id="se-price" type="number" step="0.01" min="0" value="${(s.price||0).toFixed(2)}" oninput="document.getElementById('se-incl').textContent='$'+((parseFloat(this.value)||0)*${factor}).toFixed(2)"></div>
+    <div class="fr"><label class="fl">未税价(SGD)</label><input id="se-price" type="number" step="0.01" min="0" value="${p0.toFixed(2)}" oninput="skuPriceCalc(${ci.svc},${ci.pickup},${factor})"></div>
     <div class="fr"><label class="fl">含税价(SGD)</label><div style="flex:1;color:var(--ts)">≈ <b id="se-incl">${money(priceIncl(s.price,p))}</b> <span style="font-size:12px">（税率 ${rate}%，自动计算，不可编辑）</span></div></div>
+    <div style="background:var(--bd2);border-radius:10px;padding:12px 14px;margin-top:2px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>预计收入 <b id="se-income" style="font-size:17px;color:var(--gd)">${money(inc0)}</b></div>
+        <span class="btn btn-link btn-sm" onclick="const e=document.getElementById('se-explain');e.style.display=e.style.display=='none'?'block':'none'">收入说明 ›</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--ts);margin-top:6px">商品佣金额 <b id="se-comm">${money(c0)}</b>　·　预估揽收费 <b id="se-logi">${money(g0)}</b></div>
+      <div id="se-explain" style="display:none;font-size:12px;color:var(--ts);margin-top:8px;border-top:1px dashed var(--bd);padding-top:8px;line-height:1.8">
+        预计收入 = 含税价 − 商品佣金额 − 预估揽收费<br>
+        商品佣金额 = 含税价 × 服务费率(${(ci.svc*100).toFixed(2)}%)<br>
+        预估揽收费 = 单独固定费用（与价格/比例无关，按履约方式配置）<br>
+        服务费率按品类浮动（商家×品类 &gt; 商家默认 &gt; 品类默认），免佣期内为 0；佣金/收入仅供参考，实际以订单结算为准。
+      </div>
+    </div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doSkuPrice(${i},${k})">保存</button></div>`);}
 function doSkuPrice(i,k){const p=DB.products[i],s=p.skus[k];const np=parseFloat((document.getElementById('se-price')||{}).value);
@@ -2046,7 +2109,7 @@ function ord_sim(){
   DB.orderSeq=(DB.orderSeq||4)+1;const seq=DB.orderSeq,qty=10+seq;
   const WHS=['裕廊DC','兀兰DC','盛港DC','大巴窑DC'];
   const wh=WHS[seq%4];
-  const o={id:'#SG20260630'+String(seq).padStart(3,'0'),client:clients[seq%clients.length],contact:'联系人',phone:'+65 8'+(100+seq)+' '+(1000+seq),addr:'Singapore #01-0'+seq,orderTime:`06-30 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,deliver:dl,deliverWindow:'06:00~10:00',warehouse:wh,amt:+(qty*9.30).toFixed(2),discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty,unit:'kg',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''};
+  const o={id:'#SG20260630'+String(seq).padStart(3,'0'),client:clients[seq%clients.length],contact:'联系人',phone:'+65 8'+(100+seq)+' '+(1000+seq),addr:'Singapore #01-0'+seq,orderTime:`06-30 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,deliver:dl,deliverWindow:'06:00~10:00',warehouse:wh,amt:+(qty*9.30).toFixed(2),discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty,unit:'件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''};
   DB.orders.unshift(o);ensurePickOrders();render();toast(`新订单 ${o.id}：${before?'截止前→次日达':'截止后→次次日达'} ${dl} · ${wh}`,'ok');
 }
 // 闭环D 结算

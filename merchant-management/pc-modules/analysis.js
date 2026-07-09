@@ -43,14 +43,14 @@
   function buildRank(){
     const map={};
     (DB.orders||[]).forEach(o=>(o.lines||[]).forEach(l=>{
-      const k=l.name; if(!map[k]) map[k]={name:k, unit:l.unit||'kg', qty:0, sales:0, ord:new Set()};
+      const k=l.name; if(!map[k]) map[k]={name:k, unit:l.unit||'件', qty:0, sales:0, ord:new Set()};
       map[k].qty += l.qty||0; map[k].sales += (l.qty||0)*(l.price||0); map[k].ord.add(o.id);
     }));
     let rows=Object.values(map).map(r=>({name:r.name, unit:r.unit, qty:r.qty, sales:r.sales, orders:r.ord.size,
       spec:SPEC[r.name]||('散装·1'+r.unit), rep:REP[r.name]||0.15}));
     if(!rows.length) return rows;   // 无成交订单 → 交由调用方渲染空态
     // 榜单补足占位行（演示态：有成交时让榜单更饱满）
-    ['娃娃菜','芥蓝'].forEach((nm,i)=>{ if(!rows.some(r=>r.name==nm)) rows.push({name:nm,unit:'kg',qty:48-i*12,sales:268.40-i*66.8,orders:24-i*5,spec:SPEC[nm],rep:REP[nm]}); });
+    ['娃娃菜','芥蓝'].forEach((nm,i)=>{ if(!rows.some(r=>r.name==nm)) rows.push({name:nm,unit:'件',qty:48-i*12,sales:268.40-i*66.8,orders:24-i*5,spec:SPEC[nm],rep:REP[nm]}); });
     // 缩放到接近线上量级（小棠菜 raw≈186 → ≈756）
     const f=RANK_FACTOR[DB.anaPeriod]*4.07;
     rows.forEach(r=>{ r.sales=+(r.sales*f).toFixed(2); r.qty=Math.round(r.qty*RANK_FACTOR[DB.anaPeriod]*4); r.orders=Math.round(r.orders*RANK_FACTOR[DB.anaPeriod]*10); });
