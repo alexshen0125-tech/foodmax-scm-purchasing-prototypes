@@ -72,7 +72,7 @@
   function dvIn(d){return (d.labels||[]).filter(p=>p.arrived).length;} // 已入库 = 已核验到仓张数
   function tabSign(){
     const DL=DB.deliveries||[];
-    if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无预约送货单</div><div class="e-s">备货单「分拣贴码」完成后，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货(按SKU)」完成一张备货单的贴码并「生成送货单」。</div></div>`;
+    if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无预约送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
     return `<div class="ib ib-r" style="margin-bottom:12px"><span class="i">📣</span>送货单来自备货单贴码后按仓拆分。可转发给司机，签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</div>
     <div class="card"><div class="card-bd" style="padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:13.5px"><b>转发隐私</b><span style="color:var(--ts);margin-left:8px">${DB.delivShareItems?'允许对方查看商品清单':'不允许对方查看商品清单'}</span></div>
@@ -172,31 +172,21 @@
       ${d.status=='已签到'?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
     </div>`;
   }
-  // 演示数据：首次进入 seed 3 张送货单（已入库 / 已签到 / 已预约 各一），供直接查看详情
-  function ensureDeliveriesDemo(){
-    if(DB.deliveries&&DB.deliveries.length) return;
-    DB.deliveries=DB.deliveries||[];
-    const mk=(id,pick,wh,dl,win,status,ordN,signTime,demoLines)=>{
-      const labels=demoLines.map((l,k)=>({code:`LBL-${id.slice(-5)}-${l.sku.slice(-4)}-${k}`,name:l.name,qty:l.bookQty,unit:l.skuUnit,arrived:status=='交接完成',orderId:'#SG-DEMO'}));
-      return {id,pickId:pick,warehouse:wh,deliver:dl,window:win,orderIds:Array.from({length:ordN},(_,i)=>'#SG-DEMO-'+i),labels,status,signTime,bizType:'预售品',demoLines};
-    };
-    DB.deliveries.push(
-      mk('SH20260708001','JH20260708001','裕廊DC','2026-07-08','06:00~10:00','交接完成',3,'00:52:57',[
-        {sku:'SKU8815',name:'小棠菜',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:4,bookQty:4,inQty:4,packQty:4,vol:0.018241},
-        {sku:'SKU8817',name:'芥蓝',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:1,bookQty:1,inQty:1,packQty:1,vol:0.007598},
-        {sku:'SKU8819',name:'菠菜',brand:'绿鲜源',spec:'0.5kg/件',skuUnit:'件',box:1,orderQty:1,bookQty:1,inQty:1,packQty:1,vol:0.004560},
-        {sku:'SKU8821',name:'白菜',brand:'无',spec:'1kg/件',skuUnit:'件',box:1,orderQty:3,bookQty:3,inQty:3,packQty:3,vol:0.028851},
-      ]),
-      mk('SH20260708002','JH20260708001','兀兰DC','2026-07-08','06:00~10:00','已签到',2,'01:20:14',[
-        {sku:'SKU8816',name:'娃娃菜',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:6,bookQty:6,inQty:0,packQty:6,vol:0.016031},
-        {sku:'SKU8820',name:'土豆',brand:'无',spec:'1kg/件',skuUnit:'件',box:1,orderQty:2,bookQty:2,inQty:0,packQty:2,vol:0.031500},
-      ]),
-      mk('SH20260708003','JH20260708002','盛港DC','2026-07-08','12:00~16:00','待送货',1,'',[
-        {sku:'SKU8815',name:'小棠菜',brand:'绿鲜源',spec:'1kg/件',skuUnit:'件',box:1,orderQty:8,bookQty:8,inQty:0,packQty:8,vol:0.018241},
-      ]),
-    );
-  }
+  // 送货单不再预置，改为「打印第一个标签时自动生成」（见 window.genDeliveryOnPrint，由打印标签页触发）
+  function ensureDeliveriesDemo(){DB.deliveries=DB.deliveries||[];}
   window.ensureDeliveriesDemo=ensureDeliveriesDemo;
+  // 打印标签触发：某(配送日期+入库仓库)首次打印标签时，按该仓待发货订单自动生成一张送货单（一仓一张，已存在则不重复）
+  window.genDeliveryOnPrint=function(date,wh){
+    DB.deliveries=DB.deliveries||[];
+    if(!wh) return null;
+    if(DB.deliveries.some(d=>d.deliver==date&&d.warehouse==wh)) return null;
+    const os=DB.orders.filter(o=>(o.status=='pending'||o.status=='packed')&&o.deliver==date&&o.warehouse==wh);
+    if(!os.length) return null;
+    const id='SH2026'+String(date).replace(/-/g,'')+String(++DB.deliverySeq).padStart(3,'0');
+    const labels=[];os.forEach(o=>(o.lines||[]).forEach(l=>labels.push({code:`LBL-${o.id.slice(-5)}-${l.sku.slice(-4)}`,name:l.name,qty:l.qty,unit:l.unit,arrived:false,orderId:o.id})));
+    DB.deliveries.push({id,pickId:'JH2026'+String(date).replace(/-/g,'')+'001',warehouse:wh,deliver:date,window:(os[0].deliverWindow||''),orderIds:os.map(o=>o.id),labels,status:'待送货',bizType:'预售品'});
+    return id;
+  };
   window.deliv_forward=function(id){const d=dvGet(id);if(!d)return;
     modal(`<div class="mc-hd"><h3>转发送货单 · ${d.warehouse}</h3><p>送货单 ${d.id}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="ib ib-b"><span class="i">🚚</span>把送货单转发给送货司机，司机可签到并实时查看交货进度。</div>

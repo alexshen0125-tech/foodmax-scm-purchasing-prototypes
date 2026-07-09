@@ -57,7 +57,7 @@
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际备货/贴码/送货在「备货单」菜单。</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -147,9 +147,11 @@
   }
   function printedOf(key){return (DB.labelPrinted||{})[key]||0;}
   function allUnprinted(){DB.labelPrinted=DB.labelPrinted||{};const f=DB.labelF||{};const agg={};refOrders().forEach(o=>{if(f.date&&o.deliver!=f.date)return;(o.lines||[]).forEach(l=>{const key=o.warehouse+'|'+l.sku;agg[key]=(agg[key]||0)+l.qty;});});return Object.entries(agg).reduce((s,[k,q])=>s+Math.max(0,q-(DB.labelPrinted[k]||0)),0);}
+  // 打印标签触发送货单自动生成：某(配送日期+入库仓库)首次打印标签时，按仓自动生成送货单（已存在不重复）
+  function labelTriggerDelivery(keys){if(typeof window.genDeliveryOnPrint!='function')return[];const date=(DB.labelF&&DB.labelF.date)||'';const whs=[...new Set(keys.map(k=>String(k).split('|')[0]))];const made=[];whs.forEach(wh=>{const id=window.genDeliveryOnPrint(date,wh);if(id)made.push(id);});return made;}
   // 打印：一个 SKU 按应送货数量打 N 个连续序号的码；首打/续打从 已打印+1 到 N
-  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签`,'ok');};
-  window.label_printAll=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0;labelRows().forEach(r=>{const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;}});render();toast(n?`批量打印完成，共 ${n} 张标签`:'无待打印标签','ok');};
+  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
+  window.label_printAll=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0;const done=[];labelRows().forEach(r=>{const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`:'无待打印标签','ok');};
   // 按序号打印：先勾选一个 SKU，再点顶部「按序号打印」→ 弹窗填序号区间 [从X 到Y]（漏打时也用它补打）
   window.label_bySeqPrint=function(){const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));
     if(sel.length==0){toast('请先勾选一个商品，再点「按序号打印」','err');return;}
@@ -171,11 +173,11 @@
     if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){toast(`请填写有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
     DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};
     DB.labelPrinted[key]=Math.max(printedOf(key),to);DB.labelLast[key]=to-from+1;DB.labelSel=[];
-    closeModal();render();toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张标签`,'ok');};
+    const made=labelTriggerDelivery([key]);closeModal();render();toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
   // 勾选 → 批量打印（只打勾选项，最多 50 个）
   window.label_toggleSel=function(key){DB.labelSel=DB.labelSel||[];const i=DB.labelSel.indexOf(key);if(i<0)DB.labelSel.push(key);else DB.labelSel.splice(i,1);render();};
   window.label_selAll=function(){DB.labelSel=DB.labelSel||[];const keys=labelRows().map(r=>r.key);const all=keys.length&&keys.every(k=>DB.labelSel.includes(k));DB.labelSel=all?[]:keys.slice();render();};
-  window.label_printSel=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0;labelRows().forEach(r=>{if(!sel.includes(r.key))return;const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;}});DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length} 个商品 ${n} 张标签`:'所选商品标签均已打印','ok');};
+  window.label_printSel=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`:'所选商品标签均已打印','ok');};
 
   function labelView(){
     DB.labelF=DB.labelF||{};DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};

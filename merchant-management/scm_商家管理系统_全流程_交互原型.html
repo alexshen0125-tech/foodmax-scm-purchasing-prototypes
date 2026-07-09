@@ -596,8 +596,7 @@ const NAV={
     {id:'m-order',ic:'📋',t:'订单管理',p1:1,badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
     {id:'m-pick-group',ic:'📦',t:'备货管理',p1:1,children:[
       {id:'m-pick-ref',ic:'📊',t:'备货参考'},
-      {id:'m-pick',ic:'🧺',t:'备货单',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
-      {id:'m-pick-label',ic:'🏷️',t:'打印标签'},
+      {id:'m-pick-label',ic:'🏷️',t:'打印标签',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
     ]},
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
     {sec:'增长'},
@@ -1213,7 +1212,7 @@ PAGES['m-order']=()=>{
   return `
   <div class="row" style="justify-content:flex-end;margin-bottom:14px;align-items:center">
     <div style="display:flex;gap:8px">
-      <button class="btn btn-o btn-sm" onclick="nav('m-pick')">🧺 去备货</button>
+      <button class="btn btn-o btn-sm" onclick="nav('m-pick-label')">🏷️ 去打印标签</button>
       <button class="btn btn-o btn-sm" onclick="ord_sim()">＋ 模拟来一单</button>
       <button class="btn btn-o btn-sm" onclick="ord_settings()">⏰ 截止 ${cfg.cutoff}</button>
     </div>
