@@ -215,13 +215,16 @@ function openGoodsPush(){pushPage({title:'商品管理',body:'<div id="gp"></div
 // 改价格（逐 SKU，即时生效）
 function openPrice(g){
   const rate=taxRate(g),factor=1+rate/100;
+  const SVC=0.05,PICKUP=0.00; // 服务费率 / 每件上门揽收费(固定字段,默认0)
+  const incTxt=(incl)=>`佣金 S$${(incl*SVC).toFixed(2)} · 揽收费 S$${PICKUP.toFixed(2)} · 预计收入 <b style="color:var(--emerald-2)">S$${(incl*(1-SVC)-PICKUP).toFixed(2)}</b>`;
   pushPage({title:'改价格',body:`<div style="height:4px"></div>
     <div class="sku-ed">${g.skus.map((s,i)=>`
       <div class="r"><div class="nm">${g.n}<div class="c">${s.spec}</div></div>
         <div style="text-align:right">
           <div class="in"><span class="u">S$</span><input data-i="${i}" data-price value="${s.price||''}" inputmode="decimal" placeholder="未税价"></div>
-          <div class="incl" data-incl="${i}" style="font-size:11.5px;color:#94A3B8;margin-top:5px">含税 S$${priceIncl(s.price,g).toFixed(2)}</div></div></div>`).join('')}</div>
-    <div class="sku-ed-tip">价格维护到每个售卖规格(SKU)，录入<b>未税价</b>，系统按税率 ${rate}% 自动算含税价；提交后即时生效、无需审核。</div>
+          <div class="incl" data-incl="${i}" style="font-size:11.5px;color:#94A3B8;margin-top:5px">含税 S$${priceIncl(s.price,g).toFixed(2)}</div>
+          <div class="inc-line" data-inc="${i}" style="font-size:11px;color:#94A3B8;margin-top:3px">${incTxt(priceIncl(s.price,g))}</div></div></div>`).join('')}</div>
+    <div class="sku-ed-tip">价格维护到每个售卖规格(SKU)，录入<b>未税价</b>，系统按税率 ${rate}% 自动算含税价；提交即时生效。<b>商品佣金 = 含税价×服务费率(${(SVC*100).toFixed(0)}%)</b>，<b>上门揽收费</b>为单独固定字段(与价格/比例无关)，<b>预计收入 = 含税价−佣金−揽收费</b>；仅供参考，以订单结算为准。</div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="ps" disabled>提交改价</button>`,
     mount:(p)=>{
@@ -229,8 +232,10 @@ function openPrice(g){
       const check=()=>{let anyValid=false,anyErr=false;
         p.querySelectorAll('[data-price]').forEach(inp=>{const v=inp.value.trim();const box=inp.closest('.in');
           const incl=p.querySelector(`[data-incl="${inp.dataset.i}"]`);
-          const n=parseFloat(v);
-          if(incl)incl.textContent='含税 S$'+((isNaN(n)?0:n)*factor).toFixed(2);
+          const incEl=p.querySelector(`[data-inc="${inp.dataset.i}"]`);
+          const n=parseFloat(v);const inclV=(isNaN(n)?0:n)*factor;
+          if(incl)incl.textContent='含税 S$'+inclV.toFixed(2);
+          if(incEl)incEl.innerHTML=incTxt(inclV);
           if(!v){box.style.borderColor='';return;}
           const bad=isNaN(n)||n<=0||n>9999;box.style.borderColor=bad?'var(--red)':'';
           if(bad)anyErr=true;else anyValid=true;});

@@ -1,6 +1,6 @@
-/* Food Max 商家端 v2 · 备货模块（按 SKU 汇总备货 → 分拣贴码 → 生成送货单）
-   单据链：系统按 送达日 自动成备货单(一天一张)；备货按SKU跨订单汇总；贴码按订单×SKU；
-   全订单贴完→备货单「已贴码」→按订单入库仓库分组每仓一张送货单(N:1)。数据源=window.FM.DB。
+/* Food Max 商家端 v2 · 备货参考（只查看，按 SKU 件数汇总跨订单备货量）
+   移动端不支持打印标签：标签打印与送货单生成在【电脑端】进行，打印首个标签后系统按入库仓库自动生成送货单；
+   App 仅提供「备货参考」查看备多少 + 「送货签到」查看/签到。数据源=window.FM.DB。
    评审修复内建：骨架屏/空态/提交确认/44px/S$/买家脱敏；前缀 pk-。 */
 (function(){
 const {pushPage,toast,confirmDialog,svg,skel,ordMask,ensurePickOrders,ordersOf,pickAggr,pickAllPacked,labelOrder,triggerDeliveries}=window.FM;
@@ -53,7 +53,7 @@ function listCard(pk){
   return `<div class="pk-card" data-id="${pk.id}">
     <div class="pk-ch"><span class="no">${pk.id}</span><span class="pk-st ${stClass(pk.status)}">${pk.status}</span></div>
     <div class="pk-tags"><span class="pk-tag">送达 ${pk.deliver}</span></div>
-    <div class="pk-kbox"><div class="k"><div class="v">${pk.orderIds.length}</div><div class="l">订单数</div></div><div class="k"><div class="v">${cnt}</div><div class="l">SKU 数</div></div><div class="k"><div class="v">${ordersOf(pk).filter(o=>o.status==='packed').length}/${pk.orderIds.length}</div><div class="l">已贴码</div></div></div>
+    <div class="pk-kbox"><div class="k"><div class="v">${pk.orderIds.length}</div><div class="l">订单数</div></div><div class="k"><div class="v">${cnt}</div><div class="l">SKU 数</div></div></div>
   </div>`;
 }
 
@@ -71,39 +71,19 @@ function renderList(container){
 }
 
 function openDetail(pk){
-  if(pk.status==='待备货')pk.status='备货中';
-  pushPage({title:'备货单 '+pk.id,body:'<div id="pkd"></div>',mount:(p)=>{const box=p.querySelector('#pkd');draw(box,pk);}});
+  pushPage({title:'备货参考 '+pk.id,body:'<div id="pkd"></div>',mount:(p)=>{const box=p.querySelector('#pkd');draw(box,pk);}});
 }
 
 function draw(box,pk){
-  const aggr=pickAggr(pk),orders=ordersOf(pk);
-  const allPacked=pickAllPacked(pk);
-  if(allPacked&&pk.status!=='已送货')pk.status='已贴码';
+  const aggr=pickAggr(pk);
   box.innerHTML=`
-    <div class="pk-sec">① 汇总备货 · 按 SKU<span class="hint">跨订单合并备总量；下方 = 该SKU拆到各订单</span></div>
+    <div class="pk-sec">汇总备货 · 按 SKU<span class="hint">跨订单合并备总量(件)；下方 = 该SKU拆到各订单</span></div>
     <div class="pk-tbl">${aggr.map(r=>`<div class="pk-srow">
       <div class="top"><span class="nm">${r.name} <span style="font-size:11px;color:var(--sub);font-family:monospace">${r.sku}</span></span><span class="qty">${r.qty}${r.unit}</span></div>
       <div class="alloc">${r.allocs.map(a=>`<span class="chip">${ordMask(a.client)} <b>${a.qty}${r.unit}</b></span>`).join('')}</div>
     </div>`).join('')}</div>
-    <div class="pk-sec">② 分拣贴码 · 按订单<span class="hint">每单每SKU一张码，全贴完生成送货单</span></div>
-    <div id="pk-orders">${orders.map(o=>ocard(o)).join('')}</div>
-    ${pk.status==='已送货'
-      ?`<div class="pk-genwait">✅ 已按仓生成送货单，可到「送货签到」查看</div>`
-      :allPacked
-        ?`<div class="pk-gen" id="pk-gen">${svg('sign','style="width:18px;height:18px;stroke:#fff;fill:none"')} 生成送货单（按仓拆）</div>`
-        :`<div class="pk-genwait">全部订单贴码完成后，可生成送货单</div>`}
+    <div class="pk-genwait">📄 备货参考仅供查看备多少。<b>标签打印与送货单生成在电脑端进行</b>：打印首个标签后系统按入库仓库自动生成送货单，可到「送货签到」查看并交接。</div>
     <div style="height:8px"></div>`;
-  // 绑定：打印条码
-  box.querySelectorAll('[data-label]').forEach(b=>b.onclick=()=>{
-    const o=orders.find(x=>x.id===b.dataset.label);
-    confirmDialog({title:'打印并贴码？',body:`「${ordMask(o.client)}」${o.lines.length} 个 SKU，一次打出 ${o.lines.length} 张条码贴上，之后转「已贴码待交接」。`,okText:'打印全部条码',onOk:()=>{labelOrder(o);toast('已打印 '+o.lines.length+' 张条码');draw(box,pk);}});
-  });
-  // 绑定：生成送货单
-  const gen=box.querySelector('#pk-gen');
-  if(gen)gen.onclick=()=>{
-    const made=triggerDeliveries(pk);
-    confirmDialog({title:'已生成送货单',body:`按入库仓库拆成 <b>${made.length}</b> 张送货单（一仓一张）：${made.join('、')}。可到「送货签到」查看，由仓库扫码交接入仓。`,okText:'我知道了',onOk:()=>draw(box,pk)});
-  };
 }
 
 function ocard(o){
@@ -117,5 +97,5 @@ function ocard(o){
 }
 
 window.FM_MOD=window.FM_MOD||{};
-window.FM_MOD.pick=()=>pushPage({title:'备货单',body:'<div id="pkp"></div>',mount:(p)=>renderList(p.querySelector('#pkp'))});
+window.FM_MOD.pick=()=>pushPage({title:'备货参考',body:'<div id="pkp"></div>',mount:(p)=>renderList(p.querySelector('#pkp'))});
 })();

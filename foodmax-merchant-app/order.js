@@ -2,7 +2,7 @@
    单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
-const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome}=window.FM;
+const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt}=window.FM;
 
 const css=document.createElement('style');
 css.textContent=`
@@ -120,9 +120,11 @@ function openDetail(o){
     </div>
     <div class="odd-sec">金额（预估，以订单完成为准）</div>
     <div class="odd-card">
-      <div class="odd-row"><span class="k">订单金额</span><span>S$${o.amt.toFixed(2)}</span></div>
+      <div class="odd-row"><span class="k">订单金额(未税)</span><span>S$${o.amt.toFixed(2)}</span></div>
+      <div class="odd-row"><span class="k">含税金额</span><span>S$${ordInclAmt(o).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">商家补贴</span><span style="color:var(--red)">-S$${(o.discount||0).toFixed(2)}</span></div>
-      <div class="odd-row"><span class="k">平台服务费(预估)</span><span style="color:var(--red)">-S$${(o.amt*0.05).toFixed(2)}</span></div>
+      <div class="odd-row"><span class="k">商品佣金(含税×服务费率)</span><span style="color:var(--red)">-S$${ordCommission(o).toFixed(2)}</span></div>
+      <div class="odd-row"><span class="k">上门揽收费(固定)</span><span style="color:var(--red)">-S$${ordPickup(o).toFixed(2)}</span></div>
       <div class="odd-row" style="font-weight:700"><span>预计收入(预估)</span><span style="color:var(--emerald-2)">S$${ordIncome(o).toFixed(2)}</span></div>
     </div>
     <div style="height:16px"></div>`});

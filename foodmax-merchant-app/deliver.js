@@ -151,6 +151,10 @@ css.textContent=`
 document.head.appendChild(css);
 
 const ADDR={'裕廊DC':'1 Jurong West Ave 1, #01-23 裕廊配送中心三号库','兀兰DC':'30 Woodlands Loop, #01-08 兀兰配送中心','盛港DC':'33 Sengkang West Ave, #01-15 盛港提揽点','大巴窑DC':'5 Toa Payoh Ind Park, #01-02 大巴窑配送中心','淡滨尼DC':'10 Tampines St 92, #01-19 淡滨尼配送中心','义顺DC':'8 Yishun Ind St 1, #01-11 义顺配送中心'};
+// 各 DC 收货人 / 入门位置（送货单详情·交货地点信息）
+const RECV={'裕廊DC':{d:'王志明 8123****7813',n:'林国强 9012****0250',g:'裕廊西门进，2号库3号闸口，只收不卸'},'兀兰DC':{d:'黄俊 8765****1122',n:'李文 9033****3344',g:'兀兰北门进，8号库1楼9–11号门'},'盛港DC':{d:'吴成 8201****5566',n:'/ 9111****1111',g:'东门进，1号平台，只收不卸'},'大巴窑DC':{d:'许尚 8678****7788',n:'史金超 9158****0250',g:'中门进，只收不卸'},'淡滨尼DC':{d:'周强 8299****9900',n:'郑凯 9088****2233',g:'A门进，3号卸货区'},'义顺DC':{d:'马良 8322****4455',n:'孙浩 9077****6677',g:'西门进，2号库'}};
+function dvWave(d){const h=parseInt((d.window||'0'),10);return h<12?'上午达':'下午达';}                 // 履约波次(由送达时段派生)
+function dvSku(d){const m={};(d.labels||[]).forEach(l=>{const k=l.name;if(!m[k])m[k]={name:k,unit:l.unit,code:l.code,qty:0,inQty:0};m[k].qty+=l.qty;if(l.arrived)m[k].inQty+=l.qty;});return Object.values(m);} // 商品明细按SKU聚合(件)
 
 // 伪二维码(25x25 确定性图案)
 function qrGrid(seed){let s=(seed||7)+1;const rnd=()=>{s=(s*9301+49297)%233280;return s/233280;};
@@ -183,7 +187,7 @@ function signinCard(d){
     <div class="dl-meta"><span class="k">备货单</span><span class="vv" style="font-family:monospace">${d.pickId}</span></div>
     <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
     ${d.status==='已签到'?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
-    <div class="dl-kbox"><div class="k"><div class="l">应送货</div><div class="v">${d.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${dvArrived(d)}</div></div></div>
+    <div class="dl-kbox"><div class="k"><div class="l">应送货(件)</div><div class="v">${(d.labels||[]).reduce((s,l)=>s+(+l.qty||0),0)}</div></div><div class="k"><div class="l">已入库(件)</div><div class="v">${(d.labels||[]).filter(l=>l.arrived).reduce((s,l)=>s+(+l.qty||0),0)}</div></div></div>
     <div class="dl-acts">${d.status==='交接完成'
       ?`<div class="a" data-a="detail">查看详情</div>`
       :d.status==='已签到'
@@ -204,14 +208,15 @@ function renderSigninInto(list){
   const DL=window.FM.DB.deliveries||[];
   list.innerHTML=skel(2);
   setTimeout(()=>{
-    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无预约送货单</h4><p>备货单「分拣贴码」完成后，系统按入库仓库自动生成送货单</p></div>`;return;}
+    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无预约送货单</h4><p>电脑端打印首个标签后，系统按入库仓库自动生成送货单</p></div>`;return;}
     list.innerHTML='';
     DL.forEach(d=>{const w=document.createElement('div');w.innerHTML=signinCard(d);const c=w.firstElementChild;list.appendChild(c);bindSignin(c,d);});
   },420);
 }
 function openSignin(){
+  if(window.FM.ensureDeliveriesFromPrint)window.FM.ensureDeliveriesFromPrint(); // 电脑端打印首标签→自动生成送货单(演示)
   pushPage({title:'送货签到',body:`
-    <div class="dl-banner"><span>送货单来自备货单贴码后按仓拆分。可转发给司机；签到后由<b>仓库扫码</b>逐张核验交接入仓（标签到齐 → 订单转「备货中」）。</span></div>
+    <div class="dl-banner"><span>送货单由<b>电脑端打印首个标签</b>时按入库仓库自动生成（移动端不打印标签）。可转发给司机；签到后由<b>仓库扫码</b>核验交接入仓。</span></div>
     <div class="dl-priv"><span>转发隐私：不允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
     <div class="dl-list" id="dl-sgl"></div>`,
     mount:(p)=>{
@@ -222,15 +227,42 @@ function openSignin(){
 
 /* ============ 送货单详情（条码逐张 + 交接由仓库WMS，演示占位）============ */
 function openSignDetail(d){
+  const meta=RECV[d.warehouse]||{};
+  const kv=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,.05)"><span style="color:var(--sub);flex-shrink:0">${k}</span><span style="text-align:right;font-weight:500;word-break:break-all">${v||'—'}</span></div>`;
+  const sec=t=>`<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">${t}</div>`;
+  const box=inner=>`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">${inner}</div>`;
+  const skuFrom=c=>'SKU'+String(c||'').split('-').pop();
+  const rows=dvSku(d);const totQty=rows.reduce((s,r)=>s+r.qty,0),totIn=rows.reduce((s,r)=>s+r.inQty,0);
+  const signed=d.status!=='待送货'&&d.status!=='已预约';
   pushPage({title:'送货单详情',navbar:true,body:`
-    <div class="dl-head"><div class="no">送货单 ${d.id} · 备货单 ${d.pickId}</div>
-      <div class="ware">${d.warehouse}</div>
-      <div class="ln"><span>${d.deliver} ${d.window}</span></div>
-      <div class="ln"><span class="k">订单数</span><span>${d.orderIds.length} 单</span></div></div>
+    ${sec('单据信息')}
+    ${box(
+      kv('送货单号',`<span style="font-family:monospace">${d.id}</span>`)+
+      kv('来源单号(备货单)',`<span style="font-family:monospace">${d.pickId||'-'}</span>`)+
+      kv('预约类型','预售品')+
+      kv('入库仓库',d.warehouse)+
+      kv('送货方','绿鲜源蔬果（新加坡）')+
+      kv('货主类型','3P')+
+      kv('交货方式','直送仓')+
+      kv('预约到货时间',`${d.deliver} ${d.window||''}`)+
+      kv('配送日期',d.deliver)+
+      kv('履约波次',dvWave(d))+
+      kv('签到时间',signed?`已定位签到 ${d.warehouse} · 已通过`:'未签到')
+    )}
+    ${sec('交货地点信息')}
+    ${box(
+      kv('交货地点',d.warehouse)+
+      kv('详细地址',ADDR[d.warehouse])+
+      kv('白班收货人',meta.d)+
+      kv('夜班收货人',meta.n)+
+      kv('园区可入门位置',meta.g)
+    )}
     <div class="dl-qrcard"><div class="qt">送货签到码</div><div class="dl-qr">${qrGrid((d.id||'').length+3)}</div><div style="font-size:12px;color:var(--sub);margin-top:10px">到仓出示，随后由仓库逐张扫码交接入仓</div></div>
-    <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货</div><div class="v">${d.should}</div></div><div class="k"><div class="l">已入库</div><div class="v">${dvArrived(d)}</div></div></div>
-    <div class="dl-tbl"><div class="th"><span class="c1">条码 · 商品</span><span class="c2">所属订单</span><span class="c3">到仓</span></div>
-      ${(d.labels||[]).map(l=>`<div class="tr"><span class="c1">${l.name} ${l.qty}${l.unit}<div class="sp" style="font-family:monospace">${l.code}</div></span><span class="c2" style="font-family:monospace;font-size:11px">${l.orderId}</span><span class="c3" style="${l.arrived?'color:var(--emerald)':'color:var(--red)'}">${l.arrived?'✓':'待到'}</span></div>`).join('')}</div>
+    <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">已入库(件)</div><div class="v">${totIn}</div></div></div>
+    ${sec('商品明细 · 按 SKU 件数')}
+    ${box(
+      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · 已入库 <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b></div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
+    )}
     <div style="height:8px"></div>`,
     footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" id="dl-dfwd">转发给司机</button>${d.status==='已签到'?`<button class="btn" style="flex:1;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="flex:1" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}</div>`,
     mount:(p)=>{
