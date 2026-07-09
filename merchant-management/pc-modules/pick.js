@@ -14,7 +14,7 @@
   // 稳定伪随机（同 sku+仓库 恒定，不随重渲染跳动）——仅演示用，正式取仓库实时库存与历史销量看板
   function hnum(str,mod){let h=7;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))>>>0;return h%mod;}
   function whStock(sku,wh){return 40+hnum(sku+wh+'s',80);}                 // 各仓库存总数（演示 40–119）
-  function hist(sku,wh){const y=hnum(sku+wh+'y',10),w=hnum(sku+wh+'w',10),a=1+hnum(sku+wh+'a',9);return `${y}/${w}/${a}`;} // 昨日/上周同期/7天均
+  function hist(sku,wh){return hnum(sku+wh+'y',20);} // 昨日销量（稳定伪随机 0–19）
   function refOrders(){return DB.orders.filter(o=>o.status=='pending'||o.status=='packed');} // 备货范围=待发货(含已贴标)
   function specLabel(s){const p=DB.products.find(x=>x.name==s.name);if(p&&p.skus&&p.skus[0])return `${p.skus[0].qty}${p.unit}/件`;return s.unit;}
   function refWarehouses(){return [...new Set(refOrders().map(o=>o.warehouse).filter(Boolean))];}
@@ -52,7 +52,7 @@
           <td rowspan="${rs}" style="vertical-align:top">${specLabel(s)}</td>
           <td rowspan="${rs}" style="vertical-align:top;font-size:12px;color:var(--ts)">${s.cat}</td>
           <td rowspan="${rs}" style="vertical-align:top;text-align:right"><b>${total}</b> ${s.unit}</td>`:'';
-        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td class="mono" style="color:var(--ts)" title="昨日 / 上周同期 / 7天平均销量">${hist(s.sku,wh)}</td><td style="text-align:right"><b>${q}</b> ${s.unit}</td></tr>`;
+        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right"><b>${q}</b> ${s.unit}</td></tr>`;
       }).join('');
     }).join('');
 
@@ -68,8 +68,6 @@
     </div></div>
     <div class="card"><div class="card-hd">
       <div class="row" style="gap:8px;flex-wrap:wrap">
-        <button class="btn btn-p btn-sm" onclick="toast('已按商品打印备货参考（${skus.length} 个 SKU）','ok')">🖨️ 按品打印</button>
-        <button class="btn btn-p btn-sm" onclick="toast('已按仓库打印备货参考（${whs.length} 个仓库）','ok')">🖨️ 按仓打印</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出按品备货参考表.xlsx','ok')">📤 按品导出</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出按仓备货参考表.xlsx','ok')">📤 按仓导出</button>
       </div>
@@ -77,7 +75,7 @@
     </div>
     <div class="card-bd" style="padding:8px 16px 0"><div class="ib ib-r" style="margin:0"><span class="i">⚠️</span>由于订单延退支付/取消，请以仓库展示销量停止为准。</div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th title="昨日 / 上周同期 / 7天平均销量">昨日/上周同期/7天均</th><th style="text-align:right">销量</th></tr></thead>
+      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">销量</th></tr></thead>
       <tbody>${body||`<tr><td colspan="9"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
   }

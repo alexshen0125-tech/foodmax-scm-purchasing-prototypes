@@ -536,7 +536,10 @@ const DB = {
   payment:'none',                 // none|plan|approving|paid
   invTab:'cust',                  // 开票管理当前 Tab：cust 客户开票(按订单) / svc 服务费发票(向平台申请)
   svcSel:[],                      // 服务费发票·已勾选待合并申请的结算单号
-  svcInvoices:[{no:'SVC-INV-2026-701', billNo:'ST202604-M0815', fee:991.25, gst:89.21, total:1080.46, issueDate:'2026-05-08', status:'已开票'}], // 服务费发票记录（平台开给商家）
+  svcInvoices:[ // 服务费发票记录：平台与商家结算完成后自动开给商家（GST 9%），商家端只查看/下载。仅含已结算账期
+    {no:'SVC-INV-2026-702', billNo:'ST202605-M0815', range:'2026-05-01 ~ 05-31', fee:1104.50, gst:99.41, total:1203.91, issueDate:'2026-06-06', status:'已开票'},
+    {no:'SVC-INV-2026-701', billNo:'ST202604-M0815', range:'2026-04-01 ~ 04-30', fee:991.25, gst:89.21, total:1080.46, issueDate:'2026-05-08', status:'已开票'},
+  ],
   // 售后（逆向）：餐厅对「已收货」订单在时效内发起；退款不退货 / 退货退款两类；平台三方判责；商家可申诉；判商家责逆向扣减货款
   afterSales:[
     {id:'AS-26070201', client:'食为天餐厅', order:'#SG20260701018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'签收后12小时', type:'退款不退货', amt:116.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
@@ -1319,7 +1322,7 @@ PAGES['m-invoice']=()=>{
   const pend=DB.invoices.filter(i=>i.status=='none'||i.status=='rejected').length;
   const tabsBar=`<div class="tabs">
     <div class="tab ${tab=='cust'?'active':''}" onclick="DB.invTab='cust';render()">① 客户开票（按订单）${pend?`<span class="tb">${pend}</span>`:''}</div>
-    <div class="tab ${tab=='svc'?'active':''}" onclick="DB.invTab='svc';render()">② 服务费发票（向平台申请）</div>
+    <div class="tab ${tab=='svc'?'active':''}" onclick="DB.invTab='svc';render()">② 服务费发票（平台开具）</div>
   </div>`;
   if(tab=='svc')return tabsBar+svcInvoiceContent();
   return tabsBar+`${flowTip(`客户按订单向你<b>申请开票</b>，你为每笔订单开具<b>销售发票</b>并上传；平台执行<b>四重校验</b>（金额/合规/关联/验真）后作为结算凭证放款。客户开票按订单进行，不依赖对账单确认。`)}
@@ -1339,41 +1342,15 @@ PAGES['m-invoice']=()=>{
     ${DB.payment=='paid'?`<div class="ib ib-g"><span class="i">💰</span>平台已完成打款 ${money(DB.bill.net)}，预计 1 个工作日到账 DBS ****8821。本期结算闭环完成 🎉</div>`
     :DB.payment!='none'?`<div class="ib ib-b"><span class="i">⏳</span>发票全部校验通过，平台付款审批中…</div>`:''}`;
 };
-// ② 服务费发票：商家向平台申请 → 平台开服务费发票给商家（GST 9%）。支持勾选多个账期结算单合并申请
+// ② 服务费发票：平台与商家【结算完成后自动开具】并推送给商家（佣金税票 GST 9%），商家端【只查看/下载】，无需申请
 function svcInvoiceContent(){
-  const all=[DB.bill,...DB.billsHistory];
-  const issued=new Set(DB.svcInvoices.flatMap(s=>s.billNo.split(' / ')));
-  const pending=all.filter(b=>(b.feeSvc||0)>0&&!issued.has(b.no));
-  const sel=DB.svcSel||[];
-  const selBills=pending.filter(b=>sel.includes(b.no));
-  const selFee=selBills.reduce((s,b)=>s+(b.feeSvc||0),0);
-  return `${flowTip(`平台就<b>服务费（平台服务佣金）</b>向你开票：<b>勾选一个或多个账期</b>的结算单 → 向平台<b>合并申请</b> → 平台开<b>服务费发票</b>（佣金税票 GST 9%）给你。`)}
-  <div class="card"><div class="card-hd"><h3>待开票结算单</h3><span class="sub">可跨账期勾选合并申请 · ${pending.length} 张待开</span></div><div class="card-bd flush">
-    ${pending.length?`<table><thead><tr><th style="width:42px"><input type="checkbox" ${pending.length&&selBills.length==pending.length?'checked':''} onclick="act_svcAll(this.checked)"></th><th>结算单号</th><th>结算区间</th><th>服务费(不含税)</th><th>GST 9%</th><th>价税合计</th></tr></thead><tbody>
-    ${pending.map(b=>{const on=sel.includes(b.no);const f=b.feeSvc||0;return `<tr onclick="act_svcToggle('${b.no}')" style="cursor:pointer;${on?'background:var(--gl)':''}">
-      <td><input type="checkbox" ${on?'checked':''} onclick="event.stopPropagation();act_svcToggle('${b.no}')"></td>
-      <td class="mono">${b.no}</td><td>${b.range}</td><td>${money(f)}</td><td>${money(f*0.09)}</td><td style="font-weight:600">${money(f*1.09)}</td>
-    </tr>`}).join('')}</tbody></table>`:`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无待开票服务费</div><div class="e-s">各账期服务费均已开票。</div></div>`}
-  </div></div>
-  ${pending.length?`<div class="card"><div class="card-bd" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-    <div style="flex:1;min-width:180px"><div style="font-size:12.5px;color:var(--ts)">已选 ${selBills.length} / ${pending.length} 张 · 服务费合计</div><div style="font-size:20px;font-weight:700;color:var(--gd)">${money(selFee)} <span style="font-size:12.5px;color:var(--ts);font-weight:400">价税合计 ${money(selFee*1.09)}</span></div></div>
-    <button class="btn btn-p" ${selBills.length?'':'disabled'} onclick="act_applySvcInvoice()">合并申请开票（${selBills.length}）</button>
-  </div></div>`:''}
-  <div class="card"><div class="card-hd"><h3>服务费发票记录</h3><span class="sub">共 ${DB.svcInvoices.length} 张</span></div><div class="card-bd ${DB.svcInvoices.length?'flush':''}">
-    ${DB.svcInvoices.length?`<table><thead><tr><th>发票号</th><th>覆盖结算单</th><th>服务费(不含税)</th><th>GST 9%</th><th>价税合计</th><th>状态</th><th>操作</th></tr></thead><tbody>${DB.svcInvoices.map(s=>`<tr><td class="mono">${s.no}</td><td class="mono" style="font-size:12px;white-space:normal">${s.billNo}</td><td>${money(s.fee)}</td><td>${money(s.gst)}</td><td style="font-weight:600">${money(s.total)}</td><td>${s.status=='已开票'?'<span class="tag t-g"><span class="dot"></span>已开票</span>':'<span class="tag t-y"><span class="dot"></span>待平台开票</span>'}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_svcInvPreview('${s.no}')">预览</button> ${s.status=='已开票'?`<button class="btn btn-link" onclick="act_svcInvDownload('${s.no}')">下载</button>`:`<button class="btn btn-link" onclick="act_svcInvIssue('${s.no}')">🔬模拟平台开票</button>`}</td></tr>`).join('')}</tbody></table>`
-      :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无服务费发票</div></div>`}
+  return `${flowTip(`<b>服务费发票</b>由平台在与你<b>结算完成后自动开具</b>并推送给你（就平台服务佣金开具，GST 9%），<b>无需你申请</b>。此处仅供<b>查看与下载</b>。`)}
+  <div class="card"><div class="card-hd"><h3>服务费发票记录</h3><span class="sub">平台开具 · 共 ${DB.svcInvoices.length} 张</span></div><div class="card-bd ${DB.svcInvoices.length?'flush':''}">
+    ${DB.svcInvoices.length?`<table><thead><tr><th>发票号</th><th>覆盖结算单</th><th>结算区间</th><th>服务费(不含税)</th><th>GST 9%</th><th>价税合计</th><th>开票日期</th><th>状态</th><th>操作</th></tr></thead><tbody>${DB.svcInvoices.map(s=>`<tr><td class="mono">${s.no}</td><td class="mono" style="font-size:12px;white-space:normal">${s.billNo}</td><td style="font-size:12.5px;color:var(--ts)">${s.range||'—'}</td><td>${money(s.fee)}</td><td>${money(s.gst)}</td><td style="font-weight:600">${money(s.total)}</td><td style="font-size:12.5px;color:var(--ts)">${s.issueDate||'—'}</td><td><span class="tag t-g"><span class="dot"></span>已开票</span></td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_svcInvPreview('${s.no}')">预览</button> <button class="btn btn-link" onclick="act_svcInvDownload('${s.no}')">下载</button></td></tr>`).join('')}</tbody></table>`
+      :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无服务费发票</div><div class="e-s">平台与你结算完成后会开具服务费发票并显示在此。</div></div>`}
   </div></div>`;
 }
-function act_svcToggle(no){const s=DB.svcSel||(DB.svcSel=[]);const i=s.indexOf(no);i<0?s.push(no):s.splice(i,1);render();}
-function act_svcAll(on){const all=[DB.bill,...DB.billsHistory];const issued=new Set(DB.svcInvoices.flatMap(s=>s.billNo.split(' / ')));DB.svcSel=on?all.filter(b=>(b.feeSvc||0)>0&&!issued.has(b.no)).map(b=>b.no):[];render();}
-function act_applySvcInvoice(){
-  const sel=DB.svcSel||[];const all=[DB.bill,...DB.billsHistory];const bills=all.filter(b=>sel.includes(b.no));
-  if(!bills.length)return;
-  const fee=+bills.reduce((s,b)=>s+(b.feeSvc||0),0).toFixed(2);const gst=+(fee*0.09).toFixed(2);const total=+(fee*1.09).toFixed(2);
-  DB.svcInvoices.unshift({no:'APL-2026-'+(700+DB.svcInvoices.length),billNo:bills.map(b=>b.no).join(' / '),fee,gst,total,issueDate:'',status:'待开票'});
-  DB.svcSel=[];render();toast(`已向平台提交 ${bills.length} 个账期的开票申请，等待平台开票`,'ok');
-}
-function act_svcInvIssue(no){const s=DB.svcInvoices.find(x=>x.no==no);if(!s)return;s.status='已开票';s.no=s.no.replace('APL-','SVC-INV-');s.issueDate='2026-07-06';render();toast('平台已开具服务费发票','ok');}
+// 服务费发票由平台结算后自动开具、商家端只查看/下载：原「勾选合并申请开票」流程(act_svcToggle/svcAll/applySvcInvoice/svcInvIssue)已移除
 function act_svcInvDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
 function act_svcInvPreview(no){
   const s=DB.svcInvoices.find(x=>x.no==no);if(!s)return;const issued=s.status=='已开票';
