@@ -133,8 +133,8 @@ function openFinance(){
   pushPage({title:'财务对账',body:`
     <div class="fn-note">订单配送完成的次日系统生成账单</div>
     <div class="fn-entry" id="sentry">
-      <div class="fn-el"><div class="fn-et">结算单 · 按周期结算</div><div class="fn-es">应清算给供应商 + 平台抽佣 · 查看到手货款与清分进度</div></div>
-      <div class="fn-er"><span class="fn-eb">1 待付款</span><span class="ar">›</span></div>
+      <div class="fn-el"><div class="fn-et">对账结算 · 按月结算单</div><div class="fn-es">应清算给供应商 = 汇总总额 − 逆向 − 抽佣 · 看构成/清分/到账，支持多选导出</div></div>
+      <div class="fn-er"><span class="fn-eb">1 待确认</span><span class="ar">›</span></div>
     </div>
     <div class="fn-sum">
       <div class="gh">7月1日生成账单</div>
