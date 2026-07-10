@@ -11,6 +11,54 @@
 (function(){
 const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
 
+/* ========== 实时翻译 PBTR（与 PC 端商家管理系统 TR 同源逻辑）==========
+   覆盖买家可见核心自由文本：商品名/别名(多值)/产地/品牌/描述。中↔英自动判向，露出译文行，可手改，手改后锁定不自动覆盖。
+   枚举(单位/类目/储存/履约等)不翻译，由「系统语言版本」呈现。演示 mock 词典；真实接平台翻译 API（服务待研发确认）。
+   用法：给输入框加 data-tr（多值加 data-tr-multi），mount 后调用 PBTR.init(page)。 */
+const PBTR=(function(){
+  const ZH2EN={
+    '小棠菜':'Xiao Tang Cai','娃娃菜':'Baby Bok Choy','芥蓝':'Kai Lan','菠菜':'Spinach','土豆':'Potato','马铃薯':'Potato','白菜':'Chinese Cabbage','冰鲜三文鱼':'Chilled Salmon','三文鱼':'Salmon','鸡胸肉':'Chicken Breast','生蚝':'Oyster','嫩豆腐':'Silken Tofu','老豆腐':'Firm Tofu','油豆腐':'Fried Tofu Puff','海带丝':'Kelp Shreds','萝卜丸子':'Radish Ball',
+    '有机':'Organic','新鲜':'Fresh','精选':'Premium','当日现摘':'Freshly Picked','叶嫩梗脆':'tender leaves and crisp stems','当日':'Same-day','优质':'Quality',
+    '绿鲜源':'GreenFresh','新加坡':'Singapore','马来西亚':'Malaysia','中国山东':'Shandong, China','中国':'China','挪威':'Norway','泰国':'Thailand','法国':'France','金马仑':'Cameron Highlands','林厝港':'Lim Chu Kang','山东':'Shandong',
+    '袋':'Bag','箱':'Carton','盒':'Box','包':'Pack','斤':'Jin','公斤':'kg','千克':'kg',
+    '新鲜蔬菜':'Fresh Vegetables','蔬菜':'Vegetables','海鲜水产':'Seafood','肉禽蛋品':'Meat & Poultry',
+    '蔬果生鲜店':'Fresh Produce Store','蔬果生鲜':'Fresh Produce','店铺':'Store','餐厅':'Restaurant','食材':'Ingredients','供应':'Supply','配送':'Delivery','全岛':'islandwide','每日':'Daily','专业':'Professional',
+  };
+  const EN2ZH={};Object.keys(ZH2EN).forEach(k=>{const v=ZH2EN[k].toLowerCase();if(!EN2ZH[v])EN2ZH[v]=k;});
+  const hasCJK=s=>/[一-鿿㐀-䶿]/.test(s);
+  function zh2en(t){if(ZH2EN[t])return ZH2EN[t];let out=t;Object.keys(ZH2EN).sort((a,b)=>b.length-a.length).forEach(k=>{if(out.includes(k))out=out.split(k).join(' '+ZH2EN[k]+' ');});return out.replace(/[，、]/g,', ').replace(/。/g,'. ').replace(/\s+/g,' ').replace(/\s+([,.])/g,'$1').trim();}
+  function en2zh(t){const low=t.toLowerCase();if(EN2ZH[low])return EN2ZH[low];let out=t;Object.keys(EN2ZH).sort((a,b)=>b.length-a.length).forEach(k=>{const re=new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig');out=out.replace(re,EN2ZH[k]);});return out.trim();}
+  const one=(text,dir)=>dir=='zh2en'?zh2en(text):en2zh(text);
+  function translate(text,dir,multi){if(multi){return text.split(/[,，]/).map(x=>x.trim()).filter(Boolean).map(x=>one(x,dir)).join(dir=='zh2en'?', ':'，');}return one(text,dir);}
+  function attach(el){
+    const multi=el.hasAttribute('data-tr-multi');
+    const cell=el.closest('.pb-cell')||el;
+    const row=document.createElement('div');row.className='pb-tr-row';
+    row.innerHTML=`<span class="pb-tr-badge">🌐 EN</span><input class="pb-tr-in" placeholder="输入后自动生成译文，可手动修改"><span class="pb-tr-edited" style="display:none">✎手动改</span><button type="button" class="pb-tr-re">↻ 重新翻译</button>`;
+    cell.insertAdjacentElement('afterend',row);
+    const trIn=row.querySelector('.pb-tr-in'),badge=row.querySelector('.pb-tr-badge'),edited=row.querySelector('.pb-tr-edited'),reBtn=row.querySelector('.pb-tr-re');
+    const run=()=>{const src=(el.value||'').trim();const dir=hasCJK(src)?'zh2en':'en2zh';badge.textContent=dir=='zh2en'?'🌐 EN':'🌐 中';if(trIn._locked)return;if(!src){trIn.value='';return;}trIn.value=translate(src,dir,multi);};
+    let timer=null;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(run,600);});
+    trIn.addEventListener('input',()=>{trIn._locked=true;edited.style.display='';});
+    reBtn.addEventListener('click',()=>{trIn._locked=false;edited.style.display='none';run();});
+    if((el.value||'').trim())run();
+  }
+  function init(root){(root||document).querySelectorAll('[data-tr]').forEach(el=>{if(el._trInit)return;el._trInit=1;attach(el);});}
+  if(!document.getElementById('pb-tr-style')){
+    const st=document.createElement('style');st.id='pb-tr-style';st.textContent=`
+    .pb-tr-row{display:flex;align-items:center;gap:7px;margin:-2px 14px 8px;padding:7px 9px;background:#F1F6FF;border:1px dashed #C3D6F5;border-radius:10px;}
+    .pb-tr-badge{flex:0 0 auto;font-size:11px;font-weight:700;color:#2563EB;background:#E1EBFF;border-radius:6px;padding:2px 6px;white-space:nowrap;}
+    .pb-tr-in{flex:1;min-width:0;border:none;background:transparent;border-radius:6px;padding:4px 4px;font-size:13px;color:#1E3A8A;font-family:inherit;}
+    .pb-tr-in:focus{outline:none;background:#fff;box-shadow:inset 0 0 0 1px #93B4F5;}
+    .pb-tr-in::placeholder{color:#9DB4E0;}
+    .pb-tr-edited{flex:0 0 auto;font-size:10.5px;color:#B45309;background:#FEF3C7;border-radius:6px;padding:2px 5px;white-space:nowrap;}
+    .pb-tr-re{flex:0 0 auto;font-size:11px;color:#2563EB;background:none;border:none;cursor:pointer;white-space:nowrap;font-family:inherit;padding:2px 0;}
+    .pb-tr-re:active{opacity:.6;}`;
+    document.head.appendChild(st);
+  }
+  return {init};
+})();
+
 /* ========== PC 规则数据(承重墙，照 PC 那套) ========== */
 // 后台类目(单级简化)：税率(默认值，手填可改) + 指导价(S$)，价格异常以指导价为基准
 const CATS=[
@@ -301,8 +349,8 @@ function openForm(prefill){
       <div class="pb-errs" id="pb-errs"></div>
       <div class="pb-card">
         <div class="ct">基本信息</div>
-        <div class="pb-cell" id="pb-name-row"><div class="lab"><span class="rq">*</span>商品名称</div><div class="val"><input id="pb-name" placeholder="请输入商品名称" maxlength="60" value="${f.name.replace(/"/g,'&quot;')}"></div></div>
-        <div class="pb-cell" id="pb-alias-row"><div class="lab">别名</div><div class="val"><input id="pb-alias" placeholder="选填" maxlength="60" value="${f.alias.replace(/"/g,'&quot;')}"></div></div>
+        <div class="pb-cell" id="pb-name-row"><div class="lab"><span class="rq">*</span>商品名称</div><div class="val"><input id="pb-name" data-tr placeholder="请输入商品名称" maxlength="60" value="${f.name.replace(/"/g,'&quot;')}"></div></div>
+        <div class="pb-cell" id="pb-alias-row"><div class="lab">别名</div><div class="val"><input id="pb-alias" data-tr data-tr-multi placeholder="选填" maxlength="60" value="${f.alias.replace(/"/g,'&quot;')}"></div></div>
         ${picker('pb-cat-row','pb-cat-v',f.cat?f.cat.n:'',1,'后台类目')}
         <div class="pb-cell" id="pb-tax-row"><div class="lab"><span class="rq">*</span>税率</div><div class="val"><input id="pb-tax" inputmode="decimal" placeholder="选择类目后自动带出，可改" value="${f.tax}"><span class="pre">%</span></div></div>
         ${picker('pb-measure-row','pb-measure-v',f.measure,1,'最小售卖单位')}
@@ -320,9 +368,9 @@ function openForm(prefill){
       </div>
       <div class="pb-card">
         <div class="ct">产地品牌</div>
-        <div class="pb-cell" id="pb-origin-row"><div class="lab">产地</div><div class="val"><input id="pb-origin" placeholder="选填" maxlength="40" value="${f.origin}"></div></div>
-        <div class="pb-cell" id="pb-brand-row"><div class="lab">品牌</div><div class="val"><input id="pb-brand" placeholder="选填" maxlength="40" value="${f.brand.replace(/"/g,'&quot;')}"></div></div>
-        <div class="pb-cell" id="pb-desc-row"><div class="lab">描述</div><div class="val"><input id="pb-desc" placeholder="选填" maxlength="200" value="${f.desc}"></div></div>
+        <div class="pb-cell" id="pb-origin-row"><div class="lab">产地</div><div class="val"><input id="pb-origin" data-tr placeholder="选填" maxlength="40" value="${f.origin}"></div></div>
+        <div class="pb-cell" id="pb-brand-row"><div class="lab">品牌</div><div class="val"><input id="pb-brand" data-tr placeholder="选填" maxlength="40" value="${f.brand.replace(/"/g,'&quot;')}"></div></div>
+        <div class="pb-cell" id="pb-desc-row"><div class="lab">描述</div><div class="val"><input id="pb-desc" data-tr placeholder="选填" maxlength="200" value="${f.desc}"></div></div>
       </div>
       <div class="pb-card">
         <div class="ct"><span><span class="rq" style="color:var(--red)">*</span>售卖规格</span><span style="font-weight:400;color:var(--sub);font-size:11.5px">数量为正整数 ≥1 且互不重复 · 单位=最小售卖单位</span></div>
@@ -485,6 +533,9 @@ function bindForm(p,f){
   ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
 
   p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:''});renderSpecs(p,f);paint(p,f);};
+
+  // 实时翻译：商品名/别名/产地/品牌/描述 露出买家可见英文译文行(中↔英)，可手改、手改后锁定
+  PBTR.init(p);
 
   // 提交(跑 autoCheck)
   p.querySelector('#pb-sub').onclick=()=>{
