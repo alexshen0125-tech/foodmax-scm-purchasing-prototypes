@@ -517,6 +517,7 @@ const DB = {
   ],
   // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
+  billSel:[],                     // 对账结算·已勾选待导出的结算单号
   // 结算（预置：2026年6月账单已生成待商家确认。绿鲜源处免佣期 freeUntil 2026-09-25 → 抽佣两项=0，net=gross−逆向）
   bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'generated', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
     items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]},
@@ -1302,10 +1303,18 @@ PAGES['m-settle']=()=>{
   const cur=DB.bill;
   if(cur.status=='none'&&!DB.billsHistory.length)return `<div class="empty"><div class="e-ic">🧮</div><div class="e-t">暂无结算单</div><div class="e-s">每完成一次结算即生成一张结算单。<br>可切到「平台后台 → 对账结算」点击「生成对账单」。</div></div>`;
   const rows=[...(cur.status=='none'?[]:[cur]),...DB.billsHistory];
-  return `${flowTip(`每次结算生成一张<b>结算单</b>（结算周期由商家结算方式决定，不固定按月）。点<b>详情</b>查看构成、清分与到账；当期结算单确认后进入开票与付款。`)}
-  <div class="card"><div class="card-hd"><h3>结算单列表</h3><span class="sub">共 ${rows.length} 张 · 点详情查看</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>结算单号</th><th>结算区间</th><th>状态</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
+  DB.billSel=DB.billSel.filter(no=>rows.some(r=>r.no==no));   // 清理已不存在的勾选
+  const allSel=rows.length&&rows.every(r=>DB.billSel.includes(r.no));
+  const selRows=rows.filter(r=>DB.billSel.includes(r.no));
+  const selSum=selRows.reduce((a,b)=>a+b.net,0);
+  return `${flowTip(`每次结算生成一张<b>结算单</b>（结算周期由商家结算方式决定，不固定按月）。点<b>详情</b>查看构成、清分与到账；当期结算单确认后进入开票与付款。可勾选一张或多张结算单<b>导出</b>对账明细。`)}
+  <div class="row" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-p" onclick="act_exportBills()">⬇️ 导出${DB.billSel.length?` (${DB.billSel.length})`:''}</button></div>
+  <div class="card"><div class="card-hd"><h3>结算单列表</h3><span class="sub">共 ${rows.length} 张 · 点详情查看</span></div>
+  ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 应清算合计 <b style="color:var(--gd)">${money(selSum)}</b></span><button class="btn btn-p btn-sm" onclick="act_exportBills()">⬇️ 导出所选</button><button class="btn btn-link" style="margin-left:auto" onclick="DB.billSel=[];render()">取消选择</button></div>`:''}
+  <div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选" ${allSel?'checked':''} onclick="selAllBills()"></th><th>结算单号</th><th>结算区间</th><th>状态</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
     ${rows.map(x=>`<tr>
+      <td><input type="checkbox" class="skuchk" ${DB.billSel.includes(x.no)?'checked':''} onclick="toggleBillSel('${x.no}')"></td>
       <td class="mono">${x.no}</td>
       <td>${x.range}</td>
       <td>${x===cur?tag('bill',x.status):'<span class="tag t-g"><span class="dot"></span>已结清</span>'}</td>
@@ -1315,6 +1324,30 @@ PAGES['m-settle']=()=>{
     </tr>`).join('')}
     </tbody></table></div></div></div>`;
 };
+function toggleBillSel(no){const k=DB.billSel.indexOf(no);if(k<0)DB.billSel.push(no);else DB.billSel.splice(k,1);render();}
+function selAllBills(){const rows=[...(DB.bill.status=='none'?[]:[DB.bill]),...DB.billsHistory];const nos=rows.map(r=>r.no);const all=nos.length&&nos.every(n=>DB.billSel.includes(n));if(all)DB.billSel=[];else DB.billSel=nos.slice();render();}
+function act_exportBills(){
+  const rows=[...(DB.bill.status=='none'?[]:[DB.bill]),...DB.billsHistory];
+  const targets=DB.billSel.length?rows.filter(r=>DB.billSel.includes(r.no)):rows;
+  if(!targets.length){toast('暂无可导出的结算单','info');return;}
+  const sum=targets.reduce((a,b)=>a+b.net,0);
+  const allMode=!DB.billSel.length;
+  modal(`<div class="mc-hd"><h3>⬇️ 导出结算单</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="ib ib-b"><span class="i">ℹ️</span>${allMode?'未勾选，默认导出<b>全部 '+targets.length+' 张</b>结算单。':'将导出已勾选的 <b>'+targets.length+'</b> 张结算单。'}</div>
+    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:6px 0 14px"><table style="margin:0"><thead><tr><th>结算单号</th><th>结算区间</th><th style="text-align:right">应清算</th></tr></thead><tbody>
+      ${targets.map(t=>`<tr><td class="mono">${t.no}</td><td>${t.range}</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(t.net)}</td></tr>`).join('')}
+      <tr style="background:#F7FBF8"><td colspan="2" style="font-weight:600">合计 ${targets.length} 张</td><td style="text-align:right;font-weight:700;color:var(--gd)">${money(sum)}</td></tr>
+    </tbody></table></div>
+    <label class="fl" style="display:block;margin-bottom:6px">导出格式</label>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <label class="chip-ck on"><input type="radio" name="expfmt" value="excel" checked onchange="document.querySelectorAll('[name=expfmt]').forEach(r=>r.parentElement.classList.toggle('on',r.checked))">Excel 明细表（含逐笔构成）</label>
+      <label class="chip-ck"><input type="radio" name="expfmt" value="pdf" onchange="document.querySelectorAll('[name=expfmt]').forEach(r=>r.parentElement.classList.toggle('on',r.checked))">PDF 对账单（每张一页）</label>
+    </div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doExportBills(${targets.length})">确认导出</button></div>`);
+}
+function doExportBills(n){const fmt=(document.querySelector('[name=expfmt]:checked')||{}).value=='pdf'?'PDF 对账单':'Excel 明细表';closeModal();toast(`已导出 ${n} 张结算单（${fmt}）`,'ok');}
 
 /* ---------- 商家端：发票开具（闭环D 续） ---------- */
 PAGES['m-invoice']=()=>{

@@ -1,6 +1,7 @@
 /* Food Max 商家端 v2 · 商品模块
    数据驱动配色(emerald) + 评审修复内建：骨架屏/空态/破坏性确认/批量多选/44px/SG数据
    PC 对齐(2026-07)：价格+库存到每个 SKU / 上下架细到 SKU / 状态只留销售中·未上架 / 去库存预警
+   扁平化(2026-07)：SKU 完全展开——每个售卖规格(SKU)一张独立卡，不再按 SPU 分组、无需点 SPU 看 SKU；销售中/未上架、批量、计数均按 SKU 维度（对齐 PC「每 SKU 一行」）
    税价对齐(2026-07)：价格维护未税价，默认税率 9%，SKU 行与改价页自动展示含税价（只读） */
 (function(){
 const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
@@ -46,6 +47,12 @@ css.textContent=`
 .pc .sku .sk-tg.on{background:var(--muted);color:#27433A;}
 .pc .sku .sk-tg.off{background:var(--mint-soft);color:var(--emerald-2);}
 .pc .sku .sk-st{font-size:11px;color:var(--sub);margin-top:4px;}
+/* 扁平 SKU 卡片：每个售卖规格一张卡，与 PC 端「每 SKU 一行」对齐 */
+.pc .skl{font-size:13.5px;color:var(--sub);margin-top:13px;padding-top:12px;border-top:1px solid var(--line);line-height:1.7;}
+.pc .skl b{color:var(--emerald-2);font-weight:700;font-family:'Lora',serif;}
+.pc .skl .oos{color:var(--red);font-weight:700;}
+.pc .skl .up{display:block;font-size:11px;color:#94A3B8;margin-top:3px;}
+.pc .nm .spec{color:var(--sub);font-weight:600;font-size:13px;}
 .pc .acts{display:flex;gap:9px;margin-top:14px;}
 .pc .acts .a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--muted);color:#27433A;}
 .bulkbar{display:flex;align-items:center;gap:10px;}
@@ -96,47 +103,41 @@ const GST_DEFAULT=9;
 const taxRate=p=>{const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%',''));return isNaN(t)?GST_DEFAULT:t;};
 const priceIncl=(net,p)=>(+net||0)*(1+taxRate(p)/100);   // 含税价 = 未税价 ×(1+税率)
 
-function card(g,manage){
-  const skuHtml=g.skus.map((s,i)=>{
-    const oos=(+s.stock<=0);
-    const st=s.off?'已下架':(oos?'售罄':'在售');
-    const stockTxt=s.off?'—':(oos?'<span class="oos">0（售罄）</span>':(+s.stock).toLocaleString());
-    return `<div class="sku"><div class="sm">
-        <div class="ss">${s.spec}</div>
-        <div class="sd"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 库存 ${stockTxt}</div>
-        <div class="sd" style="font-size:11.5px;color:#94A3B8;margin-top:2px">含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%）</div>
-        ${s.updatedAt?`<div class="sd" style="font-size:11px;color:#94A3B8;margin-top:2px">更新 ${s.updatedAt}</div>`:''}</div>
-      <div class="rt"><div class="sk-tg ${s.off?'off':'on'}" data-sku="${i}">${s.off?'上架':'下架'}</div>
-        <div class="sk-st">${st}</div></div></div>`;
-  }).join('');
+// 扁平 SKU 卡片：每个售卖规格(SKU)一张独立卡，SKU 完全展开、无需点 SPU 展开（对齐 PC 端「每 SKU 一行」）
+function skuCard(g,s,gi,si,manage){
+  const oos=(+s.stock<=0);
+  const st=s.off?'已下架':(oos?'售罄':'在售');
+  const stockTxt=s.off?'—':(oos?'<span class="oos">0（售罄）</span>':(+s.stock).toLocaleString());
   return `<div class="pc${manage?' manage':''}">
     <div class="chk" data-chk></div>
     <div class="body">
       <div class="top"><div class="img">${g.ic}</div>
-        <div style="flex:1"><div class="nm">${g.n}</div><div class="sp">${g.cat} · ${g.skus.length} 个规格${g.updatedAt?` · 更新 ${g.updatedAt}`:''}</div>
+        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span></div>
+          <div class="sp">${g.cat}</div>
           ${g.rec?'<span class="tag rec">商机推荐</span>':''}
-          ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div></div>
-      <div class="kpis"><div class="k"><div class="v">${g.sales}</div><div class="l">今日销量</div></div><div class="k"><div class="v">${totalStock(g).toLocaleString()}</div><div class="l">总库存</div></div></div>
-      <div class="skus">${skuHtml}</div>
+          ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
+        <div class="rt"><div class="sk-tg ${s.off?'off':'on'}" data-sku-toggle>${s.off?'上架':'下架'}</div>
+          <div class="sk-st">${st}</div></div></div>
+      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
       ${manage?'':`<div class="acts">${['改价格','改库存','更多'].map(a=>`<div class="a" data-a="${a}">${a}</div>`).join('')}</div>`}
     </div></div>`;
 }
 
-function bind(el,g,state){
+function bindSku(el,g,s,gi,si,state){
   const chk=el.querySelector('[data-chk]');
-  chk.onclick=()=>{chk.classList.toggle('on');g._sel=chk.classList.contains('on');state.refreshBulk();};
-  if(g._sel)chk.classList.add('on');
-  // 逐 SKU 上下架（即时生效无需审核；上下架均二次确认，SKU 与 SPU 各自打更新时间）
-  el.querySelectorAll('[data-sku]').forEach(b=>b.onclick=()=>{
-    const s=g.skus[+b.dataset.sku];
+  chk.onclick=()=>{chk.classList.toggle('on');s._sel=chk.classList.contains('on');state.refreshBulk();};
+  if(s._sel)chk.classList.add('on');
+  // 逐 SKU 上下架（即时生效无需审核；二次确认，SKU 与 SPU 各自打更新时间）
+  const tg=el.querySelector('[data-sku-toggle]');
+  if(tg)tg.onclick=()=>{
     const to=s.off?'上架':'下架';
     const doIt=()=>{s.off=!s.off;s.updatedAt=ts();g.updatedAt=ts();toast(`「${g.n} ${s.spec}」已${s.off?'下架':'上架'}（即时生效，无需审核）`);state.redraw();};
     confirmDialog({title:`确认${to}该规格？`,body:`「${g.n} ${s.spec}」${to}后${s.off?'客户即可下单':'客户将无法下单，可随时重新上架'}。`,danger:!s.off,okText:to,onOk:doIt});
-  });
+  };
   el.querySelectorAll('.acts .a').forEach(b=>b.onclick=()=>{
     const a=b.dataset.a;
-    if(a==='改价格')openPrice(g);
-    else if(a==='改库存')openStock(g);
+    if(a==='改价格')openPrice(g,si);
+    else if(a==='改库存')openStock(g,si);
     else openMore(g,state);
   });
   const bad=el.querySelector('[data-bad]');if(bad)bad.onclick=()=>showSupplement();
@@ -159,20 +160,23 @@ function renderList(container,inTab){
   const mngEl=container.querySelector('#mng');
   const state={tab:'sale',manage:false,refreshBulk(){},redraw(){}};
 
+  // 扁平化：以 SKU 为单位。销售中/未上架均按 SKU 的上下架状态分桶
+  const flatSkus=(tab)=>{const arr=[];PRODUCTS.forEach((g,gi)=>(g.skus||[]).forEach((s,si)=>{const on=!s.off;if(tab==='sale'?on:!on)arr.push({g,s,gi,si});}));return arr;};
+  const allSkus=()=>{const arr=[];PRODUCTS.forEach(g=>(g.skus||[]).forEach(s=>arr.push(s)));return arr;};
   const refreshCounts=()=>{
-    const c1=container.querySelector('#c-sale'),c2=container.querySelector('#c-off');
-    if(c1)c1.textContent=PRODUCTS.filter(isOnShelf).length;
-    if(c2)c2.textContent=PRODUCTS.filter(p=>!isOnShelf(p)).length;
+    const c1=container.querySelector('#c-sale'),c2=container.querySelector('#c-off');const sk=allSkus();
+    if(c1)c1.textContent=sk.filter(s=>!s.off).length;
+    if(c2)c2.textContent=sk.filter(s=>s.off).length;
   };
   const drawData=(tab)=>{
     refreshCounts();
-    const data=PRODUCTS.filter(p=>tab==='sale'?isOnShelf(p):!isOnShelf(p));
+    const data=flatSkus(tab);
     if(!data.length){
-      list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无${tab==='sale'?'销售中':'未上架'}商品</h4><p>${tab==='sale'?'上架任一规格后会出现在这里':'发布你的第一款商品开始经营'}</p></div>`;
+      list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无${tab==='sale'?'销售中':'未上架'}规格</h4><p>${tab==='sale'?'上架任一规格后会出现在这里':'发布你的第一款商品开始经营'}</p></div>`;
       return;
     }
     list.innerHTML='';
-    data.forEach(g=>{const w=document.createElement('div');w.innerHTML=card(g,state.manage);const c=w.firstElementChild;list.appendChild(c);bind(c,g,state);});
+    data.forEach(({g,s,gi,si})=>{const w=document.createElement('div');w.innerHTML=skuCard(g,s,gi,si,state.manage);const c=w.firstElementChild;list.appendChild(c);bindSku(c,g,s,gi,si,state);});
   };
   state.redraw=()=>drawData(state.tab);
   const draw=(tab)=>{
@@ -194,15 +198,17 @@ function renderList(container,inTab){
   let bulkBar;
   function showBulkBar(){
     bulkBar=document.createElement('div');bulkBar.className='page-footer';bulkBar.style.cssText='position:absolute;left:0;right:0;bottom:0;z-index:8';
-    bulkBar.innerHTML=`<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="px" id="bpx">批量改价</button><button class="up" id="bup">批量上架</button></div>`;
+    const toggleLabel=state.tab==='sale'?'批量下架':'批量上架';
+    bulkBar.innerHTML=`<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="px" id="bpx">批量改价</button><button class="up" id="bup">${toggleLabel}</button></div>`;
     container.appendChild(bulkBar);
-    const data=()=>PRODUCTS.filter(p=>state.tab==='sale'?isOnShelf(p):!isOnShelf(p));
-    state.refreshBulk=()=>{const n=data().filter(g=>g._sel).length;bulkBar.querySelector('#bc').textContent='已选 '+n;
-      bulkBar.querySelector('#ba .b').classList.toggle('on',n===data().length&&n>0);};
-    bulkBar.querySelector('#ba').onclick=()=>{const d=data();const allOn=d.every(g=>g._sel);d.forEach(g=>g._sel=!allOn);drawData(state.tab);state.refreshBulk();};
-    bulkBar.querySelector('#bup').onclick=()=>{const sel=data().filter(g=>g._sel);if(!sel.length)return toast('请先选择商品');
-      confirmDialog({title:`批量上架 ${sel.length} 款商品？`,body:'将上架所选商品的全部售卖规格。',okText:'上架',onOk:()=>{sel.forEach(g=>{g.skus.forEach(s=>{s.off=false;s.updatedAt=ts();});g.updatedAt=ts();g._sel=false;});toast(`已上架 ${sel.length} 款（全部规格）`);exitManage();}});};
-    bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(g=>g._sel).length;if(!n)return toast('请先选择商品');toast(`批量改价 ${n} 款`);};
+    const data=()=>flatSkus(state.tab);
+    state.refreshBulk=()=>{const d=data();const n=d.filter(x=>x.s._sel).length;bulkBar.querySelector('#bc').textContent='已选 '+n;
+      bulkBar.querySelector('#ba .b').classList.toggle('on',n===d.length&&n>0);};
+    bulkBar.querySelector('#ba').onclick=()=>{const d=data();const allOn=d.every(x=>x.s._sel);d.forEach(x=>x.s._sel=!allOn);drawData(state.tab);state.refreshBulk();};
+    bulkBar.querySelector('#bup').onclick=()=>{const sel=data().filter(x=>x.s._sel);if(!sel.length)return toast('请先选择规格');
+      const toOff=state.tab==='sale';const to=toOff?'下架':'上架';
+      confirmDialog({title:`批量${to} ${sel.length} 个规格？`,body:`将${to}所选 ${sel.length} 个售卖规格(SKU)，即时生效、无需审核。`,danger:toOff,okText:to,onOk:()=>{sel.forEach(x=>{x.s.off=toOff;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已${to} ${sel.length} 个规格`);exitManage();}});};
+    bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改价 ${n} 个规格`);};
     state.refreshBulk();
   }
   function hideBulkBar(){bulkBar&&bulkBar.remove();bulkBar=null;}
@@ -212,18 +218,19 @@ function renderList(container,inTab){
 
 function openGoodsPush(){pushPage({title:'商品管理',body:'<div id="gp"></div>',footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1">商机推荐</button><button class="btn primary" style="flex:1.4" id="pub">发布商品</button></div>`,mount:(p)=>{renderList(p.querySelector('#gp'),false);p.querySelector('#pub').onclick=()=>window.FM_PUBLISH?window.FM_PUBLISH():toast('发布商品');}});}
 
-// 改价格（逐 SKU，即时生效）
-function openPrice(g){
+// 改价格（逐 SKU，即时生效）；only 非空时仅编辑指定 SKU
+function openPrice(g,only){
   const rate=taxRate(g),factor=1+rate/100;
+  const idxs=(only!=null?[only]:g.skus.map((_,i)=>i));
   const SVC=0.05,PICKUP=0.00; // 服务费率 / 每件上门揽收费(固定字段,默认0)
   const incTxt=(incl)=>`佣金 S$${(incl*SVC).toFixed(2)} · 揽收费 S$${PICKUP.toFixed(2)} · 预计收入 <b style="color:var(--emerald-2)">S$${(incl*(1-SVC)-PICKUP).toFixed(2)}</b>`;
   pushPage({title:'改价格',body:`<div style="height:4px"></div>
-    <div class="sku-ed">${g.skus.map((s,i)=>`
+    <div class="sku-ed">${idxs.map(i=>{const s=g.skus[i];return `
       <div class="r"><div class="nm">${g.n}<div class="c">${s.spec}</div></div>
         <div style="text-align:right">
           <div class="in"><span class="u">S$</span><input data-i="${i}" data-price value="${s.price||''}" inputmode="decimal" placeholder="未税价"></div>
           <div class="incl" data-incl="${i}" style="font-size:11.5px;color:#94A3B8;margin-top:5px">含税 S$${priceIncl(s.price,g).toFixed(2)}</div>
-          <div class="inc-line" data-inc="${i}" style="font-size:11px;color:#94A3B8;margin-top:3px">${incTxt(priceIncl(s.price,g))}</div></div></div>`).join('')}</div>
+          <div class="inc-line" data-inc="${i}" style="font-size:11px;color:#94A3B8;margin-top:3px">${incTxt(priceIncl(s.price,g))}</div></div></div>`;}).join('')}</div>
     <div class="sku-ed-tip">价格维护到每个售卖规格(SKU)，录入<b>未税价</b>，系统按税率 ${rate}% 自动算含税价；提交即时生效。<b>商品佣金 = 含税价×服务费率(${(SVC*100).toFixed(0)}%)</b>，<b>上门揽收费</b>为单独固定字段(与价格/比例无关)，<b>预计收入 = 含税价−佣金−揽收费</b>；仅供参考，以订单结算为准。</div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="ps" disabled>提交改价</button>`,
@@ -247,12 +254,13 @@ function openPrice(g){
     }});
 }
 
-// 改库存（逐 SKU，即时生效）
-function openStock(g){
+// 改库存（逐 SKU，即时生效）；only 非空时仅编辑指定 SKU
+function openStock(g,only){
+  const idxs=(only!=null?[only]:g.skus.map((_,i)=>i));
   pushPage({title:'改库存',body:`<div style="height:4px"></div>
-    <div class="sku-ed">${g.skus.map((s,i)=>`
+    <div class="sku-ed">${idxs.map(i=>{const s=g.skus[i];return `
       <div class="r"><div class="nm">${g.n}<div class="c">${s.spec}</div></div>
-        <div class="in"><input data-i="${i}" data-stock value="${s.stock||0}" inputmode="numeric"></div></div>`).join('')}</div>
+        <div class="in"><input data-i="${i}" data-stock value="${s.stock||0}" inputmode="numeric"></div></div>`;}).join('')}</div>
     <div class="sku-ed-tip">库存维护到每个售卖规格(SKU)，为 0 即售罄；提交后即时生效、无需审核。</div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="sv">保存</button>`,
