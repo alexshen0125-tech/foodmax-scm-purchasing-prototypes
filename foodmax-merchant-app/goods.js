@@ -140,7 +140,7 @@ function skuCard(g,s,gi,si,manage){
           ${g.rec?'<span class="tag rec">商机推荐</span>':''}
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
         <div class="rt"><div class="sk-st only">${st}</div></div></div>
-      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复${s.soldToday?` · 今日已售 ${s.soldToday}`:''}</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
+      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
       ${manage?'':`<div class="acts"><div class="a" data-a="改价格">改价格</div><div class="a" data-a="改库存">改库存</div><div class="a tg ${s.off?'tg-on':''}" data-sku-toggle>${s.off?'上架':'下架'}</div><div class="a" data-a="更多">更多</div></div>`}
     </div></div>`;
 }
