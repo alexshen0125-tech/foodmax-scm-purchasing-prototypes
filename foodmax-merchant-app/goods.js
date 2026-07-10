@@ -47,6 +47,7 @@ css.textContent=`
 .pc .sku .sk-tg.on{background:var(--muted);color:#27433A;}
 .pc .sku .sk-tg.off{background:var(--mint-soft);color:var(--emerald-2);}
 .pc .sku .sk-st{font-size:11px;color:var(--sub);margin-top:4px;}
+.pc .sku .sk-st.only{font-size:12.5px;font-weight:700;color:#27433A;margin-top:0;}
 /* 扁平 SKU 卡片：每个售卖规格一张卡，与 PC 端「每 SKU 一行」对齐 */
 .pc .skl{font-size:13.5px;color:var(--sub);margin-top:13px;padding-top:12px;border-top:1px solid var(--line);line-height:1.7;}
 .pc .skl b{color:var(--emerald-2);font-weight:700;font-family:'Lora',serif;}
@@ -55,6 +56,10 @@ css.textContent=`
 .pc .nm .spec{color:var(--sub);font-weight:600;font-size:13px;}
 .pc .acts{display:flex;gap:9px;margin-top:14px;}
 .pc .acts .a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--muted);color:#27433A;}
+.pc .acts .a.tg-on{background:var(--mint-soft);color:var(--emerald-2);}
+.pc .skl .mode{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;vertical-align:middle;margin-left:1px;}
+.pc .skl .mode.daily{background:var(--mint-soft);color:var(--emerald-2);}
+.pc .skl .mode.once{background:var(--amber-soft);color:#B45309;}
 .bulkbar{display:flex;align-items:center;gap:10px;}
 .bulkbar .all{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;min-height:44px;cursor:pointer;}
 .bulkbar .all .b{width:22px;height:22px;border-radius:50%;border:2px solid #CBD5C7;display:flex;align-items:center;justify-content:center;}
@@ -134,10 +139,9 @@ function skuCard(g,s,gi,si,manage){
           <div class="sp">${g.cat}</div>
           ${g.rec?'<span class="tag rec">商机推荐</span>':''}
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
-        <div class="rt"><div class="sk-tg ${s.off?'off':'on'}" data-sku-toggle>${s.off?'上架':'下架'}</div>
-          <div class="sk-st">${st}</div></div></div>
-      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` <span style="color:#94A3B8">${s.stockMode==='daily'?'· 每日恢复'+(s.soldToday?`（今日已售 ${s.soldToday}）`:''):'· 售完即止'}</span>`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
-      ${manage?'':`<div class="acts">${['改价格','改库存','更多'].map(a=>`<div class="a" data-a="${a}">${a}</div>`).join('')}</div>`}
+        <div class="rt"><div class="sk-st only">${st}</div></div></div>
+      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复${s.soldToday?` · 今日已售 ${s.soldToday}`:''}</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
+      ${manage?'':`<div class="acts"><div class="a" data-a="改价格">改价格</div><div class="a" data-a="改库存">改库存</div><div class="a tg ${s.off?'tg-on':''}" data-sku-toggle>${s.off?'上架':'下架'}</div><div class="a" data-a="更多">更多</div></div>`}
     </div></div>`;
 }
 
@@ -152,7 +156,7 @@ function bindSku(el,g,s,gi,si,state){
     const doIt=()=>{s.off=!s.off;s.updatedAt=ts();g.updatedAt=ts();toast(`「${g.n} ${s.spec}」已${s.off?'下架':'上架'}（即时生效，无需审核）`);state.redraw();};
     confirmDialog({title:`确认${to}该规格？`,body:`「${g.n} ${s.spec}」${to}后${s.off?'客户即可下单':'客户将无法下单，可随时重新上架'}。`,danger:!s.off,okText:to,onOk:doIt});
   };
-  el.querySelectorAll('.acts .a').forEach(b=>b.onclick=()=>{
+  el.querySelectorAll('.acts .a[data-a]').forEach(b=>b.onclick=()=>{
     const a=b.dataset.a;
     if(a==='改价格')openPrice(g,si);
     else if(a==='改库存')openStock(g,si);
@@ -234,7 +238,7 @@ function renderList(container,inTab){
   draw('sale');
 }
 
-function openGoodsPush(){pushPage({title:'商品管理',body:'<div id="gp"></div>',footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1">商机推荐</button><button class="btn primary" style="flex:1.4" id="pub">发布商品</button></div>`,mount:(p)=>{renderList(p.querySelector('#gp'),false);p.querySelector('#pub').onclick=()=>window.FM_PUBLISH?window.FM_PUBLISH():toast('发布商品');}});}
+function openGoodsPush(){pushPage({title:'商品管理',body:'<div id="gp"></div>',footer:`<button class="btn primary" style="width:100%" id="pub">发布商品</button>`,mount:(p)=>{renderList(p.querySelector('#gp'),false);p.querySelector('#pub').onclick=()=>window.FM_PUBLISH?window.FM_PUBLISH():toast('发布商品');}});}
 
 // 改价格（逐 SKU，即时生效）；only 非空时仅编辑指定 SKU
 function openPrice(g,only){
