@@ -518,8 +518,8 @@ const DB = {
   // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
   billSel:[],                     // 对账结算·已勾选待导出的结算单号
-  // 结算（预置：2026年6月账单已生成待商家确认。绿鲜源处免佣期 freeUntil 2026-09-25 → 抽佣两项=0，net=gross−逆向）
-  bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'generated', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
+  // 结算（第一期：账单生成即默认商家已确认，直接待付款。绿鲜源处免佣期 freeUntil 2026-09-25 → 抽佣两项=0，net=gross−逆向）
+  bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'confirmed', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
     items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]},
   invoices:[
     {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'none',no:'',reject:''},
@@ -560,7 +560,7 @@ const S = {
   onboard:{scm_pending:['入驻审核中','t-b'],task:['待完成开店任务','t-y'],task_review:['开店任务审核中','t-b'],task_rejected:['开店任务被驳回','t-r'],active:['营业中','t-g']},
   product:{draft:['草稿','t-gr'],reviewing:['待审核','t-y'],onsale:['在售','t-g'],offsale:['已下架','t-gr'],rejected:['审核驳回','t-r'],forced_off:['强制下架','t-r']},
   order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['备货中','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
-  bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['已确认','t-g']},
+  bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['待付款','t-b']},
   invoice:{none:['待开票','t-y'],uploaded:['待校验','t-b'],verified:['校验通过','t-g'],rejected:['校验退回','t-r']},
 };
 function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
@@ -2230,7 +2230,7 @@ function act_genBill(){
   const feeLogi=signed.reduce((s,o)=>s+ord_feeLogi(o),0); // 物流佣金
   const fee=feeSvc+feeLogi;
   const net=gross-reverse-fee;
-  DB.bill={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',genDate:'2026-07-01',status:'generated',gross,reverse,fee,feeSvc,feeLogi,net,dispute:'',items:[['订单货款（含历史）',signed.length+90,gross],['逆向扣减（售后判商家责）',DB.afterSales.filter(a=>(a.status=='judged'||a.status=='closed')&&a.liable=='商家').length,-reverse],[feeSvc>0?'平台抽佣·服务佣金（按品类佣金率）':'平台抽佣·服务佣金（免佣期）',signed.length,-feeSvc],[feeLogi>0?'物流抽佣·物流佣金（按品类佣金率）':'物流抽佣·物流佣金（免佣期）',signed.length,-feeLogi]]};
+  DB.bill={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',genDate:'2026-07-01',status:'confirmed',gross,reverse,fee,feeSvc,feeLogi,net,dispute:'',items:[['订单货款（含历史）',signed.length+90,gross],['逆向扣减（售后判商家责）',DB.afterSales.filter(a=>(a.status=='judged'||a.status=='closed')&&a.liable=='商家').length,-reverse],[feeSvc>0?'平台抽佣·服务佣金（按品类佣金率）':'平台抽佣·服务佣金（免佣期）',signed.length,-feeSvc],[feeLogi>0?'物流抽佣·物流佣金（按品类佣金率）':'物流抽佣·物流佣金（免佣期）',signed.length,-feeLogi]]};
   // 生成发票占位（每签收订单一张 + 历史合并一张）
   DB.invoices=signed.map(o=>({order:o.id,client:o.client,amt:o.amt,status:'none',no:'',reject:''}));
   DB.invoices.push({order:'#2026历史合并',client:'多客户(90笔)',amt:gross-signed.reduce((s,o)=>s+o.amt,0),status:'none',no:'',reject:''});
@@ -2240,14 +2240,11 @@ function act_billDetail(key){
   const cur=DB.bill;
   const sel=(key&&DB.billsHistory.find(x=>x.period==key))||cur;
   const isCur=sel===cur;
-  const steps=['平台生成','商家确认','开票','平台校验付款','打款完成'];
-  const idx=!isCur?5:sel.status=='generated'?1:sel.status=='disputed'?1:sel.status=='adjusted'?1:sel.status=='confirmed'?(DB.payment=='paid'?5:DB.payment=='none'?2:DB.payment=='plan'||DB.payment=='approving'?3:4):0;
+  // 进度节点去掉「开票」；第一期商家确认为默认完成，当期从「平台校验付款」起
+  const steps=['平台生成','商家确认','平台校验付款','打款完成'];
+  const idx=!isCur?4:(DB.payment=='paid'?4:2);
   const payoutTag=(!isCur||DB.payment=='paid')?'<span class="tag t-g"><span class="dot"></span>已清分 · 已到账</span>':DB.payment=='none'?'<span class="tag t-y"><span class="dot"></span>已清分 · 待打款</span>':'<span class="tag t-b"><span class="dot"></span>已清分 · 付款中</span>';
-  const ft=isCur
-    ?(sel.status=='generated'?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();act_confirmBillAsk()">✓ 确认对账单</button>`
-      :sel.status=='confirmed'?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();nav('m-invoice')">去开票 →</button>`
-      :`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`)
-    :`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`;
+  const ft=`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`;
   drawer(`<div class="drawer-hd"><div><h3>${sel.no} · 结算单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${sel.range} · ${isCur?'当期':'已结清'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${isCur?`<div style="margin-bottom:16px">${pipe(steps,idx)}</div>`:''}
@@ -2259,7 +2256,7 @@ function act_billDetail(key){
       <div><div class="k">应清算给供应商（应结净额）</div><div class="v" style="color:var(--g);font-size:18px">${money(sel.net)}</div></div>
     </div>
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣</b>；平台就抽佣部分向你开具佣金税票。</div>
-    ${isCur&&sel.status=='generated'?`<div class="ib ib-b"><span class="i">ℹ️</span>如对本期账单有异议，请<b>线下联系平台运营/客服</b>核查；本期暂不支持线上提异议。</div>`:''}
+    ${isCur&&sel.status!='paid'?`<div class="ib ib-b"><span class="i">ℹ️</span>第一期：结算单生成即<b>默认对账确认</b>，直接进入付款流程；如有异议请<b>线下联系平台运营/客服</b>核查。</div>`:''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
       ${sel.items.map(it=>`<tr><td>${it[0]}</td><td>${it[1]}</td><td style="${it[2]<0?'color:var(--r)':''}">${it[2]<0?'-':''}${money(Math.abs(it[2]))}</td></tr>`).join('')}

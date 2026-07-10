@@ -2,7 +2,7 @@
    PC 对齐(2026-07)：完全按 PC 商家管理系统「对账结算」口径重构——
    月度结算单 · 绿鲜源蔬果 · 应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣(服务佣金) − 物流抽佣(物流佣金)
    列表字段/状态/详情构成/清分进度 与 PC 一致；新增「多选导出」(Excel 明细表 / PDF 对账单)。
-   当期结算单 待商家确认 → 商家确认 → 开票；历史单 已结清（只读）。金额 S$。 */
+   第一期：结算单生成即默认商家已确认，当期直接待付款(无手动确认)；进度节点去掉「开票」。历史单 已结清(只读)。金额 S$。 */
 (function(){
 const {pushPage,popPage,toast,sheet,svg,skel,confirmDialog}=window.FM;
 
@@ -89,8 +89,9 @@ document.head.appendChild(css);
 
 // ── 数据（与 PC「对账结算」DB.bill / billsHistory 完全一致）───────────
 const ME={payee:'绿鲜源蔬果 Pte Ltd',bank:'DBS ****8821'};
-// 当期结算单（可变：generated 待商家确认 → confirmed 待付款）
-const CUR={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',genDate:'2026-07-01',status:'generated',
+// 当期结算单（第一期默认已确认 → confirmed 待付款）
+// 第一期：结算单给到商家即默认商家已确认(无需手动确认)，当期直接进入待付款
+const CUR={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',genDate:'2026-07-01',status:'confirmed',
   gross:47530.00,reverse:268.00,feeSvc:1188.25,feeLogi:712.95,net:45360.80,payTime:'',
   items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]};
 const HIST=[
@@ -105,11 +106,9 @@ const rows=()=>[CUR,...HIST];
 const money=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const statusChip=b=>{
   if(b.status=='paid')return `<span class="se-chip se-c-green">已结清</span>`;
-  if(b.status=='confirmed')return `<span class="se-chip se-c-blue">待付款</span>`;
-  return `<span class="se-chip se-c-amber">待商家确认</span>`;
+  return `<span class="se-chip se-c-blue">待付款</span>`;   // 第一期默认已确认，当期即待付款
 };
 
-let listRefresh=null;           // 详情里确认对账单后回刷列表
 let selMode=false;              // 多选导出模式
 const SEL=new Set();
 
@@ -140,7 +139,7 @@ function openSettle(){
             <div class="rng">${b.range}</div>
             <div class="big disp"><span class="c">S$</span>${money(b.net).slice(2)}</div>
             <div class="glbl">应清算给供应商（到手货款）</div>
-            <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:(b.status=='confirmed'?'待打款':'待你确认对账')}${selMode?'':'<span class="ar">›</span>'}</div>
+            <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:'待打款'}${selMode?'':'<span class="ar">›</span>'}</div>
           </div>
         </div>`).join('');
         l.querySelectorAll('.se-bill').forEach(c=>{const b=rows()[+c.dataset.i];
@@ -151,7 +150,6 @@ function openSettle(){
         });
       }
       function exitSel(){selMode=false;SEL.clear();expBtn.textContent='⬇️ 多选导出';if(selbar){selbar.remove();selbar=null;}drawList();}
-      listRefresh=drawList;
       l.innerHTML=skel(3);
       setTimeout(drawList,420);
       expBtn.onclick=()=>{
@@ -179,17 +177,14 @@ function exportSheet(sel,done){
 // ── 2. 结算单详情（构成 + 账单构成 + 清分进度，对齐 PC）──
 function openDetail(b){
   const isCur=b===CUR;
-  const STEPS=['平台生成','商家确认','开票','校验付款','打款完成'];
-  const idx=b.status=='paid'?5:b.status=='confirmed'?2:1;   // generated→1(商家确认), confirmed→2(开票)
+  // 进度节点去掉「开票」；第一期商家确认为默认完成，当期从「校验付款」起
+  const STEPS=['平台生成','商家确认','校验付款','打款完成'];
+  const idx=b.status=='paid'?STEPS.length:2;   // 当期默认已确认 → 停在「校验付款」
   const payTag=b.status=='paid'?`<span class="se-chip se-c-green">已清分 · 已到账</span>`
-    :b.status=='confirmed'?`<span class="se-chip se-c-amber">已清分 · 待打款</span>`
-    :`<span class="se-chip se-c-gray">待商家确认</span>`;
+    :`<span class="se-chip se-c-amber">已清分 · 待打款</span>`;
   const svcTag=(b.feeSvc>0)?(b.status=='paid'?`<span class="se-chip se-c-green">发票 已开</span>`:`<span class="se-chip se-c-blue">结算后自动开票</span>`)
     :`<span class="se-chip se-c-gray">免佣期 · 无服务费</span>`;
-  const foot=isCur
-    ?(b.status=='generated'?`<button class="btn ghost" style="flex:1" id="se-close">关闭</button><button class="btn primary" style="flex:1.4" id="se-confirm">✓ 确认对账单</button>`
-      :`<button class="btn ghost" style="flex:1" id="se-close">关闭</button><button class="btn primary" style="flex:1.4" id="se-inv">去开票 →</button>`)
-    :`<button class="btn primary" id="se-close">关闭</button>`;
+  const foot=`<button class="btn primary" id="se-close">关闭</button>`;
   pushPage({title:'结算单详情',body:`
     <div class="se-dhead">
       <div class="no">${b.no} · ${b.range} ${statusChip(b)}</div>
@@ -232,13 +227,13 @@ function openDetail(b){
       </div>
     </div>
 
-    ${isCur&&b.status=='generated'?`<div class="se-card"><div class="se-tip">如对本期账单有异议，请<b>线下联系平台运营 / 客服</b>核查；本期暂不支持线上提异议。确认后应清算进入付款流程，不可线上撤回。</div></div>`:''}
+    ${isCur&&b.status!='paid'?`<div class="se-card"><div class="se-tip">结算单生成即默认对账确认，直接进入付款流程；如有异议请<b>线下联系平台运营 / 客服</b>核查。</div></div>`:''}
     ${b.status=='paid'?`<div class="se-card"><div class="se-idn" style="background:var(--mint-soft);color:var(--emerald-2)">💰 本期已结清，货款 ${money(b.net)} 已到账</div></div>`:''}
 
     <div class="se-card">
       <div class="se-ct">状态说明</div>
       <div class="se-legend">
-        <div><b>结算单状态</b>：待商家确认 → 待付款 → 已结清（有异议线下联系运营/客服）</div>
+        <div><b>结算单状态</b>：待付款 → 已结清（生成即默认对账确认；有异议线下联系运营/客服）</div>
         <div><b>清分状态</b>：待清分 / 已清分 / 已到账</div>
         <div><b>服务费发票(抽佣)</b>：平台结算完成后<b>自动开具</b>（GST 9%），商家仅查看/下载、无需申请</div>
       </div>
@@ -246,9 +241,6 @@ function openDetail(b){
     footer:foot,
     mount:(p)=>{
       const close=p.querySelector('#se-close');if(close)close.onclick=popPage;
-      const inv=p.querySelector('#se-inv');if(inv)inv.onclick=()=>{popPage();window.FM_MOD&&window.FM_MOD.invoice&&window.FM_MOD.invoice();};
-      const cf=p.querySelector('#se-confirm');
-      if(cf)cf.onclick=()=>confirmDialog({title:'确认对账单？',body:`确认后视为对账无误，应清算 ${money(b.net)} 进入付款流程，且不可再线上撤回（如有异议请先线下联系运营）。`,okText:'确认无误',onOk:()=>{CUR.status='confirmed';toast('对账单已确认，进入付款流程');popPage();listRefresh&&listRefresh();}});
     }});
 }
 
