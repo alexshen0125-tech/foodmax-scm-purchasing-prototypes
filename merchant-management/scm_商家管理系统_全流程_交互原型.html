@@ -483,9 +483,9 @@ const DB = {
   ],
   // 商品（样例数据：入驻/开店走完后商家端可见；平台「商品审核」即时可见待审核项。含三类目/在售/待审核/低库存/售罄/价格异常，供库存·价格·质检·经营分析·备货演示）
   products:[
-    {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',qty:1,price:9.30,stock:220,safe:30}]},
+    {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',qty:1,price:9.30,stock:220,safe:30,stockMode:'daily',soldToday:45}]},
     {id:'SPU8812',name:'娃娃菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚金马仑',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8816',qty:1,price:7.00,stock:18,safe:30}]},
-    {id:'SPU8813',name:'芥蓝',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8817',qty:1,price:6.50,stock:160,safe:20},{skuId:'SKU8818',qty:5,price:31.00,stock:42,safe:10}]},
+    {id:'SPU8813',name:'芥蓝',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8817',qty:1,price:6.50,stock:160,safe:20,stockMode:'daily',soldToday:28},{skuId:'SKU8818',qty:5,price:31.00,stock:42,safe:10,stockMode:'finite'}]},
     {id:'SPU8814',name:'菠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8819',qty:1,price:5.80,stock:95,safe:20}]},
     {id:'SPU8815',name:'土豆',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'马铃薯',origin:'中国山东',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8820',qty:1,price:3.20,stock:300,safe:40}]},
     {id:'SPU8816',name:'白菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8821',qty:1,price:3.50,stock:0,safe:30}]},
@@ -587,6 +587,11 @@ function doConfirm(){const f=CONFIRM_CB;CONFIRM_CB=null;closeModal();if(f)f();}
 function act_spuShelf(i,off){const p=DB.products[i];const n=(p.skus||[]).length;const label=off?'下架':'上架';askConfirm(`确认${label}商品「${p.name}」的<b>全部 ${n} 个规格</b>？`,()=>{(p.skus||[]).forEach(s=>{s.off=off;s.updatedAt=ts();});p.updatedAt=ts();render();toast(`「${p.name}」全部规格已${label}`,off?'info':'ok');});}
 function act_skuToggle(pi,ki){const p=DB.products[pi];const s=p.skus[ki];const to=s.off?'上架':'下架';askConfirm(`确认${to}规格「${p.name} ${s.qty}${p.unit}」？`,()=>{s.off=!s.off;s.updatedAt=ts();render();toast(`「${p.name} ${s.qty}${p.unit}」规格已${s.off?'下架':'上架'}`,s.off?'info':'ok');});}
 function skuState(p,s){if(s.review)return ['新增待审核','t-b'];if(p.status!='onsale')return ['随商品','t-gr'];if(s.off)return ['已下架','t-gr'];if(s.stock<=0)return ['售罄','t-gr'];return ['可售','t-g'];}
+// 库存模式：daily=每日恢复初始库存（每日 0 点自动补回库存总数）/ finite=售完即止（卖完不恢复、售罄下线）
+function stockModeName(s){return (s.stockMode||'finite')=='daily'?'每日恢复':'售完即止';}
+function stockModeTag(s){const daily=(s.stockMode||'finite')=='daily';return `<span class="tag ${daily?'t-b':'t-gr'}" title="库存模式" style="margin-left:6px;font-size:10.5px">${daily?'每日恢复':'售完即止'}</span>`;}
+function stkHintPC(m){return m=='daily'?'每日 0 点自动恢复至库存总数，适合每日稳定供应':'售完即止，卖完不再恢复、售罄即下线，适合尾货/限量';}
+function seModeSync(){const m=(document.querySelector('[name=se-mode]:checked')||{}).value||'finite';document.querySelectorAll('[name=se-mode]').forEach(r=>r.parentElement.classList.toggle('on',r.checked));const h=document.getElementById('se-hint');if(h)h.innerHTML='<span class="i">ℹ️</span>'+stkHintPC(m);}
 function autoCheck(p){const fails=[];const c=CATS[p.cat];if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.unit)fails.push(['必填完整性','缺少「计量单位」']);if(!p.showExp)fails.push(['必填完整性','缺少「APP是否展示效期」']);if(!p.storage)fails.push(['必填完整性','缺少「储存条件」']);if(!p.fulfil)fails.push(['必填完整性','缺少「履约方式」']);if((p.expEn||'是')=='是'&&!p.qp)fails.push(['必填完整性','效期管理=是，需填保质期']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{if(!(x.qty>0))fails.push(['售卖规格',`规格${k+1} 数量必须为正整数 ≥1`]);});const qs=sk.map(x=>x.qty);if(new Set(qs).size!=qs.length)fails.push(['售卖规格','各规格「数量」不可重复']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);return fails;}
 function computeRisk(p){const c=CATS[p.cat];if(c&&c.baseRisk=='高')return '高';if((p.skus||[]).some(x=>x.price>0&&priceAbnormal(x.price,p.cat)))return '中';if(c&&c.baseRisk=='中')return '中';return '低';}
 
@@ -964,7 +969,7 @@ PAGES['m-product']=()=>{
     <thead><tr><th style="width:30px"><input type="checkbox" class="skuchk" title="全选当前可选 SKU" ${allSel?'checked':''} onclick="selAllProducts()"></th><th>商品(SPU)</th><th>SKU 编码</th><th>规格名称</th><th>品类</th><th title="商家维护未税价">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
     ${rows.map(({p,i,s,k})=>{const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
       const priceCell=`${money(s.price||0)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}`;
-      const stockCell=`${s.stock||0}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
+      const stockCell=`${s.stock||0}${stockModeTag(s)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
       return `<tr>
       <td>${onsale?`<input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')">`:''}</td>
       <td><b>${p.name}</b><div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td>
@@ -1033,18 +1038,27 @@ function doSkuPrice(i,k){const p=DB.products[i],s=p.skus[k];const np=parseFloat(
   s.price=np;s.updatedAt=ts();p.updatedAt=ts();closeModal();render();
   if(priceAbnormal(np,p.cat))toast(`未税价已保存（${effTxt(p)}）；超指导价区间，已标记异常`,'info');
   else toast(`「${p.name} ${s.qty}${p.unit}」未税价已保存，${effTxt(p)}`,'ok');}
-function act_skuEditStock(i,k){const p=DB.products[i],s=p.skus[k];
+function act_skuEditStock(i,k){const p=DB.products[i],s=p.skus[k];const m=s.stockMode||'finite';
   modal(`<div class="mc-hd"><h3>改库存 · ${p.name} ${s.qty}${s.pack||p.unit}</h3><p>${s.skuId} · 可售库存为 0 即售罄</p><button class="mc-x" onclick="closeModal()">×</button></div>
-  <div class="mc-bd"><div class="fr"><label class="fl">可售库存</label><input id="se-stock" type="number" min="0" value="${s.stock||0}"></div></div>
+  <div class="mc-bd">
+    <div class="fr"><label class="fl">库存模式</label><div class="row" style="gap:8px;flex-wrap:wrap">
+      <label class="chip-ck ${m=='daily'?'on':''}"><input type="radio" name="se-mode" value="daily" ${m=='daily'?'checked':''} onchange="seModeSync()">每日恢复初始库存</label>
+      <label class="chip-ck ${m=='finite'?'on':''}"><input type="radio" name="se-mode" value="finite" ${m=='finite'?'checked':''} onchange="seModeSync()">售完即止</label>
+    </div></div>
+    <div class="fr"><label class="fl">库存总数</label><input id="se-stock" type="number" min="0" value="${s.stock||0}"></div>
+    <div class="ib ib-b" id="se-hint" style="margin:6px 0 0"><span class="i">ℹ️</span>${stkHintPC(m)}</div>
+    ${s.soldToday?`<div style="font-size:12px;color:var(--ts);margin-top:8px">今日已售 ${s.soldToday}</div>`:''}
+  </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doSkuStock(${i},${k})">保存</button></div>`);}
 function doSkuStock(i,k){const p=DB.products[i],s=p.skus[k];const ns=parseInt((document.getElementById('se-stock')||{}).value,10);
   if(isNaN(ns)||ns<0){toast('可售库存不能为负','err');return;}
-  s.stock=ns;s.updatedAt=ts();p.updatedAt=ts();closeModal();render();
-  toast(`「${p.name} ${s.qty}${p.unit}」库存已保存为 ${ns}，${effTxt(p)}`,'ok');}
+  const m=(document.querySelector('[name=se-mode]:checked')||{}).value||s.stockMode||'finite';
+  s.stock=ns;s.stockMode=m;s.updatedAt=ts();p.updatedAt=ts();closeModal();render();
+  toast(`「${p.name} ${s.qty}${p.unit}」库存已保存为 ${ns}（${stockModeName(s)}），${effTxt(p)}`,'ok');}
 function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const rate=taxRate(p);return `<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th title="商家维护未税价">未税价(SGD)</th><th title="含税价 = 未税价 ×(1+税率)，税率 ${rate}%，系统自动计算，不可直接编辑">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
   ${p.skus.map((s,k)=>{const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
     const priceCell=`${money(s.price||0)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}`;
-    const stockCell=`${s.stock||0}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
+    const stockCell=`${s.stock||0}${stockModeTag(s)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
     const ops=`${onsale?(s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`):'<span style="color:var(--ts)">—</span>'}`;
     return `<tr>${onsale?`<td><input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')"></td>`:''}<td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}</td><td>${s.qty}</td><td>${s.pack||p.unit}</td><td style="white-space:nowrap">${priceCell}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td><td style="white-space:nowrap">${stockCell}</td><td><span class="tag ${st[1]}">${st[0]}</span></td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td style="white-space:nowrap">${ops}</td></tr>`;}).join('')}
   </tbody></table>${edit?`<div style="padding:8px 12px;border-top:1px solid var(--bd2);display:flex;align-items:center;gap:12px;flex-wrap:wrap"><button class="btn btn-o btn-sm" onclick="act_addSkusBatch(${i})">＋ 添加规格</button><span style="font-size:12px;color:var(--ts)">未税价、可售库存各点自己的「编辑」单独改；含税价按税率 ${rate}% 自动算、只读。</span></div>`:''}`;}
@@ -1064,8 +1078,8 @@ function act_restock(i,k,v){const p=DB.products[i];p.skus[k].stock=Math.max(0,pa
 function selSkus(){const out=[];DB.products.forEach((p,i)=>p.skus.forEach((s,k)=>{if(DB.sel.includes(s.skuId))out.push({p,s});}));return out;}
 function act_batchPrice(){modal(`<div class="mc-hd"><h3>批量改价 · ${DB.sel.length} 个 SKU</h3><p>已审核商品改价即时生效、无需重审；超指导价区间仅标记异常供平台监管</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">方式</label><select id="bp-mode"><option value="set">设为固定价(SGD)</option><option value="pct">按比例涨跌(%)</option></select></div><div class="fr"><label class="fl">数值</label><input id="bp-val" type="number" step="0.01" value="0" placeholder="固定价如 6.50；涨跌如 -10 表示降 10%"></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doBatchPrice()">应用</button></div>`);}
 function doBatchPrice(){const mode=document.getElementById('bp-mode').value;const val=parseFloat(document.getElementById('bp-val').value)||0;let abn=0;selSkus().forEach(({p,s})=>{let np=mode=='set'?val:+(s.price*(1+val/100)).toFixed(2);if(np>0){s.price=np;s.updatedAt=ts();p.updatedAt=ts();if(priceAbnormal(np,p.cat))abn++;}});closeModal();DB.sel=[];render();toast(`批量改价完成，即时生效${abn?`；${abn} 个 SKU 价格异常已标记`:''}`,'ok');}
-function act_batchStock(){modal(`<div class="mc-hd"><h3>批量改库存 · ${DB.sel.length} 个 SKU</h3><p>库存不影响审核，即时生效；为 0 即售罄</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">方式</label><select id="bs-mode"><option value="set">设为固定值</option><option value="add">增减</option></select></div><div class="fr"><label class="fl">数值</label><input id="bs-val" type="number" value="0" placeholder="固定值如 100；增减如 -20"></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doBatchStock()">应用</button></div>`);}
-function doBatchStock(){const mode=document.getElementById('bs-mode').value;const val=parseInt(document.getElementById('bs-val').value)||0;selSkus().forEach(({p,s})=>{s.stock=Math.max(0,mode=='set'?val:s.stock+val);s.updatedAt=ts();p.updatedAt=ts();});closeModal();DB.sel=[];render();toast('批量改库存完成，即时生效','ok');}
+function act_batchStock(){modal(`<div class="mc-hd"><h3>批量改库存 · ${DB.sel.length} 个 SKU</h3><p>库存不影响审核，即时生效；为 0 即售罄</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">库存模式</label><select id="bs-smode"><option value="">保持不变</option><option value="daily">每日恢复初始库存</option><option value="finite">售完即止</option></select></div><div class="fr"><label class="fl">方式</label><select id="bs-mode"><option value="set">设为固定值</option><option value="add">增减</option></select></div><div class="fr"><label class="fl">数值</label><input id="bs-val" type="number" value="0" placeholder="固定值如 100；增减如 -20"></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doBatchStock()">应用</button></div>`);}
+function doBatchStock(){const mode=document.getElementById('bs-mode').value;const val=parseInt(document.getElementById('bs-val').value)||0;const sm=document.getElementById('bs-smode').value;selSkus().forEach(({p,s})=>{s.stock=Math.max(0,mode=='set'?val:s.stock+val);if(sm)s.stockMode=sm;s.updatedAt=ts();p.updatedAt=ts();});closeModal();DB.sel=[];render();toast(`批量改库存完成${sm?`（库存模式：${sm=='daily'?'每日恢复':'售完即止'}）`:''}，即时生效`,'ok');}
 /* 表格导入改价/改库存：下载当前表→线下改→按 SKU 编码逐行更新 */
 let IMP_ROWS=[];
 function act_importUpdate(){const all=[];DB.products.forEach((p,pi)=>p.skus.forEach((sk,ki)=>all.push({pi,ki})));if(!all.length){toast('请先创建商品，再用表格导入批量改价/改库存','err');return;}
