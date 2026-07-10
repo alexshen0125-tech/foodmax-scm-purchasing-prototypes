@@ -78,6 +78,24 @@ css.textContent=`
 .sku-ed .r .in input{border:none;background:transparent;outline:none;width:100%;font-size:15px;font-family:inherit;text-align:right;}
 .sku-ed .r .in .u{font-size:13px;color:var(--sub);}
 .sku-ed-tip{font-size:12.5px;color:var(--sub);margin:6px 20px 0;}
+/* 改库存·库存模式（每日恢复初始库存 / 售完即止） */
+.stk-blk{background:#fff;border-radius:16px;margin:12px 16px;padding:16px;box-shadow:var(--sh-sm);}
+.stk-blk .bnm{font-size:15px;font-weight:700;}
+.stk-blk .bnm .c{font-size:12.5px;color:var(--sub);font-weight:600;margin-left:5px;}
+.stk-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--line);}
+.stk-row:first-of-type{border-top:none;}
+.stk-row .lbl{font-size:14px;color:#27433A;font-weight:600;flex:0 0 60px;padding-top:9px;}
+.seg{display:flex;flex:1;background:var(--muted);border-radius:12px;padding:3px;gap:3px;}
+.seg .o{flex:1;min-height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--sub);border-radius:9px;cursor:pointer;text-align:center;line-height:1.15;}
+.seg .o.on{background:#fff;color:var(--emerald-2);box-shadow:var(--sh-sm);}
+.stk-fld{flex:1;display:flex;flex-direction:column;align-items:flex-end;}
+.stk-in{width:130px;background:var(--muted);border-radius:11px;min-height:44px;display:flex;align-items:center;padding:0 12px;border:1.5px solid transparent;}
+.stk-in:focus-within{border-color:var(--emerald);background:#fff;}
+.stk-in input{border:none;background:transparent;outline:none;width:100%;font-size:16px;font-family:inherit;text-align:right;}
+.stk-hint{font-size:11.5px;color:#94A3B8;margin-top:6px;text-align:right;}
+.stk-ref{font-size:12.5px;color:var(--emerald);font-weight:700;margin-top:5px;text-align:right;cursor:pointer;}
+.stk-sold{font-size:12.5px;color:var(--sub);margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+.stk-sold b{color:#27433A;font-family:'Lora',serif;}
 `;
 document.head.appendChild(css);
 
@@ -86,11 +104,11 @@ function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getF
 // SG 数据 —— 每个商品含 skus[]，价格/库存/上下架均到 SKU；创建/更新时间 SPU 与 SKU 独立
 const PRODUCTS=[
   {ic:'🥬',n:'鲜丰 · 嫩豆腐 1kg',cat:'新鲜蔬菜',rec:1,sales:4,createdAt:'2026-06-20 09:12',updatedAt:'2026-07-01 14:30',
-   skus:[{spec:'1kg/袋',price:9.99,stock:9995,off:false,createdAt:'2026-06-20 09:12',updatedAt:'2026-07-01 14:30'},{spec:'2kg/箱',price:19.50,stock:120,off:false,createdAt:'2026-06-25 10:00',updatedAt:'2026-06-25 10:00'}]},
+   skus:[{spec:'1kg/袋',price:9.99,stock:200,off:false,stockMode:'daily',soldToday:36,createdAt:'2026-06-20 09:12',updatedAt:'2026-07-01 14:30'},{spec:'2kg/箱',price:19.50,stock:120,off:false,stockMode:'finite',createdAt:'2026-06-25 10:00',updatedAt:'2026-06-25 10:00'}]},
   {ic:'🧈',n:'鲜丰 · 老豆腐',cat:'新鲜蔬菜',sales:17,createdAt:'2026-06-18 16:40',updatedAt:'2026-06-28 11:05',
    skus:[{spec:'2.5kg/盒',price:11.99,stock:168,off:false,createdAt:'2026-06-18 16:40',updatedAt:'2026-06-28 11:05'}]},
   {ic:'🍢',n:'鲜丰 · 小油豆腐',cat:'新鲜蔬菜',sales:9,createdAt:'2026-06-15 08:20',updatedAt:'2026-06-30 09:50',
-   skus:[{spec:'2斤/袋',price:8.80,stock:430,off:false,createdAt:'2026-06-15 08:20',updatedAt:'2026-06-30 09:50'},{spec:'5斤/箱',price:20.80,stock:0,off:false,createdAt:'2026-06-15 08:20',updatedAt:'2026-06-22 13:10'}]},
+   skus:[{spec:'2斤/袋',price:8.80,stock:150,off:false,stockMode:'daily',soldToday:22,createdAt:'2026-06-15 08:20',updatedAt:'2026-06-30 09:50'},{spec:'5斤/箱',price:20.80,stock:0,off:false,stockMode:'finite',createdAt:'2026-06-15 08:20',updatedAt:'2026-06-22 13:10'}]},
   {ic:'🥗',n:'冻 · 盐渍海带丝',cat:'海鲜水产',bad:'商品信息有误，已被限流',sales:0,createdAt:'2026-06-10 15:00',updatedAt:'2026-06-12 17:22',
    skus:[{spec:'4kg/箱',price:29.99,stock:0,off:true,createdAt:'2026-06-10 15:00',updatedAt:'2026-06-12 17:22'}]},
   {ic:'🟡',n:'萝卜丸子',cat:'肉禽蛋品',sales:0,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00',
@@ -118,7 +136,7 @@ function skuCard(g,s,gi,si,manage){
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
         <div class="rt"><div class="sk-tg ${s.off?'off':'on'}" data-sku-toggle>${s.off?'上架':'下架'}</div>
           <div class="sk-st">${st}</div></div></div>
-      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
+      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` <span style="color:#94A3B8">${s.stockMode==='daily'?'· 每日恢复'+(s.soldToday?`（今日已售 ${s.soldToday}）`:''):'· 售完即止'}</span>`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
       ${manage?'':`<div class="acts">${['改价格','改库存','更多'].map(a=>`<div class="a" data-a="${a}">${a}</div>`).join('')}</div>`}
     </div></div>`;
 }
@@ -255,23 +273,60 @@ function openPrice(g,only){
 }
 
 // 改库存（逐 SKU，即时生效）；only 非空时仅编辑指定 SKU
+// 两种库存模式：daily=每日恢复初始库存（每天 0 点自动补回库存总数）/ finite=售完即止（卖完不恢复、售罄下线）
+const stkHint=m=>m==='daily'?'每日 0 点自动恢复至库存总数':'售完即止，不自动恢复；0 即售罄';
 function openStock(g,only){
   const idxs=(only!=null?[only]:g.skus.map((_,i)=>i));
   pushPage({title:'改库存',body:`<div style="height:4px"></div>
-    <div class="sku-ed">${idxs.map(i=>{const s=g.skus[i];return `
-      <div class="r"><div class="nm">${g.n}<div class="c">${s.spec}</div></div>
-        <div class="in"><input data-i="${i}" data-stock value="${s.stock||0}" inputmode="numeric"></div></div>`;}).join('')}</div>
-    <div class="sku-ed-tip">库存维护到每个售卖规格(SKU)，为 0 即售罄；提交后即时生效、无需审核。</div>
+    ${idxs.map(i=>{const s=g.skus[i];const m=s.stockMode||'finite';return `
+    <div class="stk-blk" data-blk="${i}">
+      <div class="bnm">${g.n}<span class="c">${s.spec}</span></div>
+      <div class="stk-row"><div class="lbl">库存模式</div>
+        <div class="seg" data-seg="${i}">
+          <div class="o ${m==='daily'?'on':''}" data-mode="daily">每日恢复初始库存</div>
+          <div class="o ${m==='finite'?'on':''}" data-mode="finite">售完即止</div>
+        </div></div>
+      <div class="stk-row"><div class="lbl">库存总数</div>
+        <div class="stk-fld">
+          <div class="stk-in"><input data-i="${i}" data-stock value="${s.stock||0}" inputmode="numeric"></div>
+          <div class="stk-hint" data-hint="${i}">${stkHint(m)}</div>
+          <div class="stk-ref" data-ref="${i}">销量参考 ›</div>
+        </div></div>
+      <div class="stk-sold">今日已售 <b>${s.soldToday||0}</b></div>
+    </div>`;}).join('')}
+    <div class="sku-ed-tip">库存维护到每个售卖规格(SKU)。<b>每日恢复初始库存</b>：每天 0 点自动把可售库存补回设定的库存总数，适合每日稳定供应；<b>售完即止</b>：卖完不再恢复、售罄即下线，适合尾货/限量。提交后即时生效、无需审核。</div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="sv">保存</button>`,
     mount:(p)=>{
       const sv=p.querySelector('#sv');
-      const check=()=>{let ok=true;p.querySelectorAll('[data-stock]').forEach(i=>{const n=parseInt(i.value,10);const bad=isNaN(n)||n<0;i.closest('.in').style.borderColor=bad?'var(--red)':'';if(bad)ok=false;});sv.disabled=!ok;};
-      p.querySelectorAll('[data-stock]').forEach(i=>i.oninput=check);
+      // 模式切换（即时改提示文案；保存时落库）
+      p.querySelectorAll('.seg').forEach(seg=>{const i=seg.dataset.seg;
+        seg.querySelectorAll('.o').forEach(o=>o.onclick=()=>{
+          seg.querySelectorAll('.o').forEach(x=>x.classList.remove('on'));o.classList.add('on');
+          const h=p.querySelector(`[data-hint="${i}"]`);if(h)h.textContent=stkHint(o.dataset.mode);});});
+      // 销量参考：给出昨日/近7日均值/峰值三档建议，一键填入（选择优于输入，计算交给系统）
+      p.querySelectorAll('.stk-ref').forEach(r=>{const i=r.dataset.ref;r.onclick=()=>salesRef(p,i,g,g.skus[+i]);});
+      const check=()=>{let ok=true;p.querySelectorAll('[data-stock]').forEach(inp=>{const n=parseInt(inp.value,10);const bad=isNaN(n)||n<0;inp.closest('.stk-in').style.borderColor=bad?'var(--red)':'';if(bad)ok=false;});sv.disabled=!ok;};
+      p.querySelectorAll('[data-stock]').forEach(inp=>inp.oninput=check);
       sv.onclick=()=>{sv.classList.add('loading');setTimeout(()=>{
-        p.querySelectorAll('[data-stock]').forEach(inp=>{const n=parseInt(inp.value,10);if(!isNaN(n)&&n>=0){const sk=g.skus[+inp.dataset.i];sk.stock=n;sk.updatedAt=ts();}});g.updatedAt=ts();
-        sv.classList.remove('loading');toast('保存成功，即时生效');setTimeout(popPage,600);},700);};
+        p.querySelectorAll('[data-blk]').forEach(blk=>{const sk=g.skus[+blk.dataset.blk];
+          const inp=blk.querySelector('[data-stock]');const n=parseInt(inp.value,10);if(!isNaN(n)&&n>=0)sk.stock=n;
+          const on=blk.querySelector('.seg .o.on');sk.stockMode=on?on.dataset.mode:'finite';sk.updatedAt=ts();});
+        g.updatedAt=ts();sv.classList.remove('loading');toast('保存成功，即时生效');setTimeout(popPage,600);},700);};
     }});
+}
+// 近 7 日销量参考 → 三档建议值一键填入库存总数
+function salesRef(p,i,g,s){
+  const base=Math.max(1,g.sales||Math.round((+s.soldToday||0))||6);
+  const yest=Math.max(1,+s.soldToday||g.sales||base);
+  const avg=Math.max(1,Math.round(base*0.9));
+  const peak=Math.max(1,Math.round(base*1.4));
+  const fill=v=>{const inp=p.querySelector(`.stk-blk[data-blk="${i}"] [data-stock]`);if(inp){inp.value=v;inp.dispatchEvent(new Event('input'));toast(`已填入库存总数 ${v}`);}};
+  sheet([
+    {label:`按昨日销量填入 ${yest}`,onClick:()=>fill(yest)},
+    {label:`按近 7 日均值填入 ${avg}`,onClick:()=>fill(avg)},
+    {label:`按近 7 日峰值填入 ${peak}`,onClick:()=>fill(peak)},
+  ]);
 }
 
 function openMore(g,state){
