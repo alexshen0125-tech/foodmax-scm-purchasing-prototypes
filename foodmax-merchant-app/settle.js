@@ -1,7 +1,7 @@
 /* Food Max 商家端 v2 · 对账结算模块（商家视角）
    PC 对齐(2026-07)：完全按 PC 商家管理系统「对账结算」口径重构——
    月度结算单 · 绿鲜源蔬果 · 应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣(服务佣金) − 物流抽佣(物流佣金)
-   列表字段/状态/详情构成/清分进度 与 PC 一致；新增「多选导出」(Excel 明细表 / PDF 对账单)。
+   列表字段/状态/详情构成/清分进度 与 PC 一致。
    第一期：结算单生成即默认商家已确认，当期直接待付款(无手动确认)；进度节点去掉「开票」。历史单 已结清(只读)。金额 S$。 */
 (function(){
 const {pushPage,popPage,toast,sheet,svg,skel,confirmDialog}=window.FM;
@@ -10,14 +10,9 @@ const css=document.createElement('style');
 css.textContent=`
 .se-intro{margin:0 16px 12px;background:var(--mint-soft);color:var(--emerald-d);font-size:12.5px;font-weight:600;padding:11px 14px;border-radius:12px;line-height:1.5;}
 .se-topbar{display:flex;align-items:center;padding:0 18px 8px;font-size:12.5px;color:var(--sub);}
-.se-topbar .exp{margin-left:auto;color:var(--emerald);font-weight:700;min-height:40px;display:flex;align-items:center;cursor:pointer;}
-.se-list{padding:0 16px 90px;}
-.se-bill{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;display:flex;gap:12px;}
-.se-bill .chk{width:24px;height:24px;border-radius:50%;border:2px solid #CBD5C7;flex:0 0 24px;margin-top:2px;display:none;align-items:center;justify-content:center;}
-.se-bill.selmode .chk{display:flex;}
-.se-bill .chk.on{background:var(--emerald);border-color:var(--emerald);}
-.se-bill .chk.on::after{content:"✓";color:#fff;font-size:14px;font-weight:700;}
-.se-bill .bd{flex:1;min-width:0;}
+.se-list{padding:0 16px 24px;}
+.se-bill{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;}
+.se-bill .bd{min-width:0;}
 .se-bill .r1{display:flex;align-items:center;gap:8px;}
 .se-bill .no{font-size:14px;font-weight:700;color:#27433A;font-family:'Lora',serif;}
 .se-bill .rng{font-size:12px;color:var(--sub);margin-top:3px;}
@@ -31,13 +26,6 @@ css.textContent=`
 .se-c-green{background:var(--mint-soft);color:var(--emerald-2);}
 .se-c-amber{background:var(--amber-soft);color:#B45309;}
 .se-c-gray{background:var(--muted);color:var(--sub);}
-/* 多选底栏 */
-.se-selbar{position:absolute;left:0;right:0;bottom:0;z-index:8;background:#fff;box-shadow:0 -6px 20px rgba(0,0,0,.08);padding:10px 16px;display:flex;align-items:center;gap:10px;}
-.se-selbar .all{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:600;min-height:44px;cursor:pointer;}
-.se-selbar .all .b{width:22px;height:22px;border-radius:50%;border:2px solid #CBD5C7;display:flex;align-items:center;justify-content:center;}
-.se-selbar .all .b.on{background:var(--emerald);border-color:var(--emerald);}.se-selbar .all .b.on::after{content:"✓";color:#fff;font-size:12px;}
-.se-selbar .sp{flex:1;font-size:12.5px;color:var(--sub);}.se-selbar .sp b{color:var(--emerald-2);}
-.se-selbar .go{min-height:44px;padding:0 18px;border-radius:11px;font-size:14px;font-weight:700;border:none;background:var(--emerald);color:#fff;font-family:inherit;cursor:pointer;}
 /* 详情 */
 .se-dhead{text-align:center;padding:6px 16px 2px;}
 .se-dhead .no{font-size:13px;color:var(--sub);font-weight:600;}
@@ -109,69 +97,31 @@ const statusChip=b=>{
   return `<span class="se-chip se-c-blue">待付款</span>`;   // 第一期默认已确认，当期即待付款
 };
 
-let selMode=false;              // 多选导出模式
-const SEL=new Set();
-
 // ── 1. 结算单列表 ─────────────────────────────────
 function openSettle(){
-  selMode=false;SEL.clear();
   pushPage({title:'对账结算',body:`
     <div class="se-intro">每月生成一张<b>结算单</b>。<b>应清算给供应商</b>=汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣，即你的到手货款；平台就抽佣部分开具佣金税票。金额 S$。</div>
-    <div class="se-topbar"><span id="se-cnt"></span><span class="exp" id="se-exp">⬇️ 多选导出</span></div>
+    <div class="se-topbar"><span id="se-cnt"></span></div>
     <div class="se-list" id="sl"></div>`,
     mount:(p)=>{
       const l=p.querySelector('#sl');
-      const expBtn=p.querySelector('#se-exp');
-      let selbar=null;
-      function updateSelbar(){
-        if(!selbar)return;
-        const rs=rows(),sel=rs.filter(b=>SEL.has(b.no)),sum=sel.reduce((a,b)=>a+b.net,0);
-        selbar.querySelector('.sp').innerHTML=`已选 <b>${sel.length}</b> 张 · 应清算合计 <b>${money(sum)}</b>`;
-        selbar.querySelector('.all .b').classList.toggle('on',sel.length===rs.length&&rs.length>0);
-      }
       function drawList(){
         const rs=rows();
         p.querySelector('#se-cnt').textContent=`共 ${rs.length} 张 · 点卡片看详情`;
-        l.innerHTML=rs.map((b,i)=>`<div class="se-bill${selMode?' selmode':''}" data-i="${i}">
-          <div class="chk${SEL.has(b.no)?' on':''}" data-chk></div>
+        l.innerHTML=rs.map((b,i)=>`<div class="se-bill" data-i="${i}">
           <div class="bd">
             <div class="r1"><span class="no">${b.no}</span>${statusChip(b)}</div>
             <div class="rng">${b.range}</div>
             <div class="big disp"><span class="c">S$</span>${money(b.net).slice(2)}</div>
             <div class="glbl">应清算给供应商（到手货款）</div>
-            <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:'待打款'}${selMode?'':'<span class="ar">›</span>'}</div>
+            <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:'待打款'}<span class="ar">›</span></div>
           </div>
         </div>`).join('');
-        l.querySelectorAll('.se-bill').forEach(c=>{const b=rows()[+c.dataset.i];
-          c.onclick=()=>{
-            if(selMode){const on=SEL.has(b.no);on?SEL.delete(b.no):SEL.add(b.no);c.querySelector('[data-chk]').classList.toggle('on',!on);updateSelbar();}
-            else openDetail(b);
-          };
-        });
+        l.querySelectorAll('.se-bill').forEach(c=>c.onclick=()=>openDetail(rows()[+c.dataset.i]));
       }
-      function exitSel(){selMode=false;SEL.clear();expBtn.textContent='⬇️ 多选导出';if(selbar){selbar.remove();selbar=null;}drawList();}
       l.innerHTML=skel(3);
       setTimeout(drawList,420);
-      expBtn.onclick=()=>{
-        if(selMode)return exitSel();
-        selMode=true;expBtn.textContent='取消';drawList();
-        selbar=document.createElement('div');selbar.className='se-selbar';
-        selbar.innerHTML=`<div class="all" id="se-all"><span class="b"></span>全选</div><span class="sp">已选 <b>0</b> 张</span><button class="go" id="se-go">导出</button>`;
-        p.appendChild(selbar);
-        selbar.querySelector('#se-all').onclick=()=>{const rs=rows();const all=rs.every(b=>SEL.has(b.no));if(all)SEL.clear();else rs.forEach(b=>SEL.add(b.no));drawList();updateSelbar();};
-        selbar.querySelector('#se-go').onclick=()=>{const sel=rows().filter(b=>SEL.has(b.no));if(!sel.length)return toast('请先勾选结算单，或点全选');exportSheet(sel,exitSel);};
-        updateSelbar();
-      };
     }});
-}
-
-// 导出格式选择（Excel 明细表 / PDF 对账单）
-function exportSheet(sel,done){
-  const sum=sel.reduce((a,b)=>a+b.net,0);
-  sheet([
-    {label:`Excel 明细表（含逐笔构成）· ${sel.length} 张`,onClick:()=>{toast(`已导出 ${sel.length} 张结算单（Excel 明细表）`);done&&done();}},
-    {label:`PDF 对账单（每张一页）· ${sel.length} 张`,onClick:()=>{toast(`已导出 ${sel.length} 张结算单（PDF 对账单）`);done&&done();}},
-  ]);
 }
 
 // ── 2. 结算单详情（构成 + 账单构成 + 清分进度，对齐 PC）──
