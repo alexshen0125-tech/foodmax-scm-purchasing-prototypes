@@ -2,7 +2,10 @@
    单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
-const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt}=window.FM;
+const {pushPage,popPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt}=window.FM;
+// 演示锚点“今天”=最新订单日期；订单时间筛选按 orderDate(下单日期) 计算
+const TODAY='2026-07-01';
+function addDays(ymd,delta){const a=ymd.split('-').map(Number);const dt=new Date(a[0],a[1]-1,a[2]);dt.setDate(dt.getDate()+delta);const p=n=>String(n).padStart(2,'0');return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}`;}
 
 const css=document.createElement('style');
 css.textContent=`
@@ -56,6 +59,13 @@ css.textContent=`
 .odd-tl .n.on .dot{background:var(--emerald);}
 .odd-tl .n:not(:last-child)::after{content:"";position:absolute;top:5px;left:60%;width:80%;height:2px;background:var(--line);}
 .odd-tl .n.on:not(:last-child)::after{background:var(--emerald);}
+/* 订单时间·自定义区间 */
+.dr-fld{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh-sm);}
+.dr-fld .dl{font-size:14.5px;font-weight:600;color:#27433A;flex:0 0 auto;}
+.dr-fld input[type=date]{border:none;background:transparent;font-size:14.5px;font-family:inherit;color:var(--emerald-2);font-weight:600;text-align:right;min-width:0;}
+.dr-quick{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 14px;}
+.dr-quick .q{padding:8px 14px;border-radius:20px;background:var(--muted);font-size:13px;font-weight:600;color:#27433A;cursor:pointer;}
+.dr-hint{font-size:12.5px;min-height:16px;color:var(--red);}
 `;
 document.head.appendChild(css);
 
@@ -79,6 +89,7 @@ function card(o){
       <span class="st ${STCLASS[st]}">${st}${o.status==='packed'?'<span class="sub2">已贴标</span>':''}</span></div>
     <div class="meta">
       <div class="ml"><span class="lk">订单号</span><span style="font-family:monospace">${o.id}</span></div>
+      <div class="ml"><span class="lk">下单时间</span><span>${o.orderDate||'—'}</span></div>
       <div class="ml"><span class="lk">送达时间</span><span>${o.deliver} ${o.window}</span></div>
       <div class="ml"><span class="lk">入库仓库</span><span>${o.warehouse}<i class="sg">SG仓</i></span></div>
     </div>
@@ -148,21 +159,63 @@ function renderList(container,inTab){
     <div class="od-list" id="ol"></div>`;
   const list=container.querySelector('#ol');
   const statusFl=container.querySelector('[data-f="status"]');
+  const timeFl=container.querySelector('[data-f="time"]');
+  const whFl=container.querySelector('[data-f="wh"]');
+  const state={statusK:'send',date:{type:'all'}};
 
-  const drawData=(k)=>{
-    const t=TABS.find(x=>x.k===k),data=listOf(k);
-    if(!data.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('receipt')}</div><h4>暂无${t.label}订单</h4><p>该状态下还没有订单，换个筛选条件看看</p></div>`;return;}
+  // 订单时间筛选：按 orderDate(下单日期) 命中，与订单状态 tab 叠加生效
+  const matchDate=(o)=>{const f=state.date;if(f.type==='all')return true;const d=o.orderDate||'';if(!d)return false;
+    if(f.type==='today')return d===TODAY;
+    if(f.type==='range')return (!f.from||d>=f.from)&&(!f.to||d<=f.to);
+    return true;};
+  const dataNow=()=>listOf(state.statusK).filter(matchDate);
+
+  const paintList=()=>{
+    const t=TABS.find(x=>x.k===state.statusK),data=dataNow();
+    if(!data.length){const noDate=state.date.type==='all';list.innerHTML=`<div class="empty"><div class="ei">${svg('receipt')}</div><h4>暂无${t.label}订单</h4><p>${noDate?'该状态下还没有订单，换个筛选条件看看':'当前时间范围内没有'+t.label+'订单，换个时间试试'}</p></div>`;return;}
     list.innerHTML=data.map(card).join('');
     list.querySelectorAll('.oc').forEach(c=>c.onclick=()=>openDetail(data.find(o=>o.id===c.dataset.id)));
   };
-  const draw=(k)=>{list.innerHTML=skel(3);setTimeout(()=>drawData(k),420);};
+  const draw=()=>{list.innerHTML=skel(3);setTimeout(paintList,300);};
 
-  statusFl.onclick=()=>{
-    sheet(TABS.map(t=>({label:`${t.label}（${listOf(t.k).length}）`,onClick:()=>{statusFl.firstChild.textContent=t.label;draw(t.k);}})));
-  };
-  container.querySelector('[data-f="time"]').onclick=()=>toast('选择订单时间');
-  container.querySelector('[data-f="wh"]').onclick=()=>toast('选择入库仓库');
-  draw('send');
+  // 订单状态：sheet 计数已叠加当前时间筛选
+  statusFl.onclick=()=>sheet(TABS.map(t=>({label:`${t.label}（${listOf(t.k).filter(matchDate).length}）`,onClick:()=>{state.statusK=t.k;statusFl.firstChild.textContent=t.label;draw();}})));
+
+  // 订单时间：预设区间 + 自定义
+  const setTime=(type,label,extra)=>{state.date=Object.assign({type},extra||{});timeFl.firstChild.textContent=label;timeFl.classList.toggle('on',type!=='all');draw();};
+  timeFl.onclick=()=>sheet([
+    {label:'全部时间',onClick:()=>setTime('all','订单时间')},
+    {label:`今天（${TODAY}）`,onClick:()=>setTime('today','今天')},
+    {label:'近 7 天',onClick:()=>setTime('range','近7天',{from:addDays(TODAY,-6),to:TODAY})},
+    {label:'近 30 天',onClick:()=>setTime('range','近30天',{from:addDays(TODAY,-29),to:TODAY})},
+    {label:'自定义日期区间…',onClick:()=>openDateRange(setTime)},
+  ]);
+
+  whFl.onclick=()=>toast('选择入库仓库');
+  draw();
+}
+
+// 自定义日期区间：两个原生 date 输入 + 快捷区间，确定后回填筛选
+function openDateRange(setTime){
+  const dFrom=addDays(TODAY,-6),dTo=TODAY;
+  pushPage({title:'自定义日期区间',body:`
+    <div style="padding:18px 16px">
+      <div class="dr-quick" id="dr-quick">
+        <span class="q" data-d="0">今天</span><span class="q" data-d="6">近7天</span><span class="q" data-d="29">近30天</span><span class="q" data-d="89">近90天</span>
+      </div>
+      <div class="dr-fld"><span class="dl">开始日期</span><input type="date" id="dr-from" value="${dFrom}" max="${TODAY}"></div>
+      <div class="dr-fld"><span class="dl">结束日期</span><input type="date" id="dr-to" value="${dTo}" max="${TODAY}"></div>
+      <div class="dr-hint" id="dr-hint"></div>
+    </div>`,
+    footer:`<button class="btn primary" id="dr-ok" style="width:100%">确定</button>`,
+    mount:(p)=>{
+      const from=p.querySelector('#dr-from'),to=p.querySelector('#dr-to'),ok=p.querySelector('#dr-ok'),hint=p.querySelector('#dr-hint');
+      const chk=()=>{const bad=from.value&&to.value&&from.value>to.value;hint.textContent=bad?'开始日期不能晚于结束日期':'';ok.disabled=bad;ok.style.opacity=bad?'.5':'';};
+      from.onchange=chk;to.onchange=chk;
+      p.querySelectorAll('#dr-quick .q').forEach(q=>q.onclick=()=>{to.value=TODAY;from.value=addDays(TODAY,-parseInt(q.dataset.d));chk();});
+      chk();
+      ok.onclick=()=>{if(ok.disabled)return;const f=from.value,t=to.value;if(!f||!t){toast('请选择完整日期区间');return;}popPage();setTime('range',f===t?f:`${f}~${t}`,{from:f,to:t});};
+    }});
 }
 
 function openOrderPush(){pushPage({title:'订单列表',body:'<div id="op"></div>',mount:(p)=>renderList(p.querySelector('#op'),false)});}
