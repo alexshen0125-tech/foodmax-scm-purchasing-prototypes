@@ -73,6 +73,8 @@ const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产']);
 const MEASURE_UNITS=['斤','公斤(kg)','克(g)','毫升(ml)','升(L)','个','只','件','包','袋','盒','箱','瓶','桶','罐'];
 // 净含量单位
 const NET_UNITS=['g','kg','ml','L','斤','个'];
+// 包装单位(选填)：规格名拼为 数量+售卖单位/包装单位，如「1kg/袋」，与 PC 对齐
+const PACK_UNITS=['袋','盒','箱','包','件','扎','瓶','桶','罐','托'];
 // 效期单位
 const SHELF_UNITS=['天','月','年'];
 // 储存条件
@@ -344,7 +346,7 @@ function openForm(prefill){
     shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
     appShowShelf:'展示',                    // APP 是否展示效期(展示/不展示)，放保质期后
     storage:'', fulfill:'', origin:'', brand: prefill?prefill.brand:'', desc:'',
-    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite'}]:[{qty:'',price:'',stock:'',mode:'finite'}], // 售卖单位只读=最小售卖单位；mode=库存模式(finite售完即止/daily每日恢复初始库存)
+    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite',packUnit:''}]:[{qty:'',price:'',stock:'',mode:'finite',packUnit:''}], // 售卖单位只读=最小售卖单位；mode=库存模式(finite售完即止/daily每日恢复初始库存)；packUnit=包装单位(选填)
     imgs:{head:false,more:[false,false],video:false,label:false,detail:[false,false,false,false]},
   };
   const row=(id,lab,valHtml,req)=>`<div class="pb-cell" id="${id}"><div class="lab">${req?'<span class="rq">*</span>':''}${lab}</div><div class="val">${valHtml}</div><span class="ch">${svg('arrow')}</span></div>`;
@@ -418,6 +420,9 @@ function specRow(s,i,total,measure){
       <div class="unit" style="cursor:default;background:var(--muted);opacity:.9"><span class="lb">售卖单位</span><span class="uv ${measure?'':'ph'}">${uTxt}</span></div>
     </div>
     <div class="sbody" style="margin-top:10px">
+      <div class="unit packcell" data-packpick style="cursor:pointer"><span class="lb">包装单位</span><span class="uv ${s.packUnit?'':'ph'}" data-packv>${s.packUnit||'选填 · 如 袋/箱/盒'}</span><span style="margin-left:auto;flex:0 0 auto;color:var(--sub)">▾</span></div>
+    </div>
+    <div class="sbody" style="margin-top:10px">
       <div class="qty"><span class="lb">价格</span><span class="lb" style="flex:0 0 auto;padding-left:2px">S$</span><input data-price inputmode="decimal" value="${s.price}" placeholder="选填"></div>
       <div class="qty"><span class="lb">库存</span><input data-stock inputmode="numeric" value="${s.stock}" placeholder="选填"></div>
     </div>
@@ -437,6 +442,11 @@ function renderSpecs(p,f){
     row.querySelector('[data-qty]').oninput=e=>{f.specs[i].qty=e.target.value;paint(p,f);};
     row.querySelector('[data-price]').oninput=e=>{f.specs[i].price=e.target.value;paint(p,f);};
     row.querySelector('[data-stock]').oninput=e=>{f.specs[i].stock=e.target.value;paint(p,f);};
+    const pk=row.querySelector('[data-packpick]');
+    if(pk)pk.onclick=()=>pbGridPicker('选择包装单位',['无',...PACK_UNITS],f.specs[i].packUnit||'无',v=>{
+      const val=v==='无'?'':v;f.specs[i].packUnit=val;
+      const el=row.querySelector('[data-packv]');if(el){el.textContent=val||'选填 · 如 袋/箱/盒';el.classList.toggle('ph',!val);}
+    });
     const seg=row.querySelector('[data-modeseg]');
     if(seg)seg.querySelectorAll('.mo').forEach(o=>o.onclick=()=>{
       seg.querySelectorAll('.mo').forEach(x=>x.classList.remove('on'));o.classList.add('on');
@@ -550,7 +560,7 @@ function bindForm(p,f){
   // 输入框单元格点击空白不抢焦点
   ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
 
-  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite'});renderSpecs(p,f);paint(p,f);};
+  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite',packUnit:''});renderSpecs(p,f);paint(p,f);};
 
   // 实时翻译：商品名/别名/产地/品牌/描述 露出买家可见英文译文行(中↔英)，可手改、手改后锁定
   PBTR.init(p);
