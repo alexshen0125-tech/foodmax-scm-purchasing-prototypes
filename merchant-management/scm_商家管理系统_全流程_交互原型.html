@@ -871,16 +871,60 @@ function shopProfileView(){
     </div>
   </div>`;
 };
+/* ===== 实时翻译（商家自由输入 中↔英 · 露出译文行 · 可手改 · 手改后锁定不自动覆盖）=====
+   仅覆盖买家可见核心自由文本：商品名/别名/描述/产地/品牌/单位备注 + 店铺名/简介。
+   枚举(单位/类目/储存/履约等)不在内——由「系统语言版本」呈现，与翻译无关。
+   演示 mock 词典；真实接平台翻译 API（服务待研发确认）。给字段加 data-tr，渲染后 TR.init 动态生成译文行。 */
+const TR=(function(){
+  const ZH2EN={
+    '小棠菜':'Xiao Tang Cai','娃娃菜':'Baby Bok Choy','芥蓝':'Kai Lan','菠菜':'Spinach','土豆':'Potato','马铃薯':'Potato','白菜':'Chinese Cabbage','冰鲜三文鱼':'Chilled Salmon','三文鱼':'Salmon','鸡胸肉':'Chicken Breast','生蚝':'Oyster','嫩豆腐':'Silken Tofu','老豆腐':'Firm Tofu','油豆腐':'Fried Tofu Puff','海带丝':'Kelp Shreds','萝卜丸子':'Radish Ball',
+    '有机':'Organic','新鲜':'Fresh','精选':'Premium','当日现摘':'Freshly Picked','叶嫩梗脆':'tender leaves and crisp stems','当日':'Same-day','优质':'Quality',
+    '绿鲜源':'GreenFresh','新加坡':'Singapore','马来西亚':'Malaysia','中国山东':'Shandong, China','中国':'China','挪威':'Norway','泰国':'Thailand','法国':'France','金马仑':'Cameron Highlands','林厝港':'Lim Chu Kang','山东':'Shandong',
+    '袋':'Bag','箱':'Carton','盒':'Box','包':'Pack','斤':'Jin','公斤':'kg','千克':'kg',
+    '新鲜蔬菜':'Fresh Vegetables','蔬菜':'Vegetables','海鲜水产':'Seafood','肉禽蛋品':'Meat & Poultry',
+    '蔬果生鲜店':'Fresh Produce Store','蔬果生鲜':'Fresh Produce','店铺':'Store','餐厅':'Restaurant','食材':'Ingredients','供应':'Supply','配送':'Delivery','全岛':'islandwide','每日':'Daily','专业':'Professional',
+  };
+  const EN2ZH={};Object.keys(ZH2EN).forEach(k=>{const v=ZH2EN[k].toLowerCase();if(!EN2ZH[v])EN2ZH[v]=k;});
+  const hasCJK=s=>/[一-鿿㐀-䶿]/.test(s);
+  function zh2en(t){if(ZH2EN[t])return ZH2EN[t];let out=t;Object.keys(ZH2EN).sort((a,b)=>b.length-a.length).forEach(k=>{if(out.includes(k))out=out.split(k).join(' '+ZH2EN[k]+' ');});return out.replace(/[，、]/g,', ').replace(/。/g,'. ').replace(/\s+/g,' ').replace(/\s+([,.])/g,'$1').trim();}
+  function en2zh(t){const low=t.toLowerCase();if(EN2ZH[low])return EN2ZH[low];let out=t;Object.keys(EN2ZH).sort((a,b)=>b.length-a.length).forEach(k=>{const re=new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig');out=out.replace(re,EN2ZH[k]);});return out.trim();}
+  const one=(text,dir)=>dir=='zh2en'?zh2en(text):en2zh(text);
+  function translate(text,dir,multi){if(multi){return text.split(/[,，]/).map(x=>x.trim()).filter(Boolean).map(x=>one(x,dir)).join(dir=='zh2en'?', ':'，');}return one(text,dir);}
+  function attach(el){
+    const multi=el.hasAttribute('data-tr-multi');
+    const row=document.createElement('div');row.className='tr-row';
+    row.innerHTML=`<span class="tr-badge">🌐 EN</span><input class="tr-in" placeholder="输入后自动生成译文，可手动修改"><span class="tr-edited" style="display:none">✎手动改</span><button type="button" class="tr-re">↻ 重新翻译</button>`;
+    el.insertAdjacentElement('afterend',row);
+    const trIn=row.querySelector('.tr-in'),badge=row.querySelector('.tr-badge'),edited=row.querySelector('.tr-edited'),reBtn=row.querySelector('.tr-re');
+    const run=()=>{const src=(el.value||'').trim();const dir=hasCJK(src)?'zh2en':'en2zh';badge.textContent=dir=='zh2en'?'🌐 EN':'🌐 中';if(trIn._locked)return;if(!src){trIn.value='';return;}trIn.value=translate(src,dir,multi);};
+    let timer=null;el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(run,600);});
+    trIn.addEventListener('input',()=>{trIn._locked=true;edited.style.display='';});
+    reBtn.addEventListener('click',()=>{trIn._locked=false;edited.style.display='none';run();});
+    if((el.value||'').trim())run();
+  }
+  function init(root){(root||document).querySelectorAll('[data-tr]').forEach(el=>{if(el._trInit)return;el._trInit=1;attach(el);});}
+  const st=document.createElement('style');st.textContent=`
+    .tr-row{display:flex;align-items:center;gap:8px;margin-top:6px;padding:6px 8px;background:#F5F8FF;border:1px dashed #C7D6F5;border-radius:8px;}
+    .tr-badge{flex:0 0 auto;font-size:11px;font-weight:700;color:#2563EB;background:#E4EDFF;border-radius:6px;padding:2px 7px;white-space:nowrap;}
+    .tr-in{flex:1;min-width:0;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 8px;font-size:13px;color:#1E3A8A;font-family:inherit;}
+    .tr-in:focus{outline:none;border-color:#93B4F5;background:#fff;}
+    .tr-edited{flex:0 0 auto;font-size:11px;color:#B45309;background:#FEF3C7;border-radius:6px;padding:2px 6px;white-space:nowrap;}
+    .tr-re{flex:0 0 auto;font-size:11.5px;color:#2563EB;background:none;border:none;cursor:pointer;white-space:nowrap;font-family:inherit;}
+    .tr-re:hover{text-decoration:underline;}`;
+  document.head.appendChild(st);
+  return {init};
+})();
 function act_editShop(){
   const s=DB.shop;const allCats=['叶菜类','根茎类','瓜茄类','菌菇类','鲜活水产','豆制品','干货','调味'];
   modalWide(`<div class="mc-hd"><h3>编辑店铺信息</h3><p>店铺信息用于平台前台展示与运营</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="fg2"><div class="fr"><label class="fl">店铺名称</label><input id="es-name" value="${s.name}"></div><div class="fr"><label class="fl">店铺类型</label><select id="es-type"><option ${s.type=='蔬果生鲜店'?'selected':''}>蔬果生鲜店</option><option ${s.type=='水产海鲜店'?'selected':''}>水产海鲜店</option><option ${s.type=='综合食材店'?'selected':''}>综合食材店</option></select></div></div>
+    <div class="fg2"><div class="fr"><label class="fl">店铺名称</label><input id="es-name" data-tr value="${s.name}"></div><div class="fr"><label class="fl">店铺类型</label><select id="es-type"><option ${s.type=='蔬果生鲜店'?'selected':''}>蔬果生鲜店</option><option ${s.type=='水产海鲜店'?'selected':''}>水产海鲜店</option><option ${s.type=='综合食材店'?'selected':''}>综合食材店</option></select></div></div>
     <div class="fr"><label class="fl">主营品类（多选）</label><div class="row" style="gap:8px;flex-wrap:wrap">${allCats.map(c=>`<label class="chip-ck ${s.cats.includes(c)?'on':''}"><input type="checkbox" data-cat="${c}" ${s.cats.includes(c)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${c}</label>`).join('')}</div></div>
-    <div class="fr"><label class="fl">店铺简介</label><textarea id="es-intro">${s.intro}</textarea></div>
+    <div class="fr"><label class="fl">店铺简介</label><textarea id="es-intro" data-tr>${s.intro}</textarea></div>
     <div class="fg2"><div class="fr"><label class="fl">客服电话</label><input id="es-service" value="${s.service}"></div><div class="fr"><label class="fl">营业时间</label><input id="es-hours" value="${s.hours}"></div></div>
     <div class="fg2"><div class="fr"><label class="fl">配送范围</label><input id="es-delivery" value="${s.delivery}"></div><div class="fr"><label class="fl">门头照 / Logo</label><div class="up done" onclick="this.classList.add('done')"><div class="uic">📷</div><div class="ut">已上传 ✓</div></div></div></div>
     <div class="fr"><label class="fl">经营地址</label><input id="es-addr" value="${s.addr}"></div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doEditShop()">保存</button></div>`);
+  setTimeout(()=>TR.init(document.getElementById('mc')),0);
 }
 function doEditShop(){
   const s=DB.shop;
@@ -1112,13 +1156,13 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
   drawer(`<div class="drawer-hd"><h3>${isNew?'新建商品':(p.status=='rejected'||p.status=='forced_off'?'整改重提 · ':'编辑 · ')+p.name}</h3><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <h4 style="font-size:14px;margin-bottom:12px;color:var(--g)">① 商品信息（SPU）</h4>
-    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>商品名称</label><input id="f-name" value="${p.name}" placeholder="请输入商品名称" oninput="refreshSkuNames()"></div><div class="fr"><label class="fl">商品别名</label><input id="f-alias" maxlength="400" value="${p.alias||''}" placeholder="多个别名用逗号隔开，辅助客户端搜索"></div></div>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>商品名称</label><input id="f-name" data-tr value="${p.name}" placeholder="请输入商品名称" oninput="refreshSkuNames()"></div><div class="fr"><label class="fl">商品别名</label><input id="f-alias" data-tr data-tr-multi maxlength="400" value="${p.alias||''}" placeholder="多个别名用逗号隔开，辅助客户端搜索"></div></div>
     <div class="fg2"><div class="fr"><label class="fl"><b>*</b>后台类目</label><select id="f-cat" onchange="catHint();refreshSkuNames()">${opt(Object.keys(CATS),p.cat)}</select></div><div class="fr"><label class="fl">税率</label><input id="f-tax" value="${p.tax||'9%'}" placeholder="默认 9%，可改，如 7%"></div></div>
     <div class="fr"><label class="fl"><b>*</b>最小售卖单位 <span style="font-weight:400;color:var(--ts);font-size:12px">（支持维护净含量）</span></label><table class="itbl"><thead><tr><th>最小售卖单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td><select id="f-unit" onchange="refreshSkuNames()">${opt(UNITS,p.unit)}</select></td><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 500"></td><td><select id="f-netunit">${opt(NETUNIT,p.netUnit)}</select></td><td><input id="f-unitnote" maxlength="20" value="${p.unitNote||''}" placeholder="选填"></td></tr></tbody></table></div>
-    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl">产地</label><input id="f-origin" value="${p.origin||''}" placeholder="选填"></div></div>
+    <div class="fg2"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div><div class="fr"><label class="fl">产地</label><input id="f-origin" data-tr value="${p.origin||''}" placeholder="选填"></div></div>
     <div class="fg2"><div class="fr"><label class="fl"><b>*</b>效期管理</label>${radio('f-expen',p.expEn||'是',['否','是'])}</div><div class="fr" id="qp-cell"><label class="fl">保质期</label><div class="row" style="gap:8px"><input id="f-qp" value="${p.qp||''}" placeholder="如 7" style="flex:1"><select id="f-qpu" style="max-width:88px">${opt(QPUNIT,p.qpu||'天')}</select></div></div></div>
     <div class="fg3"><div class="fr"><label class="fl"><b>*</b>APP是否展示效期</label><select id="f-showexp">${opt(['展示','不展示'],p.showExp)}</select></div><div class="fr"><label class="fl"><b>*</b>储存条件</label><select id="f-storage">${opt(STORAGE,p.storage)}</select></div><div class="fr"><label class="fl"><b>*</b>履约方式</label><select id="f-fulfil">${opt(FULFIL,p.fulfil)}</select></div></div>
-    <div class="fg2"><div class="fr"><label class="fl">品牌</label><input id="f-brand" value="${p.brand||''}" placeholder="选填"></div><div class="fr"><label class="fl">商品描述</label><input id="f-desc" value="${p.desc||''}" placeholder="最多 500 字（选填）"></div></div>
+    <div class="fg2"><div class="fr"><label class="fl">品牌</label><input id="f-brand" data-tr value="${p.brand||''}" placeholder="选填"></div><div class="fr"><label class="fl">商品描述</label><input id="f-desc" data-tr value="${p.desc||''}" placeholder="最多 500 字（选填）"></div></div>
     <div id="cat-hint"></div>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU）</h4>
     <div class="ib ib-gr" style="margin-bottom:8px"><span class="i">ℹ️</span>每行 1 个 SKU，规格名称自动 = 商品名 + 数量 + 最小售卖单位；价格与库存逐规格维护。</div>
@@ -1128,7 +1172,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
     <div class="fg2"><div class="fr"><label class="fl">商品主图</label><div class="up ${p.img?'done':''}" id="f-img" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">🖼️</div><div class="ut">${p.img?'已上传 ✓':'上传主图'}</div><div class="us">首图白底 ≥800×800 · 最多 15 张</div></div></div><div class="fr"><label class="fl">商品详情</label><div class="up ${p.detail?'done':''}" id="f-detail" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">📄</div><div class="ut">${p.detail?'已上传 ✓':'上传详情图'}</div><div class="us">宽 750–1242px · 最多 10 张</div></div></div></div>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">取消</button>${ft}</div>`);
-  setTimeout(()=>{renderSkuEditor();catHint();document.querySelectorAll('input[name=f-expen]').forEach(r=>r.addEventListener('change',expToggle));expToggle();},0);
+  setTimeout(()=>{renderSkuEditor();catHint();document.querySelectorAll('input[name=f-expen]').forEach(r=>r.addEventListener('change',expToggle));expToggle();TR.init(document);},0);
 }
 function itemNameSync(){const iv=(document.getElementById('f-itemname')||{}).value||'';const nm=document.getElementById('f-name');if(nm&&nm.dataset.auto!=='0'){nm.value=iv;refreshSkuNames();}}
 function refreshInherit(){const g=id=>(document.getElementById(id)||{}).value||'';const u=g('f-unit')||'—',nq=g('f-netqty'),nu=g('f-netunit'),pq=g('f-packqty'),pu=g('f-packunit');const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};set('inh-unit',u);set('inh-net',nq?nq+nu:'—');set('inh-pack',pq?pq+(pu||''):'—');document.querySelectorAll('.sku-unit-cell').forEach(el=>el.textContent=u);}
@@ -1374,7 +1418,7 @@ PAGES['m-invoice']=()=>{
   if(tab=='svc')return tabsBar+svcInvoiceContent();
   return tabsBar+`${flowTip(`客户按订单向你<b>申请开票</b>，你为每笔订单开具<b>销售发票</b>并上传；平台执行<b>四重校验</b>（金额/合规/关联/验真）后作为结算凭证放款。客户开票按订单进行，不依赖对账单确认。`)}
   ${DB.invoices.filter(i=>i.status=='rejected').length?`<div class="ib ib-r"><span class="i">⛔</span>有发票校验被退回，请查看原因并重新上传。</div>`:''}
-  <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">开票对象=下单客户 · 共 ${DB.invoices.length} 笔</span></div><div class="card-bd flush"><table>
+  <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span style="display:flex;align-items:center;gap:12px"><button class="btn btn-link" style="color:var(--r)" onclick="act_invSampleView()">📄 参考发票样式</button><span class="sub">开票对象=下单客户 · 共 ${DB.invoices.length} 笔</span></span></div><div class="card-bd flush"><table>
     <thead><tr><th>订单号</th><th>开票客户</th><th>金额</th><th>发票号</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${DB.invoices.map((iv,i)=>`<tr>
       <td class="mono">${iv.order}</td><td>${iv.client}</td><td>${money(iv.amt)}</td>
@@ -1399,6 +1443,47 @@ function svcInvoiceContent(){
 }
 // 服务费发票由平台结算后自动开具、商家端只查看/下载：原「勾选合并申请开票」流程(act_svcToggle/svcAll/applySvcInvoice/svcInvIssue)已移除
 function act_svcInvDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
+// 参考发票样式：平台提供的客户销售发票（TAX INVOICE）标准模板，仅供商家开票时参照字段与格式
+function act_invSampleView(){
+  drawer(`<div class="drawer-hd"><div><h3>参考发票样式</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">平台提供 · 客户销售发票标准模板（示例）</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>以下为平台推荐的<b>销售发票（TAX INVOICE）</b>标准格式，下方数据均为<b>示例</b>。请按此格式向下单客户开具，确保<b>发票号/客户名称/GST 号/价税合计</b>等关键字段齐全，便于平台四重校验通过。</div>
+    <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div>
+          <div style="font-size:15px;font-weight:700">绿鲜源蔬果 Green Fresh Produce Pte Ltd</div>
+          <div style="font-size:12px;color:var(--ts);margin-top:2px">Blk 21 Jurong Port Rd, #03-12, Singapore 619098</div>
+          <div style="font-size:12px;color:var(--ts)">GST Reg No：<span class="mono">202398765M</span></div>
+        </div>
+        <div style="text-align:right"><div style="font-size:18px;font-weight:700;letter-spacing:.5px">TAX INVOICE</div><div style="font-size:12px;color:var(--ts)">销售发票</div></div>
+      </div>
+      <dl class="dl">
+        <dt>发票号</dt><dd class="mono">INV-2026-000123</dd>
+        <dt>开票日期</dt><dd>2026-07-01</dd>
+        <dt>对应订单号</dt><dd class="mono">#SG20260628007</dd>
+        <dt>开票客户（Bill To）</dt><dd>海底捞（新加坡）Hai Di Lao SG Pte Ltd</dd>
+        <dt>客户 GST 号</dt><dd class="mono">201612345R</dd>
+        <dt>客户地址</dt><dd>2 Orchard Turn, #04-01, Singapore 238801</dd>
+      </dl>
+      <table style="margin-top:12px"><thead><tr><th>#</th><th>商品/规格</th><th style="text-align:right">数量</th><th style="text-align:right">单价</th><th style="text-align:right">金额</th></tr></thead><tbody>
+        <tr><td>1</td><td>有机生菜 500g/包</td><td style="text-align:right">120</td><td style="text-align:right">$3.50</td><td style="text-align:right">$420.00</td></tr>
+        <tr><td>2</td><td>牛肉卷 1kg/盒（冷冻）</td><td style="text-align:right">200</td><td style="text-align:right">$42.00</td><td style="text-align:right">$8,400.00</td></tr>
+        <tr><td>3</td><td>金针菇 200g/包</td><td style="text-align:right">80</td><td style="text-align:right">$1.30</td><td style="text-align:right">$104.00</td></tr>
+      </tbody></table>
+      <table style="margin-top:10px"><tbody>
+        <tr><td style="color:var(--ts)">小计（不含税 / Subtotal）</td><td style="text-align:right">$8,924.00</td></tr>
+        <tr><td style="color:var(--ts)">GST 9%</td><td style="text-align:right">$803.16</td></tr>
+        <tr style="font-weight:700;background:var(--gl)"><td>价税合计（Total Payable）</td><td style="text-align:right;color:var(--gd)">$9,727.16</td></tr>
+      </tbody></table>
+      <dl class="dl" style="margin-top:14px">
+        <dt>付款条款</dt><dd>NET 30 天</dd>
+        <dt>收款账户</dt><dd>DBS Bank · <span class="mono">****8821</span></dd>
+        <dt>备注</dt><dd style="color:var(--ts)">本发票由商家就订单商品向下单客户开具；金额须与订单一致。</dd>
+      </dl>
+    </div></div>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="toast('发票模板已下载 (PDF)','ok')">下载模板 PDF</button></div>`);
+}
 function act_svcInvPreview(no){
   const s=DB.svcInvoices.find(x=>x.no==no);if(!s)return;const issued=s.status=='已开票';
   drawer(`<div class="drawer-hd"><div><h3>服务费发票${issued?'预览':'申请预览'}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${s.no} · ${issued?'已开票':'待平台开票'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
