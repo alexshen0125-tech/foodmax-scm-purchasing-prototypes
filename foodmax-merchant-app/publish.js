@@ -186,6 +186,12 @@ css.textContent=`
 .pb-spec .qty:focus-within{border-color:var(--emerald);background:#fff;}
 .pb-spec .lb{font-size:13px;color:var(--sub);flex:0 0 auto;}
 .pb-spec .qty input{flex:1;border:none;background:transparent;outline:none;font-size:15px;font-family:inherit;width:100%;}
+.pb-spec .ms-row{display:flex;align-items:center;gap:10px;margin-top:10px;}
+.pb-spec .ms-row .lb{font-size:13px;color:var(--sub);flex:0 0 auto;}
+.pb-spec .modeseg{display:flex;flex:1;background:var(--muted);border-radius:11px;padding:3px;gap:3px;}
+.pb-spec .modeseg .mo{flex:1;min-height:38px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--sub);border-radius:9px;cursor:pointer;text-align:center;line-height:1.15;padding:0 4px;}
+.pb-spec .modeseg .mo.on{background:#fff;color:var(--emerald-2);box-shadow:var(--sh-sm);}
+.pb-spec .ms-hint{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.5;}
 .pb-spec .unit{cursor:pointer;justify-content:space-between;}
 .pb-spec .unit .uv{font-size:15px;font-weight:600;}.pb-spec .unit .uv.ph{color:#94A3B8;font-weight:400;}
 .pb-spec .unit .ch{color:#94A3B8;}
@@ -338,7 +344,7 @@ function openForm(prefill){
     shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
     appShowShelf:'展示',                    // APP 是否展示效期(展示/不展示)，放保质期后
     storage:'', fulfill:'', origin:'', brand: prefill?prefill.brand:'', desc:'',
-    specs: prefill?[{qty:'1',price:'',stock:''}]:[{qty:'',price:'',stock:''}], // 售卖单位只读=最小售卖单位
+    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite'}]:[{qty:'',price:'',stock:'',mode:'finite'}], // 售卖单位只读=最小售卖单位；mode=库存模式(finite售完即止/daily每日恢复初始库存)
     imgs:{head:false,more:[false,false],video:false,label:false,detail:[false,false,false,false]},
   };
   const row=(id,lab,valHtml,req)=>`<div class="pb-cell" id="${id}"><div class="lab">${req?'<span class="rq">*</span>':''}${lab}</div><div class="val">${valHtml}</div><span class="ch">${svg('arrow')}</span></div>`;
@@ -415,6 +421,12 @@ function specRow(s,i,total,measure){
       <div class="qty"><span class="lb">价格</span><span class="lb" style="flex:0 0 auto;padding-left:2px">S$</span><input data-price inputmode="decimal" value="${s.price}" placeholder="选填"></div>
       <div class="qty"><span class="lb">库存</span><input data-stock inputmode="numeric" value="${s.stock}" placeholder="选填"></div>
     </div>
+    <div class="ms-row"><span class="lb">库存模式</span>
+      <div class="modeseg" data-modeseg>
+        <div class="mo ${(s.mode||'finite')==='daily'?'on':''}" data-m="daily">每日恢复初始库存</div>
+        <div class="mo ${(s.mode||'finite')==='finite'?'on':''}" data-m="finite">售完即止</div>
+      </div></div>
+    <div class="ms-hint" data-mshint>${(s.mode||'finite')==='daily'?'每天 0 点自动把可售库存补回设定的库存总数，适合每日稳定供应':'售完不再恢复、售罄即下线，适合尾货/限量'}</div>
     <div class="serr" data-serr></div>
     <div class="serr" data-pnote style="color:#46604F"></div></div>`;
 }
@@ -425,6 +437,12 @@ function renderSpecs(p,f){
     row.querySelector('[data-qty]').oninput=e=>{f.specs[i].qty=e.target.value;paint(p,f);};
     row.querySelector('[data-price]').oninput=e=>{f.specs[i].price=e.target.value;paint(p,f);};
     row.querySelector('[data-stock]').oninput=e=>{f.specs[i].stock=e.target.value;paint(p,f);};
+    const seg=row.querySelector('[data-modeseg]');
+    if(seg)seg.querySelectorAll('.mo').forEach(o=>o.onclick=()=>{
+      seg.querySelectorAll('.mo').forEach(x=>x.classList.remove('on'));o.classList.add('on');
+      f.specs[i].mode=o.dataset.m;
+      const hint=row.querySelector('[data-mshint]');if(hint)hint.textContent=o.dataset.m==='daily'?'每天 0 点自动把可售库存补回设定的库存总数，适合每日稳定供应':'售完不再恢复、售罄即下线，适合尾货/限量';
+    });
     const del=row.querySelector('[data-del]');
     if(del)del.onclick=()=>{f.specs.splice(i,1);renderSpecs(p,f);paint(p,f);};
   });
@@ -532,7 +550,7 @@ function bindForm(p,f){
   // 输入框单元格点击空白不抢焦点
   ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
 
-  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:''});renderSpecs(p,f);paint(p,f);};
+  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite'});renderSpecs(p,f);paint(p,f);};
 
   // 实时翻译：商品名/别名/产地/品牌/描述 露出买家可见英文译文行(中↔英)，可手改、手改后锁定
   PBTR.init(p);
