@@ -2,7 +2,7 @@
    单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
-const {pushPage,popPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt}=window.FM;
+const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt}=window.FM;
 // 演示锚点“今天”=最新订单日期；订单时间筛选按 orderDate(下单日期) 精确匹配单日
 const TODAY='2026-07-01';
 
@@ -58,13 +58,20 @@ css.textContent=`
 .odd-tl .n.on .dot{background:var(--emerald);}
 .odd-tl .n:not(:last-child)::after{content:"";position:absolute;top:5px;left:60%;width:80%;height:2px;background:var(--line);}
 .odd-tl .n.on:not(:last-child)::after{background:var(--emerald);}
-/* 订单时间·自定义区间 */
-.dr-fld{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-radius:14px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh-sm);}
-.dr-fld .dl{font-size:14.5px;font-weight:600;color:#27433A;flex:0 0 auto;}
-.dr-fld input[type=date]{border:none;background:transparent;font-size:14.5px;font-family:inherit;color:var(--emerald-2);font-weight:600;text-align:right;min-width:0;}
-.dr-quick{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 14px;}
-.dr-quick .q{padding:8px 14px;border-radius:20px;background:var(--muted);font-size:13px;font-weight:600;color:#27433A;cursor:pointer;}
-.dr-hint{font-size:12.5px;min-height:16px;color:var(--red);}
+/* 订单时间·底部弹窗选单日期 */
+.dr-fld{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--muted);border-radius:14px;padding:14px 16px;margin-bottom:10px;min-height:52px;}
+.dr-fld .dl{font-size:15px;font-weight:600;color:#27433A;flex:0 0 auto;}
+.dr-fld input[type=date]{border:none;background:transparent;font-size:15px;font-family:inherit;color:var(--emerald-2);font-weight:700;text-align:right;min-width:0;}
+.dr-quick{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;}
+.dr-quick .q{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:20px;background:var(--mint-soft);font-size:13.5px;font-weight:700;color:var(--emerald-2);cursor:pointer;}
+.sheet .ds-hd{display:flex;flex-direction:column;gap:2px;padding:15px 16px;text-align:center;font-size:16px;font-weight:700;border-bottom:1px solid var(--line);}
+.sheet .ds-hd .ds-sub{font-size:11.5px;font-weight:500;color:var(--sub);}
+.sheet .ds-clear{min-height:46px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--sub);font-size:14px;font-weight:600;cursor:pointer;}
+.sheet .ds-ft{display:flex;gap:12px;padding:10px 16px 0;}
+.sheet .ds-btn{flex:1;min-height:50px;display:flex;align-items:center;justify-content:center;border-radius:15px;font-size:16px;font-weight:700;cursor:pointer;}
+.sheet .ds-btn.cancel{background:var(--muted);color:#27433A;}
+.sheet .ds-btn.ok{background:var(--emerald);color:#fff;}
+.sheet .ds-btn.ok:active{opacity:.85;}
 `;
 document.head.appendChild(css);
 
@@ -186,21 +193,25 @@ function renderList(container,inTab){
   draw();
 }
 
-// 订单时间·选单个日期：原生 date 输入 + 今天快捷 + 全部时间清除（按日期，不支持区间统计）
+// 订单时间·选单个日期：底部弹窗(bottom sheet，不新开页) — 原生 date 输入 + 今天快捷 + 全部时间清除（按日期，不支持区间统计）
 function openDatePick(cur,onPick,onClear){
-  pushPage({title:'选择订单日期',body:`
-    <div style="padding:18px 16px">
-      <div class="dr-quick" id="dr-quick"><span class="q" data-day="${TODAY}">今天</span></div>
-      <div class="dr-fld"><span class="dl">订单日期</span><input type="date" id="dr-day" value="${cur||TODAY}" max="${TODAY}"></div>
-      <button class="btn ghost" id="dr-clear" style="width:100%;margin-top:8px">全部时间（不限日期）</button>
-    </div>`,
-    footer:`<button class="btn primary" id="dr-ok" style="width:100%">确定</button>`,
-    mount:(p)=>{
-      const day=p.querySelector('#dr-day');
-      p.querySelectorAll('#dr-quick .q').forEach(q=>q.onclick=()=>{day.value=q.dataset.day;});
-      p.querySelector('#dr-clear').onclick=()=>{popPage();onClear();};
-      p.querySelector('#dr-ok').onclick=()=>{if(!day.value){toast('请选择日期');return;}popPage();onPick(day.value);};
-    }});
+  const m=document.createElement('div');m.className='sheet-mask';
+  m.innerHTML=`<div class="sheet" style="padding:0 0 14px">
+    <div class="ds-hd">选择订单日期<span class="ds-sub">按日期筛选，不支持区间</span></div>
+    <div style="padding:14px 16px 4px">
+      <div class="dr-quick"><span class="q" data-day="${TODAY}">今天</span></div>
+      <div class="dr-fld"><span class="dl">订单日期</span><input type="date" id="ds-day" value="${cur||TODAY}" max="${TODAY}"></div>
+      <div class="ds-clear" id="ds-clear">全部时间（不限日期）</div>
+    </div>
+    <div class="ds-ft"><div class="ds-btn cancel" id="ds-cancel">取消</div><div class="ds-btn ok" id="ds-ok">确定</div></div>
+  </div>`;
+  document.querySelector('.phone').appendChild(m);
+  const day=m.querySelector('#ds-day');
+  m.querySelectorAll('.dr-quick .q').forEach(q=>q.onclick=()=>{day.value=q.dataset.day;});
+  m.querySelector('#ds-clear').onclick=()=>{m.remove();onClear();};
+  m.querySelector('#ds-cancel').onclick=()=>m.remove();
+  m.querySelector('#ds-ok').onclick=()=>{if(!day.value){toast('请选择日期');return;}m.remove();onPick(day.value);};
+  m.onclick=e=>{if(e.target===m)m.remove();};   // 点遮罩关闭
 }
 
 function openOrderPush(){pushPage({title:'订单列表',body:'<div id="op"></div>',mount:(p)=>renderList(p.querySelector('#op'),false)});}
