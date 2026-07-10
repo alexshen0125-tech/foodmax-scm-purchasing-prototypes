@@ -313,7 +313,8 @@ function renderMine(){document.getElementById('v-mine').innerHTML=`<div class="h
   <div class="deliver">${[['营业信息','sign'],['合同管理','invoice'],['服务能力','shieldcheck'],['平台规则','box'],['联系客服','bell'],['账号管理','user']].map(m=>`<div class="di"><div class="ic">${svg(m[1])}</div><span class="dl">${m[0]}</span></div>`).join('')}</div></div>`;}
 function renderOrders(){document.getElementById('v-orders').innerHTML=`<div class="ph" style="height:740px"><div class="pic">${svg('receipt')}</div><h3>订单</h3><p>订单模块按 v2 系统铺开中</p><span class="pill">设计系统 · 铺开中</span></div>`;}
 
-const TABS=[['home','工作台','home'],['orders','订单','receipt'],['goods','商品','box'],['mine','我的','user']];
+// 底部导航去掉「商品」Tab（商品管理仍从工作台「经营工具」进入）
+const TABS=[['home','工作台','home'],['orders','订单','receipt'],['mine','我的','user']];
 const tb=document.getElementById('tabbar');
 tb.innerHTML=TABS.map((t,i)=>`<div class="tab ${i===0?'active':''}" data-v="${t[0]}">${svg(t[2])}<span>${t[1]}</span></div>`).join('');
 const views={home:'v-home',orders:'v-orders',goods:'v-goods',mine:'v-mine'};
