@@ -66,7 +66,6 @@ css.textContent=`
 .dr-quick .q{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:20px;background:var(--mint-soft);font-size:13.5px;font-weight:700;color:var(--emerald-2);cursor:pointer;}
 .sheet .ds-hd{display:flex;flex-direction:column;gap:2px;padding:15px 16px;text-align:center;font-size:16px;font-weight:700;border-bottom:1px solid var(--line);}
 .sheet .ds-hd .ds-sub{font-size:11.5px;font-weight:500;color:var(--sub);}
-.sheet .ds-clear{min-height:46px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--sub);font-size:14px;font-weight:600;cursor:pointer;}
 .sheet .ds-ft{display:flex;gap:12px;padding:10px 16px 0;}
 .sheet .ds-btn{flex:1;min-height:50px;display:flex;align-items:center;justify-content:center;border-radius:15px;font-size:16px;font-weight:700;cursor:pointer;}
 .sheet .ds-btn.cancel{background:var(--muted);color:#27433A;}
@@ -184,31 +183,28 @@ function renderList(container,inTab){
   // 订单状态：sheet 计数已叠加当前时间筛选
   statusFl.onclick=()=>sheet(TABS.map(t=>({label:`${t.label}（${listOf(t.k).filter(matchDate).length}）`,onClick:()=>{state.statusK=t.k;statusFl.firstChild.textContent=t.label;draw();}})));
 
-  // 订单时间：选单个日期（不支持区间）
+  // 订单时间：选单个日期（不支持区间、不支持不限时间）
   timeFl.onclick=()=>openDatePick(state.date.type==='day'?state.date.day:TODAY,
-    (day)=>{state.date={type:'day',day};timeFl.firstChild.textContent=day;timeFl.classList.add('on');draw();},
-    ()=>{state.date={type:'all'};timeFl.firstChild.textContent='订单时间';timeFl.classList.remove('on');draw();});
+    (day)=>{state.date={type:'day',day};timeFl.firstChild.textContent=day;timeFl.classList.add('on');draw();});
 
   whFl.onclick=()=>toast('选择入库仓库');
   draw();
 }
 
-// 订单时间·选单个日期：底部弹窗(bottom sheet，不新开页) — 原生 date 输入 + 今天快捷 + 全部时间清除（按日期，不支持区间统计）
-function openDatePick(cur,onPick,onClear){
+// 订单时间·选单个日期：底部弹窗(bottom sheet，不新开页) — 原生 date 输入 + 今天快捷（按日期筛选，不支持区间、不支持不限时间）
+function openDatePick(cur,onPick){
   const m=document.createElement('div');m.className='sheet-mask';
   m.innerHTML=`<div class="sheet" style="padding:0 0 14px">
     <div class="ds-hd">选择订单日期<span class="ds-sub">按日期筛选，不支持区间</span></div>
     <div style="padding:14px 16px 4px">
       <div class="dr-quick"><span class="q" data-day="${TODAY}">今天</span></div>
       <div class="dr-fld"><span class="dl">订单日期</span><input type="date" id="ds-day" value="${cur||TODAY}" max="${TODAY}"></div>
-      <div class="ds-clear" id="ds-clear">全部时间（不限日期）</div>
     </div>
     <div class="ds-ft"><div class="ds-btn cancel" id="ds-cancel">取消</div><div class="ds-btn ok" id="ds-ok">确定</div></div>
   </div>`;
   document.querySelector('.phone').appendChild(m);
   const day=m.querySelector('#ds-day');
   m.querySelectorAll('.dr-quick .q').forEach(q=>q.onclick=()=>{day.value=q.dataset.day;});
-  m.querySelector('#ds-clear').onclick=()=>{m.remove();onClear();};
   m.querySelector('#ds-cancel').onclick=()=>m.remove();
   m.querySelector('#ds-ok').onclick=()=>{if(!day.value){toast('请选择日期');return;}m.remove();onPick(day.value);};
   m.onclick=e=>{if(e.target===m)m.remove();};   // 点遮罩关闭
