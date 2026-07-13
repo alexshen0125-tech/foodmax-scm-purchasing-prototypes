@@ -389,19 +389,10 @@ function salesRef(p,i,g,s){
 }
 
 function openMore(g,state){
-  const on=isOnShelf(g);const n=g.skus.length;
-  // SPU 整体上下架：二次确认，一次性作用于全部规格
-  const spuToggle=()=>{
-    const to=on?'下架':'上架';
-    confirmDialog({title:`确认整体${to}该商品？`,body:`将${to}「${g.n}」的全部 ${n} 个规格，${on?'客户将无法下单':'客户即可下单'}，可随时调整。`,danger:on,okText:`整体${to}`,
-      onOk:()=>{g.skus.forEach(s=>{s.off=on;s.updatedAt=ts();});g.updatedAt=ts();toast(`「${g.n}」全部规格已${to}`);state&&state.redraw();}});
-  };
+  // 已去除：整体上下架/分享给客户/删除商品；仅保留 编辑商品、复制商品
   sheet([
-    {label:on?`整体下架（全部 ${n} 规格）`:`整体上架（全部 ${n} 规格）`,onClick:spuToggle},
     {label:'编辑商品',onClick:()=>toast('编辑商品')},
     {label:'复制商品',onClick:()=>toast('复制商品')},
-    {label:'分享给客户',onClick:()=>toast('分享给客户')},
-    {label:'删除商品',danger:1,onClick:()=>confirmDialog({title:'确认删除该商品？',body:`「${g.n}」删除后不可恢复，历史订单不受影响。`,danger:1,okText:'删除',onOk:()=>toast('已删除')})},
   ]);
 }
 function showSupplement(){
