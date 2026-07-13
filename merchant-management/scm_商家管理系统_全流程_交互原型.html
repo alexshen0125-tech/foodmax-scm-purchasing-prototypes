@@ -1010,13 +1010,12 @@ PAGES['m-product']=()=>{
     <div class="tabs" style="margin:0;border:none">${[['onsale','销售中'],['off','未上架']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';render()">${x[1]}</div>`).join('')}</div>
     <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button></div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th style="width:30px"><input type="checkbox" class="skuchk" title="全选当前可选 SKU" ${allSel?'checked':''} onclick="selAllProducts()"></th><th>商品(SPU)</th><th>SKU 编码</th><th>规格名称</th><th>品类</th><th title="商家维护未税价">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th style="width:30px"><input type="checkbox" class="skuchk" title="全选当前可选 SKU" ${allSel?'checked':''} onclick="selAllProducts()"></th><th>SKU 编码</th><th>规格名称</th><th>品类</th><th title="商家维护未税价">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
     ${rows.map(({p,i,s,k})=>{const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
       const priceCell=`${money(s.price||0)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}`;
       const stockCell=`${s.stock||0}${stockModeTag(s)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
       return `<tr>
       <td>${onsale?`<input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')">`:''}</td>
-      <td><b>${p.name}</b><div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td>
       <td class="mono">${s.skuId}</td>
       <td>${p.name} ${s.qty}${s.pack||p.unit}${s.packUnit?'/'+s.packUnit:''}</td>
       <td>${p.cat||'—'}</td>
@@ -1026,7 +1025,7 @@ PAGES['m-product']=()=>{
       <td style="white-space:nowrap">${stockCell}</td>
       <td><span class="tag ${st[1]}">${st[0]}</span></td>
       <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td style="white-space:nowrap">${skuRowOps(p,i,s,k)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="12"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该分类暂无商品</div></div></td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function toggleExp(id){const k=DB.exp.indexOf(id);if(k<0)DB.exp.push(id);else DB.exp.splice(k,1);render();}
