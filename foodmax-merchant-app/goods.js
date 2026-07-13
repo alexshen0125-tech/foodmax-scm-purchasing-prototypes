@@ -163,7 +163,6 @@ function skuCard(g,s,gi,si,manage){
       <div class="top"><div class="img">${g.ic}</div>
         <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span></div>
           <div class="sp">${g.cat}</div>
-          ${g.rec?'<span class="tag rec">商机推荐</span>':''}
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
         <div class="rt"><div class="sk-st only">${st}</div></div></div>
       <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
@@ -201,11 +200,11 @@ function bindSku(el,g,s,gi,si,state){
 // 商品详情(只读)：点击卡片信息区进入，展示 SPU 信息 + 全部 SKU 规格(对齐 PC act_spuDetail)
 function openGoodsDetail(g,s){
   const on=isOnShelf(g);
-  const info=[['商品名称',g.n],['品类',g.cat],['税率',taxRate(g)+'%'],['商机推荐',g.rec?'是':'否'],['累计销量',(g.sales||0)+' 件'],['创建时间',g.createdAt||'—'],['更新时间',g.updatedAt||'—']];
+  const info=[['商品名称',g.n],['品类',g.cat],['税率',taxRate(g)+'%'],['累计销量',(g.sales||0)+' 件'],['创建时间',g.createdAt||'—'],['更新时间',g.updatedAt||'—']];
   pushPage({title:'商品详情',body:`<div class="gdt">
     <div class="card">
       <div class="hd"><div class="img">${g.ic}</div><div style="flex:1"><div class="nm">${g.n}</div><div class="sp">${g.cat}</div></div></div>
-      <div class="tags">${g.rec?'<span class="tag rec">商机推荐</span>':''}<span class="st ${on?'':'off'}">${on?'销售中':'未上架'}</span></div>
+      <div class="tags"><span class="st ${on?'':'off'}">${on?'销售中':'未上架'}</span></div>
       ${g.bad?`<div class="bad">⚠ ${g.bad}</div>`:''}
       <div style="margin-top:10px">${info.map(r=>`<div class="kv"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
     </div>
