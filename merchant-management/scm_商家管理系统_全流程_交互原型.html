@@ -43,51 +43,72 @@ button{font-family:inherit}
 .rc-tag{font-size:11px;background:rgba(255,255,255,.08);color:#CBD5E1;padding:3px 9px;border-radius:20px}
 .home-foot{margin-top:42px;color:#475569;font-size:12.5px;text-align:center}
 .home-foot b{color:#94A3B8}
-/* ============ LOGIN（参考线上 VMS 登录页 h5-ddxm-intl-vms/src/views/common/login.vue） ============ */
-:root{--lg:#059669;--lgd:#047857}
-#login{display:none;min-height:100vh}
+/* ============ LOGIN（商家端入口 · 高端视觉版） ============ */
+:root{--lg:#0F8F58;--lgd:#065F46;--lg-ink:#0B1F18;--lg-gold:#C7A35C}
+#login,#login *{box-sizing:border-box}
+#login{display:none;min-height:100vh;background:#EEF3EF}
 #login.on{display:flex}
-.lg-left{flex:0 0 44%;background:linear-gradient(155deg,#10B981 0%,#059669 45%,#065F46 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff}
-.lg-left:before,.lg-left:after{content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.08)}
-.lg-left:before{width:420px;height:420px;top:-120px;right:-120px}
-.lg-left:after{width:300px;height:300px;bottom:-100px;left:-80px;background:rgba(255,255,255,.06)}
-.lg-left-in{position:relative;z-index:1;text-align:center;padding:40px}
-.lg-left-in .chip{display:inline-flex;background:#fff;border-radius:14px;padding:14px 22px;box-shadow:0 10px 30px rgba(0,0,0,.15);margin-bottom:30px}
-.lg-left-in .chip img{height:38px;display:block}
-.lg-left-in h2{font-size:30px;font-weight:800;letter-spacing:-.5px}
-.lg-left-in p{margin-top:14px;font-size:14.5px;color:rgba(255,255,255,.85);line-height:1.8;max-width:360px}
-.lg-foods{margin-top:36px;font-size:30px;letter-spacing:10px;opacity:.92}
-.lg-right{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#fff;position:relative}
-.lg-lang{position:absolute;top:22px;right:28px;font-size:13px;color:#606266;cursor:pointer;display:flex;align-items:center;gap:5px;user-select:none}
-.lg-lang:hover{color:var(--lg)}
-.lg-card{width:416px;max-width:100%;background:#fff;border:1px solid #eee;border-radius:6px;box-shadow:0 3px 8px rgba(0,0,0,.06);padding:24px 40px 22px}
-.lg-title{font-size:24px;color:var(--lg);font-weight:bold;text-align:center;margin-bottom:20px}
-.lg-tabs{display:flex;border-bottom:1px solid #eee;margin-bottom:18px}
-.lg-tab{flex:1;text-align:center;padding:10px 0;font-size:14px;color:#999;cursor:pointer;border-bottom:2px solid transparent;transition:.2s}
+.lg-left{flex:1 1 auto;min-width:0;position:relative;overflow:hidden;display:flex;align-items:center;color:#fff;background:#052A1C}
+.lg-left:before{content:'';position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1800&q=86') center/cover no-repeat;transform:scale(1.02);filter:saturate(1.06) contrast(1.04)}
+.lg-left:after{content:'';position:absolute;inset:0;background:
+  linear-gradient(90deg,rgba(3,35,23,.82) 0%,rgba(4,63,42,.60) 42%,rgba(5,95,70,.34) 72%,rgba(5,95,70,.12) 100%),
+  radial-gradient(650px 360px at 18% 26%,rgba(199,163,92,.20),transparent 62%),
+  linear-gradient(180deg,rgba(255,255,255,.06),transparent 18%,rgba(0,0,0,.22))}
+.lg-left-in{position:relative;z-index:1;width:min(720px,76%);margin-left:64px;padding:52px 0}
+.lg-brand-row{display:flex;align-items:center;gap:14px;margin-bottom:92px}
+.lg-left-in .chip{display:inline-flex;background:rgba(255,255,255,.96);border-radius:16px;padding:11px 18px;box-shadow:0 18px 45px rgba(0,0,0,.25)}
+.lg-left-in .chip img{height:32px;display:block}
+.lg-brand-text{font-size:13px;font-weight:800;letter-spacing:2.2px;color:rgba(255,255,255,.88)}
+.lg-hero-kicker{font-size:13px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#F5D889;margin-bottom:14px}
+.lg-left-in h2{font-size:50px;font-weight:800;letter-spacing:0;line-height:1.14;text-shadow:0 18px 46px rgba(0,0,0,.28)}
+.lg-left-in p{margin-top:18px;font-size:17px;color:rgba(255,255,255,.86);line-height:1.8;max-width:560px}
+.lg-right{flex:0 0 540px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:58px 34px 28px;background:
+  radial-gradient(520px 280px at 18% 8%,rgba(15,143,88,.10),transparent),
+  linear-gradient(180deg,#F8FBF9 0%,#EFF5F1 100%);position:relative}
+.lg-lang{position:absolute;top:18px;right:34px;z-index:2;font-size:13px;color:#66756D;cursor:pointer;display:flex;align-items:center;gap:5px;user-select:none;padding:7px 10px;border-radius:8px}
+.lg-lang:hover{color:var(--lg);background:#E7F4EE}
+.lg-back{position:absolute;top:18px;left:34px;z-index:2;font-size:13px;color:#66756D;cursor:pointer;display:flex;align-items:center;gap:5px;padding:7px 10px;border-radius:8px}
+.lg-back:hover{color:var(--lg);background:#E7F4EE}
+.lg-card{width:424px;max-width:100%;background:rgba(255,255,255,.92);border:1px solid rgba(12,70,45,.10);border-radius:8px;box-shadow:0 24px 70px rgba(19,45,33,.15),0 2px 0 rgba(255,255,255,.8) inset;padding:24px 28px 22px;backdrop-filter:blur(18px)}
+.lg-panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+.lg-title{font-size:27px;color:var(--lg-ink);font-weight:700;line-height:1.18;margin:0}
+.lg-title small{display:block;margin-top:6px;font-family:'Raleway','PingFang SC',sans-serif;font-size:12px;font-weight:700;letter-spacing:.13em;color:#8B6B2D;text-transform:uppercase}
+.lg-secure{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:#0F8F58;background:#E8F6EF;border:1px solid #CBE8D9;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
+.lg-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#F2F7F4;border:1px solid #DDEAE3;border-radius:8px;padding:5px;margin-bottom:18px}
+.lg-tab{text-align:center;padding:10px 0;font-size:13px;color:#66756D;cursor:pointer;border-radius:6px;transition:.16s;font-weight:700}
 .lg-tab:hover{color:var(--lg)}
-.lg-tab.active{color:var(--lg);border-bottom-color:var(--lg);font-weight:bold}
-.lg-fr{margin-bottom:14px}
-.lg-fl{font-size:13px;color:#606266;margin-bottom:6px;display:block}
-.lg-fl b{color:#f56c6c;font-weight:400;margin-right:2px}
-#login input,#login select{height:38px;border:1px solid #dcdfe6;border-radius:4px;padding:0 11px;font-size:13px;color:#333;width:100%;background:#fff}
-#login input:focus,#login select:focus{border-color:var(--lg);box-shadow:none}
-.lg-phone-grp{display:flex}
-.lg-phone-grp select{width:88px;border-radius:4px 0 0 4px;border-right:none;flex-shrink:0;padding:0 6px}
-.lg-phone-grp input{border-radius:0 4px 4px 0}
+.lg-tab.active{color:#fff;background:linear-gradient(135deg,#119B61,#05734D);box-shadow:0 8px 18px rgba(5,115,77,.22)}
+.lg-fr{margin-bottom:12px}
+.lg-fl{font-size:12.5px;color:#24372E;margin-bottom:7px;display:block;font-weight:800}
+.lg-fl b{color:#D97706;font-weight:700;margin-right:3px}
+#login input,#login select{height:40px;border:1px solid #D8E4DD;border-radius:8px;padding:0 12px;font-size:13px;color:#17251E;width:100%;background:#fff;transition:.14s}
+#login input::placeholder{color:#9AA7A0}
+#login input:focus,#login select:focus{border-color:#0F8F58;box-shadow:0 0 0 3px rgba(15,143,88,.12)}
+.lg-phone-grp{display:flex;gap:8px}
+#login .lg-phone-grp select{width:100px;flex-shrink:0;padding:0 8px}
+#login .lg-phone-grp input,#login .lg-row input{flex:1;min-width:0;width:auto}
 .lg-row{display:flex;gap:10px;align-items:flex-start}
-.lg-imgbox{width:108px;height:38px;flex-shrink:0;border:1px solid #dcdfe6;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(135deg,#eef7f0,#e3f3e8);font-family:var(--mono);font-size:19px;font-weight:700;letter-spacing:4px;color:#047857;font-style:italic;user-select:none;position:relative;overflow:hidden}
-.lg-imgbox span{transform:skewX(-8deg)}
-.lg-imghelp{font-size:12px;color:#047857;text-align:center;cursor:pointer;margin-top:3px;width:108px;flex-shrink:0}
-.lg-codebtn{height:38px;flex-shrink:0;width:118px;border:1px solid var(--lg);background:var(--lg);color:#fff;border-radius:4px;font-size:13px;cursor:pointer;transition:.15s}
-.lg-codebtn:hover:not(:disabled){background:var(--lgd)}
-.lg-codebtn:disabled{background:#a0d9b4;border-color:#a0d9b4;cursor:not-allowed}
-.lg-submit{width:100%;height:42px;background:var(--lg);color:#fff;border:none;border-radius:4px;font-size:15px;font-weight:600;cursor:pointer;margin-top:26px;transition:.15s}
-.lg-submit:hover{background:var(--lgd)}
-.lg-extra{margin-top:16px;text-align:center;color:#999;font-size:12px;line-height:1.9}
-.lg-bottomlogo{margin-top:22px}.lg-bottomlogo img{height:30px;opacity:.9}
-.lg-back{position:absolute;top:22px;left:28px;font-size:13px;color:#909399;cursor:pointer;display:flex;align-items:center;gap:5px}
-.lg-back:hover{color:var(--lg)}
-@media(max-width:820px){.lg-left{display:none}}
+.lg-imgbox{width:112px;height:40px;flex-shrink:0;border:1px solid #D8E4DD;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:
+  linear-gradient(135deg,rgba(255,255,255,.85),rgba(230,243,236,.9)),
+  repeating-linear-gradient(35deg,rgba(15,143,88,.18) 0 2px,transparent 2px 7px);font-family:var(--mono);font-size:19px;font-weight:800;letter-spacing:4px;color:#075B3B;font-style:italic;user-select:none;position:relative;overflow:hidden}
+.lg-imgbox:after{content:'';position:absolute;inset:-20px;background:linear-gradient(110deg,transparent 35%,rgba(199,163,92,.22),transparent 62%);transform:translateX(-30%)}
+.lg-imgbox span{position:relative;z-index:1;transform:skewX(-8deg)}
+.lg-imghelp{font-size:12px;color:#7B8A82;text-align:center;cursor:pointer;margin-top:4px;width:112px;flex-shrink:0}
+.lg-imghelp:hover{color:var(--lg)}
+.lg-codebtn{height:40px;flex-shrink:0;width:132px;border:1px solid #0F8F58;background:#fff;color:#0F8F58;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;transition:.15s}
+.lg-codebtn:hover:not(:disabled){background:#E8F6EF}
+.lg-codebtn:disabled{background:#EFF5F1;border-color:#D8E4DD;color:#9AA7A0;cursor:not-allowed}
+.lg-submit{width:100%;height:44px;background:linear-gradient(135deg,#119B61,#056F4A);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:800;cursor:pointer;margin-top:18px;transition:.16s;box-shadow:0 14px 28px rgba(5,111,74,.24)}
+.lg-submit:hover{transform:translateY(-1px);box-shadow:0 18px 34px rgba(5,111,74,.30)}
+.lg-submit:active{transform:none}
+.lg-extra{margin-top:12px;text-align:center;color:#7B8A82;font-size:12px;line-height:1.9}
+.lg-support{margin-top:13px;padding-top:12px;border-top:1px solid #E6EEE9;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#7B8A82;font-size:12px}
+.lg-support b{color:#263A30}
+.lg-demo{font-size:12px;color:#8B6B2D;background:#FFF8E6;border:1px solid #F1DFB6;border-radius:999px;padding:7px 12px;cursor:pointer;font-weight:700}
+.lg-demo:hover{background:#FFF2CC}
+.lg-bottomlogo{margin-top:18px}.lg-bottomlogo img{height:28px;opacity:.72}
+@media(max-width:980px){#login.on{display:block}.lg-left{min-height:360px}.lg-left-in{width:auto;margin:0;padding:52px 28px}.lg-right{min-height:calc(100vh - 360px);flex-basis:auto}.lg-left-in h2{font-size:38px}.lg-brand-row{margin-bottom:54px}}
+@media(max-width:640px){.lg-left{display:none}.lg-right{flex:none;width:100%;max-width:100%;min-height:100vh;padding:72px 18px 24px}.lg-back,.lg-lang{top:18px}.lg-card{width:100%;padding:24px 18px}.lg-panel-head{display:block}.lg-secure{margin-top:12px}.lg-title{font-size:24px}.lg-row{gap:8px}.lg-codebtn{width:118px}}
 /* ============ APP SHELL ============ */
 .app{display:none}.app.on{display:flex;min-height:100vh}
 .sidebar{width:var(--sw);background:var(--w);border-right:1px solid var(--bd);position:fixed;inset:0 auto 0 0;height:100vh;z-index:100;display:flex;flex-direction:column}
@@ -333,28 +354,33 @@ textarea{resize:vertical;min-height:72px}
   <div class="home-foot">💡 演示提示：入驻统一走<b>供应商入驻</b>（采购SCM · 二级审批不变），选「平台商家」渠道的建档时<b>自动开通店铺管理系统</b>账号 → 商家登录<b>商家端</b>填「开店任务」(店铺基础信息) → 提交 <b>店铺运营平台</b>「开店任务审核」→ 通过即营业。<br>顶部 / 侧边栏可随时切换角色。 · v1.2 · 2026-06-30</div>
 </div>
 
-<!-- ================= LOGIN（商家端入口 · 参考线上 VMS login.vue） ================= -->
+<!-- ================= LOGIN（商家端入口 · 高端视觉版） ================= -->
 <div id="login">
   <div class="lg-left">
     <div class="lg-left-in">
-      <div class="chip"><img src="https://pub.foodexcdn.com/intl-ddxm-base-service/foodmax_66f3e76c3893477aa82e835e5a87f705.png" alt="Foodmax"></div>
-      <h2>商家管理系统</h2>
-      <p>食材供应链 · 商家协同平台<br>入驻 · 商品 · 履约 · 结算 · 售后 一站式经营</p>
-      <div class="lg-foods">🥬 🐟 🍅 🥩 🍤</div>
+      <div class="lg-brand-row">
+        <div class="chip"><img src="https://pub.foodexcdn.com/intl-ddxm-base-service/foodmax_66f3e76c3893477aa82e835e5a87f705.png" alt="Foodmax"></div>
+        <div class="lg-brand-text">FOODMAX MERCHANT</div>
+      </div>
+      <div class="lg-hero-kicker">Fresh commerce operations suite</div>
+      <h2>店铺管理系统</h2>
+      <p>Foodmax商家一站式经营管理系统</p>
     </div>
   </div>
   <div class="lg-right">
     <div class="lg-back" onclick="backToHome()">‹ 返回演示首页</div>
     <div class="lg-lang" onclick="toast('演示版仅中文','info')">🌐 中文 ▾</div>
     <div class="lg-card">
-      <div class="lg-title">Foodmax 商家管理系统</div>
+      <div class="lg-panel-head">
+        <div class="lg-title">店铺管理系统<small>Foodmax Merchant</small></div>
+        <div class="lg-secure">安全验证</div>
+      </div>
       <div class="lg-tabs">
-        <div class="lg-tab active" data-t="pwd" onclick="loginTab('pwd')">账号密码登录</div>
-        <div class="lg-tab" data-t="phone" onclick="loginTab('phone')">手机号登录</div>
+        <div class="lg-tab active" data-t="phone" onclick="loginTab('phone')">手机号登录</div>
         <div class="lg-tab" data-t="email" onclick="loginTab('email')">邮箱登录</div>
       </div>
       <!-- 账号密码登录 -->
-      <div id="lg-pwd-form">
+      <div id="lg-pwd-form" style="display:none">
         <div class="lg-fr"><label class="lg-fl"><b>*</b>账号</label><input id="lg-acct" value="9123 4567" placeholder="请输入账号（手机号 / 邮箱）"></div>
         <div class="lg-fr"><label class="lg-fl"><b>*</b>密码</label>
           <div style="position:relative"><input id="lg-pwd" type="password" placeholder="请输入密码" style="padding-right:40px"><span onclick="togglePwd()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:#999;font-size:15px;user-select:none">👁</span></div>
@@ -369,7 +395,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="lg-fr"><label class="lg-fl"><b>*</b>店铺</label><select><option value="">请选择店铺</option><option selected>绿鲜源蔬果（新加坡）· M2026-0815</option></select></div>
       </div>
       <!-- 手机号登录 -->
-      <div id="lg-phone-form" style="display:none">
+      <div id="lg-phone-form">
         <div class="lg-fr"><label class="lg-fl"><b>*</b>手机号</label>
           <div class="lg-phone-grp">
             <select id="lg-region"><option value="65">+65</option><option value="971" selected>+971</option><option value="966">+966</option><option value="86">+86</option></select>
@@ -379,7 +405,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="lg-fr"><label class="lg-fl"><b>*</b>验证码</label>
           <div class="lg-row">
             <input id="lg-img-phone" maxlength="4" placeholder="请输入图形验证码">
-            <div style="text-align:center"><div class="lg-imgbox" onclick="refreshImgCode()"><span id="lg-imgcode">A7K9</span></div><div class="lg-imghelp" onclick="refreshImgCode()">看不清? 换一换</div></div>
+            <div style="text-align:center"><div class="lg-imgbox" onclick="refreshImgCode()"><span id="lg-imgcode" class="lg-code-txt">A7K9</span></div><div class="lg-imghelp" onclick="refreshImgCode()">看不清? 换一换</div></div>
           </div>
         </div>
         <div class="lg-fr"><label class="lg-fl"><b>*</b>站点</label>
@@ -401,7 +427,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="lg-fr"><label class="lg-fl"><b>*</b>验证码</label>
           <div class="lg-row">
             <input id="lg-img-email" maxlength="4" placeholder="请输入图形验证码">
-            <div style="text-align:center"><div class="lg-imgbox" onclick="refreshImgCode()"><span>A7K9</span></div><div class="lg-imghelp" onclick="refreshImgCode()">看不清? 换一换</div></div>
+            <div style="text-align:center"><div class="lg-imgbox" onclick="refreshImgCode()"><span class="lg-code-txt">A7K9</span></div><div class="lg-imghelp" onclick="refreshImgCode()">看不清? 换一换</div></div>
           </div>
         </div>
         <div class="lg-fr"><label class="lg-fl"><b>*</b>站点</label><select><option value="">请选择站点</option><option selected>新加坡站点 (Singapore)</option><option>迪拜站点 (Dubai)</option></select></div>
@@ -415,8 +441,11 @@ textarea{resize:vertical;min-height:72px}
       </div>
       <div id="lg-msg" style="display:none;background:var(--rl);color:#b91c1c;font-size:12.5px;padding:9px 12px;border-radius:8px;margin-bottom:10px;line-height:1.6">该账号尚未开通店铺管理系统。请先在「采购SCM平台」完成供应商入驻审批（渠道=平台商家），审批通过后账号将自动开通，再用本手机号登录。</div>
       <button class="lg-submit" onclick="doLogin()">登录</button>
-      <div style="text-align:center;margin-top:12px"><button class="btn-link" onclick="act_demoLogin()" style="font-size:12px;color:#9aa0a6;background:none;border:none;cursor:pointer">🧪 演示直通：跳过入驻审批，直接开通并登录</button></div>
-      <div class="lg-extra"><div>如遇登录问题，请联系您的业务员</div><div>客服电话: 400-080-3365</div></div>
+      <div class="lg-extra">供应商入驻审批通过后，商家账号将自动开通。</div>
+      <div class="lg-support">
+        <span>客服电话 <b>400-080-3365</b></span>
+        <button class="lg-demo" onclick="act_demoLogin()">演示直通</button>
+      </div>
     </div>
     <div class="lg-bottomlogo"><img src="https://pub.foodexcdn.com/intl-ddxm-base-service/foodmax_66f3e76c3893477aa82e835e5a87f705.png" alt="Foodmax"></div>
   </div>
@@ -650,7 +679,7 @@ const NAV={
 
 /* ================= LOGIN（商家端入口，参考线上 VMS OTP 登录） ================= */
 let lgTimer=null,lgWait=0;
-function showLogin(){document.getElementById('home').style.display='none';document.getElementById('login').classList.add('on');refreshImgCode();}
+function showLogin(){document.getElementById('home').style.display='none';document.getElementById('login').classList.add('on');loginTab('phone');refreshImgCode();}
 function backToHome(){document.getElementById('login').classList.remove('on');clearInterval(lgTimer);lgWait=0;document.getElementById('home').style.display='flex';}
 function loginTab(t){
   document.querySelectorAll('#login .lg-tab').forEach(e=>e.classList.toggle('active',e.dataset.t==t));
