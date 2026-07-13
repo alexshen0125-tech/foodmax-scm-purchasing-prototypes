@@ -617,7 +617,8 @@ const NAV={
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
     {sec:'合规'},
     {id:'m-after-group',ic:'↩️',t:'售后管理',p1:1,children:[
-      {id:'m-aftersale',ic:'↩️',t:'售后工单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
+      {id:'m-aftersale',ic:'↩️',t:'售后订单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
+      {id:'m-after-ticket',ic:'🛎️',t:'售后工单'},
       {id:'m-after-return',ic:'📦',t:'退货单'},
     ]},
     {id:'m-quality',ic:'🔬',t:'质检管理'},
@@ -1540,10 +1541,11 @@ function act_svcInvPreview(no){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${issued?`<button class="btn btn-p" onclick="act_svcInvDownload('${s.no}')">下载 PDF</button>`:''}</div>`);
 }
 
-/* ---------- 商家端：售后工单（售后管理子菜单） ---------- */
+/* ---------- 商家端：售后订单（售后管理子菜单）——判责/扣款/必关联正向订单 ---------- */
 PAGES['m-aftersale']=()=>{
   const pend=DB.afterSales.filter(a=>a.status=='pending').length;
-  return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+  return `${flowTip(`<b>售后订单</b>由客户对<b>已收货正向订单</b>发起，平台<b>三方判责</b>（商家/平台/买家）；判<b>商家责任</b>时按售后金额<b>逆向扣款</b>。每张售后订单<b>必关联一张正向订单</b>。`)}
+  <div class="card"><div class="card-hd"><h3>售后订单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
     ${DB.afterSales.map((a,i)=>`<tr>
       <td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>
@@ -1570,13 +1572,33 @@ function afterMerchantOps(a,i){
   return b.join(' ');
 }
 
-/* ---------- 商家端：退货单（售后管理子菜单，内容复用 delivery.js 的 deliv_tabReturn） ---------- */
-PAGES['m-after-return']=()=>window.deliv_tabReturn?window.deliv_tabReturn():'<div class="empty"><div class="e-ic">📦</div><div class="e-t">退货单模块未加载</div></div>';
+/* ---------- 商家端：售后工单（售后管理子菜单）——售后处理跟进单，不一定关联单据，凡与商家有关即展示 ---------- */
+// 售后工单 ≠ 售后订单：工单只跟进售后处理进度(客诉/质检/回访等)，不做判责扣款，可无关联正向订单
+const AFTER_TICKETS=[
+  {id:'GD-26070301',issue:'客户咨询：菠菜到货偏黄，是否影响食用（未成单售后）',status:'处理中'},
+  {id:'GD-26070302',issue:'平台质检抽检反馈：包装标签信息不全，需整改确认',status:'待处理'},
+  {id:'GD-26070215',issue:'客户对上周配送延迟的投诉跟进',status:'已解决'},
+  {id:'GD-26070118',issue:'大客户满意度主动回访',status:'已关闭'},
+];
+const TICKET_TAG={'待处理':'t-y','处理中':'t-b','已解决':'t-g','已关闭':'t-gr'};
+PAGES['m-after-ticket']=()=>{
+  const open=AFTER_TICKETS.filter(t=>t.status=='待处理'||t.status=='处理中').length;
+  return `${flowTip(`<b>售后工单</b>用于<b>跟进售后处理</b>（客诉、质检整改、回访等），<b>不做判责扣款</b>，也<b>不一定关联单据</b>；凡与本商家相关的售后处理都会在此展示。涉及判责/扣款请见<b>售后订单</b>。`)}
+  <div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">待处理/处理中 ${open} · 共 ${AFTER_TICKETS.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>工单号</th><th>问题</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    ${AFTER_TICKETS.map(t=>`<tr>
+      <td class="mono">${t.id}</td>
+      <td style="max-width:520px;white-space:normal">${t.issue}</td>
+      <td><span class="tag ${TICKET_TAG[t.status]||'t-gr'}"><span class="dot"></span>${t.status}</span></td>
+      <td style="white-space:nowrap">${(t.status=='待处理'||t.status=='处理中')?`<button class="btn btn-p btn-sm" onclick="toast('已跟进工单 ${t.id}','ok')">跟进</button> `:''}<button class="btn btn-o btn-sm" onclick="toast('工单 ${t.id} 详情','info')">详情</button></td>
+    </tr>`).join('')}
+    </tbody></table></div></div></div>`;
+};
 
 /* ---------- 商家端：送货退货（退货退款·回仓管理） ---------- */
 PAGES['m-delivery']=()=>{
   const rs=DB.afterSales.filter(a=>a.type=='退货退款');
-  return `<div class="card"><div class="card-hd"><h3>退货回仓</h3><span class="sub">退货退款工单的退实物回仓管理（退款不退货类不在此）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>工单号</th><th>客户/订单</th><th>商品</th><th>金额</th><th>退货状态</th><th>操作</th></tr></thead><tbody>${rs.map(a=>{const i=DB.afterSales.indexOf(a);return `<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td>${a.returnStatus?`<span class="tag ${a.returnStatus=='已回仓'?'t-g':'t-pp'}"><span class="dot"></span>${a.returnStatus}</span>`:'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td>${a.returnStatus=='退货在途'?`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认回仓</button>`:a.returnStatus=='已回仓'?'<span style="color:var(--gd);font-size:12px">已结案</span>':`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`}</td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货工单</div><div class="e-s">退货退款类售后工单会在此管理退实物回仓</div></div>'}</div></div>`;
+  return `<div class="card"><div class="card-hd"><h3>退货回仓</h3><span class="sub">退货退款工单的退实物回仓管理（退款不退货类不在此）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>工单号</th><th>客户/订单</th><th>商品</th><th>金额</th><th>退货状态</th><th>操作</th></tr></thead><tbody>${rs.map(a=>{const i=DB.afterSales.indexOf(a);return `<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td>${a.returnStatus?`<span class="tag ${a.returnStatus=='已回仓'?'t-g':'t-pp'}"><span class="dot"></span>${a.returnStatus}</span>`:'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td>${a.returnStatus=='退货在途'?`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认回仓</button>`:a.returnStatus=='已回仓'?'<span style="color:var(--gd);font-size:12px">已结案</span>':`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`}</td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货工单</div><div class="e-s">退货退款类售后订单会在此管理退实物回仓</div></div>'}</div></div>`;
 };
 
 /* ---------- 商家端：违规整改（闭环F 商家侧） ---------- */
@@ -1631,7 +1653,7 @@ function exitChecks(){
     {t:'5. 无已结算未开票的单据',ok:DB.bill.status=='none'||DB.bill.status=='confirmed'&&DB.invoices.every(i=>i.status=='verified'),fix:'有客户发票待平台开具'},
     {t:'6. 无进行中的营销活动',ok:true,fix:''},
     {t:'7. 末笔订单完成满 30 天',ok:true,fix:''},
-    {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='closed'),fix:'有售后工单未结案'},
+    {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='closed'),fix:'有售后订单未结案'},
     {t:'9. 无欠款或负账单',ok:DB.merchant.vioScore<6,fix:'存在未处理违规/罚款'},
     {t:'10. 符合平台规则及法律法规',ok:true,fix:''},
   ];
@@ -2361,7 +2383,7 @@ function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];
 function act_returnReceive(i){const a=DB.afterSales[i];a.returnStatus='已回仓';a.status='closed';render();toast(`${a.id} 退货已回仓，售后结案`,'ok');}
 // 售后详情
 function act_afterDetail(i){const a=DB.afterSales[i];
-  modal(`<div class="mc-hd"><h3>售后工单 ${a.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><dl class="dl"><dt>订单</dt><dd class="mono">${a.order}</dd><dt>客户</dt><dd>${ord_mask(a.client)}</dd><dt>类型</dt><dd>${a.type}</dd><dt>商品</dt><dd>${a.item}</dd><dt>原因</dt><dd>${a.reason}</dd><dt>金额</dt><dd>${money(a.amt)}</dd><dt>判责</dt><dd>${a.liable?a.liable+'责 · '+a.refundType:'待判责'}</dd>${a.appeal?`<dt>申诉</dt><dd>${a.appeal}</dd>`:''}${a.returnStatus?`<dt>退货</dt><dd>${a.returnStatus}</dd>`:''}</dl></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
+  modal(`<div class="mc-hd"><h3>售后订单 ${a.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><dl class="dl"><dt>关联正向订单</dt><dd class="mono">${a.order}</dd><dt>客户</dt><dd>${ord_mask(a.client)}</dd><dt>类型</dt><dd>${a.type}</dd><dt>商品</dt><dd>${a.item}</dd><dt>原因</dt><dd>${a.reason}</dd><dt>金额</dt><dd>${money(a.amt)}</dd><dt>判责</dt><dd>${a.liable?a.liable+'责 · '+a.refundType:'待判责'}</dd>${a.appeal?`<dt>申诉</dt><dd>${a.appeal}</dd>`:''}${a.returnStatus?`<dt>退货</dt><dd>${a.returnStatus}</dd>`:''}</dl></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 // 闭环F 违规
 function act_addViolation(type,score,fine,detail){
