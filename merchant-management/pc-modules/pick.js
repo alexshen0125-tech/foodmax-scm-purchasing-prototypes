@@ -213,7 +213,6 @@
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-p btn-sm" ${selN?'':'disabled'} onclick="label_printSel()">批量打印${selN?`（已选 ${selN}）`:''}</button>
         <button class="btn btn-p btn-sm" onclick="label_bySeqPrint()">按序号打印</button>
-        <button class="btn btn-p btn-sm" onclick="label_printAll()">应送货打印</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出应送货标签清单.xlsx','ok')">应送货导出</button>
         <span style="font-size:12px;color:var(--r)">每次最多支持 50 个商品进行批量打印标签</span>
       </div>
