@@ -267,7 +267,8 @@ function renderList(container){
         <div class="nums"><div class="n"><div class="v">0</div><div class="l">高投预警</div></div>
           <div class="n"><div class="v">0</div><div class="l">高投商品</div></div></div></div>
     </div>
-    <div id="ret-card" style="margin:2px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退货单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退/滞销商品退回仓库 · 预约提货</div></div>${svg('arrow')}</div>
+    <div id="tk-card" style="margin:2px 16px 0;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">🛎️ 售后工单（客诉工单）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">平台处理 · 商家只读，仅查看处理记录</div></div>${svg('arrow')}</div>
+    <div id="ret-card" style="margin:10px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退货单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退/滞销商品退回仓库 · 预约提货</div></div>${svg('arrow')}</div>
     <div class="as-filters"><span class="fl" id="f-city">全部城市 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="fl" id="f-date">履约日期 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="ft">支持按照履约日期筛选</span></div>
@@ -278,6 +279,7 @@ function renderList(container){
   const list=container.querySelector('#l');
   container.querySelector('#q-card').onclick=openQuality;
   container.querySelector('#hi-card').onclick=()=>toast('高投诉商品统计开发中');
+  container.querySelector('#tk-card').onclick=openTicket;
   container.querySelector('#ret-card').onclick=()=>{if(window.FM_MOD&&window.FM_MOD.return)window.FM_MOD.return();};
   container.querySelector('#f-city').onclick=()=>sheet([{label:'全部城市',onClick:()=>toast('全部城市')},{label:'中区',onClick:()=>toast('中区')},{label:'东区',onClick:()=>toast('东区')},{label:'西区',onClick:()=>toast('西区')},{label:'北区',onClick:()=>toast('北区')}]);
   container.querySelector('#f-date').onclick=()=>toast('选择履约日期');
@@ -489,6 +491,67 @@ function openRecord(){
 /* ========== 黑名单（右上入口，占位页） ========== */
 function openBlacklist(){
   pushPage({title:'黑名单',body:`<div class="empty"><div class="ei">${svg('user')}</div><h4>暂无黑名单客户</h4><p>对存在恶意客诉的客户，可在售后处理中加入黑名单</p></div>`});
+}
+
+/* ========== 售后工单（客诉工单）——平台处理，商家【只读】，对齐 PC scm 售后工单 ========== */
+// 客户信息脱敏、物流信息不展示给商家
+const TICKETS=[
+  {id:'KS2026071311136',time:'2026-07-12 16:22',channel:'客户反馈',custStore:'海底捞（新加坡）',custNo:'C000015636',phone:'+65 97776221',
+   cat:'商品质量 / 生鲜品相',intervene:'是',desc:'菠菜到货部分偏黄，客户咨询是否影响食用',order:'#SG20260701018',
+   status:'已完成',result:'安抚 + 补货',record:'已联系客户说明品相原因，安排下一批次补发 20kg',dept:'平台客服',refund:0,coupon:0,goodwill:0,restock:20},
+  {id:'KS2026071311135',time:'2026-07-12 16:22',channel:'销售反馈',custStore:'食为天餐厅',custNo:'C000015637',phone:'+65 97771122',
+   cat:'配送 / 到货延迟',intervene:'是',desc:'客户反馈当日订单送达晚于约定时段约 1 小时',order:'#SG20260629012',
+   status:'处理中',result:'—',record:'已受理，核实司机行程中',dept:'平台物流',refund:0,coupon:0,goodwill:0,restock:0},
+  {id:'KS2026071311134',time:'2026-07-12 16:21',channel:'平台巡检',custStore:'丰盛轩',custNo:'C000015638',phone:'+65 97773344',
+   cat:'咨询 / 账号 / 信息变更',intervene:'否',desc:'商家询问如何在店铺信息更新食品经营许可证',order:'—',
+   status:'待处理',result:'—',record:'—',dept:'—',refund:0,coupon:0,goodwill:0,restock:0},
+  {id:'KS2026071311127',time:'2026-07-11 15:54',channel:'客户反馈',custStore:'锦记茶餐厅',custNo:'C000006858',phone:'+65 97775566',
+   cat:'商品质量 / 少货',intervene:'是',desc:'白菜实收数量少于订单 2kg，要求核实',order:'#SG20260630021',
+   status:'已完成',result:'退款',record:'核实为分拣少装，已退少货货款',dept:'平台客服',refund:37.20,coupon:0,goodwill:0,restock:0},
+];
+const tkColor=s=>({'待处理':'#B45309','处理中':'#2563EB','已完成':'var(--emerald-2)'}[s]||'var(--sub)');
+const tkMaskName=s=>{s=String(s||'');return s?s[0]+'****':'—';};
+const tkMaskPhone=p=>String(p||'').replace(/(\d)\d{3,}(\d{2})/,'$1****$2');
+const tkMaskNo=n=>{n=String(n||'');return n.length<=3?n:n.slice(0,1)+'****'+n.slice(-2);};
+function tkCard(t,i){
+  return `<div class="ac" data-i="${i}">
+    <div class="allh"><span class="ty" style="font-size:14px">${t.id}</span><span class="st" style="font-weight:700;color:${tkColor(t.status)}">● ${t.status}</span></div>
+    <div class="meta">
+      <div class="r"><span class="k">客诉时间</span><span class="v">${t.time}</span></div>
+      <div class="r"><span class="k">渠道</span><span class="v">${t.channel}</span></div>
+      <div class="r"><span class="k">分类</span><span class="v">${t.cat}</span></div>
+      <div class="r"><span class="k">客诉说明</span><span class="v">${t.desc}</span></div>
+    </div>
+    <div class="det"><span class="btn-d" data-det>查看</span></div></div>`;
+}
+function openTicket(){
+  pushPage({title:'售后工单',body:`
+    <div class="as-yellow" style="margin-top:12px">售后工单（客诉工单）由平台客服/相关部门处理，<b>商家无需处理，仅查看</b>处理记录；客户信息已脱敏。</div>
+    <div class="as-list" id="tl2"></div>`,
+    mount:(p)=>{
+      const l=p.querySelector('#tl2');l.innerHTML=skel(3);
+      setTimeout(()=>{
+        l.innerHTML=TICKETS.map(tkCard).join('');
+        l.querySelectorAll('.ac').forEach((el)=>{const i=+el.dataset.i;el.querySelector('[data-det]').onclick=()=>openTicketDetail(TICKETS[i]);});
+      },420);
+    }});
+}
+function openTicketDetail(t){
+  const row=(k,v)=>`<div class="as-row"><span class="k" style="width:92px;flex:0 0 92px">${k}</span><span class="v">${(v===0||v)?v:'—'}</span></div>`;
+  const amt=v=>v>0?'S$'+Number(v).toFixed(2):'—';
+  pushPage({title:'售后工单',body:`
+    <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>${t.id}</span><span style="font-size:12px;font-weight:600;color:${tkColor(t.status)}">● ${t.status}</span></div>
+      <div style="font-size:12px;color:var(--sub);margin-top:-4px">商家只读 · 由平台处理</div></div>
+    <div class="as-dblock"><div class="bt"><span>基础信息</span></div>
+      ${row('工单编号',t.id)}${row('客诉时间',t.time)}${row('渠道',t.channel)}${row('客户门店',`${tkMaskName(t.custStore)} ${tkMaskNo(t.custNo)}`)}${row('用户联系电话',tkMaskPhone(t.phone))}</div>
+    <div class="as-dblock"><div class="bt"><span>客诉信息</span></div>
+      ${row('分类',t.cat)}${row('是否可干预',t.intervene)}${row('客诉说明',t.desc)}${row('附件','—')}</div>
+    <div class="as-dblock"><div class="bt"><span>订单信息</span></div>
+      ${row('关联订单',t.order&&t.order!=='—'?t.order:'无')}</div>
+    <div class="as-dblock"><div class="bt"><span>处理信息</span></div>
+      ${row('处理状态',`<span style="font-weight:700;color:${tkColor(t.status)}">${t.status}</span>`)}${row('处理结果',t.result)}${row('处理记录',t.record)}${row('责任部门',t.dept)}${row('退款金额',amt(t.refund))}${row('补券金额',amt(t.coupon))}${row('客情金额',amt(t.goodwill))}${row('补货金额',t.restock>0?t.restock+' kg':'—')}</div>
+    <div class="as-yellow" style="margin-bottom:16px">本工单由平台客服/相关部门处理，商家端仅查看处理记录，无需操作。</div>`,
+    });
 }
 
 /* ========== 入口 ========== */
