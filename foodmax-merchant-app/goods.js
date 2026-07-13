@@ -101,6 +101,32 @@ css.textContent=`
 .stk-ref{font-size:12.5px;color:var(--emerald);font-weight:700;margin-top:5px;text-align:right;cursor:pointer;}
 .stk-sold{font-size:12.5px;color:var(--sub);margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
 .stk-sold b{color:#27433A;font-family:'Lora',serif;}
+/* 商品详情(只读·点击卡片进入) */
+.pc .body{cursor:pointer;}
+.gdt{padding:14px 16px 20px;}
+.gdt .card{background:#fff;border-radius:18px;padding:16px;box-shadow:var(--sh-sm);margin-bottom:12px;}
+.gdt .hd{display:flex;gap:13px;align-items:center;}
+.gdt .hd .img{width:56px;height:56px;border-radius:14px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;font-size:30px;flex:0 0 56px;}
+.gdt .hd .nm{font-size:16.5px;font-weight:700;}
+.gdt .hd .sp{font-size:12.5px;color:var(--sub);margin-top:2px;}
+.gdt .tags{margin:10px 0 2px;display:flex;align-items:center;gap:7px;}
+.gdt .st{font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;background:var(--mint-soft);color:var(--emerald-2);}
+.gdt .st.off{background:var(--muted);color:var(--sub);}
+.gdt .bad{background:var(--amber-soft);color:#B45309;font-size:12.5px;border-radius:11px;padding:9px 12px;margin-top:10px;}
+.gdt h5{font-size:13px;color:var(--sub);font-weight:700;margin:2px 0 6px;}
+.gdt .kv{display:flex;font-size:13.5px;padding:7px 0;border-top:1px solid var(--line);}
+.gdt .kv:first-of-type{border-top:none;}
+.gdt .kv .k{width:92px;flex:0 0 92px;color:var(--sub);}
+.gdt .kv .v{flex:1;color:#27433A;word-break:break-all;}
+.gdt .sku{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;}
+.gdt .sku.cur{border-color:var(--emerald);background:var(--mint-soft);}
+.gdt .sku .sn{font-size:14.5px;font-weight:700;display:flex;justify-content:space-between;gap:8px;align-items:center;}
+.gdt .sku .cur-b{font-size:10.5px;font-weight:700;color:var(--emerald-2);background:#fff;border:1px solid var(--emerald);border-radius:5px;padding:1px 7px;margin-left:6px;}
+.gdt .sku .ln{font-size:12.5px;color:#46604F;margin-top:7px;line-height:1.6;}
+.gdt .sku .ln b{color:var(--emerald-2);font-family:'Lora',serif;font-weight:700;}
+.gdt .sku .mode{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;margin-left:2px;}
+.gdt .sku .mode.daily{background:#fff;color:var(--emerald-2);}
+.gdt .sku .mode.once{background:var(--amber-soft);color:#B45309;}
 `;
 document.head.appendChild(css);
 
@@ -163,8 +189,37 @@ function bindSku(el,g,s,gi,si,state){
     else openMore(g,state);
   });
   const bad=el.querySelector('[data-bad]');if(bad)bad.onclick=()=>showSupplement();
+  // 点击卡片信息区进入只读详情(管理态/操作按钮/警示/复选除外)
+  const body=el.querySelector('.body');
+  if(body)body.onclick=(e)=>{
+    if(state.manage)return;
+    if(e.target.closest('.acts')||e.target.closest('[data-bad]'))return;
+    openGoodsDetail(g,s);
+  };
 }
 
+// 商品详情(只读)：点击卡片信息区进入，展示 SPU 信息 + 全部 SKU 规格(对齐 PC act_spuDetail)
+function openGoodsDetail(g,s){
+  const on=isOnShelf(g);
+  const info=[['商品名称',g.n],['品类',g.cat],['税率',taxRate(g)+'%'],['商机推荐',g.rec?'是':'否'],['累计销量',(g.sales||0)+' 件'],['创建时间',g.createdAt||'—'],['更新时间',g.updatedAt||'—']];
+  pushPage({title:'商品详情',body:`<div class="gdt">
+    <div class="card">
+      <div class="hd"><div class="img">${g.ic}</div><div style="flex:1"><div class="nm">${g.n}</div><div class="sp">${g.cat}</div></div></div>
+      <div class="tags">${g.rec?'<span class="tag rec">商机推荐</span>':''}<span class="st ${on?'':'off'}">${on?'销售中':'未上架'}</span></div>
+      ${g.bad?`<div class="bad">⚠ ${g.bad}</div>`:''}
+      <div style="margin-top:10px">${info.map(r=>`<div class="kv"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
+    </div>
+    <div class="card">
+      <h5>售卖规格（SKU）· 共 ${g.skus.length} 个</h5>
+      ${g.skus.map(x=>{const oos=(+x.stock<=0);const stt=x.off?'已下架':(oos?'售罄':'在售');const cur=x===s;
+        return `<div class="sku${cur?' cur':''}">
+          <div class="sn"><span>${g.n} · ${x.spec}${cur?'<span class="cur-b">当前</span>':''}</span><span style="font-size:12.5px;font-weight:700;color:${x.off?'var(--sub)':'var(--emerald-2)'}">${stt}</span></div>
+          <div class="ln"><b>S$${(+x.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(x.price,g).toFixed(2)}（税率 ${taxRate(g)}%）· 库存 ${x.off?'—':(oos?'0（售罄）':(+x.stock).toLocaleString())}${x.off?'':` ${x.stockMode==='daily'?'<span class="mode daily">每日恢复</span>':'<span class="mode once">售完即止</span>'}`}</div>
+          ${x.updatedAt?`<div class="ln" style="color:#94A3B8">更新 ${x.updatedAt}</div>`:''}
+        </div>`;}).join('')}
+    </div>
+  </div>`});
+}
 function renderList(container,inTab){
   container.innerHTML=`
     ${inTab?`<div class="hm-top" style="padding:14px 20px 6px"><div class="hm-store"><div class="nm disp" style="font-size:24px">商品</div></div><div class="hm-bell">${svg('search')}</div></div>`:''}
