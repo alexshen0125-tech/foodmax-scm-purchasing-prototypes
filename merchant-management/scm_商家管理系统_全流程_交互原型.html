@@ -1606,21 +1606,21 @@ PAGES['m-after-ticket']=()=>{
     </tr>`).join('')}
     </tbody></table></div></div></div>`;
 };
-// 售后工单只读详情（对齐内部客诉工单表单：基础/客诉/订单/物流/处理信息），商家不可编辑
+// 售后工单只读详情（基础/客诉/订单/处理信息）：客户信息脱敏、物流信息不展示给商家，商家不可编辑
 function act_ticketDetail(i){
   const t=AFTER_TICKETS[i];if(!t)return;
   const row=(k,v)=>`<dt>${k}</dt><dd>${(v===0||v)?v:'—'}</dd>`;
   const amt=v=>v>0?money(v):'—';
+  const maskPhone=p=>String(p||'').replace(/(\d)\d{3,}(\d{2})/,'$1****$2');   // 客户手机脱敏：保留首尾
+  const maskNo=n=>{n=String(n||'');return n.length<=3?n:n.slice(0,1)+'****'+n.slice(-2);};
   drawer(`<div class="drawer-hd"><div><h3>售后工单 <span class="mono" style="font-size:13px;color:var(--ts)">${t.id}</span></h3><div style="margin-top:4px"><span class="tag ${TICKET_TAG[t.status]||'t-gr'}"><span class="dot"></span>${t.status}</span> <span class="sub" style="font-size:12px">商家只读 · 由平台处理</span></div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <h4 style="font-size:14px;margin:2px 0 8px;color:var(--g)">基础信息</h4>
-    <dl class="dl">${row('工单编号',`<span class="mono">${t.id}</span>`)}${row('客诉时间',t.time)}${row('渠道',t.channel)}${row('客户门店',`${t.custStore} <span class="mono" style="color:var(--ts);font-size:12px">${t.custNo}</span>`)}${row('用户联系电话',t.phone)}</dl>
+    <dl class="dl">${row('工单编号',`<span class="mono">${t.id}</span>`)}${row('客诉时间',t.time)}${row('渠道',t.channel)}${row('客户门店',`${ord_mask(t.custStore)} <span class="mono" style="color:var(--ts);font-size:12px">${maskNo(t.custNo)}</span>`)}${row('用户联系电话',maskPhone(t.phone))}</dl>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">客诉信息</h4>
     <dl class="dl">${row('分类',t.cat)}${row('是否可干预',t.intervene)}${row('客诉说明',t.desc)}${row('附件','—')}</dl>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">订单信息</h4>
     <dl class="dl">${row('关联订单',t.order&&t.order!='—'?`<span class="mono">${t.order}</span>`:'无')}</dl>
-    <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">物流信息</h4>
-    <dl class="dl">${row('司机姓名',t.driver)}${row('司机手机号',t.driverPhone)}</dl>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">处理信息</h4>
     <dl class="dl">${row('处理状态',`<span class="tag ${TICKET_TAG[t.status]||'t-gr'}"><span class="dot"></span>${t.status}</span>`)}${row('处理结果',t.result)}${row('处理记录',t.record)}${row('责任部门',t.dept)}${row('退款金额',amt(t.refund))}${row('补券金额',amt(t.coupon))}${row('客情金额',amt(t.goodwill))}${row('补货金额',t.restock>0?t.restock+' kg':'—')}</dl>
     <div class="ib ib-gr" style="margin-top:14px"><span class="i">ℹ️</span>本工单由平台客服/相关部门处理，商家端仅查看处理记录，无需操作。</div>
