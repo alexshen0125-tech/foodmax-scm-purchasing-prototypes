@@ -1,4 +1,4 @@
-/* PC · 送货退货 —— 搬迁自 App「送货签到 / 交货进度 / 装筐送货 / 退库单」四合一。
+/* PC · 送货退货 —— 搬迁自 App「送货签到 / 交货进度 / 装筐送货 / 退货单」四合一。
    PC 形态：顶部 Tab(DB.delivTab) 分 4 子页，整页 re-render。
    依赖 inline 脚本：DB / money / toast / modal / modalWide / closeModal / nav / render / tag。
    仓库/区域全 SG，事业部=新加坡事业部。文案照 App 录屏真实中文，不自创业务规则。 */
@@ -25,7 +25,7 @@
     {wh:'大巴窑DC',        time:'07-01 11:00–14:00',should:55, printed:55, delivered:12, early:5, hasStation:true,
       stations:[['大巴窑区',30,30,8],['碧山区',25,25,4]]},
   ];
-  // 退库单
+  // 退货单
   const RET=[
     {id:'TKD2026070108266685',wh:'裕廊DC',  status:'待出库',qty:1,code:'460439',order:'2026-07-01 02:51',deadline:'2026-07-04 02:51'},
     {id:'TKD2026063008267496',wh:'兀兰DC',  status:'待运输',qty:2,code:'897236',order:'2026-06-30 09:12',deadline:'2026-07-03 09:12'},
@@ -254,7 +254,7 @@
   window.deliv_scan=function(){toast('当前仓库未开启装筐功能，无法扫描容器','err');};
 
   /* ============================================================
-     子页 4 · 退库单
+     子页 4 · 退货单
   ============================================================ */
   function tabReturn(){
     const t=DB.returnTab||'all';
@@ -266,17 +266,17 @@
     const filt=`<div class="card"><div class="card-bd" style="padding:12px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div class="row" style="gap:10px;align-items:center">
         <select style="max-width:150px"><option>全部仓库</option>${SG_WH.map(x=>`<option>${x}</option>`).join('')}</select>
-        <select style="max-width:150px"><option>全部单据</option><option>客退退库单</option><option>滞销退库单</option></select>
+        <select style="max-width:150px"><option>全部单据</option><option>客退退货单</option><option>滞销退货单</option></select>
       </div>
-      <button class="btn btn-p btn-sm" onclick="deliv_newReturn()">＋ 新建退库单</button>
+      <button class="btn btn-p btn-sm" onclick="deliv_newReturn()">＋ 新建退货单</button>
     </div></div>`;
-    if(!rows.length) return head+tabs+filt+`<div class="empty"><div class="e-ic">📦</div><div class="e-t">该状态下暂无退库单</div><div class="e-s">切换状态或点「＋ 新建退库单」发起退库。</div></div>`;
+    if(!rows.length) return head+tabs+filt+`<div class="empty"><div class="e-ic">📦</div><div class="e-t">该状态下暂无退货单</div><div class="e-s">切换状态或点「＋ 新建退货单」发起退货。</div></div>`;
     return head+tabs+filt+`
-    <div class="card"><div class="card-hd"><h3>退库单</h3><span class="sub">共 ${rows.length} 单</span></div>
+    <div class="card"><div class="card-hd"><h3>退货单</h3><span class="sub">共 ${rows.length} 单</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>退库单号</th><th>状态</th><th>仓库</th><th>件数</th><th>提货码</th><th>提货截止时间</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>退货单号</th><th>状态</th><th>仓库</th><th>件数</th><th>提货码</th><th>提货截止时间</th><th>操作</th></tr></thead><tbody>
       ${rows.map((r,idx)=>`<tr>
-        <td class="mono">${r.id}<div style="margin-top:3px"><span class="tag t-gr" style="font-size:10.5px">客退退库单</span></div><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.order} 下单</div></td>
+        <td class="mono">${r.id}<div style="margin-top:3px"><span class="tag t-gr" style="font-size:10.5px">客退退货单</span></div><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.order} 下单</div></td>
         <td>${retTag(r.status)}</td>
         <td><span style="color:var(--r)">●</span> ${r.wh}</td>
         <td>共 <b>${r.qty}</b> 件</td>
@@ -289,20 +289,20 @@
       </tbody></table></div></div></div>`;
   }
   window.deliv_retDetail=function(id){const r=RET.find(x=>x.id==id);
-    modal(`<div class="mc-hd"><h3>退库单 ${r.id}</h3><p>${retTag(r.status)} · ${r.wh}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modal(`<div class="mc-hd"><h3>退货单 ${r.id}</h3><p>${retTag(r.status)} · ${r.wh}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv"><div><div class="k">提货码</div><div class="v mono">${r.code}</div></div><div><div class="k">件数</div><div class="v">共 ${r.qty} 件</div></div><div><div class="k">下单时间</div><div class="v" style="font-size:13px">${r.order}</div></div><div><div class="k">提货截止</div><div class="v" style="font-size:13px;color:var(--r)">${r.deadline}</div></div></div>
     </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
   };
 
-  // 新建退库单
+  // 新建退货单
   window.deliv_newReturn=function(){
     DB.retNew=DB.retNew||{type:'成品',lines:[]};
     deliv_renderNew();
   };
   function deliv_renderNew(){
     const n=DB.retNew,tot=n.lines.reduce((s,l)=>s+l.qty,0);
-    modalWide(`<div class="mc-hd"><h3>新建退库单</h3><p>退库信息 + 退库商品，提交后生成提货码</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-      <div class="card" style="box-shadow:none;margin-bottom:12px"><div class="card-hd"><h3>退库信息</h3></div><div class="card-bd">
+    modalWide(`<div class="mc-hd"><h3>新建退货单</h3><p>退货信息 + 退货商品，提交后生成提货码</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+      <div class="card" style="box-shadow:none;margin-bottom:12px"><div class="card-hd"><h3>退货信息</h3></div><div class="card-bd">
         <div class="fg2">
           <div class="fr"><label class="fl"><b>*</b>取货仓库</label><select id="ret-wh">${SG_WH.map(x=>`<option ${n.wh==x?'selected':''}>${x}</option>`).join('')}</select></div>
           <div class="fr"><label class="fl"><b>*</b>商品类型</label>
@@ -312,13 +312,13 @@
             </div></div>
         </div>
       </div></div>
-      <div class="card" style="box-shadow:none"><div class="card-hd"><h3>退库商品</h3><button class="btn btn-link" onclick="deliv_addRetLine()">＋ 添加退库商品</button></div>
+      <div class="card" style="box-shadow:none"><div class="card-hd"><h3>退货商品</h3><button class="btn btn-link" onclick="deliv_addRetLine()">＋ 添加退货商品</button></div>
       <div class="card-bd ${n.lines.length?'flush':''}">
-        ${n.lines.length?`<table><thead><tr><th>商品</th><th>规格</th><th>退库数量</th><th>预估货值</th><th></th></tr></thead><tbody>
+        ${n.lines.length?`<table><thead><tr><th>商品</th><th>规格</th><th>退货数量</th><th>预估货值</th><th></th></tr></thead><tbody>
           ${n.lines.map((l,i)=>`<tr><td><b>${l.name}</b></td><td>${l.spec}</td><td>${l.qty} ${l.unit}</td><td>${money(l.qty*l.price)}</td><td><button class="btn btn-link" onclick="deliv_delRetLine(${i})">移除</button></td></tr>`).join('')}
-        </tbody></table>`:`<div class="empty" style="padding:26px 0"><div class="e-ic">➕</div><div class="e-t">尚未添加退库商品</div><div class="e-s">点右上「＋ 添加退库商品」从库存选择。</div></div>`}
+        </tbody></table>`:`<div class="empty" style="padding:26px 0"><div class="e-ic">➕</div><div class="e-t">尚未添加退货商品</div><div class="e-s">点右上「＋ 添加退货商品」从库存选择。</div></div>`}
       </div></div>
-    </div><div class="mc-ft"><div style="flex:1;font-size:13px">退货商品合计 <b style="font-size:16px">${tot}</b> 件</div><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" ${n.lines.length?'':'disabled'} onclick="deliv_submitReturn()">提交退库单</button></div>`);
+    </div><div class="mc-ft"><div style="flex:1;font-size:13px">退货商品合计 <b style="font-size:16px">${tot}</b> 件</div><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" ${n.lines.length?'':'disabled'} onclick="deliv_submitReturn()">提交退货单</button></div>`);
   }
   window.deliv_addRetLine=function(){
     const pool=[['本地白菜','5kg/箱','箱',12.5],['有机西兰花','3kg/箱','箱',21.0],['鲜鸡蛋','30枚/盘','盘',8.4],['精品油豆泡','1.5kg/组','组',6.2]];
@@ -328,10 +328,10 @@
   };
   window.deliv_delRetLine=function(i){DB.retNew.lines.splice(i,1);deliv_renderNew();};
   window.deliv_submitReturn=function(){
-    if(!DB.retNew.lines.length){toast('请先添加退库商品','err');return;}
+    if(!DB.retNew.lines.length){toast('请先添加退货商品','err');return;}
     const tot=DB.retNew.lines.reduce((s,l)=>s+l.qty,0);
     closeModal();DB.retNew={type:'成品',lines:[]};
-    toast(`退库单已提交（共 ${tot} 件），已生成提货码，请按截止时间预约提货`,'ok');
+    toast(`退货单已提交（共 ${tot} 件），已生成提货码，请按截止时间预约提货`,'ok');
   };
 
   // 预约提货
@@ -339,7 +339,7 @@
   function deliv_renderPickup(){
     const p=DB.retPickup,r=RET.find(x=>x.id==p.id);
     const reasons=['商品已无销售价值','不再需要该商品','质量问题','其它'];
-    modal(`<div class="mc-hd"><h3>预约提货</h3><p>退库单 ${r.id} · ${r.wh} · 共 ${r.qty} 件</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modal(`<div class="mc-hd"><h3>预约提货</h3><p>退货单 ${r.id} · ${r.wh} · 共 ${r.qty} 件</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="ib ib-y"><span class="i">⏰</span>超期未确认提货，商品自动进入销残程序。提货截止 <b>${r.deadline}</b>。</div>
       <div class="fr"><label class="fl">是否需要提货</label>
         <div style="display:flex;gap:20px;align-items:center;padding-top:6px">
@@ -366,7 +366,7 @@
       if(!p.reason){toast('请选择放弃原因','err');return;}
       // 二次确认（破坏性动作）
       modal(`<div class="mc-hd"><h3>确认放弃所有权？</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-        <div class="ib ib-r"><span class="i">⚠️</span>退库单 <b>${r.id}</b> 共 ${r.qty} 件，放弃后<b>所有权归仓库处置，不再退还，且不可撤销</b>。</div>
+        <div class="ib ib-r"><span class="i">⚠️</span>退货单 <b>${r.id}</b> 共 ${r.qty} 件，放弃后<b>所有权归仓库处置，不再退还，且不可撤销</b>。</div>
         <dl class="dl"><dt>仓库</dt><dd>${r.wh}</dd><dt>放弃原因</dt><dd>${p.reason}</dd></dl>
       </div><div class="mc-ft"><button class="btn btn-o" onclick="deliv_renderPickupBack()">再想想</button><button class="btn btn-d" onclick="deliv_pickupGiveup()">确认放弃所有权</button></div>`);
     }
@@ -381,7 +381,7 @@
     ensureDeliveriesDemo();
     if(DB.delivView){const d=dvGet(DB.delivView);if(d)return detailPage(d);DB.delivView=null;}
     const t=DB.delivTab||'sign';
-    // 送货管理=正向送货：送货签到/交货进度。「退库单(退货)」已挪到售后管理(m-aftersale)；「装筐送货」暂不要（tabBasket/tabReturn 保留备用）
+    // 送货管理=正向送货：送货签到/交货进度。「退货单(退货)」已挪到售后管理(m-aftersale)；「装筐送货」暂不要（tabBasket/tabReturn 保留备用）
     const top=`<div class="tabs" style="margin-bottom:14px">
       <div class="tab ${t=='sign'?'active':''}" onclick="DB.delivTab='sign';render()">🚚 送货签到</div>
       <div class="tab ${t=='prog'?'active':''}" onclick="DB.delivTab='prog';render()">📊 交货进度</div>
@@ -389,6 +389,6 @@
     const body=t=='prog'?tabProg():tabSign();
     return top+body;
   };
-  // 退库单(退货)已归售后管理：暴露 tabReturn 供主文件 m-aftersale 的「退库单」Tab 调用
+  // 退货单(退货)已归售后管理：暴露 tabReturn 供主文件 m-aftersale 的「退货单」Tab 调用
   window.deliv_tabReturn=tabReturn;
 })();

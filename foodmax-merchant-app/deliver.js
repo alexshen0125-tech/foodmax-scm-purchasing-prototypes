@@ -1,4 +1,4 @@
-/* Food Max 商家端 v2 · 送货退货组（送货签到 / 装筐送货 / 交货进度 / 退库取回）
+/* Food Max 商家端 v2 · 送货退货组（送货签到 / 装筐送货 / 交货进度 / 退货取回）
    还原快驴卖家App 9 张参考截图；SG 仓(裕廊/兀兰/盛港/大巴窑/淡滨尼/义顺 DC) + S$
    评审修复内建：列表先 skel→数据 / 装筐空态用 .empty / 破坏性(不需要提货·放弃所有权)用 confirmDialog / 可点元素≥44px */
 (function(){
@@ -88,7 +88,7 @@ css.textContent=`
 .dl-pw .sub2 .bt{color:#B45309;}.dl-pw .sub2 .ud{color:var(--red);font-weight:700;}
 .dl-pw .pacts{display:flex;gap:9px;margin-top:12px;}
 .dl-pw .pacts .b{flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13px;font-weight:600;background:var(--muted);color:#27433A;cursor:pointer;}
-/* 退库单 */
+/* 退货单 */
 .dl-rcard{background:#fff;border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:var(--sh-sm);}
 .dl-rcard .r1{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);flex-wrap:wrap;}
 .dl-rcard .r1 .no{font-weight:700;color:#27433A;}
@@ -123,7 +123,7 @@ css.textContent=`
 .dl-reason{display:flex;flex-direction:column;}
 .dl-reason .dl-radio{border-bottom:1px solid var(--line);justify-content:space-between;flex-direction:row-reverse;}
 .dl-sheet .sfoot{padding:12px 16px 18px;border-top:1px solid var(--line);}
-/* 新建退库单 */
+/* 新建退货单 */
 .dl-sec{font-size:15px;font-weight:700;margin:16px 16px 8px;}
 .dl-form{background:#fff;border-radius:16px;margin:0 16px;box-shadow:var(--sh-sm);overflow:hidden;}
 .dl-frow{display:flex;align-items:center;justify-content:space-between;padding:0 15px;min-height:52px;font-size:14.5px;}
@@ -319,7 +319,7 @@ function stationPopup(ware,kind){
   m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
 }
 
-/* ============ 退库取回 → 退库单 ============ */
+/* ============ 退货取回 → 退货单 ============ */
 const RETURN=[
  {no:'TKD2026063008266685',ware:'裕廊DC',cnt:1,st:'待出库',order:'2026-06-30 02:51',code:'460439',deadline:'2026-07-03 02:51'},
  {no:'TKD2026062908267496',ware:'兀兰DC',cnt:1,st:'待出库',order:'2026-06-29 09:12',code:'897256',deadline:'2026-07-02 09:12'},
@@ -328,35 +328,35 @@ const RETURN=[
 ];
 function returnCard(g){
   return `<div class="dl-rcard">
-    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退库单</span><span class="st" data-no="${g.no}">${g.st} ›</span></div>
+    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st" data-no="${g.no}">${g.st} ›</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span><span class="cnt">共${g.cnt}件</span></div>
     <div class="info">${g.order} 下单<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">提货截止时间：${g.deadline}</span></div>
     ${g.st==='待出库'?`<div class="rb"><span class="b" data-book="${g.no}">预约提货</span></div>`:''}
   </div>`;
 }
 function openReturn(){
-  pushPage({title:'退库单',body:`
+  pushPage({title:'退货单',body:`
     <div class="dl-banner" id="dl-rbn"><span>请在RF端与仓库工作人员确认实际提货数量后，提供提货码。因售后链路较长，商品数量会有20%的浮动差异，且商品质量也无法完全保证。如果您收到货物后，发现存在严重问题，可拨打客服热线 4000-616-700 进行咨询。</span><span class="x">✕</span></div>
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
     <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待出库">待出库</span><span class="t" data-t="待运输">待运输</span><span class="t" data-t="运输中">运输中</span><span class="t" data-t="已送达">已送达</span></div>
     <div class="dl-list" id="dl-rtl"></div>`,
-    footer:`<button class="btn primary" id="dl-newret">＋ 新建退库单</button>`,
+    footer:`<button class="btn primary" id="dl-newret">＋ 新建退货单</button>`,
     mount:(p)=>{
       const list=p.querySelector('#dl-rtl');
       const draw=(t)=>{
         list.innerHTML=skel(2);
         setTimeout(()=>{
           const data=t==='all'?RETURN:RETURN.filter(g=>g.st===t);
-          if(!data.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('refund')}</div><h4>暂无${t==='all'?'':t}退库单</h4><p>客退商品产生的退库单会出现在这里</p></div>`;return;}
+          if(!data.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('refund')}</div><h4>暂无${t==='all'?'':t}退货单</h4><p>客退商品产生的退货单会出现在这里</p></div>`;return;}
           list.innerHTML=data.map(returnCard).join('');
           list.querySelectorAll('[data-book]').forEach(e=>e.onclick=()=>bookPickup(e.dataset.book));
-          list.querySelectorAll('[data-no]').forEach(e=>e.onclick=()=>toast('退库单 '+e.dataset.no));
+          list.querySelectorAll('[data-no]').forEach(e=>e.onclick=()=>toast('退货单 '+e.dataset.no));
         },420);
       };
       draw('all');
       p.querySelectorAll('#dl-rtab .t').forEach(t=>t.onclick=()=>{p.querySelectorAll('#dl-rtab .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');draw(t.dataset.t);});
       const bn=p.querySelector('#dl-rbn');bn.querySelector('.x').onclick=()=>bn.remove();
-      p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:d.dataset.f==='ware'?'裕廊DC':'客退退库单',onClick:()=>toast('已筛选')},{label:d.dataset.f==='ware'?'兀兰DC':'报损退库单',onClick:()=>toast('已筛选')}]));
+      p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:d.dataset.f==='ware'?'裕廊DC':'客退退货单',onClick:()=>toast('已筛选')},{label:d.dataset.f==='ware'?'兀兰DC':'报损退货单',onClick:()=>toast('已筛选')}]));
       p.querySelector('#dl-newret').onclick=openNewReturn;
     }});
 }
@@ -385,7 +385,7 @@ function bookPickup(no){
         {label:'2026-07-04',onClick:()=>{state.date='2026-07-04';refresh();}}]);
       ok.disabled=!state.date;
     }else{
-      body.innerHTML=`<div class="dl-warn">⚠ 选择「不需要提货」将视为放弃该批退库商品的所有权，商品进入平台销残处理，操作不可撤销。</div>
+      body.innerHTML=`<div class="dl-warn">⚠ 选择「不需要提货」将视为放弃该批退货商品的所有权，商品进入平台销残处理，操作不可撤销。</div>
         <div class="qh">放弃原因</div><div class="dl-reason">${GIVEUP_REASONS.map((r,i)=>`<div class="dl-radio${state.reason===i?' on':''}" data-r="${i}"><span class="rc"></span><span>${r}</span></div>`).join('')}</div>`;
       body.querySelectorAll('[data-r]').forEach(e=>e.onclick=()=>{state.reason=+e.dataset.r;refresh();});
       ok.disabled=state.reason<0;
@@ -399,28 +399,28 @@ function bookPickup(no){
   ok.onclick=()=>{
     if(ok.disabled)return;
     if(state.need==='yes'){m.remove();toast('已预约 '+state.date+' 提货');}
-    else confirmDialog({title:'确认放弃该批退库商品？',body:`放弃后「${no}」对应商品将进入平台销残处理，您将失去货物所有权，操作不可撤销。`,danger:1,okText:'确认放弃',onOk:()=>{m.remove();toast('已提交：放弃所有权');}});
+    else confirmDialog({title:'确认放弃该批退货商品？',body:`放弃后「${no}」对应商品将进入平台销残处理，您将失去货物所有权，操作不可撤销。`,danger:1,okText:'确认放弃',onOk:()=>{m.remove();toast('已提交：放弃所有权');}});
   };
 }
-// 新建退库单
+// 新建退货单
 const RET_GOODS=[
  {ic:'🍢',nm:'[达滋味]精品油豆泡',sp:'1.5kg/组(3袋)'},
  {ic:'🥬',nm:'[鲜丰]嫩豆腐',sp:'2斤/袋'},
  {ic:'🧈',nm:'[鲜丰]老豆腐',sp:'2.5kg/盒'},
 ];
 function openNewReturn(){
-  pushPage({title:'新建退库单',body:`
-    <div class="dl-sec">退库信息</div>
+  pushPage({title:'新建退货单',body:`
+    <div class="dl-sec">退货信息</div>
     <div class="dl-form">
       <div class="dl-frow"><span class="lb"><span class="req">*</span>取货仓库</span><span class="sel" id="dl-nrw">请选择 ›</span></div>
       <div class="dl-frow"><span class="lb"><span class="req">*</span>商品类型</span>
         <div class="dl-radios"><div class="dl-radio on" data-tp="成品"><span class="rc"></span>成品</div><div class="dl-radio" data-tp="包装物"><span class="rc"></span>包装物</div></div></div>
     </div>
-    <div class="dl-sec">退库商品</div>
-    <div class="dl-add" id="dl-nradd">＋ 添加退库商品</div>
+    <div class="dl-sec">退货商品</div>
+    <div class="dl-add" id="dl-nradd">＋ 添加退货商品</div>
     <div id="dl-nritems"></div>
     <div style="height:12px"></div>`,
-    footer:`<div class="dl-foot2"><span class="sum">退货商品合计 <b id="dl-nrsum">0</b></span><button class="btn primary" id="dl-nrsub" disabled>提交退库单</button></div>`,
+    footer:`<div class="dl-foot2"><span class="sum">退货商品合计 <b id="dl-nrsum">0</b></span><button class="btn primary" id="dl-nrsub" disabled>提交退货单</button></div>`,
     mount:(p)=>{
       const state={ware:'',type:'成品',items:[]};
       const itemsBox=p.querySelector('#dl-nritems');
@@ -437,7 +437,7 @@ function openNewReturn(){
         if(!state.ware)return toast('请先选择取货仓库');
         sheet(RET_GOODS.map(g=>({label:g.nm+'  '+g.sp,onClick:()=>{state.items.push(g);refresh();}})));
       };
-      sub.onclick=()=>{const b=sub;b.classList.add('loading');setTimeout(()=>{b.classList.remove('loading');toast('退库单已提交');setTimeout(popPage,600);},700);};
+      sub.onclick=()=>{const b=sub;b.classList.add('loading');setTimeout(()=>{b.classList.remove('loading');toast('退货单已提交');setTimeout(popPage,600);},700);};
     }});
 }
 

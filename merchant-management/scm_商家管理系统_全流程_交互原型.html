@@ -616,7 +616,10 @@ const NAV={
     {id:'m-settle',ic:'💰',t:'对账结算',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
     {sec:'合规'},
-    {id:'m-aftersale',ic:'↩️',t:'售后管理',p1:1},
+    {id:'m-after-group',ic:'↩️',t:'售后管理',p1:1,children:[
+      {id:'m-aftersale',ic:'↩️',t:'售后工单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
+      {id:'m-after-return',ic:'📦',t:'退货单'},
+    ]},
     {id:'m-quality',ic:'🔬',t:'质检管理'},
     {id:'m-rectify',ic:'⚠️',t:'违规整改',badge:()=>DB.rectify=='notified'?1:0},
     {id:'m-exit',ic:'🚪',t:'闭店申请'},
@@ -1537,17 +1540,10 @@ function act_svcInvPreview(no){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${issued?`<button class="btn btn-p" onclick="act_svcInvDownload('${s.no}')">下载 PDF</button>`:''}</div>`);
 }
 
-/* ---------- 商家端：售后记录 ---------- */
+/* ---------- 商家端：售后工单（售后管理子菜单） ---------- */
 PAGES['m-aftersale']=()=>{
-  // 售后管理：售后记录 + 退库单(退货，自送货管理挪入，内容复用 delivery.js 的 deliv_tabReturn)
-  const t=DB.asTab||'record';
-  const top=`<div class="tabs" style="margin-bottom:14px">
-    <div class="tab ${t=='record'?'active':''}" onclick="DB.asTab='record';render()">↩️ 售后记录</div>
-    <div class="tab ${t=='return'?'active':''}" onclick="DB.asTab='return';render()">📦 退库单</div>
-  </div>`;
-  if(t=='return') return top+(window.deliv_tabReturn?window.deliv_tabReturn():'<div class="empty"><div class="e-ic">📦</div><div class="e-t">退库单模块未加载</div></div>');
   const pend=DB.afterSales.filter(a=>a.status=='pending').length;
-  return top+`<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+  return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
     ${DB.afterSales.map((a,i)=>`<tr>
       <td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>
@@ -1573,6 +1569,9 @@ function afterMerchantOps(a,i){
   b.push(`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`);
   return b.join(' ');
 }
+
+/* ---------- 商家端：退货单（售后管理子菜单，内容复用 delivery.js 的 deliv_tabReturn） ---------- */
+PAGES['m-after-return']=()=>window.deliv_tabReturn?window.deliv_tabReturn():'<div class="empty"><div class="e-ic">📦</div><div class="e-t">退货单模块未加载</div></div>';
 
 /* ---------- 商家端：送货退货（退货退款·回仓管理） ---------- */
 PAGES['m-delivery']=()=>{
