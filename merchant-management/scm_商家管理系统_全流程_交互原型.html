@@ -522,10 +522,9 @@ const DB = {
   bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'confirmed', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
     items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]},
   invoices:[
-    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'none',no:'',reject:''},
-    {order:'#SG20260629012',client:'食为天餐厅',amt:7360.00,status:'none',no:'',reject:''},
-    {order:'#SG20260630021',client:'丰盛轩',amt:6120.00,status:'none',no:'',reject:''},
-    {order:'#2026历史合并',client:'多客户(90笔)',amt:24230.00,status:'none',no:'',reject:''},
+    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',no:'INV-2026-6600',reject:''},
+    {order:'#SG20260629012',client:'食为天餐厅',amt:7360.00,status:'verified',no:'INV-2026-6601',reject:''},
+    {order:'#SG20260630021',client:'丰盛轩',amt:6120.00,status:'verified',no:'INV-2026-6602',reject:''},
   ],
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
   billsHistory:[
@@ -561,7 +560,7 @@ const S = {
   product:{draft:['草稿','t-gr'],reviewing:['待审核','t-y'],onsale:['在售','t-g'],offsale:['已下架','t-gr'],rejected:['审核驳回','t-r'],forced_off:['强制下架','t-r']},
   order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['备货中','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
   bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['待付款','t-b']},
-  invoice:{none:['待开票','t-y'],uploaded:['待校验','t-b'],verified:['校验通过','t-g'],rejected:['校验退回','t-r']},
+  invoice:{none:['待平台开票','t-y'],uploaded:['开票中','t-b'],verified:['已开票','t-g'],rejected:['开票异常','t-r']},
 };
 function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
@@ -615,7 +614,7 @@ const NAV={
     {id:'m-analysis',ic:'📈',t:'经营分析'},
     {sec:'财务'},
     {id:'m-settle',ic:'💰',t:'对账结算',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
-    {id:'m-invoice',ic:'🧾',t:'发票开具',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='none'||i.status=='rejected').length,by:'y'},
+    {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
     {sec:'合规'},
     {id:'m-aftersale',ic:'↩️',t:'售后管理',p1:1},
     {id:'m-quality',ic:'🔬',t:'质检管理'},
@@ -633,7 +632,7 @@ const NAV={
     {sec:'结算'},
     {id:'p-commission',ic:'💹',t:'佣金配置',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
-    {id:'p-invoice',ic:'🧾',t:'发票校验付款',badge:()=>DB.invoices.filter(i=>i.status=='uploaded').length,by:'y'},
+    {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'风控'},
     {id:'p-aftersale',ic:'⚖️',t:'售后判责',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
     {id:'p-violation',ic:'🚨',t:'违规处置'},
@@ -754,7 +753,7 @@ function topRight(){
     return `<span class="pill info">🏭 供应商主数据 ${DB.merchant.vendorCreated?3:2} 家 · 入驻待审核 4</span><div class="avatar" title="采购管理员">采</div>`;
   }
   const q=DB.merchant.onboard=='task_review'?1:0,pa=DB.products.filter(p=>p.status=='reviewing').length,as=DB.afterSales.filter(a=>a.status=='pending').length;
-  return `<span class="pill info">📥 待办 ${q+pa+as+DB.invoices.filter(i=>i.status=='uploaded').length} 项</span><div class="avatar" title="运营管理员">运</div>`;
+  return `<span class="pill info">📥 待办 ${q+pa+as+(DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0)} 项</span><div class="avatar" title="运营管理员">运</div>`;
 }
 
 /* ================= HELPERS ================= */
@@ -791,7 +790,7 @@ PAGES['m-dash']=()=>{
   DB.products.filter(p=>p.status=='forced_off').forEach(p=>todo.push([`商品「${p.name}」被强制下架`,'需整改后重新提报','m-product']));
   if(DB.orders.filter(o=>o.status=='pending').length)todo.push([`${DB.orders.filter(o=>o.status=='pending').length} 笔订单待发货`,'餐厅已下单，请尽快打包贴码','m-order']);
   if(DB.bill.status=='generated'||DB.bill.status=='adjusted')todo.push(['有账单待确认',`${DB.bill.period}账单 ${money(DB.bill.net)}`,'m-settle']);
-  if(DB.invoices.filter(i=>i.status=='rejected').length)todo.push(['发票校验被退回','请修正后重新上传','m-invoice']);
+  if(DB.invoices.filter(i=>i.status=='verified').length)todo.push(['平台已开具客户发票',`${DB.invoices.filter(i=>i.status=='verified').length} 张可预览/下载`,'m-invoice']);
   if(DB.rectify=='notified')todo.push(['收到违规整改通知','请在整改期内提交方案','m-rectify']);
 
   return `
@@ -1408,29 +1407,28 @@ function act_exportBills(){
 }
 function doExportBills(n){const fmt=(document.querySelector('[name=expfmt]:checked')||{}).value=='pdf'?'PDF 对账单':'Excel 明细表';closeModal();toast(`已导出 ${n} 张结算单（${fmt}）`,'ok');}
 
-/* ---------- 商家端：发票开具（闭环D 续） ---------- */
+/* ---------- 商家端：发票管理（闭环D 续） ---------- */
 PAGES['m-invoice']=()=>{
   const tab=DB.invTab||'cust';
-  const pend=DB.invoices.filter(i=>i.status=='none'||i.status=='rejected').length;
+  const pend=DB.invoices.filter(i=>i.status=='verified').length;
   const tabsBar=`<div class="tabs">
     <div class="tab ${tab=='cust'?'active':''}" onclick="DB.invTab='cust';render()">① 客户开票（按订单）${pend?`<span class="tb">${pend}</span>`:''}</div>
     <div class="tab ${tab=='svc'?'active':''}" onclick="DB.invTab='svc';render()">② 服务费发票（平台开具）</div>
   </div>`;
   if(tab=='svc')return tabsBar+svcInvoiceContent();
-  return tabsBar+`${flowTip(`客户按订单向你<b>申请开票</b>，你为每笔订单开具<b>销售发票</b>并上传；平台执行<b>四重校验</b>（金额/合规/关联/验真）后作为结算凭证放款。客户开票按订单进行，不依赖对账单确认。`)}
-  ${DB.invoices.filter(i=>i.status=='rejected').length?`<div class="ib ib-r"><span class="i">⛔</span>有发票校验被退回，请查看原因并重新上传。</div>`:''}
-  <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span style="display:flex;align-items:center;gap:12px"><button class="btn btn-link" style="color:var(--r)" onclick="act_invSampleView()">📄 参考发票样式</button><span class="sub">开票对象=下单客户 · 共 ${DB.invoices.length} 笔</span></span></div><div class="card-bd flush"><table>
+  const issued=DB.invoices.map((iv,i)=>({iv,i})).filter(x=>x.iv.status=='verified');
+  return tabsBar+`${flowTip(`客户销售发票由<b>平台代你（商家）开具</b>：平台按订单向下单客户开出<b>销售发票（TAX INVOICE, GST 9%）</b>并作为结算凭证。<b>你无需开具或上传</b>，此处仅展示<b>已开具</b>的发票，供<b>预览与下载</b>。`)}
+  <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">平台代开 · 已开具 ${issued.length} 张 · 每张对应一个订单/客户</span></div><div class="card-bd ${issued.length?'flush':''}">
+    ${issued.length?`<table>
     <thead><tr><th>订单号</th><th>开票客户</th><th>金额</th><th>发票号</th><th>状态</th><th>操作</th></tr></thead><tbody>
-    ${DB.invoices.map((iv,i)=>`<tr>
-      <td class="mono">${iv.order}</td><td>${iv.client}</td><td>${money(iv.amt)}</td>
-      <td class="mono">${iv.no||'—'}</td><td>${tag('invoice',iv.status)}${iv.status=='rejected'?`<div style="font-size:11.5px;color:var(--r);margin-top:4px">${iv.reject}</div>`:''}</td>
-      <td>${
-        iv.status=='none'||iv.status=='rejected'?`<button class="btn btn-p btn-sm" onclick="act_uploadInvoice(${i})">${iv.status=='rejected'?'重新上传':'开具上传'}</button>`
-        :iv.status=='uploaded'?`<span style="color:var(--ts);font-size:12.5px">平台校验中</span>`
-        :`<span class="tag t-g"><span class="dot"></span>通过</span>`
-      }</td>
+    ${issued.map(({iv,i})=>`<tr>
+      <td class="mono">${iv.order}</td><td>${maskClient(iv.client)}</td><td>${money(iv.amt)}</td>
+      <td class="mono">${iv.no||'—'}</td><td>${tag('invoice',iv.status)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_custInvPreview(${i},1)">预览</button> <button class="btn btn-link" onclick="act_custInvDownload(${i})">下载</button></td>
     </tr>`).join('')}
-    </tbody></table></div></div>
+    </tbody></table>`
+    :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无已开具发票</div><div class="e-s">平台按订单代你开具客户销售发票后，将显示在此供预览与下载。</div></div>`}
+  </div></div>
     ${DB.payment=='paid'?`<div class="ib ib-g"><span class="i">💰</span>平台已完成打款 ${money(DB.bill.net)}，预计 1 个工作日到账 DBS ****8821。本期结算闭环完成 🎉</div>`
     :DB.payment!='none'?`<div class="ib ib-b"><span class="i">⏳</span>发票全部校验通过，平台付款审批中…</div>`:''}`;
 };
@@ -1444,11 +1442,17 @@ function svcInvoiceContent(){
 }
 // 服务费发票由平台结算后自动开具、商家端只查看/下载：原「勾选合并申请开票」流程(act_svcToggle/svcAll/applySvcInvoice/svcInvIssue)已移除
 function act_svcInvDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
-// 参考发票样式：平台提供的客户销售发票（TAX INVOICE）标准模板，仅供商家开票时参照字段与格式
-function act_invSampleView(){
-  drawer(`<div class="drawer-hd"><div><h3>参考发票样式</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">平台提供 · 客户销售发票标准模板（示例）</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+// 客户信息脱敏：商家端不展示完整下单客户名（平台代开，隐私保护），保留首字符 + **
+function maskClient(s){s=String(s||'');return s.length<=1?s:s[0]+'**';}
+// 客户销售发票预览：平台代商家开具的正式发票（TAX INVOICE），商家端只读预览/下载；masked=1 时客户信息脱敏
+function act_custInvPreview(i,masked){
+  const iv=DB.invoices[i];if(!iv)return;
+  const issued=iv.status=='verified';
+  const cli=masked?maskClient(iv.client):iv.client;
+  const sub=iv.amt/1.09, gst=iv.amt-sub;
+  drawer(`<div class="drawer-hd"><div><h3>客户销售发票预览</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${iv.no||'待平台开票'} · ${issued?'平台已代开':'待平台开票'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>以下为平台推荐的<b>销售发票（TAX INVOICE）</b>标准格式，下方数据均为<b>示例</b>。请按此格式向下单客户开具，确保<b>发票号/客户名称/GST 号/价税合计</b>等关键字段齐全，便于平台四重校验通过。</div>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>本发票由<b>平台代商家（绿鲜源蔬果）</b>就订单 <span class="mono">${iv.order}</span> 向下单客户开具，金额与订单一致，作为结算凭证。你可预览与下载正式 PDF。</div>
     <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
         <div>
@@ -1459,32 +1463,30 @@ function act_invSampleView(){
         <div style="text-align:right"><div style="font-size:18px;font-weight:700;letter-spacing:.5px">TAX INVOICE</div><div style="font-size:12px;color:var(--ts)">销售发票</div></div>
       </div>
       <dl class="dl">
-        <dt>发票号</dt><dd class="mono">INV-2026-000123</dd>
-        <dt>开票日期</dt><dd>2026-07-01</dd>
-        <dt>对应订单号</dt><dd class="mono">#SG20260628007</dd>
-        <dt>开票客户（Bill To）</dt><dd>海底捞（新加坡）Hai Di Lao SG Pte Ltd</dd>
-        <dt>客户 GST 号</dt><dd class="mono">201612345R</dd>
-        <dt>客户地址</dt><dd>2 Orchard Turn, #04-01, Singapore 238801</dd>
+        <dt>发票号</dt><dd class="mono">${iv.no||'—（待平台开票）'}</dd>
+        <dt>开票日期</dt><dd>${DB.bill.genDate||'2026-07-01'}</dd>
+        <dt>对应订单号</dt><dd class="mono">${iv.order}</dd>
+        <dt>开票客户（Bill To）</dt><dd>${cli}</dd>
+        <dt>开票方（代开）</dt><dd>平台代商家开具 · Food Max Platform</dd>
       </dl>
-      <table style="margin-top:12px"><thead><tr><th>#</th><th>商品/规格</th><th style="text-align:right">数量</th><th style="text-align:right">单价</th><th style="text-align:right">金额</th></tr></thead><tbody>
-        <tr><td>1</td><td>有机生菜 500g/包</td><td style="text-align:right">120</td><td style="text-align:right">$3.50</td><td style="text-align:right">$420.00</td></tr>
-        <tr><td>2</td><td>牛肉卷 1kg/盒（冷冻）</td><td style="text-align:right">200</td><td style="text-align:right">$42.00</td><td style="text-align:right">$8,400.00</td></tr>
-        <tr><td>3</td><td>金针菇 200g/包</td><td style="text-align:right">80</td><td style="text-align:right">$1.30</td><td style="text-align:right">$104.00</td></tr>
+      <table style="margin-top:12px"><thead><tr><th>#</th><th>项目</th><th style="text-align:right">金额</th></tr></thead><tbody>
+        <tr><td>1</td><td>订单商品货款（${iv.order} · 明细见对应订单）</td><td style="text-align:right">${money(sub)}</td></tr>
       </tbody></table>
       <table style="margin-top:10px"><tbody>
-        <tr><td style="color:var(--ts)">小计（不含税 / Subtotal）</td><td style="text-align:right">$8,924.00</td></tr>
-        <tr><td style="color:var(--ts)">GST 9%</td><td style="text-align:right">$803.16</td></tr>
-        <tr style="font-weight:700;background:var(--gl)"><td>价税合计（Total Payable）</td><td style="text-align:right;color:var(--gd)">$9,727.16</td></tr>
+        <tr><td style="color:var(--ts)">小计（不含税 / Subtotal）</td><td style="text-align:right">${money(sub)}</td></tr>
+        <tr><td style="color:var(--ts)">GST 9%</td><td style="text-align:right">${money(gst)}</td></tr>
+        <tr style="font-weight:700;background:var(--gl)"><td>价税合计（Total Payable）</td><td style="text-align:right;color:var(--gd)">${money(iv.amt)}</td></tr>
       </tbody></table>
       <dl class="dl" style="margin-top:14px">
         <dt>付款条款</dt><dd>NET 30 天</dd>
         <dt>收款账户</dt><dd>DBS Bank · <span class="mono">****8821</span></dd>
-        <dt>备注</dt><dd style="color:var(--ts)">本发票由商家就订单商品向下单客户开具；金额须与订单一致。</dd>
+        <dt>备注</dt><dd style="color:var(--ts)">本发票由平台代商家就订单商品向下单客户开具；金额与订单一致。</dd>
       </dl>
     </div></div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="toast('发票模板已下载 (PDF)','ok')">下载模板 PDF</button></div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${issued?`<button class="btn btn-p" onclick="act_custInvDownload(${i})">下载发票 PDF</button>`:''}</div>`);
 }
+function act_custInvDownload(i){const iv=DB.invoices[i];if(!iv)return;toast('发票 '+(iv.no||iv.order)+' 已下载 (PDF)','ok');}
 function act_svcInvPreview(no){
   const s=DB.svcInvoices.find(x=>x.no==no);if(!s)return;const issued=s.status=='已开票';
   drawer(`<div class="drawer-hd"><div><h3>服务费发票${issued?'预览':'申请预览'}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${s.no} · ${issued?'已开票':'待平台开票'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
@@ -1602,7 +1604,7 @@ function exitChecks(){
     {t:'2. 所有商品已下架，无待上架',ok:DB.products.every(p=>p.status=='offsale'||p.status=='rejected'||p.status=='forced_off'),fix:'仍有在售/审核中商品'},
     {t:'3. 库存为零',ok:true,fix:''},
     {t:'4. 无未发起结算的单据',ok:DB.orders.every(o=>o.status=='done'||o.status=='canceled'),fix:'有订单未完成或未发货'},
-    {t:'5. 无已结算未开票的单据',ok:DB.bill.status=='none'||DB.bill.status=='confirmed'&&DB.invoices.every(i=>i.status=='verified'),fix:'有发票未校验通过'},
+    {t:'5. 无已结算未开票的单据',ok:DB.bill.status=='none'||DB.bill.status=='confirmed'&&DB.invoices.every(i=>i.status=='verified'),fix:'有客户发票待平台开具'},
     {t:'6. 无进行中的营销活动',ok:true,fix:''},
     {t:'7. 末笔订单完成满 30 天',ok:true,fix:''},
     {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='closed'),fix:'有售后工单未结案'},
@@ -1638,7 +1640,7 @@ function platTodos(){
   if(DB.merchant.onboard=='task_review')a.push(['开店任务待审核',DB.merchant.name,'p-shops','var(--y)']);
   if(DB.products.filter(p=>p.status=='reviewing').length)a.push([`${DB.products.filter(p=>p.status=='reviewing').length} 个商品待审核`,DB.merchant.name,'p-prodaudit','var(--y)']);
   if(DB.afterSales.filter(x=>x.status=='pending').length)a.push([`${DB.afterSales.filter(x=>x.status=='pending').length} 笔售后待判责`,'24h 时限','p-aftersale','var(--r)']);
-  if(DB.invoices.filter(i=>i.status=='uploaded').length)a.push([`${DB.invoices.filter(i=>i.status=='uploaded').length} 张发票待校验`,'四重校验','p-invoice','var(--y)']);
+  if(DB.bill.status=='confirmed'&&DB.invoices.filter(i=>i.status=='none').length)a.push([`${DB.invoices.filter(i=>i.status=='none').length} 张客户发票待开具`,'平台代商家开票','p-invoice','var(--y)']);
   if(DB.bill.status=='disputed')a.push(['对账争议待核查',DB.merchant.name,'p-settle','var(--r)']);
   if(DB.payment=='plan'||DB.payment=='approving')a.push(['付款待审批',money(DB.bill.net),'p-invoice','var(--b)']);
   if(DB.termination=='submitted'||DB.termination=='reviewing')a.push(['闭店申请待审核',DB.merchant.name,'p-exit','var(--b)']);
@@ -1972,28 +1974,26 @@ PAGES['p-settle']=()=>{
     ${b.status=='generated'?`<div class="ib ib-y"><span class="i">⏳</span>已推送商家，等待商家确认；商家如有异议将线下联系运营核查，需纠错时可作废重出。</div>`:''}
     ${b.status=='disputed'?`<div class="ib ib-r"><span class="i">📝</span>商家提出异议：<b>${b.dispute}</b><br>请核查后调整对账单（数量差异/价格差异/退货未冲减/单边账）。</div><button class="btn btn-p btn-lg" onclick="act_adjustBill()">核查并出具调整后对账单</button>`:''}
     ${b.status=='adjusted'?`<div class="ib ib-b"><span class="i">⏳</span>调整后对账单已推送，等待商家复核确认。</div>`:''}
-    ${b.status=='confirmed'?`<div class="ib ib-g"><span class="i">✅</span>商家已确认对账单。等待商家开票后在「发票校验付款」处理。</div>`:''}
+    ${b.status=='confirmed'?`<div class="ib ib-g"><span class="i">✅</span>商家已确认对账单。前往「发票开票付款」代商家开具客户发票并付款。</div>`:''}
   </div></div>`;
 };
 
-/* ---------- 平台：发票校验付款（闭环D 续） ---------- */
+/* ---------- 平台：发票开票付款（平台代商家开具客户发票 · 闭环D 续） ---------- */
 PAGES['p-invoice']=()=>{
-  if(DB.bill.status!='confirmed')return `<div class="empty"><div class="e-ic">🧾</div><div class="e-t">暂无待校验发票</div><div class="e-s">商家确认账单并上传发票后，将在此进行四重校验与付款。</div></div>`;
-  const up=DB.invoices.filter(i=>i.status=='uploaded');
+  if(DB.bill.status!='confirmed')return `<div class="empty"><div class="e-ic">🧾</div><div class="e-t">暂无待开票订单</div><div class="e-s">对账单确认后，将在此由平台代商家开具客户销售发票并付款。</div></div>`;
+  const wait=DB.invoices.filter(i=>i.status=='none');
   const allVer=DB.invoices.length&&DB.invoices.every(i=>i.status=='verified');
-  return `${flowTip(`发票<b>四重校验</b>：①金额一致 ②合规性 ③订单关联 ④国税验真。全部通过后生成付款计划→双签审批→打款。`)}
-  <div class="card"><div class="card-hd"><h3>发票校验</h3><span class="sub">待校验 ${up.length} · 共 ${DB.invoices.length}</span></div><div class="card-bd flush"><table>
+  return `${flowTip(`平台<b>代商家开具客户销售发票</b>（按订单，GST 9%）：确认金额与订单一致后开具，开票号回填并推送商家预览/下载。<b>全部开具后</b>生成付款计划→双签审批→打款。`)}
+  <div class="card"><div class="card-hd"><h3>平台代商家开票</h3><span style="display:flex;align-items:center;gap:12px">${wait.length?`<button class="btn btn-p btn-sm" onclick="act_issueAllInvoices()">一键代开全部（${wait.length}）</button>`:''}<span class="sub">待开具 ${wait.length} · 共 ${DB.invoices.length}</span></span></div><div class="card-bd flush"><table>
     <thead><tr><th>订单号</th><th>客户</th><th>金额</th><th>发票号</th><th>状态</th><th>操作</th></tr></thead><tbody>
-    ${DB.invoices.map((iv,i)=>`<tr><td class="mono">${iv.order}</td><td>${iv.client}</td><td>${money(iv.amt)}</td><td class="mono">${iv.no||'—'}</td><td>${tag('invoice',iv.status)}</td><td>${
-      iv.status=='uploaded'?`<button class="btn btn-p btn-sm" onclick="act_verifyInvoice(${i})">四重校验</button> <button class="btn btn-d btn-sm" onclick="act_rejectInvoice(${i})">退回</button>`
-      :iv.status=='verified'?'<span class="tag t-g"><span class="dot"></span>通过</span>'
-      :iv.status=='rejected'?'<span style="color:var(--r);font-size:12px">已退回</span>'
-      :'<span style="color:var(--ts);font-size:12.5px">待商家开票</span>'
+    ${DB.invoices.map((iv,i)=>`<tr><td class="mono">${iv.order}</td><td>${iv.client}</td><td>${money(iv.amt)}</td><td class="mono">${iv.no||'—'}</td><td>${tag('invoice',iv.status)}</td><td style="white-space:nowrap">${
+      iv.status=='none'?`<button class="btn btn-p btn-sm" onclick="act_issueInvoice(${i})">代商家开具</button>`
+      :`<span class="tag t-g"><span class="dot"></span>已开票</span> <button class="btn btn-link" onclick="act_custInvPreview(${i})">预览</button>`
     }</td></tr>`).join('')}
   </tbody></table></div></div>
   <div class="card"><div class="card-hd"><h3>付款执行</h3>${DB.payment=='paid'?'<span class="tag t-g"><span class="dot"></span>已打款</span>':''}</div><div class="card-bd">
-    ${!allVer?`<div class="ib ib-y"><span class="i">🔒</span>所有发票校验通过后方可生成付款计划。</div>`
-    :DB.payment=='none'?`<div class="ib ib-g"><span class="i">✅</span>全部发票校验通过，应付 <b>${money(DB.bill.net)}</b>。</div><button class="btn btn-p btn-lg" onclick="act_genPayment()">生成付款计划</button>`
+    ${!allVer?`<div class="ib ib-y"><span class="i">🔒</span>全部客户发票开具完成后方可生成付款计划。</div>`
+    :DB.payment=='none'?`<div class="ib ib-g"><span class="i">✅</span>全部客户发票已开具，应付 <b>${money(DB.bill.net)}</b>。</div><button class="btn btn-p btn-lg" onclick="act_genPayment()">生成付款计划</button>`
     :DB.payment=='plan'?`<div class="ib ib-b"><span class="i">📋</span>付款计划已生成（${money(DB.bill.net)}）。大额转账需主管 + CFO 双签审批。</div><button class="btn btn-p btn-lg" onclick="act_approvePay()">提交双签审批</button>`
     :DB.payment=='approving'?`<div class="ib ib-b"><span class="i">✍️</span>双签审批通过，执行银行转账。</div><button class="btn btn-p btn-lg" onclick="act_pay()">执行打款</button> <button class="btn btn-o btn-lg" onclick="act_payFail()">模拟打款失败</button>`
     :`<div class="ib ib-g"><span class="i">💰</span>已完成打款 ${money(DB.bill.net)}，结算闭环完成。</div>`}
@@ -2231,17 +2231,16 @@ function act_genBill(){
   const fee=feeSvc+feeLogi;
   const net=gross-reverse-fee;
   DB.bill={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',genDate:'2026-07-01',status:'confirmed',gross,reverse,fee,feeSvc,feeLogi,net,dispute:'',items:[['订单货款（含历史）',signed.length+90,gross],['逆向扣减（售后判商家责）',DB.afterSales.filter(a=>(a.status=='judged'||a.status=='closed')&&a.liable=='商家').length,-reverse],[feeSvc>0?'平台抽佣·服务佣金（按品类佣金率）':'平台抽佣·服务佣金（免佣期）',signed.length,-feeSvc],[feeLogi>0?'物流抽佣·物流佣金（按品类佣金率）':'物流抽佣·物流佣金（免佣期）',signed.length,-feeLogi]]};
-  // 生成发票占位（每签收订单一张 + 历史合并一张）
+  // 生成发票占位（每签收订单一张，按订单对单个客户开具，不做多客户合并）
   DB.invoices=signed.map(o=>({order:o.id,client:o.client,amt:o.amt,status:'none',no:'',reject:''}));
-  DB.invoices.push({order:'#2026历史合并',client:'多客户(90笔)',amt:gross-signed.reduce((s,o)=>s+o.amt,0),status:'none',no:'',reject:''});
   render();toast('对账单已生成并推送商家确认','ok');
 }
 function act_billDetail(key){
   const cur=DB.bill;
   const sel=(key&&DB.billsHistory.find(x=>x.period==key))||cur;
   const isCur=sel===cur;
-  // 进度节点去掉「开票」；第一期商家确认为默认完成，当期从「平台校验付款」起
-  const steps=['平台生成','商家确认','平台校验付款','打款完成'];
+  // 进度节点：第一期商家确认为默认完成，当期从「平台开票付款」起（平台代商家开具客户发票后付款）
+  const steps=['平台生成','商家确认','平台开票付款','打款完成'];
   const idx=!isCur?4:(DB.payment=='paid'?4:2);
   const payoutTag=(!isCur||DB.payment=='paid')?'<span class="tag t-g"><span class="dot"></span>已清分 · 已到账</span>':DB.payment=='none'?'<span class="tag t-y"><span class="dot"></span>已清分 · 待打款</span>':'<span class="tag t-b"><span class="dot"></span>已清分 · 付款中</span>';
   const ft=`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`;
@@ -2272,26 +2271,24 @@ function act_billDetail(key){
   <div class="drawer-ft">${ft}</div>`);
 }
 function act_confirmBillAsk(){modal(`<div class="mc-hd"><h3>确认对账单</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>确认后视为对账无误，应清算 <b>${money(DB.bill.net)}</b> 进入付款流程，且不可再线上撤回（如有异议请先线下联系运营）。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="closeModal();act_confirmBill()">确认无误</button></div>`);}
-function act_confirmBill(){DB.bill.status='confirmed';render();toast('对账单已确认，请前往开票','ok');}
+function act_confirmBill(){DB.bill.status='confirmed';render();toast('对账单已确认，平台将代开客户发票并付款','ok');}
 function act_disputeBill(){
   modal(`<div class="mc-hd"><h3>提出账单异议</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">异议说明（附签收单/出库记录）</label><textarea id="dis-reason">6月25日 #20260625011 订单，系统记 18kg，实际送仓 20kg，请核查少计的 2kg 货款。</textarea></div><div class="up done"><div class="uic">📎</div><div class="ut">已附 出库记录.pdf ✓</div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.bill.status='disputed';DB.bill.dispute=document.getElementById('dis-reason').value;closeModal();render();toast('异议已提交，平台核查中','ok')">提交异议</button></div>`);
 }
 function act_adjustBill(){DB.bill.status='adjusted';DB.bill.gross+=37.20;DB.bill.net+=37.20;DB.bill.items[0][2]=DB.bill.gross;DB.bill.dispute='已采纳：补回少计 2kg 货款 +$37.20';render();toast('已出具调整后对账单，推送商家复核','ok');}
 // 闭环D 发票/付款
-function act_uploadInvoice(i){
+// 平台代商家开具客户销售发票：金额取订单金额，回填发票号，状态置为已开票(verified)，商家端可预览/下载
+function act_issueInvoice(i){
   const iv=DB.invoices[i];
-  modal(`<div class="mc-hd"><h3>开具并上传发票</h3><p>${iv.order} · ${iv.client} · ${money(iv.amt)}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fg2"><div class="fr"><label class="fl">发票类型</label><select><option>增值税专用发票</option><option>增值税普通发票</option></select></div><div class="fr"><label class="fl">发票号码</label><input id="iv-no" value="INV-2026-${(6600+i)}"></div></div><div class="up done"><div class="uic">📎</div><div class="ut">已上传 发票PDF ✓</div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.invoices[${i}].status='uploaded';DB.invoices[${i}].no=document.getElementById('iv-no').value;closeModal();render();toast('发票已上传，等待平台校验','ok')">提交校验</button></div>`);
+  modalWide(`<div class="mc-hd"><h3>代商家开具客户发票 · ${iv.order}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <div class="ib ib-b" style="margin-bottom:10px"><span class="i">ℹ️</span>平台代商家（绿鲜源蔬果）向客户 <b>${iv.client}</b> 就订单 <span class="mono">${iv.order}</span> 开具销售发票，价税合计 <b>${money(iv.amt)}</b>（GST 9%）。</div>
+    <div class="ck ok"><div class="cb">✓</div>① 金额一致性：发票 ${money(iv.amt)} = 订单金额<span class="cx">一致</span></div>
+    <div class="ck ok"><div class="cb">✓</div>② 客户主体：抬头/GST 号取自客户档案<span class="cx">已匹配</span></div>
+    <div class="ck ok"><div class="cb">✓</div>③ 订单关联：匹配订单 ${iv.order}<span class="cx">已关联</span></div>
+    <div class="ck ok"><div class="cb">✓</div>④ 国税平台开具：生成合规发票号并验真<span class="cx">就绪</span></div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.invoices[${i}].status='verified';DB.invoices[${i}].no='INV-2026-'+${(6600+i)};closeModal();render();toast('已代商家开具发票，已推送商家','ok')">确认开具</button></div>`);
 }
-function act_verifyInvoice(i){
-  const iv=DB.invoices[i];
-  modalWide(`<div class="mc-hd"><h3>四重校验 · ${iv.no}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="ck ok"><div class="cb">✓</div>① 金额一致性：发票 ${money(iv.amt)} = 对账金额<span class="cx">通过</span></div>
-    <div class="ck ok"><div class="cb">✓</div>② 合规性：抬头/税号/品名规范<span class="cx">通过</span></div>
-    <div class="ck ok"><div class="cb">✓</div>③ 关联性：匹配订单 ${iv.order}<span class="cx">通过</span></div>
-    <div class="ck ok"><div class="cb">✓</div>④ 国税平台验真：发票真实有效<span class="cx">通过</span></div>
-  </div><div class="mc-ft"><button class="btn btn-d" onclick="closeModal();act_rejectInvoice(${i})">校验不通过·退回</button><button class="btn btn-p" onclick="DB.invoices[${i}].status='verified';closeModal();render();toast('发票校验通过','ok')">确认通过</button></div>`);
-}
-function act_rejectInvoice(i){DB.invoices[i].status='rejected';DB.invoices[i].reject='发票抬头与签约主体不一致，请修正后重新上传';render();toast('发票已退回商家','info');}
+function act_issueAllInvoices(){DB.invoices.forEach((iv,i)=>{if(iv.status=='none'){iv.status='verified';iv.no='INV-2026-'+(6600+i);}});render();toast('已一键代开全部客户发票，已推送商家','ok');}
 function act_genPayment(){DB.payment='plan';render();toast('付款计划已生成','ok');}
 function act_approvePay(){DB.payment='approving';render();toast('主管 + CFO 双签审批通过','ok');}
 function act_pay(){DB.payment='paid';render();toast(`已打款 ${money(DB.bill.net)}`,'ok');}
