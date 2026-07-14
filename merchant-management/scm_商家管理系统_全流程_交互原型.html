@@ -4,25 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Food Max · 商家管理系统全流程交互原型</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- MiSans（小米，免费商用）· jsDelivr 切片版：任一字重加载即全站 MiSans，无混字。落生产建议自托管 -->
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Regular.min.css">
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Medium.min.css">
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Semibold.min.css">
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Bold.min.css">
 <style>
 :root{
-  /* v2 设计系统(数据驱动 grocery 配色 + Wellness Calm 字体) — 与 App v2 同步 */
-  --g:#059669;--gl:#D1FAE5;--gd:#047857;--gg:linear-gradient(135deg,#059669 0%,#065F46 100%);
-  --r:#DC2626;--rl:#FEE2E2;--y:#D97706;--yl:#FEF3C7;--b:#1C64F2;--bl:#EBF2FF;--pp:#7E3AF2;--ppl:#F3EEFE;
-  --tp:#0F172A;--ts:#64748B;--tt:#94A3B8;--bd:#E4F0E9;--bd2:#EEF6F1;--bg:#F4FBF7;--w:#fff;--sw:230px;
-  --sh:0 1px 3px rgba(6,95,70,.06),0 1px 2px rgba(6,95,70,.05);
-  --sh2:0 6px 18px rgba(6,95,70,.10);--sh3:0 14px 40px rgba(6,95,70,.16);
+  /* v3 设计系统 · refined 清爽绿 + 金点缀 + 纸感底 + MiSans（与商品管理样板一致） */
+  --g:#0E7A52;--gl:#E7F2E9;--gd:#0A6343;--gg:linear-gradient(150deg,#12885B 0%,#0A5A3C 100%);
+  --r:#C0453B;--rl:#FBEBE8;--y:#A9711F;--yl:#F7EFDD;--b:#2563EB;--bl:#EEF3FF;--pp:#7E3AF2;--ppl:#F3EEFE;
+  --gold:#A9812F;--goldl:#F6EEDC;
+  --tp:#12271D;--ts:#5F7168;--tt:#9AA99F;--bd:#E3EADF;--bd2:#EDF1E9;--bg:#F3F6F0;--w:#fff;--sw:236px;
+  --sh:0 1px 2px rgba(16,42,30,.05),0 1px 1px rgba(16,42,30,.04);
+  --sh2:0 10px 26px -14px rgba(11,54,36,.22);--sh3:0 20px 46px -22px rgba(9,47,32,.3);
   --rad:14px;--mono:'SF Mono',ui-monospace,'Roboto Mono',Menlo,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-font-smoothing:antialiased}
-body{font-family:'Raleway',-apple-system,BlinkMacSystemFont,'PingFang SC','Segoe UI','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--tp);font-size:14px;line-height:1.5}
+body{font-family:'MiSans','PingFang SC','Hiragino Sans GB','Microsoft YaHei',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--tp);font-size:14px;line-height:1.5}
 button{font-family:inherit}
 ::selection{background:var(--gl)}
-/* 大额数字/主标题用 Lora 衬线(与 App v2 一致) */
-.disp,.sc-v,.home-title,.lg-title,.tb-title{font-family:'Lora','PingFang SC',serif}
+/* 主标题/大额数字统一 MiSans（去花哨衬线，靠字重/字号建立层级） */
+.disp,.sc-v,.home-title,.lg-title,.tb-title{font-family:'MiSans','PingFang SC',sans-serif}
 .sc-v{letter-spacing:0}
 /* ============ HOME / ROLE SWITCH ============ */
 #home{min-height:100vh;background:radial-gradient(1200px 600px at 80% -10%,#05966922,transparent),radial-gradient(900px 500px at 0% 110%,#1C64F215,transparent),#0B1120;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:#fff}
@@ -122,16 +126,20 @@ button{font-family:inherit}
 .nav-sec{font-size:11px;color:var(--tt);font-weight:600;padding:12px 10px 5px;letter-spacing:.5px}
 .nav-i{display:flex;align-items:center;gap:11px;padding:9px 12px;cursor:pointer;color:var(--ts);font-size:13.5px;border-radius:8px;transition:.13s;user-select:none;position:relative;margin-bottom:1px}
 .nav-i:hover{background:var(--bd2);color:var(--tp)}
-.nav-i.active{background:var(--gl);color:var(--gd);font-weight:600}
+.nav-i.active{background:var(--gl);color:var(--gd);font-weight:700}
+.nav-i.active::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:3px;background:var(--g)}
+.app.plat .nav-i.active::before{background:var(--b)}
 .app.plat .nav-i.active{background:var(--bl);color:var(--b)}
-.nav-ic{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-ic{width:20px;height:20px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:15px}
+.nav-ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.nav-i.active .nav-ic svg{opacity:1;stroke-width:1.85}
 .nav-badge{margin-left:auto;background:var(--r);color:#fff;font-size:11px;padding:0 6px;height:18px;min-width:18px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
 .nav-p1{margin-left:6px;background:var(--gl);color:var(--gd);font-size:10px;padding:1px 5px;border-radius:6px;font-weight:600;line-height:1.5;white-space:nowrap}
 .nav-badge.y{background:var(--y)}.nav-badge.g{background:var(--g)}
 .nav-grp.grp-on{color:var(--tp);font-weight:600}
 .nav-caret{font-size:10px;color:var(--tt)}
 .nav-sub{padding-left:32px;font-size:13px}
-.nav-sub .nav-ic{font-size:14px}
+.nav-sub .nav-ic svg{width:16px;height:16px}
 .sb-foot{padding:12px 16px;border-top:1px solid var(--bd2)}
 .sb-switch{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ts);cursor:pointer;padding:7px 9px;border-radius:8px;transition:.13s}
 .sb-switch:hover{background:var(--bd2);color:var(--tp)}
@@ -139,8 +147,8 @@ button{font-family:inherit}
 .main{margin-left:var(--sw);flex:1;min-width:0}
 .topbar{background:rgba(255,255,255,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--bd);padding:0 26px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
 .tb-l{display:flex;flex-direction:column}
-.tb-crumb{font-size:11.5px;color:var(--tt)}
-.tb-title{font-size:16px;font-weight:700;margin-top:1px}
+.tb-crumb{font-size:12px;color:var(--tt)}
+.tb-title{font-size:18.5px;font-weight:800;letter-spacing:-.3px;margin-top:1px;color:var(--tp)}
 .tb-r{display:flex;align-items:center;gap:14px}
 .pill{padding:5px 13px;border-radius:20px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .pill.warn{background:var(--yl);color:var(--y)}.pill.ok{background:var(--gl);color:var(--gd)}.pill.info{background:var(--bl);color:var(--b)}
@@ -168,10 +176,10 @@ button{font-family:inherit}
 .card-bd{padding:20px}
 .card-bd.flush{padding:0}
 table{width:100%;border-collapse:collapse}
-th{background:#FafBfC;padding:11px 16px;text-align:left;font-size:12px;color:var(--ts);font-weight:600;border-bottom:1px solid var(--bd);white-space:nowrap;letter-spacing:.2px}
-td{padding:13px 16px;font-size:13.5px;border-bottom:1px solid var(--bd2);vertical-align:middle}
+th{background:var(--bd2);padding:12px 16px;text-align:left;font-size:11.5px;color:var(--ts);font-weight:600;border-bottom:1px solid var(--bd);white-space:nowrap;letter-spacing:.4px}
+td{padding:14px 16px;font-size:13.5px;border-bottom:1px solid var(--bd2);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tbody tr{transition:.1s}tbody tr:hover td{background:#FAFBFC}
+tbody tr{transition:.12s}tbody tr:hover td{background:#F1F8F1}
 .mono{font-family:var(--mono);font-size:12.5px}
 /* tags */
 .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.5}
@@ -179,11 +187,11 @@ tbody tr{transition:.1s}tbody tr:hover td{background:#FAFBFC}
 .t-b{background:var(--bl);color:var(--b)}.t-gr{background:#F3F4F6;color:#6B7280}.t-pp{background:var(--ppl);color:var(--pp)}
 .tag .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
 /* buttons */
-.btn{padding:9px 16px;border-radius:9px;font-size:13.5px;cursor:pointer;border:1px solid transparent;font-weight:600;transition:.13s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;line-height:1}
+.btn{padding:9px 16px;border-radius:10px;font-size:13.5px;cursor:pointer;border:1px solid transparent;font-weight:600;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;line-height:1}
 .btn:active{transform:scale(.97)}
-.btn-p{background:var(--g);color:#fff}.btn-p:hover{background:var(--gd)}
+.btn-p{background:var(--gg);color:#fff;box-shadow:0 8px 16px -10px rgba(11,99,67,.55)}.btn-p:hover{filter:brightness(1.07);box-shadow:0 10px 20px -10px rgba(11,99,67,.72)}
 .app.plat .btn-p{background:var(--b)}.app.plat .btn-p:hover{background:#1A56DB}
-.btn-o{background:#fff;color:var(--tp);border-color:var(--bd)}.btn-o:hover{border-color:var(--ts);background:#FafBfC}
+.btn-o{background:#fff;color:var(--tp);border-color:var(--bd)}.btn-o:hover{border-color:#CFE0CD;background:var(--gl);color:var(--gd)}
 .btn-d{background:var(--r);color:#fff}.btn-d:hover{background:#C81E1E}
 .btn-w{background:var(--y);color:#fff}.btn-w:hover{filter:brightness(.95)}
 .btn-sm{padding:6px 12px;font-size:12.5px;border-radius:7px}
@@ -235,8 +243,8 @@ textarea{resize:vertical;min-height:72px}
 .up .uic{font-size:22px}.up .ut{font-size:12.5px;margin-top:5px;font-weight:600}.up .us{font-size:11.5px;color:var(--ts);margin-top:2px}
 /* tabs */
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin-bottom:20px}
-.tab{padding:10px 16px;cursor:pointer;font-size:13.5px;color:var(--ts);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;transition:.13s;display:flex;align-items:center;gap:6px}
-.tab:hover{color:var(--tp)}.tab.active{color:var(--g);border-bottom-color:var(--g);font-weight:600}
+.tab{padding:10px 14px;cursor:pointer;font-size:14.5px;color:var(--ts);border-bottom:2.5px solid transparent;margin-bottom:-1px;font-weight:600;transition:.13s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--tp)}.tab.active{color:var(--tp);border-bottom-color:var(--g);font-weight:700}
 .app.plat .tab.active{color:var(--b);border-bottom-color:var(--b)}
 .tab .tb{background:var(--r);color:#fff;border-radius:9px;font-size:11px;padding:0 6px;height:16px;display:flex;align-items:center;font-weight:600}
 /* modal */
@@ -721,6 +729,37 @@ const ROLE_META={
   shop_ops:{name:'店铺运营平台',sub:'店铺运营平台',cls:'p',ic:'🛡️',who:'运营管理员'},
   scm:{name:'采购SCM平台',sub:'采购SCM平台',cls:'p',ic:'🏭',who:'采购管理员'},
 };
+/* 侧栏线性 SVG 图标（emoji→SVG 映射，渲染时替换；未映射回退 emoji） */
+const ICON={
+  '🏠':'<path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1v-8Z"/>',
+  '🏪':'<path d="M5 9h14l-1-4H6L5 9Zm0 0v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M9 13h6"/>',
+  '🥦':'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5l8 4.5 8-4.5M12 21v-9"/>',
+  '📋':'<path d="M7 4h10l1 3v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7l1-3Z"/><path d="M9.5 12h5M9.5 15.5h5"/>',
+  '📦':'<path d="M4 8l8-4 8 4v8l-8 4-8-4V8Z"/><path d="M4 8l8 4 8-4M12 20v-8"/>',
+  '🚚':'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>',
+  '💡':'<path d="M12 4a6 6 0 0 1 3 11v2H9v-2a6 6 0 0 1 3-11ZM9.5 20h5"/>',
+  '🏷️':'<path d="M4 13l7-7 8 8-7 7-8-8Z"/><circle cx="8.5" cy="9.5" r="1.2"/>',
+  '📈':'<path d="M4 20V6M4 20h16M8 16l4-5 3 3 4-6"/>',
+  '💰':'<path d="M4 8h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Zm0 0l3-3h10l3 3M15 13h2"/>',
+  '🧾':'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z"/><path d="M9 8h6M9 12h6"/>',
+  '↩️':'<path d="M9 5H5v14M15 19h4V5M9 5l6 14"/><path d="M8 9l-2 2 2 2"/>',
+  '🔬':'<path d="M9 3h4v7a4 4 0 1 1-4 0V3ZM7 21h12"/>',
+  '⚠️':'<path d="M12 4l9 16H3L12 4Z"/><path d="M12 10v4M12 17h.01"/>',
+  '🚪':'<path d="M6 3h9v18H6zM12 12h.01M15 8l4 4-4 4"/>',
+  '🛎️':'<path d="M5 17h14a7 7 0 0 0-14 0ZM12 6V4M4 20h16"/>',
+  '📊':'<path d="M4 20V4M4 20h16M8 20v-6M12 20v-10M16 20v-4"/>',
+  '🛡️':'<path d="M12 3l7 3v6c0 5-3 7-7 9-4-2-7-4-7-9V6l7-3Z"/>',
+  '🏭':'<path d="M4 20V10l5 3V10l5 3V6l6 3v11H4Z"/>',
+  '⚖️':'<path d="M12 4v16M6 20h12M5 8L3 13h4L5 8Zm14 0l-2 5h4l-2-5ZM12 5l-7 3M12 5l7 3"/>',
+  '⚙️':'<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M4.5 7l2.6 1.5M16.9 15.5l2.6 1.5M4.5 17l2.6-1.5M16.9 8.5l2.6-1.5"/>',
+  '🧮':'<path d="M4 5h16v14H4zM4 12h16M9 5v14M15 5v14"/>',
+  '🔍':'<circle cx="11" cy="11" r="6"/><path d="M15.5 15.5L20 20"/>',
+  '🚨':'<path d="M6 17a6 6 0 0 1 12 0H6ZM12 5v2M4 20h16"/>',
+  '🏬':'<path d="M5 21V6l7-3 7 3v15M9 21v-5h6v5M9 9h.01M15 9h.01M9 12h.01M15 12h.01"/>',
+  '💹':'<path d="M4 20V4M4 20h16M8 15l3-3 2 2 4-5"/>',
+  '🔚':'<path d="M4 12h13M13 7l5 5-5 5M20 5v14"/>',
+};
+function icon(e){return ICON[e]?`<svg viewBox="0 0 24 24" fill="none">${ICON[e]}</svg>`:(e||'');}
 function goHome(){DB.role=null;document.getElementById('home').style.display='flex';document.getElementById('login').classList.remove('on');document.getElementById('app').classList.remove('on');}
 function setRole(r){
   DB.role=r;DB.page=NAV[r].find(n=>n.id).id;
@@ -752,15 +791,15 @@ function render(){
       const open=(DB.navOpen[n.id]!==undefined)?DB.navOpen[n.id]:childActive;
       const sumB=n.children.reduce((a,k)=>a+(k.badge?k.badge():0),0);
       const right=`<span style="margin-left:auto;display:flex;align-items:center;gap:6px">${(!open&&sumB)?`<span class="nav-badge" style="margin-left:0">${sumB}</span>`:''}<span class="nav-caret">${open?'▾':'▸'}</span></span>`;
-      nh+=`<div class="nav-i nav-grp ${childActive?'grp-on':''}" onclick="navToggle('${n.id}')"><span class="nav-ic">${n.ic}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${right}</div>`;
+      nh+=`<div class="nav-i nav-grp ${childActive?'grp-on':''}" onclick="navToggle('${n.id}')"><span class="nav-ic">${icon(n.ic)}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${right}</div>`;
       if(open)n.children.forEach(k=>{
         let kb='';if(k.badge){const c=k.badge();if(c>0)kb=`<span class="nav-badge ${k.by||''}">${c}</span>`;}
-        nh+=`<div class="nav-i nav-sub ${DB.page==k.id?'active':''}" onclick="nav('${k.id}')"><span class="nav-ic">${k.ic}</span>${k.t}${k.p1?'<span class="nav-p1">一期</span>':''}${kb}</div>`;
+        nh+=`<div class="nav-i nav-sub ${DB.page==k.id?'active':''}" onclick="nav('${k.id}')"><span class="nav-ic">${icon(k.ic)}</span>${k.t}${k.p1?'<span class="nav-p1">一期</span>':''}${kb}</div>`;
       });
       return;
     }
     let b='';if(n.badge){const c=n.badge();if(c>0)b=`<span class="nav-badge ${n.by||''}">${c}</span>`;}
-    nh+=`<div class="nav-i ${DB.page==n.id?'active':''}" onclick="nav('${n.id}')"><span class="nav-ic">${n.ic}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${b}</div>`;
+    nh+=`<div class="nav-i ${DB.page==n.id?'active':''}" onclick="nav('${n.id}')"><span class="nav-ic">${icon(n.ic)}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${b}</div>`;
   });
   document.getElementById('nav').innerHTML=nh;
   // topbar
