@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Max · 万里汇账户入驻对接交互原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Raleway:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --g:#059669;--gl:#D1FAE5;--gd:#047857;--gg:linear-gradient(135deg,#059669 0%,#065F46 100%);
+  --r:#DC2626;--rl:#FEE2E2;--y:#D97706;--yl:#FEF3C7;--b:#1C64F2;--bl:#EBF2FF;--pp:#7E3AF2;--ppl:#F3EEFE;
+  --tp:#0F172A;--ts:#64748B;--tt:#94A3B8;--bd:#E4F0E9;--bd2:#EEF6F1;--bg:#F4FBF7;--w:#fff;
+  --sh:0 1px 3px rgba(6,95,70,.06),0 1px 2px rgba(6,95,70,.05);
+  --sh2:0 6px 18px rgba(6,95,70,.10);--sh3:0 14px 40px rgba(6,95,70,.16);
+  --rad:14px;--mono:'SF Mono',ui-monospace,'Roboto Mono',Menlo,monospace;
+  /* 万里汇外部品牌色（授权页专用，与站内翡翠绿明显区隔） */
+  --wf:#1A2B5C;--wf2:#2440A0;--wfa:#FF5A36;--wfl:#EEF1FB;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:'Raleway',-apple-system,BlinkMacSystemFont,'PingFang SC','Segoe UI',sans-serif;background:var(--bg);color:var(--tp);font-size:14px;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+::selection{background:var(--gl)}
+.disp,.sc-v,.hero-t{font-family:'Lora','PingFang SC',serif}
+
+/* ===== TOP BAR ===== */
+.top{position:sticky;top:0;z-index:40;background:var(--w);border-bottom:1px solid var(--bd);box-shadow:var(--sh);padding:12px 26px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:16px;letter-spacing:.3px;display:flex;align-items:center;gap:9px}
+.brand .lg{width:26px;height:26px;border-radius:8px;background:var(--gg);color:#fff;display:grid;place-items:center;font-size:14px}
+.brand small{color:var(--ts);font-weight:600;font-size:12px}
+.seg{display:inline-flex;background:var(--bd2);border-radius:10px;padding:3px}
+.seg button{border:none;background:transparent;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ts)}
+.seg button.on{background:var(--w);color:var(--tp);box-shadow:var(--sh)}
+.seg.plan button.on{background:var(--gd);color:#fff}
+.seg-lb{font-size:11.5px;color:var(--tt);font-weight:700;letter-spacing:.5px;margin-right:-14px}
+.spacer{flex:1}
+.planpill{font-size:12px;color:var(--gd);background:var(--gl);padding:5px 11px;border-radius:20px;font-weight:700}
+
+/* ===== LAYOUT ===== */
+.wrap{max-width:1160px;margin:0 auto;padding:26px 26px 80px}
+.hero{background:var(--gg);color:#fff;border-radius:18px;padding:22px 26px;margin-bottom:22px;position:relative;overflow:hidden}
+.hero:after{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.08)}
+.hero-t{font-size:22px;font-weight:800}
+.hero-s{margin-top:8px;font-size:13.5px;color:rgba(255,255,255,.86);max-width:760px;line-height:1.7}
+.hero-embed{margin-top:14px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);padding:7px 13px;border-radius:10px;font-size:12.5px}
+.hero-embed b{background:var(--wfa);color:#fff;padding:2px 8px;border-radius:6px;font-size:11.5px}
+
+/* ===== PIPE (步骤条) ===== */
+.pipe{display:flex;align-items:center;background:var(--w);border:1px solid var(--bd);border-radius:var(--rad);padding:18px 20px;margin-bottom:22px;box-shadow:var(--sh);overflow-x:auto}
+.pstep{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.pdot{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;background:var(--bd2);color:var(--ts);flex-shrink:0}
+.pstep.done .pdot{background:var(--gl);color:var(--gd)}
+.pstep.cur .pdot{background:var(--gd);color:#fff;box-shadow:0 0 0 4px var(--gl)}
+.pstep.cur .pl{color:var(--tp);font-weight:700}
+.pl{font-size:13px;color:var(--ts);white-space:nowrap}
+.pl small{display:block;font-size:11px;color:var(--tt);font-weight:500}
+.pbar{flex:1;height:2px;background:var(--bd);margin:0 12px;min-width:26px}
+.pstep.done + .pbar{background:var(--gl)}
+.pstep.embed .pdot{background:var(--wfa);color:#fff}
+.pstep.embed.cur .pdot{box-shadow:0 0 0 4px #FF5A3630}
+
+/* ===== CARD ===== */
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--rad);box-shadow:var(--sh);margin-bottom:20px;overflow:hidden}
+.card-hd{padding:15px 20px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px}
+.card-hd h3{font-size:15px;font-weight:700}
+.card-hd .sub{color:var(--ts);font-size:12.5px}
+.card-hd .row{margin-left:auto;display:flex;gap:8px;align-items:center}
+.card-bd{padding:20px}
+.card-bd.flush{padding:0}
+.wf-badge{display:inline-flex;align-items:center;gap:6px;background:var(--wfl);color:var(--wf);font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;border:1px solid #D6DEF6}
+.wf-badge .d{width:6px;height:6px;border-radius:50%;background:var(--wfa)}
+
+/* ===== FORM ===== */
+.fr{margin-bottom:16px}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.fl{font-size:12.5px;color:var(--ts);margin-bottom:6px;display:block;font-weight:600}
+.fl b{color:var(--r);font-weight:400;margin-right:2px}
+.fl .hint{color:var(--tt);font-weight:400;font-size:11.5px;margin-left:4px}
+input,select,textarea{width:100%;height:40px;border:1px solid var(--bd);border-radius:9px;padding:0 12px;font-size:13.5px;color:var(--tp);background:var(--w);font-family:inherit}
+textarea{height:auto;padding:10px 12px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--g);box-shadow:0 0 0 3px var(--gl)}
+input:read-only{background:var(--bd2);color:var(--ts)}
+.ro-tag{font-size:11px;color:var(--tt);margin-left:6px;background:var(--bd2);padding:2px 7px;border-radius:6px}
+.up{border:1.5px dashed var(--bd);border-radius:10px;padding:16px;text-align:center;color:var(--ts);background:var(--bd2)}
+.up .uic{font-size:22px}
+.up .ut{font-weight:600;font-size:13px;margin-top:4px}
+.up .us{font-size:11.5px;color:var(--tt);margin-top:2px}
+.chk{display:flex;gap:9px;flex-wrap:wrap}
+.chk label{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--bd);border-radius:9px;padding:9px 13px;font-size:13px;cursor:pointer;background:var(--w)}
+.chk label.on{border-color:var(--g);background:var(--gl);color:var(--gd);font-weight:600}
+.chk input{width:auto;height:auto}
+
+/* ===== BUTTON ===== */
+.btn{border:1px solid transparent;border-radius:9px;padding:10px 18px;font-size:13.5px;font-weight:600;transition:.15s;display:inline-flex;align-items:center;gap:7px}
+.btn-p{background:var(--gd);color:#fff}.btn-p:hover{background:var(--g)}
+.btn-o{background:var(--w);border-color:var(--bd);color:var(--tp)}.btn-o:hover{border-color:var(--g);color:var(--gd)}
+.btn-d{background:var(--r);color:#fff}
+.btn-wf{background:var(--wf);color:#fff}.btn-wf:hover{background:var(--wf2)}
+.btn-lg{padding:13px 24px;font-size:15px}
+.btn-sm{padding:6px 12px;font-size:12.5px}
+.btn-link{background:none;border:none;color:var(--gd);font-weight:600;padding:0}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.ftbar{display:flex;gap:12px;justify-content:flex-end;margin-top:6px}
+
+/* ===== TAG / INFOBAR ===== */
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.tag .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.t-g{background:var(--gl);color:var(--gd)}.t-y{background:var(--yl);color:var(--y)}
+.t-r{background:var(--rl);color:var(--r)}.t-gr{background:var(--bd2);color:var(--ts)}
+.t-b{background:var(--bl);color:var(--b)}
+.ib{display:flex;gap:10px;align-items:flex-start;border-radius:11px;padding:13px 15px;font-size:13px;line-height:1.6;margin-bottom:16px}
+.ib .i{flex-shrink:0}
+.ib-g{background:var(--gl);color:var(--gd)}.ib-r{background:var(--rl);color:var(--r)}
+.ib-b{background:var(--bl);color:#1e429f}.ib-y{background:var(--yl);color:#92400e}.ib-gr{background:var(--bd2);color:var(--ts)}
+.ib b{font-weight:700}
+
+/* ===== TABLE ===== */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:11px 14px;background:var(--bd2);color:var(--ts);font-weight:600;font-size:12px;white-space:nowrap}
+td{padding:12px 14px;border-top:1px solid var(--bd)}
+tr:hover td{background:#FAFEFB}
+.mono{font-family:var(--mono);font-size:12.5px}
+.linkc{color:var(--gd);cursor:pointer;font-weight:600}
+
+/* ===== KV / account ===== */
+.kv{display:grid;grid-template-columns:130px 1fr;gap:10px 16px;font-size:13px}
+.kv dt{color:var(--ts)}.kv dd{color:var(--tp);font-weight:600}
+.acct-card{border:1px solid var(--bd);border-radius:12px;padding:16px;background:linear-gradient(135deg,#fff,#F4FBF7)}
+.acct-card .cur{font-size:12px;font-weight:800;letter-spacing:1px;color:var(--gd)}
+.acct-card .no{font-family:var(--mono);font-size:15px;margin:8px 0;letter-spacing:1px}
+.acct-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* ===== STAT ===== */
+.sg{display:grid;gap:14px;margin-bottom:20px}
+.sc{background:var(--w);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;box-shadow:var(--sh)}
+.sc-l{color:var(--ts);font-size:12.5px}
+.sc-v{font-size:26px;font-weight:700;margin-top:4px}
+.sc-s{font-size:11.5px;color:var(--tt);margin-top:2px}
+.sc.good{border-left:3px solid var(--g)}.sc.warn{border-left:3px solid var(--y)}.sc.alert{border-left:3px solid var(--r)}
+
+/* ===== DRAWER ===== */
+.mask{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:60;opacity:0;pointer-events:none;transition:.2s}
+.mask.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:560px;max-width:94vw;background:var(--bg);z-index:61;box-shadow:var(--sh3);transform:translateX(100%);transition:.28s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.dw-hd{padding:18px 22px;background:var(--w);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px}
+.dw-hd h3{font-size:16px;font-weight:700}
+.dw-hd .x{margin-left:auto;font-size:22px;color:var(--ts);cursor:pointer;line-height:1}
+.dw-bd{padding:20px 22px;overflow-y:auto;flex:1}
+.dw-ft{padding:14px 22px;background:var(--w);border-top:1px solid var(--bd);display:flex;gap:10px;justify-content:flex-end}
+
+/* ===== WORLDFIRST AUTH OVERLAY (外部授权页) ===== */
+.wfmask{position:fixed;inset:0;background:rgba(10,15,30,.7);z-index:80;display:none;align-items:center;justify-content:center;padding:24px}
+.wfmask.on{display:flex}
+.wfwin{width:520px;max-width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.wfbar{background:#E9ECF4;padding:8px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--wf)}
+.wfbar .dots{display:flex;gap:5px}.wfbar .dots i{width:9px;height:9px;border-radius:50%;background:#C3CAD9}
+.wfbar .url{flex:1;background:#fff;border-radius:6px;padding:5px 10px;font-family:var(--mono);font-size:11.5px;color:#555;display:flex;align-items:center;gap:6px}
+.wfbar .url .lock{color:var(--g)}
+.wfhero{background:linear-gradient(135deg,var(--wf),var(--wf2));color:#fff;padding:22px 26px}
+.wflogo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px}
+.wflogo .m{width:26px;height:26px;border-radius:7px;background:var(--wfa);display:grid;place-items:center;font-size:13px}
+.wfhero p{margin-top:12px;font-size:13px;color:rgba(255,255,255,.85);line-height:1.6}
+.wfbody{padding:22px 26px}
+.wfbody h4{font-size:14px;margin-bottom:12px}
+.wf-scope{border:1px solid #E2E6F0;border-radius:10px;padding:14px;margin-bottom:16px;background:#FAFBFE}
+.wf-scope li{list-style:none;display:flex;gap:9px;font-size:13px;padding:6px 0;color:#333}
+.wf-scope li .c{color:var(--g)}
+.wf-merchant{display:flex;align-items:center;gap:12px;background:var(--wfl);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.wf-merchant .av{width:38px;height:38px;border-radius:9px;background:var(--wf);color:#fff;display:grid;place-items:center;font-weight:700}
+.wf-merchant b{font-size:13.5px}.wf-merchant small{color:var(--ts);font-size:12px;display:block}
+.wf-ft{display:flex;gap:12px;padding:0 26px 24px}
+.wf-ft .btn{flex:1;justify-content:center}
+.wf-note{font-size:11.5px;color:var(--tt);text-align:center;padding:0 26px 18px;line-height:1.6}
+
+/* spinner */
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-2px}
+.spin.dk{border-color:#cbd5e1;border-top-color:var(--gd)}
+@keyframes sp{to{transform:rotate(360deg)}}
+.load-wrap{text-align:center;padding:46px 20px;color:var(--ts)}
+.load-wrap .spin{width:34px;height:34px;border-width:3px;margin-bottom:14px}
+
+/* toast */
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);z-index:100;background:#0F172A;color:#fff;padding:12px 20px;border-radius:11px;font-size:13.5px;opacity:0;transition:.25s;box-shadow:var(--sh3);display:flex;align-items:center;gap:9px;pointer-events:none}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:var(--gd)}#toast.err{background:var(--r)}#toast.info{background:var(--b)}
+.empty{text-align:center;padding:44px 20px;color:var(--ts)}
+.empty .e-ic{font-size:34px}.empty .e-t{font-weight:700;margin-top:8px}.empty .e-s{font-size:12.5px;color:var(--tt);margin-top:4px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ts);margin-bottom:16px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.diff{background:var(--wfl);border:1px solid #D6DEF6;border-radius:10px;padding:12px 15px;font-size:12.5px;color:var(--wf);line-height:1.6;margin-bottom:16px}
+.diff b{color:var(--wf2)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><span class="lg">🥬</span> Food Max <small>· 万里汇 API 对接</small></div>
+  <div class="seg" id="segView">
+    <button data-view="apply" class="on" onclick="setView('apply')">供应商入驻侧</button>
+    <button data-view="audit" onclick="setView('audit')">采购 SCM 审核侧</button>
+    <button data-view="account" onclick="setView('account')">账户管理页</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="planpill" id="planpill">API 对接 · 深度托管</div>
+</div>
+
+<div class="wrap" id="app"></div>
+
+<!-- WorldFirst 授权页 overlay -->
+<div class="wfmask" id="wfmask">
+  <div class="wfwin">
+    <div class="wfbar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="url"><span class="lock">🔒</span> open-sea.worldfirst.com/oauth/authorize</span>
+    </div>
+    <div id="wfcontent"></div>
+  </div>
+</div>
+
+<!-- drawer -->
+<div class="mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="dw-hd"><h3 id="dwTitle">详情</h3><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="dw-bd" id="dwBody"></div>
+  <div class="dw-ft" id="dwFoot"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============ STATE ============ */
+const S = {
+  plan:'B',            // A | B
+  view:'apply',        // apply | audit | account
+  applyStep:2,         // 供应商入驻向导当前步 (0 意向 1 资质 2 收款账户 3 签约 4 提交)
+  wa:'none',           // none | kyc | authing | polling | bound | failed | pending  (供应商侧万里汇状态)
+};
+const CLIENT_ID = 'FM_SG_20260709_8842';
+const DOMAIN = 'open-sea.worldfirst.com';
+
+/* 账户管理 + 提现 数据（本期只做新币 SGD，无结汇；手续费商户承担 S$5/笔，不设限额） */
+const WD_FEE = 5.00;                 // 单笔提现手续费(SGD)，商户承担
+const WALLET = {
+  ra:{cur:'SGD', no:'5210 8842 0091', st:'Active'},   // 万里汇收款账户(Receiving Account)
+  avail:  18426.50,                  // 可提现余额(可用) = 已结算到 RA
+  pending: 6240.00,                  // 在途(未结算货款，预计，不可提现)
+  banks:[
+    {id:'BK-01', bank:'DBS Bank', no:'8821', holder:'Woodlands Fresh Pte Ltd', swift:'DBSSSGSG', def:true },
+    {id:'BK-02', bank:'OCBC Bank', no:'3390', holder:'Woodlands Fresh Pte Ltd', swift:'OCBCSGSG', def:false},
+  ],
+  withdrawals:[
+    {id:'WD-26071201', date:'2026-07-12 10:22', amt:5000.00, bank:'DBS ****8821', st:'成功'},
+    {id:'WD-26071001', date:'2026-07-10 16:05', amt:8200.00, bank:'DBS ****8821', st:'成功'},
+    {id:'WD-26070802', date:'2026-07-08 09:11', amt:3000.00, bank:'OCBC ****3390', st:'失败'},
+  ],
+};
+let WD_SEQ = 26071301;
+const WD_TAG = {'待处理':'t-gr','处理中':'t-y','成功':'t-g','失败':'t-r'};
+const sgd = n => 'S$'+(+n).toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* 供应商入驻向导步骤（现有流程 + 万里汇嵌入点=第3步 收款账户） */
+const STEPS = [
+  {t:'填写入驻意向', s:'品类/城市/联系人'},
+  {t:'上传资质材料', s:'执照/许可证/开票资质'},
+  {t:'收款账户',     s:'万里汇账户授权', embed:true},
+  {t:'签约缴保证金', s:'电子合同+保证金'},
+  {t:'提交待审核',   s:'采购 SCM 核查'},
+];
+
+/* SCM 审核列表数据（含万里汇账户各状态，供应商名用 SG 风格） */
+const SUPPLIERS = [
+  {id:'FM-SUP-10023', name:'兀兰鲜蔬 Woodlands Fresh', cat:'新鲜蔬菜', apply:'资质审核中', wa:'bound',
+   ra:[{cur:'SGD',no:'5210 8842 0091',st:'active'},{cur:'CNH',no:'6031 8842 7745',st:'active'}], msg:'resultMsg=SUCCESS'},
+  {id:'FM-SUP-10024', name:'星洲海产 Straits Seafood', cat:'海鲜水产', apply:'待签约', wa:'authing',
+   ra:[], msg:'授权页已发起，等待供应商在万里汇侧确认'},
+  {id:'FM-SUP-10025', name:'南洋肉业 Nanyang Meat', cat:'肉禽蛋品', apply:'资质审核中', wa:'pending',
+   ra:[], msg:'万里汇侧 KYC 待补件：营业执照影像不清晰'},
+  {id:'FM-SUP-10026', name:'赤道调味 Equator Spice', cat:'调味品', apply:'审核驳回', wa:'failed',
+   ra:[], msg:'CURRENCY_NOT_SUPPORTED：申请币种与经营主体所在区域不匹配'},
+  {id:'FM-SUP-10027', name:'狮城冻品 Lion City Frozen', cat:'肉禽蛋品', apply:'申请中', wa:'none',
+   ra:[], msg:'尚未发起万里汇账户授权'},
+];
+
+const WA_TAG = {
+  none:{c:'t-gr',t:'未绑定'}, kyc:{c:'t-b',t:'待授权'}, authing:{c:'t-y',t:'授权中'},
+  polling:{c:'t-y',t:'校验中'}, bound:{c:'t-g',t:'已绑定'}, failed:{c:'t-r',t:'授权失败'}, pending:{c:'t-y',t:'待补件'},
+};
+const APPLY_TAG = {'申请中':'t-gr','资质审核中':'t-b','待签约':'t-y','审核驳回':'t-r','正常经营':'t-g'};
+
+/* ============ HELPERS ============ */
+function toast(m,t){const e=document.getElementById('toast');e.className='';e.textContent='';const ic=document.createElement('span');ic.textContent=t==='ok'?'✅':t==='err'?'⚠️':'ℹ️';e.appendChild(ic);e.appendChild(document.createTextNode(m));e.classList.add('on');if(t)e.classList.add(t);clearTimeout(window._tt);window._tt=setTimeout(()=>e.classList.remove('on'),2400);}
+function tag(map,k){const g=map[k]||{c:'t-gr',t:k};return `<span class="tag ${g.c}"><span class="dot"></span>${g.t}</span>`;}
+function el(id){return document.getElementById(id);}
+
+/* ============ TOP SWITCHERS ============ */
+function setPlan(p){S.plan=p;document.querySelectorAll('#segPlan button').forEach(b=>b.classList.toggle('on',b.dataset.plan===p));
+  el('planpill').textContent = p==='B'?'方案 B · 深度托管':'方案 A · 轻量跳转';
+  // 切方案时重置供应商侧演进状态到该方案起点
+  S.wa = 'none';
+  render();}
+function setView(v){S.view=v;document.querySelectorAll('#segView button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));render();}
+
+/* ============ RENDER ROOT ============ */
+function render(){
+  const a=el('app');
+  if(S.view==='apply') a.innerHTML = viewApply();
+  else if(S.view==='audit') a.innerHTML = viewAudit();
+  else a.innerHTML = viewAccount();
+}
+
+/* ============ PIPE ============ */
+function pipe(cur){
+  let h='<div class="pipe">';
+  STEPS.forEach((s,i)=>{
+    const cls = i<cur?'done':i===cur?'cur':'';
+    h+=`<div class="pstep ${cls} ${s.embed?'embed':''}"><div class="pdot">${i<cur?'✓':(s.embed?'W':i+1)}</div><div class="pl">${s.t}<small>${s.s}</small></div></div>`;
+    if(i<STEPS.length-1) h+='<div class="pbar"></div>';
+  });
+  return h+'</div>';
+}
+
+/* ============ VIEW 1: 供应商入驻侧 ============ */
+function viewApply(){
+  const planB = S.plan==='B';
+  let h = `<div class="hero">
+    <div class="hero-t">供应商入驻 · 收款账户设置</div>
+    <div class="hero-s">现有入驻流程第 3 步「收款账户」由填写银行账户改为<b>开通并授权万里汇收款账户（RA）</b>。原 <code style="background:rgba(255,255,255,.15);padding:1px 6px;border-radius:5px">bankAcct / settle</code> 字段被万里汇账户取代，打款直接结算至万里汇 RA。</div>
+    <div class="hero-embed">当前方案 <b>${planB?'B 深度托管':'A 轻量跳转'}</b> ${planB?'· 平台代填 KYC + API 代开 RA':'· 供应商跳转万里汇自助注册'}</div>
+  </div>`;
+
+  h += pipe(2);
+  h += `<div class="card"><div class="card-hd"><h3>③ 收款账户</h3><span class="wf-badge"><span class="d"></span>WorldFirst 万里汇</span><span class="sub">接入域名 ${DOMAIN}</span></div><div class="card-bd">`;
+  h += planB ? applyBodyB() : applyBodyA();
+  h += `</div></div>`;
+  return h;
+}
+
+/* 方案 B：站内填 KYC → API 代开 → 跳转授权确认 */
+function applyBodyB(){
+  if(S.wa==='bound') return boundBlock();
+  if(S.wa==='polling') return pollingBlock();
+  return `
+  <div class="diff"><b>方案 B（深度托管）：</b>供应商在 Foodmax 页内填写 KYC，平台以 <span class="mono">createReceivingAccount</span> 代开 RA，再跳转万里汇授权页确认。KYC 归属平台、把控力强。</div>
+  <div class="ib ib-b"><span class="i">🛈</span><div>以下企业信息将用于向万里汇开立收款账户，请与营业执照保持一致。带 <b style="color:var(--r)">*</b> 为必填。</div></div>
+  <div class="fg2">
+    <div class="fr"><label class="fl"><b>*</b>公司注册名 <span class="hint">与营业执照一致</span></label><input id="k_name" value="兀兰鲜蔬 Woodlands Fresh Pte. Ltd."></div>
+    <div class="fr"><label class="fl"><b>*</b>公司登记号 UEN</label><input id="k_uen" value="202612345K"></div>
+  </div>
+  <div class="fg3">
+    <div class="fr"><label class="fl"><b>*</b>注册国家/地区</label><select><option>新加坡 Singapore</option><option>中国大陆</option><option>马来西亚</option></select></div>
+    <div class="fr"><label class="fl"><b>*</b>税号 Tax ID</label><input value="M90312345X"></div>
+    <div class="fr"><label class="fl"><b>*</b>法人证件号</label><input value="S8812345Z"></div>
+  </div>
+  <div class="fr"><label class="fl"><b>*</b>开通结算币种 <span class="hint">ISO 4217 · 可多选</span></label>
+    <div class="chk">
+      <label class="on"><input type="checkbox" checked>SGD 新加坡元</label>
+      <label class="on"><input type="checkbox" checked>CNH 离岸人民币</label>
+      <label><input type="checkbox">USD 美元</label>
+    </div></div>
+  <div class="fg2">
+    <div class="fr"><label class="fl">平台商户号 referenceCustomerId <span class="ro-tag">系统生成</span></label><input class="mono" value="FM-SUP-10023" readonly></div>
+    <div class="fr"><label class="fl">店铺名 / 店铺 URL</label><input value="兀兰鲜蔬 · shop.foodmax.sg/woodlands-fresh"></div>
+  </div>
+  <div class="fr"><label class="fl">开票资质影像</label><div class="up"><div class="uic">📄</div><div class="ut">上传一般纳税人资格证 / GST 登记</div><div class="us">JPG/PNG/PDF ≤ 10MB · 沿用入驻已上传资质，可复用</div></div></div>
+  <div class="ftbar">
+    <button class="btn btn-o" onclick="toast('已保存草稿','info')">保存草稿</button>
+    <button class="btn btn-p" onclick="submitKycB()">提交并前往万里汇授权 →</button>
+  </div>`;
+}
+
+/* 方案 A：站内只有跳转按钮 → 万里汇自助注册 */
+function applyBodyA(){
+  if(S.wa==='bound') return boundBlock();
+  if(S.wa==='polling') return pollingBlock();
+  if(S.wa==='authing') return `
+    <div class="ib ib-y"><span class="i">⏳</span><div><b>已跳转万里汇注册页</b>，等待供应商在万里汇侧完成开户与账户授权。完成后自动返回本页并回填绑定结果。</div></div>
+    <div class="load-wrap"><span class="spin dk"></span><div>等待万里汇回调（resultMsg）…</div></div>
+    <div class="ftbar"><button class="btn btn-o" onclick="openWF('register')">重新打开注册页</button><button class="btn btn-p" onclick="wfReturn()">模拟：供应商已完成 →</button></div>`;
+  return `
+  <div class="diff"><b>方案 A（轻量跳转）：</b>Foodmax 侧不收 KYC，供应商点击后跳转万里汇 Office 端自助注册并填写全部资料；平台只透传 <span class="mono">referenceCustomerId</span> 与店铺信息，回来仅接收绑定结果。对接最快、平台把控力较弱。</div>
+  <div class="wf-merchant"><div class="av">兀</div><div><b>兀兰鲜蔬 Woodlands Fresh</b><small>平台商户号 FM-SUP-10023 · 品类 新鲜蔬菜</small></div></div>
+  <div class="ib ib-b"><span class="i">🛈</span><div>开通万里汇收款账户后，Food Max 的货款将结算至该账户。开户资料（公司登记号、税号、证件等 KYC）由您在万里汇页面填写，Food Max 不留存。</div></div>
+  <div class="fr"><label class="fl">将透传给万里汇的信息</label>
+    <dl class="kv" style="border:1px solid var(--bd);border-radius:10px;padding:14px">
+      <dt>referenceCustomerId</dt><dd class="mono">FM-SUP-10023</dd>
+      <dt>店铺名</dt><dd>兀兰鲜蔬 Woodlands Fresh</dd>
+      <dt>店铺 URL</dt><dd class="mono">shop.foodmax.sg/woodlands-fresh</dd>
+      <dt>回调地址 redirectUrl</dt><dd class="mono">portal.foodmax.sg/onboard/wa/callback</dd>
+    </dl></div>
+  <div class="ftbar"><button class="btn btn-wf btn-lg" onclick="openWF('register')">前往万里汇开通账户 ↗</button></div>`;
+}
+
+/* 校验中（轮询 inquiryAccount） */
+function pollingBlock(){
+  return `<div class="load-wrap"><span class="spin dk"></span>
+    <div style="font-weight:700;color:var(--tp);margin-bottom:4px">正在校验万里汇账户</div>
+    <div>调用 <span class="mono">inquiryAccount</span> 确认 RA 是否有效…</div></div>`;
+}
+
+/* 绑定成功 */
+function boundBlock(){
+  return `
+  <div class="ib ib-g"><span class="i">✅</span><div><b>万里汇收款账户已绑定</b> · 回调 <span class="mono">resultMsg=SUCCESS</span>，<span class="mono">inquiryAccount</span> 校验通过。货款将结算至以下账户。</div></div>
+  <div class="acct-grid">
+    <div class="acct-card"><div class="cur">SGD 新加坡元</div><div class="no">5210 8842 0091</div><span class="tag t-g"><span class="dot"></span>Active</span></div>
+    <div class="acct-card"><div class="cur">CNH 离岸人民币</div><div class="no">6031 8842 7745</div><span class="tag t-g"><span class="dot"></span>Active</span></div>
+  </div>
+  <dl class="kv" style="margin-top:18px">
+    <dt>平台商户号</dt><dd class="mono">FM-SUP-10023</dd>
+    <dt>Client-Id</dt><dd class="mono">${CLIENT_ID}</dd>
+    <dt>账户类型</dt><dd>Receiving Account（供应商主账户）</dd>
+    <dt>绑定时间</dt><dd>2026-07-09 15:41</dd>
+  </dl>
+  <div class="ftbar">
+    <button class="btn btn-o" onclick="S.wa='none';render()">重新授权</button>
+    <button class="btn btn-p" onclick="S.applyStep=3;toast('进入下一步：签约缴保证金','ok')">下一步：签约 →</button>
+  </div>`;
+}
+
+/* 提交 KYC（方案B）→ 跳转授权 */
+function submitKycB(){ openWF('authorize'); }
+
+/* ============ WORLDFIRST 授权页 ============ */
+function openWF(mode){
+  const c = el('wfcontent');
+  if(mode==='register'){
+    c.innerHTML = `
+      <div class="wfhero"><div class="wflogo"><span class="m">W</span>WorldFirst 万里汇</div>
+        <p>创建收款账户以接收来自合作平台 <b>Food Max</b> 的结算款项。请填写企业信息完成 KYC。</p></div>
+      <div class="wfbody">
+        <div class="wf-merchant"><div class="av" style="background:var(--wf)">FM</div><div><b>Food Max（合作平台）</b><small>referenceCustomerId · FM-SUP-10023</small></div></div>
+        <div class="fr"><label class="fl">公司注册名</label><input placeholder="Woodlands Fresh Pte. Ltd."></div>
+        <div class="fg2"><div class="fr"><label class="fl">公司登记号 UEN</label><input placeholder="2026xxxxxK"></div>
+        <div class="fr"><label class="fl">开通币种</label><select><option>SGD + CNH</option><option>SGD</option></select></div></div>
+      </div>
+      <div class="wf-ft"><button class="btn btn-o" onclick="closeWF()">取消</button><button class="btn btn-wf" onclick="wfReturn()">提交并授权给 Food Max</button></div>
+      <div class="wf-note">您正在访问万里汇（蚂蚁国际旗下）安全页面 · ${DOMAIN}</div>`;
+  } else {
+    c.innerHTML = `
+      <div class="wfhero"><div class="wflogo"><span class="m">W</span>WorldFirst 万里汇</div>
+        <p>合作平台 <b>Food Max</b> 已为您预填开户资料，请确认授权创建收款账户。</p></div>
+      <div class="wfbody">
+        <div class="wf-merchant"><div class="av" style="background:var(--wf)">兀</div><div><b>兀兰鲜蔬 Woodlands Fresh Pte. Ltd.</b><small>UEN 202612345K · 新加坡</small></div></div>
+        <h4>Food Max 请求以下授权：</h4>
+        <ul class="wf-scope">
+          <li><span class="c">✓</span> 创建 SGD、CNH 收款账户（Receiving Account）</li>
+          <li><span class="c">✓</span> 接收来自 Food Max 平台的货款结算与自动清分</li>
+          <li><span class="c">✓</span> 供 Food Max 查询账户状态与账单（inquiryAccount / statement）</li>
+        </ul>
+        <div style="font-size:12px;color:var(--ts);line-height:1.6">授权后 Food Max 可代发起结算划转，<b>不可</b>提取或挪用您账户余额。您可随时在万里汇后台解除授权。</div>
+      </div>
+      <div class="wf-ft"><button class="btn btn-o" onclick="closeWF()">拒绝</button><button class="btn btn-wf" onclick="wfReturn()">确认授权 →</button></div>
+      <div class="wf-note">您正在访问万里汇安全页面 · 🔒 ${DOMAIN}/oauth/authorize · Client-Id ${CLIENT_ID}</div>`;
+  }
+  el('wfmask').classList.add('on');
+}
+function closeWF(){ el('wfmask').classList.remove('on'); if(S.plan==='A'&&S.wa!=='bound'){S.wa='authing';render();} }
+/* 从授权页返回：回调 → 轮询 inquiryAccount → 绑定 */
+function wfReturn(){
+  el('wfmask').classList.remove('on');
+  S.wa='polling'; render();
+  toast('已收到回调 resultMsg=SUCCESS，正在校验…','info');
+  setTimeout(()=>{ S.wa='bound'; render(); toast('万里汇账户绑定成功','ok'); }, 1600);
+}
+
+/* ============ VIEW 2: 采购 SCM 审核侧 ============ */
+function viewAudit(){
+  const planB=S.plan==='B';
+  const bound=SUPPLIERS.filter(s=>s.wa==='bound').length;
+  const prog=SUPPLIERS.filter(s=>['authing','polling','pending'].includes(s.wa)).length;
+  const fail=SUPPLIERS.filter(s=>s.wa==='failed').length;
+  let h=`<div class="hero"><div class="hero-t">供应商入驻审核 · 万里汇账户核验</div>
+    <div class="hero-s">采购员/负责人在二级审批时核验供应商的万里汇账户绑定与 <span class="mono">inquiryAccount</span> 校验结果。<b>账户未绑定或校验失败将阻断「准予营业」</b>。</div>
+    <div class="hero-embed">当前方案 <b>${planB?'B 深度托管':'A 轻量跳转'}</b> · ${planB?'可见平台代填 KYC 与开户流水':'仅见万里汇回传的绑定结果'}</div></div>`;
+  h+=`<div class="sg" style="grid-template-columns:repeat(4,1fr)">
+    <div class="sc"><div class="sc-l">待核查供应商</div><div class="sc-v">${SUPPLIERS.length}</div><div class="sc-s">本周入驻申请</div></div>
+    <div class="sc good"><div class="sc-l">万里汇已绑定</div><div class="sc-v">${bound}</div><div class="sc-s">可进入准予营业</div></div>
+    <div class="sc warn"><div class="sc-l">授权/补件进行中</div><div class="sc-v">${prog}</div><div class="sc-s">等待供应商侧完成</div></div>
+    <div class="sc alert"><div class="sc-l">授权失败</div><div class="sc-v">${fail}</div><div class="sc-s">需驳回或人工介入</div></div></div>`;
+
+  h+=`<div class="card"><div class="card-hd"><h3>入驻审核队列</h3><span class="sub">Client-Id ${CLIENT_ID} · ${DOMAIN}</span></div><div class="card-bd flush">
+    <div style="overflow-x:auto"><table><thead><tr>
+      <th>平台商户号</th><th>供应商</th><th>品类</th><th>入驻状态</th><th>万里汇账户</th><th>已开币种</th><th>操作</th>
+    </tr></thead><tbody>`;
+  SUPPLIERS.forEach(s=>{
+    const cur = s.ra.length? s.ra.map(r=>r.cur).join(' / ') : '—';
+    h+=`<tr>
+      <td class="mono">${s.id}</td><td>${s.name}</td><td>${s.cat}</td>
+      <td>${tag(APPLY_TAG,s.apply)?`<span class="tag ${APPLY_TAG[s.apply]}"><span class="dot"></span>${s.apply}</span>`:s.apply}</td>
+      <td>${tag(WA_TAG,s.wa)}</td><td>${cur}</td>
+      <td><span class="linkc" onclick="openAudit('${s.id}')">核验</span></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div></div></div>`;
+  return h;
+}
+
+function openAudit(id){
+  const s=SUPPLIERS.find(x=>x.id===id); if(!s)return;
+  const planB=S.plan==='B';
+  el('dwTitle').innerHTML = `${s.name} <span style="font-size:12px;color:var(--ts)">${s.id}</span>`;
+  let b=`<div class="card"><div class="card-hd"><h3>万里汇账户核验</h3>${tag(WA_TAG,s.wa)}</div><div class="card-bd">`;
+  // 状态相关信息条
+  const IB={bound:['ib-g','✅','账户已绑定且校验通过，可放行准予营业'],
+    authing:['ib-y','⏳','授权页已发起，等待供应商在万里汇侧确认，暂不可放行'],
+    polling:['ib-y','⏳','正在轮询 inquiryAccount 校验账户有效性'],
+    pending:['ib-y','📎','万里汇侧 KYC 待补件，需通知供应商补充材料'],
+    failed:['ib-r','⚠️','授权失败，不可放行；请驳回入驻或联系供应商重试'],
+    none:['ib-gr','○','供应商尚未发起万里汇账户授权']}[s.wa];
+  b+=`<div class="ib ${IB[0]}"><span class="i">${IB[1]}</span><div>${IB[2]}</div></div>`;
+  b+=`<dl class="kv">
+    <dt>referenceCustomerId</dt><dd class="mono">${s.id}</dd>
+    <dt>Client-Id</dt><dd class="mono">${CLIENT_ID}</dd>
+    <dt>接入域名</dt><dd class="mono">${DOMAIN}</dd>
+    <dt>回传信息</dt><dd style="font-weight:400;color:var(--ts)">${s.msg}</dd></dl>`;
+  if(s.ra.length){
+    b+=`<div style="margin-top:16px" class="acct-grid">`;
+    s.ra.forEach(r=>{b+=`<div class="acct-card"><div class="cur">${r.cur}</div><div class="no">${r.no}</div><span class="tag t-g"><span class="dot"></span>${r.st}</span></div>`;});
+    b+=`</div>`;
+  }
+  b+=`</div></div>`;
+  // 方案B 额外可见平台代填 KYC
+  if(planB){
+    b+=`<div class="card"><div class="card-hd"><h3>平台代填 KYC（方案 B 可见）</h3></div><div class="card-bd"><dl class="kv">
+      <dt>公司注册名</dt><dd>${s.name} Pte. Ltd.</dd>
+      <dt>公司登记号 UEN</dt><dd class="mono">202612345K</dd>
+      <dt>税号</dt><dd class="mono">M90312345X</dd>
+      <dt>开户 API</dt><dd class="mono">createReceivingAccount</dd>
+      <dt>请求时间</dt><dd class="mono">2026-07-09T15:39:04+08:00</dd>
+    </dl></div></div>`;
+  } else {
+    b+=`<div class="ib ib-b"><span class="i">🛈</span><div><b>方案 A：</b>KYC 由供应商在万里汇侧填写，平台不留存明细，仅接收绑定结果与账户号。</div></div>`;
+  }
+  el('dwBody').innerHTML=b;
+  // 底部动作：按状态决定是否可放行
+  const canPass = s.wa==='bound';
+  el('dwFoot').innerHTML = `
+    ${s.wa==='pending'?`<button class="btn btn-o" onclick="toast('已通知供应商补件','info')">通知补件</button>`:''}
+    ${s.wa==='failed'?`<button class="btn btn-d" onclick="toast('入驻已驳回','err');closeDrawer()">驳回入驻</button>`:''}
+    <button class="btn btn-p" ${canPass?'':'disabled'} onclick="passSupplier('${s.id}')">${canPass?'二级审批通过 · 准予营业':'账户未就绪，不可放行'}</button>`;
+  openDrawer();
+}
+function passSupplier(id){toast('二级审批通过，已自动建档 + 开通店铺账号','ok');closeDrawer();}
+
+/* ============ VIEW 3: 账户管理页（账户总览 + 余额 + 站内银行卡 + 提现 + 记录）============ */
+function viewAccount(){
+  const w=WALLET;
+  let h=`<div class="hero"><div class="hero-t">账户管理</div>
+    <div class="hero-s">入驻完成后，供应商在店铺后台查看万里汇收款账户余额、管理收款银行卡、发起提现。货款经对账结算入账万里汇账户(RA)，可提现部分随时提现到本地银行卡。</div>
+    <div class="hero-embed">兀兰鲜蔬 Woodlands Fresh · FM-SUP-10023 · 结算币种 <b>SGD</b> · API 对接</div></div>`;
+  // 余额卡：可提现(主) + 在途(预计不可提)
+  h+=`<div class="card"><div class="card-hd"><h3>万里汇账户余额</h3><span class="wf-badge"><span class="d"></span>WorldFirst 万里汇 · RA ${w.ra.no}</span></div><div class="card-bd">
+    <div style="display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end">
+      <div>
+        <div style="font-size:12.5px;color:var(--ts)">可提现余额（可用）</div>
+        <div class="big" style="font-size:38px;font-weight:700;color:var(--gd);line-height:1.1;margin-top:4px">${sgd(w.avail)}</div>
+      </div>
+      <div style="padding-bottom:6px">
+        <div style="font-size:12.5px;color:var(--ts)">在途（预计 · 未结算货款）</div>
+        <div style="font-size:20px;font-weight:600;color:var(--ts);margin-top:4px">${sgd(w.pending)}</div>
+        <div style="font-size:11.5px;color:var(--ts);margin-top:2px">对账结算完成后转入可提现</div>
+      </div>
+      <div style="margin-left:auto;padding-bottom:4px"><button class="btn btn-p" style="min-width:130px" onclick="openWithdraw()">提现</button></div>
+    </div></div></div>`;
+  // 收款银行卡（站内管理）
+  h+=`<div class="card"><div class="card-hd"><h3>收款银行卡</h3><span class="sub">提现到账银行卡 · 站内维护</span><div class="row"><button class="btn btn-o btn-sm" onclick="openBankEdit()">+ 绑定银行卡</button></div></div><div class="card-bd flush"><table>
+    <thead><tr><th>银行</th><th>账号</th><th>户名</th><th>SWIFT</th><th>默认</th><th>操作</th></tr></thead><tbody>
+    ${w.banks.map(b=>`<tr>
+      <td>${b.bank}</td><td class="mono">****${b.no}</td><td>${b.holder}</td><td class="mono">${b.swift}</td>
+      <td>${b.def?'<span class="tag t-g"><span class="dot"></span>默认</span>':`<span class="linkc" onclick="setDefaultBank('${b.id}')">设为默认</span>`}</td>
+      <td>${b.def?'<span style="color:var(--ts)">—</span>':`<span class="linkc" style="color:var(--r)" onclick="unbindBank('${b.id}')">解绑</span>`}</td>
+    </tr>`).join('')}
+    </tbody></table></div></div>`;
+  // 提现记录
+  h+=`<div class="card"><div class="card-hd"><h3>提现记录</h3><span class="sub">共 ${w.withdrawals.length} 笔 · 手续费 ${sgd(WD_FEE)}/笔（商户承担）</span></div><div class="card-bd flush"><table>
+    <thead><tr><th>提现单号</th><th>时间</th><th>提现金额</th><th>手续费</th><th>实际到账</th><th>到账银行卡</th><th>状态</th></tr></thead><tbody>
+    ${w.withdrawals.map(x=>`<tr>
+      <td class="mono">${x.id}</td><td style="color:var(--ts);font-size:12.5px">${x.date}</td>
+      <td>${sgd(x.amt)}</td><td style="color:var(--ts)">${sgd(WD_FEE)}</td><td style="font-weight:600">${sgd(x.amt-WD_FEE)}</td>
+      <td class="mono">${x.bank}</td><td>${tag(WD_TAG,x.st)}</td>
+    </tr>`).join('')}
+    </tbody></table></div></div>`;
+  // 账户信息 + 操作
+  h+=`<div class="card"><div class="card-hd"><h3>账户信息</h3></div><div class="card-bd">
+    <dl class="kv">
+      <dt>收款账户(RA)</dt><dd class="mono">${w.ra.cur} · ${w.ra.no} <span class="tag t-g" style="margin-left:6px"><span class="dot"></span>${w.ra.st}</span></dd>
+      <dt>平台商户号</dt><dd class="mono">FM-SUP-10023</dd>
+      <dt>Client-Id</dt><dd class="mono">${CLIENT_ID}</dd>
+      <dt>接入域名</dt><dd class="mono">${DOMAIN}</dd>
+      <dt>KYC 归属</dt><dd>平台代填（Food Max 留存）· API 对接</dd>
+    </dl>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+      <button class="btn btn-o" onclick="toast('调用 statement 拉取账单流水','info')">账单/对账 statement</button>
+      <button class="btn btn-o" onclick="openWF('authorize')">重新授权</button>
+      <button class="btn btn-o btn-d" style="background:var(--w);border-color:var(--rl);color:var(--r)" onclick="toast('解除授权需二次确认','err')">解除万里汇授权</button>
+    </div></div></div>`;
+  return h;
+}
+
+/* ---- 提现抽屉：调万里汇提现 API（本期只 SGD，手续费商户承担，不设限额）---- */
+function openWithdraw(){
+  const w=WALLET;
+  if(!w.banks.length){toast('请先绑定收款银行卡','err');return;}
+  const def=w.banks.find(b=>b.def)||w.banks[0];
+  el('dwTitle').textContent='提现到银行卡';
+  el('dwBody').innerHTML=`
+    <div class="ib ib-b"><span class="i">🛈</span><div>提现将调用万里汇 <span class="mono">transferToBankAccount</span> API，从收款账户(RA) 划转到你的收款银行卡。仅可提现<b>可用余额</b>，手续费 <b>${sgd(WD_FEE)}/笔由商户承担</b>。</div></div>
+    <div class="fr"><label class="fl">可提现余额</label><div style="font-size:22px;font-weight:700;color:var(--gd)">${sgd(w.avail)}</div></div>
+    <div class="fr"><label class="fl"><b>*</b>到账银行卡</label>
+      <select id="wd-bank">${w.banks.map(b=>`<option value="${b.id}" ${b.id===def.id?'selected':''}>${b.bank} ****${b.no}（${b.holder}）${b.def?' · 默认':''}</option>`).join('')}</select></div>
+    <div class="fr"><label class="fl"><b>*</b>提现金额（SGD）</label>
+      <input id="wd-amt" type="number" min="0" step="0.01" placeholder="0.00" oninput="wdCalc()">
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn btn-o btn-sm" type="button" onclick="wdFillAll()">全部提现 ${sgd(w.avail)}</button></div>
+      <div id="wd-err" style="font-size:12px;color:var(--r);margin-top:6px"></div></div>
+    <dl class="kv" id="wd-sum" style="margin-top:6px">
+      <dt>手续费（商户承担）</dt><dd id="wd-fee">${sgd(WD_FEE)}</dd>
+      <dt>实际到账</dt><dd id="wd-net" style="font-weight:700;color:var(--gd)">—</dd>
+      <dt>预计到账</dt><dd>1 个工作日内（万里汇处理）</dd>
+    </dl>`;
+  el('dwFoot').innerHTML=`<button class="btn btn-o" onclick="closeDrawer()">取消</button><button class="btn btn-p" id="wd-ok" onclick="submitWithdraw()">确认提现</button>`;
+  openDrawer();wdCalc();
+}
+function wdVal(){return parseFloat((el('wd-amt')||{}).value)||0;}
+function wdFillAll(){el('wd-amt').value=WALLET.avail.toFixed(2);wdCalc();}
+function wdCalc(){
+  const amt=wdVal(),w=WALLET,err=el('wd-err'),ok=el('wd-ok');
+  let msg='';
+  if(amt>0&&amt<=WD_FEE)msg=`提现金额需大于手续费 ${sgd(WD_FEE)}`;
+  else if(amt>w.avail)msg=`超过可提现余额 ${sgd(w.avail)}`;
+  el('wd-net').textContent = amt>WD_FEE ? sgd(amt-WD_FEE) : '—';
+  err.textContent=msg;
+  if(ok)ok.disabled = !(amt>WD_FEE && amt<=w.avail);
+  if(ok)ok.style.opacity = ok.disabled?'.5':'';
+}
+function submitWithdraw(){
+  const amt=wdVal(),w=WALLET;
+  if(!(amt>WD_FEE&&amt<=w.avail))return;
+  const b=w.banks.find(x=>x.id===el('wd-bank').value)||w.banks[0];
+  w.avail=+(w.avail-amt).toFixed(2);
+  w.withdrawals.unshift({id:'WD-'+(WD_SEQ++), date:'2026-07-13 09:41', amt:amt, bank:`${b.bank.split(' ')[0]} ****${b.no}`, st:'处理中'});
+  closeDrawer();render();
+  toast(`已提交提现 ${sgd(amt)}，实际到账 ${sgd(amt-WD_FEE)}，处理中`,'ok');
+}
+
+/* ---- 绑定/管理收款银行卡（站内维护）---- */
+function openBankEdit(){
+  el('dwTitle').textContent='绑定收款银行卡';
+  el('dwBody').innerHTML=`
+    <div class="ib ib-gr"><span class="i">🛈</span><div>收款银行卡由平台站内维护，用于万里汇提现到账。请确保户名与经营主体一致，否则提现会被退回。</div></div>
+    <div class="fr"><label class="fl"><b>*</b>开户银行</label>
+      <select id="bk-bank"><option value="">请选择</option><option>DBS Bank</option><option>OCBC Bank</option><option>UOB</option><option>Maybank</option><option>Standard Chartered</option></select></div>
+    <div class="fr"><label class="fl"><b>*</b>银行账号</label><input id="bk-no" placeholder="如 123-45678-9"></div>
+    <div class="fr"><label class="fl"><b>*</b>户名</label><input id="bk-holder" value="Woodlands Fresh Pte Ltd"></div>
+    <div class="fg2"><div class="fr"><label class="fl">SWIFT / BIC</label><input id="bk-swift" placeholder="如 DBSSSGSG"></div>
+      <div class="fr"><label class="fl">设为默认</label><label style="display:flex;align-items:center;gap:8px;height:40px"><input type="checkbox" id="bk-def"> 提现默认到此卡</label></div></div>
+    <div id="bk-err" style="font-size:12px;color:var(--r)"></div>`;
+  el('dwFoot').innerHTML=`<button class="btn btn-o" onclick="closeDrawer()">取消</button><button class="btn btn-p" onclick="submitBank()">保存银行卡</button>`;
+  openDrawer();
+}
+function submitBank(){
+  const bank=el('bk-bank').value, no=(el('bk-no').value||'').replace(/\s/g,''), holder=(el('bk-holder').value||'').trim(), swift=(el('bk-swift').value||'').trim().toUpperCase(), def=el('bk-def').checked;
+  if(!bank||!no||!holder){el('bk-err').textContent='请填写开户银行、银行账号、户名';return;}
+  const last4=no.slice(-4);
+  if(def)WALLET.banks.forEach(b=>b.def=false);
+  WALLET.banks.push({id:'BK-'+String(WALLET.banks.length+1).padStart(2,'0'), bank, no:last4, holder, swift:swift||'—', def:def||WALLET.banks.length===0});
+  closeDrawer();render();toast('银行卡已绑定','ok');
+}
+function setDefaultBank(id){WALLET.banks.forEach(b=>b.def=b.id===id);render();toast('已设为默认收款卡','ok');}
+function unbindBank(id){const b=WALLET.banks.find(x=>x.id===id);if(!b||b.def){toast('默认卡不可解绑，请先切换默认','err');return;}WALLET.banks=WALLET.banks.filter(x=>x.id!==id);render();toast('银行卡已解绑','info');}
+
+/* ============ DRAWER ============ */
+function openDrawer(){el('mask').classList.add('on');el('drawer').classList.add('on');}
+function closeDrawer(){el('mask').classList.remove('on');el('drawer').classList.remove('on');}
+
+render();
+</script>
+</body>
+</html>
