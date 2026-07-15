@@ -598,6 +598,7 @@ const S = {
   order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['备货中','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
   bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['待付款','t-b']},
   invoice:{none:['待平台开票','t-y'],uploaded:['开票中','t-b'],verified:['已开票','t-g'],rejected:['开票异常','t-r']},
+  withdraw:{pending:['待处理','t-gr'],processing:['处理中','t-y'],success:['成功','t-g'],failed:['失败','t-r']},
 };
 function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
@@ -607,6 +608,23 @@ const CATS={'新鲜蔬菜':{tax:0,baseRisk:'低',guide:6.0},'肉禽蛋品':{tax:
 const CAT_SCOPE=['新鲜蔬菜','肉禽蛋品','海鲜水产'];  // 食品经营许可证经营范围（不含调味品→选它会被资质拦截）
 const UNITS=['kg','g','L','盒','袋','份','只','扎','箱'],SHELF=['常温','冷藏','冷冻'],SHOWEXP=['展示生产日期+保质期','展示到期日期','不展示'],SALETYPE=['售卖品','非卖品'];
 const PACK_UNITS=['袋','盒','箱','包','件','扎','瓶','桶','罐','托'];  // 包装单位（选填）：规格名拼为 数量+最小售卖单位/包装单位，如「1kg/袋」
+/* 账户管理 + 提现（万里汇 API 对接）：本期只做新币 SGD、无结汇、无限额；手续费商户承担 $5/笔 */
+const WD_FEE=5.00;
+DB.wallet={
+  ra:{cur:'SGD',no:'5210 8842 0091',st:'Active'},   // 万里汇收款账户(RA)
+  avail:18426.50,                                     // 可提现余额(可用)=已结算入 RA
+  pending:6240.00,                                    // 在途(未结算货款，预计，不可提现)
+  banks:[
+    {id:'BK-01',bank:'DBS Bank',no:'8821',holder:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',swift:'DBSSSGSG',def:true},
+    {id:'BK-02',bank:'OCBC Bank',no:'3390',holder:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',swift:'OCBCSGSG',def:false},
+  ],
+  withdrawals:[
+    {id:'WD-26071201',date:'2026-07-12 10:22',amt:5000.00,bank:'DBS ****8821',st:'success'},
+    {id:'WD-26071001',date:'2026-07-10 16:05',amt:8200.00,bank:'DBS ****8821',st:'success'},
+    {id:'WD-26070802',date:'2026-07-08 09:11',amt:3000.00,bank:'OCBC ****3390',st:'failed',reason:'户名与经营主体不一致，已退回可提现余额'},
+  ],
+  wdSeq:26071301,
+};
 const RISK_META={'低':['t-g','r-low'],'中':['t-y','r-mid'],'高':['t-r','r-high']};
 let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[];DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};
 function riskTag(r){if(!r)return '';return `<span class="tag ${RISK_META[r][0]}"><span class="riskdot ${RISK_META[r][1]}"></span>${r}风险</span>`;}
@@ -652,6 +670,7 @@ const NAV={
     {sec:'财务'},
     {id:'m-settle',ic:'💰',t:'对账结算',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
+    {id:'m-account',ic:'💳',t:'账户管理',p1:1},
     {sec:'合规'},
     {id:'m-after-group',ic:'↩️',t:'售后管理',p1:1,children:[
       {id:'m-aftersale',ic:'↩️',t:'售后订单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
@@ -1608,6 +1627,99 @@ function act_svcInvPreview(no){
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${issued?`<button class="btn btn-p" onclick="act_svcInvDownload('${s.no}')">下载 PDF</button>`:''}</div>`);
 }
+
+/* ---------- 商家端：账户管理（万里汇 API · 余额 / 站内银行卡 / 提现 / 记录）---------- */
+PAGES['m-account']=()=>{
+  const w=DB.wallet;
+  return `
+  <div class="card"><div class="card-hd"><h3>万里汇账户余额</h3><span class="sub">收款账户(RA) ${w.ra.cur} · ${w.ra.no}</span></div><div class="card-bd">
+    <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end">
+      <div><div style="font-size:12.5px;color:var(--ts)">可提现余额（可用）</div>
+        <div style="font-size:34px;font-weight:800;color:var(--g);line-height:1.1;margin-top:4px">${money(w.avail)}</div></div>
+      <div style="padding-bottom:6px"><div style="font-size:12.5px;color:var(--ts)">在途（预计 · 未结算货款）</div>
+        <div style="font-size:19px;font-weight:600;color:var(--ts);margin-top:4px">${money(w.pending)}</div>
+        <div style="font-size:11.5px;color:var(--tt);margin-top:2px">对账结算完成后转入可提现</div></div>
+      <div style="margin-left:auto;padding-bottom:4px"><button class="btn btn-p" style="min-width:120px" onclick="act_openWithdraw()">提现</button></div>
+    </div></div></div>
+
+  <div class="card"><div class="card-hd"><h3>收款银行卡</h3><span class="sub" style="margin-right:auto">提现到账银行卡 · 站内维护</span><button class="btn btn-o btn-sm" onclick="act_openBank()">+ 绑定银行卡</button></div><div class="card-bd flush">
+    ${w.banks.length?`<table><thead><tr><th>银行</th><th>账号</th><th>户名</th><th>SWIFT</th><th>默认</th><th>操作</th></tr></thead><tbody>
+    ${w.banks.map(b=>`<tr><td>${b.bank}</td><td class="mono">****${b.no}</td><td>${b.holder}</td><td class="mono">${b.swift}</td>
+      <td>${b.def?'<span class="tag t-g"><span class="dot"></span>默认</span>':`<button class="btn btn-link btn-sm" onclick="act_setDefaultBank('${b.id}')">设为默认</button>`}</td>
+      <td>${b.def?'<span style="color:var(--tt)">—</span>':`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_unbindBank('${b.id}')">解绑</button>`}</td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty" style="padding:22px"><div class="e-ic">💳</div><div class="e-t">未绑定收款银行卡</div><div class="e-s">绑定后方可提现，货款将到账此卡。</div></div>`}
+  </div></div>
+
+  <div class="card"><div class="card-hd"><h3>提现记录</h3><span class="sub">共 ${w.withdrawals.length} 笔 · 手续费 ${money(WD_FEE)}/笔（商户承担）</span></div><div class="card-bd flush">
+    ${w.withdrawals.length?`<table><thead><tr><th>提现单号</th><th>时间</th><th>提现金额</th><th>手续费</th><th>实际到账</th><th>到账银行卡</th><th>状态</th></tr></thead><tbody>
+    ${w.withdrawals.map(x=>`<tr><td class="mono">${x.id}</td><td style="color:var(--ts);font-size:12.5px">${x.date}</td>
+      <td>${money(x.amt)}</td><td style="color:var(--ts)">${money(WD_FEE)}</td><td style="font-weight:600">${money(x.amt-WD_FEE)}</td>
+      <td class="mono">${x.bank}</td><td>${tag('withdraw',x.st)}${x.st=='failed'&&x.reason?`<div style="font-size:11.5px;color:var(--r);margin-top:3px">${x.reason}</div>`:''}</td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty" style="padding:22px"><div class="e-ic">🧾</div><div class="e-t">暂无提现记录</div></div>`}
+  </div></div>
+
+  <div class="card"><div class="card-hd"><h3>账户信息</h3><span class="sub">WorldFirst 万里汇（蚂蚁国际）· API 对接</span></div><div class="card-bd">
+    <dl class="dl">
+      <dt>收款账户(RA)</dt><dd class="mono">${w.ra.cur} · ${w.ra.no} <span class="tag t-g" style="margin-left:6px"><span class="dot"></span>${w.ra.st}</span></dd>
+      <dt>结算主体</dt><dd>绿鲜源蔬果 Green Fresh Produce Pte Ltd</dd>
+      <dt>结算币种</dt><dd>SGD（本期不支持结汇/多币种）</dd>
+    </dl>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+      <button class="btn btn-o" onclick="toast('调用 statement 拉取账单流水','info')">账单 / 对账 statement</button>
+      <button class="btn btn-o" onclick="toast('重新发起万里汇授权（API）','info')">重新授权</button>
+    </div>
+  </div></div>`;
+};
+// 提现（万里汇 API 划转，只 SGD、手续费商户承担、不设限额）
+function act_openWithdraw(){
+  const w=DB.wallet;
+  if(!w.banks.length){toast('请先绑定收款银行卡','err');return;}
+  const def=w.banks.find(b=>b.def)||w.banks[0];
+  drawer(`<div class="drawer-hd"><div><h3>提现到银行卡</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">万里汇 API 划转 · 手续费 ${money(WD_FEE)}/笔（商户承担）</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="fr"><label class="fl">可提现余额</label><div style="font-size:22px;font-weight:800;color:var(--g)">${money(w.avail)}</div></div>
+    <div class="fr"><label class="fl"><b>*</b>到账银行卡</label><select id="wd-bank">${w.banks.map(b=>`<option value="${b.id}" ${b.id==def.id?'selected':''}>${b.bank} ****${b.no}（${b.holder}）${b.def?' · 默认':''}</option>`).join('')}</select></div>
+    <div class="fr"><label class="fl"><b>*</b>提现金额（SGD）</label><input id="wd-amt" type="number" min="0" step="0.01" placeholder="0.00" oninput="wdCalc()">
+      <div class="row" style="gap:8px;margin-top:8px"><button type="button" class="btn btn-o btn-sm" onclick="wdFillAll()">全部提现 ${money(w.avail)}</button></div>
+      <div id="wd-err" style="font-size:12px;color:var(--r);margin-top:6px"></div></div>
+    <dl class="dl"><dt>手续费（商户承担）</dt><dd>${money(WD_FEE)}</dd><dt>实际到账</dt><dd id="wd-net" style="font-weight:700;color:var(--g)">—</dd><dt>预计到账</dt><dd>1 个工作日内（万里汇处理）</dd></dl>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">取消</button><button class="btn btn-p" id="wd-ok" onclick="act_submitWithdraw()">确认提现</button></div>`);
+  wdCalc();
+}
+function wdVal(){return parseFloat((document.getElementById('wd-amt')||{}).value)||0;}
+function wdFillAll(){document.getElementById('wd-amt').value=DB.wallet.avail.toFixed(2);wdCalc();}
+function wdCalc(){const amt=wdVal(),w=DB.wallet,err=document.getElementById('wd-err'),ok=document.getElementById('wd-ok');
+  let msg=amt>0&&amt<=WD_FEE?`提现金额需大于手续费 ${money(WD_FEE)}`:(amt>w.avail?`超过可提现余额 ${money(w.avail)}`:'');
+  const net=document.getElementById('wd-net');if(net)net.textContent=amt>WD_FEE?money(amt-WD_FEE):'—';
+  if(err)err.textContent=msg;if(ok){ok.disabled=!(amt>WD_FEE&&amt<=w.avail);ok.style.opacity=ok.disabled?'.5':'';}}
+function act_submitWithdraw(){const amt=wdVal(),w=DB.wallet;if(!(amt>WD_FEE&&amt<=w.avail))return;
+  const b=w.banks.find(x=>x.id==document.getElementById('wd-bank').value)||w.banks[0];
+  w.avail=+(w.avail-amt).toFixed(2);
+  w.withdrawals.unshift({id:'WD-'+(w.wdSeq++),date:'2026-07-13 09:41',amt:amt,bank:`${b.bank.split(' ')[0]} ****${b.no}`,st:'processing'});
+  closeDrawer();render();toast(`已提交提现 ${money(amt)}，实际到账 ${money(amt-WD_FEE)}，处理中`,'ok');}
+// 绑定/管理收款银行卡（站内维护）
+function act_openBank(){
+  drawer(`<div class="drawer-hd"><div><h3>绑定收款银行卡</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">用于万里汇提现到账 · 站内维护</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="ib ib-y"><span class="i">⚠️</span>户名须与经营主体一致，否则提现将被万里汇退回。</div>
+    <div class="fr"><label class="fl"><b>*</b>开户银行</label><select id="bk-bank"><option value="">请选择</option><option>DBS Bank</option><option>OCBC Bank</option><option>UOB</option><option>Maybank</option><option>Standard Chartered</option></select></div>
+    <div class="fr"><label class="fl"><b>*</b>银行账号</label><input id="bk-no" placeholder="如 123-45678-9"></div>
+    <div class="fr"><label class="fl"><b>*</b>户名</label><input id="bk-holder" value="绿鲜源蔬果 Green Fresh Produce Pte Ltd"></div>
+    <div class="fg2"><div class="fr"><label class="fl">SWIFT / BIC</label><input id="bk-swift" placeholder="如 DBSSSGSG"></div>
+      <div class="fr"><label class="fl">设为默认</label><label style="display:flex;align-items:center;gap:8px;height:40px"><input type="checkbox" id="bk-def"> 提现默认到此卡</label></div></div>
+    <div id="bk-err" style="font-size:12px;color:var(--r)"></div>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">取消</button><button class="btn btn-p" onclick="act_submitBank()">保存银行卡</button></div>`);
+}
+function act_submitBank(){const g=id=>document.getElementById(id),w=DB.wallet;
+  const bank=g('bk-bank').value,no=(g('bk-no').value||'').replace(/\s/g,''),holder=(g('bk-holder').value||'').trim(),swift=(g('bk-swift').value||'').trim().toUpperCase(),def=g('bk-def').checked;
+  if(!bank||!no||!holder){g('bk-err').textContent='请填写开户银行、银行账号、户名';return;}
+  if(def)w.banks.forEach(b=>b.def=false);
+  w.banks.push({id:'BK-'+String(w.banks.length+1).padStart(2,'0'),bank,no:no.slice(-4),holder,swift:swift||'—',def:def||w.banks.length==0});
+  closeDrawer();render();toast('银行卡已绑定','ok');}
+function act_setDefaultBank(id){DB.wallet.banks.forEach(b=>b.def=b.id==id);render();toast('已设为默认收款卡','ok');}
+function act_unbindBank(id){const b=DB.wallet.banks.find(x=>x.id==id);if(!b||b.def){toast('默认卡不可解绑，请先切换默认','err');return;}askConfirm(`确认解绑 ${b.bank} ****${b.no}？`,()=>{DB.wallet.banks=DB.wallet.banks.filter(x=>x.id!=id);render();toast('银行卡已解绑','info');});}
 
 /* ---------- 商家端：售后订单（售后管理子菜单）——判责/扣款/必关联正向订单 ---------- */
 PAGES['m-aftersale']=()=>{
