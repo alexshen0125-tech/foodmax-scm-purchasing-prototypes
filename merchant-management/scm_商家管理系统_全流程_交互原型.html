@@ -1630,16 +1630,25 @@ function act_svcInvPreview(no){
 
 /* ---------- 商家端：账户管理（万里汇 API · 余额 / 站内银行卡 / 提现 / 记录）---------- */
 PAGES['m-account']=()=>{
-  const w=DB.wallet;
+  const w=DB.wallet, flt=w.wdFilter||'all';
+  const recs = flt=='all' ? w.withdrawals : w.withdrawals.filter(x=>x.st==flt);
+  const WF=[['all','全部'],['processing','处理中'],['success','成功'],['failed','失败']];
   return `
-  <div class="card"><div class="card-hd"><h3>万里汇账户余额</h3><span class="sub">收款账户(RA) ${w.ra.cur} · ${w.ra.no}</span></div><div class="card-bd">
-    <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end">
-      <div><div style="font-size:12.5px;color:var(--ts)">可提现余额（可用）</div>
-        <div style="font-size:34px;font-weight:800;color:var(--g);line-height:1.1;margin-top:4px">${money(w.avail)}</div></div>
-      <div style="padding-bottom:6px"><div style="font-size:12.5px;color:var(--ts)">在途（预计 · 未结算货款）</div>
-        <div style="font-size:19px;font-weight:600;color:var(--ts);margin-top:4px">${money(w.pending)}</div>
-        <div style="font-size:11.5px;color:var(--tt);margin-top:2px">对账结算完成后转入可提现</div></div>
-      <div style="margin-left:auto;padding-bottom:4px"><button class="btn btn-p" style="min-width:120px" onclick="act_openWithdraw()">提现</button></div>
+  <div class="card"><div class="card-hd"><h3>万里汇账户余额</h3><span class="sub">收款账户(RA) ${w.ra.cur} · ${w.ra.no} · WorldFirst 万里汇 API 对接</span></div><div class="card-bd">
+    <div style="display:flex;flex-wrap:wrap;gap:14px">
+      <div style="flex:1;min-width:220px;background:var(--gl);border:1px solid var(--bd);border-radius:14px;padding:16px 18px">
+        <div style="font-size:12.5px;color:var(--ts)">可提现余额（可用）</div>
+        <div style="font-size:32px;font-weight:800;color:var(--g);line-height:1.1;margin-top:6px">${money(w.avail)}</div>
+        <div style="font-size:11.5px;color:var(--ts);margin-top:4px">已结算入账万里汇账户，可随时提现</div></div>
+      <div style="flex:1;min-width:220px;background:var(--bd2);border:1px solid var(--bd);border-radius:14px;padding:16px 18px">
+        <div style="font-size:12.5px;color:var(--ts)">在途（预计 · 未结算货款）</div>
+        <div style="font-size:26px;font-weight:700;color:var(--ts);line-height:1.1;margin-top:6px">${money(w.pending)}</div>
+        <div style="font-size:11.5px;color:var(--tt);margin-top:4px">对账结算完成后转入可提现</div></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--bd2)">
+      <button class="btn btn-p" style="min-width:120px" onclick="act_openWithdraw()">提现</button>
+      <button class="btn btn-o" onclick="toast('调用 statement 拉取账单流水','info')">账单 / 对账</button>
+      <button class="btn btn-o" onclick="toast('重新发起万里汇授权（API）','info')">重新授权</button>
     </div></div></div>
 
   <div class="card"><div class="card-hd"><h3>收款银行卡</h3><span class="sub" style="margin-right:auto">提现到账银行卡 · 站内维护</span><button class="btn btn-o btn-sm" onclick="act_openBank()">+ 绑定银行卡</button></div><div class="card-bd flush">
@@ -1650,24 +1659,23 @@ PAGES['m-account']=()=>{
     </tbody></table>`:`<div class="empty" style="padding:22px"><div class="e-ic">💳</div><div class="e-t">未绑定收款银行卡</div><div class="e-s">绑定后方可提现，货款将到账此卡。</div></div>`}
   </div></div>
 
-  <div class="card"><div class="card-hd"><h3>提现记录</h3><span class="sub">共 ${w.withdrawals.length} 笔 · 手续费 ${money(WD_FEE)}/笔（商户承担）</span></div><div class="card-bd flush">
-    ${w.withdrawals.length?`<table><thead><tr><th>提现单号</th><th>时间</th><th>提现金额</th><th>手续费</th><th>实际到账</th><th>到账银行卡</th><th>状态</th></tr></thead><tbody>
-    ${w.withdrawals.map(x=>`<tr><td class="mono">${x.id}</td><td style="color:var(--ts);font-size:12.5px">${x.date}</td>
-      <td>${money(x.amt)}</td><td style="color:var(--ts)">${money(WD_FEE)}</td><td style="font-weight:600">${money(x.amt-WD_FEE)}</td>
+  <div class="card"><div class="card-hd"><h3>提现记录</h3><span class="sub">共 ${w.withdrawals.length} 笔 · 手续费 ${money(WD_FEE)}/笔（商户承担）</span></div>
+    <div style="padding:12px 20px 0"><div class="tabs" style="margin-bottom:0">${WF.map(([k,l])=>{const n=k=='all'?w.withdrawals.length:w.withdrawals.filter(x=>x.st==k).length;return `<div class="tab ${flt==k?'active':''}" onclick="DB.wallet.wdFilter='${k}';render()">${l}<span style="color:var(--tt);font-weight:600">（${n}）</span></div>`;}).join('')}</div></div>
+    <div class="card-bd flush">
+    ${recs.length?`<table><thead><tr><th>提现单号</th><th>时间</th><th>提现金额</th><th>手续费</th><th>实际到账</th><th>到账银行卡</th><th>状态</th></tr></thead><tbody>
+    ${recs.map(x=>`<tr><td class="mono">${x.id}</td><td style="color:var(--ts);font-size:12.5px">${x.date}</td>
+      <td style="font-weight:600">${money(x.amt)}</td><td style="color:var(--ts)">${money(WD_FEE)}</td><td style="font-weight:600;color:var(--g)">${money(x.amt-WD_FEE)}</td>
       <td class="mono">${x.bank}</td><td>${tag('withdraw',x.st)}${x.st=='failed'&&x.reason?`<div style="font-size:11.5px;color:var(--r);margin-top:3px">${x.reason}</div>`:''}</td></tr>`).join('')}
-    </tbody></table>`:`<div class="empty" style="padding:22px"><div class="e-ic">🧾</div><div class="e-t">暂无提现记录</div></div>`}
+    </tbody></table>`:`<div class="empty" style="padding:22px"><div class="e-ic">🧾</div><div class="e-t">${flt=='all'?'暂无提现记录':'该状态暂无提现记录'}</div></div>`}
   </div></div>
 
-  <div class="card"><div class="card-hd"><h3>账户信息</h3><span class="sub">WorldFirst 万里汇（蚂蚁国际）· API 对接</span></div><div class="card-bd">
+  <div class="card"><div class="card-hd"><h3>账户信息</h3></div><div class="card-bd">
     <dl class="dl">
       <dt>收款账户(RA)</dt><dd class="mono">${w.ra.cur} · ${w.ra.no} <span class="tag t-g" style="margin-left:6px"><span class="dot"></span>${w.ra.st}</span></dd>
       <dt>结算主体</dt><dd>绿鲜源蔬果 Green Fresh Produce Pte Ltd</dd>
       <dt>结算币种</dt><dd>SGD（本期不支持结汇/多币种）</dd>
+      <dt>对接方</dt><dd>WorldFirst 万里汇（蚂蚁国际）· API 对接</dd>
     </dl>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
-      <button class="btn btn-o" onclick="toast('调用 statement 拉取账单流水','info')">账单 / 对账 statement</button>
-      <button class="btn btn-o" onclick="toast('重新发起万里汇授权（API）','info')">重新授权</button>
-    </div>
   </div></div>`;
 };
 // 提现（万里汇 API 划转，只 SGD、手续费商户承担、不设限额）
@@ -1682,7 +1690,7 @@ function act_openWithdraw(){
     <div class="fr"><label class="fl"><b>*</b>提现金额（SGD）</label><input id="wd-amt" type="number" min="0" step="0.01" placeholder="0.00" oninput="wdCalc()">
       <div class="row" style="gap:8px;margin-top:8px"><button type="button" class="btn btn-o btn-sm" onclick="wdFillAll()">全部提现 ${money(w.avail)}</button></div>
       <div id="wd-err" style="font-size:12px;color:var(--r);margin-top:6px"></div></div>
-    <dl class="dl"><dt>手续费（商户承担）</dt><dd>${money(WD_FEE)}</dd><dt>实际到账</dt><dd id="wd-net" style="font-weight:700;color:var(--g)">—</dd><dt>预计到账</dt><dd>1 个工作日内（万里汇处理）</dd></dl>
+    <dl class="dl"><dt>手续费（商户承担）</dt><dd>${money(WD_FEE)}</dd><dt>实际到账</dt><dd id="wd-net" style="font-weight:700;color:var(--g)">—</dd><dt>提现后可提现余额</dt><dd id="wd-after" style="color:var(--ts)">${money(w.avail)}</dd><dt>预计到账</dt><dd>1 个工作日内（万里汇处理）</dd></dl>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">取消</button><button class="btn btn-p" id="wd-ok" onclick="act_submitWithdraw()">确认提现</button></div>`);
   wdCalc();
@@ -1692,6 +1700,7 @@ function wdFillAll(){document.getElementById('wd-amt').value=DB.wallet.avail.toF
 function wdCalc(){const amt=wdVal(),w=DB.wallet,err=document.getElementById('wd-err'),ok=document.getElementById('wd-ok');
   let msg=amt>0&&amt<=WD_FEE?`提现金额需大于手续费 ${money(WD_FEE)}`:(amt>w.avail?`超过可提现余额 ${money(w.avail)}`:'');
   const net=document.getElementById('wd-net');if(net)net.textContent=amt>WD_FEE?money(amt-WD_FEE):'—';
+  const after=document.getElementById('wd-after');if(after)after.textContent=(amt>0&&amt<=w.avail)?money(w.avail-amt):money(w.avail);
   if(err)err.textContent=msg;if(ok){ok.disabled=!(amt>WD_FEE&&amt<=w.avail);ok.style.opacity=ok.disabled?'.5':'';}}
 function act_submitWithdraw(){const amt=wdVal(),w=DB.wallet;if(!(amt>WD_FEE&&amt<=w.avail))return;
   const b=w.banks.find(x=>x.id==document.getElementById('wd-bank').value)||w.banks[0];
