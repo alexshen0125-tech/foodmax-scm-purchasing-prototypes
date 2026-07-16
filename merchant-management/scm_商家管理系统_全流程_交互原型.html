@@ -520,10 +520,10 @@ const DB = {
   ],
   // 商品（样例数据：入驻/开店走完后商家端可见；平台「商品审核」即时可见待审核项。含三类目/在售/待审核/低库存/售罄/价格异常，供库存·价格·质检·经营分析·备货演示）
   products:[
-    {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',qty:1,price:9.30,stock:220,safe:30,packUnit:'袋',stockMode:'daily',soldToday:45}]},
-    {id:'SPU8812',name:'娃娃菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚金马仑',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8816',qty:1,price:7.00,stock:18,safe:30}]},
-    {id:'SPU8813',name:'芥蓝',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8817',qty:1,price:6.50,stock:160,safe:20,stockMode:'daily',soldToday:28},{skuId:'SKU8818',qty:5,price:31.00,stock:42,safe:10,packUnit:'箱',stockMode:'finite'}]},
-    {id:'SPU8814',name:'菠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8819',qty:1,price:5.80,stock:95,safe:20}]},
+    {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['小棠菜主图'],detailImgs:['小棠菜详情'],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',qty:1,price:9.30,stock:220,safe:30,packUnit:'袋',stockMode:'daily',soldToday:45}]},
+    {id:'SPU8812',name:'娃娃菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚金马仑',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['娃娃菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8816',qty:1,price:7.00,stock:18,safe:30}]},
+    {id:'SPU8813',name:'芥蓝',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['芥蓝主图'],detailImgs:['芥蓝详情'],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8817',qty:1,price:6.50,stock:160,safe:20,stockMode:'daily',soldToday:28},{skuId:'SKU8818',qty:5,price:31.00,stock:42,safe:10,packUnit:'箱',stockMode:'finite'}]},
+    {id:'SPU8814',name:'菠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['菠菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8819',qty:1,price:5.80,stock:95,safe:20}]},
     {id:'SPU8815',name:'土豆',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'马铃薯',origin:'中国山东',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8820',qty:1,price:3.20,stock:300,safe:40}]},
     {id:'SPU8816',name:'白菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8821',qty:1,price:3.50,stock:0,safe:30}]},
     {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',qty:1,price:58.00,stock:26,safe:10}]},
@@ -625,8 +625,25 @@ DB.wallet={
   ],
   wdSeq:26071301,
 };
+/* 商品素材库：主图库 / 详情图库两个独立命名空间。图片「ID = 名称 = 商家上传的文件名（去扩展名）」，批量建品表格按此ID引用图片。
+   主图库(main)：商品主图，批量建品「商品主图ID」列必填校验（库中不存在→该商品建品失败）；
+   详情图库(detail)：商品详情图，「商品详情图ID」列选填（库中不存在→忽略该图，不阻断建品）。 */
+DB.materials={
+  main:[
+    {id:'001',file:'001.jpg',w:820,h:820,up:'2026-07-15 10:22'},
+    {id:'小棠菜主图',file:'小棠菜主图.png',w:900,h:900,up:'2026-07-15 10:20'},
+    {id:'娃娃菜主图',file:'娃娃菜主图.jpg',w:800,h:800,up:'2026-07-15 10:21'},
+    {id:'芥蓝主图',file:'芥蓝主图.jpg',w:860,h:860,up:'2026-07-14 18:02'},
+    {id:'菠菜主图',file:'菠菜主图.jpg',w:800,h:800,up:'2026-07-14 18:03'},
+  ],
+  detail:[
+    {id:'002',file:'002.jpg',w:750,h:1100,up:'2026-07-15 10:23'},
+    {id:'小棠菜详情',file:'小棠菜详情.jpg',w:750,h:1600,up:'2026-07-15 10:25'},
+    {id:'芥蓝详情',file:'芥蓝详情.png',w:750,h:1400,up:'2026-07-14 18:05'},
+  ],
+};
 const RISK_META={'低':['t-g','r-low'],'中':['t-y','r-mid'],'高':['t-r','r-high']};
-let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[];DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};
+let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[];DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};DB.matTab='main';DB.matQ='';
 function riskTag(r){if(!r)return '';return `<span class="tag ${RISK_META[r][0]}"><span class="riskdot ${RISK_META[r][1]}"></span>${r}风险</span>`;}
 function assume(keys){return '';}  // 顶部说明横幅已按用户要求移除
 function priceAbnormal(price,cat){const c=CATS[cat];if(!c)return false;return price<c.guide*0.5||price>c.guide*2;}
@@ -656,7 +673,10 @@ const NAV={
     {sec:'经营'},
     {id:'m-dash',ic:'🏠',t:'工作台'},
     {id:'m-shop',ic:'🏪',t:'店铺信息',p1:1,badge:()=>(DB.merchant.onboard=='task'||DB.merchant.onboard=='task_rejected')?1:0,by:'y'},
-    {id:'m-product',ic:'🥦',t:'商品管理',p1:1,badge:()=>DB.products.filter(p=>p.status=='forced_off'||p.status=='rejected').length},
+    {id:'m-product-group',ic:'🥦',t:'商品管理',p1:1,children:[
+      {id:'m-product',ic:'📋',t:'商品列表',badge:()=>DB.products.filter(p=>p.status=='forced_off'||p.status=='rejected').length},
+      {id:'m-material',ic:'🖼️',t:'商品素材库'},
+    ]},
     {id:'m-order',ic:'📋',t:'订单管理',p1:1,badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
     {id:'m-pick-group',ic:'📦',t:'备货管理',p1:1,children:[
       {id:'m-pick-ref',ic:'📊',t:'备货参考'},
@@ -1152,7 +1172,8 @@ function act_spuDetail(i){
       ${dl('产地',p.origin)}${dl('品牌',p.brand)}
       ${dl('APP展示效期',p.showExp)}${dl('储存条件',p.storage)}
       ${dl('商品描述',p.desc)}
-      ${dl('主图/详情图',`主图 ${p.img?'已上传':'未上传'} · 详情图 ${p.detail?'已上传':'未上传'}`)}
+      ${dl('商品主图',(p.mainImgs&&p.mainImgs.length)?p.mainImgs.map(id=>`<span class="tag t-g" style="font-size:10.5px;margin:0 4px 4px 0"><span class="dot"></span>${id}</span>`).join(''):(p.img?'已上传':'未上传'))}
+      ${dl('商品详情图',(p.detailImgs&&p.detailImgs.length)?p.detailImgs.map(id=>`<span class="tag t-b" style="font-size:10.5px;margin:0 4px 4px 0">${id}</span>`).join(''):(p.detail?'已上传':'未维护'))}
     </dl>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU）· 共 ${p.skus.length} 个</h4>
     <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th>未税价</th><th>含税价</th><th>可售库存</th><th>库存模式</th><th>状态</th></tr></thead><tbody>
@@ -1312,16 +1333,16 @@ function finishFunnel(p,i,fails){const box=document.getElementById('chk-result')
 /* 批量导入（每行=SKU，按商品名聚合 SPU） */
 let IMP=null;
 PAGES['m-import']=()=>{return impBuildUI();};
-function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载批量建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div></div></div>`;}
+function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div><div class="card-bd"><div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载批量建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div></div></div>`;}
 function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
 function impParseBuild(){
   const spuRows=[
-    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:''},
-    {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',unit:'盒',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord'},
-    {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',unit:'瓶',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:''},
-    {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:''},
-    {ln:6,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',unit:'扎',netQty:'',netUnit:'',expEn:'是',qp:'',qpu:'',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:''}];
-  const skuRows=[{ln:2,code:'T001',qty:1},{ln:3,code:'T001',qty:5},{ln:4,code:'T002',qty:1},{ln:5,code:'T003',qty:1},{ln:6,code:'T005',qty:0},{ln:7,code:'T999',qty:1}];
+    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图',detailImg:'芥蓝详情A,芥蓝详情'},
+    {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',unit:'盒',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
+    {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',unit:'瓶',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
+    {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
+    {ln:6,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',unit:'扎',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''}];
+  const skuRows=[{ln:2,code:'T001',qty:1},{ln:3,code:'T001',qty:5},{ln:4,code:'T002',qty:1},{ln:5,code:'T003',qty:1},{ln:6,code:'T005',qty:2},{ln:7,code:'T999',qty:1}];
   const codes=new Set(),dup=new Set();spuRows.forEach(r=>{if(r.code){if(codes.has(r.code))dup.add(r.code);codes.add(r.code);}});
   const map={};
   const spus=spuRows.map(r=>{const errs=[];
@@ -1332,7 +1353,13 @@ function impParseBuild(){
     if(r.expEn=='是'&&(!r.qp||!r.qpu))errs.push('效期管理=是，保质期/单位必填');
     if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
     else if(r.cat&&!CAT_SCOPE.includes(r.cat))errs.push('经营许可证未覆盖「'+r.cat+'」类目');
-    const o={row:r,errs,skus:[],ok:false};if(r.code)map[r.code]=o;return o;});
+    // 图片校验：主图ID必填且须在主图素材库中存在；详情图ID选填、缺失仅告警不阻断
+    const mainIds=splitIds(r.mainImg),detIds=splitIds(r.detailImg),warns=[];
+    if(!mainIds.length)errs.push('商品主图ID为空（主图必填，请先在「商品素材库」上传后填写）');
+    else{const miss=mainIds.filter(id=>!matHas('main',id));if(miss.length)errs.push('主图ID「'+miss.join('、')+'」在主图素材库中不存在，请先上传');}
+    const detOk=detIds.filter(id=>matHas('detail',id)),detMiss=detIds.filter(id=>!matHas('detail',id));
+    if(detMiss.length)warns.push('详情图ID「'+detMiss.join('、')+'」不在详情图素材库、已忽略（详情图选填）');
+    const o={row:r,errs,skus:[],ok:false,mainIds,detailIds:detOk,warns};if(r.code)map[r.code]=o;return o;});
   const orphans=[];
   skuRows.forEach(r=>{if(!r.code||!map[r.code]){orphans.push({row:r,err:!r.code?'SKU行未填SPU编号':'SPU编号「'+r.code+'」在商品表中不存在（孤儿行）'});return;}
     const errs=[];if(!(r.qty>0))errs.push('数量必须为正整数≥1');
@@ -1343,12 +1370,14 @@ function impParseBuild(){
 }
 function renderImpBuild(){const spus=IMP.spus,orphans=IMP.orphans;const okS=spus.filter(x=>x.ok);const box=document.getElementById('imp-out');
   box.innerHTML=`<div class="sg" style="grid-template-columns:repeat(4,1fr);margin:14px 0 12px"><div class="sc"><div class="sc-l">商品(SPU)</div><div class="sc-v">${spus.length}</div></div><div class="sc good"><div class="sc-l">可建</div><div class="sc-v">${okS.length}</div></div><div class="sc alert"><div class="sc-l">失败商品</div><div class="sc-v">${spus.length-okS.length}</div></div><div class="sc alert"><div class="sc-l">孤儿SKU行</div><div class="sc-v">${orphans.length}</div></div></div>
-  <div class="card" style="box-shadow:none;margin:0 0 14px"><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>SPU编号</th><th>商品</th><th>后台类目</th><th>有效规格</th><th>校验</th></tr></thead><tbody>
-  ${spus.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td><b>${o.row.name||'—'}</b></td><td>${o.row.cat||'—'}</td><td>${o.skus.filter(x=>x.ok).length}/${o.skus.length}</td><td>${o.ok?`<span class="tag t-g">可建`:`<span class="tag t-r">${o.errs[0]||(o.skus.find(x=>!x.ok)?'规格:'+o.skus.find(x=>!x.ok).errs[0]:'失败')}`}</span></td></tr>`).join('')}
-  ${orphans.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td colspan="3" style="color:var(--ts)">孤儿SKU行 第${o.row.ln}行 · ${o.row.name}</td><td><span class="tag t-r">${o.err}</span></td></tr>`).join('')}
+  <div class="card" style="box-shadow:none;margin:0 0 14px"><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>SPU编号</th><th>商品</th><th>后台类目</th><th>有效规格</th><th>图片(主图/详情)</th><th>校验</th></tr></thead><tbody>
+  ${spus.map(o=>{const mn=(o.mainIds||[]).length,dn=(o.detailIds||[]).length;const imgCell=`<span class="tag ${mn?'t-g':'t-r'}" style="font-size:10.5px">主 ${mn}</span> <span class="tag ${dn?'t-b':'t-gr'}" style="font-size:10.5px">详 ${dn}</span>${(o.warns&&o.warns.length)?` <span class="tag t-y" style="font-size:10.5px" title="${o.warns.join('；')}">⚠︎</span>`:''}`;
+    return `<tr><td class="mono">${o.row.code||'—'}</td><td><b>${o.row.name||'—'}</b></td><td>${o.row.cat||'—'}</td><td>${o.skus.filter(x=>x.ok).length}/${o.skus.length}</td><td style="white-space:nowrap">${imgCell}</td><td>${o.ok?`<span class="tag t-g">可建`:`<span class="tag t-r">${o.errs[0]||(o.skus.find(x=>!x.ok)?'规格:'+o.skus.find(x=>!x.ok).errs[0]:'失败')}`}</span></td></tr>`;}).join('')}
+  ${orphans.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td colspan="4" style="color:var(--ts)">孤儿SKU行 第${o.row.ln}行 · ${o.row.name}</td><td><span class="tag t-r">${o.err}</span></td></tr>`).join('')}
   </tbody></table></div></div></div>
+  ${(()=>{const ws=spus.filter(o=>o.ok&&o.warns&&o.warns.length);return ws.length?`<div class="ib ib-y" style="margin:0 0 12px"><span class="i">⚠️</span><div>以下可建商品有<b>详情图告警</b>（不阻断建品）：<br>${ws.map(o=>`· ${o.row.name}（${o.row.code}）：${o.warns.join('；')}`).join('<br>')}</div></div>`:'';})()}
   <button class="btn btn-p btn-lg" ${okS.length?'':'disabled'} onclick="impConfirmBuild()">确认建品 ${okS.length} 个商品（进首次建档审核）</button>`;}
-function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',unit:r.unit,netQty:r.netQty||'',netUnit:r.netUnit||'',unitNote:'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',img:false,detail:false,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,pack:r.unit,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
+function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const mainImgs=o.mainIds||[],detailImgs=o.detailIds||[];const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',unit:r.unit,netQty:r.netQty||'',netUnit:r.netUnit||'',unitNote:'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,pack:r.unit,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
 function impParseAdd(){
   const P=DB.products;const e=P[0];
   const rows=e?[
@@ -1378,6 +1407,81 @@ function parseQtys(v){return (v||'').split(/[,，\s]+/).map(x=>parseInt(x)).filt
 function act_addSkusBatch(i){const p=DB.products[i];EDIT_SKUS=[{qty:'',price:'',stock:'',stockMode:'finite'}];modalWide(`<div class="mc-hd"><h3>添加规格 · ${p.name}</h3><p>为已有商品追加售卖规格(SKU)，即时生效、无需重审；交互同新建 — 规格名自动 = 商品名 + 数量 + 计量单位（${p.unit}）</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><input id="f-name" type="hidden" value="${p.name}"><input id="f-unit" type="hidden" value="${p.unit}"><div id="sku-editor"></div><div style="margin-top:8px"><button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doAddSkusBatch(${i})">确认追加</button></div>`);setTimeout(()=>renderSkuEditor(),0);}
 function previewAddSkus(i){const p=DB.products[i];const box=document.getElementById('add-preview');if(!box)return;const qs=parseQtys((document.getElementById('add-qtys')||{}).value);const ex=new Set(p.skus.map(s=>s.qty)),seen=new Set();const items=qs.map(q=>{let st;if(ex.has(q))st='exist';else if(seen.has(q))st='dup';else{seen.add(q);st='ok';}return {q,st};});const okN=items.filter(x=>x.st=='ok').length;box.innerHTML=qs.length?`<div class="card" style="box-shadow:none;margin:0"><div class="card-bd flush"><table class="subtbl"><thead><tr><th>规格名称</th><th>数量</th><th>状态</th></tr></thead><tbody>${items.map(x=>`<tr><td>${p.name} ${x.q}${p.unit}</td><td>${x.q}</td><td>${x.st=='ok'?'<span class="tag t-g">将追加</span>':x.st=='exist'?'<span class="tag t-gr">已存在，跳过</span>':'<span class="tag t-y">重复，跳过</span>'}</td></tr>`).join('')}</tbody></table></div></div><div style="font-size:12.5px;color:var(--ts);margin-top:8px">将追加 <b>${okN}</b> 个规格</div>`:'<div style="font-size:12.5px;color:var(--ts)">请输入数量</div>';}
 function doAddSkusBatch(i){const p=DB.products[i];const rows=EDIT_SKUS.filter(s=>parseInt(s.qty)>0);if(!rows.length){toast('请至少添加一个有效规格（数量≥1）','err');return;}const ex=new Set((p.skus||[]).map(s=>s.qty)),seen=new Set();let n=0,dup=0;rows.forEach(s=>{const q=parseInt(s.qty);if(ex.has(q)||seen.has(q)){dup++;return;}seen.add(q);p.skus.push({skuId:'SKU'+(++SKU_SEQ),qty:q,pack:p.unit,packUnit:s.packUnit||'',price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:0,stockMode:s.stockMode||'finite',soldToday:0,createdAt:ts(),updatedAt:ts()});n++;});if(n)p.updatedAt=ts();closeModal();render();toast(n?(dup?`已追加 ${n} 个规格，${dup} 个数量重复已跳过`:`已追加 ${n} 个规格，即时生效`):'规格数量都已存在，未追加',n?'ok':'info');}
+
+/* ---------- 商家端：商品素材库（主图库 / 详情图库；批量建品按「图片ID = 上传文件名」引用图片） ---------- */
+const MAT_META={main:{name:'商品主图',lib:'主图素材库',ic:'🖼️',col:'商品主图ID',req:'必填',aspect:'1:1 · 建议 ≥800×800 白底'},detail:{name:'商品详情图',lib:'详情图素材库',ic:'📄',col:'商品详情图ID',req:'选填',aspect:'宽 750–1242px 长图'}};
+function splitIds(v){return (''+(v||'')).split(/[,，、;；\s\/]+/).map(x=>x.trim()).filter(Boolean);}
+function matHas(kind,id){return (DB.materials[kind]||[]).some(m=>m.id==id);}
+function matGet(kind,id){return (DB.materials[kind]||[]).find(m=>m.id==id);}
+function matUseCount(kind,id){const key=kind=='main'?'mainImgs':'detailImgs';return DB.products.filter(p=>(p[key]||[]).includes(id)).length;}
+function matUsers(kind,id){const key=kind=='main'?'mainImgs':'detailImgs';return DB.products.filter(p=>(p[key]||[]).includes(id));}
+function matHue(s){let h=0;for(let i=0;i<(''+s).length;i++)h=(h*31+(''+s).charCodeAt(i))%360;return h;}
+function matTileBg(id){const h=matHue(id);return `linear-gradient(135deg,hsl(${h} 52% 84%),hsl(${(h+42)%360} 55% 66%))`;}
+function matThumb(kind,m,px){px=px||96;const isMain=kind=='main';return `<div style="width:${px}px;height:${px}px;border-radius:10px;background:${matTileBg(m.id)};display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.25);flex-shrink:0;overflow:hidden;border:1px solid rgba(0,0,0,.05)"><span style="font-size:${px*0.32}px;line-height:1">${isMain?'🖼️':'📄'}</span><span style="font-size:11px;font-weight:600;margin-top:2px;max-width:${px-12}px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px">${m.id}</span></div>`;}
+PAGES['m-material']=()=>{
+  const t=(DB.matTab=='detail')?'detail':'main';const meta=MAT_META[t];const lib=DB.materials[t]||[];
+  const q=(DB.matQ||'').trim();const list=q?lib.filter(m=>m.id.includes(q)||m.file.includes(q)):lib;
+  const card=m=>{const uc=matUseCount(t,m.id);return `<div style="border:1px solid var(--bd);border-radius:12px;padding:12px;display:flex;gap:12px;background:var(--w)">
+      ${matThumb(t,m,88)}
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+        <div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.file}">${m.id}</div>
+        <div style="font-size:11.5px;color:var(--ts)">${m.w}×${m.h} · ${m.file.split('.').pop().toUpperCase()}</div>
+        <div style="font-size:11.5px;color:var(--ts)">上传 ${m.up}</div>
+        <div style="margin-top:2px">${uc?`<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>被 ${uc} 个商品引用</span>`:`<span class="tag t-gr" style="font-size:10.5px">未被引用</span>`}</div>
+        <div class="row" style="gap:6px;margin-top:auto;padding-top:6px">
+          <button class="btn btn-link btn-sm" onclick="matView('${t}','${m.id}')">查看</button>
+          <button class="btn btn-link btn-sm" onclick="matCopyId('${m.id}')">复制ID</button>
+          <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="matDelete('${t}','${m.id}')">删除</button>
+        </div>
+      </div>
+    </div>`;};
+  return `
+  <div class="tabs" style="margin-bottom:14px">
+    <div class="tab ${t=='main'?'active':''}" onclick="DB.matTab='main';DB.matQ='';render()">主图素材库 <span class="tag ${t=='main'?'t-g':'t-gr'}" style="font-size:10.5px;margin-left:4px">${DB.materials.main.length}</span></div>
+    <div class="tab ${t=='detail'?'active':''}" onclick="DB.matTab='detail';DB.matQ='';render()">详情图素材库 <span class="tag ${t=='detail'?'t-g':'t-gr'}" style="font-size:10.5px;margin-left:4px">${DB.materials.detail.length}</span></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><h3>${meta.ic} ${meta.lib}</h3><span class="sub">图片<b>名称即为图片ID</b>（=上传文件名）；批量建品表格「${meta.col}」列填此ID引用图片（${meta.req}）</span></div>
+    <div class="card-bd">
+      <div class="ib ib-b" style="margin:0 0 14px"><span class="i">💡</span>先在此上传${meta.name}，再到<a class="btn-link" style="color:var(--g)" onclick="DB.prodTab='import';nav('m-product')">批量建品</a>下载模板、在「${meta.col}」列填入图片ID即可批量绑定。${t=='main'?'<b>主图为必填</b>，模板里填的主图ID若未在此上传，该商品会建品失败。':'详情图选填；模板里填的详情图ID若未上传，将自动忽略、不影响建品。'}</div>
+      <div class="row" style="gap:12px;margin-bottom:14px;align-items:stretch">
+        <div class="up" style="flex:1" onclick="matUpload('${t}')"><div class="uic">⬆️</div><div class="ut">上传${meta.name}（支持批量）</div><div class="us">演示：点此模拟选择本地图片 · ${meta.aspect} · 文件名即图片ID</div></div>
+        <div style="width:240px"><div style="font-size:12px;color:var(--ts);margin-bottom:5px">搜索图片ID / 文件名</div><input value="${DB.matQ||''}" placeholder="输入图片ID 回车搜索" onkeydown="if(event.key=='Enter'){DB.matQ=this.value.trim();render()}"><div style="font-size:11.5px;color:var(--ts);margin-top:6px">共 ${lib.length} 张${q?` · 命中 ${list.length} 张`:''}</div></div>
+      </div>
+      ${list.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">${list.map(card).join('')}</div>`:`<div class="empty"><div class="e-ic">🖼️</div><div class="e-t">${q?'未找到匹配图片':'素材库为空'}</div><div class="e-s">${q?'换个关键词试试':'点上方「上传'+meta.name+'」添加图片'}</div></div>`}
+    </div>
+  </div>`;
+};
+function matUpload(kind){const meta=MAT_META[kind];
+  modal(`<div class="mc-hd"><h3>⬆️ 上传${meta.name}（演示）</h3><p>真实环境为选择本地图片，<b>文件名（去扩展名）即图片ID</b>；此处输入文件名模拟批量上传</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="fr"><label class="fl">文件名</label><input id="mat-up" placeholder="多张用逗号分隔，如：土豆主图,白菜主图"></div>
+    <div class="ib ib-gr"><span class="i">ℹ️</span>图片ID = 文件名（自动去扩展名）；同名将覆盖原图。上传后可在批量建品「${meta.col}」列直接引用。</div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doMatUpload('${kind}')">确认上传</button></div>`);}
+function doMatUpload(kind){const v=(document.getElementById('mat-up')||{}).value||'';const names=splitIds(v).map(n=>n.replace(/\.(jpg|jpeg|png|webp|gif|bmp)$/i,''));
+  if(!names.length){toast('请输入至少一个文件名','err');return;}
+  let add=0,cov=0;names.forEach(id=>{const ext=kind=='main'?'jpg':'jpg';const w=kind=='main'?800:750,h=kind=='main'?800:1400;const ex=matGet(kind,id);if(ex){ex.up=ts();cov++;}else{DB.materials[kind].push({id,file:id+'.'+ext,w,h,up:ts()});add++;}});
+  closeModal();render();toast(`上传成功：新增 ${add} 张${cov?`，覆盖 ${cov} 张`:''}`,'ok');}
+function matCopyId(id){try{navigator.clipboard&&navigator.clipboard.writeText(id);}catch(e){}toast(`图片ID「${id}」已复制`,'ok');}
+function matView(kind,id){const m=matGet(kind,id);if(!m)return;const meta=MAT_META[kind];const users=matUsers(kind,id);
+  drawer(`<div class="drawer-hd"><div><h3>${meta.ic} ${m.id}</h3><div style="margin-top:4px;font-size:12.5px;color:var(--ts)">${meta.lib} · ${m.file}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div style="display:flex;justify-content:center;margin-bottom:16px">${matThumb(kind,m,220)}</div>
+    <dl class="dl">
+      <dt>图片ID</dt><dd><span class="mono">${m.id}</span></dd>
+      <dt>文件名</dt><dd>${m.file}</dd>
+      <dt>尺寸</dt><dd>${m.w}×${m.h}</dd>
+      <dt>上传时间</dt><dd>${m.up}</dd>
+      <dt>被引用</dt><dd>${users.length} 个商品</dd>
+    </dl>
+    ${users.length?`<h4 style="font-size:13.5px;margin:14px 0 8px;color:var(--g)">引用此图的商品</h4><div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th>状态</th></tr></thead><tbody>${users.map(p=>`<tr><td class="mono">${p.id}</td><td>${p.name}</td><td>${tag('product',p.status)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>该图暂未被任何商品引用。</div>'}
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="matCopyId('${m.id}')">复制ID</button></div>`);}
+function matDelete(kind,id){const uc=matUseCount(kind,id);const meta=MAT_META[kind];
+  const go=()=>{DB.materials[kind]=DB.materials[kind].filter(m=>m.id!=id);render();toast(`已删除图片「${id}」`,'info');};
+  if(uc>0)askConfirm(`图片「${id}」正被 <b>${uc} 个商品</b>引用，删除后这些商品的${meta.name}将缺失${kind=='main'?'（主图必填，可能影响上架）':''}。确认删除？`,go);
+  else askConfirm(`确认删除图片「${id}」？`,go);}
 
 /* ---------- 商家端：备货 —— 已重构为「备货单实体」，实现见 pc-modules/pick.js（后加载覆盖本占位）。
    pick.js 复用本文件全局函数：ensurePickOrders / pickAggr / ord_relabel / ord_doRelabel / triggerDeliveries。 */
@@ -2650,7 +2754,7 @@ function act_merchant360(){
   </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 
-function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','商品名称','后台类目','税率','最小售卖单位','净含量','净含量单位','备注','是否开启效期管理','保质期','保质期单位','APP是否展示效期','储存条件','履约方式','产地','品牌','商品描述','规格数量'];rows=[['T001','芥蓝','新鲜蔬菜','9%','kg','','','','是','7','天','展示','冷藏','平台仓配','马来西亚','','新鲜芥蓝','1'],['T001','','','','','','','','','','','','','','','','','5']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
+function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','商品名称','后台类目','税率','最小售卖单位','净含量','净含量单位','备注','是否开启效期管理','保质期','保质期单位','APP是否展示效期','储存条件','履约方式','产地','品牌','商品描述','规格数量','商品主图ID（必填·来自主图素材库·多张逗号分隔·第1张为首图）','商品详情图ID（选填·来自详情图素材库·多张逗号分隔）'];rows=[['T001','芥蓝','新鲜蔬菜','9%','kg','','','','是','7','天','展示','冷藏','平台仓配','马来西亚','','新鲜芥蓝','1','芥蓝主图','芥蓝详情'],['T001','','','','','','','','','','','','','','','','','5','','']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
 /* init */
 goHome();
 </script>
