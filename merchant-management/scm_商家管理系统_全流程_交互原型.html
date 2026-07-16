@@ -634,6 +634,7 @@ DB.materials={
     {id:'小棠菜主图',file:'小棠菜主图.png',w:900,h:900,up:'2026-07-15 10:20'},
     {id:'娃娃菜主图',file:'娃娃菜主图.jpg',w:800,h:800,up:'2026-07-15 10:21'},
     {id:'芥蓝主图',file:'芥蓝主图.jpg',w:860,h:860,up:'2026-07-14 18:02'},
+    {id:'芥蓝主图2',file:'芥蓝主图2.jpg',w:860,h:860,up:'2026-07-14 18:02'},
     {id:'菠菜主图',file:'菠菜主图.jpg',w:800,h:800,up:'2026-07-14 18:03'},
   ],
   detail:[
@@ -1337,7 +1338,7 @@ function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 �
 function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
 function impParseBuild(){
   const spuRows=[
-    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图',detailImg:'芥蓝详情A,芥蓝详情'},
+    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
     {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',unit:'盒',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
     {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',unit:'瓶',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
     {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
@@ -2754,7 +2755,7 @@ function act_merchant360(){
   </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 
-function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','商品名称','后台类目','税率','最小售卖单位','净含量','净含量单位','备注','是否开启效期管理','保质期','保质期单位','APP是否展示效期','储存条件','履约方式','产地','品牌','商品描述','规格数量','商品主图ID（必填·来自主图素材库·多张逗号分隔·第1张为首图）','商品详情图ID（选填·来自详情图素材库·多张逗号分隔）'];rows=[['T001','芥蓝','新鲜蔬菜','9%','kg','','','','是','7','天','展示','冷藏','平台仓配','马来西亚','','新鲜芥蓝','1','芥蓝主图','芥蓝详情'],['T001','','','','','','','','','','','','','','','','','5','','']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
+function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','商品名称','后台类目','税率','最小售卖单位','净含量','净含量单位','备注','是否开启效期管理','保质期','保质期单位','APP是否展示效期','储存条件','履约方式','产地','品牌','商品描述','规格数量','商品主图ID（必填·来自主图素材库·多张逗号分隔·第1张为首图）','商品详情图ID（选填·来自详情图素材库·多张逗号分隔）'];rows=[['T001','芥蓝','新鲜蔬菜','9%','kg','','','','是','7','天','展示','冷藏','平台仓配','马来西亚','','新鲜芥蓝','1','芥蓝主图,芥蓝主图2','芥蓝详情'],['T001','','','','','','','','','','','','','','','','','5','','']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
 /* init */
 goHome();
 </script>
