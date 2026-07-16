@@ -1334,7 +1334,36 @@ function finishFunnel(p,i,fails){const box=document.getElementById('chk-result')
 /* 批量导入（每行=SKU，按商品名聚合 SPU） */
 let IMP=null;
 PAGES['m-import']=()=>{return impBuildUI();};
-function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div><div class="card-bd"><div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载批量建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div></div></div>`;}
+/* 批量建品字段规范（单一数据源）：驱动 ①导出模板表头(必填/选填标记)+填写说明行 ②页面「字段填写规则」表 ③示例行。
+   req：必填 / 选填 / 条件必填。ex：模板示例行首行取值。必填/枚举与建品校验(impParseBuild)、建单表单枚举保持一致。 */
+const BUILD_FIELDS=[
+  {k:'自定义SPU编号',req:'必填',rule:'商家自定义商品编号；文件内唯一，且不得与系统已有商品编号重复；同一商品的多个规格行用相同编号关联',ex:'T001'},
+  {k:'商品名称',req:'必填',rule:'商品标准名称；系统内不可与已有在售/审核中商品重名；同一SPU仅首行填写，其余规格行留空',ex:'芥蓝'},
+  {k:'后台类目',req:'必填',rule:'枚举：新鲜蔬菜 / 肉禽蛋品 / 海鲜水产；须在店铺食品经营许可范围内，超范围类目（如调味品）导入将被资质校验拦截',ex:'新鲜蔬菜'},
+  {k:'税率',req:'选填',rule:'留空默认 9%；如需其它按百分数填写，如 7% / 0%',ex:'9%'},
+  {k:'最小售卖单位',req:'必填',rule:'枚举：kg / g / L / 盒 / 袋 / 份 / 只 / 扎 / 箱',ex:'kg'},
+  {k:'净含量',req:'选填',rule:'单件净含量数值，如 500；无则留空',ex:''},
+  {k:'净含量单位',req:'选填',rule:'配合净含量填写，如 g / ml / kg；无则留空',ex:''},
+  {k:'备注',req:'选填',rule:'规格单位备注，用于规格名展示补充；无则留空',ex:''},
+  {k:'是否开启效期管理',req:'必填',rule:'枚举：是 / 否；选「是」须填写保质期与保质期单位',ex:'是'},
+  {k:'保质期',req:'条件必填',rule:'「是否开启效期管理=是」时必填，正整数，如 7；为「否」时留空',ex:'7'},
+  {k:'保质期单位',req:'条件必填',rule:'「是否开启效期管理=是」时必填，枚举：天 / 月 / 年',ex:'天'},
+  {k:'APP是否展示效期',req:'必填',rule:'枚举：展示 / 不展示',ex:'展示'},
+  {k:'储存条件',req:'必填',rule:'枚举：常温 / 冷藏 / 冷冻 / 冷鲜',ex:'冷藏'},
+  {k:'履约方式',req:'必填',rule:'枚举：平台仓配 / 商家直送',ex:'平台仓配'},
+  {k:'产地',req:'选填',rule:'如 马来西亚；无则留空',ex:'马来西亚'},
+  {k:'品牌',req:'选填',rule:'无品牌可留空',ex:''},
+  {k:'商品描述',req:'选填',rule:'商品卖点简述；无则留空',ex:'新鲜芥蓝'},
+  {k:'规格数量',req:'必填',rule:'每行一个售卖规格，填规格数量（正整数≥1）；同一SPU下各规格数量不可重复（如 1、5 表示 1kg、5kg 两个规格）',ex:'1'},
+  {k:'商品主图ID',req:'必填',rule:'来自「商品素材库 · 主图库」的图片ID（=上传文件名）；支持多张、用逗号分隔，第1张为首图；所填ID须已上传，否则该商品建品失败；同一SPU仅首行填写',ex:'芥蓝主图,芥蓝主图2'},
+  {k:'商品详情图ID',req:'选填',rule:'来自「商品素材库 · 详情图库」的图片ID；支持多张、用逗号分隔；所填ID未上传的将被忽略、不阻断建品；同一SPU仅首行填写',ex:'芥蓝详情'},
+];
+function buildFieldsTable(){return `<details style="margin:0 0 12px;border:1px solid var(--bd);border-radius:10px;padding:10px 12px"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--g)">📋 字段填写规则（必填 / 选填一览 · 共 ${BUILD_FIELDS.length} 列）</summary>
+  <div style="overflow-x:auto;margin-top:10px"><table class="subtbl"><thead><tr><th style="white-space:nowrap">字段</th><th style="white-space:nowrap">必填</th><th>填写规则</th></tr></thead><tbody>
+  ${BUILD_FIELDS.map(f=>`<tr><td style="white-space:nowrap;font-weight:600">${f.k}</td><td><span class="tag ${f.req=='必填'?'t-r':f.req=='条件必填'?'t-y':'t-gr'}" style="font-size:10.5px;white-space:nowrap">${f.req}</span></td><td style="font-size:12px;color:var(--ts);line-height:1.7">${f.rule}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div style="font-size:11.5px;color:var(--ts);margin-top:8px">导出模板第 1 行为表头（含「必填/选填」标记），第 2 行为各列填写说明（导入时请删除该行），第 3 行起为示例数据。</div></details>`;}
+function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div><div class="card-bd"><div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div>${buildFieldsTable()}<div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载批量建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div></div></div>`;}
 function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
 function impParseBuild(){
   const spuRows=[
@@ -2755,7 +2784,15 @@ function act_merchant360(){
   </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 
-function downloadTemplate(kind){let name,headers,rows;if(kind=='addsku'){name='批量新增SKU模板.csv';headers=['SPU编号（已有SPU的编号）','SKU名称','是否多退少补','内包规格_数量','包装规格_单位','SKU商品描述'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];}else{name='批量新建商品模板.csv';headers=['自定义SPU编号','商品名称','后台类目','税率','最小售卖单位','净含量','净含量单位','备注','是否开启效期管理','保质期','保质期单位','APP是否展示效期','储存条件','履约方式','产地','品牌','商品描述','规格数量','商品主图ID（必填·来自主图素材库·多张逗号分隔·第1张为首图）','商品详情图ID（选填·来自详情图素材库·多张逗号分隔）'];rows=[['T001','芥蓝','新鲜蔬菜','9%','kg','','','','是','7','天','展示','冷藏','平台仓配','马来西亚','','新鲜芥蓝','1','芥蓝主图,芥蓝主图2','芥蓝详情'],['T001','','','','','','','','','','','','','','','','','5','','']];}const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=[headers].concat(rows).map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
+function downloadTemplate(kind){let name,rows;const all=[];
+  if(kind=='addsku'){name='批量新增SKU模板.csv';const headers=['SPU编号（必填·已有SPU的编号）','SKU名称（必填）','是否多退少补（必填·是/否）','内包规格_数量（必填·正整数≥1）','包装规格_单位（必填·如 箱/盒/袋）','SKU商品描述（选填）'];const note=['【填写说明·导入时请删除本行】须是系统已存在商品的SPU编号','规格名称，如 小棠菜10kg箱','枚举：是 / 否','规格数量，正整数≥1，同一SPU不可重复','枚举：袋/盒/箱/包/件/扎/瓶/桶/罐/托','该规格补充描述，无则留空'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];all.push(headers,note,...rows);}
+  else{name='批量新建商品模板.csv';
+    const headers=BUILD_FIELDS.map(f=>f.k+'（'+f.req+'）');
+    const note=BUILD_FIELDS.map((f,i)=>(i==0?'【填写说明·导入时请删除本行】':'')+f.rule);
+    const ex1=BUILD_FIELDS.map(f=>f.ex);
+    const ex2=BUILD_FIELDS.map(f=>f.k=='自定义SPU编号'?'T001':(f.k=='规格数量'?'5':''));  // 同一SPU的第二个规格：仅编号+规格数量
+    all.push(headers,note,ex1,ex2);}
+  const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=all.map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载（表头含必填标记 + 填写说明行）','ok');}
 /* init */
 goHome();
 </script>
