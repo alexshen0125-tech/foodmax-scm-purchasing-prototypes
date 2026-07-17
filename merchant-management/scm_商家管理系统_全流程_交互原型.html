@@ -532,22 +532,21 @@ const DB = {
   ],
   // 订单履约配置（商家自履约：汇总备货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
   orderCfg:{cutoff:'18:00',commRate:0.05},
-  // 营业管理（商家自维护：每日营业时间——起始固定 00:00，只设截止时间，截止时间即当日截单时间）
+  // 营业管理（商家自维护：每日营业时间——起始固定 00:00，只设截止时间＝当日截单时间；截单后限制方式逐日可配）
   bizCfg:{
     // 每周营业时间：营业时段固定 00:00 – end；end 即当日截单时间；on=false 为休息日（前台展示「今日休息」、当天不可下单）
-    week:[
-      {d:'周一',on:true,end:'15:00'},
-      {d:'周二',on:true,end:'15:00'},
-      {d:'周三',on:true,end:'15:00'},
-      {d:'周四',on:true,end:'15:00'},
-      {d:'周五',on:true,end:'15:00'},
-      {d:'周六',on:true,end:'12:00'},
-      {d:'周日',on:false,end:'00:00'},
-    ],
-    // 截单后下单限制方式（二选一）：
+    // mode = 该日截单后下单限制方式（二选一）：
     //   't2'   = T+2 顺延接单：过截单仍可下单，客户可选配送日自动顺延为下单日+2天(T+2)起
     //   'stop' = 截单后停止接单：到达截单时间~23:59:59 当天关闭下单入口，客户次日再下单
-    cutMode:'t2',
+    week:[
+      {d:'周一',on:true,end:'15:00',mode:'t2'},
+      {d:'周二',on:true,end:'15:00',mode:'t2'},
+      {d:'周三',on:true,end:'15:00',mode:'t2'},
+      {d:'周四',on:true,end:'15:00',mode:'t2'},
+      {d:'周五',on:true,end:'15:00',mode:'stop'},
+      {d:'周六',on:true,end:'12:00',mode:'stop'},
+      {d:'周日',on:false,end:'00:00',mode:'t2'},
+    ],
   },
   // 佣金率配置（运营平台配置 · 佣金=服务佣金svc+物流佣金logi 两项分开 · 分层：品类默认→商家覆盖 · 取值 商家×品类 > 商家默认 > 品类默认 · 免佣期内两项均0）
   commCfg:{
@@ -1075,47 +1074,46 @@ function doEditShop(){
 /* ---------- 商家端：营业管理（每日营业时间：起始固定 00:00，只设截止时间＝当日截单时间 + 截单后下单限制方式） ---------- */
 PAGES['m-biz-hours']=()=>{
   const b=DB.bizCfg;
+  const modeTag=m=>m=='stop'?'<span class="tag t-r">截单后停止</span>':'<span class="tag t-y">T+2 顺延</span>';
   const rows=b.week.map(w=>`<tr>
     <td><b>${w.d}</b></td>
     <td>${w.on?'<span class="tag t-g"><span class="dot"></span>营业</span>':'<span class="tag t-gr">休息</span>'}</td>
     <td class="mono">${w.on?`00:00 – ${w.end}`:'—'}</td>
     <td>${w.on?`<span class="tag t-b">${w.end}</span>`:'—'}</td>
+    <td>${w.on?modeTag(w.mode):'—'}</td>
   </tr>`).join('');
-  const optCard=(v,tag,desc)=>{const on=b.cutMode==v;return `<div onclick="DB.bizCfg.cutMode='${v}';render()" style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;margin-bottom:10px;border:1.5px solid ${on?'var(--g)':'var(--bd)'};border-radius:10px;cursor:pointer;background:${on?'var(--gl)':'#fff'}">
-    <span style="font-size:15px;line-height:1.3">${on?'🟢':'⚪'}</span>
-    <span><b>${tag}</b><br><span style="font-size:12.5px;color:var(--ts);line-height:1.6">${desc}</span></span></div>`;};
-  const secondCell=b.cutMode=='t2'?'<span class="tag t-y">顺延至 T+2 起</span>':'<span class="tag t-r">当天停止下单</span>';
   return `
   <div class="card">
     <div class="card-hd"><h3>每日营业时间</h3><button class="btn btn-o btn-sm" onclick="act_editHours()">编辑</button></div>
     <div class="card-bd flush"><table>
-      <thead><tr><th>星期</th><th>状态</th><th>营业时段</th><th>当日截单时间</th></tr></thead>
+      <thead><tr><th>星期</th><th>状态</th><th>营业时段</th><th>当日截单时间</th><th>截单后限制方式</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="card-bd"><div class="ib ib-b"><span class="i">💡</span>营业时段固定从 <b>00:00</b> 开始，只需设置<b>截止时间</b>；截止时间即当日<b>截单时间</b>。休息日前台展示「今日休息」，客户当天不可下单。</div></div>
+    <div class="card-bd"><div class="ib ib-b"><span class="i">💡</span>营业时段固定从 <b>00:00</b> 开始，只需设置<b>截止时间</b>；截止时间即当日<b>截单时间</b>。<b>截单后限制方式可逐日不同</b>。休息日前台展示「今日休息」，客户当天不可下单。</div></div>
   </div>
   <div class="card">
-    <div class="card-hd"><h3>截单后下单限制方式</h3><span class="sub">二选一，点击切换</span></div>
+    <div class="card-hd"><h3>截单后下单限制方式 · 说明</h3><span class="sub">在上表逐日选择</span></div>
     <div class="card-bd">
-      ${optCard('t2','T+2 顺延接单','过当日截单时间后仍可下单，但客户可选的最早配送日自动顺延为「下单日 +2 天（T+2）」起，不关闭下单入口。')}
-      ${optCard('stop','截单后停止接单','到达当日截单时间起至 23:59:59，关闭当天下单入口，客户须次日再下单。')}
+      <div class="ib ib-g"><span class="i">📦</span><b>T+2 顺延接单</b>：过当日截单时间后仍可下单，但客户可选的最早配送日自动顺延为「下单日 +2 天（T+2）」起，不关闭下单入口。</div>
+      <div class="ib ib-r"><span class="i">🚫</span><b>截单后停止接单</b>：到达当日截单时间起至 23:59:59，关闭当天下单入口，客户须次日再下单。</div>
       <div class="k" style="font-size:12px;color:var(--ts);margin:16px 0 8px">下单可选配送日示意（以当日截单时间为准）</div>
-      <table style="width:100%"><thead><tr><th style="text-align:left">下单时刻</th><th style="text-align:left">客户可选最早配送日</th></tr></thead>
+      <table style="width:100%"><thead><tr><th style="text-align:left">下单时刻</th><th style="text-align:left">T+2 顺延接单</th><th style="text-align:left">截单后停止接单</th></tr></thead>
       <tbody>
-        <tr><td>当日截单前下单</td><td><span class="tag t-g">次日 T+1 起</span></td></tr>
-        <tr><td>当日截单后下单（截单时间 – 23:59:59）</td><td>${secondCell}</td></tr>
+        <tr><td>当日截单前下单</td><td><span class="tag t-g">次日 T+1 起</span></td><td><span class="tag t-g">次日 T+1 起</span></td></tr>
+        <tr><td>当日截单后下单（截单时间 – 23:59:59）</td><td><span class="tag t-y">顺延至 T+2 起</span></td><td><span class="tag t-r">当天停止下单</span></td></tr>
       </tbody></table>
     </div>
   </div>`;
 };
 function act_editHours(){
   const b=DB.bizCfg;
-  modalWide(`<div class="mc-hd"><h3>编辑每日营业时间</h3><p>营业固定从 00:00 开始，只需设置截止时间（即当日截单时间）；关闭开关即设为休息日</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <table style="width:100%"><thead><tr><th style="text-align:left">星期</th><th style="text-align:left">营业</th><th style="text-align:left">营业时段（截止时间＝截单时间）</th></tr></thead><tbody>
+  modalWide(`<div class="mc-hd"><h3>编辑每日营业时间</h3><p>营业固定从 00:00 开始，只需设截止时间（即当日截单时间）+ 该日截单后限制方式；关闭开关即设为休息日</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <table style="width:100%"><thead><tr><th style="text-align:left">星期</th><th style="text-align:left">营业</th><th style="text-align:left">营业时段（截止＝截单时间）</th><th style="text-align:left">截单后限制方式</th></tr></thead><tbody>
     ${b.week.map((w,i)=>`<tr data-r="${i}">
       <td style="font-weight:600">${w.d}</td>
-      <td><label class="chip-ck ${w.on?'on':''}"><input type="checkbox" class="eh-on" ${w.on?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked);this.closest('tr').querySelector('.eh-end').disabled=!this.checked">营业</label></td>
+      <td><label class="chip-ck ${w.on?'on':''}"><input type="checkbox" class="eh-on" ${w.on?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked);const tr=this.closest('tr');tr.querySelector('.eh-end').disabled=!this.checked;tr.querySelector('.eh-mode').disabled=!this.checked">营业</label></td>
       <td><span class="mono" style="color:var(--ts)">00:00 &nbsp;–&nbsp;</span><input type="time" class="eh-end" value="${w.end}" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"></td>
+      <td><select class="eh-mode" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><option value="t2" ${w.mode=='t2'?'selected':''}>T+2 顺延接单</option><option value="stop" ${w.mode=='stop'?'selected':''}>截单后停止接单</option></select></td>
     </tr>`).join('')}
     </tbody></table>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doEditHours()">保存</button></div>`);
@@ -1125,7 +1123,7 @@ function doEditHours(){
   document.querySelectorAll('#mc tr[data-r]').forEach(tr=>{
     const i=+tr.dataset.r,on=tr.querySelector('.eh-on').checked;
     b.week[i].on=on;
-    if(on)b.week[i].end=tr.querySelector('.eh-end').value||b.week[i].end;
+    if(on){b.week[i].end=tr.querySelector('.eh-end').value||b.week[i].end;b.week[i].mode=tr.querySelector('.eh-mode').value;}
   });
   closeModal();render();toast('营业时间已保存','ok');
 }
