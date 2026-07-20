@@ -94,6 +94,24 @@ css.textContent=`
 .mn-wh .wst .wv{font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;}
 .mn-wh .wst .wv.open{color:var(--emerald);}.mn-wh .wst .wv.close{color:var(--amber);}
 .mn-wh .wst .wv svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.4;}
+/* 营业时间与截单 */
+.bh-tip{background:var(--muted);color:var(--sub);font-size:12.5px;line-height:1.6;padding:12px 16px;margin:0;}
+.bh-card{background:#fff;border-radius:16px;margin:12px 16px;padding:14px 16px;box-shadow:var(--sh-sm);}
+.bh-hd{display:flex;align-items:center;gap:10px;}
+.bh-hd .bh-day{font-size:16px;font-weight:700;}
+.bh-hd .bh-st{font-size:13px;color:var(--sub);}
+.bh-sw{margin-left:auto;width:46px;height:27px;border-radius:16px;background:#D7E3DC;position:relative;transition:.18s;flex:0 0 46px;cursor:pointer;}
+.bh-sw .dot{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.18s;}
+.bh-sw.on{background:var(--emerald);}.bh-sw.on .dot{left:22px;}
+.bh-row{display:flex;align-items:center;justify-content:space-between;margin-top:13px;gap:10px;}
+.bh-row .bh-lb{font-size:14px;color:#46604F;flex:0 0 auto;}
+.bh-time{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--ink);}
+.bh-time input{font-family:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);min-height:38px;}
+.bh-seg{display:flex;gap:6px;}
+.bh-seg span{font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:16px;background:var(--muted);color:var(--sub);cursor:pointer;min-height:38px;display:flex;align-items:center;}
+.bh-seg span.on{background:var(--emerald);color:#fff;}
+.bh-hint{font-size:12px;color:var(--sub);margin-top:10px;}
+.bh-rest{font-size:13px;color:var(--sub);margin-top:12px;}
 `;
 document.head.appendChild(css);
 
@@ -123,7 +141,7 @@ function mineInline(container){
 
 /* ============ 基本信息 ============ */
 function openBasic(){
-  const g1=[['合作商信息',''],['经营信息','biz'],['店铺信息','store'],['主要经营品类信息','cat'],['经营城市信息','']];
+  const g1=[['合作商信息',''],['经营信息','biz'],['店铺信息','store'],['营业时间与截单','hours'],['主要经营品类信息','cat'],['经营城市信息','']];
   const g2=[['经营资质','qual','正常'],['法人信息','legal'],['授权人信息','auth']];
   const g3=[['系统权限管理','perm'],['第三方信息数据共享','']];
   const rows=(arr)=>arr.map(m=>`<div class="mn-row" data-go="${m[1]}"><span class="nm" style="margin-left:2px">${m[0]}</span>${m[2]?`<span class="rt ok">${m[2]}</span>`:''}${ARR}</div>`).join('');
@@ -133,7 +151,7 @@ function openBasic(){
     <div class="mn-grp">${rows(g3)}</div>
     <div style="height:16px"></div>`,
     mount:(p)=>p.querySelectorAll('.mn-row').forEach(r=>r.onclick=()=>{
-      const go=r.dataset.go;const map={store:openStore,biz:openBiz,cat:openCats,qual:openQual,perm:openPerm,legal:openLegal,auth:openAuth};
+      const go=r.dataset.go;const map={store:openStore,hours:openBizHours,biz:openBiz,cat:openCats,qual:openQual,perm:openPerm,legal:openLegal,auth:openAuth};
       map[go]?map[go]():toast('待补录');
     })});
 }
@@ -147,6 +165,47 @@ function openStore(){
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" disabled>提交审核</button>`,
     mount:(p)=>p.querySelectorAll('.mn-up').forEach(u=>u.onclick=()=>toast('选择图片'))});
+}
+
+/* ============ 营业时间与截单（对齐 PC「店铺管理·营业管理」：每日营业时段 start–end 可配，
+   截止时间即当日截单时间；截单后下单限制方式逐日可配 t2 顺延 / stop 停止接单） ============ */
+const BIZ_WEEK=[
+  {d:'周一',on:true,start:'00:00',end:'15:00',mode:'t2'},
+  {d:'周二',on:true,start:'00:00',end:'15:00',mode:'t2'},
+  {d:'周三',on:true,start:'00:00',end:'15:00',mode:'t2'},
+  {d:'周四',on:true,start:'00:00',end:'15:00',mode:'t2'},
+  {d:'周五',on:true,start:'00:00',end:'15:00',mode:'stop'},
+  {d:'周六',on:true,start:'06:00',end:'12:00',mode:'stop'},
+  {d:'周日',on:false,start:'00:00',end:'00:00',mode:'t2'},
+];
+function bhCard(w,i){
+  return `<div class="bh-card">
+    <div class="bh-hd"><span class="bh-day">${w.d}</span><span class="bh-st">${w.on?'营业':'休息'}</span><span class="bh-sw ${w.on?'on':''}" data-on="${i}"><span class="dot"></span></span></div>
+    ${w.on?`
+    <div class="bh-row"><span class="bh-lb">营业时段</span><span class="bh-time"><input type="time" data-start="${i}" value="${w.start}"> – <input type="time" data-end="${i}" value="${w.end}"></span></div>
+    <div class="bh-row"><span class="bh-lb">截单后限制</span><span class="bh-seg"><span class="${w.mode=='t2'?'on':''}" data-mode="${i}:t2">T+2 顺延</span><span class="${w.mode=='stop'?'on':''}" data-mode="${i}:stop">截单后停止</span></span></div>
+    <div class="bh-hint">截止 <b>${w.end}</b> 即当日截单时间 · ${w.mode=='t2'?'截单后仍可下单，最早配送顺延至 T+2 起':'截单后至 23:59:59 停止接单，客户次日再下单'}</div>
+    `:`<div class="bh-rest">今日休息，前台展示「今日休息」，客户当天不可下单</div>`}
+  </div>`;
+}
+function openBizHours(){
+  pushPage({title:'营业时间与截单',body:`
+    <div class="bh-tip">营业开始 / 截止时间逐日可配；<b>截止时间即当日截单时间</b>。截单后下单限制方式（T+2 顺延接单 / 截单后停止接单）也可逐日不同。</div>
+    <div id="bh-list"></div><div style="height:10px"></div>`,
+    footer:`<button class="btn primary" id="bh-save">更新保存</button>`,
+    mount:(p)=>{
+      const list=p.querySelector('#bh-list');
+      const draw=()=>{
+        list.innerHTML=BIZ_WEEK.map((w,i)=>bhCard(w,i)).join('');
+        list.querySelectorAll('[data-on]').forEach(el=>el.onclick=()=>{const i=+el.dataset.on;BIZ_WEEK[i].on=!BIZ_WEEK[i].on;draw();});
+        list.querySelectorAll('[data-mode]').forEach(el=>el.onclick=()=>{const a=el.dataset.mode.split(':');BIZ_WEEK[+a[0]].mode=a[1];draw();});
+        list.querySelectorAll('[data-start]').forEach(el=>el.onchange=()=>{BIZ_WEEK[+el.dataset.start].start=el.value;draw();});
+        list.querySelectorAll('[data-end]').forEach(el=>el.onchange=()=>{BIZ_WEEK[+el.dataset.end].end=el.value;draw();});
+      };
+      draw();
+      const b=p.querySelector('#bh-save');
+      b.onclick=()=>{b.classList.add('loading');setTimeout(()=>{b.classList.remove('loading');toast('营业时间已保存');setTimeout(popPage,600);},700);};
+    }});
 }
 
 /* ============ 经营信息 ============ */

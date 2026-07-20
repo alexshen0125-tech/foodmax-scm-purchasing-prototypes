@@ -65,7 +65,7 @@ css.textContent=`
 .bulkbar .all .b{width:22px;height:22px;border-radius:50%;border:2px solid #CBD5C7;display:flex;align-items:center;justify-content:center;}
 .bulkbar .all .b.on{background:var(--emerald);border-color:var(--emerald);}.bulkbar .all .b.on::after{content:"✓";color:#fff;font-size:12px;}
 .bulkbar .sp{flex:1;font-size:13px;color:var(--sub);}
-.bulkbar button{min-height:44px;padding:0 16px;border-radius:11px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;}
+.bulkbar button{min-height:44px;padding:0 12px;border-radius:11px;font-size:13.5px;font-weight:700;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;}
 .bulkbar .up{background:var(--emerald);color:#fff;}.bulkbar .px{background:var(--muted);color:var(--ink);}
 /* 空态 */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 40px;gap:14px;text-align:center;}
@@ -275,7 +275,7 @@ function renderList(container,inTab){
   function showBulkBar(){
     bulkBar=document.createElement('div');bulkBar.className='page-footer';bulkBar.style.cssText='position:absolute;left:0;right:0;bottom:0;z-index:8';
     const toggleLabel=state.tab==='sale'?'批量下架':'批量上架';
-    bulkBar.innerHTML=`<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="px" id="bpx">批量改价</button><button class="up" id="bup">${toggleLabel}</button></div>`;
+    bulkBar.innerHTML=`<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="px" id="bpx">改价</button><button class="px" id="bst">改库存</button><button class="up" id="bup">${toggleLabel}</button></div>`;
     container.appendChild(bulkBar);
     const data=()=>flatSkus(state.tab);
     state.refreshBulk=()=>{const d=data();const n=d.filter(x=>x.s._sel).length;bulkBar.querySelector('#bc').textContent='已选 '+n;
@@ -285,6 +285,7 @@ function renderList(container,inTab){
       const toOff=state.tab==='sale';const to=toOff?'下架':'上架';
       confirmDialog({title:`批量${to} ${sel.length} 个规格？`,body:`将${to}所选 ${sel.length} 个售卖规格(SKU)，即时生效、无需审核。`,danger:toOff,okText:to,onOk:()=>{sel.forEach(x=>{x.s.off=toOff;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已${to} ${sel.length} 个规格`);exitManage();}});};
     bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改价 ${n} 个规格`);};
+    bulkBar.querySelector('#bst').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改库存 ${n} 个规格`);};
     state.refreshBulk();
   }
   function hideBulkBar(){bulkBar&&bulkBar.remove();bulkBar=null;}
