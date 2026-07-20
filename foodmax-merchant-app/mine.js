@@ -186,7 +186,7 @@ function bhCard(w,i){
     ${w.on?`
     <div class="bh-row"><span class="bh-lb">营业时段</span><span class="bh-time"><input type="time" data-start="${i}" value="${w.start}"> – <input type="time" data-end="${i}" max="${PLATFORM_CUTOFF}" value="${w.end}" style="${w.end>PLATFORM_CUTOFF?'border-color:var(--red);color:var(--red)':''}"></span></div>
     <div class="bh-row"><span class="bh-lb">截单后限制</span><span class="bh-seg"><span class="${w.mode=='t2'?'on':''}" data-mode="${i}:t2">T+2 顺延</span><span class="${w.mode=='stop'?'on':''}" data-mode="${i}:stop">截单后停止</span></span></div>
-    <div class="bh-hint">${w.end>PLATFORM_CUTOFF?`<span style="color:var(--red)">截止不得晚于平台截单 ${PLATFORM_CUTOFF}</span> · `:''}截止 <b>${w.end}</b> 即当日截单时间 · ${w.mode=='t2'?'截单后仍可下单，最早配送顺延至 T+2 起':'截单后至 23:59:59 停止接单，客户次日再下单'}</div>
+    <div class="bh-hint">${w.end>PLATFORM_CUTOFF?`<span style="color:var(--red)">截止不得晚于平台截单 ${PLATFORM_CUTOFF}</span> · `:''}截止 <b>${w.end}</b> 即当日截单时间 · ${w.mode=='t2'?'截单后仍可下单，最早配送顺延至 T+2 起':'截单后停止接单，客户须等到下一个营业时间（下一营业日开始）才可下单'}</div>
     `:`<div class="bh-rest">今日休息，前台展示「今日休息」，客户当天不可下单</div>`}
   </div>`;
 }

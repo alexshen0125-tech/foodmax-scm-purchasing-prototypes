@@ -1098,12 +1098,12 @@ PAGES['m-biz-hours']=()=>{
     <div class="card-hd"><h3>截单后下单限制方式 · 说明</h3><span class="sub">在上表逐日选择</span></div>
     <div class="card-bd">
       <div class="ib ib-g"><span class="i">📦</span><b>T+2 顺延接单</b>：过当日截单时间后仍可下单，但客户可选的最早配送日自动顺延为「下单日 +2 天（T+2）」起，不关闭下单入口。</div>
-      <div class="ib ib-r"><span class="i">🚫</span><b>截单后停止接单</b>：到达当日截单时间起至 23:59:59，关闭当天下单入口，客户须次日再下单。</div>
+      <div class="ib ib-r"><span class="i">🚫</span><b>截单后停止接单</b>：到达当日截单时间后即停止接单，客户须等到<b>下一个营业时间</b>（下一营业日的营业开始时间）才可下单。</div>
       <div class="k" style="font-size:12px;color:var(--ts);margin:16px 0 8px">下单可选配送日示意（以当日截单时间为准）</div>
       <table style="width:100%"><thead><tr><th style="text-align:left">下单时刻</th><th style="text-align:left">T+2 顺延接单</th><th style="text-align:left">截单后停止接单</th></tr></thead>
       <tbody>
         <tr><td>当日截单前下单</td><td><span class="tag t-g">次日 T+1 起</span></td><td><span class="tag t-g">次日 T+1 起</span></td></tr>
-        <tr><td>当日截单后下单（截单时间 – 23:59:59）</td><td><span class="tag t-y">顺延至 T+2 起</span></td><td><span class="tag t-r">当天停止下单</span></td></tr>
+        <tr><td>当日截单后下单</td><td><span class="tag t-y">顺延至 T+2 起</span></td><td><span class="tag t-r">停止 · 下一营业时间可下单</span></td></tr>
       </tbody></table>
     </div>
   </div>`;
