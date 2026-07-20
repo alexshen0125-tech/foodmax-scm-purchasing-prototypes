@@ -320,25 +320,26 @@ function stationPopup(ware,kind){
 }
 
 /* ============ 退货取回 → 退货单 ============ */
+// 退货单：货到仓(待提货)后，商家须在「到货后 48 小时」内提货，逾期默认放弃、货物进入平台销残处理
 const RETURN=[
- {no:'TKD2026063008266685',ware:'裕廊DC',cnt:1,st:'待出库',order:'2026-06-30 02:51',code:'460439',deadline:'2026-07-03 02:51'},
- {no:'TKD2026062908267496',ware:'兀兰DC',cnt:1,st:'待出库',order:'2026-06-29 09:12',code:'897256',deadline:'2026-07-02 09:12'},
- {no:'TKD2026062908314280',ware:'盛港DC',cnt:1,st:'待出库',order:'2026-06-29 09:04',code:'715187',deadline:'2026-07-02 09:04'},
- {no:'TKD2026062708201337',ware:'大巴窑DC',cnt:2,st:'运输中',order:'2026-06-27 14:20',code:'330218',deadline:'2026-06-30 14:20'},
+ {no:'TKD2026063008266685',ware:'裕廊DC',cnt:1,st:'待提货',order:'2026-07-19 08:51',code:'460439',arrive:'2026-07-19 21:00',deadline:'2026-07-21 21:00'},
+ {no:'TKD2026062908267496',ware:'兀兰DC',cnt:1,st:'待提货',order:'2026-07-20 07:12',code:'897256',arrive:'2026-07-20 09:00',deadline:'2026-07-22 09:00'},
+ {no:'TKD2026062908314280',ware:'盛港DC',cnt:1,st:'待提货',order:'2026-07-19 06:04',code:'715187',arrive:'2026-07-19 14:00',deadline:'2026-07-21 14:00'},
+ {no:'TKD2026062708201337',ware:'大巴窑DC',cnt:2,st:'运输中',order:'2026-07-20 14:20',code:'330218',arrive:'',deadline:''},
 ];
 function returnCard(g){
   return `<div class="dl-rcard">
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st" data-no="${g.no}">${g.st} ›</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span><span class="cnt">共${g.cnt}件</span></div>
-    <div class="info">${g.order} 下单<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">提货截止时间：${g.deadline}</span></div>
-    ${g.st==='待出库'?`<div class="rb"><span class="b" data-book="${g.no}">预约提货</span></div>`:''}
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.deadline?`提货截止：${g.deadline}（到货后 48h，逾期默认放弃）`:'待到仓后开放提货'}</span></div>
+    ${g.st==='待提货'?`<div class="rb"><span class="b" data-book="${g.no}">预约提货</span></div>`:''}
   </div>`;
 }
 function openReturn(){
   pushPage({title:'退货单',body:`
     <div class="dl-banner" id="dl-rbn"><span>请在RF端与仓库工作人员确认实际提货数量后，提供提货码。因售后链路较长，商品数量会有20%的浮动差异，且商品质量也无法完全保证。如果您收到货物后，发现存在严重问题，可拨打客服热线 4000-616-700 进行咨询。</span><span class="x">✕</span></div>
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
-    <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待出库">待出库</span><span class="t" data-t="待运输">待运输</span><span class="t" data-t="运输中">运输中</span><span class="t" data-t="已送达">已送达</span></div>
+    <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待提货">待提货</span><span class="t" data-t="运输中">运输中</span><span class="t" data-t="已提货">已提货</span></div>
     <div class="dl-list" id="dl-rtl"></div>`,
     footer:`<button class="btn primary" id="dl-newret">＋ 新建退货单</button>`,
     mount:(p)=>{
@@ -366,7 +367,7 @@ function bookPickup(no){
   const m=document.createElement('div');m.className='dl-sheet-mask';
   m.innerHTML=`<div class="dl-sheet"><div class="sh">预约提货<span class="x">✕</span></div>
     <div class="sbody">
-      <div class="tip">ⓘ 超期未确认提货，商品自动进入销残程序</div>
+      <div class="tip">ⓘ 货到仓后请在 <b>48 小时</b>内提货；逾期未提货默认放弃，商品自动进入平台销残处理</div>
       <div class="qh">是否需要提货</div>
       <div class="dl-radios"><div class="dl-radio on" data-v="yes"><span class="rc"></span>需要提货</div><div class="dl-radio danger" data-v="no"><span class="rc"></span>不需要提货</div></div>
       <div id="dl-pkbody"></div>
