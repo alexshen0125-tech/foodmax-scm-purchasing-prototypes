@@ -534,6 +534,7 @@ const DB = {
   orderCfg:{cutoff:'18:00',commRate:0.05},
   // 营业管理（商家自维护：每日营业时间 start–end 均可配；end 即当日截单时间；截单后限制方式逐日可配）
   bizCfg:{
+    platformCutoff:'18:00',  // 平台公共截单时间（平台级配置·全平台统一上限）；商家截止时间不得晚于此（入驻默认初始化 00:00~此）
     // 每周营业时间：营业时段 start – end（均可配）；end 即当日截单时间；on=false 为休息日（前台展示「今日休息」、当天不可下单）
     // mode = 该日截单后下单限制方式（二选一）：
     //   't2'   = T+2 顺延接单：过截单仍可下单，客户可选配送日自动顺延为下单日+2天(T+2)起
@@ -1086,12 +1087,12 @@ PAGES['m-biz-hours']=()=>{
   </tr>`).join('');
   return `
   <div class="card">
-    <div class="card-hd"><h3>每日营业时间</h3><button class="btn btn-o btn-sm" onclick="act_editHours()">编辑</button></div>
+    <div class="card-hd"><h3>每日营业时间</h3><div class="row" style="gap:10px"><span class="tag t-b" style="align-self:center">平台公共截单时间 ${DB.bizCfg.platformCutoff}</span><button class="btn btn-o btn-sm" onclick="act_editHours()">编辑</button></div></div>
     <div class="card-bd flush"><table>
       <thead><tr><th>星期</th><th>状态</th><th>营业时段</th><th>当日截单时间</th><th>截单后限制方式</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="card-bd"><div class="ib ib-b"><span class="i">💡</span>营业时段<b>开始 / 截止时间均可逐日配置</b>；<b>截止时间即当日截单时间</b>。<b>截单后限制方式也可逐日不同</b>。休息日前台展示「今日休息」，客户当天不可下单。</div></div>
+    <div class="card-bd"><div class="ib ib-b"><span class="i">💡</span>营业时段<b>开始 / 截止时间均可逐日配置</b>；<b>截止时间即当日截单时间</b>。截止时间<b>不得晚于平台公共截单时间 ${DB.bizCfg.platformCutoff}</b>（只能往前收紧）。<b>截单后限制方式也可逐日不同</b>。入驻完成默认初始化为 <b>00:00 ~ ${DB.bizCfg.platformCutoff}</b>、全周营业。休息日前台展示「今日休息」，客户当天不可下单。</div></div>
   </div>
   <div class="card">
     <div class="card-hd"><h3>截单后下单限制方式 · 说明</h3><span class="sub">在上表逐日选择</span></div>
@@ -1110,23 +1111,26 @@ PAGES['m-biz-hours']=()=>{
 function act_editHours(){
   const b=DB.bizCfg;
   modalWide(`<div class="mc-hd"><h3>编辑每日营业时间</h3><p>逐日设置营业开始 / 截止时间（截止即当日截单时间）+ 该日截单后限制方式；关闭开关即设为休息日</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <table style="width:100%"><thead><tr><th style="text-align:left">星期</th><th style="text-align:left">营业</th><th style="text-align:left">营业时段（截止＝截单时间）</th><th style="text-align:left">截单后限制方式</th></tr></thead><tbody>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⏱️</span>平台公共截单时间为 <b>${b.platformCutoff}</b>，各日<b>截止时间不得晚于 ${b.platformCutoff}</b>（只能往前收紧）。</div>
+    <table style="width:100%"><thead><tr><th style="text-align:left">星期</th><th style="text-align:left">营业</th><th style="text-align:left">营业时段（截止＝截单时间，≤${b.platformCutoff}）</th><th style="text-align:left">截单后限制方式</th></tr></thead><tbody>
     ${b.week.map((w,i)=>`<tr data-r="${i}">
       <td style="font-weight:600">${w.d}</td>
       <td><label class="chip-ck ${w.on?'on':''}"><input type="checkbox" class="eh-on" ${w.on?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked);const tr=this.closest('tr');tr.querySelectorAll('.eh-start,.eh-end,.eh-mode').forEach(el=>el.disabled=!this.checked)">营业</label></td>
-      <td><input type="time" class="eh-start" value="${w.start}" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><span class="mono" style="color:var(--ts)">&nbsp;–&nbsp;</span><input type="time" class="eh-end" value="${w.end}" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"></td>
+      <td><input type="time" class="eh-start" value="${w.start}" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><span class="mono" style="color:var(--ts)">&nbsp;–&nbsp;</span><input type="time" class="eh-end" max="${b.platformCutoff}" value="${w.end}" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"></td>
       <td><select class="eh-mode" ${w.on?'':'disabled'} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><option value="t2" ${w.mode=='t2'?'selected':''}>T+2 顺延接单</option><option value="stop" ${w.mode=='stop'?'selected':''}>截单后停止接单</option></select></td>
     </tr>`).join('')}
     </tbody></table>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doEditHours()">保存</button></div>`);
 }
 function doEditHours(){
-  const b=DB.bizCfg;
-  document.querySelectorAll('#mc tr[data-r]').forEach(tr=>{
-    const i=+tr.dataset.r,on=tr.querySelector('.eh-on').checked;
-    b.week[i].on=on;
-    if(on){b.week[i].start=tr.querySelector('.eh-start').value||b.week[i].start;b.week[i].end=tr.querySelector('.eh-end').value||b.week[i].end;b.week[i].mode=tr.querySelector('.eh-mode').value;}
-  });
+  const b=DB.bizCfg;const rows=[...document.querySelectorAll('#mc tr[data-r]')];
+  // 校验：营业日截止时间不得晚于平台公共截单时间；开始须早于截止（BR-04/校验）
+  for(const tr of rows){const on=tr.querySelector('.eh-on').checked;if(!on)continue;const d=b.week[+tr.dataset.r].d;const st=tr.querySelector('.eh-start').value,en=tr.querySelector('.eh-end').value;
+    if(en>b.platformCutoff){toast(`${d}：截止时间不得晚于平台公共截单时间 ${b.platformCutoff}`,'err');return;}
+    if(st>=en){toast(`${d}：开始时间须早于截止时间`,'err');return;}
+  }
+  rows.forEach(tr=>{const i=+tr.dataset.r,on=tr.querySelector('.eh-on').checked;b.week[i].on=on;
+    if(on){b.week[i].start=tr.querySelector('.eh-start').value||b.week[i].start;b.week[i].end=tr.querySelector('.eh-end').value||b.week[i].end;b.week[i].mode=tr.querySelector('.eh-mode').value;}});
   closeModal();render();toast('营业时间已保存','ok');
 }
 
