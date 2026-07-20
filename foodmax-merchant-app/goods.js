@@ -143,7 +143,7 @@ const PRODUCTS=[
   {ic:'🥗',n:'冻 · 盐渍海带丝',cat:'海鲜水产',bad:'商品信息有误，已被限流',sales:0,createdAt:'2026-06-10 15:00',updatedAt:'2026-06-12 17:22',
    skus:[{spec:'4kg/箱',price:29.99,stock:0,off:true,createdAt:'2026-06-10 15:00',updatedAt:'2026-06-12 17:22'}]},
   {ic:'🟡',n:'萝卜丸子',cat:'肉禽蛋品',sales:0,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00',
-   skus:[{spec:'2.5kg/袋',price:12.00,stock:4,off:true,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00'}]},
+   skus:[{spec:'2.5kg/袋',price:12.00,stock:4,off:true,recycled:true,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00'}]},
 ];
 const isOnShelf=p=>p.skus.some(s=>!s.off);           // 销售中 = 至少 1 个 SKU 在架
 const totalStock=p=>p.skus.reduce((a,s)=>a+(+s.stock||0),0);
@@ -153,10 +153,15 @@ const taxRate=p=>{const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%'
 const priceIncl=(net,p)=>(+net||0)*(1+taxRate(p)/100);   // 含税价 = 未税价 ×(1+税率)
 
 // 扁平 SKU 卡片：每个售卖规格(SKU)一张独立卡，SKU 完全展开、无需点 SPU 展开（对齐 PC 端「每 SKU 一行」）
-function skuCard(g,s,gi,si,manage){
+const skuRecyclable=s=>s.off&&!s.recycled;   // 仅已下架规格可移入回收站
+function skuCard(g,s,gi,si,manage,tab){
+  const isRec=tab==='recycle';
   const oos=(+s.stock<=0);
-  const st=s.off?'已下架':(oos?'售罄':'在售');
+  const st=isRec?'回收站':(s.off?'已下架':(oos?'售罄':'在售'));
   const stockTxt=s.off?'—':(oos?'<span class="oos">0（售罄）</span>':(+s.stock).toLocaleString());
+  const acts=isRec
+    ? `<div class="acts"><div class="a" data-a="还原">移出 / 还原</div></div>`
+    : `<div class="acts"><div class="a" data-a="改价格">改价格</div><div class="a" data-a="改库存">改库存</div><div class="a tg ${s.off?'tg-on':''}" data-sku-toggle>${s.off?'上架':'下架'}</div><div class="a" data-a="更多">更多</div></div>`;
   return `<div class="pc${manage?' manage':''}">
     <div class="chk" data-chk></div>
     <div class="body">
@@ -166,7 +171,7 @@ function skuCard(g,s,gi,si,manage){
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
         <div class="rt"><div class="sk-st only">${st}</div></div></div>
       <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%） · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
-      ${manage?'':`<div class="acts"><div class="a" data-a="改价格">改价格</div><div class="a" data-a="改库存">改库存</div><div class="a tg ${s.off?'tg-on':''}" data-sku-toggle>${s.off?'上架':'下架'}</div><div class="a" data-a="更多">更多</div></div>`}
+      ${manage?'':acts}
     </div></div>`;
 }
 
@@ -185,7 +190,8 @@ function bindSku(el,g,s,gi,si,state){
     const a=b.dataset.a;
     if(a==='改价格')openPrice(g,si);
     else if(a==='改库存')openStock(g,si);
-    else openMore(g,state);
+    else if(a==='还原')doRestore(g,s,state);
+    else openMore(g,s,state);
   });
   const bad=el.querySelector('[data-bad]');if(bad)bad.onclick=()=>showSupplement();
   // 点击卡片信息区进入只读详情(管理态/操作按钮/警示/复选除外)
@@ -227,6 +233,7 @@ function renderList(container,inTab){
       <div class="gd-filters" id="f">
         <div class="gd-pill on" data-t="sale">销售中<span class="c" id="c-sale"></span></div>
         <div class="gd-pill" data-t="off">未上架<span class="c" id="c-off"></span></div>
+        <div class="gd-pill" data-t="recycle">回收站<span class="c" id="c-recycle"></span></div>
       </div>
     </div>
     <div class="gd-sub"><span id="sort">上架时间 · 由近及远</span><span class="mng" id="mng">管理</span></div>
@@ -237,26 +244,28 @@ function renderList(container,inTab){
   const state={tab:'sale',manage:false,refreshBulk(){},redraw(){}};
 
   // 扁平化：以 SKU 为单位。销售中/未上架均按 SKU 的上下架状态分桶
-  const flatSkus=(tab)=>{const arr=[];PRODUCTS.forEach((g,gi)=>(g.skus||[]).forEach((s,si)=>{const on=!s.off;if(tab==='sale'?on:!on)arr.push({g,s,gi,si});}));return arr;};
+  const flatSkus=(tab)=>{const arr=[];PRODUCTS.forEach((g,gi)=>(g.skus||[]).forEach((s,si)=>{const rec=!!s.recycled;if(tab==='recycle'){if(rec)arr.push({g,s,gi,si});return;}if(rec)return;const on=!s.off;if(tab==='sale'?on:!on)arr.push({g,s,gi,si});}));return arr;};
   const allSkus=()=>{const arr=[];PRODUCTS.forEach(g=>(g.skus||[]).forEach(s=>arr.push(s)));return arr;};
   const refreshCounts=()=>{
-    const c1=container.querySelector('#c-sale'),c2=container.querySelector('#c-off');const sk=allSkus();
-    if(c1)c1.textContent=sk.filter(s=>!s.off).length;
-    if(c2)c2.textContent=sk.filter(s=>s.off).length;
+    const c1=container.querySelector('#c-sale'),c2=container.querySelector('#c-off'),c3=container.querySelector('#c-recycle');const sk=allSkus();
+    if(c1)c1.textContent=sk.filter(s=>!s.off&&!s.recycled).length;
+    if(c2)c2.textContent=sk.filter(s=>s.off&&!s.recycled).length;
+    if(c3)c3.textContent=sk.filter(s=>s.recycled).length;
   };
   const drawData=(tab)=>{
     refreshCounts();
     const data=flatSkus(tab);
     if(!data.length){
-      list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无${tab==='sale'?'销售中':'未上架'}规格</h4><p>${tab==='sale'?'上架任一规格后会出现在这里':'发布你的第一款商品开始经营'}</p></div>`;
+      const t3=tab==='recycle'?'回收站':(tab==='sale'?'销售中':'未上架');
+      list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无${t3}规格</h4><p>${tab==='recycle'?'把不用的已下架规格移入回收站，可随时移出再用':(tab==='sale'?'上架任一规格后会出现在这里':'发布你的第一款商品开始经营')}</p></div>`;
       return;
     }
     list.innerHTML='';
-    data.forEach(({g,s,gi,si})=>{const w=document.createElement('div');w.innerHTML=skuCard(g,s,gi,si,state.manage);const c=w.firstElementChild;list.appendChild(c);bindSku(c,g,s,gi,si,state);});
+    data.forEach(({g,s,gi,si})=>{const w=document.createElement('div');w.innerHTML=skuCard(g,s,gi,si,state.manage,tab);const c=w.firstElementChild;list.appendChild(c);bindSku(c,g,s,gi,si,state);});
   };
   state.redraw=()=>drawData(state.tab);
   const draw=(tab)=>{
-    state.tab=tab;sortEl.textContent=(tab==='sale'?'上架':'下架')+'时间 · 由近及远';
+    state.tab=tab;sortEl.textContent=(tab==='recycle'?'移入回收站':(tab==='sale'?'上架':'下架'))+'时间 · 由近及远';
     list.innerHTML=skel(3);                       // 骨架屏(H1)
     setTimeout(()=>drawData(tab),420);            // 模拟加载
   };
@@ -274,18 +283,28 @@ function renderList(container,inTab){
   let bulkBar;
   function showBulkBar(){
     bulkBar=document.createElement('div');bulkBar.className='page-footer';bulkBar.style.cssText='position:absolute;left:0;right:0;bottom:0;z-index:8';
-    const toggleLabel=state.tab==='sale'?'批量下架':'批量上架';
-    bulkBar.innerHTML=`<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="px" id="bpx">改价</button><button class="px" id="bst">改库存</button><button class="up" id="bup">${toggleLabel}</button></div>`;
+    const isRec=state.tab==='recycle';
+    const toggleLabel=state.tab==='sale'?'下架':'上架';
+    bulkBar.innerHTML=isRec
+      ? `<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="up" id="brs">移出 / 还原</button></div>`
+      : `<div class="bulkbar"><div class="all" id="ba"><span class="b"></span>全选</div><span class="sp" id="bc">已选 0</span><button class="px" id="bpx">改价</button><button class="px" id="bst">改库存</button><button class="px" id="brc">移入回收</button><button class="up" id="bup">${toggleLabel}</button></div>`;
     container.appendChild(bulkBar);
     const data=()=>flatSkus(state.tab);
     state.refreshBulk=()=>{const d=data();const n=d.filter(x=>x.s._sel).length;bulkBar.querySelector('#bc').textContent='已选 '+n;
       bulkBar.querySelector('#ba .b').classList.toggle('on',n===d.length&&n>0);};
     bulkBar.querySelector('#ba').onclick=()=>{const d=data();const allOn=d.every(x=>x.s._sel);d.forEach(x=>x.s._sel=!allOn);drawData(state.tab);state.refreshBulk();};
-    bulkBar.querySelector('#bup').onclick=()=>{const sel=data().filter(x=>x.s._sel);if(!sel.length)return toast('请先选择规格');
-      const toOff=state.tab==='sale';const to=toOff?'下架':'上架';
-      confirmDialog({title:`批量${to} ${sel.length} 个规格？`,body:`将${to}所选 ${sel.length} 个售卖规格(SKU)，即时生效、无需审核。`,danger:toOff,okText:to,onOk:()=>{sel.forEach(x=>{x.s.off=toOff;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已${to} ${sel.length} 个规格`);exitManage();}});};
-    bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改价 ${n} 个规格`);};
-    bulkBar.querySelector('#bst').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改库存 ${n} 个规格`);};
+    if(isRec){
+      bulkBar.querySelector('#brs').onclick=()=>{const sel=data().filter(x=>x.s._sel);if(!sel.length)return toast('请先选择规格');
+        confirmDialog({title:`批量移出 ${sel.length} 个规格？`,body:`将所选 ${sel.length} 个规格移出回收站，还原后为已下架、可再上架。`,okText:'移出/还原',onOk:()=>{sel.forEach(x=>{x.s.recycled=false;x.s.off=true;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已移出 ${sel.length} 个规格`);exitManage();}});};
+    }else{
+      bulkBar.querySelector('#bup').onclick=()=>{const sel=data().filter(x=>x.s._sel);if(!sel.length)return toast('请先选择规格');
+        const toOff=state.tab==='sale';const to=toOff?'下架':'上架';
+        confirmDialog({title:`批量${to} ${sel.length} 个规格？`,body:`将${to}所选 ${sel.length} 个售卖规格(SKU)，即时生效、无需审核。`,danger:toOff,okText:to,onOk:()=>{sel.forEach(x=>{x.s.off=toOff;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已${to} ${sel.length} 个规格`);exitManage();}});};
+      bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改价 ${n} 个规格`);};
+      bulkBar.querySelector('#bst').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改库存 ${n} 个规格`);};
+      bulkBar.querySelector('#brc').onclick=()=>{const sel=data().filter(x=>x.s._sel&&skuRecyclable(x.s));if(!sel.length)return toast('仅已下架规格可移入回收站');
+        confirmDialog({title:`移入回收站 ${sel.length} 个规格？`,body:`将所选 ${sel.length} 个已下架规格移入回收站，可随时移出再用。`,okText:'移入回收站',onOk:()=>{sel.forEach(x=>{x.s.recycled=true;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已移入回收站 ${sel.length} 个规格`);exitManage();}});};
+    }
     state.refreshBulk();
   }
   function hideBulkBar(){bulkBar&&bulkBar.remove();bulkBar=null;}
@@ -388,13 +407,18 @@ function salesRef(p,i,g,s){
   ]);
 }
 
-function openMore(g,state){
-  // 已去除：整体上下架/分享给客户/删除商品；仅保留 编辑商品、复制商品
-  sheet([
+function openMore(g,s,state){
+  // 已去除：整体上下架/分享给客户/删除商品；仅保留 编辑商品、复制商品；已下架规格可移入回收站
+  const items=[
     {label:'编辑商品',onClick:()=>toast('编辑商品')},
     {label:'复制商品',onClick:()=>toast('复制商品')},
-  ]);
+  ];
+  if(s&&skuRecyclable(s))items.push({label:'移入回收站',onClick:()=>doRecycle(g,s,state)});
+  sheet(items);
 }
+// 移入回收站 / 移出还原（永久保留，无删除；还原后=已下架）
+function doRecycle(g,s,state){confirmDialog({title:'移入回收站？',body:`「${g.n} ${s.spec}」移入回收站后停止售卖，可随时移出再用。`,okText:'移入回收站',onOk:()=>{s.recycled=true;s.updatedAt=ts();g.updatedAt=ts();toast('已移入回收站');state.redraw();}});}
+function doRestore(g,s,state){confirmDialog({title:'移出回收站？',body:`「${g.n} ${s.spec}」还原后为已下架，可再上架售卖。`,okText:'移出/还原',onOk:()=>{s.recycled=false;s.off=true;s.updatedAt=ts();g.updatedAt=ts();toast('已移出回收站（已下架）');state.redraw();}});}
 function showSupplement(){
   confirmDialog({title:'商品信息缺失',body:'当前商品缺少必要属性，不符合治理规则，已被限流。补充信息后可恢复曝光。',okText:'去补充',onOk:()=>toast('前往补充信息')});
 }
