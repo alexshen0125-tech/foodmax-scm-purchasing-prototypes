@@ -120,7 +120,7 @@ const eyeSvg='<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 
 
 /* ============ 我的 (填充 container) ============ */
 function mineInline(container){
-  const g1=[['营业信息','sign','biz'],['合同管理','invoice'],['服务能力','shieldcheck']];
+  const g1=[['营业时间设置','sign','hours'],['合同管理','invoice'],['服务能力','shieldcheck']];
   const g2=[['平台规则','box'],['联系客服','bell'],['廉正举报','alert'],['查看 Food Max 商城','tag'],['账号管理','user']];
   const rows=(arr)=>arr.map(m=>`<div class="mn-row" data-go="${m[2]||''}"><span class="ic">${svg(m[1])}</span><span class="nm">${m[0]}</span>${ARR}</div>`).join('');
   container.innerHTML=`
@@ -135,13 +135,14 @@ function mineInline(container){
     <div class="mn-foot">ICP / 营业执照编号：Reg. No. 201812345A · Food Max (SG) Pte Ltd ›</div>`;
   container.querySelector('#mn-basic').onclick=openBasic;
   container.querySelectorAll('.mn-row').forEach(r=>r.onclick=()=>{
-    if(r.dataset.go==='biz')openBusinessStatus();else toast('待补录');
+    const go=r.dataset.go;
+    if(go==='hours')openBizHours();else if(go==='biz')openBusinessStatus();else toast('待补录');
   });
 }
 
 /* ============ 基本信息 ============ */
 function openBasic(){
-  const g1=[['合作商信息',''],['经营信息','biz'],['店铺信息','store'],['营业时间与截单','hours'],['主要经营品类信息','cat'],['经营城市信息','']];
+  const g1=[['合作商信息',''],['经营信息','biz'],['店铺信息','store'],['主要经营品类信息','cat'],['经营城市信息','']];
   const g2=[['经营资质','qual','正常'],['法人信息','legal'],['授权人信息','auth']];
   const g3=[['系统权限管理','perm'],['第三方信息数据共享','']];
   const rows=(arr)=>arr.map(m=>`<div class="mn-row" data-go="${m[1]}"><span class="nm" style="margin-left:2px">${m[0]}</span>${m[2]?`<span class="rt ok">${m[2]}</span>`:''}${ARR}</div>`).join('');
@@ -189,7 +190,7 @@ function bhCard(w,i){
   </div>`;
 }
 function openBizHours(){
-  pushPage({title:'营业时间与截单',body:`
+  pushPage({title:'营业时间设置',body:`
     <div class="bh-tip">营业开始 / 截止时间逐日可配；<b>截止时间即当日截单时间</b>。截单后下单限制方式（T+2 顺延接单 / 截单后停止接单）也可逐日不同。</div>
     <div id="bh-list"></div><div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="bh-save">更新保存</button>`,
