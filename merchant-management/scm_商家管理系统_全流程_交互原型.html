@@ -1194,18 +1194,18 @@ PAGES['m-product']=()=>{
     <button class="btn btn-p btn-sm" onclick="DB.pFilter.name=(document.getElementById('pf-name')||{}).value.trim();DB.pFilter.skuName=(document.getElementById('pf-skuname')||{}).value.trim();DB.pFilter.skuCode=(document.getElementById('pf-skucode')||{}).value.trim();DB.pPage=1;render()">查询</button>
     <button class="btn btn-o btn-sm" onclick="DB.pFilter={};DB.pPage=1;render()">重置</button>
   </div></div>
-  <div class="selbar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F1F8F1;border:1px solid var(--bd);border-radius:10px;margin-bottom:14px;font-size:13px">
-    <span>${selN?`已选 <b>${selN}</b> 个 SKU`:'<span style="color:var(--ts)">勾选 SKU 后可批量操作</span>'}</span>
-    <button class="btn btn-p btn-sm" ${selN?'':'disabled'} onclick="act_batchShelf(false)">批量上架</button>
-    <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchShelf(true)">批量下架</button>
-    <span style="width:1px;height:18px;background:var(--bd)"></span>
-    <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchPrice()">批量改价</button>
-    <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchStock()">批量改库存</button>
-    ${selN?`<button class="btn btn-link" style="margin-left:auto" onclick="DB.sel=[];render()">取消选择</button>`:''}
-  </div>
-  <div class="card"><div class="card-hd">
+  <div class="card"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
     <div class="tabs" style="margin:0;border:none">${[['onsale','销售中'],['off','未上架']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';DB.pPage=1;DB.sel=[];render()">${x[1]}</div>`).join('')}</div>
-    <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button></div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <span style="font-size:12.5px;color:var(--ts);align-self:center">${selN?`已选 <b style="color:var(--tp)">${selN}</b>`:'勾选 SKU 后可批量操作'}</span>
+      <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchShelf(false)">批量上架</button>
+      <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchShelf(true)">批量下架</button>
+      <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchPrice()">批量改价</button>
+      <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="act_batchStock()">批量改库存</button>
+      ${selN?`<button class="btn btn-link btn-sm" onclick="DB.sel=[];render()">取消</button>`:''}
+      <span style="width:1px;height:18px;background:var(--bd);align-self:center"></span>
+      <button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button>
+    </div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th style="width:30px"><input type="checkbox" class="skuchk" title="全选当前页可选 SKU" ${allSel?'checked':''} onclick="selAllProducts()"></th><th>商品编码</th><th>商品名称</th><th>品类</th><th title="商家维护未税价">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
     ${rows.map(({p,i,s,k})=>{const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
