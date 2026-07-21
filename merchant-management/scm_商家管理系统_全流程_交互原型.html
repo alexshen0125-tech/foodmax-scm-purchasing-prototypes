@@ -718,7 +718,6 @@ const NAV={
     {sec:'合规'},
     {id:'m-after-group',ic:'↩️',t:'售后管理',p1:1,children:[
       {id:'m-aftersale',ic:'↩️',t:'售后订单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
-      {id:'m-after-ticket',ic:'🛎️',t:'售后工单'},
       {id:'m-after-return',ic:'📦',t:'退货单'},
     ]},
     {id:'m-quality',ic:'🔬',t:'质检管理'},
@@ -2031,65 +2030,10 @@ function afterMerchantOps(a,i){
   return b.join(' ');
 }
 
-/* ---------- 商家端：售后工单（售后管理子菜单）——客诉工单，商家【只读查看处理记录，不参与处理】 ---------- */
-// 售后工单 ≠ 售后订单：工单由平台客服/相关部门处理，商家端只查看与本商家相关的工单及处理记录，不判责不扣款、不一定关联单据
-// 字段对齐内部客诉工单：基础信息 / 客诉信息 / 订单信息 / 物流信息 / 处理信息
-const AFTER_TICKETS=[
-  {id:'KS2026071311136',time:'2026-07-12 16:22',channel:'客户反馈',custStore:'海底捞（新加坡）',custNo:'C000015636',phone:'+65 97776221',
-   cat:'商品质量 / 生鲜品相',intervene:'是',desc:'菠菜到货部分偏黄，客户咨询是否影响食用',order:'#SG20260701018',driver:'林师傅',driverPhone:'+65 81234567',
-   status:'已完成',result:'安抚 + 补货',record:'已联系客户说明品相原因，安排下一批次补发 20kg',dept:'平台客服',refund:0,coupon:0,goodwill:0,restock:20},
-  {id:'KS2026071311135',time:'2026-07-12 16:22',channel:'销售反馈',custStore:'食为天餐厅',custNo:'C000015637',phone:'+65 97771122',
-   cat:'配送 / 到货延迟',intervene:'是',desc:'客户反馈当日订单送达晚于约定时段约 1 小时',order:'#SG20260629012',driver:'陈师傅',driverPhone:'+65 82345678',
-   status:'处理中',result:'—',record:'已受理，核实司机行程中',dept:'平台物流',refund:0,coupon:0,goodwill:0,restock:0},
-  {id:'KS2026071311134',time:'2026-07-12 16:21',channel:'平台巡检',custStore:'丰盛轩',custNo:'C000015638',phone:'+65 97773344',
-   cat:'咨询 / 账号 / 信息变更',intervene:'否',desc:'商家询问如何在店铺信息更新食品经营许可证',order:'—',driver:'—',driverPhone:'—',
-   status:'待处理',result:'—',record:'—',dept:'—',refund:0,coupon:0,goodwill:0,restock:0},
-  {id:'KS2026071311127',time:'2026-07-11 15:54',channel:'客户反馈',custStore:'锦记茶餐厅',custNo:'C000006858',phone:'+65 97775566',
-   cat:'商品质量 / 少货',intervene:'是',desc:'白菜实收数量少于订单 2kg，要求核实',order:'#SG20260630021',driver:'林师傅',driverPhone:'+65 81234567',
-   status:'已完成',result:'退款',record:'核实为分拣少装，已退少货货款',dept:'平台客服',refund:37.20,coupon:0,goodwill:0,restock:0},
-];
-const TICKET_TAG={'待处理':'t-y','处理中':'t-b','已完成':'t-g'};
-PAGES['m-after-ticket']=()=>{
-  const open=AFTER_TICKETS.filter(t=>t.status=='待处理'||t.status=='处理中').length;
-  return `${flowTip(`<b>售后工单</b>（客诉工单）由<b>平台客服/相关部门处理</b>，<b>商家无需处理，仅查看</b>与本商家相关的工单及处理记录；不做判责扣款，也不一定关联单据。涉及判责/扣款见<b>售后订单</b>。`)}
-  <div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">处理中/待处理 ${open} · 共 ${AFTER_TICKETS.length} · 商家只读</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>工单编号</th><th>客诉时间</th><th>渠道</th><th>分类</th><th>客诉说明</th><th>处理状态</th><th>操作</th></tr></thead><tbody>
-    ${AFTER_TICKETS.map((t,i)=>`<tr>
-      <td class="mono">${t.id}</td>
-      <td style="white-space:nowrap">${t.time}</td>
-      <td>${t.channel}</td>
-      <td>${t.cat}</td>
-      <td style="max-width:280px;white-space:normal;color:var(--ts);font-size:12.5px">${t.desc}</td>
-      <td><span class="tag ${TICKET_TAG[t.status]||'t-gr'}"><span class="dot"></span>${t.status}</span></td>
-      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_ticketDetail(${i})">查看</button></td>
-    </tr>`).join('')}
-    </tbody></table></div></div></div>`;
-};
-// 售后工单只读详情（基础/客诉/订单/处理信息）：客户信息脱敏、物流信息不展示给商家，商家不可编辑
-function act_ticketDetail(i){
-  const t=AFTER_TICKETS[i];if(!t)return;
-  const row=(k,v)=>`<dt>${k}</dt><dd>${(v===0||v)?v:'—'}</dd>`;
-  const amt=v=>v>0?money(v):'—';
-  const maskPhone=p=>String(p||'').replace(/(\d)\d{3,}(\d{2})/,'$1****$2');   // 客户手机脱敏：保留首尾
-  const maskNo=n=>{n=String(n||'');return n.length<=3?n:n.slice(0,1)+'****'+n.slice(-2);};
-  drawer(`<div class="drawer-hd"><div><h3>售后工单 <span class="mono" style="font-size:13px;color:var(--ts)">${t.id}</span></h3><div style="margin-top:4px"><span class="tag ${TICKET_TAG[t.status]||'t-gr'}"><span class="dot"></span>${t.status}</span> <span class="sub" style="font-size:12px">商家只读 · 由平台处理</span></div></div><span class="x" onclick="closeDrawer()">×</span></div>
-  <div class="drawer-bd">
-    <h4 style="font-size:14px;margin:2px 0 8px;color:var(--g)">基础信息</h4>
-    <dl class="dl">${row('工单编号',`<span class="mono">${t.id}</span>`)}${row('客诉时间',t.time)}${row('渠道',t.channel)}${row('客户门店',`${ord_mask(t.custStore)} <span class="mono" style="color:var(--ts);font-size:12px">${maskNo(t.custNo)}</span>`)}${row('用户联系电话',maskPhone(t.phone))}</dl>
-    <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">客诉信息</h4>
-    <dl class="dl">${row('分类',t.cat)}${row('是否可干预',t.intervene)}${row('客诉说明',t.desc)}${row('附件','—')}</dl>
-    <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">订单信息</h4>
-    <dl class="dl">${row('关联订单',t.order&&t.order!='—'?`<span class="mono">${t.order}</span>`:'无')}</dl>
-    <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">处理信息</h4>
-    <dl class="dl">${row('处理状态',`<span class="tag ${TICKET_TAG[t.status]||'t-gr'}"><span class="dot"></span>${t.status}</span>`)}${row('处理结果',t.result)}${row('处理记录',t.record)}${row('责任部门',t.dept)}${row('退款金额',amt(t.refund))}${row('补券金额',amt(t.coupon))}${row('客情金额',amt(t.goodwill))}${row('补货金额',t.restock>0?t.restock+' kg':'—')}</dl>
-    <div class="ib ib-gr" style="margin-top:14px"><span class="i">ℹ️</span>本工单由平台客服/相关部门处理，商家端仅查看处理记录，无需操作。</div>
-  </div>
-  <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
-}
 
 /* ---------- 商家端：退货单（退货退款·到仓提货，商家只读；确认由仓库操作，超72h未提平台处置） ---------- */
 PAGES['m-after-return']=()=>{
-  const rs=DB.afterSales.filter(a=>a.type=='退货退款');
+  const rs=DB.afterSales.filter(a=>a.type=='退货退款'&&a.returnStatus);
   const stTag=s=>{const m={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s=='逾期未提'?'逾期未提·平台处置':s}</span>`;};
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
     const dueMs=arriveDueMs(a.arriveAt,72);
@@ -2101,7 +2045,7 @@ PAGES['m-after-return']=()=>{
 
 /* ---------- 商家端：送货退货（退货退款·回仓管理） ---------- */
 PAGES['m-delivery']=()=>{
-  const rs=DB.afterSales.filter(a=>a.type=='退货退款');
+  const rs=DB.afterSales.filter(a=>a.type=='退货退款'&&a.returnStatus);
   const rtag={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'};
   return `<div class="card"><div class="card-hd"><h3>退货取回</h3><span class="sub">退货退款到仓提货进度（只读 · 详见「售后管理 → 退货单」）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>工单号</th><th>客户/订单</th><th>商品</th><th>金额</th><th>退货状态</th><th>操作</th></tr></thead><tbody>${rs.map(a=>{const i=DB.afterSales.indexOf(a);return `<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td>${a.returnStatus?`<span class="tag ${rtag[a.returnStatus]||'t-gr'}"><span class="dot"></span>${a.returnStatus=='逾期未提'?'逾期未提·平台处置':a.returnStatus}</span>`:'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货工单</div><div class="e-s">退货退款类售后订单会在此展示到仓提货进度</div></div>'}</div></div>`;
 };
