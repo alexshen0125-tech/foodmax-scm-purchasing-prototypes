@@ -1310,6 +1310,11 @@ function act_spuDetail(i){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${p.status!='reviewing'&&p.status!='forced_off'?`<button class="btn btn-p" onclick="closeDrawer();act_editSpu(${i})">编辑</button>`:''}</div>`);
 }
 function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
+/* 倒计时：data-cd=截止毫秒；全局每秒刷新所有 [data-cd]（申诉24h窗口 / 退货单72h提货时限） */
+function fmtRemain(ms){let s=Math.floor((ms-Date.now())/1000);if(!ms||isNaN(s))return '—';if(s<=0)return '已截止';const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const m=Math.floor(s/60),ss=s%60;const p=n=>(''+n).padStart(2,'0');return (d?d+'天 ':'')+p(h)+':'+p(m)+':'+p(ss);}
+function cdSpan(ms){return `<b data-cd="${ms}">${fmtRemain(ms)}</b>`;}
+function arriveDueMs(str,hrs){if(!str)return 0;const t=Date.parse(str.replace(' ','T'));return isNaN(t)?0:t+hrs*3600000;}
+if(!window._cdTick)window._cdTick=setInterval(()=>{document.querySelectorAll('[data-cd]').forEach(el=>{el.textContent=fmtRemain(+el.dataset.cd);});},1000);
 /* GST：价格维护未税价，默认税率 9%，系统自动算含税价（仅展示、不可直接编辑） */
 const GST_DEFAULT=9;
 function taxRate(p){const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%',''));return isNaN(t)?GST_DEFAULT:t;}
@@ -2016,8 +2021,12 @@ function afterStatus(a){
 }
 function afterMerchantOps(a,i){
   const b=[];
-  // 申诉：判商家责后开放(退款前)，仅 1 次，24h 可配窗口内(退货/退款类售后单)；退货单确认由仓库操作，商家侧不出现
-  if(a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&!a.appeal)b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉<span style="font-size:10px;color:var(--ts);margin-left:3px">24h内</span></button>`);
+  // 申诉：判商家责后开放(退款前)，仅 1 次，24h 可配窗口内；窗口用倒计时展示，逾期入口关闭；退货单确认由仓库操作、商家侧不出现
+  if(a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&!a.appeal){
+    if(!a.appealDeadline)a.appealDeadline=Date.now()+24*3600*1000;   // 判商家责起 24h 窗口(演示：首次渲染起算)
+    if(a.appealDeadline>Date.now())b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉<span style="font-size:10px;color:var(--r);margin-left:4px">剩 ${cdSpan(a.appealDeadline)}</span></button>`);
+    else b.push(`<span style="font-size:11.5px;color:var(--ts)">申诉已截止</span>`);
+  }
   b.push(`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`);
   return b.join(' ');
 }
@@ -2083,7 +2092,8 @@ PAGES['m-after-return']=()=>{
   const rs=DB.afterSales.filter(a=>a.type=='退货退款');
   const stTag=s=>{const m={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s=='逾期未提'?'逾期未提·平台处置':s}</span>`;};
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
-    const deadline=a.returnStatus=='待提货'?'<b style="color:var(--r)">到货后 72h 内提货，逾期平台处置</b>':(a.returnStatus=='已提货'?('已提货 '+(a.pickupAt||'')):(a.returnStatus=='逾期未提'?'已逾期·平台处置':(a.returnStatus=='待仓库入库'?'待仓库确认到货':'—')));
+    const dueMs=arriveDueMs(a.arriveAt,72);
+    const deadline=a.returnStatus=='待提货'?`<b style="color:var(--r)">剩 ${cdSpan(dueMs)} 提货</b><div style="font-size:11px;color:var(--ts)">到货 ${a.arriveAt||''} · 逾期平台处置</div>`:(a.returnStatus=='已提货'?('已提货 '+(a.pickupAt||'')):(a.returnStatus=='逾期未提'?'已逾期·平台处置':(a.returnStatus=='待仓库入库'?'待仓库确认到货':'—')));
     return `<tr><td class="mono">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td>${a.returnStatus?stTag(a.returnStatus):'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td style="font-size:12px">${deadline}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('');
   return `${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货，触发 <b>72 小时</b>倒计时）→ 已提货 / 逾期未提。<b>BR-R1</b> 商家端<b>只读</b>展示状态与剩余提货时长，<b>状态确认均由仓库操作</b>、商家无确认权限；<b>BR-R2</b> 超 72 小时未提货，平台可自行处置货物。`)}
   <div class="card"><div class="card-hd"><h3>退货单</h3><span class="sub">退货退款到仓提货（商家只读 · 仓库确认 · 超 72h 未提平台处置）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th>金额</th><th>到仓时间</th><th>状态</th><th>提货时限</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
@@ -2870,7 +2880,7 @@ function doJudge(i,liable){const a=DB.afterSales[i];a.liable=liable;
 }
 // 商家端：申诉
 function act_appeal(i){const a=DB.afterSales[i];
-  modal(`<div class="mc-hd"><h3>申诉 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📣</span><div>判商家责后可申诉，平台客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b>申诉截止 2026-07-22 10:00</b>，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div></div><div class="fr"><label class="fl">申诉理由</label><textarea id="ap-reason">出库前已拍照留证，货品无质量问题，疑为配送环节导致，申请重新判责。</textarea></div><div class="fr"><label class="fl">上传证据照片 <span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span></label><div class="up" onclick="this.classList.add('done');this.querySelector('.uic').textContent='✓';this.querySelector('.ut').textContent='已上传 3 张'"><div class="uic">📷</div><div class="ut">点击上传照片</div><div class="us">选填 · 支持 jpg/png，最多 9 张 · 出库品相 / 分拣记录 / 配送签收等证据</div></div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.afterSales[${i}].status='appealing';DB.afterSales[${i}].appeal=document.getElementById('ap-reason').value;closeModal();render();toast('申诉已提交，平台客服二次判责中','ok')">提交申诉</button></div>`);
+  modal(`<div class="mc-hd"><h3>申诉 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📣</span><div>判商家责后可申诉，平台客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b style="color:var(--r)">剩 ${cdSpan(a.appealDeadline||Date.now()+24*3600*1000)}</b> 截止，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div></div><div class="fr"><label class="fl">申诉理由</label><textarea id="ap-reason">出库前已拍照留证，货品无质量问题，疑为配送环节导致，申请重新判责。</textarea></div><div class="fr"><label class="fl">上传证据照片 <span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span></label><div class="up" onclick="this.classList.add('done');this.querySelector('.uic').textContent='✓';this.querySelector('.ut').textContent='已上传 3 张'"><div class="uic">📷</div><div class="ut">点击上传照片</div><div class="us">选填 · 支持 jpg/png，最多 9 张 · 出库品相 / 分拣记录 / 配送签收等证据</div></div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.afterSales[${i}].status='appealing';DB.afterSales[${i}].appeal=document.getElementById('ap-reason').value;closeModal();render();toast('申诉已提交，平台客服二次判责中','ok')">提交申诉</button></div>`);
 }
 // 平台端：复核申诉
 function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];

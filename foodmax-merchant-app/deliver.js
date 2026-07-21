@@ -2,7 +2,7 @@
    还原快驴卖家App 9 张参考截图；SG 仓(裕廊/兀兰/盛港/大巴窑/淡滨尼/义顺 DC) + S$
    评审修复内建：列表先 skel→数据 / 装筐空态用 .empty / 破坏性(不需要提货·放弃所有权)用 confirmDialog / 可点元素≥44px */
 (function(){
-const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
+const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel,cdSpan,arriveDueMs}=window.FM;
 
 const css=document.createElement('style');
 css.textContent=`
@@ -332,7 +332,7 @@ function returnCard(g){
   return `<div class="dl-rcard">
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st" data-no="${g.no}">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span><span class="cnt">共${g.cnt}件</span></div>
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'&&g.deadline?`提货截止：${g.deadline}（到货后 72h，逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?'已提货':g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`剩 ${cdSpan(arriveDueMs(g.arrive,72))} 提货（逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?'已提货':g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
   </div>`;
 }
 function openReturn(){

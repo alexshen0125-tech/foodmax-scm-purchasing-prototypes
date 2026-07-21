@@ -2,7 +2,7 @@
    还原快驴卖家App售后：列表(6 Tab) + 判责详情 + 商品质量等级(含定级介绍弹窗) + 判责记录时间线
    评审修复内建：各 Tab 先骨架→数据 / 申诉中空态 / 认责等不可逆动作 confirmDialog / 44px / 币种 S$ / SG 仓库 */
 (function(){
-const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
+const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel,cdSpan}=window.FM;
 
 const css=document.createElement('style');
 css.textContent=`
@@ -363,7 +363,7 @@ function openDetail(d){
 /* 去申诉表单 */
 function openAppeal(d){
   pushPage({title:'发起申诉',body:`
-    <div style="margin-top:13px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">判商家责后可申诉，客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b>截止 2026-07-22 10:00</b>，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div>
+    <div style="margin-top:13px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">判商家责后可申诉，客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b style="color:var(--red)">剩 ${cdSpan(Date.now()+24*3600*1000)}</b> 截止，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div>
     <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉商品</span></div>
       <div class="as-gline" style="border:none;padding:0;margin:0"><div class="img">${d.img}</div>
         <div class="gi"><div class="nm"><span>${d.nm}</span></div><div class="sp"><span>${d.sp}</span><span>可申诉金额 ${d.appealAmt}</span></div></div></div></div>
