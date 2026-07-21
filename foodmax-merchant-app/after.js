@@ -268,7 +268,7 @@ function renderList(container){
           <div class="n"><div class="v">0</div><div class="l">高投商品</div></div></div></div>
     </div>
     <div id="tk-card" style="margin:2px 16px 0;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">🛎️ 售后工单（客诉工单）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">平台处理 · 商家只读，仅查看处理记录</div></div>${svg('arrow')}</div>
-    <div id="ret-card" style="margin:10px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退货单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退/滞销商品退回仓库 · 预约提货</div></div>${svg('arrow')}</div>
+    <div id="ret-card" style="margin:10px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退货单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退商品到仓提货进度（商家只读 · 仓库确认 · 72h 提货）</div></div>${svg('arrow')}</div>
     <div class="as-filters"><span class="fl" id="f-city">全部城市 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="fl" id="f-date">履约日期 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="ft">支持按照履约日期筛选</span></div>
@@ -363,6 +363,7 @@ function openDetail(d){
 /* 去申诉表单 */
 function openAppeal(d){
   pushPage({title:'发起申诉',body:`
+    <div style="margin-top:13px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">判商家责后可申诉，客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b>截止 2026-07-22 10:00</b>，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div>
     <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉商品</span></div>
       <div class="as-gline" style="border:none;padding:0;margin:0"><div class="img">${d.img}</div>
         <div class="gi"><div class="nm"><span>${d.nm}</span></div><div class="sp"><span>${d.sp}</span><span>可申诉金额 ${d.appealAmt}</span></div></div></div></div>
@@ -372,9 +373,9 @@ function openAppeal(d){
       </div></div>
     <div class="as-dblock"><div class="bt"><span>申诉描述</span></div>
       <textarea id="desc" placeholder="请填写申诉理由，说明商品规格、配送等情况" style="width:100%;min-height:90px;border:1.5px solid var(--line);border-radius:12px;padding:11px;font-size:14px;font-family:inherit;outline:none;resize:none"></textarea></div>
-    <div class="as-dblock"><div class="bt"><span>申诉凭证</span></div>
+    <div class="as-dblock"><div class="bt"><span>申诉凭证</span><span style="font-size:12px;color:var(--sub);font-weight:400">选填</span></div>
       <div class="as-imgs"><div class="im" style="width:72px;height:72px;cursor:pointer">${svg('box')}</div></div>
-      <div style="font-size:12px;color:var(--sub);margin-top:6px">上传商品货标、配送记录等凭证图片（最多 6 张）</div></div>
+      <div style="font-size:12px;color:var(--sub);margin-top:6px">选填 · 上传商品货标、配送记录等凭证图片（最多 6 张）</div></div>
     <div style="height:6px"></div>`,
     footer:`<button class="btn primary" id="sub">提交申诉</button>`,
     mount:(p)=>{
@@ -384,7 +385,7 @@ function openAppeal(d){
         const desc=p.querySelector('#desc').value.trim();
         if(!desc)return toast('请填写申诉描述');
         const b=p.querySelector('#sub');b.classList.add('loading');
-        setTimeout(()=>{b.classList.remove('loading');toast('申诉已提交，平台将在 48 小时内处理');setTimeout(()=>{popPage();popPage();},700);},700);
+        setTimeout(()=>{b.classList.remove('loading');toast('申诉已提交，客服将二次判责');setTimeout(()=>{popPage();popPage();},700);},700);
       };
     }});
 }

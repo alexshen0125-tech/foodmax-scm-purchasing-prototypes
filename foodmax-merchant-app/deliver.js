@@ -319,38 +319,36 @@ function stationPopup(ware,kind){
   m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
 }
 
-/* ============ 退货取回 → 退货单 ============ */
-// 退货单：货到仓(待提货)后，商家须在「到货后 48 小时」内提货，逾期默认放弃、货物进入平台销残处理
+/* ============ 退货取回 → 退货单（2026-07-21 会议定稿：商家只读；确认由仓库操作；到货后72h未提平台处置） ============ */
+// 退货单：三方退货到平台仓不入库仅暂存。状态 待仓库入库→待提货(仓库确认到货,72h倒计时)→已提货/逾期未提。
+// 商家端只读展示状态+提货码+剩余时限，无状态确认/预约/新建权限（三方退款须基于已判责售后工单，禁止商家自建）
 const RETURN=[
- {no:'TKD2026063008266685',ware:'裕廊DC',cnt:1,st:'待提货',order:'2026-07-19 08:51',code:'460439',arrive:'2026-07-19 21:00',deadline:'2026-07-21 21:00'},
- {no:'TKD2026062908267496',ware:'兀兰DC',cnt:1,st:'待提货',order:'2026-07-20 07:12',code:'897256',arrive:'2026-07-20 09:00',deadline:'2026-07-22 09:00'},
- {no:'TKD2026062908314280',ware:'盛港DC',cnt:1,st:'待提货',order:'2026-07-19 06:04',code:'715187',arrive:'2026-07-19 14:00',deadline:'2026-07-21 14:00'},
- {no:'TKD2026062708201337',ware:'大巴窑DC',cnt:2,st:'运输中',order:'2026-07-20 14:20',code:'330218',arrive:'',deadline:''},
+ {no:'TKD2026063008266685',ware:'裕廊DC',cnt:1,st:'待提货',order:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',deadline:'2026-07-23 21:00'},
+ {no:'TKD2026062908267496',ware:'兀兰DC',cnt:1,st:'待仓库入库',order:'2026-07-21 07:12',code:'897256',arrive:'',deadline:''},
+ {no:'TKD2026062908314280',ware:'盛港DC',cnt:1,st:'待提货',order:'2026-07-20 06:04',code:'715187',arrive:'2026-07-20 14:00',deadline:'2026-07-23 14:00'},
+ {no:'TKD2026062708201337',ware:'大巴窑DC',cnt:2,st:'已提货',order:'2026-07-18 14:20',code:'330218',arrive:'2026-07-18 18:00',deadline:'2026-07-21 18:00'},
 ];
 function returnCard(g){
   return `<div class="dl-rcard">
-    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st" data-no="${g.no}">${g.st} ›</span></div>
+    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st" data-no="${g.no}">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span><span class="cnt">共${g.cnt}件</span></div>
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.deadline?`提货截止：${g.deadline}（到货后 48h，逾期默认放弃）`:'待到仓后开放提货'}</span></div>
-    ${g.st==='待提货'?`<div class="rb"><span class="b" data-book="${g.no}">预约提货</span></div>`:''}
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'&&g.deadline?`提货截止：${g.deadline}（到货后 72h，逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?'已提货':g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
   </div>`;
 }
 function openReturn(){
   pushPage({title:'退货单',body:`
-    <div class="dl-banner" id="dl-rbn"><span>请在RF端与仓库工作人员确认实际提货数量后，提供提货码。因售后链路较长，商品数量会有20%的浮动差异，且商品质量也无法完全保证。如果您收到货物后，发现存在严重问题，可拨打客服热线 4000-616-700 进行咨询。</span><span class="x">✕</span></div>
+    <div class="dl-banner" id="dl-rbn"><span>三方退货货物到仓后不入库、仅暂存。<b>提货确认由仓库操作</b>，商家凭提货码到仓自提；到货后请在 <b>72 小时</b>内提货，逾期平台可自行处置。数量以仓库 RF 端实际确认为准，如有严重问题请拨客服 4000-616-700。</span><span class="x">✕</span></div>
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
-    <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待提货">待提货</span><span class="t" data-t="运输中">运输中</span><span class="t" data-t="已提货">已提货</span></div>
+    <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待仓库入库">待仓库入库</span><span class="t" data-t="待提货">待提货</span><span class="t" data-t="已提货">已提货</span></div>
     <div class="dl-list" id="dl-rtl"></div>`,
-    footer:`<button class="btn primary" id="dl-newret">＋ 新建退货单</button>`,
     mount:(p)=>{
       const list=p.querySelector('#dl-rtl');
       const draw=(t)=>{
         list.innerHTML=skel(2);
         setTimeout(()=>{
           const data=t==='all'?RETURN:RETURN.filter(g=>g.st===t);
-          if(!data.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('refund')}</div><h4>暂无${t==='all'?'':t}退货单</h4><p>客退商品产生的退货单会出现在这里</p></div>`;return;}
+          if(!data.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('refund')}</div><h4>暂无${t==='all'?'':t}退货单</h4><p>退货退款售后单判责后会在此展示到仓提货进度</p></div>`;return;}
           list.innerHTML=data.map(returnCard).join('');
-          list.querySelectorAll('[data-book]').forEach(e=>e.onclick=()=>bookPickup(e.dataset.book));
           list.querySelectorAll('[data-no]').forEach(e=>e.onclick=()=>toast('退货单 '+e.dataset.no));
         },420);
       };
@@ -358,89 +356,9 @@ function openReturn(){
       p.querySelectorAll('#dl-rtab .t').forEach(t=>t.onclick=()=>{p.querySelectorAll('#dl-rtab .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');draw(t.dataset.t);});
       const bn=p.querySelector('#dl-rbn');bn.querySelector('.x').onclick=()=>bn.remove();
       p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:d.dataset.f==='ware'?'裕廊DC':'客退退货单',onClick:()=>toast('已筛选')},{label:d.dataset.f==='ware'?'兀兰DC':'报损退货单',onClick:()=>toast('已筛选')}]));
-      p.querySelector('#dl-newret').onclick=openNewReturn;
     }});
 }
-// 预约提货弹层
-const GIVEUP_REASONS=['商品已无销售价值','二次取回成本高于货值','客户已自行处理','其他原因'];
-function bookPickup(no){
-  const m=document.createElement('div');m.className='dl-sheet-mask';
-  m.innerHTML=`<div class="dl-sheet"><div class="sh">预约提货<span class="x">✕</span></div>
-    <div class="sbody">
-      <div class="tip">ⓘ 货到仓后请在 <b>48 小时</b>内提货；逾期未提货默认放弃，商品自动进入平台销残处理</div>
-      <div class="qh">是否需要提货</div>
-      <div class="dl-radios"><div class="dl-radio on" data-v="yes"><span class="rc"></span>需要提货</div><div class="dl-radio danger" data-v="no"><span class="rc"></span>不需要提货</div></div>
-      <div id="dl-pkbody"></div>
-    </div>
-    <div class="sfoot"><button class="btn primary" id="dl-pkok">确定</button></div></div>`;
-  document.querySelector('.phone').appendChild(m);
-  const body=m.querySelector('#dl-pkbody');
-  const state={need:'yes',date:'',reason:-1};
-  const ok=m.querySelector('#dl-pkok');
-  const refresh=()=>{
-    if(state.need==='yes'){
-      body.innerHTML=`<div class="qh">预约提货时间</div><div class="dl-field${state.date?' has':''}" id="dl-pkdate">${state.date||'请选择日期'}<span style="color:var(--sub)">▾</span></div>`;
-      body.querySelector('#dl-pkdate').onclick=()=>sheet([
-        {label:'2026-07-02',onClick:()=>{state.date='2026-07-02';refresh();}},
-        {label:'2026-07-03',onClick:()=>{state.date='2026-07-03';refresh();}},
-        {label:'2026-07-04',onClick:()=>{state.date='2026-07-04';refresh();}}]);
-      ok.disabled=!state.date;
-    }else{
-      body.innerHTML=`<div class="dl-warn">⚠ 选择「不需要提货」将视为放弃该批退货商品的所有权，商品进入平台销残处理，操作不可撤销。</div>
-        <div class="qh">放弃原因</div><div class="dl-reason">${GIVEUP_REASONS.map((r,i)=>`<div class="dl-radio${state.reason===i?' on':''}" data-r="${i}"><span class="rc"></span><span>${r}</span></div>`).join('')}</div>`;
-      body.querySelectorAll('[data-r]').forEach(e=>e.onclick=()=>{state.reason=+e.dataset.r;refresh();});
-      ok.disabled=state.reason<0;
-    }
-  };
-  m.querySelectorAll('.dl-radios .dl-radio').forEach(r=>r.onclick=()=>{
-    m.querySelectorAll('.dl-radios .dl-radio').forEach(x=>x.classList.remove('on'));r.classList.add('on');
-    state.need=r.dataset.v;state.date='';state.reason=-1;refresh();});
-  refresh();
-  m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
-  ok.onclick=()=>{
-    if(ok.disabled)return;
-    if(state.need==='yes'){m.remove();toast('已预约 '+state.date+' 提货');}
-    else confirmDialog({title:'确认放弃该批退货商品？',body:`放弃后「${no}」对应商品将进入平台销残处理，您将失去货物所有权，操作不可撤销。`,danger:1,okText:'确认放弃',onOk:()=>{m.remove();toast('已提交：放弃所有权');}});
-  };
-}
-// 新建退货单
-const RET_GOODS=[
- {ic:'🍢',nm:'[达滋味]精品油豆泡',sp:'1.5kg/组(3袋)'},
- {ic:'🥬',nm:'[鲜丰]嫩豆腐',sp:'2斤/袋'},
- {ic:'🧈',nm:'[鲜丰]老豆腐',sp:'2.5kg/盒'},
-];
-function openNewReturn(){
-  pushPage({title:'新建退货单',body:`
-    <div class="dl-sec">退货信息</div>
-    <div class="dl-form">
-      <div class="dl-frow"><span class="lb"><span class="req">*</span>取货仓库</span><span class="sel" id="dl-nrw">请选择 ›</span></div>
-      <div class="dl-frow"><span class="lb"><span class="req">*</span>商品类型</span>
-        <div class="dl-radios"><div class="dl-radio on" data-tp="成品"><span class="rc"></span>成品</div><div class="dl-radio" data-tp="包装物"><span class="rc"></span>包装物</div></div></div>
-    </div>
-    <div class="dl-sec">退货商品</div>
-    <div class="dl-add" id="dl-nradd">＋ 添加退货商品</div>
-    <div id="dl-nritems"></div>
-    <div style="height:12px"></div>`,
-    footer:`<div class="dl-foot2"><span class="sum">退货商品合计 <b id="dl-nrsum">0</b></span><button class="btn primary" id="dl-nrsub" disabled>提交退货单</button></div>`,
-    mount:(p)=>{
-      const state={ware:'',type:'成品',items:[]};
-      const itemsBox=p.querySelector('#dl-nritems');
-      const sum=p.querySelector('#dl-nrsum'),sub=p.querySelector('#dl-nrsub'),wsel=p.querySelector('#dl-nrw');
-      const refresh=()=>{
-        itemsBox.innerHTML=state.items.map((it,i)=>`<div class="dl-item"><div class="ig">${it.ic}</div><div class="it"><div class="nm">${it.nm}</div><div class="sp">售卖规格 · ${it.sp}</div></div><span class="del" data-d="${i}">移除</span></div>`).join('');
-        itemsBox.querySelectorAll('[data-d]').forEach(e=>e.onclick=()=>{state.items.splice(+e.dataset.d,1);refresh();});
-        sum.textContent=state.items.length;
-        sub.disabled=!(state.ware&&state.items.length);
-      };
-      wsel.onclick=()=>sheet(['裕廊DC','兀兰DC','盛港DC','大巴窑DC','淡滨尼DC','义顺DC'].map(w=>({label:w,onClick:()=>{state.ware=w;wsel.textContent=w+' ›';wsel.classList.add('has');refresh();}})));
-      p.querySelectorAll('[data-tp]').forEach(r=>r.onclick=()=>{p.querySelectorAll('[data-tp]').forEach(x=>x.classList.remove('on'));r.classList.add('on');state.type=r.dataset.tp;});
-      p.querySelector('#dl-nradd').onclick=()=>{
-        if(!state.ware)return toast('请先选择取货仓库');
-        sheet(RET_GOODS.map(g=>({label:g.nm+'  '+g.sp,onClick:()=>{state.items.push(g);refresh();}})));
-      };
-      sub.onclick=()=>{const b=sub;b.classList.add('loading');setTimeout(()=>{b.classList.remove('loading');toast('退货单已提交');setTimeout(popPage,600);},700);};
-    }});
-}
+// 预约提货 / 新建退货单 已按 2026-07-21 会议移除：提货确认统一由仓库操作、商家端只读；三方退款须基于已判责售后工单，商家不可自建退货单。
 
 window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.signin=openSignin;

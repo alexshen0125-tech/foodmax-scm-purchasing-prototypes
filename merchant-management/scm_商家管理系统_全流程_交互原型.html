@@ -597,9 +597,10 @@ const DB = {
   // 售后（逆向）：餐厅对「已收货」订单在时效内发起；退款不退货 / 退货退款两类；平台三方判责；商家可申诉；判商家责逆向扣减货款
   afterSales:[
     {id:'AS-26070201', client:'食为天餐厅', order:'#SG20260701018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'签收后12小时', type:'退款不退货', amt:116.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
-    {id:'AS-26070202', client:'海底捞（新加坡）', order:'#SG20260701005', item:'白菜 24kg', reason:'误发精品装，规格不符，要求退回', age:'签收后8小时', type:'退货退款', amt:84.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:'待退货'},
-    {id:'AS-26070203', client:'金鼎轩', order:'#SG20260701009', item:'娃娃菜 15kg', reason:'规格不符，要求退回', age:'签收后10小时', type:'退货退款', amt:105.00, status:'judged', liable:'商家', refundType:'退货退款·货退回商家仓·扣商家货款', appeal:'', returnStatus:'待提货', arriveAt:'2026-07-19 21:30'},
-    {id:'AS-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退回商家仓', appeal:'', returnStatus:'逾期未提', arriveAt:'2026-07-16 18:00'},
+    {id:'AS-26070202', client:'海底捞（新加坡）', order:'#SG20260701005', item:'白菜 24kg', reason:'误发精品装，规格不符，要求退回', age:'签收后8小时', type:'退货退款', amt:84.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
+    {id:'AS-26070203', client:'金鼎轩', order:'#SG20260701009', item:'娃娃菜 15kg', reason:'规格不符，要求退回', age:'签收后10小时', type:'退货退款', amt:105.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待仓库入库'},
+    {id:'AS-26070205', client:'鼎泰丰', order:'#SG20260701012', item:'芥蓝 10kg', reason:'到货偏软，要求退回', age:'签收后9小时', type:'退货退款', amt:65.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待提货', arriveAt:'2026-07-20 21:30'},
+    {id:'AS-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'逾期未提', arriveAt:'2026-07-16 18:00'},
   ],
   // 违规
   violations:[],
@@ -2015,8 +2016,8 @@ function afterStatus(a){
 }
 function afterMerchantOps(a,i){
   const b=[];
-  if(a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&!a.appeal)b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉</button>`);
-  if(a.type=='退货退款'&&a.returnStatus=='退货在途')b.push(`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认退货回仓</button>`);
+  // 申诉：判商家责后开放(退款前)，仅 1 次，24h 可配窗口内(退货/退款类售后单)；退货单确认由仓库操作，商家侧不出现
+  if(a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&!a.appeal)b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉<span style="font-size:10px;color:var(--ts);margin-left:3px">24h内</span></button>`);
   b.push(`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`);
   return b.join(' ');
 }
@@ -2077,24 +2078,22 @@ function act_ticketDetail(i){
   <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 }
 
-/* ---------- 商家端：退货单（退货退款·实物回仓 + 到仓提货，超48h未提默认放弃） ---------- */
+/* ---------- 商家端：退货单（退货退款·到仓提货，商家只读；确认由仓库操作，超72h未提平台处置） ---------- */
 PAGES['m-after-return']=()=>{
   const rs=DB.afterSales.filter(a=>a.type=='退货退款');
-  const stTag=s=>{const m={'待退货':'t-y','退货在途':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s=='逾期未提'?'逾期未提·默认放弃':s}</span>`;};
+  const stTag=s=>{const m={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s=='逾期未提'?'逾期未提·平台处置':s}</span>`;};
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
-    const deadline=a.returnStatus=='待提货'?'<b style="color:var(--r)">到货后 48h 内，逾期默认放弃</b>':(a.returnStatus=='已提货'?('已提货 '+(a.pickupAt||'')):(a.returnStatus=='逾期未提'?'已逾期放弃·平台处置':'—'));
-    let ops=`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`;
-    if(a.returnStatus=='退货在途')ops=`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认到仓</button> `+ops;
-    else if(a.returnStatus=='待提货')ops=`<button class="btn btn-p btn-sm" onclick="act_returnPickup(${i})">确认提货</button> <button class="btn btn-o btn-sm" onclick="act_returnGiveup(${i})">放弃提货</button> `+ops;
-    return `<tr><td class="mono">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td>${a.returnStatus?stTag(a.returnStatus):'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td style="font-size:12px">${deadline}</td><td style="white-space:nowrap">${ops}</td></tr>`;}).join('');
-  return `${flowTip(`<b>退货退款</b>售后单判责后生成退货单，实物统一退回<b>平台仓</b>。仓库<b>确认到货</b>后系统提醒商家到仓提货：<b>BR-R1</b> 商家 48 小时内提货 → 退货单闭环；<b>BR-R2</b> 超 48 小时未提货，默认商家<b>放弃</b>（视同不要），货物由平台处置。`)}
-  <div class="card"><div class="card-hd"><h3>退货单</h3><span class="sub">退货退款实物回仓与到仓提货（超 48h 未提默认放弃）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th>金额</th><th>到仓时间</th><th>状态</th><th>提货时限</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单会在此生成退货单，管理实物回仓与提货</div></div>'}</div></div>`;
+    const deadline=a.returnStatus=='待提货'?'<b style="color:var(--r)">到货后 72h 内提货，逾期平台处置</b>':(a.returnStatus=='已提货'?('已提货 '+(a.pickupAt||'')):(a.returnStatus=='逾期未提'?'已逾期·平台处置':(a.returnStatus=='待仓库入库'?'待仓库确认到货':'—')));
+    return `<tr><td class="mono">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td>${a.returnStatus?stTag(a.returnStatus):'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td style="font-size:12px">${deadline}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('');
+  return `${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货，触发 <b>72 小时</b>倒计时）→ 已提货 / 逾期未提。<b>BR-R1</b> 商家端<b>只读</b>展示状态与剩余提货时长，<b>状态确认均由仓库操作</b>、商家无确认权限；<b>BR-R2</b> 超 72 小时未提货，平台可自行处置货物。`)}
+  <div class="card"><div class="card-hd"><h3>退货单</h3><span class="sub">退货退款到仓提货（商家只读 · 仓库确认 · 超 72h 未提平台处置）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th>金额</th><th>到仓时间</th><th>状态</th><th>提货时限</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
 };
 
 /* ---------- 商家端：送货退货（退货退款·回仓管理） ---------- */
 PAGES['m-delivery']=()=>{
   const rs=DB.afterSales.filter(a=>a.type=='退货退款');
-  return `<div class="card"><div class="card-hd"><h3>退货回仓</h3><span class="sub">退货退款工单的退实物回仓管理（退款不退货类不在此）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>工单号</th><th>客户/订单</th><th>商品</th><th>金额</th><th>退货状态</th><th>操作</th></tr></thead><tbody>${rs.map(a=>{const i=DB.afterSales.indexOf(a);return `<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td>${a.returnStatus?`<span class="tag ${a.returnStatus=='已回仓'?'t-g':'t-pp'}"><span class="dot"></span>${a.returnStatus}</span>`:'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td>${a.returnStatus=='退货在途'?`<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">确认回仓</button>`:a.returnStatus=='已回仓'?'<span style="color:var(--gd);font-size:12px">已结案</span>':`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`}</td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货工单</div><div class="e-s">退货退款类售后订单会在此管理退实物回仓</div></div>'}</div></div>`;
+  const rtag={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'};
+  return `<div class="card"><div class="card-hd"><h3>退货取回</h3><span class="sub">退货退款到仓提货进度（只读 · 详见「售后管理 → 退货单」）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>工单号</th><th>客户/订单</th><th>商品</th><th>金额</th><th>退货状态</th><th>操作</th></tr></thead><tbody>${rs.map(a=>{const i=DB.afterSales.indexOf(a);return `<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td>${a.returnStatus?`<span class="tag ${rtag[a.returnStatus]||'t-gr'}"><span class="dot"></span>${a.returnStatus=='逾期未提'?'逾期未提·平台处置':a.returnStatus}</span>`:'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('')}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货工单</div><div class="e-s">退货退款类售后订单会在此展示到仓提货进度</div></div>'}</div></div>`;
 };
 
 /* ---------- 商家端：违规整改（闭环F 商家侧） ---------- */
@@ -2552,6 +2551,9 @@ PAGES['p-aftersale']=()=>{
 function afterPlatOps(a,i){
   if(a.status=='pending')return `<button class="btn btn-p btn-sm" onclick="act_judge(${i})">判责</button>`;
   if(a.status=='appealing')return `<div style="font-size:11.5px;color:var(--b);margin-bottom:4px">申诉：${(a.appeal||'').slice(0,16)}…</div><button class="btn btn-p btn-sm" onclick="act_reviewAppeal(${i},false)">申诉成立·改判</button> <button class="btn btn-o btn-sm" onclick="act_reviewAppeal(${i},true)">维持原判</button>`;
+  // 退货单仓库确认（会议定稿：状态确认均由仓库/平台操作，商家端只读）
+  if(a.type=='退货退款'&&a.returnStatus=='待仓库入库')return `<button class="btn btn-p btn-sm" onclick="act_returnReceive(${i})">仓库确认到货</button> ${afterStatus(a)}`;
+  if(a.type=='退货退款'&&a.returnStatus=='待提货')return `<button class="btn btn-p btn-sm" onclick="act_returnPickup(${i})">确认提货完成</button> <button class="btn btn-o btn-sm" onclick="act_returnExpire(${i})">超72h·平台处置</button> ${afterStatus(a)}`;
   return afterStatus(a);
 }
 
@@ -2846,7 +2848,7 @@ function ord_afterSale(i){const o=DB.orders[i];
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="ord_doAfterSale(${i})">提交售后申请</button></div>`);
 }
 function ord_doAfterSale(i){const o=DB.orders[i],type=document.getElementById('as-type').value,item=document.getElementById('as-item').value,reason=document.getElementById('as-reason').value;
-  DB.afterSales.unshift({id:'AS-'+o.id.slice(-6),client:o.client,order:o.id,item,reason,age:'签收后2小时',type,amt:o.amt,status:'pending',liable:'',refundType:'',appeal:'',returnStatus:type=='退货退款'?'待退货':''});
+  DB.afterSales.unshift({id:'AS-'+o.id.slice(-6),client:o.client,order:o.id,item,reason,age:'签收后2小时',type,amt:o.amt,status:'pending',liable:'',refundType:'',appeal:'',returnStatus:''});
   closeModal();render();toast(`已发起售后（${type}），等待平台判责`,'ok');
 }
 // 平台端：三方判责
@@ -2862,13 +2864,13 @@ function act_judge(i){const a=DB.afterSales[i];
 }
 function doJudge(i,liable){const a=DB.afterSales[i];a.liable=liable;
   if(liable=='买家'){a.refundType='驳回·买家承担';a.status='closed';a.returnStatus='';}
-  else if(a.type=='退货退款'){a.refundType=liable=='商家'?'退货退款·货退回商家仓·扣商家货款':'平台承担·退款·平台回收';a.status='judged';a.returnStatus='退货在途';}
+  else if(a.type=='退货退款'){a.refundType=liable=='商家'?'退货退款·货退平台仓待提·扣商家货款':'平台承担·退款·货退平台仓待提';a.status='judged';a.returnStatus='待仓库入库';}
   else{a.refundType=liable=='商家'?'退款不退货·扣商家货款':'平台承担·退款至餐厅';a.status='closed';}
   closeModal();render();toast(`已判定为${liable}责`,liable=='商家'?'info':'ok');
 }
 // 商家端：申诉
 function act_appeal(i){const a=DB.afterSales[i];
-  modal(`<div class="mc-hd"><h3>申诉 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📣</span><div>对判责结果有异议可申诉，平台将复核。</div></div><div class="fr"><label class="fl">申诉理由</label><textarea id="ap-reason">出库前已拍照留证，货品无质量问题，疑为配送环节导致，申请重新判责。</textarea></div><div class="fr"><label class="fl">上传证据照片</label><div class="up" onclick="this.classList.add('done');this.querySelector('.uic').textContent='✓';this.querySelector('.ut').textContent='已上传 3 张'"><div class="uic">📷</div><div class="ut">点击上传照片</div><div class="us">支持 jpg/png，最多 9 张 · 出库品相 / 分拣记录 / 配送签收等证据</div></div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.afterSales[${i}].status='appealing';DB.afterSales[${i}].appeal=document.getElementById('ap-reason').value;closeModal();render();toast('申诉已提交，平台复核中','ok')">提交申诉</button></div>`);
+  modal(`<div class="mc-hd"><h3>申诉 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📣</span><div>判商家责后可申诉，平台客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b>申诉截止 2026-07-22 10:00</b>，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div></div><div class="fr"><label class="fl">申诉理由</label><textarea id="ap-reason">出库前已拍照留证，货品无质量问题，疑为配送环节导致，申请重新判责。</textarea></div><div class="fr"><label class="fl">上传证据照片 <span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span></label><div class="up" onclick="this.classList.add('done');this.querySelector('.uic').textContent='✓';this.querySelector('.ut').textContent='已上传 3 张'"><div class="uic">📷</div><div class="ut">点击上传照片</div><div class="us">选填 · 支持 jpg/png，最多 9 张 · 出库品相 / 分拣记录 / 配送签收等证据</div></div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.afterSales[${i}].status='appealing';DB.afterSales[${i}].appeal=document.getElementById('ap-reason').value;closeModal();render();toast('申诉已提交，平台客服二次判责中','ok')">提交申诉</button></div>`);
 }
 // 平台端：复核申诉
 function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];
@@ -2876,12 +2878,14 @@ function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];
   else{a.liable='平台';a.refundType='申诉成立·改判平台责·退款至餐厅';a.status='closed';a.returnStatus='';render();toast('复核完成：申诉成立，改判平台责','ok');}
 }
 // 商家/仓：退货退款回仓确认
-/* 退货单·提货闭环：退货退款实物退回平台仓 → 仓库确认到货(待提货,提醒商家) → 商家48h内提货 / 超48h未提默认放弃(货物平台处置)
-   BR-R1 仓库确认到货起 48 小时内商家可到仓提货，提货即退货单闭环
-   BR-R2 超 48 小时未提货，系统自动置「逾期未提·默认放弃」，货物由平台处置；商家亦可主动放弃 */
-function act_returnReceive(i){const a=DB.afterSales[i];a.returnStatus='待提货';a.arriveAt=ts();a.status='judged';render();toast(`${a.id} 退货已到仓，已提醒商家 48 小时内到仓提货`,'info');}
-function act_returnPickup(i){const a=DB.afterSales[i];askConfirm(`确认已到仓库提货「${a.item}」？提货后退货单闭环。`,()=>{a.returnStatus='已提货';a.status='closed';a.pickupAt=ts();render();toast(`${a.id} 已提货，退货单闭环`,'ok');});}
-function act_returnGiveup(i){const a=DB.afterSales[i];askConfirm(`确认放弃提货「${a.item}」？放弃后视同不要，货物由平台处置，不可恢复。`,()=>{a.returnStatus='逾期未提';a.status='closed';render();toast(`${a.id} 已放弃提货，货物由平台处置`,'info');});}
+/* 退货单·提货闭环（2026-07-21 会议定稿）：退货退款判非买家责→生成退货单，三方货物到平台仓「不入库·仅暂存」。
+   状态：待仓库入库(司机取货送大仓) → 待提货(仓库确认到货,触发72h倒计时) → 已提货 / 逾期未提(超72h平台处置)
+   BR-R1 提货倒计时默认 72 小时(平台可配)，仓库确认到货起算；商家端只读展示剩余时长，无状态确认权限
+   BR-R2 超 72 小时未提货，平台可自行处置货物(逾期未提)
+   所有状态确认(到仓/提货完成/逾期处置)均由「仓库/平台」操作，商家端不确认；取消原客服「已取回」人工节点，系统自动回传 */
+function act_returnReceive(i){const a=DB.afterSales[i];a.returnStatus='待提货';a.arriveAt=ts();a.status='judged';render();toast(`${a.id} 仓库确认到货，进入待提货（72 小时倒计时）`,'info');}
+function act_returnPickup(i){const a=DB.afterSales[i];askConfirm(`（仓库操作）确认商家已提货「${a.item}」？确认后退货单闭环。`,()=>{a.returnStatus='已提货';a.status='closed';a.pickupAt=ts();render();toast(`${a.id} 已提货，退货单闭环`,'ok');});}
+function act_returnExpire(i){const a=DB.afterSales[i];askConfirm(`（仓库操作）确认「${a.item}」超 72h 未提货、由平台处置？处置后退货单结案，不可恢复。`,()=>{a.returnStatus='逾期未提';a.status='closed';render();toast(`${a.id} 逾期未提，货物由平台处置`,'info');});}
 // 售后详情
 function act_afterDetail(i){const a=DB.afterSales[i];
   modal(`<div class="mc-hd"><h3>售后订单 ${a.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><dl class="dl"><dt>关联正向订单</dt><dd class="mono">${a.order}</dd><dt>客户</dt><dd>${ord_mask(a.client)}</dd><dt>类型</dt><dd>${a.type}</dd><dt>商品</dt><dd>${a.item}</dd><dt>原因</dt><dd>${a.reason}</dd><dt>金额</dt><dd>${money(a.amt)}</dd><dt>判责</dt><dd>${a.liable?a.liable+'责 · '+a.refundType:'待判责'}</dd>${a.appeal?`<dt>申诉</dt><dd>${a.appeal}</dd>`:''}${a.returnStatus?`<dt>退货</dt><dd>${a.returnStatus}</dd>`:''}</dl></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
