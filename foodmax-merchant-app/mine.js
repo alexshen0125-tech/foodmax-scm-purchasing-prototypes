@@ -169,30 +169,29 @@ function openStore(){
 }
 
 /* ============ 营业时间与截单（对齐 PC「店铺管理·营业管理」：每日营业时段 start–end 可配，
-   截止时间即当日截单时间；截单后下单限制方式逐日可配 t2 顺延 / stop 停止接单） ============ */
+   截止时间即当日截单时间；截单后统一停止接单——客户须等下一个营业时间才可下单，无 T+2 顺延模式） ============ */
 const PLATFORM_CUTOFF='18:00';  // 平台公共截单时间(平台级上限)；商家截止不得晚于此，入驻默认初始化 00:00~此
 const BIZ_WEEK=[
-  {d:'周一',on:true,start:'00:00',end:'15:00',mode:'t2'},
-  {d:'周二',on:true,start:'00:00',end:'15:00',mode:'t2'},
-  {d:'周三',on:true,start:'00:00',end:'15:00',mode:'t2'},
-  {d:'周四',on:true,start:'00:00',end:'15:00',mode:'t2'},
-  {d:'周五',on:true,start:'00:00',end:'15:00',mode:'stop'},
-  {d:'周六',on:true,start:'06:00',end:'12:00',mode:'stop'},
-  {d:'周日',on:false,start:'00:00',end:'00:00',mode:'t2'},
+  {d:'周一',on:true,start:'00:00',end:'15:00'},
+  {d:'周二',on:true,start:'00:00',end:'15:00'},
+  {d:'周三',on:true,start:'00:00',end:'15:00'},
+  {d:'周四',on:true,start:'00:00',end:'15:00'},
+  {d:'周五',on:true,start:'00:00',end:'15:00'},
+  {d:'周六',on:true,start:'06:00',end:'12:00'},
+  {d:'周日',on:false,start:'00:00',end:'00:00'},
 ];
 function bhCard(w,i){
   return `<div class="bh-card">
     <div class="bh-hd"><span class="bh-day">${w.d}</span><span class="bh-st">${w.on?'营业':'休息'}</span><span class="bh-sw ${w.on?'on':''}" data-on="${i}"><span class="dot"></span></span></div>
     ${w.on?`
     <div class="bh-row"><span class="bh-lb">营业时段</span><span class="bh-time"><input type="time" data-start="${i}" value="${w.start}"> – <input type="time" data-end="${i}" max="${PLATFORM_CUTOFF}" value="${w.end}" style="${w.end>PLATFORM_CUTOFF?'border-color:var(--red);color:var(--red)':''}"></span></div>
-    <div class="bh-row"><span class="bh-lb">截单后限制</span><span class="bh-seg"><span class="${w.mode=='t2'?'on':''}" data-mode="${i}:t2">T+2 顺延</span><span class="${w.mode=='stop'?'on':''}" data-mode="${i}:stop">截单后停止</span></span></div>
-    <div class="bh-hint">${w.end>PLATFORM_CUTOFF?`<span style="color:var(--red)">截止不得晚于平台截单 ${PLATFORM_CUTOFF}</span> · `:''}截止 <b>${w.end}</b> 即当日截单时间 · ${w.mode=='t2'?'截单后仍可下单，最早配送顺延至 T+2 起':'截单后停止接单，客户须等到下一个营业时间（下一营业日开始）才可下单'}</div>
+    <div class="bh-hint">${w.end>PLATFORM_CUTOFF?`<span style="color:var(--red)">截止不得晚于平台截单 ${PLATFORM_CUTOFF}</span> · `:''}截止 <b>${w.end}</b> 即当日截单时间 · 截单后停止接单，客户须等到下一个营业时间才可下单</div>
     `:`<div class="bh-rest">今日休息，前台展示「今日休息」，客户当天不可下单</div>`}
   </div>`;
 }
 function openBizHours(){
   pushPage({title:'营业时间设置',body:`
-    <div class="bh-tip">平台公共截单时间 <b>${PLATFORM_CUTOFF}</b>：各日<b>截止时间不得晚于 ${PLATFORM_CUTOFF}</b>（只能往前收紧）。截止时间即当日截单时间；截单后限制方式（T+2 顺延 / 截单后停止）逐日可配。入驻默认初始化为 00:00 ~ ${PLATFORM_CUTOFF}、全周营业。</div>
+    <div class="bh-tip">平台公共截单时间 <b>${PLATFORM_CUTOFF}</b>：各日<b>截止时间不得晚于 ${PLATFORM_CUTOFF}</b>（只能往前收紧）。截止时间即当日截单时间；<b>截单后停止接单</b>（客户须等下一个营业时间才可下单）。入驻默认初始化为 00:00 ~ ${PLATFORM_CUTOFF}、全周营业。</div>
     <div id="bh-list"></div><div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="bh-save">更新保存</button>`,
     mount:(p)=>{
@@ -200,7 +199,6 @@ function openBizHours(){
       const draw=()=>{
         list.innerHTML=BIZ_WEEK.map((w,i)=>bhCard(w,i)).join('');
         list.querySelectorAll('[data-on]').forEach(el=>el.onclick=()=>{const i=+el.dataset.on;BIZ_WEEK[i].on=!BIZ_WEEK[i].on;draw();});
-        list.querySelectorAll('[data-mode]').forEach(el=>el.onclick=()=>{const a=el.dataset.mode.split(':');BIZ_WEEK[+a[0]].mode=a[1];draw();});
         list.querySelectorAll('[data-start]').forEach(el=>el.onchange=()=>{BIZ_WEEK[+el.dataset.start].start=el.value;draw();});
         list.querySelectorAll('[data-end]').forEach(el=>el.onchange=()=>{BIZ_WEEK[+el.dataset.end].end=el.value;draw();});
       };
