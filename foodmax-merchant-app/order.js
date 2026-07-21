@@ -139,6 +139,7 @@ function openDetail(o){
       <div class="odd-row"><span class="k">订单金额(未税)</span><span>S$${o.amt.toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">含税金额</span><span>S$${ordInclAmt(o).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">商家补贴</span><span style="color:var(--red)">-S$${(o.discount||0).toFixed(2)}</span></div>
+      <div class="odd-row"><span class="k">平台补贴</span><span style="color:var(--emerald-2)">+S$${(o.platSub||0).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">商品佣金(含税×服务费率)</span><span style="color:var(--red)">-S$${ordCommission(o).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">上门揽收费(固定)</span><span style="color:var(--red)">-S$${ordPickup(o).toFixed(2)}</span></div>
       <div class="odd-row" style="font-weight:700"><span>预计收入(预估)</span><span style="color:var(--emerald-2)">S$${ordIncome(o).toFixed(2)}</span></div>

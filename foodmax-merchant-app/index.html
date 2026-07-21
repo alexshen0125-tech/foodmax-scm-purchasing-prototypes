@@ -221,12 +221,12 @@ function ordQty(o){return (o.lines||[]).reduce((s,l)=>s+(+l.qty||0),0);}      //
 function ordInclAmt(o){return +(o.amt*(1+TAX)).toFixed(2);}                   // 订单含税总额
 function ordCommission(o){return +(ordInclAmt(o)*SVC_RATE).toFixed(2);}       // 商品佣金 = 含税额 × 服务费率
 function ordPickup(o){return +(ordQty(o)*PICKUP_PER).toFixed(2);}             // 上门揽收费 = 件数 × 每件固定额
-function ordIncome(o){return +(ordInclAmt(o)-(o.discount||0)-ordCommission(o)-ordPickup(o)).toFixed(2);} // 预计收入
+function ordIncome(o){return +(ordInclAmt(o)-(o.discount||0)+(o.platSub||0)-ordCommission(o)-ordPickup(o)).toFixed(2);} // 预计收入 = 含税额 − 商家补贴 + 平台补贴 − 佣金 − 揽收费
 const DB={
   orders:[
-    {id:'#SG20260701001',client:'海底捞（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260701001',client:'海底捞（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,platSub:8.00,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260701002',client:'食为天餐厅',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'件',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
-    {id:'#SG20260628003',client:'丰盛轩',orderDate:'2026-06-28',deliver:'06-28',window:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'件',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260628003',client:'丰盛轩',orderDate:'2026-06-28',deliver:'06-28',window:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,platSub:12.00,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'件',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260615004',client:'新味坊',orderDate:'2026-06-15',deliver:'06-15',window:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
   ],
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
