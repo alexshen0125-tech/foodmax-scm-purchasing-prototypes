@@ -180,18 +180,22 @@ const BIZ_WEEK=[
   {d:'周六',on:true,start:'06:00',end:'12:00'},
   {d:'周日',on:false,start:'00:00',end:'00:00'},
 ];
+function bizNowHM(){const n=new Date();const p=x=>(''+x).padStart(2,'0');return p(n.getHours())+':'+p(n.getMinutes());}
+function bizTodayIdx(){return (new Date().getDay()+6)%7;}   // 0=周一 … 6=周日
 function bhCard(w,i){
+  const isT=i===bizTodayIdx();const nowHM=bizNowHM();const endDis=isT&&nowHM>=PLATFORM_CUTOFF;
+  const todayHint=nowHM>=PLATFORM_CUTOFF?`<span style="color:var(--red)">今日已过平台截单，当日不可再调（改动下周${w.d}生效）</span>`:(nowHM>=w.end?`<span style="color:var(--red)">今日营业已结束，改截单将于下周${w.d}生效</span>`:`<span style="color:var(--red)">今日仅可改截单时间（${nowHM}~${PLATFORM_CUTOFF}）·营业状态/开始时间锁定</span>`);
   return `<div class="bh-card">
-    <div class="bh-hd"><span class="bh-day">${w.d}</span><span class="bh-st">${w.on?'营业':'休息'}</span><span class="bh-sw ${w.on?'on':''}" data-on="${i}"><span class="dot"></span></span></div>
+    <div class="bh-hd"><span class="bh-day">${w.d}${isT?' <span style="font-size:10px;color:var(--emerald-2);background:var(--mint-soft);padding:1px 6px;border-radius:6px;margin-left:6px">今日</span>':''}</span><span class="bh-st">${w.on?'营业':'休息'}</span><span class="bh-sw ${w.on?'on':''}" ${isT?'style="opacity:.45"':`data-on="${i}"`}><span class="dot"></span></span></div>
     ${w.on?`
-    <div class="bh-row"><span class="bh-lb">营业时段</span><span class="bh-time"><input type="time" data-start="${i}" value="${w.start}"> – <input type="time" data-end="${i}" max="${PLATFORM_CUTOFF}" value="${w.end}" style="${w.end>PLATFORM_CUTOFF?'border-color:var(--red);color:var(--red)':''}"></span></div>
-    <div class="bh-hint">${w.end>PLATFORM_CUTOFF?`<span style="color:var(--red)">截止不得晚于平台截单 ${PLATFORM_CUTOFF}</span> · `:''}截止 <b>${w.end}</b> 即当日截单时间 · 截单后停止接单，客户须等到下一个营业时间才可下单</div>
+    <div class="bh-row"><span class="bh-lb">营业时段</span><span class="bh-time"><input type="time" ${isT?'disabled':`data-start="${i}"`} value="${w.start}"> – <input type="time" data-end="${i}" ${isT?`min="${nowHM}"`:''} max="${PLATFORM_CUTOFF}" value="${w.end}" ${endDis?'disabled':''} style="${w.end>PLATFORM_CUTOFF?'border-color:var(--red);color:var(--red)':''}"></span></div>
+    <div class="bh-hint">${isT?todayHint:(w.end>PLATFORM_CUTOFF?`<span style="color:var(--red)">截止不得晚于平台截单 ${PLATFORM_CUTOFF}</span> · `:'')+'截止 <b>'+w.end+'</b> 即当日截单时间'} · 截单后停止接单，客户须等到下一个营业时间才可下单</div>
     `:`<div class="bh-rest">今日休息，前台展示「今日休息」，客户当天不可下单</div>`}
   </div>`;
 }
 function openBizHours(){
   pushPage({title:'营业时间设置',body:`
-    <div class="bh-tip">平台公共截单时间 <b>${PLATFORM_CUTOFF}</b>：各日<b>截止时间不得晚于 ${PLATFORM_CUTOFF}</b>（只能往前收紧）。截止时间即当日截单时间；<b>截单后停止接单</b>（客户须等下一个营业时间才可下单）。入驻默认初始化为 00:00 ~ ${PLATFORM_CUTOFF}、全周营业。</div>
+    <div class="bh-tip">平台公共截单时间 <b>${PLATFORM_CUTOFF}</b>：截止不得晚于它。<b>T+1 及以后</b>可改营业状态与起止时间；<b>当日仅可改截单时间</b>（营业状态/开始时间锁定，可提前不早于现在、可延后不晚于平台截单），当日营业结束后再改下周对应日生效。截单后停止接单，客户须等下一个营业时间才可下单。入驻默认 00:00 ~ ${PLATFORM_CUTOFF}、全周营业。</div>
     <div id="bh-list"></div><div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="bh-save">更新保存</button>`,
     mount:(p)=>{
@@ -205,11 +209,14 @@ function openBizHours(){
       draw();
       const b=p.querySelector('#bh-save');
       b.onclick=()=>{
-        // 校验：营业日截止不得晚于平台公共截单时间；开始须早于截止
-        for(const w of BIZ_WEEK){if(!w.on)continue;
+        // 校验：营业日截止不得晚于平台公共截单时间；开始须早于截止；当日截止不得早于当前时间
+        const ti=bizTodayIdx(),nowHM=bizNowHM();let weekEffect=false;
+        for(let i=0;i<BIZ_WEEK.length;i++){const w=BIZ_WEEK[i];if(!w.on)continue;
           if(w.end>PLATFORM_CUTOFF)return toast(`${w.d}：截止时间不得晚于平台截单 ${PLATFORM_CUTOFF}`);
-          if(w.start>=w.end)return toast(`${w.d}：开始时间须早于截止时间`);}
-        b.classList.add('loading');setTimeout(()=>{b.classList.remove('loading');toast('营业时间已保存');setTimeout(popPage,600);},700);};
+          if(w.start>=w.end)return toast(`${w.d}：开始时间须早于截止时间`);
+          if(i===ti&&w.end<nowHM)return toast(`今日截单时间不能早于当前时间 ${nowHM}`);
+          if(i===ti&&nowHM>=w.end)weekEffect=true;}
+        b.classList.add('loading');setTimeout(()=>{b.classList.remove('loading');toast(weekEffect?'已保存：今日营业已结束，本次修改下周对应日生效':'营业时间已保存');setTimeout(popPage,600);},700);};
     }});
 }
 
