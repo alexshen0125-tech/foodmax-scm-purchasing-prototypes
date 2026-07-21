@@ -1089,7 +1089,7 @@ PAGES['m-biz-hours']=()=>{
       <thead><tr><th>星期</th><th>状态</th><th>营业时段</th><th>当日截单时间</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
-    <div class="card-bd"><div class="ib ib-b"><span class="i">💡</span><div>营业时段<b>开始 / 截止时间均可逐日配置</b>；<b>截止时间即当日截单时间</b>，不得晚于平台公共截单时间 <b>${b.platformCutoff}</b>（只能往前收紧）。<b>T+1 及以后</b>可改营业状态与起止时间；<b>当日仅可改截单时间</b>（营业状态/开始时间锁定，截单可提前不早于现在、可延后不晚于平台截单）；<b>当日营业结束后再改，下周对应日生效</b>。入驻默认初始化为 <b>00:00 ~ ${b.platformCutoff}</b>、全周营业。休息日前台「今日休息」，客户当天不可下单。</div></div></div>
+    <div class="card-bd"><div class="ib ib-b"><span class="i">💡</span><div>营业时段<b>开始 / 截止时间均可逐日配置</b>；<b>截止时间即当日截单时间</b>，不得晚于平台公共截单时间 <b>${b.platformCutoff}</b>（只能往前收紧）。<b>T+1 及以后</b>可改营业状态与起止时间；<b>当日按三段</b>：<b>未到开始</b>→营业状态/开始/截单均可改（即时）；<b>营业中</b>→仅可改截单（营业状态/开始锁定，截单不早于现在、不晚于平台截单，即时）；<b>营业结束</b>→修改于<b>下周对应日生效</b>。入驻默认初始化为 <b>00:00 ~ ${b.platformCutoff}</b>、全周营业。休息日前台「今日休息」，客户当天不可下单。</div></div></div>
   </div>
   <div class="card">
     <div class="card-hd"><h3>截单规则 · 说明</h3></div>
@@ -1100,36 +1100,34 @@ PAGES['m-biz-hours']=()=>{
 };
 function bizNowHM(){const n=new Date();const p=x=>(''+x).padStart(2,'0');return p(n.getHours())+':'+p(n.getMinutes());}
 function bizTodayIdx(){return (new Date().getDay()+6)%7;}   // 0=周一 … 6=周日
+// 今日时段：rest 休息 / before 未到开始 / open 营业中 / ended 营业结束
+function bizPeriod(w,nowHM){if(!w.on)return 'rest';if(nowHM<w.start)return 'before';if(nowHM<w.end)return 'open';return 'ended';}
 function act_editHours(){
-  const b=DB.bizCfg;const nowHM=bizNowHM();const ti=bizTodayIdx();const today=b.week[ti];
-  const ended=today.on&&(nowHM>=today.end);            // 今日营业已结束（已过当日截单）
-  modalWide(`<div class="mc-hd"><h3>编辑每日营业时间</h3><p>T+1 及以后可改营业状态与起止时间；<b>当日仅可改截单时间</b>（营业状态/开始时间锁定），关闭开关即设为休息日</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⏱️</span><div>平台公共截单时间 <b>${b.platformCutoff}</b>，截止不得晚于它。<b>今日（${today.d}）</b>：营业状态与开始时间不可改，仅可把截单时间在 <b>${nowHM} ~ ${b.platformCutoff}</b> 内调整（可提前不早于现在、可延后不晚于平台截单）；${ended?'<b style="color:var(--r)">今日营业已结束，本次修改将于下周对应日生效</b>。':'即时生效。'}</div></div>
+  const b=DB.bizCfg;const nowHM=bizNowHM();const ti=bizTodayIdx();const today=b.week[ti];const tp=bizPeriod(today,nowHM);
+  const tpTxt={rest:'今日休息，可改营业状态（开业则可设时段）',before:`今日尚未开始营业，<b>营业状态/开始/截单均可改</b>，即时生效`,open:`今日营业中，<b>营业状态与开始时间锁定</b>，仅可把截单时间在 <b>${nowHM} ~ ${b.platformCutoff}</b> 内调整（可提前不早于现在、可延后不晚于平台截单），即时生效`,ended:`<b style="color:var(--r)">今日营业已结束，本次修改将于下周对应日（${today.d}）生效</b>`}[tp];
+  modalWide(`<div class="mc-hd"><h3>编辑每日营业时间</h3><p>T+1 及以后自由改；<b>今日分三段</b>：未到开始→都可改 · 营业中→仅改截单 · 已结束→改则下周生效</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⏱️</span><div>平台公共截单时间 <b>${b.platformCutoff}</b>，截止不得晚于它。<b>今日（${today.d}）</b>：${tpTxt}。</div></div>
     <table style="width:100%"><thead><tr><th style="text-align:left">星期</th><th style="text-align:left">营业</th><th style="text-align:left">营业时段（截止＝截单时间，≤${b.platformCutoff}）</th></tr></thead><tbody>
-    ${b.week.map((w,i)=>{const isT=i===ti;const lockTog=isT,lockSt=isT;const endDis=!w.on||(isT&&nowHM>=b.platformCutoff);
-      return `<tr data-r="${i}" data-today="${isT?1:0}">
-      <td style="font-weight:600">${w.d}${isT?' <span class="tag t-b" style="font-size:10px">今日</span>':''}</td>
+    ${b.week.map((w,i)=>{const isT=i===ti;const per=isT?bizPeriod(w,nowHM):'';const lockTog=per==='open';const lockSt=per==='open';const endMin=per==='open'?nowHM:'';
+      const hint=!isT?'':{rest:'今日休息 · 可改营业状态',before:'今日尚未开始 · 营业状态/开始/截单均可改（即时生效）',open:'今日营业中 · 仅可改截单（'+nowHM+'~'+b.platformCutoff+'）· 营业状态/开始锁定',ended:'今日营业已结束 · 修改下周'+w.d+'生效'}[per];
+      return `<tr data-r="${i}" data-today="${isT?1:0}" data-period="${per}">
+      <td style="font-weight:600">${w.d}${isT?` <span class="tag t-b" style="font-size:10px">今日·${({rest:'休息',before:'未开始',open:'营业中',ended:'已结束'})[per]}</span>`:''}</td>
       <td><label class="chip-ck ${w.on?'on':''}" style="${lockTog?'opacity:.5;cursor:not-allowed':''}"><input type="checkbox" class="eh-on" ${w.on?'checked':''} ${lockTog?'disabled':''} onchange="this.parentElement.classList.toggle('on',this.checked);const tr=this.closest('tr');tr.querySelectorAll('.eh-start,.eh-end').forEach(el=>el.disabled=!this.checked)">营业</label></td>
-      <td><input type="time" class="eh-start" value="${w.start}" ${(!w.on||lockSt)?'disabled':''} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><span class="mono" style="color:var(--ts)">&nbsp;–&nbsp;</span><input type="time" class="eh-end" ${isT?`min="${nowHM}" `:''}max="${b.platformCutoff}" value="${w.end}" ${endDis?'disabled':''} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit">${isT?`<div style="font-size:11px;color:var(--r);margin-top:3px">${nowHM>=b.platformCutoff?'今日已过平台截单，当日不可再调（修改下周'+w.d+'生效）':'今日仅可改截单时间 · 营业状态/开始时间锁定'}</div>`:''}</td>
+      <td><input type="time" class="eh-start" value="${w.start}" ${(!w.on||lockSt)?'disabled':''} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><span class="mono" style="color:var(--ts)">&nbsp;–&nbsp;</span><input type="time" class="eh-end" ${endMin?`min="${endMin}" `:''}max="${b.platformCutoff}" value="${w.end}" ${!w.on?'disabled':''} style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px;font-family:inherit">${isT?`<div style="font-size:11px;color:${per==='ended'?'var(--r)':'var(--ts)'};margin-top:3px">${hint}</div>`:''}</td>
     </tr>`;}).join('')}
     </tbody></table>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doEditHours()">保存</button></div>`);
 }
 function doEditHours(){
   const b=DB.bizCfg;const rows=[...document.querySelectorAll('#mc tr[data-r]')];const nowHM=bizNowHM();
-  // 校验：截止≤平台截单、开始<截止；当日截止不得早于当前时间
-  for(const tr of rows){const on=tr.querySelector('.eh-on').checked;if(!on)continue;const i=+tr.dataset.r,d=b.week[i].d,isT=tr.dataset.today=='1';const st=tr.querySelector('.eh-start').value,en=tr.querySelector('.eh-end').value;
+  for(const tr of rows){const on=tr.querySelector('.eh-on').checked;if(!on)continue;const i=+tr.dataset.r,d=b.week[i].d,per=tr.dataset.period;const st=tr.querySelector('.eh-start').value,en=tr.querySelector('.eh-end').value;
     if(en>b.platformCutoff){toast(`${d}：截止时间不得晚于平台公共截单时间 ${b.platformCutoff}`,'err');return;}
     if(st>=en){toast(`${d}：开始时间须早于截止时间`,'err');return;}
-    if(isT&&en<nowHM){toast(`今日截单时间不能早于当前时间 ${nowHM}`,'err');return;}
+    if(per==='open'&&en<nowHM){toast(`今日营业中，截单时间不能早于当前时间 ${nowHM}`,'err');return;}   // 营业中截单不早于现在
   }
   let weekEffect=false;
-  rows.forEach(tr=>{const i=+tr.dataset.r,on=tr.querySelector('.eh-on').checked,isT=tr.dataset.today=='1';
-    if(isT){ // 当日：营业状态/开始锁定不写回；仅截止可改；已过当日营业结束→下周生效
-      if(!b.week[i].on)return;const en=tr.querySelector('.eh-end').value;
-      if(en&&en!=b.week[i].end){if(nowHM>=b.week[i].end)weekEffect=true;else b.week[i].end=en;}
-      return;
-    }
+  rows.forEach(tr=>{const i=+tr.dataset.r,on=tr.querySelector('.eh-on').checked;
+    if(tr.dataset.period==='ended'){weekEffect=true;}   // 营业结束后改→下周生效（演示仍写回该周期行）
     b.week[i].on=on;
     if(on){b.week[i].start=tr.querySelector('.eh-start').value||b.week[i].start;b.week[i].end=tr.querySelector('.eh-end').value||b.week[i].end;}});
   closeModal();render();toast(weekEffect?'已保存：今日营业已结束，本次修改下周对应日生效':'营业时间已保存','ok');
