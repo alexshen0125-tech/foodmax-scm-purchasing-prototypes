@@ -36,7 +36,7 @@
     if(real===''||real===null||real===undefined||isNaN(real))return {st:'wait',due,up,diff:0,ratio:0,amt:0};
     const diff=+(real-due).toFixed(2),ratio=due?diff/due:0;
     if(real<=0)return {st:'block',due,up,diff,ratio,amt:0,msg:'实发净重必须 > 0'};
-    if(Math.abs(ratio)>WG.BLOCK)return {st:'block',due,up,diff,ratio,amt:0,msg:`差异 ${(ratio*100).toFixed(1)}% 超 ±${WG.BLOCK*100}%，请复称`};
+    if(Math.abs(ratio)>WG.BLOCK)return {st:'block',due,up,diff,ratio,amt:0,msg:`超 ±${WG.BLOCK*100}%，请复称`};
     if(Math.abs(ratio)<=WG.TOL)return {st:'ok',due,up,diff,ratio,amt:0};                 // 正常损耗，不产生差额
     if(diff<0)return {st:'refund',due,up,diff,ratio,amt:+(diff*up).toFixed(2)};          // 少发：全额退客户
     const capped=ratio>WG.CAP;                                                            // 多发：按 +5% 封顶补款
@@ -151,9 +151,9 @@
     const rows=ROWS;
     const wait=rows.filter(r=>r.st=='wait').length,blocked=rows.filter(r=>r.c.st=='block').length;
     const total=+rows.reduce((a,r)=>a+(r.c.amt||0),0).toFixed(2);
-    el.innerHTML=`<span>可称重行：<b>${rows.length}</b></span><span>待称重：<b style="color:var(--r)">${wait}</b></span>
-      <span>超限拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span>
-      <span>差额合计：<b style="color:${total>0?'var(--y)':total<0?'var(--r)':'var(--gd)'}">${total>0?'+':''}${money2(total)}</b></span>
+    el.innerHTML=`<span style="min-width:78px">可称重行：<b>${rows.length}</b></span><span style="min-width:70px">待称重：<b style="color:var(--r)">${wait}</b></span>
+      <span style="min-width:84px">超限拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span>
+      <span style="min-width:132px">差额合计：<b style="color:${total>0?'var(--y)':total<0?'var(--r)':'var(--gd)'}">${total>0?'+':''}${money2(total)}</b></span>
       <span style="color:var(--ts);font-size:12px">容差 ±${WG.TOL*100}% 不计差额 · 多发按 +${WG.CAP*100}% 封顶 · 超 ±${WG.BLOCK*100}% 拦截</span>`;
   }
 
@@ -191,12 +191,12 @@
       </div>
       <div id="wg-sum" class="row" style="gap:14px;font-size:12.5px;align-items:center"></div>
     </div>
-    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table style="table-layout:fixed;width:100%;min-width:960px">
       <thead><tr>
-        <th style="width:34px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
-        <th>订单号 / 客户</th><th>商品（规格）</th><th style="text-align:right">件数</th>
-        <th style="text-align:right">应发净重</th><th style="text-align:center;width:172px">实发净重 (kg)</th>
-        <th style="text-align:right">差异</th><th style="text-align:right">差异率</th>
+        <th style="width:36px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
+        <th>订单号 / 客户</th><th style="width:190px">商品（规格）</th><th style="text-align:right;width:74px">件数</th>
+        <th style="text-align:right;width:104px">应发净重</th><th style="text-align:center;width:210px">实发净重 (kg)</th>
+        <th style="text-align:right;width:104px">差异</th><th style="text-align:right;width:96px">差异率</th>
       </tr></thead><tbody>
       ${ROWS.map((r,i)=>{
         const done=r.st=='done',lock=r.locked;
@@ -207,12 +207,12 @@
         <td style="text-align:right">${r.l.qty}</td>
         <td style="text-align:right"><b>${dueW(r.l)}</b> kg</td>
         <td style="text-align:center">${done||lock
-          ?`<b>${r.real} kg</b><div style="font-size:10.5px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG.DAYS} 天已锁定`:'✓ 已提交'}</div>`
+          ?`<b>${r.real} kg</b><div style="font-size:10.5px;line-height:15px;min-height:15px;margin-top:3px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG.DAYS} 天已锁定`:'✓ 已提交'}</div>`
           :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
               <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="请输入" oninput="wg_input(${i},this.value)" style="width:96px;text-align:right">
               <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
             </div>
-            <div id="wg-msg-${i}" style="font-size:10.5px;color:var(--r);margin-top:3px"></div>`}</td>
+            <div id="wg-msg-${i}" style="font-size:10.5px;color:var(--r);margin-top:3px;min-height:15px;line-height:15px;white-space:nowrap;overflow:hidden"></div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
         <td id="wg-rate-${i}" style="text-align:right"></td>
       </tr>`;}).join('')||`<tr><td colspan="8"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`}
