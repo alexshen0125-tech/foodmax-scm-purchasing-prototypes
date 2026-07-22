@@ -26,8 +26,10 @@
     const weighable=!!(s?s.refund:1)&&['kg','g'].includes(unit); // BR-01 门控：多退少补=是 且 计量单位为重量
     return {weighable,specQty,unit,why:s&&!s.refund?'定重预包装 · 按件计价':(!['kg','g'].includes(unit)?'非重量计价单位':'')};
   }
-  function dueW(l){return +(l.qty*skuMeta(l).specQty).toFixed(2);}   // 应发净重 kg = 件数 × 规格净重
-  function kgPrice(l){const m=skuMeta(l);return +(l.price/m.specQty).toFixed(2);} // S$/kg
+  function dueW(l){return +(l.qty*skuMeta(l).specQty).toFixed(2);}   // 应发净重 kg = 件数 × 规格净重(每件预估净重)
+  // 单价口径：多退少补 SKU 按重量定价，price 本身即 S$/计量单位（规格 5kg/箱 也填 6.20/kg，整箱预估 31.00）；
+  // 非多退少补 SKU 按整规格计价，折算成 S$/kg 仅用于对照展示。
+  function kgPrice(l){const m=skuMeta(l);return +(m.weighable?l.price:l.price/m.specQty).toFixed(2);}
 
   /* ========== 行差额计算（BR-04/05/06/07） ========== */
   function calc(l,real){
