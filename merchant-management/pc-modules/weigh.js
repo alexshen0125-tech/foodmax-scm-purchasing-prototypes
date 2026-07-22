@@ -163,7 +163,8 @@
 
   /* ========== 局部重绘 ========== */
   function paintRow(idx){
-    const r=ROWS[idx];const c=r.c;
+    const r=ROWS[idx];if(!r||!r.m.weighable)return;   // 不参与的行保留首屏「不参与」态，不被局部重绘覆盖
+    const c=r.c;
     const set=(id,html,color)=>{const el=document.getElementById(id);if(el){el.innerHTML=html;if(color)el.style.color=color;}};
     set('wg-diff-'+idx,c.st=='wait'?'—':`${c.diff>0?'+':''}${c.diff} kg`,c.diff>0?'var(--y)':c.diff<0?'var(--r)':'var(--ts)');
     set('wg-rate-'+idx,c.st=='wait'?'—':`${(c.ratio*100).toFixed(1)}%`,Math.abs(c.ratio)>WG.BLOCK?'var(--r)':'var(--ts)');
