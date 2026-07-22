@@ -10,15 +10,9 @@
     TOL:0.02,     // BR-04 容差：|差异率| ≤ 2% 视为正常损耗，不产生差额
     CAP:0.05,     // BR-05 补款封顶：多发超过 +5% 的部分不计补款
     BLOCK:0.20,   // BR-06 异常拦截：|差异率| > 20% 或实发=0，禁止提交
-    TARE:1.2,     // BR-02 标准筐皮重 kg/筐（按毛重录入时自动扣皮）
     DAYS:7,       // BR-09 配送完成后 7 天不可再录入/修改
     SVC:0.05,     // BR-08 平台服务费率（差额同步重算佣金）
   };
-  const tareCss=document.createElement('style');
-  tareCss.textContent=`.wg-tare{width:28px;height:28px;flex:0 0 28px;border:1px solid var(--bd);background:#fff;border-radius:7px;
-    cursor:pointer;font-size:13px;line-height:1;color:var(--ts);padding:0;display:inline-flex;align-items:center;justify-content:center;transition:.13s}
-  .wg-tare:hover{border-color:var(--g);color:var(--g);background:var(--gl)}`;
-  document.head.appendChild(tareCss);
   const money2=v=>(typeof money=='function'?money(v):'S$'+(+v||0).toFixed(2));
 
   /* ========== SKU 口径解析：是否多退少补 + 规格净重 + S$/kg ========== */
@@ -51,7 +45,7 @@
   const ST={wait:['待称重','t-gr'],ok:['正常损耗','t-b'],add:['补款','t-y'],refund:['退款','t-pp'],block:['超限拦截','t-r'],done:['已提交','t-g']};
 
   /* ========== 数据存取 ========== */
-  function store(){DB.weigh=DB.weigh||{};return DB.weigh;}                 // {orderId|sku:{real,gross,baskets,at,by}}
+  function store(){DB.weigh=DB.weigh||{};return DB.weigh;}                 // {orderId|sku:{real,at,by,submitted,amt,due,diff,photo}}
   function keyOf(o,l){return o.id+'|'+l.sku;}
   function recOf(o,l){return store()[keyOf(o,l)]||null;}
   function submitted(o,l){const r=recOf(o,l);return !!(r&&r.submitted);}
@@ -101,29 +95,6 @@
     paintRow(idx);paintSum();
   };
   window.wg_useDue=function(idx){const r=ROWS[idx];if(!r)return;const el=document.getElementById('wg-in-'+idx);if(el)el.value=r.c.due||dueW(r.l);wg_input(idx,String(dueW(r.l)));};
-  // 按毛重录入：净重 = 毛重 − 筐数 × 标准皮重（不让用户心算）
-  window.wg_gross=function(idx){const r=ROWS[idx];if(!r)return;
-    modal(`<div class="mc-hd"><h3>按毛重录入 · ${r.l.name}</h3><p>${r.o.id} · ${ord_mask(r.o.client)} · 应发净重 <b>${dueW(r.l)} kg</b></p><button class="mc-x" onclick="closeModal()">×</button></div>
-    <div class="mc-bd">
-      <div class="ib ib-b"><span class="i">⚖️</span>净重 = 毛重 − 筐数 × 标准皮重（<b>${WG.TARE} kg/筐</b>），系统自动扣皮，无需手算。</div>
-      <div class="row" style="gap:10px;align-items:flex-end">
-        <div class="fr" style="flex:1;margin:0"><label class="fl">毛重 (kg)</label><input id="wg-g" type="number" step="0.01" min="0" value="${(r.rec&&r.rec.gross)||''}" oninput="wg_grossPreview()"></div>
-        <div class="fr" style="flex:1;margin:0"><label class="fl">筐数</label><input id="wg-b" type="number" step="1" min="0" value="${(r.rec&&r.rec.baskets)||1}" oninput="wg_grossPreview()"></div>
-      </div>
-      <div id="wg-gp" style="font-size:13px;margin-top:6px;color:var(--ts)">—</div>
-    </div>
-    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="wg_grossOk(${idx})">换算并填入</button></div>`);
-    setTimeout(wg_grossPreview,0);};
-  window.wg_grossPreview=function(){const g=parseFloat((document.getElementById('wg-g')||{}).value),b=parseInt((document.getElementById('wg-b')||{}).value,10)||0;
-    const el=document.getElementById('wg-gp');if(!el)return;
-    if(isNaN(g)){el.textContent='—';return;}
-    const net=+(g-b*WG.TARE).toFixed(2);
-    el.innerHTML=`净重 = ${g} − ${b} × ${WG.TARE} = <b style="color:var(--g)">${net} kg</b>`;};
-  window.wg_grossOk=function(idx){const g=parseFloat((document.getElementById('wg-g')||{}).value),b=parseInt((document.getElementById('wg-b')||{}).value,10)||0;
-    if(isNaN(g)||g<=0){toast('请填写毛重','err');return;}
-    const net=+(g-b*WG.TARE).toFixed(2);const s=store(),k=keyOf(ROWS[idx].o,ROWS[idx].l);
-    s[k]=Object.assign({},s[k],{gross:g,baskets:b});
-    closeModal();render();setTimeout(()=>{const el=document.getElementById('wg-in-'+idx);if(el){el.value=net;}wg_input(idx,String(net));},0);};
   window.wg_photo=function(idx){const r=ROWS[idx];const s=store(),k=keyOf(r.o,r.l);s[k]=Object.assign({real:''},s[k],{photo:!(s[k]&&s[k].photo)});render();toast(s[k].photo?'已附磅单照片（演示）':'已移除磅单照片','ok');};
 
   /* 勾选 + 批量（按钮常驻，未选置灰） */
@@ -228,7 +199,7 @@
       <thead><tr>
         <th style="width:34px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
         <th>订单号 / 客户</th><th>商品（规格）</th><th style="text-align:right">件数</th>
-        <th style="text-align:right">应发净重</th><th style="text-align:center;width:196px">实发净重 (kg)</th>
+        <th style="text-align:right">应发净重</th><th style="text-align:center;width:168px">实发净重 (kg)</th>
         <th style="text-align:right">差异</th><th style="text-align:right">差异率</th>
         <th style="text-align:right">单价</th><th style="text-align:right">差额</th><th>状态</th><th>凭证</th>
       </tr></thead><tbody>
@@ -245,7 +216,6 @@
           :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
               <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="${dueW(r.l)}" oninput="wg_input(${i},this.value)" style="width:92px;text-align:right">
               <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
-              <button class="wg-tare" title="按毛重录入：填毛重与筐数，自动扣筐皮换算净重" onclick="wg_gross(${i})"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M7 19h10M4 8h16M12 8l6-2M12 8L6 6"/><path d="M4 8l-2.2 4.6a2.6 2.6 0 004.4 0z"/><path d="M20 8l-2.2 4.6a2.6 2.6 0 004.4 0z"/></svg></button>
             </div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
         <td id="wg-rate-${i}" style="text-align:right"></td>
