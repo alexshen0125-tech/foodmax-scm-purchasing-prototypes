@@ -14,6 +14,11 @@
     DAYS:7,       // BR-09 配送完成后 7 天不可再录入/修改
     SVC:0.05,     // BR-08 平台服务费率（差额同步重算佣金）
   };
+  const tareCss=document.createElement('style');
+  tareCss.textContent=`.wg-tare{width:28px;height:28px;flex:0 0 28px;border:1px solid var(--bd);background:#fff;border-radius:7px;
+    cursor:pointer;font-size:13px;line-height:1;color:var(--ts);padding:0;display:inline-flex;align-items:center;justify-content:center;transition:.13s}
+  .wg-tare:hover{border-color:var(--g);color:var(--g);background:var(--gl)}`;
+  document.head.appendChild(tareCss);
   const money2=v=>(typeof money=='function'?money(v):'S$'+(+v||0).toFixed(2));
 
   /* ========== SKU 口径解析：是否多退少补 + 规格净重 + S$/kg ========== */
@@ -223,7 +228,7 @@
       <thead><tr>
         <th style="width:34px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
         <th>订单号 / 客户</th><th>商品（规格）</th><th style="text-align:right">件数</th>
-        <th style="text-align:right">应发净重</th><th style="text-align:center;width:180px">实发净重 (kg)</th>
+        <th style="text-align:right">应发净重</th><th style="text-align:center;width:196px">实发净重 (kg)</th>
         <th style="text-align:right">差异</th><th style="text-align:right">差异率</th>
         <th style="text-align:right">单价</th><th style="text-align:right">差额</th><th>状态</th><th>凭证</th>
       </tr></thead><tbody>
@@ -237,9 +242,10 @@
         <td style="text-align:right"><b>${dueW(r.l)}</b> kg</td>
         <td style="text-align:center">${done||lock
           ?`<b>${r.real} kg</b>${lock?`<div style="font-size:10.5px;color:var(--ts)">超 ${WG.DAYS} 天已锁定</div>`:''}`
-          :`<div class="row" style="gap:8px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
-              <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="${dueW(r.l)}" oninput="wg_input(${i},this.value)" style="width:96px;text-align:right">
-              <button class="btn btn-link btn-sm" title="按毛重录入，自动扣筐皮换算净重" onclick="wg_gross(${i})">按毛重</button>
+          :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
+              <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="${dueW(r.l)}" oninput="wg_input(${i},this.value)" style="width:92px;text-align:right">
+              <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
+              <button class="wg-tare" title="按毛重录入：填毛重与筐数，自动扣筐皮换算净重" onclick="wg_gross(${i})"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M7 19h10M4 8h16M12 8l6-2M12 8L6 6"/><path d="M4 8l-2.2 4.6a2.6 2.6 0 004.4 0z"/><path d="M20 8l-2.2 4.6a2.6 2.6 0 004.4 0z"/></svg></button>
             </div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
         <td id="wg-rate-${i}" style="text-align:right"></td>
