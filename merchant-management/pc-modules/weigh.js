@@ -271,6 +271,22 @@
       <tr style="font-weight:700;background:var(--gl)"><td colspan="5">差额合计（并入当期对账单）</td><td style="text-align:right;color:${total>0?'var(--y)':'var(--r)'}">${total>0?'+':''}${money2(total)}</td><td></td></tr>
       </tbody></table></div></div></div>`;
   };
+  /* 供打印标签门禁调用（pick.js）：单条订单行的称重状态
+     'na'=不参与多退少补 / 'wait'=需称重但未提交 / 'done'=已提交实发净重 */
+  window.weighLineState=function(o,l){
+    if(!skuMeta(l).weighable)return 'na';
+    const r=recOf(o,l);
+    return r&&r.submitted?'done':'wait';
+  };
+  // 某(配送日期 + 入库仓库)下仍未完成称重的订单行数——供送货单生成门禁用（整仓没称完不生成送货单）
+  window.weighWhPending=function(date,wh){
+    let n=0;
+    DB.orders.filter(o=>(o.status=='pending'||o.status=='packed')&&(!date||o.deliver==date)&&(!wh||o.warehouse==wh))
+      .forEach(o=>(o.lines||[]).forEach(l=>{if(window.weighLineState(o,l)=='wait')n++;}));
+    return n;
+  };
+  // 已提交的实发净重（打印标签时印在标签上）
+  window.weighRealOf=function(o,l){const r=recOf(o,l);return r&&r.submitted?r.real:null;};
   // 供菜单角标 / 其他模块引用：待称重行数
   window.weighPending=function(){const saved=DB.weighF;DB.weighF={date:'',wh:'',st:''};const n=buildRows().filter(r=>r.m.weighable&&r.st=='wait').length;DB.weighF=saved;return n;};
 

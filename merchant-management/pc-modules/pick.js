@@ -137,23 +137,34 @@
       (o.lines||[]).forEach(l=>{
         if(f.name&&!((l.name||'').includes(f.name))&&!((l.sku||'').includes(f.name)))return;
         const key=o.warehouse+'|'+l.sku;
-        if(!agg[key])agg[key]={key,sku:l.sku,name:l.name,unit:l.unit,cat:catPathName(lineCat(l)),qty:0};
+        if(!agg[key])agg[key]={key,sku:l.sku,name:l.name,unit:l.unit,cat:catPathName(lineCat(l)),qty:0,wgNeed:0,wgWait:0,wgReal:0};
         agg[key].qty+=l.qty;
+        // 多退少补门禁：该标签行覆盖的订单中，只要还有一单没提交实发净重，就不许打印（打印即生成送货单，重量再补录已晚）
+        const st=(typeof weighLineState=='function')?weighLineState(o,l):'na';
+        if(st!='na'){agg[key].wgNeed++;if(st=='wait')agg[key].wgWait++;else agg[key].wgReal+=(typeof weighRealOf=='function'&&weighRealOf(o,l))||0;}
       });
     });
     return Object.values(agg);
   }
   function printedOf(key){return (DB.labelPrinted||{})[key]||0;}
+  function wgBlocked(r){return (r.wgWait||0)>0;}
+  function wgDeny(r){toast(`「${r.name}」还有 ${r.wgWait} 个订单未录实发净重。多退少补商品需先在「备货管理 › 称重录入」完成称重才能打印标签`,'err');}
   function allUnprinted(){DB.labelPrinted=DB.labelPrinted||{};const f=DB.labelF||{};const agg={};refOrders().forEach(o=>{if(f.date&&o.deliver!=f.date)return;(o.lines||[]).forEach(l=>{const key=o.warehouse+'|'+l.sku;agg[key]=(agg[key]||0)+l.qty;});});return Object.entries(agg).reduce((s,[k,q])=>s+Math.max(0,q-(DB.labelPrinted[k]||0)),0);}
   // 打印标签触发送货单自动生成：某(配送日期+入库仓库)首次打印标签时，按仓自动生成送货单（已存在不重复）
-  function labelTriggerDelivery(keys){if(typeof window.genDeliveryOnPrint!='function')return[];const date=(DB.labelF&&DB.labelF.date)||'';const whs=[...new Set(keys.map(k=>String(k).split('|')[0]))];const made=[];whs.forEach(wh=>{const id=window.genDeliveryOnPrint(date,wh);if(id)made.push(id);});return made;}
+  function labelTriggerDelivery(keys){if(typeof window.genDeliveryOnPrint!='function')return[];const date=(DB.labelF&&DB.labelF.date)||'';const whs=[...new Set(keys.map(k=>String(k).split('|')[0]))];const made=[];
+    whs.forEach(wh=>{
+      // 整仓门禁：该仓还有多退少补商品未录实发净重时不生成送货单——避免"送货单已开、货还没称完"
+      if(typeof window.weighWhPending=='function'&&window.weighWhPending(date,wh)>0)return;
+      const id=window.genDeliveryOnPrint(date,wh);if(id)made.push(id);});
+    return made;}
   // 打印：一个 SKU 按应送货数量打 N 个连续序号的码；首打/续打从 已打印+1 到 N
-  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
-  window.label_printAll=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0;const done=[];labelRows().forEach(r=>{const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`:'无待打印标签','ok');};
+  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
+  window.label_printAll=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
   // 按序号打印：先勾选一个 SKU，再点顶部「按序号打印」→ 弹窗填序号区间 [从X 到Y]（漏打时也用它补打）
   window.label_bySeqPrint=function(){const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));
     if(sel.length==0){toast('请先勾选一个商品，再点「按序号打印」','err');return;}
     if(sel.length>1){toast('「按序号打印」每次只支持一个商品，请只勾选一个','err');return;}
+    const rr=labelRows().find(x=>x.key==sel[0]);if(rr&&wgBlocked(rr)){wgDeny(rr);return;}
     label_seqModal(sel[0]);};
   window.label_seqModal=function(key){const r=labelRows().find(x=>x.key==key);if(!r)return;const N=r.qty;const pr=Math.min(N,printedOf(key));
     modal(`<div class="mc-hd"><h3>按序号打印 · ${r.name}</h3><p>${specLabel(r)}（${r.sku}） · 本 SKU 共 <b>${N}</b> 张标签，序号 1–${N}${pr?` · 已打印至 ${pr}`:''}</p><button class="mc-x" onclick="closeModal()">×</button></div>
@@ -166,7 +177,7 @@
       </div>
     </div>
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="label_doSeqPrint('${key}')">打印</button></div>`);};
-  window.label_doSeqPrint=function(key){const r=labelRows().find(x=>x.key==key);if(!r)return;const N=r.qty;
+  window.label_doSeqPrint=function(key){const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){closeModal();wgDeny(r);return;}const N=r.qty;
     const from=parseInt((document.getElementById('rp-from')||{}).value,10),to=parseInt((document.getElementById('rp-to')||{}).value,10);
     if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){toast(`请填写有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
     DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};
@@ -175,7 +186,7 @@
   // 勾选 → 批量打印（只打勾选项，最多 50 个）
   window.label_toggleSel=function(key){DB.labelSel=DB.labelSel||[];const i=DB.labelSel.indexOf(key);if(i<0)DB.labelSel.push(key);else DB.labelSel.splice(i,1);render();};
   window.label_selAll=function(){DB.labelSel=DB.labelSel||[];const keys=labelRows().map(r=>r.key);const all=keys.length&&keys.every(k=>DB.labelSel.includes(k));DB.labelSel=all?[]:keys.slice();render();};
-  window.label_printSel=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`:'所选商品标签均已打印','ok');};
+  window.label_printSel=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length-blk} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个因未完成称重被拦截`:''}`:(blk?`所选 ${blk} 个商品未完成称重，无法打印`:'所选商品标签均已打印'),blk&&!n?'err':'ok');};
 
   function labelView(){
     DB.labelF=DB.labelF||{};DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};
@@ -183,6 +194,7 @@
     const dates=refDates();if(f.date===undefined)f.date=dates[0]||'';
     const whs=refWarehouses();if(f.wh===undefined)f.wh=whs[0]||'';
     const rows=labelRows();
+    const blocked=rows.filter(wgBlocked).length;
     const should=rows.reduce((a,r)=>a+r.qty,0);
     const printed=rows.reduce((a,r)=>a+Math.min(r.qty,printedOf(r.key)),0);
     const unpr=should-printed;
@@ -190,6 +202,7 @@
     const optSel=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。</div>
+    ${blocked?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span><b>${blocked} 个商品因未完成称重被拦截，无法打印标签。</b>多退少补（按重量定价）商品必须先录实发净重——打印首张标签即自动生成送货单，届时重量已无法再改。<button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重录入 →</button></div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">
         <div class="tabs" style="margin:0;border:none">
@@ -222,22 +235,24 @@
       </div>
     </div>
     <div class="card-bd" style="padding:10px 16px;display:flex;gap:22px;font-size:13px;border-bottom:1px solid var(--bd2);flex-wrap:wrap;align-items:center">
-      <span>应送货：<b>${should}</b></span><span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${unpr}</b></span><span>超量：<b>0</b></span><span class="tag t-y" style="font-size:11px">未截单</span>
+      <span>应送货：<b>${should}</b></span><span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${unpr}</b></span><span>未称重拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span><span>超量：<b>0</b></span><span class="tag t-y" style="font-size:11px">未截单</span>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th style="width:34px"><input type="checkbox" title="全选本页商品" ${allSel?'checked':''} onclick="label_selAll()"></th><th style="width:44px">序号</th><th>商品名称</th><th>规格(编码)</th><th>分类</th><th style="text-align:right">昨日销量</th><th style="text-align:right">应送货</th><th style="text-align:right">已打印数</th><th style="text-align:right">未打印数</th><th style="text-align:right">本次打印数</th><th>操作</th></tr></thead><tbody>
       ${rows.map((r,i)=>{const pr=Math.min(r.qty,printedOf(r.key));const un=r.qty-pr;const last=DB.labelLast[r.key]||0;const done=un<=0;return `<tr>
         <td><input type="checkbox" ${sel.includes(r.key)?'checked':''} onclick="label_toggleSel('${r.key}')"></td>
         <td>${i+1}</td>
-        <td><b>${r.name}</b>${done?' <span class="tag t-g" style="font-size:10px">打印完成</span>':''}</td>
+        <td><b>${r.name}</b>${done?' <span class="tag t-g" style="font-size:10px">打印完成</span>':''}${wgBlocked(r)?` <span class="tag t-r" style="font-size:10px">待称重 ${r.wgWait}</span>`:(r.wgNeed?' <span class="tag t-g" style="font-size:10px">已称重</span>':'')}</td>
         <td>${specLabel(r)} <span style="color:var(--ts)">(${r.sku})</span></td>
         <td style="font-size:12px;color:var(--ts)">${r.cat}</td>
         <td style="text-align:right">${yday(r.sku)}</td>
-        <td style="text-align:right"><b>${r.qty}</b><div style="font-size:11px;color:var(--ts)">序号 1–${r.qty}</div></td>
+        <td style="text-align:right"><b>${r.qty}</b><div style="font-size:11px;color:var(--ts)">${r.wgNeed&&!wgBlocked(r)?`实发 ${r.wgReal.toFixed(1)}kg`:`序号 1–${r.qty}`}</div></td>
         <td style="text-align:right;color:var(--gd)">${pr}</td>
         <td style="text-align:right;${un>0?'color:var(--r);font-weight:600':''}">${un}</td>
         <td style="text-align:right">${last||(un>0?un:'—')}</td>
-        <td style="white-space:nowrap">${un>0?`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`:'<span style="color:var(--ts)">打印完成</span>'}</td>
+        <td style="white-space:nowrap">${un<=0?'<span style="color:var(--ts)">打印完成</span>':(wgBlocked(r)
+          ?`<button class="btn btn-p btn-sm" disabled title="该商品有 ${r.wgWait} 个订单未录实发净重，完成称重后才能打印">打印</button> <button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重</button>`
+          :`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`)}</td>
       </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
       </tbody></table></div></div></div>`;
   }
