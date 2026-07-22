@@ -199,7 +199,7 @@
       <thead><tr>
         <th style="width:34px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
         <th>订单号 / 客户</th><th>商品（规格）</th><th style="text-align:right">件数</th>
-        <th style="text-align:right">应发净重</th><th style="text-align:center;width:168px">实发净重 (kg)</th>
+        <th style="text-align:right">应发净重</th><th style="text-align:center;width:172px">实发净重 (kg)</th>
         <th style="text-align:right">差异</th><th style="text-align:right">差异率</th>
         <th style="text-align:right">单价</th><th style="text-align:right">差额</th><th>状态</th><th>凭证</th>
       </tr></thead><tbody>
@@ -214,7 +214,7 @@
         <td style="text-align:center">${done||lock
           ?`<b>${r.real} kg</b>${lock?`<div style="font-size:10.5px;color:var(--ts)">超 ${WG.DAYS} 天已锁定</div>`:''}`
           :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
-              <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="${dueW(r.l)}" oninput="wg_input(${i},this.value)" style="width:92px;text-align:right">
+              <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="请输入" oninput="wg_input(${i},this.value)" style="width:96px;text-align:right">
               <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
             </div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
