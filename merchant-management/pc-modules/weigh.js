@@ -71,6 +71,7 @@
       (o.lines||[]).forEach(l=>{
         if(f.name&&!((l.name||'').includes(f.name))&&!((l.sku||'').includes(f.name)))return;
         const m=skuMeta(l),r=recOf(o,l);
+        if(!m.weighable)return;                    // 定重预包装/非重量单位：不需要称重，不进本列表
         const real=r?r.real:'';
         const c=calc(l,m.weighable?real:'');
         const st=!m.weighable?'na':(r&&r.submitted?'done':c.st);
@@ -122,9 +123,9 @@
 
   /* 勾选 + 批量（按钮常驻，未选置灰） */
   window.wg_toggle=function(idx){DB.weighSel=DB.weighSel||[];const r=ROWS[idx];const k=keyOf(r.o,r.l);const i=DB.weighSel.indexOf(k);if(i<0)DB.weighSel.push(k);else DB.weighSel.splice(i,1);render();};
-  window.wg_selAll=function(){DB.weighSel=DB.weighSel||[];const keys=ROWS.filter(r=>r.m.weighable&&r.st!='done'&&!r.locked).map(r=>keyOf(r.o,r.l));
+  window.wg_selAll=function(){DB.weighSel=DB.weighSel||[];const keys=ROWS.filter(r=>r.st!='done'&&!r.locked).map(r=>keyOf(r.o,r.l));
     const all=keys.length&&keys.every(k=>DB.weighSel.includes(k));DB.weighSel=all?[]:keys.slice();render();};
-  function selRows(){const sel=DB.weighSel||[];return ROWS.filter(r=>sel.includes(keyOf(r.o,r.l))&&r.m.weighable&&r.st!='done'&&!r.locked);}
+  function selRows(){const sel=DB.weighSel||[];return ROWS.filter(r=>sel.includes(keyOf(r.o,r.l))&&r.st!='done'&&!r.locked);}
   // 批量按应发确认：80% 的行称出来就是应发，一键填平，只手动改有差异的（交互自检 #3/#5）
   window.wg_batchDue=function(){const rows=selRows();if(!rows.length){toast('请先勾选要确认的行','err');return;}
     const s=store();rows.forEach(r=>{s[keyOf(r.o,r.l)]=Object.assign({},s[keyOf(r.o,r.l)],{real:dueW(r.l),at:'2026-07-01 08:20',by:DB.merchant&&DB.merchant.contact||'门店操作员'});});
@@ -163,7 +164,7 @@
 
   /* ========== 局部重绘 ========== */
   function paintRow(idx){
-    const r=ROWS[idx];if(!r||!r.m.weighable)return;   // 不参与的行保留首屏「不参与」态，不被局部重绘覆盖
+    const r=ROWS[idx];if(!r)return;
     const c=r.c;
     const set=(id,html,color)=>{const el=document.getElementById(id);if(el){el.innerHTML=html;if(color)el.style.color=color;}};
     set('wg-diff-'+idx,c.st=='wait'?'—':`${c.diff>0?'+':''}${c.diff} kg`,c.diff>0?'var(--y)':c.diff<0?'var(--r)':'var(--ts)');
@@ -175,7 +176,7 @@
   }
   function paintSum(){
     const el=document.getElementById('wg-sum');if(!el)return;
-    const rows=ROWS.filter(r=>r.m.weighable);
+    const rows=ROWS;
     const wait=rows.filter(r=>r.st=='wait').length,blocked=rows.filter(r=>r.c.st=='block').length;
     const total=+rows.reduce((a,r)=>a+(r.c.amt||0),0).toFixed(2);
     el.innerHTML=`<span>可称重行：<b>${rows.length}</b></span><span>待称重：<b style="color:var(--r)">${wait}</b></span>
@@ -191,13 +192,13 @@
     if(f.date===undefined)f.date=dates[0]||'';
     ROWS=buildRows();
     const selN=selRows().length;
-    const selKeys=ROWS.filter(r=>r.m.weighable&&r.st!='done'&&!r.locked).map(r=>keyOf(r.o,r.l));
+    const selKeys=ROWS.filter(r=>r.st!='done'&&!r.locked).map(r=>keyOf(r.o,r.l));
     const allSel=selKeys.length&&selKeys.every(k=>(DB.weighSel||[]).includes(k));
     const opt=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span>
       按重量定价的商品（多退少补=是）下单时按<b>预估净重</b>锁价，分装过秤后在此录<b>实发净重</b>；
-      差额 =（实发 − 应发）× S$/kg，随<b>当期对账单</b>多退少补。定重预包装商品按件计价，不参与。</div>
+      差额 =（实发 − 应发）× S$/kg，随<b>当期对账单</b>多退少补。定重预包装商品按件计价、无需称重，<b>不在此列表展示</b>。</div>
 
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期</div><select onchange="DB.weighF.date=this.value;render()" style="min-width:140px">${dates.map(d=>`<option ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option>无</option>'}</select></div>
@@ -222,33 +223,32 @@
       <thead><tr>
         <th style="width:34px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
         <th>订单号 / 客户</th><th>商品（规格）</th><th style="text-align:right">件数</th>
-        <th style="text-align:right">应发净重</th><th style="text-align:center;width:190px">实发净重 (kg)</th>
+        <th style="text-align:right">应发净重</th><th style="text-align:center;width:240px">实发净重 (kg)</th>
         <th style="text-align:right">差异</th><th style="text-align:right">差异率</th>
         <th style="text-align:right">单价</th><th style="text-align:right">差额</th><th>状态</th><th>凭证</th>
       </tr></thead><tbody>
       ${ROWS.map((r,i)=>{
-        const na=!r.m.weighable,done=r.st=='done',lock=r.locked;
-        const t=na?['不参与','t-gr']:(ST[r.st]||ST.wait);
-        return `<tr style="${na?'background:#FAFBFA':''}">
-        <td>${na||done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(keyOf(r.o,r.l))?'checked':''} onclick="wg_toggle(${i})">`}</td>
+        const done=r.st=='done',lock=r.locked,t=ST[r.st]||ST.wait;
+        return `<tr>
+        <td>${done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(keyOf(r.o,r.l))?'checked':''} onclick="wg_toggle(${i})">`}</td>
         <td><span class="mono" style="font-size:11.5px">${r.o.id}</span><div style="font-size:11.5px;color:var(--ts)">${ord_mask(r.o.client)} · ${r.o.warehouse||'—'}</div></td>
-        <td><b>${r.l.name}</b> <span style="color:var(--ts);font-size:11.5px">${r.m.specQty}${r.m.unit}/件</span>${na?`<div style="font-size:11px;color:var(--ts)">${r.m.why}</div>`:''}</td>
+        <td style="white-space:nowrap"><b>${r.l.name}</b> <span style="color:var(--ts);font-size:11.5px">${r.m.specQty}${r.m.unit}/件</span></td>
         <td style="text-align:right">${r.l.qty}</td>
-        <td style="text-align:right">${na?'<span style="color:var(--ts)">—</span>':`<b>${dueW(r.l)}</b> kg`}</td>
-        <td style="text-align:center">${na?'<span style="color:var(--ts)">—</span>':(done||lock
-          ?`<b>${r.real} kg</b>${lock?'<div style="font-size:10.5px;color:var(--ts)">超 '+WG.DAYS+' 天已锁定</div>':''}`
-          :`<div class="row" style="gap:5px;justify-content:center;align-items:center">
+        <td style="text-align:right"><b>${dueW(r.l)}</b> kg</td>
+        <td style="text-align:center">${done||lock
+          ?`<b>${r.real} kg</b>${lock?`<div style="font-size:10.5px;color:var(--ts)">超 ${WG.DAYS} 天已锁定</div>`:''}`
+          :`<div class="row" style="gap:6px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
               <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="${dueW(r.l)}" oninput="wg_input(${i},this.value)" style="width:90px;text-align:right">
               <button class="btn btn-link btn-sm" title="按应发净重填入" onclick="wg_useDue(${i})">按应发</button>
               <button class="btn btn-link btn-sm" title="按毛重自动扣皮换算" onclick="wg_gross(${i})">毛重</button>
-            </div>`)}</td>
+            </div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
         <td id="wg-rate-${i}" style="text-align:right"></td>
-        <td style="text-align:right">${na?'<span style="color:var(--ts)">—</span>':`${money2(kgPrice(r.l))}<span style="color:var(--ts);font-size:11px">/kg</span>`}</td>
+        <td style="text-align:right;white-space:nowrap">${money2(kgPrice(r.l))}<span style="color:var(--ts);font-size:11px">/kg</span></td>
         <td id="wg-amt-${i}" style="text-align:right"></td>
         <td id="wg-st-${i}"><span class="tag ${t[1]}">${t[0]}</span></td>
-        <td>${na?'—':`<button class="btn btn-link btn-sm" onclick="wg_photo(${i})">${r.rec&&r.rec.photo?'✅ 已附磅单':'📷 附磅单'}</button>`}</td>
-      </tr>`;}).join('')||`<tr><td colspan="12"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下暂无待称重商品</div><div class="e-s">切换配送日期/仓库，或到「订单管理」模拟来一单。</div></div></td></tr>`}
+        <td><button class="btn btn-link btn-sm" onclick="wg_photo(${i})">${r.rec&&r.rec.photo?'✅ 已附磅单':'📷 附磅单'}</button></td>
+      </tr>`;}).join('')||`<tr><td colspan="12"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`}
       </tbody></table></div></div></div>`;
   }
 
@@ -288,7 +288,7 @@
   // 已提交的实发净重（打印标签时印在标签上）
   window.weighRealOf=function(o,l){const r=recOf(o,l);return r&&r.submitted?r.real:null;};
   // 供菜单角标 / 其他模块引用：待称重行数
-  window.weighPending=function(){const saved=DB.weighF;DB.weighF={date:'',wh:'',st:''};const n=buildRows().filter(r=>r.m.weighable&&r.st=='wait').length;DB.weighF=saved;return n;};
+  window.weighPending=function(){const saved=DB.weighF;DB.weighF={date:'',wh:'',st:''};const n=buildRows().filter(r=>r.st=='wait').length;DB.weighF=saved;return n;};
 
   PAGES['m-pick-weigh']=()=>{ ensurePickOrders(); const html=view(); setTimeout(()=>{ROWS.forEach((r,i)=>paintRow(i));paintSum();},0); return html; };
 })();
