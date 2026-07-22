@@ -61,14 +61,19 @@ const PBTR=(function(){
 
 /* ========== PC 规则数据(承重墙，照 PC 那套) ========== */
 // 后台类目(单级简化)：税率(默认值，手填可改) + 指导价(S$)，价格异常以指导价为基准
+// bcrs:true 的类目，建品时才出现「是否支持 BCRS」(与 PC CATS['饮料'].bcrs 同源)
 const CATS=[
   {n:'新鲜蔬菜',tax:0, guide:6},
   {n:'肉禽蛋品',tax:9, guide:14},
   {n:'海鲜水产',tax:9, guide:25},
   {n:'调味品',  tax:9, guide:18},
+  {n:'饮料',    tax:9, guide:5, bcrs:true},
 ];
-// 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖
-const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产']);
+// 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖(与 PC CAT_SCOPE 一致)
+const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料']);
+// BCRS 单容器法规押金 S$0.10（平台级参数，不计 GST；与 PC BCRS_UNIT_PRICE 同源）
+const BCRS_UNIT_PRICE=0.10;
+const BCRS_MAX=3.00;   // 押金单价上限（每最小售卖单位）
 // 最小售卖单位(PC 基础计量单位；SKU 售卖单位只读 = 最小售卖单位)
 const MEASURE_UNITS=['斤','公斤(kg)','克(g)','毫升(ml)','升(L)','个','只','件','包','袋','盒','箱','瓶','桶','罐'];
 // 净含量单位
@@ -82,7 +87,7 @@ const STORAGES=['常温','阴凉干燥','冷藏(0~4℃)','冷冻(-18℃)'];
 // 履约方式
 const FULFILLS=['次日达','当日达','商家自配','到店自提'];
 // 已存在(非草稿)商品名库，用于 BR-09 同名校验(取自 goods.js 销售中/未上架)
-const EXISTING=['鲜丰 · 嫩豆腐 1kg','鲜丰 · 老豆腐','鲜丰 · 小油豆腐','冻 · 盐渍海带丝','萝卜丸子'];
+const EXISTING=['鲜丰 · 嫩豆腐 1kg','鲜丰 · 老豆腐','鲜丰 · 小油豆腐','冻 · 盐渍海带丝','萝卜丸子','鲜丰 · NFC 椰子水 330ml'];
 
 // 商品库 mock(SG 本地化)，找品列表用
 const LIB=[
@@ -198,6 +203,9 @@ css.textContent=`
 .pb-spec .unit .uv{font-size:15px;font-weight:600;}.pb-spec .unit .uv.ph{color:#94A3B8;font-weight:400;}
 .pb-spec .unit .ch{color:#94A3B8;}
 .pb-spec .serr{color:var(--red);font-size:11.5px;margin-top:7px;min-height:0;}
+/* BCRS 说明条(仅支持 BCRS 的类目出现) */
+.pb-bcrs-tip{font-size:11.5px;color:var(--sub);line-height:1.6;padding:2px 16px 14px;background:#fff;}
+.pb-bcrs-tip b{color:#27433A;}
 .pb-addspec{margin:12px 14px 4px;min-height:46px;border:1.5px dashed var(--emerald);border-radius:12px;color:var(--emerald);font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 /* 图片区 */
 .pb-imgsec{padding:6px 16px 4px;}
@@ -341,6 +349,7 @@ function openForm(prefill){
     tax:  prefill?String((CATS.find(c=>c.n===prefill.cat)||{}).tax??''):'', // 手填，默认取类目
     measure: prefill?prefill.measure:'',   // 最小售卖单位
     netQty:'', netUnit:'', measureNote:'',
+    bcrs:'否', bcrsDeposit:'',              // BCRS：仅 cat.bcrs 类目可选；押金单价 S$/最小售卖单位
     sellType:'售卖品',                      // 销售类型固定，不可改
     validEnable:'是',                       // 效期管理默认「是」
     shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
@@ -364,6 +373,9 @@ function openForm(prefill){
         ${picker('pb-measure-row','pb-measure-v',f.measure,1,'最小售卖单位')}
         <div class="pb-cell" id="pb-net-row"><div class="lab">净含量</div><div class="val"><input id="pb-netqty" inputmode="decimal" placeholder="选填" value="${f.netQty}"><span class="vtxt" id="pb-netunit" style="flex:0 0 auto;max-width:70px">${f.netUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="最小售卖单位备注，选填" maxlength="40" value="${f.measureNote}"></div></div>
+        <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
+        <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>押金单价</div><div class="val"><span class="pre">S$</span><input id="pb-bcrsdep" inputmode="decimal" placeholder="如 ${BCRS_UNIT_PRICE.toFixed(2)}" value="${f.bcrsDeposit}"><span class="pre">/最小售卖单位</span></div></div>
+        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">单容器法规押金 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}</b>（不计 GST）；一个最小售卖单位含几个容器就填几×${BCRS_UNIT_PRICE.toFixed(2)}。<b>每个 SKU 押金 = 该规格数量 × 押金单价</b>，透传客户下单/订单/发票原样展示。上限 S$${BCRS_MAX.toFixed(2)} · 适用容量 150ml–3L。</div>
         <div class="pb-cell" id="pb-selltype-row"><div class="lab">销售类型</div><div class="val"><span class="vtxt" style="color:var(--sub)">售卖品</span></div></div>
       </div>
       <div class="pb-card">
@@ -433,7 +445,8 @@ function specRow(s,i,total,measure){
       </div></div>
     <div class="ms-hint" data-mshint>${(s.mode||'finite')==='daily'?'每天 0 点自动把可售库存补回设定的库存总数，适合每日稳定供应':'售完不再恢复、售罄即下线，适合尾货/限量'}</div>
     <div class="serr" data-serr></div>
-    <div class="serr" data-pnote style="color:#46604F"></div></div>`;
+    <div class="serr" data-pnote style="color:#46604F"></div>
+    <div class="serr" data-bnote style="color:var(--emerald-2)"></div></div>`;
 }
 function renderSpecs(p,f){
   const box=p.querySelector('#pb-specs');
@@ -483,6 +496,7 @@ function renderImgs(p,f){
 
 /* ---- 即时校验标红(H6)；submitted=true 时连必填空值一并标红 ---- */
 function paint(p,f,submitted){
+  submitted=!!submitted;   // 必须转真布尔：classList.toggle(cls,undefined) 等同于取反，会误标红
   // 商品名称(同名 BR-09 即时红；空值仅提交时红)
   const nameDup=!!(f.name.trim()&&EXISTING.includes(f.name.trim()));
   p.querySelector('#pb-name-row').classList.toggle('err',nameDup||(submitted&&!f.name.trim()));
@@ -490,6 +504,11 @@ function paint(p,f,submitted){
   p.querySelector('#pb-cat-row').classList.toggle('err',(submitted&&!f.cat)||(!!f.cat&&!LICENSE.has(f.cat.n)));
   p.querySelector('#pb-tax-row').classList.toggle('err',submitted&&!String(f.tax).trim());
   p.querySelector('#pb-measure-row').classList.toggle('err',submitted&&!f.measure);
+  // BCRS 押金单价：选「是」时必填 >0 且 ≤ 上限（即时标红）
+  const bOn=f.bcrs==='是'&&!!(f.cat&&f.cat.bcrs);
+  const bDep=parseFloat(f.bcrsDeposit);
+  const bBad=bOn&&((String(f.bcrsDeposit).trim()&&(isNaN(bDep)||bDep<=0||bDep>BCRS_MAX))||(submitted&&!String(f.bcrsDeposit).trim()));
+  p.querySelector('#pb-bcrsdep-row').classList.toggle('err',!!bBad);
   // 售卖规格：正整数≥1 + 不可重复
   const qtys=f.specs.map(s=>String(s.qty).trim());
   p.querySelectorAll('.pb-spec').forEach((row,i)=>{
@@ -503,6 +522,10 @@ function paint(p,f,submitted){
       if(!String(f.specs[i].price).trim()||isNaN(pv)||!f.cat){pn.textContent='';}
       else if(pv<f.cat.guide*0.5||pv>f.cat.guide*2){pn.textContent=`价格异常 · 偏离指导价 S$${f.cat.guide.toFixed(2)}（合理区间 S$${(f.cat.guide*0.5).toFixed(2)}~S$${(f.cat.guide*2).toFixed(2)}）`;pn.style.color='var(--red)';}
       else{pn.textContent=`参考指导价 S$${f.cat.guide.toFixed(2)} · 正常`;pn.style.color='#46604F';}}
+    // BCRS 押金预览：本规格押金 = 数量 × 押金单价（系统算，商家不心算）
+    const bn=row.querySelector('[data-bnote]');
+    if(bn){const q=parseInt(qtys[i],10);
+      bn.textContent=(bOn&&bDep>0&&bDep<=BCRS_MAX&&q>0)?`BCRS 押金 S$${(q*bDep).toFixed(2)}／${q}${f.measure||''}（${q} × S$${bDep.toFixed(2)}）`:'';}
   });
 }
 
@@ -518,6 +541,11 @@ function runChecks(f){
   const qtys=f.specs.map(s=>String(s.qty).trim()).filter(q=>/^[1-9]\d*$/.test(q));
   if(new Set(qtys).size!==qtys.length) fails.push(['规格','各规格「数量」不可重复']);
   if(f.cat&&!LICENSE.has(f.cat.n)) fails.push(['资质',`经营许可证未覆盖「${f.cat.n}」类目`]);
+  if(f.bcrs==='是'&&f.cat&&f.cat.bcrs){
+    const d=parseFloat(f.bcrsDeposit);
+    if(!(d>0))            fails.push(['BCRS','支持 BCRS 需填押金单价（>0）']);
+    else if(d>BCRS_MAX)   fails.push(['BCRS',`押金单价不可超过 S$${BCRS_MAX.toFixed(2)}，请核对最小售卖单位`]);
+  }
   if(f.name.trim()&&EXISTING.includes(f.name.trim())) fails.push(['查重','已存在同名商品']);
   return fails;
 }
@@ -528,6 +556,18 @@ function renderErrors(p,fails){
   box.innerHTML=`<div class="eh">${svg('alert')} 还有 ${fails.length} 项待完善</div>`+
     fails.map(x=>`<div class="li"><span class="cat">${x[0]}</span>${x[1]}</div>`).join('');
   box.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---- BCRS 类目门控：仅 cat.bcrs=true 的类目显示；切到不支持的类目则隐藏并重置为「否」 ---- */
+function bcrsToggle(p,f){
+  const rowB=p.querySelector('#pb-bcrs-row'),rowD=p.querySelector('#pb-bcrsdep-row'),tip=p.querySelector('#pb-bcrs-tip');
+  if(!rowB)return;
+  const catOn=!!(f.cat&&f.cat.bcrs);
+  if(!catOn){f.bcrs='否';f.bcrsDeposit='';const v=p.querySelector('#pb-bcrs-v');if(v)v.textContent='否';const dp=p.querySelector('#pb-bcrsdep');if(dp)dp.value='';}
+  rowB.style.display=catOn?'':'none';
+  const depOn=catOn&&f.bcrs==='是';
+  rowD.style.display=depOn?'':'none';
+  tip.style.display=depOn?'':'none';
 }
 
 /* ---- 表单绑定 ---- */
@@ -545,8 +585,15 @@ function bindForm(p,f){
   p.querySelector('#pb-origin').oninput=e=>{f.origin=e.target.value;};
   p.querySelector('#pb-brand').oninput=e=>{f.brand=e.target.value;};
   p.querySelector('#pb-desc').oninput=e=>{f.desc=e.target.value;};
-  // 后台类目(选中后自动带出默认税率，手填可改)
-  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}paint(p,f);});
+  // 后台类目(选中后自动带出默认税率，手填可改；联动 BCRS 类目门控)
+  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}bcrsToggle(p,f);paint(p,f);});
+  // BCRS：是否支持(仅 bcrs 类目可见) + 押金单价
+  p.querySelector('#pb-bcrs-row').onclick=()=>pbGridPicker('是否支持 BCRS',['否','是'],f.bcrs,v=>{
+    f.bcrs=v;setPH(p.querySelector('#pb-bcrs-v'),v,1);
+    if(v==='是'&&!String(f.bcrsDeposit).trim()){f.bcrsDeposit=BCRS_UNIT_PRICE.toFixed(2);p.querySelector('#pb-bcrsdep').value=f.bcrsDeposit;}  // 高频默认值：单容器 0.10
+    bcrsToggle(p,f);paint(p,f);});
+  p.querySelector('#pb-bcrsdep').oninput=e=>{f.bcrsDeposit=e.target.value;paint(p,f);};
+  bcrsToggle(p,f);
   // 最小售卖单位(变更后 SKU 售卖单位联动只读)
   p.querySelector('#pb-measure-row').onclick=()=>pbGridPicker('选择最小售卖单位',MEASURE_UNITS,f.measure,v=>{f.measure=v;setPH(p.querySelector('#pb-measure-v'),v,1);renderSpecs(p,f);paint(p,f);});
   // 净含量单位
@@ -558,7 +605,7 @@ function bindForm(p,f){
   p.querySelector('#pb-storage-row').onclick=()=>pbGridPicker('储存条件',STORAGES,f.storage,v=>{f.storage=v;setPH(p.querySelector('#pb-storage-v'),v,1);});
   p.querySelector('#pb-fulfill-row').onclick=()=>pbGridPicker('履约方式',FULFILLS,f.fulfill,v=>{f.fulfill=v;setPH(p.querySelector('#pb-fulfill-v'),v,1);});
   // 输入框单元格点击空白不抢焦点
-  ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
+  ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-bcrsdep-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
 
   p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite',packUnit:''});renderSpecs(p,f);paint(p,f);};
 
