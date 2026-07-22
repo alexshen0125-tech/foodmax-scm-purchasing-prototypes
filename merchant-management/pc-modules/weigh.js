@@ -42,7 +42,6 @@
     const capped=ratio>WG.CAP;                                                            // 多发：按 +5% 封顶补款
     return {st:'add',due,up,diff,ratio,capped,amt:+(Math.min(ratio,WG.CAP)*due*up).toFixed(2)};
   }
-  const ST={wait:['待称重','t-gr'],ok:['正常损耗','t-b'],add:['补款','t-y'],refund:['退款','t-pp'],block:['超限拦截','t-r'],done:['已提交','t-g']};
 
   /* ========== 数据存取 ========== */
   function store(){DB.weigh=DB.weigh||{};return DB.weigh;}                 // {orderId|sku:{real,at,by,submitted,amt,due,diff,photo}}
@@ -95,7 +94,6 @@
     paintRow(idx);paintSum();
   };
   window.wg_useDue=function(idx){const r=ROWS[idx];if(!r)return;const el=document.getElementById('wg-in-'+idx);if(el)el.value=r.c.due||dueW(r.l);wg_input(idx,String(dueW(r.l)));};
-  window.wg_photo=function(idx){const r=ROWS[idx];const s=store(),k=keyOf(r.o,r.l);s[k]=Object.assign({real:''},s[k],{photo:!(s[k]&&s[k].photo)});render();toast(s[k].photo?'已附磅单照片（演示）':'已移除磅单照片','ok');};
 
   /* 勾选 + 批量（按钮常驻，未选置灰） */
   window.wg_toggle=function(idx){DB.weighSel=DB.weighSel||[];const r=ROWS[idx];const k=keyOf(r.o,r.l);const i=DB.weighSel.indexOf(k);if(i<0)DB.weighSel.push(k);else DB.weighSel.splice(i,1);render();};
@@ -145,9 +143,7 @@
     const set=(id,html,color)=>{const el=document.getElementById(id);if(el){el.innerHTML=html;if(color)el.style.color=color;}};
     set('wg-diff-'+idx,c.st=='wait'?'—':`${c.diff>0?'+':''}${c.diff} kg`,c.diff>0?'var(--y)':c.diff<0?'var(--r)':'var(--ts)');
     set('wg-rate-'+idx,c.st=='wait'?'—':`${(c.ratio*100).toFixed(1)}%`,Math.abs(c.ratio)>WG.BLOCK?'var(--r)':'var(--ts)');
-    set('wg-amt-'+idx,c.amt?`<b>${c.amt>0?'+':'-'}${money2(Math.abs(c.amt))}</b>${c.capped?`<div style="font-size:10.5px;color:var(--ts)">+${WG.CAP*100}% 封顶</div>`:''}`:'—',c.amt>0?'var(--y)':c.amt<0?'var(--r)':'var(--ts)');
-    const t=ST[r.st]||ST.wait;
-    set('wg-st-'+idx,`<span class="tag ${t[1]}">${t[0]}</span>${c.msg?`<div style="font-size:10.5px;color:var(--r);margin-top:2px">${c.msg}</div>`:''}`);
+    set('wg-msg-'+idx,c.msg||'');
     const inp=document.getElementById('wg-in-'+idx);if(inp)inp.style.borderColor=c.st=='block'?'var(--r)':'';
   }
   function paintSum(){
@@ -201,10 +197,9 @@
         <th>订单号 / 客户</th><th>商品（规格）</th><th style="text-align:right">件数</th>
         <th style="text-align:right">应发净重</th><th style="text-align:center;width:172px">实发净重 (kg)</th>
         <th style="text-align:right">差异</th><th style="text-align:right">差异率</th>
-        <th style="text-align:right">单价</th><th style="text-align:right">差额</th><th>状态</th><th>凭证</th>
       </tr></thead><tbody>
       ${ROWS.map((r,i)=>{
-        const done=r.st=='done',lock=r.locked,t=ST[r.st]||ST.wait;
+        const done=r.st=='done',lock=r.locked;
         return `<tr>
         <td>${done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(keyOf(r.o,r.l))?'checked':''} onclick="wg_toggle(${i})">`}</td>
         <td><span class="mono" style="font-size:11.5px">${r.o.id}</span><div style="font-size:11.5px;color:var(--ts)">${ord_mask(r.o.client)} · ${r.o.warehouse||'—'}</div></td>
@@ -212,18 +207,15 @@
         <td style="text-align:right">${r.l.qty}</td>
         <td style="text-align:right"><b>${dueW(r.l)}</b> kg</td>
         <td style="text-align:center">${done||lock
-          ?`<b>${r.real} kg</b>${lock?`<div style="font-size:10.5px;color:var(--ts)">超 ${WG.DAYS} 天已锁定</div>`:''}`
+          ?`<b>${r.real} kg</b><div style="font-size:10.5px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG.DAYS} 天已锁定`:'✓ 已提交'}</div>`
           :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
               <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="请输入" oninput="wg_input(${i},this.value)" style="width:96px;text-align:right">
               <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
-            </div>`}</td>
+            </div>
+            <div id="wg-msg-${i}" style="font-size:10.5px;color:var(--r);margin-top:3px"></div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
         <td id="wg-rate-${i}" style="text-align:right"></td>
-        <td style="text-align:right;white-space:nowrap">${money2(kgPrice(r.l))}<span style="color:var(--ts);font-size:11px">/kg</span></td>
-        <td id="wg-amt-${i}" style="text-align:right"></td>
-        <td id="wg-st-${i}"><span class="tag ${t[1]}">${t[0]}</span></td>
-        <td><button class="btn btn-link btn-sm" onclick="wg_photo(${i})">${r.rec&&r.rec.photo?'✅ 已附磅单':'📷 附磅单'}</button></td>
-      </tr>`;}).join('')||`<tr><td colspan="12"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="8"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`}
       </tbody></table></div></div></div>`;
   }
 
