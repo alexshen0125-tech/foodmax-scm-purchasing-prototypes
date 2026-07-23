@@ -162,6 +162,14 @@ button{font-family:inherit}
 .tb-crumb{font-size:12px;color:var(--tt)}
 .tb-title{font-size:18.5px;font-weight:800;letter-spacing:-.3px;margin-top:1px;color:var(--tp)}
 .tb-r{display:flex;align-items:center;gap:14px}
+.tb-btn{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--bd);background:var(--w);color:var(--g);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.tb-btn:hover{border-color:var(--g);box-shadow:var(--sh2)}
+.tb-dl{position:relative}
+.tb-dl .tb-btn{cursor:default}
+.tb-dl-pop{position:absolute;top:100%;right:0;padding-top:9px;opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .18s,transform .18s;z-index:60}
+.tb-dl:hover .tb-dl-pop{opacity:1;visibility:visible;transform:none}
+.tb-dl-card{width:340px;background:var(--w);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh3);overflow:hidden}
+.tb-dl-card .wp-dl-hero{border-radius:0}
 .pill{padding:5px 13px;border-radius:20px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .pill.warn{background:var(--yl);color:var(--y)}.pill.ok{background:var(--gl);color:var(--gd)}.pill.info{background:var(--bl);color:var(--b)}
 .avatar{width:34px;height:34px;border-radius:9px;background:var(--gg);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer}
@@ -341,6 +349,67 @@ textarea{resize:vertical;min-height:72px}
 .stepper button{width:30px;height:32px;border:none;background:#F7F8FA;cursor:pointer;font-size:16px;color:var(--tp)}
 .stepper input{width:56px;height:32px;border:none;border-left:1px solid #dcdfe6;border-right:1px solid #dcdfe6;text-align:center;font-size:13px}
 .stepper .su{padding:0 8px;font-size:12px;color:var(--ts)}
+/* ===== 工作台重排版：主区两栏 / 下载App / 帮助中心 ===== */
+.wp-main{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:18px;align-items:start}
+@media(max-width:1180px){.wp-main{grid-template-columns:1fr}}
+.wp-side{display:flex;flex-direction:column;gap:16px}
+/* 下载 App 双码卡 */
+.wp-dl{background:var(--w);border-radius:var(--rad);border:1px solid var(--bd);box-shadow:var(--sh);overflow:hidden}
+.wp-dl-hero{padding:18px 20px;background:var(--gg);color:#fff;display:flex;align-items:center;gap:12px}
+.wp-dl-hero .ic{width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.wp-dl-hero .t{font-size:15.5px;font-weight:700;line-height:1.3}
+.wp-dl-hero .s{font-size:12px;opacity:.85;margin-top:2px}
+.wp-qrs{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px 20px}
+.wp-qr{text-align:center}
+.wp-qr .box{width:118px;height:118px;margin:0 auto;border:1px solid var(--bd);border-radius:12px;padding:9px;background:#fff}
+.wp-qr .box svg{width:100%;height:100%;display:block}
+.wp-qr .os{margin-top:9px;font-size:13px;font-weight:600;color:var(--tp);display:flex;align-items:center;justify-content:center;gap:5px}
+.wp-qr .os .badge{font-size:15px}
+.wp-qr .hint{font-size:11.5px;color:var(--ts);margin-top:2px}
+.wp-dl-ft{padding:11px 20px;border-top:1px solid var(--bd2);font-size:12px;color:var(--ts);display:flex;align-items:center;gap:6px}
+/* 常用功能 */
+.wp-qa{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.wp-qi{position:relative;display:flex;flex-direction:column;align-items:center;gap:9px;padding:16px 8px;border:1px solid var(--bd);border-radius:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s;background:var(--w)}
+.wp-qi:hover{border-color:var(--g);box-shadow:var(--sh2)}
+.wp-qi:active{transform:scale(.97)}
+.wp-qi .qic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:23px}
+.wp-qi .qil{font-size:13px;font-weight:600;color:var(--tp)}
+.wp-qi .qib{position:absolute;top:9px;right:12px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--r);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.wp-qi .qib:empty,.wp-qi .qib[data-z]{display:none}
+/* 平台公告 */
+.wp-ann{display:flex;align-items:center;gap:11px;padding:13px 20px;border-bottom:1px solid var(--bd2);cursor:pointer;transition:background .15s}
+.wp-ann:last-child{border-bottom:none}
+.wp-ann:hover{background:var(--gl)}
+.wp-ann-b{flex:1;min-width:0}
+.wp-ann-t{font-size:13.5px;font-weight:500;color:var(--tp);line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.wp-ann-d{font-size:11.5px;color:var(--tt);margin-top:3px}
+/* 商家成长中心 */
+.wp-grow{display:grid;grid-template-columns:1.3fr 1fr;gap:22px;align-items:center}
+@media(max-width:1180px){.wp-grow{grid-template-columns:1fr}}
+.wp-grow-h{font-size:15px;font-weight:700;color:var(--tp);margin-bottom:12px}
+.wp-grow-bar{height:9px;border-radius:6px;background:var(--bd2);overflow:hidden}
+.wp-grow-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#12885B,#0A5A3C)}
+.wp-grow-s{font-size:12.5px;color:var(--ts);margin-top:9px}
+.wp-grow-r{display:flex;flex-wrap:wrap;gap:8px}
+.wp-chip{font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--bg);color:var(--ts);border:1px solid var(--bd)}
+.wp-chip.done{background:var(--gl);color:var(--gd);border-color:#A7F3D0}
+/* 帮助中心 */
+.wp-help{display:grid;grid-template-columns:1.4fr 1fr;gap:22px}
+@media(max-width:1180px){.wp-help{grid-template-columns:1fr}}
+.wp-faq{display:flex;flex-direction:column}
+.wp-faq .q{display:flex;align-items:center;gap:11px;padding:13px 4px;border-bottom:1px solid var(--bd2);cursor:pointer;transition:background .15s;border-radius:8px}
+.wp-faq .q:hover{background:var(--gl)}
+.wp-faq .q:last-child{border-bottom:none}
+.wp-faq .q .qi{width:22px;height:22px;border-radius:6px;background:var(--gl);color:var(--gd);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wp-faq .q .qt{flex:1;font-size:13.5px;font-weight:500;color:var(--tp)}
+.wp-faq .q .qa{color:var(--tt);font-size:13px}
+.wp-entries{display:flex;flex-direction:column;gap:12px}
+.wp-entry{display:flex;align-items:center;gap:13px;padding:15px 16px;border:1px solid var(--bd);border-radius:12px;cursor:pointer;transition:border-color .15s,box-shadow .15s;background:var(--w)}
+.wp-entry:hover{border-color:var(--g);box-shadow:var(--sh2)}
+.wp-entry .ec{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.wp-entry .et{font-size:14px;font-weight:700;color:var(--tp)}
+.wp-entry .es{font-size:12px;color:var(--ts);margin-top:2px}
+.wp-entry .ea{margin-left:auto;color:var(--tt);font-size:16px}
 </style>
 </head>
 <body>
@@ -898,7 +967,8 @@ function topRight(){
     if(DB.orders.filter(o=>o.status=='pending').length) p=`<span class="pill warn">📦 ${DB.orders.filter(o=>o.status=='pending').length} 单待发货</span>`;
     else if(DB.merchant.onboard!='active') p=`<span class="pill info">${S.onboard[DB.merchant.onboard][0]}</span>`;
     else p=`<span class="pill ok">✓ 正常经营 · 信用 ${DB.merchant.grade} 级</span>`;
-    return p+`<div class="avatar" title="${DB.merchant.contact}">陈</div>`;
+    return `<div class="tb-dl"><button class="tb-btn">📱 下载 App</button>
+      <div class="tb-dl-pop"><div class="tb-dl-card"><div class="wp-dl" style="border:none;box-shadow:none">${wpDlInner()}</div></div></div></div>`+p+`<div class="avatar" title="${DB.merchant.contact}">陈</div>`;
   }
   if(DB.role=='scm'){
     return `<span class="pill info">🏭 供应商主数据 ${DB.merchant.vendorCreated?3:2} 家 · 入驻待审核 4</span><div class="avatar" title="采购管理员">采</div>`;
@@ -933,34 +1003,107 @@ const PAGES={};
 /* ---------- 商家端：工作台 ---------- */
 PAGES['m-dash']=()=>{
   const m=DB.merchant;
-  const todo=[];
-  if(m.onboard=='task')todo.push(['完成开店任务','在「店铺信息」维护店铺基础信息后提交店铺运营平台审核','m-shop']);
-  if(m.onboard=='task_rejected')todo.push(['开店任务被驳回，需修改重提','查看驳回原因并修改店铺信息','m-shop']);
-  if(m.onboard=='task_review')todo.push(['开店任务审核中','等待店铺运营平台审核','m-shop']);
-  DB.quals.filter(q=>q.status=='expiring').forEach(q=>todo.push([`${q.name} 即将到期`,`有效期至 ${q.expire}，请尽快续证`,'m-qual']));
-  DB.products.filter(p=>p.status=='forced_off').forEach(p=>todo.push([`商品「${p.name}」被强制下架`,'需整改后重新提报','m-product']));
-  if(DB.orders.filter(o=>o.status=='pending').length)todo.push([`${DB.orders.filter(o=>o.status=='pending').length} 笔订单待发货`,'餐厅已下单，请尽快打包贴码','m-order']);
-  if(DB.bill.status=='generated'||DB.bill.status=='adjusted')todo.push(['有账单待确认',`${DB.bill.period}账单 ${money(DB.bill.net)}`,'m-settle']);
-  if(DB.invoices.filter(i=>i.status=='verified').length)todo.push(['平台已开具客户发票',`${DB.invoices.filter(i=>i.status=='verified').length} 张可预览/下载`,'m-invoice']);
-  if(DB.rectify=='notified')todo.push(['收到违规整改通知','请在整改期内提交方案','m-rectify']);
-
   return `
-  ${m.onboard!='active'?flowTip(`店铺尚未开业，当前状态：<b>${S.onboard[m.onboard][0]}</b>。请先完成开店任务（在「店铺信息」中）。前往 <a class="btn-link" onclick="nav('m-shop')" style="color:#34D399">店铺信息 · 开店任务 →</a>`):''}
   <div class="sg">
-    <div class="sc good"><div class="sc-l">店铺状态</div><div class="sc-v" style="font-size:20px">${S.onboard[m.onboard][0]}</div><div class="sc-s">信用等级 ${m.grade} 级</div></div>
-    <div class="sc"><div class="sc-l">在售商品</div><div class="sc-v">${DB.products.filter(p=>p.status=='onsale').length}</div><div class="sc-s">共 ${DB.products.length} 个 SKU</div></div>
-    <div class="sc ${DB.orders.filter(o=>o.status=='pending').length?'warn':''}"><div class="sc-l">今日订单</div><div class="sc-v">${DB.orders.length}</div><div class="sc-s">${DB.orders.filter(o=>o.status=='pending').length} 待发货</div></div>
-    <div class="sc ${m.vioScore>=6?'alert':''}"><div class="sc-l">违规分</div><div class="sc-v">${m.vioScore}</div><div class="sc-s">${m.vioScore>=6?'已触发整改':'阈值 6 分'}</div></div>
+    <div class="sc good"><div class="sc-l">销售额</div><div class="sc-v" style="color:var(--gd)">$11,544.95</div>${wpTrend(14.83)}</div>
+    <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">741</div>${wpTrend(11.06)}</div>
+    <div class="sc"><div class="sc-l">实付单均价</div><div class="sc-v">$15.58</div>${wpTrend(0)}</div>
+    <div class="sc"><div class="sc-l">动销覆盖</div><div class="sc-v">62.0%</div><div class="sc-s">动销 30 / 在售 48 SPU</div></div>
   </div>
-  <div class="card"><div class="card-hd"><h3>📌 待办事项 <span class="sub">${todo.length} 项</span></h3></div>
-    <div class="card-bd ${todo.length?'flush':''}">${todo.length?todo.map(t=>`
-      <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--bd2);cursor:pointer" onclick="nav('${t[2]}')">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--y);flex-shrink:0"></div>
-        <div style="flex:1"><div style="font-weight:600;font-size:14px">${t[0]}</div><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${t[1]}</div></div>
-        <button class="btn btn-o btn-sm">去处理 →</button>
-      </div>`).join(''):`<div class="empty"><div class="e-ic">🎉</div><div class="e-t">暂无待办</div><div class="e-s">一切正常，继续保持！</div></div>`}</div>
+  <div class="wp-main">
+    <div class="card" style="margin-bottom:0"><div class="card-hd"><h3>⚡ 常用功能</h3><span class="sub">高频操作一键直达</span></div>
+      <div class="card-bd"><div class="wp-qa">${WP_QUICK.map(q=>`
+        <div class="wp-qi" onclick="nav('${q.p}')"><div class="qic" style="background:${q.bg}"><span>${q.ic}</span></div><span class="qil">${q.t}</span>${q.badge&&q.badge()>0?`<span class="qib">${q.badge()}</span>`:''}</div>`).join('')}</div>
+      </div>
+    </div>
+    <div class="wp-side">
+      <div class="card" style="margin-bottom:0"><div class="card-hd"><h3>📢 平台公告</h3><button class="btn btn-link" onclick="toast('公告中心整理中','info')">更多 →</button></div>
+        <div class="card-bd flush">${WP_ANN.map(a=>`
+          <div class="wp-ann" onclick="wpAnn(${WP_ANN.indexOf(a)})"><span class="tag ${a.tag[1]}" style="font-size:11px">${a.tag[0]}</span>
+            <div class="wp-ann-b"><div class="wp-ann-t">${a.title}</div><div class="wp-ann-d">${a.date}</div></div><span style="color:var(--tt)">›</span></div>`).join('')}</div>
+      </div>
+    </div>
+  </div>
+  <div class="card"><div class="card-hd"><h3>🎓 帮助中心</h3><button class="btn btn-link" onclick="toast('更多帮助文档整理中','info')">全部帮助文档 →</button></div>
+    <div class="card-bd">
+      <div class="wp-help">
+        <div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--ts);margin-bottom:6px">常见问题</div>
+          <div class="wp-faq">${WP_FAQ.map((f,i)=>`
+            <div class="q" onclick="wpFaq(${i})"><div class="qi">Q</div><div class="qt">${f.q}</div><div class="qa">›</div></div>`).join('')}</div>
+        </div>
+        <div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--ts);margin-bottom:6px">快捷入口</div>
+          <div class="wp-entries">
+            <div class="wp-entry" onclick="wpManual()"><div class="ec" style="background:var(--gl)">📖</div><div><div class="et">操作手册</div><div class="es">建品 · 备货贴码 · 对账开票 全流程图解</div></div><span class="ea">›</span></div>
+            <div class="wp-entry" onclick="wpVideo()"><div class="ec" style="background:var(--bl)">🎬</div><div><div class="et">视频教程</div><div class="es">分模块短视频，3 分钟上手一个功能</div></div><span class="ea">›</span></div>
+            <div class="wp-entry" onclick="wpContact()"><div class="ec" style="background:var(--yl)">🎧</div><div><div class="et">联系客服</div><div class="es">在线客服 / 电话 ${DB.shop.service}</div></div><span class="ea">›</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>`;
 };
+/* 工作台·常用功能（快捷入口，均跳既有模块） */
+const WP_QUICK=[
+  {t:'新建商品',ic:'🥦',bg:'var(--gl)',p:'m-product'},
+  {t:'打印标签',ic:'🏷️',bg:'var(--yl)',p:'m-pick-label',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
+  {t:'备货参考',ic:'📊',bg:'var(--gl)',p:'m-pick-ref'},
+  {t:'对账结算',ic:'💰',bg:'var(--bl)',p:'m-settle'},
+];
+/* 工作台·平台公告 */
+const WP_ANN=[
+  {tag:['活动','t-g'],title:'7 月「叶菜季」流量扶持报名开启，优质商家享首页曝光',date:'2026-07-20',body:'活动时间 2026-07-25 至 08-25。在售叶菜类 SKU ≥ 10 且近 30 天违规分为 0 的商家可报名，通过后享「新鲜严选」专区首页曝光与搜索加权。报名入口：营销活动 · 平台活动。'},
+  {tag:['系统','t-b'],title:'对账结算规则更新：服务佣金改为按品类佣金率计费',date:'2026-07-18',body:'自 2026-08 账期起，平台服务佣金由统一费率调整为按商品品类佣金率分别计费，物流佣金同步。历史账期不受影响，详见「对账结算」账单明细项说明。'},
+  {tag:['通知','t-y'],title:'国庆假期（08-09）配送与揽收时间安排通知',date:'2026-07-15',body:'新加坡国庆日 08-09 当天暂停上门揽收，08-08 及 08-10 正常。请提前与餐厅客户确认送达日，避免影响履约。'},
+];
+function wpAnn(i){const a=WP_ANN[i];modal(`<div class="mc-hd"><h3>${a.title}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd"><div style="margin-bottom:10px"><span class="tag ${a.tag[1]}" style="font-size:11px">${a.tag[0]}</span> <span style="font-size:12.5px;color:var(--ts);margin-left:6px">${a.date}</span></div>
+  <div style="font-size:14px;line-height:1.85;color:var(--tp)">${a.body}</div></div>
+  <div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">知道了</button></div>`);}
+/* 工作台指标·较昨日环比（正数绿↑ / 负数红↓ / 0灰持平） */
+function wpTrend(pct){const v=(+pct).toFixed(2);
+  if(pct>0)return `<div class="sc-s" style="color:var(--g)">较昨日 ↑ ${v}%</div>`;
+  if(pct<0)return `<div class="sc-s" style="color:var(--r)">较昨日 ↓ ${Math.abs(v)}%</div>`;
+  return `<div class="sc-s">较昨日 ${v}%</div>`;}
+/* 帮助中心数据 + 交互 */
+const WP_FAQ=[
+  {q:'如何新建商品并上架？',a:'进入「商品管理 · 商品列表」→ 点右上「新建商品」，填写商品名/类目/单位/售价，按 SKU 维护规格与库存，保存后提交店铺运营平台审核，审核通过即自动上架。批量新建可用「导入模板」。'},
+  {q:'订单来了怎么备货、贴码、发货？',a:'「订单管理」查看待发货订单 →「备货管理 · 备货参考」按送达日汇总备货量 →「称重录入」录入实际重量 →「打印标签」按订单×SKU 打印并贴码 → 全部贴码后系统按仓自动生成送货单，交仓库交接即转「待收货」。'},
+  {q:'账单在哪看？什么时候到账？',a:'「对账结算」查看每个账期的对账单（货款 − 逆向扣减 − 平台/物流佣金 = 应结净额），确认无误后账单流转平台付款，结算账期为月结 30 天，到账后可在账单详情看到到账银行与流水。'},
+  {q:'客户发票怎么开？服务费发票在哪下载？',a:'「发票管理 · 客户开票」按订单为餐厅开票；「服务费发票」为平台与你结算后自动开具（GST 9%），你只需在此查看/下载 PDF。'},
+  {q:'商品被强制下架 / 收到违规整改怎么办？',a:'工作台「待办事项」会提示。到「商品列表」查看强制下架原因并整改后重新提报；「违规整改」查看整改通知，在整改期内提交整改方案，逾期未整改将影响信用等级。'},
+];
+function wpFaq(i){const f=WP_FAQ[i];modal(`<div class="mc-hd"><h3>${f.q}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd"><div style="font-size:14px;line-height:1.85;color:var(--tp)">${f.a}</div></div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">知道了</button><button class="btn btn-p" onclick="closeModal();wpContact()">还有疑问 · 联系客服</button></div>`);}
+function wpManual(){toast('正在打开《商家后台操作手册》','info');}
+function wpVideo(){toast('视频教程整理中，敬请期待','info');}
+function wpContact(){modal(`<div class="mc-hd"><h3>联系客服</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="wp-entry" style="cursor:default;margin-bottom:12px"><div class="ec" style="background:var(--gl)">💬</div><div><div class="et">在线客服</div><div class="es">工作日 09:00–18:00 实时响应</div></div></div>
+    <div class="wp-entry" style="cursor:default"><div class="ec" style="background:var(--yl)">📞</div><div><div class="et">客服热线</div><div class="es">${DB.shop.service}</div></div></div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button><button class="btn btn-p" onclick="closeModal();toast('正在接入在线客服…','ok')">发起在线咨询</button></div>`);}
+/* 下载 App 内容（工作台卡片 + 顶栏按钮弹窗 共用一份） */
+function wpDlInner(){return `
+  <div class="wp-dl-hero"><div class="ic">📱</div><div><div class="t">下载 Food Max 商家 App</div><div class="s">随时随地管理订单 · 备货 · 对账</div></div></div>
+  <div class="wp-qrs">
+    <div class="wp-qr"><div class="box">${wpQR('ios')}</div><div class="os"><span class="badge">🍎</span>iOS</div><div class="hint">App Store 扫码下载</div></div>
+    <div class="wp-qr"><div class="box">${wpQR('android')}</div><div class="os"><span class="badge">🤖</span>Android</div><div class="hint">应用市场扫码下载</div></div>
+  </div>
+  <div class="wp-dl-ft">💡 用手机相机扫码即可安装，账号与 PC 端互通</div>`;}
+function wpDownloadModal(){modal(`<div class="mc-hd"><h3>下载商家 App</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd" style="padding:0"><div class="wp-dl" style="border:none;box-shadow:none;border-radius:0">${wpDlInner()}</div></div>`);}
+/* 演示用假二维码：三个定位角 + 稳定伪随机模块（种子决定图案，不随渲染变化） */
+function wpQR(seed){
+  const N=21,cell=100/N;let h=0;for(let i=0;i<seed.length;i++)h=(h*131+seed.charCodeAt(i))>>>0;
+  const rnd=()=>{h=(h*1103515245+12345)&0x7fffffff;return h/0x7fffffff;};
+  const finder=(x,y)=>`<rect x="${x*cell}" y="${y*cell}" width="${7*cell}" height="${7*cell}" fill="#12271D"/><rect x="${(x+1)*cell}" y="${(y+1)*cell}" width="${5*cell}" height="${5*cell}" fill="#fff"/><rect x="${(x+2)*cell}" y="${(y+2)*cell}" width="${3*cell}" height="${3*cell}" fill="#12271D"/>`;
+  const inFinder=(r,c)=>(r<8&&c<8)||(r<8&&c>=N-8)||(r>=N-8&&c<8);
+  let mods='';for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(inFinder(r,c))continue;if(rnd()>0.5)mods+=`<rect x="${c*cell}" y="${r*cell}" width="${cell}" height="${cell}" fill="#12271D"/>`;}
+  return `<svg viewBox="0 0 100 100" shape-rendering="crispEdges"><rect width="100" height="100" fill="#fff"/>${mods}${finder(0,0)}${finder(N-7,0)}${finder(0,N-7)}</svg>`;
+}
 
 /* ---------- 商家端：店铺信息（店铺主页 · 参考美团/快驴商家版店铺主页） ---------- */
 PAGES['m-shop']=()=>{
