@@ -753,7 +753,7 @@ DB.materials={
 const RISK_META={'低':['t-g','r-low'],'中':['t-y','r-mid'],'高':['t-r','r-high']};
 let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[];DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};DB.matTab='main';DB.matQ='';
 /* 多退少补规则（平台统一配置，称重录入 weigh.js 实时读取；单位=差异率%，向上=多发/客户补钱，向下=少发/退客户） */
-DB.weighCfg={tol:2, capUp:5, blockUp:15, blockDown:20, days:7, recheck:3};
+DB.weighCfg={tol:2, capUp:5, blockUp:15, blockDown:20, days:7};
 function riskTag(r){if(!r)return '';return `<span class="tag ${RISK_META[r][0]}"><span class="riskdot ${RISK_META[r][1]}"></span>${r}风险</span>`;}
 function assume(keys){return '';}  // 顶部说明横幅已按用户要求移除
 function priceAbnormal(price,cat){const c=CATS[cat];if(!c)return false;return price<c.guide*0.5||price>c.guide*2;}
@@ -2589,17 +2589,14 @@ PAGES['p-weighcfg']=()=>{
     ${row('blockUp','拦截阈值','%','多发差异率超过此值即拦截、要求商家重新分装（不让客户为大幅超发买单）。须 ≥ 补款封顶。')}
     <div class="wc-sec">三、向下 · 少发（退客户，可放宽）<span class="wc-b" style="background:var(--bl);color:var(--b)">全额退客户</span></div>
     ${row('blockDown','拦截阈值','%','少发差异率超过此值即拦截、要求复称（防手滑多打一位小数）；容差内到此值之间全额退客户。')}
-    <div class="wc-sec">四、其它</div>
-    ${row('days','录入时限','天','配送完成后超过此天数，实发净重不可再录入/修改。')}
-    ${row('recheck','复称偏差','%','DC 交接抽检复称，与商家报重偏差超过此值以平台为准，并计入商家质量分。')}
-    <div class="ib ib-b" style="margin-top:14px"><span class="i">🔗</span>当前口径预览：容差 <b>±${c.tol}%</b> 不计差额 · 多发按 <b>+${c.capUp}%</b> 封顶、超 <b>+${c.blockUp}%</b> 拦截重分装 · 少发超 <b>−${c.blockDown}%</b> 拦截复称 · 录入时限 <b>${c.days} 天</b>。</div>
+    <div class="ib ib-b" style="margin-top:14px"><span class="i">🔗</span>当前口径预览：容差 <b>±${c.tol}%</b> 不计差额 · 多发按 <b>+${c.capUp}%</b> 封顶、超 <b>+${c.blockUp}%</b> 拦截重分装 · 少发超 <b>−${c.blockDown}%</b> 拦截复称。</div>
   </div><div class="card-ft" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-o" onclick="wcfgReset()">恢复默认</button><button class="btn btn-p" onclick="toast('多退少补规则已保存，称重录入即时生效','ok')">保存配置</button></div></div>`;
 };
 function wcfgSet(k,v){let n=Math.max(0,Math.round(parseFloat(v)||0));DB.weighCfg[k]=n;
   if(DB.weighCfg.blockUp<DB.weighCfg.capUp){DB.weighCfg.blockUp=DB.weighCfg.capUp;toast('拦截阈值不得低于补款封顶，已同步','info');}
   render();}
 function wcfgStep(k,d){DB.weighCfg[k]=Math.max(0,(DB.weighCfg[k]||0)+d);if(DB.weighCfg.blockUp<DB.weighCfg.capUp)DB.weighCfg.blockUp=DB.weighCfg.capUp;render();}
-function wcfgReset(){DB.weighCfg={tol:2,capUp:5,blockUp:15,blockDown:20,days:7,recheck:3};render();toast('已恢复默认口径','info');}
+function wcfgReset(){DB.weighCfg={tol:2,capUp:5,blockUp:15,blockDown:20,days:7};render();toast('已恢复默认口径','info');}
 
 /* ---------- 平台：佣金配置（运营平台配置佣金率 · 分层：品类默认 + 商家专属覆盖 · 支持免佣期） ---------- */
 const COMM_SHOPS=[{code:'M2026-0815',name:'绿鲜源蔬果旗舰店'},{code:'M2026-0820',name:'阳光烘焙原料店'},{code:'M2026-0805',name:'椰丰食品旗舰店'}];
@@ -3145,13 +3142,13 @@ function downloadTemplate(kind){let name,rows;const all=[];
 goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
-<script src="pc-modules/stock.js?v=20260723a"></script>
-<script src="pc-modules/pick.js?v=20260723a"></script>
-<script src="pc-modules/weigh.js?v=20260723a"></script>
-<script src="pc-modules/delivery.js?v=20260723a"></script>
-<script src="pc-modules/biz.js?v=20260723a"></script>
-<script src="pc-modules/price.js?v=20260723a"></script>
-<script src="pc-modules/analysis.js?v=20260723a"></script>
-<script src="pc-modules/quality.js?v=20260723a"></script>
+<script src="pc-modules/stock.js?v=20260723b"></script>
+<script src="pc-modules/pick.js?v=20260723b"></script>
+<script src="pc-modules/weigh.js?v=20260723b"></script>
+<script src="pc-modules/delivery.js?v=20260723b"></script>
+<script src="pc-modules/biz.js?v=20260723b"></script>
+<script src="pc-modules/price.js?v=20260723b"></script>
+<script src="pc-modules/analysis.js?v=20260723b"></script>
+<script src="pc-modules/quality.js?v=20260723b"></script>
 </body>
 </html>
