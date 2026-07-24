@@ -753,7 +753,7 @@ DB.materials={
 const RISK_META={'低':['t-g','r-low'],'中':['t-y','r-mid'],'高':['t-r','r-high']};
 let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[];DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};DB.matTab='main';DB.matQ='';
 /* 多退少补规则（平台统一配置，称重录入 weigh.js 实时读取；单位=差异率%，向上=多发/客户补钱，向下=少发/退客户） */
-DB.weighCfg={tol:2, capUp:5, blockUp:15, blockDown:20, days:7};
+DB.weighCfg={tol:2, blockUp:15, blockDown:20, days:7};
 function riskTag(r){if(!r)return '';return `<span class="tag ${RISK_META[r][0]}"><span class="riskdot ${RISK_META[r][1]}"></span>${r}风险</span>`;}
 function assume(keys){return '';}  // 顶部说明横幅已按用户要求移除
 function priceAbnormal(price,cat){const c=CATS[cat];if(!c)return false;return price<c.guide*0.5||price>c.guide*2;}
@@ -1643,8 +1643,9 @@ function skuEdRefundNote(){
   if(!['kg','g'].includes(unit))return `<div class="ib ib-gr" style="margin:10px 0 0"><span class="i">ℹ️</span>计量单位为「${unit||'—'}」，规格按整件计价；多退少补仅支持 <b>kg / g</b> 计量单位的商品。</div>`;
   const n=EDIT_SKUS.filter(s=>s.refund).length;
   if(!n)return `<div class="ib ib-gr" style="margin:10px 0 0"><span class="i">ℹ️</span>全部规格按整件计价。开启<b>多退少补</b>后按 S$/${unit} 定价，适用于分装称重的非标生鲜。</div>`;
+  const wc=DB.weighCfg||{tol:2,blockUp:15,blockDown:20,days:7};
   return `<div class="ib ib-b" style="margin:10px 0 0"><span class="i">⚖️</span><div><b>${n} 个规格已开启多退少补</b>（按 S$/${unit} 定价）：客户按预估净重下单锁价，商家分装过秤后在「备货管理 › 称重录入」录实发净重。
-    结算口径：容差 ±2% 内不计差额 · 少发全额退客户 · 多发按 +5% 封顶补款 · 单行差异 > ±20% 拦截需复称 · 配送完成 7 天后不可再录。</div></div>`;
+    结算口径（平台「多退少补规则」统一配置）：容差 ±${wc.tol}% 内不计差额 · 少发全额退客户、超 −${wc.blockDown}% 拦截复称 · 多发按实补、超 +${wc.blockUp}% 拦截重分装 · 配送完成 ${wc.days} 天后不可再录。</div></div>`;
 }
 function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!box)return;const unit=(document.getElementById('f-unit')||{}).value||'—';const gc="grid-template-columns:1.4fr 0.75fr 0.6fr 0.75fr 0.8fr 0.95fr 0.65fr 1.05fr 32px";box.innerHTML=`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>1 份 = 数量</div><div>售卖单位</div><div>包装单位</div><div>未税价(SGD)</div><div title="是=按重量定价(S$/计量单位)，商家分装称重后按实发净重结算差额；否=按规格整件计价">多退少补</div><div>可售库存</div><div>库存模式</div><div></div></div>`+EDIT_SKUS.map((s,k)=>{const m=s.stockMode||'finite';const pk=s.packUnit||'';return `<div class="skued2" style="${gc};align-items:center"><div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div><div class="stepper"><button type="button" onclick="stepQty(${k},-1)">−</button><input type="number" min="1" value="${s.qty||''}" oninput="EDIT_SKUS[${k}].qty=parseInt(this.value)||0;skuRowSync(${k})"><button type="button" onclick="stepQty(${k},1)">＋</button></div><div class="sku-unit-cell" title="取自最小售卖单位" style="height:32px;display:flex;align-items:center;justify-content:center;background:#F3F4F6;color:var(--ts);border-radius:4px;font-size:12.5px">${unit}</div><div><select title="包装单位（选填），规格名拼为 数量+售卖单位/包装单位，如 1kg/袋" onchange="EDIT_SKUS[${k}].packUnit=this.value;skuRowSync(${k})" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 6px;font-size:12.5px;box-sizing:border-box"><option value="" ${pk==''?'selected':''}>无</option>${PACK_UNITS.map(u=>`<option value="${u}" ${pk==u?'selected':''}>${u}</option>`).join('')}</select></div><div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div><div>${skuEdRefund(k,unit)}</div><div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><div><select title="每日恢复初始库存：每天 0 点自动补回库存总数；售完即止：卖完不恢复、售罄即下线" onchange="EDIT_SKUS[${k}].stockMode=this.value" style="width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 6px;font-size:12.5px;box-sizing:border-box"><option value="finite" ${m=='finite'?'selected':''}>售完即止</option><option value="daily" ${m=='daily'?'selected':''}>每日恢复初始库存</option></select></div><button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`;}).join('')+skuEdRefundNote();}
 function addSkuRow(){EDIT_SKUS.push({qty:'',price:'',pack:'',stockMode:'finite'});renderSkuEditor();}
@@ -2585,18 +2586,15 @@ PAGES['p-weighcfg']=()=>{
     <div class="wc-sec">一、容差<span class="wc-b" style="background:var(--gl);color:var(--gd)">不触发多退少补</span></div>
     ${row('tol','容差','%','差异率在 ±此值内视为正常损耗，不产生差额、商家吸收。示例：应发 20kg，±'+c.tol+'% ≈ ±'+(20*c.tol/100).toFixed(2)+'kg 内不结算。')}
     <div class="wc-sec">二、向上 · 多发（客户补钱，从严）<span class="wc-b" style="background:var(--yl);color:var(--y)">尽量不让客户补钱</span></div>
-    ${row('capUp','补款封顶','%','多发时客户最多补这么多；超出部分不计补款、商家承担。')}
-    ${row('blockUp','拦截阈值','%','多发差异率超过此值即拦截、要求商家重新分装（不让客户为大幅超发买单）。须 ≥ 补款封顶。')}
+    ${row('blockUp','拦截阈值','%','容差到此值之间：客户按实际多发补款；超过此值即拦截、要求商家重新分装（不让客户为大幅超发买单）。')}
     <div class="wc-sec">三、向下 · 少发（退客户，可放宽）<span class="wc-b" style="background:var(--bl);color:var(--b)">全额退客户</span></div>
     ${row('blockDown','拦截阈值','%','少发差异率超过此值即拦截、要求复称（防手滑多打一位小数）；容差内到此值之间全额退客户。')}
-    <div class="ib ib-b" style="margin-top:14px"><span class="i">🔗</span>当前口径预览：容差 <b>±${c.tol}%</b> 不计差额 · 多发按 <b>+${c.capUp}%</b> 封顶、超 <b>+${c.blockUp}%</b> 拦截重分装 · 少发超 <b>−${c.blockDown}%</b> 拦截复称。</div>
+    <div class="ib ib-b" style="margin-top:14px"><span class="i">🔗</span>当前口径预览：容差 <b>±${c.tol}%</b> 不计差额 · 多发超 <b>+${c.blockUp}%</b> 拦截重分装（容差~拦截间客户按实补） · 少发超 <b>−${c.blockDown}%</b> 拦截复称。</div>
   </div><div class="card-ft" style="display:flex;justify-content:flex-end;gap:10px;padding:14px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-o" onclick="wcfgReset()">恢复默认</button><button class="btn btn-p" onclick="toast('多退少补规则已保存，称重录入即时生效','ok')">保存配置</button></div></div>`;
 };
-function wcfgSet(k,v){let n=Math.max(0,Math.round(parseFloat(v)||0));DB.weighCfg[k]=n;
-  if(DB.weighCfg.blockUp<DB.weighCfg.capUp){DB.weighCfg.blockUp=DB.weighCfg.capUp;toast('拦截阈值不得低于补款封顶，已同步','info');}
-  render();}
-function wcfgStep(k,d){DB.weighCfg[k]=Math.max(0,(DB.weighCfg[k]||0)+d);if(DB.weighCfg.blockUp<DB.weighCfg.capUp)DB.weighCfg.blockUp=DB.weighCfg.capUp;render();}
-function wcfgReset(){DB.weighCfg={tol:2,capUp:5,blockUp:15,blockDown:20,days:7};render();toast('已恢复默认口径','info');}
+function wcfgSet(k,v){DB.weighCfg[k]=Math.max(0,Math.round(parseFloat(v)||0));render();}
+function wcfgStep(k,d){DB.weighCfg[k]=Math.max(0,(DB.weighCfg[k]||0)+d);render();}
+function wcfgReset(){DB.weighCfg={tol:2,blockUp:15,blockDown:20,days:7};render();toast('已恢复默认口径','info');}
 
 /* ---------- 平台：佣金配置（运营平台配置佣金率 · 分层：品类默认 + 商家专属覆盖 · 支持免佣期） ---------- */
 const COMM_SHOPS=[{code:'M2026-0815',name:'绿鲜源蔬果旗舰店'},{code:'M2026-0820',name:'阳光烘焙原料店'},{code:'M2026-0805',name:'椰丰食品旗舰店'}];
@@ -3142,13 +3140,13 @@ function downloadTemplate(kind){let name,rows;const all=[];
 goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
-<script src="pc-modules/stock.js?v=20260723b"></script>
-<script src="pc-modules/pick.js?v=20260723b"></script>
-<script src="pc-modules/weigh.js?v=20260723b"></script>
-<script src="pc-modules/delivery.js?v=20260723b"></script>
-<script src="pc-modules/biz.js?v=20260723b"></script>
-<script src="pc-modules/price.js?v=20260723b"></script>
-<script src="pc-modules/analysis.js?v=20260723b"></script>
-<script src="pc-modules/quality.js?v=20260723b"></script>
+<script src="pc-modules/stock.js?v=20260723d"></script>
+<script src="pc-modules/pick.js?v=20260723d"></script>
+<script src="pc-modules/weigh.js?v=20260723d"></script>
+<script src="pc-modules/delivery.js?v=20260723d"></script>
+<script src="pc-modules/biz.js?v=20260723d"></script>
+<script src="pc-modules/price.js?v=20260723d"></script>
+<script src="pc-modules/analysis.js?v=20260723d"></script>
+<script src="pc-modules/quality.js?v=20260723d"></script>
 </body>
 </html>

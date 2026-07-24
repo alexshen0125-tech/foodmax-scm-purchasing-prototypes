@@ -7,13 +7,12 @@
 (function(){
   /* ========== 业务口径（平台可配·从 DB.weighCfg 实时读取，单位%→比率）==========
      配置页：平台运营「多退少补规则」PAGES['p-weighcfg']。缺省兜底见 DEF。 */
-  const DEF={tol:2, capUp:5, blockUp:15, blockDown:20, days:7, recheck:3};
+  const DEF={tol:2, blockUp:15, blockDown:20, days:7};
   const SVC=0.05;  // 平台服务费率（差额同步重算佣金，佣金配置口径）
   function WG(){
     const c=(typeof DB!=='undefined'&&DB.weighCfg)||DEF;
     return {
       TOL:(c.tol??DEF.tol)/100,           // 容差：|差异率| ≤ TOL 不产生差额
-      CAP:(c.capUp??DEF.capUp)/100,       // 多发补款封顶
       BLOCK_UP:(c.blockUp??DEF.blockUp)/100,     // 向上·多发拦截（超此要求重分装）
       BLOCK_DOWN:(c.blockDown??DEF.blockDown)/100,// 向下·少发拦截（超此要求复称）
       DAYS:c.days??DEF.days,
@@ -47,8 +46,7 @@
     if(ratio<-g.BLOCK_DOWN)return {st:'block',due,up,diff,ratio,amt:0,msg:`少发超 −${g.BLOCK_DOWN*100}%，请复称`}; // 向下拦截
     if(Math.abs(ratio)<=g.TOL)return {st:'ok',due,up,diff,ratio,amt:0};                  // 容差内：正常损耗，不产生差额
     if(diff<0)return {st:'refund',due,up,diff,ratio,amt:+(diff*up).toFixed(2)};          // 少发：全额退客户
-    const capped=ratio>g.CAP;                                                             // 多发：按补款封顶
-    return {st:'add',due,up,diff,ratio,capped,cap:g.CAP,amt:+(Math.min(ratio,g.CAP)*due*up).toFixed(2)};
+    return {st:'add',due,up,diff,ratio,amt:+(diff*up).toFixed(2)};                        // 多发：客户按实补（容差~拦截间）
   }
 
   /* ========== 数据存取 ========== */
@@ -125,7 +123,7 @@
       <div style="overflow-x:auto;max-height:280px"><table style="border:1px solid var(--bd2)"><thead><tr><th>订单</th><th>商品</th><th style="text-align:right">应发</th><th style="text-align:right">实发</th><th style="text-align:right">差异</th><th style="text-align:right">差额</th></tr></thead><tbody>
       ${rows.map(r=>`<tr><td class="mono" style="font-size:11.5px">${r.o.id}</td><td>${r.l.name}</td><td style="text-align:right">${r.c.due}kg</td><td style="text-align:right"><b>${r.real}kg</b></td>
         <td style="text-align:right;color:${r.c.diff>0?'var(--y)':r.c.diff<0?'var(--r)':'var(--ts)'}">${r.c.diff>0?'+':''}${r.c.diff}kg</td>
-        <td style="text-align:right">${r.c.amt?`<b style="color:${r.c.amt>0?'var(--y)':'var(--r)'}">${r.c.amt>0?'+':'-'}${money2(Math.abs(r.c.amt))}</b>${r.c.capped?'<div style="font-size:10.5px;color:var(--ts)">已按 +'+((r.c.cap||0)*100)+'% 封顶</div>':''}`:'<span style="color:var(--ts)">—</span>'}</td></tr>`).join('')}
+        <td style="text-align:right">${r.c.amt?`<b style="color:${r.c.amt>0?'var(--y)':'var(--r)'}">${r.c.amt>0?'+':'-'}${money2(Math.abs(r.c.amt))}</b>`:'<span style="color:var(--ts)">—</span>'}</td></tr>`).join('')}
       </tbody></table></div>
       <div class="ib ${total>=0?'ib-y':'ib-b'}" style="margin-top:12px"><span class="i">💰</span>
         本次差额合计 <b>${total>0?'+':''}${money2(total)}</b>（补款 ${add.length} 行 / 退款 ${ref.length} 行）；
@@ -162,7 +160,7 @@
     el.innerHTML=`<span style="min-width:78px">可称重行：<b>${rows.length}</b></span><span style="min-width:70px">待称重：<b style="color:var(--r)">${wait}</b></span>
       <span style="min-width:84px">超限拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span>
       <span style="min-width:132px">差额合计：<b style="color:${total>0?'var(--y)':total<0?'var(--r)':'var(--gd)'}">${total>0?'+':''}${money2(total)}</b></span>
-      <span style="color:var(--ts);font-size:12px">容差 ±${WG().TOL*100}% 不计差额 · 多发 +${WG().CAP*100}% 封顶/超 +${WG().BLOCK_UP*100}% 拦截 · 少发超 −${WG().BLOCK_DOWN*100}% 拦截</span>`;
+      <span style="color:var(--ts);font-size:12px">容差 ±${WG().TOL*100}% 不计差额 · 多发超 +${WG().BLOCK_UP*100}% 拦截 · 少发超 −${WG().BLOCK_DOWN*100}% 拦截</span>`;
   }
 
   /* ========== 页面 ========== */
