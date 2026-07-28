@@ -183,7 +183,7 @@ const TILES=[
   {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
 ];
 // 备货(备货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
-const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
+const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
 const READY=new Set(['goods']);
 
 /* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
@@ -336,6 +336,7 @@ renderHome();
 <script src="stock.js"></script>
 <script src="order.js"></script>
 <script src="pick.js"></script>
+<script src="label.js"></script>
 <script src="after.js"></script>
 <script src="invoice.js"></script>
 <script src="analysis.js"></script>
