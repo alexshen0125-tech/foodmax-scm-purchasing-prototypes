@@ -74,6 +74,8 @@
   window.wg_portion=function(gi,pi,v){const r=ROWS[gi];if(!r)return;setWs(r.key,pi,v===''?'':parseFloat(v));computeGroup(r);paintPortion(gi,pi);paintGroupSum(gi);paintSum();};
   window.wg_fillGroup=function(gi){const r=ROWS[gi];if(!r||r.st=='done'||r.locked)return;const s=store();s[r.key]=s[r.key]||{ws:{}};s[r.key].ws={};for(let i=0;i<r.portionN;i++)s[r.key].ws[i]=r.specQty;s[r.key].at='2026-07-01 08:20';s[r.key].by=DB.merchant&&DB.merchant.contact||'门店操作员';render();toast(`「${r.name}·${r.wh}」${r.portionN} 件已按应发 ${r.specQty}${r.unit}/件 填入，可改称出来不一样的件`,'ok');};
 
+  window.wg_fold=function(key){DB.weighCollapse=DB.weighCollapse||{};DB.weighCollapse[key]=!DB.weighCollapse[key];render();};
+  window.wg_foldAll=function(){DB.weighCollapse=DB.weighCollapse||{};const anyOpen=ROWS.some(r=>!DB.weighCollapse[r.key]);ROWS.forEach(r=>DB.weighCollapse[r.key]=anyOpen);render();};
   window.wg_toggle=function(gi){DB.weighSel=DB.weighSel||[];const k=ROWS[gi].key;const i=DB.weighSel.indexOf(k);if(i<0)DB.weighSel.push(k);else DB.weighSel.splice(i,1);render();};
   window.wg_selAll=function(){DB.weighSel=DB.weighSel||[];const keys=ROWS.filter(r=>r.st!='done'&&!r.locked).map(r=>r.key);const all=keys.length&&keys.every(k=>DB.weighSel.includes(k));DB.weighSel=all?[]:keys.slice();render();};
   function selRows(){const sel=DB.weighSel||[];return ROWS.filter(r=>sel.includes(r.key)&&r.st!='done'&&!r.locked);}
@@ -128,14 +130,17 @@
     const selKeys=ROWS.filter(r=>r.st!='done'&&!r.locked).map(r=>r.key);
     const allSel=selKeys.length&&selKeys.every(k=>(DB.weighSel||[]).includes(k));
     const opt=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
-    const bodyHtml=ROWS.length?ROWS.map((g,gi)=>{const done=g.st=='done',lock=g.locked;
-      // 分组头（商品 + 单价 + 仓库 + 汇总 + 整组按应发）
+    const CO=DB.weighCollapse||{};
+    const bodyHtml=ROWS.length?ROWS.map((g,gi)=>{const done=g.st=='done',lock=g.locked,collapsed=!!CO[g.key];
+      // 分组头（折叠箭头 + 商品 + 单价 + 仓库 + 汇总 + 整组按应发），点箭头/商品名折叠
+      const chev=`<span class="wg-fold" onclick="wg_fold('${g.key}')" title="${collapsed?'展开':'收起'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${collapsed?0:90}deg);transition:.15s"><path d="M9 6l6 6-6 6"/></svg></span>`;
       const head=`<tr class="wg-grp"><td>${done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(g.key)?'checked':''} onclick="wg_toggle(${gi})">`}</td>
-        <td colspan="5"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <span><b style="font-size:13.5px">${g.name}</b> <span style="color:var(--ts);font-size:11.5px">${money2(g.up)}/${g.unit} · ${g.wh} · ${g.portionN} 件</span></span>
+        <td colspan="5"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="display:inline-flex;align-items:center;gap:6px;cursor:pointer" onclick="wg_fold('${g.key}')">${chev}<b style="font-size:13.5px">${g.name}</b> <span style="color:var(--ts);font-size:11.5px">${money2(g.up)}/${g.unit} · ${g.wh} · ${g.portionN} 件</span></span>
           <span id="wg-gsum-${gi}" style="font-size:12px;color:var(--ts)">${groupSumHtml(g)}</span>
           ${done||lock?`<span style="margin-left:auto;font-size:11.5px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG().DAYS} 天已锁定`:'✓ 已提交 · 每件一张标签印实发净重'}</span>`:`<button class="btn btn-link btn-sm" style="margin-left:auto" onclick="wg_fillGroup(${gi})" title="全部件按应发 ${g.specQty}${g.unit} 填入">整组按应发</button>`}
         </div></td></tr>`;
+      if(collapsed)return head;   // 折叠：只出组头
       // 逐件行：件号 | 应发(规格量) | 实发[输入] | 差异 | 差异率
       const rows=Array.from({length:g.portionN}).map((_,pi)=>{const w=g.ws[pi];const has=w!=null&&w!=='';const p=g.ps[pi]||{};
         const rc=done||lock
@@ -152,6 +157,8 @@
     return `
     <style>
     .wg-grp td{background:var(--gl);padding:9px 14px}
+    .wg-fold{display:inline-flex;align-items:center;color:var(--gd);flex:0 0 auto}
+    .wg-fold:hover{color:var(--g)}
     .wg-pr td{padding:6px 14px}
     .wg-pr input{border:1px solid var(--bd);border-radius:9px;height:34px;background:#FBFCF9;font-size:13.5px;color:var(--tp);outline:none;transition:.16s}
     .wg-pr input:focus{border-color:var(--g);background:#fff;box-shadow:0 0 0 3px rgba(14,122,82,.12)}
@@ -175,6 +182,7 @@
         <button class="btn btn-o btn-sm" ${selN?'':'disabled'} onclick="wg_fillSpecAll()" title="勾选商品的全部件一键按应发填入">按应发填入${selN?`（${selN}）`:''}</button>
         <button class="btn btn-p btn-sm" ${selN?'':'disabled'} onclick="wg_submit()">提交称重结果${selN?`（${selN}）`:''}</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出称重单.xlsx（逐件实发/应发/差异/差额）','ok')">导出称重单</button>
+        <button class="btn btn-o btn-sm" onclick="wg_foldAll()">全部折叠 / 展开</button>
         <button class="btn btn-link btn-sm" onclick="nav('m-pick-label')">去打印标签</button>
       </div>
       <div id="wg-sum" class="row" style="gap:14px;font-size:12.5px;align-items:center"></div>
