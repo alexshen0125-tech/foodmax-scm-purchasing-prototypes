@@ -147,6 +147,18 @@
     return Object.values(agg);
   }
   function printedOf(key){return (DB.labelPrinted||{})[key]||0;}
+  // 多退少补标签行的逐订单明细（每单一份货一张标签；标签印 客户+订单尾号+实发净重，贴前核对重量防贴错）
+  function labelOrdersOf(r){
+    const f=DB.labelF||{};const parts=String(r.key).split('|'),wh=parts[0],sku=parts[1];const out=[];
+    refOrders().forEach(o=>{
+      if(f.date&&o.deliver!=f.date)return;if(o.warehouse!=wh)return;if(f.wave&&waveOf(o)!=f.wave)return;
+      (o.lines||[]).forEach(l=>{if(l.sku!=sku)return;
+        const st=(typeof weighLineState=='function')?weighLineState(o,l):'na';
+        const real=(typeof weighRealOf=='function')?weighRealOf(o,l):null;
+        out.push({o,l,st,real});});
+    });
+    return out;
+  }
   function wgBlocked(r){return (r.wgWait||0)>0;}
   function wgDeny(r){toast(`「${r.name}」还有 ${r.wgWait} 个订单未录实发净重。多退少补商品需先在「备货管理 › 称重录入」完成称重才能打印标签`,'err');}
   function allUnprinted(){DB.labelPrinted=DB.labelPrinted||{};const f=DB.labelF||{};const agg={};refOrders().forEach(o=>{if(f.date&&o.deliver!=f.date)return;(o.lines||[]).forEach(l=>{const key=o.warehouse+'|'+l.sku;agg[key]=(agg[key]||0)+l.qty;});});return Object.entries(agg).reduce((s,[k,q])=>s+Math.max(0,q-(DB.labelPrinted[k]||0)),0);}
@@ -158,7 +170,7 @@
       const id=window.genDeliveryOnPrint(date,wh);if(id)made.push(id);});
     return made;}
   // 打印：一个 SKU 按应送货数量打 N 个连续序号的码；首打/续打从 已打印+1 到 N
-  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
+  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();const desc=r.wgNeed?`${labelOrdersOf(r).length} 张逐订单标签（各印客户+订单尾号+实发净重）`:`序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签`;toast(`已打印「${r.name}」${desc}${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
   window.label_printAll=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
   // 按序号打印：先勾选一个 SKU，再点顶部「按序号打印」→ 弹窗填序号区间 [从X 到Y]（漏打时也用它补打）
   window.label_bySeqPrint=function(){const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));
@@ -201,7 +213,7 @@
     DB.labelSel=DB.labelSel||[];const selKeys=rows.map(r=>r.key);const sel=DB.labelSel.filter(k=>selKeys.includes(k));const selN=sel.length;const allSel=selKeys.length&&selKeys.every(k=>sel.includes(k));
     const optSel=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。</div>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）每个订单单独一张标签、印<b>实发净重</b>，展开可见逐订单明细；贴标时按重量核对防贴错。</div>
     ${blocked?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span><b>${blocked} 个商品因未完成称重被拦截，无法打印标签。</b>多退少补（按重量定价）商品必须先录实发净重——打印首张标签即自动生成送货单，届时重量已无法再改。<button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重录入 →</button></div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">
@@ -253,7 +265,10 @@
         <td style="white-space:nowrap">${un<=0?'<span style="color:var(--ts)">打印完成</span>':(wgBlocked(r)
           ?`<button class="btn btn-p btn-sm" disabled title="该商品有 ${r.wgWait} 个订单未录实发净重，完成称重后才能打印">打印</button> <button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重</button>`
           :`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`)}</td>
-      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
+      </tr>${r.wgNeed?(()=>{const ords=labelOrdersOf(r);return `<tr><td></td><td colspan="10" style="padding:2px 12px 10px;background:#F7FBF7">
+        <div style="font-size:11.5px;color:var(--ts);margin:2px 0 6px">🏷️ 逐订单标签（一单一份货一张，标签印 <b>客户 + 订单尾号 + 实发净重</b>；贴前核对手中袋重 = 标签重量，防贴错）：</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${ords.map(x=>`<span style="border:1px solid var(--bd2);border-radius:8px;padding:5px 10px;font-size:12px;white-space:nowrap;${x.st=='wait'?'border-color:var(--r);color:var(--r)':''}">${ord_mask(x.o.client)} · 单尾 <b class="mono">${x.o.id.slice(-4)}</b> · 实发 <b>${x.real!=null?x.real+'kg':(x.st=='wait'?'待称重':'—')}</b></span>`).join('')}</div>
+      </td></tr>`;})():''}`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
       </tbody></table></div></div></div>`;
   }
 

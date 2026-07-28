@@ -110,6 +110,10 @@
   window.wg_batchDue=function(){const rows=selRows();if(!rows.length){toast('请先勾选要确认的行','err');return;}
     const s=store();rows.forEach(r=>{s[keyOf(r.o,r.l)]=Object.assign({},s[keyOf(r.o,r.l)],{real:dueW(r.l),at:'2026-07-01 08:20',by:DB.merchant&&DB.merchant.contact||'门店操作员'});});
     render();toast(`已按应发净重填入 ${rows.length} 行，可继续修改有差异的行`,'ok');};
+  // 整组按应发：把某个 SKU 分组下全部待称行一键填应发（分装同一个品时顺手填平，再手改称出来不一样的）
+  window.wg_groupDue=function(name){const rows=ROWS.filter(r=>r.l.name===name&&r.st!='done'&&!r.locked);if(!rows.length){toast('该品无待称重行','info');return;}
+    const s=store();rows.forEach(r=>{s[keyOf(r.o,r.l)]=Object.assign({},s[keyOf(r.o,r.l)],{real:dueW(r.l),at:'2026-07-01 08:20',by:DB.merchant&&DB.merchant.contact||'门店操作员'});});
+    render();toast(`「${name}」${rows.length} 行已按应发填入，可继续修改有差异的行`,'ok');};
   window.wg_submit=function(){
     const rows=selRows().filter(r=>r.real!==''&&!isNaN(r.real));
     if(!rows.length){toast('请先勾选并录入实发净重','err');return;}
@@ -173,6 +177,37 @@
     const selKeys=ROWS.filter(r=>r.st!='done'&&!r.locked).map(r=>keyOf(r.o,r.l));
     const allSel=selKeys.length&&selKeys.every(k=>(DB.weighSel||[]).includes(k));
     const opt=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
+    // 按 SKU 分组（首次出现顺序），组内保留各订单行的原始 index —— 同一个品多个单聚在一起，贴合分装动作
+    const groups=[],gmap={};
+    ROWS.forEach((r,i)=>{const k=r.l.name;if(!gmap[k]){gmap[k]={name:r.l.name,idxs:[]};groups.push(gmap[k]);}gmap[k].idxs.push(i);});
+    const renderRow=(i)=>{const r=ROWS[i];const done=r.st=='done',lock=r.locked;
+      return `<tr>
+        <td>${done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(keyOf(r.o,r.l))?'checked':''} onclick="wg_toggle(${i})">`}</td>
+        <td><span class="mono" style="font-size:11.5px">${r.o.id}</span><div style="font-size:11.5px;color:var(--ts)">${ord_mask(r.o.client)} · ${r.o.warehouse||'—'}</div></td>
+        <td style="white-space:nowrap;color:var(--ts);font-size:11.5px">${r.m.specQty}${r.m.unit}/件</td>
+        <td style="text-align:right">${r.l.qty}</td>
+        <td style="text-align:right"><b>${dueW(r.l)}</b> kg</td>
+        <td style="text-align:center">${done||lock
+          ?`<b>${r.real} kg</b><div style="font-size:10.5px;line-height:15px;min-height:15px;margin-top:3px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG().DAYS} 天已锁定`:'✓ 已提交'}</div>`
+          :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
+              <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="请输入" oninput="wg_input(${i},this.value)" style="width:96px;text-align:right">
+              <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
+            </div>
+            <div id="wg-msg-${i}" style="font-size:10.5px;color:var(--r);margin-top:3px;min-height:15px;line-height:15px;white-space:nowrap;overflow:hidden"></div>`}</td>
+        <td id="wg-diff-${i}" style="text-align:right"></td>
+        <td id="wg-rate-${i}" style="text-align:right"></td>
+      </tr>`;};
+    const bodyHtml=groups.length?groups.map(g=>{
+      const dueSum=+g.idxs.reduce((a,i)=>a+dueW(ROWS[i].l),0).toFixed(2);
+      const waitN=g.idxs.filter(i=>ROWS[i].st=='wait').length;
+      const hasWait=g.idxs.some(i=>ROWS[i].st!='done'&&!ROWS[i].locked);
+      return `<tr><td colspan="8" style="background:var(--gl);padding:9px 14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <b style="font-size:13.5px">${g.name}</b>
+          <span style="font-size:12px;color:var(--ts)">应发合计 <b style="color:var(--tp)">${dueSum} kg</b> · ${g.idxs.length} 单${waitN?` · 待称 <b style="color:var(--r)">${waitN}</b>`:' · 已称完'}</span>
+          ${hasWait?`<button class="btn btn-link btn-sm" style="margin-left:auto" onclick="wg_groupDue('${g.name.replace(/'/g,"\\'")}')" title="该品全部待称行一键按应发填入">整组按应发</button>`:''}
+        </div></td></tr>`+g.idxs.map(renderRow).join('');
+    }).join(''):`<tr><td colspan="8"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`;
     return `
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span>
       按重量定价的商品（多退少补=是）下单时按<b>预估净重</b>锁价，分装过秤后在此录<b>实发净重</b>；
@@ -204,24 +239,7 @@
         <th style="text-align:right;width:104px">应发净重</th><th style="text-align:center;width:210px">实发净重 (kg)</th>
         <th style="text-align:right;width:104px">差异</th><th style="text-align:right;width:96px">差异率</th>
       </tr></thead><tbody>
-      ${ROWS.map((r,i)=>{
-        const done=r.st=='done',lock=r.locked;
-        return `<tr>
-        <td>${done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(keyOf(r.o,r.l))?'checked':''} onclick="wg_toggle(${i})">`}</td>
-        <td><span class="mono" style="font-size:11.5px">${r.o.id}</span><div style="font-size:11.5px;color:var(--ts)">${ord_mask(r.o.client)} · ${r.o.warehouse||'—'}</div></td>
-        <td style="white-space:nowrap"><b>${r.l.name}</b> <span style="color:var(--ts);font-size:11.5px">${r.m.specQty}${r.m.unit}/件</span></td>
-        <td style="text-align:right">${r.l.qty}</td>
-        <td style="text-align:right"><b>${dueW(r.l)}</b> kg</td>
-        <td style="text-align:center">${done||lock
-          ?`<b>${r.real} kg</b><div style="font-size:10.5px;line-height:15px;min-height:15px;margin-top:3px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG().DAYS} 天已锁定`:'✓ 已提交'}</div>`
-          :`<div class="row" style="gap:7px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
-              <input id="wg-in-${i}" type="number" step="0.01" min="0" value="${r.real===''?'':r.real}" placeholder="请输入" oninput="wg_input(${i},this.value)" style="width:96px;text-align:right">
-              <button class="btn btn-link btn-sm" title="称出来与应发一致时，一键填入 ${dueW(r.l)} kg" onclick="wg_useDue(${i})">按应发</button>
-            </div>
-            <div id="wg-msg-${i}" style="font-size:10.5px;color:var(--r);margin-top:3px;min-height:15px;line-height:15px;white-space:nowrap;overflow:hidden"></div>`}</td>
-        <td id="wg-diff-${i}" style="text-align:right"></td>
-        <td id="wg-rate-${i}" style="text-align:right"></td>
-      </tr>`;}).join('')||`<tr><td colspan="8"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`}
+      ${bodyHtml}
       </tbody></table></div></div></div>`;
   }
 
