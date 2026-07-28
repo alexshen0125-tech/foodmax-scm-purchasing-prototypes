@@ -25,7 +25,7 @@ window.FM_dateField=dateField;   // 供 weigh.js 复用
 
 const css=document.createElement('style');
 css.textContent=`
-.lb-tabs{display:flex;gap:8px;padding:12px 16px 0;}
+.lb-tabs{display:flex;gap:8px;padding:12px 16px 0;position:sticky;top:0;z-index:20;background:var(--bg);box-shadow:0 6px 8px -6px rgba(6,95,70,.10);}
 .lb-tab{flex:1;text-align:center;padding:11px 0;border-radius:12px 12px 0 0;font-size:14px;font-weight:700;color:var(--sub);background:var(--muted);cursor:pointer;}
 .lb-tab.on{color:var(--emerald-2);background:#fff;box-shadow:var(--sh-sm);}
 .lb-note{margin:12px 16px 0;background:var(--mint-soft);border-radius:14px;padding:12px 14px;font-size:12px;line-height:1.6;color:#27433A;}
