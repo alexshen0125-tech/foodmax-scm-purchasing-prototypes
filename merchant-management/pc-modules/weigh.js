@@ -124,13 +124,19 @@
 
   /* ========== 页面 ========== */
   function portionGrid(r,idx){
-    if(r.st=='done'||r.locked){
-      return `<div class="wg-pg">${Array.from({length:r.portionN}).map((_,i)=>`<span class="wg-pd">份${i+1} <b>${(r.ws[i]!=null?r.ws[i]:'—')}</b></span>`).join('')}</div>
-        <div style="font-size:11.5px;color:${r.locked?'var(--ts)':'var(--gd)'};margin-top:6px">${r.locked?`超 ${WG().DAYS} 天已锁定`:'✓ 已提交 · 每份一张标签、印该份实发净重'}</div>`;
-    }
-    return `<div class="wg-pg">${Array.from({length:r.portionN}).map((_,i)=>{const w=r.ws[i];const bad=portionTypo(w===undefined?'':+w,r.specQty);
-      return `<span class="wg-pi ${bad?'bad':''}"><label>份${i+1}</label><input type="number" step="0.01" min="0" value="${w!=null?w:''}" placeholder="${r.specQty}" oninput="wg_portion(${idx},${i},this.value)"><i>${r.unit}</i></span>`;}).join('')}</div>
-      <div style="font-size:11.5px;color:var(--ts);margin-top:6px">逐份过秤录入，每份一张标签、印该份实发净重（不含订单/客户）。</div>`;
+    const readonly=r.st=='done'||r.locked;
+    const rows=Array.from({length:r.portionN}).map((_,i)=>{
+      const w=r.ws[i];const has=w!=null&&w!=='';const dv=has?+(+w-r.specQty).toFixed(2):null;const bad=portionTypo(has?+w:'',r.specQty);
+      const tail=readonly?'':(bad?`<span class="pf">⚠️ 重量明显异常，请核对</span>`:(has&&Math.abs(dv)>=0.01?`<span class="pf ok">${dv>0?'+':''}${dv} kg</span>`:''));
+      const cell=readonly
+        ?`<b class="pw">${has?w+' '+r.unit:'—'}</b><span class="ptag">🏷️ 标签印 ${has?w+r.unit:'—'}</span>`
+        :`<input type="number" step="0.01" min="0" value="${has?w:''}" placeholder="${r.specQty}" oninput="wg_portion(${idx},${i},this.value)"><i>${r.unit}</i>${tail}`;
+      return `<div class="wg-pr ${bad?'bad':''}"><span class="pn">份 ${i+1}</span>${cell}</div>`;
+    }).join('');
+    const note=readonly
+      ?`<div style="font-size:11.5px;color:${r.locked?'var(--ts)':'var(--gd)'};margin-top:8px">${r.locked?`超 ${WG().DAYS} 天已锁定`:'✓ 已提交 · 每份一张标签、印该份实发净重'}</div>`
+      :`<div style="font-size:11.5px;color:var(--ts);margin-top:8px">逐份过秤录入，一行一份；每份一张标签、印该份实发净重（不含订单/客户）。</div>`;
+    return `<div class="wg-pl">${rows}</div>${note}`;
   }
   function view(){
     DB.weighF=DB.weighF||{};DB.weighSel=DB.weighSel||[];
@@ -157,13 +163,19 @@
     .wg-ch{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .wg-sum{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ts);margin:10px 0;padding:8px 0;border-top:1px dashed var(--bd2);border-bottom:1px dashed var(--bd2)}
     .wg-sum b{color:var(--tp)}
-    .wg-pg{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-    .wg-pi{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:3px 6px}
-    .wg-pi label{font-size:11px;color:var(--ts);white-space:nowrap}
-    .wg-pi input{width:58px;height:28px;border:none;background:transparent;text-align:right;font-size:13px;outline:none}
-    .wg-pi i{font-size:11px;color:var(--ts);font-style:normal}
-    .wg-pi.bad{border-color:var(--r);background:var(--rl)}
-    .wg-pd{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ts);background:var(--bg);border-radius:7px;padding:3px 9px}.wg-pd b{color:var(--tp)}
+    .wg-pl{margin-top:10px;border:1px solid var(--bd2);border-radius:10px;overflow:hidden}
+    .wg-pr{display:flex;align-items:center;gap:12px;padding:8px 14px}
+    .wg-pr+.wg-pr{border-top:1px solid var(--bd2)}
+    .wg-pr:nth-child(even){background:var(--bg)}
+    .wg-pr .pn{width:52px;font-size:12.5px;color:var(--ts);flex:0 0 52px}
+    .wg-pr input{width:120px;height:32px;border:1px solid var(--bd);border-radius:8px;text-align:right;padding:0 10px;font-size:14px;outline:none}
+    .wg-pr input:focus{border-color:var(--g)}
+    .wg-pr i{font-size:12px;color:var(--ts);font-style:normal}
+    .wg-pr .pf{font-size:11.5px;color:var(--r);margin-left:4px}
+    .wg-pr .pf.ok{color:var(--ts)}
+    .wg-pr.bad input{border-color:var(--r);background:var(--rl)}
+    .wg-pr .pw{font-size:14px;min-width:80px}
+    .wg-pr .ptag{font-size:11.5px;color:var(--ts)}
     </style>
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span>
       按重量定价（多退少补=是）的商品，分装时<b>每一份（袋）单独过秤</b>、每份一张标签印<b>该份实发净重</b>，<b>不含订单/客户</b>——货到仓库由 WMS 重新分拣分配。
