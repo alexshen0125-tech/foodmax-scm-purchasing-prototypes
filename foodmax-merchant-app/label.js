@@ -56,6 +56,14 @@ css.textContent=`
 .lp-printer b{color:var(--emerald-2);}
 .lp-gatetip{margin:12px 16px 0;background:var(--amber-soft);border-radius:12px;padding:12px 14px;font-size:12.5px;color:#B45309;line-height:1.6;}
 .lp-gatetip .go{color:var(--emerald-2);font-weight:700;text-decoration:underline;}
+.lp-seq{margin:12px 16px 0;background:#fff;border-radius:14px;padding:14px 15px;box-shadow:var(--sh-sm);}
+.lp-seq .t{font-size:14px;font-weight:700;}
+.lp-seq .s{font-size:12px;color:var(--sub);margin:5px 0 11px;line-height:1.55;}
+.lp-seq .seqrow{display:flex;align-items:center;gap:9px;}
+.lp-seq input{width:62px;height:42px;border:1.5px solid var(--line);border-radius:11px;text-align:center;font-size:16px;font-family:inherit;color:var(--ink);}
+.lp-seq input:focus{border-color:var(--emerald);outline:none;}
+.lp-seq .dash{color:var(--sub);}
+.lp-seqbtn{flex:1;height:42px;border-radius:11px;background:var(--muted);color:var(--emerald-2);font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-family:inherit;}
 .lb-row .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .lb-row .nm{font-size:14.5px;font-weight:700;}
 .lb-row .wtag{font-size:10.5px;font-weight:700;border-radius:7px;padding:1px 7px;margin-left:6px;}
@@ -156,6 +164,18 @@ function onPrintClick(key){const r=rowOf(key);
   reallyPrint(key);}
 function goWeighFor(){window.FM.popPage();LBTAB='weigh';if(LBROOT)mount(LBROOT);}
 window.lp_goWeigh=goWeighFor;
+// 按序号打印 / 补打：填 [起始,结束] 区间，漏打时补打指定几张
+window.lp_seqPrint=function(key){const r=rowOf(key);
+  if(r.refund&&!weighed(key)){window.FM.toast('该商品为多退少补，请先完成称重','err');return;}
+  const N=r.qty,from=parseInt((CURLP.querySelector('#lp-from')||{}).value,10),to=parseInt((CURLP.querySelector('#lp-to')||{}).value,10);
+  if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){window.FM.toast(`请填有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
+  const doIt=()=>{window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};
+    window.FM.DB.labelPrinted[key]=Math.max(printedOf(key),to);
+    window.FM.toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张`,'ok');
+    drawLabelDetail(CURLP.querySelector('#lpd'),key);
+    if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}};
+  if(!printer().connected){connectPrinter(doIt);return;}
+  doIt();};
 function drawLabelDetail(box,key){
   const r=rowOf(key);const pr=Math.min(r.qty,printedOf(key)),un=r.qty-pr;
   const gated=r.refund&&!weighed(key);const p=printer();
@@ -168,7 +188,12 @@ function drawLabelDetail(box,key){
     </div>
     <div class="lb-sum"><div class="k"><div class="v">${r.qty}</div><div class="l">应送货(张)</div></div><div class="k"><div class="v g">${pr}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${un}</div><div class="l">未打印</div></div></div>
     ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
-      :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>`}
+      :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>
+        <div class="lp-seq">
+          <div class="t">按序号打印 / 补打</div>
+          <div class="s">本商品共 ${r.qty} 张，序号 1–${r.qty}${pr?` · 已打印至 ${pr}`:''}。上方「打印 N 张」打全部未打印；漏打哪几张就在此填序号区间补打。</div>
+          <div class="seqrow"><input id="lp-from" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${Math.min(pr+1,r.qty)}"><span class="dash">—</span><input id="lp-to" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${r.qty}"><button class="lp-seqbtn" onclick="lp_seqPrint('${key}')">打印此区间</button></div>
+        </div>`}
     <div style="height:14px"></div>`;
   refreshPrintFooter(key);
 }
