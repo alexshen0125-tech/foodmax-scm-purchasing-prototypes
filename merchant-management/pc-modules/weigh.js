@@ -159,22 +159,24 @@
       </div>`;}).join(''):`<div class="empty" style="padding:40px"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div>`;
     return `
     <style>
-    .wg-card{background:var(--w);border:1px solid var(--bd2);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+    /* 对齐 foodmax-frontend 设计系统 token 与 .card/.input 配方 */
+    .wg-card{background:var(--w);border:1px solid var(--bd);border-radius:var(--rad);box-shadow:var(--sh);padding:15px 20px;margin-bottom:18px}
     .wg-ch{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .wg-sum{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ts);margin:10px 0;padding:8px 0;border-top:1px dashed var(--bd2);border-bottom:1px dashed var(--bd2)}
+    .wg-sum{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ts);margin:12px 0;padding:9px 0;border-top:1px solid var(--bd2);border-bottom:1px solid var(--bd2)}
     .wg-sum b{color:var(--tp)}
-    .wg-pl{margin-top:10px;border:1px solid var(--bd2);border-radius:10px;overflow:hidden}
+    .wg-pl{margin-top:12px;border:1px solid var(--bd2);border-radius:var(--rad);overflow:hidden}
     .wg-pr{display:flex;align-items:center;gap:12px;padding:8px 14px}
     .wg-pr+.wg-pr{border-top:1px solid var(--bd2)}
-    .wg-pr:nth-child(even){background:var(--bg)}
+    .wg-pr:nth-child(even){background:#FBFCF9}
     .wg-pr .pn{width:52px;font-size:12.5px;color:var(--ts);flex:0 0 52px}
-    .wg-pr input{width:120px;height:32px;border:1px solid var(--bd);border-radius:8px;text-align:right;padding:0 10px;font-size:14px;outline:none}
-    .wg-pr input:focus{border-color:var(--g)}
+    .wg-pr input{width:118px;height:36px;border:1px solid var(--bd);border-radius:9px;background:#FBFCF9;text-align:right;padding:0 12px;font-size:13.5px;color:var(--tp);outline:none;transition:.16s}
+    .wg-pr input:focus{border-color:var(--g);background:#fff;box-shadow:0 0 0 3px rgba(14,122,82,.12)}
+    .wg-pr input::placeholder{color:var(--tt)}
     .wg-pr i{font-size:12px;color:var(--ts);font-style:normal}
     .wg-pr .pf{font-size:11.5px;color:var(--r);margin-left:4px}
     .wg-pr .pf.ok{color:var(--ts)}
     .wg-pr.bad input{border-color:var(--r);background:var(--rl)}
-    .wg-pr .pw{font-size:14px;min-width:80px}
+    .wg-pr .pw{font-size:13.5px;font-weight:600;min-width:80px}
     .wg-pr .ptag{font-size:11.5px;color:var(--ts)}
     </style>
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span>
