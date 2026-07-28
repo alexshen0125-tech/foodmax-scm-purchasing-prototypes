@@ -167,17 +167,18 @@ function renderBody(root){
   const doneN=gs.filter(g=>g.submitted).length;
   const amtSum=+gs.filter(g=>g.submitted).reduce((a,g)=>a+g.amtSum,0).toFixed(2);
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
+  const df=window.FM_dateField(state.date,ds,d=>{state.date=d;renderBody(root);});
   root.innerHTML=`
     <div class="lb-note">⚖️ 多退少补（按重量定价）商品需逐件录实发净重后才能打标签。点商品进入称重，大多数件按应发一键填入、只改不同的件。</div>
     <div class="lb-filter">
-      <div class="lb-frow"><span class="lb-fl">配送日期</span><div class="lb-pills">${ds.map(d=>`${pill(d,state.date,'date')}${d}</span>`).join('')||'<span class="lb-pill on">无</span>'}</div></div>
+      <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
     </div>
     <div class="lb-sum"><div class="k"><div class="v r">${waitN}</div><div class="l">待称重</div></div><div class="k"><div class="v g">${doneN}</div><div class="l">已提交</div></div><div class="k"><div class="v ${amtSum>0?'':amtSum<0?'r':''}">${amtSum>0?'+':''}${S(amtSum).slice(2)}</div><div class="l">发货差额(S$)</div></div></div>
     ${gs.length?gs.map(card).join(''):`<div class="empty"><div class="ei">${svg('layers')}</div><h4>该筛选下无多退少补商品</h4><p>只有按重量定价（多退少补）的商品才需称重</p></div>`}
     <div style="height:14px"></div>`;
   root.querySelectorAll('.wg-card').forEach(c=>c.onclick=()=>openSku(c.dataset.key));
-  root.querySelectorAll('[data-date]').forEach(el=>el.onclick=()=>{state.date=el.dataset.date;renderBody(root);});
+  df.bind(root);
   root.querySelectorAll('[data-wh]').forEach(el=>el.onclick=()=>{state.wh=el.dataset.wh;renderBody(root);});
 }
 

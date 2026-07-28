@@ -14,6 +14,14 @@ const META={
 };
 const metaOf=sku=>META[sku]||{cat:'—',spec:'',refund:0,specQty:1,unit:'kg'};
 window.FM_SKU_META=META;   // 供 weigh.js 复用
+// 日期选择器：字段 + 点击弹底部选择（对齐移动端时间选择器，值限定为有数据的配送日）
+const CAL='<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>';
+const fmtDate=d=>d?'2026-'+d:'';
+function dateField(cur,list,onPick){
+  return {html:`<div class="lb-field" data-datefield="1">${CAL}<b>${fmtDate(cur)||'选择配送日期'}</b><span class="caret">▾</span></div>`,
+    bind:root=>{const el=root.querySelector('[data-datefield]');if(el)el.onclick=()=>window.FM.sheet(list.map(d=>({label:fmtDate(d),onClick:()=>onPick(d)})));}};
+}
+window.FM_dateField=dateField;   // 供 weigh.js 复用
 
 const css=document.createElement('style');
 css.textContent=`
@@ -29,6 +37,9 @@ css.textContent=`
 .lb-pill{font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:20px;background:var(--muted);color:#46604F;cursor:pointer;min-height:32px;display:flex;align-items:center;}
 .lb-pill.on{background:var(--emerald);color:#fff;}
 .lb-search{flex:1;height:36px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font-size:13px;font-family:inherit;color:var(--ink);}
+.lb-field{flex:1;min-height:38px;border:1px solid var(--line);border-radius:10px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;background:#fff;}
+.lb-field svg{width:16px;height:16px;stroke:var(--emerald-2);fill:none;stroke-width:1.8;flex:0 0 16px;}
+.lb-field .caret{margin-left:auto;color:var(--sub);font-size:11px;}
 .lb-sum{display:flex;background:#fff;border-radius:16px;margin:13px 16px 0;padding:15px 0;box-shadow:var(--sh-sm);}
 .lb-sum .k{flex:1;text-align:center;}.lb-sum .k+.k{border-left:1px solid var(--line);}
 .lb-sum .k .v{font-size:22px;font-weight:600;font-family:'Lora',serif;}
@@ -89,10 +100,11 @@ function renderPrint(box){
   const byWh={};rs.forEach(r=>{(byWh[r.wh]=byWh[r.wh]||[]).push(r);});
   const whSet=Object.keys(byWh);
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
+  const df=dateField(state.date,ds,d=>{state.date=d;renderPrint(box);});
   box.innerHTML=`
     <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。</div>
     <div class="lb-filter">
-      <div class="lb-frow"><span class="lb-fl">配送日期</span><div class="lb-pills">${ds.map(d=>`${pill(d,state.date,'date')}${d}</span>`).join('')||'<span class="lb-pill on">无</span>'}</div></div>
+      <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
       <div class="lb-frow"><span class="lb-fl">商品名称</span><input class="lb-search" id="lb-name" placeholder="输入商品名 / SKU 编码" value="${state.name||''}"></div>
     </div>
@@ -108,7 +120,7 @@ function renderPrint(box){
       </div>`;}).join('')}</div>`).join('')
     :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>该筛选下暂无应送货标签</h4><p>切换配送日期 / 仓库看看</p></div>`}
     <div style="height:12px"></div>`;
-  box.querySelectorAll('[data-date]').forEach(el=>el.onclick=()=>{state.date=el.dataset.date;renderPrint(box);});
+  df.bind(box);
   box.querySelectorAll('[data-wh]').forEach(el=>el.onclick=()=>{state.wh=el.dataset.wh;renderPrint(box);});
   const s=box.querySelector('#lb-name');if(s)s.oninput=()=>{state.name=s.value.trim();const p=s.selectionStart;renderPrint(box);const n=box.querySelector('#lb-name');if(n){n.focus();n.setSelectionRange(p,p);}};
 }
