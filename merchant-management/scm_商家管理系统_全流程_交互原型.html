@@ -2282,7 +2282,7 @@ PAGES['m-rectify']=()=>{
   <div class="sg" style="grid-template-columns:repeat(3,1fr)">
     <div class="sc ${DB.merchant.vioScore>=6?'alert':''}"><div class="sc-l">当前违规分</div><div class="sc-v">${DB.merchant.vioScore}</div><div class="sc-s">阈值 6 分触发整改</div></div>
     <div class="sc"><div class="sc-l">违规记录</div><div class="sc-v">${DB.violations.length}</div><div class="sc-s">累计条数</div></div>
-    <div class="sc ${r=='suspended'?'alert':r=='notified'||r=='submitted'?'warn':'good'}"><div class="sc-l">整改状态</div><div class="sc-v" style="font-size:18px">${{none:'正常',notified:'待整改',submitted:'待平台复核',passed:'已通过',suspended:'已强制暂停'}[r]}</div></div>
+    <div class="sc ${r=='suspended'?'alert':r=='notified'||r=='submitted'?'warn':'good'}"><div class="sc-l">整改状态</div><div class="sc-v" style="font-size:18px">${({none:'正常',notified:'待整改',submitted:'待平台复核',passed:'已通过',suspended:'已强制暂停'})[r]}</div></div>
   </div>
   ${DB.violations.length?`<div class="card"><div class="card-hd"><h3>违规记录</h3></div><div class="card-bd flush"><table><thead><tr><th>日期</th><th>类型</th><th>详情</th><th>扣分</th><th>罚款</th></tr></thead><tbody>${DB.violations.map(v=>`<tr><td>${v.date}</td><td>${v.type}</td><td>${v.detail}</td><td style="color:var(--r);font-weight:600">-${v.score}</td><td>${money(v.fine)}</td></tr>`).join('')}</tbody></table></div></div>`:`<div class="ib ib-g"><span class="i">✅</span>暂无违规记录，继续保持。</div>`}
   ${r=='notified'?`<div class="card"><div class="card-hd"><h3>提交整改方案</h3><span class="tag t-y"><span class="dot"></span>整改期 2026-06-29 ~ 07-14（15天）</span></div><div class="card-bd">
@@ -2774,7 +2774,7 @@ PAGES['p-violation']=()=>{
   <div class="sg" style="grid-template-columns:repeat(3,1fr)">
     <div class="sc ${DB.merchant.vioScore>=6?'alert':''}"><div class="sc-l">${DB.merchant.name} 违规分</div><div class="sc-v">${DB.merchant.vioScore}</div><div class="sc-s">阈值 6 分</div></div>
     <div class="sc"><div class="sc-l">违规记录</div><div class="sc-v">${DB.violations.length}</div><div class="sc-s">累计</div></div>
-    <div class="sc ${DB.rectify=='notified'||DB.rectify=='submitted'?'warn':DB.rectify=='suspended'?'alert':''}"><div class="sc-l">整改状态</div><div class="sc-v" style="font-size:17px">${{none:'正常',notified:'已通知待整改',submitted:'待复核',passed:'已通过',suspended:'已暂停'}[DB.rectify]}</div></div>
+    <div class="sc ${DB.rectify=='notified'||DB.rectify=='submitted'?'warn':DB.rectify=='suspended'?'alert':''}"><div class="sc-l">整改状态</div><div class="sc-v" style="font-size:17px">${({none:'正常',notified:'已通知待整改',submitted:'待复核',passed:'已通过',suspended:'已暂停'})[DB.rectify]}</div></div>
   </div>
   <div class="card"><div class="card-hd"><h3>违规处置</h3></div><div class="card-bd">
     <div class="row" style="margin-bottom:16px">
@@ -3158,13 +3158,13 @@ function downloadTemplate(kind){let name,rows;const all=[];
 goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
-<script src="pc-modules/stock.js?v=20260728k"></script>
-<script src="pc-modules/pick.js?v=20260728k"></script>
-<script src="pc-modules/weigh.js?v=20260728k"></script>
-<script src="pc-modules/delivery.js?v=20260728k"></script>
-<script src="pc-modules/biz.js?v=20260728k"></script>
-<script src="pc-modules/price.js?v=20260728k"></script>
-<script src="pc-modules/analysis.js?v=20260728k"></script>
-<script src="pc-modules/quality.js?v=20260728k"></script>
+<script src="pc-modules/stock.js?v=20260728m"></script>
+<script src="pc-modules/pick.js?v=20260728m"></script>
+<script src="pc-modules/weigh.js?v=20260728m"></script>
+<script src="pc-modules/delivery.js?v=20260728m"></script>
+<script src="pc-modules/biz.js?v=20260728m"></script>
+<script src="pc-modules/price.js?v=20260728m"></script>
+<script src="pc-modules/analysis.js?v=20260728m"></script>
+<script src="pc-modules/quality.js?v=20260728m"></script>
 </body>
 </html>
