@@ -123,9 +123,8 @@
     const bodyHtml=ROWS.length?ROWS.map((r,i)=>{const done=r.st=='done',lock=r.locked;
       return `<tr>
         <td>${done||lock?'':`<input type="checkbox" ${(DB.weighSel||[]).includes(r.key)?'checked':''} onclick="wg_toggle(${i})">`}</td>
-        <td style="white-space:nowrap"><b>${r.name}</b> <span style="color:var(--ts);font-size:11.5px">${r.specQty}${r.unit}/件</span><div style="font-size:11.5px;color:var(--ts)">${r.wh}</div></td>
-        <td style="text-align:right">${r.qty}</td>
-        <td style="text-align:right"><b>${r.due}</b> kg</td>
+        <td style="white-space:nowrap"><b>${r.name}</b> <span style="color:var(--ts);font-size:11.5px">${money2(r.up)}/${r.unit}</span><div style="font-size:11.5px;color:var(--ts)">${r.wh}</div></td>
+        <td style="text-align:right"><b>${r.due}</b> ${r.unit}</td>
         <td style="text-align:center">${done||lock
           ?`<b>${r.real} kg</b><div style="font-size:10.5px;line-height:15px;min-height:15px;margin-top:3px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG().DAYS} 天已锁定`:'✓ 已提交'}</div>`
           :`<div class="row" style="gap:8px;justify-content:center;align-items:center;flex-wrap:nowrap;white-space:nowrap">
@@ -135,10 +134,10 @@
             <div id="wg-msg-${i}" style="font-size:10.5px;color:var(--r);margin-top:3px;min-height:15px;line-height:15px;white-space:nowrap;overflow:hidden"></div>`}</td>
         <td id="wg-diff-${i}" style="text-align:right"></td>
         <td id="wg-rate-${i}" style="text-align:right"></td>
-      </tr>`;}).join(''):`<tr><td colspan="7"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`;
+      </tr>`;}).join(''):`<tr><td colspan="6"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">该筛选下没有需要称重的商品</div><div class="e-s">仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。</div></div></td></tr>`;
     return `
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span>
-      按重量定价（多退少补=是）的商品，每件商品录一个<b>实发净重</b>、对一个<b>应发净重</b>（件数×规格量），差异/差异率按该行算；<b>不含订单/客户</b>——货到仓库由 WMS 重新分拣分配。
+      按重量定价（多退少补=是）的商品按 <b>S$/kg</b> 计价、按重量下单，每件商品录一个<b>实发净重</b>、对一个<b>应发净重</b>（下单重量），差异/差异率按该行算；<b>不含订单/客户</b>——货到仓库由 WMS 重新分拣分配。
       发货差额 =（实发 − 应发）× S$/kg，是<b>商家↔平台发货结算差额</b>；客户账单多退少补以仓库实际分配为准。</div>
 
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
@@ -162,9 +161,9 @@
     <div class="card-bd flush"><div style="overflow-x:auto"><table style="table-layout:fixed;width:100%;min-width:820px">
       <thead><tr>
         <th style="width:36px"><input type="checkbox" title="全选可称重行" ${allSel?'checked':''} onclick="wg_selAll()"></th>
-        <th style="width:200px">商品（规格）</th><th style="text-align:right;width:74px">件数</th>
-        <th style="text-align:right;width:110px">应发净重</th><th style="text-align:center;width:200px">实发净重 (kg)</th>
-        <th style="text-align:right;width:104px">差异</th><th style="text-align:right;width:96px">差异率</th>
+        <th style="width:230px">商品（单价）</th>
+        <th style="text-align:right;width:120px">应发净重</th><th style="text-align:center;width:210px">实发净重 (kg)</th>
+        <th style="text-align:right;width:110px">差异</th><th style="text-align:right;width:100px">差异率</th>
       </tr></thead><tbody>${bodyHtml}</tbody></table></div></div></div>`;
   }
 
