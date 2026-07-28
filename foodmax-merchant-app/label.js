@@ -48,8 +48,14 @@ css.textContent=`
 .lb-sec{font-size:14.5px;font-weight:700;margin:17px 16px 8px;display:flex;align-items:center;gap:8px;}
 .lb-sec .hint{margin-left:auto;font-size:12px;font-weight:600;color:var(--sub);}
 .lb-tbl{background:#fff;border-radius:16px;margin:0 16px;box-shadow:var(--sh-sm);overflow:hidden;}
-.lb-row{padding:13px 15px;}
+.lb-row{padding:13px 15px;cursor:pointer;position:relative;}
+.lb-row .chev{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--sub);font-size:16px;}
+.lb-row .top{padding-right:16px;}
 .lb-row+.lb-row{border-top:1px solid var(--line);}
+.lp-printer{margin:12px 16px 0;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);background:#fff;border-radius:12px;padding:12px 14px;box-shadow:var(--sh-sm);}
+.lp-printer b{color:var(--emerald-2);}
+.lp-gatetip{margin:12px 16px 0;background:var(--amber-soft);border-radius:12px;padding:12px 14px;font-size:12.5px;color:#B45309;line-height:1.6;}
+.lp-gatetip .go{color:var(--emerald-2);font-weight:700;text-decoration:underline;}
 .lb-row .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .lb-row .nm{font-size:14.5px;font-weight:700;}
 .lb-row .wtag{font-size:10.5px;font-weight:700;border-radius:7px;padding:1px 7px;margin-left:6px;}
@@ -113,25 +119,79 @@ function renderPrint(box){
       <div class="lb-sec">${w}<span class="hint">应送货 ${byWh[w].reduce((a,r)=>a+r.qty,0)} 张</span></div>
       <div class="lb-tbl">${byWh[w].map(r=>{const pr=Math.min(r.qty,printedOf(r.key)),un=r.qty-pr;
         const wtag=r.refund?(weighed(r.key)?'<span class="wtag done">已称重</span>':'<span class="wtag wait">待称重</span>'):'';
-        return `<div class="lb-row">
+        return `<div class="lb-row" data-key="${r.key}">
         <div class="top"><span class="nm">${r.name}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span></div>
+        <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
     :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>该筛选下暂无应送货标签</h4><p>切换配送日期 / 仓库看看</p></div>`}
     <div style="height:12px"></div>`;
   df.bind(box);
+  box.querySelectorAll('.lb-row[data-key]').forEach(el=>el.onclick=()=>openLabelDetail(el.dataset.key));
   box.querySelectorAll('[data-wh]').forEach(el=>el.onclick=()=>{state.wh=el.dataset.wh;renderPrint(box);});
   const s=box.querySelector('#lb-name');if(s)s.oninput=()=>{state.name=s.value.trim();const p=s.selectionStart;renderPrint(box);const n=box.querySelector('#lb-name');if(n){n.focus();n.setSelectionRange(p,p);}};
 }
 
+/* ================= 标签打印 · SKU 详情页（点击进入打印） ================= */
+function rowOf(key){const [wh,sku]=key.split('|');const m=metaOf(sku);let qty=0,name='',unit='件';
+  pend().forEach(o=>{if(o.warehouse!==wh)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;qty+=(+l.qty||0);name=l.name;unit=l.unit;});});
+  return {key,wh,sku,name,unit,qty,cat:m.cat,spec:m.spec,refund:m.refund};}
+const printer=()=>{window.FM.DB.printer=window.FM.DB.printer||{connected:false,name:''};return window.FM.DB.printer;};
+function connectPrinter(then){window.FM.sheet([
+  {label:'FoodMax 标签机 · TSC-A1（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='TSC-A1';window.FM.toast('已连接 TSC-A1 标签机','ok');then&&then();}},
+  {label:'Brother QL-820NWB（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='QL-820';window.FM.toast('已连接 QL-820 标签机','ok');then&&then();}},
+]);}
+let CURLP=null;
+function reallyPrint(key){window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};const r=rowOf(key);const old=Math.min(r.qty,printedOf(key));
+  if(old>=r.qty){window.FM.toast('该商品标签已全部打印','info');return;}
+  window.FM.DB.labelPrinted[key]=r.qty;
+  window.FM.toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张（印实发净重）`,'ok');
+  drawLabelDetail(CURLP.querySelector('#lpd'),key);
+  if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}}   // 同步刷新底层列表，返回即最新
+function onPrintClick(key){const r=rowOf(key);
+  if(r.refund&&!weighed(key)){window.FM.toast('该商品为多退少补，请先在「称重商品」完成称重','err');return;}
+  if(Math.min(r.qty,printedOf(key))>=r.qty){window.FM.toast('该商品标签已全部打印','info');return;}
+  if(!printer().connected){connectPrinter(()=>reallyPrint(key));return;}
+  reallyPrint(key);}
+function goWeighFor(){window.FM.popPage();LBTAB='weigh';if(LBROOT)mount(LBROOT);}
+window.lp_goWeigh=goWeighFor;
+function drawLabelDetail(box,key){
+  const r=rowOf(key);const pr=Math.min(r.qty,printedOf(key)),un=r.qty-pr;
+  const gated=r.refund&&!weighed(key);const p=printer();
+  box.innerHTML=`
+    <div class="wg-dh">
+      <div class="r"><span class="k">仓库</span><span class="v">${r.wh}</span></div>
+      <div class="r"><span class="k">规格 / 编码</span><span class="v">${r.spec||'—'} · ${r.sku}</span></div>
+      <div class="r"><span class="k">分类</span><span class="v">${r.cat}</span></div>
+      ${r.refund?`<div class="r"><span class="k">称重状态</span><span class="v ${gated?'refund':''}">${gated?'待称重':'已称重 ✓'}</span></div>`:''}
+    </div>
+    <div class="lb-sum"><div class="k"><div class="v">${r.qty}</div><div class="l">应送货(张)</div></div><div class="k"><div class="v g">${pr}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${un}</div><div class="l">未打印</div></div></div>
+    ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
+      :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>`}
+    <div style="height:14px"></div>`;
+  refreshPrintFooter(key);
+}
+function refreshPrintFooter(key){if(!CURLP)return;const btn=CURLP.querySelector('#lp-print');if(!btn)return;
+  const r=rowOf(key);const pr=Math.min(r.qty,printedOf(key)),un=r.qty-pr;const gated=r.refund&&!weighed(key);
+  btn.disabled=false;btn.style.opacity='';
+  if(gated){btn.textContent='🔒 请先完成称重';btn.className='btn';btn.style.opacity='.55';}
+  else if(un<=0){btn.textContent='✓ 已全部打印';btn.className='btn';btn.disabled=true;}
+  else{btn.textContent=`🖨 打印 ${un} 张标签`;btn.className='btn primary';}}
+function openLabelDetail(key){const r=rowOf(key);
+  CURLP=pushPage({title:'打印标签 · '+r.name,body:'<div id="lpd"></div>',
+    footer:`<button class="btn primary" id="lp-print">🖨 打印标签</button>`,
+    mount:(p)=>{CURLP=p;drawLabelDetail(p.querySelector('#lpd'),key);const b=p.querySelector('#lp-print');if(b)b.onclick=()=>onPrintClick(key);}});
+}
+
 /* ================= Tab 容器 ================= */
-let LBTAB='print';
+let LBTAB='print',LBROOT=null;
 function renderActive(bodyEl){
   if(LBTAB==='print'){bodyEl.innerHTML=skel(3);setTimeout(()=>renderPrint(bodyEl),380);}
   else{if(window.FM_WEIGH&&window.FM_WEIGH.render)window.FM_WEIGH.render(bodyEl);else bodyEl.innerHTML='<div class="empty"><h4>称重模块未加载</h4></div>';}
 }
 function mount(root){
+  LBROOT=root;
   root.innerHTML=`<div class="lb-tabs">
     <div class="lb-tab ${LBTAB==='print'?'on':''}" data-t="print">🏷️ 标签打印</div>
     <div class="lb-tab ${LBTAB==='weigh'?'on':''}" data-t="weigh">⚖️ 称重商品</div>
