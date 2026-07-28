@@ -18,17 +18,18 @@
     return {weighable:!!(s?s.refund:1)&&['kg','g'].includes((p&&p.unit)||'kg'),specQty:s&&s.qty>0?s.qty:1,unit:(p&&p.unit)||'kg'};}
   function kgPrice(l){const m=skuMeta(l);return +(m.weighable?l.price:l.price/m.specQty).toFixed(2);}
 
-  /* 汇总差额（作用于 仓库×SKU：实发合计 vs 应发合计=N×规格量） */
-  function calc(due,up,realSum,filledAll){
+  /* 逐份差额：每一份独立算 差异/差异率/差额（相对规格量），阈值逐份判 */
+  function calcPortion(w,spec,up){
     const g=WG();
-    if(!filledAll)return {st:'wait',due,up,diff:0,ratio:0,amt:0};
-    const diff=+(realSum-due).toFixed(2),ratio=due?diff/due:0;
-    if(realSum<=0)return {st:'block',due,up,diff,ratio,amt:0,msg:'实发净重必须 > 0'};
-    if(ratio>g.BLOCK_UP)return {st:'block',due,up,diff,ratio,amt:0,msg:`多发超 +${g.BLOCK_UP*100}%，请重分装`};
-    if(ratio<-g.BLOCK_DOWN)return {st:'block',due,up,diff,ratio,amt:0,msg:`少发超 −${g.BLOCK_DOWN*100}%，请复称`};
-    if(Math.abs(ratio)<=g.TOL)return {st:'ok',due,up,diff,ratio,amt:0};
-    if(diff<0)return {st:'refund',due,up,diff,ratio,amt:+(diff*up).toFixed(2)};
-    return {st:'add',due,up,diff,ratio,amt:+(diff*up).toFixed(2)};
+    if(w===''||w==null||isNaN(w))return {filled:false,diff:0,rate:0,amt:0,st:'wait'};
+    const diff=+(w-spec).toFixed(2),rate=spec?diff/spec:0;
+    if(w<=0)return {filled:true,diff,rate,amt:0,st:'block',msg:'必须 > 0'};
+    if(w>spec*3)return {filled:true,diff,rate,amt:0,st:'block',msg:'明显异常，请核对'};   // 手滑多打一位
+    if(rate>g.BLOCK_UP)return {filled:true,diff,rate,amt:0,st:'block',msg:`超 +${g.BLOCK_UP*100}%，请重分装`};
+    if(rate<-g.BLOCK_DOWN)return {filled:true,diff,rate,amt:0,st:'block',msg:`超 −${g.BLOCK_DOWN*100}%，请复称`};
+    if(Math.abs(rate)<=g.TOL)return {filled:true,diff,rate,amt:0,st:'ok'};                // 容差内该份不产生差额
+    if(diff<0)return {filled:true,diff,rate,amt:+(diff*up).toFixed(2),st:'refund'};       // 该份少发
+    return {filled:true,diff,rate,amt:+(diff*up).toFixed(2),st:'add'};                    // 该份多发
   }
 
   function store(){DB.weigh=DB.weigh||{};return DB.weigh;}                 // {wh|sku:{ws:{i:w},submitted,amt,due,diff,at,by}}
@@ -40,16 +41,16 @@
   function lockedByStatus(o){if(o.status!='done'||!o.doneDate)return false;const d=Date.parse('2026-'+String(o.doneDate).replace(/^2026-/,''));return !isNaN(d)&&(Date.now()-d)/86400000>WG().DAYS;}
 
   let ROWS=[];
-  function portionTypo(w,spec){return w!==''&&!isNaN(w)&&(w<=0||w>spec*3);}  // 单份明显异常(手滑多打一位)
   function computeRow(g){
     const rec=store()[g.key],ws=(rec&&rec.ws)||{};
-    let realSum=0,filled=0,typo=0;
-    for(let i=0;i<g.portionN;i++){const w=ws[i];if(w!==''&&w!=null&&!isNaN(w)){realSum+=+w;filled++;if(portionTypo(+w,g.specQty))typo++;}}
-    realSum=+realSum.toFixed(2);
-    const filledAll=filled===g.portionN;
-    const c=calc(g.due,g.up,realSum,filledAll);
-    const st=(rec&&rec.submitted)?'done':(typo?'block':c.st);
-    return Object.assign(g,{ws,realSum,filled,typo,c:typo?Object.assign({},c,{st:'block',msg:`${typo} 份重量明显异常，请核对`}):c,st,rec});
+    const ps=[];let realSum=0,filled=0,amtSum=0,blocked=0;
+    for(let i=0;i<g.portionN;i++){const p=calcPortion(ws[i]==null?'':+ws[i],g.specQty,g.up);ps[i]=p;
+      if(p.filled){realSum+=+ws[i];filled++;amtSum+=p.amt;if(p.st=='block')blocked++;}}
+    realSum=+realSum.toFixed(2);amtSum=+amtSum.toFixed(2);
+    const filledAll=filled===g.portionN,totDiff=+(realSum-g.due).toFixed(2),totRate=g.due?totDiff/g.due:0;
+    let st;if(rec&&rec.submitted)st='done';else if(blocked)st='block';else if(!filledAll)st='wait';else st=amtSum>0?'add':(amtSum<0?'refund':'ok');
+    return Object.assign(g,{ws,ps,realSum,filled,amtSum,blocked,totDiff,totRate,st,rec,
+      c:{st,diff:totDiff,ratio:totRate,amt:amtSum,due:g.due,up:g.up,msg:blocked?`${blocked} 份超阈值/异常，请核对`:''}});
   }
   function buildRows(){
     DB.weighF=DB.weighF||{};const f=DB.weighF;const agg={};
@@ -126,11 +127,15 @@
   function portionGrid(r,idx){
     const readonly=r.st=='done'||r.locked;
     const rows=Array.from({length:r.portionN}).map((_,i)=>{
-      const w=r.ws[i];const has=w!=null&&w!=='';const dv=has?+(+w-r.specQty).toFixed(2):null;const bad=portionTypo(has?+w:'',r.specQty);
-      const tail=readonly?'':(bad?`<span class="pf">⚠️ 重量明显异常，请核对</span>`:(has&&Math.abs(dv)>=0.01?`<span class="pf ok">${dv>0?'+':''}${dv} kg</span>`:''));
+      const w=r.ws[i];const has=w!=null&&w!=='';const p=r.ps[i]||{};const bad=p.st=='block';
+      // 每一份自己的差异 + 差异率（相对规格量）
+      const dcol=v=>v>0?'var(--y)':v<0?'var(--r)':'var(--ts)';
+      const detail=(!has)?'<span class="pd" style="color:var(--tt)">待称</span><span class="pd" style="color:var(--tt)">—</span>'
+        :`<span class="pd" style="color:${dcol(p.diff)}">差异 <b>${p.diff>0?'+':''}${p.diff}</b> kg</span><span class="pd" style="color:${dcol(p.diff)}">差异率 <b>${p.rate>0?'+':''}${(p.rate*100).toFixed(1)}%</b></span>`;
+      const flag=(!readonly&&bad&&p.msg)?`<span class="pf">⚠️ ${p.msg}</span>`:'';
       const cell=readonly
-        ?`<b class="pw">${has?w+' '+r.unit:'—'}</b><span class="ptag">🏷️ 标签印 ${has?w+r.unit:'—'}</span>`
-        :`<input type="number" step="0.01" min="0" value="${has?w:''}" placeholder="${r.specQty}" oninput="wg_portion(${idx},${i},this.value)"><i>${r.unit}</i>${tail}`;
+        ?`<b class="pw">${has?w+' '+r.unit:'—'}</b>${detail}<span class="ptag">🏷️ 标签印 ${has?w+r.unit:'—'}</span>`
+        :`<input type="number" step="0.01" min="0" value="${has?w:''}" placeholder="${r.specQty}" oninput="wg_portion(${idx},${i},this.value)"><i>${r.unit}</i>${detail}${flag}`;
       return `<div class="wg-pr ${bad?'bad':''}"><span class="pn">份 ${i+1}</span>${cell}</div>`;
     }).join('');
     const note=readonly
@@ -173,6 +178,7 @@
     .wg-pr input:focus{border-color:var(--g);background:#fff;box-shadow:0 0 0 3px rgba(14,122,82,.12)}
     .wg-pr input::placeholder{color:var(--tt)}
     .wg-pr i{font-size:12px;color:var(--ts);font-style:normal}
+    .wg-pr .pd{font-size:12px;color:var(--ts);white-space:nowrap;min-width:96px}.wg-pr .pd b{font-weight:600}
     .wg-pr .pf{font-size:11.5px;color:var(--r);margin-left:4px}
     .wg-pr .pf.ok{color:var(--ts)}
     .wg-pr.bad input{border-color:var(--r);background:var(--rl)}
