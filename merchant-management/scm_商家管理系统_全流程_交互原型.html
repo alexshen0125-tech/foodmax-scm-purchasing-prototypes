@@ -1009,13 +1009,30 @@ const PAGES={};
 
 /* ---------- 商家端：工作台 ---------- */
 PAGES['m-dash']=()=>{
-  const m=DB.merchant;
+  const m=DB.merchant;const p=DB.dashPeriod=DB.dashPeriod||'today';const d=dashData();
+  const r=DB.dashRange||{from:'2026-07-01',to:'2026-07-29'};
+  const ptab=(k,t)=>`<div class="tab ${p==k?'active':''}" onclick="DB.dashPeriod='${k}';render()">${t}</div>`;
   return `
+  <div class="card" style="margin-bottom:14px;box-shadow:none;border:none;background:transparent">
+    <div class="card-hd" style="padding:0 2px 12px;border:none;flex-wrap:wrap;gap:10px">
+      <div class="row" style="align-items:center;gap:12px;flex-wrap:wrap">
+        <h3 style="margin:0">经营概览</h3>
+        <div class="tabs" style="margin:0;border:none">${ptab('today','今日')}${ptab('yesterday','昨日')}${ptab('7d','近7天')}${ptab('custom','自定义')}</div>
+      </div>
+      <span style="font-size:12px;color:var(--ts)">${d.note}</span>
+    </div>
+    ${p==='custom'?`<div class="card" style="margin:0 0 12px"><div class="card-bd" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 16px">
+      <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">起始日期</div><input type="date" id="dash-from" value="${r.from}" style="min-width:160px"></div>
+      <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">结束日期</div><input type="date" id="dash-to" value="${r.to}" style="min-width:160px"></div>
+      <button class="btn btn-p btn-sm" onclick="dashQuery()">查询</button>
+      <button class="btn btn-o btn-sm" onclick="DB.dashPeriod='today';render()">重置为今日</button>
+    </div></div>`:''}
+  </div>
   <div class="sg">
-    <div class="sc good"><div class="sc-l">销售额</div><div class="sc-v" style="color:var(--gd)">$11,544.95</div>${wpTrend(14.83)}</div>
-    <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">741</div>${wpTrend(11.06)}</div>
-    <div class="sc"><div class="sc-l">实付单均价</div><div class="sc-v">$15.58</div>${wpTrend(0)}</div>
-    <div class="sc"><div class="sc-l">动销覆盖</div><div class="sc-v">62.0%</div><div class="sc-s">动销 30 / 在售 48 SPU</div></div>
+    <div class="sc good"><div class="sc-l">销售额</div><div class="sc-v" style="color:var(--gd)">$${d.sales}</div>${wpTrend(d.st,d.tl)}</div>
+    <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">${d.orders}</div>${wpTrend(d.ot,d.tl)}</div>
+    <div class="sc"><div class="sc-l">实付单均价</div><div class="sc-v">$${d.avg}</div>${wpTrend(d.at,d.tl)}</div>
+    <div class="sc"><div class="sc-l">动销覆盖</div><div class="sc-v">${d.cover}%</div><div class="sc-s">动销 ${d.cn.split(' / ')[0]} / 在售 ${d.cn.split(' / ')[1]} SPU</div></div>
   </div>
   <div class="wp-main">
     <div class="card" style="margin-bottom:0"><div class="card-hd"><h3>⚡ 常用功能</h3><span class="sub">高频操作一键直达</span></div>
@@ -1068,11 +1085,31 @@ function wpAnn(i){const a=WP_ANN[i];modal(`<div class="mc-hd"><h3>${a.title}</h3
   <div class="mc-bd"><div style="margin-bottom:10px"><span class="tag ${a.tag[1]}" style="font-size:11px">${a.tag[0]}</span> <span style="font-size:12.5px;color:var(--ts);margin-left:6px">${a.date}</span></div>
   <div style="font-size:14px;line-height:1.85;color:var(--tp)">${a.body}</div></div>
   <div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">知道了</button></div>`);}
-/* 工作台指标·较昨日环比（正数绿↑ / 负数红↓ / 0灰持平） */
-function wpTrend(pct){const v=(+pct).toFixed(2);
-  if(pct>0)return `<div class="sc-s" style="color:var(--g)">较昨日 ↑ ${v}%</div>`;
-  if(pct<0)return `<div class="sc-s" style="color:var(--r)">较昨日 ↓ ${Math.abs(v)}%</div>`;
-  return `<div class="sc-s">较昨日 ${v}%</div>`;}
+/* 工作台指标·环比（正数绿↑ / 负数红↓ / 0灰持平；label=对比口径） */
+function wpTrend(pct,label='较昨日'){const v=(+pct).toFixed(2);
+  if(pct>0)return `<div class="sc-s" style="color:var(--g)">${label} ↑ ${v}%</div>`;
+  if(pct<0)return `<div class="sc-s" style="color:var(--r)">${label} ↓ ${Math.abs(v)}%</div>`;
+  return `<div class="sc-s">${label} ${v}%</div>`;}
+/* 工作台经营指标·时间段（默认今日，可选昨日/近7天/自定义区间）。演示 mock 数据，按口径给不同值 */
+function dashData(){
+  const p=DB.dashPeriod||'today';
+  const M={
+    today:{sales:'3,852.33',st:18.5,orders:'286',ot:9.2,avg:'13.47',at:2.1,cover:'58.0',cn:'28 / 48',tl:'较昨日',note:'今日实时 · 截至 16:49'},
+    yesterday:{sales:'11,544.95',st:14.83,orders:'741',ot:11.06,avg:'15.58',at:0,cover:'62.0',cn:'30 / 48',tl:'较前日',note:'昨日有效订单口径 · 更新于 07-29 00:10'},
+    '7d':{sales:'78,220.40',st:6.3,orders:'5,102',ot:4.8,avg:'15.33',at:1.2,cover:'86.0',cn:'41 / 48',tl:'较上周',note:'近 7 天累计（07-23 ~ 07-29）'},
+  };
+  if(p==='custom'){
+    const r=DB.dashRange||{from:'2026-07-01',to:'2026-07-29'};
+    const days=Math.max(1,Math.round((Date.parse(r.to)-Date.parse(r.from))/86400000)+1);
+    const sales=(days*2680.5),orders=days*182;
+    return {sales:sales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),st:5.6,orders:orders.toLocaleString('en-US'),ot:3.9,avg:(sales/orders).toFixed(2),at:1.0,cover:'74.0',cn:'36 / 48',tl:'环比上一周期',note:`自定义区间 ${r.from} ~ ${r.to}（共 ${days} 天）`};
+  }
+  return M[p]||M.today;
+}
+function dashQuery(){const f=(document.getElementById('dash-from')||{}).value,t=(document.getElementById('dash-to')||{}).value;
+  if(!f||!t){toast('请选择起始与结束日期','err');return;}
+  if(Date.parse(f)>Date.parse(t)){toast('起始日期不能晚于结束日期','err');return;}
+  DB.dashRange={from:f,to:t};DB.dashPeriod='custom';render();toast(`已按 ${f} ~ ${t} 查询`,'ok');}
 /* 帮助中心数据 + 交互 */
 const WP_FAQ=[
   {q:'如何新建商品并上架？',a:'进入「商品管理 · 商品列表」→ 点右上「新建商品」，填写商品名/类目/单位/售价，按 SKU 维护规格与库存，保存后提交店铺运营平台审核，审核通过即自动上架。批量新建可用「导入模板」。'},
