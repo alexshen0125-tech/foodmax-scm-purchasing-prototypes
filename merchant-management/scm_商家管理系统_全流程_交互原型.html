@@ -1019,7 +1019,10 @@ PAGES['m-dash']=()=>{
         <h3 style="margin:0">经营概览</h3>
         <div class="tabs" style="margin:0;border:none">${ptab('today','今日')}${ptab('yesterday','昨日')}${ptab('7d','近7天')}${ptab('custom','自定义')}</div>
       </div>
-      <span style="font-size:12px;color:var(--ts)">${d.note}</span>
+      <div class="row" style="align-items:center;gap:10px">
+        <span style="font-size:12px;color:var(--ts)">${d.note}</span>
+        ${p==='today'?`<button class="btn btn-o btn-sm" onclick="dashRefresh()" title="刷新今日实时数据">↻ 刷新</button>`:''}
+      </div>
     </div>
     ${p==='custom'?`<div class="card" style="margin:0 0 12px"><div class="card-bd" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;padding:12px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">起始日期</div><input type="date" id="dash-from" value="${r.from}" style="min-width:160px"></div>
@@ -1093,8 +1096,11 @@ function wpTrend(pct,label='较昨日'){const v=(+pct).toFixed(2);
 /* 工作台经营指标·时间段（默认今日，可选昨日/近7天/自定义区间）。演示 mock 数据，按口径给不同值 */
 function dashData(){
   const p=DB.dashPeriod||'today';
+  if(p==='today'){   // 今日实时：随手动刷新累加（模拟实时增长），截至时间取上次刷新
+    const tick=DB.dashTick||0,sales=3852.33+tick*68.40,orders=286+tick*4,cover=Math.min(72,58.0+tick*0.4);
+    return {sales:sales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),st:18.5,orders:(''+orders),ot:9.2,avg:(sales/orders).toFixed(2),at:2.1,cover:cover.toFixed(1),cn:(28+Math.min(6,tick))+' / 48',tl:'较昨日',note:`今日实时 · 截至 ${DB.dashTodayAt||'16:49'}`};
+  }
   const M={
-    today:{sales:'3,852.33',st:18.5,orders:'286',ot:9.2,avg:'13.47',at:2.1,cover:'58.0',cn:'28 / 48',tl:'较昨日',note:'今日实时 · 截至 16:49'},
     yesterday:{sales:'11,544.95',st:14.83,orders:'741',ot:11.06,avg:'15.58',at:0,cover:'62.0',cn:'30 / 48',tl:'较前日',note:'昨日有效订单口径 · 更新于 07-29 00:10'},
     '7d':{sales:'78,220.40',st:6.3,orders:'5,102',ot:4.8,avg:'15.33',at:1.2,cover:'86.0',cn:'41 / 48',tl:'较上周',note:'近 7 天累计（07-23 ~ 07-29）'},
   };
@@ -1106,6 +1112,7 @@ function dashData(){
   }
   return M[p]||M.today;
 }
+function dashRefresh(){DB.dashTick=(DB.dashTick||0)+1;const n=new Date(),pad=x=>(''+x).padStart(2,'0');DB.dashTodayAt=pad(n.getHours())+':'+pad(n.getMinutes());render();toast('已刷新今日实时数据','ok');}
 function dashQuery(){const f=(document.getElementById('dash-from')||{}).value,t=(document.getElementById('dash-to')||{}).value;
   if(!f||!t){toast('请选择起始与结束日期','err');return;}
   if(Date.parse(f)>Date.parse(t)){toast('起始日期不能晚于结束日期','err');return;}
