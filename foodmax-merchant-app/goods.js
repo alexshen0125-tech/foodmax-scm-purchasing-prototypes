@@ -219,6 +219,7 @@ function bindSku(el,g,s,gi,si,state){
 function openGoodsDetail(g,s){
   const on=isOnShelf(g);
   const info=[['商品名称',g.n],['品类',g.cat],['税率',taxRate(g)+'%'],
+    ['售卖模式',g.consign?'<span class="consign-b" style="margin:0 5px 0 0">寄售</span>库存由货品库存决定、逐规格不可维护':'自售（经销买断）'],
     ['BCRS 押金',g.bcrs?`<span class="bcrs-b" style="margin:0 5px 0 0">BCRS</span>押金单价 S$${(+g.bcrsDeposit).toFixed(2)}/最小售卖单位（单容器 S$${BCRS_UNIT_PRICE.toFixed(2)}，不计 GST）`:'不支持'],
     ['累计销量',(g.sales||0)+' 件'],['创建时间',g.createdAt||'—'],['更新时间',g.updatedAt||'—']];
   pushPage({title:'商品详情',body:`<div class="gdt">
@@ -233,6 +234,7 @@ function openGoodsDetail(g,s){
       ${g.skus.map(x=>{const oos=(+x.stock<=0);const stt=x.off?'已下架':(oos?'售罄':'在售');const cur=x===s;const xb=skuBcrs(g,x);
         return `<div class="sku${cur?' cur':''}">
           <div class="sn"><span>${g.n} · ${x.spec}${cur?'<span class="cur-b">当前</span>':''}</span><span style="font-size:12.5px;font-weight:700;color:${x.off?'var(--sub)':'var(--emerald-2)'}">${stt}</span></div>
+          ${x.refund?`<div class="ln"><span class="refund-b" style="margin:0 5px 0 0">多退少补</span>按重量结差额，分装后按实发净重结算，需先称重</div>`:''}
           ${xb?`<div class="ln">BCRS 押金 <b>S$${xb.toFixed(2)}</b>（${x.qty} × S$${(+g.bcrsDeposit).toFixed(2)}，不计 GST）</div>`:''}
           <div class="ln"><b>S$${(+x.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(x.price,g).toFixed(2)}（税率 ${taxRate(g)}%）· 库存 ${x.off?'—':(oos?'0（售罄）':(+x.stock).toLocaleString())}${x.off?'':` ${x.stockMode==='daily'?'<span class="mode daily">每日恢复</span>':'<span class="mode once">售完即止</span>'}`}</div>
           ${x.updatedAt?`<div class="ln" style="color:#94A3B8">更新 ${x.updatedAt}</div>`:''}
