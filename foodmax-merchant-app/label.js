@@ -56,16 +56,10 @@ css.textContent=`
 .lp-printer b{color:var(--emerald-2);}
 .lp-gatetip{margin:12px 16px 0;background:var(--amber-soft);border-radius:12px;padding:12px 14px;font-size:12.5px;color:#B45309;line-height:1.6;}
 .lp-gatetip .go{color:var(--emerald-2);font-weight:700;text-decoration:underline;}
-.lp-seq{margin:10px 16px 0;background:transparent;}
-.lp-seqhd{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--sub);}
-.lp-seqhd .chev{font-size:11px;color:var(--sub);}
-.lp-seqbody{background:#fff;border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);margin-top:2px;}
-.lp-seq .s{font-size:11.5px;color:var(--sub);margin:0 0 11px;line-height:1.55;}
-.lp-seq .seqrow{display:flex;align-items:center;gap:9px;}
-.lp-seq input{width:60px;height:40px;border:1.5px solid var(--line);border-radius:11px;text-align:center;font-size:15px;font-family:inherit;color:var(--ink);}
-.lp-seq input:focus{border-color:var(--emerald);outline:none;}
-.lp-seq .dash{color:var(--sub);}
-.lp-seqbtn{flex:1;height:40px;border-radius:11px;background:var(--muted);color:var(--emerald-2);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-family:inherit;}
+.lp-seqlink{margin:12px 16px 0;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--sub);background:transparent;border:1px dashed var(--line);cursor:pointer;}
+.lp-seqlink:active{background:var(--muted);}
+.lpm-in{width:76px;height:44px;border:1.5px solid var(--line);border-radius:11px;text-align:center;font-size:17px;font-family:inherit;color:var(--ink);}
+.lpm-in:focus{border-color:var(--emerald);outline:none;}
 .lb-row .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .lb-row .nm{font-size:14.5px;font-weight:700;}
 .lb-row .wtag{font-size:10.5px;font-weight:700;border-radius:7px;padding:1px 7px;margin-left:6px;}
@@ -152,8 +146,7 @@ function connectPrinter(then){window.FM.sheet([
   {label:'FoodMax 标签机 · TSC-A1（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='TSC-A1';window.FM.toast('已连接 TSC-A1 标签机','ok');then&&then();}},
   {label:'Brother QL-820NWB（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='QL-820';window.FM.toast('已连接 QL-820 标签机','ok');then&&then();}},
 ]);}
-let CURLP=null,LP_SEQOPEN=false;
-window.lp_seqToggle=function(key){LP_SEQOPEN=!LP_SEQOPEN;drawLabelDetail(CURLP.querySelector('#lpd'),key);};
+let CURLP=null;
 function reallyPrint(key){window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};const r=rowOf(key);const old=Math.min(r.qty,printedOf(key));
   if(old>=r.qty){window.FM.toast('该商品标签已全部打印','info');return;}
   window.FM.DB.labelPrinted[key]=r.qty;
@@ -167,18 +160,31 @@ function onPrintClick(key){const r=rowOf(key);
   reallyPrint(key);}
 function goWeighFor(){window.FM.popPage();LBTAB='weigh';if(LBROOT)mount(LBROOT);}
 window.lp_goWeigh=goWeighFor;
-// 按序号打印 / 补打：填 [起始,结束] 区间，漏打时补打指定几张
-window.lp_seqPrint=function(key){const r=rowOf(key);
+// 按序号打印 / 补打：点弱按钮弹窗填 [起始,结束] 区间，漏打时补打指定几张
+window.lp_seqModal=function(key){const r=rowOf(key);
   if(r.refund&&!weighed(key)){window.FM.toast('该商品为多退少补，请先完成称重','err');return;}
-  const N=r.qty,from=parseInt((CURLP.querySelector('#lp-from')||{}).value,10),to=parseInt((CURLP.querySelector('#lp-to')||{}).value,10);
-  if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){window.FM.toast(`请填有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
-  const doIt=()=>{window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};
-    window.FM.DB.labelPrinted[key]=Math.max(printedOf(key),to);
-    window.FM.toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张`,'ok');
-    drawLabelDetail(CURLP.querySelector('#lpd'),key);
-    if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}};
-  if(!printer().connected){connectPrinter(doIt);return;}
-  doIt();};
+  const N=r.qty,pr=Math.min(r.qty,printedOf(key));
+  const m=document.createElement('div');m.className='modal-mask';
+  m.innerHTML=`<div class="modal"><div class="mt">按序号打印 / 补打</div>
+    <div class="mb" style="text-align:left">
+      <div style="font-size:12.5px;color:var(--sub);line-height:1.6;margin-bottom:13px">${r.name} · 共 <b>${N}</b> 张，序号 1–${N}${pr?` · 已打印至 ${pr}`:''}。漏打哪几张就填哪段序号。</div>
+      <div style="display:flex;align-items:center;gap:10px;justify-content:center"><input id="lpm-from" class="lpm-in" type="number" inputmode="numeric" min="1" max="${N}" value="${Math.min(pr+1,N)}"><span style="color:var(--sub)">—</span><input id="lpm-to" class="lpm-in" type="number" inputmode="numeric" min="1" max="${N}" value="${N}"></div>
+    </div>
+    <div class="mf"><div class="mbn cancel">取消</div><div class="mbn ok">打印</div></div></div>`;
+  document.querySelector('.phone').appendChild(m);
+  const close=()=>m.remove();
+  m.querySelector('.cancel').onclick=close;m.onclick=e=>{if(e.target===m)close();};
+  m.querySelector('.ok').onclick=()=>{
+    const from=parseInt(m.querySelector('#lpm-from').value,10),to=parseInt(m.querySelector('#lpm-to').value,10);
+    if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){window.FM.toast(`请填有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
+    close();
+    const doIt=()=>{window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};
+      window.FM.DB.labelPrinted[key]=Math.max(printedOf(key),to);
+      window.FM.toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张`,'ok');
+      drawLabelDetail(CURLP.querySelector('#lpd'),key);
+      if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}};
+    if(!printer().connected){connectPrinter(doIt);return;}
+    doIt();};};
 function drawLabelDetail(box,key){
   const r=rowOf(key);const pr=Math.min(r.qty,printedOf(key)),un=r.qty-pr;
   const gated=r.refund&&!weighed(key);const p=printer();
@@ -192,13 +198,7 @@ function drawLabelDetail(box,key){
     <div class="lb-sum"><div class="k"><div class="v">${r.qty}</div><div class="l">应送货(张)</div></div><div class="k"><div class="v g">${pr}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${un}</div><div class="l">未打印</div></div></div>
     ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
       :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>
-        <div class="lp-seq">
-          <div class="lp-seqhd" onclick="lp_seqToggle('${key}')"><span>🔢 按序号打印 / 补打</span><span class="chev">${LP_SEQOPEN?'收起 ▴':'展开 ▾'}</span></div>
-          ${LP_SEQOPEN?`<div class="lp-seqbody">
-            <div class="s">本商品共 ${r.qty} 张，序号 1–${r.qty}${pr?` · 已打印至 ${pr}`:''}。上方「打印 N 张」打全部未打印；漏打哪几张在此填序号区间补打。</div>
-            <div class="seqrow"><input id="lp-from" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${Math.min(pr+1,r.qty)}"><span class="dash">—</span><input id="lp-to" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${r.qty}"><button class="lp-seqbtn" onclick="lp_seqPrint('${key}')">打印此区间</button></div>
-          </div>`:''}
-        </div>`}
+        <div class="lp-seqlink" onclick="lp_seqModal('${key}')">🔢 按序号打印 / 补打</div>`}
     <div style="height:14px"></div>`;
   refreshPrintFooter(key);
 }
@@ -208,7 +208,7 @@ function refreshPrintFooter(key){if(!CURLP)return;const btn=CURLP.querySelector(
   if(gated){btn.textContent='🔒 请先完成称重';btn.className='btn';btn.style.opacity='.55';}
   else if(un<=0){btn.textContent='✓ 已全部打印';btn.className='btn';btn.disabled=true;}
   else{btn.textContent=`🖨 打印 ${un} 张标签`;btn.className='btn primary';}}
-function openLabelDetail(key){const r=rowOf(key);LP_SEQOPEN=false;   // 每次进详情默认折叠补打，避免误操作
+function openLabelDetail(key){const r=rowOf(key);
   CURLP=pushPage({title:'打印标签 · '+r.name,body:'<div id="lpd"></div>',
     footer:`<button class="btn primary" id="lp-print">🖨 打印标签</button>`,
     mount:(p)=>{CURLP=p;drawLabelDetail(p.querySelector('#lpd'),key);const b=p.querySelector('#lp-print');if(b)b.onclick=()=>onPrintClick(key);}});
