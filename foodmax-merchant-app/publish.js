@@ -351,6 +351,7 @@ function openForm(prefill){
     netQty:'', netUnit:'', measureNote:'',
     bcrs:'否', bcrsDeposit:'',              // BCRS：仅 cat.bcrs 类目可选；押金单价 S$/最小售卖单位
     sellType:'售卖品',                      // 销售类型固定，不可改
+    supplyMode:'自售',                      // 售卖模式(dev supplyMode 1=自售/2=寄售)：默认自售，保存后不可修改；寄售→SKU库存只读
     validEnable:'是',                       // 效期管理默认「是」
     shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
     appShowShelf:'展示',                    // APP 是否展示效期(展示/不展示)，放保质期后
@@ -377,6 +378,8 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>押金单价</div><div class="val"><span class="pre">S$</span><input id="pb-bcrsdep" inputmode="decimal" placeholder="如 ${BCRS_UNIT_PRICE.toFixed(2)}" value="${f.bcrsDeposit}"><span class="pre">/最小售卖单位</span></div></div>
         <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">单容器法规押金 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}</b>（不计 GST）；一个最小售卖单位含几个容器就填几×${BCRS_UNIT_PRICE.toFixed(2)}。<b>每个 SKU 押金 = 该规格数量 × 押金单价</b>，透传客户下单/订单/发票原样展示。上限 S$${BCRS_MAX.toFixed(2)} · 适用容量 150ml–3L。</div>
         <div class="pb-cell" id="pb-selltype-row"><div class="lab">销售类型</div><div class="val"><span class="vtxt" style="color:var(--sub)">售卖品</span></div></div>
+        <div class="pb-cell" id="pb-supply-row" style="cursor:pointer"><div class="lab">售卖模式</div><div class="val"><span class="vtxt" id="pb-supply-v">${f.supplyMode}</span></div><span class="ch">${svg('arrow')}</span></div>
+        <div class="pb-bcrs-tip" style="display:block;padding-top:2px">自售=经销买断，库存自行维护；<b>寄售</b>=库存由货品库存决定、逐规格不可维护。售卖模式<b>保存后不可修改</b>。</div>
       </div>
       <div class="pb-card">
         <div class="ct">效期与履约</div>
@@ -423,38 +426,49 @@ function confirmExit(f){
 }
 
 /* ---- 售卖规格渲染(售卖单位只读 = 最小售卖单位) ---- */
-function specRow(s,i,total,measure){
+function specRow(s,i,total,measure,consign){
   const uTxt=measure||'—';
+  const wgUnit=['kg','g'].includes(measure);   // 多退少补仅计量单位为 kg/g 时可选
   return `<div class="pb-spec" data-i="${i}">
     <div class="sh"><span class="sn">规格${i+1}</span>${total>1?'<span class="del" data-del>删除</span>':''}</div>
     <div class="sbody">
       <div class="qty"><span class="lb">数量</span><input data-qty inputmode="numeric" value="${s.qty}" placeholder="如 2"></div>
       <div class="unit" style="cursor:default;background:var(--muted);opacity:.9"><span class="lb">售卖单位</span><span class="uv ${measure?'':'ph'}">${uTxt}</span></div>
     </div>
+    ${wgUnit?`<div class="ms-row"><span class="lb">多退少补</span>
+      <div class="modeseg" data-refundseg>
+        <div class="mo ${s.refund?'on':''}" data-r="1">是 · 按重量结差额</div>
+        <div class="mo ${s.refund?'':'on'}" data-r="0">否 · 定重按件</div>
+      </div></div>
+    <div class="ms-hint">是=按重量定价（S$/${measure}），分装后按实发净重结算差额，需先称重再打标；否=定重预包装按件计价。</div>`:''}
     <div class="sbody" style="margin-top:10px">
       <div class="unit packcell" data-packpick style="cursor:pointer"><span class="lb">包装单位</span><span class="uv ${s.packUnit?'':'ph'}" data-packv>${s.packUnit||'选填 · 如 袋/箱/盒'}</span><span style="margin-left:auto;flex:0 0 auto;color:var(--sub)">▾</span></div>
     </div>
     <div class="sbody" style="margin-top:10px">
       <div class="qty"><span class="lb">价格</span><span class="lb" style="flex:0 0 auto;padding-left:2px">S$</span><input data-price inputmode="decimal" value="${s.price}" placeholder="选填"></div>
-      <div class="qty"><span class="lb">库存</span><input data-stock inputmode="numeric" value="${s.stock}" placeholder="选填"></div>
+      <div class="qty"${consign?' style="opacity:.55"':''}><span class="lb">库存</span><input data-stock inputmode="numeric" value="${consign?'':s.stock}" placeholder="${consign?'由货品库存决定':'选填'}"${consign?' disabled':''}></div>
     </div>
-    <div class="ms-row"><span class="lb">库存模式</span>
+    ${consign?`<div class="ms-hint" style="color:#B45309">🔒 寄售品库存与库存模式由<b>货品库存</b>决定，不逐规格维护（1 规格 = ${s.qty||'N'} 个货品单位）。</div>`
+      :`<div class="ms-row"><span class="lb">库存模式</span>
       <div class="modeseg" data-modeseg>
         <div class="mo ${(s.mode||'finite')==='daily'?'on':''}" data-m="daily">每日恢复初始库存</div>
         <div class="mo ${(s.mode||'finite')==='finite'?'on':''}" data-m="finite">售完即止</div>
       </div></div>
-    <div class="ms-hint" data-mshint>${(s.mode||'finite')==='daily'?'每天 0 点自动把可售库存补回设定的库存总数，适合每日稳定供应':'售完不再恢复、售罄即下线，适合尾货/限量'}</div>
+    <div class="ms-hint" data-mshint>${(s.mode||'finite')==='daily'?'每天 0 点自动把可售库存补回设定的库存总数，适合每日稳定供应':'售完不再恢复、售罄即下线，适合尾货/限量'}</div>`}
     <div class="serr" data-serr></div>
     <div class="serr" data-pnote style="color:#46604F"></div>
     <div class="serr" data-bnote style="color:var(--emerald-2)"></div></div>`;
 }
 function renderSpecs(p,f){
   const box=p.querySelector('#pb-specs');
-  box.innerHTML=f.specs.map((s,i)=>specRow(s,i,f.specs.length,f.measure)).join('');
+  const consign=f.supplyMode==='寄售';
+  box.innerHTML=f.specs.map((s,i)=>specRow(s,i,f.specs.length,f.measure,consign)).join('');
   box.querySelectorAll('.pb-spec').forEach((row,i)=>{
     row.querySelector('[data-qty]').oninput=e=>{f.specs[i].qty=e.target.value;paint(p,f);};
     row.querySelector('[data-price]').oninput=e=>{f.specs[i].price=e.target.value;paint(p,f);};
-    row.querySelector('[data-stock]').oninput=e=>{f.specs[i].stock=e.target.value;paint(p,f);};
+    const stk=row.querySelector('[data-stock]');if(stk&&!consign)stk.oninput=e=>{f.specs[i].stock=e.target.value;paint(p,f);};
+    const rseg=row.querySelector('[data-refundseg]');
+    if(rseg)rseg.querySelectorAll('.mo').forEach(o=>o.onclick=()=>{rseg.querySelectorAll('.mo').forEach(x=>x.classList.remove('on'));o.classList.add('on');f.specs[i].refund=o.dataset.r==='1'?1:0;});
     const pk=row.querySelector('[data-packpick]');
     if(pk)pk.onclick=()=>pbGridPicker('选择包装单位',['无',...PACK_UNITS],f.specs[i].packUnit||'无',v=>{
       const val=v==='无'?'':v;f.specs[i].packUnit=val;
@@ -595,6 +609,9 @@ function bindForm(p,f){
   p.querySelector('#pb-bcrsdep').oninput=e=>{f.bcrsDeposit=e.target.value;paint(p,f);};
   bcrsToggle(p,f);
   // 最小售卖单位(变更后 SKU 售卖单位联动只读)
+  p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
+    f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);renderSpecs(p,f);paint(p,f);});
+
   p.querySelector('#pb-measure-row').onclick=()=>pbGridPicker('选择最小售卖单位',MEASURE_UNITS,f.measure,v=>{f.measure=v;setPH(p.querySelector('#pb-measure-v'),v,1);renderSpecs(p,f);paint(p,f);});
   // 净含量单位
   p.querySelector('#pb-net-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('净含量单位',NET_UNITS,f.netUnit,v=>{f.netUnit=v;setPH(p.querySelector('#pb-netunit'),v,1);});};

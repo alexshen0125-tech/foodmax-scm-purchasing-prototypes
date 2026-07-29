@@ -56,6 +56,8 @@ css.textContent=`
 .pc .nm .spec{color:var(--sub);font-weight:600;font-size:13px;}
 /* BCRS 饮料容器押金标 */
 .bcrs-b{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:#E1EBFF;color:#2563EB;vertical-align:middle;margin-left:5px;}
+.consign-b{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:#F3EEFE;color:#7E3AF2;vertical-align:middle;margin-left:5px;}
+.refund-b{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:#D1FAE5;color:#059669;vertical-align:middle;margin-left:5px;}
 .pc .acts{display:flex;gap:9px;margin-top:14px;}
 .pc .acts .a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--muted);color:#27433A;}
 .pc .acts .a.tg-on{background:var(--mint-soft);color:var(--emerald-2);}
@@ -137,8 +139,9 @@ function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getF
 // SG 数据 —— 每个商品含 skus[]，价格/库存/上下架均到 SKU；创建/更新时间 SPU 与 SKU 独立
 const PRODUCTS=[
   {ic:'🥬',n:'鲜丰 · 嫩豆腐 1kg',cat:'新鲜蔬菜',rec:1,sales:4,createdAt:'2026-06-20 09:12',updatedAt:'2026-07-01 14:30',
-   skus:[{spec:'1kg/袋',price:9.99,stock:200,off:false,stockMode:'daily',soldToday:36,createdAt:'2026-06-20 09:12',updatedAt:'2026-07-01 14:30'},{spec:'2kg/箱',price:19.50,stock:120,off:false,stockMode:'finite',createdAt:'2026-06-25 10:00',updatedAt:'2026-06-25 10:00'}]},
-  {ic:'🧈',n:'鲜丰 · 老豆腐',cat:'新鲜蔬菜',sales:17,createdAt:'2026-06-18 16:40',updatedAt:'2026-06-28 11:05',
+   skus:[{spec:'1kg/袋',price:9.99,stock:200,off:false,stockMode:'daily',soldToday:36,refund:1,createdAt:'2026-06-20 09:12',updatedAt:'2026-07-01 14:30'},{spec:'2kg/箱',price:19.50,stock:120,off:false,stockMode:'finite',createdAt:'2026-06-25 10:00',updatedAt:'2026-06-25 10:00'}]},
+  // 寄售样例(对齐 dev supplyMode=2 寄售)：库存由货品库存决定、逐规格不可维护
+  {ic:'🧈',n:'鲜丰 · 老豆腐',cat:'新鲜蔬菜',consign:true,sales:17,createdAt:'2026-06-18 16:40',updatedAt:'2026-06-28 11:05',
    skus:[{spec:'2.5kg/盒',price:11.99,stock:168,off:false,createdAt:'2026-06-18 16:40',updatedAt:'2026-06-28 11:05'}]},
   {ic:'🍢',n:'鲜丰 · 小油豆腐',cat:'新鲜蔬菜',sales:9,createdAt:'2026-06-15 08:20',updatedAt:'2026-06-30 09:50',
    skus:[{spec:'2斤/袋',price:8.80,stock:150,off:false,stockMode:'daily',soldToday:22,createdAt:'2026-06-15 08:20',updatedAt:'2026-06-30 09:50'},{spec:'5斤/箱',price:20.80,stock:0,off:false,stockMode:'finite',createdAt:'2026-06-15 08:20',updatedAt:'2026-06-22 13:10'}]},
@@ -175,7 +178,7 @@ function skuCard(g,s,gi,si,manage,tab){
     <div class="chk" data-chk></div>
     <div class="body">
       <div class="top"><div class="img">${g.ic}</div>
-        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span>${bc?'<span class="bcrs-b">BCRS</span>':''}</div>
+        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span>${g.consign?'<span class="consign-b">寄售</span>':''}${s.refund?'<span class="refund-b">多退少补</span>':''}${bc?'<span class="bcrs-b">BCRS</span>':''}</div>
           <div class="sp">${g.cat}</div>
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
         <div class="rt"><div class="sk-st only">${st}</div></div></div>
