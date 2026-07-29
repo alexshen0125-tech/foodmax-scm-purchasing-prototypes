@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>整件 / 散件作业判定 PDA 交互原型 v1.0</title>
+<style>
+  :root{
+    --brand:#16A34A; --brand-deep:#15803D; --brand-bg:#F0FDF4; --brand-border:#BBF7D0;
+    --amber:#D97706; --amber-deep:#B45309; --amber-bg:#FFFBEB; --amber-border:#FDE68A;
+    --ink-900:#0F172A; --ink-700:#334155; --ink-500:#64748B; --ink-400:#94A3B8;
+    --ink-300:#CBD5E1; --ink-200:#E2E8F0; --ink-100:#F1F5F9; --ink-50:#F8FAFC;
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 4px 16px rgba(15,23,42,.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{
+    font-family:-apple-system,'SF Pro Text','PingFang SC','Microsoft YaHei',sans-serif;
+    background:#EEF1F5;
+    background-image:
+      radial-gradient(1200px 600px at 0% 0%, rgba(22,163,74,.06), transparent 50%),
+      radial-gradient(1000px 500px at 100% 10%, rgba(217,119,6,.05), transparent 50%);
+    display:flex;justify-content:center;align-items:flex-start;
+    padding:40px 24px;gap:32px;flex-wrap:wrap;min-height:100vh;color:var(--ink-900);
+  }
+
+  /* ===== 全宽说明区 ===== */
+  .intro{
+    flex-basis:100%;max-width:1140px;background:#fff;border-radius:16px;
+    padding:20px 24px;box-shadow:var(--shadow);border:1px solid var(--ink-100);
+  }
+  .intro-title{font-size:18px;font-weight:800;color:var(--ink-900);letter-spacing:.3px}
+  .intro-sub{font-size:12px;color:var(--ink-500);margin-top:4px}
+  .intro-rules{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+  .rule-card{
+    flex:1;min-width:240px;background:var(--ink-50);border:1px solid var(--ink-100);
+    border-radius:10px;padding:12px 14px;
+  }
+  .rc-tag{
+    font-size:11px;font-weight:700;color:var(--brand-deep);background:var(--brand-bg);
+    border:1px solid var(--brand-border);padding:2px 8px;border-radius:6px;
+    display:inline-block;margin-bottom:6px;
+  }
+  .rc-tag.amber{color:var(--amber-deep);background:var(--amber-bg);border-color:var(--amber-border)}
+  .rc-text{font-size:12px;color:var(--ink-700);line-height:1.65}
+  .br-list{margin:10px 0 0;padding-left:0;list-style:none}
+  .br-list li{
+    font-size:12px;color:var(--ink-700);line-height:1.7;padding-left:2px;
+  }
+  .br-list b{color:var(--brand-deep);font-weight:700}
+
+  /* ===== 行标题 ===== */
+  .row-title{
+    flex-basis:100%;max-width:1140px;font-size:15px;font-weight:800;color:var(--ink-700);
+    margin:10px 0 -8px;display:flex;align-items:center;gap:9px;
+  }
+  .row-title::before{content:"";width:4px;height:17px;background:var(--brand);border-radius:2px}
+  .row-title.r2::before{background:var(--amber)}
+
+  /* ===== PDA 设备 ===== */
+  .pda{
+    width:340px;background:#fff;border-radius:32px;
+    box-shadow:0 24px 60px rgba(15,23,42,.14),0 4px 12px rgba(15,23,42,.06),inset 0 0 0 1px rgba(15,23,42,.04);
+    overflow:hidden;border:3px solid #0F172A;flex-shrink:0;position:relative;
+  }
+  .pda-notch{width:110px;height:6px;background:#0F172A;border-radius:0 0 8px 8px;margin:0 auto}
+  .pda-home{width:40px;height:40px;border:2px solid var(--ink-200);border-radius:50%;margin:10px auto 12px;position:relative}
+  .pda-home::after{content:"";position:absolute;inset:6px;border:1.5px solid var(--ink-200);border-radius:50%}
+  .pda-label{
+    text-align:center;padding:8px 10px;font-size:11px;color:var(--ink-500);
+    background:var(--ink-50);font-weight:500;border-top:1px solid var(--ink-100);
+  }
+
+  /* ===== 状态栏 / 导航 ===== */
+  .status-bar{
+    height:30px;background:#fff;display:flex;align-items:center;justify-content:space-between;
+    padding:0 16px;font-size:11px;color:var(--ink-700);font-weight:600;border-bottom:1px solid var(--ink-100);
+  }
+  .status-bar .wifi{display:inline-flex;align-items:center;gap:4px}
+  .nav-bar{
+    height:46px;background:#fff;display:flex;align-items:center;padding:0 12px;
+    border-bottom:1px solid var(--ink-100);position:relative;
+  }
+  .nav-back{
+    width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+    border-radius:8px;color:var(--ink-700);
+  }
+  .nav-title{
+    position:absolute;left:0;right:0;text-align:center;font-size:15px;font-weight:600;
+    color:var(--ink-900);pointer-events:none;letter-spacing:.3px;
+  }
+  .nav-right{width:36px;margin-left:auto}
+
+  /* ===== 任务信息 ===== */
+  .task-no{padding:10px 14px 2px;font-size:14px;font-weight:700;color:var(--ink-900);letter-spacing:.2px}
+  .task-meta{padding:2px 14px 8px;font-size:11px;color:var(--ink-500)}
+
+  /* ===== 作业模式条 ===== */
+  .mode-bar{
+    display:flex;align-items:center;gap:9px;padding:9px 14px;
+    background:var(--brand-bg);border-top:1px solid var(--brand-border);
+    border-bottom:1px solid var(--brand-border);
+  }
+  .mode-bar.loose{background:var(--amber-bg);border-color:var(--amber-border)}
+  .mode-badge{
+    font-size:12px;font-weight:800;padding:4px 10px;border-radius:8px;
+    background:var(--brand);color:#fff;flex-shrink:0;display:inline-flex;align-items:center;gap:4px;
+  }
+  .mode-badge.loose{background:var(--amber)}
+  .mode-desc{font-size:11px;color:var(--ink-700);line-height:1.45}
+  .mode-desc b{font-weight:700}
+
+  /* ===== 区块 ===== */
+  .section{padding:12px 14px}
+  .section-title{font-size:12px;color:var(--ink-500);margin-bottom:8px;font-weight:600;letter-spacing:.2px}
+
+  /* ===== 货品区 ===== */
+  .product-area{display:flex;gap:12px;padding:12px 14px}
+  .product-img{
+    width:72px;height:72px;border-radius:10px;
+    background:linear-gradient(135deg,#F8FAFC,#E2E8F0);
+    border:1px solid var(--ink-200);display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;font-size:36px;
+  }
+  .product-info{flex:1;font-size:12px;color:var(--ink-500);line-height:1.75;min-width:0}
+  .product-info .loc{
+    display:inline-flex;align-items:center;font-size:15px;font-weight:800;color:var(--brand-deep);
+    letter-spacing:.3px;background:var(--brand-bg);padding:2px 10px;border-radius:8px;
+    border:1px solid var(--brand-border);margin-bottom:3px;
+  }
+  .product-info .name{font-size:13px;font-weight:700;color:var(--ink-900);margin-top:2px}
+  .product-info .pack-warn{color:var(--amber-deep);font-weight:700}
+
+  /* ===== 扫描行 ===== */
+  .scan-wrap{display:flex;gap:8px}
+  .scan-input{
+    flex:1;height:40px;border:1.5px solid var(--ink-200);border-radius:10px;
+    padding:0 12px;font-size:13px;background:#fff;color:var(--ink-900);font-weight:500;
+    display:flex;align-items:center;
+  }
+  .scan-input.ok{background:var(--brand-bg);border-color:var(--brand-border);color:var(--brand-deep);font-weight:600}
+  .scan-btn{
+    width:40px;height:40px;background:var(--brand);color:#fff;border:none;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(22,163,74,.25);
+  }
+
+  /* ===== 数量框 ===== */
+  .qty-row{display:flex;gap:10px;padding:6px 14px 12px}
+  .qty-box{
+    flex:1;background:#fff;border-radius:12px;padding:12px 8px;text-align:center;
+    border:1.5px solid var(--ink-100);box-shadow:0 1px 2px rgba(15,23,42,.03);
+  }
+  .qty-box.active{border-color:var(--brand);background:linear-gradient(180deg,var(--brand-bg),#fff);box-shadow:0 4px 12px rgba(22,163,74,.12)}
+  .qty-box.active.loose{border-color:var(--amber);background:linear-gradient(180deg,var(--amber-bg),#fff);box-shadow:0 4px 12px rgba(217,119,6,.12)}
+  .qty-label{font-size:11px;color:var(--ink-500);margin-bottom:4px;font-weight:500}
+  .qty-num{font-size:28px;font-weight:800;color:var(--ink-900);line-height:1;letter-spacing:-.5px;font-feature-settings:"tnum"}
+  .qty-num.green{color:var(--brand-deep)}
+  .qty-num.amber{color:var(--amber-deep)}
+  .qty-unit{font-size:11px;color:var(--ink-500);margin-top:2px}
+
+  /* ===== 计数器（散件） ===== */
+  .counter{display:flex;align-items:center;justify-content:center;gap:14px;padding:0 14px 10px}
+  .counter-btn{
+    width:42px;height:42px;border-radius:50%;border:1.5px solid var(--ink-200);background:#fff;
+    font-size:22px;font-weight:700;color:var(--ink-700);display:flex;align-items:center;justify-content:center;
+  }
+  .counter-val{font-size:34px;font-weight:800;color:var(--amber-deep);min-width:74px;text-align:center;font-feature-settings:"tnum"}
+
+  /* ===== 提交按钮 ===== */
+  .submit-btn{
+    margin:6px 14px 14px;height:46px;border:none;border-radius:12px;font-size:15px;font-weight:700;
+    width:calc(100% - 28px);display:flex;align-items:center;justify-content:center;letter-spacing:.5px;
+  }
+  .submit-btn.green{background:linear-gradient(180deg,var(--brand),var(--brand-deep));color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)}
+  .submit-btn.amber{background:linear-gradient(180deg,var(--amber),var(--amber-deep));color:#fff;box-shadow:0 6px 16px rgba(217,119,6,.3)}
+
+  /* ===== 流程箭头 ===== */
+  .flow-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--brand);padding-top:300px;flex-shrink:0}
+  .flow-arrow .arrow-circle{
+    width:44px;height:44px;border-radius:50%;background:#fff;border:2px solid var(--brand);
+    display:flex;align-items:center;justify-content:center;color:var(--brand);box-shadow:0 4px 14px rgba(22,163,74,.2);
+  }
+  .flow-arrow.amber .arrow-circle{border-color:var(--amber);color:var(--amber)}
+  .flow-arrow span{font-size:11px;color:var(--ink-500);margin-top:8px;text-align:center;line-height:1.5;max-width:96px}
+
+  /* ===== 模态 ===== */
+  .modal-overlay{
+    position:absolute;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;z-index:10;padding:16px;
+  }
+  .modal-box.warn{background:#fff;border-radius:16px;padding:24px 22px 20px;width:290px;box-shadow:0 20px 50px rgba(15,23,42,.28)}
+  .warn-icon{
+    width:50px;height:50px;border-radius:50%;background:var(--amber-bg);border:1px solid var(--amber-border);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--amber);
+  }
+  .warn-title{font-size:16px;font-weight:800;color:var(--ink-900);text-align:center;margin-bottom:8px}
+  .warn-desc{font-size:12px;color:var(--ink-500);line-height:1.6;margin-bottom:12px;text-align:center}
+  .warn-desc b{color:var(--ink-900);font-weight:700}
+  .spec-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  .spec-item{
+    display:flex;justify-content:space-between;align-items:center;background:var(--amber-bg);
+    border:1px solid var(--amber-border);border-radius:8px;padding:8px 11px;
+  }
+  .spec-pack{font-size:13px;font-weight:800;color:var(--amber-deep)}
+  .spec-batch{font-size:11px;color:var(--ink-500)}
+  .warn-note{
+    font-size:11px;color:var(--ink-700);line-height:1.6;background:var(--ink-50);
+    border-radius:8px;padding:9px 11px;margin-bottom:14px;
+  }
+  .modal-btns{display:flex;flex-direction:column;gap:8px}
+  .btn-full{
+    height:44px;border-radius:10px;font-size:14px;font-weight:700;border:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .btn-full.primary{background:linear-gradient(180deg,var(--brand),var(--brand-deep));color:#fff;box-shadow:0 6px 16px rgba(22,163,74,.3)}
+  .btn-full.ghost{background:#fff;border:1.5px solid var(--ink-200);color:var(--ink-700)}
+
+  /* ===== 完成弹窗 ===== */
+  .modal-box.done{background:#fff;border-radius:16px;padding:30px 26px 24px;text-align:center;width:250px;box-shadow:0 20px 50px rgba(15,23,42,.25)}
+  .done-icon{
+    width:54px;height:54px;border-radius:50%;background:var(--brand-bg);border:1px solid var(--brand-border);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--brand);
+  }
+  .modal-text{font-size:16px;font-weight:700;color:var(--ink-900);margin-bottom:6px}
+  .modal-sub{font-size:12px;color:var(--ink-500);margin-bottom:18px}
+  .modal-btn{height:40px;padding:0 36px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- ════════ 说明区 ════════ -->
+<div class="intro">
+  <div class="intro-title">整件 / 散件作业判定 · PDA 交互原型</div>
+  <div class="intro-sub">适用场景：采购入库收货 · 销售出库拣货 ｜ 版本 v1.0 ｜ 2026-05-20 ｜ WMS PDA</div>
+  <div class="intro-rules">
+    <div class="rule-card">
+      <span class="rc-tag">整件作业</span>
+      <div class="rc-text">作业对象单位 = 箱（包装规格单位）。PDA 直接显示「应收/应拣 N 箱」，按整箱清点，<b>无需拆箱数瓶</b>。</div>
+    </div>
+    <div class="rule-card">
+      <span class="rc-tag amber">散件作业</span>
+      <div class="rc-text">作业对象单位 = 计量单位（瓶/袋）。PDA 显示「应收/应拣 N 瓶」，按最小单位<b>逐个清点</b>。</div>
+    </div>
+    <div class="rule-card">
+      <span class="rc-tag amber">多箱规软提示</span>
+      <div class="rc-text">系统检测到同一货品在库存在 ≥2 种箱规时，整件作业页弹出软提示，<b>建议</b>转散件，作业员仍可坚持整件（二次确认）。</div>
+    </div>
+  </div>
+  <ul class="br-list">
+    <li><b>BR-01</b>　作业模式按作业对象单位判定：单位 = 箱 → 整件作业；单位 = 计量单位（瓶/袋）→ 散件作业。</li>
+    <li><b>BR-02</b>　入库收货按采购单行的采购单位判定；出库拣货按订单行的售卖规格判定。同一套判定逻辑。</li>
+    <li><b>BR-03</b>　整件作业仅清点箱数，不要求拆箱；系统按「标准箱规」折算计量单位库存。</li>
+    <li><b>BR-04</b>　进入整件作业页时，系统校验该货品当前在库是否存在 ≥2 种箱规；命中即弹出多箱规软提示。</li>
+    <li><b>BR-05</b>　软提示二选一：「改为散件作业」转散件页按计量单位逐一清点；「仍按整件作业」需二次确认后继续。</li>
+    <li><b>BR-06</b>　转散件作业后，应收/应拣数量换算为计量单位（瓶）展示与记账。</li>
+    <li><b>BR-07</b>　库存以计量单位记账。多箱规下整件作业的折算系数与实物不一致 = 库存错乱根因，故系统建议散件。</li>
+  </ul>
+</div>
+
+<!-- ════════ 行标题：入库收货 ════════ -->
+<div class="row-title">流程一　采购入库收货（PDA 收货）</div>
+
+<!-- ── 页面 1：整件收货（正常，单一箱规） ── -->
+<div class="pda">
+  <div class="pda-notch"></div>
+  <div style="min-height:600px">
+    <div class="status-bar">
+      <span>09:14</span><span>warehouse01</span>
+      <span class="wifi">WiFi<svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="7" width="2.5" height="3" rx=".5"/><rect x="3.5" y="5" width="2.5" height="5" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg></span>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div class="nav-title">收货作业</div>
+      <div class="nav-right"></div>
+    </div>
+    <div class="task-no">RK20260520-007</div>
+    <div class="task-meta">采购单 CG20260518-031 ｜ 供应商 新嘉食品 ｜ 货品 1/2</div>
+
+    <div class="mode-bar">
+      <span class="mode-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        整件作业
+      </span>
+      <div class="mode-desc">采购单位 = <b>箱</b>，箱规统一，按整箱清点，<b>无需拆箱数瓶</b>。</div>
+    </div>
+
+    <div class="product-area">
+      <div class="product-img">&#128230;</div>
+      <div class="product-info">
+        <div class="loc">收货暂存区 R-01</div>
+        <div class="name">农夫山泉 饮用天然水 550ml</div>
+        <div>箱规：24 瓶 / 箱（在库统一）</div>
+        <div>批次：BC-2605A ｜ 生产 2026-05-02</div>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:0;padding-bottom:6px">
+      <div class="section-title">扫描商品条码</div>
+      <div class="scan-wrap">
+        <div class="scan-input ok">6921168509256 &nbsp;&#10003;</div>
+        <button class="scan-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="2" height="18"/><rect x="7" y="3" width="1" height="18"/><rect x="10" y="3" width="3" height="18"/><rect x="15" y="3" width="1" height="18"/><rect x="18" y="3" width="3" height="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="qty-row">
+      <div class="qty-box"><div class="qty-label">应收数量</div><div class="qty-num">20</div><div class="qty-unit">箱</div></div>
+      <div class="qty-box active"><div class="qty-label">实收数量</div><div class="qty-num green">20</div><div class="qty-unit">箱</div></div>
+    </div>
+
+    <button class="submit-btn green">确认收货（整件）</button>
+  </div>
+  <div class="pda-label">页面 1 — 整件收货：按箱清点，单一箱规</div>
+  <div class="pda-home"></div>
+</div>
+
+<div class="flow-arrow">
+  <div class="arrow-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
+  <span>下一货品<br>命中多箱规</span>
+</div>
+
+<!-- ── 页面 2：整件收货 + 多箱规软提示弹窗 ── -->
+<div class="pda" style="position:relative">
+  <div class="pda-notch"></div>
+  <div style="min-height:600px;filter:blur(2px);opacity:.55">
+    <div class="status-bar">
+      <span>09:17</span><span>warehouse01</span>
+      <span class="wifi">WiFi<svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="7" width="2.5" height="3" rx=".5"/><rect x="3.5" y="5" width="2.5" height="5" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg></span>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div class="nav-title">收货作业</div>
+      <div class="nav-right"></div>
+    </div>
+    <div class="task-no">RK20260520-007</div>
+    <div class="task-meta">采购单 CG20260518-031 ｜ 供应商 新嘉食品 ｜ 货品 2/2</div>
+    <div class="mode-bar">
+      <span class="mode-badge">整件作业</span>
+      <div class="mode-desc">采购单位 = 箱，正在校验在库箱规…</div>
+    </div>
+    <div class="product-area">
+      <div class="product-img">&#128230;</div>
+      <div class="product-info">
+        <div class="loc">收货暂存区 R-01</div>
+        <div class="name">海天 金标生抽酱油 1.9L</div>
+        <div class="pack-warn">箱规：检测到多种</div>
+      </div>
+    </div>
+    <div class="qty-row">
+      <div class="qty-box"><div class="qty-label">应收数量</div><div class="qty-num">—</div><div class="qty-unit">待确认</div></div>
+      <div class="qty-box"><div class="qty-label">实收数量</div><div class="qty-num">—</div><div class="qty-unit">待确认</div></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay">
+    <div class="modal-box warn">
+      <div class="warn-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      </div>
+      <div class="warn-title">检测到多种箱规</div>
+      <div class="warn-desc">货品 <b>海天金标生抽 1.9L</b> 当前在库存在 2 种箱规：</div>
+      <div class="spec-list">
+        <div class="spec-item"><span class="spec-pack">6 瓶 / 箱</span><span class="spec-batch">批次 BC-2604X</span></div>
+        <div class="spec-item"><span class="spec-pack">12 瓶 / 箱</span><span class="spec-batch">批次 BC-2605Y</span></div>
+      </div>
+      <div class="warn-note">整件作业按「标准箱规」折算瓶数记账，箱规不一致会导致<b>库存数量错乱</b>。建议改为散件作业，按瓶逐一清点。</div>
+      <div class="modal-btns">
+        <button class="btn-full primary">改为散件作业</button>
+        <button class="btn-full ghost">仍按整件作业</button>
+      </div>
+    </div>
+  </div>
+  <div class="pda-label" style="position:relative;z-index:11">页面 2 — 整件作业命中多箱规，弹出软提示</div>
+  <div class="pda-home"></div>
+</div>
+
+<div class="flow-arrow amber">
+  <div class="arrow-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
+  <span>点「改为<br>散件作业」</span>
+</div>
+
+<!-- ── 页面 3：散件收货 ── -->
+<div class="pda">
+  <div class="pda-notch"></div>
+  <div style="min-height:600px">
+    <div class="status-bar">
+      <span>09:18</span><span>warehouse01</span>
+      <span class="wifi">WiFi<svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="7" width="2.5" height="3" rx=".5"/><rect x="3.5" y="5" width="2.5" height="5" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg></span>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div class="nav-title">收货作业</div>
+      <div class="nav-right"></div>
+    </div>
+    <div class="task-no">RK20260520-007</div>
+    <div class="task-meta">采购单 CG20260518-031 ｜ 供应商 新嘉食品 ｜ 货品 2/2</div>
+
+    <div class="mode-bar loose">
+      <span class="mode-badge loose">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        散件作业
+      </span>
+      <div class="mode-desc">该货品<b>存在多种箱规</b>，已转散件，请按瓶逐一清点。</div>
+    </div>
+
+    <div class="product-area">
+      <div class="product-img">&#128230;</div>
+      <div class="product-info">
+        <div class="loc">收货暂存区 R-01</div>
+        <div class="name">海天 金标生抽酱油 1.9L</div>
+        <div class="pack-warn">箱规：多种（6、12 瓶/箱）</div>
+        <div>计量单位：瓶</div>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:0;padding-bottom:6px">
+      <div class="section-title">扫描商品条码</div>
+      <div class="scan-wrap">
+        <div class="scan-input ok">6901234567891 &nbsp;&#10003;</div>
+        <button class="scan-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="2" height="18"/><rect x="7" y="3" width="1" height="18"/><rect x="10" y="3" width="3" height="18"/><rect x="15" y="3" width="1" height="18"/><rect x="18" y="3" width="3" height="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="qty-row">
+      <div class="qty-box"><div class="qty-label">应收数量</div><div class="qty-num">108</div><div class="qty-unit">瓶</div></div>
+      <div class="qty-box active loose"><div class="qty-label">实收数量</div><div class="qty-num amber">108</div><div class="qty-unit">瓶</div></div>
+    </div>
+    <div class="counter">
+      <button class="counter-btn">&#8722;</button>
+      <span class="counter-val">108</span>
+      <button class="counter-btn">&#43;</button>
+    </div>
+
+    <button class="submit-btn amber">确认收货（散件）</button>
+  </div>
+  <div class="pda-label">页面 3 — 散件收货：按瓶逐一清点，避免库存错乱</div>
+  <div class="pda-home"></div>
+</div>
+
+<!-- ════════ 行标题：出库拣货 ════════ -->
+<div class="row-title r2">流程二　销售出库拣货（PDA 拣货）</div>
+
+<!-- ── 页面 4：整件拣货（正常） ── -->
+<div class="pda">
+  <div class="pda-notch"></div>
+  <div style="min-height:600px">
+    <div class="status-bar">
+      <span>14:32</span><span>picker08</span>
+      <span class="wifi">WiFi<svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="7" width="2.5" height="3" rx=".5"/><rect x="3.5" y="5" width="2.5" height="5" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg></span>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div class="nav-title">拣货作业</div>
+      <div class="nav-right"></div>
+    </div>
+    <div class="task-no">JH20260520-015</div>
+    <div class="task-meta">波次 PC20260520-003 ｜ 客户 富临酒楼 ｜ 货品 1/2</div>
+
+    <div class="mode-bar">
+      <span class="mode-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5V8z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+        整件作业
+      </span>
+      <div class="mode-desc">客户下单规格 = <b>整箱</b>，箱规统一，按整箱拣货出库。</div>
+    </div>
+
+    <div class="product-area">
+      <div class="product-img">&#128230;</div>
+      <div class="product-info">
+        <div class="loc">A02-03-1</div>
+        <div class="name">可口可乐 330ml</div>
+        <div>箱规：24 瓶 / 箱（在库统一）</div>
+        <div>批次：BC-2604C ｜ 生产 2026-04-20</div>
+      </div>
+    </div>
+
+    <div class="section" style="padding-top:0;padding-bottom:4px">
+      <div class="section-title">扫描库位</div>
+      <div class="scan-wrap">
+        <div class="scan-input ok">A02-03-1 &nbsp;&#10003;</div>
+        <button class="scan-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="2" height="18"/><rect x="7" y="3" width="1" height="18"/><rect x="10" y="3" width="3" height="18"/><rect x="15" y="3" width="1" height="18"/><rect x="18" y="3" width="3" height="18"/></svg></button>
+      </div>
+    </div>
+    <div class="section" style="padding-top:4px;padding-bottom:6px">
+      <div class="section-title">扫描商品</div>
+      <div class="scan-wrap">
+        <div class="scan-input ok">6901234560015 &nbsp;&#10003;</div>
+        <button class="scan-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="2" height="18"/><rect x="7" y="3" width="1" height="18"/><rect x="10" y="3" width="3" height="18"/><rect x="15" y="3" width="1" height="18"/><rect x="18" y="3" width="3" height="18"/></svg></button>
+      </div>
+    </div>
+
+    <div class="qty-row">
+      <div class="qty-box"><div class="qty-label">应拣数量</div><div class="qty-num">8</div><div class="qty-unit">箱</div></div>
+      <div class="qty-box active"><div class="qty-label">实拣数量</div><div class="qty-num green">8</div><div class="qty-unit">箱</div></div>
+    </div>
+
+    <button class="submit-btn green">确认提交（整件）</button>
+  </div>
+  <div class="pda-label">页面 4 — 整件拣货：客户下单整箱，按箱出库</div>
+  <div class="pda-home"></div>
+</div>
+
+<div class="flow-arrow">
+  <div class="arrow-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
+  <span>下一货品<br>命中多箱规</span>
+</div>
+
+<!-- ── 页面 5：整件拣货 + 多箱规软提示弹窗 ── -->
+<div class="pda" style="position:relative">
+  <div class="pda-notch"></div>
+  <div style="min-height:600px;filter:blur(2px);opacity:.55">
+    <div class="status-bar">
+      <span>14:36</span><span>picker08</span>
+      <span class="wifi">WiFi<svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="7" width="2.5" height="3" rx=".5"/><rect x="3.5" y="5" width="2.5" height="5" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg></span>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div class="nav-title">拣货作业</div>
+      <div class="nav-right"></div>
+    </div>
+    <div class="task-no">JH20260520-015</div>
+    <div class="task-meta">波次 PC20260520-003 ｜ 客户 富临酒楼 ｜ 货品 2/2</div>
+    <div class="mode-bar">
+      <span class="mode-badge">整件作业</span>
+      <div class="mode-desc">客户下单规格 = 整箱，正在校验在库箱规…</div>
+    </div>
+    <div class="product-area">
+      <div class="product-img">&#128230;</div>
+      <div class="product-info">
+        <div class="loc">A03-01-2</div>
+        <div class="name">蒙牛 纯牛奶 250ml</div>
+        <div class="pack-warn">箱规：检测到多种</div>
+      </div>
+    </div>
+    <div class="qty-row">
+      <div class="qty-box"><div class="qty-label">应拣数量</div><div class="qty-num">—</div><div class="qty-unit">待确认</div></div>
+      <div class="qty-box"><div class="qty-label">实拣数量</div><div class="qty-num">—</div><div class="qty-unit">待确认</div></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay">
+    <div class="modal-box warn">
+      <div class="warn-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      </div>
+      <div class="warn-title">检测到多种箱规</div>
+      <div class="warn-desc">货品 <b>蒙牛纯牛奶 250ml</b> 当前在库存在 2 种箱规：</div>
+      <div class="spec-list">
+        <div class="spec-item"><span class="spec-pack">12 瓶 / 箱</span><span class="spec-batch">库位 A03-01-2</span></div>
+        <div class="spec-item"><span class="spec-pack">16 瓶 / 箱</span><span class="spec-batch">库位 A03-01-5</span></div>
+      </div>
+      <div class="warn-note">整件拣货按「标准箱规」折算扣减库存，箱规不一致会导致<b>账实不符、库存错乱</b>。建议改为散件作业，按瓶清点拣货。</div>
+      <div class="modal-btns">
+        <button class="btn-full primary">改为散件作业</button>
+        <button class="btn-full ghost">仍按整件作业</button>
+      </div>
+    </div>
+  </div>
+  <div class="pda-label" style="position:relative;z-index:11">页面 5 — 整件拣货命中多箱规，弹出软提示</div>
+  <div class="pda-home"></div>
+</div>
+
+<div class="flow-arrow amber">
+  <div class="arrow-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></div>
+  <span>点「改为<br>散件作业」</span>
+</div>
+
+<!-- ── 页面 6：散件拣货 ── -->
+<div class="pda" style="position:relative">
+  <div class="pda-notch"></div>
+  <div style="min-height:600px;filter:blur(2px);opacity:.55">
+    <div class="status-bar">
+      <span>14:43</span><span>picker08</span>
+      <span class="wifi">WiFi<svg width="14" height="10" viewBox="0 0 14 10" fill="currentColor"><rect x="0" y="7" width="2.5" height="3" rx=".5"/><rect x="3.5" y="5" width="2.5" height="5" rx=".5"/><rect x="7" y="2" width="2.5" height="8" rx=".5"/><rect x="10.5" y="0" width="2.5" height="10" rx=".5"/></svg></span>
+    </div>
+    <div class="nav-bar">
+      <div class="nav-back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+      <div class="nav-title">拣货作业</div>
+      <div class="nav-right"></div>
+    </div>
+    <div class="task-no">JH20260520-015</div>
+    <div class="task-meta">波次 PC20260520-003 ｜ 客户 富临酒楼 ｜ 货品 2/2</div>
+    <div class="mode-bar loose">
+      <span class="mode-badge loose">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        散件作业
+      </span>
+      <div class="mode-desc">该货品<b>存在多种箱规</b>，已转散件，请按瓶清点拣货。</div>
+    </div>
+    <div class="product-area">
+      <div class="product-img">&#128230;</div>
+      <div class="product-info">
+        <div class="loc">A03-01-2</div>
+        <div class="name">蒙牛 纯牛奶 250ml</div>
+        <div class="pack-warn">箱规：多种（12、16 瓶/箱）</div>
+        <div>计量单位：瓶</div>
+      </div>
+    </div>
+    <div class="qty-row">
+      <div class="qty-box"><div class="qty-label">应拣数量</div><div class="qty-num">50</div><div class="qty-unit">瓶</div></div>
+      <div class="qty-box active loose"><div class="qty-label">实拣数量</div><div class="qty-num amber">50</div><div class="qty-unit">瓶</div></div>
+    </div>
+    <div class="counter">
+      <button class="counter-btn">&#8722;</button>
+      <span class="counter-val">50</span>
+      <button class="counter-btn">&#43;</button>
+    </div>
+    <button class="submit-btn amber">确认提交（散件）</button>
+  </div>
+
+  <div class="modal-overlay">
+    <div class="modal-box done">
+      <div class="done-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
+      <div class="modal-text">散件拣货完成</div>
+      <div class="modal-sub">实拣 50 瓶，按计量单位扣减库存</div>
+      <button class="modal-btn">确定</button>
+    </div>
+  </div>
+  <div class="pda-label" style="position:relative;z-index:11">页面 6 — 散件拣货完成：按瓶扣减，账实一致</div>
+  <div class="pda-home"></div>
+</div>
+
+</body>
+</html>

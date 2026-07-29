@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Max · 原料货品采购计划预测</title>
+<style>
+:root{
+  --green:#0f8f68;--green-2:#087653;--mint:#e9f7f2;
+  --ink:#172033;--text:#344054;--muted:#667085;
+  --line:#d8dee8;--line-2:#edf0f5;
+  --red:#c83f49;--red-bg:#fff1f2;
+  --amber:#c77718;--amber-bg:#fff6e6;
+  --blue:#2563eb;--blue-bg:#edf4ff;
+  --pink:#d65d6b;--pink-bg:#fdeaee;
+  --gold:#b7842b;--gold-bg:#fdf2dc;
+  --purple:#7e57c2;--purple-bg:#efe8fb;
+  --gray-bg:#eef1f5;
+  --panel:#fff;--shadow:0 24px 60px rgba(16,24,40,.2);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#eef2f6;color:var(--ink);font-size:13px}
+button,input,select{font:inherit}
+.app{height:100vh;display:grid;grid-template-columns:96px 1fr;overflow:hidden}
+.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:center;padding:18px 6px;gap:12px}
+.logo{width:44px;height:44px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800}
+.rail button{width:80px;height:60px;border:0;border-radius:8px;background:transparent;color:#cbd5e1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;padding:6px;line-height:1.3;text-align:center}
+.rail button.active,.rail button:hover{background:#1d2939;color:#fff}
+.dot{width:7px;height:7px;border-radius:50%;background:#475467}
+.rail button.active .dot{background:var(--green)}
+.main{height:100vh;overflow:auto}
+.hero{background:#fff;border-bottom:1px solid var(--line);padding:18px 26px 16px}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.title{font-size:22px;font-weight:800}
+.subtitle{margin-top:7px;color:var(--muted);max-width:760px;line-height:1.55}
+.hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{height:34px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:0 13px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.primary:hover{background:var(--green-2);color:#fff}
+.btn.text{border:0;background:transparent;color:var(--green);padding:0 6px;height:auto}
+.btn.small{height:28px;padding:0 9px;font-size:12px}
+.chip{height:34px;border:1px solid var(--line);border-radius:5px;padding:0 11px;background:#fff;color:var(--text)}
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}
+.pipe{border:1px solid var(--line-2);border-radius:6px;padding:10px 12px;background:#fafbfc;display:flex;flex-direction:column;gap:4px}
+.pipe strong{font-size:12px;color:var(--ink)}
+.pipe span{font-size:11px;color:var(--muted)}
+.pipe.ok strong{color:var(--green)}.pipe.warn strong{color:var(--amber)}
+.workspace{padding:18px 26px 44px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.panel-head{height:46px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-2)}
+.panel-title{font-weight:750}
+.panel-body{padding:14px}
+.view{display:none}.view.active{display:block}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{padding:10px 16px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-size:13px}
+.tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;white-space:nowrap;vertical-align:middle;font-size:12px}
+th{background:#f8fafc;color:var(--muted);font-weight:650;font-size:11px;position:sticky;top:0}
+tr:hover td{background:#fbfcfd}
+.num{text-align:right;font-family:Menlo,Consolas,monospace}
+.num.neg{color:var(--red);font-weight:700}
+.num.pos{color:var(--green);font-weight:700}
+.num.zero{color:var(--muted)}
+.day-cell{background:#fafbfc}
+.day-cell.has{background:var(--mint)}
+.day-th{background:#eaf6f0;color:var(--green);font-weight:700}
+.input-num{width:84px;height:26px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 6px;outline:none;background:#fff;color:var(--ink)}
+.input-num:focus{border-color:var(--green)}
+.input-num:disabled,input:disabled{background:#f8fafc;color:var(--ink);cursor:default;border-color:var(--line-2)}
+.rd-day{display:inline-flex;align-items:center;justify-content:center;width:36px;height:32px;border:1px solid var(--line);border-radius:5px;cursor:pointer;font-size:12px;background:#fff;color:var(--text)}
+.rd-day.on{border-color:var(--green);background:var(--mint);color:var(--green);font-weight:600}
+.pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;border:1px solid transparent;white-space:nowrap;font-weight:500}
+.pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
+.pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
+.pill.red{color:var(--red);background:var(--red-bg);border-color:#ffc9cf}
+.pill.gray{color:var(--muted);background:#f1f3f6;border-color:#dde1e8}
+.expand-btn{border:0;background:transparent;color:var(--green);cursor:pointer;font-size:12px}
+.row-detail{background:#fafbfc}
+.row-detail td{padding:0;border-bottom:1px solid var(--line)}
+.detail-grid{padding:14px 18px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.detail-block{background:#fff;border:1px solid var(--line-2);border-radius:7px;padding:12px}
+.detail-block h5{margin:0 0 8px;font-size:12px;color:var(--muted);font-weight:600}
+.detail-block .row{display:flex;justify-content:space-between;font-size:12px;line-height:1.8}
+.detail-block .row .v{font-family:Menlo,Consolas,monospace;color:var(--ink);font-weight:600}
+.formula-line{font-family:Menlo,Consolas,monospace;font-size:12px;color:var(--ink);background:#f8fafc;border:1px dashed var(--line-2);border-radius:5px;padding:8px 10px;margin-top:6px}
+.bom-chain{font-size:11px;color:var(--muted);line-height:1.7}
+.bom-chain b{color:var(--ink)}
+
+/* ============ 算量流程图 ============ */
+.flow-page{background:#fff;border:1px solid var(--line);border-radius:8px;padding:24px}
+.flow-title{font-size:14px;color:var(--muted);margin-bottom:18px}
+.flow-blocks{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px}
+.flow-block{border-radius:8px;padding:14px;border:1px solid transparent}
+.flow-block.pink{background:var(--pink-bg);border-color:#f4cdd3}
+.flow-block.green{background:#e6f6ed;border-color:#b9e3d4}
+.flow-block.gold{background:var(--gold-bg);border-color:#f0dcad}
+.flow-block.purple{background:var(--purple-bg);border-color:#cdb9eb}
+.flow-block.gray{background:var(--gray-bg);border-color:#cfd6df}
+.flow-block h3{margin:0 0 10px;font-size:13px;font-weight:700}
+.flow-block.pink h3{color:var(--pink)}
+.flow-block.green h3{color:var(--green)}
+.flow-block.gold h3{color:var(--gold)}
+.flow-block.purple h3{color:var(--purple)}
+.flow-block.gray h3{color:var(--ink)}
+.flow-block ul{margin:0;padding-left:16px;font-size:11px;color:var(--text);line-height:1.7}
+.flow-block .out{margin-top:10px;background:rgba(255,255,255,.7);border-radius:5px;padding:7px 9px;font-size:11px;color:var(--ink);font-weight:600;border:1px dashed rgba(0,0,0,.1)}
+.flow-arrow{text-align:center;color:var(--muted);font-size:18px;margin:6px 0}
+.flow-mid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.flow-mid .flow-block{background:#fff;border-color:var(--line);text-align:center}
+.flow-mid .formula{font-family:Menlo,Consolas,monospace;font-size:12px;color:var(--ink);margin-top:6px}
+.flow-total{background:var(--mint);border:2px solid var(--green);border-radius:8px;padding:14px;text-align:center;margin-bottom:18px}
+.flow-total h3{margin:0 0 6px;color:var(--green);font-size:14px}
+.flow-total .formula{font-family:Menlo,Consolas,monospace;font-size:13px;color:var(--ink)}
+.flow-day{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.flow-day .flow-block{background:#fff;border-color:var(--line)}
+.flow-day h4{margin:0 0 6px;font-size:13px;color:var(--green)}
+.flow-day .formula{font-family:Menlo,Consolas,monospace;font-size:11px;color:var(--text);line-height:1.6}
+
+/* ============ 配置页 ============ */
+.cfg-tabs{margin-bottom:12px}
+.matrix-table input{width:60px}
+
+/* ============ Modal ============ */
+.drawer-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;z-index:20;align-items:center;justify-content:center}
+.drawer-mask.show{display:flex}
+.drawer-side-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;z-index:25;justify-content:flex-end}
+.drawer-side-mask.show{display:flex}
+.drawer-side-pane{background:#fff;width:min(880px,94vw);height:100vh;display:flex;flex-direction:column;box-shadow:-12px 0 36px rgba(15,23,42,.2)}
+.modal{background:#fff;border-radius:8px;width:min(680px,92vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal-head{height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.modal-body{padding:18px;overflow:auto}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.close{border:0;background:transparent;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+.toast{position:fixed;top:22px;right:24px;background:#172033;color:#fff;padding:11px 14px;border-radius:6px;display:none;z-index:30;box-shadow:0 10px 28px rgba(16,24,40,.22);max-width:360px}
+.toast.show{display:block}
+.toast.success{background:var(--green)}
+.toast.warn{background:var(--amber)}
+.dot-st{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:2px}
+.dot-st.green{background:var(--green);box-shadow:0 0 0 2px rgba(16,179,131,.18)}
+.dot-st.amber{background:var(--amber);animation:dotPulse 1.4s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.spin-w{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-1px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.muted{color:var(--muted);font-size:11px}
+
+@media(max-width:1280px){.detail-grid,.flow-blocks{grid-template-columns:repeat(2,1fr)}.flow-day{grid-template-columns:1fr}}
+@media(max-width:860px){.app{grid-template-columns:1fr}.rail{display:none}.pipeline{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">FM</div>
+    <button class="active" data-view="plan"><span class="dot"></span>采购计划</button>
+    <button data-view="flow"><span class="dot"></span>算量流程</button>
+    <button data-view="cfg"><span class="dot"></span>补货参数<br>配置</button>
+  </aside>
+  <main class="main">
+
+    <!-- ===== 1. 采购计划主页：T 日 / T+1 / ... / T+N 按日采购 ===== -->
+    <div class="view active" id="plan">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">原料货品采购计划预测</div>
+            <div class="subtitle">5 大计算块 → 备货目标 + T 期末库存 → 总采购量。每行点「详情」查看完整算量取数。</div>
+          </div>
+          <div class="hero-actions">
+            <span id="recalc-status" class="muted" style="font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0 6px">
+              <span class="dot-st green"></span>
+              <span>上次重算 今天 09:32 · 用时 32 秒</span>
+            </span>
+            <input class="chip" value="2026-05-21">
+            <button id="btn-recalc" class="btn primary" onclick="triggerRecalc()">重算</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px 12px">
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品编码</label><input class="chip" style="height:30px" placeholder="搜索 SPU 编码"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品名称</label><input class="chip" style="height:30px" placeholder="搜索货品名称"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>水果</option><option>肉禽</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商</label><input class="chip" style="height:30px" placeholder="选择供应商"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>West Hub</option><option>East Hub</option></select></div>
+              <div style="grid-column:span 5;display:flex;gap:8px;align-items:center">
+                <label class="muted" style="font-size:12px">计划日</label>
+                <select class="chip" style="height:30px;width:170px" id="plan-date-sel" onchange="setPlanDate(this.value)">
+                  <option value="2026-06-18">2026-06-18（今天）</option>
+                  <option value="2026-06-17">2026-06-17</option>
+                  <option value="2026-06-16">2026-06-16</option>
+                </select>
+                <span class="muted" style="font-size:11px">采纳率按计划日<b>快照</b>，切换日期可回看历史</span>
+                <span id="plan-selected-tip" class="muted" style="display:none;margin-right:8px">已勾选 <b id="plan-selected-count" style="color:var(--ink)">0</b> 项</span>
+                <button class="btn" onclick="exportPlan()" style="margin-left:auto" title="导出当前筛选条件下的采购建议量列表，用于线下找供应商谈量谈价">⬇ 导出</button>
+                <button class="btn primary" id="btn-create-po" onclick="openCreatePoModal()">生成采购单</button>
+                <button class="btn primary" onclick="toast('查询成功，共 386 条','success')">查询</button>
+                <button class="btn" onclick="toast('已重置筛选')">重置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:38px"><input type="checkbox" id="plan-check-all" onchange="toggleAllPlanRows(this)"></th>
+                <th style="min-width:200px">原料货品</th>
+                <th class="num">最终备货天数</th>
+                <th class="num">μ 日均销</th>
+                <th class="num">当日预估剩余</th>
+                <th class="num">T 日销售可用</th>
+                <th class="num">备货目标</th>
+                <th class="num">T 期末库存</th>
+                <th class="num" style="background:#eaf6f0;color:var(--green)">总采购量</th>
+                <th class="num">已下单量</th>
+                <th style="min-width:150px">采纳率</th>
+                <th>状态</th>
+                <th style="width:80px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="planRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 2. 算量流程 ===== -->
+    <div class="view" id="flow">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">原料货品采购计划预测流程</div>
+            <div class="subtitle">5 大计算块的输入输出 + 中间计算 + 最终总采购量 + 按日采购计划公式。点击采购计划页的行可看该 SKU 的具体取数。</div>
+          </div>
+        </div>
+      </section>
+      <section class="workspace">
+        <div class="flow-page">
+          <div class="flow-title">5 大计算块（输入逻辑）</div>
+          <div class="flow-blocks">
+            <div class="flow-block pink">
+              <h3>预测覆盖天数逻辑</h3>
+              <ul>
+                <li>基础备货天数（销售分层 × 保质期矩阵）</li>
+                <li>VLT/VCT 修正天数</li>
+                <li>缺货系数：保质期 ≥3 天 +2；&lt;3 天 +1.5</li>
+                <li>周末 / 节假日系数</li>
+              </ul>
+              <div class="out">输出：最终备货天数</div>
+            </div>
+            <div class="flow-block green">
+              <h3>天级平均日销逻辑</h3>
+              <ul>
+                <li>(近 7 日日均销 + 近 3 日日均销) / 2</li>
+                <li>售罄日不计入分母与分子</li>
+                <li>SKU 销量 → 成品 item 销量 → BOM → 原料 item 销量</li>
+              </ul>
+              <div class="out">输出：μ_demand（原料级日均销）</div>
+            </div>
+            <div class="flow-block gold">
+              <h3>当日预估剩余销量逻辑</h3>
+              <ul>
+                <li>SKU 实时销量 → 成品 → BOM → 原料 item 实时销量</li>
+                <li>P_now = 当日实际销量 / 当日大盘预估销量</li>
+                <li>P_now ≤ 当日平均进度+20% → 剩余=大盘预估−当日实际</li>
+                <li>否 → 剩余=近 7 日单日最大销量−当日实际</li>
+              </ul>
+              <div class="out">输出：当日预估剩余销量</div>
+            </div>
+            <div class="flow-block purple">
+              <h3>今日在途库存逻辑</h3>
+              <ul>
+                <li>状态：待下单 / 待发货 / 待入库 / 入库中</li>
+                <li>按预计到货日分桶</li>
+              </ul>
+              <div class="out">输出：今日在途 / 明日在途 / 后日在途 / … / T 日在途</div>
+            </div>
+            <div class="flow-block gray">
+              <h3>库存逻辑</h3>
+              <ul>
+                <li>仓库销售可用库存（WMS available_qty）</li>
+              </ul>
+              <div class="out">输出：T 日销售可用库存</div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">▼</div>
+
+          <div class="flow-mid">
+            <div class="flow-block">
+              <h3 style="color:var(--ink)">备货目标</h3>
+              <div class="formula">覆盖天数 × 预测销量 ÷ (1 − 安全库存比例 SS%)</div>
+            </div>
+            <div class="flow-block">
+              <h3 style="color:var(--ink)">T 期末库存</h3>
+              <div class="formula">T 日在途库存 + T 日销售可用库存 − T 日预估剩余销量</div>
+            </div>
+          </div>
+
+          <div class="flow-arrow">▼</div>
+
+          <div class="flow-total">
+            <h3>总采购量</h3>
+            <div class="formula">总采购量 = 备货目标 − T 期末库存</div>
+          </div>
+
+          <div class="flow-arrow">▼</div>
+
+          <div class="flow-day">
+            <div class="flow-block">
+              <h4>T 日采购计划</h4>
+              <div class="formula">= T+1 备货目标 − T 日期末库存 − T+1 在途库存</div>
+            </div>
+            <div class="flow-block">
+              <h4>T+1 日采购计划</h4>
+              <div class="formula">= T+2 备货目标 − T+1 日期末库存 − T+2 在途库存</div>
+            </div>
+            <div class="flow-block">
+              <h4>T+N 日采购计划</h4>
+              <div class="formula">= T+【N+1】备货目标 − T+N 日期末库存 − T+【N+1】在途库存</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 3. 补货参数配置（前称覆盖天数配置；v2.1 起合入安全库存比例）===== -->
+    <div class="view" id="cfg">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">补货参数配置</div>
+            <div class="subtitle">采购计划「预测覆盖天数 + 备货目标」的 5 项全局配置：基础备货天数矩阵 / 接单日 · VCT / 缺货系数 / 周末节假日系数 / 安全库存比例。修改后下次重算生效。SPU × 供应商 × 仓库 维度的 VLT / 品供绑定见「SPU 品供参数」页。</div>
+          </div>
+          <div class="hero-actions"></div>
+        </div>
+      </section>
+      <section class="workspace">
+        <div class="tabs cfg-tabs">
+          <div class="tab active" data-tab="c-matrix">基础备货天数矩阵</div>
+          <div class="tab" data-tab="c-vlt">接单日 / VCT</div>
+          <div class="tab" data-tab="c-oos">缺货系数</div>
+          <div class="tab" data-tab="c-weekend">周末 / 节假日系数</div>
+          <div class="tab" data-tab="c-ss">安全库存比例</div>
+        </div>
+
+        <div class="tab-pane active" id="c-matrix">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">基础备货天数矩阵</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-matrix',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-matrix','基础备货天数矩阵',this)">保存</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <p class="muted" style="margin-bottom:8px">行 = 销售分层（名称 / 销量下限 / 上限可自定义），列 = 保质期分层（可修改名称 / 范围）。单元格为基础备货天数。编辑模式下支持新增 / 删除行列。</p>
+              <div style="display:flex;gap:8px;margin-bottom:10px">
+                <button class="btn small pane-edit-only" disabled onclick="addSalesTier()">+ 新增销售分层</button>
+                <button class="btn small pane-edit-only" disabled onclick="addShelfTier()">+ 新增保质期分层</button>
+              </div>
+              <div class="table-wrap matrix-table"><table>
+                <thead id="matrix-head"></thead>
+                <tbody id="matrix-body"></tbody>
+              </table></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="c-vlt">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">供应商接单日 / VCT</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-vlt',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-vlt','供应商接单日 / VCT',this)">保存</button>
+              </div>
+            </div>
+            <div class="panel-body" style="padding-bottom:8px">
+              <div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:12px;line-height:1.7;color:var(--text)">
+                <div style="font-weight:700;margin-bottom:4px;color:var(--blue)">💡 与现有功能的关系</div>
+                <div>本页维护「<b>供应商维度</b>」的接单日与 VCT（每供应商一行）。</div>
+                <div><b>VLT（提前期）已在「SPU 品供参数」页按 SPU × 供应商 × 仓库 维护</b>（字段 <code>orderLeadTime</code>），不在此重复维护。</div>
+                <div style="margin-top:4px">接单日只在供应商维度维护，无需 SPU 级覆盖。</div>
+              </div>
+            </div>
+
+            <div class="table-wrap" style="border-top:1px solid var(--line-2);border-radius:0;border-left:0;border-right:0;border-bottom:0"><table>
+              <thead><tr>
+                <th>供应商</th><th>仓库</th>
+                <th style="min-width:240px">接单日设置</th>
+                <th class="num">VCT (天)</th>
+              </tr></thead>
+              <tbody>
+                <tr><td>GreenFarm (V-001)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周三、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · GreenFarm (V-001)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>FreshGo (V-003)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一至周六 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · FreshGo (V-003)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td></tr>
+                <tr><td>MeatPro (V-007)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 1 天 · 首次 2026-05-01 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · MeatPro (V-007)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="1"></td></tr>
+                <tr><td>Hattah (V-021)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周二、周五 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · Hattah (V-021)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="3"></td></tr>
+                <tr><td>RedSun (V-012)</td><td>West Hub</td><td><span class="pill blue" style="margin-right:6px">按日</span>每 2 天 · 首次 2026-05-02 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · RedSun (V-012)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td></tr>
+                <tr><td>TomatoKing (V-018)</td><td>West Hub</td><td><span class="pill green" style="margin-right:6px">按周</span>周一、周四 <button class="btn text small pane-edit-only" disabled onclick="openRpModal('receivingDay','编辑接单日 · TomatoKing (V-018)')" style="font-size:11px">改</button></td><td class="num"><input class="input-num" value="2"></td></tr>
+              </tbody>
+            </table></div>
+            <div style="padding:10px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between">
+              <span>共 6 条供应商默认</span>
+              <span>VLT 维护 →「SPU 品供参数」页（已有功能）</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="c-oos">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">缺货系数</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEdit('c-oos',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-oos','缺货系数',this)">保存</button>
+              </div>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th style="width:65%">条件（预计剩余库存 ≤ 0 时触发）</th><th class="num">叠加天数</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <span style="display:inline-flex;align-items:center;gap:6px">
+                      <span class="pill green" style="min-width:44px;text-align:center">长保</span>
+                      <span>保质期 ≥</span>
+                      <input class="input-num thr-oos" type="number" min="0" step="1" style="width:56px;text-align:center" value="3" oninput="syncOosThr(this)" onblur="validOosThr(this)">
+                      <span>天</span>
+                    </span>
+                  </td>
+                  <td class="num"><input class="input-num" type="number" min="0" step="0.5" value="2"></td>
+                </tr>
+                <tr>
+                  <td>
+                    <span style="display:inline-flex;align-items:center;gap:6px">
+                      <span class="pill blue" style="min-width:44px;text-align:center">短保</span>
+                      <span>保质期 &lt;</span>
+                      <input class="input-num thr-oos" type="number" min="0" step="1" style="width:56px;text-align:center" value="3" oninput="syncOosThr(this)" onblur="validOosThr(this)">
+                      <span>天</span>
+                    </span>
+                  </td>
+                  <td class="num"><input class="input-num" type="number" min="0" step="0.5" value="1.5"></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="muted" style="padding:8px 14px;font-size:12px;border-top:1px solid var(--line-2);background:#fafbfc;line-height:1.6">
+              <div>· 阈值用于区分长保 / 短保；两个阈值输入框联动，修改任一即同步。</div>
+              <div>· 叠加天数会加进当 SKU 的「预测覆盖天数」，从而提升备货目标。</div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="c-weekend">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">周末 / 节假日系数</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn small pane-edit-only" disabled onclick="addWeekdayRule()">+ 新增周末场景</button>
+                <button class="btn small" onclick="enterEdit('c-weekend',this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveAndExit('c-weekend','周末 / 节假日系数',this)">保存</button>
+              </div>
+            </div>
+            <div class="table-wrap"><table>
+              <thead><tr><th style="width:60%">场景</th><th class="num">叠加天数</th><th style="width:80px;text-align:center">操作</th></tr></thead>
+              <tbody id="weekend-tbody">
+                <!-- 渲染：按周规则（可增删）+ 法定节假日（固定 2 行） -->
+              </tbody>
+            </table>
+            <div class="muted" style="padding:8px 14px;font-size:12px;border-top:1px solid var(--line-2);background:#fafbfc;line-height:1.6">
+              <div>· 按周规则：当采购下单日落在所选星期时，按「叠加天数」加进预测覆盖天数。</div>
+              <div>· 法定节假日为系统兜底规则，仅可改叠加天数，不可删除。</div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 安全库存比例 -->
+        <div class="tab-pane" id="c-ss">
+          <div class="panel">
+            <div class="panel-head">
+              <div class="panel-title">安全库存比例 · 全局</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn small" onclick="enterEditSs(this)">编辑</button>
+                <button class="btn primary small" disabled onclick="saveSsRatio(this)">保存</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:140px 1fr;gap:14px;align-items:center;max-width:640px">
+                <label style="text-align:right;font-size:13px;color:var(--text)">安全库存比例</label>
+                <div style="display:inline-flex;align-items:center;gap:8px">
+                  <input id="ss-ratio-input-cfg" class="input-num" type="number" min="0" max="100" step="1" value="16" disabled style="width:84px;text-align:right">
+                  <span style="font-size:13px;color:var(--ink)">%</span>
+                  <span class="muted" style="font-size:11px;margin-left:8px">建议 10% – 30%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== 4. SPU 品供参数（前称补货参数配置；维护 SPU 维度的 VLT / 品供绑定）===== -->
+    <div class="view" id="rp">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <div class="title">SPU 品供参数</div>
+            <div class="subtitle">维护 SPU × 供应商 × 仓库 的<b style="color:var(--green)">提前期（VLT）</b>、增长系数、品供绑定。每个 SPU + 供应商 + 仓库 一条记录。接单日与 VCT 在「补货参数配置 → 接单日 / VCT」按供应商维度统一维护。— 现有页面，本期不重做。</div>
+          </div>
+        </div>
+      </section>
+      <section class="workspace">
+        <div class="panel" style="margin-bottom:12px">
+          <div class="panel-body">
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px 12px">
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品编码</label><input id="rp-filter-code" class="chip" style="height:30px" placeholder="搜索 SPU 编码"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">货品名称</label><input id="rp-filter-name" class="chip" style="height:30px" placeholder="搜索货品名称"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">类目</label><select class="chip" style="height:30px"><option>全部</option><option>蔬菜</option><option>肉禽</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">供应商名称/ID</label><input id="rp-filter-vendor" class="chip" style="height:30px" placeholder="搜索供应商"></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">仓库</label><select class="chip" style="height:30px"><option>全部</option><option>West Hub</option><option>East Hub</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">配置状态</label><select class="chip" style="height:30px"><option>全部</option><option>启用</option><option>停用</option></select></div>
+              <div style="display:flex;flex-direction:column;gap:4px"><label class="muted">品供绑定关系</label><select class="chip" style="height:30px"><option>全部</option><option>已绑定</option><option>未绑定</option></select></div>
+              <div style="grid-column:span 6;display:flex;justify-content:flex-end;gap:8px">
+                <button class="btn primary" onclick="renderRpRows();toast('查询成功')">查询</button>
+                <button class="btn" onclick="document.getElementById('rp-filter-code').value='';document.getElementById('rp-filter-name').value='';document.getElementById('rp-filter-vendor').value='';renderRpRows();toast('已重置')">重置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head" style="padding:0 14px;height:48px;justify-content:flex-end">
+            <span class="muted">共 <b id="rp-count">8</b> 条</span>
+          </div>
+          <div class="table-wrap" style="border-radius:0;border-left:0;border-right:0;border-top:0;border-bottom:0"><table>
+            <thead><tr>
+              <th style="width:38px"><input type="checkbox"></th>
+              <th>供应商名称</th>
+              <th>供应商ID</th>
+              <th>SPU 名称</th>
+              <th>SPU 编号</th>
+              <th>类目</th>
+              <th>仓库名称</th>
+              <th>仓库ID</th>
+              <th>接单日设置</th>
+              <th>提前期</th>
+              <th>处理状态</th>
+              <th>品供绑定</th>
+              <th style="width:120px">操作</th>
+            </tr></thead>
+            <tbody id="rpRows"></tbody>
+          </table></div>
+          <div style="padding:12px 14px;display:flex;justify-content:flex-end;color:var(--muted);font-size:12px;gap:6px;align-items:center">
+            <span>共 8 条</span>
+            <button class="btn small" disabled>‹</button>
+            <button class="btn small primary">1</button>
+            <button class="btn small">›</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<div class="drawer-mask" id="modalMask"><div class="modal" id="modalBox"></div></div>
+<div class="drawer-mask" id="splitMask" style="z-index:30"><div class="modal" id="splitBox" style="width:min(560px,94vw)"></div></div>
+<div class="drawer-side-mask" id="skuDrawerMask">
+  <div class="drawer-side-pane">
+    <div style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)">
+      <div id="sku-drawer-title" style="font-size:15px;font-weight:700">SKU 详情</div>
+      <button class="close" onclick="closeSkuDrawer()">×</button>
+    </div>
+    <div id="sku-drawer-body" style="padding:18px;overflow:auto;flex:1"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// 原料 SKU 数据：含 5 大计算块结果 + 备货目标 + T期末 + 总采购量 + 按日采购
+const data=[
+  {
+    id:1, name:'金针菇原料', code:'SPU-10021',
+    vendorName:'GreenFarm', vendorCode:'V-001', corpName:'小满新加坡', corpCode:'SG-XM',
+    category:'蔬菜 / 菇类', shelfTier:'中保', salesTier:'L1 高销', shelf:7, ss:0.16,
+    baseDays:3, extraVlt:0, extraOos:0, extraWeekend:0.5, finalDays:3.5,
+    mu:535, todaySold:312, salesD7:[480,520,'售罄',560,610,590,605], salesD3:[560,610,590],
+    pNow:0.42, avgProgress:0.46, todayRemain:223,
+    bom:[
+      {sku:'SKU-10021-A',skuName:'金针菇 200g',item:'item1',ratio:0.5},
+      {sku:'SKU-10021-B',skuName:'金针菇 500g',item:'item2',ratio:1.0}
+    ],
+    available:345, inTransit:{today:120,t1:0,t2:0,t3:80,t4:0},
+    stockTarget:1965, endingT:242, totalQty:1723,
+    dayPlans:[620, 535, 535, 455, 535]
+  },
+  {
+    id:2, name:'鲜鸡胸肉原料', code:'SPU-78120',
+    vendorName:'MeatPro', vendorCode:'V-007', corpName:'小满新加坡', corpCode:'SG-XM',
+    category:'肉禽 / 禽肉', shelfTier:'短保', salesTier:'L2 中销', shelf:5, ss:0.12,
+    baseDays:1.5, extraVlt:0, extraOos:1.5, extraWeekend:0, finalDays:3,
+    mu:145, todaySold:95, salesD7:[130,140,148,150,155,140,150], salesD3:[150,155,140],
+    pNow:0.55, avgProgress:0.50, todayRemain:50,
+    bom:[{sku:'SKU-78120',skuName:'鲜鸡胸肉 1kg',item:'item3',ratio:1.0}],
+    available:90, inTransit:{today:40,t1:0,t2:0,t3:0,t4:0},
+    stockTarget:494, endingT:80, totalQty:414,
+    dayPlans:[260, 145, 145, 145, 0]
+  },
+  {
+    id:3, name:'上海青原料', code:'SPU-30087',
+    vendorName:'FreshGo', vendorCode:'V-003', corpName:'小满新加坡', corpCode:'SG-XM',
+    category:'蔬菜 / 叶菜', shelfTier:'短保', salesTier:'L2 中销', shelf:3, ss:0.10,
+    baseDays:1.5, extraVlt:0, extraOos:0, extraWeekend:0, finalDays:1.5,
+    mu:280, todaySold:195, salesD7:[260,275,290,285,300,278,290], salesD3:[285,300,278],
+    pNow:0.65, avgProgress:0.45, todayRemain:85,
+    bom:[{sku:'SKU-30087',skuName:'上海青 250g',item:'item5',ratio:1.0}],
+    available:240, inTransit:{today:60,t1:60,t2:0,t3:0,t4:0},
+    stockTarget:467, endingT:215, totalQty:252,
+    dayPlans:[280, 0, 280, 280, 280]
+  },
+  {
+    id:4, name:'番茄原料', code:'SPU-32011',
+    vendorName:'RedSun', vendorCode:'V-012', corpName:'小满新加坡', corpCode:'SG-XM',
+    category:'蔬菜 / 果菜', shelfTier:'中保', salesTier:'L1 高销', shelf:10, ss:0.16,
+    baseDays:3, extraVlt:1, extraOos:0, extraWeekend:0, finalDays:4,
+    mu:610, todaySold:240, salesD7:[580,590,610,615,620,605,610], salesD3:[615,620,605],
+    pNow:0.40, avgProgress:0.40, todayRemain:360,
+    bom:[{sku:'SKU-32011',skuName:'番茄 500g',item:'item7',ratio:1.0}],
+    available:520, inTransit:{today:180,t1:0,t2:120,t3:0,t4:0},
+    stockTarget:2905, endingT:340, totalQty:2565,
+    dayPlans:[610, 490, 610, 610, 245]
+  },
+  {
+    id:5, name:'白玉菇原料', code:'SPU-10032',
+    vendorName:'GreenFarm', vendorCode:'V-001', corpName:'小满新加坡', corpCode:'SG-XM',
+    category:'蔬菜 / 菇类', shelfTier:'中保', salesTier:'L3 低销', shelf:7, ss:0.10,
+    baseDays:2, extraVlt:0, extraOos:0, extraWeekend:0, finalDays:2,
+    mu:86, todaySold:42, salesD7:[80,84,86,88,90,85,88], salesD3:[88,90,85],
+    pNow:0.45, avgProgress:0.48, todayRemain:50,
+    bom:[{sku:'SKU-10032',skuName:'白玉菇 200g',item:'item9',ratio:1.0}],
+    available:124, inTransit:{today:30,t1:0,t2:0,t3:0,t4:0},
+    stockTarget:191, endingT:104, totalQty:87,
+    dayPlans:[0, 86, 86, 0, 86]
+  }
+];
+
+// ── 计划日快照 + 采纳率 + 多供应商上次价 + 品供绑定（本期新增）──
+let curPlanDate='2026-06-18';
+// 按计划日快照：itemId -> { 计划日 -> {total 总采购量, ordered 已下单量} }。每天独立快照、不覆盖、可回看历史
+const SNAP={
+  1:{'2026-06-18':{total:1723,ordered:1000},'2026-06-17':{total:1680,ordered:1680},'2026-06-16':{total:1540,ordered:920}},
+  2:{'2026-06-18':{total:414, ordered:0},   '2026-06-17':{total:430, ordered:430}, '2026-06-16':{total:390, ordered:200}},
+  3:{'2026-06-18':{total:252, ordered:252}, '2026-06-17':{total:260, ordered:210}, '2026-06-16':{total:240, ordered:240}},
+  4:{'2026-06-18':{total:2565,ordered:2700},'2026-06-17':{total:2480,ordered:2480},'2026-06-16':{total:2300,ordered:1500}},
+  5:{'2026-06-18':{total:87,  ordered:40},  '2026-06-17':{total:90,  ordered:90},  '2026-06-16':{total:82,  ordered:0}}
+};
+function snapOf(r){const m=SNAP[r.id];const s=m&&m[curPlanDate];return s?{total:s.total,ordered:s.ordered}:{total:r.totalQty||0,ordered:0};}
+function setPlanDate(d){curPlanDate=d;renderPlanRows();}
+const CAND_VENDORS=[{code:'V-001',name:'GreenFarm'},{code:'V-003',name:'FreshGo'},{code:'V-007',name:'MeatPro'},{code:'V-012',name:'RedSun'},{code:'V-018',name:'TomatoKing'},{code:'V-021',name:'Hattah'}];
+// 品供绑定：vendorCode -> 可供货品 id（来自「SPU 品供参数」），决定供应商分组里挂哪些货品
+const VENDOR_ITEMS={'V-001':[1,5],'V-003':[1,3],'V-007':[2],'V-012':[4],'V-018':[4],'V-021':[1,4]};
+const LAST_PRICE={'1|V-001':2.80,'1|V-003':2.75,'1|V-018':2.90,'2|V-007':1.20,'2|V-012':1.25,'3|V-003':2.30,'3|V-001':2.35,'4|V-012':2.30,'4|V-018':2.22,'4|V-021':2.40,'5|V-001':2.60};
+function rateCell(r){
+  const sn=snapOf(r),t=sn.total,o=sn.ordered,pct=t?Math.round(o/t*1000)/10:0,over=o>t,w=Math.min(100,pct);
+  return `<div style="display:flex;align-items:center;gap:8px;min-width:140px"><div style="flex:1;height:7px;background:#eef0f3;border-radius:4px;overflow:hidden"><i style="display:block;height:100%;width:${w}%;background:${over?'#f56c6c':'var(--green)'}"></i></div><span class="num" style="font-size:12px;min-width:50px;text-align:right">${pct}%</span></div>`;
+}
+function statusTag(r){
+  const sn=snapOf(r),t=sn.total,o=sn.ordered;
+  if(o>t) return '<span class="pill" style="background:#fef0f0;color:#f56c6c">超采</span>';
+  if(o<=0) return '<span class="pill gray">待下单</span>';
+  if(o>=t) return '<span class="pill green">已下单完</span>';
+  return '<span class="pill" style="background:#fdf6ec;color:#e6a23c">部分下单</span>';
+}
+
+function fmt(n){
+  if(n===0) return '0';
+  if(n==null) return '-';
+  return n.toLocaleString();
+}
+function numCls(n){
+  if(n<0) return 'num neg';
+  if(n===0) return 'num zero';
+  return 'num';
+}
+function dayCellCls(n){return n>0?'day-cell has num':'day-cell num zero'}
+
+function renderPlanRows(){
+  const rows=data.map(r=>{
+    return `
+    <tr data-id="${r.id}">
+      <td><input type="checkbox" class="plan-row-check" data-id="${r.id}" data-name="${r.name}" data-code="${r.code}" data-qty="${r.totalQty}" data-vendor-name="${r.vendorName}" data-vendor-code="${r.vendorCode}" data-corp-name="${r.corpName}" data-corp-code="${r.corpCode}" onchange="updatePlanSelection()"></td>
+      <td>
+        <div style="font-weight:600">${r.name}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+          <span class="muted" style="font-size:11px">${r.code} · ${r.category}</span>
+          <span class="pill green" style="font-size:10px">${r.vendorName} (${r.vendorCode})</span>
+        </div>
+      </td>
+      <td class="num"><b>${r.finalDays}</b><div class="muted">基础 ${r.baseDays}</div></td>
+      <td class="num">${fmt(r.mu)}</td>
+      <td class="num">${fmt(r.todayRemain)}</td>
+      <td class="num">${fmt(r.available)}</td>
+      <td class="num">${fmt(r.stockTarget)}</td>
+      <td class="${numCls(r.endingT)}">${fmt(r.endingT)}</td>
+      <td class="num" style="background:#eaf6f0;color:var(--green);font-weight:700">${fmt(snapOf(r).total)}</td>
+      <td class="num">${fmt(snapOf(r).ordered)}</td>
+      <td>${rateCell(r)}</td>
+      <td>${statusTag(r)}</td>
+      <td><button class="btn text small" onclick="openSkuDrawer(${r.id})" style="padding:0 6px">详情</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('planRows').innerHTML=rows;
+}
+
+function renderSkuDetail(r){
+  return `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="detail-block">
+        <h5>① 预测覆盖天数</h5>
+        <div class="row"><span>基础备货天数</span><span class="v">${r.baseDays}</span></div>
+        <div class="row"><span>缺货系数</span><span class="v">+${r.extraOos}</span></div>
+        <div class="row"><span>周末/节假日</span><span class="v">+${r.extraWeekend}</span></div>
+        <div class="row" style="border-top:1px dashed var(--line-2);margin-top:4px;padding-top:4px"><b>最终备货天数</b><span class="v" style="color:var(--green)">${r.finalDays}</span></div>
+        <div class="muted" style="margin-top:6px">${r.salesTier} · ${r.shelfTier}（${r.shelf} 天）</div>
+      </div>
+      <div class="detail-block">
+        <h5>② 天级平均日销 μ</h5>
+        <div class="bom-chain">
+          ${r.bom.map(b=>`<div><b>${b.sku}</b> ${b.skuName} → ${b.item} × ${b.ratio}</div>`).join('')}
+          <div style="margin-top:4px">↓ BOM 汇总到原料</div>
+        </div>
+        <div class="formula-line">(近 7 + 近 3) / 2 = <b>${r.mu}</b></div>
+        <div class="muted" style="margin-top:6px">近 7 日：${r.salesD7.join(' / ')}</div>
+      </div>
+      <div class="detail-block">
+        <h5>③ 当日预估剩余销量</h5>
+        <div class="row"><span>当日已售</span><span class="v">${r.todaySold}</span></div>
+        <div class="row"><span>P_now</span><span class="v">${(r.pNow*100).toFixed(0)}%</span></div>
+        <div class="row"><span>大盘均进度</span><span class="v">${(r.avgProgress*100).toFixed(0)}%</span></div>
+        <div class="row"><span>判定</span><span class="v">${r.pNow > r.avgProgress+0.2 ? '异常加速' : '常态'}</span></div>
+        <div class="row" style="border-top:1px dashed var(--line-2);margin-top:4px;padding-top:4px"><b>剩余销量</b><span class="v" style="color:var(--green)">${r.todayRemain}</span></div>
+      </div>
+      <div class="detail-block">
+        <h5>④ 今日在途库存</h5>
+        <div class="row"><span>今日在途</span><span class="v">${r.inTransit.today}</span></div>
+        <div class="muted" style="margin-top:6px">来源：待下单 / 待发货 / 待入库 / 入库中</div>
+      </div>
+      <div class="detail-block">
+        <h5>⑤ 库存 & 中间计算</h5>
+        <div class="row"><span>仓库销售可用</span><span class="v">${r.available}</span></div>
+        <div class="row"><span>SS 安全库存比例</span><span class="v">${(r.ss*100)}%</span></div>
+        <div class="formula-line">备货目标 = ${r.finalDays} × ${r.mu} ÷ (1−${r.ss}) = <b>${r.stockTarget}</b></div>
+        <div class="formula-line">T 期末 = ${r.inTransit.today} + ${r.available} − ${r.todayRemain} = <b>${r.endingT}</b></div>
+        <div class="formula-line" style="background:var(--mint);border-color:var(--green);color:var(--green)">总采购量 = ${r.stockTarget} − ${r.endingT} = <b>${r.totalQty}</b></div>
+      </div>
+    </div>`;
+}
+
+// 行选 / 全选 / 「建采购单」按钮 disabled 联动（对齐现有 analyse.vue 行为）
+function updatePlanSelection(){
+  const rows=document.querySelectorAll('.plan-row-check');
+  const checked=Array.from(rows).filter(c=>c.checked);
+  const count=checked.length;
+  const tip=document.getElementById('plan-selected-tip');
+  tip.style.display=count>0?'inline':'none';
+  document.getElementById('plan-selected-count').textContent=count;
+  // 全选 checkbox 状态
+  const master=document.getElementById('plan-check-all');
+  if(master){
+    master.checked=(count===rows.length && count>0);
+    master.indeterminate=(count>0 && count<rows.length);
+  }
+}
+function toggleAllPlanRows(master){
+  document.querySelectorAll('.plan-row-check').forEach(c=>c.checked=master.checked);
+  updatePlanSelection();
+}
+// ── 生成采购单 · 按供应商分组（一供应商一组/一张单、挂多品；本期改）──
+let genGroups=[], genSelIds=[];
+function openCreatePoModal(){
+  const checked=Array.from(document.querySelectorAll('.plan-row-check:checked'));
+  if(!checked.length){toast('请先勾选要生成采购单的货品','warn');return;}
+  const corpSet=new Set(checked.map(c=>c.dataset.corpCode));
+  if(corpSet.size>1){toast('勾选的货品来自不同结算主体，需保留同一结算主体后再生成','warn');return;}
+  genSelIds=checked.map(c=>Number(c.dataset.id));
+  // 按勾选货品的推荐供应商自动建组（一供应商一张单），其余可手动加
+  const recos=[...new Set(genSelIds.map(id=>(data.find(x=>x.id===id)||{}).vendorCode).filter(Boolean))];
+  genGroups=recos.length?recos.map(v=>({vendor:v,items:groupItems(v)})):[{vendor:'',items:[]}];
+  document.getElementById('modalBox').style.width='min(1060px, 96vw)';
+  document.getElementById('modalMask').classList.add('show');
+  renderGenModal();
+}
+function gAllocated(id){let s=0;genGroups.forEach(g=>g.items.forEach(it=>{if(it.id===id)s+=Number(it.qty)||0;}));return s;}
+function groupItems(vendor){
+  if(!vendor) return [];
+  return genSelIds.filter(id=>(VENDOR_ITEMS[vendor]||[]).includes(id)).map(id=>{
+    const r=data.find(x=>x.id===id),sn=snapOf(r),remain=Math.max(0,sn.total-sn.ordered);
+    const def=Math.max(0,remain-gAllocated(id)),lp=LAST_PRICE[id+'|'+vendor];
+    return {id,name:r.name,code:r.code,total:sn.total,ordered:sn.ordered,remain,qty:def,price:(lp!=null?lp:'')};
+  });
+}
+function gAddGroup(){genGroups.push({vendor:'',items:[]});renderGenModal();}
+function gDelGroup(gi){genGroups.splice(gi,1);renderGenModal();}
+function gSetVendor(gi,v){
+  if(v&&genGroups.some((g,i)=>i!==gi&&g.vendor===v)){toast('该供应商已添加，请勿重复','warn');renderGenModal();return;}
+  genGroups[gi].vendor=v;genGroups[gi].items=groupItems(v);renderGenModal();
+}
+function gDelItem(gi,id){genGroups[gi].items=genGroups[gi].items.filter(x=>x.id!==id);renderGenModal();}
+function gQty(gi,id,v){const it=genGroups[gi].items.find(x=>x.id===id);if(it)it.qty=v===''?'':Number(v);renderGenSummary();}
+function gPrice(gi,id,v){const it=genGroups[gi].items.find(x=>x.id===id);if(it)it.price=v===''?'':Number(v);}
+function gVendorOpts(gi){
+  const used=genGroups.filter((g,i)=>i!==gi&&g.vendor).map(g=>g.vendor),cur=genGroups[gi].vendor;
+  return '<option value="">请选择供应商</option>'+CAND_VENDORS.map(v=>`<option value="${v.code}" ${cur===v.code?'selected':''} ${used.includes(v.code)?'disabled':''}>${v.name} (${v.code})</option>`).join('');
+}
+function poCount(){return genGroups.filter(g=>g.vendor&&g.items.some(it=>Number(it.qty)>0)).length;}
+function renderGenModal(){
+  const groups=genGroups.map((g,gi)=>{
+    let body;
+    if(!g.vendor) body=`<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">选择供应商后，自动列出它可供货的勾选货品（不用逐货品选供应商）</td></tr>`;
+    else if(!g.items.length) body=`<tr><td colspan="5" class="muted" style="text-align:center;padding:14px">该供应商无可供货的勾选货品（按品供绑定）</td></tr>`;
+    else body=g.items.map(it=>{
+      const lp=LAST_PRICE[it.id+'|'+g.vendor];
+      const sess=gAllocated(it.id), left=it.remain-sess;   // 本品跨所有供应商组的本次分配
+      return `<tr>`+
+        `<td>${it.name}<div class="muted" style="font-size:11px">${it.code}</div></td>`+
+        `<td style="font-size:12px"><div class="muted">总 ${it.total} · 计划剩 ${it.remain}</div><div style="color:${left<0?'#f56c6c':'var(--green)'}">本次已分配 ${sess} · 剩 ${left}</div></td>`+
+        `<td class="num"><input class="chip" style="width:92px;height:28px;text-align:right" type="number" min="0" value="${it.qty}" placeholder="不限" oninput="gQty(${gi},${it.id},this.value)" onchange="renderGenModal()"></td>`+
+        `<td><div style="display:flex;gap:5px;align-items:center"><input class="chip" style="width:80px;height:28px;text-align:right" type="number" step="0.01" value="${it.price}" placeholder="留空手填" oninput="gPrice(${gi},${it.id},this.value)"><span class="muted" style="font-size:11px">${lp!=null?('上次 '+lp):'无历史'}</span></div></td>`+
+        `<td><button class="btn text small" onclick="openSplit(${it.id})" title="把该货品一次拆给它的多个供应商">拆供应商</button> <button class="btn text small" style="color:#f56c6c" onclick="gDelItem(${gi},${it.id})">移除</button></td>`+
+      `</tr>`;
+    }).join('');
+    return `<div style="border:1px solid var(--line);border-radius:8px;margin-bottom:12px;overflow:hidden">`+
+      `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#f7f9fc;border-bottom:1px solid var(--line)">`+
+        `<span class="pill" style="background:#e8f0ff;color:#2b6fff">采购单 ${gi+1}</span>`+
+        `<select class="chip" style="height:30px;min-width:220px;padding:0 6px" onchange="gSetVendor(${gi},this.value)">${gVendorOpts(gi)}</select>`+
+        `<span class="muted" style="font-size:11px">= 一张草稿采购单</span>`+
+        `<button class="btn text small" style="margin-left:auto;color:#f56c6c" onclick="gDelGroup(${gi})">删除该单</button>`+
+      `</div>`+
+      `<table class="dense"><thead><tr><th>货品</th><th style="width:170px">本品分配（跨供应商）</th><th class="num" style="width:110px">本次下单量</th><th style="width:190px">采购单价(未税)</th><th style="width:130px">操作</th></tr></thead><tbody>${body}</tbody></table>`+
+    `</div>`;
+  }).join('');
+  document.getElementById('modalBox').innerHTML=
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">生成采购单 · 按供应商分组</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto;max-height:64vh">'+
+      '<div style="background:var(--blue-bg);border:1px solid #c8d9ff;border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.7;color:var(--text);margin-bottom:14px">'+
+        '<div style="font-weight:700;color:var(--blue);margin-bottom:4px">📌 处理逻辑（供应商分组）</div>'+
+        '<div><b>一个供应商加一次</b>，下面自动挂出它可供货的勾选货品，批量填量——不用逐货品重复选供应商。</div>'+
+        '<div>一个货品可出现在<b>多个供应商</b>下（拆单）；<b>每个供应商生成 1 张草稿采购单</b>。</div>'+
+        '<div><b>数量不校验</b>（可少 / 等 / 超）；采购单价默认带<b>「该供应商×该货品」上次价</b>，可改、无历史留空手填。</div>'+
+      '</div>'+
+      groups+
+      '<button class="btn" onclick="gAddGroup()">+ 添加供应商（再开一张采购单）</button>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="muted" id="gen-summary" style="font-size:12px"></div><div style="display:flex;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="genConfirm()">创建采购单</button></div></div>';
+  renderGenSummary();
+}
+function renderGenSummary(){
+  let totalQ=0;genGroups.forEach(g=>g.items.forEach(it=>{if(g.vendor&&Number(it.qty)>0)totalQ+=Number(it.qty);}));
+  const el=document.getElementById('gen-summary');
+  if(el) el.innerHTML='本次下单合计 <b>'+totalQ+'</b> · 生成 <b>'+poCount()+'</b> 张采购单（每供应商一张）';
+}
+function genConfirm(){
+  const n=poCount();
+  if(!n){toast('请至少给一个供应商填下单量','warn');return;}
+  const addById={};
+  genGroups.forEach(g=>{if(g.vendor)g.items.forEach(it=>{if(Number(it.qty)>0)addById[it.id]=(addById[it.id]||0)+Number(it.qty);});});
+  Object.keys(addById).forEach(id=>{const s=SNAP[id]&&SNAP[id][curPlanDate];if(s)s.ordered+=addById[id];});
+  renderPlanRows(); closeModal();
+  toast('已生成 '+n+' 张草稿采购单；采纳率（'+curPlanDate+'）已更新（演示：实际待审核通过后回写）','success');
+}
+// ── 货品级一键拆供应商（货品优先：选货品 → 一处拆给它的多个供应商 → 回填到分组）──
+let splitId=null, splitRows=[];
+function openSplit(id){
+  splitId=id;
+  splitRows=CAND_VENDORS.filter(v=>(VENDOR_ITEMS[v.code]||[]).includes(id)).map(v=>{
+    const grp=genGroups.find(g=>g.vendor===v.code), it=grp&&grp.items.find(x=>x.id===id), lp=LAST_PRICE[id+'|'+v.code];
+    return {vendor:v.code,name:v.name,qty:(it&&it.qty!==''&&it.qty!=null?it.qty:''),price:(it&&it.price!==''&&it.price!=null?it.price:(lp!=null?lp:''))};
+  });
+  renderSplit(); document.getElementById('splitMask').classList.add('show');
+}
+function closeSplit(){document.getElementById('splitMask').classList.remove('show');}
+function splitQty(k,v){splitRows[k].qty=v===''?'':Number(v);renderSplit();}
+function splitPrice(k,v){splitRows[k].price=v===''?'':Number(v);}
+function renderSplit(){
+  const r=data.find(x=>x.id===splitId),sn=snapOf(r),planRemain=Math.max(0,sn.total-sn.ordered);
+  const sum=splitRows.reduce((s,x)=>s+(Number(x.qty)||0),0),left=planRemain-sum;
+  const rows=splitRows.map((x,k)=>{
+    const lp=LAST_PRICE[splitId+'|'+x.vendor];
+    return `<tr><td>${x.name} <span class="muted" style="font-size:11px">${x.vendor}</span></td>`+
+      `<td class="num"><input class="chip" style="width:90px;height:28px;text-align:right" type="number" min="0" value="${x.qty}" placeholder="0" oninput="splitQty(${k},this.value)"></td>`+
+      `<td><div style="display:flex;gap:5px;align-items:center"><input class="chip" style="width:78px;height:28px;text-align:right" type="number" step="0.01" value="${x.price}" placeholder="留空手填" oninput="splitPrice(${k},this.value)"><span class="muted" style="font-size:11px">${lp!=null?('上次 '+lp):'无历史'}</span></div></td></tr>`;
+  }).join('');
+  document.getElementById('splitBox').innerHTML=
+    '<div class="modal-head" style="height:50px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">按供应商拆分 · '+r.name+'</div><button class="close" onclick="closeSplit()">×</button></div>'+
+    '<div class="modal-body" style="padding:16px 18px">'+
+      '<div class="muted" style="font-size:12px;margin-bottom:10px">总采购量 <b style="color:var(--green)">'+sn.total+'</b> · 计划剩 '+planRemain+' · 本次已分配 <b>'+sum+'</b> · 剩 <b style="color:'+(left<0?'#f56c6c':'var(--green)')+'">'+left+'</b>（数量不校验，可超）</div>'+
+      '<table class="dense"><thead><tr><th>供应商（候选）</th><th class="num" style="width:110px">下单量</th><th style="width:180px">采购单价(未税)</th></tr></thead><tbody>'+(rows||'<tr><td colspan="3" class="muted" style="text-align:center;padding:14px">该货品无可供货供应商（品供绑定为空）</td></tr>')+'</tbody></table>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeSplit()">取消</button><button class="btn primary" onclick="confirmSplit()">应用到供应商分组</button></div>';
+}
+function confirmSplit(){
+  const id=splitId,r=data.find(x=>x.id===id),sn=snapOf(r),remain=Math.max(0,sn.total-sn.ordered);
+  splitRows.forEach(sr=>{
+    const q=Number(sr.qty)||0; let grp=genGroups.find(g=>g.vendor===sr.vendor);
+    if(q>0){
+      if(!grp){grp={vendor:sr.vendor,items:[]};genGroups.push(grp);}
+      let it=grp.items.find(x=>x.id===id);
+      if(!it){it={id,name:r.name,code:r.code,total:sn.total,ordered:sn.ordered,remain,qty:0,price:''};grp.items.push(it);}
+      it.qty=q; if(sr.price!=='') it.price=sr.price;
+    } else if(grp){ grp.items=grp.items.filter(x=>x.id!==id); }
+  });
+  genGroups=genGroups.filter(g=>g.vendor); if(!genGroups.length) genGroups=[{vendor:'',items:[]}];
+  closeSplit(); renderGenModal();
+  toast('已按供应商拆分「'+r.name+'」并回填到分组','success');
+}
+
+function openSkuDrawer(id){
+  const r = data.find(x => x.id === id);
+  if(!r) return;
+  document.getElementById('sku-drawer-title').textContent = r.name+' · '+r.code+' · 详情';
+  document.getElementById('sku-drawer-body').innerHTML = renderSkuDetail(r);
+  document.getElementById('skuDrawerMask').classList.add('show');
+}
+function closeSkuDrawer(){
+  document.getElementById('skuDrawerMask').classList.remove('show');
+}
+
+// View switch
+function switchView(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===id));
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
+}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',function(){
+    const id=t.dataset.tab;
+    t.parentElement.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===t));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.toggle('active',p.id===id));
+  });
+});
+
+// Toast
+let toastTimer;
+function toast(msg,type){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+document.getElementById('modalMask').addEventListener('click',e=>{
+  if(e.target.id==='modalMask') e.target.classList.remove('show');
+});
+document.getElementById('skuDrawerMask').addEventListener('click',e=>{
+  if(e.target.id==='skuDrawerMask') closeSkuDrawer();
+});
+
+// ============ SPU 品供参数（前称补货参数配置；SPU × 供应商 × 仓库 维度的 VLT / 品供绑定）============
+const rpData=[
+  {id:1, vendorName:'GreenFarm', vendorCode:'V-001', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周三、周五', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:2, vendorName:'FreshGo', vendorCode:'V-003', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一至周六', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:3, vendorName:'Hattah', vendorCode:'V-021', spuName:'金针菇', spuCode:'SPU-10021', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周二、周五', orderLeadTime:3, status:'启用', binding:'已绑定', isOverride:true},
+  {id:4, vendorName:'MeatPro', vendorCode:'V-007', spuName:'鲜鸡胸肉', spuCode:'SPU-78120', categoryName:'肉禽 / 禽肉', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:2, everyFewDays:1, firstOrderDate:'2026-05-01', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:5, vendorName:'FreshGo', vendorCode:'V-003', spuName:'上海青', spuCode:'SPU-30087', categoryName:'蔬菜 / 叶菜', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一至周六', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:6, vendorName:'RedSun', vendorCode:'V-012', spuName:'番茄', spuCode:'SPU-32011', categoryName:'蔬菜 / 果菜', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:2, everyFewDays:2, firstOrderDate:'2026-05-02', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false},
+  {id:7, vendorName:'TomatoKing', vendorCode:'V-018', spuName:'番茄', spuCode:'SPU-32011', categoryName:'蔬菜 / 果菜', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周四', orderLeadTime:3, status:'启用', binding:'已绑定', isOverride:true},
+  {id:8, vendorName:'GreenFarm', vendorCode:'V-001', spuName:'白玉菇', spuCode:'SPU-10032', categoryName:'蔬菜 / 菇类', warehouseName:'West Hub', warehouseCode:'WH-W', receivingType:1, setByWeekDesc:'周一、周三、周五', orderLeadTime:1, status:'启用', binding:'已绑定', isOverride:false}
+];
+
+function renderRpRows(){
+  const codeQ=(document.getElementById('rp-filter-code')?.value||'').trim().toLowerCase();
+  const nameQ=(document.getElementById('rp-filter-name')?.value||'').trim().toLowerCase();
+  const vendorQ=(document.getElementById('rp-filter-vendor')?.value||'').trim().toLowerCase();
+  const filtered=rpData.filter(r=>{
+    const matchCode=!codeQ||r.spuCode.toLowerCase().includes(codeQ);
+    const matchName=!nameQ||r.spuName.toLowerCase().includes(nameQ);
+    const matchVendor=!vendorQ||r.vendorName.toLowerCase().includes(vendorQ)||r.vendorCode.toLowerCase().includes(vendorQ);
+    return matchCode && matchName && matchVendor;
+  });
+  const rows=filtered.map(r=>{
+    const receiving = r.receivingType===1
+      ? '按周 '+(r.setByWeekDesc||'')
+      : '按日 每 '+(r.everyFewDays||0)+' 天<div class="muted">首次：'+(r.firstOrderDate||'-')+'</div>';
+    const vlt = r.isOverride
+      ? `<b style="color:var(--blue)">${r.orderLeadTime} 天</b> <span class="pill blue" style="margin-left:4px;height:18px;padding:0 5px;font-size:10px">SPU 级覆盖</span>`
+      : `${r.orderLeadTime} 天`;
+    const statusPill = r.status==='启用'?'<span class="pill green">启用</span>':'<span class="pill amber">停用</span>';
+    return `<tr>
+      <td><input type="checkbox"></td>
+      <td>${r.vendorName}</td>
+      <td>${r.vendorCode}</td>
+      <td>${r.spuName}</td>
+      <td>${r.spuCode}</td>
+      <td>${r.categoryName}</td>
+      <td>${r.warehouseName}</td>
+      <td>${r.warehouseCode}</td>
+      <td>${receiving}</td>
+      <td>${vlt}</td>
+      <td>${statusPill}</td>
+      <td><span class="pill blue">${r.binding}</span></td>
+      <td>
+        <button class="btn text" onclick="openRpModal('rpAdd','编辑配置')">编辑</button>
+        <button class="btn text danger" onclick="if(confirm('确定要删除该条配置吗？'))toast('删除成功','success')">删除</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rpRows').innerHTML=rows;
+  document.getElementById('rp-count').textContent=filtered.length;
+}
+
+function jumpToRp(vendor){
+  document.getElementById('rp-filter-code').value='';
+  document.getElementById('rp-filter-name').value='';
+  document.getElementById('rp-filter-vendor').value=vendor;
+  switchView('rp');
+  renderRpRows();
+  toast(`已跳转到「SPU 品供参数」，按 ${vendor} 过滤显示 SPU 级 VLT 覆盖`,'success');
+}
+
+const rpModals = {
+  rpAdd: function(title){return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">'+(title||'新增配置')+'</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">仓库名称/ID *</label><select class="chip" style="width:100%;height:34px"><option>West Hub (WH-W)</option><option>East Hub (WH-E)</option></select></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">商品名称/ID *</label><input class="chip" style="width:100%;height:34px" placeholder="搜索 SPU"></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">供应商名称/ID *</label><input class="chip" style="width:100%;height:34px" placeholder="搜索供应商"></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日配置 *</label><div style="display:flex;gap:14px"><label><input type="radio" name="rcv" checked> 按周</label><label><input type="radio" name="rcv"> 按日（每 N 天）</label></div></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日期 *</label><div style="display:flex;gap:6px">'+
+        '<label style="border:1px solid var(--green);background:var(--mint);color:var(--green);padding:5px 9px;border-radius:5px;cursor:pointer">一</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">二</label>'+
+        '<label style="border:1px solid var(--green);background:var(--mint);color:var(--green);padding:5px 9px;border-radius:5px;cursor:pointer">三</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">四</label>'+
+        '<label style="border:1px solid var(--green);background:var(--mint);color:var(--green);padding:5px 9px;border-radius:5px;cursor:pointer">五</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">六</label>'+
+        '<label style="border:1px solid var(--line);padding:5px 9px;border-radius:5px;cursor:pointer">日</label>'+
+      '</div></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">增长系数 *</label><input class="chip" style="width:160px;height:34px" type="number" step="0.01" value="1.00"></div>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">提前期 (天) *</label><input class="chip" style="width:160px;height:34px" type="number" value="1" min="0"></div>'+
+      '<p class="muted" style="margin-top:6px;line-height:1.6">📌 此处填写的 <b>提前期 (VLT)</b> 是 SPU + 供应商 + 仓库 维度的唯一维护点（系统不另设供应商默认 VLT）。接单日与 VCT 在「补货参数配置 → 接单日 / VCT」按供应商维度维护。</p>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'保存成功\',\'success\')">保存</button></div>';
+  },
+  receivingDay: function(title){return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">'+(title||'编辑接单日')+'</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<p class="muted" style="margin-bottom:14px;line-height:1.6">接单日维护到供应商维度即可，无需 SPU 级覆盖。同供应商对所有 SPU 共用一个接单日配置。</p>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日配置 *</label>'+
+        '<div style="display:flex;gap:14px">'+
+          '<label><input type="radio" name="rd-type" checked onchange="document.getElementById(\'rd-byweek\').style.display=\'\';document.getElementById(\'rd-byday\').style.display=\'none\'"> 按周</label>'+
+          '<label><input type="radio" name="rd-type" onchange="document.getElementById(\'rd-byweek\').style.display=\'none\';document.getElementById(\'rd-byday\').style.display=\'\'"> 按日（每 N 天）</label>'+
+        '</div>'+
+      '</div>'+
+      '<div id="rd-byweek" style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">接单日期 *</label>'+
+        '<div style="display:flex;gap:6px">'+
+          '<label class="rd-day on" onclick="this.classList.toggle(\'on\')">一</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">二</label>'+
+          '<label class="rd-day on" onclick="this.classList.toggle(\'on\')">三</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">四</label>'+
+          '<label class="rd-day on" onclick="this.classList.toggle(\'on\')">五</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">六</label>'+
+          '<label class="rd-day" onclick="this.classList.toggle(\'on\')">日</label>'+
+        '</div>'+
+      '</div>'+
+      '<div id="rd-byday" style="display:none">'+
+        '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">间隔日 *</label><div style="display:flex;align-items:center;gap:6px"><span>每</span><input class="chip" style="width:80px;height:34px" type="number" value="1" min="1"><span>天</span></div></div>'+
+        '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">第一次开始下单日 *</label><input class="chip" style="width:200px;height:34px" type="date" value="2026-05-21"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'接单日已保存\',\'success\')">保存</button></div>';
+  },
+  rpGrowth: function(){return ''+
+    '<div class="modal-head" style="height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)"><div style="font-size:15px;font-weight:700">设置增长系数</div><button class="close" onclick="closeModal()">×</button></div>'+
+    '<div class="modal-body" style="padding:18px;overflow:auto">'+
+      '<p class="muted" style="margin-bottom:14px">将选中行的增长系数批量更新为以下值。</p>'+
+      '<div style="display:grid;grid-template-columns:120px 1fr;gap:12px;margin-bottom:14px;align-items:center"><label style="text-align:right;font-size:13px">增长系数 *</label><input class="chip" style="width:160px;height:34px" type="number" step="0.01" value="1.20"></div>'+
+    '</div>'+
+    '<div class="modal-foot" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px"><button class="btn" onclick="closeModal()">取消</button><button class="btn primary" onclick="closeModal();toast(\'操作成功\',\'success\')">提交</button></div>';
+  }
+};
+
+function openRpModal(type, title){
+  document.getElementById('modalBox').innerHTML=rpModals[type](title);
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal(){document.getElementById('modalMask').classList.remove('show');document.getElementById('modalBox').style.width='';}
+
+// ============ 采购建议量 导出 ============
+function exportPlan(){
+  const checked = document.querySelectorAll('.plan-row-check:checked').length;
+  const scope = checked>0 ? `已勾选 ${checked} 项` : '当前筛选条件下全部 386 项';
+  toast(`导出任务已提交：${scope}\n含【商品 / SPU / 仓库 / 供应商 / 总采购量 / 建议采购量(箱规) / 上次采购单价】，完成后右上角下载`, 'success');
+}
+
+// ============ 补货参数配置 · 安全库存比例 Tab ============
+function enterEditSs(btn){
+  document.getElementById('ss-ratio-input-cfg').disabled = false;
+  document.getElementById('ss-ratio-input-cfg').focus();
+  const head = btn.closest('.panel-head');
+  const btns = head.querySelectorAll('button');
+  if(btns[0]) btns[0].disabled = true;
+  if(btns[1]) btns[1].disabled = false;
+}
+function saveSsRatio(btn){
+  const input = document.getElementById('ss-ratio-input-cfg');
+  const v = Math.max(0, Math.min(100, parseInt(input.value) || 0));
+  input.value = v;
+  input.disabled = true;
+  const head = btn.closest('.panel-head');
+  const btns = head.querySelectorAll('button');
+  if(btns[0]) btns[0].disabled = false;
+  if(btns[1]) btns[1].disabled = true;
+  toast('安全库存比例已保存：'+v+'%（下次重算生效）', 'success');
+}
+
+// 配置页：默认查看模式，编辑→可改，保存→回到查看
+const paneEditState={'c-matrix':false,'c-vlt':false,'c-oos':false,'c-weekend':false};
+function setPaneDisabled(paneId, disabled){
+  document.querySelectorAll(`#${paneId} .table-wrap input, #${paneId} .table-wrap select`).forEach(i=>i.disabled=disabled);
+  document.querySelectorAll(`#${paneId} .pane-edit-only`).forEach(b=>b.disabled=disabled);
+}
+function getPaneBtns(paneId){
+  const head=document.querySelector(`#${paneId} .panel-head`);
+  if(!head) return [];
+  // 仅取 编辑 / 保存 两个固定按钮（排除 + 新增 类的 pane-edit-only 按钮）
+  return head.querySelectorAll('button:not(.pane-edit-only)');
+}
+function enterEdit(paneId, btn){
+  paneEditState[paneId]=true;
+  setPaneDisabled(paneId, false);
+  const btns=getPaneBtns(paneId);
+  if(btns[0]) btns[0].disabled=true;
+  if(btns[1]) btns[1].disabled=false;
+}
+function saveAndExit(paneId, label, btn){
+  paneEditState[paneId]=false;
+  setPaneDisabled(paneId, true);
+  const btns=getPaneBtns(paneId);
+  if(btns[0]) btns[0].disabled=false;
+  if(btns[1]) btns[1].disabled=true;
+  toast(label+' 已保存','success');
+}
+// 全量重算：按钮 loading + 状态文案 + 完成 toast + 持久化「上次重算」时间
+function triggerRecalc(){
+  const btn=document.getElementById('btn-recalc');
+  const st=document.getElementById('recalc-status');
+  if(btn.disabled) return;
+  // 1) 提交：按钮 loading + 状态文案切「进行中」
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin-w"></span>重算中...';
+  st.innerHTML='<span class="dot-st amber"></span><span>正在重算 1,247 个 SPU · 预计 30 秒</span>';
+  toast('已提交全量重算，约 30 秒后完成','success');
+  // 2) 模拟后台 3 秒后完成（真实环境由后端推送 / 轮询触发）
+  const startTs=Date.now();
+  setTimeout(function(){
+    const cost=Math.round((Date.now()-startTs)/1000)+29; // demo 显示 ~32s
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,'0');
+    const mm=String(now.getMinutes()).padStart(2,'0');
+    btn.disabled=false;
+    btn.innerHTML='重算';
+    st.innerHTML='<span class="dot-st green"></span><span>上次重算 今天 '+hh+':'+mm+' · 用时 '+cost+' 秒</span>';
+    toast('✓ 重算完成，已更新 1,247 个 SPU 的备货建议','success');
+  },3000);
+}
+// 缺货系数 阈值联动：≥ 与 < 同步
+function syncOosThr(src){
+  document.querySelectorAll('.thr-oos').forEach(function(i){if(i!==src) i.value=src.value});
+}
+// 阈值校验：失焦时空值或负数回退为 1
+function validOosThr(src){
+  const v=parseFloat(src.value);
+  if(isNaN(v)||v<0){src.value='1';syncOosThr(src);toast('阈值需为非负数，已重置为 1','warn');}
+}
+
+// ====== 基础备货天数矩阵 动态渲染 ======
+const matrixState={
+  shelfTiers:[
+    {name:'短保',lower:'0',upper:'7'},
+    {name:'中保',lower:'7',upper:'15'},
+    {name:'长保',lower:'15',upper:'不限'}
+  ],
+  salesTiers:[
+    {label:'L1',name:'高销',lower:'500',upper:'不限',days:['1.5','3','4']},
+    {label:'L2',name:'中销',lower:'100',upper:'500',days:['1.5','2.5','3.5']},
+    {label:'L3',name:'低销',lower:'20',upper:'100',days:['1','2','3']},
+    {label:'L4',name:'微销',lower:'0',upper:'20',days:['1','1.5','2']}
+  ]
+};
+function escAttr(s){return String(s).replace(/"/g,'&quot;')}
+function renderMatrix(){
+  const shelfHeads=matrixState.shelfTiers.map(function(t,i){
+    return '<th style="vertical-align:top">'+
+      '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-start">'+
+        '<input class="input-num" style="width:104px;text-align:left" value="'+escAttr(t.name)+'" placeholder="名称" onchange="matrixState.shelfTiers['+i+'].name=this.value">'+
+        '<div style="display:inline-flex;align-items:center;gap:4px">'+
+          '<input class="input-num" style="width:48px" value="'+escAttr(t.lower||'')+'" placeholder="下限" onchange="matrixState.shelfTiers['+i+'].lower=this.value">'+
+          '<span style="color:var(--muted)">~</span>'+
+          '<input class="input-num" style="width:48px" value="'+escAttr(t.upper||'')+'" placeholder="上限" onchange="matrixState.shelfTiers['+i+'].upper=this.value">'+
+          '<span class="muted" style="font-size:11px">天</span>'+
+          '<button class="btn text danger pane-edit-only" disabled onclick="delShelfTier('+i+')" style="font-size:14px;padding:0 4px;height:auto;margin-left:2px">✕</button>'+
+        '</div>'+
+      '</div>'+
+    '</th>';
+  }).join('');
+  document.getElementById('matrix-head').innerHTML='<tr><th style="width:60px">分层</th><th style="width:120px">名称</th><th class="num" style="width:110px">销量下限</th><th class="num" style="width:110px">销量上限</th>'+shelfHeads+'<th style="width:80px">操作</th></tr>';
+  const rows=matrixState.salesTiers.map(function(s,i){
+    const dayCells=s.days.map(function(d,j){
+      return '<td class="num"><input class="input-num" value="'+escAttr(d)+'" onchange="matrixState.salesTiers['+i+'].days['+j+']=this.value"></td>';
+    }).join('');
+    return '<tr>'+
+      '<td><b>'+s.label+'</b></td>'+
+      '<td><input class="input-num" style="width:96px;text-align:left" value="'+escAttr(s.name)+'" onchange="matrixState.salesTiers['+i+'].name=this.value"></td>'+
+      '<td class="num"><input class="input-num" value="'+escAttr(s.lower)+'" onchange="matrixState.salesTiers['+i+'].lower=this.value"></td>'+
+      '<td class="num"><input class="input-num" value="'+escAttr(s.upper)+'" onchange="matrixState.salesTiers['+i+'].upper=this.value"></td>'+
+      dayCells+
+      '<td><button class="btn text danger pane-edit-only" disabled onclick="delSalesTier('+i+')">删除</button></td>'+
+    '</tr>';
+  }).join('');
+  document.getElementById('matrix-body').innerHTML=rows;
+  setPaneDisabled('c-matrix', !paneEditState['c-matrix']);
+}
+function addSalesTier(){
+  const idx=matrixState.salesTiers.length;
+  matrixState.salesTiers.push({
+    label:'L'+(idx+1),name:'新分层',lower:'0',upper:'0',
+    days:matrixState.shelfTiers.map(function(){return '1'})
+  });
+  renderMatrix();
+  toast('已新增销售分层 L'+(idx+1));
+}
+function addShelfTier(){
+  matrixState.shelfTiers.push({name:'新分层',lower:'0',upper:'0'});
+  matrixState.salesTiers.forEach(function(s){s.days.push('1')});
+  renderMatrix();
+  toast('已新增保质期分层');
+}
+function delSalesTier(idx){
+  if(matrixState.salesTiers.length<=1){toast('至少保留 1 个销售分层','warn');return;}
+  matrixState.salesTiers.splice(idx,1);
+  matrixState.salesTiers.forEach(function(s,i){s.label='L'+(i+1)});
+  renderMatrix();
+  toast('已删除销售分层');
+}
+function delShelfTier(idx){
+  if(matrixState.shelfTiers.length<=1){toast('至少保留 1 个保质期分层','warn');return;}
+  matrixState.shelfTiers.splice(idx,1);
+  matrixState.salesTiers.forEach(function(s){s.days.splice(idx,1)});
+  renderMatrix();
+  toast('已删除保质期分层');
+}
+
+// ===== 周末 / 节假日系数 =====
+const WEEK_NAMES=['周一','周二','周三','周四','周五','周六','周日'];
+const weekendState={
+  weekdayRules:[
+    {day:4, desc:'周日不到货', stack:'1'},  // 周五
+    {day:5, desc:'',           stack:'1'}   // 周六
+  ],
+  holidayPre:'1',
+  holidayDay:'假期天数-1'
+};
+function renderWeekend(){
+  const tbody=document.getElementById('weekend-tbody');
+  if(!tbody) return;
+  const inEdit=paneEditState['c-weekend'];
+  const dis=inEdit?'':'disabled';
+  // 按周规则
+  const weeklyRows=weekendState.weekdayRules.map(function(r,i){
+    const opts=WEEK_NAMES.map(function(n,j){
+      return '<option value="'+j+'"'+(j===r.day?' selected':'')+'>'+n+'</option>';
+    }).join('');
+    return '<tr>'+
+      '<td>'+
+        '<span style="display:inline-flex;align-items:center;gap:8px">'+
+          '<select class="chip" style="height:28px;width:78px" '+dis+' onchange="weekendState.weekdayRules['+i+'].day=parseInt(this.value)">'+opts+'</select>'+
+          '<input class="input-num" style="width:200px;text-align:left" placeholder="备注（选填，如：周日不到货）" value="'+escAttr(r.desc||'')+'" '+dis+' onchange="weekendState.weekdayRules['+i+'].desc=this.value">'+
+        '</span>'+
+      '</td>'+
+      '<td class="num"><input class="input-num" type="number" min="0" step="1" value="'+escAttr(r.stack)+'" '+dis+' onchange="weekendState.weekdayRules['+i+'].stack=this.value"></td>'+
+      '<td style="text-align:center"><button class="btn text danger pane-edit-only" '+dis+' onclick="delWeekdayRule('+i+')">删除</button></td>'+
+    '</tr>';
+  }).join('');
+  // 法定节假日分组分隔
+  const holidayDivider='<tr><td colspan="3" style="background:#fafbfc;padding:6px 14px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);border-bottom:1px solid var(--line-2)">法定节假日（系统兜底规则，仅可改叠加天数）</td></tr>';
+  const holidayRows=
+    '<tr><td><span style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">🔒</span>法定假日前 1 天</span></td>'+
+      '<td class="num"><input class="input-num" type="number" min="0" step="1" value="'+escAttr(weekendState.holidayPre)+'" '+dis+' onchange="weekendState.holidayPre=this.value"></td>'+
+      '<td style="text-align:center"><span class="muted" style="font-size:11px">—</span></td></tr>'+
+    '<tr><td><span style="display:inline-flex;align-items:center;gap:6px"><span class="pill gray">🔒</span>法定假日当天</span></td>'+
+      '<td class="num"><input class="input-num" style="width:104px;text-align:right" value="'+escAttr(weekendState.holidayDay)+'" '+dis+' onchange="weekendState.holidayDay=this.value"></td>'+
+      '<td style="text-align:center"><span class="muted" style="font-size:11px">—</span></td></tr>';
+  tbody.innerHTML=weeklyRows+holidayDivider+holidayRows;
+}
+function addWeekdayRule(){
+  // 推荐一个尚未使用的星期
+  const used=weekendState.weekdayRules.map(function(r){return r.day});
+  let pick=0;
+  for(let i=0;i<7;i++){if(used.indexOf(i)===-1){pick=i;break;}}
+  weekendState.weekdayRules.push({day:pick, desc:'', stack:'1'});
+  renderWeekend();
+  toast('已新增周末场景，请选择星期');
+}
+function delWeekdayRule(idx){
+  weekendState.weekdayRules.splice(idx,1);
+  renderWeekend();
+  toast('已删除');
+}
+
+// 初始：4 个 tab-pane 都置为只读
+renderMatrix();
+renderWeekend();
+['c-matrix','c-vlt','c-oos','c-weekend'].forEach(id=>setPaneDisabled(id, true));
+
+renderPlanRows();
+renderRpRows();
+updatePlanSelection();
+</script>
+</body>
+</html>

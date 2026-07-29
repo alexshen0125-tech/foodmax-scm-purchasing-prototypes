@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 采购单·预约发货货柜号 + 合同附件 + 跨境物流追踪 — 交互原型 v1.1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --primary:#1FA365;--primary-hover:#178a55;--primary-bg:#EAF7F0;--primary-border:#A6E0C2;
+  --warning:#E6A23C;--danger:#F56C6C;--info:#909399;
+  --text:#1F2329;--text-2:#4E5969;--text-3:#86909C;--text-4:#C0C4CC;
+  --border:#DCDFE6;--border-light:#E4E7ED;--bg:#F5F7FA;--white:#fff;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+body{font-family:var(--font);font-size:13px;color:var(--text);background:#EEF1F5;padding:20px;}
+.wrap{max-width:1200px;margin:0 auto;}
+.note{background:#FFF7E6;border:1px solid #FFE0A3;color:#8a5a00;padding:10px 14px;border-radius:6px;font-size:12px;margin-bottom:16px;line-height:1.6;}
+.note b{color:#634100;}
+.panel{background:var(--white);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden;}
+.panel-hd{padding:12px 18px;border-bottom:1px solid var(--border-light);font-weight:600;font-size:14px;display:flex;align-items:center;gap:10px;}
+.panel-hd .tag{font-size:11px;font-weight:500;color:var(--primary);background:var(--primary-bg);border:1px solid var(--primary-border);padding:1px 8px;border-radius:10px;}
+.panel-bd{padding:18px;}
+
+/* toggle */
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.seg button{border:none;background:var(--white);padding:6px 16px;font-size:13px;cursor:pointer;color:var(--text-2);}
+.seg button.active{background:var(--primary);color:#fff;}
+
+/* dialog */
+.dlg{width:440px;border:1px solid var(--border-light);border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.1);margin:0 auto;}
+.dlg-hd{padding:16px 20px;font-weight:600;font-size:16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-light);}
+.dlg-hd .x{color:var(--text-3);cursor:pointer;font-size:18px;}
+.dlg-bd{padding:20px;}
+.f-item{margin-bottom:16px;}
+.f-item label{display:block;font-size:13px;color:var(--text);margin-bottom:6px;}
+.f-item label .req{color:var(--danger);margin-right:3px;}
+.f-item label .hl{color:var(--primary);font-weight:600;}
+.f-item input,.f-item textarea{width:100%;border:1px solid var(--border);border-radius:5px;padding:8px 11px;font-size:13px;font-family:inherit;color:var(--text);}
+.f-item input:focus,.f-item textarea:focus{outline:none;border-color:var(--primary);}
+.f-item input.err{border-color:var(--danger);}
+.f-item .errmsg{color:var(--danger);font-size:12px;margin-top:4px;display:none;}
+.f-item .errmsg.show{display:block;}
+.f-item textarea{resize:vertical;min-height:64px;}
+.f-item .ph::placeholder{color:var(--text-4);}
+.new-badge{font-size:10px;color:#fff;background:var(--primary);border-radius:3px;padding:0 5px;margin-left:6px;vertical-align:middle;}
+.dlg-ft{padding:14px 20px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:10px;}
+.btn{padding:8px 18px;border-radius:5px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text-2);}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+.btn.primary:hover{background:var(--primary-hover);}
+.row-hidden{display:none;}
+
+/* detail base info */
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 24px;margin-bottom:6px;}
+.kv{display:flex;gap:6px;font-size:13px;}
+.kv .k{color:var(--text-3);min-width:84px;text-align:right;}
+.kv .v{color:var(--text);font-weight:500;}
+.kv .v.hl{color:var(--primary);}
+
+/* tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border-light);margin:8px 0 0;}
+.tabs .tab{padding:10px 18px;font-size:14px;cursor:pointer;color:var(--text-2);border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tabs .tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600;}
+.tab-pane{padding:16px 2px;}
+.tab-pane.hide{display:none;}
+
+/* attachment */
+.att-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.att-bar .hint{font-size:12px;color:var(--text-3);}
+table.att{width:100%;border-collapse:collapse;font-size:13px;}
+table.att th,table.att td{border-bottom:1px solid var(--border-light);padding:10px 10px;text-align:left;}
+table.att th{color:var(--text-3);font-weight:500;background:var(--bg);}
+table.att td a{color:var(--primary);cursor:pointer;text-decoration:none;}
+table.att td a:hover{text-decoration:underline;}
+.op-del{color:var(--danger);cursor:pointer;}
+.empty{text-align:center;color:var(--text-4);padding:32px 0;font-size:13px;}
+.role-tag{font-size:11px;color:var(--text-2);background:var(--bg);border:1px solid var(--border);padding:1px 8px;border-radius:10px;margin-left:8px;}
+
+/* toast */
+#toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#303133;color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;}
+#toast.show{opacity:1;}
+.spec{font-size:12px;color:var(--text-3);margin-top:10px;line-height:1.7;}
+.spec code{background:var(--bg);padding:1px 5px;border-radius:3px;color:var(--text-2);}
+
+/* logistics timeline */
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(217,119,6,.45);}70%{box-shadow:0 0 0 8px rgba(217,119,6,0);}100%{box-shadow:0 0 0 0 rgba(217,119,6,0);}}
+.lg-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.lg-hd .t{font-size:14px;font-weight:600;color:var(--text);}
+.lg-hd .sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+.lg-warn{font-size:12px;color:var(--warning);background:#FDF6EC;border:1px solid #F5DAB1;padding:3px 10px;border-radius:10px;font-weight:600;}
+.lg-node{display:flex;gap:16px;align-items:flex-start;}
+.lg-rail{display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0;}
+.lg-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.lg-dot.done{background:var(--primary);}
+.lg-dot.active{background:var(--warning);animation:pulse 2s infinite;}
+.lg-dot.todo{background:#EBEEF2;border:2px solid #CDD3DB;}
+.lg-dot.todo i{width:8px;height:8px;border-radius:50%;background:#CDD3DB;display:block;}
+.lg-line{width:2px;height:40px;margin:4px 0;}
+.lg-line.done{background:var(--primary-border);}
+.lg-line.warn{background:#F5DAB1;}
+.lg-line.todo{background:#EBEEF2;}
+.lg-body{padding-top:4px;padding-bottom:20px;flex:1;}
+.lg-body.last{padding-bottom:0;}
+.lg-title{font-size:13.5px;font-weight:600;}
+.lg-title.done{color:var(--primary-hover);}
+.lg-title.active{color:var(--warning);}
+.lg-title.todo{color:var(--text-3);}
+.lg-tag{font-size:11px;background:#FDF6EC;color:var(--warning);border:1px solid #F5DAB1;padding:1px 7px;border-radius:8px;font-weight:600;margin-left:4px;}
+.lg-time{font-size:12.5px;margin-top:2px;}
+.lg-time.muted{color:var(--text-3);}
+.lg-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+.lg-entry{margin-top:8px;display:flex;gap:8px;}
+.lg-entry input{border:1px solid var(--border);border-radius:5px;padding:6px 10px;font-size:12.5px;font-family:inherit;color:var(--text);height:32px;}
+.lg-entry input:focus{outline:none;border-color:var(--primary);}
+.lg-entry input.date{width:150px;}
+.lg-entry input.memo{flex:1;}
+.btn.sm{padding:0 14px;height:32px;font-size:12.5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="note">
+    交互原型 · <b>SCM 采购单：跨境单预约发货货柜号/车牌号 + 合同附件上传 + 跨境物流追踪</b>。下方两块均可交互：①切换采购单业务类型，观察「货柜号/车牌号」字段显隐与必填校验；②在合同附件 Tab 上传/删除文件，并切换采购/供应商视角；③切到「物流追踪」Tab——6 节点手动录入时间轴，点「确认到港/清关」逐节点推进，到港预警随节点联动（仅跨境采购展示、仅采购视角可录入）。
+  </div>
+
+  <!-- ① 预约发货弹窗 -->
+  <div class="panel">
+    <div class="panel-hd">① 预约发货弹窗 <span class="tag">BR-01 / BR-02 / BR-03</span></div>
+    <div class="panel-bd">
+      <div style="margin-bottom:18px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:13px;color:var(--text-2);">当前采购单业务类型：</span>
+        <div class="seg">
+          <button id="btLocal" onclick="setBiz(1)">本地采购</button>
+          <button id="btCross" class="active" onclick="setBiz(2)">跨境采购</button>
+        </div>
+        <span class="spec" id="bizHint" style="margin-top:0;"></span>
+      </div>
+
+      <div class="dlg">
+        <div class="dlg-hd">预约发货 <span class="x">✕</span></div>
+        <div class="dlg-bd">
+          <div class="f-item"><label><span class="req">*</span>预约送达日期</label><input class="ph" placeholder="预约送达日期" value="2026-06-18"></div>
+          <div class="f-item"><label><span class="req">*</span>预约送达时间</label><input class="ph" placeholder="预约送达时间" value="10:00"></div>
+          <div class="f-item"><label><span class="req">*</span>配送人电话</label><input class="ph" placeholder="配送人电话" value="+65 8123 4567"></div>
+          <div class="f-item" id="containerRow">
+            <label><span class="req">*</span><span class="hl">货柜号/车牌号</span><span class="new-badge">本期新增</span></label>
+            <input id="containerInput" class="ph" placeholder="请输入货柜号或车牌号" maxlength="50">
+            <div class="errmsg" id="containerErr">请输入货柜号/车牌号</div>
+          </div>
+          <div class="f-item"><label>备注</label><textarea class="ph" placeholder="备注" maxlength="500"></textarea></div>
+        </div>
+        <div class="dlg-ft">
+          <button class="btn">取消</button>
+          <button class="btn primary" onclick="submitBooking()">确认预约</button>
+        </div>
+      </div>
+      <div class="spec">
+        规则：<code>businessType=2 跨境采购</code> 时展示「货柜号/车牌号」并<b>必填</b>（1–50 字符，去首尾空格非空）；<code>businessType=1 本地采购</code> 时该字段整行不渲染、不参与校验。单字段承载货柜号或车牌号，海运填货柜号 / 陆运填车牌号。
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 采购单详情 合同附件 -->
+  <div class="panel">
+    <div class="panel-hd">② 采购单详情 · 合同附件 <span class="tag">BR-04 / BR-05 / BR-06</span></div>
+    <div class="panel-bd">
+      <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:13px;color:var(--text-2);">当前视角：</span>
+        <div class="seg">
+          <button id="vScm" class="active" onclick="setRole('scm')">采购（SCM）</button>
+          <button id="vVms" onclick="setRole('vms')">供应商（VMS）</button>
+        </div>
+        <span class="spec" id="roleHint" style="margin-top:0;"></span>
+      </div>
+
+      <!-- base info -->
+      <div class="info-grid">
+        <div class="kv"><span class="k">采购单编号</span><span class="v">PA2026060900012</span></div>
+        <div class="kv"><span class="k">供应商</span><span class="v">H &amp; Y VEGETABLE PTE LTD</span></div>
+        <div class="kv"><span class="k">采购单状态</span><span class="v">待发货</span></div>
+        <div class="kv"><span class="k">业务类型</span><span class="v" id="detailBiz">跨境采购</span></div>
+        <div class="kv"><span class="k">货源国</span><span class="v">印度尼西亚</span></div>
+        <div class="kv" id="detailContainerKv"><span class="k">货柜号/车牌号</span><span class="v hl">TEMU1234567</span></div>
+      </div>
+
+      <!-- tabs -->
+      <div class="tabs">
+        <div class="tab" data-pane="0" onclick="setTab(0)">采购商品</div>
+        <div class="tab" data-pane="1" onclick="setTab(1)">预付记录</div>
+        <div class="tab active" data-pane="2" onclick="setTab(2)">合同附件<span class="new-badge">本期新增</span></div>
+        <div class="tab" id="tabLogistics" data-pane="4" onclick="setTab(4)">物流追踪<span class="new-badge">本期新增</span></div>
+        <div class="tab" data-pane="3" onclick="setTab(3)">操作记录</div>
+      </div>
+
+      <div class="tab-pane hide" id="pane0"><div class="empty">（采购商品列表 — 原型省略）</div></div>
+      <div class="tab-pane hide" id="pane1"><div class="empty">（预付记录 — 原型省略）</div></div>
+      <div class="tab-pane" id="pane2">
+        <div class="att-bar">
+          <span class="hint">单文件 ≤ 5MB，支持 pdf/jpg/jpeg/png/doc/docx/xls/xlsx，单采购单累计 ≤ 20 个 · 任意采购单状态可上传</span>
+          <input type="file" id="fileInput" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" onchange="onFilePicked(event)">
+          <button class="btn primary" id="uploadBtn" onclick="document.getElementById('fileInput').click()">上传合同附件</button>
+        </div>
+        <table class="att">
+          <thead><tr><th style="width:48px;">序号</th><th>文件名</th><th style="width:100px;">大小</th><th style="width:120px;">上传人</th><th style="width:160px;">上传时间</th><th style="width:80px;" class="opcol">操作</th></tr></thead>
+          <tbody id="attBody"></tbody>
+        </table>
+        <div class="empty" id="attEmpty" style="display:none;">暂无合同附件</div>
+      </div>
+      <div class="tab-pane hide" id="pane3"><div class="empty">（操作记录 — 原型省略）</div></div>
+      <div class="tab-pane hide" id="pane4">
+        <div class="lg-hd">
+          <div>
+            <div class="t">跨境物流追踪</div>
+            <div class="sub">手动录入各节点实际完成时间，系统不对接货代 API（运单号仅参考、不自动同步）</div>
+          </div>
+          <span class="lg-warn" id="lgWarn">⚠ 到港预警：距预计到港还剩 2 天</span>
+        </div>
+        <div id="lgTimeline"></div>
+        <div class="spec">
+          规则：6 节点中「下单」由系统自动落时间、「入库」由 WMS 回调自动触发，其余节点需采购在到货后手动录入实际完成时间；任一手动节点实际时间晚于预计即标红逾期；本 Tab 仅跨境采购单展示，供应商视角只读、不可录入。
+        </div>
+      </div>
+
+      <div class="spec">
+        规则：合同附件不受采购单状态限制（含已作废）均可上传；仅采购可上传/删除/替换（替换 = 删旧 + 传新），供应商端只读、可下载；删除走软删并写操作记录。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let biz=2, role='scm', uploadSeq=2;
+let atts=[
+  {id:1,name:'采购合同_H&Y_2026Q2.pdf',size:'1.8 MB',user:'白金萍',time:'2026-06-09 11:02'},
+  {id:2,name:'报价确认单_扫描件.jpg',size:'0.6 MB',user:'白金萍',time:'2026-06-09 11:05'},
+];
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600);}
+
+function setBiz(b){biz=b;
+  document.getElementById('btLocal').classList.toggle('active',b===1);
+  document.getElementById('btCross').classList.toggle('active',b===2);
+  document.getElementById('containerRow').classList.toggle('row-hidden',b===1);
+  document.getElementById('bizHint').textContent = b===2 ? '跨境单：货柜号/车牌号必填' : '本地单：不展示货柜号/车牌号字段';
+  // sync detail base info
+  document.getElementById('detailBiz').textContent = b===2?'跨境采购':'本地采购';
+  document.getElementById('detailContainerKv').style.display = b===2?'':'none';
+  // 物流追踪 Tab 仅跨境采购展示；本地采购隐藏，若正停留在该 Tab 则回退到合同附件
+  document.getElementById('tabLogistics').style.display = b===2?'':'none';
+  if(b===1 && !document.getElementById('pane4').classList.contains('hide')) setTab(2);
+  clearErr();
+}
+function clearErr(){document.getElementById('containerInput').classList.remove('err');document.getElementById('containerErr').classList.remove('show');}
+function submitBooking(){
+  if(biz===2){
+    const v=document.getElementById('containerInput').value.trim();
+    if(!v){document.getElementById('containerInput').classList.add('err');document.getElementById('containerErr').classList.add('show');return;}
+  }
+  clearErr();
+  toast('预约成功'+(biz===2?'，货柜号/车牌号已记录':''));
+}
+
+function setRole(r){role=r;
+  document.getElementById('vScm').classList.toggle('active',r==='scm');
+  document.getElementById('vVms').classList.toggle('active',r==='vms');
+  document.getElementById('roleHint').textContent = r==='scm' ? '可上传/删除/替换' : '只读：可查看与下载，无上传/删除入口';
+  document.getElementById('uploadBtn').style.display = r==='scm'?'':'none';
+  document.querySelectorAll('.opcol').forEach(e=>e.style.display = r==='scm'?'':'none');
+  renderAtt();
+  renderLogistics();   // 录入入口随视角联动
+}
+function setTab(i){
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.toggle('active',+t.dataset.pane===i));
+  for(let k=0;k<5;k++){const p=document.getElementById('pane'+k);if(p)p.classList.toggle('hide',k!==i);}
+}
+function renderAtt(){
+  const tb=document.getElementById('attBody');tb.innerHTML='';
+  document.getElementById('attEmpty').style.display = atts.length?'none':'block';
+  atts.forEach((a,i)=>{
+    const op = role==='scm' ? `<td class="opcol"><span class="op-del" onclick="del(${a.id})">删除</span></td>` : `<td class="opcol" style="display:none;"></td>`;
+    tb.innerHTML += `<tr><td>${i+1}</td><td><a onclick="toast('下载 / 预览：${a.name}')">${a.name}</a></td><td>${a.size}</td><td>${a.user}</td><td>${a.time}</td>${op}</tr>`;
+  });
+}
+function del(id){
+  if(role!=='scm')return;
+  if(confirm('确认删除该附件？删除后供应商端将不可见')){
+    atts=atts.filter(a=>a.id!==id);renderAtt();toast('已删除');
+  }
+}
+const WHITELIST=['pdf','jpg','jpeg','png','doc','docx','xls','xlsx'];
+const MAX_BYTES=5*1024*1024;
+function fmtSize(b){return b<1024*1024 ? (b/1024).toFixed(0)+' KB' : (b/1024/1024).toFixed(1)+' MB';}
+function onFilePicked(e){
+  const f=e.target.files[0];
+  e.target.value='';            // 允许重复选同一文件
+  if(!f)return;
+  if(atts.length>=20){toast('单采购单最多上传 20 个附件');return;}
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  if(!WHITELIST.includes(ext)){toast('仅支持 pdf/jpg/jpeg/png/doc/docx/xls/xlsx');return;}
+  if(f.size===0){toast('文件不能为空');return;}
+  if(f.size>MAX_BYTES){toast('单文件不能超过 5MB');return;}
+  // 模拟上传中 -> 成功
+  const btn=document.getElementById('uploadBtn');
+  btn.disabled=true;const old=btn.textContent;btn.textContent='上传中…';
+  setTimeout(()=>{
+    uploadSeq++;
+    atts.push({id:uploadSeq,name:f.name,size:fmtSize(f.size),user:'白金萍',time:'2026-06-15 14:30'});
+    renderAtt();
+    btn.disabled=false;btn.textContent=old;
+    toast('上传成功');
+  },600);
+}
+
+/* ===== ③ 跨境物流追踪 ===== */
+// 6 节点；下单=系统自动、入库=WMS 回调自动，其余手动录入。logiStep 指向当前待处理节点
+let logiStep = 3;
+const logi = [
+  {name:'下单',     expected:'',          actual:'2026-04-01 09:32', actualNote:'（系统自动）', auto:true},
+  {name:'供应商确认', expected:'2026-04-03', actual:'2026-04-03 16:20 · Alex Chen', auto:false},
+  {name:'发货',     expected:'2026-04-20', actual:'2026-04-20 10:05 · Alex Chen', sub:'运单号：COSCO-2026-04-88821（仅参考，不自动同步）', auto:false},
+  {name:'到港',     expected:'2026-04-28', actual:'', auto:false, confirm:'确认到港', eta:'2天后预计到港'},
+  {name:'清关',     expected:'2026-04-30', actual:'', auto:false, confirm:'确认清关'},
+  {name:'入库',     expected:'',          actual:'', auto:true, titleNote:'（WMS 回调自动触发）'},
+];
+function renderLogistics(){
+  const box=document.getElementById('lgTimeline');if(!box)return;
+  // 到港预警：仅当「到港」节点为当前待录入节点时展示
+  document.getElementById('lgWarn').style.display = (logiStep===3 && !logi[3].actual) ? '' : 'none';
+  let html='';
+  logi.forEach((n,i)=>{
+    const done = i<logiStep || !!n.actual;
+    const active = i===logiStep && !done;
+    const st = done?'done':(active?'active':'todo');
+    const dotCls = done?'done':(active && !n.auto ?'active':'todo');
+    const last = i===logi.length-1;
+    const dotInner = done
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : (active && !n.auto)
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+        : '<i></i>';
+    const lineCls = done?'done':(active?'warn':'todo');
+    // 时间行
+    const expTxt = n.expected?('预计：'+n.expected):'预计：—';
+    const actTxt = n.actual?('实际：'+n.actual+(n.actualNote||'')):'实际：—';
+    const timeMuted = (!done && !active) ? ' muted' : '';
+    // 待录入标签
+    let tag='';
+    if(active && !n.auto) tag=`<span class="lg-tag">待录入${n.eta?' · '+n.eta:''}</span>`;
+    if(active && n.auto)  tag=`<span class="lg-tag">待回调</span>`;
+    // 录入行：当前手动节点 + 采购视角才出现
+    let entry='';
+    if(active && !n.auto && role==='scm'){
+      entry=`<div class="lg-entry">
+        <input type="date" class="date" id="lgDate" value="${n.expected||''}">
+        <input type="text" class="memo" id="lgMemo" placeholder="备注（选填）">
+        <button class="btn primary sm" onclick="confirmLogistics()">${n.confirm}</button>
+      </div>`;
+    } else if(active && !n.auto && role!=='scm'){
+      entry=`<div class="lg-sub">供应商视角只读，待采购录入${n.name}时间</div>`;
+    }
+    html+=`<div class="lg-node">
+      <div class="lg-rail">
+        <div class="lg-dot ${dotCls}">${dotInner}</div>
+        ${last?'':`<div class="lg-line ${lineCls}"></div>`}
+      </div>
+      <div class="lg-body${last?' last':''}">
+        <div class="lg-title ${st}">${n.name}${n.titleNote?`<span style="font-size:11px;font-weight:400;color:var(--text-3);">${n.titleNote}</span>`:''}${tag}</div>
+        <div class="lg-time${timeMuted}">${expTxt} &nbsp;·&nbsp; ${actTxt}</div>
+        ${n.sub?`<div class="lg-sub">${n.sub}</div>`:''}
+        ${entry}
+      </div>
+    </div>`;
+  });
+  box.innerHTML=html;
+}
+function confirmLogistics(){
+  const n=logi[logiStep];if(!n||n.auto)return;
+  const d=document.getElementById('lgDate').value;
+  if(!d){toast('请选择实际'+n.name+'日期');return;}
+  const memo=(document.getElementById('lgMemo').value||'').trim();
+  n.actual = d + ' 14:30 · 白金萍' + (memo?(' · '+memo):'');
+  logiStep++;
+  // 跳过自动节点（入库由 WMS 回调，无需手动确认）
+  renderLogistics();
+  toast(n.name+'已确认，实际时间已记录');
+}
+
+setBiz(2);setRole('scm');setTab(2);renderAtt();renderLogistics();
+</script>
+</body>
+</html>

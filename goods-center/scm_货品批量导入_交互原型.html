@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 货品批量导入 · 交互原型</title>
+<style>
+/* ── 设计系统 1:1 沿用《SCM 货品中心 交互原型》 ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:#303133;background:#f0f2f5;min-height:100vh}
+:root{--primary:#07B77D;--primary-hover:#05A06D;--primary-light:#e8f9f4;--danger:#F56C6C;--warning:#E6A23C;--info:#409EFF;--purple:#722ED1;--border:#DCDFE6;--t1:#303133;--t2:#606266;--t3:#909399;--bg:#F5F7FA}
+.layout{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:50px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:100;flex-shrink:0}
+.topbar-logo{font-weight:700;font-size:16px;color:#fff;background:var(--primary);padding:4px 12px;border-radius:4px;margin-right:24px}
+.topbar-nav{display:flex;align-items:stretch;height:100%}
+.topbar-nav a{display:flex;align-items:center;padding:0 16px;color:var(--t2);text-decoration:none;font-size:13px;border-bottom:2px solid transparent;cursor:pointer}
+.topbar-nav a.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px;color:var(--t2);font-size:13px}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:#fff;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sidebar-group-title{padding:12px 16px 6px;font-size:12px;color:var(--t3);letter-spacing:.5px}
+.sidebar-item{display:flex;align-items:center;padding:10px 20px;color:var(--t2);cursor:pointer;font-size:13px;border-left:3px solid transparent}
+.sidebar-item:hover{background:var(--primary-light);color:var(--primary)}
+.sidebar-item.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:500}
+.main{flex:1;overflow:auto;padding:16px}
+.card{background:#fff;border-radius:4px;border:1px solid var(--border);margin-bottom:12px}
+.card-body{padding:16px}
+.page-title{font-size:16px;font-weight:600;color:var(--t1);margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--t3);margin-bottom:16px}
+.filter-form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.filter-item{display:flex;flex-direction:column;gap:4px}
+.filter-item label{font-size:12px;color:var(--t2)}
+.filter-btns{display:flex;gap:8px;align-items:flex-end}
+input[type=text],input[type=number],select,textarea{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;font-size:13px;color:var(--t1);background:#fff;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23909399'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.iw120{width:120px}.iw150{width:150px}.iw180{width:180px}.iw200{width:200px}.iw240{width:240px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:32px;padding:0 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--t1);white-space:nowrap;text-decoration:none}
+.btn:hover{color:var(--primary);border-color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover);color:#fff}
+.btn-sm{height:28px;padding:0 10px;font-size:12px}
+.btn-plain{background:#fff;border-color:var(--border);color:var(--t1)}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.btn-text{border:none;background:none;color:var(--primary);padding:0 4px;height:auto;cursor:pointer;font-size:13px}
+.btn-text:hover{color:var(--primary-hover)}
+.dropdown-wrap{position:relative;display:inline-block}
+.dropdown-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);min-width:200px;z-index:200;display:none}
+.dropdown-menu.show{display:block}
+.dropdown-item{padding:9px 16px;cursor:pointer;font-size:13px;color:var(--t1)}
+.dropdown-item:hover{background:var(--primary-light);color:var(--primary)}
+.dropdown-item.is-new{color:var(--primary);font-weight:500}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.tbl-toolbar-left{display:flex;align-items:center;gap:8px;color:var(--t2);font-size:13px}
+.tbl-toolbar-right{display:flex;align-items:center;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fafafa;color:var(--t2);font-weight:500;padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f0f0f0;color:var(--t1);vertical-align:middle}
+tr:hover td{background:#fafafa}
+.mono{font-family:monospace;font-size:12px;color:var(--t3)}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500}
+.tag-green{background:#e8f9f4;color:#07B77D;border:1px solid #b3e8d8}
+.tag-blue{background:#ecf5ff;color:#409EFF;border:1px solid #b3d8ff}
+.tag-gray{background:#f4f4f5;color:#909399;border:1px solid #d3d4d6}
+.tag-orange{background:#fdf6ec;color:#E6A23C;border:1px solid #f5dab1}
+.tag-purple{background:#f9f0ff;color:#722ED1;border:1px solid #d3adf7}
+.tag-red{background:#fef0f0;color:#F56C6C;border:1px solid #fbc4c4}
+.switch{position:relative;display:inline-block;width:40px;height:20px;cursor:pointer}
+.switch input{opacity:0;width:0;height:0}
+.switch-slider{position:absolute;inset:0;background:#ccc;border-radius:10px;transition:.2s}
+.switch-slider:before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked+.switch-slider{background:var(--primary)}
+.switch input:checked+.switch-slider:before{transform:translateX(20px)}
+.switch.disabled{opacity:.5;cursor:not-allowed}
+.pagination{display:flex;align-items:center;gap:4px;padding:12px 16px;justify-content:flex-end;border-top:1px solid var(--border)}
+.page-btn{min-width:32px;height:32px;padding:0 6px;border:1px solid var(--border);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;background:#fff;color:var(--t2)}
+.page-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.page-info{font-size:13px;color:var(--t2);padding:0 4px}
+/* dialog */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.dialog{background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.15);max-height:90vh;overflow:hidden;display:flex;flex-direction:column}
+.dialog-sm{width:480px}.dialog-md{width:600px}.dialog-lg{width:900px}
+.dialog-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dialog-header h3{font-size:15px;font-weight:600}
+.dialog-close{width:24px;height:24px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:18px;line-height:1}
+.dialog-close:hover{background:var(--bg);color:var(--t1)}
+.dialog-body{padding:20px;overflow-y:auto;flex:1}
+.dialog-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+/* import form */
+.imp-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
+.imp-label{width:84px;flex-shrink:0;text-align:right;font-size:13px;color:var(--t2);padding-top:6px}
+.imp-label.req::before{content:'*';color:var(--danger);margin-right:4px}
+.imp-ctrl{flex:1}
+.tip{color:var(--danger);font-size:12px;line-height:1.7}
+.tip-gray{color:var(--t3);font-size:12px;line-height:1.7}
+.dropzone{border:1px dashed var(--border);border-radius:6px;padding:28px 16px;text-align:center;color:var(--t3);font-size:13px;cursor:pointer;transition:all .15s;background:#fafbfc}
+.dropzone:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light)}
+.dropzone.dragover{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+.dropzone .dz-ico{font-size:30px;display:block;margin-bottom:8px}
+.file-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;margin-top:10px;font-size:13px}
+.file-chip .fc-ico{width:26px;height:26px;border-radius:4px;background:#e8f9f4;color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.file-chip .fc-name{flex:1;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-chip .fc-size{color:var(--t3);font-size:12px}
+.file-chip .fc-del{color:var(--t3);cursor:pointer;padding:2px 6px;border-radius:4px}
+.file-chip .fc-del:hover{color:var(--danger);background:#fef0f0}
+.notice-box{border-radius:4px;padding:10px 14px;font-size:12px;line-height:1.7;margin-bottom:0}
+.notice-info{background:#ecf5ff;border:1px solid #b3d8ff;color:#409EFF}
+.notice-warn{background:#fdf6ec;border:1px solid #f5dab1;color:#E6A23C}
+.notice-err{background:#fef0f0;border:1px solid #fbc4c4;color:#F56C6C}
+.inline-err{display:flex;align-items:center;gap:6px;color:var(--danger);font-size:12px;margin-top:8px}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:-2px}
+.spinner.dark{border-color:rgba(7,183,125,.25);border-top-color:var(--primary)}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* progress (synchronous wait) */
+.imp-progress{text-align:center;padding:30px 10px}
+.imp-progress .pg-ico{width:56px;height:56px;border-radius:50%;border:4px solid var(--primary-light);border-top-color:var(--primary);margin:0 auto 18px;animation:spin .8s linear infinite}
+.imp-progress .pg-title{font-size:15px;font-weight:600;color:var(--t1);margin-bottom:6px}
+.imp-progress .pg-sub{font-size:12px;color:var(--t3)}
+/* result */
+.result-wrap{text-align:center;padding:24px 10px 8px}
+.result-ico{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;color:#fff}
+.result-ico.ok{background:var(--primary)}
+.result-ico.fail{background:var(--danger)}
+.result-ico.warn{background:var(--warning)}
+.result-title{font-size:18px;font-weight:600;margin-bottom:8px}
+.result-desc{font-size:13px;color:var(--t2);line-height:1.7;max-width:440px;margin:0 auto}
+.result-stat{display:flex;justify-content:center;gap:40px;margin:20px 0 4px}
+.stat-cell .stat-num{font-size:26px;font-weight:700;line-height:1}
+.stat-cell .stat-label{font-size:12px;color:var(--t3);margin-top:6px}
+.stat-cell.ok .stat-num{color:var(--primary)}
+.stat-cell.fail .stat-num{color:var(--danger)}
+.err-detail-card{background:#fef6f6;border:1px solid #fbc4c4;border-radius:6px;padding:14px 16px;text-align:left;margin:18px auto 0;max-width:480px}
+.err-detail-card .edc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.err-detail-card .edc-title{font-size:13px;font-weight:600;color:var(--danger)}
+.err-detail-card ul{margin:0;padding-left:18px;color:var(--t2);font-size:12px;line-height:1.9}
+/* template fields table */
+.tplfields{font-size:12.5px}
+.tplfields th{font-size:12px}
+.tplfields td{padding:8px 10px;border-bottom:1px solid #f0f0f0}
+.req-dot{color:var(--danger)}
+.cond-dot{color:var(--warning)}
+.collapse-head{display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--primary);font-size:13px;margin-top:14px;user-select:none}
+.collapse-head .arr{transition:transform .2s}
+.collapse-head.open .arr{transform:rotate(90deg)}
+.collapse-body{display:none;margin-top:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.collapse-body.open{display:block}
+/* toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#303133;color:#fff;padding:10px 20px;border-radius:4px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .3s;display:flex;align-items:center;gap:8px}
+.toast.show{opacity:1}
+.toast.success{background:#67C23A}.toast.warning{background:#E6A23C}.toast.error{background:#F56C6C}
+/* demo simulator */
+.sim-bar{background:#1f2733;color:#cbd5e1;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:12.5px}
+.sim-bar .sim-title{color:#fff;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.sim-bar .sim-title .badge{background:var(--primary);color:#fff;font-size:11px;padding:1px 8px;border-radius:10px;font-weight:500}
+.sim-bar .sim-opts{display:flex;flex-wrap:wrap;gap:8px}
+.sim-opt{display:flex;align-items:center;gap:6px;background:#2b3543;border:1px solid #3a4757;border-radius:6px;padding:6px 10px;cursor:pointer;color:#cbd5e1}
+.sim-opt:hover{border-color:var(--primary)}
+.sim-opt input{accent-color:var(--primary)}
+.sim-opt.active{border-color:var(--primary);background:#0e2a23;color:#fff}
+.sim-note{color:#94a3b8;margin-top:8px;line-height:1.6}
+.flex{display:flex}.items-center{align-items:center}.gap8{gap:8px}.gap12{gap:12px}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.text-gray{color:var(--t3)}.text-sm{font-size:12px}.fw600{font-weight:600}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div class="topbar-logo">Food Max SCM</div>
+    <div class="topbar-nav">
+      <a>采购管理</a><a>供应商</a><a class="active">货品中心</a><a>仓储</a><a>结算</a>
+    </div>
+    <div class="topbar-right"><span>🌐 简体中文</span><span>SG-Site ▾</span><span>采购主管 ▾</span></div>
+  </div>
+  <div class="body-wrap">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+      <div class="sidebar-group-title">货品中心</div>
+      <div class="sidebar-item active">货品管理</div>
+      <div class="sidebar-item">BOM 管理</div>
+      <div class="sidebar-item">货品分类</div>
+      <div class="sidebar-group-title">任务</div>
+      <div class="sidebar-item">导入/导出记录</div>
+    </div>
+
+    <!-- 主区 -->
+    <div class="main">
+      <!-- 演示模拟器 -->
+      <div class="sim-bar">
+        <div class="sim-title">🧪 交互原型 · 场景模拟器 <span class="badge">仅原型，用于演示完整闭环</span></div>
+        <div class="sim-opts" id="simOpts">
+          <label class="sim-opt active"><input type="radio" name="sim" value="ok" checked>全部合法 → 成功导入</label>
+          <label class="sim-opt"><input type="radio" name="sim" value="invalid">部分成功 → 合法行入库 + 错误明细</label>
+          <label class="sim-opt"><input type="radio" name="sim" value="format">文件格式错误（非 .xlsx）</label>
+          <label class="sim-opt"><input type="radio" name="sim" value="overflow">超 500 行</label>
+          <label class="sim-opt"><input type="radio" name="sim" value="empty">空文件 / 无有效数据</label>
+          <label class="sim-opt"><input type="radio" name="sim" value="header">表头与模板不符</label>
+          <label class="sim-opt"><input type="radio" name="sim" value="server">系统/网络异常</label>
+        </div>
+        <div class="sim-note">选择一种场景后，点击右侧「批量操作 → 批量导入货品」走完整流程查看对应提示与处理。</div>
+      </div>
+
+      <div class="page-title">货品管理</div>
+      <div class="page-sub">商货分离 · 货品数据层 · 当前 Site：SG-Site</div>
+
+      <!-- 筛选 -->
+      <div class="card"><div class="card-body">
+        <div class="filter-form">
+          <div class="filter-item"><label>后台类目</label><select class="iw180"><option>全部</option><option>禽肉类</option><option>蔬菜类</option><option>水产类</option></select></div>
+          <div class="filter-item"><label>货品名称</label><input type="text" class="iw180" placeholder="请输入货品名称"></div>
+          <div class="filter-item"><label>货品编码</label><input type="text" class="iw180" placeholder="请输入货品编码"></div>
+          <div class="filter-item"><label>旧编码</label><input type="text" class="iw150" placeholder="请输入旧编码"></div>
+          <div class="filter-item"><label>货品类型</label><select class="iw120"><option>全部</option><option>标品</option><option>非标品</option></select></div>
+          <div class="filter-item"><label>是否可采</label><select class="iw120"><option>全部</option><option>可采</option><option>不可采</option></select></div>
+          <div class="filter-item"><label>创建方式</label><select class="iw180"><option>全部</option><option>原料关联(含 BOM)</option><option>手动创建</option></select></div>
+          <div class="filter-item"><label>状态</label><select class="iw120"><option>启用</option><option>停用</option><option>全部</option></select></div>
+          <div class="filter-btns"><button class="btn btn-primary">查询</button><button class="btn">重置</button></div>
+        </div>
+      </div></div>
+
+      <!-- 列表 -->
+      <div class="card">
+        <div class="tbl-toolbar">
+          <div class="tbl-toolbar-left">共 <b>1,286</b> 条货品</div>
+          <div class="tbl-toolbar-right">
+            <!-- 批量操作下拉：新增「批量导入货品」 -->
+            <div class="dropdown-wrap">
+              <button class="btn btn-plain" onclick="toggleDd('ddBatch')">批量操作 <span style="font-size:10px">▾</span></button>
+              <div class="dropdown-menu" id="ddBatch">
+                <div class="dropdown-item is-new" onclick="openImport()">＋ 批量导入货品</div>
+                <div class="dropdown-item" onclick="toast('原型聚焦「批量导入货品」','warning');toggleDd('ddBatch')">批量导入默认供应商</div>
+                <div class="dropdown-item" onclick="toast('原型聚焦「批量导入货品」','warning');toggleDd('ddBatch')">批量导入商品关联供应商</div>
+              </div>
+            </div>
+            <!-- 新建货品下拉 -->
+            <div class="dropdown-wrap">
+              <button class="btn btn-primary" onclick="toggleDd('ddCreate')">新建货品 <span style="font-size:10px">▾</span></button>
+              <div class="dropdown-menu" id="ddCreate" style="right:0;left:auto">
+                <div class="dropdown-item" onclick="toast('原型聚焦「批量导入货品」','warning');toggleDd('ddCreate')">标品</div>
+                <div class="dropdown-item" onclick="toast('原型聚焦「批量导入货品」','warning');toggleDd('ddCreate')">非标品</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr>
+              <th>货品编码</th><th>旧编码</th><th>货品名称</th><th>后台类目</th>
+              <th>货品属性</th><th>货品类型</th><th>创建方式</th><th>是否可采</th><th>状态</th><th>更新时间</th><th style="text-align:right">操作</th>
+            </tr></thead>
+            <tbody id="itemRows"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <span class="page-info">共 1,286 条</span>
+          <span class="page-btn">‹</span><span class="page-btn active">1</span><span class="page-btn">2</span><span class="page-btn">3</span><span class="page-btn">…</span><span class="page-btn">129</span><span class="page-btn">›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ 批量导入弹窗 ════════ -->
+<div class="overlay" id="importOverlay">
+  <div class="dialog dialog-md">
+    <div class="dialog-header">
+      <h3 id="impTitle">批量导入货品</h3>
+      <div class="dialog-close" onclick="closeImport()">×</div>
+    </div>
+
+    <!-- 步骤①：上传 -->
+    <div id="paneUpload">
+      <div class="dialog-body">
+        <div class="imp-row">
+          <div class="imp-label">下载模板</div>
+          <div class="imp-ctrl">
+            <button class="btn-text" onclick="downloadTpl()">⬇ 下载导入模板.xlsx</button>
+            <div class="collapse-head" id="tplHead" onclick="toggleTpl()"><span class="arr">▶</span> 查看模板字段说明（17 列）</div>
+            <div class="collapse-body" id="tplBody">
+              <table class="tplfields">
+                <thead><tr><th>列名</th><th>必填</th><th>填写方式</th><th>说明</th></tr></thead>
+                <tbody>
+                  <tr><td>货品类型</td><td><span class="req-dot">必填</span></td><td>标品 / 非标品</td><td>决定货品属性：标品→成品货品，非标品→原料货品</td></tr>
+                  <tr><td>货品名称</td><td><span class="req-dot">必填</span></td><td>文本 ≤50</td><td>同 Site 不可重名</td></tr>
+                  <tr><td>后台类目</td><td><span class="req-dot">必填</span></td><td>中文名称</td><td>按当前 Site 类目反查，查不到记错误行</td></tr>
+                  <tr><td>计量单位</td><td><span class="req-dot">必填</span></td><td>中文名称</td><td>KG/g/L/盒/袋 等</td></tr>
+                  <tr><td>净含量</td><td><span class="req-dot">必填</span></td><td>数值 &gt;0</td><td>—</td></tr>
+                  <tr><td>净含量单位</td><td><span class="req-dot">必填</span></td><td>中文名称</td><td>—</td></tr>
+                  <tr><td>包装单位</td><td>选填</td><td>中文名称</td><td>箱/盒/袋/桶 等</td></tr>
+                  <tr><td>包装数量</td><td>选填</td><td>数值 &gt;0</td><td>—</td></tr>
+                  <tr><td>效期管理</td><td><span class="req-dot">必填</span></td><td>是 / 否</td><td>=是 时下 3 列条件必填</td></tr>
+                  <tr><td>保质期时长</td><td><span class="cond-dot">条件</span></td><td>整数 &gt;0</td><td>效期管理=是 时必填</td></tr>
+                  <tr><td>保质期单位</td><td><span class="cond-dot">条件</span></td><td>天/月/年</td><td>效期管理=是 时必填</td></tr>
+                  <tr><td>保存条件</td><td><span class="cond-dot">条件</span></td><td>常温/冷藏/冷冻/冷鲜/冷藏储存</td><td>效期管理=是 时必填（StorageValueEnum 5 值）</td></tr>
+                  <tr><td>是否可采</td><td>选填</td><td>是 / 否（默认是）</td><td>填了「关联原料编码」时本列忽略，强制不可采</td></tr>
+                  <tr><td>关联原料编码</td><td><span class="cond-dot">条件</span></td><td>库内原料货品编码</td><td>仅标品可填；填了→该货品=成品来自原料，自动建 BOM、锁不可采</td></tr>
+                  <tr><td>产地</td><td>选填</td><td>文本</td><td>—</td></tr>
+                  <tr><td>品牌</td><td>选填</td><td>文本</td><td>—</td></tr>
+                  <tr><td>旧编码</td><td>选填</td><td>文本 ≤50</td><td>历史 SPU 编码，可空</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="imp-row">
+          <div class="imp-label req">上传文件</div>
+          <div class="imp-ctrl">
+            <div class="dropzone" id="dropzone" onclick="pickFile()">
+              <span class="dz-ico">📄</span>
+              将填好的 <b>.xlsx</b> 拖到此处，或<span style="color:var(--primary)">点击选择文件</span>
+              <div class="tip-gray" style="margin-top:6px">仅支持 .xlsx 格式，单个文件 ≤10MB</div>
+            </div>
+            <input type="file" id="fileInput" style="display:none" accept=".xlsx" onchange="onFilePicked()">
+            <div id="fileChipWrap"></div>
+            <div id="inlineErr"></div>
+          </div>
+        </div>
+
+        <div class="imp-row">
+          <div class="imp-label req">说明</div>
+          <div class="imp-ctrl">
+            <div class="notice-box notice-info">
+              · 单次最多导入 <b>500 行</b>，超出请分批导入。<br>
+              · 货品编码由系统自动生成（item-YYYYMMDD-XXXX），<b>无需在模板填写</b>。<br>
+              · 类目 / 单位 / 保存条件等请填写<b>中文名称</b>，系统按当前 Site 字典反查。<br>
+              · <b>部分成功</b>：合法行直接入库；错误行不入库，系统生成「错误明细」（仅含错误行）供修正后补传。
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button class="btn" onclick="closeImport()">取消</button>
+        <button class="btn btn-primary" id="btnStart" disabled onclick="startImport()">开始导入</button>
+      </div>
+    </div>
+
+    <!-- 步骤②：同步处理中 -->
+    <div id="paneProgress" style="display:none">
+      <div class="dialog-body">
+        <div class="imp-progress">
+          <div class="pg-ico"></div>
+          <div class="pg-title">正在校验并导入…</div>
+          <div class="pg-sub" id="pgSub">正在解析文件并逐行校验，请勿关闭窗口</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤③：结果 -->
+    <div id="paneResult" style="display:none">
+      <div class="dialog-body" id="resultBody"></div>
+      <div class="dialog-footer" id="resultFooter"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 错误明细预览弹窗 -->
+<div class="overlay" id="errOverlay">
+  <div class="dialog dialog-lg">
+    <div class="dialog-header">
+      <h3>错误明细预览 · 错误原因_货品导入.xlsx</h3>
+      <div class="dialog-close" onclick="hide('errOverlay')">×</div>
+    </div>
+    <div class="dialog-body">
+      <div class="notice-box notice-warn" style="margin-bottom:14px">仅含未通过校验的失败行（合法行已入库）。原表列 + 末尾「错误原因」列，出错单元格高亮。修正这些行后补传即可。</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>行号</th><th>货品类型</th><th>货品名称</th><th>后台类目</th><th>计量单位</th><th>效期管理</th><th>关联原料编码</th><th style="color:var(--danger)">错误原因</th></tr></thead>
+          <tbody>
+            <tr><td>3</td><td>标品</td><td>冷冻鸡全腿</td><td>禽肉类</td><td>KG</td><td>是</td><td>—</td><td style="color:var(--danger)">效期管理=是，但「保存条件」为空</td></tr>
+            <tr><td>7</td><td>非标品</td><td>新鲜西兰花</td><td><span style="color:var(--danger)">绿叶菜</span></td><td>KG</td><td>否</td><td>—</td><td style="color:var(--danger)">后台类目「绿叶菜」在当前 Site 不存在</td></tr>
+            <tr><td>12</td><td>标品</td><td>分割牛上脑</td><td>牛肉类</td><td>KG</td><td>是</td><td><span style="color:var(--danger)">item-20250101-9999</span></td><td style="color:var(--danger)">关联原料编码不存在或非原料货品</td></tr>
+            <tr><td>21</td><td>非标品</td><td>整条三文鱼</td><td>水产类</td><td>KG</td><td>是</td><td><span style="color:var(--danger)">item-20260520-0007</span></td><td style="color:var(--danger)">非标品（原料）不允许填写「关联原料编码」</td></tr>
+            <tr><td>34</td><td>标品</td><td>—</td><td>禽肉类</td><td>KG</td><td>否</td><td>—</td><td style="color:var(--danger)">「货品名称」为必填，不可为空</td></tr>
+            <tr><td>58</td><td>标品</td><td>鲜鸡蛋 30 枚装</td><td>蛋品类</td><td>盒</td><td>否</td><td>—</td><td style="color:var(--danger)">货品名称「鲜鸡蛋 30 枚装」与已有货品重名</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn" onclick="hide('errOverlay')">关闭</button>
+      <button class="btn btn-primary" onclick="toast('已下载 错误原因_货品导入.xlsx','success')">⬇ 下载错误明细</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── 列表假数据（贴近真实业务，不臆造字段） ── */
+const ROWS = [
+  {code:'item-20260601-0012',old:'SPU100231',name:'冷冻鸡胸肉',cat:'禽肉类',attr:1,type:2,ctype:2,pur:1,st:1,t:'2026-06-06 14:22'},
+  {code:'item-20260601-0013',old:'',name:'分割鸡胸柳',cat:'禽肉类',attr:2,type:1,ctype:1,pur:0,st:1,t:'2026-06-06 14:25'},
+  {code:'item-20260530-0008',old:'SPU100190',name:'新鲜西兰花',cat:'蔬菜类',attr:1,type:2,ctype:2,pur:1,st:1,t:'2026-06-05 09:10'},
+  {code:'item-20260528-0021',old:'SPU100155',name:'瓶装椰子水 1L',cat:'饮品类',attr:2,type:1,ctype:2,pur:1,st:1,t:'2026-06-04 17:48'},
+  {code:'item-20260527-0003',old:'',name:'整条三文鱼',cat:'水产类',attr:1,type:2,ctype:2,pur:1,st:1,t:'2026-06-03 11:30'},
+  {code:'item-20260527-0004',old:'',name:'三文鱼柳',cat:'水产类',attr:2,type:1,ctype:1,pur:0,st:1,t:'2026-06-03 11:32'},
+  {code:'item-20260525-0017',old:'SPU100099',name:'冷冻牛上脑',cat:'牛肉类',attr:2,type:1,ctype:2,pur:1,st:2,t:'2026-06-01 08:05'},
+];
+function attrTag(a){return a===1?'<span class="tag tag-gray">原料货品</span>':'<span class="tag tag-purple">成品货品</span>';}
+function typeTag(t){return t===1?'<span class="tag tag-green">标品</span>':'<span class="tag tag-orange">非标品</span>';}
+function ctypeTag(c){return c===1?'<span class="tag tag-orange">原料关联(含 BOM)</span>':'<span class="tag tag-blue">手动创建</span>';}
+function sw(on,disabled){return '<label class="switch '+(disabled?'disabled':'')+'"><input type="checkbox" '+(on?'checked':'')+' '+(disabled?'disabled':'')+'><span class="switch-slider"></span></label>';}
+function stSwitch(on){return '<label class="switch"><input type="checkbox" '+(on?'checked':'')+'><span class="switch-slider"></span></label>';}
+function renderRows(){
+  document.getElementById('itemRows').innerHTML = ROWS.map(r=>`
+    <tr>
+      <td class="mono" style="color:var(--t2)">${r.code}</td>
+      <td class="mono">${r.old||'—'}</td>
+      <td style="color:var(--t1)">${r.name}</td>
+      <td>${r.cat}</td>
+      <td style="text-align:center">${attrTag(r.attr)}</td>
+      <td style="text-align:center">${typeTag(r.type)}</td>
+      <td style="text-align:center">${ctypeTag(r.ctype)}</td>
+      <td style="text-align:center">${sw(r.pur===1, r.ctype===1)}</td>
+      <td style="text-align:center">${stSwitch(r.st===1)}</td>
+      <td class="text-gray text-sm">${r.t}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn-text">编辑</button>
+        <button class="btn-text">详情</button>
+        ${r.attr===1?'<button class="btn-text">新建成品货品</button>':''}
+        <button class="btn-text">日志</button>
+      </td>
+    </tr>`).join('');
+}
+renderRows();
+
+/* ── 通用 ── */
+let toastT;
+function toast(msg,type){const el=document.getElementById('toast');el.className='toast '+(type||'')+' show';el.innerHTML=(type==='success'?'✓ ':type==='error'?'✕ ':type==='warning'?'⚠ ':'')+msg;clearTimeout(toastT);toastT=setTimeout(()=>el.className='toast '+(type||''),2200);}
+function show(id){document.getElementById(id).classList.add('show');}
+function hide(id){document.getElementById(id).classList.remove('show');}
+function toggleDd(id){document.querySelectorAll('.dropdown-menu').forEach(m=>{if(m.id!==id)m.classList.remove('show')});document.getElementById(id).classList.toggle('show');}
+document.addEventListener('click',e=>{if(!e.target.closest('.dropdown-wrap'))document.querySelectorAll('.dropdown-menu').forEach(m=>m.classList.remove('show'));});
+function sim(){return document.querySelector('input[name=sim]:checked').value;}
+document.getElementById('simOpts').addEventListener('change',()=>{document.querySelectorAll('.sim-opt').forEach(o=>o.classList.toggle('active',o.querySelector('input').checked));});
+
+/* ── 导入弹窗 ── */
+let pickedFile=null;
+function openImport(){toggleDd('ddBatch');resetImport();show('importOverlay');}
+function closeImport(){hide('importOverlay');}
+function resetImport(){
+  pickedFile=null;
+  document.getElementById('paneUpload').style.display='';
+  document.getElementById('paneProgress').style.display='none';
+  document.getElementById('paneResult').style.display='none';
+  document.getElementById('fileChipWrap').innerHTML='';
+  document.getElementById('inlineErr').innerHTML='';
+  document.getElementById('btnStart').disabled=true;
+  document.getElementById('tplBody').classList.remove('open');
+  document.getElementById('tplHead').classList.remove('open');
+}
+function toggleTpl(){document.getElementById('tplBody').classList.toggle('open');document.getElementById('tplHead').classList.toggle('open');}
+function downloadTpl(){toast('已下载 货品导入模板.xlsx','success');}
+function pickFile(){document.getElementById('fileInput').click();}
+
+/* 拖拽 */
+const dz=document.getElementById('dropzone');
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('dragover');}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('dragover');}));
+dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f.name);});
+function onFilePicked(){const f=document.getElementById('fileInput').files[0];if(f)handleFile(f.name);}
+
+/* 选文件后即时校验（格式） */
+function handleFile(name){
+  const inlineErr=document.getElementById('inlineErr');
+  inlineErr.innerHTML='';
+  // 模拟器：format 场景强制走非 xlsx 提示
+  const isXlsx = sim()==='format' ? false : /\.xlsx$/i.test(name);
+  const displayName = sim()==='format' ? (name.replace(/\.xlsx$/i,'')+'.xls') : name;
+  pickedFile={name:displayName, ok:isXlsx};
+  document.getElementById('fileChipWrap').innerHTML=`
+    <div class="file-chip">
+      <span class="fc-ico">x</span>
+      <span class="fc-name">${displayName}</span>
+      <span class="fc-size">${sim()==='overflow'?'1,024 行 · 286KB':'482 行 · 64KB'}</span>
+      <span class="fc-del" onclick="clearFile()">删除</span>
+    </div>`;
+  if(!isXlsx){
+    inlineErr.innerHTML='<div class="inline-err">⚠ 仅支持 .xlsx 格式文件，请重新选择</div>';
+    document.getElementById('btnStart').disabled=true;
+    return;
+  }
+  document.getElementById('btnStart').disabled=false;
+}
+function clearFile(){pickedFile=null;document.getElementById('fileChipWrap').innerHTML='';document.getElementById('inlineErr').innerHTML='';document.getElementById('btnStart').disabled=true;document.getElementById('fileInput').value='';}
+
+/* 开始导入 → 同步处理 → 结果 */
+function startImport(){
+  const s=sim();
+  // 仅格式/大小在前端即时拦截；行数/表头/空文件等内容级校验由后端执行、结果页呈现
+  document.getElementById('paneUpload').style.display='none';
+  document.getElementById('paneProgress').style.display='';
+  let n=0;const sub=document.getElementById('pgSub');
+  const timer=setInterval(()=>{n+=Math.floor(Math.random()*80)+40;if(n>482)n=482;sub.textContent=`已校验 ${n} / 482 行…（预计需 10~20 秒，请勿关闭）`;},180);
+  setTimeout(()=>{
+    clearInterval(timer);
+    document.getElementById('paneProgress').style.display='none';
+    document.getElementById('paneResult').style.display='';
+    if(s==='server') renderServerErr();
+    else if(s==='invalid') renderInvalid();
+    else if(s==='overflow') renderReject('文件共 1,024 行，超过单次上限 500 行','请拆分为多批后分别导入（每批 ≤500 行）。本次未导入任何数据。');
+    else if(s==='empty') renderReject('未解析到有效数据','文件为空或所有数据行均为空，请检查后重新上传。');
+    else if(s==='header') renderReject('模板格式不正确','上传文件缺少必需列，请重新下载模板填写（系统按列名定位，列顺序可任意）。本次未导入任何数据。');
+    else renderOk();
+  },1600);
+}
+
+/* 后端整批拦截（行数/表头/空文件）：结果页统一呈现，0 入库 */
+function renderReject(title,desc){
+  document.getElementById('resultBody').innerHTML=`
+    <div class="result-wrap">
+      <div class="result-ico warn">!</div>
+      <div class="result-title">${title}</div>
+      <div class="result-desc">${desc}</div>
+    </div>`;
+  document.getElementById('resultFooter').innerHTML=`<button class="btn btn-primary" onclick="backToUpload()">返回重新上传</button>`;
+}
+
+/* 结果：成功 */
+function renderOk(){
+  document.getElementById('resultBody').innerHTML=`
+    <div class="result-wrap">
+      <div class="result-ico ok">✓</div>
+      <div class="result-title">导入成功</div>
+      <div class="result-desc">全部 482 行货品已通过校验并创建。其中含 28 条标品成品（已自动建立原料→成品 BOM 关系）。</div>
+      <div class="result-stat"><div class="stat-cell ok"><div class="stat-num">482</div><div class="stat-label">成功创建</div></div></div>
+    </div>`;
+  document.getElementById('resultFooter').innerHTML=`<button class="btn btn-primary" onclick="finishOk()">完成</button>`;
+}
+function finishOk(){closeImport();toast('已成功导入 482 条货品','success');}
+
+/* 结果：部分成功（合法行已入库，错误行回吐明细） */
+function renderInvalid(){
+  document.getElementById('resultBody').innerHTML=`
+    <div class="result-wrap">
+      <div class="result-ico warn">⚠</div>
+      <div class="result-title">部分导入完成</div>
+      <div class="result-desc">共 482 行：<b style="color:var(--primary)">476 行已成功入库</b>（含成品自动建 BOM），<b style="color:var(--danger)">6 行</b>未通过校验、未入库。仅需修正这 6 行后补传即可。</div>
+      <div class="result-stat">
+        <div class="stat-cell ok"><div class="stat-num">476</div><div class="stat-label">成功入库</div></div>
+        <div class="stat-cell fail"><div class="stat-num">6</div><div class="stat-label">失败（未入库）</div></div>
+      </div>
+      <div class="err-detail-card">
+        <div class="edc-top"><span class="edc-title">错误明细（节选，仅含失败行）</span><button class="btn-text" onclick="show('errOverlay')">预览全部 ›</button></div>
+        <ul>
+          <li>第 3 行：效期管理=是，但「保存条件」为空</li>
+          <li>第 7 行：后台类目「绿叶菜」在当前 Site 不存在</li>
+          <li>第 12 行：关联原料编码不存在或非原料货品</li>
+          <li>第 58 行：货品名称与已有货品重名</li>
+        </ul>
+      </div>
+    </div>`;
+  document.getElementById('resultFooter').innerHTML=`
+    <button class="btn" onclick="backToUpload()">上传修正文件</button>
+    <button class="btn btn-primary" onclick="toast('已下载 错误明细_货品导入.xlsx（仅含 6 行失败行）','success')">⬇ 下载错误明细</button>`;
+}
+/* 结果：系统异常 */
+function renderServerErr(){
+  document.getElementById('resultBody').innerHTML=`
+    <div class="result-wrap">
+      <div class="result-ico warn">⚠</div>
+      <div class="result-title">导入失败</div>
+      <div class="result-desc">系统繁忙或网络异常，本次导入未完成（未创建任何货品）。请稍后重试；若多次失败请联系管理员。</div>
+    </div>`;
+  document.getElementById('resultFooter').innerHTML=`
+    <button class="btn" onclick="closeImport()">关闭</button>
+    <button class="btn btn-primary" onclick="backToUpload()">重试</button>`;
+}
+function backToUpload(){
+  clearFile(); // 返回上传页清空旧文件，避免误传未修正文件
+  document.getElementById('paneResult').style.display='none';
+  document.getElementById('paneUpload').style.display='';
+  document.getElementById('inlineErr').innerHTML='<div class="notice-box notice-warn mt8">请上传<b>修正后</b>的文件</div>';
+}
+</script>
+</body>
+</html>

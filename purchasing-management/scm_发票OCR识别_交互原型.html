@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>发票 OCR 智能识别 — 交互原型 v1.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+    /* Skeleton animation */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* OCR filled field */
+    .ocr-filled input, .ocr-filled select {
+      border-color: #22c55e !important;
+      background-color: #f0fdf4 !important;
+    }
+
+    /* Missing required field */
+    .field-error input, .field-error select {
+      border-color: #ef4444 !important;
+      background-color: #fef2f2 !important;
+      animation: shake 0.3s ease;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    /* Upload drag area */
+    .upload-area:hover, .upload-area.drag-over {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+
+    /* Step indicator */
+    .step-active .step-circle { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .step-done .step-circle { background: #22c55e; color: white; border-color: #22c55e; }
+    .step-done .step-label { color: #22c55e; }
+    .step-active .step-label { color: #3b82f6; font-weight: 600; }
+
+    /* Invoice preview mock */
+    .invoice-mock { font-size: 10px; line-height: 1.5; }
+
+    /* Fade in animation */
+    .fade-in { animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      transition: all 0.3s ease;
+    }
+
+    /* OCR badge */
+    .ocr-badge {
+      font-size: 10px; padding: 1px 6px; border-radius: 4px;
+      background: #dcfce7; color: #15803d; font-weight: 500;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-3">
+    <div class="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+      <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    </div>
+    <span class="text-sm font-semibold text-gray-800">Food Max — 供应商门户</span>
+    <span class="text-gray-300 text-sm">|</span>
+    <span class="text-sm text-gray-500">采购发票管理</span>
+    <div class="ml-auto flex items-center gap-2">
+      <span class="text-xs text-gray-400 bg-amber-50 border border-amber-200 text-amber-600 px-2 py-0.5 rounded">交互原型 v1.0</span>
+    </div>
+  </div>
+
+  <!-- Page Container -->
+  <div class="max-w-6xl mx-auto px-6 py-8">
+
+    <!-- Page Title -->
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-gray-900">新增发票</h1>
+      <p class="text-sm text-gray-500 mt-1">上传发票文件，系统将自动识别并填充发票信息</p>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="flex items-center gap-0 mb-8" id="stepIndicator">
+      <!-- Step 1 -->
+      <div class="flex items-center gap-2 step-active" id="step1Wrap">
+        <div class="step-circle w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center text-xs font-semibold text-gray-400 transition-all">1</div>
+        <span class="step-label text-sm text-gray-400 transition-all">上传发票</span>
+      </div>
+      <div class="h-px w-12 bg-gray-200 mx-3" id="line1"></div>
+      <!-- Step 2 -->
+      <div class="flex items-center gap-2" id="step2Wrap">
+        <div class="step-circle w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center text-xs font-semibold text-gray-400 transition-all">2</div>
+        <span class="step-label text-sm text-gray-400 transition-all">核查确认</span>
+      </div>
+      <div class="h-px w-12 bg-gray-200 mx-3" id="line2"></div>
+      <!-- Step 3 -->
+      <div class="flex items-center gap-2" id="step3Wrap">
+        <div class="step-circle w-7 h-7 rounded-full border-2 border-gray-300 flex items-center justify-center text-xs font-semibold text-gray-400 transition-all">3</div>
+        <span class="step-label text-sm text-gray-400 transition-all">提交完成</span>
+      </div>
+    </div>
+
+    <!-- ============ STATE 1: UPLOAD ============ -->
+    <div id="stateUpload" class="fade-in">
+      <div class="bg-white rounded-xl border border-gray-200 p-12 text-center upload-area border-2 border-dashed border-gray-300 cursor-pointer transition-all" id="uploadArea" onclick="simulateUpload()">
+        <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+        <p class="text-base font-semibold text-gray-700 mb-1">点击或拖拽发票文件至此处</p>
+        <p class="text-sm text-gray-400 mb-6">支持 JPG、PNG、PDF 格式，单文件最大 10MB</p>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors" onclick="event.stopPropagation(); simulateUpload()">
+          选择文件
+        </button>
+        <div class="mt-6 flex items-center justify-center gap-6 text-xs text-gray-400">
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+            PDF
+          </span>
+          <span class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-2 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+            JPG / PNG
+          </span>
+        </div>
+      </div>
+      <!-- Scenario buttons -->
+      <div class="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <p class="text-xs font-semibold text-amber-700 mb-3">原型演示场景（点击模拟不同结果）</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="text-xs bg-white border border-amber-300 text-amber-700 px-3 py-1.5 rounded-md hover:bg-amber-100 transition-colors" onclick="simulateUpload('success')">
+            ✅ 识别成功（正常发票）
+          </button>
+          <button class="text-xs bg-white border border-amber-300 text-amber-700 px-3 py-1.5 rounded-md hover:bg-amber-100 transition-colors" onclick="simulateUpload('creditnote')">
+            📄 识别成功（Credit Note）
+          </button>
+          <button class="text-xs bg-white border border-amber-300 text-amber-700 px-3 py-1.5 rounded-md hover:bg-amber-100 transition-colors" onclick="simulateUpload('partial')">
+            ⚠️ 部分识别（扫描件）
+          </button>
+          <button class="text-xs bg-white border border-amber-300 text-amber-700 px-3 py-1.5 rounded-md hover:bg-amber-100 transition-colors" onclick="simulateUpload('timeout')">
+            ⏱️ 识别超时降级
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 2: LOADING ============ -->
+    <div id="stateLoading" class="hidden fade-in">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="flex" style="min-height: 600px;">
+          <!-- Left: file preview placeholder -->
+          <div class="w-5/12 border-r border-gray-100 p-6 bg-gray-50 flex flex-col items-center justify-center">
+            <div class="w-full bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+              <div class="skeleton h-4 w-3/4 mb-3"></div>
+              <div class="skeleton h-3 w-1/2 mb-6"></div>
+              <div class="skeleton h-3 w-full mb-2"></div>
+              <div class="skeleton h-3 w-full mb-2"></div>
+              <div class="skeleton h-3 w-4/5 mb-4"></div>
+              <div class="skeleton h-10 w-full mb-3"></div>
+              <div class="skeleton h-3 w-full mb-2"></div>
+              <div class="skeleton h-3 w-3/4 mb-2"></div>
+              <div class="skeleton h-3 w-full mb-2"></div>
+              <div class="skeleton h-3 w-2/3 mb-4"></div>
+              <div class="skeleton h-3 w-full mb-2"></div>
+              <div class="skeleton h-3 w-4/5"></div>
+            </div>
+          </div>
+          <!-- Right: skeleton form -->
+          <div class="w-7/12 p-8">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span class="text-sm font-medium text-blue-600">OCR 识别中，请稍候...</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="skeleton h-3 w-16 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-16 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-16 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-20 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-20 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-16 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-16 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-24 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-16 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+              <div>
+                <div class="skeleton h-3 w-12 mb-2"></div>
+                <div class="skeleton h-9 w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 3: REVIEW FORM ============ -->
+    <div id="stateReview" class="hidden fade-in">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="flex" style="min-height: 640px;">
+
+          <!-- Left: Invoice Preview -->
+          <div class="w-5/12 border-r border-gray-100 bg-gray-50 flex flex-col" style="max-height: 760px; overflow-y: auto;">
+            <div class="px-4 py-3 border-b border-gray-200 bg-white flex items-center justify-between sticky top-0 z-10">
+              <span class="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                发票原件预览
+              </span>
+              <span class="text-xs text-gray-400" id="fileNameLabel">INV-2026-0311.pdf</span>
+            </div>
+            <!-- Mock Invoice Content -->
+            <div class="p-4 flex-1 flex items-start justify-center">
+              <div class="bg-white rounded-lg border border-gray-200 shadow-sm w-full p-5 invoice-mock" id="invoicePreview">
+                <!-- Invoice content injected by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Form -->
+          <div class="w-7/12 flex flex-col" style="max-height: 760px; overflow-y: auto;">
+            <!-- OCR result banner -->
+            <div class="px-6 py-3 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10" id="ocrBanner">
+              <!-- injected by JS -->
+            </div>
+
+            <div class="px-6 py-5 flex-1">
+              <div class="text-sm font-semibold text-gray-700 mb-4">发票抬头信息</div>
+
+              <!-- Section: 发票抬头 -->
+              <div class="grid grid-cols-2 gap-4" id="formFields">
+
+                <!-- 发票号码 -->
+                <div id="f_invoice_number" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    发票号码 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_invoice_number">OCR</span>
+                  </label>
+                  <input type="text" id="v_invoice_number" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="请输入" />
+                </div>
+
+                <!-- 开票日期 -->
+                <div id="f_invoice_date" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    开票日期 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_invoice_date">OCR</span>
+                  </label>
+                  <input type="date" id="v_invoice_date" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" />
+                </div>
+
+                <!-- 发票类型 -->
+                <div id="f_invoice_type" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    发票类型 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_invoice_type">OCR</span>
+                  </label>
+                  <select id="v_invoice_type" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white pr-8" onchange="handleInvoiceTypeChange()">
+                    <option value="">请选择</option>
+                    <option value="Invoice">Invoice</option>
+                    <option value="Receipt">Receipt</option>
+                    <option value="Credit Note">Credit Note</option>
+                  </select>
+                </div>
+
+                <!-- 开票人名称 -->
+                <div id="f_issuer_name" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    开票人名称 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_issuer_name">OCR</span>
+                  </label>
+                  <input type="text" id="v_issuer_name" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="请输入" />
+                </div>
+
+                <!-- 供应商税号 -->
+                <div id="f_gst_no" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    供应商税号 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_gst_no">OCR</span>
+                  </label>
+                  <input type="text" id="v_gst_no" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="如：201434312R" />
+                </div>
+
+                <!-- 发票币种 -->
+                <div id="f_currency" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    发票币种 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_currency">OCR</span>
+                  </label>
+                  <select id="v_currency" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white pr-8">
+                    <option value="SGD">SGD</option>
+                    <option value="USD">USD</option>
+                    <option value="CNY">CNY</option>
+                  </select>
+                </div>
+
+                <!-- 税率 -->
+                <div id="f_tax_rate" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    税率 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_tax_rate">OCR</span>
+                  </label>
+                  <input type="text" id="v_tax_rate" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="如：9%" />
+                </div>
+
+                <!-- 发票税额 -->
+                <div id="f_tax_amount" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    发票税额 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_tax_amount">OCR</span>
+                  </label>
+                  <input type="text" id="v_tax_amount" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="SGD" />
+                </div>
+
+                <!-- 发票不含税金额 -->
+                <div id="f_amount_excl" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    发票不含税金额 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_amount_excl">OCR</span>
+                  </label>
+                  <input type="text" id="v_amount_excl" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="SGD" />
+                </div>
+
+                <!-- 发票含税金额 -->
+                <div id="f_amount_incl" class="col-span-1">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    发票含税金额 <span class="text-red-500">*</span>
+                    <span class="ocr-badge" id="badge_amount_incl">OCR</span>
+                  </label>
+                  <input type="text" id="v_amount_incl" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="SGD" />
+                </div>
+
+                <!-- 商品一级分类 — always manual -->
+                <div id="f_category" class="col-span-2">
+                  <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                    商品一级分类 <span class="text-red-500">*</span>
+                    <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">手动填写</span>
+                  </label>
+                  <select id="v_category" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors bg-white pr-8">
+                    <option value="">请选择分类</option>
+                    <option value="蔬菜水果">蔬菜水果</option>
+                    <option value="肉禽海鲜">肉禽海鲜</option>
+                    <option value="调味品">调味品</option>
+                    <option value="包装食品">包装食品</option>
+                    <option value="饮料">饮料</option>
+                    <option value="其他">其他</option>
+                  </select>
+                </div>
+
+                <!-- Credit Note fields — shown conditionally -->
+                <div id="creditNoteFields" class="col-span-2 hidden fade-in">
+                  <div class="border-t border-gray-100 pt-4 mt-1 mb-2">
+                    <div class="text-xs font-semibold text-orange-600 flex items-center gap-1.5 mb-3">
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      Credit Note 必填字段
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                      <div id="f_orig_inv_no">
+                        <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                          原正数发票号 <span class="text-red-500">*</span>
+                          <span class="ocr-badge" id="badge_orig_inv_no">OCR</span>
+                        </label>
+                        <input type="text" id="v_orig_inv_no" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" placeholder="请输入原发票号" />
+                      </div>
+                      <div id="f_orig_inv_date">
+                        <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 mb-1.5">
+                          原正数发票开票日期 <span class="text-red-500">*</span>
+                          <span class="ocr-badge" id="badge_orig_inv_date">OCR</span>
+                        </label>
+                        <input type="date" id="v_orig_inv_date" class="w-full h-9 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Footer buttons -->
+            <div class="px-6 py-4 border-t border-gray-100 bg-white sticky bottom-0 flex items-center justify-between">
+              <button class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1.5 transition-colors" onclick="resetToUpload()">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                重新上传
+              </button>
+              <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2" onclick="handleSubmit()">
+                提交发票
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STATE 4: SUCCESS ============ -->
+    <div id="stateSuccess" class="hidden fade-in">
+      <div class="bg-white rounded-xl border border-gray-200 p-16 text-center">
+        <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+          <svg class="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-gray-900 mb-2">发票提交成功</h2>
+        <p class="text-sm text-gray-500 mb-8">发票已提交至采购团队审核，审核结果将通过邮件通知您</p>
+        <div class="flex items-center justify-center gap-3">
+          <button class="text-sm text-gray-600 border border-gray-200 px-5 py-2.5 rounded-lg hover:bg-gray-50 transition-colors" onclick="resetToUpload()">
+            继续上传发票
+          </button>
+          <button class="text-sm text-blue-600 border border-blue-200 bg-blue-50 px-5 py-2.5 rounded-lg hover:bg-blue-100 transition-colors">
+            查看发票列表
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden z-50">
+    <div id="toastContent" class="bg-gray-900 text-white text-sm px-4 py-3 rounded-lg shadow-xl flex items-center gap-2 max-w-sm">
+    </div>
+  </div>
+
+  <script>
+    // Current scenario
+    let currentScenario = 'success';
+    let isCreditNote = false;
+
+    // Scenario data
+    const scenarios = {
+      success: {
+        fileName: 'INV-2026-0311.pdf',
+        banner: { type: 'success', text: 'OCR 识别完成，已自动填充 <strong>11</strong> 个字段，请核查后提交' },
+        fields: {
+          invoice_number: 'INV-2026-0311',
+          invoice_date: '2026-03-11',
+          invoice_type: 'Invoice',
+          issuer_name: 'ABC Foods Pte Ltd',
+          gst_no: '201434312R',
+          currency: 'SGD',
+          tax_rate: '9%',
+          tax_amount: '43.20',
+          amount_excl: '480.00',
+          amount_incl: '523.20',
+          category: '',
+          orig_inv_no: null,
+          orig_inv_date: null,
+        },
+        invoice: generateInvoiceMock('Invoice', 'INV-2026-0311', '11 Mar 2026', 'ABC Foods Pte Ltd', '480.00', '43.20', '523.20')
+      },
+      creditnote: {
+        fileName: 'CN-2026-0042.pdf',
+        banner: { type: 'success', text: 'OCR 识别完成，已自动填充 <strong>12</strong> 个字段，请核查后提交' },
+        fields: {
+          invoice_number: 'CN-2026-0042',
+          invoice_date: '2026-03-18',
+          invoice_type: 'Credit Note',
+          issuer_name: 'ABC Foods Pte Ltd',
+          gst_no: '201434312R',
+          currency: 'SGD',
+          tax_rate: '9%',
+          tax_amount: '18.00',
+          amount_excl: '200.00',
+          amount_incl: '218.00',
+          category: '',
+          orig_inv_no: 'INV-2026-0290',
+          orig_inv_date: '2026-03-05',
+        },
+        invoice: generateInvoiceMock('Credit Note', 'CN-2026-0042', '18 Mar 2026', 'ABC Foods Pte Ltd', '200.00', '18.00', '218.00', 'INV-2026-0290')
+      },
+      partial: {
+        fileName: 'scan_invoice.jpg',
+        banner: { type: 'warning', text: 'OCR 部分识别，已自动填充 <strong>6</strong> 个字段，<strong>橙色字段</strong>识别置信度较低，请重点核查' },
+        fields: {
+          invoice_number: 'INV-2O26-O3l1',  // intentionally bad OCR
+          invoice_date: '2026-03-11',
+          invoice_type: 'Invoice',
+          issuer_name: 'ABC F00ds Pte Ltd',  // intentionally bad OCR
+          gst_no: '',
+          currency: 'SGD',
+          tax_rate: '',
+          tax_amount: '',
+          amount_excl: '480.00',
+          amount_incl: '',
+          category: '',
+          orig_inv_no: null,
+          orig_inv_date: null,
+        },
+        lowConfidence: ['invoice_number', 'issuer_name'],
+        invoice: generateInvoiceMock('Invoice', 'INV-2026-0311', '11 Mar 2026', 'ABC Foods Pte Ltd', '480.00', '43.20', '523.20')
+      },
+      timeout: {
+        fileName: null,
+        banner: null,
+        fields: null,
+        invoice: null,
+      }
+    };
+
+    function generateInvoiceMock(type, num, date, company, excl, tax, incl, origInv) {
+      const isCredit = type === 'Credit Note';
+      return `
+        <div class="border-b border-gray-200 pb-3 mb-3">
+          <div class="text-sm font-bold text-gray-800 mb-0.5">ABC Foods Pte Ltd</div>
+          <div class="text-gray-500">10 Tuas Avenue, Singapore 638802</div>
+          <div class="text-gray-500">GST Reg No: 201434312R</div>
+        </div>
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <div class="font-bold text-blue-700 text-sm">${type.toUpperCase()}</div>
+            <div class="text-gray-600">No: <span class="font-semibold text-gray-800">${num}</span></div>
+            <div class="text-gray-600">Date: ${date}</div>
+            ${isCredit ? `<div class="text-gray-600">Ref: ${origInv}</div>` : ''}
+          </div>
+          <div class="text-right text-gray-600">
+            <div>To: Food Max Pte Ltd</div>
+            <div>18 Tampines Ind Cres</div>
+            <div>Singapore 528605</div>
+          </div>
+        </div>
+        <table class="w-full mb-3" style="font-size:10px">
+          <thead>
+            <tr class="border-b border-gray-200 text-gray-500">
+              <th class="text-left py-1">Description</th>
+              <th class="text-right py-1">Qty</th>
+              <th class="text-right py-1">Unit Price</th>
+              <th class="text-right py-1">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-700">
+            <tr><td class="py-0.5">Fresh Vegetables - Mixed</td><td class="text-right">50 kg</td><td class="text-right">5.60</td><td class="text-right">280.00</td></tr>
+            <tr><td class="py-0.5">Chilled Chicken Breast</td><td class="text-right">20 kg</td><td class="text-right">10.00</td><td class="text-right">200.00</td></tr>
+          </tbody>
+        </table>
+        <div class="border-t border-gray-200 pt-2">
+          <div class="flex justify-between text-gray-600"><span>Subtotal (excl. GST)</span><span>SGD ${excl}</span></div>
+          <div class="flex justify-between text-gray-600"><span>GST (9%)</span><span>SGD ${tax}</span></div>
+          <div class="flex justify-between font-bold text-gray-900 mt-1 border-t border-gray-200 pt-1"><span>Total (incl. GST)</span><span>SGD ${incl}</span></div>
+        </div>
+        <div class="mt-3 text-gray-400 text-center">Payment Terms: 30 days</div>
+      `;
+    }
+
+    function simulateUpload(scenario = 'success') {
+      currentScenario = scenario;
+
+      if (scenario === 'timeout') {
+        showState('loading');
+        setStep(2);
+        setTimeout(() => {
+          showState('review');
+          setStep(2);
+          renderTimeout();
+        }, 2000);
+        return;
+      }
+
+      showState('loading');
+      setStep(2);
+
+      setTimeout(() => {
+        showState('review');
+        setStep(2);
+        renderReview(scenario);
+      }, 2500);
+    }
+
+    function renderReview(scenario) {
+      const data = scenarios[scenario];
+      isCreditNote = data.fields.invoice_type === 'Credit Note';
+
+      // File name
+      document.getElementById('fileNameLabel').textContent = data.fileName;
+
+      // Invoice preview
+      document.getElementById('invoicePreview').innerHTML = data.invoice;
+
+      // OCR banner
+      const banner = document.getElementById('ocrBanner');
+      if (data.banner.type === 'success') {
+        banner.innerHTML = `
+          <div class="flex items-center gap-2 text-green-700">
+            <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span class="text-xs">${data.banner.text}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs text-gray-400">OCR 已填充</span>
+            <span class="ocr-badge">OCR</span>
+            <span class="text-xs text-gray-400 ml-2">需手动填写</span>
+            <span class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">手动填写</span>
+          </div>
+        `;
+      } else {
+        banner.innerHTML = `
+          <div class="flex items-center gap-2 text-orange-700">
+            <div class="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg class="w-3 h-3 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </div>
+            <span class="text-xs">${data.banner.text}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="ocr-badge">OCR</span>
+            <span class="text-xs text-gray-400">已填充</span>
+            <span class="ml-2 text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">低置信度</span>
+            <span class="text-xs text-gray-400">需重点核查</span>
+          </div>
+        `;
+      }
+
+      // Fill fields
+      const fields = data.fields;
+      const fillField = (key, value, isLow) => {
+        const input = document.getElementById(`v_${key}`);
+        const wrapper = document.getElementById(`f_${key}`);
+        const badge = document.getElementById(`badge_${key}`);
+        if (!input || !wrapper) return;
+
+        if (value !== null && value !== '') {
+          input.value = value;
+          wrapper.classList.add('ocr-filled');
+          if (isLow) {
+            wrapper.classList.remove('ocr-filled');
+            badge.textContent = '低置信度';
+            badge.style.background = '#ffedd5';
+            badge.style.color = '#c2410c';
+            input.style.borderColor = '#f97316';
+            input.style.backgroundColor = '#fff7ed';
+          }
+        } else {
+          wrapper.classList.remove('ocr-filled');
+          if (badge && value !== null) {
+            // has value but empty means OCR didn't get it
+            badge.style.display = 'none';
+          }
+        }
+      };
+
+      const lowConf = data.lowConfidence || [];
+      Object.entries(fields).forEach(([key, val]) => {
+        if (val === null) {
+          const badge = document.getElementById(`badge_${key}`);
+          if (badge) badge.style.display = 'none';
+          return;
+        }
+        fillField(key, val, lowConf.includes(key));
+      });
+
+      // Credit Note fields
+      const cnFields = document.getElementById('creditNoteFields');
+      if (isCreditNote) {
+        cnFields.classList.remove('hidden');
+      } else {
+        cnFields.classList.add('hidden');
+      }
+    }
+
+    function renderTimeout() {
+      isCreditNote = false;
+      document.getElementById('fileNameLabel').textContent = 'invoice.jpg';
+      document.getElementById('invoicePreview').innerHTML = `
+        <div class="text-center py-8 text-gray-400">
+          <svg class="w-8 h-8 mx-auto mb-2 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <div class="text-xs">预览加载失败</div>
+        </div>
+      `;
+
+      const banner = document.getElementById('ocrBanner');
+      banner.innerHTML = `
+        <div class="flex items-center gap-2 text-red-600">
+          <div class="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-3 h-3 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </div>
+          <span class="text-xs">识别超时，请手动填写发票信息</span>
+        </div>
+        <button class="text-xs text-blue-600 hover:underline" onclick="simulateUpload('success')">重新识别</button>
+      `;
+
+      // Clear all fields, hide OCR badges
+      document.querySelectorAll('[id^="badge_"]').forEach(b => b.style.display = 'none');
+      document.querySelectorAll('[id^="v_"]').forEach(i => {
+        i.value = '';
+        const wrapper = i.closest('[id^="f_"]');
+        if (wrapper) wrapper.classList.remove('ocr-filled');
+      });
+      document.getElementById('creditNoteFields').classList.add('hidden');
+    }
+
+    function handleInvoiceTypeChange() {
+      const val = document.getElementById('v_invoice_type').value;
+      isCreditNote = val === 'Credit Note';
+      const cnFields = document.getElementById('creditNoteFields');
+      if (isCreditNote) {
+        cnFields.classList.remove('hidden');
+        cnFields.classList.add('fade-in');
+      } else {
+        cnFields.classList.add('hidden');
+      }
+    }
+
+    function handleSubmit() {
+      // Validate required fields
+      const requiredFields = ['invoice_number', 'invoice_date', 'invoice_type', 'issuer_name', 'gst_no', 'currency', 'tax_rate', 'tax_amount', 'amount_excl', 'amount_incl', 'category'];
+      if (isCreditNote) {
+        requiredFields.push('orig_inv_no', 'orig_inv_date');
+      }
+
+      let firstError = null;
+      let hasError = false;
+
+      requiredFields.forEach(key => {
+        const input = document.getElementById(`v_${key}`);
+        const wrapper = document.getElementById(`f_${key}`);
+        if (!input || !wrapper) return;
+        if (!input.value || input.value.trim() === '') {
+          wrapper.classList.add('field-error');
+          wrapper.classList.remove('ocr-filled');
+          if (!firstError) firstError = wrapper;
+          hasError = true;
+        } else {
+          wrapper.classList.remove('field-error');
+        }
+      });
+
+      if (hasError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('error', '请补充必填字段后再提交');
+        // Remove error classes after animation
+        setTimeout(() => {
+          document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+        }, 2000);
+        return;
+      }
+
+      // Simulate success
+      showToast('success', '正在提交...');
+      setTimeout(() => {
+        showState('success');
+        setStep(3);
+      }, 800);
+    }
+
+    function resetToUpload() {
+      showState('upload');
+      setStep(1);
+      // Reset form
+      document.querySelectorAll('[id^="v_"]').forEach(i => i.value = '');
+      document.querySelectorAll('[id^="badge_"]').forEach(b => { b.style.display = ''; b.textContent = 'OCR'; b.style.background = ''; b.style.color = ''; });
+      document.querySelectorAll('[id^="f_"]').forEach(w => { w.classList.remove('ocr-filled', 'field-error'); });
+      document.querySelectorAll('[id^="v_"] input, [id^="v_"] select').forEach(i => { i.style.borderColor = ''; i.style.backgroundColor = ''; });
+      document.getElementById('creditNoteFields').classList.add('hidden');
+      isCreditNote = false;
+    }
+
+    function showState(state) {
+      ['upload', 'loading', 'review', 'success'].forEach(s => {
+        document.getElementById(`state${capitalize(s)}`).classList.add('hidden');
+      });
+      document.getElementById(`state${capitalize(state)}`).classList.remove('hidden');
+    }
+
+    function setStep(step) {
+      [1, 2, 3].forEach(n => {
+        const wrap = document.getElementById(`step${n}Wrap`);
+        wrap.classList.remove('step-active', 'step-done');
+        if (n < step) wrap.classList.add('step-done');
+        else if (n === step) wrap.classList.add('step-active');
+      });
+      // Update lines
+      const l1 = document.getElementById('line1');
+      const l2 = document.getElementById('line2');
+      if (step >= 2) l1.classList.add('bg-blue-300'); else l1.classList.remove('bg-blue-300');
+      if (step >= 3) l2.classList.add('bg-blue-300'); else l2.classList.remove('bg-blue-300');
+    }
+
+    function showToast(type, message) {
+      const toast = document.getElementById('toast');
+      const content = document.getElementById('toastContent');
+      const icon = type === 'error'
+        ? '<svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>'
+        : '<svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+      content.innerHTML = icon + `<span>${message}</span>`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2500);
+    }
+
+    function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    // Init
+    setStep(1);
+  </script>
+
+</body>
+</html>

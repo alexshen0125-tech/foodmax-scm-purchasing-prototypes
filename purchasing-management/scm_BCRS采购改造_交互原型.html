@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Food Max · BCRS 采购侧改造 (第一阶段)</title>
+<style>
+:root{
+  --green:#0f8f68;--green-2:#087653;--mint:#e9f7f2;
+  --ink:#172033;--text:#344054;--muted:#667085;
+  --line:#d8dee8;--line-2:#edf0f5;
+  --red:#c83f49;--red-bg:#fff1f2;
+  --amber:#c77718;--amber-bg:#fff6e6;
+  --blue:#2563eb;--blue-bg:#edf4ff;
+  --gray-bg:#eef1f5;
+  --panel:#fff;--shadow:0 24px 60px rgba(16,24,40,.2);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Arial,sans-serif;background:#eef2f6;color:var(--ink);font-size:13px}
+button,input,select,textarea{font:inherit}
+.app{height:100vh;display:grid;grid-template-columns:156px 1fr;overflow:hidden}
+.rail{background:#101828;color:#cbd5e1;display:flex;flex-direction:column;align-items:stretch;padding:14px 8px;gap:2px;overflow-y:auto}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--green);display:grid;place-items:center;color:#fff;font-weight:800;margin:0 auto 6px}
+.rail-group{font-size:10px;color:#64748b;padding:10px 10px 4px;font-weight:700;letter-spacing:.5px;border-top:1px solid #1d2939;margin-top:4px}
+.rail-group:first-of-type{border-top:0;margin-top:2px}
+.rail button{width:100%;border:0;border-radius:7px;background:transparent;color:#cbd5e1;cursor:pointer;display:flex;flex-direction:row;align-items:center;gap:8px;font-size:12px;padding:8px 10px;line-height:1.3;text-align:left}
+.rail button.active,.rail button:hover{background:#1d2939;color:#fff}
+.dot{width:6px;height:6px;border-radius:50%;background:#475467;flex:0 0 auto}
+.rail button.active .dot{background:var(--green)}
+.main{height:100vh;overflow:auto}
+
+/* 第一阶段提示 */
+.phase-banner{background:linear-gradient(90deg,#e9f7f2,#fff);border-bottom:1px solid #b9e3d4;padding:9px 26px;font-size:12px;color:var(--green-2);display:flex;align-items:center;gap:10px}
+.phase-banner b{color:var(--green)}
+.phase-pill{background:var(--green);color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700}
+
+.hero{background:#fff;border-bottom:1px solid var(--line);padding:18px 26px 16px}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.title{font-size:22px;font-weight:800}
+.subtitle{margin-top:7px;color:var(--muted);max-width:860px;line-height:1.55}
+.hero-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{height:34px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:0 13px;cursor:pointer;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.primary:hover{background:var(--green-2);color:#fff}
+.btn.danger{color:var(--red);border-color:#ffc9cf}
+.btn.danger:hover{background:var(--red-bg)}
+.btn.small{height:28px;padding:0 9px;font-size:12px}
+.chip{height:34px;border:1px solid var(--line);border-radius:5px;padding:0 11px;background:#fff;color:var(--text)}
+.site-flag{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;background:var(--mint);border:1px solid #b9e3d4;color:var(--green);border-radius:13px;font-size:11px;font-weight:600}
+.workspace{padding:18px 26px 44px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.panel-head{height:46px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-2)}
+.panel-title{font-weight:750;display:flex;align-items:center;gap:8px}
+.panel-body{padding:16px 18px}
+.view{display:none}.view.active{display:block}
+
+/* form grid */
+.form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 18px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:11px;color:var(--muted);font-weight:600}
+.fld label .req{color:var(--red);margin-left:2px}
+.fld input,.fld select,.fld textarea{height:32px;border:1px solid var(--line);border-radius:5px;padding:0 10px;outline:none;background:#fff;color:var(--ink)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--green)}
+.fld input:disabled,.fld select:disabled{background:#f8fafc;color:var(--muted)}
+.fld .hint{font-size:11px;color:var(--muted);line-height:1.5}
+.fld .err{font-size:11px;color:var(--red)}
+.fld.full{grid-column:1/-1}
+.fld.span2{grid-column:span 2}
+
+/* toggle */
+.switch{position:relative;display:inline-block;width:38px;height:22px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#cfd6df;border-radius:22px;transition:.2s}
+.slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--green)}
+input:checked+.slider:before{transform:translateX(16px)}
+
+/* BCRS section */
+.bcrs-zone{background:linear-gradient(0deg,#f5fbf8,#fff);border:1px solid #b9e3d4;border-radius:8px;padding:14px 18px;margin-top:10px;position:relative}
+.bcrs-zone.disabled{background:#f8fafc;border-color:var(--line-2)}
+.bcrs-zone.disabled .form-grid{opacity:.45;pointer-events:none}
+.bcrs-zone-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.bcrs-zone-title{font-size:13px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px}
+.bcrs-zone-title .badge{font-size:10px;background:var(--green);color:#fff;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.3px}
+.bcrs-zone.disabled .bcrs-zone-title{color:var(--muted)}
+.bcrs-zone.disabled .bcrs-zone-title .badge{background:#cfd6df}
+
+/* tables */
+.table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;vertical-align:middle;font-size:12px}
+th{background:#f8fafc;color:var(--muted);font-weight:650;font-size:11px;position:sticky;top:0}
+tr:hover td{background:#fbfcfd}
+.num{text-align:right;font-family:Menlo,Consolas,monospace}
+.num.pos{color:var(--green);font-weight:700}
+.input-num{width:90px;height:28px;border:1px solid var(--line);border-radius:5px;text-align:right;padding:0 8px;outline:none;background:#fff;color:var(--ink)}
+.input-num:focus{border-color:var(--green)}
+.input-num:disabled{background:#f8fafc;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:11px;border:1px solid transparent;white-space:nowrap;font-weight:500}
+.pill.green{color:var(--green);background:var(--mint);border-color:#b9e3d4}
+.pill.amber{color:var(--amber);background:var(--amber-bg);border-color:#ffd99b}
+.pill.red{color:var(--red);background:var(--red-bg);border-color:#ffc9cf}
+.pill.gray{color:var(--muted);background:#f1f3f6;border-color:#dde1e8}
+.pill.blue{color:var(--blue);background:var(--blue-bg);border-color:#cfdcfc}
+
+/* BCRS row highlight */
+tr.bcrs-row td{background:#f5fbf8 !important;border-left:3px solid var(--green)}
+tr.bcrs-row td:first-child{padding-left:32px;color:var(--muted);font-size:11px}
+tr.bcrs-row .linked-tag{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:600}
+tr.bcrs-row .linked-tag:before{content:"↳";color:var(--green);font-weight:700}
+.auto-tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;background:var(--blue-bg);color:var(--blue);border:1px solid #cfdcfc;border-radius:3px;font-size:10px;font-weight:600;margin-left:6px}
+
+/* SKU list row badge */
+.tag-bcrs{display:inline-flex;align-items:center;height:18px;padding:0 6px;background:var(--mint);color:var(--green);border:1px solid #b9e3d4;border-radius:3px;font-size:10px;font-weight:700;margin-left:6px}
+.tag-bcrs.tag-non{background:#f1f3f6;color:var(--muted);border-color:#dde1e8}
+
+/* SKU table inline switch */
+.list-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+/* 采购明细 card-stats（对齐系统 order-create.vue）*/
+.detail-head{height:auto;min-height:46px;padding:10px 14px;align-items:center;flex-wrap:wrap;gap:10px}
+.card-stats{display:inline-flex;gap:18px;margin-left:18px;flex-wrap:wrap;align-items:center}
+.card-stats .stat-item{font-size:12px;color:var(--muted);white-space:nowrap}
+.card-stats .stat-item .value{color:var(--ink);font-weight:700;font-family:Menlo,Consolas,monospace;margin-left:4px}
+.card-stats .stat-item.dep .value{color:var(--green)}
+.card-header-buttons{display:flex;gap:8px;flex-wrap:wrap}
+/* 详情/退供 商品tab 表格上方 stats 横排（对齐系统 .stats）*/
+.stats{display:flex;gap:24px;flex-wrap:wrap;padding:12px 14px;background:#fafbfc;border-bottom:1px solid var(--line-2)}
+.stats .stat-item{font-size:12px;color:var(--muted);white-space:nowrap}
+.stats .stat-item .value{color:var(--ink);font-weight:700;font-family:Menlo,Consolas,monospace;margin-left:4px}
+.stats .stat-item.dep .value{color:var(--green)}
+/* 结算单详情：基础信息 label:value（还原系统 el-descriptions） */
+.info-block{margin-bottom:18px}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 28px}
+.info-item{display:flex;align-items:flex-start;gap:8px;font-size:13px}
+.info-item .lbl{color:var(--muted);white-space:nowrap;min-width:96px;text-align:right;padding-top:6px}
+.info-item .val{color:var(--ink);flex:1;background:#f8fafc;border:1px solid var(--line-2);border-radius:4px;padding:6px 10px;min-height:32px;word-break:break-all}
+.info-sep{height:1px;background:var(--line-2);margin:18px 0}
+/* 进度条 stepper */
+.stepper{display:flex;align-items:flex-start;padding:20px 8px 8px}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative}
+.step:not(:last-child):after{content:"";position:absolute;top:13px;left:50%;width:100%;height:2px;background:var(--line)}
+.step.done:not(:last-child):after{background:var(--green)}
+.step .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;z-index:1}
+.step.done .dot{background:var(--green);border-color:var(--green);color:#fff}
+.step.active .dot{border-color:var(--ink);color:var(--ink)}
+.step .step-t{margin-top:8px;font-size:13px;color:var(--ink);font-weight:600;text-align:center}
+.step.done .step-t{color:var(--green)}
+.step .step-d{font-size:11px;color:var(--muted);margin-top:3px}
+/* 开票信息 边框网格 */
+.bill-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line)}
+.bill-cell{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 16px;min-height:70px}
+.bill-cell .bc-title{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.bill-cell .bc-kv{display:flex;justify-content:space-between;gap:16px;font-size:12px;line-height:2}
+.bill-cell .bc-kv .v{font-family:Menlo,Consolas,monospace;color:var(--ink);font-weight:600;white-space:nowrap}
+.bill-cell .big{font-size:18px;font-weight:700;font-family:Menlo,Consolas,monospace;color:var(--ink)}
+.bill-cell.dep{background:#f5fbf8}
+.bill-cell.dep .bc-kv.dep-kv .v{color:var(--green)}
+/* 新建货品建档表单（还原系统 货品基础信息）*/
+.gd-form{max-width:1180px}
+.gd-row{display:flex;gap:16px;margin-bottom:18px;align-items:flex-start}
+.gd-label{width:104px;flex:0 0 auto;text-align:right;font-size:13px;color:var(--ink);padding-top:8px}
+.gd-label .req{color:var(--red);margin-right:3px}
+.gd-ctrl{flex:1;max-width:900px}
+.gd-ctrl>input,.gd-ctrl>select,.gd-ctrl>textarea{width:100%;border:1px solid var(--line);border-radius:5px;padding:8px 10px;outline:none;background:#fff;color:var(--ink)}
+.gd-ctrl>input:focus,.gd-ctrl>select:focus,.gd-ctrl>textarea:focus{border-color:var(--green)}
+.gd-ctrl input:disabled,.gd-ctrl select:disabled{background:#f8fafc;color:var(--muted)}
+.gd-radio{display:flex;gap:28px;padding-top:7px;font-size:13px}
+.gd-radio label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.gd-subtable{width:100%;border:1px solid var(--line);border-radius:6px;border-collapse:collapse;overflow:hidden}
+.gd-subtable th{background:#f8fafc;padding:10px;font-size:12px;color:var(--muted);font-weight:600;text-align:center;border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+.gd-subtable th:last-child{border-right:0}
+.gd-subtable td{padding:10px;border-right:1px solid var(--line-2)}
+.gd-subtable td:last-child{border-right:0}
+.gd-subtable td input,.gd-subtable td select{width:100%;border:1px solid var(--line);border-radius:5px;padding:7px 9px;outline:none}
+.gd-err{color:var(--red);font-size:11px;margin-top:4px}
+.gd-count{font-size:11px;color:var(--muted);text-align:right;margin-top:2px}
+.gd-bcrs{background:linear-gradient(0deg,#f5fbf8,#fff);border:1px solid #b9e3d4;border-radius:8px;padding:14px 16px}
+.gd-bcrs-tag{display:inline-flex;align-items:center;height:18px;padding:0 7px;background:var(--green);color:#fff;border-radius:3px;font-size:10px;font-weight:700;margin-left:8px}
+.gd-img{width:88px;height:88px;border:1px dashed var(--line);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:24px;cursor:pointer}
+.gd-foot{display:flex;justify-content:flex-end;gap:12px;padding:14px 26px;border-top:1px solid var(--line);background:#fff;position:sticky;bottom:0}
+
+/* summary */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 18px;background:#fafbfc;border-top:1px solid var(--line)}
+.summary-card{background:#fff;border:1px solid var(--line-2);border-radius:6px;padding:10px 12px}
+.summary-card .k{font-size:11px;color:var(--muted)}
+.summary-card .v{font-size:16px;font-weight:700;font-family:Menlo,Consolas,monospace;margin-top:4px}
+.summary-card.green .v{color:var(--green)}
+.summary-card.amber .v{color:var(--amber)}
+
+/* rules */
+.rule-row{display:grid;grid-template-columns:80px 1fr;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line-2);font-size:12px;line-height:1.55}
+.rule-row:last-child{border-bottom:0}
+.rule-row code{font-family:Menlo,Consolas,monospace;color:var(--green);font-weight:700;background:var(--mint);padding:2px 6px;border-radius:4px;height:fit-content;text-align:center}
+.rule-row.ac code{color:var(--blue);background:var(--blue-bg)}
+
+/* formula */
+.formula-line{font-family:Menlo,Consolas,monospace;font-size:12px;color:var(--ink);background:#f8fafc;border:1px dashed var(--line-2);border-radius:5px;padding:9px 11px;margin-top:8px;line-height:1.7}
+.formula-line b{color:var(--green)}
+
+/* toast */
+.toast{position:fixed;top:22px;right:24px;background:#172033;color:#fff;padding:11px 14px;border-radius:6px;display:none;z-index:30;box-shadow:0 10px 28px rgba(16,24,40,.22);font-size:12px}
+.toast.show{display:block}
+.toast.success{background:var(--green)}
+.toast.warn{background:var(--amber)}
+.toast.error{background:var(--red)}
+
+/* modal */
+.drawer-mask{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;z-index:20;align-items:center;justify-content:center}
+.drawer-mask.show{display:flex}
+.modal{background:#fff;border-radius:8px;width:min(720px,92vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal-head{height:54px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.modal-body{padding:18px;overflow:auto}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.close{border:0;background:transparent;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+.sku-list{display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto}
+.sku-item{border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:12px;cursor:pointer;background:#fff}
+.sku-item:hover{border-color:var(--green);background:var(--mint)}
+.sku-item .sku-img{width:40px;height:40px;border-radius:6px;background:#f1f3f6;display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:700}
+.sku-item .sku-info{flex:1}
+.sku-item .sku-info .n{font-weight:600}
+.sku-item .sku-info .m{font-size:11px;color:var(--muted);margin-top:2px}
+.sku-item.bcrs .sku-img{background:var(--mint);color:var(--green)}
+
+.site-switch{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--amber-bg);border:1px solid #ffd99b;border-radius:6px;color:#8a5511;font-size:12px;line-height:1.5;margin-bottom:14px}
+.site-switch.sg{background:var(--mint);border-color:#b9e3d4;color:var(--green-2)}
+.site-switch select{margin-left:auto}
+
+@media(max-width:1280px){.form-grid{grid-template-columns:repeat(2,1fr)}.summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:860px){.app{grid-template-columns:1fr}.rail{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">FM</div>
+    <div class="rail-group">采购 SCM</div>
+    <button class="active" data-view="goods-list"><span class="dot"></span>货品</button>
+    <button data-view="po-create"><span class="dot"></span>采购单</button>
+    <button data-view="po-detail"><span class="dot"></span>采购单详情</button>
+    <button data-view="reject"><span class="dot"></span>退供单</button>
+    <button data-view="invoice"><span class="dot"></span>上传发票</button>
+    <button data-view="settle"><span class="dot"></span>结算单</button>
+    <div class="rail-group">供应商 VMS</div>
+    <button data-view="vms-po"><span class="dot"></span>采购单</button>
+    <button data-view="vms-refund"><span class="dot"></span>退货单</button>
+    <button data-view="vms-invoice"><span class="dot"></span>上传发票</button>
+    <button data-view="vms-settle"><span class="dot"></span>结算单</button>
+    <div class="rail-group">文档</div>
+    <button data-view="rules"><span class="dot"></span>规则验收</button>
+  </aside>
+
+  <main class="main">
+
+    <div class="phase-banner">
+      <span class="phase-pill">第一阶段</span>
+      <span>BCRS 采购侧最小可用版本 — <b>货品主数据只新增 2 个 BCRS 字段</b>：是否支持 BCRS + 押金金额（按计量单位）。容器类型 / 容量 / 关联押金 SKU 等留待后续阶段。</span>
+    </div>
+
+  <!-- ========== 视图 1：货品列表 ========== -->
+  <div class="view active" id="goods-list">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">货品列表</div>
+          <div class="subtitle">SGP 站点的货品基础信息表。新增「BCRS 支持」与「押金金额」两列。点任意行进入编辑页维护。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="site-flag">● SGP 新加坡站点</span>
+          <input class="chip" placeholder="搜索 SKU / 商品名">
+          <button class="btn">导出</button>
+          <button class="btn primary">+ 新建商品</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-body" style="padding:0">
+          <div class="table-wrap" style="border:0;border-radius:0">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU 编码</th>
+                  <th>商品名称</th>
+                  <th>分类</th>
+                  <th>采购单位</th>
+                  <th class="num">箱规</th>
+                  <th class="num">最近采购价</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="cursor:pointer" onclick="gotoEdit('SKU-BV-COKE-500')">
+                  <td><b>SKU-BV-COKE-500</b></td>
+                  <td>Coca-Cola 可口可乐 500ml</td>
+                  <td>饮料/碳酸</td><td>箱</td><td class="num">24 瓶/箱</td><td class="num">18.50</td>
+                  <td><span class="pill green">已发布</span></td>
+                  <td><a class="btn small" onclick="event.stopPropagation();gotoEdit('SKU-BV-COKE-500')">编辑</a></td>
+                </tr>
+                <tr style="cursor:pointer">
+                  <td><b>SKU-BV-100PLUS-325</b></td>
+                  <td>100Plus Isotonic Drink 325ml</td>
+                  <td>饮料/运动</td><td>箱</td><td class="num">24 罐/箱</td><td class="num">14.80</td>
+                  <td><span class="pill green">已发布</span></td>
+                  <td><a class="btn small">编辑</a></td>
+                </tr>
+                <tr style="cursor:pointer">
+                  <td><b>SKU-BV-TIGER-330</b></td>
+                  <td>Tiger Beer 虎牌啤酒 330ml</td>
+                  <td>饮料/啤酒</td><td>箱</td><td class="num">24 罐/箱</td><td class="num">38.50</td>
+                  <td><span class="pill green">已发布</span></td>
+                  <td><a class="btn small">编辑</a></td>
+                </tr>
+                <tr style="cursor:pointer">
+                  <td><b>SKU-BV-WATER-GLASS</b></td>
+                  <td>San Pellegrino 玻璃瓶 750ml</td>
+                  <td>饮料/水</td><td>件</td><td class="num">12 瓶/件</td><td class="num">7.80</td>
+                  <td><span class="pill green">已发布</span></td>
+                  <td><a class="btn small">编辑</a></td>
+                </tr>
+                <tr style="cursor:pointer">
+                  <td><b>SKU-FD-RICE-5KG</b></td>
+                  <td>Jasmine Rice 茉莉香米 5kg</td>
+                  <td>粮油/米</td><td>箱</td><td class="num">4 袋/箱</td><td class="num">32.00</td>
+                  <td><span class="pill green">已发布</span></td>
+                  <td><a class="btn small">编辑</a></td>
+                </tr>
+                <tr style="cursor:pointer">
+                  <td><b>SKU-FD-OIL-5L</b></td>
+                  <td>Knife Cooking Oil 食用油 5L</td>
+                  <td>粮油/油</td><td>箱</td><td class="num">4 桶/箱</td><td class="num">54.00</td>
+                  <td><span class="pill green">已发布</span></td>
+                  <td><a class="btn small">编辑</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 2：新建货品（建档）========== -->
+  <div class="view" id="goods-edit">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">新建货品</div>
+          <div class="subtitle">布局对齐系统「新建货品 · 货品基础信息」。在现有字段基础上新增 BCRS 字段（是否支持 BCRS + 押金金额），仅 SGP 站点显示；押金金额单位跟随「计量单位」。</div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn" onclick="switchView('goods-list')">返回列表</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <div class="site-switch sg" id="siteSwitch">
+        <span>当前站点：<b>新加坡 (SGP)</b> — BCRS 字段可见且可编辑</span>
+        <select onchange="switchSite(this.value)">
+          <option value="SGP">SGP 新加坡（启用 BCRS）</option>
+          <option value="MYS">MYS 马来西亚（关闭 BCRS）</option>
+          <option value="VNM">VNM 越南（关闭 BCRS）</option>
+        </select>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">货品基础信息</div></div>
+        <div class="panel-body">
+          <div class="gd-form">
+
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品类型</div>
+              <div class="gd-ctrl" style="max-width:300px"><select><option>标品</option><option>非标品</option></select></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品属性</div>
+              <div class="gd-ctrl gd-radio">
+                <label><input type="radio" name="goodsAttr"> 原料货品</label>
+                <label><input type="radio" name="goodsAttr" checked> 成品货品</label>
+              </div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品名称</div>
+              <div class="gd-ctrl"><input maxlength="50" placeholder="请输入货品名称" value="Coca-Cola 可口可乐 500ml (PET)"><div class="gd-count">35/50</div></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>库存单位</div>
+              <div class="gd-ctrl">
+                <table class="gd-subtable">
+                  <thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th></tr></thead>
+                  <tbody><tr>
+                    <td><select id="uomSel" onchange="refreshPreview()"><option>瓶</option><option>罐</option></select></td>
+                    <td><input value="500"></td>
+                    <td><select><option>ml</option><option>L</option></select></td>
+                  </tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label">包装规格<br><span style="font-size:11px;color:var(--muted)">（选填）</span></div>
+              <div class="gd-ctrl">
+                <table class="gd-subtable">
+                  <thead><tr><th>包装数量</th><th>包装单位</th></tr></thead>
+                  <tbody><tr>
+                    <td><input id="packQty" value="24" type="number" min="1" oninput="refreshPreview()"></td>
+                    <td><select><option>箱</option><option>件</option></select></td>
+                  </tr></tbody>
+                </table>
+                <div class="gd-count" style="text-align:left;color:var(--green)">↳ BCRS 押金按此「包装数量」换算：押金金额 × 包装数量 = 每箱押金</div>
+              </div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>后台类目</div>
+              <div class="gd-ctrl" style="max-width:420px"><select><option value="">请选择</option><option selected>饮料 / 碳酸饮料</option></select></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>是否可采</div>
+              <div class="gd-ctrl gd-radio">
+                <label><input type="radio" name="canBuy"> 否</label>
+                <label><input type="radio" name="canBuy" checked> 是</label>
+              </div>
+            </div>
+
+            <!-- ===== BCRS 新增字段 ===== -->
+            <div class="gd-row" id="bcrsRow">
+              <div class="gd-label"><span class="req">*</span>是否支持 BCRS</div>
+              <div class="gd-ctrl">
+                <div class="gd-bcrs">
+                  <div class="gd-radio" style="padding-top:0">
+                    <label><input type="radio" name="bcrs" onchange="onBcrsRadio(false)"> 否</label>
+                    <label><input type="radio" name="bcrs" id="bcrsEnabled" checked onchange="onBcrsRadio(true)"> 是<span class="gd-bcrs-tag">本期新增 · 仅 SGP</span></label>
+                  </div>
+                  <div id="bcrsZone" style="margin-top:14px">
+                    <div class="gd-row" style="margin-bottom:10px">
+                      <div class="gd-label" style="width:84px"><span class="req">*</span>押金金额</div>
+                      <div class="gd-ctrl" style="max-width:320px;display:flex;align-items:center;gap:6px">
+                        <span style="font-size:12px;color:var(--muted)">S$</span>
+                        <input id="depositPrice" value="0.10" type="number" step="0.01" min="0" oninput="refreshPreview()">
+                        <span style="font-size:12px;color:var(--muted)">/ <span id="uomLabel">瓶</span></span>
+                      </div>
+                    </div>
+                    <div class="gd-row" style="margin-bottom:0">
+                      <div class="gd-label" style="width:84px">押金预览</div>
+                      <div class="gd-ctrl" style="max-width:460px"><input id="previewLine" value="押金金额 S$0.10 × 包装数量 24 瓶 = 每箱押金 S$2.40" disabled></div>
+                    </div>
+                    <div class="formula-line" style="margin-top:12px">
+                      <b>BR-01：</b>BCRS 仅新增 2 字段（是否支持 BCRS + 押金金额）<br>
+                      <b>BR-02：</b>每箱押金 = 押金金额 × 包装数量；<b>BR-03：</b>采购单押金合计 = 每箱押金 × 采购数量(箱)<br>
+                      <b>BR-04：</b>押金金额单位跟随「计量单位」（瓶 / 罐 / 个 …）；仅 SGP 站点显示
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- ===== BCRS 字段结束 ===== -->
+
+            <div class="gd-row">
+              <div class="gd-label">货品描述</div>
+              <div class="gd-ctrl"><textarea rows="3" maxlength="500" placeholder="请输入货品描述"></textarea><div class="gd-count">0/500</div></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label">产地</div>
+              <div class="gd-ctrl"><input placeholder="请输入产地"></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label">品牌</div>
+              <div class="gd-ctrl"><input value="Coca-Cola"></div>
+            </div>
+            <div class="gd-row">
+              <div class="gd-label"><span class="req">*</span>货品图片</div>
+              <div class="gd-ctrl"><div class="gd-img" onclick="toast('选择图片')">+</div></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="gd-foot">
+      <button class="btn" onclick="switchView('goods-list')">取消</button>
+      <button class="btn primary" onclick="saveGoods()">完成建档</button>
+    </div>
+  </div>
+
+  <!-- ========== 视图 3：采购单新建 ========== -->
+  <div class="view" id="po-create">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">采购单新建 — BCRS 押金联动</div>
+          <div class="subtitle">选择支持 BCRS 的商品后，系统自动在该商品行下方追加押金独立行（不增加列）。押金行数量随主商品数量联动，押金行单价取自货品主数据「押金金额」，PO 中不可编辑。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="site-flag">● SGP 新加坡站点</span>
+          <button class="btn" onclick="toast('已保存草稿','success')">保存草稿</button>
+          <button class="btn primary" onclick="submitPo()">提交</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <!-- 基本信息 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">基本信息</div></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>采购单号</label><input value="PO-SGP-20260520-0142" disabled></div>
+            <div class="fld"><label>供应商<span class="req">*</span></label><select><option>Coca-Cola Singapore Pte Ltd</option></select></div>
+            <div class="fld"><label>仓库<span class="req">*</span></label><select><option>SG-West Hub</option><option>SG-East Hub</option></select></div>
+            <div class="fld"><label>预计到货</label><input type="date" value="2026-05-24"></div>
+            <div class="fld"><label>付款方式</label><select><option>月结 30 天</option></select></div>
+            <div class="fld"><label>定价方式<span class="req">*</span></label><select><option>含税定价</option><option>未税定价</option></select></div>
+            <div class="fld"><label>采购员</label><input value="沈亮" disabled></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 采购明细（结构对齐系统：标题 + card-stats 横排 + 右侧按钮组，底部无汇总卡片） -->
+      <div class="panel">
+        <div class="panel-head detail-head">
+          <div style="display:flex;align-items:center;flex-wrap:wrap">
+            <div class="panel-title">采购明细</div>
+            <div class="card-stats">
+              <span class="stat-item">含税商品金额：<span class="value" id="sumGoods">S$2,009.00</span></span>
+              <span class="stat-item">未税商品金额：<span class="value" id="sumGoodsEx">S$1,843.12</span></span>
+              <span class="stat-item dep">押金金额：<span class="value" id="sumDeposit">S$192.00</span></span>
+            </div>
+          </div>
+          <div class="card-header-buttons">
+            <button class="btn small" onclick="toast('新增包装物（演示）')">新增包装物</button>
+            <button class="btn small primary" id="btnAddSku" onclick="openSkuPicker()">新增商品</button>
+            <button class="btn small primary" onclick="openSkuPicker()">批量新增商品</button>
+            <button class="btn small" onclick="toast('已导出并存为草稿','success')">导出采购商品</button>
+            <button class="btn small" onclick="toast('导入将替换现有商品','warn')">导入采购商品</button>
+          </div>
+        </div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-create.vue（含税定价口径）。BCRS 押金作为独立行（系统底层 materialType≠0），不增加列。横向可滚动查看全部 18 列。</div>
+        <div class="table-wrap" style="border-radius:0;border:0">
+          <table style="min-width:2100px">
+            <thead>
+              <tr>
+                <th style="width:120px">采购类型</th>
+                <th style="width:140px">商品编码</th>
+                <th style="min-width:200px">商品名称</th>
+                <th class="num" style="width:90px">超收比例</th>
+                <th style="width:90px">销售类型</th>
+                <th style="width:130px">商品分类</th>
+                <th class="num" style="width:130px">成本均价(含税)</th>
+                <th class="num" style="width:130px">成本均价(未税)</th>
+                <th class="num" style="width:150px">采购单价(含税)</th>
+                <th class="num" style="width:130px">采购单价(未税)</th>
+                <th class="num" style="width:180px">采购数量</th>
+                <th class="num" style="width:140px">采购金额(含税)</th>
+                <th class="num" style="width:130px">采购金额(未税)</th>
+                <th style="width:80px">税率</th>
+                <th class="num" style="width:110px">采购金额税额</th>
+                <th style="width:130px">选择箱规</th>
+                <th style="min-width:160px">商品备注</th>
+                <th style="width:70px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="poRows">
+              <!-- 主商品 1：可乐 -->
+              <tr data-row="1" data-sku="SKU-BV-COKE-500" data-bcrs="true" data-box-size="24" data-deposit="0.10" data-price="18.50" data-tax="0.09">
+                <td>商品</td>
+                <td><b>SKU-BV-COKE-500</b></td>
+                <td>Coca-Cola 可口可乐 500ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td>
+                <td>正常</td>
+                <td>饮料/碳酸</td>
+                <td class="num">17.20/箱</td>
+                <td class="num">15.78/箱</td>
+                <td class="num"><input id="price1" type="number" class="input-num" value="18.50" step="0.01" onchange="recalcRow(1)">/箱</td>
+                <td class="num" id="exPrice1">16.97/箱</td>
+                <td class="num"><input id="mainQty1" type="number" class="input-num" value="50" min="0" onchange="syncDepositRow(1,this.value)">箱</td>
+                <td class="num pos" id="amt1">925.00</td>
+                <td class="num" id="exAmt1">848.62</td>
+                <td>9%</td>
+                <td class="num" id="tax1">76.38</td>
+                <td>24 瓶/箱</td>
+                <td>—</td>
+                <td><button class="btn small danger" onclick="removeRow(1)">删除</button></td>
+              </tr>
+              <tr class="bcrs-row" id="depRow1" data-row="1-dep" data-parent="1">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 自动追加 <span class="auto-tag">系统</span></div></td>
+                <td class="num">--</td>
+                <td>--</td>
+                <td>--</td>
+                <td class="num">--</td>
+                <td class="num">--</td>
+                <td class="num"><input id="depPriceCell1" type="number" class="input-num" value="0.10" disabled>/个</td>
+                <td class="num">0.10/个</td>
+                <td class="num"><input type="number" class="input-num" id="dep-qty-1" value="1200" disabled>个</td>
+                <td class="num pos" id="dep-amt-1">120.00</td>
+                <td class="num">120.00</td>
+                <td>0%</td>
+                <td class="num">0.00</td>
+                <td>--</td>
+                <td>自动追加</td>
+                <td><span style="color:var(--muted);font-size:11px">联动</span></td>
+              </tr>
+
+              <!-- 主商品 2：100Plus -->
+              <tr data-row="2" data-sku="SKU-BV-100PLUS-325" data-bcrs="true" data-box-size="24" data-deposit="0.10" data-price="14.80" data-tax="0.09">
+                <td>商品</td>
+                <td><b>SKU-BV-100PLUS-325</b></td>
+                <td>100Plus Isotonic Drink 325ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td>
+                <td>正常</td>
+                <td>饮料/运动</td>
+                <td class="num">13.50/箱</td>
+                <td class="num">12.39/箱</td>
+                <td class="num"><input id="price2" type="number" class="input-num" value="14.80" step="0.01" onchange="recalcRow(2)">/箱</td>
+                <td class="num" id="exPrice2">13.58/箱</td>
+                <td class="num"><input type="number" class="input-num" value="30" min="0" onchange="syncDepositRow(2,this.value)">箱</td>
+                <td class="num pos" id="amt2">444.00</td>
+                <td class="num" id="exAmt2">407.34</td>
+                <td>9%</td>
+                <td class="num" id="tax2">36.66</td>
+                <td>24 罐/箱</td>
+                <td>—</td>
+                <td><button class="btn small danger" onclick="removeRow(2)">删除</button></td>
+              </tr>
+              <tr class="bcrs-row" data-row="2-dep" data-parent="2">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 自动追加 <span class="auto-tag">系统</span></div></td>
+                <td class="num">--</td>
+                <td>--</td>
+                <td>--</td>
+                <td class="num">--</td>
+                <td class="num">--</td>
+                <td class="num"><input type="number" class="input-num" value="0.10" disabled>/个</td>
+                <td class="num">0.10/个</td>
+                <td class="num"><input type="number" class="input-num" id="dep-qty-2" value="720" disabled>个</td>
+                <td class="num pos" id="dep-amt-2">72.00</td>
+                <td class="num">72.00</td>
+                <td>0%</td>
+                <td class="num">0.00</td>
+                <td>--</td>
+                <td>自动追加</td>
+                <td><span style="color:var(--muted);font-size:11px">联动</span></td>
+              </tr>
+
+              <!-- 非 BCRS 商品 -->
+              <tr data-row="3" data-sku="SKU-FD-RICE-5KG" data-bcrs="false" data-price="32.00" data-tax="0.09">
+                <td>商品</td>
+                <td><b>SKU-FD-RICE-5KG</b></td>
+                <td>Jasmine Rice 茉莉香米 5kg<span class="tag-bcrs tag-non">非 BCRS</span></td>
+                <td class="num">3%</td>
+                <td>正常</td>
+                <td>粮油/米</td>
+                <td class="num">30.50/箱</td>
+                <td class="num">27.98/箱</td>
+                <td class="num"><input id="price3" type="number" class="input-num" value="32.00" step="0.01" onchange="recalcRow(3)">/箱</td>
+                <td class="num" id="exPrice3">29.36/箱</td>
+                <td class="num"><input type="number" class="input-num" value="20" min="0" onchange="recalcRow(3)">箱</td>
+                <td class="num pos" id="amt3">640.00</td>
+                <td class="num" id="exAmt3">587.16</td>
+                <td>9%</td>
+                <td class="num" id="tax3">52.84</td>
+                <td>4 袋/箱</td>
+                <td>—</td>
+                <td><button class="btn small danger" onclick="removeRow(3)">删除</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- 联动说明 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">本单 BCRS 联动逻辑</div></div>
+        <div class="panel-body">
+          <div class="formula-line">
+            <b>BR-05 押金行自动追加：</b>选择「是否支持 BCRS = 是」的商品时，系统在该行下方追加押金独立行<br>
+            <b>BR-06 押金数量公式：</b>押金行数量 = 主商品采购数量(箱) × 箱规(boxSize)<br>
+            &nbsp;&nbsp;· 行 1：50 箱 × 24 瓶/箱 = <b>1200</b> 个 × S$0.10 = <b>S$120.00</b><br>
+            &nbsp;&nbsp;· 行 2：30 箱 × 24 罐/箱 = <b>720</b> 个 × S$0.10 = <b>S$72.00</b><br>
+            <b>BR-07 押金行单价：</b>取自货品主数据「押金金额」字段（按计量单位计），PO 中不可编辑<br>
+            <b>BR-08 数量联动：</b>主商品数量变更 → 押金行数量与金额实时同步刷新<br>
+            <b>BR-09 级联删除：</b>删除主商品行 → 自动删除关联押金行<br>
+            <b>BR-10 财务挂账：</b>押金金额不进存货成本，独立挂「应付押金」往来科目
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ========== 视图 4：采购单详情 ========== -->
+  <div class="view" id="po-detail">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">采购单详情 — PO-SGP-20260520-0142</div>
+          <div class="subtitle">已完成（已入库）。商品明细字段严格对齐系统 order-detail.vue 21 列；均摊后单价仅订单状态=已完成时显示。BCRS 押金行以独立行展示。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill green" style="height:28px">已完成</span>
+          <button class="btn" onclick="toast('已打印 PDF','success')">打印</button>
+          <button class="btn primary" onclick="toast('已通知供应商','success')">通知供应商</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">基本信息</div></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>采购单号</label><input value="PO-SGP-20260520-0142" disabled></div>
+            <div class="fld"><label>供应商</label><input value="Coca-Cola Singapore Pte Ltd" disabled></div>
+            <div class="fld"><label>仓库</label><input value="SG-West Hub" disabled></div>
+            <div class="fld"><label>预计到货</label><input value="2026-05-24" disabled></div>
+            <div class="fld"><label>付款方式</label><input value="月结 30 天" disabled></div>
+            <div class="fld"><label>采购员</label><input value="沈亮" disabled></div>
+            <div class="fld"><label>提交时间</label><input value="2026-05-20 11:38" disabled></div>
+            <div class="fld"><label>状态</label><input value="已完成" disabled></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">商品明细</div><span class="pill gray">5 行 · 含 2 行 BCRS 押金</span></div>
+        <div class="stats">
+          <span class="stat-item">商品数：<span class="value">3</span></span>
+          <span class="stat-item">押金笔数：<span class="value">2</span></span>
+          <span class="stat-item">商品总金额(含税)：<span class="value">S$2,009.00</span></span>
+          <span class="stat-item dep">押金金额(含税)：<span class="value" id="detailSumDeposit">S$192.00</span></span>
+          <span class="stat-item">采购总金额(含税)：<span class="value">S$2,201.00</span></span>
+        </div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 order-detail.vue（21 列，只读）。横向可滚动查看全部列。</div>
+        <div class="table-wrap" style="border:0;border-radius:0">
+          <table style="min-width:2560px">
+            <thead>
+              <tr>
+                <th style="width:120px">采购类型</th>
+                <th style="width:130px">SPU编码</th>
+                <th style="min-width:180px">SPU名称</th>
+                <th class="num" style="width:80px">超收比例</th>
+                <th style="width:90px">销售类型</th>
+                <th style="width:120px">发票类型</th>
+                <th style="width:140px">SKU编码</th>
+                <th style="min-width:200px">SKU名称</th>
+                <th style="width:70px">税率</th>
+                <th style="width:120px">商品分类</th>
+                <th class="num" style="width:130px">采购单价(含税)</th>
+                <th class="num" style="width:130px">采购单价(未税)</th>
+                <th class="num" style="width:140px">均摊后单价(含税)</th>
+                <th class="num" style="width:140px">均摊后单价(未税)</th>
+                <th class="num" style="width:100px">税额</th>
+                <th class="num" style="width:110px">采购数量</th>
+                <th class="num" style="width:120px">实际采购数量</th>
+                <th class="num" style="width:130px">采购金额(含税)</th>
+                <th class="num" style="width:130px">采购金额(未税)</th>
+                <th style="width:110px">箱规</th>
+                <th style="min-width:140px">商品备注</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>商品</td>
+                <td>SPU-COKE-500</td>
+                <td>Coca-Cola 可口可乐 500ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td><td>正常</td><td>增值税专用</td>
+                <td><b>SKU-BV-COKE-500</b></td>
+                <td>Coca-Cola 可口可乐 500ml (PET)</td>
+                <td>9%</td><td>饮料/碳酸</td>
+                <td class="num">18.50/箱</td><td class="num">16.97/箱</td>
+                <td class="num">19.20/箱</td><td class="num">17.61/箱</td>
+                <td class="num">76.38</td>
+                <td class="num">50箱</td><td class="num">50箱</td>
+                <td class="num pos">925.00</td><td class="num">848.62</td>
+                <td>24 瓶/箱</td><td>—</td>
+              </tr>
+              <tr class="bcrs-row" id="detailDepRow1">
+                <td id="detailDepPill1">押金</td>
+                <td>--</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
+                <td class="num">--</td><td>--</td><td>--</td>
+                <td class="muted">系统生成</td>
+                <td>BCRS 押金</td>
+                <td>0%</td><td>--</td>
+                <td class="num">0.10/个</td><td class="num">0.10/个</td>
+                <td class="num">--</td><td class="num">--</td>
+                <td class="num">0.00</td>
+                <td class="num">1,200个</td><td class="num">1,200个</td>
+                <td class="num pos">120.00</td><td class="num">120.00</td>
+                <td>--</td><td>自动追加</td>
+              </tr>
+              <tr>
+                <td>商品</td>
+                <td>SPU-100PLUS-325</td>
+                <td>100Plus Isotonic Drink 325ml<span class="tag-bcrs">BCRS</span></td>
+                <td class="num">5%</td><td>正常</td><td>增值税专用</td>
+                <td><b>SKU-BV-100PLUS-325</b></td>
+                <td>100Plus Isotonic Drink 325ml</td>
+                <td>9%</td><td>饮料/运动</td>
+                <td class="num">14.80/箱</td><td class="num">13.58/箱</td>
+                <td class="num">15.30/箱</td><td class="num">14.04/箱</td>
+                <td class="num">36.66</td>
+                <td class="num">30箱</td><td class="num">30箱</td>
+                <td class="num pos">444.00</td><td class="num">407.34</td>
+                <td>24 罐/箱</td><td>—</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td>--</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
+                <td class="num">--</td><td>--</td><td>--</td>
+                <td class="muted">系统生成</td>
+                <td>BCRS 押金</td>
+                <td>0%</td><td>--</td>
+                <td class="num">0.10/个</td><td class="num">0.10/个</td>
+                <td class="num">--</td><td class="num">--</td>
+                <td class="num">0.00</td>
+                <td class="num">720个</td><td class="num">720个</td>
+                <td class="num pos">72.00</td><td class="num">72.00</td>
+                <td>--</td><td>自动追加</td>
+              </tr>
+              <tr>
+                <td>商品</td>
+                <td>SPU-RICE-5KG</td>
+                <td>Jasmine Rice 茉莉香米 5kg<span class="tag-bcrs tag-non">非 BCRS</span></td>
+                <td class="num">3%</td><td>正常</td><td>增值税专用</td>
+                <td><b>SKU-FD-RICE-5KG</b></td>
+                <td>Jasmine Rice 茉莉香米 5kg</td>
+                <td>9%</td><td>粮油/米</td>
+                <td class="num">32.00/箱</td><td class="num">29.36/箱</td>
+                <td class="num">32.80/箱</td><td class="num">30.09/箱</td>
+                <td class="num">52.84</td>
+                <td class="num">20箱</td><td class="num">20箱</td>
+                <td class="num pos">640.00</td><td class="num">587.16</td>
+                <td>4 袋/箱</td><td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">财务挂账拆分（参考）</div></div>
+        <div class="panel-body">
+          <div class="formula-line" id="accountingSplit">
+            <b>存货成本：</b>S$2,009.00（仅商品金额）<br>
+            <b>应付供应商：</b>S$2,009.00（不含押金）<br>
+            <b>应付押金（独立科目）：</b>S$192.00（待 NEA 申报对账冲销）<br>
+            <b>应付总额：</b>S$2,201.00
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ========== 视图 5：退供单 ========== -->
+  <div class="view" id="reject">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">退供单 — BCRS 押金冲销</div>
+          <div class="subtitle">字段严格对齐系统 reject-detail.vue（11 列）。退供 BCRS 商品时自动追加「BCRS 押金」返还独立行，数量随退货数量同步；押金返还冲销原 PO 的「应付押金」科目。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="site-flag">● SGP 新加坡站点</span>
+          <button class="btn" onclick="toast('已保存草稿','success')">保存草稿</button>
+          <button class="btn primary" onclick="toast('退供单已提交 ✓','success')">提交</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">基本信息</div></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>退供单号</label><input value="RJ-SGP-20260520-0031" disabled></div>
+            <div class="fld"><label>关联采购单</label><input value="PO-SGP-20260520-0142" disabled></div>
+            <div class="fld"><label>供应商</label><input value="Coca-Cola Singapore Pte Ltd" disabled></div>
+            <div class="fld"><label>仓库</label><input value="SG-West Hub" disabled></div>
+            <div class="fld"><label>退供原因<span class="req">*</span></label><select><option>质量问题</option><option>过期</option><option>多送</option></select></div>
+            <div class="fld"><label>预计退回日期</label><input type="date" value="2026-05-22"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">退货明细</div>
+          <span class="pill gray">3 行 · 含 1 行 BCRS 押金返还</span>
+        </div>
+        <div class="stats">
+          <span class="stat-item">商品数：<span class="value">2</span></span>
+          <span class="stat-item">商品总金额：<span class="value">S$156.50</span></span>
+          <span class="stat-item dep">押金笔数：<span class="value">1</span></span>
+          <span class="stat-item dep">押金金额：<span class="value">S$12.00</span></span>
+        </div>
+        <div class="muted" style="padding:8px 14px 0">字段严格对齐系统 reject-detail.vue（11 列）。BCRS 押金返还为独立行。横向可滚动查看全部列。</div>
+        <div class="table-wrap" style="border:0;border-radius:0">
+          <table style="min-width:1500px">
+            <thead>
+              <tr>
+                <th style="width:130px">退货类型</th>
+                <th style="width:140px">SKU编码</th>
+                <th style="min-width:200px">SKU名称</th>
+                <th style="width:90px">销售类型</th>
+                <th style="width:120px">商品分类</th>
+                <th class="num" style="width:130px">退货单价</th>
+                <th class="num" style="width:150px">退货数量</th>
+                <th class="num" style="width:130px">实际退货数量</th>
+                <th class="num" style="width:120px">退货金额</th>
+                <th style="width:110px">箱规</th>
+                <th style="min-width:140px">商品备注</th>
+              </tr>
+            </thead>
+            <tbody id="rejectRows">
+              <tr data-row="r1" data-sku="SKU-BV-COKE-500" data-bcrs="true" data-box-size="24" data-deposit="0.10" data-price="18.50" data-maxqty="50">
+                <td>商品</td>
+                <td><b>SKU-BV-COKE-500</b></td>
+                <td>Coca-Cola 可口可乐 500ml<span class="tag-bcrs">BCRS</span></td>
+                <td>正常</td>
+                <td>饮料/碳酸</td>
+                <td class="num">18.50/箱</td>
+                <td class="num"><input id="rejQtyR1" type="number" class="input-num" value="5" min="0" max="50" onchange="syncRejectDeposit('r1',this.value)">箱<div style="font-size:11px;color:var(--muted)">原 PO 50 箱</div></td>
+                <td class="num" id="rejOut-r1">5箱</td>
+                <td class="num pos" id="rej-sub-r1">92.50</td>
+                <td>24 瓶/箱</td>
+                <td>—</td>
+              </tr>
+              <tr class="bcrs-row" id="rejDepRow1" data-row="r1-dep" data-parent="r1">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金返还</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
+                <td>--</td>
+                <td>--</td>
+                <td class="num">0.10/个</td>
+                <td class="num"><input type="number" class="input-num" id="rej-dep-qty-r1" value="120" disabled>个</td>
+                <td class="num">120个</td>
+                <td class="num pos" id="rej-dep-amt-r1">12.00</td>
+                <td>--</td>
+                <td>自动追加</td>
+              </tr>
+
+              <tr data-row="r2" data-sku="SKU-FD-RICE-5KG" data-bcrs="false" data-price="32.00" data-maxqty="20">
+                <td>商品</td>
+                <td><b>SKU-FD-RICE-5KG</b></td>
+                <td>Jasmine Rice 茉莉香米 5kg<span class="tag-bcrs tag-non">非 BCRS</span></td>
+                <td>正常</td>
+                <td>粮油/米</td>
+                <td class="num">32.00/箱</td>
+                <td class="num"><input type="number" class="input-num" value="2" min="0" max="20">箱<div style="font-size:11px;color:var(--muted)">原 PO 20 箱</div></td>
+                <td class="num">2箱</td>
+                <td class="num pos">64.00</td>
+                <td>4 袋/箱</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">退供单 BCRS 联动逻辑</div></div>
+        <div class="panel-body">
+          <div class="formula-line">
+            <b>BR-11 退货押金自动追加：</b>退供 BCRS 商品时，系统在该退货行下方追加「BCRS 押金」返还独立行<br>
+            <b>BR-12 退货押金数量公式：</b>押金返还数量 = 退货数量(箱) × 主商品 boxSize<br>
+            &nbsp;&nbsp;· 行 1：5 箱 × 24 瓶/箱 = <b>120</b> 个 × S$0.10 = <b>S$12.00</b>（退货金额按系统正数显示）<br>
+            <b>BR-13 退货数量联动：</b>退货数量变更 → 押金返还行数量与金额实时同步<br>
+            <b>BR-14 退货押金校验：</b>退货数量 ≤ 原采购数量；超出阻断提交<br>
+            <b>BR-15 财务冲销：</b>押金返还金额冲销原 PO 的「应付押金」往来科目，不影响存货成本科目
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ========== 视图 6：上传发票 ========== -->
+  <div class="view" id="invoice">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">上传发票 — BCRS 押金展示</div>
+          <div class="subtitle">字段对齐系统 create-invoice.vue。关联采购单只要有一个商品带 BCRS 标识，本页展示「押金金额」，且发票应开 / 已开金额汇总包含该押金。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="site-flag">● SGP 新加坡站点</span>
+          <button class="btn" onclick="toast('已保存草稿','success')">保存草稿</button>
+          <button class="btn primary" onclick="toast('发票已上传 ✓','success')">提交</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <!-- 关联采购单 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">关联采购单</div><span class="pill green">含 BCRS 货品</span></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>结算单号</label><input value="ST-SGP-20260522-0007" disabled></div>
+            <div class="fld"><label>关联采购单</label><input value="PO-SGP-20260520-0142" disabled></div>
+            <div class="fld"><label>供应商</label><input value="Coca-Cola Singapore Pte Ltd" disabled></div>
+            <div class="fld"><label>BCRS 标识 <span class="auto-tag">关联 PO 任一商品含 BCRS 即为是</span></label><input id="invBcrsFlag" value="是（2 个 BCRS 商品）" disabled style="background:var(--mint);color:var(--green);font-weight:600"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 应开票金额拆分 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">应开票金额（系统计算）</div></div>
+        <div class="panel-body">
+          <div class="summary" style="grid-template-columns:repeat(4,1fr);padding:0">
+            <div class="summary-card"><div class="k">商品总额(含税)</div><div class="v">S$2,009.00</div></div>
+            <div class="summary-card green" id="invBcrsCard"><div class="k">押金金额</div><div class="v">S$192.00</div></div>
+            <div class="summary-card"><div class="k">供应商应开票金额</div><div class="v">S$2,201.00</div></div>
+            <div class="summary-card amber"><div class="k">已开票金额</div><div class="v">S$0.00</div></div>
+          </div>
+          <div class="formula-line" style="margin-top:14px">
+            <b>应开票金额 = 商品总额(含税) + 押金金额</b> = S$2,009.00 + S$192.00 = <b>S$2,201.00</b><br>
+            BR-17：关联 PO 含 BCRS 时，应开票金额计入 BCRS 押金；上传发票需覆盖该金额
+          </div>
+        </div>
+      </div>
+
+      <!-- 发票录入（对齐 create-invoice.vue 字段） -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">发票信息</div><span class="muted">字段对齐 create-invoice.vue</span></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>发票号<span class="req">*</span></label><input placeholder="请输入发票号"></div>
+            <div class="fld"><label>发票类型<span class="req">*</span></label><select><option>增值税专用发票</option><option>普通发票</option></select></div>
+            <div class="fld"><label>商品一级分类<span class="req">*</span></label><select><option>饮料</option></select></div>
+            <div class="fld"><label>发票税额<span class="req">*</span></label><input type="number" value="180.81" step="0.01"></div>
+            <div class="fld"><label>发票不含税金额<span class="req">*</span></label><input type="number" value="2020.19" step="0.01"></div>
+            <div class="fld"><label>发票含税金额<span class="req">*</span></label><input type="number" value="2201.00" step="0.01"></div>
+            <div class="fld span2"><label>押金金额<span class="auto-tag">系统带入 · 含在发票含税金额内</span></label><input value="S$192.00（押金不计 GST）" disabled style="background:var(--mint);color:var(--green)"></div>
+          </div>
+          <div class="formula-line" style="margin-top:6px">
+            BR-18：发票含税金额须 ≥ 应开票金额（含 BCRS 押金 S$192.00），否则提示金额不足
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ========== 视图 7：结算单详情 ========== -->
+  <div class="view" id="settle">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">结算单据详情</div>
+          <div class="subtitle">布局 100% 还原系统结算单据详情页。BCRS 押金以「押金金额 / 押金应开收据总金额」展示（底层复用系统 purchaseOrderPackageTotalAmount 字段），并计入采购单据总额与结算金额总计。</div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn" onclick="switchView('settle')">返回</button>
+          <button class="btn" onclick="toast('已导出','success')">导出</button>
+          <button class="btn" onclick="toast('已打印','success')">打印</button>
+          <button class="btn danger">作废</button>
+          <button class="btn">对账操作 ▾</button>
+          <button class="btn primary">发票审核 ▾</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <!-- 内容 tab（还原系统：基础信息/单据信息/票据管理/操作记录）-->
+      <div class="tabs" style="display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:16px">
+        <div style="padding:10px 16px;color:var(--green);border-bottom:2px solid var(--green);font-weight:600">基础信息</div>
+        <div style="padding:10px 16px;color:var(--muted)">单据信息</div>
+        <div style="padding:10px 16px;color:var(--muted)">票据管理</div>
+        <div style="padding:10px 16px;color:var(--muted)">操作记录</div>
+      </div>
+
+      <!-- 基本信息 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">基本信息</div><span class="pill green">含 BCRS 货品</span></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">结款单号：</span><span class="val">FS2026052100021</span></div>
+            <div class="info-item"><span class="lbl">总应付金额：</span><span class="val">2,201.00</span></div>
+            <div class="info-item"><span class="lbl">结算币种：</span><span class="val">SGD</span></div>
+            <div class="info-item"><span class="lbl">结款单状态：</span><span class="val">正常</span></div>
+            <div class="info-item"><span class="lbl">对账单状态：</span><span class="val">对账通过</span></div>
+            <div class="info-item"><span class="lbl">收付款状态：</span><span class="val">待付款</span></div>
+            <div class="info-item"><span class="lbl">发票状态：</span><span class="val">待审核</span></div>
+            <div class="info-item"><span class="lbl">收据状态：</span><span class="val">审核通过</span></div>
+            <div class="info-item"><span class="lbl">发票驳回原因：</span><span class="val">—</span></div>
+            <div class="info-item"><span class="lbl">统计区间：</span><span class="val">2026-05-20~2026-05-20</span></div>
+            <div class="info-item"><span class="lbl">财务内部备注：</span><span class="val">&nbsp;</span></div>
+          </div>
+          <div class="info-sep"></div>
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">供应商编号：</span><span class="val">S2025091500001</span></div>
+            <div class="info-item"><span class="lbl">供应商名称：</span><span class="val">Coca-Cola Singapore Pte Ltd</span></div>
+            <div class="info-item"><span class="lbl">结算主体：</span><span class="val">10X AI TECHNOLOGY PTE. LTD.</span></div>
+            <div class="info-item"><span class="lbl">结算方式：</span><span class="val">月结</span></div>
+            <div class="info-item"><span class="lbl">开户银行：</span><span class="val">HLBB</span></div>
+            <div class="info-item"><span class="lbl">供应商支行：</span><span class="val">HONG LEONG BANK BERHAD</span></div>
+            <div class="info-item"><span class="lbl">账户名称：</span><span class="val">hello world</span></div>
+            <div class="info-item"><span class="lbl">银行账号：</span><span class="val">9000900000</span></div>
+            <div class="info-item"><span class="lbl">SWIFT 代码：</span><span class="val">HLBBMYKLXXX</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 进度条 -->
+      <div class="panel">
+        <div class="panel-body">
+          <div class="stepper">
+            <div class="step done"><div class="dot">✓</div><div class="step-t">创建结算单</div><div class="step-d">2026-05-21 14:27:16</div></div>
+            <div class="step done"><div class="dot">✓</div><div class="step-t">小满&供应商对账</div><div class="step-d">2026-05-21 14:27:21</div></div>
+            <div class="step done"><div class="dot">✓</div><div class="step-t">供应商上传发票</div><div class="step-d">2026-05-21 14:27:21</div></div>
+            <div class="step active"><div class="dot">4</div><div class="step-t">发票审核</div><div class="step-d">—</div></div>
+            <div class="step"><div class="dot">5</div><div class="step-t">付款完成</div><div class="step-d">—</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 开票信息 -->
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">开票信息</div><span class="muted">字段与布局对齐 settlement/detail.vue</span></div>
+        <div class="panel-body" style="padding:14px">
+          <div class="bill-grid">
+            <!-- Row1 -->
+            <div class="bill-cell">
+              <div class="bc-title">采购单据总额</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">2,201.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">2,020.19</span></div>
+              <div class="bc-kv"><span>商品总额(含税)：</span><span class="v">2,009.00</span></div>
+              <div class="bc-kv"><span>商品总额(未税)：</span><span class="v">1,843.12</span></div>
+              <div class="bc-kv dep-kv"><span>押金金额：</span><span class="v">192.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">退供单据总额</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>商品总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>商品总额(未税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>押金金额：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">调整单-固定扣点总额(票扣)</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">调整单-违约金(收据)</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+            </div>
+            <!-- Row2 -->
+            <div class="bill-cell">
+              <div class="bc-title">调整单-尾差调整总额(票扣)</div>
+              <div class="bc-kv"><span>总额(含税)：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>总额(未税)：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">结算金额总计</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">已预付金额总计</div>
+              <div class="big">0.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">资金余额抵扣</div>
+              <div class="big">0.00</div>
+            </div>
+            <!-- Row3 -->
+            <div class="bill-cell">
+              <div class="bc-title">应付金额总计</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">供应商应开票金额</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">供应商实际开票金额</div>
+              <div class="big">2,201.00</div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">供应商实际开票与应开票金额差异</div>
+              <div class="big">0.00</div>
+            </div>
+            <!-- Row4 -->
+            <div class="bill-cell dep" style="grid-column:1/-1">
+              <div class="bc-title">押金应开收据总金额</div>
+              <div class="big" style="color:var(--green)">192.00</div>
+            </div>
+          </div>
+          <div class="formula-line" style="margin-top:14px">
+            <b>BR-19：</b>BCRS 押金以「押金金额」展示（采购单据总额块）→ 计入结算金额总计与应付金额总计；底层复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code> 字段<br>
+            <b>BR-20：</b>关联 PO 任一商品含 BCRS 标识 → 「押金金额」「押金应开收据总金额」显示押金；否则为 0<br>
+            <b>BR-21：</b>BCRS 押金不计 GST（含税额 = 未税额）
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ========== 视图 8：VMS 采购单详情（供应商端）========== -->
+  <div class="view" id="vms-po">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 采购单详情（供应商端）</div>
+          <div class="subtitle">字段严格对齐系统 VMS purchase-detail.vue（15 列）。供应商视角下，BCRS 押金作为「押金」类型独立行展示，金额计入订单金额。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('已预约送达','success')">预约送达</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">采购单信息</div></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">采购单号：</span><span class="val">PO-SGP-20260520-0142</span></div>
+            <div class="info-item"><span class="lbl">供应商：</span><span class="val">Coca-Cola Singapore Pte Ltd</span></div>
+            <div class="info-item"><span class="lbl">送达仓库：</span><span class="val">SG-West Hub</span></div>
+            <div class="info-item"><span class="lbl">要求到货：</span><span class="val">2026-05-24</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">商品明细</div><span class="muted">字段对齐 VMS purchase-detail.vue</span></div>
+        <div class="muted" style="padding:8px 14px 0">BCRS 押金作为「押金」类型独立行，订单金额含押金。横向可滚动查看全部列。</div>
+        <div class="table-wrap" style="border:0;border-radius:0">
+          <table style="min-width:2120px">
+            <thead><tr>
+              <th style="width:90px">商品类型</th>
+              <th style="min-width:160px">SPU信息</th>
+              <th style="min-width:200px">SKU信息</th>
+              <th style="width:120px">类目</th>
+              <th style="width:110px">发票类型</th>
+              <th style="width:70px">税率</th>
+              <th class="num" style="width:110px">单价(含税)</th>
+              <th class="num" style="width:110px">单价(未税)</th>
+              <th class="num" style="width:90px">需求数量</th>
+              <th class="num" style="width:100px">可送达数量</th>
+              <th class="num" style="width:100px">已送达数量</th>
+              <th style="width:60px">单位</th>
+              <th class="num" style="width:120px">订单金额(含税)</th>
+              <th class="num" style="width:120px">订单金额(未税)</th>
+              <th class="num" style="width:90px">已出签数</th>
+              <th class="num" style="width:100px">本次出签数</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td>商品</td>
+                <td>Coca-Cola 可口可乐 500ml<div style="font-size:11px;color:var(--muted)">SPU-COKE-500</div></td>
+                <td>Coca-Cola 可口可乐 500ml (PET)<span class="tag-bcrs">含包装物</span><div style="font-size:11px;color:var(--muted)">SKU-BV-COKE-500</div></td>
+                <td>饮料/碳酸</td><td>增值税专用</td><td>9%</td>
+                <td class="num">18.50</td><td class="num">16.97</td>
+                <td class="num">50</td><td class="num">50</td><td class="num">50</td><td>箱</td>
+                <td class="num pos">925.00</td><td class="num">848.62</td>
+                <td class="num">50</td><td class="num">50</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted)">关联 SKU-BV-COKE-500 · 50 箱 × 24 瓶/箱</div></td>
+                <td>--</td><td>--</td><td>0%</td>
+                <td class="num">0.10</td><td class="num">0.10</td>
+                <td class="num">1,200</td><td class="num">1,200</td><td class="num">1,200</td><td>个</td>
+                <td class="num pos">120.00</td><td class="num">120.00</td>
+                <td class="num">--</td><td class="num">--</td>
+              </tr>
+              <tr>
+                <td>商品</td>
+                <td>100Plus Isotonic Drink 325ml<div style="font-size:11px;color:var(--muted)">SPU-100PLUS-325</div></td>
+                <td>100Plus Isotonic Drink 325ml<span class="tag-bcrs">含包装物</span><div style="font-size:11px;color:var(--muted)">SKU-BV-100PLUS-325</div></td>
+                <td>饮料/运动</td><td>增值税专用</td><td>9%</td>
+                <td class="num">14.80</td><td class="num">13.58</td>
+                <td class="num">30</td><td class="num">30</td><td class="num">30</td><td>箱</td>
+                <td class="num pos">444.00</td><td class="num">407.34</td>
+                <td class="num">30</td><td class="num">30</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted)">关联 SKU-BV-100PLUS-325 · 30 箱 × 24 罐/箱</div></td>
+                <td>--</td><td>--</td><td>0%</td>
+                <td class="num">0.10</td><td class="num">0.10</td>
+                <td class="num">720</td><td class="num">720</td><td class="num">720</td><td>个</td>
+                <td class="num pos">72.00</td><td class="num">72.00</td>
+                <td class="num">--</td><td class="num">--</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 9：VMS 退货单详情（供应商端）========== -->
+  <div class="view" id="vms-refund">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 退货单详情（供应商端）</div>
+          <div class="subtitle">字段严格对齐系统 VMS refund-detail.vue（14 列）。供应商视角下，BCRS 押金返还作为「押金」类型独立行，金额计入退货金额。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('已确认取回','success')">确认取回</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">退货单信息</div></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">退货单号：</span><span class="val">RF-SGP-20260522-0015</span></div>
+            <div class="info-item"><span class="lbl">关联采购单：</span><span class="val">PO-SGP-20260520-0142</span></div>
+            <div class="info-item"><span class="lbl">供应商：</span><span class="val">Coca-Cola Singapore Pte Ltd</span></div>
+            <div class="info-item"><span class="lbl">退货原因：</span><span class="val">质量问题</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">退货明细</div><span class="muted">字段对齐 VMS refund-detail.vue</span></div>
+        <div class="muted" style="padding:8px 14px 0">BCRS 押金返还作为「押金」类型独立行，退货金额含押金返还。横向可滚动查看全部列。</div>
+        <div class="table-wrap" style="border:0;border-radius:0">
+          <table style="min-width:1700px">
+            <thead><tr>
+              <th style="width:90px">退货类型</th>
+              <th style="min-width:160px">SPU名称</th>
+              <th style="min-width:180px">SKU名称</th>
+              <th style="width:110px">商品规格</th>
+              <th style="width:110px">类目</th>
+              <th style="width:110px">发票类型</th>
+              <th style="width:70px">税率</th>
+              <th class="num" style="width:120px">退货单价(含税)</th>
+              <th class="num" style="width:120px">退货单价(未税)</th>
+              <th class="num" style="width:90px">退货数量</th>
+              <th class="num" style="width:100px">已取回数量</th>
+              <th style="width:60px">单位</th>
+              <th class="num" style="width:120px">退货金额(含税)</th>
+              <th class="num" style="width:120px">退货金额(未税)</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td>商品</td>
+                <td>Coca-Cola 可口可乐 500ml<div style="font-size:11px;color:var(--muted)">SPU-COKE-500</div></td>
+                <td>Coca-Cola 可口可乐 500ml<div style="font-size:11px;color:var(--muted)">SKU-BV-COKE-500</div></td>
+                <td>500ml/瓶</td><td>饮料/碳酸</td><td>增值税专用</td><td>9%</td>
+                <td class="num">18.50</td><td class="num">16.97</td>
+                <td class="num">5</td><td class="num">5</td><td>箱</td>
+                <td class="num pos">92.50</td><td class="num">84.86</td>
+              </tr>
+              <tr class="bcrs-row">
+                <td>押金</td>
+                <td class="muted">系统生成</td>
+                <td><span class="linked-tag">BCRS 押金返还</span><div style="font-size:11px;color:var(--muted)">关联 SKU-BV-COKE-500 · 5 箱 × 24 瓶/箱</div></td>
+                <td>--</td><td>--</td><td>--</td><td>0%</td>
+                <td class="num">0.10</td><td class="num">0.10</td>
+                <td class="num">120</td><td class="num">120</td><td>个</td>
+                <td class="num pos">12.00</td><td class="num">12.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 10：VMS 上传发票（供应商端）========== -->
+  <div class="view" id="vms-invoice">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 上传发票（供应商端）</div>
+          <div class="subtitle">字段对齐系统 VMS bill/settlement/dialogs/create-invoice.vue。供应商上传发票时，关联采购单含 BCRS 则展示「押金金额」，应开票金额含押金。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('OCR 识别中','success')">OCR 识别</button>
+          <button class="btn primary" onclick="toast('发票已上传 ✓','success')">提交</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">应开票金额（系统计算）</div><span class="pill green">关联 PO 含 BCRS</span></div>
+        <div class="panel-body" style="padding:14px">
+          <div class="bill-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="bill-cell"><div class="bc-title">商品总额(含税)</div><div class="big">2,009.00</div></div>
+            <div class="bill-cell dep"><div class="bc-title">押金金额</div><div class="big" style="color:var(--green)">192.00</div></div>
+            <div class="bill-cell"><div class="bc-title">应开票金额</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">已开票金额</div><div class="big" style="color:var(--amber)">0.00</div></div>
+          </div>
+          <div class="formula-line" style="margin-top:14px"><b>应开票金额 = 商品总额(含税) + 押金金额</b> = 2,009.00 + 192.00 = <b>S$2,201.00</b>（BR-18）</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">发票信息</div><span class="muted">字段对齐 VMS create-invoice.vue</span></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="fld"><label>发票号码<span class="req">*</span></label><input placeholder="请输入发票号码"></div>
+            <div class="fld"><label>发票类型<span class="req">*</span></label><select><option>增值税专用发票</option><option>普通发票</option></select></div>
+            <div class="fld"><label>开票日期<span class="req">*</span></label><input type="date" value="2026-05-22"></div>
+            <div class="fld"><label>商品一级分类<span class="req">*</span></label><select><option>饮料</option></select></div>
+            <div class="fld"><label>发票税额<span class="req">*</span></label><input type="number" value="180.81" step="0.01"></div>
+            <div class="fld"><label>发票不含税金额<span class="req">*</span></label><input type="number" value="2020.19" step="0.01"></div>
+            <div class="fld"><label>发票含税金额<span class="req">*</span></label><input type="number" value="2201.00" step="0.01"></div>
+            <div class="fld"><label>发票币种</label><select><option>SGD</option></select></div>
+            <div class="fld"><label>开票人名称</label><input value="Coca-Cola Singapore Pte Ltd"></div>
+            <div class="fld"><label>供应商税号</label><input value="NEA-BCRS-SG-002214"></div>
+            <div class="fld"><label>税率</label><input value="9%" disabled></div>
+            <div class="fld span2"><label>押金金额<span class="auto-tag">系统带入 · 含在发票含税金额内</span></label><input value="S$192.00（押金不计 GST）" disabled style="background:var(--mint);color:var(--green)"></div>
+          </div>
+          <div class="formula-line" style="margin-top:6px">BR-18：发票含税金额须 ≥ 应开票金额（含押金 S$192.00），否则提示金额不足</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 11：VMS 结算单详情（供应商端）========== -->
+  <div class="view" id="vms-settle">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">VMS 结算单详情（供应商端）</div>
+          <div class="subtitle">字段对齐系统 VMS bill/settlement/settlement-detail-tabs/base-info.vue。供应商视角金额汇总，BCRS 押金以「押金金额 / 押金应开收据总金额」展示，计入单据总金额与结算金额总计。</div>
+        </div>
+        <div class="hero-actions">
+          <span class="pill blue" style="height:28px">供应商端 · 含 BCRS</span>
+          <button class="btn" onclick="toast('已导出','success')">导出</button>
+        </div>
+      </div>
+    </section>
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">基本信息</div></div>
+        <div class="panel-body">
+          <div class="info-grid">
+            <div class="info-item"><span class="lbl">结算单号：</span><span class="val">FS2026052100021</span></div>
+            <div class="info-item"><span class="lbl">结算方式：</span><span class="val">月结</span></div>
+            <div class="info-item"><span class="lbl">结算主体：</span><span class="val">10X AI TECHNOLOGY PTE. LTD.</span></div>
+            <div class="info-item"><span class="lbl">发票状态：</span><span class="val">待审核</span></div>
+            <div class="info-item"><span class="lbl">收据状态：</span><span class="val">审核通过</span></div>
+            <div class="info-item"><span class="lbl">折让金额：</span><span class="val">0.00</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">开票信息 — 金额汇总</div><span class="muted">字段对齐 VMS base-info.vue</span></div>
+        <div class="panel-body" style="padding:14px">
+          <div class="bill-grid">
+            <div class="bill-cell">
+              <div class="bc-title">单据总金额</div>
+              <div class="bc-kv"><span>总金额：</span><span class="v">2,201.00</span></div>
+              <div class="bc-kv"><span>商品总额：</span><span class="v">2,009.00</span></div>
+              <div class="bc-kv dep-kv"><span>押金金额：</span><span class="v">192.00</span></div>
+            </div>
+            <div class="bill-cell">
+              <div class="bc-title">退货单据总金额</div>
+              <div class="bc-kv"><span>总金额：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>商品总额：</span><span class="v">0.00</span></div>
+              <div class="bc-kv"><span>押金金额：</span><span class="v">0.00</span></div>
+            </div>
+            <div class="bill-cell"><div class="bc-title">调整单固定扣点总金额</div><div class="big">0.00</div></div>
+            <div class="bill-cell"><div class="bc-title">调整单罚款总金额</div><div class="big">0.00</div></div>
+            <div class="bill-cell"><div class="bc-title">调整单-尾差调整总额(票扣)</div><div class="big">0.00</div></div>
+            <div class="bill-cell"><div class="bc-title">结算金额总计</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">应付金额总计</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell dep"><div class="bc-title">押金应开收据总金额</div><div class="big" style="color:var(--green)">192.00</div></div>
+            <div class="bill-cell"><div class="bc-title">应开票金额</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">实际开票金额</div><div class="big">2,201.00</div></div>
+            <div class="bill-cell"><div class="bc-title">实际开票与应开票差异金额</div><div class="big">0.00</div></div>
+          </div>
+          <div class="formula-line" style="margin-top:14px">
+            <b>BR-19：</b>押金金额计入「单据总金额」→ 结算金额总计 / 应付金额总计；底层复用系统 <code style="background:#fff;color:var(--ink)">purchaseOrderPackageTotalAmount</code> 字段<br>
+            <b>BR-24：</b>VMS（供应商端）与 SCM（采购员端）的结算押金金额同源一致
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== 视图 12：业务规则 ========== -->
+  <div class="view" id="rules">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="title">业务规则与验收标准（第一阶段）</div>
+          <div class="subtitle">最小可用范围内的全部 BR 与 AC。BR 用于研发实现，AC 用于测试验证（Given/When/Then）。容器类型/容量/关联押金 SKU 等扩展项留待二期。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">货品主数据 — 业务规则</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code>BR-01</code><div><b>新增字段范围</b>：本期货品主数据 BCRS 部分仅新增 2 个字段 —「是否支持 BCRS」(bcrsEnabled, boolean, 默认 false) 与「押金金额」(depositPrice, decimal, S$ / 计量单位；单位跟随货品 UOM)</div></div>
+          <div class="rule-row"><code>BR-02</code><div><b>押金计算依赖现有箱规</b>：押金行数量 = 主商品采购数量 × 货品主数据 <code style="background:#fff;color:var(--ink)">boxSize</code>（箱规字段为现有字段，非本期新增）</div></div>
+          <div class="rule-row"><code>BR-03</code><div><b>押金金额校验</b>：当 bcrsEnabled = true 时，depositPrice 为必填且必须 > 0，单位跟随计量单位展示；为 false 时该字段隐藏并清空。预览：每箱押金 = 押金金额 × 包装数量</div></div>
+          <div class="rule-row"><code>BR-04</code><div><b>站点开关</b>：仅 <code style="background:#fff;color:var(--ink)">stationInfo.countryCode === 'SGP'</code> 时显示 BCRS 字段与押金行；其他站点完全隐藏</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">采购单 — 业务规则</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code>BR-05</code><div><b>押金独立行</b>：采购支持 BCRS 的商品时，系统在该商品行下方追加独立押金行（不增加价格列）；押金行商品名固定为「BCRS 押金」</div></div>
+          <div class="rule-row"><code>BR-06</code><div><b>押金数量公式</b>：押金行数量 = 主商品采购数量(箱) × 主商品 boxSize；单位「个」</div></div>
+          <div class="rule-row"><code>BR-07</code><div><b>押金行单价不可编辑</b>：押金行单价直接取主商品货品主数据「押金金额」(depositPrice)，PO 中 disabled</div></div>
+          <div class="rule-row"><code>BR-08</code><div><b>数量联动</b>：主商品数量变更（含 PO 编辑、退回修改）→ 押金行数量与金额自动刷新</div></div>
+          <div class="rule-row"><code>BR-09</code><div><b>级联删除</b>：删除主商品行 → 自动删除关联押金行；用户不能单独删除押金行</div></div>
+          <div class="rule-row"><code>BR-10</code><div><b>财务挂账分离</b>：押金金额不进存货成本，单独挂「应付押金」往来科目；底部汇总区独立列示 BCRS 押金合计</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">退供单 — 业务规则</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code>BR-11</code><div><b>退货押金行</b>：退供 BCRS 商品时，系统在该退货行下方追加「BCRS 押金」返还独立行；退货金额按系统口径正数显示（filterAmount）</div></div>
+          <div class="rule-row"><code>BR-12</code><div><b>退货押金数量公式</b>：押金返还数量 = 退货数量(箱) × 主商品 boxSize；单位「个」</div></div>
+          <div class="rule-row"><code>BR-13</code><div><b>退货数量联动</b>：退货数量变更 → 押金返还行数量与金额实时同步</div></div>
+          <div class="rule-row"><code>BR-14</code><div><b>退货数量校验</b>：退货数量 ≤ 关联 PO 的原采购数量；超出时阻断提交并提示</div></div>
+          <div class="rule-row"><code>BR-15</code><div><b>财务冲销</b>：押金返还金额冲销原 PO 的「应付押金」往来科目，不影响存货成本</div></div>
+          <div class="rule-row"><code>BR-16</code><div><b>退供单押金不可单独删除</b>：押金返还行随主商品退货行级联存在，用户不能单独删除</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">结算单 / 上传发票 — 业务规则</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code>BR-17</code><div><b>BCRS 判定（结算侧）</b>：结算单关联的采购单只要有<b>一个商品</b>含 BCRS 标识，即判定该结算单含 BCRS；上传发票页与结算单详情页均展示「押金金额」字段</div></div>
+          <div class="rule-row"><code>BR-18</code><div><b>发票金额含押金</b>：应开票金额 = 商品总额(含税) + 押金金额；上传发票时发票含税金额须 ≥ 应开票金额，否则提示金额不足</div></div>
+          <div class="rule-row"><code>BR-19</code><div><b>结算金额含押金</b>：押金金额计入采购单据总额 → 计入结算金额总计与应付金额总计（底层复用系统 purchaseOrderPackageTotalAmount 字段）</div></div>
+          <div class="rule-row"><code>BR-20</code><div><b>无 BCRS 时隐藏</b>：关联 PO 无任何 BCRS 商品时，「押金金额」「押金应开收据总金额」为 0，可隐藏 BCRS 相关字段</div></div>
+          <div class="rule-row"><code>BR-21</code><div><b>押金不计 GST</b>：BCRS 押金部分含税额 = 未税额（税额 0），发票税额仅按商品金额计算</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">VMS 供应商端 — 业务规则</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code>BR-22</code><div><b>VMS 采购单展示</b>：供应商端采购单详情（purchase-detail.vue）中，BCRS 押金作为「押金」类型独立行展示（商品类型列=押金）；订单金额(含税/未税)包含押金</div></div>
+          <div class="rule-row"><code>BR-23</code><div><b>VMS 退货单展示</b>：供应商端退货单详情（refund-detail.vue）中，BCRS 押金返还作为「押金」类型独立行展示（退货类型列=押金）；退货金额(含税/未税)包含押金返还</div></div>
+          <div class="rule-row"><code>BR-24</code><div><b>SCM/VMS 数据一致</b>：同一采购单/退货单/结算单在 SCM（采购员端）与 VMS（供应商端）展示的 BCRS 押金行、数量、金额必须一致（同源数据）</div></div>
+          <div class="rule-row"><code>BR-25</code><div><b>VMS 上传发票</b>：供应商端上传发票（create-invoice.vue）时，关联 PO 含 BCRS 则展示「押金金额」，应开票金额 = 商品总额(含税) + 押金金额；发票含税金额须 ≥ 应开票金额</div></div>
+          <div class="rule-row"><code>BR-26</code><div><b>VMS 结算单展示</b>：供应商端结算单详情（base-info.vue）的开票信息中，押金以「押金金额 / 押金应开收据总金额」展示，计入单据总金额→结算金额总计→应付金额总计（底层复用 purchaseOrderPackageTotalAmount 字段）</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">验收标准（Acceptance Criteria）</div></div>
+        <div class="panel-body">
+          <div class="rule-row ac"><code>AC-01</code><div><b>正向 · 货品启用 BCRS</b><br>Given SGP 站点 / SKU=Coca-Cola 500ml / 计量单位=瓶 / 包装数量=24<br>When 切换「是否支持 BCRS」=ON，押金金额=0.10（S$/瓶）→ 点保存<br>Then 保存成功；列表「BCRS 支持」列显示「✓ 支持」；预览显示「押金金额 S$0.10 × 包装数量 24 瓶 = 每箱押金 S$2.40」；变更记录新增一条</div></div>
+          <div class="rule-row ac"><code>AC-02</code><div><b>异常 · 押金金额为空</b><br>Given 「是否支持 BCRS」=ON<br>When 押金金额留空 → 点保存<br>Then 阻断保存，定位押金金额字段并提示「BCRS 支持时押金金额为必填项，且必须 > 0」</div></div>
+          <div class="rule-row ac"><code>AC-03</code><div><b>正向 · 选择 BCRS 商品自动追加押金行</b><br>Given 新建采购单 / SGP / 空商品列表<br>When 选择 Coca-Cola 500ml（bcrsEnabled=true / boxSize=24 / deposit=0.10）数量=50 箱<br>Then 表格出现主行 + 押金行，押金行数量=50×24=1200，单价=0.10，小计=120.00；押金行 disabled、绿色高亮、来源=系统</div></div>
+          <div class="rule-row ac"><code>AC-04</code><div><b>正向 · 数量联动</b><br>Given AC-03 完成<br>When 主商品数量从 50 改为 80<br>Then 押金行数量自动刷新为 80×24=1920，小计=192.00，无需手动操作</div></div>
+          <div class="rule-row ac"><code>AC-05</code><div><b>正向 · 级联删除</b><br>Given 表格有主行 + 押金行<br>When 点主商品行删除按钮<br>Then 主商品行与押金行一同移除，汇总区数据实时刷新</div></div>
+          <div class="rule-row ac"><code>AC-06</code><div><b>异常 · 非 SGP 站点</b><br>Given 切换站点到 MYS<br>When 进入货品编辑 / 采购单<br>Then BCRS 信息区整体不可见，PO 表格不显示押金行（即使原数据存在也不展示）</div></div>
+          <div class="rule-row ac"><code>AC-07</code><div><b>正向 · 汇总与挂账分离</b><br>Given 采购单含 BCRS 商品 + 押金行<br>When 提交单据<br>Then 底部汇总区「BCRS 押金合计」单独列示；财务挂账：商品金额进存货成本、押金金额挂「应付押金」</div></div>
+          <div class="rule-row ac"><code>AC-08</code><div><b>正向 · 押金行单价 PO 不可编辑</b><br>Given 采购单有 BCRS 押金行<br>When 鼠标点击押金行单价输入框<br>Then 输入框 disabled，鼠标悬浮 tooltip「押金行单价取自货品主数据『押金金额』，PO 中不可编辑」</div></div>
+          <div class="rule-row ac"><code>AC-09</code><div><b>正向 · 退供单押金返还自动追加</b><br>Given 关联 PO=PO-SGP-0142（含 Coca-Cola 50 箱 BCRS） <br>When 新建退供单，选择 Coca-Cola 退货 5 箱<br>Then 退货行下方自动追加押金返还行，数量=5×24=120 个，金额=-S$12.00（红色），来源=系统</div></div>
+          <div class="rule-row ac"><code>AC-10</code><div><b>正向 · 退货押金联动</b><br>Given AC-09 完成<br>When 把退货数量从 5 改为 10<br>Then 押金返还行数量自动刷新为 10×24=240，金额=-S$24.00</div></div>
+          <div class="rule-row ac"><code>AC-11</code><div><b>异常 · 退货数量超出原采购</b><br>Given 原 PO 行 Coca-Cola 采购 50 箱<br>When 退货数量输入 60<br>Then 阻断提交，提示「退货数量不能超过原采购数量 50 箱」</div></div>
+          <div class="rule-row ac"><code>AC-12</code><div><b>正向 · 含 BCRS 的结算上传发票</b><br>Given 结算单关联 PO-SGP-0142（2 个 BCRS 商品，押金合计 S$192.00）<br>When 进入上传发票页<br>Then 展示「押金金额 S$192.00」，应开票金额=商品 2,009.00 + 押金 192.00=S$2,201.00</div></div>
+          <div class="rule-row ac"><code>AC-13</code><div><b>正向 · 结算单详情展示押金</b><br>Given 同上结算单<br>When 打开结算单详情开票信息<br>Then「押金金额」=S$192.00；结算金额总计 / 应付金额总计 / 押金应开收据总金额 均含该押金</div></div>
+          <div class="rule-row ac"><code>AC-14</code><div><b>异常 · 发票金额不足</b><br>Given 应开票金额 S$2,201.00（含押金）<br>When 上传发票含税金额填 2,009.00（漏押金）<br>Then 提示「发票金额不足，需 ≥ 应开票金额 S$2,201.00（含 BCRS 押金 S$192.00）」</div></div>
+          <div class="rule-row ac"><code>AC-15</code><div><b>正向 · 无 BCRS 不展示</b><br>Given 关联 PO 无任何 BCRS 商品<br>When 进入上传发票 / 结算单详情<br>Then 不展示 BCRS 押金字段，押金相关金额为 0</div></div>
+          <div class="rule-row ac"><code>AC-16</code><div><b>正向 · VMS 采购单展示押金</b><br>Given 供应商登录 VMS / 采购单 PO-SGP-0142 含 2 个 BCRS 商品<br>When 打开 VMS 采购单详情<br>Then 商品明细出现「押金」类型独立行（数量 1200/720 个），订单金额(含税)含押金；与 SCM 端数据一致</div></div>
+          <div class="rule-row ac"><code>AC-17</code><div><b>正向 · VMS 退货单展示押金</b><br>Given 供应商登录 VMS / 退货单含 BCRS 商品退 5 箱<br>When 打开 VMS 退货单详情<br>Then 退货明细出现「押金」类型返还独立行（数量 120 个，退货金额 12.00），退货金额含押金返还</div></div>
+          <div class="rule-row ac"><code>AC-18</code><div><b>正向 · VMS 上传发票含押金</b><br>Given 供应商登录 VMS / 关联 PO 含 BCRS（押金 S$192.00）<br>When 进入 VMS 上传发票页<br>Then 展示「押金金额 S$192.00」，应开票金额=商品 2,009.00 + 押金 192.00=S$2,201.00；发票含税金额须 ≥ 2,201.00</div></div>
+          <div class="rule-row ac"><code>AC-19</code><div><b>正向 · VMS 结算单展示押金</b><br>Given 供应商登录 VMS / 结算单含 BCRS<br>When 打开 VMS 结算单详情开票信息<br>Then「单据总金额」含押金金额 S$192.00；结算金额总计/应付金额总计/押金应开收据总金额 均含该押金；与 SCM 端数据一致</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">本期不做（OUT）</div></div>
+        <div class="panel-body">
+          <div class="rule-row"><code style="background:#f1f3f6;color:var(--muted)">OUT-01</code><div>容器类型（PET / 金属罐）字段及自动判定逻辑</div></div>
+          <div class="rule-row"><code style="background:#f1f3f6;color:var(--muted)">OUT-02</code><div>单容器容量字段及 150–3000ml 范围校验</div></div>
+          <div class="rule-row"><code style="background:#f1f3f6;color:var(--muted)">OUT-03</code><div>关联押金 SKU 区分维护（PET-150-500 / CAN-501-3000 等）— 第一阶段统一一个「BCRS 押金」虚拟商品</div></div>
+          <div class="rule-row"><code style="background:#f1f3f6;color:var(--muted)">OUT-04</code><div>NEA 注册号、供应商前置校验</div></div>
+          <div class="rule-row"><code style="background:#f1f3f6;color:var(--muted)">OUT-05</code><div>销售出库押金传导、空容器返还、NEA 申报对账</div></div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+  </main>
+</div>
+
+<!-- SKU Picker -->
+<div class="drawer-mask" id="skuPickerMask">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="panel-title">选择商品（SGP 站点 SKU 库）</div>
+      <button class="close" onclick="closeSkuPicker()">×</button>
+    </div>
+    <div class="modal-body">
+      <input class="chip" style="width:100%;margin-bottom:10px;height:36px" placeholder="搜索 SKU 编码 / 商品名称">
+      <div class="sku-list">
+        <div class="sku-item bcrs" onclick="addSku('SKU-BV-SPRITE-500','Sprite 雪碧 500ml',true,24,0.10,'24 瓶/箱',16.20,'饮料/碳酸')">
+          <div class="sku-img">饮</div>
+          <div class="sku-info"><div class="n">Sprite 雪碧 500ml <span class="tag-bcrs">BCRS</span></div><div class="m">SKU-BV-SPRITE-500 · 24 瓶/箱 · S$16.20/箱 · 押金 S$0.10/瓶</div></div>
+        </div>
+        <div class="sku-item bcrs" onclick="addSku('SKU-BV-FANTA-1500','Fanta Orange 芬达 1.5L',true,8,0.10,'8 瓶/箱',22.40,'饮料/碳酸')">
+          <div class="sku-img">饮</div>
+          <div class="sku-info"><div class="n">Fanta Orange 芬达 1.5L <span class="tag-bcrs">BCRS</span></div><div class="m">SKU-BV-FANTA-1500 · 8 瓶/箱 · S$22.40/箱 · 押金 S$0.10/瓶</div></div>
+        </div>
+        <div class="sku-item bcrs" onclick="addSku('SKU-BV-TIGER-330','Tiger Beer 虎牌啤酒 330ml',true,24,0.10,'24 罐/箱',38.50,'饮料/啤酒')">
+          <div class="sku-img">啤</div>
+          <div class="sku-info"><div class="n">Tiger Beer 虎牌啤酒 330ml <span class="tag-bcrs">BCRS</span></div><div class="m">SKU-BV-TIGER-330 · 24 罐/箱 · S$38.50/箱 · 押金 S$0.10/罐</div></div>
+        </div>
+        <div class="sku-item" onclick="addSku('SKU-BV-WATER-GLASS','San Pellegrino 玻璃瓶 750ml',false,12,0,'12 瓶/件',7.80,'饮料/水')">
+          <div class="sku-img">水</div>
+          <div class="sku-info"><div class="n">San Pellegrino 玻璃瓶 750ml <span class="tag-bcrs tag-non">非 BCRS</span></div><div class="m">SKU-BV-WATER-GLASS · 12 瓶/件 · 玻璃瓶不参与 BCRS</div></div>
+        </div>
+        <div class="sku-item" onclick="addSku('SKU-FD-OIL-5L','Knife Cooking Oil 食用油 5L',false,4,0,'4 桶/箱',54.00,'粮油/油')">
+          <div class="sku-img">油</div>
+          <div class="sku-info"><div class="n">Knife Cooking Oil 5L <span class="tag-bcrs tag-non">非 BCRS</span></div><div class="m">SKU-FD-OIL-5L · 4 桶/箱 · S$54.00/桶</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeSkuPicker()">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== 视图切换 =====
+function switchView(id){
+  document.querySelectorAll('.rail button').forEach(x=>x.classList.toggle('active', x.dataset.view===id));
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active', x.id===id));
+}
+document.querySelectorAll('.rail button').forEach(b=>{
+  b.addEventListener('click',()=>switchView(b.dataset.view));
+});
+
+// ===== Toast =====
+function toast(msg, type){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show ' + (type||'');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+// ===== 货品编辑：开关 =====
+function onBcrsRadio(enabled){
+  document.getElementById('bcrsZone').style.display = enabled ? '' : 'none';
+}
+function refreshPreview(){
+  const uom=(document.getElementById('uomSel')?.value)||'瓶';
+  const pack=parseInt(document.getElementById('packQty')?.value)||0;
+  const dep=parseFloat(document.getElementById('depositPrice')?.value)||0;
+  const lbl=document.getElementById('uomLabel'); if(lbl) lbl.textContent=uom;
+  const pv=document.getElementById('previewLine');
+  if(pv) pv.value=`押金金额 S$${dep.toFixed(2)} × 包装数量 ${pack} ${uom} = 每箱押金 S$${(dep*pack).toFixed(2)}`;
+}
+function saveGoods(){
+  const enabled=document.getElementById('bcrsEnabled').checked;
+  if(enabled){
+    const dep=parseFloat(document.getElementById('depositPrice').value);
+    if(!dep||dep<=0){return toast('押金金额为 BCRS 支持时必填项，必须 > 0','error');}
+  }
+  toast('已完成建档（含 BCRS 字段）','success');
+}
+function gotoEdit(sku){switchView('goods-edit');}
+
+// ===== 站点切换 =====
+function switchSite(code){
+  const w=document.getElementById('siteSwitch');
+  const bcrsRow=document.getElementById('bcrsRow');
+  if(code==='SGP'){
+    w.className='site-switch sg';
+    w.querySelector('span').innerHTML='当前站点：<b>新加坡 (SGP)</b> — BCRS 字段可见且可编辑';
+    if(bcrsRow) bcrsRow.style.display='';
+  } else {
+    w.className='site-switch';
+    w.querySelector('span').innerHTML=`当前站点：<b>${code}</b> — BCRS 字段已隐藏（BR-04）`;
+    if(bcrsRow) bcrsRow.style.display='none';
+  }
+}
+
+// ===== 采购单：联动 =====
+function syncDepositRow(rowId, qty){
+  const main=document.querySelector(`tr[data-row="${rowId}"]`);
+  if(!main) return;
+  recalcRow(rowId);
+  if(main.dataset.bcrs!=='true') return;
+  const boxSize=parseInt(main.dataset.boxSize,10);
+  const deposit=parseFloat(main.dataset.deposit);
+  const depQty=(parseInt(qty,10)||0)*boxSize;
+  const depAmt=(depQty*deposit).toFixed(2);
+  const qtyInput=document.getElementById('dep-qty-'+rowId);
+  const amtCell=document.getElementById('dep-amt-'+rowId);
+  if(qtyInput) qtyInput.value=depQty;
+  if(amtCell) amtCell.textContent=depAmt;
+  refreshSummary();
+  toast(`押金行已联动：${depQty} 个 × S$${deposit.toFixed(2)} = S$${depAmt}`,'success');
+}
+// 列索引（采购单新建 18 列，含税定价）：9=采购单价含税 10=采购单价未税 11=采购数量 12=采购金额含税 13=采购金额未税 15=税额
+function recalcRow(rowId){
+  const main=document.querySelector(`tr[data-row="${rowId}"]`);
+  if(!main) return;
+  const qty=parseFloat(main.querySelector('td:nth-child(11) input').value)||0;
+  const price=parseFloat(main.querySelector('td:nth-child(9) input').value)||0;
+  const tax=parseFloat(main.dataset.tax)||0;
+  const amt=qty*price;                       // 采购金额(含税)
+  const exAmt=amt/(1+tax);                    // 采购金额(未税)
+  const taxAmt=amt-exAmt;                      // 税额
+  const exPrice=price/(1+tax);                 // 采购单价(未税)
+  const set=(id,v)=>{const el=document.getElementById(id+rowId);if(el)el.textContent=v;};
+  set('amt',amt.toFixed(2));
+  set('exAmt',exAmt.toFixed(2));
+  set('tax',taxAmt.toFixed(2));
+  const exP=document.getElementById('exPrice'+rowId);
+  if(exP) exP.textContent=exPrice.toFixed(2)+'/箱';
+  refreshSummary();
+}
+function refreshSummary(){
+  let goods=0, goodsEx=0, deposit=0;          // 含税商品 / 未税商品 / 押金
+  document.querySelectorAll('#poRows tr:not(.bcrs-row)').forEach(r=>{
+    const amt=r.querySelector('td:nth-child(12)');     // 采购金额(含税)
+    const amtEx=r.querySelector('td:nth-child(13)');    // 采购金额(未税)
+    if(amt) goods+=parseFloat(amt.textContent.replace(/,/g,''))||0;
+    if(amtEx) goodsEx+=parseFloat(amtEx.textContent.replace(/,/g,''))||0;
+  });
+  document.querySelectorAll('#poRows tr.bcrs-row').forEach(r=>{
+    const amt=r.querySelector('td:nth-child(12)');
+    if(amt) deposit+=parseFloat(amt.textContent.replace(/,/g,''))||0;
+  });
+  document.getElementById('sumGoods').textContent='S$'+goods.toFixed(2);
+  document.getElementById('sumGoodsEx').textContent='S$'+goodsEx.toFixed(2);
+  document.getElementById('sumDeposit').textContent='S$'+deposit.toFixed(2);
+}
+function removeRow(rowId){
+  const main=document.querySelector(`tr[data-row="${rowId}"]`);
+  const dep=document.querySelector(`tr[data-parent="${rowId}"]`);
+  if(main) main.remove();
+  if(dep) dep.remove();
+  refreshSummary();
+  toast(dep?'已删除主商品行与关联押金行（BR-09）':'已删除商品行','success');
+}
+function submitPo(){toast('采购单已提交 ✓','success');}
+
+// ===== 退供单联动（11 列，退货金额正数显示，对齐系统 filterAmount）=====
+function syncRejectDeposit(rowId, qty){
+  const main=document.querySelector(`tr[data-row="${rowId}"]`);
+  if(!main) return;
+  let q=parseInt(qty,10)||0;
+  const maxQty=parseInt(main.dataset.maxqty,10)||Infinity;
+  if(q>maxQty){ toast(`退货数量不能超过原采购数量 ${maxQty} 箱（BR-14）`,'error'); }
+  const price=parseFloat(main.dataset.price)||0;
+  const sub=document.getElementById('rej-sub-'+rowId);
+  if(sub) sub.textContent=(q*price).toFixed(2);          // 退货金额（正数）
+  const out=document.getElementById('rejOut-'+rowId);
+  if(out) out.textContent=q+'箱';                          // 实际退货数量联动
+  if(main.dataset.bcrs!=='true') return;
+  const boxSize=parseInt(main.dataset.boxSize,10);
+  const deposit=parseFloat(main.dataset.deposit);
+  const depQty=q*boxSize;
+  const depAmt=(depQty*deposit).toFixed(2);
+  const qtyInput=document.getElementById('rej-dep-qty-'+rowId);
+  const amtCell=document.getElementById('rej-dep-amt-'+rowId);
+  if(qtyInput) qtyInput.value=depQty;
+  if(amtCell) amtCell.textContent=depAmt;
+  toast(`押金返还已联动：${depQty} 个 × S$${deposit.toFixed(2)} = S$${depAmt}`,'success');
+}
+
+// ===== SKU Picker =====
+function openSkuPicker(){document.getElementById('skuPickerMask').classList.add('show');}
+function closeSkuPicker(){document.getElementById('skuPickerMask').classList.remove('show');}
+function addSku(sku,name,isBcrs,boxSize,deposit,boxLabel,price,category){
+  const tbody=document.getElementById('poRows');
+  const rowId=Date.now();
+  const tax=0.09, qty=10;
+  const tagBcrs=isBcrs?'<span class="tag-bcrs">BCRS</span>':'<span class="tag-bcrs tag-non">非 BCRS</span>';
+  const amt=qty*price, exAmt=amt/(1+tax), taxAmt=amt-exAmt, exPrice=price/(1+tax);
+  let html=`<tr data-row="${rowId}" data-sku="${sku}" data-bcrs="${isBcrs}" data-box-size="${boxSize}" data-deposit="${deposit}" data-price="${price}" data-tax="${tax}">
+    <td>商品</td>
+    <td><b>${sku}</b></td>
+    <td>${name}${tagBcrs}</td>
+    <td class="num">5%</td>
+    <td>正常</td>
+    <td>${category||'--'}</td>
+    <td class="num">${(price*0.93).toFixed(2)}/箱</td>
+    <td class="num">${(price*0.93/(1+tax)).toFixed(2)}/箱</td>
+    <td class="num"><input type="number" class="input-num" value="${price.toFixed(2)}" step="0.01" onchange="recalcRow(${rowId})">/箱</td>
+    <td class="num" id="exPrice${rowId}">${exPrice.toFixed(2)}/箱</td>
+    <td class="num"><input type="number" class="input-num" value="${qty}" min="0" onchange="${isBcrs?`syncDepositRow(${rowId},this.value)`:`recalcRow(${rowId})`}">箱</td>
+    <td class="num pos" id="amt${rowId}">${amt.toFixed(2)}</td>
+    <td class="num" id="exAmt${rowId}">${exAmt.toFixed(2)}</td>
+    <td>9%</td>
+    <td class="num" id="tax${rowId}">${taxAmt.toFixed(2)}</td>
+    <td>${boxLabel}</td>
+    <td>—</td>
+    <td><button class="btn small danger" onclick="removeRow(${rowId})">删除</button></td>
+  </tr>`;
+  if(isBcrs){
+    const dq=qty*boxSize;
+    const da=(dq*deposit).toFixed(2);
+    html += `<tr class="bcrs-row" data-row="${rowId}-dep" data-parent="${rowId}">
+      <td>押金</td>
+      <td class="muted">系统生成</td>
+      <td><span class="linked-tag">BCRS 押金</span><div style="font-size:11px;color:var(--muted);margin-top:2px">关联 ${sku} · ${qty} 箱 × ${boxSize} 瓶/箱 · 自动追加 <span class="auto-tag">系统</span></div></td>
+      <td class="num">--</td><td>--</td><td>--</td><td class="num">--</td><td class="num">--</td>
+      <td class="num"><input type="number" class="input-num" value="${deposit.toFixed(2)}" disabled>/个</td>
+      <td class="num">${deposit.toFixed(2)}/个</td>
+      <td class="num"><input type="number" class="input-num" id="dep-qty-${rowId}" value="${dq}" disabled>个</td>
+      <td class="num pos" id="dep-amt-${rowId}">${da}</td>
+      <td class="num">${da}</td>
+      <td>0%</td><td class="num">0.00</td><td>--</td><td>自动追加</td>
+      <td><span style="color:var(--muted);font-size:11px">联动</span></td>
+    </tr>`;
+  }
+  tbody.insertAdjacentHTML('beforeend', html);
+  refreshSummary();
+  closeSkuPicker();
+  toast(isBcrs?`已添加 ${name} + 押金行（自动追加 BR-05）`:'已添加商品','success');
+}
+</script>
+<!-- ════════════════ 规则标注层 / prototype-annotate ════════════════ -->
+<style>
+  .anno-badge{position:absolute;z-index:9990;width:18px;height:18px;background:#ff7a18;color:#fff;font-size:11px;line-height:18px;text-align:center;border-radius:50%;font-weight:700;cursor:help;box-shadow:0 1px 4px rgba(0,0,0,.3);display:none;font-family:-apple-system,Segoe UI,sans-serif;}
+  body.anno-on .anno-badge{display:block;}
+  .anno-badge.anno-hidden{display:none!important;}
+  body.anno-on [data-anno-marked]{outline:1px dashed #ff7a18;outline-offset:1px;}
+  #anno-tip{position:fixed;z-index:9999;max-width:340px;display:none;background:#1f2430;color:#e6e6e6;border-radius:8px;padding:0;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:12.5px;line-height:1.6;font-family:-apple-system,Segoe UI,Helvetica,sans-serif;}
+  #anno-tip .anno-tip-hd{padding:8px 12px;font-weight:700;font-size:13px;border-bottom:1px solid #353b48;color:#fff;}
+  #anno-tip .anno-row{padding:6px 12px;display:flex;gap:8px;border-bottom:1px solid #2a2f3a;}
+  #anno-tip .anno-row:last-child{border-bottom:none;}
+  #anno-tip .anno-tag{flex:0 0 auto;font-weight:700;font-size:10.5px;padding:1px 6px;border-radius:4px;height:16px;line-height:14px;align-self:flex-start;white-space:nowrap;}
+  #anno-tip .t-BR{background:#ff7a18;color:#fff;}
+  #anno-tip .t-AC{background:#3b82f6;color:#fff;}
+  #anno-tip .t-校验{background:#10b981;color:#fff;}
+  #anno-tip .t-交互{background:#8b5cf6;color:#fff;}
+  #anno-tip .anno-txt{flex:1;}
+  #anno-toggle{position:fixed;right:16px;bottom:78px;z-index:9998;background:#1f2430;color:#fff;border:1px solid #ff7a18;padding:7px 14px;border-radius:20px;font-size:12.5px;cursor:pointer;font-family:-apple-system,Segoe UI,sans-serif;user-select:none;box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  #anno-toggle .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff7a18;margin-right:6px;vertical-align:1px;}
+  body:not(.anno-on) #anno-toggle .dot{background:#555;}
+</style>
+<div id="anno-toggle"><span class="dot"></span>规则标注</div>
+<div id="anno-tip"></div>
+<script>
+const ANNOTATIONS = [
+  /* === 视图 2：货品编辑 === */
+  {
+    sel: "#bcrsEnabled",
+    title: "是否支持 BCRS（开关）",
+    rules: [
+      { type: "BR", id: "BR-01", text: "货品主数据 BCRS 部分仅新增 2 个字段：bcrsEnabled(boolean, 默认 false) + depositPrice(decimal, S$ / 计量单位)" },
+      { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时 depositPrice 必填且 > 0；false 时该字段隐藏并清空" },
+      { type: "AC", id: "AC-01", text: "Given SGP / SKU=Coca-Cola 500ml / 计量单位=瓶 / 包装数量=24，When 切 ON+押金金额=0.10→保存，Then 预览显示「× 24 瓶 = 每箱 S$2.40」、列表显示「✓ 支持」" },
+      { type: "校验", text: "boolean 类型，默认 false" },
+      { type: "交互", text: "切换 ON 时下方表单激活，OFF 时整体灰化(disabled)" }
+    ]
+  },
+  {
+    sel: "#depositPrice",
+    title: "押金金额 (S$ / 计量单位)",
+    rules: [
+      { type: "BR", id: "BR-03", text: "bcrsEnabled=true 时必填且必须 > 0；单位跟随计量单位（瓶/罐/个 …）" },
+      { type: "AC", id: "AC-02", text: "Given 开关=ON，When 押金金额留空→保存，Then 阻断并提示「BCRS 支持时押金金额为必填项，且必须 > 0」" },
+      { type: "校验", text: "decimal(8,2)，> 0，最大 2 位小数，默认值 0.10（NEA 标准）" },
+      { type: "交互", text: "失焦校验 + 保存时再次校验；联动「押金预览」实时重算" }
+    ]
+  },
+  {
+    sel: "#siteSwitch",
+    title: "站点切换（演示）",
+    rules: [
+      { type: "BR", id: "BR-04", text: "仅 stationInfo.countryCode === 'SGP' 时显示 BCRS 字段与押金行；其他站点完全隐藏" },
+      { type: "AC", id: "AC-06", text: "Given 切站点到 MYS，When 进入货品编辑/采购单，Then BCRS 信息区整体不可见，PO 表格不显示押金行（原数据保留但不展示）" },
+      { type: "交互", text: "复用现有 isSingaporeSite 计算属性（order-detail.vue:607-610）" }
+    ]
+  },
+  {
+    sel: "#previewLine",
+    title: "押金预览（每箱）",
+    rules: [
+      { type: "BR", id: "BR-02", text: "每箱押金 = 押金金额 × 包装数量；采购单押金合计 = 每箱押金 × 采购数量(箱)" },
+      { type: "交互", text: "随计量单位 / 包装数量 / 押金金额变化实时刷新预览文案" }
+    ]
+  },
+
+  /* === 视图 3：采购单新建 === */
+  {
+    sel: "#btnAddSku",
+    title: "+ 添加商品",
+    rules: [
+      { type: "BR", id: "BR-05", text: "采购支持 BCRS 的商品时，系统在该商品行下方追加独立押金行；押金行商品名固定为「BCRS 押金」" },
+      { type: "AC", id: "AC-03", text: "Given 新建PO/SGP/空商品，When 选 Coca-Cola(bcrsEnabled=true,boxSize=24,deposit=0.10)数量=50箱，Then 主行+押金行(数量=50×24=1200,单价=0.10,小计=120.00)，押金行 disabled 绿色高亮来源=系统" },
+      { type: "交互", text: "弹出 SKU Picker，强制走选择器以防绕过 BCRS 联动" }
+    ]
+  },
+  {
+    sel: "#mainQty1",
+    title: "主商品采购数量",
+    rules: [
+      { type: "BR", id: "BR-06", text: "押金行数量 = 主商品采购数量(箱) × 主商品 boxSize；单位「个」" },
+      { type: "BR", id: "BR-08", text: "主商品数量变更（含 PO 编辑、退回修改）→ 押金行数量与金额自动刷新" },
+      { type: "AC", id: "AC-04", text: "Given AC-03 完成，When 数量从 50→80，Then 押金行数量自动刷新 80×24=1920，小计=192.00" },
+      { type: "校验", text: "正整数 ≥ 0" },
+      { type: "交互", text: "onchange 触发 syncDepositRow(rowId)；同步刷新汇总区" }
+    ]
+  },
+  {
+    sel: "#depRow1",
+    title: "BCRS 押金独立行（系统自动追加）",
+    rules: [
+      { type: "BR", id: "BR-05", text: "在 BCRS 商品行下方追加独立押金行（不增加价格列）；本期统一一个「BCRS 押金」虚拟商品，不区分容器类型" },
+      { type: "BR", id: "BR-07", text: "押金行单价取自货品主数据「押金金额」(depositPrice)，PO 中 disabled 不可编辑" },
+      { type: "BR", id: "BR-09", text: "删除主商品行 → 自动删除关联押金行；用户不能单独删除押金行" },
+      { type: "AC", id: "AC-05", text: "Given 表格有主行+押金行，When 点主行删除，Then 主行与押金行一同移除，汇总区实时刷新" },
+      { type: "交互", text: "绿色 ↳ 缩进高亮；来源=系统；操作列显示「联动」不可点击" }
+    ]
+  },
+  {
+    sel: "#depPriceCell1",
+    title: "押金行单价（disabled）",
+    rules: [
+      { type: "BR", id: "BR-07", text: "押金行单价直接取主商品货品主数据「押金金额」(depositPrice)，PO 中 disabled" },
+      { type: "AC", id: "AC-08", text: "Given PO 有 BCRS 押金行，When 点击押金行单价输入框，Then 输入框 disabled，悬浮 tooltip「押金行单价取自货品主数据『押金金额』，PO 中不可编辑」" }
+    ]
+  },
+  {
+    sel: "#sumDeposit",
+    title: "BCRS 押金合计",
+    rules: [
+      { type: "BR", id: "BR-10", text: "押金金额不进存货成本，独立挂「应付押金」往来科目；底部汇总区独立列示 BCRS 押金合计" },
+      { type: "AC", id: "AC-07", text: "Given PO 含 BCRS 商品+押金行，When 提交单据，Then 底部汇总区「BCRS 押金合计」单独列示；财务挂账：商品金额进存货成本，押金金额挂「应付押金」" }
+    ]
+  },
+
+  /* === 视图 4：采购单详情 === */
+  {
+    sel: "#detailDepRow1",
+    title: "BCRS 押金行（详情页只读展示）",
+    rules: [
+      { type: "BR", id: "BR-05", text: "押金作为独立商品行展示，不并入主商品价格列；商品名固定「BCRS 押金」" },
+      { type: "BR", id: "BR-06", text: "押金数量 = 主商品采购数量 × boxSize（详情页显示「50 箱 × 24 瓶/箱」回溯计算依据）" },
+      { type: "BR", id: "BR-09", text: "押金行随主商品行级联存在，详情页不可单独编辑/删除" },
+      { type: "AC", id: "AC-07", text: "详情商品明细中押金行以 ↳ 缩进 + 绿色高亮独立展示，与主商品行视觉区分" },
+      { type: "交互", text: "鼠标悬浮可展开关联主商品 SKU 和换算式；打印 PDF 时押金行作为独立行项" }
+    ]
+  },
+  {
+    sel: "#detailDepPill1",
+    title: "类型标识：押金",
+    rules: [
+      { type: "BR", id: "BR-10", text: "押金行打「押金」绿色 pill，财务侧据此识别为应付押金科目；商品行打「商品」蓝色 pill 进存货成本" },
+      { type: "校验", text: "枚举：商品 / 押金；押金行固定为「押金」不可改" },
+      { type: "交互", text: "导出/打印 PDF 时按 type 字段筛选汇总" }
+    ]
+  },
+  {
+    sel: "#detailSumDeposit",
+    title: "BCRS 押金合计（应付押金）",
+    rules: [
+      { type: "BR", id: "BR-10", text: "押金金额不进存货成本，独立挂「应付押金」往来科目；底部汇总区独立列示" },
+      { type: "AC", id: "AC-07", text: "Given PO 含 BCRS 商品+押金行，When 提交单据，Then 底部汇总「BCRS 押金合计」单独列示" },
+      { type: "交互", text: "金额=Σ 所有 BCRS 押金行小计；联动主商品数量实时刷新" }
+    ]
+  },
+  {
+    sel: "#accountingSplit",
+    title: "财务挂账拆分",
+    rules: [
+      { type: "BR", id: "BR-10", text: "存货成本=商品金额；应付押金=押金合计；GST 仅按商品金额×9%（押金不计 GST，待财务确认）" },
+      { type: "AC", id: "AC-07", text: "提交单据后财务侧自动拆分入账：存货 / 应付供应商 / 应付押金 / 应付总额四笔" },
+      { type: "交互", text: "明细可导出 CSV 供财务对账" }
+    ]
+  },
+
+  /* === 视图 5：退供单 === */
+  {
+    sel: "#rejQtyR1",
+    title: "退货数量",
+    rules: [
+      { type: "BR", id: "BR-13", text: "退货数量变更 → 押金返还行数量与金额实时同步" },
+      { type: "BR", id: "BR-14", text: "退货数量 ≤ 关联 PO 的原采购数量；超出时阻断提交并提示" },
+      { type: "AC", id: "AC-10", text: "Given AC-09 完成，When 数量从 5→10，Then 押金返还行数量自动刷新 10×24=240，金额=-S$24.00" },
+      { type: "AC", id: "AC-11", text: "Given 原 PO 采购 50 箱，When 退货数量=60，Then 阻断提交并提示「退货数量不能超过原采购数量 50 箱」" },
+      { type: "校验", text: "正整数；0 ≤ 退货数量 ≤ 原采购数量" }
+    ]
+  },
+  {
+    sel: "#rejDepRow1",
+    title: "BCRS 押金返还行（系统自动追加）",
+    rules: [
+      { type: "BR", id: "BR-11", text: "退供 BCRS 商品时，系统在该退货行下方追加押金返还独立行；金额为负数（红色显示）" },
+      { type: "BR", id: "BR-12", text: "押金返还数量 = 退货数量(箱) × 主商品 boxSize；单位「个」" },
+      { type: "BR", id: "BR-15", text: "押金返还金额冲销原 PO 的「应付押金」往来科目，不影响存货成本" },
+      { type: "BR", id: "BR-16", text: "押金返还行随主商品退货行级联存在，用户不能单独删除" },
+      { type: "AC", id: "AC-09", text: "Given 关联 PO=PO-SGP-0142(Coca-Cola 50箱 BCRS)，When 新建退供单退 5 箱，Then 自动追加押金返还行(数量=120,金额=-S$12.00 红色,来源=系统)" }
+    ]
+  }
+];
+(function () {
+  const tip = document.getElementById('anno-tip');
+  const toggle = document.getElementById('anno-toggle');
+  document.body.classList.add('anno-on');
+  toggle.addEventListener('click', () => {
+    document.body.classList.toggle('anno-on');
+    if (!document.body.classList.contains('anno-on')) hideTip();
+  });
+  function renderTip(a) {
+    let h = '<div class="anno-tip-hd">' + esc(a.title) + '</div>';
+    a.rules.forEach(r => {
+      const label = r.id ? r.id : r.type;
+      h += '<div class="anno-row"><span class="anno-tag t-' + r.type + '">' + esc(label) + '</span><span class="anno-txt">' + esc(r.text) + '</span></div>';
+    });
+    tip.innerHTML = h;
+  }
+  function showTip(e, a) {
+    if (!document.body.classList.contains('anno-on')) return;
+    renderTip(a);
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + r.width > innerWidth)  x = e.clientX - r.width - 14;
+    if (y + r.height > innerHeight) y = e.clientY - r.height - 14;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top  = Math.max(8, y) + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+  function esc(s) { return String(s).replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+  const entries = [];
+  ANNOTATIONS.forEach((a, i) => {
+    const el = document.querySelector(a.sel);
+    if (!el) { console.warn('[规则标注] 选择器未命中：' + a.sel); return; }
+    el.setAttribute('data-anno-marked', '');
+    const badge = document.createElement('div');
+    badge.className = 'anno-badge';
+    badge.textContent = i + 1;
+    document.body.appendChild(badge);
+    [el, badge].forEach(t => {
+      t.addEventListener('mousemove', e => showTip(e, a));
+      t.addEventListener('mouseleave', hideTip);
+    });
+    entries.push({ el, badge });
+  });
+  function refresh() {
+    entries.forEach(({ el, badge }) => {
+      if (el.getClientRects().length === 0) { badge.classList.add('anno-hidden'); return; }
+      badge.classList.remove('anno-hidden');
+      const r = el.getBoundingClientRect();
+      badge.style.left = (r.right + scrollX - 9) + 'px';
+      badge.style.top  = (r.top + scrollY - 9) + 'px';
+    });
+  }
+  refresh();
+  addEventListener('scroll', refresh, true);
+  addEventListener('resize', refresh);
+  setInterval(refresh, 500);
+})();
+</script>
+<!-- ══════════════ 规则标注层 结束 ══════════════ -->
+</body>
+</html>
