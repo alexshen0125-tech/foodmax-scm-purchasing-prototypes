@@ -1034,21 +1034,12 @@ PAGES['m-dash']=()=>{
   <div class="sg">
     <div class="sc good"><div class="sc-l">销售额</div><div class="sc-v" style="color:var(--gd)">$${d.sales}</div>${wpTrend(d.st,d.tl)}</div>
     <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">${d.orders}</div>${wpTrend(d.ot,d.tl)}</div>
-    <div class="sc"><div class="sc-l">实付单均价</div><div class="sc-v">$${d.avg}</div>${wpTrend(d.at,d.tl)}</div>
+    <div class="sc"><div class="sc-l">客单价</div><div class="sc-v">$${d.avg}</div>${wpTrend(d.at,d.tl)}</div>
     <div class="sc"><div class="sc-l">动销覆盖</div><div class="sc-v">${d.cover}%</div><div class="sc-s">动销 ${d.cn.split(' / ')[0]} / 在售 ${d.cn.split(' / ')[1]} SPU</div></div>
   </div>
-  <div class="wp-main">
-    <div class="card" style="margin-bottom:0"><div class="card-hd"><h3>⚡ 常用功能</h3><span class="sub">高频操作一键直达</span></div>
-      <div class="card-bd"><div class="wp-qa">${WP_QUICK.map(q=>`
-        <div class="wp-qi" onclick="nav('${q.p}')"><div class="qic" style="background:${q.bg}"><span>${q.ic}</span></div><span class="qil">${q.t}</span>${q.badge&&q.badge()>0?`<span class="qib">${q.badge()}</span>`:''}</div>`).join('')}</div>
-      </div>
-    </div>
-    <div class="wp-side">
-      <div class="card" style="margin-bottom:0"><div class="card-hd"><h3>📢 平台公告</h3><button class="btn btn-link" onclick="toast('公告中心整理中','info')">更多 →</button></div>
-        <div class="card-bd flush">${WP_ANN.map(a=>`
-          <div class="wp-ann" onclick="wpAnn(${WP_ANN.indexOf(a)})"><span class="tag ${a.tag[1]}" style="font-size:11px">${a.tag[0]}</span>
-            <div class="wp-ann-b"><div class="wp-ann-t">${a.title}</div><div class="wp-ann-d">${a.date}</div></div><span style="color:var(--tt)">›</span></div>`).join('')}</div>
-      </div>
+  <div class="card"><div class="card-hd"><h3>⚡ 常用功能</h3><span class="sub">高频操作一键直达</span></div>
+    <div class="card-bd"><div class="wp-qa">${WP_QUICK.map(q=>`
+      <div class="wp-qi" onclick="nav('${q.p}')"><div class="qic" style="background:${q.bg}"><span>${q.ic}</span></div><span class="qil">${q.t}</span>${q.badge&&q.badge()>0?`<span class="qib">${q.badge()}</span>`:''}</div>`).join('')}</div>
     </div>
   </div>
   <div class="card"><div class="card-hd"><h3>🎓 帮助中心</h3><button class="btn btn-link" onclick="toast('更多帮助文档整理中','info')">全部帮助文档 →</button></div>
@@ -1062,9 +1053,8 @@ PAGES['m-dash']=()=>{
         <div>
           <div style="font-size:12.5px;font-weight:700;color:var(--ts);margin-bottom:6px">快捷入口</div>
           <div class="wp-entries">
-            <div class="wp-entry" onclick="wpManual()"><div class="ec" style="background:var(--gl)">📖</div><div><div class="et">操作手册</div><div class="es">建品 · 备货贴码 · 对账开票 全流程图解</div></div><span class="ea">›</span></div>
-            <div class="wp-entry" onclick="wpVideo()"><div class="ec" style="background:var(--bl)">🎬</div><div><div class="et">视频教程</div><div class="es">分模块短视频，3 分钟上手一个功能</div></div><span class="ea">›</span></div>
-            <div class="wp-entry" onclick="wpContact()"><div class="ec" style="background:var(--yl)">🎧</div><div><div class="et">联系客服</div><div class="es">在线客服 / 电话 ${DB.shop.service}</div></div><span class="ea">›</span></div>
+            <div class="wp-entry" onclick="wpManual()"><div class="ec" style="background:var(--gl)">📖</div><div><div class="et">操作手册</div><div class="es">商家端功能操作指引</div></div><span class="ea">›</span></div>
+            <div class="wp-entry" onclick="wpPrinter()"><div class="ec" style="background:var(--bl)">🖨️</div><div><div class="et">打印机配置手册</div><div class="es">标签打印机安装与配置指引</div></div><span class="ea">›</span></div>
           </div>
         </div>
       </div>
@@ -1110,7 +1100,7 @@ function dashData(){
     const sales=(days*2680.5),orders=days*182;
     return {sales:sales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),st:5.6,orders:orders.toLocaleString('en-US'),ot:3.9,avg:(sales/orders).toFixed(2),at:1.0,cover:'74.0',cn:'36 / 48',tl:'环比上一周期',note:`自定义区间 ${r.from} ~ ${r.to}（共 ${days} 天）`};
   }
-  return M[p]||M.today;
+  return M[p]||M.yesterday;
 }
 function dashRefresh(){DB.dashTick=(DB.dashTick||0)+1;const n=new Date(),pad=x=>(''+x).padStart(2,'0');DB.dashTodayAt=pad(n.getHours())+':'+pad(n.getMinutes());render();toast('已刷新今日实时数据','ok');}
 function dashQuery(){const f=(document.getElementById('dash-from')||{}).value,t=(document.getElementById('dash-to')||{}).value;
@@ -1119,16 +1109,17 @@ function dashQuery(){const f=(document.getElementById('dash-from')||{}).value,t=
   DB.dashRange={from:f,to:t};DB.dashPeriod='custom';render();toast(`已按 ${f} ~ ${t} 查询`,'ok');}
 /* 帮助中心数据 + 交互 */
 const WP_FAQ=[
-  {q:'如何新建商品并上架？',a:'进入「商品管理 · 商品列表」→ 点右上「新建商品」，填写商品名/类目/单位/售价，按 SKU 维护规格与库存，保存后提交店铺运营平台审核，审核通过即自动上架。批量新建可用「导入模板」。'},
-  {q:'订单来了怎么备货、贴码、发货？',a:'「订单管理」查看待发货订单 →「备货管理 · 备货参考」按送达日汇总备货量 →「称重录入」录入实际重量 →「打印标签」按订单×SKU 打印并贴码 → 全部贴码后系统按仓自动生成送货单，交仓库交接即转「待收货」。'},
-  {q:'账单在哪看？什么时候到账？',a:'「对账结算」查看每个账期的对账单（货款 − 逆向扣减 − 平台/物流佣金 = 应结净额），确认无误后账单流转平台付款，结算账期为月结 30 天，到账后可在账单详情看到到账银行与流水。'},
-  {q:'客户发票怎么开？服务费发票在哪下载？',a:'「发票管理 · 客户开票」按订单为餐厅开票；「服务费发票」为平台与你结算后自动开具（GST 9%），你只需在此查看/下载 PDF。'},
-  {q:'商品被强制下架 / 收到违规整改怎么办？',a:'工作台「待办事项」会提示。到「商品列表」查看强制下架原因并整改后重新提报；「违规整改」查看整改通知，在整改期内提交整改方案，逾期未整改将影响信用等级。'},
+  {q:'如何新建并上架商品？',a:'进入「商品管理 · 商品列表」→ 点右上「新建商品」，填写商品名/类目/单位/售价，按 SKU 维护规格与库存，保存后提交店铺运营平台审核，审核通过即自动上架。批量新建可用「导入模板」。'},
+  {q:'订单如何接单与履约？',a:'「订单管理」查看待发货订单 →「备货管理 · 备货参考」按送达日汇总备货量 →「称重录入」录入实际重量 →「打印标签」按订单×SKU 打印并贴码 → 全部贴码后系统按仓自动生成送货单，交仓库交接即转「待收货」。'},
+  {q:'对账与结算周期是怎样的？',a:'「对账结算」查看每个账期的对账单（货款 − 逆向扣减 − 平台/物流佣金 = 应结净额），确认无误后账单流转平台付款，结算账期为月结 30 天，到账后可在账单详情看到到账银行与流水。'},
+  {q:'如何申请与下载发票？',a:'「发票管理 · 客户开票」按订单为餐厅开票；「服务费发票」为平台与你结算后自动开具（GST 9%），你只需在此查看/下载 PDF。'},
+  {q:'违规处理与申诉流程说明',a:'工作台会提示违规与整改通知。到「违规整改」查看原因与整改期，在整改期内提交整改方案；对判定有异议可在时效内发起申诉，逾期未整改将影响信用等级。'},
 ];
 function wpFaq(i){const f=WP_FAQ[i];modal(`<div class="mc-hd"><h3>${f.q}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd"><div style="font-size:14px;line-height:1.85;color:var(--tp)">${f.a}</div></div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">知道了</button><button class="btn btn-p" onclick="closeModal();wpContact()">还有疑问 · 联系客服</button></div>`);}
 function wpManual(){toast('正在打开《商家后台操作手册》','info');}
+function wpPrinter(){toast('正在打开《标签打印机配置手册》','info');}
 function wpVideo(){toast('视频教程整理中，敬请期待','info');}
 function wpContact(){modal(`<div class="mc-hd"><h3>联系客服</h3><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
