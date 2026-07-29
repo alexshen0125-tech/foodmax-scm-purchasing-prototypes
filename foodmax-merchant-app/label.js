@@ -56,14 +56,16 @@ css.textContent=`
 .lp-printer b{color:var(--emerald-2);}
 .lp-gatetip{margin:12px 16px 0;background:var(--amber-soft);border-radius:12px;padding:12px 14px;font-size:12.5px;color:#B45309;line-height:1.6;}
 .lp-gatetip .go{color:var(--emerald-2);font-weight:700;text-decoration:underline;}
-.lp-seq{margin:12px 16px 0;background:#fff;border-radius:14px;padding:14px 15px;box-shadow:var(--sh-sm);}
-.lp-seq .t{font-size:14px;font-weight:700;}
-.lp-seq .s{font-size:12px;color:var(--sub);margin:5px 0 11px;line-height:1.55;}
+.lp-seq{margin:10px 16px 0;background:transparent;}
+.lp-seqhd{display:flex;align-items:center;justify-content:space-between;padding:11px 4px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--sub);}
+.lp-seqhd .chev{font-size:11px;color:var(--sub);}
+.lp-seqbody{background:#fff;border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);margin-top:2px;}
+.lp-seq .s{font-size:11.5px;color:var(--sub);margin:0 0 11px;line-height:1.55;}
 .lp-seq .seqrow{display:flex;align-items:center;gap:9px;}
-.lp-seq input{width:62px;height:42px;border:1.5px solid var(--line);border-radius:11px;text-align:center;font-size:16px;font-family:inherit;color:var(--ink);}
+.lp-seq input{width:60px;height:40px;border:1.5px solid var(--line);border-radius:11px;text-align:center;font-size:15px;font-family:inherit;color:var(--ink);}
 .lp-seq input:focus{border-color:var(--emerald);outline:none;}
 .lp-seq .dash{color:var(--sub);}
-.lp-seqbtn{flex:1;height:42px;border-radius:11px;background:var(--muted);color:var(--emerald-2);font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-family:inherit;}
+.lp-seqbtn{flex:1;height:40px;border-radius:11px;background:var(--muted);color:var(--emerald-2);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-family:inherit;}
 .lb-row .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .lb-row .nm{font-size:14.5px;font-weight:700;}
 .lb-row .wtag{font-size:10.5px;font-weight:700;border-radius:7px;padding:1px 7px;margin-left:6px;}
@@ -150,7 +152,8 @@ function connectPrinter(then){window.FM.sheet([
   {label:'FoodMax 标签机 · TSC-A1（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='TSC-A1';window.FM.toast('已连接 TSC-A1 标签机','ok');then&&then();}},
   {label:'Brother QL-820NWB（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='QL-820';window.FM.toast('已连接 QL-820 标签机','ok');then&&then();}},
 ]);}
-let CURLP=null;
+let CURLP=null,LP_SEQOPEN=false;
+window.lp_seqToggle=function(key){LP_SEQOPEN=!LP_SEQOPEN;drawLabelDetail(CURLP.querySelector('#lpd'),key);};
 function reallyPrint(key){window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};const r=rowOf(key);const old=Math.min(r.qty,printedOf(key));
   if(old>=r.qty){window.FM.toast('该商品标签已全部打印','info');return;}
   window.FM.DB.labelPrinted[key]=r.qty;
@@ -190,9 +193,11 @@ function drawLabelDetail(box,key){
     ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
       :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>
         <div class="lp-seq">
-          <div class="t">按序号打印 / 补打</div>
-          <div class="s">本商品共 ${r.qty} 张，序号 1–${r.qty}${pr?` · 已打印至 ${pr}`:''}。上方「打印 N 张」打全部未打印；漏打哪几张就在此填序号区间补打。</div>
-          <div class="seqrow"><input id="lp-from" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${Math.min(pr+1,r.qty)}"><span class="dash">—</span><input id="lp-to" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${r.qty}"><button class="lp-seqbtn" onclick="lp_seqPrint('${key}')">打印此区间</button></div>
+          <div class="lp-seqhd" onclick="lp_seqToggle('${key}')"><span>🔢 按序号打印 / 补打</span><span class="chev">${LP_SEQOPEN?'收起 ▴':'展开 ▾'}</span></div>
+          ${LP_SEQOPEN?`<div class="lp-seqbody">
+            <div class="s">本商品共 ${r.qty} 张，序号 1–${r.qty}${pr?` · 已打印至 ${pr}`:''}。上方「打印 N 张」打全部未打印；漏打哪几张在此填序号区间补打。</div>
+            <div class="seqrow"><input id="lp-from" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${Math.min(pr+1,r.qty)}"><span class="dash">—</span><input id="lp-to" type="number" inputmode="numeric" min="1" max="${r.qty}" value="${r.qty}"><button class="lp-seqbtn" onclick="lp_seqPrint('${key}')">打印此区间</button></div>
+          </div>`:''}
         </div>`}
     <div style="height:14px"></div>`;
   refreshPrintFooter(key);
@@ -203,7 +208,7 @@ function refreshPrintFooter(key){if(!CURLP)return;const btn=CURLP.querySelector(
   if(gated){btn.textContent='🔒 请先完成称重';btn.className='btn';btn.style.opacity='.55';}
   else if(un<=0){btn.textContent='✓ 已全部打印';btn.className='btn';btn.disabled=true;}
   else{btn.textContent=`🖨 打印 ${un} 张标签`;btn.className='btn primary';}}
-function openLabelDetail(key){const r=rowOf(key);
+function openLabelDetail(key){const r=rowOf(key);LP_SEQOPEN=false;   // 每次进详情默认折叠补打，避免误操作
   CURLP=pushPage({title:'打印标签 · '+r.name,body:'<div id="lpd"></div>',
     footer:`<button class="btn primary" id="lp-print">🖨 打印标签</button>`,
     mount:(p)=>{CURLP=p;drawLabelDetail(p.querySelector('#lpd'),key);const b=p.querySelector('#lp-print');if(b)b.onclick=()=>onPrintClick(key);}});
