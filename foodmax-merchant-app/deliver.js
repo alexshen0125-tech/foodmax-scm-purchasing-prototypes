@@ -179,27 +179,42 @@ function qrPopup(title){
 /* ============ 送货签到（数据源=FM.DB.deliveries；交接归仓库WMS，商家不可点）============ */
 function dvStName(d){return {'待送货':'待送货','已预约':'已预约','已签到':'已签到','交接完成':'已入库'}[d.status]||d.status;}
 function dvArrived(d){return (d.labels||[]).filter(l=>l.arrived).length;}
+const DL_SLOTS=['23:00–02:00','02:00–05:00','06:00–10:00','11:00–14:00','16:00–20:00'];   // 预约送货可选时段
+function stChip(t,bg,c){return `<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:${bg};color:${c}">${t}</span>`;}
+// 送货单：预约(booked) 与 签到(signed) 相互独立
 function signinCard(d){
-  const signed=d.status==='已签到'||d.status==='交接完成';
+  if(d.booked===undefined)d.booked=false;if(d.signed===undefined)d.signed=(d.status==='已签到'||d.status==='交接完成');
+  const done=d.status==='交接完成';
+  const bkChip=d.booked?stChip('已预约','var(--amber-soft)','var(--amber)'):stChip('未预约','var(--muted)','var(--sub)');
+  const sgChip=done?stChip('已入库','var(--mint-soft)','var(--emerald-2)'):(d.signed?stChip('已签到','#E1EBFF','#2563EB'):stChip('未签到','var(--muted)','var(--sub)'));
   return `<div class="dl-card">
-    <div class="dl-ch"><span>预约送货单</span><span class="no">${d.id}</span><span class="st ${signed?'ok':'wait'}">${dvStName(d)}</span></div>
-    <div class="dl-tagline"><span class="v">${d.deliver} ${d.window}</span></div>
+    <div class="dl-ch"><span>送货单</span><span class="no">${d.id}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:9px 0 3px">${bkChip}${sgChip}${d.booked?`<span style="font-size:11.5px;color:var(--sub)">${d.bookWindow||d.window}</span>`:''}</div>
     <div class="dl-meta"><span class="k">备货单</span><span class="vv" style="font-family:monospace">${d.pickId}</span></div>
     <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
-    ${d.status==='已签到'?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
+    ${d.signed&&!done?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
     <div class="dl-kbox"><div class="k"><div class="l">应送货(件)</div><div class="v">${(d.labels||[]).reduce((s,l)=>s+(+l.qty||0),0)}</div></div><div class="k"><div class="l">已入库(件)</div><div class="v">${(d.labels||[]).filter(l=>l.arrived).reduce((s,l)=>s+(+l.qty||0),0)}</div></div></div>
-    <div class="dl-acts">${d.status==='交接完成'
+    <div class="dl-acts">${done
       ?`<div class="a" data-a="detail">查看详情</div>`
-      :d.status==='已签到'
-      ?`<div class="a" data-a="detail">查看详情</div><div class="a" data-a="fwd">转发</div>`
-      :`<div class="a key" data-a="sign">签到</div><div class="a" data-a="detail">详情</div><div class="a" data-a="fwd">转发</div>`}</div>
+      :`<div class="a" data-a="${d.booked?'bookmenu':'book'}">${d.booked?'改约/取消':'预约送货'}</div>${d.signed?'':`<div class="a key" data-a="sign">签到码</div>`}<div class="a" data-a="detail">详情</div>`}</div>
   </div>`;
 }
+function dvBookSheet(d){sheet(DL_SLOTS.map(s=>({label:`预约 ${s}${(d.bookWindow||d.window)===s?'　✓':''}`,onClick:()=>{d.booked=true;d.bookWindow=s;toast('已预约送货 '+s);rerenderSignin();}})));}
+// 签到码：商家出示，由【仓库人员扫码确认】，商家端不做签到确认操作（演示用"模拟仓库扫码"）
+function dvSignQR(d){const m=document.createElement('div');m.className='modal-mask';
+  m.innerHTML=`<div class="modal" style="max-width:320px"><div class="mt">送货签到码 · ${d.warehouse}</div>
+    <div class="mb"><div style="background:var(--mint-soft);border-radius:14px;padding:16px 12px;text-align:center"><div style="font-weight:700;margin-bottom:10px">${d.id}</div><div class="dl-qr">${qrGrid((d.id||'').length+3)}</div><div style="font-size:11.5px;color:var(--sub);margin-top:10px;line-height:1.6">到仓<b>出示此码</b>，由<b>仓库人员扫码确认签到</b>——商家端不做签到操作。</div></div></div>
+    <div class="mf"><div class="mbn cancel">关闭</div><div class="mbn ok">🔬 模拟仓库扫码签到</div></div></div>`;
+  document.querySelector('.phone').appendChild(m);
+  m.querySelector('.cancel').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
+  m.querySelector('.ok').onclick=()=>{d.signed=true;d.signTime=d.signTime||'00:12';m.remove();toast('仓库已扫码确认签到，待逐张核验交接入仓');rerenderSignin();};}
 function bindSignin(el,d){
   el.querySelectorAll('.dl-acts .a').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
-    if(a==='sign')confirmDialog({title:'确认到仓签到？',body:`「${d.warehouse}」签到后由<b>仓库扫码</b>逐张核验交接入仓（商家不操作交接）。`,okText:'签到',onOk:()=>{if(d.status==='待送货'||d.status==='已预约')d.status='已签到';toast('签到成功，待仓库扫码交接');rerenderSignin();}});
+    // 签到与预约相互独立；签到由仓库扫码确认，商家端只出示签到码
+    if(a==='sign')dvSignQR(d);
+    else if(a==='book')dvBookSheet(d);
+    else if(a==='bookmenu')sheet([{label:'改约时段',onClick:()=>dvBookSheet(d)},{label:'取消预约',danger:1,onClick:()=>{d.booked=false;d.bookWindow='';toast('已取消预约，仍可到仓直接签到');rerenderSignin();}}]);
     else if(a==='detail')openSignDetail(d);
-    else if(a==='fwd')sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')},{label:'复制送货单号',onClick:()=>toast('已复制 '+d.id)}]);
   });
 }
 let _signList=null;
@@ -208,13 +223,16 @@ function renderSigninInto(list){
   const DL=window.FM.DB.deliveries||[];
   list.innerHTML=skel(2);
   setTimeout(()=>{
-    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无预约送货单</h4><p>电脑端打印首个标签后，系统按入库仓库自动生成送货单</p></div>`;return;}
+    if(!DL.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('sign')}</div><h4>暂无送货单</h4><p>电脑端打印首个标签后，系统按入库仓库自动生成送货单</p></div>`;return;}
     list.innerHTML='';
     DL.forEach(d=>{const w=document.createElement('div');w.innerHTML=signinCard(d);const c=w.firstElementChild;list.appendChild(c);bindSignin(c,d);});
   },420);
 }
 function openSignin(){
   if(window.FM.ensureDeliveriesFromPrint)window.FM.ensureDeliveriesFromPrint(); // 电脑端打印首标签→自动生成送货单(演示)
+  if(!window.FM.DB._delivDemo){window.FM.DB._delivDemo=true;const DL=window.FM.DB.deliveries||[];   // 演示预约/签到解耦的各种态
+    if(DL[0]){DL[0].booked=true;DL[0].bookWindow='23:00–02:00';}          // 已预约·未签到
+    if(DL[1]){DL[1].signed=true;DL[1].signTime='00:12';}}                 // 未预约·已签到(仓库已扫码)
   pushPage({title:'送货签到',body:`
     <div class="dl-banner"><span>送货单由<b>电脑端打印首个标签</b>时按入库仓库自动生成（移动端不打印标签）。可转发给司机；签到后由<b>仓库扫码</b>核验交接入仓。</span></div>
     <div class="dl-priv"><span>转发隐私：不允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
@@ -233,7 +251,7 @@ function openSignDetail(d){
   const box=inner=>`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">${inner}</div>`;
   const skuFrom=c=>'SKU'+String(c||'').split('-').pop();
   const rows=dvSku(d);const totQty=rows.reduce((s,r)=>s+r.qty,0),totIn=rows.reduce((s,r)=>s+r.inQty,0);
-  const signed=d.status!=='待送货'&&d.status!=='已预约';
+  const signed=d.signed||d.status==='交接完成';
   pushPage({title:'送货单详情',navbar:true,body:`
     ${sec('单据信息')}
     ${box(
@@ -244,10 +262,10 @@ function openSignDetail(d){
       kv('送货方','绿鲜源蔬果（新加坡）')+
       kv('货主类型','3P')+
       kv('交货方式','直送仓')+
-      kv('预约到货时间',`${d.deliver} ${d.window||''}`)+
+      kv('预约送货时段',d.booked?`${d.deliver} ${d.bookWindow||d.window}（已预约）`:'未预约（可到仓直接签到）')+
       kv('配送日期',d.deliver)+
       kv('履约波次',dvWave(d))+
-      kv('签到时间',signed?`已定位签到 ${d.warehouse} · 已通过`:'未签到')
+      kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认 · ${d.warehouse}`:'未签到')
     )}
     ${sec('交货地点信息')}
     ${box(
@@ -264,7 +282,7 @@ function openSignDetail(d){
       rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · 已入库 <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b></div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
     )}
     <div style="height:8px"></div>`,
-    footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" id="dl-dfwd">转发给司机</button>${d.status==='已签到'?`<button class="btn" style="flex:1;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="flex:1" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}</div>`,
+    footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" id="dl-dfwd">转发给司机</button>${(d.signed&&d.status!=='交接完成')?`<button class="btn" style="flex:1;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="flex:1" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}</div>`,
     mount:(p)=>{
       p.querySelector('#dl-dfwd').onclick=()=>sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')}]);
       const wms=p.querySelector('#dl-wms');

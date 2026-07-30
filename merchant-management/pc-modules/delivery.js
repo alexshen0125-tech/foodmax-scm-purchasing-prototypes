@@ -92,22 +92,23 @@
         <td><b style="font-size:15px">${dvShould(d)}</b> <span style="color:var(--ts)">/ ${dvIn(d)}</span></td>
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
-          :`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">待仓库交接</span>':`<button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button> <button class="btn btn-o btn-sm" onclick="deliv_forward('${d.id}')">转发</button>`}</td>
+          :`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">待仓库交接</span>':`<button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button> <button class="btn btn-o btn-sm" onclick="deliv_forward('${d.id}')">转发</button>`}</td>
       </tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   }
   window.deliv_togglePrivacy=function(){DB.delivShareItems=!DB.delivShareItems;render();toast(DB.delivShareItems?'已允许对方查看商品清单':'已关闭商品清单查看','info');};
   function dvGet(id){return (DB.deliveries||[]).find(x=>x.id==id);}
   window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
-    modal(`<div class="mc-hd"><h3>送货签到 · ${d.warehouse}</h3><p>送货单 ${d.id} · 备货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    modal(`<div class="mc-hd"><h3>送货签到码 · ${d.warehouse}</h3><p>送货单 ${d.id} · 备货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv" style="margin-bottom:14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">送达时段</div><div class="v" style="font-size:13px">${d.deliver} ${d.window}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div></div>
+      <div class="ib ib-b" style="margin-bottom:10px"><span class="i">ℹ️</span>到仓<b>出示此码</b>，由<b>仓库人员扫码确认签到</b>——商家端不做签到操作。</div>
       <div style="background:var(--gl);border-radius:12px;padding:18px 0 14px;text-align:center;margin-bottom:6px">
         <div style="font-weight:700;margin-bottom:12px">送货签到码</div>${qrBlock(d.id)}
-        <div style="font-size:12px;color:var(--ts);margin-top:12px">到仓后扫码签到，随后仓库逐张核验交接入仓</div></div>
-    </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button><button class="btn btn-p" onclick="deliv_doSign('${d.id}')">确认已签到</button></div>`);
+        <div style="font-size:12px;color:var(--ts);margin-top:12px">仓库扫码签到后，逐张核验交接入仓</div></div>
+    </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button><button class="btn btn-o" onclick="deliv_doSign('${d.id}')">🔬 演示：模拟仓库扫码签到</button></div>`);
   };
-  // 签到：与预约相互独立——未预约也可直接签到；只置 signed，不动预约态/入库态
-  window.deliv_doSign=function(id){const d=dvGet(id);if(!d)return;d.signed=true;d.signTime=d.signTime||'00:12';closeModal();render();toast(`${id} 已签到${d.booked?'':'（未预约·直接到仓签到）'}，仓库可逐张核验交接入仓`,'ok');};
+  // 签到由【仓库人员扫码】确认——商家端只出示签到码、不做签到操作。此处为【演示】模拟仓库扫码；与预约相互独立(未预约也可被扫码签到)
+  window.deliv_doSign=function(id){const d=dvGet(id);if(!d)return;d.signed=true;d.signTime=d.signTime||'00:12';closeModal();render();toast(`${id} 仓库已扫码确认签到${d.booked?'':'（未预约·直接到仓签到）'}，可逐张核验交接入仓`,'ok');};
   // 预约送货：选到仓时段（与签到解耦）
   window.deliv_book=function(id){const d=dvGet(id);if(!d)return;
     modal(`<div class="mc-hd"><h3>${d.booked?'改约送货':'预约送货'} · ${d.warehouse}</h3><p>送货单 ${d.id}</p><button class="mc-x" onclick="closeModal()">×</button></div>
