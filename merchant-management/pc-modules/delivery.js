@@ -137,51 +137,42 @@
   }
   function detailPage(d){
     const meta=DC_META[d.warehouse]||{};const lines=dvDetailLines(d);const inbound=d.status=='交接完成';
-    const ownerType=DB.merchant.channel=='平台商家'?'3P':'自营';
-    const signTxt=(d.signed||d.status=='交接完成')?`${d.deliver} ${d.signTime||'00:12'} 定位签到 ${d.warehouse} 已通过`:'未签到';
+    const dash=v=>(v===undefined||v===null||v==='')?'—':v;
+    const bkChip=d.booked?'<span class="tag t-y"><span class="dot"></span>已预约</span>':'<span class="tag t-gr"><span class="dot"></span>未预约</span>';
+    const sgChip=inbound?'<span class="tag t-g"><span class="dot"></span>已入库</span>':(d.signed?'<span class="tag t-b"><span class="dot"></span>已签到</span>':'<span class="tag t-gr"><span class="dot"></span>未签到</span>');
     return `
     <div class="row" style="align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <button class="btn btn-o btn-sm" onclick="deliv_closeDetail()">← 返回送货单列表</button>
-      <span class="mono" style="font-weight:700">${d.id}</span>${dvTag(d.status)}
-      <span style="font-size:12.5px;color:var(--ts)">备货单 ${d.pickId||'-'} · ${d.deliver} ${d.window||''}</span>
+      <span class="mono" style="font-weight:700">${d.id}</span>${bkChip}${sgChip}
     </div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:18px 22px">
-      ${secBar('单据信息',dvTag(d.status))}
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px 40px">
+      ${secBar('单据信息')}
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px 40px">
         ${kvItem('送货单号',`<span class="mono">${d.id}</span>`)}
-        ${kvItem('来源单号（备货单）',`<span class="mono">${d.pickId||'-'}</span>`)}
-        ${kvItem('预约类型',d.bizType||'预售品')}
-        ${kvItem('入库仓库',d.warehouse)}
-        ${kvItem('送货方',DB.merchant.name)}
-        ${kvItem('货主类型',ownerType)}
-        ${kvItem('货主（买手）名称',DB.merchant.name)}
-        ${kvItem('交货方式','直送仓')}
-        ${kvItem('交货地点',d.warehouse)}
-        ${kvItem('预约送货时段',d.booked?`${d.deliver} ${d.bookWindow||d.window}（已预约）`:'未预约（可到仓直接签到）')}
-        ${kvItem('配送日期',d.deliver)}
-        ${kvItem('履约波次','全天达')}
+        ${kvItem('来源单号（备货单）',`<span class="mono">${dash(d.pickId)}</span>`)}
+        ${kvItem('入库仓库',dash(d.warehouse))}
+        ${kvItem('送达时段',`${d.deliver} ${dash(d.window)}`)}
+        ${kvItem('应送货',`${dvShould(d)} 件`)}
+        ${kvItem('已入库',`${dvIn(d)} 件`)}
+        ${kvItem('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')}
+        ${kvItem('签到时间',(d.signed||inbound)?`${d.deliver} ${d.signTime||'00:12'} 仓库扫码确认`:'未签到')}
+        ${kvItem('交接时间',inbound?`${d.deliver} 已交接入仓`:'未交接')}
       </div>
-      <div style="border-top:1px dashed var(--bd2);margin-top:16px;padding-top:14px">${kvItem('签到时间',signTxt)}</div>
     </div></div>
-    <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:18px 22px">
+    ${(meta.addr||(meta.day&&meta.day[0]))?`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:18px 22px">
       ${secBar('交货地点信息')}
-      <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:18px 40px">
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${kvItem('交货地点',d.warehouse)}
-          ${kvItem('白班收货人',(meta.day||[]).join('　'))}
-          ${kvItem('夜班收货人',(meta.night||[]).join('　'))}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:16px">
-          ${kvItem('详细地址',meta.addr)}
-          ${kvItem('园区可入门位置',meta.gate)}
-        </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px 40px">
+        ${kvItem('入库仓库',dash(d.warehouse))}
+        ${kvItem('详细地址',dash(meta.addr))}
+        ${kvItem('送货联系人',dash(meta.day&&meta.day[0]?meta.day[0].split(' ')[0]:''))}
+        ${kvItem('联系电话',dash(meta.day&&meta.day[0]?(meta.day[0].split(' ')[1]||''):''))}
       </div>
-    </div></div>
-    <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 件数（成品）</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>品牌</th><th>规格</th><th>SKU单位</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">已入库数量</th></tr></thead><tbody>
-      ${lines.map((r,i)=>`<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.brand}</td><td>${r.spec}</td><td>${r.skuUnit}</td><td style="text-align:right">${r.orderQty.toFixed(2)}</td><td style="text-align:right">${r.bookQty.toFixed(2)}</td><td style="text-align:right;${inbound?'color:var(--gd);font-weight:600':'color:var(--ts)'}">${r.inQty.toFixed(2)}</td></tr>`).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+    </div></div>`:''}
+    <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">已入库数量</th></tr></thead><tbody>
+      ${lines.map((r,i)=>`<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td><td style="text-align:right">${r.bookQty}</td><td style="text-align:right;${r.inQty>0?'color:var(--gd);font-weight:600':'color:var(--ts)'}">${r.inQty}</td></tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
       </tbody></table></div></div>
-      ${d.status=='已签到'?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
+      ${(d.signed&&!inbound)?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
     </div>`;
   }
   // 送货单不再预置，改为「打印第一个标签时自动生成」（见 window.genDeliveryOnPrint，由打印标签页触发）

@@ -257,25 +257,20 @@ function openSignDetail(d){
     ${box(
       kv('送货单号',`<span style="font-family:monospace">${d.id}</span>`)+
       kv('来源单号(备货单)',`<span style="font-family:monospace">${d.pickId||'-'}</span>`)+
-      kv('预约类型','预售品')+
       kv('入库仓库',d.warehouse)+
-      kv('送货方','绿鲜源蔬果（新加坡）')+
-      kv('货主类型','3P')+
-      kv('交货方式','直送仓')+
-      kv('预约送货时段',d.booked?`${d.deliver} ${d.bookWindow||d.window}（已预约）`:'未预约（可到仓直接签到）')+
-      kv('配送日期',d.deliver)+
-      kv('履约波次',dvWave(d))+
-      kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认 · ${d.warehouse}`:'未签到')
+      kv('送达时段',`${d.deliver} ${d.window||''}`)+
+      kv('应送货',`${totQty} 件`)+
+      kv('已入库',`${totIn} 件`)+
+      kv('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')+
+      kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认`:'未签到')+
+      kv('交接时间',d.status==='交接完成'?`${d.deliver} 已交接入仓`:'未交接')
     )}
-    ${sec('交货地点信息')}
-    ${box(
-      kv('交货地点',d.warehouse)+
+    ${(ADDR[d.warehouse]||meta.d)?sec('交货地点信息')+box(
+      kv('入库仓库',d.warehouse)+
       kv('详细地址',ADDR[d.warehouse])+
-      kv('白班收货人',meta.d)+
-      kv('夜班收货人',meta.n)+
-      kv('园区可入门位置',meta.g)
-    )}
-    <div class="dl-qrcard"><div class="qt">送货签到码</div><div class="dl-qr">${qrGrid((d.id||'').length+3)}</div><div style="font-size:12px;color:var(--sub);margin-top:10px">到仓出示，随后由仓库逐张扫码交接入仓</div></div>
+      kv('送货联系人',meta.d?String(meta.d).split(' ')[0]:'')+
+      kv('联系电话',meta.d?(String(meta.d).split(' ')[1]||''):'')
+    ):''}
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">已入库(件)</div><div class="v">${totIn}</div></div></div>
     ${sec('商品明细 · 按 SKU 件数')}
     ${box(
