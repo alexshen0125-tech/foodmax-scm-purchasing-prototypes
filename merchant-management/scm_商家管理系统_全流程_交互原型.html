@@ -1441,7 +1441,7 @@ PAGES['m-product']=()=>{
       <td style="white-space:nowrap">${stockCell}</td>
       <td><span class="tag ${st[1]}">${st[0]}</span></td>
       <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td>${isForced?`<td><div class="reason-cell" title="${(p.reject||'平台强制下架').replace(/"/g,'&quot;')}">${p.reject||'平台强制下架'}</div></td>`:''}<td style="white-space:nowrap">${skuRowOps(p,i,s,k)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="${isForced?14:13}">`<div class="empty"><div class="e-ic">${isRec?'🗑️':isReview?'🕓':isRejected?'⛔':isForced?'🚫':'📭'}</div><div class="e-t">${isRec?'回收站暂无商品':isReview?'暂无待审核商品':isRejected?'暂无审核拒绝的商品':isForced?'暂无被强制下架的商品':'该分类暂无商品'}</div>${isRejected?'<div class="e-s">平台驳回的商品会出现在这里，可查看字段审核意见后修改重提</div>':isForced?'<div class="e-s">平台因品控/资质/违规强制下架的 SKU 会出现在这里，含下架原因，整改后可重新提报</div>':''}</div></td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="${isForced?14:13}"><div class="empty"><div class="e-ic">${isRec?'🗑️':isReview?'🕓':isRejected?'⛔':isForced?'🚫':'📭'}</div><div class="e-t">${isRec?'回收站暂无商品':isReview?'暂无待审核商品':isRejected?'暂无审核拒绝的商品':isForced?'暂无被强制下架的商品':'该分类暂无商品'}</div>${isRejected?'<div class="e-s">平台驳回的商品会出现在这里，可查看字段审核意见后修改重提</div>':isForced?'<div class="e-s">平台因品控/资质/违规强制下架的 SKU 会出现在这里，含下架原因，整改后可重新提报</div>':''}</div></td></tr>`}
     </tbody></table></div>${prodPager(PG)}</div></div>`;
 };
 function toggleExp(id){const k=DB.exp.indexOf(id);if(k<0)DB.exp.push(id);else DB.exp.splice(k,1);render();}
