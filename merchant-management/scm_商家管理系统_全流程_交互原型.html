@@ -1395,7 +1395,7 @@ PAGES['m-product']=()=>{
   const selIds=rows.filter(r=>skuSelectable(r.p,r.s,f)).map(r=>r.s.skuId);const allSel=selIds.length&&selIds.every(id=>DB.sel.includes(id));
   const recN=recycleCount();const isRec=f=='recycle';const isReview=f=='review',isRejected=f=='rejected',isForced=f=='forced',isSimple=isReview||isRejected||isForced;
   return `${assume(['Q1','Q2','Q6'])}
-  ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>批量修改</b>（商品名称 / 商品别名，中英双语）走<b>表格导入</b>、不依赖勾选：选改名称还是别名 → 下载已预填当前值的模板 → 上传按 <b>SKU 编码</b>匹配；名称/别名是 <b>SPU 级</b>字段，同一商品多个规格共用，组内新值不一致则整组报错。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
+  ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>批量修改</b>（商品名称 / 商品别名，中英双语）走<b>表格导入</b>、不依赖勾选：选改名称还是别名 → 下载模板（3 列：SKU 编码 / 新中文 / 新英文，编码已带出，留空即不变）→ 上传按 <b>SKU 编码</b>匹配；名称/别名是 <b>SPU 级</b>字段，同一商品多个规格共用，组内新值不一致则整组报错。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">品类</div><select id="pf-cat" onchange="DB.pFilter.cat=this.value;DB.pPage=1;render()" style="min-width:150px"><option value="">全部品类</option>${Object.keys(CATS).map(c=>`<option ${pf.cat==c?'selected':''}>${c}</option>`).join('')}</select></div>
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">商品名称 / 编码</div><input id="pf-name" value="${pf.name||''}" placeholder="输入名称或 SPU 编码" onkeydown="if(event.key=='Enter'){DB.pFilter.name=this.value.trim();DB.pPage=1;render()}" style="min-width:220px"></div>
@@ -1640,7 +1640,7 @@ function renderImpPreview(){IMP_ROWS=[];DB.products.forEach((p,pi)=>p.skus.forEa
 function doImportUpdate(){let nP=0,nS=0,abn=0;IMP_ROWS.forEach(r=>{const prod=DB.products[r.pi];const sku=prod.skus[r.ki];let ch=false;if(r.newP>0&&r.newP!=r.oldP){sku.price=r.newP;nP++;ch=true;if(priceAbnormal(r.newP,r.cat))abn++;}if(r.newS!=r.oldS){sku.stock=Math.max(0,r.newS);nS++;ch=true;}if(ch){sku.updatedAt=ts();prod.updatedAt=ts();}});closeModal();render();toast(`导入完成：改价 ${nP} · 改库存 ${nS}${abn?` · ${abn} 个 SKU 价格异常已标记`:''}，即时生效`,'ok');}
 /* ===== 批量修改（商品名称 / 商品别名 · 中英双语） =====
    入口：商品列表工具条「✏️ 批量修改」，不依赖勾选（按上传表逐行匹配 SKU 编码）。
-   ① 选修改内容（名称 / 别名，默认「商品名称」）→ ② 下载模板（已预填当前值）→ ③ 上传解析预览 → 确认。
+   ① 选修改内容（名称 / 别名，默认「商品名称」）→ ② 下载模板（3 列：SKU 编码 / 新中文 / 新英文）→ ③ 上传解析预览 → 确认。
    注意：名称/别名是 SPU 级字段，一个 SPU 下多个 SKU 共用。模板按 SKU 编码出行（商家手上的凭据就是
    SKU 编码），同一 SPU 的多行相邻分组；组内新值必须一致，不一致则整组报错、不落库。
    可改范围沿用 skuSelectable：回收站 / 新增待审核 / 待审核·驳回·强制下架的商品不在内。 */
@@ -1650,7 +1650,7 @@ function brScope(){const rows=[];DB.products.forEach((p,pi)=>(p.skus||[]).forEac
   rows.sort((a,b)=>a.spu==b.spu?0:(a.spu<b.spu?-1:1));return rows;}
 function act_batchRename(){if(!brScope().length){toast('暂无可修改的 SKU（回收站、审核中/驳回/强制下架的商品不支持批量修改）','err');return;}
   BR={field:'name',rows:null};
-  modalWide(`<div class="mc-hd"><h3>✏️ 批量修改 · 商品名称 / 商品别名</h3><p>下载模板（已预填当前值）→ 线下改「新中文/新英文」列 → 上传按 SKU 编码逐行更新</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  modalWide(`<div class="mc-hd"><h3>✏️ 批量修改 · 商品名称 / 商品别名</h3><p>下载模板（3 列，SKU 编码已带出）→ 线下填「新中文/新英文」列 → 上传按 SKU 编码逐行更新</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd"><div id="br-body"></div></div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="br-confirm" style="display:none" onclick="doBatchRename()">确认导入更新</button></div>`);
   brRender();}
@@ -1664,28 +1664,27 @@ function brRender(){const isName=BR.field=='name',L=isName?'商品名称':'商�
     </div>
     <div style="font-size:12px;color:var(--ts);margin-top:6px">${isName?'商品名称是买家可见主名称，一次只改名称，不动别名。':'别名用于辅助客户端搜索，多个别名用逗号隔开；一次只改别名，不动名称。'}</div>
   </div>
-  <div class="ib ib-b"><span class="i">ℹ️</span>模板按 <b>SKU 编码</b>匹配，编码不存在 / 不在可改范围的行报错跳过；单次最多 <b>${BR_MAX}</b> 行。${L}为<b>商品(SPU)级</b>字段，同一商品的多个规格共用——模板中同一商品的多行已相邻分组，<b>组内新值必须填一致</b>，不一致整组报错不导入。中英两列可只填一列，留空表示该语言不变。</div>
+  <div class="ib ib-b"><span class="i">ℹ️</span>模板按 <b>SKU 编码</b>匹配，编码不存在 / 不在可改范围的行报错跳过；单次最多 <b>${BR_MAX}</b> 行。中英两列可只填一列，<b>留空表示该语言不变</b>。${L}为<b>商品(SPU)级</b>字段，同一商品的多个规格共用——若同一商品的多个 SKU 都填了且新值不一致，该组整体报错不导入（上传后的预览表会标出所属商品与改前值供核对）。</div>
   <div class="row" style="gap:12px;margin:8px 0">
     <button class="btn btn-o" onclick="brDownloadTpl()">⬇️ 下载${L}模板（${sc.length} 行）</button>
     <div class="up" style="flex:1" onclick="brPreview()"><div class="uic">📄</div><div class="ut">点击上传已修改的${L}表</div><div class="us">演示：点此模拟解析上传文件</div></div>
   </div>
-  <div style="font-size:12px;color:var(--ts);margin-bottom:6px">模板字段：<span class="mono">SKU 编码</span>、<span class="mono">所属商品(SPU)</span>、<span class="mono">当前中文${L}</span>、<span class="mono">当前英文${L}</span>、<span class="mono">${isName?'商品新中文名称':'新中文别名'}</span>、<span class="mono">${isName?'商品新英文名称':'新英文别名'}</span></div>
+  <div style="font-size:12px;color:var(--ts);margin-bottom:6px">模板字段（3 列）：<span class="mono">SKU 编码</span>、<span class="mono">${isName?'商品新中文名称':'新中文别名'}</span>、<span class="mono">${isName?'商品新英文名称':'新英文别名'}</span>　·　下载时 SKU 编码已带出，只填新值两列</div>
   <div id="br-preview"></div>`;
   if(BR.rows)brRenderPreview();}
 /* 下载模板：真实产出文件（UTF-8 BOM 的 CSV，Excel 双击可正常打开中文）。
-   每个可改 SKU 一行，同一 SPU 的多行相邻；「新中文/新英文」列预填当前值，商家只改要改的行。 */
+   三列——SKU 编码 / 新中文 / 新英文。SKU 编码已带出（免商家回列表抄编码），新值两列留空由商家填；
+   留空即该语言不变。改前值与所属商品不进模板，在上传后的预览表里给出核对。 */
 function brDownloadTpl(){const isName=BR.field=='name',L=isName?'名称':'别名';
-  const head=['SKU 编码','所属商品(SPU)','所属商品编码',`当前中文${isName?'商品名称':'商品别名'}`,`当前英文${isName?'商品名称':'商品别名'}`,isName?'商品新中文名称':'新中文别名',isName?'商品新英文名称':'新英文别名'];
+  const head=['SKU 编码',isName?'商品新中文名称':'新中文别名',isName?'商品新英文名称':'新英文别名'];
   const q=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
   const lines=[head.map(q).join(',')];
-  brScope().forEach(r=>{const p=DB.products[r.pi];
-    const zh=isName?(p.name||''):(p.alias||''),en=isName?(p.nameEn||brEn(p.name)):(p.aliasEn||brEn(p.alias));
-    lines.push([r.skuId,p.name,p.id,zh,en,zh,en].map(q).join(','));});
+  brScope().forEach(r=>lines.push([r.skuId,'',''].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=`批量修改商品${L}模板_${lines.length-1}行.csv`;document.body.appendChild(a);a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
-  toast(`已下载${L}模板：${lines.length-1} 行，新值列已预填当前值，只改要改的行`,'ok');}
+  toast(`已下载${L}模板：${lines.length-1} 行 SKU 编码已带出，填新中文/新英文${L}即可，留空表示不变`,'ok');}
 /* 模拟解析：前两组给出改后值；再造一条「同 SPU 组内不一致」与一条「编码不存在」，演示校验 */
 function brPreview(){const isName=BR.field=='name';const sc=brScope().slice(0,BR_MAX);
   BR.rows=sc.map(r=>{const p=DB.products[r.pi];const zh=isName?(p.name||''):(p.alias||'');
