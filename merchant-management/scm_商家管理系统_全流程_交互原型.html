@@ -1666,12 +1666,26 @@ function brRender(){const isName=BR.field=='name',L=isName?'商品名称':'商�
   </div>
   <div class="ib ib-b"><span class="i">ℹ️</span>模板按 <b>SKU 编码</b>匹配，编码不存在 / 不在可改范围的行报错跳过；单次最多 <b>${BR_MAX}</b> 行。${L}为<b>商品(SPU)级</b>字段，同一商品的多个规格共用——模板中同一商品的多行已相邻分组，<b>组内新值必须填一致</b>，不一致整组报错不导入。中英两列可只填一列，留空表示该语言不变。</div>
   <div class="row" style="gap:12px;margin:8px 0">
-    <button class="btn btn-o" onclick="toast('已导出 ${sc.length} 行${L}模板（含 SKU 编码 / 所属商品 / 当前中英${L}，新值列已预填当前值）','ok')">⬇️ 下载${L}模板（${sc.length} 行）</button>
+    <button class="btn btn-o" onclick="brDownloadTpl()">⬇️ 下载${L}模板（${sc.length} 行）</button>
     <div class="up" style="flex:1" onclick="brPreview()"><div class="uic">📄</div><div class="ut">点击上传已修改的${L}表</div><div class="us">演示：点此模拟解析上传文件</div></div>
   </div>
   <div style="font-size:12px;color:var(--ts);margin-bottom:6px">模板字段：<span class="mono">SKU 编码</span>、<span class="mono">所属商品(SPU)</span>、<span class="mono">当前中文${L}</span>、<span class="mono">当前英文${L}</span>、<span class="mono">${isName?'商品新中文名称':'新中文别名'}</span>、<span class="mono">${isName?'商品新英文名称':'新英文别名'}</span></div>
   <div id="br-preview"></div>`;
   if(BR.rows)brRenderPreview();}
+/* 下载模板：真实产出文件（UTF-8 BOM 的 CSV，Excel 双击可正常打开中文）。
+   每个可改 SKU 一行，同一 SPU 的多行相邻；「新中文/新英文」列预填当前值，商家只改要改的行。 */
+function brDownloadTpl(){const isName=BR.field=='name',L=isName?'名称':'别名';
+  const head=['SKU 编码','所属商品(SPU)','所属商品编码',`当前中文${isName?'商品名称':'商品别名'}`,`当前英文${isName?'商品名称':'商品别名'}`,isName?'商品新中文名称':'新中文别名',isName?'商品新英文名称':'新英文别名'];
+  const q=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const lines=[head.map(q).join(',')];
+  brScope().forEach(r=>{const p=DB.products[r.pi];
+    const zh=isName?(p.name||''):(p.alias||''),en=isName?(p.nameEn||brEn(p.name)):(p.aliasEn||brEn(p.alias));
+    lines.push([r.skuId,p.name,p.id,zh,en,zh,en].map(q).join(','));});
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`批量修改商品${L}模板_${lines.length-1}行.csv`;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);
+  toast(`已下载${L}模板：${lines.length-1} 行，新值列已预填当前值，只改要改的行`,'ok');}
 /* 模拟解析：前两组给出改后值；再造一条「同 SPU 组内不一致」与一条「编码不存在」，演示校验 */
 function brPreview(){const isName=BR.field=='name';const sc=brScope().slice(0,BR_MAX);
   BR.rows=sc.map(r=>{const p=DB.products[r.pi];const zh=isName?(p.name||''):(p.alias||'');
