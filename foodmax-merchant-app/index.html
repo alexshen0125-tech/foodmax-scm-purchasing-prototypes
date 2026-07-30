@@ -286,20 +286,48 @@ function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM
     <span class="pill">${r?'设计系统 · 铺开中':'规划中 · 即将上线'}</span></div>`});}
 window.FM.openModule=openModule;
 
+/* 首页经营概览（对齐 PC 工作台：今日默认/昨日/近7天/自定义 + 今日手动刷新；mock 数值与 PC 同源） */
+let HD_PERIOD='today',HD_TICK=0,HD_AT='09:41',HD_RANGE={from:'2026-07-01',to:'2026-07-29'};
+function homeDash(){
+  const p=HD_PERIOD;
+  if(p==='today'){const t=HD_TICK,sales=3852.33+t*68.40,orders=286+t*4,cover=Math.min(72,58.0+t*0.4);
+    return {sales:sales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),st:18.5,orders:''+orders,avg:(sales/orders).toFixed(2),cover:cover.toFixed(1),tl:'较昨日',note:'今日实时 · 截至 '+HD_AT};}
+  if(p==='custom'){const r=HD_RANGE,days=Math.max(1,Math.round((Date.parse(r.to)-Date.parse(r.from))/86400000)+1),sales=days*2680.5,orders=days*182;
+    return {sales:sales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),st:5.6,orders:orders.toLocaleString('en-US'),avg:(sales/orders).toFixed(2),cover:'74.0',tl:'环比',note:`${r.from} ~ ${r.to}（${days} 天）`};}
+  const M={yesterday:{sales:'11,544.95',st:14.83,orders:'741',avg:'15.58',cover:'62.0',tl:'较前日',note:'昨日有效订单口径'},'7d':{sales:'78,220.40',st:6.3,orders:'5,102',avg:'15.33',cover:'86.0',tl:'较上周',note:'近 7 天累计'}};
+  return M[p]||M.yesterday;
+}
+window.homeSetPeriod=k=>{if(k==='custom'){homeCustom();return;}HD_PERIOD=k;renderHome();};
+window.homeRefresh=()=>{HD_TICK++;const n=new Date(),pad=x=>(''+x).padStart(2,'0');HD_AT=pad(n.getHours())+':'+pad(n.getMinutes());renderHome();toast('已刷新今日实时数据');};
+window.homeCustom=()=>{const r=HD_RANGE;const m=document.createElement('div');m.className='modal-mask';
+  const inS='width:100%;height:44px;border:1px solid var(--line);border-radius:11px;padding:0 12px;font-size:15px;font-family:inherit;color:var(--ink);margin-top:5px';
+  m.innerHTML=`<div class="modal"><div class="mt">自定义时间段</div>
+    <div class="mb" style="text-align:left"><label style="font-size:12px;color:var(--sub);display:block">起始日期<input id="hd-from" type="date" value="${r.from}" style="${inS}"></label>
+    <label style="font-size:12px;color:var(--sub);display:block;margin-top:12px">结束日期<input id="hd-to" type="date" value="${r.to}" style="${inS}"></label></div>
+    <div class="mf"><div class="mbn cancel">取消</div><div class="mbn ok">查询</div></div></div>`;
+  document.querySelector('.phone').appendChild(m);
+  const close=()=>m.remove();m.querySelector('.cancel').onclick=close;m.onclick=e=>{if(e.target===m)close();};
+  m.querySelector('.ok').onclick=()=>{const f=m.querySelector('#hd-from').value,t=m.querySelector('#hd-to').value;
+    if(!f||!t||Date.parse(f)>Date.parse(t)){toast('请选择有效日期区间');return;}HD_RANGE={from:f,to:t};HD_PERIOD='custom';close();renderHome();};};
 function renderHome(){
+  const hd=homeDash();
   const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${t.badge?`<span class="bdg ${t.amber?'amber':''}">${t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
   const deliver=DELIVER.map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${d.badge?`<span class="bdg">${d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
   document.getElementById('v-home').innerHTML=`<div class="stagger">
     <div class="hm-top"><div class="hm-logo">${svg('leaf')}</div>
       <div class="hm-store"><div class="nm">鲜丰食材 · Fresh Harvest Pte Ltd</div><div class="sub"><span class="dot"></span>正常营业 · Food Max 优选商家</div></div>
       <div class="hm-bell">${svg('bell')}<span class="rd"></span></div></div>
-    <div class="hero"><div class="lab">今日实时销售额 <span class="ln"></span> 截至 09:41</div>
-      <div class="big disp"><span class="c">S$</span>3,852.33</div>
-      <span class="trend">${svg('trend','style="width:13px;height:13px;stroke:#fff"')} 较昨日 +18.5%</span>
-      <div class="row2"><div class="m"><div class="v disp">345</div><div class="k">销量</div></div>
-        <div class="m"><div class="v disp">98</div><div class="k">活跃客户</div></div>
-        <div class="m"><div class="v disp">62%</div><div class="k">动销覆盖</div></div>
-        <div class="ar">${svg('arrow')}</div></div></div>
+    <div class="hero">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:13px">
+        ${[['today','今日'],['yesterday','昨日'],['7d','近7天'],['custom','自定义']].map(x=>`<span onclick="homeSetPeriod('${x[0]}')" style="font-size:11.5px;font-weight:600;padding:5px 12px;border-radius:20px;cursor:pointer;${HD_PERIOD===x[0]?'background:#fff;color:var(--emerald-2)':'background:rgba(255,255,255,.18);color:#fff'}">${x[1]}</span>`).join('')}
+        ${HD_PERIOD==='today'?`<span onclick="homeRefresh()" style="margin-left:auto;font-size:12px;color:#fff;opacity:.92;cursor:pointer">↻ 刷新</span>`:''}
+      </div>
+      <div class="lab">销售额 <span class="ln"></span> ${hd.note}</div>
+      <div class="big disp"><span class="c">S$</span>${hd.sales}</div>
+      <span class="trend">${svg('trend','style="width:13px;height:13px;stroke:#fff"')} ${hd.tl} ${hd.st>=0?'+':'−'}${Math.abs(hd.st)}%</span>
+      <div class="row2"><div class="m"><div class="v disp">${hd.orders}</div><div class="k">订单量</div></div>
+        <div class="m"><div class="v disp"><span style="font-size:15px">S$</span>${hd.avg}</div><div class="k">客单价</div></div>
+        <div class="m"><div class="v disp">${hd.cover}%</div><div class="k">动销覆盖</div></div></div></div>
     <div class="todobar"><div class="todo"><div class="n">12</div><div class="t">待发货</div><span class="pin"></span></div>
       <div class="todo"><div class="n warn">3</div><div class="t">待处理售后</div></div>
       <div class="todo"><div class="n warn">8</div><div class="t">缺货商品</div></div>
