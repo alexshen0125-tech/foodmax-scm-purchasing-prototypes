@@ -218,7 +218,9 @@ function bindSku(el,g,s,gi,si,state){
 // 商品详情(只读)：点击卡片信息区进入，展示 SPU 信息 + 全部 SKU 规格(对齐 PC act_spuDetail)
 function openGoodsDetail(g,s){
   const on=isOnShelf(g);
-  const info=[['商品名称',g.n],['品类',g.cat],['税率',taxRate(g)+'%'],
+  // 名称/别名均为 SPU 级字段，中英双语（PC 端支持「批量修改」按 SKU 编码导表更新，App 只读展示）
+  const info=[['商品名称',g.n],['商品名称(EN)',g.nEn||'—'],['商品别名',g.alias||'—'],['商品别名(EN)',g.aliasEn||'—'],
+    ['品类',g.cat],['税率',taxRate(g)+'%'],
     ['售卖模式',g.consign?'<span class="consign-b" style="margin:0 5px 0 0">寄售</span>库存由货品库存决定、逐规格不可维护':'自售（经销买断）'],
     ['BCRS 押金',g.bcrs?`<span class="bcrs-b" style="margin:0 5px 0 0">BCRS</span>押金单价 S$${(+g.bcrsDeposit).toFixed(2)}/最小售卖单位（单容器 S$${BCRS_UNIT_PRICE.toFixed(2)}，不计 GST）`:'不支持'],
     ['累计销量',(g.sales||0)+' 件'],['创建时间',g.createdAt||'—'],['更新时间',g.updatedAt||'—']];

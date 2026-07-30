@@ -1249,7 +1249,7 @@ const TR=(function(){
     .tr-re{flex:0 0 auto;font-size:11.5px;color:#2563EB;background:none;border:none;cursor:pointer;white-space:nowrap;font-family:inherit;}
     .tr-re:hover{text-decoration:underline;}`;
   document.head.appendChild(st);
-  return {init};
+  return {init,translate};
 })();
 function act_editShop(){
   const s=DB.shop;const allCats=['叶菜类','根茎类','瓜茄类','菌菇类','鲜活水产','豆制品','干货','调味'];
@@ -1395,7 +1395,7 @@ PAGES['m-product']=()=>{
   const selIds=rows.filter(r=>skuSelectable(r.p,r.s,f)).map(r=>r.s.skuId);const allSel=selIds.length&&selIds.every(id=>DB.sel.includes(id));
   const recN=recycleCount();const isRec=f=='recycle';const isReview=f=='review',isRejected=f=='rejected',isForced=f=='forced',isSimple=isReview||isRejected||isForced;
   return `${assume(['Q1','Q2','Q6'])}
-  ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
+  ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>批量修改</b>（商品名称 / 商品别名，中英双语）走<b>表格导入</b>、不依赖勾选：选改名称还是别名 → 下载已预填当前值的模板 → 上传按 <b>SKU 编码</b>匹配；名称/别名是 <b>SPU 级</b>字段，同一商品多个规格共用，组内新值不一致则整组报错。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">品类</div><select id="pf-cat" onchange="DB.pFilter.cat=this.value;DB.pPage=1;render()" style="min-width:150px"><option value="">全部品类</option>${Object.keys(CATS).map(c=>`<option ${pf.cat==c?'selected':''}>${c}</option>`).join('')}</select></div>
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">商品名称 / 编码</div><input id="pf-name" value="${pf.name||''}" placeholder="输入名称或 SPU 编码" onkeydown="if(event.key=='Enter'){DB.pFilter.name=this.value.trim();DB.pPage=1;render()}" style="min-width:220px"></div>
@@ -1419,7 +1419,7 @@ PAGES['m-product']=()=>{
       <button class="btn btn-o btn-sm" ${selN?'':'disabled'} style="${selN?'color:var(--r);border-color:var(--r)':''}" onclick="act_batchRecycle()">移入回收站</button>
       ${selN?`<button class="btn btn-link btn-sm" onclick="DB.sel=[];render()">取消</button>`:''}
       <span style="width:1px;height:18px;background:var(--bd);align-self:center"></span>
-      <button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button>
+      <button class="btn btn-o btn-sm" onclick="act_batchRename()">✏️ 批量修改</button><button class="btn btn-o btn-sm" onclick="act_importUpdate()">📤 导入改价/库存</button><button class="btn btn-o btn-sm" onclick="DB.prodTab='import';render()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_editSpu()">＋ 新建商品</button>
       `}
     </div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
@@ -1508,7 +1508,8 @@ function act_spuDetail(i){
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
       ${dl('最小售卖单位',p.unit)}${dl('净含量',p.netQty?p.netQty+(p.netUnit||''):'—')}
       ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 押金单价 ${money(p.bcrsDeposit)}/最小售卖单位（单容器 S$${BCRS_UNIT_PRICE.toFixed(2)}）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}
-      ${dl('商品别名',p.alias)}
+      ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
+      ${dl('商品别名(EN)',p.aliasEn||'—')}
       ${dl('产地',p.origin)}${dl('品牌',p.brand)}
       ${dl('APP展示效期',p.showExp)}${dl('储存条件',p.storage)}
       ${dl('商品描述',p.desc)}
@@ -1637,6 +1638,82 @@ function renderImpPreview(){IMP_ROWS=[];DB.products.forEach((p,pi)=>p.skus.forEa
   ${IMP_ROWS.map((r,k)=>`<tr><td class="mono">${r.skuId}</td><td>${r.name} · ${r.spec}</td><td>${money(r.oldP)}</td><td><input class="miniprice" value="${r.newP}" oninput="IMP_ROWS[${k}].newP=parseFloat(this.value)||0"></td><td>${r.oldS}</td><td><input class="ministock" value="${r.newS}" oninput="IMP_ROWS[${k}].newS=parseInt(this.value)||0"></td></tr>`).join('')}
   </tbody></table></div>`;document.getElementById('imp-confirm').style.display='';}
 function doImportUpdate(){let nP=0,nS=0,abn=0;IMP_ROWS.forEach(r=>{const prod=DB.products[r.pi];const sku=prod.skus[r.ki];let ch=false;if(r.newP>0&&r.newP!=r.oldP){sku.price=r.newP;nP++;ch=true;if(priceAbnormal(r.newP,r.cat))abn++;}if(r.newS!=r.oldS){sku.stock=Math.max(0,r.newS);nS++;ch=true;}if(ch){sku.updatedAt=ts();prod.updatedAt=ts();}});closeModal();render();toast(`导入完成：改价 ${nP} · 改库存 ${nS}${abn?` · ${abn} 个 SKU 价格异常已标记`:''}，即时生效`,'ok');}
+/* ===== 批量修改（商品名称 / 商品别名 · 中英双语） =====
+   入口：商品列表工具条「✏️ 批量修改」，不依赖勾选（按上传表逐行匹配 SKU 编码）。
+   ① 选修改内容（名称 / 别名，默认「商品名称」）→ ② 下载模板（已预填当前值）→ ③ 上传解析预览 → 确认。
+   注意：名称/别名是 SPU 级字段，一个 SPU 下多个 SKU 共用。模板按 SKU 编码出行（商家手上的凭据就是
+   SKU 编码），同一 SPU 的多行相邻分组；组内新值必须一致，不一致则整组报错、不落库。
+   可改范围沿用 skuSelectable：回收站 / 新增待审核 / 待审核·驳回·强制下架的商品不在内。 */
+let BR=null;const BR_MAX=200;
+const brEn=t=>(t||'').trim()?TR.translate(t.trim(),'zh2en',true):'';
+function brScope(){const rows=[];DB.products.forEach((p,pi)=>(p.skus||[]).forEach((s,ki)=>{if(skuSelectable(p,s,'onsale'))rows.push({pi,ki,spu:p.id,skuId:s.skuId});}));
+  rows.sort((a,b)=>a.spu==b.spu?0:(a.spu<b.spu?-1:1));return rows;}
+function act_batchRename(){if(!brScope().length){toast('暂无可修改的 SKU（回收站、审核中/驳回/强制下架的商品不支持批量修改）','err');return;}
+  BR={field:'name',rows:null};
+  modalWide(`<div class="mc-hd"><h3>✏️ 批量修改 · 商品名称 / 商品别名</h3><p>下载模板（已预填当前值）→ 线下改「新中文/新英文」列 → 上传按 SKU 编码逐行更新</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd"><div id="br-body"></div></div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="br-confirm" style="display:none" onclick="doBatchRename()">确认导入更新</button></div>`);
+  brRender();}
+function brPick(f){if(BR.field==f)return;BR.field=f;BR.rows=null;document.getElementById('br-confirm').style.display='none';brRender();}
+function brRender(){const isName=BR.field=='name',L=isName?'商品名称':'商品别名',sc=brScope();
+  document.getElementById('br-body').innerHTML=`
+  <div class="fr" style="margin-bottom:14px"><label class="fl"><b>*</b>① 选择要修改的内容</label>
+    <div class="row" style="gap:14px">
+      <label class="chip-ck ${isName?'on':''}" onclick="brPick('name')"><input type="radio" name="br-f" ${isName?'checked':''}>商品名称</label>
+      <label class="chip-ck ${isName?'':'on'}" onclick="brPick('alias')"><input type="radio" name="br-f" ${isName?'':'checked'}>商品别名</label>
+    </div>
+    <div style="font-size:12px;color:var(--ts);margin-top:6px">${isName?'商品名称是买家可见主名称，一次只改名称，不动别名。':'别名用于辅助客户端搜索，多个别名用逗号隔开；一次只改别名，不动名称。'}</div>
+  </div>
+  <div class="ib ib-b"><span class="i">ℹ️</span>模板按 <b>SKU 编码</b>匹配，编码不存在 / 不在可改范围的行报错跳过；单次最多 <b>${BR_MAX}</b> 行。${L}为<b>商品(SPU)级</b>字段，同一商品的多个规格共用——模板中同一商品的多行已相邻分组，<b>组内新值必须填一致</b>，不一致整组报错不导入。中英两列可只填一列，留空表示该语言不变。</div>
+  <div class="row" style="gap:12px;margin:8px 0">
+    <button class="btn btn-o" onclick="toast('已导出 ${sc.length} 行${L}模板（含 SKU 编码 / 所属商品 / 当前中英${L}，新值列已预填当前值）','ok')">⬇️ 下载${L}模板（${sc.length} 行）</button>
+    <div class="up" style="flex:1" onclick="brPreview()"><div class="uic">📄</div><div class="ut">点击上传已修改的${L}表</div><div class="us">演示：点此模拟解析上传文件</div></div>
+  </div>
+  <div style="font-size:12px;color:var(--ts);margin-bottom:6px">模板字段：<span class="mono">SKU 编码</span>、<span class="mono">所属商品(SPU)</span>、<span class="mono">当前中文${L}</span>、<span class="mono">当前英文${L}</span>、<span class="mono">${isName?'商品新中文名称':'新中文别名'}</span>、<span class="mono">${isName?'商品新英文名称':'新英文别名'}</span></div>
+  <div id="br-preview"></div>`;
+  if(BR.rows)brRenderPreview();}
+/* 模拟解析：前两组给出改后值；再造一条「同 SPU 组内不一致」与一条「编码不存在」，演示校验 */
+function brPreview(){const isName=BR.field=='name';const sc=brScope().slice(0,BR_MAX);
+  BR.rows=sc.map(r=>{const p=DB.products[r.pi];const zh=isName?(p.name||''):(p.alias||'');
+    const en=isName?(p.nameEn||brEn(p.name)):(p.aliasEn||brEn(p.alias));
+    return {...r,spuName:p.name,oldZh:zh,oldEn:en,newZh:zh,newEn:en};});
+  const byspu={};BR.rows.forEach(r=>(byspu[r.spu]=byspu[r.spu]||[]).push(r));
+  const single=Object.keys(byspu).filter(k=>byspu[k].length==1),multi=Object.keys(byspu).filter(k=>byspu[k].length>1);
+  // ① 两组正常改动（同组多行填一致，校验通过）
+  const demo=isName?[['有机小棠菜','Organic Xiao Tang Cai'],['甜心娃娃菜','Sweet Baby Bok Choy']]:[['小棠菜,青江菜','Xiao Tang Cai, Qing Jiang Cai'],['娃娃菜,黄芽白','Baby Bok Choy, Wong Bok']];
+  single.slice(0,demo.length).forEach((k,d)=>byspu[k].forEach(r=>{r.newZh=demo[d][0];r.newEn=demo[d][1];}));
+  // ② 造一组「同 SPU 组内新值不一致」演示校验拦截
+  if(multi.length){const g=byspu[multi[0]];
+    g[0].newZh=isName?'芥蓝(精选)':'芥蓝,盖兰';g[0].newEn=isName?'Kai Lan (Premium)':'Kai Lan, Gai Lan';
+    g[1].newZh=isName?'芥蓝(有机)':'芥蓝,芥兰';g[1].newEn=isName?'Kai Lan (Organic)':'Kai Lan, Jie Lan';}
+  // ③ 造一行编码不存在
+  BR.rows.push({pi:-1,ki:-1,spu:'—',skuId:'SKU9999',spuName:'—',oldZh:'',oldEn:'',newZh:isName?'不存在的商品':'不存在的别名',newEn:'Ghost Item'});
+  brRenderPreview();document.getElementById('br-confirm').style.display='';}
+/* 逐行校验 → 返回 {r, err} */
+function brCheck(){const groups={};BR.rows.forEach(r=>{(groups[r.spu]=groups[r.spu]||[]).push(r);});
+  return BR.rows.map(r=>{if(r.pi<0)return {r,err:'SKU 编码不存在'};
+    const g=groups[r.spu];const bad=g.some(x=>x.newZh!=g[0].newZh||x.newEn!=g[0].newEn);
+    if(bad)return {r,err:`同一商品的 ${g.length} 个规格新值不一致`};
+    if(BR.field=='name'&&!String(r.newZh||'').trim())return {r,err:'商品名称不可为空'};
+    if(r.newZh==r.oldZh&&r.newEn==r.oldEn)return {r,err:''};
+    return {r,err:''};});}
+function brRenderPreview(){const isName=BR.field=='name',L=isName?'名称':'别名';const ck=brCheck();
+  const okRows=ck.filter(x=>!x.err&&(x.r.newZh!=x.r.oldZh||x.r.newEn!=x.r.oldEn));
+  const errN=ck.filter(x=>x.err).length,spuN=new Set(okRows.map(x=>x.r.spu)).size;
+  document.getElementById('br-preview').innerHTML=`
+  <div class="ib ${errN?'ib-y':'ib-b'}"><span class="i">📋</span>已解析 <b>${BR.rows.length}</b> 行：将更新 <b>${spuN}</b> 个商品 / 影响 <b>${okRows.length}</b> 个 SKU${errN?`，<b style="color:var(--r)">${errN}</b> 行有误将跳过`:''}（下表可继续微调"新中文/新英文"模拟导入内容）</div>
+  <div style="max-height:300px;overflow:auto"><table class="subtbl"><thead><tr><th style="width:96px">SKU 编码</th><th style="width:150px">所属商品(SPU)</th><th>中文${L}（改前 → 改后）</th><th>英文${L}（改前 → 改后）</th><th style="width:132px">校验</th></tr></thead><tbody>
+  ${ck.map(({r,err},k)=>`<tr${err?' style="background:#FEF6F5"':''}><td class="mono">${r.skuId}</td><td>${r.spuName}${r.spu!='—'?`<div class="mono" style="color:var(--tt);font-size:10.5px">${r.spu}</div>`:''}</td>
+    <td><div style="color:var(--ts);font-size:11.5px;margin-bottom:3px">${r.oldZh||'—'} <span style="color:var(--tt)">→</span></div><input class="miniprice" style="width:100%;text-align:left" value="${r.newZh}" oninput="BR.rows[${k}].newZh=this.value;brRenderPreview()"></td>
+    <td><div style="color:var(--ts);font-size:11.5px;margin-bottom:3px">${r.oldEn||'—'} <span style="color:var(--tt)">→</span></div><input class="miniprice" style="width:100%;text-align:left" value="${r.newEn}" oninput="BR.rows[${k}].newEn=this.value;brRenderPreview()"></td>
+    <td>${err?`<span class="tag t-r" style="font-size:10.5px">${err}</span>`:(r.newZh==r.oldZh&&r.newEn==r.oldEn?'<span style="color:var(--tt);font-size:11.5px">未改动</span>':'<span class="tag t-g" style="font-size:10.5px">可更新</span>')}</td></tr>`).join('')}
+  </tbody></table></div>`;}
+function doBatchRename(){const isName=BR.field=='name';const ck=brCheck();const done=new Set();let n=0,sk=0;
+  ck.forEach(({r,err})=>{if(err||r.pi<0)return;if(r.newZh==r.oldZh&&r.newEn==r.oldEn)return;
+    const p=DB.products[r.pi];if(!done.has(r.spu)){if(isName){p.name=r.newZh;p.nameEn=r.newEn;}else{p.alias=r.newZh;p.aliasEn=r.newEn;}p.updatedAt=ts();done.add(r.spu);n++;}
+    p.skus[r.ki].updatedAt=ts();sk++;});
+  const skipped=ck.filter(x=>x.err).length;BR=null;closeModal();render();
+  toast(`批量修改${isName?'名称':'别名'}完成：${n} 个商品 / ${sk} 个 SKU 已更新${skipped?` · ${skipped} 行有误已跳过`:''}，即时生效`,'ok');}
 /* 建档/编辑（SPU + 多 SKU 行） */
 function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',unit:'',brand:'',origin:'',saleType:'售卖品',name:'',alias:'',showExp:'',desc:'',img:false,detail:false,status:'draft'}:JSON.parse(JSON.stringify(DB.products[i]));
   p.name=p.name||p.itemName||'';
