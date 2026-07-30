@@ -617,6 +617,7 @@ const DB = {
     {id:'SPU8819',name:'生蚝',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'法国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8824',refund:0,qty:1,price:0,stock:0,safe:10}]},
     {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',netQty:'330',netUnit:'ml',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsDeposit:0.10,skus:[{skuId:'SKU8825',qty:1,price:2.50,stock:200,safe:30,stockMode:'finite'},{skuId:'SKU8826',qty:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite'}]},
     {id:'SPU8821',name:'龙虾',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'澳大利亚',brand:'',desc:'鲜活波士顿龙虾',showExp:'展示生产日期+保质期',img:true,detail:false,status:'rejected',risk:'高',reject:'',note:'',auditOpinions:[{f:'name',label:'商品名称',op:'名称过于笼统，需标注品种（如「波士顿龙虾」）与是否鲜活/冰鲜'},{f:'origin',label:'产地',op:'填写产地与上传的进口报关资料不一致，请核对后填写真实产地'},{f:'img',label:'商品主图',op:'主图含文字水印且非纯白底，不符合平台主图规范，请更换白底实拍图'}],skus:[{skuId:'SKU8827',refund:1,qty:1,price:88.00,stock:12,safe:5}]},
+    {id:'SPU8823',name:'即食凉拌海带丝',cat:'海鲜水产',unit:'包',saleType:'售卖品',alias:'',origin:'中国山东',brand:'',desc:'开袋即食凉拌海带丝',showExp:'展示生产日期+保质期',img:true,detail:false,status:'forced_off',risk:'高',reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',note:'',skus:[{skuId:'SKU8829',refund:0,qty:1,price:6.80,stock:0,safe:10,off:true}]},
   ],
   // 订单履约配置（商家自履约：汇总备货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
   orderCfg:{cutoff:'18:00',commRate:0.05},
@@ -1392,7 +1393,7 @@ PAGES['m-product']=()=>{
   const f=DB.mTab||'onsale';
   const PG=prodPageInfo();const rows=PG.pageRows;const selN=DB.sel.length;
   const selIds=rows.filter(r=>skuSelectable(r.p,r.s,f)).map(r=>r.s.skuId);const allSel=selIds.length&&selIds.every(id=>DB.sel.includes(id));
-  const recN=recycleCount();const isRec=f=='recycle';const isReview=f=='review',isRejected=f=='rejected',isSimple=isReview||isRejected;
+  const recN=recycleCount();const isRec=f=='recycle';const isReview=f=='review',isRejected=f=='rejected',isForced=f=='forced',isSimple=isReview||isRejected||isForced;
   return `${assume(['Q1','Q2','Q6'])}
   ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
@@ -1404,9 +1405,9 @@ PAGES['m-product']=()=>{
     <button class="btn btn-o btn-sm" onclick="DB.pFilter={};DB.pPage=1;render()">重置</button>
   </div></div>
   <div class="card"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
-    <div class="tabs" style="margin:0;border:none">${[['onsale','销售中',0,''],['review','待审核',reviewCount(),'t-y'],['rejected','审核拒绝',rejectCount(),'t-r'],['off','未上架',0,''],['recycle','回收站',recN,'t-gr']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';DB.pPage=1;DB.sel=[];render()">${x[1]}${x[2]?` <span class="tag ${x[3]}" style="font-size:10px;margin-left:2px">${x[2]}</span>`:''}</div>`).join('')}</div>
+    <div class="tabs" style="margin:0;border:none">${[['onsale','销售中',0,''],['review','待审核',reviewCount(),'t-y'],['rejected','审核拒绝',rejectCount(),'t-r'],['forced','强制下架',forcedCount(),'t-r'],['off','未上架',0,''],['recycle','回收站',recN,'t-gr']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';DB.pPage=1;DB.sel=[];render()">${x[1]}${x[2]?` <span class="tag ${x[3]}" style="font-size:10px;margin-left:2px">${x[2]}</span>`:''}</div>`).join('')}</div>
     <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end">
-      <span style="font-size:12.5px;color:var(--ts);align-self:center">${isSimple?(isReview?'平台审核中，可编辑后重新提交':'审核未通过，查看字段意见并修改重提'):(selN?`已选 <b style="color:var(--tp)">${selN}</b>`:(isRec?'勾选 SKU 后可批量还原':'勾选 SKU 后可批量操作'))}</span>
+      <span style="font-size:12.5px;color:var(--ts);align-self:center">${isSimple?(isReview?'平台审核中，可编辑后重新提交':isForced?'平台强制下架，查看原因整改后重新提报':'审核未通过，查看字段意见并修改重提'):(selN?`已选 <b style="color:var(--tp)">${selN}</b>`:(isRec?'勾选 SKU 后可批量还原':'勾选 SKU 后可批量操作'))}</span>
       ${isSimple?'':isRec?`
       <button class="btn btn-p btn-sm" ${selN?'':'disabled'} onclick="act_batchRestore()">批量移出/还原</button>
       ${selN?`<button class="btn btn-link btn-sm" onclick="DB.sel=[];render()">取消</button>`:''}
@@ -1423,13 +1424,13 @@ PAGES['m-product']=()=>{
     </div>
   </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th style="width:30px"><input type="checkbox" class="skuchk" title="全选当前页可选 SKU" ${allSel?'checked':''} onclick="selAllProducts()"></th><th>商品编码</th><th>商品名称</th><th>品类</th><th title="是=按重量定价(S$/计量单位)，商家分装称重后按实发净重结算差额；否=定重预包装，按规格整件计价">多退少补</th><th title="商家维护未税价">未税价(SGD)</th><th>税率</th><th title="含税价 = 未税价 ×(1+税率)，系统自动计算">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
-    ${rows.map(({p,i,s,k})=>{const onsale=p.status=='onsale';const edit=!isRec&&p.status!='rejected'&&p.status!='forced_off';const st=isRec?['回收站','t-gr']:(p.status=='reviewing'?['待审核','t-y']:(p.status=='rejected'?['审核拒绝','t-r']:skuState(p,s)));const sel=DB.sel.includes(s.skuId);const canSel=skuSelectable(p,s,f);
+    ${rows.map(({p,i,s,k})=>{const onsale=p.status=='onsale';const edit=!isRec&&p.status!='rejected'&&p.status!='forced_off';const st=isRec?['回收站','t-gr']:(p.status=='reviewing'?['待审核','t-y']:(p.status=='rejected'?['审核拒绝','t-r']:(p.status=='forced_off'?['强制下架','t-r']:skuState(p,s))));const sel=DB.sel.includes(s.skuId);const canSel=skuSelectable(p,s,f);
       const priceCell=`${money(s.price||0)}${s.refund?`<span style="color:var(--ts);font-size:11px">/${p.unit}</span>`:''}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}${s.refund&&s.qty>1?`<div style="font-size:11px;color:var(--ts)">${s.qty}${p.unit}/${s.packUnit||'件'} 预估 ${money((s.price||0)*s.qty)}</div>`:''}`;
       const stockCell=`${s.stock||0}${stockModeTag(s)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
       return `<tr>
       <td>${canSel?`<input type="checkbox" class="skuchk" ${sel?'checked':''} onclick="toggleSel('${s.skuId}')">`:''}</td>
       <td class="mono">${s.skuId}</td>
-      <td style="white-space:nowrap">${p.name} ${s.qty}${s.pack||p.unit}${s.packUnit?'/'+s.packUnit:''}${p.consign?` <span class="tag t-pp" style="font-size:10px" title="寄售 · 库存由货品库存决定">寄售</span>`:''}${p.bcrs?` <span class="tag t-b" style="font-size:10px" title="BCRS 押金 ${money((s.qty||0)*p.bcrsDeposit)}">BCRS</span>`:''}</td>
+      <td style="white-space:nowrap">${p.name} ${s.qty}${s.pack||p.unit}${s.packUnit?'/'+s.packUnit:''}${p.consign?` <span class="tag t-pp" style="font-size:10px" title="寄售 · 库存由货品库存决定">寄售</span>`:''}${p.bcrs?` <span class="tag t-b" style="font-size:10px" title="BCRS 押金 ${money((s.qty||0)*p.bcrsDeposit)}">BCRS</span>`:''}${isForced&&p.reject?`<div style="white-space:normal;max-width:300px;margin-top:4px;font-size:11.5px;color:var(--r);line-height:1.5">⛔ 强制下架原因：${p.reject}</div>`:''}</td>
       <td style="white-space:nowrap">${p.cat||'—'}</td>
       <td>${skuRefundCell(p,s,i,k)}</td>
       <td style="white-space:nowrap">${priceCell}</td>
@@ -1438,7 +1439,7 @@ PAGES['m-product']=()=>{
       <td style="white-space:nowrap">${stockCell}</td>
       <td><span class="tag ${st[1]}">${st[0]}</span></td>
       <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${s.updatedAt||'—'}</td><td style="white-space:nowrap">${skuRowOps(p,i,s,k)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="13"><div class="empty"><div class="e-ic">${isRec?'🗑️':isReview?'🕓':isRejected?'⛔':'📭'}</div><div class="e-t">${isRec?'回收站暂无商品':isReview?'暂无待审核商品':isRejected?'暂无审核拒绝的商品':'该分类暂无商品'}</div>${isRejected?'<div class="e-s">平台驳回的商品会出现在这里，可查看字段审核意见后修改重提</div>':''}</div></td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="13"><div class="empty"><div class="e-ic">${isRec?'🗑️':isReview?'🕓':isRejected?'⛔':isForced?'🚫':'📭'}</div><div class="e-t">${isRec?'回收站暂无商品':isReview?'暂无待审核商品':isRejected?'暂无审核拒绝的商品':isForced?'暂无被强制下架的商品':'该分类暂无商品'}</div>${isRejected?'<div class="e-s">平台驳回的商品会出现在这里，可查看字段审核意见后修改重提</div>':isForced?'<div class="e-s">平台因品控/资质/违规强制下架的 SKU 会出现在这里，含下架原因，整改后可重新提报</div>':''}</div></td></tr>`}
     </tbody></table></div>${prodPager(PG)}</div></div>`;
 };
 function toggleExp(id){const k=DB.exp.indexOf(id);if(k<0)DB.exp.push(id);else DB.exp.splice(k,1);render();}
@@ -1448,10 +1449,11 @@ function expandAllOnsale(){const ids=DB.products.filter(p=>p.status=='onsale').m
 /* 商品列表 · SKU 铺开：每个 SKU 一行，无需点 SPU 展开。SPU 级过滤(品类/名称/上下架) + SKU 级过滤(规格名/编码) */
 function productSkuRows(){DB.sel=DB.sel||[];DB.pFilter=DB.pFilter||{};const pf=DB.pFilter;const f=DB.mTab||'onsale';
   const spuMatch=p=>{if(pf.cat&&p.cat!=pf.cat)return false;if(pf.name&&!(p.name||'').includes(pf.name)&&!(p.id||'').includes(pf.name))return false;
+    if(f=='forced')return p.status=='forced_off';                                  // 强制下架桶
     if(f=='review')return p.status=='reviewing';                                   // 待审核桶
     if(f=='rejected')return p.status=='rejected';                                  // 审核拒绝桶
     if(f=='onsale')return isOnShelf(p);
-    if(f=='off')return !isOnShelf(p)&&p.status!='reviewing'&&p.status!='rejected';  // 未上架：草稿/已下架/强制下架，排除审核中/拒绝
+    if(f=='off')return !isOnShelf(p)&&!['reviewing','rejected','forced_off'].includes(p.status);  // 未上架：草稿/已下架，排除审核中/拒绝/强制下架
     return true;};// recycle 不按上架桶过滤
   const rows=[];DB.products.forEach(p=>{if(!spuMatch(p))return;const i=DB.products.indexOf(p);(p.skus||[]).forEach((s,k)=>{if(pf.skuName&&!((p.name||'')+' '+s.qty+p.unit).includes(pf.skuName))return;if(pf.skuCode&&!(s.skuId||'').includes(pf.skuCode))return;const rec=!!s.recycled;if(f=='recycle'?!rec:rec)return;rows.push({p,i,s,k});});});return rows;}
 /* 回收站：SKU 粒度。仅“已下架”规格可移入(skuRecyclable)；回收站中可移出还原(还原后=已下架)；永久保留、无删除 */
@@ -1460,6 +1462,7 @@ function skuSelectable(p,s,f){if(f=='recycle')return !!s.recycled;return !s.recy
 function recycleCount(){return DB.products.reduce((a,p)=>a+(p.skus||[]).filter(s=>s.recycled).length,0);}
 function reviewCount(){return DB.products.filter(p=>p.status=='reviewing').length;}   // 待审核 SPU 数
 function rejectCount(){return DB.products.filter(p=>p.status=='rejected').length;}      // 审核拒绝 SPU 数
+function forcedCount(){return DB.products.filter(p=>p.status=='forced_off').length;}    // 平台强制下架 SPU 数
 function act_skuRecycle(i,k){const p=DB.products[i],s=p.skus[k];if(!skuRecyclable(p,s)){toast('仅已下架规格可移入回收站','err');return;}askConfirm(`确认将规格「${p.name} ${s.qty}${p.unit}」移入回收站？移入后停止售卖，可随时移出再用。`,()=>{s.recycled=true;s.updatedAt=ts();p.updatedAt=ts();render();toast('已移入回收站','info');});}
 function act_skuRestore(i,k){const p=DB.products[i],s=p.skus[k];askConfirm(`确认将规格「${p.name} ${s.qty}${p.unit}」移出回收站？还原后为已下架，可再上架售卖。`,()=>{s.recycled=false;s.off=true;s.updatedAt=ts();p.updatedAt=ts();render();toast('已移出回收站（已下架）','ok');});}
 function act_batchRecycle(){const t=[];DB.products.forEach(p=>(p.skus||[]).forEach(s=>{if(DB.sel.includes(s.skuId)&&skuRecyclable(p,s))t.push({p,s});}));if(!t.length){toast('未选择可移入回收站的规格（仅已下架可移入）','err');return;}askConfirm(`确认将已选 <b>${t.length}</b> 个已下架 SKU 移入回收站？可随时移出再用。`,()=>{t.forEach(x=>{x.s.recycled=true;x.s.updatedAt=ts();x.p.updatedAt=ts();});DB.sel=[];render();toast(`已移入回收站 ${t.length} 个 SKU`,'info');});}
