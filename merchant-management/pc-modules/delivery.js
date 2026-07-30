@@ -88,7 +88,7 @@
         <td><b style="font-size:15px">${dvShould(d)}</b> <span style="color:var(--ts)">/ ${dvIn(d)}</span></td>
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
-          :`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">待仓库交接</span>':`<button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
+          :`${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">已签到 · 待仓库交接</span>':`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} <button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
       </tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   }

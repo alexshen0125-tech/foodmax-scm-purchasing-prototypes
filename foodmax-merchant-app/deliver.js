@@ -196,7 +196,7 @@ function signinCard(d){
     <div class="dl-kbox"><div class="k"><div class="l">应送货(件)</div><div class="v">${(d.labels||[]).reduce((s,l)=>s+(+l.qty||0),0)}</div></div><div class="k"><div class="l">已入库(件)</div><div class="v">${(d.labels||[]).filter(l=>l.arrived).reduce((s,l)=>s+(+l.qty||0),0)}</div></div></div>
     <div class="dl-acts">${done
       ?`<div class="a" data-a="detail">查看详情</div>`
-      :`<div class="a" data-a="${d.booked?'bookmenu':'book'}">${d.booked?'改约/取消':'预约送货'}</div>${d.signed?'':`<div class="a key" data-a="sign">签到码</div>`}<div class="a" data-a="detail">详情</div>`}</div>
+      :`${d.signed?'':`<div class="a" data-a="${d.booked?'bookmenu':'book'}">${d.booked?'改约/取消':'预约送货'}</div><div class="a key" data-a="sign">签到码</div>`}<div class="a" data-a="detail">详情</div>`}</div>
   </div>`;
 }
 function dvBookSheet(d){sheet(DL_SLOTS.map(s=>({label:`预约 ${s}${(d.bookWindow||d.window)===s?'　✓':''}`,onClick:()=>{d.booked=true;d.bookWindow=s;toast('已预约送货 '+s);rerenderSignin();}})));}
