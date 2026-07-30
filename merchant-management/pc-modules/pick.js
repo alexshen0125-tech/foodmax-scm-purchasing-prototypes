@@ -157,11 +157,20 @@
       if(typeof window.weighWhPending=='function'&&window.weighWhPending(date,wh)>0)return;
       const id=window.genDeliveryOnPrint(date,wh);if(id)made.push(id);});
     return made;}
+  // 打印机设置：商家先选标签纸张大小，选完才能打印（门禁）
+  const PAPERS=['40×30 mm','50×30 mm','60×40 mm','70×50 mm','80×60 mm'];   // 热敏标签纸常见规格
+  window.label_paperModal=function(){modal(`<div class="mc-hd"><h3>打印机设置</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd"><div class="ib ib-b"><span class="i">🖨️</span>请选择标签打印机使用的<b>标签纸张大小</b>，与实际装纸一致；<b>选择后方可打印标签</b>。</div>
+    <div class="fr"><label class="fl"><b>*</b>标签纸张大小</label><select id="lp-paper"><option value="" ${!DB.labelPaper?'selected':''}>请选择纸张大小</option>${PAPERS.map(x=>`<option ${DB.labelPaper==x?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div class="ib ib-gr" style="margin-top:8px"><span class="i">ℹ️</span>更换标签纸后请回此重新选择，否则可能打印错位。</div></div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="label_savePaper()">保存设置</button></div>`);};
+  window.label_savePaper=function(){const v=(document.getElementById('lp-paper')||{}).value;if(!v){toast('请选择标签纸张大小','err');return;}DB.labelPaper=v;closeModal();render();toast('已设置标签纸张：'+v,'ok');};
+  function ensurePaper(){if(!DB.labelPaper){toast('请先在「打印机设置」选择标签纸张大小，选完才能打印','err');label_paperModal();return false;}return true;}
   // 打印：一个 SKU 按应送货数量打 N 个连续序号的码；首打/续打从 已打印+1 到 N
-  window.label_printOne=function(key){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${r.wgNeed?'（印实发净重，不含订单信息）':''}${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
-  window.label_printAll=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
+  window.label_printOne=function(key){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${r.wgNeed?'（印实发净重，不含订单信息）':''}${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
+  window.label_printAll=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
   // 按序号打印：先勾选一个 SKU，再点顶部「按序号打印」→ 弹窗填序号区间 [从X 到Y]（漏打时也用它补打）
-  window.label_bySeqPrint=function(){const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));
+  window.label_bySeqPrint=function(){if(!ensurePaper())return;const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));
     if(sel.length==0){toast('请先勾选一个商品，再点「按序号打印」','err');return;}
     if(sel.length>1){toast('「按序号打印」每次只支持一个商品，请只勾选一个','err');return;}
     const rr=labelRows().find(x=>x.key==sel[0]);if(rr&&wgBlocked(rr)){wgDeny(rr);return;}
@@ -186,7 +195,7 @@
   // 勾选 → 批量打印（只打勾选项，最多 50 个）
   window.label_toggleSel=function(key){DB.labelSel=DB.labelSel||[];const i=DB.labelSel.indexOf(key);if(i<0)DB.labelSel.push(key);else DB.labelSel.splice(i,1);render();};
   window.label_selAll=function(){DB.labelSel=DB.labelSel||[];const keys=labelRows().map(r=>r.key);const all=keys.length&&keys.every(k=>DB.labelSel.includes(k));DB.labelSel=all?[]:keys.slice();render();};
-  window.label_printSel=function(){DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length-blk} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个因未完成称重被拦截`:''}`:(blk?`所选 ${blk} 个商品未完成称重，无法打印`:'所选商品标签均已打印'),blk&&!n?'err':'ok');};
+  window.label_printSel=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length-blk} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个因未完成称重被拦截`:''}`:(blk?`所选 ${blk} 个商品未完成称重，无法打印`:'所选商品标签均已打印'),blk&&!n?'err':'ok');};
 
   function labelView(){
     DB.labelF=DB.labelF||{};DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};
@@ -201,6 +210,7 @@
     DB.labelSel=DB.labelSel||[];const selKeys=rows.map(r=>r.key);const sel=DB.labelSel.filter(k=>selKeys.includes(k));const selN=sel.length;const allSel=selKeys.length&&selKeys.every(k=>sel.includes(k));
     const optSel=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
+    ${!DB.labelPaper?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">🖨️</span><b>尚未设置打印机纸张</b>，需先选择标签纸张大小后才能打印标签。<button class="btn btn-link btn-sm" onclick="label_paperModal()">去设置 →</button></div>`:''}
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。</div>
     ${blocked?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span><b>${blocked} 个商品因未完成称重被拦截，无法打印标签。</b>多退少补（按重量定价）商品必须先录实发净重——打印首张标签即自动生成送货单，届时重量已无法再改。<button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重录入 →</button></div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
@@ -210,7 +220,7 @@
         </div>
         <div style="display:flex;gap:16px;font-size:12.5px;padding:6px 0">
           <span class="btn btn-link" onclick="nav('m-delivery')">查看预约送货时间</span>
-          <span class="btn btn-link" onclick="toast('打印帮助：请连接标签打印机后点打印','info')">查看打印帮助</span>
+          <span class="btn btn-link" onclick="label_paperModal()">🖨️ 打印机设置 · ${DB.labelPaper?`<b style="color:var(--gd)">${DB.labelPaper}</b>`:'<b style="color:var(--r)">未设置纸张</b>'}</span>
         </div>
       </div>
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
