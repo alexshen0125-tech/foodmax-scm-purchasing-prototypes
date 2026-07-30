@@ -234,12 +234,10 @@ function openSignin(){
     if(DL[0]){DL[0].booked=true;DL[0].bookWindow='23:00–02:00';}          // 已预约·未签到
     if(DL[1]){DL[1].signed=true;DL[1].signTime='00:12';}}                 // 未预约·已签到(仓库已扫码)
   pushPage({title:'送货签到',body:`
-    <div class="dl-banner"><span>送货单由<b>电脑端打印首个标签</b>时按入库仓库自动生成（移动端不打印标签）。可转发给司机；签到后由<b>仓库扫码</b>核验交接入仓。</span></div>
-    <div class="dl-priv"><span>转发隐私：不允许对方查看商品清单</span><span class="ed" id="dl-priv">修改 ›</span></div>
+    <div class="dl-banner"><span>送货单由<b>电脑端打印首个标签</b>时按入库仓库自动生成（移动端不打印标签）。<b>预约与签到相互独立</b>；签到由<b>仓库扫码</b>核验交接入仓。</span></div>
     <div class="dl-list" id="dl-sgl"></div>`,
     mount:(p)=>{
       _signList=p.querySelector('#dl-sgl');renderSigninInto(_signList);
-      p.querySelector('#dl-priv').onclick=()=>sheet([{label:'允许对方查看商品清单',onClick:()=>toast('已设置：允许查看')},{label:'仅展示送货单号与数量',onClick:()=>toast('已设置：隐藏清单')}]);
     }});
 }
 
@@ -277,9 +275,8 @@ function openSignDetail(d){
       rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · 已入库 <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b></div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
     )}
     <div style="height:8px"></div>`,
-    footer:`<div style="display:flex;gap:12px"><button class="btn ghost" style="flex:1" id="dl-dfwd">转发给司机</button>${(d.signed&&d.status!=='交接完成')?`<button class="btn" style="flex:1;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="flex:1" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}</div>`,
+    footer:`${(d.signed&&d.status!=='交接完成')?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="width:100%" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}`,
     mount:(p)=>{
-      p.querySelector('#dl-dfwd').onclick=()=>sheet([{label:'转发给送货司机',onClick:()=>toast('已生成转发链接')}]);
       const wms=p.querySelector('#dl-wms');
       if(wms)wms.onclick=()=>confirmDialog({title:'模拟仓库扫码交接',body:`【演示】模拟仓库 WMS 扫齐 ${d.should} 张标签，${d.orderIds.length} 个订单将转「备货中」。真实由仓库端扫码，商家不操作。`,okText:'模拟交接',onOk:()=>{(d.labels||[]).forEach(l=>l.arrived=true);window.FM.deliveryHandover(d.id);toast('【演示】已交接入仓，订单转备货中');popPage();rerenderSignin();}});
     }});

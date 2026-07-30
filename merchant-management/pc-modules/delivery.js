@@ -75,10 +75,6 @@
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
     return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</div>
-    <div class="card"><div class="card-bd" style="padding:12px 20px;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:13.5px"><b>转发隐私</b><span style="color:var(--ts);margin-left:8px">${DB.delivShareItems?'允许对方查看商品清单':'不允许对方查看商品清单'}</span></div>
-      <button class="btn btn-link" onclick="deliv_togglePrivacy()">修改 ›</button>
-    </div></div>
     <div class="card"><div class="card-hd"><h3>送货单</h3><span class="sub">共 ${DL.length} 单 · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length}</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>送货单</th><th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>操作</th></tr></thead><tbody>
@@ -92,7 +88,7 @@
         <td><b style="font-size:15px">${dvShould(d)}</b> <span style="color:var(--ts)">/ ${dvIn(d)}</span></td>
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
-          :`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">待仓库交接</span>':`<button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button> <button class="btn btn-o btn-sm" onclick="deliv_forward('${d.id}')">转发</button>`}</td>
+          :`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">待仓库交接</span>':`<button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
       </tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   }
