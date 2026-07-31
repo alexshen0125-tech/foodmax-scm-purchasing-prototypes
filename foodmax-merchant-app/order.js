@@ -124,7 +124,7 @@ function openDetail(o){
       <div class="st" style="color:var(--${STCLASS[st]==='emerald'?'emerald':STCLASS[st]==='amber'?'amber':STCLASS[st]==='red'?'red':'sub'})">${st}${o.status==='packed'?' · 已贴标待交接':''}</div></div>
     <div class="odd-tl">${steps.map((s,i)=>`<div class="n ${i<=cur&&o.status!=='canceled'?'on':''}"><div class="dot"></div>${s}</div>`).join('')}</div>
     <div class="odd-sec">商品明细</div>
-    <div class="odd-card">${o.lines.map(l=>`<div class="odd-line"><div><div class="nm">${l.name}${l.bcrsDeposit?' <span class="bcrs-b">BCRS</span>':''}</div><div class="qp">S$${l.price.toFixed(2)}/${l.unit}${l.bcrsDeposit?` · 押金 S$${(+l.bcrsDeposit).toFixed(2)}/${l.unit}`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${l.bcrsDeposit?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`).join('')}</div>
+    <div class="odd-card">${o.lines.map(l=>{const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;return `<div class="odd-line"><div><div class="nm">${l.name}${bc?' <span class="bcrs-b">BCRS</span>':''}</div><div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;}).join('')}</div>
     <div class="odd-sec">配送信息</div>
     <div class="odd-card">
       <div class="odd-row"><span class="k">订单号</span><span style="font-family:monospace">${o.id}</span></div>

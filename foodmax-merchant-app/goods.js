@@ -150,7 +150,7 @@ const PRODUCTS=[
   {ic:'🟡',n:'萝卜丸子',cat:'肉禽蛋品',sales:0,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00',
    skus:[{spec:'2.5kg/袋',price:12.00,stock:4,off:true,recycled:true,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00'}]},
   // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 规格数量 × 押金单价
-  {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',cat:'饮料',bcrs:true,bcrsDeposit:0.10,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
+  {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',cat:'饮料',bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
    skus:[{spec:'1瓶',qty:1,price:2.50,stock:200,off:false,stockMode:'finite',soldToday:18,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00'},{spec:'24瓶/箱',qty:24,price:55.00,stock:40,off:false,stockMode:'finite',createdAt:'2026-07-10 10:20',updatedAt:'2026-07-18 09:40'}]},
 ];
 const isOnShelf=p=>p.skus.some(s=>!s.off);           // 销售中 = 至少 1 个 SKU 在架
@@ -161,7 +161,9 @@ const taxRate=p=>{const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%'
 const priceIncl=(net,p)=>(+net||0)*(1+taxRate(p)/100);   // 含税价 = 未税价 ×(1+税率)
 // BCRS 饮料容器押金(与 PC 同口径)：每个 SKU 押金 = 该规格数量 × 押金单价；不计 GST、随商品透传订单/发票
 const BCRS_UNIT_PRICE=0.10;                              // 单容器法规押金 S$0.10（平台级参数）
-const skuBcrs=(g,s)=>(g&&g.bcrs&&+g.bcrsDeposit>0)?+((+s.qty||1)*g.bcrsDeposit).toFixed(2):0;
+// 每 SKU 押金 = 规格数量 × 每最小售卖单位容器数 × 0.10（三因子，对齐商城；押金单价平台固定 0.10）
+const skuContainers=(g,s)=>(+s.qty||1)*(+g.bcrsUnitContainers||0);           // 该 SKU 售卖单位含容器数
+const skuBcrs=(g,s)=>(g&&g.bcrs&&+g.bcrsUnitContainers>0)?+(skuContainers(g,s)*BCRS_UNIT_PRICE).toFixed(2):0;
 
 // 扁平 SKU 卡片：每个售卖规格(SKU)一张独立卡，SKU 完全展开、无需点 SPU 展开（对齐 PC 端「每 SKU 一行」）
 const skuRecyclable=s=>s.off&&!s.recycled;   // 仅已下架规格可移入回收站
@@ -222,7 +224,7 @@ function openGoodsDetail(g,s){
   const info=[['商品名称',g.n],['商品名称(EN)',g.nEn||'—'],['商品别名',g.alias||'—'],['商品别名(EN)',g.aliasEn||'—'],
     ['品类',g.cat],['税率',taxRate(g)+'%'],
     ['售卖模式',g.consign?'<span class="consign-b" style="margin:0 5px 0 0">寄售</span>库存由货品库存决定、逐规格不可维护':'自售（经销买断）'],
-    ['BCRS 押金',g.bcrs?`<span class="bcrs-b" style="margin:0 5px 0 0">BCRS</span>押金单价 S$${(+g.bcrsDeposit).toFixed(2)}/最小售卖单位（单容器 S$${BCRS_UNIT_PRICE.toFixed(2)}，不计 GST）`:'不支持'],
+    ['BCRS 押金',g.bcrs?`<span class="bcrs-b" style="margin:0 5px 0 0">BCRS</span>每最小售卖单位 ${(+g.bcrsUnitContainers||0)} 容器 × S$${BCRS_UNIT_PRICE.toFixed(2)}（单容器法规押金 S$${BCRS_UNIT_PRICE.toFixed(2)}，平台固定·不计 GST）`:'不支持'],
     ['累计销量',(g.sales||0)+' 件'],['创建时间',g.createdAt||'—'],['更新时间',g.updatedAt||'—']];
   pushPage({title:'商品详情',body:`<div class="gdt">
     <div class="card">
@@ -237,7 +239,7 @@ function openGoodsDetail(g,s){
         return `<div class="sku${cur?' cur':''}">
           <div class="sn"><span>${g.n} · ${x.spec}${cur?'<span class="cur-b">当前</span>':''}</span><span style="font-size:12.5px;font-weight:700;color:${x.off?'var(--sub)':'var(--emerald-2)'}">${stt}</span></div>
           ${x.refund?`<div class="ln"><span class="refund-b" style="margin:0 5px 0 0">多退少补</span>按重量结差额，分装后按实发净重结算，需先称重</div>`:''}
-          ${xb?`<div class="ln">BCRS 押金 <b>S$${xb.toFixed(2)}</b>（${x.qty} × S$${(+g.bcrsDeposit).toFixed(2)}，不计 GST）</div>`:''}
+          ${xb?`<div class="ln">BCRS 押金 <b>S$${xb.toFixed(2)}</b>（${skuContainers(g,x)}容器 × S$${BCRS_UNIT_PRICE.toFixed(2)}，不计 GST）</div>`:''}
           <div class="ln"><b>S$${(+x.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(x.price,g).toFixed(2)}（税率 ${taxRate(g)}%）· 库存 ${x.off?'—':(oos?'0（售罄）':(+x.stock).toLocaleString())}${x.off?'':` ${x.stockMode==='daily'?'<span class="mode daily">每日恢复</span>':'<span class="mode once">售完即止</span>'}`}</div>
           ${x.updatedAt?`<div class="ln" style="color:#94A3B8">更新 ${x.updatedAt}</div>`:''}
         </div>`;}).join('')}
@@ -346,7 +348,7 @@ function openPrice(g,only){
           <div class="in"><span class="u">S$</span><input data-i="${i}" data-price value="${s.price||''}" inputmode="decimal" placeholder="未税价"></div>
           <div class="incl" data-incl="${i}" style="font-size:11.5px;color:#94A3B8;margin-top:5px">含税 S$${priceIncl(s.price,g).toFixed(2)}</div>
           <div class="inc-line" data-inc="${i}" style="font-size:11px;color:#94A3B8;margin-top:3px">${incTxt(priceIncl(s.price,g))}</div></div></div>`;}).join('')}</div>
-    <div class="sku-ed-tip">${g.bcrs?`<b>BCRS 商品</b>：押金单价 S$${(+g.bcrsDeposit).toFixed(2)}/最小售卖单位在商品信息里维护，此处不改；押金为<b>过手项</b>，不计 GST、不计入佣金基数与预计收入。<br>`:''}价格维护到每个售卖规格(SKU)，录入<b>未税价</b>，系统按税率 ${rate}% 自动算含税价；提交即时生效。<b>商品佣金 = 含税价×服务费率(${(SVC*100).toFixed(0)}%)</b>，<b>上门揽收费</b>为单独固定字段(与价格/比例无关)，<b>预计收入 = 含税价−佣金−揽收费</b>；仅供参考，以订单结算为准。</div>
+    <div class="sku-ed-tip">${g.bcrs?`<b>BCRS 商品</b>：容器数在商品信息里维护、押金单价平台固定 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器，此处不改；押金为<b>过手项</b>，不计 GST、不计入佣金基数与预计收入。<br>`:''}价格维护到每个售卖规格(SKU)，录入<b>未税价</b>，系统按税率 ${rate}% 自动算含税价；提交即时生效。<b>商品佣金 = 含税价×服务费率(${(SVC*100).toFixed(0)}%)</b>，<b>上门揽收费</b>为单独固定字段(与价格/比例无关)，<b>预计收入 = 含税价−佣金−揽收费</b>；仅供参考，以订单结算为准。</div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="ps" disabled>提交改价</button>`,
     mount:(p)=>{

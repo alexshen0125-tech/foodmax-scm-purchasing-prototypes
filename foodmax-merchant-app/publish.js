@@ -71,9 +71,9 @@ const CATS=[
 ];
 // 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖(与 PC CAT_SCOPE 一致)
 const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料']);
-// BCRS 单容器法规押金 S$0.10（平台级参数，不计 GST；与 PC BCRS_UNIT_PRICE 同源）
+// BCRS 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST；与 PC 同源）。商家只填「每最小售卖单位容器数」，押金=容器数×0.10×数量
 const BCRS_UNIT_PRICE=0.10;
-const BCRS_MAX=3.00;   // 押金单价上限（每最小售卖单位）
+const BCRS_CONTAINERS_MAX=999;   // 容器数正整数上限（防呆，非法规限额）
 // 最小售卖单位(PC 基础计量单位；SKU 售卖单位只读 = 最小售卖单位)
 const MEASURE_UNITS=['斤','公斤(kg)','克(g)','毫升(ml)','升(L)','个','只','件','包','袋','盒','箱','瓶','桶','罐'];
 // 净含量单位
@@ -349,7 +349,7 @@ function openForm(prefill){
     tax:  prefill?String((CATS.find(c=>c.n===prefill.cat)||{}).tax??''):'', // 手填，默认取类目
     measure: prefill?prefill.measure:'',   // 最小售卖单位
     netQty:'', netUnit:'', measureNote:'',
-    bcrs:'否', bcrsDeposit:'',              // BCRS：仅 cat.bcrs 类目可选；押金单价 S$/最小售卖单位
+    bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每最小售卖单位容器数(整数)，押金单价平台固定 0.10
     sellType:'售卖品',                      // 销售类型固定，不可改
     supplyMode:'自售',                      // 售卖模式(dev supplyMode 1=自售/2=寄售)：默认自售，保存后不可修改；寄售→SKU库存只读
     validEnable:'是',                       // 效期管理默认「是」
@@ -375,8 +375,8 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-net-row"><div class="lab">净含量</div><div class="val"><input id="pb-netqty" inputmode="decimal" placeholder="选填" value="${f.netQty}"><span class="vtxt" id="pb-netunit" style="flex:0 0 auto;max-width:70px">${f.netUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="最小售卖单位备注，选填" maxlength="40" value="${f.measureNote}"></div></div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>押金单价</div><div class="val"><span class="pre">S$</span><input id="pb-bcrsdep" inputmode="decimal" placeholder="如 ${BCRS_UNIT_PRICE.toFixed(2)}" value="${f.bcrsDeposit}"><span class="pre">/最小售卖单位</span></div></div>
-        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">单容器法规押金 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}</b>（不计 GST）；一个最小售卖单位含几个容器就填几×${BCRS_UNIT_PRICE.toFixed(2)}。<b>每个 SKU 押金 = 该规格数量 × 押金单价</b>，透传客户下单/订单/发票原样展示。上限 S$${BCRS_MAX.toFixed(2)} · 适用容量 150ml–3L。</div>
+        <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每最小售卖单位容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
+        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">押金单价由平台固定为 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</b>（法规押金·不计 GST，商家不可改）。此处填<b>一个最小售卖单位含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 规格数量 × 每最小售卖单位容器数 × S$${BCRS_UNIT_PRICE.toFixed(2)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。</div>
         <div class="pb-cell" id="pb-selltype-row"><div class="lab">销售类型</div><div class="val"><span class="vtxt" style="color:var(--sub)">售卖品</span></div></div>
         <div class="pb-cell" id="pb-supply-row" style="cursor:pointer"><div class="lab">售卖模式</div><div class="val"><span class="vtxt" id="pb-supply-v">${f.supplyMode}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-bcrs-tip" style="display:block;padding-top:2px">自售=经销买断，库存自行维护；<b>寄售</b>=库存由货品库存决定、逐规格不可维护。售卖模式<b>保存后不可修改</b>。</div>
@@ -520,8 +520,9 @@ function paint(p,f,submitted){
   p.querySelector('#pb-measure-row').classList.toggle('err',submitted&&!f.measure);
   // BCRS 押金单价：选「是」时必填 >0 且 ≤ 上限（即时标红）
   const bOn=f.bcrs==='是'&&!!(f.cat&&f.cat.bcrs);
-  const bDep=parseFloat(f.bcrsDeposit);
-  const bBad=bOn&&((String(f.bcrsDeposit).trim()&&(isNaN(bDep)||bDep<=0||bDep>BCRS_MAX))||(submitted&&!String(f.bcrsDeposit).trim()));
+  const bCnt=parseInt(f.bcrsUnitContainers,10);
+  const bCntOk=Number.isInteger(bCnt)&&bCnt>=1&&bCnt<=BCRS_CONTAINERS_MAX;
+  const bBad=bOn&&((String(f.bcrsUnitContainers).trim()&&!bCntOk)||(submitted&&!String(f.bcrsUnitContainers).trim()));
   p.querySelector('#pb-bcrsdep-row').classList.toggle('err',!!bBad);
   // 售卖规格：正整数≥1 + 不可重复
   const qtys=f.specs.map(s=>String(s.qty).trim());
@@ -539,7 +540,7 @@ function paint(p,f,submitted){
     // BCRS 押金预览：本规格押金 = 数量 × 押金单价（系统算，商家不心算）
     const bn=row.querySelector('[data-bnote]');
     if(bn){const q=parseInt(qtys[i],10);
-      bn.textContent=(bOn&&bDep>0&&bDep<=BCRS_MAX&&q>0)?`BCRS 押金 S$${(q*bDep).toFixed(2)}／${q}${f.measure||''}（${q} × S$${bDep.toFixed(2)}）`:'';}
+      bn.textContent=(bOn&&bCntOk&&q>0)?`BCRS 押金 S$${(q*bCnt*BCRS_UNIT_PRICE).toFixed(2)}／${q}${f.measure||''}（${q}×${bCnt}容器×S$${BCRS_UNIT_PRICE.toFixed(2)}）`:'';}
   });
 }
 
@@ -556,9 +557,9 @@ function runChecks(f){
   if(new Set(qtys).size!==qtys.length) fails.push(['规格','各规格「数量」不可重复']);
   if(f.cat&&!LICENSE.has(f.cat.n)) fails.push(['资质',`经营许可证未覆盖「${f.cat.n}」类目`]);
   if(f.bcrs==='是'&&f.cat&&f.cat.bcrs){
-    const d=parseFloat(f.bcrsDeposit);
-    if(!(d>0))            fails.push(['BCRS','支持 BCRS 需填押金单价（>0）']);
-    else if(d>BCRS_MAX)   fails.push(['BCRS',`押金单价不可超过 S$${BCRS_MAX.toFixed(2)}，请核对最小售卖单位`]);
+    const d=parseInt(f.bcrsUnitContainers,10);
+    if(!Number.isInteger(d)||d<1)          fails.push(['BCRS','支持 BCRS 需填「每最小售卖单位容器数」（正整数 ≥1）']);
+    else if(d>BCRS_CONTAINERS_MAX)         fails.push(['BCRS',`容器数不合理（>${BCRS_CONTAINERS_MAX}），请核对最小售卖单位`]);
   }
   if(f.name.trim()&&EXISTING.includes(f.name.trim())) fails.push(['查重','已存在同名商品']);
   return fails;
@@ -577,7 +578,7 @@ function bcrsToggle(p,f){
   const rowB=p.querySelector('#pb-bcrs-row'),rowD=p.querySelector('#pb-bcrsdep-row'),tip=p.querySelector('#pb-bcrs-tip');
   if(!rowB)return;
   const catOn=!!(f.cat&&f.cat.bcrs);
-  if(!catOn){f.bcrs='否';f.bcrsDeposit='';const v=p.querySelector('#pb-bcrs-v');if(v)v.textContent='否';const dp=p.querySelector('#pb-bcrsdep');if(dp)dp.value='';}
+  if(!catOn){f.bcrs='否';f.bcrsUnitContainers='';const v=p.querySelector('#pb-bcrs-v');if(v)v.textContent='否';const dp=p.querySelector('#pb-bcrscnt');if(dp)dp.value='';}
   rowB.style.display=catOn?'':'none';
   const depOn=catOn&&f.bcrs==='是';
   rowD.style.display=depOn?'':'none';
@@ -604,9 +605,9 @@ function bindForm(p,f){
   // BCRS：是否支持(仅 bcrs 类目可见) + 押金单价
   p.querySelector('#pb-bcrs-row').onclick=()=>pbGridPicker('是否支持 BCRS',['否','是'],f.bcrs,v=>{
     f.bcrs=v;setPH(p.querySelector('#pb-bcrs-v'),v,1);
-    if(v==='是'&&!String(f.bcrsDeposit).trim()){f.bcrsDeposit=BCRS_UNIT_PRICE.toFixed(2);p.querySelector('#pb-bcrsdep').value=f.bcrsDeposit;}  // 高频默认值：单容器 0.10
+    if(v==='是'&&!String(f.bcrsUnitContainers).trim()){f.bcrsUnitContainers='1';p.querySelector('#pb-bcrscnt').value='1';}  // 高频默认值：一瓶/一罐=1 容器
     bcrsToggle(p,f);paint(p,f);});
-  p.querySelector('#pb-bcrsdep').oninput=e=>{f.bcrsDeposit=e.target.value;paint(p,f);};
+  p.querySelector('#pb-bcrscnt').oninput=e=>{f.bcrsUnitContainers=e.target.value;paint(p,f);};
   bcrsToggle(p,f);
   // 最小售卖单位(变更后 SKU 售卖单位联动只读)
   p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
@@ -622,7 +623,7 @@ function bindForm(p,f){
   p.querySelector('#pb-storage-row').onclick=()=>pbGridPicker('储存条件',STORAGES,f.storage,v=>{f.storage=v;setPH(p.querySelector('#pb-storage-v'),v,1);});
   p.querySelector('#pb-fulfill-row').onclick=()=>pbGridPicker('履约方式',FULFILLS,f.fulfill,v=>{f.fulfill=v;setPH(p.querySelector('#pb-fulfill-v'),v,1);});
   // 输入框单元格点击空白不抢焦点
-  ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-bcrsdep-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>p.querySelector('#'+id).onclick=null);
+  ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-bcrsdep-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>{const el=p.querySelector('#'+id);if(el)el.onclick=null;});
 
   p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite',packUnit:''});renderSpecs(p,f);paint(p,f);};
 
