@@ -2,7 +2,7 @@
    单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
-const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt}=window.FM;
+const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordCommission,ordPickup,ordInclAmt,ordBcrs,lineBcrs}=window.FM;
 // 演示锚点“今天”=最新订单日期；订单时间筛选按 orderDate(下单日期) 精确匹配单日
 const TODAY='2026-07-01';
 
@@ -103,7 +103,7 @@ function card(o){
         <div class="rw">单价 <b>S$${(l0.price||0).toFixed(2)}/${l0.unit}</b></div>
         ${o.lines.length>1?`<div class="rw">等 ${o.lines.length} 种商品</div>`:''}
       </div></div>
-    <div class="foot"><span>共 ${o.lines.length} 种商品 · 订单金额 S$${o.amt.toFixed(2)}</span><span class="inc">预计收入<b class="disp">S$${ordIncome(o).toFixed(2)}</b></span></div>
+    <div class="foot"><span>共 ${o.lines.length} 种商品 · 订单金额 S$${o.amt.toFixed(2)}${ordBcrs(o)>0?` · BCRS 押金 S$${ordBcrs(o).toFixed(2)}`:''}</span><span class="inc">预计收入<b class="disp">S$${ordIncome(o).toFixed(2)}</b></span></div>
   </div>`;
 }
 
@@ -124,7 +124,7 @@ function openDetail(o){
       <div class="st" style="color:var(--${STCLASS[st]==='emerald'?'emerald':STCLASS[st]==='amber'?'amber':STCLASS[st]==='red'?'red':'sub'})">${st}${o.status==='packed'?' · 已贴标待交接':''}</div></div>
     <div class="odd-tl">${steps.map((s,i)=>`<div class="n ${i<=cur&&o.status!=='canceled'?'on':''}"><div class="dot"></div>${s}</div>`).join('')}</div>
     <div class="odd-sec">商品明细</div>
-    <div class="odd-card">${o.lines.map(l=>`<div class="odd-line"><div><div class="nm">${l.name}</div><div class="qp">S$${l.price.toFixed(2)}/${l.unit}</div></div><div class="amt">${l.qty}${l.unit}</div></div>`).join('')}</div>
+    <div class="odd-card">${o.lines.map(l=>`<div class="odd-line"><div><div class="nm">${l.name}${l.bcrsDeposit?' <span class="bcrs-b">BCRS</span>':''}</div><div class="qp">S$${l.price.toFixed(2)}/${l.unit}${l.bcrsDeposit?` · 押金 S$${(+l.bcrsDeposit).toFixed(2)}/${l.unit}`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${l.bcrsDeposit?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`).join('')}</div>
     <div class="odd-sec">配送信息</div>
     <div class="odd-card">
       <div class="odd-row"><span class="k">订单号</span><span style="font-family:monospace">${o.id}</span></div>
@@ -138,6 +138,7 @@ function openDetail(o){
     <div class="odd-card">
       <div class="odd-row"><span class="k">订单金额(未税)</span><span>S$${o.amt.toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">含税金额</span><span>S$${ordInclAmt(o).toFixed(2)}</span></div>
+      ${ordBcrs(o)>0?`<div class="odd-row"><span class="k">BCRS 押金<span style="font-size:11px;color:var(--sub)"> · 过手不计收入</span></span><span>S$${ordBcrs(o).toFixed(2)}</span></div>`:''}
       <div class="odd-row"><span class="k">商家补贴</span><span style="color:var(--red)">-S$${(o.discount||0).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">平台补贴</span><span style="color:var(--emerald-2)">+S$${(o.platSub||0).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">商品佣金(含税×服务费率)</span><span style="color:var(--red)">-S$${ordCommission(o).toFixed(2)}</span></div>

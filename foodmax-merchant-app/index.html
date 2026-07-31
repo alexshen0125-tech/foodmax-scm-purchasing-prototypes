@@ -242,6 +242,9 @@ function ordInclAmt(o){return +(o.amt*(1+TAX)).toFixed(2);}                   //
 function ordCommission(o){return +(ordInclAmt(o)*SVC_RATE).toFixed(2);}       // 商品佣金 = 含税额 × 服务费率
 function ordPickup(o){return +(ordQty(o)*PICKUP_PER).toFixed(2);}             // 上门揽收费 = 件数 × 每件固定额
 function ordIncome(o){return +(ordInclAmt(o)-(o.discount||0)+(o.platSub||0)-ordCommission(o)-ordPickup(o)).toFixed(2);} // 预计收入 = 含税额 − 商家补贴 + 平台补贴 − 佣金 − 揽收费
+// BCRS 饮料容器押金：行押金 = 件数 × 押金单价(S$/最小售卖单位)；过手项——不计 GST、不计佣金基数、不进预计收入
+function lineBcrs(l){return +((+l.qty||0)*(+l.bcrsDeposit||0)).toFixed(2);}
+function ordBcrs(o){return +((o.lines||[]).reduce((s,l)=>s+lineBcrs(l),0)).toFixed(2);} // 订单 BCRS 押金合计
 /* 倒计时：data-cd=截止毫秒；全局每秒刷新（退货单72h提货时限 / 申诉24h窗口） */
 function fmtRemain(ms){let s=Math.floor((ms-Date.now())/1000);if(!ms||isNaN(s))return '—';if(s<=0)return '已截止';const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const m=Math.floor(s/60),ss=s%60;const p=n=>(''+n).padStart(2,'0');return (d?d+'天 ':'')+p(h)+':'+p(m)+':'+p(ss);}
 function cdSpan(ms){return `<b data-cd="${ms}">${fmtRemain(ms)}</b>`;}
@@ -253,6 +256,8 @@ const DB={
     {id:'#SG20260701002',client:'食为天餐厅',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'件',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260628003',client:'丰盛轩',orderDate:'2026-06-28',deliver:'06-28',window:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,platSub:12.00,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'件',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260615004',client:'新味坊',orderDate:'2026-06-15',deliver:'06-15',window:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    // 饮料订单（含 BCRS 押金）：行项带 bcrsDeposit=押金单价(S$/最小售卖单位)，行押金=件数×押金单价（椰子水 24瓶/箱→2.40、1瓶→0.10）
+    {id:'#SG20260701005',client:'珍宝海鲜（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:600.00,discount:0,platSub:0,lines:[{sku:'SKU8826',name:'NFC 椰子水 24瓶/箱',qty:10,unit:'箱',price:55.00,bcrsDeposit:2.40},{sku:'SKU8825',name:'NFC 椰子水',qty:20,unit:'瓶',price:2.50,bcrsDeposit:0.10}],status:'pending',labels:[],pickId:'',deliveryId:''},
   ],
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
 };
@@ -297,7 +302,7 @@ function cancelOrder(id){const o=DB.orders.find(x=>x.id===id);if(!o||o.status!==
   if(pk){pk.orderIds=pk.orderIds.filter(x=>x!==id);if(!pk.orderIds.length)pk.status='已作废';}
   o.pickId='';return pk;}
 window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel,
-  DB,ordMask,ordIncome,ordCommission,ordPickup,ordQty,ordInclAmt,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
+  DB,ordMask,ordIncome,ordCommission,ordPickup,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
 
 function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
   const r=READY.has(k);
