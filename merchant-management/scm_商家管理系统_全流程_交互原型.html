@@ -230,6 +230,32 @@ input[type=checkbox]:focus,input[type=radio]:focus{box-shadow:none}
 textarea{resize:vertical;min-height:72px}
 .fr{margin-bottom:16px}
 .fg2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* ===== 店铺资料页排版（只读=描述式、编辑=分组表单；容器收敛，宽屏不拉满） ===== */
+.shopform{max-width:1040px}
+.shopform .card{margin-bottom:16px}
+.shopform-ft{display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 60%,transparent);padding:12px 0 4px}
+.sec-t{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--g);margin-bottom:16px}
+.sec-bar{width:14px;height:2px;border-radius:2px;background:var(--g);flex:0 0 14px}
+label.fl .rq{color:var(--r);font-style:normal;margin-right:3px}
+/* 只读态：标签在上、值在下的描述式两列，不用禁用输入框 */
+.rd-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 32px}
+.rd-r{min-width:0}
+.rd-k{font-size:12px;color:var(--ts)}
+.rd-v{font-size:14px;font-weight:500;color:var(--tp);margin-top:3px;line-height:1.6;word-break:break-word}
+.rd-h{display:block;font-size:11.5px;color:var(--tt);font-weight:400;margin-top:2px}
+.rd-h a{color:var(--g);font-weight:500}
+/* 店铺形象：头像与店铺主信息同屏，不再沉到页面最底 */
+.shop-hero{display:flex;gap:20px;flex-wrap:wrap}
+.shop-logo{width:96px;height:96px;flex:0 0 96px;border-radius:18px;background:var(--gl);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:46px}
+.logo-edit{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.logo-tip{font-size:12.5px;color:var(--ts);line-height:1.7}
+.logo-tip b{color:var(--tp);font-weight:600}
+/* 简介字数放到标签行右端，与标签同行——不再飘到卡片最右、也不被译文行挤走 */
+label.fl.fl-row{display:flex;align-items:baseline}
+label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
+/* 平台维护的只读值：与输入框同高，但用底色区分，避免和可编辑项混淆 */
+.ro-field{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border:1px dashed var(--bd);border-radius:9px;background:var(--bd2);font-size:13.5px;color:var(--tp)}
+@media(max-width:900px){.rd-grid{grid-template-columns:1fr}.shopform .fg2{grid-template-columns:1fr}}
 .vgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:820px){.vgrid{grid-template-columns:1fr}}
 .chip-ck{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer;user-select:none;transition:.13s}
@@ -589,11 +615,15 @@ const DB = {
   shopTab:null,                    // 店铺管理页当前 Tab：pending|list
   applyTab:null,                   // 入驻审核详情 Tab：info|internal|flow|log
   // 店铺信息（平台商家专属，自营供应商无）
+  shopEditing:false,               // 店铺资料是否处于编辑态（编辑入口在 Tab 行右侧，与线上一致）
   shop:{
     logo:'🥬', name:'绿鲜源蔬果旗舰店', type:'蔬果生鲜店',
     cats:['叶菜类','根茎类','瓜茄类'],
     intro:'新加坡本地直供叶菜，每日清晨现摘现送，主营小棠菜、白菜、菠菜等。',
-    service:'+65 9123 4567', addr:'Pasir Panjang Wholesale Centre Blk 14 #02-12, Singapore 110014',
+    // 与线上 ShopProfileTab 字段对齐：联系人 / 客服电话(区号+号码) / UEN / 结算方式 / 最晚付款日
+    contact:'沈亮', svcRegion:'+65', service:'+65 9123 4567', uen:'UEN20260715476017',
+    settleType:'现结', payDay:'2',
+    addr:'Pasir Panjang Wholesale Centre Blk 14 #02-12, Singapore 110014',
     hours:'每日 04:00 – 14:00', delivery:'新加坡全岛', openDate:'2026-06-20',
     // 收款账户与结算方式：入驻（招商准入）时已提交，开店任务直接沿用、不重复填写
     bankAcct:'DBS Bank · 绿鲜源蔬果 Green Fresh Produce Pte Ltd · SGD 账户尾号 6621',
@@ -658,6 +688,8 @@ const DB = {
     {id:'#SG20260630002',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'06-30 10:40',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'件',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
     {id:'#SG20260630003',client:'丰盛轩',contact:'黄先生',phone:'+65 9001 7788',addr:'Bedok North Ave 1 #01-15',orderTime:'06-29 20:10',deliver:'07-01',deliverWindow:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,platSub:12.00,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'件',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
     {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    // 饮料订单（含 BCRS 押金）：行项 bcrsDeposit=押金单价(S$/最小售卖单位)，行押金=件数×押金单价（椰子水 24瓶/箱→2.40、1瓶→0.10）
+    {id:'#SG20260630005',client:'珍宝海鲜（新加坡）',contact:'李经理',phone:'+65 8222 3344',addr:'Jurong East St 21 #01-05',orderTime:'06-30 11:20',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:600.00,discount:0,platSub:0,lines:[{sku:'SKU8826',name:'NFC 椰子水 24瓶/箱',qty:10,unit:'箱',price:55.00,bcrsDeposit:2.40},{sku:'SKU8825',name:'NFC 椰子水',qty:20,unit:'瓶',price:2.50,bcrsDeposit:0.10}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
   ],
   // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
@@ -1155,60 +1187,129 @@ function wpQR(seed){
 PAGES['m-shop']=()=>{
   const t=DB.shopTab||'profile';
   const qn=DB.quals.filter(q=>q.status=='expiring'||q.status=='expired').length;
-  const bar=`<div class="tabs" style="margin-bottom:14px">
-    <div class="tab ${t=='profile'?'active':''}" onclick="DB.shopTab='profile';render()">店铺资料</div>
-    <div class="tab ${t=='qual'?'active':''}" onclick="DB.shopTab='qual';render()">经营资质${qn?` <span class="tag t-y" style="font-size:10px;margin-left:4px">${qn}</span>`:''}</div>
+  // 编辑入口放 Tab 行右侧（与线上 ShopInfoPage 一致）：只读态给「编辑」，编辑态不给（操作条在表单底部）
+  const canEdit=DB.merchant.onboard=='active';
+  const editBtn=(t=='profile'&&canEdit&&!DB.shopEditing)?`<button class="btn btn-o btn-sm" style="margin-left:auto;margin-bottom:6px" onclick="DB.shopEditing=true;render()">编辑</button>`:'';
+  const bar=`<div class="tabs" style="margin-bottom:14px;align-items:flex-end">
+    <div class="tab ${t=='profile'?'active':''}" onclick="DB.shopTab='profile';DB.shopEditing=false;render()">店铺资料</div>
+    <div class="tab ${t=='qual'?'active':''}" onclick="DB.shopTab='qual';DB.shopEditing=false;render()">经营资质${qn?` <span class="tag t-y" style="font-size:10px;margin-left:4px">${qn}</span>`:''}</div>
+    ${editBtn}
   </div>`;
   if(t=='qual') return bar+PAGES['m-qual']();
   return bar+(DB.merchant.onboard=='active'?shopProfileView():shopTaskView());
 };
+/* 店铺资料 · 排版规则（2026-07-31 重排，替代原「一张大卡 13 个禁用输入框」）
+   ① 只读态不用 disabled 输入框展示，改「标签 / 值」描述式——去掉一屏的灰框噪音，密度提高约一倍
+   ② 按语义分三组：店铺形象 / 联系与经营 / 开票与结算，取代无分组长表单
+   ③ 店铺头像上移到第一组首屏（原来在页面最底，必须滚到底才看得到）
+   ④ 表单容器收敛到 1040px，1920 宽屏下不再把单个输入框拉到 780px
+   ⑤ 营业时间为平台维护的只读值，独立标注来源并给「营业管理」跳转，不再混在输入框网格里
+   字段与线上 apps/web/src/features/shop/components/ShopProfileTab.tsx 一一对应 */
+const SHOP_CATS_ALL=['乳制品','新鲜水果','肉禽','餐厨用品','叶菜类','根茎类','瓜茄类','菌菇类','鲜活水产','豆制品'];
+const SHOP_TYPES=['蔬果生鲜店','水产海鲜店','综合食材店'];
+const SHOP_SETTLE=['现结','月结'];
+const rdRow=(k,v,hint)=>`<div class="rd-r"><div class="rd-k">${k}</div><div class="rd-v">${v||'—'}${hint?`<span class="rd-h">${hint}</span>`:''}</div></div>`;
+const secT=(t,extra)=>`<div class="sec-t"><span class="sec-bar"></span>${t}${extra||''}</div>`;
+
 function shopProfileView(){
+  if(DB.shopEditing) return shopProfileEdit();
   const m=DB.merchant,s=DB.shop;
-  const statusBadge='<span class="tag t-g"><span class="dot"></span>营业中</span>';
-  const expQ=DB.quals.find(q=>q.status=='expiring');
-  return `
-  <div class="card" style="overflow:hidden;padding:0">
-    <div style="height:118px;background:var(--gg);position:relative">
-      <div style="position:absolute;inset:0;opacity:.18;font-size:60px;letter-spacing:18px;padding:18px 22px;overflow:hidden;white-space:nowrap">🥬🍅🥬🐟🍅🥬🥩🍤🥬🍅</div>
-    </div>
-    <div style="padding:0 24px 20px;display:flex;gap:18px;align-items:flex-end;margin-top:-42px;flex-wrap:wrap">
-      <div style="width:88px;height:88px;border-radius:20px;background:#fff;border:3px solid #fff;box-shadow:var(--sh2);display:flex;align-items:center;justify-content:center;font-size:46px;flex-shrink:0">${s.logo||'🏪'}</div>
-      <div style="flex:1;min-width:200px;padding-bottom:2px">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:20px;font-weight:800">${s.name||'（未命名店铺）'}</span>${statusBadge}<span class="tag t-pp" style="font-size:11px">平台商家</span></div>
-        <div style="color:var(--ts);font-size:13px;margin-top:5px">${s.type||'—'} · 店铺编号 <span class="mono">${m.code}</span> · 开业于 ${s.openDate||'—'}</div>
+  const badge=m.onboard=='active'?'<span class="tag t-g"><span class="dot"></span>营业中</span>':'<span class="tag t-y"><span class="dot"></span>审核中</span>';
+  return `<div class="shopform">
+    <div class="card"><div class="card-bd">
+      ${secT('店铺形象')}
+      <div class="shop-hero">
+        <div class="shop-logo">${s.logo||'🏪'}</div>
+        <div style="flex:1;min-width:220px">
+          <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:19px;font-weight:800">${s.name||'（未命名店铺）'}</span>
+            ${badge}
+            <span class="tag t-pp" style="font-size:11px">${s.type}</span>
+          </div>
+          <div style="color:var(--ts);font-size:12.5px;margin-top:5px">店铺编号 <span class="mono">${m.code}</span>${(m.onboard=='active'&&s.openDate)?` · 开业于 ${s.openDate}`:''} · 头像展示在 APP 端</div>
+          <div style="margin-top:12px"><div class="rd-k" style="margin-bottom:6px">主营品类</div><div class="row" style="gap:6px;flex-wrap:wrap">${s.cats.map(c=>`<span class="tag t-g">${c}</span>`).join('')||'—'}</div></div>
+          <div style="margin-top:12px"><div class="rd-k" style="margin-bottom:4px">店铺简介</div><div style="font-size:13.5px;line-height:1.7;color:var(--tp)">${s.intro||'—'}</div></div>
+        </div>
       </div>
-      <button class="btn btn-p" onclick="act_editShop()">✏️ 编辑店铺</button>
-    </div>
-  </div>
-  <div class="split">
-    <div class="card"><div class="card-hd"><h3>店铺基本信息</h3><button class="btn btn-o btn-sm" onclick="act_editShop()">编辑</button></div><div class="card-bd">
-      <div class="kv" style="margin-bottom:14px">
-        <div><div class="k">店铺名称</div><div class="v">${s.name}</div></div>
-        <div><div class="k">店铺类型</div><div class="v">${s.type}</div></div>
-        <div><div class="k">客服电话</div><div class="v">${s.service}</div></div>
-        <div><div class="k">营业时间</div><div class="v">${s.hours}</div></div>
-        <div><div class="k">配送范围</div><div class="v">${s.delivery}</div></div>
-        <div><div class="k">供应商渠道</div><div class="v">${chanTag('平台商家')}</div></div>
-      </div>
-      <div style="margin-bottom:12px"><div class="k" style="font-size:12px;color:var(--ts);margin-bottom:6px">主营品类</div><div class="row" style="gap:6px;flex-wrap:wrap">${s.cats.map(c=>`<span class="tag t-g">${c}</span>`).join('')}</div></div>
-      <div><div class="k" style="font-size:12px;color:var(--ts);margin-bottom:4px">店铺简介</div><div style="font-size:13.5px;line-height:1.7">${s.intro}</div></div>
-      <div style="margin-top:12px"><div class="k" style="font-size:12px;color:var(--ts);margin-bottom:4px">经营地址</div><div style="font-size:13.5px">${s.addr}</div></div>
     </div></div>
-    <div>
-      <div class="card"><div class="card-hd"><h3>资质与认证</h3><button class="btn btn-link" onclick="nav('m-qual')">资质管理 →</button></div><div class="card-bd">
-        <div class="ck ok"><div class="cb">✓</div>营业执照<span class="cx">已认证</span></div>
-        <div class="ck ${expQ?'no':'ok'}"><div class="cb">${expQ?'!':'✓'}</div>食品经营许可证<span class="cx">${expQ?'即将到期 '+expQ.expire:'有效'}</span></div>
-        <div class="ck ok"><div class="cb">✓</div>一般纳税人资格<span class="cx">已认证</span></div>
-      </div></div>
-      <div class="card"><div class="card-hd"><h3>账号与经营</h3></div><div class="card-bd"><div class="kv">
-        <div><div class="k">经营主体</div><div class="v" style="font-size:13px">${m.name}</div></div>
-        <div><div class="k">商家编号</div><div class="v mono">${m.code}</div></div>
-        <div><div class="k">结算账期</div><div class="v">月结 30 天</div></div>
-        <div><div class="k">信用等级</div><div class="v">${m.grade} 级</div></div>
-        <div><div class="k">保证金余额</div><div class="v">${depositText(m.depositBalance)}</div></div>
-        <div><div class="k">对应供应商</div><div class="v mono">${m.vendorCreated?'V2026-0815':'待建档'}</div></div>
-      </div></div></div>
-    </div>
+
+    <div class="card"><div class="card-bd">
+      ${secT('联系与经营')}
+      <div class="rd-grid">
+        ${rdRow('联系人姓名',s.contact)}
+        ${rdRow('客服电话',`<span class="mono">${s.service}</span>`)}
+        ${rdRow('配送范围',s.delivery)}
+        ${rdRow('营业时间',s.hours,`由营业管理维护 · <a href="javascript:nav('m-biz-hours')">去设置 →</a>`)}
+      </div>
+      <div class="rd-grid" style="grid-template-columns:1fr">${rdRow('经营地址',s.addr)}</div>
+    </div></div>
+
+    <div class="card"><div class="card-bd">
+      ${secT('开票与结算')}
+      <div class="rd-grid">
+        ${rdRow('UEN（开票用）',`<span class="mono">${s.uen}</span>`)}
+        ${rdRow('结算方式',s.settleType)}
+        ${rdRow('最晚付款日',s.payDay?`每月 ${s.payDay} 日`:'')}
+        ${rdRow('收款账户',s.bankAcct,'入驻时提交，如需变更联系运营')}
+      </div>
+    </div></div>
+  </div>`;
+};
+
+// mode='task' 时同一张表用于「开店任务」（首次填写无可回滚原值，不给取消，按钮为提交开店任务）
+function shopProfileEdit(mode){
+  const s=DB.shop;
+  setTimeout(()=>TR.init(document),0); // 店铺名称/简介是买家可见自由文本，沿用实时翻译译文行
+  return `<div class="shopform">
+    <div class="card"><div class="card-bd">
+      ${secT('店铺形象')}
+      <div class="fg2">
+        <div class="fr"><label class="fl"><i class="rq">*</i>店铺名称</label><input id="es-name" data-tr value="${s.name}"></div>
+        <div class="fr"><label class="fl"><i class="rq">*</i>店铺类型</label><select id="es-type">${SHOP_TYPES.map(x=>`<option ${s.type==x?'selected':''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <div class="fr"><label class="fl"><i class="rq">*</i>主营品类（多选）</label><div class="row" style="gap:8px;flex-wrap:wrap">${SHOP_CATS_ALL.map(c=>`<label class="chip-ck ${s.cats.includes(c)?'on':''}"><input type="checkbox" data-cat="${c}" ${s.cats.includes(c)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${c}</label>`).join('')}</div></div>
+      <div class="fr"><label class="fl"><i class="rq">*</i>店铺头像</label>
+        <div class="logo-edit">
+          <div class="up done" style="width:104px;flex:0 0 104px;padding:12px"><div class="uic">${s.logo||'📷'}</div><div class="ut">重新上传</div></div>
+          <div class="logo-tip"><b>建议尺寸 800×800</b><br>头像会展示在 APP 端，支持 jpg / png，单张 ≤5MB。</div>
+        </div>
+      </div>
+      <div class="fr" style="margin-bottom:0">
+        <label class="fl fl-row"><span>店铺简介</span><span class="fl-cnt"><span id="es-cnt">${(s.intro||'').length}</span>/250</span></label>
+        <textarea id="es-intro" data-tr maxlength="250" oninput="document.getElementById('es-cnt').textContent=this.value.length">${s.intro}</textarea>
+      </div>
+    </div></div>
+
+    <div class="card"><div class="card-bd">
+      ${secT('联系与经营')}
+      <div class="fg2">
+        <div class="fr"><label class="fl"><i class="rq">*</i>联系人姓名</label><input id="es-contact" value="${s.contact}"></div>
+        <div class="fr"><label class="fl"><i class="rq">*</i>客服电话</label>
+          <div class="row" style="gap:8px"><select id="es-region" style="flex:0 0 92px"><option ${s.svcRegion=='+65'?'selected':''}>+65</option><option ${s.svcRegion=='+86'?'selected':''}>+86</option></select><input id="es-service" style="flex:1" value="${(s.service||'').replace(/^\+\d+\s*/,'')}"></div>
+        </div>
+      </div>
+      <div class="fg2">
+        <div class="fr"><label class="fl"><i class="rq">*</i>配送范围</label><input id="es-delivery" value="${s.delivery}"></div>
+        <div class="fr"><label class="fl">营业时间</label>
+          <div class="ro-field">${s.hours}<a href="javascript:nav('m-biz-hours')" style="margin-left:auto;font-size:12px">去营业管理设置 →</a></div>
+        </div>
+      </div>
+      <div class="fr" style="margin-bottom:0"><label class="fl"><i class="rq">*</i>经营地址</label><input id="es-addr" value="${s.addr}"></div>
+    </div></div>
+
+    <div class="card"><div class="card-bd">
+      ${secT('开票与结算')}
+      <div class="fg2">
+        <div class="fr"><label class="fl"><i class="rq">*</i>UEN（开票用）</label><input id="es-uen" value="${s.uen}"></div>
+        <div class="fr"><label class="fl"><i class="rq">*</i>结算方式</label><select id="es-settle">${SHOP_SETTLE.map(x=>`<option ${s.settleType==x?'selected':''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <div class="fg2">
+        <div class="fr" style="margin-bottom:0"><label class="fl"><i class="rq">*</i>最晚付款日</label><select id="es-payday">${[1,2,3,5,10,15,20,25].map(d=>`<option ${String(s.payDay)==String(d)?'selected':''}>${d}</option>`).join('')}</select></div>
+        <div class="fr" style="margin-bottom:0"><label class="fl">收款账户</label><div class="ro-field" style="color:var(--ts)">${s.bankAcct}</div></div>
+      </div>
+    </div></div>
+
+    <div class="shopform-ft">${mode=='task'?`<button class="btn btn-p btn-lg" onclick="act_submitTask()">${DB.merchant.onboard=='task_rejected'?'重新提交开店任务':'提交开店任务'}</button>`:`<button class="btn btn-o" onclick="DB.shopEditing=false;render()">取消</button><button class="btn btn-p" onclick="doEditShop()">提交</button>`}</div>
   </div>`;
 };
 /* ===== 实时翻译（商家自由输入 中↔英 · 露出译文行 · 可手改 · 手改后锁定不自动覆盖）=====
@@ -1254,30 +1355,26 @@ const TR=(function(){
   document.head.appendChild(st);
   return {init,translate};
 })();
-function act_editShop(){
-  const s=DB.shop;const allCats=['叶菜类','根茎类','瓜茄类','菌菇类','鲜活水产','豆制品','干货','调味'];
-  modalWide(`<div class="mc-hd"><h3>编辑店铺信息</h3><p>店铺信息用于平台前台展示与运营</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="fg2"><div class="fr"><label class="fl">店铺名称</label><input id="es-name" data-tr value="${s.name}"></div><div class="fr"><label class="fl">店铺类型</label><select id="es-type"><option ${s.type=='蔬果生鲜店'?'selected':''}>蔬果生鲜店</option><option ${s.type=='水产海鲜店'?'selected':''}>水产海鲜店</option><option ${s.type=='综合食材店'?'selected':''}>综合食材店</option></select></div></div>
-    <div class="fr"><label class="fl">主营品类（多选）</label><div class="row" style="gap:8px;flex-wrap:wrap">${allCats.map(c=>`<label class="chip-ck ${s.cats.includes(c)?'on':''}"><input type="checkbox" data-cat="${c}" ${s.cats.includes(c)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${c}</label>`).join('')}</div></div>
-    <div class="fr"><label class="fl">店铺简介</label><textarea id="es-intro" data-tr>${s.intro}</textarea></div>
-    <div class="fg2"><div class="fr"><label class="fl">客服电话</label><input id="es-service" value="${s.service}"></div><div class="fr"><label class="fl">营业时间</label><input id="es-hours" value="${s.hours}"></div></div>
-    <div class="fg2"><div class="fr"><label class="fl">配送范围</label><input id="es-delivery" value="${s.delivery}"></div><div class="fr"><label class="fl">门头照 / Logo</label><div class="up done" onclick="this.classList.add('done')"><div class="uic">📷</div><div class="ut">已上传 ✓</div></div></div></div>
-    <div class="fr"><label class="fl">经营地址</label><input id="es-addr" value="${s.addr}"></div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doEditShop()">保存</button></div>`);
-  setTimeout(()=>TR.init(document.getElementById('mc')),0);
+// 编辑改为页内切换（与线上一致：Tab 行右侧「编辑」→ 表单就地变可编辑 → 底部 取消/提交），不再弹窗
+function act_editShop(){DB.shopTab='profile';DB.shopEditing=true;nav('m-shop');}
+// 读表单回写 DB.shop：店铺资料编辑与开店任务提交共用
+function readShopForm(){
+  const s=DB.shop,g=id=>document.getElementById(id)||{};
+  s.name=g('es-name').value||s.name;
+  s.type=g('es-type').value||s.type;
+  s.intro=g('es-intro').value??s.intro;
+  s.contact=g('es-contact').value||s.contact;
+  s.svcRegion=g('es-region').value||s.svcRegion;
+  if(g('es-service').value) s.service=s.svcRegion+' '+g('es-service').value.trim();
+  s.delivery=g('es-delivery').value||s.delivery;
+  s.addr=g('es-addr').value||s.addr;
+  s.uen=g('es-uen').value||s.uen;
+  s.settleType=g('es-settle').value||s.settleType;
+  s.payDay=g('es-payday').value||s.payDay;
+  const cks=[...document.querySelectorAll('.shopform input[data-cat]:checked')].map(e=>e.dataset.cat);
+  if(cks.length)s.cats=cks;
 }
-function doEditShop(){
-  const s=DB.shop;
-  s.name=document.getElementById('es-name').value||s.name;
-  s.type=document.getElementById('es-type').value;
-  s.intro=document.getElementById('es-intro').value;
-  s.service=document.getElementById('es-service').value;
-  s.hours=document.getElementById('es-hours').value;
-  s.delivery=document.getElementById('es-delivery').value;
-  s.addr=document.getElementById('es-addr').value;
-  s.cats=[...document.querySelectorAll('#mc input[data-cat]:checked')].map(e=>e.dataset.cat);
-  closeModal();render();toast('店铺信息已保存','ok');
-}
+function doEditShop(){readShopForm();DB.shopEditing=false;render();toast('店铺信息已保存','ok');}
 
 /* ---------- 商家端：营业管理（每日营业时间：start–end 可配，截止时间＝当日截单时间；截单后统一停止接单） ---------- */
 PAGES['m-biz-hours']=()=>{
@@ -1341,6 +1438,8 @@ function doEditHours(){
 }
 
 /* ---------- 商家端：开店任务（并入「店铺信息」，营业前展示；店铺信息主页需开店任务通过后才生成） ---------- */
+// 开店任务与店铺资料用同一张分组表单（与线上一致：ShopInfoPage 进度条 + 同一个 ShopProfileTab），
+// 不再维护第二套字段更少的 taskForm——曾导致开店任务缺 联系人/UEN/最晚付款日
 function shopTaskView(){
   const m=DB.merchant;
   const steps=['账号开通','填写开店任务','运营审核','营业中'];
@@ -1348,32 +1447,15 @@ function shopTaskView(){
   const rejIdx=m.onboard=='task_rejected'?2:-1;
   let body='';
   if(m.onboard=='task'){
-    body=taskForm();
+    body=shopProfileEdit('task');
   }else if(m.onboard=='task_rejected'){
-    body=`<div class="ib ib-r"><span class="i">⛔</span><div><b>开店任务被驳回</b><br>${m.taskReject||'店铺信息不完整，请补充后重新提交。'}</div></div>${taskForm(true)}`;
+    body=`<div class="shopform"><div class="ib ib-r"><span class="i">⛔</span><div><b>开店任务被驳回</b><br>${m.taskReject||'店铺信息不完整，请补充后重新提交。'}</div></div></div>${shopProfileEdit('task')}`;
   }else{
-    body=taskSummary();
+    // 审核中：不可编辑，用只读态展示已提交内容（线上 canEdit=false 同此）
+    body=`<div class="shopform"><div class="ib ib-y"><span class="i">⏳</span><div><b>开店任务审核中</b><br>运营审核期间店铺资料不可修改，审核通过后可在本页「编辑」。</div></div></div>${shopProfileView()}`;
   }
-  return `<div class="card"><div class="card-bd">${pipe(steps,map[m.onboard],rejIdx)}</div></div>${body}`;
+  return `<div class="card shopform"><div class="card-bd">${pipe(steps,map[m.onboard],rejIdx)}</div></div>${body}`;
 }
-function taskForm(resub){const s=DB.shop;return `
-<div class="card"><div class="card-hd"><h3>🏪 开店任务 · 维护店铺基础信息</h3><span class="sub">平台商家专属</span></div><div class="card-bd">
-  <div class="fg2"><div class="fr"><label class="fl">店铺名称</label><input id="tk-name" value="${s.name}" placeholder="展示给买家的店铺名称"></div><div class="fr"><label class="fl">店铺类型</label><select id="tk-type"><option value="" ${s.type?'':'selected'}>请选择店铺类型</option><option ${s.type=='蔬果生鲜店'?'selected':''}>蔬果生鲜店</option><option ${s.type=='水产海鲜店'?'selected':''}>水产海鲜店</option><option ${s.type=='综合食材店'?'selected':''}>综合食材店</option></select></div></div>
-  <div class="fr"><label class="fl">主营品类（多选）</label><div class="row" style="gap:8px;flex-wrap:wrap">${['叶菜类','根茎类','瓜茄类','菌菇类','鲜活水产','豆制品','干货','调味'].map(c=>`<label class="chip-ck ${s.cats.includes(c)?'on':''}"><input type="checkbox" data-tcat="${c}" ${s.cats.includes(c)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${c}</label>`).join('')}</div></div>
-  <div class="fr"><label class="fl">店铺简介</label><textarea id="tk-intro" placeholder="一句话介绍店铺特色 / 优势品类">${s.intro}</textarea></div>
-  <div class="fg2"><div class="fr"><label class="fl">客服电话</label><input id="tk-service" value="${s.service}" placeholder="如：+65 9123 4567"></div><div class="fr"><label class="fl">营业时间</label><input id="tk-hours" value="${s.hours}" placeholder="如：每日 04:00 – 14:00"></div></div>
-  <div class="fg2"><div class="fr"><label class="fl">配送范围</label><input id="tk-delivery" value="${s.delivery}" placeholder="如：新加坡全岛"></div><div class="fr"><label class="fl">店铺门头照 / Logo</label><div class="up" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">📷</div><div class="ut">点击上传</div></div></div></div>
-  <div class="fr"><label class="fl">经营地址</label><input id="tk-addr" value="${s.addr}" placeholder="店铺 / 仓库经营地址"></div>
-  <h4 style="font-size:13.5px;margin:6px 0 8px">收款与结算 <span style="font-weight:400;color:var(--ts);font-size:12px">已在入驻时提交，开店任务直接沿用</span></h4>
-  <div class="ib ib-b" style="margin-bottom:10px"><span class="i">ℹ️</span>收款银行账户与结算方式取自<b>入驻资料</b>，无需在开店任务重复填写；如需变更请到「财务 · 对账结算」发起。</div>
-  <div class="fg2">
-    <div class="fr"><label class="fl">收款银行账户 <span class="tag t-g" style="font-size:10px">取自入驻</span></label><input value="${s.bankAcct||''}" readonly style="background:#F3F4F6;color:var(--ts)"></div>
-    <div class="fr"><label class="fl">结算方式 / 账期 <span class="tag t-g" style="font-size:10px">取自入驻</span></label><input value="${s.settle||''}" readonly style="background:#F3F4F6;color:var(--ts)"></div>
-  </div>
-  <button class="btn btn-p btn-lg" style="margin-top:14px" onclick="act_submitTask()">${resub?'重新提交开店任务':'提交开店任务'}</button>
-</div></div>`;}
-function taskSummary(){const s=DB.shop;return `<div class="card"><div class="card-hd"><h3>已提交开店任务</h3></div><div class="card-bd"><dl class="dl"><dt>店铺名称</dt><dd>${s.name}</dd><dt>店铺类型</dt><dd>${s.type}</dd><dt>主营品类</dt><dd>${s.cats.join(' · ')||'—'}</dd><dt>营业时间</dt><dd>${s.hours||'—'}</dd><dt>经营地址</dt><dd>${s.addr||'—'}</dd></dl></div></div>`;}
-
 /* ---------- 商家端：资质管理（闭环 资质有效期） ---------- */
 PAGES['m-qual']=()=>{
   const exp=DB.quals.filter(q=>q.status=='expiring'||q.status=='expired');
@@ -2021,21 +2103,22 @@ PAGES['m-order']=()=>{
   <div class="tabs">${ORD_TABS.map(t=>`<div class="tab ${ordTab==t[0]?'active':''}" onclick="ordTab='${t[0]}';render()">${t[1]}${ordTabCount(t[0])?`<span class="tb" style="background:var(--ts)">${ordTabCount(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span><div><b>多退少补金额</b>（按重量定价商品）= Σ<b>(实发净重 − 应发净重) × 单价</b>，<b>+</b>为多发补款客户、<b>−</b>为少发退款客户；<b>平台佣金变更</b> = 多退少补金额 × 该行品类佣金率（服务+物流），补款佣金增、退款佣金减。<b>结算后预计收入 = 预估收入 + 多退少补金额 − 佣金变更</b>。货到仓库 WMS 重新分拣分配后按各订单实际分配重量结算（收货/完成即定稿）。</div></div>
   <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th>商家补贴</th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th title="BCRS 饮料容器押金 = Σ(件数×押金单价)；过手项，不计 GST/佣金/预计收入，随货透传客户下单/订单/发票">BCRS押金</th><th>商家补贴</th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${list.map((o)=>{const i=DB.orders.indexOf(o);return `<tr>
       <td class="mono">${o.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.orderTime||''}</div></td>
       <td>${ord_mask(o.client)}</td>
-      <td style="max-width:230px;white-space:normal">${(o.lines||[]).map(l=>`<div>${l.name} <span style="color:var(--ts)">${l.qty}${l.unit} · ${money(l.price)}/${l.unit}</span></div>`).join('')}<div style="font-size:11.5px;color:var(--ts);margin-top:2px">共 ${(o.lines||[]).length} 件商品</div></td>
+      <td style="max-width:230px;white-space:normal">${(o.lines||[]).map(l=>`<div>${l.name}${l.bcrsDeposit?' <span class="tag t-b" style="font-size:9.5px;padding:0 4px">BCRS</span>':''} <span style="color:var(--ts)">${l.qty}${l.unit} · ${money(l.price)}/${l.unit}${l.bcrsDeposit?` · 押金${money(l.bcrsDeposit)}/${l.unit}`:''}</span></div>`).join('')}<div style="font-size:11.5px;color:var(--ts);margin-top:2px">共 ${(o.lines||[]).length} 件商品</div></td>
       <td>${o.deliver||'—'}<div style="font-size:11.5px;color:var(--ts)">${o.deliverWindow||''}</div></td>
       <td>${o.warehouse||'—'}</td>
       <td><b>${money(o.amt)}</b></td>
+      <td>${ordBcrs(o)>0?`<b class="tag t-b" style="font-size:12px" title="过手项·不计 GST/佣金/预计收入">${money(ordBcrs(o))}</b>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="color:var(--r)">-${money(ord_disc(o))}</td>
       <td style="color:var(--r)">-${money(ord_fee(o))}</td>
       <td>${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${f>0?'+':''}${money(f)}</div>`;})()}</td>
       <td><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ordTag(o)}${o.status=='pending'?'<div style="font-size:11px;color:var(--ts);margin-top:2px">待分拣贴标</div>':o.status=='packed'?'<div style="font-size:11px;color:var(--pp);margin-top:2px">已贴标·待交接</div>':''}</td>
       <td>${ord_ops(o,i)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
@@ -2092,6 +2175,9 @@ function ord_feePct(o){return o.amt?ord_fee(o)/o.amt:0;}            // 综合费
 function ord_disc(o){return o.discount||0;}                         // 商家补贴（合作商优惠·商家出，扣减项）
 function ord_platSub(o){return o.platSub||0;}                       // 平台补贴（平台出·增项，计入商家预计收入）
 function ord_income(o){return o.amt-ord_disc(o)+ord_platSub(o)-ord_fee(o);}  // 预计收入 = 订单金额 − 商家补贴 + 平台补贴 − 佣金
+// BCRS 饮料容器押金：行押金=件数×押金单价(S$/最小售卖单位)；过手项——不计 GST、不计佣金基数、不进预计收入
+function lineBcrs(l){return (+l.qty||0)*(+l.bcrsDeposit||0);}
+function ordBcrs(o){return (o.lines||[]).reduce((s,l)=>s+lineBcrs(l),0);}
 /* 多退少补（客户侧·货到仓库 WMS 重新分拣分配后，按各订单实际分配重量 vs 应发结算）——演示用每行稳定模拟实发差异。
    多退少补金额 = Σ(实发净重 − 应发净重)×单价（+补款客户 / −退款客户）；平台佣金变更 = 多退少补金额 × 该行品类佣金率(服务+物流)。 */
 function ordAdjParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';
@@ -2953,17 +3039,8 @@ PAGES['p-exit']=()=>{
 // 闭环A 入驻
 // 商家端：提交开店任务（店铺基础信息）→ 待店铺运营平台审核
 function act_submitTask(){
-  const s=DB.shop;
-  s.name=(document.getElementById('tk-name')||{}).value||s.name;
-  s.type=(document.getElementById('tk-type')||{}).value||s.type;
-  s.intro=(document.getElementById('tk-intro')||{}).value||s.intro;
-  s.service=(document.getElementById('tk-service')||{}).value||s.service;
-  s.hours=(document.getElementById('tk-hours')||{}).value||s.hours;
-  s.delivery=(document.getElementById('tk-delivery')||{}).value||s.delivery;
-  s.addr=(document.getElementById('tk-addr')||{}).value||s.addr;
-  const cks=[...document.querySelectorAll('#content input[data-tcat]:checked')].map(e=>e.dataset.tcat);
-  if(cks.length)s.cats=cks;
-  DB.merchant.onboard='task_review';render();toast('开店任务已提交，等待店铺运营平台审核','ok');
+  readShopForm();   // 与「店铺资料 · 编辑」共用同一张表单和同一套读值逻辑
+  DB.merchant.onboard='task_review';DB.shopEditing=false;render();toast('开店任务已提交，等待店铺运营平台审核','ok');
 }
 // 店铺运营平台：开店任务审核
 function act_approveTask(){closeModal();DB.merchant.onboard='active';DB.shop.openDate='2026-06-30';render();toast('开店任务审核通过，店铺正式营业','ok');}
