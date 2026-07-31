@@ -2021,7 +2021,7 @@ PAGES['m-order']=()=>{
   <div class="tabs">${ORD_TABS.map(t=>`<div class="tab ${ordTab==t[0]?'active':''}" onclick="ordTab='${t[0]}';render()">${t[1]}${ordTabCount(t[0])?`<span class="tb" style="background:var(--ts)">${ordTabCount(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span><div><b>多退少补金额</b>（按重量定价商品）= Σ<b>(实发净重 − 应发净重) × 单价</b>，<b>+</b>为多发补款客户、<b>−</b>为少发退款客户；<b>平台佣金变更</b> = 多退少补金额 × 该行品类佣金率（服务+物流），补款佣金增、退款佣金减。<b>结算后预计收入 = 预估收入 + 多退少补金额 − 佣金变更</b>。货到仓库 WMS 重新分拣分配后按各订单实际分配重量结算（收货/完成即定稿）。</div></div>
   <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th>商家补贴</th><th>平台补贴</th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th>商家补贴</th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${list.map((o)=>{const i=DB.orders.indexOf(o);return `<tr>
       <td class="mono">${o.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.orderTime||''}</div></td>
       <td>${ord_mask(o.client)}</td>
@@ -2030,13 +2030,12 @@ PAGES['m-order']=()=>{
       <td>${o.warehouse||'—'}</td>
       <td><b>${money(o.amt)}</b></td>
       <td style="color:var(--r)">-${money(ord_disc(o))}</td>
-      <td style="color:var(--gd)">${ord_platSub(o)>0?'+'+money(ord_platSub(o)):money(0)}</td>
       <td style="color:var(--r)">-${money(ord_fee(o))}</td>
       <td>${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${f>0?'+':''}${money(f)}</div>`;})()}</td>
       <td><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ordTag(o)}${o.status=='pending'?'<div style="font-size:11px;color:var(--ts);margin-top:2px">待分拣贴标</div>':o.status=='packed'?'<div style="font-size:11px;color:var(--pp);margin-top:2px">已贴标·待交接</div>':''}</td>
       <td>${ord_ops(o,i)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
@@ -3318,7 +3317,7 @@ goHome();
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260730f"></script>
 <script src="pc-modules/pick.js?v=20260730f"></script>
-<script src="pc-modules/weigh.js?v=20260731c"></script>
+<script src="pc-modules/weigh.js?v=20260731d"></script>
 <script src="pc-modules/delivery.js?v=20260730f"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
