@@ -612,6 +612,7 @@ const DB = {
     {id:'SPU8812',name:'娃娃菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',consign:true,alias:'',origin:'马来西亚金马仑',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['娃娃菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8816',refund:0,qty:1,price:7.00,stock:18,safe:30}]},
     {id:'SPU8813',name:'芥蓝',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'新加坡',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['芥蓝主图'],detailImgs:['芥蓝详情'],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8817',refund:1,qty:1,price:6.50,stock:160,safe:20,stockMode:'daily',soldToday:28},{skuId:'SKU8818',refund:1,qty:5,price:6.20,stock:42,safe:10,packUnit:'箱',stockMode:'finite'}]},
     {id:'SPU8814',name:'菠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['菠菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8819',refund:1,qty:1,price:5.80,stock:95,safe:20}]},
+    {id:'SPU8820',name:'空心菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['空心菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8825',refund:1,qty:1,price:7.00,stock:70,safe:20}]},
     {id:'SPU8815',name:'土豆',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'马铃薯',origin:'中国山东',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8820',refund:0,qty:1,price:3.20,stock:300,safe:40}]},
     {id:'SPU8816',name:'白菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8821',refund:0,qty:1,price:3.50,stock:0,safe:30,off:true,recycled:true}]},
     {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',refund:1,qty:1,price:58.00,stock:26,safe:10}]},
@@ -2018,8 +2019,9 @@ PAGES['m-order']=()=>{
     </div>
   </div>
   <div class="tabs">${ORD_TABS.map(t=>`<div class="tab ${ordTab==t[0]?'active':''}" onclick="ordTab='${t[0]}';render()">${t[1]}${ordTabCount(t[0])?`<span class="tb" style="background:var(--ts)">${ordTabCount(t[0])}</span>`:''}</div>`).join('')}</div>
+  <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span><div><b>多退少补金额</b>（按重量定价商品）= Σ<b>(实发净重 − 应发净重) × 单价</b>，<b>+</b>为多发补款客户、<b>−</b>为少发退款客户；<b>平台佣金变更</b> = 多退少补金额 × 该行品类佣金率（服务+物流），补款佣金增、退款佣金减。<b>结算后预计收入 = 预估收入 + 多退少补金额 − 佣金变更</b>。货到仓库 WMS 重新分拣分配后按各订单实际分配重量结算（收货/完成即定稿）。</div></div>
   <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th>商家补贴</th><th>平台补贴</th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th>商家补贴</th><th>平台补贴</th><th title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额<span style="font-weight:400">ⓘ</span></th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${list.map((o)=>{const i=DB.orders.indexOf(o);return `<tr>
       <td class="mono">${o.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.orderTime||''}</div></td>
       <td>${ord_mask(o.client)}</td>
@@ -2029,11 +2031,12 @@ PAGES['m-order']=()=>{
       <td><b>${money(o.amt)}</b></td>
       <td style="color:var(--r)">-${money(ord_disc(o))}</td>
       <td style="color:var(--gd)">${ord_platSub(o)>0?'+'+money(ord_platSub(o)):money(0)}</td>
+      <td>${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o),set=ordSettled(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">佣金 ${f>0?'+':''}${money(f)}${set?'':' · 待结算'}</div>`;})()}</td>
       <td style="color:var(--r)">-${money(ord_fee(o))}</td>
       <td><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ordTag(o)}${o.status=='pending'?'<div style="font-size:11px;color:var(--ts);margin-top:2px">待分拣贴标</div>':o.status=='packed'?'<div style="font-size:11px;color:var(--pp);margin-top:2px">已贴标·待交接</div>':''}</td>
       <td>${ord_ops(o,i)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
@@ -2090,6 +2093,19 @@ function ord_feePct(o){return o.amt?ord_fee(o)/o.amt:0;}            // 综合费
 function ord_disc(o){return o.discount||0;}                         // 商家补贴（合作商优惠·商家出，扣减项）
 function ord_platSub(o){return o.platSub||0;}                       // 平台补贴（平台出·增项，计入商家预计收入）
 function ord_income(o){return o.amt-ord_disc(o)+ord_platSub(o)-ord_fee(o);}  // 预计收入 = 订单金额 − 商家补贴 + 平台补贴 − 佣金
+/* 多退少补（客户侧·货到仓库 WMS 重新分拣分配后，按各订单实际分配重量 vs 应发结算）——演示用每行稳定模拟实发差异。
+   多退少补金额 = Σ(实发净重 − 应发净重)×单价（+补款客户 / −退款客户）；平台佣金变更 = 多退少补金额 × 该行品类佣金率(服务+物流)。 */
+function ordAdjParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';
+  return (o.lines||[]).reduce((a,l)=>{const p=DB.products.find(x=>x.name==l.name);if(!p||!(p.skus&&p.skus[0]&&p.skus[0].refund))return a; // 仅按重量定价(多退少补)品
+    let h=7;const key=o.id+'|'+l.sku;for(const c of key)h=(h*31+c.charCodeAt(0))>>>0;const rate=((h%7)<3?1:-1)*(0.02+(h%50)/1000); // 稳定伪随机差异率 ±2%~±7%(非零·增减混合)
+    const due=+(l.qty*(p.skus[0].qty||1)).toFixed(2),diffW=+(due*rate).toFixed(2),amt=+(diffW*l.price).toFixed(2); // 差异净重、差额(未税)
+    const r=commRates(code,lineCat(l),d),feeAdj=+(amt*(r.svc+r.logi)).toFixed(2); // 佣金变更=差额×品类佣金率
+    a.amt+=amt;a.fee+=feeAdj;a.has=true;a.rows.push({name:l.name,unit:l.unit,price:l.price,due,diffW,amt,feeAdj,pct:r.svc+r.logi});return a;},
+    {amt:0,fee:0,has:false,rows:[]});}
+function ordAdjust(o){return +ordAdjParts(o).amt.toFixed(2);}   // 多退少补金额（+补款/−退款）
+function ordAdjFee(o){return +ordAdjParts(o).fee.toFixed(2);}   // 因多退少补引起的平台佣金变更
+function ordHasAdj(o){return ordAdjParts(o).has;}
+function ordSettled(o){return o.status=='received'||o.status=='done';} // 已收货/已完成=已随分拣结算
 function ord_ops(o,i){
   // 订单履约=纯监控视图：所有状态行操作仅「详情」。打码归备货单、交接归送货单、售后/客户收货/完成为上游动作，
   // 均不在订单行；上游动作的“演示模拟”入口挪进订单详情抽屉（见 ord_detail 底部）。
@@ -3080,6 +3096,18 @@ function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pendin
       <tr style="font-weight:700;background:var(--gl)"><td>合计（共 ${(o.lines||[]).length} 件）</td><td style="text-align:right">${money(o.amt)}</td><td style="text-align:right;color:var(--r)">-${money(ord_disc(o))}</td><td style="text-align:right;color:var(--gd)">${ord_platSub(o)>0?'+'+money(ord_platSub(o)):money(0)}</td><td style="text-align:right;color:var(--r)">-${money(ord_feeSvc(o))}</td><td style="text-align:right;color:var(--r)">-${money(ord_feeLogi(o))}</td><td style="text-align:right;color:var(--gd)">${money(ord_income(o))}</td></tr>
       </tbody></table></div>
     <div style="font-size:11.5px;color:var(--ts);margin-bottom:14px">服务佣金 + 物流佣金按各商品所属<b>品类佣金率</b>${ord_fee(o)>0?'（合计综合 '+(ord_feePct(o)*100).toFixed(1)+'%）':'（免佣期）'}逐行计 · 预计收入 = 订单金额 − 商家补贴 + 平台补贴 − 服务佣金 − 物流佣金,均为<b>预估</b>,以订单实际完成为准 · 结算：完成后 3 天</div>
+    ${(()=>{if(!ordHasAdj(o))return '';const P=ordAdjParts(o),adj=ordAdjust(o),fee=ordAdjFee(o),set=ordSettled(o);const inc2=+(ord_income(o)+adj-fee).toFixed(2);
+      return `<div class="card" style="box-shadow:none;margin-bottom:14px"><div class="card-hd"><h3 style="font-size:14px">多退少补（按重量定价商品）</h3><span class="sub">${set?'已随分拣结算':'待仓库分拣分配后结算'}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table style="border:none">
+      <thead><tr><th>商品</th><th style="text-align:right">实发−应发(净重)</th><th style="text-align:right">单价</th><th style="text-align:right">多退少补金额</th><th style="text-align:right">品类佣金率</th><th style="text-align:right">平台佣金变更</th></tr></thead><tbody>
+      ${P.rows.map(r=>`<tr><td><b>${r.name}</b></td>
+        <td style="text-align:right;color:${r.diffW>0?'var(--y)':r.diffW<0?'var(--r)':'var(--ts)'}">${r.diffW>0?'+':''}${r.diffW} ${r.unit}</td>
+        <td style="text-align:right">${money(r.price)}/${r.unit}</td>
+        <td style="text-align:right;color:${r.amt>0?'var(--y)':r.amt<0?'var(--r)':'var(--ts)'}"><b>${r.amt>0?'+':''}${money(r.amt)}</b></td>
+        <td style="text-align:right;color:var(--ts)">${(r.pct*100).toFixed(1)}%</td>
+        <td style="text-align:right;color:${r.feeAdj>0?'var(--y)':r.feeAdj<0?'var(--r)':'var(--ts)'}">${r.feeAdj>0?'+':''}${money(r.feeAdj)}</td></tr>`).join('')}
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="3">合计</td><td style="text-align:right;color:${adj>0?'var(--y)':adj<0?'var(--r)':'var(--ts)'}">${adj>0?'+':''}${money(adj)}</td><td></td><td style="text-align:right;color:${fee>0?'var(--y)':fee<0?'var(--r)':'var(--ts)'}">${fee>0?'+':''}${money(fee)}</td></tr>
+      </tbody></table></div></div></div>
+      <div style="font-size:11.5px;color:var(--ts);margin-bottom:14px"><b>多退少补金额</b> = Σ(实发净重 − 应发净重)×单价（+补款客户/−退款客户）· <b>平台佣金变更</b> = 多退少补金额×品类佣金率 · <b>结算后预计收入 ${inc2>=ord_income(o)?'≈':''} ${money(inc2)}</b>（= 预估收入 ${money(ord_income(o))} ${adj>=0?'+':'−'} 多退少补 ${money(Math.abs(adj))} ${fee>=0?'−':'+'} 佣金变更 ${money(Math.abs(fee))}）。以仓库实际分拣分配为准。</div>`;})()}
     <div class="card" style="box-shadow:none;margin-bottom:0"><div class="card-hd"><h3 style="font-size:14px">订单信息</h3></div><div class="card-bd"><dl class="dl">
       <dt>收货信息</dt><dd>${ord_mask(o.client)}<span style="color:var(--ts);font-weight:400;font-size:12px;margin-left:6px">（信息已脱敏）</span></dd>
       <dt>下单时间</dt><dd>${o.orderTime||'—'}</dd>
@@ -3290,7 +3318,7 @@ goHome();
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260730f"></script>
 <script src="pc-modules/pick.js?v=20260730f"></script>
-<script src="pc-modules/weigh.js?v=20260730f"></script>
+<script src="pc-modules/weigh.js?v=20260731a"></script>
 <script src="pc-modules/delivery.js?v=20260730f"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
