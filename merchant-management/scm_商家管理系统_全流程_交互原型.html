@@ -1585,6 +1585,23 @@ function skuRowOps(p,i,s,k){
   if(p.status=='forced_off')return `<button class="btn btn-o btn-sm" onclick="showReject(${i})">原因</button> <button class="btn btn-p btn-sm" onclick="act_editSpu(${i})">整改重提</button>${detail}`;
   return detail.trim();
 }
+/* 详情抽屉底部按钮按状态给（scm_商品审核与强制下架_prd 6.2）：
+   待审核=只给关闭（平台审核中，改动走列表「编辑」）；审核拒绝=「修改重提」；强制下架=「整改重提」；其余=「编辑」。
+   修复点：此前 reviewing 与 forced_off 一律不给按钮，商家在详情看完原因后没有下一步入口、必须退回列表。 */
+/* 详情抽屉里的审核信息块：审核拒绝优先按字段列意见（BR-AUD-06），无字段级意见时降级为整体原因文本；强制下架展示原因 */
+function detailAuditBlock(p){
+  const ao=p.auditOpinions||[];
+  if(p.status=='rejected'&&ao.length)
+    return `<h4 style="font-size:14px;margin:16px 0 8px;color:var(--r)">③ 平台审核意见（${ao.length} 项）</h4>`+
+      ao.map(o=>`<div class="ib ib-r" style="margin-bottom:8px"><span class="i">⛔</span><div><b>${o.label}</b>：${o.op}</div></div>`).join('');
+  if(p.reject)return `<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span>${p.status=='forced_off'?'强制下架原因':'驳回原因'}：${p.reject}</div>`;
+  return '';
+}
+function detailFtBtn(p,i){
+  if(p.status=='reviewing')return '';
+  const label=p.status=='rejected'?'修改重提':(p.status=='forced_off'?'整改重提':'编辑');
+  return `<button class="btn btn-p" onclick="closeDrawer();act_editSpu(${i})">${label}</button>`;
+}
 // 商品只读详情抽屉：查看 SPU 信息 + 全部 SKU 规格(价格/库存/状态)，不可编辑
 function act_spuDetail(i){
   const p=DB.products[i];if(!p)return;
@@ -1609,9 +1626,9 @@ function act_spuDetail(i){
     <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th>未税价</th><th>含税价</th>${p.bcrs?'<th>BCRS押金</th>':''}<th>可售库存</th><th>库存模式</th><th>状态</th></tr></thead><tbody>
       ${p.skus.map(s=>{const st=skuState(p,s);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${s.qty}${s.pack||p.unit}${s.packUnit?'/'+s.packUnit:''}</td><td>${money(s.price||0)}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td>${p.bcrs?`<td><span class="tag t-b" title="${skuBcrsContainers(p,s)}容器×${money(BCRS_UNIT_PRICE)}">${money(skuBcrsAmt(p,s))}</span></td>`:''}<td>${s.stock||0}${stockModeTag(s)}</td><td>${s.stockMode=='daily'?'每日恢复':s.stockMode=='finite'?'售完即止':'—'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`;}).join('')}
     </tbody></table></div>
-    ${p.reject?`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span>驳回原因：${p.reject}</div>`:''}
+    ${detailAuditBlock(p)}
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${p.status!='reviewing'&&p.status!='forced_off'?`<button class="btn btn-p" onclick="closeDrawer();act_editSpu(${i})">编辑</button>`:''}</div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${detailFtBtn(p,i)}</div>`);
 }
 function ts(){const d=new Date();const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
 /* 倒计时：data-cd=截止毫秒；全局每秒刷新所有 [data-cd]（申诉24h窗口 / 退货单72h提货时限） */

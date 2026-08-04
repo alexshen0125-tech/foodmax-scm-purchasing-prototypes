@@ -1,6 +1,8 @@
 /* Food Max 商家端 v2 · 商品模块
    数据驱动配色(emerald) + 评审修复内建：骨架屏/空态/破坏性确认/批量多选/44px/SG数据
-   PC 对齐(2026-07)：价格+库存到每个 SKU / 上下架细到 SKU / 状态只留销售中·未上架 / 去库存预警
+   PC 对齐(2026-07)：价格+库存到每个 SKU / 上下架细到 SKU / 去库存预警
+   审核态(2026-08)：补齐待审核·审核拒绝·强制下架三桶（对齐 PC m-product 六桶，见 PRD scm_商品审核与强制下架_prd.md）
+     —— 归桶优先级 回收站 > 审核状态 > 上下架；审核态全部规格不可售、禁改价/改库存/上下架/批量；字段级审核意见只读展示
    扁平化(2026-07)：SKU 完全展开——每个售卖规格(SKU)一张独立卡，不再按 SPU 分组、无需点 SPU 看 SKU；销售中/未上架、批量、计数均按 SKU 维度（对齐 PC「每 SKU 一行」）
    税价对齐(2026-07)：价格维护未税价，默认税率 9%，SKU 行与改价页自动展示含税价（只读） */
 (function(){
@@ -61,6 +63,7 @@ css.textContent=`
 .pc .acts{display:flex;gap:9px;margin-top:14px;}
 .pc .acts .a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--muted);color:#27433A;}
 .pc .acts .a.tg-on{background:var(--mint-soft);color:var(--emerald-2);}
+.pc .acts .a.dis{background:transparent;color:var(--sub);font-weight:600;cursor:default;}
 .pc .skl .mode{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;vertical-align:middle;margin-left:1px;}
 .pc .skl .mode.daily{background:var(--mint-soft);color:var(--emerald-2);}
 .pc .skl .mode.once{background:var(--amber-soft);color:#B45309;}
@@ -131,6 +134,16 @@ css.textContent=`
 .gdt .sku .mode{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;margin-left:2px;}
 .gdt .sku .mode.daily{background:#fff;color:var(--emerald-2);}
 .gdt .sku .mode.once{background:var(--amber-soft);color:#B45309;}
+/* 审核态（待审核 / 审核拒绝 / 强制下架）：标识 + 原因块 + 字段级审核意见 */
+.aud-b{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;vertical-align:middle;margin-left:5px;}
+.aud-b.rv{background:#FEF3C7;color:#B45309;}.aud-b.rj{background:var(--red-soft);color:var(--red);}.aud-b.fo{background:var(--red-soft);color:var(--red);}
+.pc .aud-r{display:block;margin-top:9px;padding:9px 11px;border-radius:11px;background:var(--red-soft);color:var(--red);font-size:12.5px;line-height:1.6;cursor:pointer;}
+.pc .aud-r.rv{background:#FEF3C7;color:#B45309;cursor:default;}
+.pc .sk-st.aud{color:var(--sub);font-weight:600;}
+.gdt .rej{background:var(--red-soft);color:var(--red);font-size:12.5px;border-radius:11px;padding:10px 12px;margin-top:10px;line-height:1.6;}
+.gdt .op{border:1px solid #FECACA;border-radius:12px;padding:11px 12px;margin-top:9px;background:#FFF7F7;}
+.gdt .op .f{font-size:13.5px;font-weight:700;color:var(--red);}
+.gdt .op .t{font-size:12.5px;color:#46604F;margin-top:5px;line-height:1.6;}
 `;
 document.head.appendChild(css);
 
@@ -152,8 +165,25 @@ const PRODUCTS=[
   // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 规格数量 × 押金单价
   {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',cat:'饮料',bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
    skus:[{spec:'1瓶',qty:1,price:2.50,stock:200,off:false,stockMode:'finite',soldToday:18,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00'},{spec:'24瓶/箱',qty:24,price:55.00,stock:40,off:false,stockMode:'finite',createdAt:'2026-07-10 10:20',updatedAt:'2026-07-18 09:40'}]},
+  // ↓ 审核态样例(对齐 PC SPU8818/8821/8823)：待审核 / 审核拒绝(字段级意见) / 强制下架(原因)
+  {ic:'🍗',n:'鲜丰 · 鸡胸肉',cat:'肉禽蛋品',status:'reviewing',sales:0,createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10',
+   skus:[{spec:'1kg/袋',price:13.50,stock:0,off:false,stockMode:'finite',createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10'}]},
+  {ic:'🦞',n:'龙虾',cat:'海鲜水产',status:'rejected',sales:0,createdAt:'2026-07-28 14:05',updatedAt:'2026-07-30 10:22',
+   auditOpinions:[
+     {f:'name',label:'商品名称',op:'名称过于笼统，需标注品种（如「波士顿龙虾」）与是否鲜活/冰鲜'},
+     {f:'origin',label:'产地',op:'填写产地与上传的进口报关资料不一致，请核对后填写真实产地'},
+     {f:'img',label:'商品主图',op:'主图含文字水印且非纯白底，不符合平台主图规范，请更换白底实拍图'}],
+   skus:[{spec:'1kg',price:88.00,stock:12,off:false,stockMode:'finite',refund:1,createdAt:'2026-07-28 14:05',updatedAt:'2026-07-28 14:05'}]},
+  {ic:'🥗',n:'即食凉拌海带丝',cat:'海鲜水产',status:'forced_off',sales:6,createdAt:'2026-06-30 11:00',updatedAt:'2026-07-25 16:40',
+   reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',
+   skus:[{spec:'1包',price:6.80,stock:0,off:true,stockMode:'finite',createdAt:'2026-06-30 11:00',updatedAt:'2026-07-25 16:40'}]},
 ];
-const isOnShelf=p=>p.skus.some(s=>!s.off);           // 销售中 = 至少 1 个 SKU 在架
+/* 审核态（平台回写，商家端只读）：reviewing 待审核 / rejected 审核拒绝 / forced_off 强制下架
+   BR-AUD-02 独占分桶：三态商品不出现在销售中/未上架；BR-AUD-03 全部规格不可售，与 sku.off 无关 */
+const AUD={reviewing:['待审核','rv'],rejected:['审核拒绝','rj'],forced_off:['强制下架','fo']};
+const audOf=g=>AUD[g.status]?g.status:'';                 // 非三态（含无 status）一律按已审核通过处理
+const isAud=g=>!!audOf(g);
+const isOnShelf=p=>!isAud(p)&&p.skus.some(s=>!s.off);   // 销售中 = 非审核态 且 至少 1 个 SKU 在架
 const totalStock=p=>p.skus.reduce((a,s)=>a+(+s.stock||0),0);
 // GST：价格维护未税价，默认税率 9%，系统自动算含税价（仅展示、不可编辑）
 const GST_DEFAULT=9;
@@ -169,21 +199,37 @@ const skuBcrs=(g,s)=>(g&&g.bcrs&&+g.bcrsUnitContainers>0)?+(skuContainers(g,s)*B
 const skuRecyclable=s=>s.off&&!s.recycled;   // 仅已下架规格可移入回收站
 function skuCard(g,s,gi,si,manage,tab){
   const isRec=tab==='recycle';
+  const aud=audOf(g);                                    // 审核态：待审核 / 审核拒绝 / 强制下架
   const oos=(+s.stock<=0);
-  const st=isRec?'回收站':(s.off?'已下架':(oos?'售罄':'在售'));
+  const st=isRec?'回收站':(aud?'随商品':(s.off?'已下架':(oos?'售罄':'在售')));
   const stockTxt=s.off?'—':(oos?'<span class="oos">0（售罄）</span>':(+s.stock).toLocaleString());
   const bc=skuBcrs(g,s);
+  // BR-AUD-04：审核态禁用上下架/改价/改库存/更多，改为看原因·重提
+  const audActs=aud=='rejected'
+      ? `<div class="acts"><div class="a" data-a="审核意见">审核意见</div><div class="a tg tg-on" data-a="修改重提">修改重提</div></div>`
+    : aud=='forced_off'
+      ? `<div class="acts"><div class="a" data-a="下架原因">下架原因</div><div class="a tg tg-on" data-a="整改重提">整改重提</div></div>`
+      : `<div class="acts"><div class="a dis">平台审核中</div><div class="a" data-a="编辑">编辑</div></div>`;
   const acts=isRec
     ? `<div class="acts"><div class="a" data-a="还原">移出 / 还原</div></div>`
+    : aud ? audActs
     : `<div class="acts"><div class="a" data-a="改价格">改价格</div><div class="a" data-a="改库存">改库存</div><div class="a tg ${s.off?'tg-on':''}" data-sku-toggle>${s.off?'上架':'下架'}</div><div class="a" data-a="更多">更多</div></div>`;
+  // 审核态原因条：驳回优先显示「N 项字段意见」入口，强制下架显示原因摘要，待审核给等待提示
+  const opN=(g.auditOpinions||[]).length;
+  const audRow=!aud?'':(aud=='rejected'
+      ? `<div class="aud-r" data-aud>⛔ ${opN?`平台指出 ${opN} 项需修改`:(g.reject||'审核未通过')} ›</div>`
+    : aud=='forced_off'
+      ? `<div class="aud-r" data-aud>⛔ ${g.reject||'平台强制下架'} ›</div>`
+      : `<div class="aud-r rv">🕓 平台审核中，通过后自动上架售卖</div>`);
   return `<div class="pc${manage?' manage':''}">
     <div class="chk" data-chk></div>
     <div class="body">
       <div class="top"><div class="img">${g.ic}</div>
-        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span>${g.consign?'<span class="consign-b">寄售</span>':''}${s.refund?'<span class="refund-b">多退少补</span>':''}${bc?'<span class="bcrs-b">BCRS</span>':''}</div>
+        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span>${aud?`<span class="aud-b ${AUD[aud][1]}">${AUD[aud][0]}</span>`:''}${g.consign?'<span class="consign-b">寄售</span>':''}${s.refund?'<span class="refund-b">多退少补</span>':''}${bc?'<span class="bcrs-b">BCRS</span>':''}</div>
           <div class="sp">${g.cat}</div>
-          ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}</div>
-        <div class="rt"><div class="sk-st only">${st}</div></div></div>
+          ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}
+          ${audRow}</div>
+        <div class="rt"><div class="sk-st only${aud?' aud':''}">${st}</div></div></div>
       <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%）${bc?` · BCRS 押金 <b>S$${bc.toFixed(2)}</b>` :''} · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
       ${manage?'':acts}
     </div></div>`;
@@ -205,21 +251,41 @@ function bindSku(el,g,s,gi,si,state){
     if(a==='改价格')openPrice(g,si);
     else if(a==='改库存')openStock(g,si);
     else if(a==='还原')doRestore(g,s,state);
+    else if(a==='审核意见'||a==='下架原因')openAudit(g);
+    else if(a==='修改重提'||a==='整改重提'||a==='编辑')toast(a+'：进商品编辑（原型占位）');
     else openMore(g,s,state);
   });
+  const audEl=el.querySelector('[data-aud]');if(audEl)audEl.onclick=(e)=>{e.stopPropagation();openAudit(g);};
   const bad=el.querySelector('[data-bad]');if(bad)bad.onclick=()=>showSupplement();
   // 点击卡片信息区进入只读详情(管理态/操作按钮/警示/复选除外)
   const body=el.querySelector('.body');
   if(body)body.onclick=(e)=>{
     if(state.manage)return;
-    if(e.target.closest('.acts')||e.target.closest('[data-bad]'))return;
+    if(e.target.closest('.acts')||e.target.closest('[data-bad]')||e.target.closest('[data-aud]'))return;
     openGoodsDetail(g,s);
   };
 }
 
+/* 审核意见 / 下架原因（只读，对齐 PC showReject + BR-AUD-06）：
+   审核拒绝优先按字段逐条列出；无字段级意见时降级为整体原因文本，不空白不报错。
+   App 端只读展示，整改重提入口在卡片操作区。 */
+function openAudit(g){
+  const aud=audOf(g);const ao=g.auditOpinions||[];
+  const title=aud=='forced_off'?'强制下架原因':'平台审核意见';
+  const body=ao.length
+    ? `<div class="gdt"><div class="card"><h5>平台指出以下 ${ao.length} 项需修改</h5>
+        ${ao.map(o=>`<div class="op"><div class="f">${o.label}</div><div class="t">${o.op}</div></div>`).join('')}
+        <div class="kv" style="margin-top:12px"><span class="k">下一步</span><span class="v">逐项修改后点「修改重提」，重新提交平台审核</span></div>
+      </div></div>`
+    : `<div class="gdt"><div class="card"><h5>${title}</h5><div class="rej">⛔ ${g.reject||'—'}</div>
+        <div class="kv" style="margin-top:12px"><span class="k">下一步</span><span class="v">${aud=='forced_off'?'整改后点「整改重提」，重新提交平台复核':'修改后重新提交平台审核'}</span></div>
+      </div></div>`;
+  pushPage({title,body,footer:`<button class="btn primary" style="width:100%" id="ra">${aud=='forced_off'?'整改重提':'修改重提'}</button>`,
+    mount:(p)=>{p.querySelector('#ra').onclick=()=>toast('进商品编辑（原型占位）');}});
+}
 // 商品详情(只读)：点击卡片信息区进入，展示 SPU 信息 + 全部 SKU 规格(对齐 PC act_spuDetail)
 function openGoodsDetail(g,s){
-  const on=isOnShelf(g);
+  const on=isOnShelf(g);const aud=audOf(g);const ao=g.auditOpinions||[];
   // 名称/别名均为 SPU 级字段，中英双语（PC 端支持「批量修改」按 SKU 编码导表更新，App 只读展示）
   const info=[['商品名称',g.n],['商品名称(EN)',g.nEn||'—'],['商品别名',g.alias||'—'],['商品别名(EN)',g.aliasEn||'—'],
     ['品类',g.cat],['税率',taxRate(g)+'%'],
@@ -229,13 +295,15 @@ function openGoodsDetail(g,s){
   pushPage({title:'商品详情',body:`<div class="gdt">
     <div class="card">
       <div class="hd"><div class="img">${g.ic}</div><div style="flex:1"><div class="nm">${g.n}</div><div class="sp">${g.cat}</div></div></div>
-      <div class="tags"><span class="st ${on?'':'off'}">${on?'销售中':'未上架'}</span></div>
+      <div class="tags"><span class="st ${aud?'off':(on?'':'off')}">${aud?AUD[aud][0]:(on?'销售中':'未上架')}</span></div>
       ${g.bad?`<div class="bad">⚠ ${g.bad}</div>`:''}
+      ${aud=='reviewing'?'<div class="bad">🕓 平台审核中，通过后自动上架售卖；期间全部规格不可售、不可改价改库存</div>':''}
+      ${aud&&ao.length?`<h5 style="margin-top:12px">平台审核意见（${ao.length} 项）</h5>${ao.map(o=>`<div class="op"><div class="f">${o.label}</div><div class="t">${o.op}</div></div>`).join('')}`:(aud&&g.reject?`<div class="rej">⛔ ${aud=='forced_off'?'强制下架原因':'驳回原因'}：${g.reject}</div>`:'')}
       <div style="margin-top:10px">${info.map(r=>`<div class="kv"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join('')}</div>
     </div>
     <div class="card">
       <h5>售卖规格（SKU）· 共 ${g.skus.length} 个</h5>
-      ${g.skus.map(x=>{const oos=(+x.stock<=0);const stt=x.off?'已下架':(oos?'售罄':'在售');const cur=x===s;const xb=skuBcrs(g,x);
+      ${g.skus.map(x=>{const oos=(+x.stock<=0);const stt=aud?'随商品':(x.off?'已下架':(oos?'售罄':'在售'));const cur=x===s;const xb=skuBcrs(g,x);
         return `<div class="sku${cur?' cur':''}">
           <div class="sn"><span>${g.n} · ${x.spec}${cur?'<span class="cur-b">当前</span>':''}</span><span style="font-size:12.5px;font-weight:700;color:${x.off?'var(--sub)':'var(--emerald-2)'}">${stt}</span></div>
           ${x.refund?`<div class="ln"><span class="refund-b" style="margin:0 5px 0 0">多退少补</span>按重量结差额，分装后按实发净重结算，需先称重</div>`:''}
@@ -253,6 +321,9 @@ function renderList(container,inTab){
       ${inTab?'':`<div class="gd-search">${svg('search')}搜索商品名称 / 编码 / SKU</div>`}
       <div class="gd-filters" id="f">
         <div class="gd-pill on" data-t="sale">销售中<span class="c" id="c-sale"></span></div>
+        <div class="gd-pill" data-t="reviewing">待审核<span class="c" id="c-reviewing"></span></div>
+        <div class="gd-pill" data-t="rejected">审核拒绝<span class="c" id="c-rejected"></span></div>
+        <div class="gd-pill" data-t="forced_off">强制下架<span class="c" id="c-forced_off"></span></div>
         <div class="gd-pill" data-t="off">未上架<span class="c" id="c-off"></span></div>
         <div class="gd-pill" data-t="recycle">回收站<span class="c" id="c-recycle"></span></div>
       </div>
@@ -264,29 +335,50 @@ function renderList(container,inTab){
   const mngEl=container.querySelector('#mng');
   const state={tab:'sale',manage:false,refreshBulk(){},redraw(){}};
 
-  // 扁平化：以 SKU 为单位。销售中/未上架均按 SKU 的上下架状态分桶
-  const flatSkus=(tab)=>{const arr=[];PRODUCTS.forEach((g,gi)=>(g.skus||[]).forEach((s,si)=>{const rec=!!s.recycled;if(tab==='recycle'){if(rec)arr.push({g,s,gi,si});return;}if(rec)return;const on=!s.off;if(tab==='sale'?on:!on)arr.push({g,s,gi,si});}));return arr;};
+  /* 扁平化：以 SKU 为单位。归桶优先级 = 回收站标记 > SPU 审核状态 > 上下架推导（BR-AUD-01/02）：
+     三个审核态商品独占自己的桶，不出现在销售中/未上架 */
+  const flatSkus=(tab)=>{const arr=[];PRODUCTS.forEach((g,gi)=>(g.skus||[]).forEach((s,si)=>{
+    const rec=!!s.recycled;
+    if(tab==='recycle'){if(rec)arr.push({g,s,gi,si});return;}
+    if(rec)return;
+    const aud=audOf(g);
+    if(AUD[tab]){if(aud===tab)arr.push({g,s,gi,si});return;}   // 待审核 / 审核拒绝 / 强制下架 桶
+    if(aud)return;                                              // 审核态不落销售中 / 未上架
+    const on=!s.off;if(tab==='sale'?on:!on)arr.push({g,s,gi,si});
+  }));return arr;};
   const allSkus=()=>{const arr=[];PRODUCTS.forEach(g=>(g.skus||[]).forEach(s=>arr.push(s)));return arr;};
   const refreshCounts=()=>{
-    const c1=container.querySelector('#c-sale'),c2=container.querySelector('#c-off'),c3=container.querySelector('#c-recycle');const sk=allSkus();
-    if(c1)c1.textContent=sk.filter(s=>!s.off&&!s.recycled).length;
-    if(c2)c2.textContent=sk.filter(s=>s.off&&!s.recycled).length;
-    if(c3)c3.textContent=sk.filter(s=>s.recycled).length;
+    const set=(id,v)=>{const e=container.querySelector('#c-'+id);if(e)e.textContent=v;};
+    const live=[];PRODUCTS.forEach(g=>(g.skus||[]).forEach(s=>{if(!s.recycled&&!isAud(g))live.push(s);}));
+    set('sale',live.filter(s=>!s.off).length);
+    set('off',live.filter(s=>s.off).length);
+    set('recycle',allSkus().filter(s=>s.recycled).length);
+    // 审核态角标口径 = SPU 数（不是 SKU 数，与 PC 一致）
+    Object.keys(AUD).forEach(k=>set(k,PRODUCTS.filter(g=>audOf(g)===k).length||''));
   };
   const drawData=(tab)=>{
     refreshCounts();
     const data=flatSkus(tab);
     if(!data.length){
-      const t3=tab==='recycle'?'回收站':(tab==='sale'?'销售中':'未上架');
-      list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无${t3}规格</h4><p>${tab==='recycle'?'把不用的已下架规格移入回收站，可随时移出再用':(tab==='sale'?'上架任一规格后会出现在这里':'发布你的第一款商品开始经营')}</p></div>`;
+      const EMPTY={recycle:['回收站规格','把不用的已下架规格移入回收站，可随时移出再用'],
+        sale:['销售中规格','上架任一规格后会出现在这里'],
+        off:['未上架规格','发布你的第一款商品开始经营'],
+        reviewing:['待审核商品','提交建档后会在这里等平台审核，通过即自动上架'],
+        rejected:['审核拒绝的商品','平台驳回的商品会出现在这里，可查看字段审核意见后修改重提'],
+        forced_off:['被强制下架的商品','平台因品控/资质/违规强制下架的商品会出现在这里，含下架原因，整改后可重新提报']};
+      const e=EMPTY[tab]||EMPTY.off;
+      list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无${e[0]}</h4><p>${e[1]}</p></div>`;
       return;
     }
     list.innerHTML='';
     data.forEach(({g,s,gi,si})=>{const w=document.createElement('div');w.innerHTML=skuCard(g,s,gi,si,state.manage,tab);const c=w.firstElementChild;list.appendChild(c);bindSku(c,g,s,gi,si,state);});
   };
   state.redraw=()=>drawData(state.tab);
+  const SORTLBL={recycle:'移入回收站',sale:'上架',off:'下架',reviewing:'提交',rejected:'驳回',forced_off:'强制下架'};
   const draw=(tab)=>{
-    state.tab=tab;sortEl.textContent=(tab==='recycle'?'移入回收站':(tab==='sale'?'上架':'下架'))+'时间 · 由近及远';
+    state.tab=tab;sortEl.textContent=(SORTLBL[tab]||'更新')+'时间 · 由近及远';
+    // BR-AUD-04：审核态桶禁用批量，隐藏「管理」入口
+    mngEl.style.display=AUD[tab]?'none':'';
     list.innerHTML=skel(3);                       // 骨架屏(H1)
     setTimeout(()=>drawData(tab),420);            // 模拟加载
   };
