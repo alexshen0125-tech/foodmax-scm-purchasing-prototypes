@@ -646,7 +646,7 @@ const DB = {
     {id:'SPU8815',name:'土豆',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'马铃薯',origin:'中国山东',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8820',refund:0,qty:1,price:3.20,stock:300,safe:40}]},
     {id:'SPU8816',name:'白菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8821',refund:0,qty:1,price:3.50,stock:0,safe:30,off:true,recycled:true}]},
     {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',refund:1,qty:1,price:58.00,stock:26,safe:10}]},
-    {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',refund:0,qty:1,price:13.50,stock:0,safe:20}]},
+    {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,mainImgs:['鸡胸肉主图'],status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',refund:0,qty:1,price:13.50,stock:0,safe:20}]},
     {id:'SPU8819',name:'生蚝',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'法国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8824',refund:0,qty:1,price:0,stock:0,safe:10}]},
     {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',netQty:'330',netUnit:'ml',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,price:2.50,stock:200,safe:30,stockMode:'finite'},{skuId:'SKU8826',qty:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite'}]},
     {id:'SPU8821',name:'龙虾',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'澳大利亚',brand:'',desc:'鲜活波士顿龙虾',showExp:'展示生产日期+保质期',img:true,detail:false,status:'rejected',risk:'高',reject:'',note:'',auditOpinions:[{f:'name',label:'商品名称',op:'名称过于笼统，需标注品种（如「波士顿龙虾」）与是否鲜活/冰鲜'},{f:'origin',label:'产地',op:'填写产地与上传的进口报关资料不一致，请核对后填写真实产地'},{f:'img',label:'商品主图',op:'主图含文字水印且非纯白底，不符合平台主图规范，请更换白底实拍图'}],skus:[{skuId:'SKU8827',refund:1,qty:1,price:88.00,stock:12,safe:5}]},
@@ -783,6 +783,7 @@ DB.materials={
     {id:'芥蓝主图',file:'芥蓝主图.jpg',w:860,h:860,up:'2026-07-14 18:02'},
     {id:'芥蓝主图2',file:'芥蓝主图2.jpg',w:860,h:860,up:'2026-07-14 18:02'},
     {id:'菠菜主图',file:'菠菜主图.jpg',w:800,h:800,up:'2026-07-14 18:03'},
+    {id:'鸡胸肉主图',file:'鸡胸肉主图.jpg',w:800,h:800,up:'2026-07-16 09:40'},   // 被「待审核」商品引用：未上架，可删（删除时给受影响商品提示）
   ],
   detail:[
     {id:'002',file:'002.jpg',w:750,h:1100,up:'2026-07-15 10:23'},
@@ -2025,17 +2026,17 @@ function matThumb(kind,m,px){px=px||96;const isMain=kind=='main';return `<div st
 PAGES['m-material']=()=>{
   const t=(DB.matTab=='detail')?'detail':'main';const meta=MAT_META[t];const lib=DB.materials[t]||[];
   const q=(DB.matQ||'').trim();const list=q?lib.filter(m=>m.id.includes(q)||m.file.includes(q)):lib;
-  const card=m=>{const uc=matUseCount(t,m.id);return `<div style="border:1px solid var(--bd);border-radius:12px;padding:12px;display:flex;gap:12px;background:var(--w)">
+  const card=m=>{const uc=matUseCount(t,m.id);const onC=matOnShelfUsers(t,m.id).length;return `<div style="border:1px solid var(--bd);border-radius:12px;padding:12px;display:flex;gap:12px;background:var(--w)">
       ${matThumb(t,m,88)}
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
         <div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.file}">${m.id}</div>
         <div style="font-size:11.5px;color:var(--ts)">${m.w}×${m.h} · ${m.file.split('.').pop().toUpperCase()}</div>
         <div style="font-size:11.5px;color:var(--ts)">上传 ${m.up}</div>
-        <div style="margin-top:2px">${uc?`<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>被 ${uc} 个商品引用</span>`:`<span class="tag t-gr" style="font-size:10.5px">未被引用</span>`}</div>
+        <div style="margin-top:2px">${uc?`<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>被 ${uc} 个商品引用</span>${onC?` <span class="tag t-r" style="font-size:10.5px" title="被上架商品使用，需先下架这些商品才可删除">${onC} 个在售 · 不可删</span>`:''}`:`<span class="tag t-gr" style="font-size:10.5px">未被引用</span>`}</div>
         <div class="row" style="gap:6px;margin-top:auto;padding-top:6px">
           <button class="btn btn-link btn-sm" onclick="matView('${t}','${m.id}')">查看</button>
           <button class="btn btn-link btn-sm" onclick="matCopyId('${m.id}')">复制ID</button>
-          <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="matDelete('${t}','${m.id}')">删除</button>
+          <button class="btn btn-link btn-sm" style="color:var(--r)" title="${onC?'被 '+onC+' 个上架商品使用，需先下架后才可删除':'删除图片'}" onclick="matDelete('${t}','${m.id}')">删除</button>
         </div>
       </div>
     </div>`;};
@@ -2047,7 +2048,7 @@ PAGES['m-material']=()=>{
   <div class="card">
     <div class="card-hd"><h3>${meta.ic} ${meta.lib}</h3><span class="sub">图片<b>名称即为图片ID</b>（=上传文件名）；批量建品表格「${meta.col}」列填此ID引用图片（${meta.req}）</span></div>
     <div class="card-bd">
-      <div class="ib ib-b" style="margin:0 0 14px"><span class="i">💡</span>先在此上传${meta.name}，再到<a class="btn-link" style="color:var(--g)" onclick="DB.prodTab='import';nav('m-product')">批量建品</a>下载模板、在「${meta.col}」列填入图片ID即可批量绑定。${t=='main'?'<b>主图为必填</b>，模板里填的主图ID若未在此上传，该商品会建品失败。':'详情图选填；模板里填的详情图ID若未上传，将自动忽略、不影响建品。'}</div>
+      <div class="ib ib-b" style="margin:0 0 14px"><span class="i">💡</span>先在此上传${meta.name}，再到<a class="btn-link" style="color:var(--g)" onclick="DB.prodTab='import';nav('m-product')">批量建品</a>下载模板、在「${meta.col}」列填入图片ID即可批量绑定。${t=='main'?'<b>主图为必填</b>，模板里填的主图ID若未在此上传，该商品会建品失败。':'详情图选填；模板里填的详情图ID若未上传，将自动忽略、不影响建品。'}<br><b>删除规则</b>：被<b>上架商品</b>引用的图片不可删除，需先将这些商品下架后再删；仅被未上架商品引用的图片可删（会提示受影响商品）。</div>
       <div class="row" style="gap:12px;margin-bottom:14px;align-items:stretch">
         <div class="up" style="flex:1" onclick="matUpload('${t}')"><div class="uic">⬆️</div><div class="ut">上传${meta.name}（支持批量）</div><div class="us">演示：点此模拟选择本地图片 · ${meta.aspect} · 文件名即图片ID</div></div>
         <div style="width:240px"><div style="font-size:12px;color:var(--ts);margin-bottom:5px">搜索图片ID / 文件名</div><input value="${DB.matQ||''}" placeholder="输入图片ID 回车搜索" onkeydown="if(event.key=='Enter'){DB.matQ=this.value.trim();render()}"><div style="font-size:11.5px;color:var(--ts);margin-top:6px">共 ${lib.length} 张${q?` · 命中 ${list.length} 张`:''}</div></div>
@@ -2077,14 +2078,29 @@ function matView(kind,id){const m=matGet(kind,id);if(!m)return;const meta=MAT_ME
       <dt>文件名</dt><dd>${m.file}</dd>
       <dt>尺寸</dt><dd>${m.w}×${m.h}</dd>
       <dt>上传时间</dt><dd>${m.up}</dd>
-      <dt>被引用</dt><dd>${users.length} 个商品</dd>
+      <dt>被引用</dt><dd>${users.length} 个商品${matOnShelfUsers(kind,id).length?` <span class="tag t-r" style="font-size:10.5px">其中 ${matOnShelfUsers(kind,id).length} 个在售 · 不可删</span>`:''}</dd>
     </dl>
     ${users.length?`<h4 style="font-size:13.5px;margin:14px 0 8px;color:var(--g)">引用此图的商品</h4><div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th>状态</th></tr></thead><tbody>${users.map(p=>`<tr><td class="mono">${p.id}</td><td>${p.name}</td><td>${tag('product',p.status)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>该图暂未被任何商品引用。</div>'}
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="matCopyId('${m.id}')">复制ID</button></div>`);}
-function matDelete(kind,id){const uc=matUseCount(kind,id);const meta=MAT_META[kind];
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-o" style="color:var(--r);border-color:var(--r)" onclick="matDelete('${kind}','${m.id}')">删除</button><button class="btn btn-p" onclick="matCopyId('${m.id}')">复制ID</button></div>`);}
+/* 素材删除规则：图片被「上架商品」引用时不可删（在售商品主图/详情图缺失会直接影响买家侧展示），
+   须先把这些商品下架再删；仅被未上架商品（草稿/已下架/审核中/驳回/强制下架）引用时可删、二次确认。 */
+function matOnShelfUsers(kind,id){return matUsers(kind,id).filter(isOnShelf);}
+function matDelete(kind,id){const meta=MAT_META[kind];const users=matUsers(kind,id);const onS=matOnShelfUsers(kind,id);
   const go=()=>{DB.materials[kind]=DB.materials[kind].filter(m=>m.id!=id);render();toast(`已删除图片「${id}」`,'info');};
-  if(uc>0)askConfirm(`图片「${id}」正被 <b>${uc} 个商品</b>引用，删除后这些商品的${meta.name}将缺失${kind=='main'?'（主图必填，可能影响上架）':''}。确认删除？`,go);
+  if(onS.length){
+    const names=onS.map(p=>`「${p.name}」`).join('、');
+    modal(`<div class="mc-hd"><h3>无法删除 · ${id}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd">
+      <div class="ib ib-r"><span class="i">⛔</span><div>图片「<b>${id}</b>」正被 <b>${onS.length} 个上架商品</b>用作${meta.name}，无法删除。<br>请先将 <b>${names}</b> 下架后再操作。</div></div>
+      <div style="overflow-x:auto;margin-top:12px"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th>状态</th></tr></thead><tbody>
+        ${onS.map(p=>`<tr><td class="mono">${p.id}</td><td>${p.name}</td><td>${tag('product',p.status)}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${users.length>onS.length?`<div class="ib ib-gr" style="margin-top:10px"><span class="i">ℹ️</span>另有 ${users.length-onS.length} 个未上架商品引用此图，不影响删除判定。</div>`:''}
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">知道了</button><button class="btn btn-p" onclick="closeModal();closeDrawer();DB.mTab='onsale';DB.pFilter={name:'${onS[0].name}'};DB.pPage=1;nav('m-product')">去下架「${onS[0].name}」 →</button></div>`);
+    return;}
+  if(users.length)askConfirm(`图片「${id}」正被 <b>${users.length} 个未上架商品</b>引用（${users.map(p=>p.name).join('、')}），删除后这些商品的${meta.name}将缺失${kind=='main'?'（主图必填，重新提报上架前需补图）':''}。确认删除？`,go);
   else askConfirm(`确认删除图片「${id}」？`,go);}
 
 /* ---------- 商家端：备货 —— 已重构为「备货单实体」，实现见 pc-modules/pick.js（后加载覆盖本占位）。
