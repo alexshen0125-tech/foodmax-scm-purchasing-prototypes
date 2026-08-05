@@ -843,7 +843,8 @@ const NAV={
     {id:'m-price',ic:'🏷️',t:'价格分析'},
     {id:'m-analysis',ic:'📈',t:'经营分析'},
     {sec:'财务'},
-    {id:'m-settle',ic:'💰',t:'对账结算',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
+    {id:'m-recon',ic:'🧮',t:'对账单',p1:1},
+    {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
     {id:'m-account',ic:'💳',t:'账户管理',p1:1},
     {sec:'合规'},
@@ -1106,12 +1107,12 @@ const WP_QUICK=[
   {t:'新建商品',ic:'🥦',bg:'var(--gl)',p:'m-product'},
   {t:'打印标签',ic:'🏷️',bg:'var(--yl)',p:'m-pick-label',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
   {t:'备货参考',ic:'📊',bg:'var(--gl)',p:'m-pick-ref'},
-  {t:'对账结算',ic:'💰',bg:'var(--bl)',p:'m-settle'},
+  {t:'结算单',ic:'💰',bg:'var(--bl)',p:'m-settle'},
 ];
 /* 工作台·平台公告 */
 const WP_ANN=[
   {tag:['活动','t-g'],title:'7 月「叶菜季」流量扶持报名开启，优质商家享首页曝光',date:'2026-07-20',body:'活动时间 2026-07-25 至 08-25。在售叶菜类 SKU ≥ 10 且近 30 天违规分为 0 的商家可报名，通过后享「新鲜严选」专区首页曝光与搜索加权。报名入口：营销活动 · 平台活动。'},
-  {tag:['系统','t-b'],title:'对账结算规则更新：服务佣金改为按品类佣金率计费',date:'2026-07-18',body:'自 2026-08 账期起，平台服务佣金由统一费率调整为按商品品类佣金率分别计费，物流佣金同步。历史账期不受影响，详见「对账结算」账单明细项说明。'},
+  {tag:['系统','t-b'],title:'对账结算规则更新：服务佣金改为按品类佣金率计费',date:'2026-07-18',body:'自 2026-08 账期起，平台服务佣金由统一费率调整为按商品品类佣金率分别计费，物流佣金同步。历史账期不受影响，详见「结算单」账单明细项说明。'},
   {tag:['通知','t-y'],title:'国庆假期（08-09）配送与揽收时间安排通知',date:'2026-07-15',body:'新加坡国庆日 08-09 当天暂停上门揽收，08-08 及 08-10 正常。请提前与餐厅客户确认送达日，避免影响履约。'},
 ];
 function wpAnn(i){const a=WP_ANN[i];modal(`<div class="mc-hd"><h3>${a.title}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
@@ -1151,7 +1152,7 @@ function dashQuery(){const f=(document.getElementById('dash-from')||{}).value,t=
 const WP_FAQ=[
   {q:'如何新建并上架商品？',a:'进入「商品管理 · 商品列表」→ 点右上「新建商品」，填写商品名/类目/单位/售价，按 SKU 维护规格与库存，保存后提交店铺运营平台审核，审核通过即自动上架。批量新建可用「导入模板」。'},
   {q:'订单如何接单与履约？',a:'「订单管理」查看待发货订单 →「备货管理 · 备货参考」按送达日汇总备货量 →「称重录入」录入实际重量 →「打印标签」按订单×SKU 打印并贴码 → 全部贴码后系统按仓自动生成送货单，交仓库交接即转「待收货」。'},
-  {q:'对账与结算周期是怎样的？',a:'「对账结算」查看每个账期的对账单（货款 − 逆向扣减 − 平台/物流佣金 = 应结净额），确认无误后账单流转平台付款，结算账期为月结 30 天，到账后可在账单详情看到到账银行与流水。'},
+  {q:'对账与结算周期是怎样的？',a:'「对账单」按账期核对逐笔货款与扣减；核对无误后在「结算单」查看该期应结净额（货款 − 逆向扣减 − 平台/物流佣金），确认后账单流转平台付款，结算账期为月结 30 天，到账后可在结算单详情看到到账银行与流水。'},
   {q:'如何申请与下载发票？',a:'「发票管理 · 客户开票」按订单为餐厅开票；「服务费发票」为平台与你结算后自动开具（GST 9%），你只需在此查看/下载 PDF。'},
   {q:'违规处理与申诉流程说明',a:'工作台会提示违规与整改通知。到「违规整改」查看原因与整改期，在整改期内提交整改方案；对判定有异议可在时效内发起申诉，逾期未整改将影响信用等级。'},
 ];
@@ -2233,7 +2234,10 @@ function ord_ops(o,i){
   return `<button class="btn btn-o btn-sm" onclick="ord_detail(${i})">详情</button>`;
 }
 
-/* ---------- 商家端：对账结算（闭环D 商家侧） ---------- */
+/* ---------- 商家端：对账单（菜单预留，页面内容待确认） ---------- */
+PAGES['m-recon']=()=>`<div class="empty"><div class="e-ic">🧮</div><div class="e-t">对账单</div><div class="e-s">页面内容待确认，菜单先预留。</div></div>`;
+
+/* ---------- 商家端：结算单（闭环D 商家侧） ---------- */
 PAGES['m-settle']=()=>{
   const cur=DB.bill;
   if(cur.status=='none'&&!DB.billsHistory.length)return `<div class="empty"><div class="e-ic">🧮</div><div class="e-t">暂无结算单</div><div class="e-s">每完成一次结算即生成一张结算单。<br>可切到「平台后台 → 对账结算」点击「生成对账单」。</div></div>`;
