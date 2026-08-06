@@ -1,8 +1,9 @@
 /* Food Max 商家端 v2 · 对账单模块（商家视角·只读）
    PC 对齐：与 PC 商家管理系统「财务 › 对账单」同口径——
-   按送货单出账，结算金额 = Σ(实发数量 × 未税单价)，差异 = 实发 − 应发（+多发 / −少发）；
-   同一天多张送货单汇总为当日结算金额，按结算周期并入结算单。
-   明细两个维度：SKU 维度 / 订单维度（订单维度按仓库实际分配量拆分）。金额 S$。 */
+   每天一张对账单、一个入库仓库 → 对应当日一张送货单；
+   当日结算金额 = Σ(实发件数 × 未税单价)，差异 = 实发件数 − 应发件数（+多发 / −少发）；
+   全为标品、按整件对账（应发=送货单下单/预约件数，实发=仓库签收入库件数），不涉及重量差额；
+   金额未税/含税并列（默认 GST 9%）。明细两个维度：SKU 维度 / 订单维度（按仓库实际分配件数拆分）。金额 S$。 */
 (function(){
 const {pushPage,popPage,toast,svg,skel}=window.FM;
 
@@ -49,19 +50,19 @@ document.head.appendChild(css);
 /* 与 PC 原型 RECON 同源同值（改一端记得同步另一端） */
 const RECON=[
   {date:'2026-07-01',no:'DZ20260701',sh:'SH20260701001',wh:'裕廊DC',lines:[
-    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'kg',price:3.80,due:20,real:19.40,byOrder:[['#SG20260701001','海****',12,11.60],['#SG20260701004','金****',8,7.80]]},
-    {sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'kg',price:2.60,due:10,real:10.35,byOrder:[['#SG20260701001','海****',6,6.20],['#SG20260701004','金****',4,4.15]]},
-    {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'kg',price:3.20,due:30,real:29.10,byOrder:[['#SG20260701002','新****',18,17.40],['#SG20260701004','金****',12,11.70]]},
+    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:20,real:18,byOrder:[['#SG20260701001','海****',12,11],['#SG20260701004','金****',8,7]]},
+    {sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',price:2.60,due:10,real:10,byOrder:[['#SG20260701001','海****',6,6],['#SG20260701004','金****',4,4]]},
+    {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',price:3.20,due:30,real:28,byOrder:[['#SG20260701002','新****',18,17],['#SG20260701004','金****',12,11]]},
     {sku:'SKU8806',name:'土豆',spec:'2kg/件',unit:'件',price:4.50,due:16,real:16,byOrder:[['#SG20260701002','新****',10,10],['#SG20260701001','海****',6,6]]},
   ]},
   {date:'2026-06-30',no:'DZ20260630',sh:'SH20260630001',wh:'裕廊DC',lines:[
-    {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'kg',price:4.10,due:12,real:11.55,byOrder:[['#SG20260630001','福****',12,11.55]]},
-    {sku:'SKU8805',name:'胡萝卜',spec:'1kg/件',unit:'kg',price:2.20,due:25,real:25.60,byOrder:[['#SG20260630001','福****',15,15.30],['#SG20260630004','恒****',10,10.30]]},
-    {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:20,byOrder:[['#SG20260630004','恒****',20,20]]},
+    {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',price:4.10,due:12,real:11,byOrder:[['#SG20260630001','福****',12,11]]},
+    {sku:'SKU8805',name:'胡萝卜',spec:'1kg/件',unit:'件',price:2.20,due:25,real:25,byOrder:[['#SG20260630001','福****',15,15],['#SG20260630004','恒****',10,10]]},
+    {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:19,byOrder:[['#SG20260630004','恒****',20,19]]},
   ]},
   {date:'2026-06-29',no:'DZ20260629',sh:'SH20260629001',wh:'裕廊DC',lines:[
-    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'kg',price:3.80,due:18,real:18.45,byOrder:[['#SG20260629002','悦****',10,10.25],['#SG20260629005','丰****',8,8.20]]},
-    {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:40,byOrder:[['#SG20260629002','悦****',25,25],['#SG20260629005','丰****',15,15]]},
+    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:18,real:18,byOrder:[['#SG20260629002','悦****',10,10],['#SG20260629005','丰****',8,8]]},
+    {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:38,byOrder:[['#SG20260629002','悦****',25,24],['#SG20260629005','丰****',15,14]]},
   ]},
 ];
 const GST=9;                                                          // 默认税率 GST 9%
@@ -76,7 +77,7 @@ const rcOrders=d=>[...new Set(d.lines.flatMap(l=>l.byOrder.map(o=>o[0])))];
 const diffCls=v=>v>0?'rc-up':v<0?'rc-dn':'rc-eq';
 const diffTxt=v=>(v>0?'+':v<0?'−':'')+S(Math.abs(v));
 
-/* ── 列表：按日分组，日汇总 = 当日结算金额 ────────────────── */
+/* ── 列表：每天一张对账单 ─────────────────────────────── */
 function openRecon(){
   const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
   const sumDue=rows.reduce((a,d)=>a+rcDue(d),0), sumReal=rows.reduce((a,d)=>a+rcReal(d),0);
@@ -123,14 +124,14 @@ function openReconDetail(no,tab){
     return {id,nm,n,oDue:+oDue.toFixed(2),oReal:+oReal.toFixed(2),oDueG:+oDueG.toFixed(2),oRealG:+oRealG.toFixed(2)};
   });
   const skuRows=d.lines.map(l=>{
-    const qv=+(l.real-l.due).toFixed(2), pct=l.due?(qv/l.due*100).toFixed(1):'0.0';
+    const qv=l.real-l.due;
     return `<div class="rc-row">
       <div class="t">${l.name} <span style="font-weight:400;color:var(--sub);font-size:12px">${l.spec}</span></div>
       <div class="s">${l.sku} · 未税 ${S(l.price)}/${l.unit} · 含税 ${S(l.price*rcMul(l))}/${l.unit} · 税率 ${rcTax(l)}%</div>
       <div class="kvs">
         <div class="c2"><div class="k">应发</div><div class="v">${l.due}${l.unit}</div></div>
         <div class="c2"><div class="k">实发</div><div class="v">${l.real}${l.unit}</div></div>
-        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(qv)}">${qv>0?'+':qv<0?'−':''}${Math.abs(qv)}${l.unit}<span style="font-weight:400;font-size:11px"> (${qv>0?'+':qv<0?'−':''}${Math.abs(pct)}%)</span></div></div>
+        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(qv)}">${qv>0?'+':qv<0?'−':''}${Math.abs(qv)}${l.unit}</div></div>
         <div class="c2 last"><div class="k">结算金额（未税）</div><div class="v">${S(l.real*l.price)}</div><div class="k" style="margin-top:2px">含税 ${S(l.real*l.price*rcMul(l))}</div></div>
       </div></div>`;}).join('');
   const ordRows=orders.map(o=>{
@@ -158,7 +159,7 @@ function openReconDetail(no,tab){
     </div>
     <div class="rc-tabs"><div class="rc-tab ${tab=='sku'?'on':''}" data-t="sku">SKU 维度</div><div class="rc-tab ${tab=='order'?'on':''}" data-t="order">订单维度</div></div>
     ${tab=='sku'?skuRows:ordRows}
-    <div class="rc-note">当日结算金额（未税）= Σ(实发数量 × 未税单价)；含税金额 = 逐行 ×(1+税率)，默认 GST ${GST}%，税额 = 含税 − 未税；差异 = 实发 − 应发（+ 多发 / − 少发）。每日一张对账单，对应当日送货单（一个入库仓库）。按重量定价商品的实发数量取「备货 › 称重录入」提交的实发净重，订单维度按仓库实际分配量拆分。各日对账单按结算周期汇总并入结算单。</div>`,
+    <div class="rc-note">当日结算金额（未税）= Σ(实发件数 × 未税单价)；含税金额 = 逐行 ×(1+税率)，默认 GST ${GST}%，税额 = 含税 − 未税；差异 = 实发件数 − 应发件数（+ 多发 / − 少发）。全为标品、按整件对账，不产生重量差额。应发件数取送货单的下单/预约数量，实发件数取仓库签收入库件数（送货单「已入库数量」）；订单维度按仓库实际分配件数拆分。每日一张对账单，对应当日送货单（一个入库仓库）；各日对账单按结算周期汇总并入结算单。</div>`,
     mount:(p)=>{
       p.querySelectorAll('.rc-tab').forEach(t=>t.onclick=()=>{if(t.dataset.t==tab)return;popPage();openReconDetail(no,t.dataset.t);});
     }});
