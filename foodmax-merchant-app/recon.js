@@ -16,9 +16,6 @@ css.textContent=`
 .rc-sum .cols .c2{flex:1;}
 .rc-sum .cols .k{font-size:11.5px;color:var(--sub);}
 .rc-sum .cols .v{font-size:14px;font-weight:700;color:#27433A;margin-top:3px;}
-.rc-day{margin:16px 18px 8px;font-size:12.5px;color:var(--sub);display:flex;align-items:center;}
-.rc-day b{color:#27433A;font-size:13.5px;margin-right:8px;}
-.rc-day .amt{margin-left:auto;color:var(--emerald-2);font-weight:700;}
 .rc-list{padding:0 16px 24px;}
 .rc-card{background:#fff;border-radius:18px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;min-height:44px;}
 .rc-card .r1{display:flex;align-items:center;gap:8px;}
@@ -51,20 +48,20 @@ document.head.appendChild(css);
 
 /* 与 PC 原型 RECON 同源同值（改一端记得同步另一端） */
 const RECON=[
-  {date:'2026-07-01',wh:'裕廊DC',no:'SH20260701001',lines:[
+  {date:'2026-07-01',no:'DZ20260701',sh:'SH20260701001',wh:'裕廊DC',lines:[
     {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'kg',price:3.80,due:20,real:19.40,byOrder:[['#SG20260701001','海****',12,11.60],['#SG20260701004','金****',8,7.80]]},
     {sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'kg',price:2.60,due:10,real:10.35,byOrder:[['#SG20260701001','海****',6,6.20],['#SG20260701004','金****',4,4.15]]},
+    {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'kg',price:3.20,due:30,real:29.10,byOrder:[['#SG20260701002','新****',18,17.40],['#SG20260701004','金****',12,11.70]]},
+    {sku:'SKU8806',name:'土豆',spec:'2kg/件',unit:'件',price:4.50,due:16,real:16,byOrder:[['#SG20260701002','新****',10,10],['#SG20260701001','海****',6,6]]},
   ]},
-  {date:'2026-07-01',wh:'兀兰DC',no:'SH20260701002',lines:[
-    {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'kg',price:3.20,due:30,real:29.10,byOrder:[['#SG20260701002','新****',18,17.40],['#SG20260701005','大****',12,11.70]]},
-    {sku:'SKU8806',name:'土豆',spec:'2kg/件',unit:'件',price:4.50,due:16,real:16,byOrder:[['#SG20260701002','新****',10,10],['#SG20260701005','大****',6,6]]},
-  ]},
-  {date:'2026-06-30',wh:'裕廊DC',no:'SH20260630001',lines:[
+  {date:'2026-06-30',no:'DZ20260630',sh:'SH20260630001',wh:'裕廊DC',lines:[
     {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'kg',price:4.10,due:12,real:11.55,byOrder:[['#SG20260630001','福****',12,11.55]]},
     {sku:'SKU8805',name:'胡萝卜',spec:'1kg/件',unit:'kg',price:2.20,due:25,real:25.60,byOrder:[['#SG20260630001','福****',15,15.30],['#SG20260630004','恒****',10,10.30]]},
+    {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:20,byOrder:[['#SG20260630004','恒****',20,20]]},
   ]},
-  {date:'2026-06-30',wh:'盛港DC',no:'SH20260630002',lines:[
-    {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:20,byOrder:[['#SG20260630002','悦****',20,20]]},
+  {date:'2026-06-29',no:'DZ20260629',sh:'SH20260629001',wh:'裕廊DC',lines:[
+    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'kg',price:3.80,due:18,real:18.45,byOrder:[['#SG20260629002','悦****',10,10.25],['#SG20260629005','丰****',8,8.20]]},
+    {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:40,byOrder:[['#SG20260629002','悦****',25,25],['#SG20260629005','丰****',15,15]]},
   ]},
 ];
 const S=n=>'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -76,8 +73,8 @@ const diffTxt=v=>(v>0?'+':v<0?'−':'')+S(Math.abs(v));
 
 /* ── 列表：按日分组，日汇总 = 当日结算金额 ────────────────── */
 function openRecon(){
-  const dates=[...new Set(RECON.map(d=>d.date))].sort().reverse();
-  const sumDue=RECON.reduce((a,d)=>a+rcDue(d),0), sumReal=RECON.reduce((a,d)=>a+rcReal(d),0);
+  const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
+  const sumDue=rows.reduce((a,d)=>a+rcDue(d),0), sumReal=rows.reduce((a,d)=>a+rcReal(d),0);
   pushPage({title:'对账单',body:`
     <div class="rc-sum">
       <div class="lbl">近 7 天 · 结算金额合计（未税）</div>
@@ -92,21 +89,16 @@ function openRecon(){
     mount:(p)=>{
       setTimeout(()=>{
         const box=p.querySelector('#rcl');if(!box)return;
-        box.innerHTML=dates.map(dt=>{
-          const ds=RECON.filter(d=>d.date==dt);
-          const dReal=ds.reduce((a,d)=>a+rcReal(d),0);
-          return `<div class="rc-day"><b>${dt}</b>${ds.length} 张送货单<span class="amt">${S(dReal)}</span></div>
-          <div class="rc-list">${ds.map(d=>{
-            const du=rcDue(d),re=rcReal(d),v=+(re-du).toFixed(2),os=rcOrders(d);
-            return `<div class="rc-card" data-no="${d.no}">
-              <div class="r1"><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
-              <div class="meta">${os.length} 个订单 · ${d.lines.length} 个 SKU</div>
-              <div class="r2">
-                <div class="g"><div class="k">应发 / 实发</div><div class="v">${S(du)} / ${S(re)}</div></div>
-                <div class="g"><div class="k">差异</div><div class="v ${diffCls(v)}">${diffTxt(v)}</div></div>
-                <div class="g settle"><div class="k">结算金额</div><div class="v">${S(re)}</div></div>
-              </div></div>`;}).join('')}</div>`;
-        }).join('');
+        box.innerHTML=`<div class="rc-list">${rows.map(d=>{
+          const du=rcDue(d),re=rcReal(d),v=+(re-du).toFixed(2),os=rcOrders(d);
+          return `<div class="rc-card" data-no="${d.no}">
+            <div class="r1"><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
+            <div class="meta">${d.date} · 送货单 ${d.sh} · ${os.length} 个订单 · ${d.lines.length} 个 SKU</div>
+            <div class="r2">
+              <div class="g"><div class="k">应发 / 实发</div><div class="v">${S(du)} / ${S(re)}</div></div>
+              <div class="g"><div class="k">差异</div><div class="v ${diffCls(v)}">${diffTxt(v)}</div></div>
+              <div class="g settle"><div class="k">当日结算</div><div class="v">${S(re)}</div></div>
+            </div></div>`;}).join('')}</div>`;
         box.querySelectorAll('.rc-card').forEach(c=>c.onclick=()=>openReconDetail(c.dataset.no));
       },420);
     }});
@@ -147,8 +139,8 @@ function openReconDetail(no,tab){
       </div></div>`;}).join('');
   pushPage({title:'对账单详情',body:`
     <div class="rc-sum">
-      <div class="lbl">${d.no} · ${d.date} · ${d.wh}</div>
-      <div class="lbl" style="margin-top:6px">结算金额（未税）</div>
+      <div class="lbl">${d.no} · ${d.date} · ${d.wh} · 送货单 ${d.sh}</div>
+      <div class="lbl" style="margin-top:6px">当日结算金额（未税）</div>
       <div class="big disp"><span class="c">S$</span>${re.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="cols">
         <div class="c2"><div class="k">应发金额</div><div class="v">${S(du)}</div></div>
@@ -158,7 +150,7 @@ function openReconDetail(no,tab){
     </div>
     <div class="rc-tabs"><div class="rc-tab ${tab=='sku'?'on':''}" data-t="sku">SKU 维度</div><div class="rc-tab ${tab=='order'?'on':''}" data-t="order">订单维度</div></div>
     ${tab=='sku'?skuRows:ordRows}
-    <div class="rc-note">结算金额 = Σ(实发数量 × 未税单价)；差异 = 实发 − 应发（+ 多发 / − 少发）。按重量定价商品的实发数量取「备货 › 称重录入」提交的实发净重，订单维度按仓库实际分配量拆分。当日各送货单结算金额汇总为当日结算金额，按结算周期并入结算单。</div>`,
+    <div class="rc-note">当日结算金额 = Σ(实发数量 × 未税单价)；差异 = 实发 − 应发（+ 多发 / − 少发）。每日一张对账单，对应当日送货单（一个入库仓库）。按重量定价商品的实发数量取「备货 › 称重录入」提交的实发净重，订单维度按仓库实际分配量拆分。各日对账单按结算周期汇总并入结算单。</div>`,
     mount:(p)=>{
       p.querySelectorAll('.rc-tab').forEach(t=>t.onclick=()=>{if(t.dataset.t==tab)return;popPage();openReconDetail(no,t.dataset.t);});
     }});
