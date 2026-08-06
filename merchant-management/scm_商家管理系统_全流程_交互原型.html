@@ -2237,10 +2237,10 @@ function ord_ops(o,i){
 /* ---------- 商家端：对账单（每日一张，基于当日送货单算结算金额） ----------
    口径：当日结算金额（未税）= Σ(实发件数 × 未税单价) − 判给商家的售后金额；含税同口径按含税单价算。
    全为标品、按整件对账（应发=送货单下单/预约件数，实发=仓库签收入库件数），不涉及重量差额。
-   每天一张对账单、一个入库仓库 → 对应当日一张送货单，关联当日多张订单；
+   对账单即送货单（不另编号，单号=送货单号）：每天一张、一个入库仓库，关联当日多张订单；
    明细三个页签：SKU 维度 / 订单维度 / 售后明细（售后 = 客诉判责结果为商家承担的部分）。 */
 const RECON=[
-  {date:'2026-07-01',no:'DZ20260701',sh:'SH20260701001',wh:'裕廊DC',lines:[
+  {date:'2026-07-01',no:'SH20260701001',wh:'裕廊DC',lines:[
     {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:20,real:18,byOrder:[['#SG20260701001','海****',12,11],['#SG20260701004','金****',8,7]]},
     {sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',price:2.60,due:10,real:10,byOrder:[['#SG20260701001','海****',6,6],['#SG20260701004','金****',4,4]]},
     {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',price:3.20,due:30,real:28,byOrder:[['#SG20260701002','新****',18,17],['#SG20260701004','金****',12,11]]},
@@ -2249,14 +2249,14 @@ const RECON=[
     {id:'AS20260701003',order:'#SG20260701001',sku:'SKU8801',qty:1,judge:'商家责任 · 叶片腐烂',type:'仅退款'},
     {id:'AS20260701007',order:'#SG20260701004',sku:'SKU8804',qty:2,judge:'商家责任 · 少发',type:'仅退款'},
   ]},
-  {date:'2026-06-30',no:'DZ20260630',sh:'SH20260630001',wh:'裕廊DC',lines:[
+  {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',lines:[
     {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',price:4.10,due:12,real:11,byOrder:[['#SG20260630001','福****',12,11]]},
     {sku:'SKU8805',name:'胡萝卜',spec:'1kg/件',unit:'件',price:2.20,due:25,real:25,byOrder:[['#SG20260630001','福****',15,15],['#SG20260630004','恒****',10,10]]},
     {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:19,byOrder:[['#SG20260630004','恒****',20,19]]},
   ],after:[
     {id:'AS20260630004',order:'#SG20260630004',sku:'SKU8807',qty:1,judge:'商家责任 · 破损',type:'退货退款'},
   ]},
-  {date:'2026-06-29',no:'DZ20260629',sh:'SH20260629001',wh:'裕廊DC',lines:[
+  {date:'2026-06-29',no:'SH20260629001',wh:'裕廊DC',lines:[
     {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:18,real:18,byOrder:[['#SG20260629002','悦****',10,10],['#SG20260629005','丰****',8,8]]},
     {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:38,byOrder:[['#SG20260629002','悦****',25,24],['#SG20260629005','丰****',15,14]]},
   ],after:[]},
@@ -2297,7 +2297,7 @@ PAGES['m-recon']=()=>{
   </div></div></div>
   <div class="card"><div class="card-hd"><h3>对账单列表</h3><span class="sub">每日一张 · 共 ${rows.length} 张</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>对账单号</th><th>对账日期</th><th>送货单号</th><th>入库仓库</th><th>关联订单</th><th>SKU 数</th>
+    <thead><tr><th>送货单号</th><th>送货日期</th><th>入库仓库</th><th>关联订单</th><th>SKU 数</th>
       <th style="text-align:right">实发金额<br><span style="font-weight:400;color:var(--ts)">未税</span></th>
       <th style="text-align:right">实发金额<br><span style="font-weight:400;color:var(--ts)">含税</span></th>
       <th style="text-align:right" title="客诉判责结果为商家承担的退款/赔付，冲减当日结算">售后金额<br><span style="font-weight:400;color:var(--ts)">未税</span></th>
@@ -2308,7 +2308,6 @@ PAGES['m-recon']=()=>{
     ${rows.map(d=>{const os=rcOrders(d);return `<tr>
       <td class="mono">${d.no}</td>
       <td>${d.date}</td>
-      <td class="mono">${d.sh}</td>
       <td>${d.wh}</td>
       <td>${os.length} 单<div style="font-size:11px;color:var(--ts)">${os.join('、')}</div></td>
       <td>${d.lines.length}</td>
@@ -2333,7 +2332,7 @@ function act_reconDetail(no){
     return {id,nm,n,oReal,oRealG,oAf,oAfG};
   });
   const aft=(d.after||[]);
-  drawer(`<div class="drawer-hd"><div><h3>${d.no} · 对账单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${d.date} · ${d.wh} · 送货单 ${d.sh} · 关联 ${orders.length} 个订单</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>${d.no} · 对账单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${d.date} · ${d.wh} · 关联 ${orders.length} 个订单</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="kv" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
       <div><div class="k">实发金额（未税）</div><div class="v">${money(re)}</div></div>
@@ -2390,7 +2389,7 @@ function act_reconDetail(no){
       <tr style="font-weight:700;background:var(--gl)"><td colspan="7">判给商家合计</td><td style="text-align:right">${rcNeg(af)}</td><td style="text-align:right">${rcNeg(afG)}</td></tr>
       </tbody></table>`
     :`<div class="empty" style="padding:28px 0"><div class="e-ic">↩️</div><div class="e-t">当日无判给商家的售后</div><div class="e-s">客诉判责结果为平台/客户承担的部分不进本对账单。</div></div>`)}
-    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">当日结算金额 = 实发金额 − 判给商家的售后金额；实发金额 = Σ(实发件数 × 单价)，未税用未税单价、含税用含税单价（含税单价 = 未税单价 ×(1+税率)，默认 GST ${GST_DEFAULT}%）。全为标品、按整件对账：应发件数取送货单下单/预约数量，实发件数取仓库签收入库件数（送货单「已入库数量」），不产生重量差额。售后金额只计客诉判责结果为<b>商家承担</b>的部分，按售后件数 × 该 SKU 单价计。每日一张对账单，对应当日送货单（一个入库仓库）；各日对账单按结算周期汇总并入结算单。</div>
+    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">当日结算金额 = 实发金额 − 判给商家的售后金额；实发金额 = Σ(实发件数 × 单价)，未税用未税单价、含税用含税单价（含税单价 = 未税单价 ×(1+税率)，默认 GST ${GST_DEFAULT}%）。全为标品、按整件对账：应发件数取送货单下单/预约数量，实发件数取仓库签收入库件数（送货单「已入库数量」），不产生重量差额。售后金额只计客诉判责结果为<b>商家承担</b>的部分，按售后件数 × 该 SKU 单价计。对账单即送货单，每天一张、一个入库仓库；各日对账单按结算周期汇总并入结算单。</div>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="toast('已导出本单对账明细','ok')">⬇️ 导出本单</button><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 }

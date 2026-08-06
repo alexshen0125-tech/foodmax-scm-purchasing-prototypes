@@ -1,6 +1,6 @@
 /* Food Max 商家端 v2 · 对账单模块（商家视角·只读）
    PC 对齐：与 PC 商家管理系统「财务 › 对账单」同口径——
-   每天一张对账单、一个入库仓库 → 对应当日一张送货单；
+   对账单即送货单（不另编号，单号=送货单号）：每天一张、一个入库仓库；
    当日结算金额 = 实发金额 − 判给商家的售后金额（未税/含税各算一套，含税单价 = 未税单价 ×(1+税率)，默认 GST 9%）；
    全为标品、按整件对账（应发=送货单下单/预约件数，实发=仓库签收入库件数），不涉及重量差额；
    明细三个页签：SKU 维度 / 订单维度 / 售后明细。金额 S$。 */
@@ -48,7 +48,7 @@ document.head.appendChild(css);
 
 /* 与 PC 原型 RECON 同源同值（改一端记得同步另一端） */
 const RECON=[
-  {date:'2026-07-01',no:'DZ20260701',sh:'SH20260701001',wh:'裕廊DC',lines:[
+  {date:'2026-07-01',no:'SH20260701001',wh:'裕廊DC',lines:[
     {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:20,real:18,byOrder:[['#SG20260701001','海****',12,11],['#SG20260701004','金****',8,7]]},
     {sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',price:2.60,due:10,real:10,byOrder:[['#SG20260701001','海****',6,6],['#SG20260701004','金****',4,4]]},
     {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',price:3.20,due:30,real:28,byOrder:[['#SG20260701002','新****',18,17],['#SG20260701004','金****',12,11]]},
@@ -57,14 +57,14 @@ const RECON=[
     {id:'AS20260701003',order:'#SG20260701001',sku:'SKU8801',qty:1,judge:'商家责任 · 叶片腐烂',type:'仅退款'},
     {id:'AS20260701007',order:'#SG20260701004',sku:'SKU8804',qty:2,judge:'商家责任 · 少发',type:'仅退款'},
   ]},
-  {date:'2026-06-30',no:'DZ20260630',sh:'SH20260630001',wh:'裕廊DC',lines:[
+  {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',lines:[
     {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',price:4.10,due:12,real:11,byOrder:[['#SG20260630001','福****',12,11]]},
     {sku:'SKU8805',name:'胡萝卜',spec:'1kg/件',unit:'件',price:2.20,due:25,real:25,byOrder:[['#SG20260630001','福****',15,15],['#SG20260630004','恒****',10,10]]},
     {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:19,byOrder:[['#SG20260630004','恒****',20,19]]},
   ],after:[
     {id:'AS20260630004',order:'#SG20260630004',sku:'SKU8807',qty:1,judge:'商家责任 · 破损',type:'退货退款'},
   ]},
-  {date:'2026-06-29',no:'DZ20260629',sh:'SH20260629001',wh:'裕廊DC',lines:[
+  {date:'2026-06-29',no:'SH20260629001',wh:'裕廊DC',lines:[
     {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:18,real:18,byOrder:[['#SG20260629002','悦****',10,10],['#SG20260629005','丰****',8,8]]},
     {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:38,byOrder:[['#SG20260629002','悦****',25,24],['#SG20260629005','丰****',15,14]]},
   ],after:[]},
@@ -111,7 +111,7 @@ function openRecon(){
           const os=rcOrders(d),nAf=(d.after||[]).length;
           return `<div class="rc-card" data-no="${d.no}">
             <div class="r1"><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
-            <div class="meta">${d.date} · 送货单 ${d.sh} · ${os.length} 个订单 · ${d.lines.length} 个 SKU${nAf?` · 售后 ${nAf} 笔`:''}</div>
+            <div class="meta">${d.date} · ${os.length} 个订单 · ${d.lines.length} 个 SKU${nAf?` · 售后 ${nAf} 笔`:''}</div>
             <div class="r2">
               <div class="g"><div class="k">实发金额（未税 / 含税）</div><div class="v">${S(rcReal(d))} / ${S(rcRealG(d))}</div></div>
               <div class="g settle"><div class="k">当日结算（未税）</div><div class="v">${S(rcNet(d))}</div><div class="k" style="margin-top:2px">含税 ${S(rcNetG(d))}</div></div>
@@ -165,7 +165,7 @@ function openReconDetail(no,tab){
     :`<div class="rc-empty">当日无判给商家的售后<br>客诉判责结果为平台/客户承担的部分不进本对账单</div>`;
   pushPage({title:'对账单详情',body:`
     <div class="rc-sum">
-      <div class="lbl">${d.no} · ${d.date} · ${d.wh} · 送货单 ${d.sh}</div>
+      <div class="lbl">${d.no} · ${d.date} · ${d.wh}</div>
       <div class="lbl" style="margin-top:6px">当日结算金额（未税）</div>
       <div class="big disp"><span class="c">S$</span>${ne.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="lbl">含税 ${S(neG)}</div>
@@ -182,7 +182,7 @@ function openReconDetail(no,tab){
       <div class="rc-tab ${tab=='after'?'on':''}" data-t="after">售后${aft.length?` ${aft.length}`:''}</div>
     </div>
     ${tab=='sku'?skuRows:tab=='order'?ordRows:aftRows}
-    <div class="rc-note">当日结算金额 = 实发金额 − 判给商家的售后金额；实发金额 = Σ(实发件数 × 单价)，未税用未税单价、含税用含税单价（含税单价 = 未税单价 ×(1+税率)，默认 GST ${GST}%）。全为标品、按整件对账：应发件数取送货单下单/预约数量，实发件数取仓库签收入库件数（送货单「已入库数量」），不产生重量差额。售后金额只计客诉判责为商家承担的部分，按售后件数 × 该 SKU 单价计。每日一张对账单，对应当日送货单（一个入库仓库）；各日对账单按结算周期汇总并入结算单。</div>`,
+    <div class="rc-note">当日结算金额 = 实发金额 − 判给商家的售后金额；实发金额 = Σ(实发件数 × 单价)，未税用未税单价、含税用含税单价（含税单价 = 未税单价 ×(1+税率)，默认 GST ${GST}%）。全为标品、按整件对账：应发件数取送货单下单/预约数量，实发件数取仓库签收入库件数（送货单「已入库数量」），不产生重量差额。售后金额只计客诉判责为商家承担的部分，按售后件数 × 该 SKU 单价计。对账单即送货单，每天一张、一个入库仓库；各日对账单按结算周期汇总并入结算单。</div>`,
     mount:(p)=>{
       p.querySelectorAll('.rc-tab').forEach(t=>t.onclick=()=>{if(t.dataset.t==tab)return;popPage();openReconDetail(no,t.dataset.t);});
     }});
