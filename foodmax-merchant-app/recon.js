@@ -64,9 +64,14 @@ const RECON=[
     {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:40,byOrder:[['#SG20260629002','悦****',25,25],['#SG20260629005','丰****',15,15]]},
   ]},
 ];
+const GST=9;                                                          // 默认税率 GST 9%
 const S=n=>'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const rcDue =d=>d.lines.reduce((a,l)=>a+l.due*l.price,0);
+const rcTax=l=>(l.tax==null?GST:l.tax);
+const rcMul=l=>1+rcTax(l)/100;
+const rcDue =d=>d.lines.reduce((a,l)=>a+l.due*l.price,0);             // 未税
 const rcReal=d=>d.lines.reduce((a,l)=>a+l.real*l.price,0);
+const rcDueG =d=>d.lines.reduce((a,l)=>a+l.due*l.price*rcMul(l),0);   // 含税
+const rcRealG=d=>d.lines.reduce((a,l)=>a+l.real*l.price*rcMul(l),0);
 const rcOrders=d=>[...new Set(d.lines.flatMap(l=>l.byOrder.map(o=>o[0])))];
 const diffCls=v=>v>0?'rc-up':v<0?'rc-dn':'rc-eq';
 const diffTxt=v=>(v>0?'+':v<0?'−':'')+S(Math.abs(v));
@@ -75,14 +80,16 @@ const diffTxt=v=>(v>0?'+':v<0?'−':'')+S(Math.abs(v));
 function openRecon(){
   const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
   const sumDue=rows.reduce((a,d)=>a+rcDue(d),0), sumReal=rows.reduce((a,d)=>a+rcReal(d),0);
+  const sumDueG=rows.reduce((a,d)=>a+rcDueG(d),0), sumRealG=rows.reduce((a,d)=>a+rcRealG(d),0);
   pushPage({title:'对账单',body:`
     <div class="rc-sum">
       <div class="lbl">近 7 天 · 结算金额合计（未税）</div>
       <div class="big disp"><span class="c">S$</span>${sumReal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="lbl">含税 ${S(sumRealG)} · GST ${S(+(sumRealG-sumReal).toFixed(2))}</div>
       <div class="cols">
-        <div class="c2"><div class="k">应发金额</div><div class="v">${S(sumDue)}</div></div>
-        <div class="c2"><div class="k">实发金额</div><div class="v">${S(sumReal)}</div></div>
-        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(+(sumReal-sumDue).toFixed(2))}">${diffTxt(+(sumReal-sumDue).toFixed(2))}</div></div>
+        <div class="c2"><div class="k">应发金额</div><div class="v">${S(sumDue)}</div><div class="k" style="margin-top:2px">含税 ${S(sumDueG)}</div></div>
+        <div class="c2"><div class="k">实发金额</div><div class="v">${S(sumReal)}</div><div class="k" style="margin-top:2px">含税 ${S(sumRealG)}</div></div>
+        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(+(sumReal-sumDue).toFixed(2))}">${diffTxt(+(sumReal-sumDue).toFixed(2))}</div><div class="k" style="margin-top:2px">含税 ${diffTxt(+(sumRealG-sumDueG).toFixed(2))}</div></div>
       </div>
     </div>
     <div id="rcl">${skel(3)}</div>`,
@@ -90,14 +97,14 @@ function openRecon(){
       setTimeout(()=>{
         const box=p.querySelector('#rcl');if(!box)return;
         box.innerHTML=`<div class="rc-list">${rows.map(d=>{
-          const du=rcDue(d),re=rcReal(d),v=+(re-du).toFixed(2),os=rcOrders(d);
+          const du=rcDue(d),re=rcReal(d),reG=rcRealG(d),v=+(re-du).toFixed(2),os=rcOrders(d);
           return `<div class="rc-card" data-no="${d.no}">
             <div class="r1"><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
             <div class="meta">${d.date} · 送货单 ${d.sh} · ${os.length} 个订单 · ${d.lines.length} 个 SKU</div>
             <div class="r2">
-              <div class="g"><div class="k">应发 / 实发</div><div class="v">${S(du)} / ${S(re)}</div></div>
+              <div class="g"><div class="k">应发 / 实发（未税）</div><div class="v">${S(du)} / ${S(re)}</div></div>
               <div class="g"><div class="k">差异</div><div class="v ${diffCls(v)}">${diffTxt(v)}</div></div>
-              <div class="g settle"><div class="k">当日结算</div><div class="v">${S(re)}</div></div>
+              <div class="g settle"><div class="k">当日结算（未税）</div><div class="v">${S(re)}</div><div class="k" style="margin-top:2px">含税 ${S(reG)}</div></div>
             </div></div>`;}).join('')}</div>`;
         box.querySelectorAll('.rc-card').forEach(c=>c.onclick=()=>openReconDetail(c.dataset.no));
       },420);
@@ -108,49 +115,50 @@ function openRecon(){
 function openReconDetail(no,tab){
   const d=RECON.find(x=>x.no==no);if(!d)return;
   tab=tab||'sku';
-  const du=rcDue(d),re=rcReal(d),v=+(re-du).toFixed(2);
+  const du=rcDue(d),re=rcReal(d),duG=rcDueG(d),reG=rcRealG(d),v=+(re-du).toFixed(2),vG=+(reG-duG).toFixed(2);
   const orders=rcOrders(d).map(id=>{
     const nm=(d.lines.flatMap(l=>l.byOrder).find(o=>o[0]==id)||[])[1]||'';
-    let oDue=0,oReal=0,n=0;
-    d.lines.forEach(l=>l.byOrder.filter(o=>o[0]==id).forEach(o=>{oDue+=o[2]*l.price;oReal+=o[3]*l.price;n++;}));
-    return {id,nm,n,oDue:+oDue.toFixed(2),oReal:+oReal.toFixed(2)};
+    let oDue=0,oReal=0,oDueG=0,oRealG=0,n=0;
+    d.lines.forEach(l=>l.byOrder.filter(o=>o[0]==id).forEach(o=>{oDue+=o[2]*l.price;oReal+=o[3]*l.price;oDueG+=o[2]*l.price*rcMul(l);oRealG+=o[3]*l.price*rcMul(l);n++;}));
+    return {id,nm,n,oDue:+oDue.toFixed(2),oReal:+oReal.toFixed(2),oDueG:+oDueG.toFixed(2),oRealG:+oRealG.toFixed(2)};
   });
   const skuRows=d.lines.map(l=>{
     const qv=+(l.real-l.due).toFixed(2), pct=l.due?(qv/l.due*100).toFixed(1):'0.0';
     return `<div class="rc-row">
       <div class="t">${l.name} <span style="font-weight:400;color:var(--sub);font-size:12px">${l.spec}</span></div>
-      <div class="s">${l.sku} · ${S(l.price)}/${l.unit}</div>
+      <div class="s">${l.sku} · 未税 ${S(l.price)}/${l.unit} · 含税 ${S(l.price*rcMul(l))}/${l.unit} · 税率 ${rcTax(l)}%</div>
       <div class="kvs">
         <div class="c2"><div class="k">应发</div><div class="v">${l.due}${l.unit}</div></div>
         <div class="c2"><div class="k">实发</div><div class="v">${l.real}${l.unit}</div></div>
         <div class="c2"><div class="k">差异</div><div class="v ${diffCls(qv)}">${qv>0?'+':qv<0?'−':''}${Math.abs(qv)}${l.unit}<span style="font-weight:400;font-size:11px"> (${qv>0?'+':qv<0?'−':''}${Math.abs(pct)}%)</span></div></div>
-        <div class="c2 last"><div class="k">结算金额</div><div class="v">${S(l.real*l.price)}</div></div>
+        <div class="c2 last"><div class="k">结算金额（未税）</div><div class="v">${S(l.real*l.price)}</div><div class="k" style="margin-top:2px">含税 ${S(l.real*l.price*rcMul(l))}</div></div>
       </div></div>`;}).join('');
   const ordRows=orders.map(o=>{
-    const ov=+(o.oReal-o.oDue).toFixed(2);
+    const ov=+(o.oReal-o.oDue).toFixed(2), ovG=+(o.oRealG-o.oDueG).toFixed(2);
     return `<div class="rc-row">
       <div class="t">${o.id}</div>
       <div class="s">${o.nm} · ${o.n} 个 SKU</div>
       <div class="kvs">
-        <div class="c2"><div class="k">应发金额</div><div class="v">${S(o.oDue)}</div></div>
-        <div class="c2"><div class="k">实发金额</div><div class="v">${S(o.oReal)}</div></div>
-        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(ov)}">${diffTxt(ov)}</div></div>
-        <div class="c2 last"><div class="k">结算金额</div><div class="v">${S(o.oReal)}</div></div>
+        <div class="c2"><div class="k">应发金额</div><div class="v">${S(o.oDue)}</div><div class="k" style="margin-top:2px">含税 ${S(o.oDueG)}</div></div>
+        <div class="c2"><div class="k">实发金额</div><div class="v">${S(o.oReal)}</div><div class="k" style="margin-top:2px">含税 ${S(o.oRealG)}</div></div>
+        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(ov)}">${diffTxt(ov)}</div><div class="k" style="margin-top:2px">含税 ${diffTxt(ovG)}</div></div>
+        <div class="c2 last"><div class="k">结算金额（未税）</div><div class="v">${S(o.oReal)}</div><div class="k" style="margin-top:2px">含税 ${S(o.oRealG)}</div></div>
       </div></div>`;}).join('');
   pushPage({title:'对账单详情',body:`
     <div class="rc-sum">
       <div class="lbl">${d.no} · ${d.date} · ${d.wh} · 送货单 ${d.sh}</div>
       <div class="lbl" style="margin-top:6px">当日结算金额（未税）</div>
       <div class="big disp"><span class="c">S$</span>${re.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="lbl">含税 ${S(reG)} · GST ${S(+(reG-re).toFixed(2))}</div>
       <div class="cols">
-        <div class="c2"><div class="k">应发金额</div><div class="v">${S(du)}</div></div>
-        <div class="c2"><div class="k">实发金额</div><div class="v">${S(re)}</div></div>
-        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(v)}">${diffTxt(v)}</div></div>
+        <div class="c2"><div class="k">应发金额</div><div class="v">${S(du)}</div><div class="k" style="margin-top:2px">含税 ${S(duG)}</div></div>
+        <div class="c2"><div class="k">实发金额</div><div class="v">${S(re)}</div><div class="k" style="margin-top:2px">含税 ${S(reG)}</div></div>
+        <div class="c2"><div class="k">差异</div><div class="v ${diffCls(v)}">${diffTxt(v)}</div><div class="k" style="margin-top:2px">含税 ${diffTxt(vG)}</div></div>
       </div>
     </div>
     <div class="rc-tabs"><div class="rc-tab ${tab=='sku'?'on':''}" data-t="sku">SKU 维度</div><div class="rc-tab ${tab=='order'?'on':''}" data-t="order">订单维度</div></div>
     ${tab=='sku'?skuRows:ordRows}
-    <div class="rc-note">当日结算金额 = Σ(实发数量 × 未税单价)；差异 = 实发 − 应发（+ 多发 / − 少发）。每日一张对账单，对应当日送货单（一个入库仓库）。按重量定价商品的实发数量取「备货 › 称重录入」提交的实发净重，订单维度按仓库实际分配量拆分。各日对账单按结算周期汇总并入结算单。</div>`,
+    <div class="rc-note">当日结算金额（未税）= Σ(实发数量 × 未税单价)；含税金额 = 逐行 ×(1+税率)，默认 GST ${GST}%，税额 = 含税 − 未税；差异 = 实发 − 应发（+ 多发 / − 少发）。每日一张对账单，对应当日送货单（一个入库仓库）。按重量定价商品的实发数量取「备货 › 称重录入」提交的实发净重，订单维度按仓库实际分配量拆分。各日对账单按结算周期汇总并入结算单。</div>`,
     mount:(p)=>{
       p.querySelectorAll('.rc-tab').forEach(t=>t.onclick=()=>{if(t.dataset.t==tab)return;popPage();openReconDetail(no,t.dataset.t);});
     }});
