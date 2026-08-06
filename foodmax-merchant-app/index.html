@@ -186,6 +186,7 @@ const I={
   search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',
   arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>', back:'<path d="M15 6l-6 6 6 6"/>',
   leaf:'<path d="M5 19C4 12 9 5 20 4c0 11-7 16-14 15z"/><path d="M5 19c2-5 6-8 10-9"/>',
+  printer:'<path d="M7 9V4h10v5M7 18H5a1 1 0 01-1-1v-6a2 2 0 012-2h12a2 2 0 012 2v6a1 1 0 01-1 1h-2"/><path d="M7 14h10v6H7z"/>',
 };
 const svg=(k,x='')=>`<svg viewBox="0 0 24 24" ${x}>${I[k]}</svg>`;
 const TILES=[
@@ -202,6 +203,8 @@ const TILES=[
   {k:'biz',l:'商机推荐',ic:'trend',bg:'#FEF3C7',st:'#B45309',badge:'加流量',amber:1},
   {k:'violate',l:'违规记录',ic:'alert',bg:'#FEE2E2',st:'var(--red)',dot:1},
   {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
+  {k:'supply',l:'耗材商城',ic:'printer',bg:'#D1FAE5',st:'var(--emerald-2)'},
+  {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
 ];
 // 备货(备货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
 const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
@@ -403,5 +406,6 @@ renderHome();
 <script src="deliver.js"></script>
 <script src="message.js"></script>
 <script src="publish.js"></script>
+<script src="supply.js"></script>
 </body>
 </html>

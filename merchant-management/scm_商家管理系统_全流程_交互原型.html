@@ -838,6 +838,10 @@ const NAV={
       {id:'m-pick-label',ic:'🏷️',t:'打印标签',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
     ]},
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
+    {id:'m-supply-group',ic:'🖨️',t:'耗材商城',p1:1,children:[
+      {id:'m-supply',ic:'🛒',t:'耗材商城'},
+      {id:'m-supply-order',ic:'📦',t:'我的耗材订单',badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.shop==DB.merchant.code&&(o.status=='pending'||o.status=='shipping')).length:0},
+    ]},
     {sec:'增长'},
     {id:'m-biz',ic:'💡',t:'商机推荐'},
     {id:'m-price',ic:'🏷️',t:'价格分析'},
@@ -869,6 +873,9 @@ const NAV={
     {id:'p-weighcfg',ic:'⚖️',t:'多退少补规则',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
+    {sec:'耗材'},
+    {id:'p-supply-goods',ic:'🖨️',t:'耗材商品',p1:1},
+    {id:'p-supply-order',ic:'🛒',t:'耗材订单',p1:1,badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.status=='pending'||o.status=='shipping').length:0,by:'y'},
     {sec:'风控'},
     {id:'p-aftersale',ic:'⚖️',t:'售后判责',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
     {id:'p-violation',ic:'🚨',t:'违规处置'},
@@ -954,6 +961,8 @@ const ICON={
   '🏬':'<path d="M5 21V6l7-3 7 3v15M9 21v-5h6v5M9 9h.01M15 9h.01M9 12h.01M15 12h.01"/>',
   '💹':'<path d="M4 20V4M4 20h16M8 15l3-3 2 2 4-5"/>',
   '🔚':'<path d="M4 12h13M13 7l5 5-5 5M20 5v14"/>',
+  '🖨️':'<path d="M7 9V4h10v5M7 18H5a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7z"/>',
+  '🛒':'<path d="M3 4h2l2.4 10.4a1 1 0 0 0 1 .8h8.2a1 1 0 0 0 1-.78L20 8H6"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>',
 };
 function icon(e){return ICON[e]?`<svg viewBox="0 0 24 24" fill="none">${ICON[e]}</svg>`:(e||'');}
 function goHome(){DB.role=null;document.getElementById('home').style.display='flex';document.getElementById('login').classList.remove('on');document.getElementById('app').classList.remove('on');}
@@ -1108,6 +1117,7 @@ const WP_QUICK=[
   {t:'打印标签',ic:'🏷️',bg:'var(--yl)',p:'m-pick-label',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
   {t:'备货参考',ic:'📊',bg:'var(--gl)',p:'m-pick-ref'},
   {t:'结算单',ic:'💰',bg:'var(--bl)',p:'m-settle'},
+  {t:'耗材商城',ic:'🖨️',bg:'var(--gl)',p:'m-supply'},
 ];
 /* 工作台·平台公告 */
 const WP_ANN=[
@@ -2452,8 +2462,10 @@ PAGES['m-invoice']=()=>{
   const tabsBar=`<div class="tabs">
     <div class="tab ${tab=='cust'?'active':''}" onclick="DB.invTab='cust';render()">① 客户开票（按订单）${pend?`<span class="tb">${pend}</span>`:''}</div>
     <div class="tab ${tab=='svc'?'active':''}" onclick="DB.invTab='svc';render()">② 服务费发票（平台开具）</div>
+    <div class="tab ${tab=='sup'?'active':''}" onclick="DB.invTab='sup';render()">③ 耗材发票（平台开具）${(DB.supplyInvoices||[]).length?`<span class="tb">${DB.supplyInvoices.length}</span>`:''}</div>
   </div>`;
   if(tab=='svc')return tabsBar+svcInvoiceContent();
+  if(tab=='sup')return tabsBar+supplyInvoiceContent();
   const issued=DB.invoices.map((iv,i)=>({iv,i})).filter(x=>x.iv.status=='verified');
   return tabsBar+`${flowTip(`客户销售发票由<b>平台代你（商家）开具</b>：平台按订单向下单客户开出<b>销售发票（TAX INVOICE, GST 9%）</b>并作为结算凭证。<b>你无需开具或上传</b>，此处仅展示<b>已开具</b>的发票，供<b>预览与下载</b>。`)}
   <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">平台代开 · 已开具 ${issued.length} 张 · 每张对应一个订单/客户</span></div><div class="card-bd ${issued.length?'flush':''}">
@@ -2731,7 +2743,7 @@ PAGES['m-exit']=()=>{
   if(t=='none'){
     return `${flowTip(`闭店需满足 <b>10 项</b>前提条件。系统自动核查，全部满足后方可提交，由平台审核 → 公示 → 观察 → 退还保证金。`)}
     <div class="ib ${allOk?'ib-g':'ib-y'}"><span class="i">${allOk?'✅':'📋'}</span>${allOk?'全部条件已满足，可提交闭店申请。':`尚有 <b>${checks.filter(c=>!c.ok).length}</b> 项未满足，请先处理（下方红色项）。`}</div>
-    <div class="card"><div class="card-hd"><h3>闭店前提条件核查</h3><span class="sub">${checks.filter(c=>c.ok).length}/10 满足</span></div><div class="card-bd">
+    <div class="card"><div class="card-hd"><h3>闭店前提条件核查</h3><span class="sub">${checks.filter(c=>c.ok).length}/${checks.length} 满足</span></div><div class="card-bd">
       ${checks.map(c=>`<div class="ck ${c.ok?'ok':'no'}"><div class="cb">${c.ok?'✓':'✕'}</div>${c.t}<span class="cx">${c.ok?'已满足':c.fix}</span></div>`).join('')}
       <button class="btn btn-d btn-lg" style="margin-top:14px" ${allOk?'':'disabled'} onclick="act_submitExit()">提交闭店申请</button>
       ${allOk?'':'<div style="font-size:12.5px;color:var(--ts);margin-top:8px">提示：本演示中可在「平台后台」处理售后/账单使条件满足，或点击下方按钮一键模拟结清。</div>'}
@@ -2758,6 +2770,7 @@ function exitChecks(){
     {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='closed'),fix:'有售后订单未结案'},
     {t:'9. 无欠款或负账单',ok:DB.merchant.vioScore<6,fix:'存在未处理违规/罚款'},
     {t:'10. 符合平台规则及法律法规',ok:true,fix:''},
+    {t:'11. 无在途耗材订单、无未结清耗材款',ok:!(DB.supplyOrders||[]).some(o=>o.shop==DB.merchant.code&&(o.status=='pending'||o.status=='shipping'||o.status=='delivered')),fix:'有耗材订单未交付或未结清'},
   ];
 }
 
@@ -3427,9 +3440,11 @@ function act_billDetail(key){
       <div><div class="k">逆向扣减（退款/少货）</div><div class="v" style="color:var(--r)">-${money(sel.reverse)}</div></div>
       <div><div class="k">平台抽佣（服务佣金）${sel.feeSvc>0?'':'· 免佣期'}</div><div class="v" style="color:var(--r)">-${money(sel.feeSvc||0)}</div></div>
       <div><div class="k">物流抽佣（物流佣金）${sel.feeLogi>0?'':'· 免佣期'}</div><div class="v" style="color:var(--r)">-${money(sel.feeLogi||0)}</div></div>
+      ${isCur&&(sel.supply||0)>0?`<div><div class="k">耗材采购扣款（含税 · ${sel.supplyCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.supply)}</div></div>`:''}
       <div><div class="k">应清算给供应商（应结净额）</div><div class="v" style="color:var(--g);font-size:18px">${money(sel.net)}</div></div>
     </div>
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣</b>；平台就抽佣部分向你开具佣金税票。</div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣 − 耗材采购扣款</b>；平台就抽佣部分向你开具佣金税票，就耗材部分开具耗材销售发票。</div>
+    ${isCur&&(sel.supply||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🖨️</span><div>本期含耗材采购扣款 <b>${money(sel.supply)}</b>（已交付 ${sel.supplyCnt} 单，按含税金额扣）；当期应清算不足以覆盖时，差额结转下期继续扣。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-supply-order')">查看耗材订单 →</button></div></div>`:''}
     ${isCur&&sel.status!='paid'?`<div class="ib ib-b"><span class="i">ℹ️</span>第一期：结算单生成即<b>默认对账确认</b>，直接进入付款流程；如有异议请<b>线下联系平台运营/客服</b>核查。</div>`:''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
@@ -3585,5 +3600,6 @@ goHome();
 <script src="pc-modules/price.js?v=20260730f"></script>
 <script src="pc-modules/analysis.js?v=20260730f"></script>
 <script src="pc-modules/quality.js?v=20260730f"></script>
+<script src="pc-modules/supply.js?v=20260806a"></script>
 </body>
 </html>
