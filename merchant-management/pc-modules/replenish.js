@@ -1,4 +1,5 @@
 /* PC · 自营代补货（商家端）+ 代补货加价率配置（运营平台端）
+   适用范围：仅【出库前·仓内收货清点】场景；差异只有一种——实收数量 < 应送数量（数量少了），无原因分类。
    业务链：商家送货到仓 → 仓库收货清点发现少货 → 自营现货可【全额覆盖】缺口 → 系统生成代补货单
            → 平台按【商家含税售价 ×(1+加价率)】向商家销售该缺口数量 → 计入当期结算单扣减项
            → 平台就该笔向商家开【代补货销售发票】(TAX INVOICE, GST 9%)。
@@ -10,7 +11,7 @@
    - 自营现货不足以【全额覆盖】缺口 → 不生成代补货单，按实收数量出库并标缺货。
    - 支付方式固定 = 结算抵扣，商家无支付动作；结算单新增扣减行「自营代补货扣款」，取含税金额。
    - 应清算 = 汇总总额 − 逆向扣减 − 服务佣金 − 物流佣金 − 耗材采购扣款 − 自营代补货扣款。
-   - 异议走线下：不设线上申诉入口（对齐对账结算 BR-05）。判责结论不对商家展示，只展示实收数量与少货原因。
+   - 异议走线下：不设线上申诉入口（对齐对账结算 BR-05）。判责结论不对商家展示，只展示应送/实收数量与差异。
    依赖主文件全局：DB / money / toast / drawer / closeDrawer / nav / render / flowTip / GST_DEFAULT。 */
 (function(){
 
@@ -31,19 +32,19 @@ window.replRateOf = function(shop){
 DB.replOrders = DB.replOrders || [
   {no:'RPL-20260628-003', deliveryNo:'SH20260628004', subOrderNo:'#SG20260628011', warehouse:'盛港DC',
    receiptTime:'2026-06-28 01:06', sku:'SKU8801', name:'小棠菜', spec:'1kg/件', unit:'件',
-   should:20, received:18, qty:2, price:2.60, rate:30, reason:'质量拒收',
+   should:20, received:18, qty:2, price:2.60, rate:30,
    status:'pending', billNo:'', invNo:''},
   {no:'RPL-20260629-004', deliveryNo:'SH20260629005', subOrderNo:'#SG20260629004', warehouse:'兀兰DC',
    receiptTime:'2026-06-29 03:24', sku:'SKU8804', name:'空心菜', spec:'1kg/件', unit:'件',
-   should:30, received:22, qty:8, price:3.20, rate:30, reason:'重量差异超范围',
+   should:30, received:22, qty:8, price:3.20, rate:30,
    status:'pending', billNo:'', invNo:''},
   {no:'RPL-20260522-002', deliveryNo:'SH20260522001', subOrderNo:'#SG20260522006', warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42', sku:'SKU8803', name:'菠菜', spec:'1kg/件', unit:'件',
-   should:12, received:10, qty:2, price:3.80, rate:30, reason:'实物少送',
+   should:12, received:10, qty:2, price:3.80, rate:30,
    status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-302'},
   {no:'RPL-20260518-001', deliveryNo:'SH20260518001', subOrderNo:'#SG20260518009', warehouse:'裕廊DC',
    receiptTime:'2026-05-18 02:18', sku:'SKU8811', name:'鲜鸡蛋', spec:'30枚/盘', unit:'盘',
-   should:60, received:48, qty:12, price:8.40, rate:30, reason:'商品送错',
+   should:60, received:48, qty:12, price:8.40, rate:30,
    status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-301'},
 ];
 DB.replInvoices = DB.replInvoices || [
@@ -68,8 +69,6 @@ window.replByDelivery = function(id){return DB.replOrders.filter(r=>r.deliveryNo
 const R_ST = {pending:['待结算','t-y'], deducted:['已抵扣','t-b'], invoiced:['已开票','t-g']};
 const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已抵扣'],['invoiced','已开票']];
 function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
-function reasonTag(x){const m={'实物少送':'t-y','商品送错':'t-y','质量拒收':'t-r','重量差异超范围':'t-b'}[x]||'t-gr';
-  return `<span class="tag ${m}" style="font-size:10.5px"><span class="dot"></span>${x}</span>`;}
 
 /* 结算联动：待结算的代补货单按含税金额汇总为当期结算单扣减项 */
 window.replSettleSync=function(){
@@ -114,7 +113,7 @@ PAGES['m-replenish']=()=>{
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>代补货单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·代补</th><th style="text-align:right">含税售价</th><th style="text-align:right">加价率</th><th style="text-align:right">代补单价</th><th style="text-align:right">金额（含税）</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>`<tr>
-      <td class="mono">${r.no}<div style="margin-top:3px">${reasonTag(r.reason)}</div></td>
+      <td class="mono">${r.no}</td>
       <td class="mono" style="font-size:12px">${r.deliveryNo}<div style="color:var(--ts);margin-top:2px">${r.subOrderNo}</div></td>
       <td><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.sku} · ${r.spec}</div></td>
       <td style="text-align:right">${r.should} <span style="color:var(--ts)">/</span> <b style="color:var(--r)">${r.received}</b></td>
@@ -139,7 +138,7 @@ window.repl_detail=function(no){
   const sec=t=>`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">${t}</h3></div>`;
   drawer(`<div class="drawer-hd"><div><h3>${r.no} · 代补货单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${r.warehouse} · 收货清点 ${r.receiptTime}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div class="row" style="gap:8px;margin-bottom:14px">${rTag(r.status)}${reasonTag(r.reason)}</div>
+    <div class="row" style="gap:8px;margin-bottom:14px">${rTag(r.status)}<span class="tag t-r"><span class="dot"></span>少货 ${rGap(r)} ${r.unit}</span></div>
     <div class="ib ib-y" style="margin-bottom:16px"><span class="i">🔁</span>本单少货 <b>${rGap(r)} ${r.unit}</b>，已由平台<b>自营现货全额代补</b>，客户订单未受影响（商品/金额/发票不变）。缺口部分视同你向平台采购，货款在结算单中抵扣。</div>
 
     ${sec('单据信息')}
@@ -148,8 +147,8 @@ window.repl_detail=function(no){
       ${kv('关联送货单',`<span class="mono">${r.deliveryNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${r.deliveryNo}';nav('m-delivery')">查看</button>`)}
       ${kv('关联原订单（供应商子单）',`<span class="mono">${r.subOrderNo}</span>`)}
       ${kv('入库仓库',r.warehouse)}
-      ${kv('收货清点时间',r.receiptTime)}
-      ${kv('少货原因',reasonTag(r.reason))}
+      ${kv('收货清点时间',`${r.receiptTime}（出库前·仓内清点）`)}
+      ${kv('差异',`实收 ${r.received} − 应送 ${r.should} = <b style="color:var(--r)">-${rGap(r)}</b> ${r.unit}（数量少送）`)}
     </div>
 
     ${sec('商品明细')}

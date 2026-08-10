@@ -74,8 +74,6 @@
   // 少货：仓库收货清点后回写实收数量（WMS 推送），实收 < 应送即为少货。判责结论不对商家展示，只展示实收与原因。
   function dvShort(d){return (d.demoLines||[]).some(l=>l.recvQty!=null&&l.recvQty<l.bookQty);}
   function dvShortQty(d){return (d.demoLines||[]).reduce((a,l)=>a+((l.recvQty!=null&&l.recvQty<l.bookQty)?(l.bookQty-l.recvQty):0),0);}
-  function shortReasonTag(x){if(!x)return '';const m={'实物少送':'t-y','商品送错':'t-y','质量拒收':'t-r','重量差异超范围':'t-b'}[x]||'t-gr';
-    return `<span class="tag ${m}" style="font-size:10.5px"><span class="dot"></span>${x}</span>`;}
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
@@ -184,12 +182,11 @@
       </div>
     </div></div>`:''}
     <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异</th><th>少货原因</th></tr></thead><tbody>
+      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异</th></tr></thead><tbody>
       ${lines.map((r,i)=>{const diff=(r.recvQty==null)?null:(r.recvQty-r.bookQty);
         return `<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td><td style="text-align:right">${r.bookQty}</td>
         <td style="text-align:right;${r.recvQty==null?'color:var(--ts)':(diff<0?'color:var(--r);font-weight:600':'color:var(--gd);font-weight:600')}">${r.recvQty==null?'待清点':r.recvQty}</td>
-        <td style="text-align:right;${diff<0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${diff==null?'—':(diff<0?diff:'0')}</td>
-        <td>${diff<0?shortReasonTag(r.reason||'实物少送'):'<span style="color:var(--ts)">—</span>'}</td></tr>`;}).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+        <td style="text-align:right;${diff<0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${diff==null?'—':(diff<0?diff:'0')}</td></tr>`;}).join('')||`<tr><td colspan="8" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。</div></div>
       ${(d.signed&&!inbound)?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
@@ -198,8 +195,8 @@
   // 送货单不再预置，改为「打印第一个标签时自动生成」（见 window.genDeliveryOnPrint，由打印标签页触发）
   function ensureDeliveriesDemo(){DB.deliveries=DB.deliveries||[];
     if(DB._delivSeeded)return;DB._delivSeeded=true;   // 预置演示送货单，覆盖 预约/签到 解耦的各种态
-    // 行：[SKU, 名称, 规格, 预约数量, 实收数量(可选·仓库清点回写), 少货原因(可选)]
-    const dl=rows=>rows.map(r=>({sku:r[0],name:r[1],brand:'绿鲜源',spec:r[2],skuUnit:'件',box:1,orderQty:r[3],bookQty:r[3],packQty:r[3],recvQty:(r[4]==null?null:r[4]),reason:r[5]||'',vol:+(0.012*r[3]).toFixed(4)}));
+    // 行：[SKU, 名称, 规格, 预约数量, 实收数量(可选·仓库收货清点回写)]
+    const dl=rows=>rows.map(r=>({sku:r[0],name:r[1],brand:'绿鲜源',spec:r[2],skuUnit:'件',box:1,orderQty:r[3],bookQty:r[3],packQty:r[3],recvQty:(r[4]==null?null:r[4]),vol:+(0.012*r[3]).toFixed(4)}));
     const lbl=n=>Array.from({length:n}).map((_,i)=>({code:'LBL-'+i,arrived:false}));
     const lblA=(n,a)=>Array.from({length:n}).map((_,i)=>({code:'LBL-'+i,arrived:i<a}));   // 已入库 a 张（= 实收）
     DB.deliveries.push(
@@ -207,10 +204,10 @@
       {id:'SH20260701002',pickId:'JH20260701002',warehouse:'兀兰DC',deliver:'07-01',window:'06:00–10:00',orderIds:['#SG20260701002'],labels:lbl(30),status:'待送货',bizType:'预售品',booked:false,signed:true,demoLines:dl([['SKU8804','空心菜','1kg/件',30]])},
       {id:'SH20260628003',pickId:'JH20260628003',warehouse:'盛港DC',deliver:'06-28',window:'12:00–16:00',orderIds:['#SG20260628003'],labels:lbl(12),status:'待送货',bizType:'预售品',booked:false,signed:false,demoLines:dl([['SKU8803','菠菜','1kg/件',12]])},
       // ↓ 已入库并完成收货清点：少货部分由平台自营现货代补，对应「财务 › 自营代补货」的代补货单
-      {id:'SH20260628004',pickId:'JH20260628004',warehouse:'盛港DC',deliver:'06-28',window:'02:00–05:00',orderIds:['#SG20260628011'],labels:lblA(20,18),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'00:52',receiptTime:'2026-06-28 01:06',demoLines:dl([['SKU8801','小棠菜','1kg/件',20,18,'质量拒收']])},
-      {id:'SH20260629005',pickId:'JH20260629005',warehouse:'兀兰DC',deliver:'06-29',window:'02:00–05:00',orderIds:['#SG20260629004'],labels:lblA(30,22),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'02:41',receiptTime:'2026-06-29 03:24',demoLines:dl([['SKU8804','空心菜','1kg/件',30,22,'重量差异超范围']])},
-      {id:'SH20260522001',pickId:'JH20260522001',warehouse:'盛港DC',deliver:'05-22',window:'12:00–16:00',orderIds:['#SG20260522006'],labels:lblA(12,10),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'12:00–16:00',signed:true,signTime:'12:20',receiptTime:'2026-05-22 13:42',demoLines:dl([['SKU8803','菠菜','1kg/件',12,10,'实物少送']])},
-      {id:'SH20260518001',pickId:'JH20260518001',warehouse:'裕廊DC',deliver:'05-18',window:'23:00–02:00',orderIds:['#SG20260518009'],labels:lblA(60,48),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'23:00–02:00',signed:true,signTime:'01:35',receiptTime:'2026-05-18 02:18',demoLines:dl([['SKU8811','鲜鸡蛋','30枚/盘',60,48,'商品送错']])}
+      {id:'SH20260628004',pickId:'JH20260628004',warehouse:'盛港DC',deliver:'06-28',window:'02:00–05:00',orderIds:['#SG20260628011'],labels:lblA(20,18),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'00:52',receiptTime:'2026-06-28 01:06',demoLines:dl([['SKU8801','小棠菜','1kg/件',20,18]])},
+      {id:'SH20260629005',pickId:'JH20260629005',warehouse:'兀兰DC',deliver:'06-29',window:'02:00–05:00',orderIds:['#SG20260629004'],labels:lblA(30,22),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'02:41',receiptTime:'2026-06-29 03:24',demoLines:dl([['SKU8804','空心菜','1kg/件',30,22]])},
+      {id:'SH20260522001',pickId:'JH20260522001',warehouse:'盛港DC',deliver:'05-22',window:'12:00–16:00',orderIds:['#SG20260522006'],labels:lblA(12,10),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'12:00–16:00',signed:true,signTime:'12:20',receiptTime:'2026-05-22 13:42',demoLines:dl([['SKU8803','菠菜','1kg/件',12,10]])},
+      {id:'SH20260518001',pickId:'JH20260518001',warehouse:'裕廊DC',deliver:'05-18',window:'23:00–02:00',orderIds:['#SG20260518009'],labels:lblA(60,48),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'23:00–02:00',signed:true,signTime:'01:35',receiptTime:'2026-05-18 02:18',demoLines:dl([['SKU8811','鲜鸡蛋','30枚/盘',60,48]])}
     );}
   window.ensureDeliveriesDemo=ensureDeliveriesDemo;
   // 打印标签触发：某(配送日期+入库仓库)首次打印标签时，按该仓待发货订单自动生成一张送货单（一仓一张，已存在则不重复）

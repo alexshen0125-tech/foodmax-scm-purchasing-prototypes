@@ -1,4 +1,5 @@
 /* Food Max 商家端 v2 · 自营代补货（与 PC「财务 › 自营代补货」pc-modules/replenish.js 同口径）
+   适用范围：仅【出库前·仓内收货清点】场景；差异只有一种——实收 < 应送（数量少了），无原因分类。
    业务链：送货到仓 → 仓库收货清点少货 → 自营现货可【全额覆盖】缺口 → 生成代补货单
            → 平台按【含税售价 ×(1+加价率)】向商家销售缺口数量 → 当期结算单抵扣 → 平台开代补货销售发票。
    口径（2026-08-07 缺货补货方案对焦会 + 沈亮 2026-08-10 确认）：
@@ -68,16 +69,16 @@ const CFG={rate:30};
 const LIST=[
   {no:'RPL-20260628-003',deliveryNo:'SH20260628004',subOrderNo:'#SG20260628011',warehouse:'盛港DC',
    receiptTime:'2026-06-28 01:06',sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',
-   should:20,received:18,qty:2,price:2.60,rate:30,reason:'质量拒收',status:'pending',billNo:'',invNo:''},
+   should:20,received:18,qty:2,price:2.60,rate:30,status:'pending',billNo:'',invNo:''},
   {no:'RPL-20260629-004',deliveryNo:'SH20260629005',subOrderNo:'#SG20260629004',warehouse:'兀兰DC',
    receiptTime:'2026-06-29 03:24',sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',
-   should:30,received:22,qty:8,price:3.20,rate:30,reason:'重量差异超范围',status:'pending',billNo:'',invNo:''},
+   should:30,received:22,qty:8,price:3.20,rate:30,status:'pending',billNo:'',invNo:''},
   {no:'RPL-20260522-002',deliveryNo:'SH20260522001',subOrderNo:'#SG20260522006',warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42',sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',
-   should:12,received:10,qty:2,price:3.80,rate:30,reason:'实物少送',status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-302'},
+   should:12,received:10,qty:2,price:3.80,rate:30,status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-302'},
   {no:'RPL-20260518-001',deliveryNo:'SH20260518001',subOrderNo:'#SG20260518009',warehouse:'裕廊DC',
    receiptTime:'2026-05-18 02:18',sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',
-   should:60,received:48,qty:12,price:8.40,rate:30,reason:'商品送错',status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-301'},
+   should:60,received:48,qty:12,price:8.40,rate:30,status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-301'},
 ];
 const GST=9;
 const money=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -90,7 +91,6 @@ const loss = r=>+(r.qty*r.price*r.rate/100).toFixed(2);
 const ST={pending:['待结算','rp-c-amber'],deducted:['已抵扣','rp-c-blue'],invoiced:['已开票','rp-c-green']};
 const TABS=[['all','全部'],['pending','待结算'],['deducted','已抵扣'],['invoiced','已开票']];
 const stChip=s=>{const[t,c]=ST[s]||['—','rp-c-gray'];return `<span class="rp-chip ${c}">${t}</span>`;};
-const reasonChip=x=>`<span class="rp-chip ${({'实物少送':'rp-c-amber','商品送错':'rp-c-amber','质量拒收':'rp-c-red','重量差异超范围':'rp-c-blue'})[x]||'rp-c-gray'}">${x}</span>`;
 // 供 deliver.js 送货单详情联动
 window.FM_REPL_BY_DELIVERY=id=>LIST.filter(r=>r.deliveryNo===id);
 
@@ -123,7 +123,7 @@ function openReplen(){
         const rs=LIST.filter(r=>_tab==='all'||r.status===_tab);
         if(!rs.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('swap')}</div><h4>${_tab==='all'?'暂无代补货单':'该状态下暂无单据'}</h4><p>${_tab==='all'?'足额送货到仓即不会产生代补货单':'切换上方状态查看其它单据'}</p></div>`;return;}
         list.innerHTML=rs.map((r,i)=>`<div class="rp-card" data-no="${r.no}">
-          <div class="r1"><span class="no">${r.no}</span>${stChip(r.status)}${reasonChip(r.reason)}</div>
+          <div class="r1"><span class="no">${r.no}</span>${stChip(r.status)}<span class="rp-chip rp-c-red">少货 ${gap(r)} ${r.unit}</span></div>
           <div class="sub">${r.warehouse} · 收货清点 ${r.receiptTime}</div>
           <div class="goods"><span class="nm">${r.name}</span><span class="sk">${r.sku} · ${r.spec}</span></div>
           <div class="qty">
@@ -147,7 +147,7 @@ function openDetail(r){
   if(!r)return;
   pushPage({title:'代补货单详情',navbar:true,body:`
     <div class="rp-card2">
-      <div class="rp-ct">${r.no} <span class="desc">${stChip(r.status)} ${reasonChip(r.reason)}</span></div>
+      <div class="rp-ct">${r.no} <span class="desc">${stChip(r.status)}</span></div>
       <div class="rp-note warn">本单少货 <b>${gap(r)} ${r.unit}</b>，已由平台<b>自营现货全额代补</b>，客户订单未受影响（商品/金额/发票不变）。缺口部分视同你向平台采购，货款在结算单中抵扣。</div>
     </div>
 
@@ -156,8 +156,8 @@ function openDetail(r){
       <div class="rp-row"><span class="k">关联送货单</span><span class="v">${r.deliveryNo}</span></div>
       <div class="rp-row"><span class="k">关联原订单（供应商子单）</span><span class="v">${r.subOrderNo}</span></div>
       <div class="rp-row"><span class="k">入库仓库</span><span class="v">${r.warehouse}</span></div>
-      <div class="rp-row"><span class="k">收货清点时间</span><span class="v">${r.receiptTime}</span></div>
-      <div class="rp-row"><span class="k">少货原因</span><span class="v">${r.reason}</span></div>
+      <div class="rp-row"><span class="k">收货清点时间</span><span class="v">${r.receiptTime}<br><span style="font-size:11px;font-weight:400;color:var(--sub)">出库前 · 仓内清点</span></span></div>
+      <div class="rp-row"><span class="k">差异</span><span class="v neg">实收 ${r.received} − 应送 ${r.should} = -${gap(r)} ${r.unit}（数量少送）</span></div>
     </div>
 
     <div class="rp-card2">

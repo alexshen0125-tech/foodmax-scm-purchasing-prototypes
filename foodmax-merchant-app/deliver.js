@@ -154,12 +154,12 @@ const ADDR={'裕廊DC':'1 Jurong West Ave 1, #01-23 裕廊配送中心三号库'
 // 各 DC 收货人 / 入门位置（送货单详情·交货地点信息）
 const RECV={'裕廊DC':{d:'王志明 8123****7813',n:'林国强 9012****0250',g:'裕廊西门进，2号库3号闸口，只收不卸'},'兀兰DC':{d:'黄俊 8765****1122',n:'李文 9033****3344',g:'兀兰北门进，8号库1楼9–11号门'},'盛港DC':{d:'吴成 8201****5566',n:'/ 9111****1111',g:'东门进，1号平台，只收不卸'},'大巴窑DC':{d:'许尚 8678****7788',n:'史金超 9158****0250',g:'中门进，只收不卸'},'淡滨尼DC':{d:'周强 8299****9900',n:'郑凯 9088****2233',g:'A门进，3号卸货区'},'义顺DC':{d:'马良 8322****4455',n:'孙浩 9077****6677',g:'西门进，2号库'}};
 function dvWave(d){const h=parseInt((d.window||'0'),10);return h<12?'上午达':'下午达';}                 // 履约波次(由送达时段派生)
-// 商品明细按SKU聚合(件)；demoLines 带 recvQty=仓库收货清点回写的实收数量（少货演示）
+// 商品明细按SKU聚合(件)；demoLines 带 recvQty=仓库收货清点(出库前)回写的实收数量。差异只有「数量少送」一种，无原因分类
 function dvSku(d){
   if(d.demoLines)return d.demoLines.map(l=>({name:l.name,unit:l.unit,code:l.code,qty:l.qty,
-    inQty:(l.recvQty!=null?l.recvQty:(d.status==='交接完成'?l.qty:0)),reason:l.reason||''}));
-  const m={};(d.labels||[]).forEach(l=>{const k=l.name;if(!m[k])m[k]={name:k,unit:l.unit,code:l.code,qty:0,inQty:0,reason:''};m[k].qty+=l.qty;if(l.arrived)m[k].inQty+=l.qty;});return Object.values(m);}
-// 少货：实收(清点) < 应送。判责结论不对商家展示，只展示实收数量与少货原因
+    inQty:(l.recvQty!=null?l.recvQty:(d.status==='交接完成'?l.qty:0))}));
+  const m={};(d.labels||[]).forEach(l=>{const k=l.name;if(!m[k])m[k]={name:k,unit:l.unit,code:l.code,qty:0,inQty:0};m[k].qty+=l.qty;if(l.arrived)m[k].inQty+=l.qty;});return Object.values(m);}
+// 少货：实收(清点) < 应送。判责结论不对商家展示，只展示应送/实收与差异
 function dvShort(d){return d.status==='交接完成'&&dvSku(d).some(r=>r.inQty<r.qty);}
 function dvShortQty(d){return dvSku(d).reduce((a,r)=>a+Math.max(0,r.qty-r.inQty),0);}
 
@@ -247,10 +247,10 @@ function openSignin(){
     DL.push(
       {id:'SH20260628004',pickId:'JH20260628004',warehouse:'盛港DC',deliver:'06-28',window:'02:00–05:00',orderIds:['#SG20260628011'],labels:[],should:20,
        status:'交接完成',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'00:52',receiptTime:'2026-06-28 01:06',
-       demoLines:[{code:'LBL-x-8801',name:'小棠菜',unit:'件',qty:20,recvQty:18,reason:'质量拒收'}]},
+       demoLines:[{code:'LBL-x-8801',name:'小棠菜',unit:'件',qty:20,recvQty:18}]},
       {id:'SH20260629005',pickId:'JH20260629005',warehouse:'兀兰DC',deliver:'06-29',window:'02:00–05:00',orderIds:['#SG20260629004'],labels:[],should:30,
        status:'交接完成',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'02:41',receiptTime:'2026-06-29 03:24',
-       demoLines:[{code:'LBL-x-8804',name:'空心菜',unit:'件',qty:30,recvQty:22,reason:'重量差异超范围'}]}
+       demoLines:[{code:'LBL-x-8804',name:'空心菜',unit:'件',qty:30,recvQty:22}]}
     );}
   pushPage({title:'送货签到',body:`
     <div class="dl-banner"><span>送货单由<b>电脑端打印首个标签</b>时按入库仓库自动生成（移动端不打印标签）。<b>预约与签到相互独立</b>；签到由<b>仓库扫码</b>核验交接入仓。</span></div>
@@ -281,7 +281,7 @@ function openSignDetail(d){
       kv('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')+
       kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认`:'未签到')+
       kv('交接时间',d.status==='交接完成'?`${d.deliver} 已交接入仓`:'未交接')+
-      kv('收货清点时间',d.status==='交接完成'?(d.receiptTime||`${d.deliver} 已清点`):'未清点')
+      kv('收货清点时间',d.status==='交接完成'?`${d.receiptTime||d.deliver+' 已清点'}（出库前·仓内清点）`:'未清点')
     )}
     ${dvShort(d)?(()=>{const rs=(window.FM_REPL_BY_DELIVERY?window.FM_REPL_BY_DELIVERY(d.id):[]);
       return `<div style="margin:12px 16px 0;background:${rs.length?'var(--amber-soft)':'var(--red-soft)'};color:${rs.length?'#B45309':'var(--red)'};font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
@@ -299,7 +299,7 @@ function openSignDetail(d){
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">${d.status==='交接完成'?'实收(件)':'已入库(件)'}</div><div class="v" ${totIn<totQty?'style="color:var(--red)"':''}>${totIn}</div></div></div>
     ${sec('商品明细 · 按 SKU 件数')}
     ${box(
-      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${r.inQty<r.qty?` · 差异 <b style="color:var(--red)">-${r.qty-r.inQty}</b>${r.reason?` · ${r.reason}`:''}`:''}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
+      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${r.inQty<r.qty?` · 差异 <b style="color:var(--red)">-${r.qty-r.inQty}</b>`:''}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
     )}
     <div style="margin:8px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。</div>
     <div style="height:8px"></div>`,
