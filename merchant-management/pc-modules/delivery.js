@@ -74,6 +74,10 @@
   // 少货：仓库收货清点后回写实收数量（WMS 推送），实收 < 应送即为少货。判责结论不对商家展示，只展示实收与原因。
   function dvShort(d){return (d.demoLines||[]).some(l=>l.recvQty!=null&&l.recvQty<l.bookQty);}
   function dvShortQty(d){return (d.demoLines||[]).reduce((a,l)=>a+((l.recvQty!=null&&l.recvQty<l.bookQty)?(l.bookQty-l.recvQty):0),0);}
+  // 自营补货：少货缺口由平台自营现货代补的数量（来自代补货单）。未代补默认 0
+  function dvRepl(d){return (typeof replByDelivery=='function')?replByDelivery(d.id):[];}
+  function dvReplQty(d){return dvRepl(d).reduce((a,r)=>a+(+r.qty||0),0);}
+  function dvReplSku(d,sku){return dvRepl(d).filter(r=>r.sku==sku).reduce((a,r)=>a+(+r.qty||0),0);}
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
@@ -90,8 +94,8 @@
         <td>${d.deliver}<div style="font-size:11px;color:var(--ts)">${d.window}</div></td>
         <td><b style="font-size:15px">${dvShould(d)}</b> <span style="color:var(--ts)">/ ${dvIn(d)}</span></td>
         <td>${done?(dvShort(d)
-          ?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)}</span>${(typeof replByDelivery=='function'&&replByDelivery(d.id).length)?'<div style="font-size:11px;color:var(--ts);margin-top:2px">已自营代补</div>':''}`
-          :'<span class="tag t-g"><span class="dot"></span>足额收货</span>')
+          ?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)}</span><div style="font-size:11px;color:var(--ts);margin-top:2px">自营补货 <b style="color:var(--gold)">${dvReplQty(d)}</b> 件</div>`
+          :'<span class="tag t-g"><span class="dot"></span>足额收货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">自营补货 0 件</div>')
           :'<span style="color:var(--ts);font-size:12px">待清点</span>'}</td>
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
@@ -163,6 +167,7 @@
         ${kvItem('交接时间',inbound?`${d.deliver} 已交接入仓`:'未交接')}
         ${kvItem('收货清点时间',inbound?(d.receiptTime||`${d.deliver} 已清点`):'未清点')}
         ${kvItem('收货结果',inbound?(dvShort(d)?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)} 件</span>`:'<span class="tag t-g"><span class="dot"></span>足额收货</span>'):'待清点')}
+        ${kvItem('自营补货',inbound?`<b style="color:${dvReplQty(d)>0?'var(--gold)':'var(--ts)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?`（缺口由平台自营现货代补）`:'（无需代补）'}`:'0 件')}
       </div>
     </div></div>
     ${(inbound&&dvShort(d))?(()=>{const rs=(typeof replByDelivery=='function')?replByDelivery(d.id):[];
@@ -182,13 +187,14 @@
       </div>
     </div></div>`:''}
     <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异</th></tr></thead><tbody>
+      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异</th><th style="text-align:right">自营补货</th></tr></thead><tbody>
       ${lines.map((r,i)=>{const diff=(r.recvQty==null)?null:(r.recvQty-r.bookQty);
         return `<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td><td style="text-align:right">${r.bookQty}</td>
         <td style="text-align:right;${r.recvQty==null?'color:var(--ts)':(diff<0?'color:var(--r);font-weight:600':'color:var(--gd);font-weight:600')}">${r.recvQty==null?'待清点':r.recvQty}</td>
-        <td style="text-align:right;${diff<0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${diff==null?'—':(diff<0?diff:'0')}</td></tr>`;}).join('')||`<tr><td colspan="8" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+        <td style="text-align:right;${diff<0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${diff==null?'—':(diff<0?diff:'0')}</td>
+        <td style="text-align:right;${dvReplSku(d,r.sku)>0?'color:var(--gold);font-weight:600':'color:var(--ts)'}">${dvReplSku(d,r.sku)}</td></tr>`;}).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
       </tbody></table></div>
-      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。</div></div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>自营补货</b>＝该 SKU 缺口由平台自营现货代补的数量（未代补为 0），按含税售价 ×(1+加价率) 在结算单中抵扣。</div></div>
       ${(d.signed&&!inbound)?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
     </div>`;
   }
