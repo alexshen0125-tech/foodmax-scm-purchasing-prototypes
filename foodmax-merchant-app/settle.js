@@ -79,9 +79,10 @@ document.head.appendChild(css);
 const ME={payee:'绿鲜源蔬果 Pte Ltd',bank:'DBS ****8821'};
 // 当期结算单（第一期默认已确认 → confirmed 待付款）
 // 第一期：结算单给到商家即默认商家已确认(无需手动确认)，当期直接进入待付款
+// repl = 自营代补货扣款（含税）：送货到仓少货、由平台自营现货代补的缺口，按 含税售价×(1+加价率) 视同商家向平台采购，结算直接抵扣
 const CUR={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',genDate:'2026-07-01',status:'confirmed',
-  gross:47530.00,reverse:268.00,feeSvc:1188.25,feeLogi:712.95,net:45360.80,payTime:'',
-  items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]};
+  gross:47530.00,reverse:268.00,feeSvc:1188.25,feeLogi:712.95,repl:40.04,replCnt:2,net:45320.76,payTime:'',
+  items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95],['自营代补货扣款（含税）',2,-40.04]]};
 const HIST=[
   {period:'2026年5月',no:'ST202605-M0815',range:'2026-05-01 ~ 05-31',genDate:'2026-06-01',status:'paid',
    gross:44180.00,reverse:210.00,feeSvc:1104.50,feeLogi:662.70,net:42202.80,payTime:'2026-06-03 09:12 已到账 DBS ****8821',
@@ -149,8 +150,10 @@ function openDetail(b){
       <div class="se-row"><span class="k">逆向扣减（退款/少货）</span><span class="v neg">-${money(b.reverse)}</span></div>
       <div class="se-row"><span class="k">平台抽佣（服务佣金）${b.feeSvc>0?'':'· 免佣期'}</span><span class="v neg">-${money(b.feeSvc)}</span></div>
       <div class="se-row"><span class="k">物流抽佣（物流佣金）${b.feeLogi>0?'':'· 免佣期'}</span><span class="v neg">-${money(b.feeLogi)}</span></div>
+      ${(b.repl||0)>0?`<div class="se-row"><span class="k">自营代补货扣款（含税 · ${b.replCnt} 单）</span><span class="v neg">-${money(b.repl)}<span class="eq">含税售价 ×(1+加价率)</span></span></div>`:''}
       <div class="se-row brand"><span class="k">应清算给供应商</span><span class="v">${money(b.net)}</span></div>
-      <div class="se-idn">${money(b.net)} + ${money(b.reverse+b.feeSvc+b.feeLogi)} = ${money(b.gross)} ✓ 勾稽平</div>
+      <div class="se-idn">${money(b.net)} + ${money(b.reverse+b.feeSvc+b.feeLogi+(b.repl||0))} = ${money(b.gross)} ✓ 勾稽平</div>
+      ${(b.repl||0)>0?`<div class="se-tip">本期含<b>自营代补货扣款 ${money(b.repl)}</b>（${b.replCnt} 单）——你送货到仓少货、由平台自营现货代补的部分，视同你向平台采购；<b>少货不下调 GMV 与抽佣</b>。<span id="se-repl-lk" style="font-weight:700;cursor:pointer">查看代补货单 ›</span></div>`:''}
     </div>
 
     <div class="se-card">
@@ -191,6 +194,8 @@ function openDetail(b){
     footer:foot,
     mount:(p)=>{
       const close=p.querySelector('#se-close');if(close)close.onclick=popPage;
+      const lk=p.querySelector('#se-repl-lk');
+      if(lk)lk.onclick=()=>{window.FM_MOD&&window.FM_MOD.replen?window.FM_MOD.replen():toast('自营代补货模块加载中');};
     }});
 }
 

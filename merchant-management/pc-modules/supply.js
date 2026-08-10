@@ -72,7 +72,7 @@ window.supplySettleSync=function(){
   DB.bill.supply=amt;DB.bill.supplyCnt=del.length;
   DB.bill.items=DB.bill.items.filter(it=>it[0]!='耗材采购扣款（含税）');
   if(amt>0)DB.bill.items.push(['耗材采购扣款（含税）',del.length,-amt]);
-  DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-amt).toFixed(2);
+  DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-amt-(DB.bill.repl||0)).toFixed(2);
 };
 supplySettleSync();
 
