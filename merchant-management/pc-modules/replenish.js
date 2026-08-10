@@ -5,7 +5,8 @@
            → 平台就该笔向商家开【代补货销售发票】(TAX INVOICE, GST 9%)。
    口径（2026-08-07 缺货补货方案对焦会 + 沈亮 2026-08-10 确认）：
    - 客户订单完全无感：商品/金额/发票不变；商家 GMV 与平台佣金按【应送数量】足额计，不因少货下调。
-   - 代补单价(含税) = 商家含税售价 ×(1+加价率)；加价率默认 30%，平台可配；生成单据时【快照】落库，改配置不追溯。
+   - 代补单价(含税) = 商家含税售价 ×(1+加价率)；加价率【全平台统一】单值，默认 30%、平台可配，
+     不分商家/品类/site；生成单据时【快照】落库，改配置不追溯已生成单据。
    - 商家含税售价取【原订单下单时】的 SKU 价格快照，不取当前挂牌价。
    - 等效罚则 = 缺口数量 × 含税售价 × 加价率（因缺口部分的货款商家照收，只多付加价部分）。
    - 自营现货不足以【全额覆盖】缺口 → 不生成代补货单，按实收数量出库并标缺货。
@@ -15,18 +16,9 @@
    依赖主文件全局：DB / money / toast / drawer / closeDrawer / nav / render / flowTip / GST_DEFAULT。 */
 (function(){
 
-/* ================= 平台可配：代补货加价率 ================= */
-DB.replCfg = DB.replCfg || {
-  rate: 30,                       // 全局默认加价率 %
-  overrides: [                    // 按商家覆盖（就近命中：商家 > 全局默认）
-    {shop:'M2026-0815', shopName:'绿鲜源蔬果旗舰店', rate:30},
-  ],
-};
-// 就近命中加价率：商家覆盖 > 全局默认
-window.replRateOf = function(shop){
-  const o=(DB.replCfg.overrides||[]).find(x=>x.shop==shop);
-  return o?o.rate:DB.replCfg.rate;
-};
+/* ================= 平台可配：代补货加价率（全平台统一单值） ================= */
+DB.replCfg = DB.replCfg || { rate: 30 };   // 加价率 %，全平台统一，不分商家/品类/site
+window.replRateOf = function(){ return DB.replCfg.rate; };
 
 /* ================= 演示数据（挂 DB，跨 render 持久） ================= */
 DB.replOrders = DB.replOrders || [
@@ -87,7 +79,7 @@ PAGES['m-replenish']=()=>{
   const all=DB.replOrders;
   const rows=all.filter(r=>t=='all'||r.status==t);
   const pend=all.filter(r=>r.status=='pending');
-  const rate=replRateOf(DB.merchant.code||'M2026-0815');
+  const rate=replRateOf();
   const sumAmt=+(pend.reduce((a,r)=>a+rAmt(r),0)).toFixed(2);
   const sumQty=pend.reduce((a,r)=>a+r.qty,0);
   const sumLoss=+(pend.reduce((a,r)=>a+rLoss(r),0)).toFixed(2);
@@ -100,7 +92,7 @@ PAGES['m-replenish']=()=>{
   const stats=`<div class="sg" style="grid-template-columns:repeat(4,1fr)">
     <div class="sc"><div class="sc-l">本期待结算代补货单</div><div class="sc-v">${pend.length}</div><div class="sc-s">共 ${sumQty} ${pend[0]?pend[0].unit:'件'}缺口由自营现货代补</div></div>
     <div class="sc ${sumAmt>0?'warn':''}"><div class="sc-l">本期代补货款（含税）</div><div class="sc-v">${money(sumAmt)}</div><div class="sc-s">结算时自动抵扣，无需另行付款</div></div>
-    <div class="sc"><div class="sc-l">当前加价率</div><div class="sc-v">${rate}%</div><div class="sc-s">平台配置 · 生成单据时快照</div></div>
+    <div class="sc"><div class="sc-l">当前加价率</div><div class="sc-v">${rate}%</div><div class="sc-s">全平台统一 · 生成单据时快照</div></div>
     <div class="sc ${sumLoss>0?'alert':''}"><div class="sc-l">本期加价成本</div><div class="sc-v">${money(sumLoss)}</div><div class="sc-s">= 缺口数量 × 售价 × ${rate}%</div></div>
   </div>`;
 
@@ -250,34 +242,21 @@ window.repl_invPreview=function(no){
 /* ================= 运营平台端 · 代补货加价率配置 ================= */
 PAGES['p-replcfg']=()=>{
   const c=DB.replCfg;
-  return `${flowTip(`配置<b>自营代补货加价率</b>：商家送货到仓少货、由自营现货代补时，平台按 <b>商家含税售价 ×(1+加价率)</b> 向该商家销售缺口数量。加价率<b>就近命中</b>（商家覆盖 &gt; 全局默认），并在<b>生成代补货单时快照</b>落库，后续调整不追溯已生成单据。`)}
-  <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>全局默认加价率</h3><span class="sub">未单独配置的商家统一适用</span></div><div class="card-bd">
+  return `${flowTip(`配置<b>自营代补货加价率</b>：商家送货到仓少货、由自营现货代补时，平台按 <b>商家含税售价 ×(1+加价率)</b> 向商家销售缺口数量。加价率<b>全平台统一</b>（不分商家 / 品类 / site），并在<b>生成代补货单时快照</b>落库，后续调整不追溯已生成单据。`)}
+  <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>代补货加价率</h3><span class="sub">全平台统一 · 所有商家一致</span></div><div class="card-bd">
     <div class="fg2">
       <div class="fr"><label class="fl"><b>*</b>加价率（%）</label><input id="rcfg-rate" type="number" min="0" max="200" step="1" value="${c.rate}"></div>
       <div class="fr"><label class="fl">效果预览（含税售价 S$10.00）</label><input value="代补单价 S$${(10*(1+c.rate/100)).toFixed(2)} · 每件多付 S$${(10*c.rate/100).toFixed(2)}" readonly style="background:#F3F4F6;color:var(--ts)"></div>
     </div>
-    <div class="ib ib-y"><span class="i">⚠️</span>加价率即<b>等效罚则强度</b>：缺口部分的货款商家照收，因此商家净损失 = 缺口数量 × 含税售价 × 加价率。调高会直接加重供应商履约成本，请与商务确认后再改。</div>
-    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-p" onclick="repl_saveRate()">保存全局加价率</button></div>
+    <div class="ib ib-y"><span class="i">⚠️</span>加价率即<b>等效罚则强度</b>：缺口部分的货款商家照收，因此商家净损失 = 缺口数量 × 含税售价 × 加价率。调高会直接加重<b>全平台所有供应商</b>的履约成本，请与商务确认后再改。</div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn btn-p" onclick="repl_saveRate()">保存加价率</button></div>
   </div></div>
-  <div class="card"><div class="card-hd"><h3>按商家覆盖</h3><span class="sub">共 ${c.overrides.length} 条 · 优先级高于全局默认</span></div>
-  <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>商家编码</th><th>商家名称</th><th style="text-align:right">加价率</th><th style="text-align:right">S$10 售价 → 代补单价</th><th>操作</th></tr></thead><tbody>
-    ${c.overrides.map((o,i)=>`<tr>
-      <td class="mono">${o.shop}</td><td><b>${o.shopName}</b></td>
-      <td style="text-align:right;color:var(--gold);font-weight:600">+${o.rate}%</td>
-      <td style="text-align:right">S$${(10*(1+o.rate/100)).toFixed(2)}</td>
-      <td><input type="number" min="0" max="200" step="1" value="${o.rate}" style="width:88px;display:inline-block" onchange="repl_setOverride(${i},this.value)"></td>
-    </tr>`).join('')||`<tr><td colspan="5" style="text-align:center;color:var(--ts);padding:18px">暂无商家级覆盖，全部适用全局默认 ${c.rate}%</td></tr>`}
-    </tbody></table></div></div></div>`;
+  <div class="card"><div class="card-bd" style="font-size:12.5px;color:var(--ts)">本期<b>不支持</b>按商家 / 按品类 / 按 SKU 差异化配置——加价率对全平台商家一视同仁。已生成的代补货单按其快照的加价率结算，不受此处调整影响。</div></div>`;
 };
 window.repl_saveRate=function(){
   const v=+((document.getElementById('rcfg-rate')||{}).value);
   if(!(v>=0&&v<=200)){toast('加价率需在 0–200% 之间','err');return;}
-  DB.replCfg.rate=v;render();toast(`全局加价率已保存为 ${v}%（仅对之后生成的代补货单生效）`,'ok');
-};
-window.repl_setOverride=function(i,v){
-  v=+v; if(!(v>=0&&v<=200)){toast('加价率需在 0–200% 之间','err');render();return;}
-  DB.replCfg.overrides[i].rate=v;render();toast(`${DB.replCfg.overrides[i].shopName} 加价率已改为 ${v}%`,'ok');
+  DB.replCfg.rate=v;render();toast(`全平台加价率已保存为 ${v}%（仅对之后生成的代补货单生效）`,'ok');
 };
 
 })();

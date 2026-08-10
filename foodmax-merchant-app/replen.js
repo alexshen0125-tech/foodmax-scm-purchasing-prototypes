@@ -4,7 +4,8 @@
            → 平台按【含税售价 ×(1+加价率)】向商家销售缺口数量 → 当期结算单抵扣 → 平台开代补货销售发票。
    口径（2026-08-07 缺货补货方案对焦会 + 沈亮 2026-08-10 确认）：
    - 客户订单完全无感（商品/金额/发票不变）；商家 GMV 与佣金按【应送数量】足额计，不因少货下调。
-   - 代补单价(含税) = 含税售价 ×(1+加价率)；加价率默认 30%、平台可配、生成时快照；售价取原订单下单时快照。
+   - 代补单价(含税) = 含税售价 ×(1+加价率)；加价率【全平台统一】单值，默认 30%、平台可配、生成时快照，
+     不分商家/品类/site；售价取原订单下单时快照。
    - 等效罚则 = 缺口数量 × 含税售价 × 加价率。
    - 自营现货不足以全额覆盖缺口 → 不生成代补货单，按实收数量出库并标缺货。
    - 结算抵扣，商家无支付动作；异议走线下，无线上申诉入口。
@@ -63,7 +64,7 @@ css.textContent=`
 `;
 document.head.appendChild(css);
 
-/* ── 平台可配加价率（默认 30%，与 PC DB.replCfg 同口径）───────── */
+/* ── 平台可配加价率：全平台统一单值（与 PC DB.replCfg 同口径）───────── */
 const CFG={rate:30};
 /* ── 数据（与 PC DB.replOrders 一致）──────────────────────── */
 const LIST=[
@@ -111,7 +112,7 @@ function openReplen(){
         sum.innerHTML=`
           <div class="c"><div class="v">${pend.length}</div><div class="l">本期待结算单数</div></div>
           <div class="c"><div class="v neg">${money(pend.reduce((a,r)=>a+amt(r),0)).slice(2)}</div><div class="l">代补货款(含税)</div></div>
-          <div class="c"><div class="v">${CFG.rate}%</div><div class="l">当前加价率</div></div>
+          <div class="c"><div class="v">${CFG.rate}%</div><div class="l">加价率·全平台统一</div></div>
           <div class="c"><div class="v neg">${money(pend.reduce((a,r)=>a+loss(r),0)).slice(2)}</div><div class="l">加价成本</div></div>`;
       }
       function drawTabs(){
