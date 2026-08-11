@@ -190,9 +190,14 @@ function invRows(mode){
         stock:k.stock,locked:k.locked,transit:0,sellable:left(k.stock,k.locked),shared:false}));
     }else it.stocks.forEach(s=>{
       const il=left(s.wms,s.locked);
-      it.skus.forEach(k=>out.push({it,k,wh:s.wh,self:false,unit:it.unit,
-        stock:s.wms,locked:s.locked,transit:s.transit,
-        sellable:Math.floor(il/k.ratio),shared:it.skus.length>1}));
+      it.skus.forEach(k=>{
+        /* 全部换算成本规格的「件」；已占用由 在库件 − 可售件 反推，
+           不能各自 floor（否则三个数在屏幕上对不上，BR-04b） */
+        const stockPc=Math.floor(s.wms/k.ratio);
+        const sellable=Math.floor(il/k.ratio);
+        out.push({it,k,wh:s.wh,self:false,unit:'件',raw:s.wms,rawUnit:it.unit,
+          stock:stockPc,locked:stockPc-sellable,transit:Math.floor(s.transit/k.ratio),
+          sellable,shared:it.skus.length>1});});
     });
   });
   return out;
@@ -403,13 +408,13 @@ function renderMain(container){
           <div style="text-align:right">${flag(it)}<div style="margin-top:5px"><span class="sk-tag ${r.sellable<=0?'out':'ok'}">${r.sellable<=0?'缺货':'正常'}</span></div></div></div>
         <div class="sk-q4 ${self?'n3':'n4'}">
           <div class="c"><div class="l">可售库存</div><div class="v ${r.sellable<=0?'r':'g'}">${r.sellable}<span class="u">件</span></div></div>
-          <div class="c"><div class="l">${self?'设置库存':'在库'}${r.shared?' ·共享':''}</div><div class="v">${r.stock}<span class="u">${r.unit}</span></div></div>
+          <div class="c"><div class="l">${self?'设置库存':'在库'}${r.shared?' ·共享':''}</div><div class="v">${r.stock}<span class="u">件</span></div></div>
           <div class="c"><div class="l">已占用</div><div class="v m">${r.locked||'—'}</div></div>
           ${self?'':`<div class="c"><div class="l">在途</div><div class="v ${r.transit?'b':'m'}">${r.transit||'—'}</div></div>`}
         </div>
         <div class="sk-spec">${self?`库存模式 <b>${SMODE[k.stockMode]}</b>　·　与其他规格互相独立`
-          :r.shared?`1 件 = <b>${k.ratio}${it.unit}</b>　·　<b>与本商品其他规格共用同一批货</b>`
-                   :`1 件 = <b>${k.ratio}${it.unit}</b>`}</div>
+          :r.shared?`1 件 = <b>${k.ratio}${it.unit}</b>　·　该仓实物 <b>${r.raw}${r.rawUnit}</b>，<b>与本商品其他规格共用</b>`
+                   :`1 件 = <b>${k.ratio}${it.unit}</b>　·　该仓实物 <b>${r.raw}${r.rawUnit}</b>`}</div>
         ${self?`<div class="sk-acts"><div class="sk-btn" data-edit="${it.item}" data-sku="${k.skuId}">改库存</div></div>`:''}
       </div>`;}).join('');
 

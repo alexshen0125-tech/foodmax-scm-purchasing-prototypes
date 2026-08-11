@@ -132,9 +132,14 @@
         it.stocks.filter(s=>!wh||s.wh==wh).forEach(s=>{
           const il=left(s.wms,s.locked);
           it.skus.forEach(k=>{if(!hit(k))return;
-            out.push({it,k,wh:s.wh,self:false,unit:it.unit,qtyUnit:'件',
-              stock:s.wms,locked:s.locked,transit:s.transit,
-              sellable:Math.floor(il/k.ratio),shared:it.skus.length>1});});
+            /* 全部换算成本规格的「件」。注意：已占用必须由 在库件 − 可售件 反推，
+               不能各自 floor —— floor(52/3)−floor(8/3)=15 ≠ floor(44/3)=14，
+               三个数会在屏幕上对不上（BR-04b）。 */
+            const stockPc=Math.floor(s.wms/k.ratio);
+            const sellable=Math.floor(il/k.ratio);
+            out.push({it,k,wh:s.wh,self:false,unit:'件',raw:s.wms,rawUnit:it.unit,
+              stock:stockPc,locked:stockPc-sellable,transit:Math.floor(s.transit/k.ratio),
+              sellable,shared:it.skus.length>1});});
         });
       }
     });
@@ -345,7 +350,7 @@
     const tabs=`<div class="tabs" style="margin:0;border:none">${qb('','全部',cAll)}${qb('out','已缺货',cOut)}${qb('transit','有在途',cTr)}</div>`;
 
     const body=list.map(r=>{const it=r.it,k=r.k,self=r.self;
-      const shareTag=r.shared?` <span class="tag t-pp" style="font-size:10px" title="本商品下各规格共用同一批货，此列为货品维度数值，同商品同仓各行相同">共享</span>`:'';
+      const shareTag=r.shared?` <span class="tag t-pp" style="font-size:10px" title="本商品下各规格共用同一批货（该仓共 ${r.raw}${r.rawUnit}），此处已按 1 件 = ${r.k.ratio}${r.rawUnit} 折算成本规格件数">共享</span>`:'';
       return `<tr>
         <td><b>${it.name}</b><div class="mono" style="font-size:11.5px;color:var(--ts)">${it.item}</div></td>
         <td class="mono">${k.skuId}</td>
@@ -354,9 +359,9 @@
         <td style="color:var(--ts)">${it.cat}</td>
         <td>${self?`<span style="color:var(--tt)">${SELF_WH}</span>`:r.wh}</td>
         <td style="text-align:right"><b style="${r.sellable<=0?'color:var(--r)':''}">${r.sellable}</b> <span style="font-size:11.5px;color:var(--tt)">件</span></td>
-        <td style="text-align:right">${r.stock} <span style="font-size:11.5px;color:var(--tt)">${r.unit}</span>${shareTag}</td>
-        <td style="text-align:right;color:var(--ts)">${r.locked||'—'}</td>
-        <td style="text-align:right">${r.transit?`<span style="color:var(--b)">${r.transit} ${r.unit}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
+        <td style="text-align:right">${r.stock} <span style="font-size:11.5px;color:var(--tt)">件</span>${shareTag}</td>
+        <td style="text-align:right;color:var(--ts)">${r.locked?r.locked+' 件':'—'}</td>
+        <td style="text-align:right">${r.transit?`<span style="color:var(--b)">${r.transit} 件</span>`:'<span style="color:var(--tt)">—</span>'}</td>
         <td>${self?`<span class="tag ${k.stockMode=='daily'?'t-g':'t-y'}" style="font-size:10.5px">${SMODE[k.stockMode]}</span>`:'<span class="tag t-gr" style="font-size:10.5px">货品库存</span>'}</td>
         <td>${r.sellable<=0?'<span class="tag t-r"><span class="dot"></span>缺货</span>':'<span class="tag t-g"><span class="dot"></span>正常</span>'}</td>
         <td>${self?`<button class="btn btn-o btn-sm" onclick="inv_edit('${it.item}','${k.skuId}')">改库存</button> `:''}<button class="btn btn-link" onclick="inv_detail('${it.item}')">明细</button> <button class="btn btn-link" onclick="inv_flow('${it.item}')">流水</button></td>
@@ -376,7 +381,7 @@
       <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="toast('已导出当前筛选结果','ok')">⬇️ 导出库存</button></div>
     </div>
     <div class="card-bd">
-      <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>，「在库/已占用/在途」是货品维度数值，同商品同仓各行相同。</div>
+      <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度；<b>数量列一律按本行规格折算成「件」</b>（不足 1 件不计）。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>——鼠标悬停可看该仓实物总量，卖掉任一规格，其他规格件数会同步下降。</div>
       <div style="overflow-x:auto"><table>
         <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">在库</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>${body||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invWh||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invWh||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
