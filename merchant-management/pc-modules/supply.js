@@ -1,8 +1,9 @@
 /* PC · 耗材商城（商家端）+ 耗材管理（运营平台端）
-   业务链：耗材订单(HC) → 耗材送货单(HS，推仓库作业) → 仓库回写已交付 → 计入当期结算单扣减项 → 平台开耗材销售发票。
+   业务链：耗材订单(HC) → 耗材送货单(HS，推仓库作业) → 仓库回写已交付 → 计入当期结算单扣减项 → 结算完成后平台开耗材销售发票。
    边界：配送执行（谁送/自提/运费）不在本原型范围，送货单只做「生成 + 推送 + 状态承接」。
    口径：
    - 计费时点 = 耗材送货单回写「已交付」，按回写时间落入当期结算周期（未交付不计费）。
+   - 开票时点 = **结算完成后**（与服务费发票同节奏），不是交付时点；已结算 ≠ 已开票。商家可下载发票 PDF。
    - 支付方式固定 = 结算抵扣，商家无支付动作；结算单新增扣减行「耗材采购扣款」，取含税金额。
    - 应清算 = 汇总总额 − 逆向扣减 − 服务佣金 − 物流佣金 − 耗材采购扣款；不足扣时差额结转下期。
    - 耗材与经营商品完全隔离：独立商品表与类目，不进商品审核流、不进对账单、不参与佣金。
@@ -12,32 +13,35 @@
 
 /* ================= 演示数据（挂 DB，跨 render 持久） ================= */
 DB.supplyGoods = DB.supplyGoods || [
-  {code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:16.80,tax:9,stock:480,limitQty:20,limitCycle:'单次',status:'onsale',ic:'🏷️',desc:'适配平台标配标签打印机，商品标签 / 称重标签通用。'},
-  {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:21.50,tax:9,stock:260,limitQty:20,limitCycle:'单次',status:'onsale',ic:'🏷️',desc:'大幅面标签，整件送货标签用。'},
-  {code:'HC-CLN-PEN',name:'打印头清洁笔',spec:'2支/盒',unit:'盒',cat:'标签耗材',price:6.00,tax:9,stock:0,limitQty:5,limitCycle:'单次',status:'onsale',ic:'🖊️',desc:'打印头清洁，建议每月一次。'},
-  {code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',cat:'打印设备',price:328.00,tax:9,stock:26,limitQty:2,limitCycle:'每店累计',status:'onsale',ic:'🖨️',desc:'平台标配机型，随附驱动与配置手册，即插即用。'},
-  {code:'HC-PRT-BT10',name:'便携蓝牙标签打印机',spec:'蓝牙 5.0 · 内置电池',unit:'台',cat:'打印设备',price:168.00,tax:9,stock:12,limitQty:2,limitCycle:'每店累计',status:'onsale',ic:'🖨️',desc:'移动分拣场景，配合商家 App 打印。'},
-  {code:'HC-BOX-STD',name:'周转筐 600×400',spec:'1个',unit:'个',cat:'周转物料',price:12.00,tax:9,stock:900,limitQty:100,limitCycle:'单次',status:'offsale',ic:'🧺',desc:'暂未开放销售。'},
+  {code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:16.80,tax:9,stock:480,status:'onsale',ic:'🏷️',desc:'适配平台标配标签打印机，商品标签 / 称重标签通用。'},
+  {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:21.50,tax:9,stock:260,status:'onsale',ic:'🏷️',desc:'大幅面标签，整件送货标签用。'},
+  {code:'HC-CLN-PEN',name:'打印头清洁笔',spec:'2支/盒',unit:'盒',cat:'标签耗材',price:6.00,tax:9,stock:0,status:'onsale',ic:'🖊️',desc:'打印头清洁，建议每月一次。'},
+  {code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',cat:'打印设备',price:328.00,tax:9,stock:26,status:'onsale',ic:'🖨️',desc:'平台标配机型，随附驱动与配置手册，即插即用。'},
+  {code:'HC-PRT-BT10',name:'便携蓝牙标签打印机',spec:'蓝牙 5.0 · 内置电池',unit:'台',cat:'打印设备',price:168.00,tax:9,stock:12,status:'onsale',ic:'🖨️',desc:'移动分拣场景，配合商家 App 打印。'},
+  {code:'HC-BOX-STD',name:'周转筐 600×400',spec:'1个',unit:'个',cat:'周转物料',price:12.00,tax:9,stock:900,status:'offsale',ic:'🧺',desc:'暂未开放销售。'},
 ];
 DB.supplyOrders = DB.supplyOrders || [
   {no:'HC20260518001',date:'2026-05-18 10:24',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',qty:1,price:328.00,tax:9}],
-   status:'settled',deliveryNo:'HS20260518001',deliveryStatus:'已交付',pushAt:'2026-05-18 10:25',deliveredAt:'2026-05-19 08:40',billNo:'ST202605-M0815',invNo:'SUP-INV-2026-501'},
+   status:'invoiced',deliveryNo:'HS20260518001',deliveryStatus:'已交付',pushAt:'2026-05-18 10:25',deliveredAt:'2026-05-19 08:40',billNo:'ST202605-M0815',settledAt:'2026-06-01 02:00',invNo:'SUP-INV-2026-501',invoicedAt:'2026-06-06 10:12'},
+  // 已计入 5 月结算单、但该结算单尚在付款中 → 未开票（演示「已结算 ≠ 已开票」）
+  {no:'HC20260520001',date:'2026-05-20 14:08',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
+   lines:[{code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',qty:4,price:21.50,tax:9}],
+   status:'settled',deliveryNo:'HS20260520001',deliveryStatus:'已交付',pushAt:'2026-05-20 14:09',deliveredAt:'2026-05-21 08:05',billNo:'ST202605-M0815',settledAt:'2026-06-01 02:00',invNo:'',invoicedAt:''},
   {no:'HC20260612001',date:'2026-06-12 09:06',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',qty:6,price:16.80,tax:9},
           {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',qty:2,price:21.50,tax:9}],
-   status:'delivered',deliveryNo:'HS20260612001',deliveryStatus:'已交付',pushAt:'2026-06-12 09:07',deliveredAt:'2026-06-13 07:20',billNo:'',invNo:'SUP-INV-2026-502'},
+   status:'delivered',deliveryNo:'HS20260612001',deliveryStatus:'已交付',pushAt:'2026-06-12 09:07',deliveredAt:'2026-06-13 07:20',billNo:'',settledAt:'',invNo:'',invoicedAt:''},
   {no:'HC20260628001',date:'2026-06-28 16:41',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',qty:10,price:16.80,tax:9}],
-   status:'pending',deliveryNo:'HS20260628001',deliveryStatus:'待处理',pushAt:'2026-06-28 16:42',deliveredAt:'',billNo:'',invNo:''},
+   status:'pending',deliveryNo:'HS20260628001',deliveryStatus:'待处理',pushAt:'2026-06-28 16:42',deliveredAt:'',billNo:'',settledAt:'',invNo:'',invoicedAt:''},
 ];
 DB.supplyCart   = DB.supplyCart   || {};
 DB.supplySeq    = DB.supplySeq    || 2;      // 当日流水号
 DB.supplyTab    = DB.supplyTab    || 'all';
 DB.supplyGTab   = DB.supplyGTab   || 'all';  // 商城品类筛选
 DB.supplyInvoices = DB.supplyInvoices || [
-  {no:'SUP-INV-2026-501',order:'HC20260518001',date:'2026-05-20',net:328.00,gst:29.52,total:357.52,status:'已开票'},
-  {no:'SUP-INV-2026-502',order:'HC20260612001',date:'2026-06-14',net:143.80,gst:12.94,total:156.74,status:'已开票'},
+  {no:'SUP-INV-2026-501',order:'HC20260518001',date:'2026-06-06',net:328.00,gst:29.52,total:357.52,status:'已开票'},
 ];
 
 /* ================= 口径计算 ================= */
@@ -49,22 +53,24 @@ const odNet  = o => +(o.lines.reduce((a,l)=>a+lnNet(l),0)).toFixed(2);
 const odIncl = o => +(o.lines.reduce((a,l)=>a+lnIncl(l),0)).toFixed(2);
 const odQty  = o => o.lines.reduce((a,l)=>a+(+l.qty||0),0);
 const gOf    = c => DB.supplyGoods.find(g=>g.code==c)||{};
-const S_ST = {pending:['待送货','t-y'],shipping:['送货中','t-b'],delivered:['已交付','t-g'],settled:['已结算','t-gr'],canceled:['已取消','t-gr']};
-const S_TABS=[['all','全部'],['pending','待送货'],['shipping','送货中'],['delivered','已交付'],['settled','已结算'],['canceled','已取消']];
+/* 状态链：待送货 → 送货中 → 已交付 →（账期聚合）已结算 →（结算完成放款后自动开票）已开票（终态）
+   开票时点 = 结算完成后，与服务费发票同节奏（《对账结算 PRD》BR-10），不是交付时点。 */
+const S_ST = {pending:['待送货','t-y'],shipping:['送货中','t-b'],delivered:['已交付','t-b'],settled:['已结算','t-pp'],invoiced:['已开票','t-g'],canceled:['已取消','t-gr']};
+const S_TABS=[['all','全部'],['pending','待送货'],['shipping','送货中'],['delivered','已交付'],['settled','已结算'],['invoiced','已开票'],['canceled','已取消']];
 function sTag(s){const[t,c]=S_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
+// 发票单元格：已开票给发票号，其余给等待原因（开票在结算完成之后）
+function shipCell(o){
+  return `<span class="mono" style="font-size:12.5px">${o.deliveryNo}</span><div style="margin-top:3px">${dTag(o.deliveryStatus)}</div>${o.deliveredAt?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.deliveredAt}</div>`:''}`;
+}
+function invCell(o){
+  if(o.invNo)return `<span class="tag t-g"><span class="dot"></span>已开票</span><div class="mono" style="font-size:11.5px;color:var(--ts);margin-top:2px">${o.invNo}</div>`;
+  if(o.status=='canceled')return '<span style="color:var(--tt)">—</span>';
+  if(o.status=='settled')return '<span class="tag t-y"><span class="dot"></span>待开票</span><div style="font-size:11px;color:var(--ts);margin-top:2px">结算完成后开具</div>';
+  return '<span style="font-size:12px;color:var(--ts)">待结算</span>';
+}
 function dTag(s){const m={'待处理':'t-y','已推送':'t-b','已交付':'t-g','已作废':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s}</span>`;}
-// 「每店累计」限购已购数：统计未取消订单的累计件数
-function boughtQty(code){return DB.supplyOrders.filter(o=>o.status!='canceled').reduce((a,o)=>a+o.lines.filter(l=>l.code==code).reduce((b,l)=>b+l.qty,0),0);}
-// 单个商品的可下单上限 = min(库存, 限购剩余)
-function maxQty(g){
-  const byStock=Math.max(0,g.stock);
-  const byLimit=g.limitCycle=='每店累计'?Math.max(0,g.limitQty-boughtQty(g.code)):g.limitQty;
-  return Math.min(byStock,byLimit);
-}
-function limitText(g){
-  if(g.limitCycle=='每店累计'){const b=boughtQty(g.code);return `每店累计限购 ${g.limitQty}${g.unit} · 已购 ${b}${g.unit} · 剩余 ${Math.max(0,g.limitQty-b)}${g.unit}`;}
-  return `单次限购 ${g.limitQty}${g.unit}`;
-}
+// 可下单上限 = 平台可售库存（本期不做限购）
+function maxQty(g){return Math.max(0,g.stock);}
 /* 结算联动：已交付未结算的耗材订单，按含税金额汇总为当期结算单扣减项（BR：计费时点=交付确认） */
 window.supplySettleSync=function(){
   const del=DB.supplyOrders.filter(o=>o.status=='delivered');
@@ -121,8 +127,8 @@ PAGES['m-supply']=()=>{
   <div class="tabs">${sgCats().map(c=>`<div class="tab ${tab==c?'active':''}" onclick="DB.supplyGTab='${c}';render()">${c=='all'?'全部':c}</div>`).join('')}</div>
   <div class="sg-grid">
     ${list.map(g=>{
-      const mx=maxQty(g),q=DB.supplyCart[g.code]||0,out=g.stock<=0,lim=mx<=0&&!out;
-      return `<div class="sg-card ${out||lim?'out':''}">
+      const mx=maxQty(g),q=DB.supplyCart[g.code]||0,out=g.stock<=0;
+      return `<div class="sg-card ${out?'out':''}">
         <div class="sg-hd">
           <div class="sg-ic">${g.ic}</div>
           <div style="min-width:0;flex:1">
@@ -133,10 +139,9 @@ PAGES['m-supply']=()=>{
         </div>
         <div class="sg-price"><span class="sg-p1">${money(g.price)}</span><span class="sg-p2">/${g.unit}（未税）</span></div>
         <div class="sg-p2" style="margin-top:4px">含税 ${money(sIncl(g))}/${g.unit} · GST ${sTax(g)}%</div>
-        <div class="sg-meta">${out?`库存 0${g.unit}`:`可下单 ${mx}${g.unit}（库存 ${g.stock}${g.unit}）`}<br>${limitText(g)}</div>
+        <div class="sg-meta">${out?`库存 0${g.unit}`:`可下单 ${mx}${g.unit}（库存 ${g.stock}${g.unit}）`}</div>
         <div class="sg-ft">
           ${out?'<span class="tag t-gr"><span class="dot"></span>暂时缺货</span>'
-            :lim?'<span class="tag t-y"><span class="dot"></span>已达限购上限</span>'
             :`<div class="sg-step">
               <button onclick="sgStep('${g.code}',-1)" ${q<=0?'disabled':''} id="sgm-${g.code}">−</button>
               <input id="sgq-${g.code}" type="number" min="0" max="${mx}" value="${q}" oninput="sgSetQty('${g.code}',this.value)">
@@ -172,13 +177,13 @@ function sgPaint(code){
 window.sgStep=function(code,d){
   const g=gOf(code),mx=maxQty(g);let q=(DB.supplyCart[code]||0)+d;
   if(q<0)q=0;
-  if(q>mx){toast(`「${g.name}」最多可下单 ${mx}${g.unit}（受库存与限购限制）`,'err');q=mx;}
+  if(q>mx){toast(`「${g.name}」最多可下单 ${mx}${g.unit}（受库存限制）`,'err');q=mx;}
   DB.supplyCart[code]=q;sgPaint(code);
 };
 window.sgSetQty=function(code,v){
   const g=gOf(code),mx=maxQty(g);let q=parseInt(v,10);
   if(isNaN(q)||q<0)q=0;
-  if(q>mx){toast(`「${g.name}」最多可下单 ${mx}${g.unit}（受库存与限购限制）`,'err');q=mx;}
+  if(q>mx){toast(`「${g.name}」最多可下单 ${mx}${g.unit}（受库存限制）`,'err');q=mx;}
   DB.supplyCart[code]=q;sgPaint(code);
 };
 window.sgClearCart=function(){DB.supplyCart={};render();toast('已清空采购单','info');};
@@ -205,10 +210,10 @@ window.sgSubmitAsk=function(){
 };
 window.sgSubmit=function(){
   const ls=cartLines();if(!ls.length)return;
-  // 提交前二次校验库存与限购（避免运营端改价改库存后越界）
+  // 提交前二次校验库存（避免运营端改价改库存后越界）
   for(const l of ls){const g=gOf(l.code),mx=maxQty(g);
     if(g.status!='onsale'){toast(`「${g.name}」已下架，请移除后再提交`,'err');return;}
-    if(l.qty>mx){toast(`「${g.name}」超出可下单上限 ${mx}${g.unit}`,'err');return;}}
+    if(l.qty>mx){toast(`「${g.name}」超出可售库存 ${mx}${g.unit}`,'err');return;}}
   const seq=String(++DB.supplySeq).padStart(3,'0'),d='20260630';
   const note=(document.getElementById('sg-note')||{}).value||'';
   const o={no:'HC'+d+seq,date:ts(),shop:DB.merchant.code,shopName:DB.shop.name,lines:ls.map(l=>({...l})),
@@ -237,26 +242,26 @@ PAGES['m-supply-order']=()=>{
   <div class="tabs">${S_TABS.map(t=>`<div class="tab ${tab==t[0]?'active':''}" onclick="DB.supplyTab='${t[0]}';render()">${t[1]}${cnt(t[0])?`<span class="tb" style="background:var(--ts)">${cnt(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="card"><div class="card-hd"><h3>耗材采购单</h3><span class="sub">共 ${list.length} 单 · 一张采购单对应一张耗材送货单</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>采购单号</th><th>下单时间</th><th>耗材明细</th><th style="text-align:right">金额（未税）</th><th style="text-align:right">金额（含税）</th><th>送货单号</th><th>送货单状态</th><th>订单状态</th><th>计费结算单</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>采购单号</th><th>耗材明细</th><th style="text-align:right">金额（未税）</th><th style="text-align:right">金额（含税）</th><th>耗材送货单</th><th>订单状态</th><th>计费结算单</th><th>耗材发票</th><th>操作</th></tr></thead><tbody>
     ${list.map(o=>`<tr>
-      <td class="mono">${o.no}</td>
-      <td style="font-size:12.5px;color:var(--ts);white-space:nowrap">${o.date}</td>
-      <td style="max-width:250px;white-space:normal">${o.lines.map(l=>`<div>${l.name} <span style="color:var(--ts)">${l.qty}${l.unit}</span></div>`).join('')}<div style="font-size:11.5px;color:var(--ts);margin-top:2px">共 ${odQty(o)} 件</div></td>
+      <td class="mono">${o.no}<div style="font-size:11px;color:var(--ts);margin-top:2px;font-weight:400">${o.date}</div></td>
+      <td style="min-width:190px;max-width:260px;white-space:normal">${o.lines.map(l=>`<div>${l.name} <span style="color:var(--ts)">${l.qty}${l.unit}</span></div>`).join('')}<div style="font-size:11.5px;color:var(--ts);margin-top:2px">共 ${odQty(o)} 件</div></td>
       <td style="text-align:right">${money(odNet(o))}</td>
       <td style="text-align:right;font-weight:600">${money(odIncl(o))}</td>
-      <td class="mono">${o.deliveryNo}</td>
-      <td>${dTag(o.deliveryStatus)}${o.deliveredAt?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.deliveredAt}</div>`:''}</td>
+      <td>${shipCell(o)}</td>
       <td>${sTag(o.status)}</td>
       <td>${o.billNo?`<span class="mono" style="font-size:12px">${o.billNo}</span>`:(o.status=='delivered'?`<span style="font-size:12px;color:var(--y)">待计入 ${DB.bill.no}</span>`:'<span style="color:var(--tt)">—</span>')}</td>
-      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="sgOrderDetail('${o.no}')">详情</button>${o.status=='pending'?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}</td>
-    </tr>`).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--ts);padding:22px">该状态暂无耗材采购单</td></tr>`}
+      <td>${invCell(o)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="sgOrderDetail('${o.no}')">详情</button>${o.invNo?` <button class="btn btn-link btn-sm" onclick="sgDownloadInv('${o.no}')">下载发票</button>`:''}${o.status=='pending'?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}</td>
+    </tr>`).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:22px">该状态暂无耗材采购单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 window.sgOrderDetail=function(no,role){
   const o=DB.supplyOrders.find(x=>x.no==no);if(!o)return;
   const plat=role=='plat';
-  const steps=['提交采购单','推送仓库','仓库交付','计入结算'];
-  const idx=o.status=='canceled'?0:(o.status=='pending'?1:o.status=='shipping'?2:o.status=='delivered'?3:4);
+  const steps=['提交采购单','推送仓库','仓库交付','计入结算','开具发票'];
+  const IDX={canceled:0,pending:1,shipping:2,delivered:3,settled:4,invoiced:5};
+  const idx=IDX[o.status]!=null?IDX[o.status]:0;
   drawer(`<div class="drawer-hd"><div><h3>${o.no} · 耗材采购单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.date} · ${plat?o.shopName+' · '+o.shop:'共 '+odQty(o)+' 件'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${o.status=='canceled'?'<div class="ib ib-gr"><span class="i">🚫</span>本单已取消，不产生扣款。</div>':`<div style="margin-bottom:16px">${pipe(steps,idx)}</div>`}
@@ -288,14 +293,21 @@ window.sgOrderDetail=function(no,role){
     <dl class="dl">
       <dt>支付方式</dt><dd>结算抵扣 · 商家无需付款</dd>
       <dt>计费时点</dt><dd>${o.deliveredAt?`交付确认 ${o.deliveredAt}`:'待交付确认后计费'}</dd>
-      <dt>计入结算单</dt><dd>${o.billNo?`<span class="mono">${o.billNo}</span> · 已结清`:(o.status=='delivered'?`<span class="mono">${DB.bill.no}</span> · 当期扣减 ${money(odIncl(o))}`:'—')}</dd>
-      <dt>耗材销售发票</dt><dd>${o.invNo?`<span class="mono">${o.invNo}</span> · 已开票（GST ${sTax(o.lines[0])}%）`:'交付确认后由平台开具'}</dd>
+      <dt>计入结算单</dt><dd>${o.billNo?`<span class="mono">${o.billNo}</span>${o.settledAt?' · '+o.settledAt:''}`:(o.status=='delivered'?`<span class="mono">${DB.bill.no}</span> · 当期扣减 ${money(odIncl(o))}`:'—')}</dd>
+      <dt>开票时点</dt><dd>${o.invoicedAt?`结算完成后开具 ${o.invoicedAt}`:'待所在结算单完成放款后自动开具'}</dd>
+      <dt>耗材销售发票</dt><dd>${o.invNo
+        ?`<span class="mono">${o.invNo}</span> · 已开票（未税 ${money(odNet(o))} + GST ${sTax(o.lines[0])}% ${money(+(odIncl(o)-odNet(o)).toFixed(2))} = ${money(odIncl(o))}）
+           <button class="btn btn-link btn-sm" style="padding-left:0" onclick="sgDownloadInv('${o.no}')">下载 PDF</button>`
+        :(o.status=='settled'?'待开票 · 结算单完成放款后由平台自动开具':'—')}</dd>
     </dl>
-    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">耗材款不进对账单、不参与佣金计算；按含税金额作为结算单扣减项，与当期货款轧差。当期应清算不足以覆盖时，差额结转下期继续扣。</div>
+    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">耗材款不进对账单、不参与佣金计算；按含税金额作为结算单扣减项，与当期货款轧差。开票时点为<b>结算完成后</b>（与服务费发票同节奏），故「已结算」不等于「已开票」。</div>
   </div>
   <div class="drawer-ft">
     ${plat&&o.status=='pending'?`<button class="btn btn-o" onclick="sgPush('${o.no}')">标记已推送仓库</button>`:''}
     ${plat&&o.status=='shipping'?`<button class="btn btn-p" onclick="sgDeliver('${o.no}')">回写已交付 · 触发计费</button>`:''}
+    ${plat&&o.status=='delivered'?`<button class="btn btn-o" onclick="sgSettle('${o.no}')">计入结算单</button>`:''}
+    ${plat&&o.status=='settled'?`<button class="btn btn-p" onclick="sgInvoice('${o.no}')">结算完成 · 开具发票</button>`:''}
+    ${!plat&&o.invNo?`<button class="btn btn-o" onclick="sgDownloadInv('${o.no}')">⬇️ 下载发票</button>`:''}
     ${!plat&&o.status=='pending'?`<button class="btn btn-d" onclick="sgCancelAsk('${o.no}')">取消采购单</button>`:''}
     <button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 };
@@ -321,7 +333,7 @@ PAGES['p-supply-goods']=()=>{
   </div>
   <div class="card"><div class="card-hd"><h3>耗材商品</h3><span class="sub">平台统一维护 · 商家端只读，不进商品审核流</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>耗材编码</th><th>名称 / 规格</th><th>类别</th><th>单位</th><th style="text-align:right">未税单价</th><th style="text-align:right">含税单价</th><th>税率</th><th style="text-align:right">库存</th><th>限购</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>耗材编码</th><th>名称 / 规格</th><th>类别</th><th>单位</th><th style="text-align:right">未税单价</th><th style="text-align:right">含税单价</th><th>税率</th><th style="text-align:right">库存</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${gs.map(g=>`<tr>
       <td class="mono">${g.code}</td>
       <td><b>${g.name}</b><div style="font-size:11.5px;color:var(--ts)">${g.spec}</div></td>
@@ -330,7 +342,6 @@ PAGES['p-supply-goods']=()=>{
       <td style="text-align:right;color:var(--ts)">${money(sIncl(g))}</td>
       <td>${sTax(g)}%</td>
       <td style="text-align:right">${g.stock<=0?'<span style="color:var(--r);font-weight:600">0</span>':g.stock}</td>
-      <td style="font-size:12px">${g.limitCycle} ${g.limitQty}${g.unit}</td>
       <td>${g.status=='onsale'?(g.stock<=0?'<span class="tag t-y"><span class="dot"></span>在售 · 缺货</span>':'<span class="tag t-g"><span class="dot"></span>在售</span>'):'<span class="tag t-gr"><span class="dot"></span>已下架</span>'}</td>
       <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="sgGoodsEdit('${g.code}')">编辑</button>
         <button class="btn btn-link btn-sm" onclick="sgToggle('${g.code}')" style="${g.status=='onsale'?'color:var(--r)':''}">${g.status=='onsale'?'下架':'上架'}</button></td>
@@ -344,7 +355,7 @@ window.sgToggle=function(code){
   });
 };
 window.sgGoodsEdit=function(code){
-  const g=code?gOf(code):{code:'',name:'',spec:'',unit:'箱',cat:'标签耗材',price:'',tax:9,stock:'',limitQty:'',limitCycle:'单次',status:'onsale',ic:'📦',desc:''};
+  const g=code?gOf(code):{code:'',name:'',spec:'',unit:'箱',cat:'标签耗材',price:'',tax:9,stock:'',status:'onsale',ic:'📦',desc:''};
   const isNew=!code;
   drawer(`<div class="drawer-hd"><div><h3>${isNew?'新建耗材':'编辑耗材 · '+g.name}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">耗材独立类目，不进货品中心、不参与佣金</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
@@ -360,11 +371,7 @@ window.sgGoodsEdit=function(code){
       <div class="fr"><label class="fl"><b>*</b>税率（%）</label><input id="sgf-tax" type="number" step="1" min="0" max="30" value="${g.tax}" oninput="sgPreviewIncl()"></div>
     </div>
     <div class="ib ib-b" id="sgf-incl"><span class="i">🧮</span>含税单价 = 未税单价 ×(1+税率) = <b>${g.price?money(sIncl(g)):'—'}</b></div>
-    <div class="fg3">
-      <div class="fr"><label class="fl"><b>*</b>可售库存</label><input id="sgf-stock" type="number" step="1" min="0" value="${g.stock}"></div>
-      <div class="fr"><label class="fl"><b>*</b>限购周期</label><select id="sgf-lc">${['单次','每店累计'].map(c=>`<option ${g.limitCycle==c?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="fr"><label class="fl"><b>*</b>限购数量</label><input id="sgf-lq" type="number" step="1" min="1" value="${g.limitQty}"></div>
-    </div>
+    <div class="fr"><label class="fl"><b>*</b>可售库存</label><input id="sgf-stock" type="number" step="1" min="0" value="${g.stock}"></div>
     <div class="fr"><label class="fl">耗材说明</label><textarea id="sgf-desc" placeholder="商家端商品卡展示">${g.desc||''}</textarea></div>
     <div id="sgf-err" style="font-size:12.5px;color:var(--r)"></div>
   </div>
@@ -380,7 +387,7 @@ window.sgGoodsSave=function(code){
   const err=document.getElementById('sgf-err');
   const o={code:(v('sgf-code')||'').trim().toUpperCase(),name:(v('sgf-name')||'').trim(),spec:(v('sgf-spec')||'').trim(),
     cat:v('sgf-cat'),unit:v('sgf-unit'),price:parseFloat(v('sgf-price')),tax:parseFloat(v('sgf-tax')),
-    stock:parseInt(v('sgf-stock'),10),limitCycle:v('sgf-lc'),limitQty:parseInt(v('sgf-lq'),10),desc:(v('sgf-desc')||'').trim()};
+    stock:parseInt(v('sgf-stock'),10),desc:(v('sgf-desc')||'').trim()};
   const fails=[];
   if(!o.code)fails.push('耗材编码必填');
   if(!code&&DB.supplyGoods.some(g=>g.code==o.code))fails.push('耗材编码已存在');
@@ -389,7 +396,6 @@ window.sgGoodsSave=function(code){
   if(!(o.price>0))fails.push('未税单价必须 > 0');
   if(!(o.tax>=0))fails.push('税率必须 ≥ 0');
   if(!(o.stock>=0))fails.push('可售库存必须 ≥ 0');
-  if(!(o.limitQty>=1))fails.push('限购数量必须 ≥ 1');
   if(fails.length){err.innerHTML=fails.join('；');return;}
   if(code){Object.assign(gOf(code),o);}
   else{DB.supplyGoods.push({...o,status:'onsale',ic:o.cat=='打印设备'?'🖨️':o.cat=='标签耗材'?'🏷️':'📦'});}
@@ -407,28 +413,30 @@ PAGES['p-supply-order']=()=>{
     <div class="sc ${cnt('pending')?'warn':''}"><div class="sc-l">待推送仓库</div><div class="sc-v">${cnt('pending')}</div></div>
     <div class="sc"><div class="sc-l">仓库作业中</div><div class="sc-v">${cnt('shipping')}</div><div class="sc-s">待回写交付</div></div>
     <div class="sc"><div class="sc-l">已交付待结算</div><div class="sc-v">${cnt('delivered')}</div><div class="sc-s">计入当期结算扣减</div></div>
+    <div class="sc ${cnt('settled')?'warn':''}"><div class="sc-l">已结算待开票</div><div class="sc-v">${cnt('settled')}</div><div class="sc-s">结算完成后开具</div></div>
     <div class="sc good"><div class="sc-l">已交付金额（含税）</div><div class="sc-v">${money(+(all.filter(o=>o.status=='delivered'||o.status=='settled').reduce((a,o)=>a+odIncl(o),0)).toFixed(2))}</div></div>
   </div>
   <div class="tabs">${S_TABS.map(t=>`<div class="tab ${tab==t[0]?'active':''}" onclick="DB.supplyTab='${t[0]}';render()">${t[1]}${cnt(t[0])?`<span class="tb" style="background:var(--ts)">${cnt(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="card"><div class="card-hd"><h3>耗材订单</h3><span class="sub">共 ${list.length} 单 · 交付回写即触发商家结算扣款</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>采购单号</th><th>店铺</th><th>下单时间</th><th>耗材明细</th><th style="text-align:right">未税</th><th style="text-align:right">含税</th><th>送货单号</th><th>送货单状态</th><th>订单状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>采购单号</th><th>店铺</th><th>耗材明细</th><th style="text-align:right">未税</th><th style="text-align:right">含税</th><th>耗材送货单</th><th>订单状态</th><th>耗材发票</th><th>操作</th></tr></thead><tbody>
     ${list.map(o=>`<tr>
-      <td class="mono">${o.no}</td>
+      <td class="mono">${o.no}<div style="font-size:11px;color:var(--ts);margin-top:2px;font-weight:400">${o.date}</div></td>
       <td>${o.shopName}<div class="mono" style="font-size:11.5px;color:var(--ts)">${o.shop}</div></td>
-      <td style="font-size:12.5px;color:var(--ts);white-space:nowrap">${o.date}</td>
-      <td style="max-width:230px;white-space:normal">${o.lines.map(l=>`<div>${l.name} <span style="color:var(--ts)">${l.qty}${l.unit}</span></div>`).join('')}</td>
+      <td style="min-width:190px;max-width:260px;white-space:normal">${o.lines.map(l=>`<div>${l.name} <span style="color:var(--ts)">${l.qty}${l.unit}</span></div>`).join('')}</td>
       <td style="text-align:right">${money(odNet(o))}</td>
       <td style="text-align:right;font-weight:600">${money(odIncl(o))}</td>
-      <td class="mono">${o.deliveryNo}</td>
-      <td>${dTag(o.deliveryStatus)}</td>
+      <td>${shipCell(o)}</td>
       <td>${sTag(o.status)}</td>
+      <td>${invCell(o)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-o btn-sm" onclick="sgOrderDetail('${o.no}','plat')">详情</button>
         ${o.status=='pending'?` <button class="btn btn-o btn-sm" onclick="sgPush('${o.no}')">推送仓库</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}
         ${o.status=='shipping'?` <button class="btn btn-p btn-sm" onclick="sgDeliver('${o.no}')">回写已交付</button>`:''}
+        ${o.status=='delivered'?` <button class="btn btn-o btn-sm" onclick="sgSettle('${o.no}')">计入结算单</button>`:''}
+        ${o.status=='settled'?` <button class="btn btn-p btn-sm" onclick="sgInvoice('${o.no}')">结算完成 · 开票</button>`:''}
       </td>
-    </tr>`).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--ts);padding:22px">该状态暂无耗材订单</td></tr>`}
+    </tr>`).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:22px">该状态暂无耗材订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 window.sgPush=function(no){
@@ -440,11 +448,34 @@ window.sgDeliver=function(no){
   const o=DB.supplyOrders.find(x=>x.no==no);if(!o||o.status!='shipping')return;
   askConfirm(`确认回写送货单 <b>${o.deliveryNo}</b> 为「已交付」？回写后 <b>${money(odIncl(o))}</b> 立即计入商家当期结算单 ${DB.bill.no} 扣减项，且订单不可再取消。`,()=>{
     o.status='delivered';o.deliveryStatus='已交付';o.deliveredAt=ts();
+    supplySettleSync();closeDrawer();render();
+    toast(`已交付，${money(odIncl(o))} 计入 ${DB.bill.no}；发票待结算完成后开具`,'ok');
+  });
+};
+/* 账期聚合：已交付 → 已结算（回填结算单号）。此时钱已扣，但尚未开票 */
+window.sgSettle=function(no){
+  const o=DB.supplyOrders.find(x=>x.no==no);if(!o||o.status!='delivered')return;
+  askConfirm(`确认将 <b>${o.no}</b>（${money(odIncl(o))}）计入结算单 <b>${DB.bill.no}</b>？计入后进入「已结算」，待该结算单完成放款后自动开具耗材发票。`,()=>{
+    o.status='settled';o.billNo=DB.bill.no;o.settledAt=ts();
+    supplySettleSync();closeDrawer();render();
+    toast(`${o.no} 已计入 ${DB.bill.no}，待结算完成后开票`,'ok');
+  });
+};
+/* 结算完成（放款）后自动开具耗材销售发票：已结算 → 已开票（终态） */
+window.sgInvoice=function(no){
+  const o=DB.supplyOrders.find(x=>x.no==no);if(!o||o.status!='settled')return;
+  askConfirm(`确认结算单 <b>${o.billNo}</b> 已完成放款，为 <b>${o.no}</b> 开具耗材销售发票？开票后商家可自助下载 PDF。`,()=>{
+    o.status='invoiced';o.invoicedAt=ts();
     o.invNo='SUP-INV-2026-'+(500+DB.supplyInvoices.length+1);
     DB.supplyInvoices.unshift({no:o.invNo,order:o.no,date:ts().slice(0,10),net:odNet(o),gst:+(odIncl(o)-odNet(o)).toFixed(2),total:odIncl(o),status:'已开票'});
-    supplySettleSync();closeDrawer();render();
-    toast(`已交付，${money(odIncl(o))} 计入 ${DB.bill.no}，耗材发票 ${o.invNo} 已开具`,'ok');
+    closeDrawer();render();
+    toast(`耗材发票 ${o.invNo} 已开具，商家可下载`,'ok');
   });
+};
+/* 商家下载耗材发票 */
+window.sgDownloadInv=function(no){
+  const o=DB.supplyOrders.find(x=>x.no==no);if(!o||!o.invNo){toast('该单尚未开票','err');return;}
+  toast(`已下载 ${o.invNo}.pdf`,'ok');
 };
 
 /* ================= 商家端 · 耗材发票（发票管理 ③ Tab 内容） ================= */

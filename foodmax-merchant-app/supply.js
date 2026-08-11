@@ -1,8 +1,9 @@
 /* Food Max 商家端 v2 · 耗材商城 + 我的耗材订单（自 PC 同步）
    PC 对齐：与 PC 商家管理系统「耗材商城 / 我的耗材订单」同口径——
    业务链：耗材订单(HC) → 耗材送货单(HS，推仓库作业) → 仓库回写已交付 → 计入当期结算单扣减项 → 平台开耗材销售发票；
-   计费时点 = 送货单回写「已交付」，未交付不计费；支付方式固定 = 结算抵扣，商家无支付动作；
-   价格未税/含税并列（GST 9%），下单快照单价；库存 + 限购（单次 / 每店累计）双重校验；
+   计费时点 = 送货单回写「已交付」，未交付不计费；开票时点 = **结算完成后**（与服务费发票同节奏），已结算 ≠ 已开票；
+   支付方式固定 = 结算抵扣，商家无支付动作；已开票单支持下载发票 PDF；
+   价格未税/含税并列（GST 9%），下单快照单价；可下单上限 = 平台可售库存（本期不做限购）；
    耗材与经营商品完全隔离：不进商品审核流、不进对账单、不参与佣金。
    移动端形态：一屏一主任务——商城页步进器 + 底部常驻结算条（未选置灰），确认页复核后提交。金额 S$。前缀 sp-。
    商品/订单数据与 PC pc-modules/supply.js 同源同值，改一端记得同步另一端。 */
@@ -65,6 +66,10 @@ css.textContent=`
 .sp-dl .d:last-child{border-bottom:none;}
 .sp-dl .d .k{color:var(--sub);flex:0 0 96px;}
 .sp-dl .d .v{flex:1;text-align:right;font-weight:600;color:#27433A;word-break:break-all;}
+.sp-inv{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:11.5px;color:var(--sub);flex-wrap:wrap;}
+.sp-inv .no{font-family:'Lora',serif;color:#27433A;font-weight:700;}
+.sp-inv .hint{color:var(--sub);}
+.sp-inv .dl{margin-left:auto;min-height:32px;line-height:32px;padding:0 14px;border-radius:10px;background:var(--mint-soft);color:var(--emerald-2);font-weight:700;font-size:12.5px;}
 .sp-note{margin:8px 16px 26px;font-size:11.5px;color:var(--sub);line-height:1.65;}
 .sp-empty{margin:40px 16px;text-align:center;color:var(--sub);font-size:13px;line-height:1.8;}
 .sp-steps{display:flex;margin:0 16px 14px;background:#fff;border-radius:18px;padding:16px 12px;box-shadow:var(--sh-sm);}
@@ -83,20 +88,23 @@ document.head.appendChild(css);
 const GST=9;
 const S=n=>'S$'+(+n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const GOODS=[
-  {code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:16.80,tax:9,stock:480,limitQty:20,limitCycle:'单次',status:'onsale',ic:'🏷️'},
-  {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:21.50,tax:9,stock:260,limitQty:20,limitCycle:'单次',status:'onsale',ic:'🏷️'},
-  {code:'HC-CLN-PEN',name:'打印头清洁笔',spec:'2支/盒',unit:'盒',cat:'标签耗材',price:6.00,tax:9,stock:0,limitQty:5,limitCycle:'单次',status:'onsale',ic:'🖊️'},
-  {code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',cat:'打印设备',price:328.00,tax:9,stock:26,limitQty:2,limitCycle:'每店累计',status:'onsale',ic:'🖨️'},
-  {code:'HC-PRT-BT10',name:'便携蓝牙标签打印机',spec:'蓝牙 5.0 · 内置电池',unit:'台',cat:'打印设备',price:168.00,tax:9,stock:12,limitQty:2,limitCycle:'每店累计',status:'onsale',ic:'🖨️'},
+  {code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:16.80,tax:9,stock:480,status:'onsale',ic:'🏷️'},
+  {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',cat:'标签耗材',price:21.50,tax:9,stock:260,status:'onsale',ic:'🏷️'},
+  {code:'HC-CLN-PEN',name:'打印头清洁笔',spec:'2支/盒',unit:'盒',cat:'标签耗材',price:6.00,tax:9,stock:0,status:'onsale',ic:'🖊️'},
+  {code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',cat:'打印设备',price:328.00,tax:9,stock:26,status:'onsale',ic:'🖨️'},
+  {code:'HC-PRT-BT10',name:'便携蓝牙标签打印机',spec:'蓝牙 5.0 · 内置电池',unit:'台',cat:'打印设备',price:168.00,tax:9,stock:12,status:'onsale',ic:'🖨️'},
 ];
 const ORDERS=[
   {no:'HC20260518001',date:'2026-05-18 10:24',
    lines:[{code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',qty:1,price:328.00,tax:9}],
-   status:'settled',deliveryNo:'HS20260518001',deliveryStatus:'已交付',pushAt:'2026-05-18 10:25',deliveredAt:'2026-05-19 08:40',billNo:'ST202605-M0815',invNo:'SUP-INV-2026-501'},
+   status:'invoiced',deliveryNo:'HS20260518001',deliveryStatus:'已交付',pushAt:'2026-05-18 10:25',deliveredAt:'2026-05-19 08:40',billNo:'ST202605-M0815',settledAt:'2026-06-01 02:00',invNo:'SUP-INV-2026-501',invoicedAt:'2026-06-06 10:12'},
+  {no:'HC20260520001',date:'2026-05-20 14:08',
+   lines:[{code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',qty:4,price:21.50,tax:9}],
+   status:'settled',deliveryNo:'HS20260520001',deliveryStatus:'已交付',pushAt:'2026-05-20 14:09',deliveredAt:'2026-05-21 08:05',billNo:'ST202605-M0815',settledAt:'2026-06-01 02:00',invNo:'',invoicedAt:''},
   {no:'HC20260612001',date:'2026-06-12 09:06',
    lines:[{code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',qty:6,price:16.80,tax:9},
           {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',qty:2,price:21.50,tax:9}],
-   status:'delivered',deliveryNo:'HS20260612001',deliveryStatus:'已交付',pushAt:'2026-06-12 09:07',deliveredAt:'2026-06-13 07:20',billNo:'',invNo:'SUP-INV-2026-502'},
+   status:'delivered',deliveryNo:'HS20260612001',deliveryStatus:'已交付',pushAt:'2026-06-12 09:07',deliveredAt:'2026-06-13 07:20',billNo:'',settledAt:'',invNo:'',invoicedAt:''},
   {no:'HC20260628001',date:'2026-06-28 16:41',
    lines:[{code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',qty:10,price:16.80,tax:9}],
    status:'pending',deliveryNo:'HS20260628001',deliveryStatus:'待处理',pushAt:'2026-06-28 16:42',deliveredAt:'',billNo:'',invNo:''},
@@ -114,19 +122,12 @@ const odNet = o => +(o.lines.reduce((a,l)=>a+lnNet(l),0)).toFixed(2);
 const odInc = o => +(o.lines.reduce((a,l)=>a+lnInc(l),0)).toFixed(2);
 const odQty = o => o.lines.reduce((a,l)=>a+l.qty,0);
 const gOf   = c => GOODS.find(g=>g.code==c)||{};
-const ST={pending:['待送货','y'],shipping:['送货中','g'],delivered:['已交付','g'],settled:['已结算',''],canceled:['已取消','']};
-const OTABS=[['all','全部'],['pending','待送货'],['shipping','送货中'],['delivered','已交付'],['settled','已结算'],['canceled','已取消']];
+/* 状态链：待送货 → 送货中 → 已交付 →（账期聚合）已结算 →（结算完成后自动开票）已开票（终态） */
+const ST={pending:['待送货','y'],shipping:['送货中','g'],delivered:['已交付','g'],settled:['已结算',''],invoiced:['已开票','g'],canceled:['已取消','']};
+const OTABS=[['all','全部'],['pending','待送货'],['shipping','送货中'],['delivered','已交付'],['settled','已结算'],['invoiced','已开票'],['canceled','已取消']];
 function stPill(s){const[t,c]=ST[s]||['—',''];return `<span class="sp-pill ${c}">${t}</span>`;}
 function dPill(s){const c={'待处理':'y','已推送':'g','已交付':'g','已作废':''}[s]||'';return `<span class="sp-pill ${c}">${s}</span>`;}
-function bought(code){return ORDERS.filter(o=>o.status!='canceled').reduce((a,o)=>a+o.lines.filter(l=>l.code==code).reduce((b,l)=>b+l.qty,0),0);}
-function maxQty(g){
-  const byLimit=g.limitCycle=='每店累计'?Math.max(0,g.limitQty-bought(g.code)):g.limitQty;
-  return Math.min(Math.max(0,g.stock),byLimit);
-}
-function limitText(g){
-  if(g.limitCycle=='每店累计'){const b=bought(g.code);return `每店累计限购 ${g.limitQty}${g.unit} · 已购 ${b}${g.unit} · 剩余 ${Math.max(0,g.limitQty-b)}${g.unit}`;}
-  return `单次限购 ${g.limitQty}${g.unit}`;
-}
+function maxQty(g){return Math.max(0,g.stock);}   // 可下单上限 = 平台可售库存（本期不做限购）
 const cartLines=()=>Object.keys(CART).filter(c=>CART[c]>0).map(c=>{const g=gOf(c);
   return {code:c,name:g.name,spec:g.spec,unit:g.unit,qty:CART[c],price:g.price,tax:tOf(g)};});
 const cartNet=()=>+(cartLines().reduce((a,l)=>a+lnNet(l),0)).toFixed(2);
@@ -136,8 +137,8 @@ function nowTs(){const d=new Date(),p=n=>(''+n).padStart(2,'0');
 
 /* ── 商城 ─────────────────────────────────────────────── */
 function cardHTML(g){
-  const mx=maxQty(g),q=CART[g.code]||0,out=g.stock<=0,lim=mx<=0&&!out;
-  return `<div class="sp-card ${out||lim?'out':''}" data-code="${g.code}">
+  const mx=maxQty(g),q=CART[g.code]||0,out=g.stock<=0;
+  return `<div class="sp-card ${out?'out':''}" data-code="${g.code}">
     <div class="sp-hd"><div class="sp-ic">${g.ic}</div>
       <div style="min-width:0;flex:1">
         <div class="sp-nm">${g.name}</div>
@@ -146,10 +147,9 @@ function cardHTML(g){
       </div></div>
     <div class="sp-price"><span class="sp-p1">${S(g.price)}</span><span class="sp-p2">/${g.unit}（未税）</span></div>
     <div class="sp-p2" style="margin-top:3px">含税 ${S(incl(g))}/${g.unit} · GST ${tOf(g)}%</div>
-    <div class="sp-meta">${out?`库存 0${g.unit}`:`可下单 ${mx}${g.unit}（库存 ${g.stock}${g.unit}）`}<br>${limitText(g)}</div>
+    <div class="sp-meta">${out?`库存 0${g.unit}`:`可下单 ${mx}${g.unit}（库存 ${g.stock}${g.unit}）`}</div>
     <div class="sp-ft">
       ${out?'<span class="sp-pill">暂时缺货</span>'
-        :lim?'<span class="sp-pill y">已达限购上限</span>'
         :`<div class="sp-step">
             <div class="b minus ${q<=0?'off':''}">−</div>
             <div class="q">${q}</div>
@@ -261,9 +261,14 @@ function openOrders(){
             <div class="r1"><span class="no">${o.no}</span>${stPill(o.status)}</div>
             <div class="meta">${o.date} · ${odQty(o)} 件<br>${o.lines.map(l=>`${l.name} ${l.qty}${l.unit}`).join('、')}</div>
             <div class="r2"><div class="g"><div class="k">送货单 ${o.deliveryNo}</div><div class="v" style="font-size:12.5px">${o.deliveryStatus}${o.deliveredAt?' · '+o.deliveredAt:''}</div></div>
-              <div class="g em"><div class="k">金额（含税）</div><div class="v">${S(odInc(o))}</div></div></div></div>`).join('')}</div>`
+              <div class="g em"><div class="k">金额（含税）</div><div class="v">${S(odInc(o))}</div></div></div>
+            <div class="sp-inv">${o.invNo
+              ?`<span><span class="sp-pill g">已开票</span> <span class="no">${o.invNo}</span></span><span class="dl" data-dl="${o.no}">下载发票</span>`
+              :o.status=='settled'?`<span><span class="sp-pill y">待开票</span> <span class="hint">结算完成后开具</span></span>`
+              :o.status=='canceled'?'':`<span class="hint">发票待结算完成后开具</span>`}</div></div>`).join('')}</div>`
           :`<div class="sp-empty">该状态暂无耗材采购单<br>去耗材商城选购标签纸与打印机</div>`;
         box.querySelectorAll('.sp-row').forEach(r=>r.onclick=()=>openOrderDetail(r.dataset.no));
+        box.querySelectorAll('[data-dl]').forEach(b=>b.onclick=(e)=>{e.stopPropagation();toast(`已下载 ${(ORDERS.find(x=>x.no==b.dataset.dl)||{}).invNo}.pdf`);});
       };
       setTimeout(paint,420);
       p.querySelectorAll('.sp-tab').forEach(t=>t.onclick=()=>{
@@ -275,8 +280,9 @@ function openOrders(){
 /* ── 订单详情：订单单据 / 送货单据 / 结算与开票 ──────────── */
 function openOrderDetail(no){
   const o=ORDERS.find(x=>x.no==no);if(!o)return;
-  const steps=['提交','推仓库','已交付','计入结算'];
-  const idx=o.status=='canceled'?0:(o.status=='pending'?1:o.status=='shipping'?2:o.status=='delivered'?3:4);
+  const steps=['提交','推仓库','已交付','计入结算','开发票'];
+  const IDX={canceled:0,pending:1,shipping:2,delivered:3,settled:4,invoiced:5};
+  const idx=IDX[o.status]!=null?IDX[o.status]:0;
   pushPage({title:'耗材采购单',
     body:`${o.status=='canceled'?'<div class="sp-note" style="margin-top:16px">本单已取消，不产生扣款。</div>'
       :`<div class="sp-steps" style="margin-top:14px">${steps.map((s,i)=>`<div class="st ${i<idx?'dn':i==idx?'on':''}"><div class="d">${i<idx?'✓':i+1}</div><div class="l">${s}</div></div>`).join('')}</div>`}
@@ -314,13 +320,18 @@ function openOrderDetail(no){
       <div class="sp-dl">
         <div class="d"><span class="k">支付方式</span><span class="v">结算抵扣 · 无需付款</span></div>
         <div class="d"><span class="k">计费时点</span><span class="v">${o.deliveredAt?'交付确认 '+o.deliveredAt:'待交付确认后计费'}</span></div>
-        <div class="d"><span class="k">计入结算单</span><span class="v">${o.billNo?o.billNo+' · 已结清':(o.status=='delivered'?BILL_NO+' · 当期扣 '+S(odInc(o)):'—')}</span></div>
-        <div class="d"><span class="k">耗材发票</span><span class="v">${o.invNo?o.invNo+' · 已开票':'交付确认后由平台开具'}</span></div>
+        <div class="d"><span class="k">计入结算单</span><span class="v">${o.billNo?o.billNo+(o.settledAt?' · '+o.settledAt:''):(o.status=='delivered'?BILL_NO+' · 当期扣 '+S(odInc(o)):'—')}</span></div>
+        <div class="d"><span class="k">开票时点</span><span class="v">${o.invoicedAt?'结算完成后 '+o.invoicedAt:'待结算单完成放款后自动开具'}</span></div>
+        <div class="d"><span class="k">耗材发票</span><span class="v">${o.invNo?o.invNo+' · 已开票':(o.status=='settled'?'待开票':'—')}</span></div>
       </div>
       <div class="sp-note">耗材款不进对账单、不参与佣金计算；按含税金额作为结算单扣减项，与当期货款轧差。当期应清算不足以覆盖时，差额结转下期继续扣。</div>`,
     footer:o.status=='pending'?`<div class="sp-bar"><div class="l"><div class="k">未交付可取消</div><div class="v" style="font-size:16px">${S(odInc(o))}</div></div>
-      <div class="sp-btn" id="sp-cancel" style="background:var(--red)">取消采购单</div></div>`:'',
+      <div class="sp-btn" id="sp-cancel" style="background:var(--red)">取消采购单</div></div>`
+      :o.invNo?`<div class="sp-bar"><div class="l"><div class="k">${o.invNo}</div><div class="v" style="font-size:16px">${S(odInc(o))}</div></div>
+      <div class="sp-btn" id="sp-dl">下载发票</div></div>`:'',
     mount:(p)=>{
+      const dl=p.querySelector('#sp-dl');
+      if(dl)dl.onclick=()=>toast(`已下载 ${o.invNo}.pdf`);
       const c=p.querySelector('#sp-cancel');
       if(c)c.onclick=()=>confirmDialog({danger:1,title:'取消采购单',
         body:`取消后送货单 ${o.deliveryNo} 同步作废、库存退回，本单不产生扣款。`,okText:'确认取消',
