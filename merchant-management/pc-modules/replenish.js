@@ -56,14 +56,13 @@ const rUnit = r => +(r.price*(1+r.rate/100)).toFixed(2);                  // 补
 const rAmt  = r => +(rUnit(r)*r.qty).toFixed(2);                          // 金额（含税）
 const rNet  = r => +(rAmt(r)/(1+gst()/100)).toFixed(2);                   // 不含税
 const rGst  = r => +(rAmt(r)-rNet(r)).toFixed(2);                         // GST
-const rLoss = r => +(r.qty*r.price*r.rate/100).toFixed(2);                // 等效罚则（净损失）
 const rOf   = no => DB.replOrders.find(x=>x.no==no);
 window.replOf = rOf; window.replAmt = rAmt; window.replUnit = rUnit; window.replNet = rNet; window.replGst = rGst;
 // 送货单 → 补货单（送货单详情联动用）
 window.replByDelivery = function(id){return DB.replOrders.filter(r=>r.deliveryNo==id);};
 
-const R_ST = {pending:['待结算','t-y'], deducted:['已抵扣','t-b'], invoiced:['已开票','t-g'], voided:['已作废','t-gr'], reversed:['已冲正','t-gr']};
-const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已抵扣'],['invoiced','已开票'],['voided','已作废/冲正']];
+const R_ST = {pending:['待结算','t-y'], deducted:['已结算','t-b'], invoiced:['已开票','t-g'], voided:['已作废','t-gr'], reversed:['已冲正','t-gr']};
+const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已结算'],['invoiced','已开票'],['voided','已作废/冲正']];
 function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
 /* 结算联动：待结算的补货单按含税金额汇总为当期结算单扣减项 */
@@ -112,7 +111,7 @@ PAGES['m-replenish']=()=>{
   return tip+filt+tabs+`
   <div class="card">
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>补货单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">含税售价</th><th style="text-align:right">加价率</th><th style="text-align:right">结算抵扣（含税）</th><th style="text-align:right">其中你多付</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>补货单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">含税售价</th><th style="text-align:right">加价率</th><th style="text-align:right">结算抵扣（含税）</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>`<tr>
       <td class="mono" style="white-space:nowrap">${r.no}</td>
       <td class="mono" style="font-size:12px;white-space:nowrap">${r.deliveryNo}<div style="color:var(--ts);margin-top:2px">${r.subOrderNo}</div></td>
@@ -121,13 +120,12 @@ PAGES['m-replenish']=()=>{
       <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
       <td style="text-align:right">${money(r.price)}</td>
       <td style="text-align:right;color:var(--gold);font-weight:600">+${r.rate}%</td>
-      <td style="text-align:right;color:var(--ts)">-${money(rAmt(r))}<div style="font-size:11px;margin-top:2px">单价 ${money(rUnit(r))}</div></td>
-      <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">${money(rLoss(r))}</td>
+      <td style="text-align:right;color:var(--r);font-weight:600">-${money(rAmt(r))}<div style="font-size:11px;margin-top:2px;color:var(--ts);font-weight:400">单价 ${money(rUnit(r))}</div></td>
       <td style="white-space:nowrap">${rTag(r.status)}${r.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.billNo}</div>`:''}</td>
       <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="repl_detail('${r.no}')">详情</button></td>
     </tr>`).join('')}
     </tbody></table></div></div>
-  <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">口径：<b>「其中你多付」才是你的实际损失</b>——缺口货款照常计入你的收入，只是多付了加价部分。客户订单按<b>应送数量</b>足额计入 GMV 与平台佣金，缺口部分不冲减；补货款按<b>含税金额</b>在当期结算单中扣减。自营现货<b>不足以全额覆盖</b>缺口时不生成补货单，按实收数量出库并标缺货。</div>
+  <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">口径：客户订单按<b>应送数量</b>足额计入 GMV 与平台佣金，缺口部分不冲减（缺口货款照常计入你的收入）；补货款按<b>含税金额</b>在当期结算单中扣减。自营现货<b>不足以全额覆盖</b>缺口时不生成补货单，按实收数量出库并标缺货。</div>
   </div>`;
 };
 
