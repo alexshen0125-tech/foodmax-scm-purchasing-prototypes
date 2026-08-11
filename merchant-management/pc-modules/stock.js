@@ -113,30 +113,42 @@
   const itemOf=code=>DB.invItems.find(i=>i.item==code)||{};
   const selfTot=it=>it.skus.reduce((a,k)=>({stock:a.stock+(+k.stock||0),locked:a.locked+(+k.locked||0)}),{stock:0,locked:0});
 
-  /* 行 = 商品 × 仓；自售为不分仓的单行 */
+  /* 行 = SKU（与商品列表同粒度，平铺）；寄售再 × 仓
+     自售：每 SKU 独立库存，单位=件
+     寄售：同商品各 SKU 共享货品库存池 → 在库/已占用/在途为**货品单位**且同商品同仓各行相同，
+           可售库存按 convertRatio 折成件（BR-04），故必须打「共享」标，否则会被读成各自有货 */
   function rows(){
     const wh=DB.invWh||'',kw=(DB.invKw||'').trim().toLowerCase(),md=DB.invMode||'';
     const out=[];
     DB.invItems.forEach(it=>{
       if(md&&it.mode!=md)return;
-      if(kw&&!(it.name.toLowerCase().includes(kw)||it.item.toLowerCase().includes(kw)))return;
+      const hit=k=>!kw||it.name.toLowerCase().includes(kw)||it.item.toLowerCase().includes(kw)||k.skuId.toLowerCase().includes(kw);
       if(isSelf(it)){
         if(wh)return;                                   // 自售不分仓：选了具体仓就不出现
-        const t=selfTot(it);
-        out.push({it,wh:SELF_WH,total:t.stock,locked:t.locked,transit:0,left:left(t.stock,t.locked)});
+        it.skus.forEach(k=>{if(!hit(k))return;
+          out.push({it,k,wh:SELF_WH,self:true,unit:'件',qtyUnit:'件',
+            stock:k.stock,locked:k.locked,transit:0,sellable:left(k.stock,k.locked),shared:false});});
       }else{
-        it.stocks.filter(s=>!wh||s.wh==wh).forEach(s=>
-          out.push({it,wh:s.wh,total:s.wms,locked:s.locked,transit:s.transit,left:left(s.wms,s.locked),s}));
+        it.stocks.filter(s=>!wh||s.wh==wh).forEach(s=>{
+          const il=left(s.wms,s.locked);
+          it.skus.forEach(k=>{if(!hit(k))return;
+            out.push({it,k,wh:s.wh,self:false,unit:it.unit,qtyUnit:'件',
+              stock:s.wms,locked:s.locked,transit:s.transit,
+              sellable:Math.floor(il/k.ratio),shared:it.skus.length>1});});
+        });
       }
     });
     return out;
   }
-  /* NAV 徽标：缺货行数（自售无 stocks 数组，必须分流，否则侧栏渲染直接抛错） */
+  /* NAV 徽标：缺货 SKU 行数（自售无 stocks 数组，必须分流，否则侧栏渲染直接抛错） */
   window.invOutCount=function(){
     if(!DB.invItems)return 0;
     return DB.invItems.reduce((a,it)=>{
-      if(isSelf(it)){const t=selfTot(it);return a+(left(t.stock,t.locked)<=0?1:0);}
-      return a+(it.stocks||[]).filter(s=>left(s.wms,s.locked)<=0).length;
+      if(isSelf(it))return a+it.skus.filter(k=>left(k.stock,k.locked)<=0).length;
+      return a+(it.stocks||[]).reduce((b,s)=>{
+        const il=left(s.wms,s.locked);
+        return b+it.skus.filter(k=>Math.floor(il/k.ratio)<=0).length;
+      },0);
     },0);
   };
   window.invTransitCount=function(){
@@ -146,41 +158,35 @@
   const flowsOf=(code,type)=>DB.invFlow.filter(f=>f.item==code&&(!type||f.type==type)).sort((a,b)=>a.time<b.time?1:-1);
   const signTxt=f=>{const m=FLOW[f.type];return m.s=='±'?(f.qty>0?'+':'')+f.qty:m.s+f.qty;};
 
-  /* ---------- 改库存（仅自售，逐 SKU） ---------- */
-  window.inv_edit=function(code){
+  /* ---------- 改库存（仅自售，单 SKU：列表已按 SKU 平铺，逐行改） ---------- */
+  window.inv_edit=function(code,skuId){
     const it=itemOf(code);
     if(!isSelf(it)){toast('寄售商品库存由仓库实物决定，不可手工修改','err');return;}
-    const rowsHtml=it.skus.map((k,i)=>`<tr>
-      <td><b>${k.spec}</b><div class="mono" style="font-size:11.5px;color:var(--ts)">${k.skuId}</div></td>
-      <td style="text-align:right;color:var(--ts)">${k.stock}</td>
-      <td><input class="ministock" id="ive-${i}" type="number" min="0" step="1" value="${k.stock}" oninput="inv_chk(${it.skus.length})"></td>
-      <td><select id="ivm-${i}"><option value="daily" ${k.stockMode=='daily'?'selected':''}>每日恢复</option><option value="finite" ${k.stockMode=='finite'?'selected':''}>售完即止</option></select></td>
-    </tr>`).join('');
-    modalWide(`<div class="mc-hd"><h3>改库存 · ${it.name}</h3><p><span class="tag t-g" style="font-size:10.5px">自售</span> 逐规格独立维护，单位=件</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    const k=it.skus.find(x=>x.skuId==skuId);
+    modal(`<div class="mc-hd"><h3>改库存</h3><p>${it.name} ${k.spec} · <span class="mono">${k.skuId}</span></p><button class="mc-x" onclick="closeModal()">×</button></div>
     <div class="mc-bd">
-      <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>规格</th><th style="text-align:right">当前库存</th><th style="width:130px">新库存</th><th style="width:140px">库存模式</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+      <div class="fr"><label class="fl">当前可售库存</label><input value="${k.stock}" readonly style="background:#F3F4F6;color:var(--ts)"></div>
+      <div class="fr"><label class="fl"><b>*</b>新可售库存（件）</label><input id="ive-v" type="number" min="0" step="1" value="${k.stock}" oninput="inv_chk()"></div>
+      <div class="fr"><label class="fl"><b>*</b>库存模式</label><select id="ive-m"><option value="daily" ${k.stockMode=='daily'?'selected':''}>每日恢复</option><option value="finite" ${k.stockMode=='finite'?'selected':''}>售完即止</option></select></div>
       <div id="ive-err"></div>
-      <div class="ib ib-b" style="margin-top:10px"><span class="i">ℹ️</span><b>每日恢复</b>=每天自动回到你设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改库存<b>即时生效、无需审核</b>，设为 0 即售罄下架。</div>
+      <div class="ib ib-b" style="margin-top:10px"><span class="i">ℹ️</span><b>每日恢复</b>=每天自动回到你设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改库存<b>即时生效、无需审核</b>，设为 0 即售罄下架。本规格库存<b>与其他规格互相独立</b>。</div>
     </div>
-    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="ive-ok" onclick="inv_save('${code}')">保存（即时生效）</button></div>`);
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="ive-ok" onclick="inv_save('${code}','${skuId}')">保存（即时生效）</button></div>`);
   };
-  window.inv_chk=function(n){
-    let bad=false;
-    for(let i=0;i<n;i++){const v=(document.getElementById('ive-'+i)||{}).value;
-      const x=Number(v);if(v===''||isNaN(x)||x<0||!Number.isInteger(x))bad=true;}
+  window.inv_chk=function(){
+    const v=(document.getElementById('ive-v')||{}).value,n=Number(v);
+    const bad=v===''||isNaN(n)||n<0||!Number.isInteger(n);
     const box=document.getElementById('ive-err'),ok=document.getElementById('ive-ok');
     if(box)box.innerHTML=bad?`<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span>库存必须为 ≥0 的整数</div>`:'';
     if(ok)ok.disabled=bad;
     return !bad;
   };
-  window.inv_save=function(code){
-    const it=itemOf(code);
-    if(!inv_chk(it.skus.length)){toast('库存必须为 ≥0 的整数','err');return;}
-    it.skus.forEach((k,i)=>{
-      k.stock=Math.max(0,parseInt(document.getElementById('ive-'+i).value)||0);
-      k.stockMode=document.getElementById('ivm-'+i).value;
-    });
-    closeModal();render();toast(`「${it.name}」库存已更新，即时生效`,'ok');
+  window.inv_save=function(code,skuId){
+    if(!inv_chk()){toast('库存必须为 ≥0 的整数','err');return;}
+    const it=itemOf(code),k=it.skus.find(x=>x.skuId==skuId);
+    k.stock=Math.max(0,parseInt(document.getElementById('ive-v').value)||0);
+    k.stockMode=document.getElementById('ive-m').value;
+    closeModal();render();toast(`「${it.name} ${k.spec}」库存已更新为 ${k.stock} 件`,'ok');
   };
 
   /* ---------- 抽屉 A：库存明细 ---------- */
@@ -332,26 +338,27 @@
     DB.invWh=DB.invWh||'';DB.invKw=DB.invKw||'';DB.invMode=DB.invMode||'';DB.invQuick=DB.invQuick||'';
     let list=rows();
     const q=DB.invQuick;
-    if(q=='out')list=list.filter(r=>r.left<=0);
+    if(q=='out')list=list.filter(r=>r.sellable<=0);
     if(q=='transit')list=list.filter(r=>r.transit>0);
-    const base=rows(),cOut=base.filter(r=>r.left<=0).length,cTr=base.filter(r=>r.transit>0).length;
+    const base=rows(),cOut=base.filter(r=>r.sellable<=0).length,cTr=base.filter(r=>r.transit>0).length;
     const qb=(v,t,n)=>`<button class="btn ${q==v?'btn-p':'btn-o'} btn-sm" onclick="inv_quick('${v}')">${t}${n?` (${n})`:''}</button>`;
 
-    const body=list.map(r=>{const it=r.it,u=it.unit,self=isSelf(it);
-      const spec=self?it.skus.map(k=>`${k.spec} <b>${left(k.stock,k.locked)}</b> 件`).join(' ／ ')
-                     :it.skus.map(k=>`${k.spec} <b>${Math.floor(r.left/k.ratio)}</b> 件`).join(' ／ ');
+    const body=list.map(r=>{const it=r.it,k=r.k,self=r.self;
+      const shareTag=r.shared?` <span class="tag t-pp" style="font-size:10px" title="本商品下各规格共用同一批货，此列为货品维度数值，同商品同仓各行相同">共享</span>`:'';
       return `<tr>
         <td><b>${it.name}</b><div class="mono" style="font-size:11.5px;color:var(--ts)">${it.item}</div></td>
+        <td class="mono">${k.skuId}</td>
+        <td>${k.spec}</td>
         <td>${self?'<span class="tag t-g" style="font-size:10.5px">自售</span>':'<span class="tag t-pp" style="font-size:10.5px">寄售</span>'}</td>
         <td style="color:var(--ts)">${it.cat}</td>
         <td>${self?`<span style="color:var(--tt)">${SELF_WH}</span>`:r.wh}</td>
-        <td style="text-align:right">${r.total} <span style="font-size:11.5px;color:var(--tt)">${u}</span></td>
+        <td style="text-align:right"><b style="${r.sellable<=0?'color:var(--r)':''}">${r.sellable}</b> <span style="font-size:11.5px;color:var(--tt)">件</span></td>
+        <td style="text-align:right">${r.stock} <span style="font-size:11.5px;color:var(--tt)">${r.unit}</span>${shareTag}</td>
         <td style="text-align:right;color:var(--ts)">${r.locked||'—'}</td>
-        <td style="text-align:right"><b style="${r.left<=0?'color:var(--r)':''}">${r.left}</b> <span style="font-size:11.5px;color:var(--tt)">${u}</span></td>
-        <td style="text-align:right">${r.transit?`<span style="color:var(--b)">${r.transit} ${u}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
-        <td style="font-size:12px;color:var(--ts)">${spec}</td>
-        <td>${r.left<=0?'<span class="tag t-r"><span class="dot"></span>缺货</span>':'<span class="tag t-g"><span class="dot"></span>正常</span>'}</td>
-        <td>${self?`<button class="btn btn-o btn-sm" onclick="inv_edit('${it.item}')">改库存</button> `:''}<button class="btn btn-link" onclick="inv_detail('${it.item}')">明细</button> <button class="btn btn-link" onclick="inv_flow('${it.item}')">流水</button></td>
+        <td style="text-align:right">${r.transit?`<span style="color:var(--b)">${r.transit} ${r.unit}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
+        <td>${self?`<span class="tag ${k.stockMode=='daily'?'t-g':'t-y'}" style="font-size:10.5px">${SMODE[k.stockMode]}</span>`:'<span class="tag t-gr" style="font-size:10.5px">货品库存</span>'}</td>
+        <td>${r.sellable<=0?'<span class="tag t-r"><span class="dot"></span>缺货</span>':'<span class="tag t-g"><span class="dot"></span>正常</span>'}</td>
+        <td>${self?`<button class="btn btn-o btn-sm" onclick="inv_edit('${it.item}','${k.skuId}')">改库存</button> `:''}<button class="btn btn-link" onclick="inv_detail('${it.item}')">明细</button> <button class="btn btn-link" onclick="inv_flow('${it.item}')">流水</button></td>
       </tr>`;}).join('');
 
     return `
@@ -369,10 +376,10 @@
     </div>
     <div class="card-bd">
       <div class="row" style="gap:8px;margin-bottom:12px">${qb('out','缺货',cOut)}${qb('transit','有在途',cTr)}</div>
-      <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>自售</b>库存由你自己维护，可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>，只能查看与追溯流水。</div>
+      <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>，「在库/已占用/在途」是货品维度数值，同商品同仓各行相同。</div>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>商品</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">库存</th><th style="text-align:right">已占用</th><th style="text-align:right">可售</th><th style="text-align:right">在途</th><th>各规格可售</th><th>状态</th><th>操作</th></tr></thead>
-        <tbody>${body||`<tr><td colspan="11"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invWh||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invWh||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
+        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">在库</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>${body||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invWh||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invWh||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
       </table></div>
     </div></div>`;
   };

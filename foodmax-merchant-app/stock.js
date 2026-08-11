@@ -178,13 +178,22 @@ const isSelf=it=>it.mode==='self';
 const left=(a,b)=>Math.max((+a||0)-(+b||0),0);
 const itemOf=c=>ITEMS.find(i=>i.item===c);
 const selfTot=it=>it.skus.reduce((a,k)=>({stock:a.stock+(+k.stock||0),locked:a.locked+(+k.locked||0)}),{stock:0,locked:0});
+/* 行 = SKU（与商品列表同粒度，平铺）；寄售再 × 仓
+   寄售同商品各 SKU 共享货品库存池 → 在库/已占用/在途为货品单位、同商品同仓各行相同，
+   可售按 convertRatio 折成件，故必须打「共享」标 */
 function invRows(mode){
   const out=[];
   ITEMS.forEach(it=>{
     if(mode&&it.mode!==mode)return;
-    if(isSelf(it)){const t=selfTot(it);
-      out.push({it,wh:SELF_WH,total:t.stock,locked:t.locked,transit:0,left:left(t.stock,t.locked)});
-    }else it.stocks.forEach(s=>out.push({it,wh:s.wh,total:s.wms,locked:s.locked,transit:s.transit,left:left(s.wms,s.locked)}));
+    if(isSelf(it)){
+      it.skus.forEach(k=>out.push({it,k,wh:SELF_WH,self:true,unit:'件',
+        stock:k.stock,locked:k.locked,transit:0,sellable:left(k.stock,k.locked),shared:false}));
+    }else it.stocks.forEach(s=>{
+      const il=left(s.wms,s.locked);
+      it.skus.forEach(k=>out.push({it,k,wh:s.wh,self:false,unit:it.unit,
+        stock:s.wms,locked:s.locked,transit:s.transit,
+        sellable:Math.floor(il/k.ratio),shared:it.skus.length>1}));
+    });
   });
   return out;
 }
@@ -193,45 +202,46 @@ const sign=f=>{const m=FLOW[f.type];return m.s==='±'?(f.qty>0?'+':'')+f.qty:m.s
 const flag=it=>isSelf(it)?'<span class="sk-tag self">自售</span>':'<span class="sk-tag cons">寄售</span>';
 
 /* ============ 子页：改库存（仅自售，逐 SKU） ============ */
-function openEdit(code,after){
+/* 改库存：列表已按 SKU 平铺，逐个规格改（skuId 省略时改第一个） */
+function openEdit(code,after,skuId){
   const it=itemOf(code);
   if(!isSelf(it)){toast('寄售商品库存由仓库实物决定，不可修改');return;}
-  const draft=it.skus.map(k=>({stock:String(k.stock),stockMode:k.stockMode}));
-  pushPage({title:'改库存',subtitle:`${it.name} · 逐规格独立维护`,
-    body:`<div class="sk-note">自售商品库存由你自己维护。<b>每日恢复</b>=每天自动回到设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改后<b>即时生效、无需审核</b>，设为 0 即售罄下架。</div>
-      <div class="sk-box" style="margin-top:12px">${it.skus.map((k,i)=>`
+  const k=it.skus.find(x=>x.skuId===skuId)||it.skus[0];
+  const draft={stock:String(k.stock),stockMode:k.stockMode};
+  pushPage({title:'改库存',subtitle:`${it.name} ${k.spec}`,
+    body:`<div class="sk-note"><b>每日恢复</b>=每天自动回到设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改后<b>即时生效、无需审核</b>，设为 0 即售罄下架。本规格库存<b>与其他规格互相独立</b>。</div>
+      <div class="sk-box" style="margin-top:12px">
         <div class="sk-ed">
           <div class="t">${k.spec}</div><div class="s">${k.skuId} · 当前 ${k.stock} 件</div>
-          <input class="sk-in" type="number" min="0" step="1" value="${k.stock}" data-i="${i}" inputmode="numeric">
-          <div class="sk-seg" data-seg="${i}">
+          <input class="sk-in" id="ed-v" type="number" min="0" step="1" value="${k.stock}" inputmode="numeric">
+          <div class="sk-seg" id="ed-seg">
             <div class="s ${k.stockMode==='daily'?'on':''}" data-m="daily">每日恢复</div>
             <div class="s ${k.stockMode==='finite'?'on':''}" data-m="finite">售完即止</div>
           </div>
-        </div>`).join('')}</div>
+        </div>
+      </div>
       <div id="ed-err"></div><div style="height:20px"></div>`,
     footer:`<div class="sk-save"><div class="b" id="ed-ok">保存（即时生效）</div></div>`,
     mount:(p)=>{
-      const ok=p.querySelector('#ed-ok'),err=p.querySelector('#ed-err');
+      const ok=p.querySelector('#ed-ok'),err=p.querySelector('#ed-err'),inp=p.querySelector('#ed-v');
       const validate=()=>{
-        let bad=false;
-        p.querySelectorAll('.sk-in').forEach(inp=>{
-          const v=inp.value,n=Number(v);
-          const b=v===''||isNaN(n)||n<0||!Number.isInteger(n);
-          inp.classList.toggle('bad',b); if(b)bad=true; else draft[+inp.dataset.i].stock=v;
-        });
+        const v=inp.value,n=Number(v);
+        const bad=v===''||isNaN(n)||n<0||!Number.isInteger(n);
+        inp.classList.toggle('bad',bad);
+        if(!bad)draft.stock=v;
         err.innerHTML=bad?`<div class="sk-note red">库存必须为 <b>≥0 的整数</b></div>`:'';
         ok.classList.toggle('off',bad);
         return !bad;
       };
-      p.querySelectorAll('.sk-in').forEach(inp=>inp.oninput=validate);
-      p.querySelectorAll('.sk-seg').forEach(seg=>seg.querySelectorAll('.s').forEach(s=>s.onclick=()=>{
-        seg.querySelectorAll('.s').forEach(x=>x.classList.remove('on'));
-        s.classList.add('on'); draft[+seg.dataset.seg].stockMode=s.dataset.m;
-      }));
+      inp.oninput=validate;
+      p.querySelectorAll('#ed-seg .s').forEach(s=>s.onclick=()=>{
+        p.querySelectorAll('#ed-seg .s').forEach(x=>x.classList.remove('on'));
+        s.classList.add('on'); draft.stockMode=s.dataset.m;
+      });
       ok.onclick=()=>{
         if(!validate()){toast('库存必须为 ≥0 的整数');return;}
-        it.skus.forEach((k,i)=>{k.stock=Math.max(0,parseInt(draft[i].stock)||0);k.stockMode=draft[i].stockMode;});
-        popPage(); toast(`「${it.name}」库存已更新，即时生效`); after&&after();
+        k.stock=Math.max(0,parseInt(draft.stock)||0); k.stockMode=draft.stockMode;
+        popPage(); toast(`「${it.name} ${k.spec}」库存已更新为 ${k.stock} 件`); after&&after();
       };
     }});
 }
@@ -380,26 +390,27 @@ function renderMain(container){
 
   const drawStock=()=>{
     let list=invRows(state.mode);
-    if(state.quick==='out')list=list.filter(r=>r.left<=0);
+    if(state.quick==='out')list=list.filter(r=>r.sellable<=0);
     if(state.quick==='transit')list=list.filter(r=>r.transit>0);
     const base=invRows(state.mode);
-    const cOut=base.filter(r=>r.left<=0).length,cTr=base.filter(r=>r.transit>0).length;
+    const cOut=base.filter(r=>r.sellable<=0).length,cTr=base.filter(r=>r.transit>0).length;
     const chip=(g,v,t,n)=>`<div class="sk-chip${state[g]===v?' on':''}" data-g="${g}" data-v="${v}">${t}${n!=null?` (${n})`:''}</div>`;
 
-    const cards=list.map(r=>{const it=r.it,u=it.unit,self=isSelf(it);
-      const spec=self?it.skus.map(k=>`${k.spec} <b>${left(k.stock,k.locked)}</b> 件`).join('　／　')
-                     :it.skus.map(k=>`${k.spec} <b>${Math.floor(r.left/k.ratio)}</b> 件`).join('　／　');
+    const cards=list.map(r=>{const it=r.it,k=r.k,self=r.self;
       return `<div class="sk-card" data-item="${it.item}">
-        <div class="sk-hd"><div><div class="sk-nm">${it.name}</div><div class="sk-sub">${it.item} · ${r.wh}</div></div>
-          <div style="text-align:right">${flag(it)}<div style="margin-top:5px"><span class="sk-tag ${r.left<=0?'out':'ok'}">${r.left<=0?'缺货':'正常'}</span></div></div></div>
+        <div class="sk-hd"><div><div class="sk-nm">${it.name} <span style="font-size:13px;font-weight:600;color:var(--sub)">${k.spec}</span></div>
+          <div class="sk-sub">${k.skuId} · ${r.wh}</div></div>
+          <div style="text-align:right">${flag(it)}<div style="margin-top:5px"><span class="sk-tag ${r.sellable<=0?'out':'ok'}">${r.sellable<=0?'缺货':'正常'}</span></div></div></div>
         <div class="sk-q4 ${self?'n3':'n4'}">
-          <div class="c"><div class="l">${self?'设置库存':'在库'}</div><div class="v">${r.total}<span class="u">${u}</span></div></div>
+          <div class="c"><div class="l">可售库存</div><div class="v ${r.sellable<=0?'r':'g'}">${r.sellable}<span class="u">件</span></div></div>
+          <div class="c"><div class="l">${self?'设置库存':'在库'}${r.shared?' ·共享':''}</div><div class="v">${r.stock}<span class="u">${r.unit}</span></div></div>
           <div class="c"><div class="l">已占用</div><div class="v m">${r.locked||'—'}</div></div>
-          <div class="c"><div class="l">可售</div><div class="v ${r.left<=0?'r':'g'}">${r.left}<span class="u">${u}</span></div></div>
           ${self?'':`<div class="c"><div class="l">在途</div><div class="v ${r.transit?'b':'m'}">${r.transit||'—'}</div></div>`}
         </div>
-        <div class="sk-spec">${spec}</div>
-        ${self?`<div class="sk-acts"><div class="sk-btn" data-edit="${it.item}">改库存</div></div>`:''}
+        <div class="sk-spec">${self?`库存模式 <b>${SMODE[k.stockMode]}</b>　·　与其他规格互相独立`
+          :r.shared?`1 件 = <b>${k.ratio}${it.unit}</b>　·　<b>与本商品其他规格共用同一批货</b>`
+                   :`1 件 = <b>${k.ratio}${it.unit}</b>`}</div>
+        ${self?`<div class="sk-acts"><div class="sk-btn" data-edit="${it.item}" data-sku="${k.skuId}">改库存</div></div>`:''}
       </div>`;}).join('');
 
     pane.innerHTML=`
@@ -412,7 +423,7 @@ function renderMain(container){
     pane.querySelectorAll('.sk-card').forEach(c=>c.onclick=e=>{
       if(e.target.closest('[data-edit]'))return; openDetail(c.dataset.item);});
     pane.querySelectorAll('[data-edit]').forEach(b=>b.onclick=e=>{
-      e.stopPropagation(); openEdit(b.dataset.edit,draw);});
+      e.stopPropagation(); openEdit(b.dataset.edit,draw,b.dataset.sku);});
     pane.querySelectorAll('#mc .sk-chip,#qc .sk-chip').forEach(c=>c.onclick=()=>{
       const g=c.dataset.g,v=c.dataset.v;
       state[g]=(g==='quick'&&state[g]===v)?'':v; draw();});
