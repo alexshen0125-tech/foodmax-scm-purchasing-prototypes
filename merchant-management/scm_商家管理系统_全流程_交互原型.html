@@ -859,6 +859,7 @@ const NAV={
       {id:'m-pick-weigh',ic:'⚖️',t:'称重录入',badge:()=>typeof weighPending=='function'?weighPending():0},
       {id:'m-pick-label',ic:'🏷️',t:'打印标签',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
     ]},
+    {id:'m-stock',ic:'📦',t:'库存管理',p1:1,badge:()=>DB.invItems?DB.invItems.reduce((a,i)=>a+i.stocks.filter(s=>Math.max(s.wms-s.locked,0)<=0).length,0):0,by:'y'},
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
     {id:'m-supply-group',ic:'🖨️',t:'耗材商城',p1:1,children:[
       {id:'m-supply',ic:'🛒',t:'耗材商城'},
@@ -3657,7 +3658,7 @@ function downloadTemplate(kind){let name,rows;const all=[];
 goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
-<script src="pc-modules/stock.js?v=20260730f"></script>
+<script src="pc-modules/stock.js?v=20260811a"></script>
 <script src="pc-modules/pick.js?v=20260730f"></script>
 <script src="pc-modules/weigh.js?v=20260731d"></script>
 <script src="pc-modules/delivery.js?v=20260810a"></script>
