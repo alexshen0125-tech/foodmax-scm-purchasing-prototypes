@@ -168,27 +168,42 @@
     const it=itemOf(code);
     if(!isSelf(it)){toast('寄售商品库存由仓库实物决定，不可手工修改','err');return;}
     const k=it.skus.find(x=>x.skuId==skuId);
+    /* 输入的是「库存总数」（落设置库存），不是可售——可售由系统联动算给商家看，
+       避免"我填了90怎么只有86"的必然客诉；同时消灭心算（自检项 2/4/6）。 */
     modal(`<div class="mc-hd"><h3>改库存</h3><p>${it.name} ${k.spec} · <span class="mono">${k.skuId}</span></p><button class="mc-x" onclick="closeModal()">×</button></div>
     <div class="mc-bd">
-      <div class="fr"><label class="fl">当前可售库存</label><input value="${k.stock}" readonly style="background:#F3F4F6;color:var(--ts)"></div>
-      <div class="fr"><label class="fl"><b>*</b>新可售库存（件）</label><input id="ive-v" type="number" min="0" step="1" value="${k.stock}" oninput="inv_chk()"></div>
-      <div class="fr"><label class="fl"><b>*</b>库存模式</label><select id="ive-m"><option value="daily" ${k.stockMode=='daily'?'selected':''}>每日恢复</option><option value="finite" ${k.stockMode=='finite'?'selected':''}>售完即止</option></select></div>
+      <div class="fr"><label class="fl"><b>*</b>库存总数（件）</label><input id="ive-v" type="number" min="0" step="1" value="${k.stock}" oninput="inv_chk(${+k.locked||0})"></div>
+      <div class="fr"><label class="fl">已被下单占用</label><input value="${k.locked||0}" readonly style="background:#F3F4F6;color:var(--ts)"></div>
+      <div class="ib ib-g" id="ive-calc"></div>
+      <div class="fr" style="margin-top:10px"><label class="fl"><b>*</b>库存模式</label><select id="ive-m"><option value="daily" ${k.stockMode=='daily'?'selected':''}>每日恢复</option><option value="finite" ${k.stockMode=='finite'?'selected':''}>售完即止</option></select></div>
       <div id="ive-err"></div>
-      <div class="ib ib-b" style="margin-top:10px"><span class="i">ℹ️</span><b>每日恢复</b>=每天自动回到你设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改库存<b>即时生效、无需审核</b>，设为 0 即售罄下架。本规格库存<b>与其他规格互相独立</b>。</div>
+      <div class="ib ib-b" style="margin-top:10px"><span class="i">ℹ️</span><b>每日恢复</b>=每天自动回到你设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改库存<b>即时生效、无需审核</b>。本规格库存<b>与其他规格互相独立</b>。</div>
     </div>
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="ive-ok" onclick="inv_save('${code}','${skuId}')">保存（即时生效）</button></div>`);
+    inv_chk(+k.locked||0);
   };
-  window.inv_chk=function(){
+  window.inv_chk=function(locked){
     const v=(document.getElementById('ive-v')||{}).value,n=Number(v);
     const bad=v===''||isNaN(n)||n<0||!Number.isInteger(n);
-    const box=document.getElementById('ive-err'),ok=document.getElementById('ive-ok');
+    const box=document.getElementById('ive-err'),ok=document.getElementById('ive-ok'),calc=document.getElementById('ive-calc');
     if(box)box.innerHTML=bad?`<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span>库存必须为 ≥0 的整数</div>`:'';
+    if(calc){
+      if(bad){calc.style.display='none';}
+      else{
+        const sell=Math.max(n-(+locked||0),0);
+        calc.style.display='';
+        calc.className=sell<=0?'ib ib-y':'ib ib-g';
+        calc.innerHTML=sell<=0
+          ? `<span class="i">⚠️</span>已有 <b>${locked}</b> 件被下单占用，保存后<b>可售为 0</b>，商品将售罄下架。`
+          : `<span class="i">✅</span>保存后可售 <b>${sell}</b> 件（库存总数 ${n} − 已占用 ${locked}）`;
+      }
+    }
     if(ok)ok.disabled=bad;
     return !bad;
   };
   window.inv_save=function(code,skuId){
-    if(!inv_chk()){toast('库存必须为 ≥0 的整数','err');return;}
     const it=itemOf(code),k=it.skus.find(x=>x.skuId==skuId);
+    if(!inv_chk(+k.locked||0)){toast('库存必须为 ≥0 的整数','err');return;}
     k.stock=Math.max(0,parseInt(document.getElementById('ive-v').value)||0);
     k.stockMode=document.getElementById('ive-m').value;
     closeModal();render();toast(`「${it.name} ${k.spec}」库存已更新为 ${k.stock} 件`,'ok');
@@ -206,15 +221,16 @@
       tot=selfTot(it);totLeft=left(tot.stock,tot.locked);
       blocks=`<h4 style="font-size:14px;margin:2px 0 10px;color:var(--g)">① 数量构成</h4>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        ${num('设置库存',tot.stock)}${num('已占用',tot.locked)}${num('可售',totLeft,'var(--g)')}
+        ${num('库存总数',tot.stock)}${num('已占用',tot.locked)}${num('可售',totLeft,'var(--g)')}
       </div>
-      <div class="ib ib-gr" style="margin-top:10px"><span class="i">📐</span><b>可售 = 设置库存 − 已占用</b>。设置库存是你自己填的可供货数量；「已占用」是买家已下单、还没送出的量。自售商品<b>不入仓</b>，因此没有「在仓实物」与「在途」。</div>
+      <div class="ib ib-gr" style="margin-top:10px"><span class="i">📐</span><b>可售 = 库存总数 − 已占用</b>。库存总数是你自己填的可供货数量；「已占用」是买家已下单、还没送出的量。自售商品<b>不入仓</b>，因此没有「在仓实物」与「在途」。</div>
 
       <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 各规格库存（逐规格独立）</h4>
-      <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>规格</th><th>SKU 编码</th><th>库存模式</th><th style="text-align:right">设置库存</th><th style="text-align:right">已占用</th><th style="text-align:right">可售</th></tr></thead><tbody>
+      <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>规格</th><th>SKU 编码</th><th>库存模式</th><th style="text-align:right">库存总数</th><th style="text-align:right">已占用</th><th style="text-align:right">可售</th><th>操作</th></tr></thead><tbody>
         ${it.skus.map(k=>`<tr><td>${k.spec}</td><td class="mono">${k.skuId}</td><td><span class="tag ${k.stockMode=='daily'?'t-g':'t-y'}" style="font-size:10.5px">${SMODE[k.stockMode]}</span></td>
           <td style="text-align:right">${k.stock}</td><td style="text-align:right;color:var(--ts)">${k.locked||'—'}</td>
-          <td style="text-align:right"><b>${left(k.stock,k.locked)}</b> 件</td></tr>`).join('')}
+          <td style="text-align:right"><b>${left(k.stock,k.locked)}</b> 件</td>
+          <td><button class="btn btn-link" onclick="closeDrawer();inv_edit('${code}','${k.skuId}')">改</button></td></tr>`).join('')}
       </tbody></table></div>
       <div class="ib ib-b" style="margin-top:8px"><span class="i">💡</span>自售商品<b>每个规格的库存各自独立</b>，改一个不影响另一个——这点和寄售相反。</div>`;
     }else{
@@ -224,17 +240,23 @@
         <td style="text-align:right;color:var(--ts)">${s.locked}</td>
         <td style="text-align:right"><b>${left(s.wms,s.locked)}</b></td>
         <td style="text-align:right;${s.transit?'color:var(--b)':'color:var(--tt)'}">${s.transit||'—'}</td></tr>`).join('');
-      const skuRows=it.skus.map(k=>`<tr><td>${k.spec}</td><td class="mono">${k.skuId}</td>
+      /* 合计件数 = Σ 各仓折算件数，严禁先合计原值再折算：
+         A仓5kg + B仓5kg、ratio=3 → 分仓 1+1=2 箱；先合计得 floor(10/3)=3 箱，
+         多出的那 1 箱跨仓拼不出来、根本不可售（BR-08 不跨仓调拨）。 */
+      const skuRows=it.skus.map(k=>{
+        const perWh=it.stocks.map(s=>Math.floor(left(s.wms,s.locked)/k.ratio));
+        const sum=perWh.reduce((a,b)=>a+b,0);
+        return `<tr><td>${k.spec}</td><td class="mono">${k.skuId}</td>
         <td style="text-align:right;color:var(--ts)">${k.ratio} ${u}</td>
-        <td style="text-align:right"><b>${Math.floor(totLeft/k.ratio)}</b> 件</td></tr>`).join('');
+        <td style="text-align:right"><b>${sum}</b> 件<div style="font-size:11px;color:var(--tt)">${perWh.map((n,i)=>it.stocks[i].wh+' '+n).join(' + ')}</div></td></tr>`;}).join('');
       blocks=`<h4 style="font-size:14px;margin:2px 0 10px;color:var(--g)">① 数量构成（全部仓合计）</h4>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-        ${num('在库',tot.wms)}${num('已占用',tot.locked)}${num('可售',totLeft,'var(--g)')}${num('在途',tot.transit,'var(--b)')}
+        ${num('在仓实物',tot.wms)}${num('已占用',tot.locked)}${num('可售',totLeft,'var(--g)')}${num('在途',tot.transit,'var(--b)')}
       </div>
-      <div class="ib ib-gr" style="margin-top:10px"><span class="i">📐</span><b>可售 = 在库 − 已占用</b>。「已占用」是买家已下单、仓库尚未出库的量，出库后从在库扣掉；「在途」是你已送到仓、仓库还没入库完成的量，入库完成后才计入在库。</div>
+      <div class="ib ib-gr" style="margin-top:10px"><span class="i">📐</span><b>可售 = 在仓实物 − 已占用</b>。「已占用」是买家已下单、仓库尚未出库的量，出库后从在库扣掉；「在途」是你已送到仓、仓库还没入库完成的量，入库完成后才计入在库。</div>
 
       <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 分仓明细</h4>
-      <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>仓库</th><th style="text-align:right">在库</th><th style="text-align:right">已占用</th><th style="text-align:right">可售</th><th style="text-align:right">在途</th></tr></thead><tbody>${whRows}</tbody></table></div>
+      <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>仓库</th><th style="text-align:right">在仓实物</th><th style="text-align:right">已占用</th><th style="text-align:right">可售</th><th style="text-align:right">在途</th></tr></thead><tbody>${whRows}</tbody></table></div>
       <div class="ib ib-y" style="margin-top:8px"><span class="i">⚠️</span>各仓库存<b>独立记账、不跨仓调拨</b>，买家下单按收货仓匹配——某仓可售为 0 时，其他仓有货也无法销往该仓覆盖区域。</div>
 
       <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">③ 各规格可售件数（换算）</h4>
@@ -257,7 +279,6 @@
       <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>时间</th><th>${self?'范围':'仓库'}</th><th>类型</th><th style="text-align:right">变动</th><th style="text-align:right">变动后</th></tr></thead><tbody>${recent||'<tr><td colspan="5" style="color:var(--tt)">暂无变动记录</td></tr>'}</tbody></table></div>
     </div>
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
-      ${self?`<button class="btn btn-o" onclick="closeDrawer();inv_edit('${code}')">改库存</button>`:''}
       <button class="btn btn-p" onclick="closeDrawer();inv_flow('${code}')">查看全部流水 →</button></div>`);
   };
 
@@ -292,7 +313,7 @@
     modal(`<div class="mc-hd"><h3>对这笔变动有疑问</h3><p class="mono">${doc}</p><button class="mc-x" onclick="closeModal()">×</button></div>
     <div class="mc-bd">
       <div class="ib ib-y"><span class="i">⚠️</span>盘点亏损、报损由仓库作业产生，商家端为只读展示。</div>
-      <p style="font-size:13px;color:var(--ts);line-height:1.7;margin-top:10px">如需核对，请把<b>作业单号 ${doc}</b>提供给你的对接运营，由运营在 WMS 侧调取作业记录与责任判定。</p>
+      <p style="font-size:13px;color:var(--ts);line-height:1.7;margin-top:10px">如需核对，请把<b>作业单号 ${doc}</b>提供给你的对接运营，由运营在仓库系统调取作业记录与责任判定。</p>
       <p style="font-size:13px;color:var(--ts);line-height:1.7">线上差异申诉功能规划中，当前版本尚未开放。</p>
     </div>
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">知道了</button><button class="btn btn-p" onclick="closeModal();toast('单号已复制：${doc}','ok')">复制单号</button></div>`);
@@ -382,7 +403,7 @@
     <div class="card-bd">
       <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度；<b>数量列一律按本行规格折算成「件」</b>（不足 1 件不计）。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>——鼠标悬停可看该仓实物总量，卖掉任一规格，其他规格件数会同步下降。</div>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">在库</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
+        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">${DB.invMode=='self'?'库存总数':DB.invMode=='consign'?'在仓实物':'库存/在仓'}</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>${body||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invWh||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invWh||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
       </table></div>
     </div></div>`;

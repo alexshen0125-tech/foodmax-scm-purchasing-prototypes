@@ -34,7 +34,7 @@ css.textContent=`
 .sk-search{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 13px;border-radius:12px;background:var(--muted);color:var(--sub);font-size:14px;}
 .sk-search svg{width:17px;height:17px;flex:0 0 auto;stroke:var(--sub);fill:none;stroke-width:1.8;}
 .sk-chips{display:flex;gap:8px;padding:10px 16px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.sk-chip{flex:0 0 auto;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:13px;color:var(--sub);cursor:pointer;white-space:nowrap;}
+.sk-chip{flex:0 0 auto;min-height:44px;display:flex;align-items:center;padding:0 13px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:13px;color:var(--sub);cursor:pointer;white-space:nowrap;}
 .sk-chip.on{background:var(--emerald);border-color:var(--emerald);color:#fff;font-weight:600;}
 .sk-note{margin:10px 16px 2px;padding:11px 13px;border-radius:12px;background:var(--mint-soft);font-size:12.5px;line-height:1.65;color:var(--ink);}
 .sk-note.blue{background:#EFF6FF;} .sk-note.amber{background:var(--amber-soft);} .sk-note.red{background:var(--red-soft);}
@@ -75,7 +75,7 @@ css.textContent=`
 .sk-f2{font-size:11.5px;color:var(--sub);font-family:ui-monospace,Menlo,monospace;}
 .sk-amt{font-size:15px;font-weight:700;}
 .sk-amt.plus{color:var(--emerald);} .sk-amt.minus{color:var(--red);} .sk-amt.gray{color:var(--sub);} .sk-amt.blue{color:#2563EB;}
-.sk-dis{margin-top:7px;min-height:34px;display:inline-flex;align-items:center;padding:0 12px;border-radius:18px;border:1px solid var(--line);font-size:12px;color:var(--sub);cursor:pointer;}
+.sk-dis{margin-top:7px;min-height:44px;display:inline-flex;align-items:center;padding:0 12px;border-radius:18px;border:1px solid var(--line);font-size:12px;color:var(--sub);cursor:pointer;}
 .sk-ed{padding:14px;border-bottom:1px solid var(--line);}
 .sk-ed .t{font-size:14px;font-weight:700;color:var(--ink);}
 .sk-ed .s{font-size:11.5px;color:var(--sub);font-family:ui-monospace,Menlo,monospace;margin-top:2px;}
@@ -217,27 +217,35 @@ function openEdit(code,after,skuId){
     body:`<div class="sk-note"><b>每日恢复</b>=每天自动回到设置的数量；<b>售完即止</b>=卖完就没有，需手动补。改后<b>即时生效、无需审核</b>，设为 0 即售罄下架。本规格库存<b>与其他规格互相独立</b>。</div>
       <div class="sk-box" style="margin-top:12px">
         <div class="sk-ed">
-          <div class="t">${k.spec}</div><div class="s">${k.skuId} · 当前 ${k.stock} 件</div>
-          <input class="sk-in" id="ed-v" type="number" min="0" step="1" value="${k.stock}" inputmode="numeric">
+          <div class="t">${k.spec}</div><div class="s">${k.skuId} · 当前库存总数 ${k.stock} 件 · 已被下单占用 ${k.locked||0} 件</div>
+          <input class="sk-in" id="ed-v" type="number" min="0" step="1" value="${k.stock}" inputmode="numeric" aria-label="库存总数（件）">
           <div class="sk-seg" id="ed-seg">
             <div class="s ${k.stockMode==='daily'?'on':''}" data-m="daily">每日恢复</div>
             <div class="s ${k.stockMode==='finite'?'on':''}" data-m="finite">售完即止</div>
           </div>
         </div>
       </div>
-      <div id="ed-err"></div><div style="height:20px"></div>`,
+      <div id="ed-calc"></div><div id="ed-err"></div><div style="height:20px"></div>`,
     footer:`<div class="sk-save"><div class="b" id="ed-ok">保存（即时生效）</div></div>`,
     mount:(p)=>{
-      const ok=p.querySelector('#ed-ok'),err=p.querySelector('#ed-err'),inp=p.querySelector('#ed-v');
+      const ok=p.querySelector('#ed-ok'),err=p.querySelector('#ed-err'),inp=p.querySelector('#ed-v'),calc=p.querySelector('#ed-calc');
+      const locked=+k.locked||0;
       const validate=()=>{
         const v=inp.value,n=Number(v);
         const bad=v===''||isNaN(n)||n<0||!Number.isInteger(n);
         inp.classList.toggle('bad',bad);
         if(!bad)draft.stock=v;
         err.innerHTML=bad?`<div class="sk-note red">库存必须为 <b>≥0 的整数</b></div>`:'';
+        /* 联动预览可售，消灭"我填了90怎么只有86"的心算与客诉 */
+        if(bad)calc.innerHTML='';
+        else{const sell=Math.max(n-locked,0);
+          calc.innerHTML=sell<=0
+            ? `<div class="sk-note amber">已有 <b>${locked}</b> 件被下单占用，保存后<b>可售为 0</b>，商品将售罄下架。</div>`
+            : `<div class="sk-note">保存后可售 <b>${sell}</b> 件（库存总数 ${n} − 已占用 ${locked}）</div>`;}
         ok.classList.toggle('off',bad);
         return !bad;
       };
+      validate();
       inp.oninput=validate;
       p.querySelectorAll('#ed-seg .s').forEach(s=>s.onclick=()=>{
         p.querySelectorAll('#ed-seg .s').forEach(x=>x.classList.remove('on'));
@@ -292,48 +300,54 @@ function openDispute(doc){
 }
 
 /* ============ 子页：库存明细 ============ */
-function openDetail(code){
+function openDetail(code,onSaved){
   const render=()=>{
     const it=itemOf(code),u=it.unit,self=isSelf(it);
     let head,blocks;
     if(self){
       const t=selfTot(it),tl=left(t.stock,t.locked);
       head=`<div class="sk-card" style="cursor:default"><div class="sk-q4 n3" style="border-top:none;padding-top:0">
-          <div class="c"><div class="l">设置库存</div><div class="v">${t.stock}<span class="u">${u}</span></div></div>
+          <div class="c"><div class="l">库存总数</div><div class="v">${t.stock}<span class="u">${u}</span></div></div>
           <div class="c"><div class="l">已占用</div><div class="v m">${t.locked}<span class="u">${u}</span></div></div>
           <div class="c"><div class="l">可售</div><div class="v g">${tl}<span class="u">${u}</span></div></div>
         </div></div>
-        <div class="sk-note"><b>可售 = 设置库存 − 已占用</b>。设置库存是你自己填的可供货数量；「已占用」是买家已下单、还没送出的量。自售商品<b>不入仓</b>，因此没有「在仓实物」与「在途」。</div>`;
+        <div class="sk-note"><b>可售 = 库存总数 − 已占用</b>。库存总数是你自己填的可供货数量；「已占用」是买家已下单、还没送出的量。自售商品<b>不入仓</b>，因此没有「在仓实物」与「在途」。</div>`;
+      /* 改库存入口逐规格挂行内——不能用无规格上下文的全局按钮（多规格时会默认改第一个且用户无感知） */
       blocks=`<div class="sk-sec">各规格库存（逐规格独立）</div><div class="sk-box">
           ${it.skus.map(k=>`<div class="sk-flow">
             <div class="sk-f1"><span style="font-weight:700;font-size:14px">${k.spec}</span>
               <span style="font-size:14px">可售 <b style="color:var(--emerald)">${left(k.stock,k.locked)}</b> 件</span></div>
-            <div class="sk-f1"><span class="sk-f2">${k.skuId} · 设置 ${k.stock} · 已占用 ${k.locked}</span>
+            <div class="sk-f1"><span class="sk-f2">${k.skuId} · 库存总数 ${k.stock} · 已占用 ${k.locked}</span>
               <span class="sk-tag ${k.stockMode==='daily'?'ok':'wait'}">${SMODE[k.stockMode]}</span></div>
+            <div class="sk-dis" data-ed="${k.skuId}" style="min-height:44px">改这个规格的库存</div>
           </div>`).join('')}</div>
-        <div class="sk-note blue">自售商品<b>每个规格的库存各自独立</b>，改一个不影响另一个——这点和寄售相反。</div>
-        <div style="padding:16px 16px 0"><div class="sk-btn" id="ed" style="width:100%;min-height:46px">改库存</div></div>`;
+        <div class="sk-note blue">自售商品<b>每个规格的库存各自独立</b>，改一个不影响另一个——这点和寄售相反。</div>`;
     }else{
       const t=it.stocks.reduce((a,s)=>({wms:a.wms+s.wms,locked:a.locked+s.locked,transit:a.transit+s.transit}),{wms:0,locked:0,transit:0});
       const tl=it.stocks.reduce((a,s)=>a+left(s.wms,s.locked),0);
       head=`<div class="sk-card" style="cursor:default"><div class="sk-q4 n4" style="border-top:none;padding-top:0">
-          <div class="c"><div class="l">在库</div><div class="v">${t.wms}<span class="u">${u}</span></div></div>
+          <div class="c"><div class="l">在仓实物</div><div class="v">${t.wms}<span class="u">${u}</span></div></div>
           <div class="c"><div class="l">已占用</div><div class="v m">${t.locked}<span class="u">${u}</span></div></div>
           <div class="c"><div class="l">可售</div><div class="v g">${tl}<span class="u">${u}</span></div></div>
           <div class="c"><div class="l">在途</div><div class="v b">${t.transit}<span class="u">${u}</span></div></div>
         </div></div>
-        <div class="sk-note"><b>可售 = 在库 − 已占用</b>。「已占用」是买家已下单、仓库尚未出库的量；「在途」是你已送到仓、仓库还没入库完成的量，入库完成后才计入在库。</div>`;
+        <div class="sk-note"><b>可售 = 在仓实物 − 已占用</b>。「已占用」是买家已下单、仓库尚未出库的量；「在途」是你已送到仓、仓库还没入库完成的量，入库完成后才计入在库。</div>`;
       blocks=`<div class="sk-sec">分仓明细</div><div class="sk-box">
           ${it.stocks.map(s=>`<div class="sk-flow">
             <div class="sk-f1"><span style="font-weight:700;font-size:14px">${s.wh}</span>
               <span style="font-size:14px">可售 <b style="color:var(--emerald)">${left(s.wms,s.locked)}</b> ${u}</span></div>
-            <div class="sk-f1"><span class="sk-f2">在库 ${s.wms} · 已占用 ${s.locked}</span>
+            <div class="sk-f1"><span class="sk-f2">在仓实物 ${s.wms} · 已占用 ${s.locked}</span>
               <span class="sk-f2">${s.transit?'在途 '+s.transit:'无在途'}</span></div>
           </div>`).join('')}</div>
         <div class="sk-note amber">各仓库存<b>独立记账、不跨仓调拨</b>。某仓可售为 0 时，其他仓有货也无法销往该仓覆盖区域。</div>
         <div class="sk-sec">各规格可售件数</div><div class="sk-box">
-          ${it.skus.map(k=>`<div class="sk-row"><span class="k">${k.spec}<div class="sk-f2">${k.skuId} · 1 件 = ${k.ratio}${u}</div></span>
-            <span class="v">${Math.floor(tl/k.ratio)} 件</span></div>`).join('')}</div>
+          ${it.skus.map(k=>{
+            /* 合计 = Σ 各仓折算件数，不能先合计原值再折算：
+               A仓5kg+B仓5kg、ratio=3 → 分仓 1+1=2 箱；先合计得 floor(10/3)=3 箱，
+               多出那 1 箱跨仓拼不出来、根本不可售（不跨仓调拨） */
+            const per=it.stocks.map(s=>Math.floor(left(s.wms,s.locked)/k.ratio));
+            return `<div class="sk-row"><span class="k">${k.spec}<div class="sk-f2">${k.skuId} · 1 件 = ${k.ratio}${u} · ${it.stocks.map((s,i)=>s.wh+' '+per[i]).join(' + ')}</div></span>
+            <span class="v">${per.reduce((a,b)=>a+b,0)} 件</span></div>`;}).join('')}</div>
         <div class="sk-note blue">本商品下<b>所有规格共用同一批货</b>（共 ${tl} ${u} 可售），不是各自独立的库存。卖掉任意一个规格，其他规格的可售件数都会同步下降——这不是数据错误。</div>`;
     }
     const recent=flowsOf(code,'').slice(0,5).map(f=>{const m=FLOW[f.type];
@@ -351,8 +365,9 @@ function openDetail(code){
       const host=p.querySelector('#dt-body');
       const bind=()=>{
         const more=host.querySelector('#more'); if(more)more.onclick=()=>openFlow(code);
-        const ed=host.querySelector('#ed');
-        if(ed)ed.onclick=()=>openEdit(code,()=>{host.innerHTML=render();bind();});   // 改完就地重绘
+        /* 逐规格入口；改完同时重绘本页与列表（否则返回列表看到旧值，商家会重复改） */
+        host.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>
+          openEdit(code,()=>{host.innerHTML=render();bind();onSaved&&onSaved();},b.dataset.ed));
       };
       bind();
     }});
@@ -407,7 +422,7 @@ function renderMain(container){
           <div style="text-align:right">${flag(it)}<div style="margin-top:5px"><span class="sk-tag ${r.sellable<=0?'out':'ok'}">${r.sellable<=0?'缺货':'正常'}</span></div></div></div>
         <div class="sk-q4 ${self?'n3':'n4'}">
           <div class="c"><div class="l">可售库存</div><div class="v ${r.sellable<=0?'r':'g'}">${r.sellable}<span class="u">件</span></div></div>
-          <div class="c"><div class="l">${self?'设置库存':'在库'}${r.shared?' ·共享':''}</div><div class="v">${r.stock}<span class="u">件</span></div></div>
+          <div class="c"><div class="l">${self?'库存总数':'在仓实物'}${r.shared?' ·共享':''}</div><div class="v">${r.stock}<span class="u">件</span></div></div>
           <div class="c"><div class="l">已占用</div><div class="v m">${r.locked||'—'}</div></div>
           ${self?'':`<div class="c"><div class="l">在途</div><div class="v ${r.transit?'b':'m'}">${r.transit||'—'}</div></div>`}
         </div>
@@ -425,7 +440,7 @@ function renderMain(container){
       <div class="sk-list">${cards||`<div class="sk-empty"><div class="ei">${svg('layers')}</div><h4>${state.mode||state.quick?'当前筛选下没有库存':'暂无库存'}</h4><p>${state.mode||state.quick?'点上方标签取消筛选':'上架商品后，库存会在这里显示'}</p></div>`}</div>`;
 
     pane.querySelectorAll('.sk-card').forEach(c=>c.onclick=e=>{
-      if(e.target.closest('[data-edit]'))return; openDetail(c.dataset.item);});
+      if(e.target.closest('[data-edit]'))return; openDetail(c.dataset.item,draw);});
     pane.querySelectorAll('[data-edit]').forEach(b=>b.onclick=e=>{
       e.stopPropagation(); openEdit(b.dataset.edit,draw,b.dataset.sku);});
     pane.querySelectorAll('#mc .sk-chip,#qc .sk-chip').forEach(c=>c.onclick=()=>{
