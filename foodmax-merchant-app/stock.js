@@ -416,7 +416,7 @@ function renderMain(container){
     pane.innerHTML=`
       <div class="sk-bar"><div class="sk-search">${svg('search')}输入商品名称或编码</div></div>
       <div class="sk-chips" id="mc">${chip('mode','','全部')}${chip('mode','self','自售')}${chip('mode','consign','寄售')}</div>
-      <div class="sk-chips" id="qc">${chip('quick','out','缺货',cOut)}${chip('quick','transit','有在途',cTr)}</div>
+      <div class="sk-chips" id="qc">${chip('quick','','全部',base.length)}${chip('quick','out','已缺货',cOut)}${chip('quick','transit','有在途',cTr)}</div>
       <div class="sk-note"><b>自售</b>库存由你自己维护，可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>，只能查看与追溯流水。</div>
       <div class="sk-list">${cards||`<div class="sk-empty"><div class="ei">${svg('layers')}</div><h4>${state.mode||state.quick?'当前筛选下没有库存':'暂无库存'}</h4><p>${state.mode||state.quick?'点上方标签取消筛选':'上架商品后，库存会在这里显示'}</p></div>`}</div>`;
 
@@ -425,8 +425,7 @@ function renderMain(container){
     pane.querySelectorAll('[data-edit]').forEach(b=>b.onclick=e=>{
       e.stopPropagation(); openEdit(b.dataset.edit,draw,b.dataset.sku);});
     pane.querySelectorAll('#mc .sk-chip,#qc .sk-chip').forEach(c=>c.onclick=()=>{
-      const g=c.dataset.g,v=c.dataset.v;
-      state[g]=(g==='quick'&&state[g]===v)?'':v; draw();});
+      state[c.dataset.g]=c.dataset.v; draw();});   // 两组均为互斥选择（含「全部」档），非 toggle
     pane.querySelector('.sk-search').onclick=()=>toast('搜索商品名称或编码');
   };
 

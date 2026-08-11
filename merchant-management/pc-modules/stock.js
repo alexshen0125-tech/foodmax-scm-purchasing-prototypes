@@ -330,7 +330,7 @@
   window.inv_mode=function(v){DB.invMode=v;render();};
   window.inv_search=function(){DB.invKw=(document.getElementById('inv-kw')||{}).value||'';render();};
   window.inv_reset=function(){DB.invKw='';DB.invWh='';DB.invMode='';DB.invQuick='';render();};
-  window.inv_quick=function(v){DB.invQuick=DB.invQuick==v?'':v;render();};
+  window.inv_quick=function(v){DB.invQuick=v;render();};   // Tab：全部 / 已缺货 / 有在途（互斥，非 toggle）
 
   /* ---------- 页面 1：库存列表（自售 + 寄售通用） ---------- */
   PAGES['m-stock']=()=>{
@@ -340,8 +340,9 @@
     const q=DB.invQuick;
     if(q=='out')list=list.filter(r=>r.sellable<=0);
     if(q=='transit')list=list.filter(r=>r.transit>0);
-    const base=rows(),cOut=base.filter(r=>r.sellable<=0).length,cTr=base.filter(r=>r.transit>0).length;
-    const qb=(v,t,n)=>`<button class="btn ${q==v?'btn-p':'btn-o'} btn-sm" onclick="inv_quick('${v}')">${t}${n?` (${n})`:''}</button>`;
+    const base=rows(),cAll=base.length,cOut=base.filter(r=>r.sellable<=0).length,cTr=base.filter(r=>r.transit>0).length;
+    const qb=(v,t,n)=>`<div class="tab ${q==v?'active':''}" onclick="inv_quick('${v}')">${t}<span style="color:var(--ts);font-weight:400;margin-left:4px">${n}</span></div>`;
+    const tabs=`<div class="tabs" style="margin:0;border:none">${qb('','全部',cAll)}${qb('out','已缺货',cOut)}${qb('transit','有在途',cTr)}</div>`;
 
     const body=list.map(r=>{const it=r.it,k=r.k,self=r.self;
       const shareTag=r.shared?` <span class="tag t-pp" style="font-size:10px" title="本商品下各规格共用同一批货，此列为货品维度数值，同商品同仓各行相同">共享</span>`:'';
@@ -371,11 +372,10 @@
       <div class="row" style="gap:8px;margin-top:4px"><button class="btn btn-p" onclick="inv_search()">查询</button><button class="btn btn-o" onclick="inv_reset()">重置</button></div>
     </div></div>
 
-    <div class="card"><div class="card-hd"><h3>库存列表</h3><span class="sub">共 ${list.length} 条</span>
+    <div class="card"><div class="card-hd">${tabs}
       <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="toast('已导出当前筛选结果','ok')">⬇️ 导出库存</button></div>
     </div>
     <div class="card-bd">
-      <div class="row" style="gap:8px;margin-bottom:12px">${qb('out','缺货',cOut)}${qb('transit','有在途',cTr)}</div>
       <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>，「在库/已占用/在途」是货品维度数值，同商品同仓各行相同。</div>
       <div style="overflow-x:auto"><table>
         <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">在库</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
