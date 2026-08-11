@@ -189,21 +189,17 @@ const I={
   printer:'<path d="M7 9V4h10v5M7 18H5a1 1 0 01-1-1v-6a2 2 0 012-2h12a2 2 0 012 2v6a1 1 0 01-1 1h-2"/><path d="M7 14h10v6H7z"/>',
 };
 const svg=(k,x='')=>`<svg viewBox="0 0 24 24" ${x}>${I[k]}</svg>`;
+// 与 PC 导航对齐：商机推荐/价格分析/经营分析/违规记录/质检管理 本期不做，已移除磁贴（模块实现保留）
 const TILES=[
   {k:'goods',l:'商品管理',ic:'box',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'stock',l:'库存管理',ic:'layers',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'order',l:'订单管理',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
   {k:'after',l:'售后管理',ic:'refund',bg:'#FEE2E2',st:'var(--red)',dot:1},
   {k:'invoice',l:'发票管理',ic:'invoice',bg:'#D1FAE5',st:'var(--emerald-2)',badge:'3'},
-  {k:'price',l:'价格分析',ic:'tag',bg:'#FEF3C7',st:'#B45309',badge:'50',amber:1},
-  {k:'analysis',l:'经营分析',ic:'chart',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'recon',l:'对账单',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
   {k:'settle',l:'结算单',ic:'wallet',bg:'#FEF3C7',st:'#B45309'},
   {k:'replen',l:'自营补货',ic:'swap',bg:'#FEF3C7',st:'#B45309',badge:'2',amber:1},
   {k:'mkt',l:'营销活动',ic:'mega',bg:'#FEE2E2',st:'var(--red)'},
-  {k:'biz',l:'商机推荐',ic:'trend',bg:'#FEF3C7',st:'#B45309',badge:'加流量',amber:1},
-  {k:'violate',l:'违规记录',ic:'alert',bg:'#FEE2E2',st:'var(--red)',dot:1},
-  {k:'quality',l:'质检管理',ic:'shieldcheck',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'supply',l:'耗材商城',ic:'printer',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
 ];
@@ -390,7 +386,7 @@ tb.querySelectorAll('.tab').forEach(tab=>tab.onclick=()=>{resetStack();
 renderHome();
 </script>
 <script src="goods.js"></script>
-<script src="stock.js?v=20260811h"></script>
+<script src="stock.js?v=20260811i"></script>
 <script src="order.js"></script>
 <script src="pick.js"></script>
 <script src="label.js"></script>

@@ -868,10 +868,8 @@ const NAV={
       {id:'m-supply',ic:'🛒',t:'耗材商城'},
       {id:'m-supply-order',ic:'📦',t:'我的耗材订单',badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.shop==DB.merchant.code&&(o.status=='pending'||o.status=='shipping')).length:0},
     ]},
-    {sec:'增长'},
-    {id:'m-biz',ic:'💡',t:'商机推荐'},
-    {id:'m-price',ic:'🏷️',t:'价格分析'},
-    {id:'m-analysis',ic:'📈',t:'经营分析'},
+    // 「增长」组（商机推荐 m-biz / 价格分析 m-price / 经营分析 m-analysis）本期不做，已从导航移除；
+    // PAGES 实现保留在 pc-modules/biz.js·price.js·analysis.js，恢复时把 NAV 条目加回即可
     {sec:'财务'},
     {id:'m-recon',ic:'🧮',t:'对账单',p1:1},
     {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
@@ -883,9 +881,8 @@ const NAV={
       {id:'m-aftersale',ic:'↩️',t:'售后订单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
       {id:'m-after-return',ic:'📦',t:'退货单'},
     ]},
-    {id:'m-quality',ic:'🔬',t:'质检管理'},
-    {id:'m-rectify',ic:'⚠️',t:'违规整改',badge:()=>DB.rectify=='notified'?1:0},
-    {id:'m-exit',ic:'🚪',t:'闭店申请'},
+    // 质检管理 m-quality / 违规整改 m-rectify / 闭店申请 m-exit 本期不做，已从导航移除；
+    // PAGES 实现保留（quality.js 与主文件），恢复时把 NAV 条目加回即可
   ],
   shop_ops:[
     {sec:'总览'},
@@ -3661,7 +3658,7 @@ function downloadTemplate(kind){let name,rows;const all=[];
 goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
-<script src="pc-modules/stock.js?v=20260811h"></script>
+<script src="pc-modules/stock.js?v=20260811i"></script>
 <script src="pc-modules/pick.js?v=20260730f"></script>
 <script src="pc-modules/weigh.js?v=20260731d"></script>
 <script src="pc-modules/delivery.js?v=20260810a"></script>
