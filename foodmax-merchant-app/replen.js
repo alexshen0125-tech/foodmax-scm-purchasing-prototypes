@@ -172,13 +172,6 @@ function openDetail(r){
     </div>
 
     <div class="rp-card2">
-      <div class="rp-ct">对你的影响</div>
-      <div class="rp-row"><span class="k">该商品计入 GMV<br><span style="font-size:11px">按应送 ${r.should} 足额计，不因少货下调</span></span><span class="v">${money(+(r.should*r.price).toFixed(2))}</span></div>
-      <div class="rp-row"><span class="k">补货扣款<br><span style="font-size:11px">缺口 ${r.qty} × ${money(unit(r))}</span></span><span class="v neg">-${money(amt(r))}</span></div>
-      <div class="rp-row total"><span class="k">实际多付（加价成本）<br><span style="font-size:11px;font-weight:500">= ${r.qty} × ${money(r.price)} × ${r.rate}%</span></span><span class="v neg">${money(loss(r))}</span></div>
-    </div>
-
-    <div class="rp-card2">
       <div class="rp-ct">结算与发票</div>
       <div class="rp-row" ${r.billNo?'id="rp-go-st" style="cursor:pointer"':''}><span class="k">抵扣所属结算单</span><span class="v">${r.billNo?r.billNo+' ›':'预计计入下一期结算单（生成时抵扣）'}</span></div>
       <div class="rp-row" ${r.invNo?'id="rp-go-iv" style="cursor:pointer"':''}><span class="k">补货发票</span><span class="v">${r.invNo?r.invNo+' ›':'结算完成后由平台自动开具'}</span></div>

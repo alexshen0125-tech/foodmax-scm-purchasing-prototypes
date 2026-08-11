@@ -110,7 +110,7 @@ PAGES['m-replenish']=()=>{
   if(!rows.length) return tip+filt+tabs+`<div class="empty"><div class="e-ic">🔁</div><div class="e-t">${(f.no||f.dl||f.od)?'没有符合筛选条件的补货单':(t=='all'?'暂无自营补货单':'该状态下暂无补货单')}</div><div class="e-s">${(f.no||f.dl||f.od)?'换个单号试试，或点「重置」查看全部。':(t=='all'?'足额送货到仓即不会产生补货单。仓库收货清点少货且自营有货补货时，此处生成单据。':'切换上方状态查看其它补货单。')}</div></div>`;
 
   return tip+filt+tabs+`
-  <div class="card"><div class="card-hd"><h3>补货单</h3><span class="sub">共 ${rows.length} 单${(f.no||f.dl||f.od)?` / 全部 ${all.length} 单`:''} · 单价 = 含税售价 ×(1+加价率)</span></div>
+  <div class="card">
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>补货单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">含税售价</th><th style="text-align:right">加价率</th><th style="text-align:right">结算抵扣（含税）</th><th style="text-align:right">其中你多付</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>`<tr>
@@ -176,15 +176,6 @@ window.repl_detail=function(no){
         <tr><td style="color:var(--ts)">不含税金额</td><td style="text-align:right">${money(rNet(r))}</td></tr>
         <tr><td style="color:var(--ts)">GST ${gst()}%</td><td style="text-align:right">${money(rGst(r))}</td></tr>
         <tr style="font-weight:700;background:var(--gl)"><td>补货款（含税 · 结算抵扣）</td><td style="text-align:right;color:var(--r)">-${money(rAmt(r))}</td></tr>
-      </tbody>
-    </table></div>
-
-    ${sec('对你的影响')}
-    <div style="overflow-x:auto;margin-bottom:14px"><table>
-      <thead><tr><th>项目</th><th style="text-align:right">金额</th><th>说明</th></tr></thead><tbody>
-        <tr><td>该商品计入 GMV</td><td style="text-align:right">${money(+(r.should*r.price).toFixed(2))}</td><td style="font-size:12px;color:var(--ts)">按<b>应送 ${r.should}</b> 足额计，不因少货下调</td></tr>
-        <tr><td>补货扣款</td><td style="text-align:right;color:var(--r)">-${money(rAmt(r))}</td><td style="font-size:12px;color:var(--ts)">缺口 ${r.qty} × ${money(rUnit(r))}</td></tr>
-        <tr style="font-weight:700;background:var(--gl)"><td>实际多付（加价成本）</td><td style="text-align:right;color:var(--r)">${money(rLoss(r))}</td><td style="font-size:12px;color:var(--ts)">= ${r.qty} × ${money(r.price)} × ${r.rate}%</td></tr>
       </tbody>
     </table></div>
 
