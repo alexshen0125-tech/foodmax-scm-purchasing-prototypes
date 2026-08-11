@@ -127,13 +127,13 @@ const FLOWS=[
   {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-11 09:12',type:'out',   qty:12, after:186,doc:'CK-JS-20260811-0043'},
   {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-10 16:40',type:'loss',  qty:4,  after:198,doc:'PD-20260810-0007'},
   {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-10 11:05',type:'out',   qty:26, after:202,doc:'CK-JS-20260810-0031'},
-  {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-09 08:30',type:'in',    qty:150,after:228,doc:'R2026080900112'},
+  {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-09 08:30',type:'in',    qty:150,after:228,doc:'GH-JS-20260808-0009'},
   {item:'SPU-JS-8801',wh:'兀兰DC',time:'2026-08-10 14:22',type:'out',   qty:9,  after:52, doc:'CK-JS-20260810-0028'},
   {item:'SPU-JS-8802',wh:'裕廊DC',time:'2026-08-11 10:02',type:'ret',   qty:6,  after:74, doc:'TH-20260811-0005'},
   {item:'SPU-JS-8802',wh:'裕廊DC',time:'2026-08-10 09:18',type:'out',   qty:18, after:68, doc:'CK-JS-20260810-0022'},
   {item:'SPU-JS-8802',wh:'盛港DC',time:'2026-08-08 15:47',type:'damage',qty:5,  after:31, doc:'BS-20260808-0002'},
   {item:'SPU-JS-8803',wh:'裕廊DC',time:'2026-08-09 17:30',type:'out',   qty:34, after:0,  doc:'CK-JS-20260809-0019'},
-  {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'R2026081100031'},
+  {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'GH-JS-20260810-0017'},
   {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-09 12:10',type:'gain',  qty:3,  after:40, doc:'PD-20260809-0004'},
   {item:'SPU-JS-8804',wh:'盛港DC',time:'2026-08-10 10:33',type:'out',   qty:22, after:96, doc:'CK-JS-20260810-0026'},
   {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-08-11 08:41',type:'out',   qty:6,  after:18, doc:'CK-JS-20260811-0040'},
@@ -367,16 +367,15 @@ function openInbound(no){
       <div class="sk-f1"><span class="sk-f2">${l.item} · 应收 ${l.plan} ${l.unit}</span>
         ${short?`<span class="sk-amt minus" style="font-size:13px">短收 ${short} ${l.unit}</span>`:''}</div></div>`;}).join('');
   const hasShort=done&&d.lines.some(l=>l.recv!=null&&l.recv<l.plan);
-  pushPage({title:d.no,subtitle:`${d.wh} · ${d.status}`,
+  pushPage({title:d.supply,subtitle:`${d.wh} · ${d.status}`,
     body:`<div class="sk-sec">单据信息</div><div class="sk-box">
-        <div class="sk-row"><span class="k">入库单号</span><span class="v">${d.no}</span></div>
-        <div class="sk-row"><span class="k">寄售供货单号</span><span class="v">${d.supply}</span></div>
+        <div class="sk-row"><span class="k">供货单号</span><span class="v">${d.supply}</span></div>
         <div class="sk-row"><span class="k">入库仓库</span><span class="v">${d.wh}</span></div>
         <div class="sk-row"><span class="k">创建时间</span><span class="v">${d.create}</span></div>
         <div class="sk-row"><span class="k">当前状态</span><span class="v"><span class="sk-tag ${IN_ST[d.status]}">${d.status}</span></span></div>
       </div>
       <div class="sk-sec">商品明细</div><div class="sk-box">${lines}</div>
-      ${hasShort?`<div class="sk-note red"><b>存在短收</b>：仓库按实收数量入账，差额<b>不会自动补建</b>。如对实收数量有疑问，请凭入库单号 ${d.no} 联系运营核对。</div>`
+      ${hasShort?`<div class="sk-note red"><b>存在短收</b>：仓库按实收数量入账，差额<b>不会自动补建</b>。如对实收数量有疑问，请凭供货单号 ${d.supply} 联系运营核对。</div>`
         :done?`<div class="sk-note">已全部入库并计入可售库存。</div>`
         :`<div class="sk-note blue">入库完成且库存同步成功后，这批货才会计入可售库存。</div>`}
       <div style="height:28px"></div>`});
@@ -439,7 +438,7 @@ function renderMain(container){
       const plan=d.lines.reduce((a,l)=>a+l.plan,0),recv=d.lines.reduce((a,l)=>a+(l.recv||0),0);
       const short=d.status==='入库完成'&&recv<plan;
       return `<div class="sk-card" data-no="${d.no}">
-        <div class="sk-hd"><div><div class="sk-nm">${d.lines.map(l=>l.name).join('、')}</div><div class="sk-sub">${d.no}</div></div>
+        <div class="sk-hd"><div><div class="sk-nm">${d.lines.map(l=>l.name).join('、')}</div><div class="sk-sub">${d.supply}</div></div>
           <span class="sk-tag ${IN_ST[d.status]}">${d.status}</span></div>
         <div class="sk-q4 n4">
           <div class="c"><div class="l">仓库</div><div class="v" style="font-size:14px">${d.wh}</div></div>
@@ -447,7 +446,7 @@ function renderMain(container){
           <div class="c"><div class="l">实收</div><div class="v ${d.status==='待入库'||d.status==='已取消'?'m':''}">${d.status==='待入库'||d.status==='已取消'?'—':recv}</div></div>
           <div class="c"><div class="l">差异</div><div class="v ${short?'r':'m'}">${short?'-'+(plan-recv):'—'}</div></div>
         </div>
-        <div class="sk-spec">供货单 ${d.supply}　·　${d.create}</div>
+        <div class="sk-spec">${d.create}</div>
       </div>`;}).join('');
     pane.innerHTML=`
       <div class="sk-note blue">这里跟踪你<b>已送到仓、还没入库完成</b>的货（<b>仅寄售商品</b>——自售不入仓、无在途）。入库单由仓库按你的寄售供货单生成，商家端只读；<b>入库完成且同步成功后才计入可售库存</b>。</div>

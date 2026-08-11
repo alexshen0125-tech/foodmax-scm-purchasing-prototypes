@@ -74,13 +74,13 @@
       {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-11 09:12',type:'out',   qty:12, after:186,doc:'CK-JS-20260811-0043'},
       {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-10 16:40',type:'loss',  qty:4,  after:198,doc:'PD-20260810-0007'},
       {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-10 11:05',type:'out',   qty:26, after:202,doc:'CK-JS-20260810-0031'},
-      {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-09 08:30',type:'in',    qty:150,after:228,doc:'R2026080900112'},
+      {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-09 08:30',type:'in',    qty:150,after:228,doc:'GH-JS-20260808-0009'},
       {item:'SPU-JS-8801',wh:'兀兰DC',time:'2026-08-10 14:22',type:'out',   qty:9,  after:52, doc:'CK-JS-20260810-0028'},
       {item:'SPU-JS-8802',wh:'裕廊DC',time:'2026-08-11 10:02',type:'ret',   qty:6,  after:74, doc:'TH-20260811-0005'},
       {item:'SPU-JS-8802',wh:'裕廊DC',time:'2026-08-10 09:18',type:'out',   qty:18, after:68, doc:'CK-JS-20260810-0022'},
       {item:'SPU-JS-8802',wh:'盛港DC',time:'2026-08-08 15:47',type:'damage',qty:5,  after:31, doc:'BS-20260808-0002'},
       {item:'SPU-JS-8803',wh:'裕廊DC',time:'2026-08-09 17:30',type:'out',   qty:34, after:0,  doc:'CK-JS-20260809-0019'},
-      {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'R2026081100031'},
+      {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'GH-JS-20260810-0017'},
       {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-09 12:10',type:'gain',  qty:3,  after:40, doc:'PD-20260809-0004'},
       {item:'SPU-JS-8804',wh:'盛港DC',time:'2026-08-10 10:33',type:'out',   qty:22, after:96, doc:'CK-JS-20260810-0026'},
       {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-08-11 08:41',type:'out',   qty:6,  after:18, doc:'CK-JS-20260811-0040'},
@@ -308,22 +308,21 @@
         <td style="text-align:right">${short?`<span style="color:var(--r);font-weight:600">短收 ${short} ${l.unit}</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>`;}).join('');
     const hasShort=done&&d.lines.some(l=>l.recv!=null&&l.recv<l.plan);
 
-    drawer(`<div class="drawer-hd"><div><h3>${d.no}</h3>
+    drawer(`<div class="drawer-hd"><div><h3>${d.supply}</h3>
       <div style="margin-top:4px"><span class="tag ${IN_ST[d.status]}"><span class="dot"></span>${d.status}</span>
-      <span class="sub" style="font-size:12px;margin-left:6px">${d.wh} · 供货单 ${d.supply}</span></div></div>
+      <span class="sub" style="font-size:12px;margin-left:6px">${d.wh} · ${d.create}</span></div></div>
       <span class="x" onclick="closeDrawer()">×</span></div>
     <div class="drawer-bd">
       <h4 style="font-size:14px;margin:2px 0 10px;color:var(--g)">① 单据信息</h4>
       <dl class="dl">
-        <dt>入库单号</dt><dd class="mono">${d.no}</dd>
-        <dt>寄售供货单号</dt><dd class="mono">${d.supply}</dd>
+        <dt>供货单号</dt><dd class="mono">${d.supply}</dd>
         <dt>入库仓库</dt><dd>${d.wh}</dd>
         <dt>创建时间</dt><dd>${d.create}</dd>
         <dt>当前状态</dt><dd><span class="tag ${IN_ST[d.status]}"><span class="dot"></span>${d.status}</span></dd>
       </dl>
       <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 商品明细</h4>
       <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品</th><th style="text-align:right">应收</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th></tr></thead><tbody>${body}</tbody></table></div>
-      ${hasShort?`<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span><b>存在短收</b>：仓库按实收数量入账，差额<b>不会自动补建</b>。如对实收数量有疑问，请凭入库单号 ${d.no} 联系运营核对。</div>`
+      ${hasShort?`<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span><b>存在短收</b>：仓库按实收数量入账，差额<b>不会自动补建</b>。如对实收数量有疑问，请凭供货单号 ${d.supply} 联系运营核对。</div>`
         :done?`<div class="ib ib-g" style="margin-top:8px"><span class="i">✅</span>已全部入库并计入可售库存。</div>`
         :`<div class="ib ib-b" style="margin-top:8px"><span class="i">ℹ️</span>入库完成且库存同步成功后，这批货才会计入可售库存。</div>`}
     </div>
@@ -397,8 +396,7 @@
       const recv=d.lines.reduce((a,l)=>a+(l.recv||0),0);
       const short=d.status=='入库完成'&&recv<plan;
       return `<tr>
-        <td class="mono">${d.no}</td>
-        <td class="mono" style="font-size:12px;color:var(--ts)">${d.supply}</td>
+        <td class="mono">${d.supply}</td>
         <td>${d.wh}</td>
         <td>${d.lines.map(l=>l.name).join('、')}<div style="font-size:11.5px;color:var(--ts)">共 ${d.lines.length} 个商品</div></td>
         <td style="text-align:right">${plan}</td>
@@ -414,8 +412,8 @@
     <div class="card-bd">
       <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>这里跟踪你<b>已送到仓、还没入库完成</b>的货（<b>仅寄售商品</b>——自售不入仓、无在途）。入库单由仓库按你的寄售供货单生成，商家端只读；<b>入库完成且同步成功后才计入可售库存</b>。</div>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>入库单号</th><th>供货单号</th><th>仓库</th><th>商品</th><th style="text-align:right">应收</th><th style="text-align:right">实收</th><th>差异</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
-        <tbody>${body||`<tr><td colspan="10"><div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无在途入库</div><div class="e-s">送货到仓后，入库进度会在这里显示</div></div></td></tr>`}</tbody>
+        <thead><tr><th>供货单号</th><th>仓库</th><th>商品</th><th style="text-align:right">应收</th><th style="text-align:right">实收</th><th>差异</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody>${body||`<tr><td colspan="9"><div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无在途入库</div><div class="e-s">送货到仓后，入库进度会在这里显示</div></div></td></tr>`}</tbody>
       </table></div>
     </div></div>`;
   };
