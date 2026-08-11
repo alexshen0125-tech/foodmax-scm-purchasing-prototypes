@@ -30,6 +30,10 @@ DB.replOrders = DB.replOrders || [
    receiptTime:'2026-06-29 03:24', sku:'SKU8804', name:'空心菜', spec:'1kg/件', unit:'件',
    should:30, received:22, qty:8, price:3.20, rate:30,
    status:'pending', billNo:'', invNo:''},
+  {no:'RPL-20260630-005', deliveryNo:'SH20260630007', subOrderNo:'#SG20260630012', warehouse:'大巴窑DC',
+   receiptTime:'2026-06-30 04:11', sku:'SKU8802', name:'白菜', spec:'1kg/件', unit:'件',
+   should:40, received:37, qty:3, price:2.10, rate:30,
+   status:'deducted', billNo:'ST202606-M0815', invNo:''},
   {no:'RPL-20260522-002', deliveryNo:'SH20260522001', subOrderNo:'#SG20260522006', warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42', sku:'SKU8803', name:'菠菜', spec:'1kg/件', unit:'件',
    should:12, received:10, qty:2, price:3.80, rate:30,
@@ -58,8 +62,8 @@ window.replOf = rOf; window.replAmt = rAmt; window.replUnit = rUnit; window.repl
 // 送货单 → 代补货单（送货单详情联动用）
 window.replByDelivery = function(id){return DB.replOrders.filter(r=>r.deliveryNo==id);};
 
-const R_ST = {pending:['待结算','t-y'], deducted:['已抵扣','t-b'], invoiced:['已开票','t-g']};
-const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已抵扣'],['invoiced','已开票']];
+const R_ST = {pending:['待结算','t-y'], deducted:['已抵扣','t-b'], invoiced:['已开票','t-g'], voided:['已作废','t-gr'], reversed:['已冲正','t-gr']};
+const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已抵扣'],['invoiced','已开票'],['voided','已作废/冲正']];
 function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
 /* 结算联动：待结算的代补货单按含税金额汇总为当期结算单扣减项 */
@@ -77,7 +81,7 @@ replSettleSync();
 PAGES['m-replenish']=()=>{
   const t=DB.replTab;
   const all=DB.replOrders;
-  const rows=all.filter(r=>t=='all'||r.status==t);
+  const rows=all.filter(r=>t=='all'||(t=='voided'?(r.status=='voided'||r.status=='reversed'):r.status==t));
   const pend=all.filter(r=>r.status=='pending');
   const rate=replRateOf();
   const sumAmt=+(pend.reduce((a,r)=>a+rAmt(r),0)).toFixed(2);
@@ -85,15 +89,16 @@ PAGES['m-replenish']=()=>{
   const sumLoss=+(pend.reduce((a,r)=>a+rLoss(r),0)).toFixed(2);
 
   const tabs=`<div class="tabs">${R_TABS.map(x=>{
-    const n=x[0]=='all'?all.length:all.filter(r=>r.status==x[0]).length;
+    const n=x[0]=='all'?all.length:all.filter(r=>x[0]=='voided'?(r.status=='voided'||r.status=='reversed'):r.status==x[0]).length;
     return `<div class="tab ${t==x[0]?'active':''}" onclick="DB.replTab='${x[0]}';render()">${x[1]}${n?`<span class="tb">${n}</span>`:''}</div>`;
   }).join('')}</div>`;
 
+  const sumGoods=+(sumAmt-sumLoss).toFixed(2);
   const stats=`<div class="sg" style="grid-template-columns:repeat(4,1fr)">
+    <div class="sc ${sumLoss>0?'alert':''}"><div class="sc-l">本期你实际多付</div><div class="sc-v">${money(sumLoss)}</div><div class="sc-s">= 缺口数量 × 售价 × ${rate}%，这才是你的损失</div></div>
+    <div class="sc ${sumAmt>0?'warn':''}"><div class="sc-l">本期结算抵扣（含税）</div><div class="sc-v">${money(sumAmt)}</div><div class="sc-s">含缺口货款 ${money(sumGoods)}，该货款<b>仍计入你的收入</b></div></div>
     <div class="sc"><div class="sc-l">本期待结算代补货单</div><div class="sc-v">${pend.length}</div><div class="sc-s">共 ${sumQty} ${pend[0]?pend[0].unit:'件'}缺口由自营现货代补</div></div>
-    <div class="sc ${sumAmt>0?'warn':''}"><div class="sc-l">本期代补货款（含税）</div><div class="sc-v">${money(sumAmt)}</div><div class="sc-s">结算时自动抵扣，无需另行付款</div></div>
     <div class="sc"><div class="sc-l">当前加价率</div><div class="sc-v">${rate}%</div><div class="sc-s">全平台统一 · 生成单据时快照</div></div>
-    <div class="sc ${sumLoss>0?'alert':''}"><div class="sc-l">本期加价成本</div><div class="sc-v">${money(sumLoss)}</div><div class="sc-s">= 缺口数量 × 售价 × ${rate}%</div></div>
   </div>`;
 
   const tip=flowTip(`你送货到仓后，仓库<b>收货清点</b>发现少货、且平台<b>自营现货可全额覆盖缺口</b>时，由自营现货替你补齐——<b>客户订单完全不受影响</b>（商品、金额、发票均不变，你的 GMV 与佣金仍按<b>应送数量</b>足额计）。这部分缺口视同<b>你向平台采购</b>：单价 = 你的<b>含税售价 ×(1+加价率 ${rate}%)</b>，货款在<b>当期结算单中直接抵扣</b>，平台就该笔向你开具<b>代补货销售发票</b>。对实收数量有异议请<b>线下联系运营核对</b>。`);
@@ -103,7 +108,7 @@ PAGES['m-replenish']=()=>{
   return tip+stats+tabs+`
   <div class="card"><div class="card-hd"><h3>代补货单</h3><span class="sub">共 ${rows.length} 单 · 单价 = 含税售价 ×(1+加价率)</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>代补货单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·代补</th><th style="text-align:right">含税售价</th><th style="text-align:right">加价率</th><th style="text-align:right">代补单价</th><th style="text-align:right">金额（含税）</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>代补货单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·代补</th><th style="text-align:right">含税售价</th><th style="text-align:right">加价率</th><th style="text-align:right">代补单价</th><th style="text-align:right">结算抵扣（含税）</th><th style="text-align:right">其中你多付</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>`<tr>
       <td class="mono">${r.no}</td>
       <td class="mono" style="font-size:12px">${r.deliveryNo}<div style="color:var(--ts);margin-top:2px">${r.subOrderNo}</div></td>
@@ -113,12 +118,13 @@ PAGES['m-replenish']=()=>{
       <td style="text-align:right">${money(r.price)}</td>
       <td style="text-align:right;color:var(--gold);font-weight:600">+${r.rate}%</td>
       <td style="text-align:right">${money(rUnit(r))}</td>
-      <td style="text-align:right;color:var(--r);font-weight:600">-${money(rAmt(r))}</td>
+      <td style="text-align:right;color:var(--ts)">-${money(rAmt(r))}</td>
+      <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">${money(rLoss(r))}</td>
       <td>${rTag(r.status)}${r.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.billNo}</div>`:''}</td>
       <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="repl_detail('${r.no}')">详情</button></td>
     </tr>`).join('')}
     </tbody></table></div></div>
-  <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">口径：客户订单按<b>应送数量</b>足额计入 GMV 与平台佣金，缺口部分不冲减；代补货款按<b>含税金额</b>在当期结算单中扣减。自营现货<b>不足以全额覆盖</b>缺口时不生成代补货单，按实收数量出库并标缺货。</div>
+  <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">口径：<b>「其中你多付」才是你的实际损失</b>——缺口货款照常计入你的收入，只是多付了加价部分。客户订单按<b>应送数量</b>足额计入 GMV 与平台佣金，缺口部分不冲减；代补货款按<b>含税金额</b>在当期结算单中扣减。自营现货<b>不足以全额覆盖</b>缺口时不生成代补货单，按实收数量出库并标缺货。</div>
   </div>`;
 };
 
@@ -177,7 +183,7 @@ window.repl_detail=function(no){
       ${kv('抵扣所属结算单',r.billNo?`<span class="mono">${r.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:'待本期结算单生成时抵扣')}
       ${kv('代补货发票',inv?`<span class="mono">${inv.no}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.invTab='repl';nav('m-invoice')">查看</button>`:'结算完成后由平台自动开具')}
     </div>
-    <div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>对<b>实收数量</b>有异议，请<b>线下联系平台运营</b>核对（必要时可调取仓库收货环节监控），本期不设线上申诉入口。</div>
+    <div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>对<b>实收数量</b>有异议，请在<b>收货清点后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567），并提供<b>装车照片或司机交接单</b>；平台将调取仓库收货监控核对，核实有误的由运营发起<b>冲正</b>，在下期结算回补并开红冲发票。逾期以清点数量为准。本期不设线上申诉入口。</div>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${inv?`<button class="btn btn-p" onclick="repl_invDownload('${inv.no}')">下载发票 PDF</button>`:''}</div>`);
 };

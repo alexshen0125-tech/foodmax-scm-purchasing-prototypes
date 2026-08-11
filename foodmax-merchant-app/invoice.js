@@ -2,6 +2,7 @@
    与 PC 端(scm_商家管理系统_全流程_交互原型.html)同一业务模型：
    ① 客户开票(按订单)：客户销售发票由【平台代商家开具】(GST 9%)，商家【无需开具/上传】，仅展示【已开具】发票，供预览/下载；客户信息脱敏；不做多客户合并。
    ② 服务费发票(平台开具)：平台在与商家结算完成后【自动开具】佣金税票(GST 9%)并推送，商家仅【查看/下载】，无需申请。
+   ③ 代补货发票(平台开具)：平台就【自营现货代补商家到仓少送的缺口】向商家开销售发票(GST 9%)，结算完成后自动开具推送，商家仅【查看/下载】。
    交互形态可与 PC 不同(App 分段+卡片+推页预览)，但业务规则/字段/状态/模式与 PC 一致。 */
 (function(){
 const {pushPage,toast,svg,skel}=window.FM;
@@ -67,6 +68,12 @@ const SVC=[
   {no:'SVC-INV-2026-701',billNo:'ST202604-M0815',range:'2026-04-01 ~ 04-30',fee:'991.25',gst:'89.21',total:'1080.46',date:'2026-05-08'},
 ];
 
+// ③ 代补货发票·平台开具(与 PC DB.replInvoices 对齐；平台就自营代补的缺口向商家开销售发票)
+const RPL=[
+  {no:'RPL-INV-2026-302',repl:'RPL-20260522-002',billNo:'ST202605-M0815',item:'菠菜 × 2 件',net:'9.06',gst:'0.82',total:'9.88',date:'2026-06-06'},
+  {no:'RPL-INV-2026-301',repl:'RPL-20260518-001',billNo:'ST202605-M0815',item:'鲜鸡蛋 × 12 盘',net:'120.22',gst:'10.82',total:'131.04',date:'2026-06-06'},
+];
+
 // 客户信息脱敏：商家端不展示完整下单客户名(平台代开，隐私保护)，保留首字符 + **（与 PC maskClient 一致）
 function maskClient(s){s=String(s||'');return s.length<=1?s:s[0]+'**';}
 function fmt(v){return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
@@ -94,6 +101,19 @@ function svcCard(s,i){
       <div class="col"><div class="l">价税合计</div><div class="v amt" style="font-size:16px">${money(s.total)}</div></div>
     </div>
     <div class="ft"><span>开票日期 ${s.date}</span><span class="acts"><button class="prev" data-prev>预览</button><button class="dl" data-dl>下载</button></span></div>
+  </div>`;
+}
+
+function rplCard(r,i){
+  return `<div class="iv-card" data-i="${i}">
+    <div class="hd"><span class="ord">${r.no}</span><span class="bd">已开票</span></div>
+    <div class="cli">代补货单 <b>${r.repl}</b> · 抵扣结算单 ${r.billNo}</div>
+    <div class="g">
+      <div class="col"><div class="l">商品</div><div class="v">${r.item}</div></div>
+      <div class="col"><div class="l">GST 9%</div><div class="v">${money(r.gst)}</div></div>
+      <div class="col"><div class="l">价税合计</div><div class="v amt" style="font-size:16px">${money(r.total)}</div></div>
+    </div>
+    <div class="ft"><span>开票日期 ${r.date}</span><span class="acts"><button class="prev" data-prev>预览</button><button class="dl" data-dl>下载</button></span></div>
   </div>`;
 }
 
@@ -137,11 +157,29 @@ function previewSvc(s){
   </div>`,s.no);
 }
 
+function previewRpl(r){
+  previewPage('代补货发票',`<div class="doc">
+    <div class="th"><div class="co">Food Max Platform Pte Ltd<small>自营代补货销售发票</small></div><div class="ti">TAX INVOICE<small>代补货发票</small></div></div>
+    <div class="kv"><span class="k">发票号</span><span class="v">${r.no}</span></div>
+    <div class="kv"><span class="k">开票日期</span><span class="v">${r.date}</span></div>
+    <div class="kv"><span class="k">关联代补货单</span><span class="v">${r.repl}</span></div>
+    <div class="kv"><span class="k">抵扣结算单</span><span class="v">${r.billNo}</span></div>
+    <div class="kv"><span class="k">商品</span><span class="v">${r.item}</span></div>
+    <div class="kv"><span class="k">开票方 / 收票方</span><span class="v">平台 / 你（商家）</span></div>
+    <div class="tot">
+      <div class="r"><span>货款（不含税 / Subtotal）</span><span>${money(r.net)}</span></div>
+      <div class="r"><span>GST 9%</span><span>${money(r.gst)}</span></div>
+      <div class="r big"><span>价税合计 Total</span><span>${money(r.total)}</span></div>
+    </div>
+    <div class="note">平台就自营现货替你补齐的缺口数量向你开具销售发票；货款已在结算单 ${r.billNo} 中抵扣，无需另行付款。</div>
+  </div>`,r.no);
+}
+
 function bindCards(listEl,kind){
   listEl.querySelectorAll('.iv-card').forEach(el=>{
-    const i=+el.dataset.i, item=kind==='cust'?CUST[i]:SVC[i];
+    const i=+el.dataset.i, item=kind==='cust'?CUST[i]:(kind==='svc'?SVC[i]:RPL[i]);
     const pv=el.querySelector('[data-prev]'), dl=el.querySelector('[data-dl]');
-    if(pv)pv.onclick=()=>kind==='cust'?previewCust(item):previewSvc(item);
+    if(pv)pv.onclick=()=>kind==='cust'?previewCust(item):(kind==='svc'?previewSvc(item):previewRpl(item));
     if(dl)dl.onclick=()=>toast('发票 '+item.no+' 已下载 (PDF)');
   });
 }
@@ -153,9 +191,12 @@ function render(page){
   if(st.seg==='cust'){
     head=`<div class="iv-tip cust">客户销售发票由<b>平台代你开具</b>（按订单，GST 9%），你<b>无需开具或上传</b>；此处仅展示<b>已开具</b>的发票，供预览与下载。</div>
       <div class="iv-stat"><span>已开具 <b>${CUST.length}</b> 张 · 每张对应一个订单/客户</span></div>`;
-  }else{
+  }else if(st.seg==='svc'){
     head=`<div class="iv-tip fm">服务费发票由平台在与你<b>结算完成后自动开具</b>并推送（就平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${SVC.length}</b> 张</span></div>`;
+  }else{
+    head=`<div class="iv-tip fm">代补货发票由平台在与你<b>结算完成后自动开具</b>并推送——平台就<b>自营现货替你补齐的缺口数量</b>向你开销售发票（GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
+      <div class="iv-stat"><span>平台开具 · 共 <b>${RPL.length}</b> 张</span></div>`;
   }
   dyn.innerHTML=head+`<div class="iv-list" id="ivlist">${skel(3)}</div>`;
   const listEl=dyn.querySelector('#ivlist');
@@ -164,16 +205,19 @@ function render(page){
     if(st.seg==='cust'){
       listEl.innerHTML=CUST.length?CUST.map(custCard).join(''):empty('暂无已开具发票','平台按订单代你开具客户销售发票后，将显示在此供预览与下载');
       bindCards(listEl,'cust');
-    }else{
+    }else if(st.seg==='svc'){
       listEl.innerHTML=SVC.length?SVC.map(svcCard).join(''):empty('暂无服务费发票','平台与你结算完成后会开具服务费发票并显示在此');
       bindCards(listEl,'svc');
+    }else{
+      listEl.innerHTML=RPL.length?RPL.map(rplCard).join(''):empty('暂无代补货发票','产生自营代补货且结算完成后，平台会开具代补货销售发票并显示在此');
+      bindCards(listEl,'rpl');
     }
   },420);
 }
 
 function open(){
   pushPage({title:'开票管理',body:`
-    <div class="iv-seg" id="ivseg"><span class="s on" data-s="cust">客户开票</span><span class="s" data-s="svc">服务费发票</span></div>
+    <div class="iv-seg" id="ivseg"><span class="s on" data-s="cust">客户开票</span><span class="s" data-s="svc">服务费</span><span class="s" data-s="rpl">代补货</span></div>
     <div id="ivdyn"></div>`,
     mount:(page)=>{
       page._st={seg:'cust'};

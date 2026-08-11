@@ -286,6 +286,7 @@ function openSignDetail(d){
       kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认`:'未签到')+
       kv('交接时间',d.status==='交接完成'?`${d.deliver} 已交接入仓`:'未交接')+
       kv('收货清点时间',d.status==='交接完成'?`${d.receiptTime||d.deliver+' 已清点'}（出库前·仓内清点）`:'未清点')+
+      kv('收货结果',d.status==='交接完成'?(dvShort(d)?`<b style="color:var(--red)">少货 ${dvShortQty(d)} 件</b>`:'<b style="color:var(--emerald)">足额收货</b>'):'待清点')+
       kv('自营补货',d.status==='交接完成'?`<b style="color:${dvReplQty(d)>0?'var(--amber)':'var(--sub)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?'（缺口由平台自营现货代补）':'（无需代补）'}`:'0 件')
     )}
     ${dvShort(d)?(()=>{const rs=(window.FM_REPL_BY_DELIVERY?window.FM_REPL_BY_DELIVERY(d.id):[]);

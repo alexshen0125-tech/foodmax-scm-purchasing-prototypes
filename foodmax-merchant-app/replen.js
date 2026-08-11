@@ -74,6 +74,9 @@ const LIST=[
   {no:'RPL-20260629-004',deliveryNo:'SH20260629005',subOrderNo:'#SG20260629004',warehouse:'兀兰DC',
    receiptTime:'2026-06-29 03:24',sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',
    should:30,received:22,qty:8,price:3.20,rate:30,status:'pending',billNo:'',invNo:''},
+  {no:'RPL-20260630-005',deliveryNo:'SH20260630007',subOrderNo:'#SG20260630012',warehouse:'大巴窑DC',
+   receiptTime:'2026-06-30 04:11',sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',
+   should:40,received:37,qty:3,price:2.10,rate:30,status:'deducted',billNo:'ST202606-M0815',invNo:''},
   {no:'RPL-20260522-002',deliveryNo:'SH20260522001',subOrderNo:'#SG20260522006',warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42',sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',
    should:12,received:10,qty:2,price:3.80,rate:30,status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-302'},
@@ -89,7 +92,7 @@ const amt  = r=>+(unit(r)*r.qty).toFixed(2);
 const net  = r=>+(amt(r)/(1+GST/100)).toFixed(2);
 const gst  = r=>+(amt(r)-net(r)).toFixed(2);
 const loss = r=>+(r.qty*r.price*r.rate/100).toFixed(2);
-const ST={pending:['待结算','rp-c-amber'],deducted:['已抵扣','rp-c-blue'],invoiced:['已开票','rp-c-green']};
+const ST={pending:['待结算','rp-c-amber'],deducted:['已抵扣','rp-c-blue'],invoiced:['已开票','rp-c-green'],voided:['已作废','rp-c-gray'],reversed:['已冲正','rp-c-gray']};
 const TABS=[['all','全部'],['pending','待结算'],['deducted','已抵扣'],['invoiced','已开票']];
 const stChip=s=>{const[t,c]=ST[s]||['—','rp-c-gray'];return `<span class="rp-chip ${c}">${t}</span>`;};
 // 供 deliver.js 送货单详情联动
@@ -110,10 +113,10 @@ function openReplen(){
       function drawSum(){
         const pend=LIST.filter(r=>r.status==='pending');
         sum.innerHTML=`
-          <div class="c"><div class="v">${pend.length}</div><div class="l">本期待结算单数</div></div>
-          <div class="c"><div class="v neg">${money(pend.reduce((a,r)=>a+amt(r),0)).slice(2)}</div><div class="l">代补货款(含税)</div></div>
-          <div class="c"><div class="v">${CFG.rate}%</div><div class="l">加价率·全平台统一</div></div>
-          <div class="c"><div class="v neg">${money(pend.reduce((a,r)=>a+loss(r),0)).slice(2)}</div><div class="l">加价成本</div></div>`;
+          <div class="c"><div class="v neg">${money(pend.reduce((a,r)=>a+loss(r),0)).slice(2)}</div><div class="l">你实际多付</div></div>
+          <div class="c"><div class="v">${money(pend.reduce((a,r)=>a+amt(r),0)).slice(2)}</div><div class="l">结算抵扣(含税)</div></div>
+          <div class="c"><div class="v">${pend.length}</div><div class="l">待结算单数</div></div>
+          <div class="c"><div class="v">${CFG.rate}%</div><div class="l">加价率·全平台</div></div>`;
       }
       function drawTabs(){
         tabs.innerHTML=TABS.map(t=>{const n=t[0]==='all'?LIST.length:LIST.filter(r=>r.status===t[0]).length;
@@ -125,6 +128,7 @@ function openReplen(){
         if(!rs.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('swap')}</div><h4>${_tab==='all'?'暂无代补货单':'该状态下暂无单据'}</h4><p>${_tab==='all'?'足额送货到仓即不会产生代补货单':'切换上方状态查看其它单据'}</p></div>`;return;}
         list.innerHTML=rs.map((r,i)=>`<div class="rp-card" data-no="${r.no}">
           <div class="r1"><span class="no">${r.no}</span>${stChip(r.status)}<span class="rp-chip rp-c-red">少货 ${gap(r)} ${r.unit}</span></div>
+          <div class="sub" style="font-family:monospace">${r.deliveryNo} · ${r.subOrderNo}</div>
           <div class="sub">${r.warehouse} · 收货清点 ${r.receiptTime}</div>
           <div class="goods"><span class="nm">${r.name}</span><span class="sk">${r.sku} · ${r.spec}</span></div>
           <div class="qty">
@@ -133,7 +137,7 @@ function openReplen(){
             <div class="q"><div class="v neg">${gap(r)}</div><div class="l">缺口(${r.unit})</div></div>
             <div class="q"><div class="v">${money(unit(r)).slice(2)}</div><div class="l">代补单价</div></div>
           </div>
-          <div class="r2">${money(r.price)} ×(1+${r.rate}%) × ${r.qty}${r.unit}<span class="amt">-${money(amt(r))}</span></div>
+          <div class="r2">结算抵扣 ${money(amt(r))}<span class="amt">你多付 ${money(loss(r))}</span></div>
         </div>`).join('');
         list.querySelectorAll('.rp-card').forEach(c=>c.onclick=()=>openDetail(LIST.find(r=>r.no===c.dataset.no)));
       }
@@ -154,7 +158,7 @@ function openDetail(r){
 
     <div class="rp-card2">
       <div class="rp-ct">单据信息</div>
-      <div class="rp-row"><span class="k">关联送货单</span><span class="v">${r.deliveryNo}</span></div>
+      <div class="rp-row" id="rp-go-dl" style="cursor:pointer"><span class="k">关联送货单</span><span class="v">${r.deliveryNo} ›</span></div>
       <div class="rp-row"><span class="k">关联原订单（供应商子单）</span><span class="v">${r.subOrderNo}</span></div>
       <div class="rp-row"><span class="k">入库仓库</span><span class="v">${r.warehouse}</span></div>
       <div class="rp-row"><span class="k">收货清点时间</span><span class="v">${r.receiptTime}<br><span style="font-size:11px;font-weight:400;color:var(--sub)">出库前 · 仓内清点</span></span></div>
@@ -182,13 +186,19 @@ function openDetail(r){
 
     <div class="rp-card2">
       <div class="rp-ct">结算与发票</div>
-      <div class="rp-row"><span class="k">抵扣所属结算单</span><span class="v">${r.billNo||'待本期结算单生成时抵扣'}</span></div>
-      <div class="rp-row"><span class="k">代补货发票</span><span class="v">${r.invNo||'结算完成后由平台自动开具'}</span></div>
-      <div class="rp-note">平台就代补货单向你开具<b>代补货销售发票</b>（开票方＝平台、收票方＝商家，GST ${GST}%），结算完成后自动开具并推送，你只需查看/下载。<br>对<b>实收数量</b>有异议请<b>线下联系平台运营</b>核对（可调取仓库收货监控），本期不设线上申诉入口。</div>
+      <div class="rp-row" ${r.billNo?'id="rp-go-st" style="cursor:pointer"':''}><span class="k">抵扣所属结算单</span><span class="v">${r.billNo?r.billNo+' ›':'预计计入下一期结算单（生成时抵扣）'}</span></div>
+      <div class="rp-row" ${r.invNo?'id="rp-go-iv" style="cursor:pointer"':''}><span class="k">代补货发票</span><span class="v">${r.invNo?r.invNo+' ›':'结算完成后由平台自动开具'}</span></div>
+      <div class="rp-note">平台就代补货单向你开具<b>代补货销售发票</b>（开票方＝平台、收票方＝商家，GST ${GST}%），结算完成后自动开具并推送，你只需查看/下载。<br>对<b>实收数量</b>有异议，请在<b>收货清点后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567），并提供<b>装车照片或司机交接单</b>；平台调取仓库收货监控核对，核实有误的由运营发起<b>冲正</b>，下期结算回补并开红冲发票。逾期以清点数量为准。</div>
     </div>
     <div style="height:8px"></div>`,
     footer:`<button class="btn primary" style="width:100%" id="rp-close">关闭</button>`,
-    mount:(p)=>{const c=p.querySelector('#rp-close');if(c)c.onclick=popPage;}});
+    mount:(p)=>{
+      const c=p.querySelector('#rp-close');if(c)c.onclick=popPage;
+      const go=(id,mod,tip)=>{const e=p.querySelector(id);if(e)e.onclick=()=>{window.FM_MOD&&window.FM_MOD[mod]?window.FM_MOD[mod]():toast(tip);};};
+      go('#rp-go-dl','signin','送货管理加载中');
+      go('#rp-go-st','settle','结算单模块加载中');
+      go('#rp-go-iv','invoice','开票管理加载中');
+    }});
 }
 
 window.FM_MOD=window.FM_MOD||{};

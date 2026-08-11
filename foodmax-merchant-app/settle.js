@@ -85,8 +85,8 @@ const CUR={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',g
   items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95],['自营代补货扣款（含税）',2,-40.04]]};
 const HIST=[
   {period:'2026年5月',no:'ST202605-M0815',range:'2026-05-01 ~ 05-31',genDate:'2026-06-01',status:'paid',
-   gross:44180.00,reverse:210.00,feeSvc:1104.50,feeLogi:662.70,net:42202.80,payTime:'2026-06-03 09:12 已到账 DBS ****8821',
-   items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70]]},
+   gross:44180.00,reverse:210.00,feeSvc:1104.50,feeLogi:662.70,repl:140.92,replCnt:2,net:42061.88,payTime:'2026-06-03 09:12 已到账 DBS ****8821',
+   items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['自营代补货扣款（含税）',2,-140.92]]},
   {period:'2026年4月',no:'ST202604-M0815',range:'2026-04-01 ~ 04-30',genDate:'2026-05-01',status:'paid',
    gross:39650.00,reverse:0,feeSvc:991.25,feeLogi:594.75,net:38064.00,payTime:'2026-05-06 09:08 已到账 DBS ****8821',
    items:[['订单货款（含历史）',80,39650.00],['逆向扣减（售后判商家责）',0,0],['平台抽佣·服务佣金（按品类佣金率）',80,-991.25],['物流抽佣·物流佣金（按品类佣金率）',80,-594.75]]},
@@ -147,7 +147,7 @@ function openDetail(b){
     <div class="se-card">
       <div class="se-ct">结算单构成<span class="desc">应清算给供应商 = 汇总总额 − 逆向 − 抽佣</span></div>
       <div class="se-row"><span class="k">汇总总额（GMV）</span><span class="v">${money(b.gross)}</span></div>
-      <div class="se-row"><span class="k">逆向扣减（退款/少货）</span><span class="v neg">-${money(b.reverse)}</span></div>
+      <div class="se-row"><span class="k">逆向扣减（售后退款·判商家责）</span><span class="v neg">-${money(b.reverse)}</span></div>
       <div class="se-row"><span class="k">平台抽佣（服务佣金）${b.feeSvc>0?'':'· 免佣期'}</span><span class="v neg">-${money(b.feeSvc)}</span></div>
       <div class="se-row"><span class="k">物流抽佣（物流佣金）${b.feeLogi>0?'':'· 免佣期'}</span><span class="v neg">-${money(b.feeLogi)}</span></div>
       ${(b.repl||0)>0?`<div class="se-row"><span class="k">自营代补货扣款（含税 · ${b.replCnt} 单）</span><span class="v neg">-${money(b.repl)}<span class="eq">含税售价 ×(1+加价率)</span></span></div>`:''}
