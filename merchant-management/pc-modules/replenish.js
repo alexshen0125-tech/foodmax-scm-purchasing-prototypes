@@ -62,7 +62,7 @@ window.replOf = rOf; window.replAmt = rAmt; window.replUnit = rUnit; window.repl
 window.replByDelivery = function(id){return DB.replOrders.filter(r=>r.deliveryNo==id);};
 
 const R_ST = {pending:['待结算','t-y'], deducted:['已结算','t-b'], invoiced:['已开票','t-g'], voided:['已作废','t-gr'], reversed:['已冲正','t-gr']};
-const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已结算'],['invoiced','已开票'],['voided','已作废/冲正']];
+const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已结算'],['invoiced','已开票']];   // 已作废/已冲正不设独立 Tab（运营侧极少发生），单据仍在「全部」中按状态标签展示
 function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
 /* 结算联动：待结算的补货单按含税金额汇总为当期结算单扣减项 */
@@ -82,12 +82,12 @@ PAGES['m-replenish']=()=>{
   const all=DB.replOrders;
   const hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
   const rows=all
-    .filter(r=>t=='all'||(t=='voided'?(r.status=='voided'||r.status=='reversed'):r.status==t))
+    .filter(r=>t=='all'||r.status==t)
     .filter(r=>hit(r.no,DB.replFilter&&DB.replFilter.no)&&hit(r.deliveryNo,DB.replFilter&&DB.replFilter.dl)&&hit(r.subOrderNo,DB.replFilter&&DB.replFilter.od));
   const rate=replRateOf();
 
   const tabs=`<div class="tabs">${R_TABS.map(x=>{
-    const n=x[0]=='all'?all.length:all.filter(r=>x[0]=='voided'?(r.status=='voided'||r.status=='reversed'):r.status==x[0]).length;
+    const n=x[0]=='all'?all.length:all.filter(r=>r.status==x[0]).length;
     return `<div class="tab ${t==x[0]?'active':''}" onclick="DB.replTab='${x[0]}';render()">${x[1]}${n?`<span class="tb">${n}</span>`:''}</div>`;
   }).join('')}</div>`;
 

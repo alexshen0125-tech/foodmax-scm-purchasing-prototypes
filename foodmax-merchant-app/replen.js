@@ -89,7 +89,7 @@ const amt  = r=>+(unit(r)*r.qty).toFixed(2);
 const net  = r=>+(amt(r)/(1+GST/100)).toFixed(2);
 const gst  = r=>+(amt(r)-net(r)).toFixed(2);
 const ST={pending:['待结算','rp-c-amber'],deducted:['已结算','rp-c-blue'],invoiced:['已开票','rp-c-green'],voided:['已作废','rp-c-gray'],reversed:['已冲正','rp-c-gray']};
-const TABS=[['all','全部'],['pending','待结算'],['deducted','已结算'],['invoiced','已开票'],['voided','已作废/冲正']];
+const TABS=[['all','全部'],['pending','待结算'],['deducted','已结算'],['invoiced','已开票']];   // 已作废/已冲正不设独立 Tab，仍在「全部」中按状态标签展示
 const stChip=s=>{const[t,c]=ST[s]||['—','rp-c-gray'];return `<span class="rp-chip ${c}">${t}</span>`;};
 // 供 deliver.js 送货单详情联动
 window.FM_REPL_BY_DELIVERY=id=>LIST.filter(r=>r.deliveryNo===id);
@@ -107,15 +107,14 @@ function openReplen(){
     mount:(p)=>{
       const tabs=p.querySelector('#rp-tabs'),list=p.querySelector('#rp-list'),q=p.querySelector('#rp-q');
       function drawTabs(){
-        tabs.innerHTML=TABS.map(t=>{const n=t[0]==='all'?LIST.length:LIST.filter(r=>t[0]==='voided'?(r.status==='voided'||r.status==='reversed'):r.status===t[0]).length;
+        tabs.innerHTML=TABS.map(t=>{const n=t[0]==='all'?LIST.length:LIST.filter(r=>r.status===t[0]).length;
           return `<div class="rp-tab ${_tab===t[0]?'on':''}" data-t="${t[0]}">${t[1]}${n?` ${n}`:''}</div>`;}).join('');
         tabs.querySelectorAll('.rp-tab').forEach(t=>t.onclick=()=>{if(_tab===t.dataset.t)return;_tab=t.dataset.t;drawTabs();drawList();});
       }
       function drawList(){
         const k=_q.trim().toLowerCase();
         const hit=r=>!k||[r.no,r.deliveryNo,r.subOrderNo].some(v=>String(v||'').toLowerCase().includes(k));
-        const inTab=r=>_tab==='all'||(_tab==='voided'?(r.status==='voided'||r.status==='reversed'):r.status===_tab);
-        const rs=LIST.filter(inTab).filter(hit);
+        const rs=LIST.filter(r=>_tab==='all'||r.status===_tab).filter(hit);
         if(!rs.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('swap')}</div><h4>${_q?'没有符合搜索条件的补货单':(_tab==='all'?'暂无补货单':'该状态下暂无单据')}</h4><p>${_q?'换个单号试试，或点 ✕ 清空搜索':(_tab==='all'?'足额送货到仓即不会产生补货单':'切换上方状态查看其它单据')}</p></div>`;return;}
         list.innerHTML=rs.map((r,i)=>`<div class="rp-card" data-no="${r.no}">
           <div class="r1"><span class="no">${r.no}</span>${stChip(r.status)}<span class="rp-chip rp-c-red">少货 ${gap(r)} ${r.unit}</span></div>
