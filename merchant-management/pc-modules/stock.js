@@ -45,19 +45,19 @@
     if(DB.invItems)return;
     DB.invItems=[
       /* ===== 寄售：货品级、分仓、只读 ===== */
-      {item:'ITM-JS-8801',mode:'consign',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',
+      {item:'SPU-JS-8801',mode:'consign',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',
        skus:[{skuId:'SKU-JS-1101',spec:'1kg/袋',ratio:1},{skuId:'SKU-JS-1102',spec:'3kg/箱',ratio:3}],
        stocks:[{wh:'裕廊DC',wms:186,locked:24,transit:60},{wh:'兀兰DC',wms:52,locked:8,transit:0}]},
-      {item:'ITM-JS-8802',mode:'consign',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',
+      {item:'SPU-JS-8802',mode:'consign',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',
        skus:[{skuId:'SKU-JS-1201',spec:'2kg/袋',ratio:2}],
        stocks:[{wh:'裕廊DC',wms:74,locked:12,transit:0},{wh:'盛港DC',wms:31,locked:3,transit:40}]},
-      {item:'ITM-JS-8803',mode:'consign',name:'冷冻虾仁',cat:'海鲜水产',unit:'kg',
+      {item:'SPU-JS-8803',mode:'consign',name:'冷冻虾仁',cat:'海鲜水产',unit:'kg',
        skus:[{skuId:'SKU-JS-1301',spec:'500g/盒',ratio:0.5},{skuId:'SKU-JS-1302',spec:'5kg/箱',ratio:5}],
        stocks:[{wh:'裕廊DC',wms:0,locked:0,transit:120}]},
-      {item:'ITM-JS-8804',mode:'consign',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',
+      {item:'SPU-JS-8804',mode:'consign',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',
        skus:[{skuId:'SKU-JS-1401',spec:'1kg/袋',ratio:1},{skuId:'SKU-JS-1402',spec:'5kg/箱',ratio:5}],
        stocks:[{wh:'兀兰DC',wms:240,locked:35,transit:0},{wh:'盛港DC',wms:96,locked:0,transit:0}]},
-      {item:'ITM-JS-8805',mode:'consign',name:'泰国龙眼',cat:'新鲜蔬菜',unit:'箱',
+      {item:'SPU-JS-8805',mode:'consign',name:'泰国龙眼',cat:'新鲜蔬菜',unit:'箱',
        skus:[{skuId:'SKU-JS-1501',spec:'1箱',ratio:1}],
        stocks:[{wh:'裕廊DC',wms:18,locked:18,transit:0}]},
       /* ===== 自售：SKU 级、不分仓、可改 ===== */
@@ -71,20 +71,20 @@
              {skuId:'SKU-ZS-2302',spec:'12瓶/箱',stock:45,locked:0,stockMode:'finite'}]},
     ];
     DB.invFlow=[
-      {item:'ITM-JS-8801',wh:'裕廊DC',time:'2026-08-11 09:12',type:'out',   qty:12, after:186,doc:'CK-JS-20260811-0043'},
-      {item:'ITM-JS-8801',wh:'裕廊DC',time:'2026-08-10 16:40',type:'loss',  qty:4,  after:198,doc:'PD-20260810-0007'},
-      {item:'ITM-JS-8801',wh:'裕廊DC',time:'2026-08-10 11:05',type:'out',   qty:26, after:202,doc:'CK-JS-20260810-0031'},
-      {item:'ITM-JS-8801',wh:'裕廊DC',time:'2026-08-09 08:30',type:'in',    qty:150,after:228,doc:'R2026080900112'},
-      {item:'ITM-JS-8801',wh:'兀兰DC',time:'2026-08-10 14:22',type:'out',   qty:9,  after:52, doc:'CK-JS-20260810-0028'},
-      {item:'ITM-JS-8802',wh:'裕廊DC',time:'2026-08-11 10:02',type:'ret',   qty:6,  after:74, doc:'TH-20260811-0005'},
-      {item:'ITM-JS-8802',wh:'裕廊DC',time:'2026-08-10 09:18',type:'out',   qty:18, after:68, doc:'CK-JS-20260810-0022'},
-      {item:'ITM-JS-8802',wh:'盛港DC',time:'2026-08-08 15:47',type:'damage',qty:5,  after:31, doc:'BS-20260808-0002'},
-      {item:'ITM-JS-8803',wh:'裕廊DC',time:'2026-08-09 17:30',type:'out',   qty:34, after:0,  doc:'CK-JS-20260809-0019'},
-      {item:'ITM-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'R2026081100031'},
-      {item:'ITM-JS-8804',wh:'兀兰DC',time:'2026-08-09 12:10',type:'gain',  qty:3,  after:40, doc:'PD-20260809-0004'},
-      {item:'ITM-JS-8804',wh:'盛港DC',time:'2026-08-10 10:33',type:'out',   qty:22, after:96, doc:'CK-JS-20260810-0026'},
-      {item:'ITM-JS-8805',wh:'裕廊DC',time:'2026-08-11 08:41',type:'out',   qty:6,  after:18, doc:'CK-JS-20260811-0040'},
-      {item:'ITM-JS-8805',wh:'裕廊DC',time:'2026-08-07 09:00',type:'adj',   qty:-2, after:24, doc:'TZ-20260807-0001'},
+      {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-11 09:12',type:'out',   qty:12, after:186,doc:'CK-JS-20260811-0043'},
+      {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-10 16:40',type:'loss',  qty:4,  after:198,doc:'PD-20260810-0007'},
+      {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-10 11:05',type:'out',   qty:26, after:202,doc:'CK-JS-20260810-0031'},
+      {item:'SPU-JS-8801',wh:'裕廊DC',time:'2026-08-09 08:30',type:'in',    qty:150,after:228,doc:'R2026080900112'},
+      {item:'SPU-JS-8801',wh:'兀兰DC',time:'2026-08-10 14:22',type:'out',   qty:9,  after:52, doc:'CK-JS-20260810-0028'},
+      {item:'SPU-JS-8802',wh:'裕廊DC',time:'2026-08-11 10:02',type:'ret',   qty:6,  after:74, doc:'TH-20260811-0005'},
+      {item:'SPU-JS-8802',wh:'裕廊DC',time:'2026-08-10 09:18',type:'out',   qty:18, after:68, doc:'CK-JS-20260810-0022'},
+      {item:'SPU-JS-8802',wh:'盛港DC',time:'2026-08-08 15:47',type:'damage',qty:5,  after:31, doc:'BS-20260808-0002'},
+      {item:'SPU-JS-8803',wh:'裕廊DC',time:'2026-08-09 17:30',type:'out',   qty:34, after:0,  doc:'CK-JS-20260809-0019'},
+      {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'R2026081100031'},
+      {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-09 12:10',type:'gain',  qty:3,  after:40, doc:'PD-20260809-0004'},
+      {item:'SPU-JS-8804',wh:'盛港DC',time:'2026-08-10 10:33',type:'out',   qty:22, after:96, doc:'CK-JS-20260810-0026'},
+      {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-08-11 08:41',type:'out',   qty:6,  after:18, doc:'CK-JS-20260811-0040'},
+      {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-08-07 09:00',type:'adj',   qty:-2, after:24, doc:'TZ-20260807-0001'},
       /* 自售：无入仓/盘点，只有销售出库、客户退货、商家改库存 */
       {item:'SPU-ZS-6601',wh:SELF_WH,time:'2026-08-11 11:20',type:'out',  qty:14, after:120,doc:'CK-20260811-0091'},
       {item:'SPU-ZS-6601',wh:SELF_WH,time:'2026-08-11 08:00',type:'edit', qty:60, after:134,doc:'商家手动调整'},
@@ -94,16 +94,16 @@
     ];
     DB.invInbound=[
       {no:'R2026081200055',supply:'GH-JS-20260811-0021',wh:'裕廊DC',status:'待入库',create:'2026-08-11 18:20',
-       lines:[{item:'ITM-JS-8801',name:'冰鲜三文鱼',unit:'kg',plan:60,recv:null},
-              {item:'ITM-JS-8803',name:'冷冻虾仁',unit:'kg',plan:120,recv:null}]},
+       lines:[{item:'SPU-JS-8801',name:'冰鲜三文鱼',unit:'kg',plan:60,recv:null},
+              {item:'SPU-JS-8803',name:'冷冻虾仁',unit:'kg',plan:120,recv:null}]},
       {no:'R2026081100031',supply:'GH-JS-20260810-0018',wh:'盛港DC',status:'入库中',create:'2026-08-11 07:10',
-       lines:[{item:'ITM-JS-8802',name:'鸡胸肉',unit:'kg',plan:40,recv:40}]},
+       lines:[{item:'SPU-JS-8802',name:'鸡胸肉',unit:'kg',plan:40,recv:40}]},
       {no:'R2026081100030',supply:'GH-JS-20260810-0017',wh:'兀兰DC',status:'入库完成',create:'2026-08-11 06:40',
-       lines:[{item:'ITM-JS-8804',name:'小棠菜',unit:'kg',plan:220,recv:200}]},
+       lines:[{item:'SPU-JS-8804',name:'小棠菜',unit:'kg',plan:220,recv:200}]},
       {no:'R2026080900112',supply:'GH-JS-20260808-0009',wh:'裕廊DC',status:'入库完成',create:'2026-08-09 08:05',
-       lines:[{item:'ITM-JS-8801',name:'冰鲜三文鱼',unit:'kg',plan:150,recv:150}]},
+       lines:[{item:'SPU-JS-8801',name:'冰鲜三文鱼',unit:'kg',plan:150,recv:150}]},
       {no:'R2026080700088',supply:'GH-JS-20260806-0005',wh:'裕廊DC',status:'已取消',create:'2026-08-07 13:25',
-       lines:[{item:'ITM-JS-8805',name:'泰国龙眼',unit:'箱',plan:30,recv:null}]},
+       lines:[{item:'SPU-JS-8805',name:'泰国龙眼',unit:'箱',plan:30,recv:null}]},
     ];
   }
 
@@ -362,7 +362,7 @@
         <td style="text-align:right">${r.stock} <span style="font-size:11.5px;color:var(--tt)">件</span>${shareTag}</td>
         <td style="text-align:right;color:var(--ts)">${r.locked?r.locked+' 件':'—'}</td>
         <td style="text-align:right">${r.transit?`<span style="color:var(--b)">${r.transit} 件</span>`:'<span style="color:var(--tt)">—</span>'}</td>
-        <td>${self?`<span class="tag ${k.stockMode=='daily'?'t-g':'t-y'}" style="font-size:10.5px">${SMODE[k.stockMode]}</span>`:'<span class="tag t-gr" style="font-size:10.5px">货品库存</span>'}</td>
+        <td>${self?`<span class="tag ${k.stockMode=='daily'?'t-g':'t-y'}" style="font-size:10.5px">${SMODE[k.stockMode]}</span>`:'<span class="tag t-gr" style="font-size:10.5px">仓库实物</span>'}</td>
         <td>${r.sellable<=0?'<span class="tag t-r"><span class="dot"></span>缺货</span>':'<span class="tag t-g"><span class="dot"></span>正常</span>'}</td>
         <td>${self?`<button class="btn btn-o btn-sm" onclick="inv_edit('${it.item}','${k.skuId}')">改库存</button> `:''}<button class="btn btn-link" onclick="inv_detail('${it.item}')">明细</button> <button class="btn btn-link" onclick="inv_flow('${it.item}')">流水</button></td>
       </tr>`;}).join('');
