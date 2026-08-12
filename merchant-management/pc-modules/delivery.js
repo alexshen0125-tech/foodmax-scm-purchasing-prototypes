@@ -187,7 +187,7 @@
       </div>
     </div></div>`:''}
     ${(typeof whrOfDelivery=='function'&&whrOfDelivery(d.id).length)?`<div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>多货 / 错货 · 待退回</h3><span class="sub">仓库已登记台账并留存照片，请线下联系仓库取回；不计入结算</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">数量</th><th>存放库位</th><th>登记时间</th><th>凭证</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">数量</th><th>存放库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
       ${whrOfDelivery(d.id).map(r=>`<tr>
         <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.skuCode} · ${r.spec}</div></td>
         <td><span class="tag ${r.type=='送错'?'t-r':'t-y'}" style="font-size:10.5px"><span class="dot"></span>${r.type}</span>${r.note?`<div style="font-size:11px;color:var(--ts);margin-top:2px;white-space:normal;max-width:180px">${r.note}</div>`:''}</td>
@@ -196,7 +196,6 @@
         <td style="font-size:12px;color:var(--ts);white-space:nowrap">${r.registeredAt}</td>
         <td><button class="btn btn-link btn-sm" onclick="whr_photos('${r.deliveryNo}','${r.skuCode}')">📷 ${r.photos} 张</button></td>
         <td style="white-space:nowrap">${r.status=='已取回'?'<span class="tag t-g"><span class="dot"></span>已取回</span>':'<span class="tag t-b"><span class="dot"></span>待取回</span>'}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="whr_contact('${r.warehouse}')">联系仓库取货</button></td>
       </tr>`).join('')}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">多货/错货<b>不新增单据、不产生结算</b>，沿用本送货单标记；也可在「售后管理 › 退货单 › 仓库退回」统一查看。<button class="btn btn-link" style="padding-left:4px" onclick="DB.retSrcTab='wh';nav('m-after-return')">前往 →</button></div>
@@ -304,26 +303,12 @@
         <td style="font-size:12px;color:var(--ts);white-space:nowrap">${r.registeredAt}</td>
         <td><button class="btn btn-link btn-sm" onclick="whr_photos('${r.deliveryNo}','${r.skuCode}')">📷 ${r.photos} 张</button></td>
         <td style="white-space:nowrap">${whrStTag(r.status)}${r.pickedAt?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.pickedAt}</div>`:''}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="whr_contact('${r.warehouse}')">联系仓库取货</button> <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${r.deliveryNo}';nav('m-delivery')">送货单</button></td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${r.deliveryNo}';nav('m-delivery')">送货单</button></td>
       </tr>`).join('')}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">状态由<b>仓库</b>在交接时回写（待取回 → 已取回），商家端只读；取货时间<b>线下与仓库确认</b>，本期不做线上预约。</div>
     </div>`;
   };
-  window.whr_contact=function(wh){
-    const m=DC_META[wh]||{};
-    modal(`<div class="mc-hd"><h3>联系仓库取货 · ${wh}</h3><p>线下与仓库确认取货时间后现场交接</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-      <dl class="dl">
-        <dt>仓库</dt><dd>${wh}</dd>
-        <dt>详细地址</dt><dd>${m.addr||'—'}</dd>
-        <dt>白班收货人</dt><dd>${(m.day&&m.day[0])||'—'}</dd>
-        <dt>夜班收货人</dt><dd>${(m.night&&m.night[0])||'—'}</dd>
-        <dt>入门/卸货</dt><dd>${m.gate||'—'}</dd>
-      </dl>
-      <div class="ib ib-b" style="margin-top:10px"><span class="i">ℹ️</span>取货请携带<b>营业执照或授权函</b>，现场与仓库核对实物与留存照片后交接；交接完成由仓库在系统回写「已取回」。</div>
-    </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">知道了</button></div>`);
-  };
-
   /* ============================================================
      子页 2 · 交货进度
   ============================================================ */
