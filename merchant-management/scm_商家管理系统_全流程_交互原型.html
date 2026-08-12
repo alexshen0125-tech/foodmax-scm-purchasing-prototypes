@@ -879,7 +879,7 @@ const NAV={
     {sec:'合规'},
     {id:'m-after-group',ic:'↩️',t:'售后管理',p1:1,children:[
       {id:'m-aftersale',ic:'↩️',t:'售后订单',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
-      {id:'m-after-return',ic:'📦',t:'退货单'},
+      {id:'m-after-return',ic:'📦',t:'退货单',badge:()=>(DB.whReturns||[]).filter(r=>r.status=='待取回').length},
     ]},
     // 质检管理 m-quality / 违规整改 m-rectify / 闭店申请 m-exit 本期不做，已从导航移除；
     // PAGES 实现保留（quality.js 与主文件），恢复时把 NAV 条目加回即可
@@ -2765,14 +2765,21 @@ function afterMerchantOps(a,i){
 
 /* ---------- 商家端：退货单（退货退款·到仓提货，商家只读；确认由仓库操作，超72h未提平台处置） ---------- */
 PAGES['m-after-return']=()=>{
+  const rt=DB.retSrcTab||'cust';
+  const whrWait=(DB.whReturns||[]).filter(r=>r.status=='待取回').length;
+  const srcTabs=`<div class="tabs" style="margin-bottom:14px">
+    <div class="tab ${rt=='cust'?'active':''}" onclick="DB.retSrcTab='cust';render()">客户退货</div>
+    <div class="tab ${rt=='wh'?'active':''}" onclick="DB.retSrcTab='wh';render()">仓库退回${whrWait?`<span class="tb">${whrWait}</span>`:''}</div>
+  </div>`;
+  if(rt=='wh') return srcTabs+(typeof deliv_whReturnContent=='function'?deliv_whReturnContent():'');
   const rs=DB.afterSales.filter(a=>a.type=='退货退款'&&a.returnStatus);
   const stTag=s=>{const m={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g','逾期未提':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s=='逾期未提'?'逾期未提·平台处置':s}</span>`;};
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
     const dueMs=arriveDueMs(a.arriveAt,72);
     const deadline=a.returnStatus=='待提货'?`<b style="color:var(--r)">剩 ${cdSpan(dueMs)} 提货</b><div style="font-size:11px;color:var(--ts)">到货 ${a.arriveAt||''} · 逾期平台处置</div>`:(a.returnStatus=='已提货'?('已提货 '+(a.pickupAt||'')):(a.returnStatus=='逾期未提'?'已逾期·平台处置':(a.returnStatus=='待仓库入库'?'待仓库确认到货':'—')));
     return `<tr><td class="mono">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td>${a.returnStatus?stTag(a.returnStatus):'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td style="font-size:12px">${deadline}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('');
-  return `${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货，触发 <b>72 小时</b>倒计时）→ 已提货 / 逾期未提。<b>BR-R1</b> 商家端<b>只读</b>展示状态与剩余提货时长，<b>状态确认均由仓库操作</b>、商家无确认权限；<b>BR-R2</b> 超 72 小时未提货，平台可自行处置货物。`)}
-  <div class="card"><div class="card-hd"><h3>退货单</h3><span class="sub">退货退款到仓提货（商家只读 · 仓库确认 · 超 72h 未提平台处置）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th>金额</th><th>到仓时间</th><th>状态</th><th>提货时限</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
+  return srcTabs+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货，触发 <b>72 小时</b>倒计时）→ 已提货 / 逾期未提。<b>BR-R1</b> 商家端<b>只读</b>展示状态与剩余提货时长，<b>状态确认均由仓库操作</b>、商家无确认权限；<b>BR-R2</b> 超 72 小时未提货，平台可自行处置货物。`)}
+  <div class="card"><div class="card-hd"><h3>客户退货</h3><span class="sub">客户售后「退货退款」判责后到仓暂存提货（商家只读 · 仓库确认 · 超 72h 未提平台处置）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th>金额</th><th>到仓时间</th><th>状态</th><th>提货时限</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
 };
 
 /* 送货管理 PAGES['m-delivery'] 由 pc-modules/delivery.js 提供（送货签到 / 交货进度）；
