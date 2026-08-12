@@ -285,40 +285,93 @@
       <div style="font-size:12.5px;color:var(--ts);margin-top:12px">存放位置：<b>${r.warehouse} · ${r.slot}</b>（专属虚拟库位，不计入正常库存）</div>
     </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
   };
-  // 「售后管理 › 退货单 › 仓库退回」Tab 内容
+  // 「售后管理 › 退货单 › 仓库退回」Tab —— 列表按【送货单】合并成一行，明细在详情抽屉里逐 SKU 展开
+  function whrGroups(){
+    const map={};
+    (DB.whReturns||[]).forEach(r=>{(map[r.deliveryNo]=map[r.deliveryNo]||[]).push(r);});
+    return Object.keys(map)
+      .map(no=>{const list=map[no].slice().sort((a,b)=>(a.type=='送错'?0:1)-(b.type=='送错'?0:1));
+        const wait=list.filter(x=>x.status=='待取回').length;
+        return {no,list,warehouse:list[0].warehouse,slot:[...new Set(list.map(x=>x.slot))].join(' / '),
+          at:list.map(x=>x.registeredAt).sort()[0],
+          photos:list.reduce((a,x)=>a+x.photos,0),
+          qty:list.reduce((a,x)=>a+x.qty,0),
+          wait,status:wait==0?'已取回':(wait==list.length?'待取回':'部分取回')};})
+      .sort((a,b)=>b.at.localeCompare(a.at));
+  }
+  function whrSumText(list){
+    return [...new Set(list.map(x=>x.type))]
+      .map(t=>`${t} ${list.filter(x=>x.type==t).reduce((a,x)=>a+x.qty,0)}${list.find(x=>x.type==t).unit}`).join(' · ');
+  }
+  function whrGrpStTag(g){
+    if(g.status=='已取回')return '<span class="tag t-g"><span class="dot"></span>已取回</span>';
+    if(g.status=='部分取回')return `<span class="tag t-y"><span class="dot"></span>部分取回</span><div style="font-size:11px;color:var(--ts);margin-top:2px">待取回 ${g.wait}/${g.list.length} 项</div>`;
+    return `<span class="tag t-b"><span class="dot"></span>待取回</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.list.length} 项</div>`;
+  }
   window.deliv_whReturnContent=function(){
-    // 同一张送货单可能同时有「送错」与「送多」（甚至该单还少货由自营补齐）——按送货单聚拢展示，同单内送错在前
-    const order=[...new Set((DB.whReturns||[]).slice().sort((a,b)=>b.registeredAt.localeCompare(a.registeredAt)).map(r=>r.deliveryNo))];
-    const rows=(DB.whReturns||[]).slice().sort((a,b)=>
-      order.indexOf(a.deliveryNo)-order.indexOf(b.deliveryNo) || (a.type=='送错'?-1:1)-(b.type=='送错'?-1:1));
-    if(!rows.length) return `<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无待退回商品</div><div class="e-s">送货到仓被清点出<b>送多</b>或<b>送错</b>的商品时，仓库登记台账后在此生成取货通知。</div></div>`;
-    const wait=rows.filter(r=>r.status=='待取回').length;
+    const gs=whrGroups();
+    if(!gs.length) return `<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无待退回商品</div><div class="e-s">送货到仓被清点出<b>送多</b>或<b>送错</b>的商品时，仓库登记台账后在此生成取货通知。</div></div>`;
+    const waitDoc=gs.filter(g=>g.status!='已取回').length;
     return `<div class="ib ib-y" style="margin-bottom:12px"><span class="i">📦</span><div>
       <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送多</b>或<b>送错</b>的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。
-      <br><span style="color:var(--ts)">沿用原送货单标记，不另生成退货单号；实物凭证以仓库留存照片为准。</span>
+      <br><span style="color:var(--ts)">沿用原送货单标记，不另生成退货单号；一张送货单合并为一条，点<b>详情</b>看逐个商品的类型、数量与实物照片。</span>
     </div></div>
-    <div class="card"><div class="card-hd"><h3>仓库退回</h3><span class="sub">待取回 ${wait} · 共 ${rows.length} 条 · 按「送货单 × SKU」登记</span></div>
+    <div class="card"><div class="card-hd"><h3>仓库退回</h3><span class="sub">待取回 ${waitDoc} 单 · 共 ${gs.length} 单 / ${(DB.whReturns||[]).length} 项 · 按送货单合并</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>来源送货单</th><th>商品</th><th>类型</th><th style="text-align:right">数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>凭证</th><th>状态</th><th>操作</th></tr></thead><tbody>
-      ${rows.map((r,i)=>{const first=i==0||rows[i-1].deliveryNo!=r.deliveryNo;
-        const same=rows.filter(x=>x.deliveryNo==r.deliveryNo);
-        return `<tr${first&&i>0?' style="border-top:2px solid var(--bd)"':''}>
-        <td class="mono" style="white-space:nowrap">${first
-          ?`${r.deliveryNo}${same.length>1?`<div style="font-size:11px;color:var(--ts);margin-top:2px;font-family:inherit">本单共 ${same.length} 项：${[...new Set(same.map(x=>x.type))].map(t=>`${t} ${same.filter(x=>x.type==t).reduce((a,x)=>a+x.qty,0)}${same.find(x=>x.type==t).unit}`).join(' · ')}</div>`:''}`
-          :`<span style="color:var(--tt)">↳ 同单</span>`}</td>
-        <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.skuCode} · ${r.spec}</div></td>
-        <td>${whrTypeTag(r.type)}${r.note?`<div style="font-size:11px;color:var(--ts);margin-top:2px;white-space:normal;max-width:170px">${r.note}</div>`:''}</td>
-        <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
-        <td style="white-space:nowrap">${r.warehouse}<div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${r.slot}</div></td>
-        <td style="font-size:12px;color:var(--ts);white-space:nowrap">${r.registeredAt}</td>
-        <td><button class="btn btn-link btn-sm" onclick="whr_photos('${r.deliveryNo}','${r.skuCode}')">📷 ${r.photos} 张</button></td>
-        <td style="white-space:nowrap">${whrStTag(r.status)}${r.pickedAt?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.pickedAt}</div>`:''}</td>
-        <td style="white-space:nowrap">${first?`<button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${r.deliveryNo}';nav('m-delivery')">送货单</button>`:''}</td>
-      </tr>`;}).join('')}
+      <thead><tr><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">总数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>凭证</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      ${gs.map(g=>`<tr>
+        <td class="mono" style="white-space:nowrap">${g.no}</td>
+        <td style="white-space:nowrap">${g.list.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.list.length} 个 SKU</div></td>
+        <td style="white-space:nowrap">${g.list.some(x=>x.type=='送错')?`<span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>送错</span> `:''}${g.list.some(x=>x.type=='送多')?`<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>送多</span>`:''}<div style="font-size:11px;color:var(--ts);margin-top:2px">${whrSumText(g.list)}</div></td>
+        <td style="text-align:right"><b>${g.qty}</b></td>
+        <td style="white-space:nowrap">${g.warehouse}<div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${g.slot}</div></td>
+        <td style="font-size:12px;color:var(--ts);white-space:nowrap">${g.at}</td>
+        <td style="font-size:12px;color:var(--ts);white-space:nowrap">📷 ${g.photos} 张</td>
+        <td style="white-space:nowrap">${whrGrpStTag(g)}</td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="whr_detail('${g.no}')">详情</button> <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${g.no}';nav('m-delivery')">送货单</button></td>
+      </tr>`).join('')}
       </tbody></table></div>
-      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">状态由<b>仓库</b>在交接时回写（待取回 → 已取回），商家端只读；取货时间<b>线下与仓库确认</b>，本期不做线上预约。</div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">状态由<b>仓库</b>在交接时按项回写（待取回 → 已取回），同单部分取回时显示「部分取回」；商家端只读。取货时间<b>线下与仓库确认</b>，本期不做线上预约。</div>
     </div>`;
   };
+  // 仓库退回详情（右侧抽屉）：逐 SKU 区分展示
+  window.whr_detail=function(no){
+    const g=whrGroups().find(x=>x.no==no); if(!g)return;
+    const kv=(k,v)=>`<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;
+    const sec=t=>`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">${t}</h3></div>`;
+    drawer(`<div class="drawer-hd"><div><h3>${g.no} · 仓库退回</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${g.warehouse} · 共 ${g.list.length} 项 · ${whrSumText(g.list)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+    <div class="drawer-bd">
+      <div class="row" style="gap:8px;margin-bottom:14px">${whrGrpStTag(g)}</div>
+      <div class="ib ib-y" style="margin-bottom:16px"><span class="i">📦</span>本单被清点出 <b>${whrSumText(g.list)}</b>，仓库已登记台账、留存实物照片并放入专属虚拟库位暂存。这批货<b>不计入结算、不产生扣款也不付款</b>，请线下与仓库约时间取回。</div>
+
+      ${sec('单据信息')}
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">
+        ${kv('来源送货单',`<span class="mono">${g.no}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.no}';nav('m-delivery')">查看</button>`)}
+        ${kv('存放仓库',g.warehouse)}
+        ${kv('虚拟库位',`<span class="mono">${g.slot}</span>`)}
+        ${kv('首次登记时间',g.at)}
+        ${kv('退回商品',`${g.list.length} 个 SKU · 合计 ${g.qty}`)}
+        ${kv('退回单号','无（沿用原送货单标记，不另生成单号）')}
+      </div>
+
+      ${sec('退回商品明细')}
+      <div style="overflow-x:auto;margin-bottom:14px"><table>
+        <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">数量</th><th>库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
+        ${g.list.map(r=>`<tr>
+          <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.skuCode} · ${r.spec}</div>${r.note?`<div style="font-size:11px;color:var(--ts);margin-top:3px;white-space:normal;max-width:220px">${r.note}</div>`:''}</td>
+          <td><span class="tag ${r.type=='送错'?'t-r':'t-y'}" style="font-size:10.5px"><span class="dot"></span>${r.type}</span></td>
+          <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
+          <td class="mono" style="font-size:12px">${r.slot}</td>
+          <td style="font-size:12px;color:var(--ts);white-space:nowrap">${r.registeredAt}</td>
+          <td><button class="btn btn-link btn-sm" onclick="whr_photos('${r.deliveryNo}','${r.skuCode}')">📷 ${r.photos} 张</button></td>
+          <td style="white-space:nowrap">${r.status=='已取回'?`<span class="tag t-g"><span class="dot"></span>已取回</span>${r.pickedAt?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.pickedAt}</div>`:''}`:'<span class="tag t-b"><span class="dot"></span>待取回</span>'}</td>
+        </tr>`).join('')}
+        </tbody></table></div>
+      <div class="ib ib-b"><span class="i">ℹ️</span>状态由<b>仓库</b>在交接时<b>按项</b>回写，同单可分批取回；商家端只读，无编辑与线上预约入口。</div>
+    </div>
+    <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.no}';nav('m-delivery')">查看送货单</button></div>`);
+  };
+
   /* ============================================================
      子页 2 · 交货进度
   ============================================================ */
