@@ -318,7 +318,7 @@
     </div></div>
     <div class="card"><div class="card-hd"><h3>仓库退回</h3><span class="sub">待取回 ${waitDoc} 单 · 共 ${gs.length} 单 / ${(DB.whReturns||[]).length} 项 · 按送货单合并</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">总数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>凭证</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">总数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
       ${gs.map(g=>`<tr>
         <td class="mono" style="white-space:nowrap">${g.no}</td>
         <td style="white-space:nowrap">${g.list.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.list.length} 个 SKU</div></td>
@@ -326,7 +326,6 @@
         <td style="text-align:right"><b>${g.qty}</b></td>
         <td style="white-space:nowrap">${g.warehouse}<div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${g.slot}</div></td>
         <td style="font-size:12px;color:var(--ts);white-space:nowrap">${g.at}</td>
-        <td style="font-size:12px;color:var(--ts);white-space:nowrap">📷 ${g.photos} 张</td>
         <td style="white-space:nowrap">${whrGrpStTag(g)}</td>
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="whr_detail('${g.no}')">详情</button> <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${g.no}';nav('m-delivery')">送货单</button></td>
       </tr>`).join('')}
