@@ -205,6 +205,7 @@ function signinCard(d){
     <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
     ${d.signed&&!done?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
     <div class="dl-kbox"><div class="k"><div class="l">应送货(件)</div><div class="v">${dvSku(d).reduce((s,r)=>s+r.qty,0)}</div></div><div class="k"><div class="l">${done?'实收(件)':'已入库(件)'}</div><div class="v" ${dvShort(d)?'style="color:var(--red)"':''}>${dvSku(d).reduce((s,r)=>s+r.inQty,0)}</div></div><div class="k"><div class="l">自营补货(件)</div><div class="v" ${dvReplQty(d)>0?'style="color:var(--amber)"':''}>${dvReplQty(d)}</div></div></div>
+    ${whrOf(d.id).length?`<div style="display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap">${whrOf(d.id).some(r=>r.type==='送错')?stChip('有错货','var(--red-soft)','var(--red)'):''}${whrOf(d.id).some(r=>r.type==='送多')?stChip('有多货','var(--amber-soft)','#B45309'):''}</div>`:''}
     ${done?`<div style="display:flex;align-items:center;gap:8px;margin-top:11px">${dvShort(d)
       ?stChip('收货清点 · 少货 '+dvShortQty(d)+' 件','var(--red-soft)','var(--red)')+(dvReplQty(d)>0?stChip('自营补货 '+dvReplQty(d)+' 件','var(--amber-soft)','#B45309'):'')
       :stChip('收货清点 · 足额收货','var(--mint-soft)','var(--emerald-2)')}</div>`:''}
@@ -303,6 +304,14 @@ function openSignDetail(d){
       kv('联系电话',meta.d?(String(meta.d).split(' ')[1]||''):'')
     ):''}
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">${d.status==='交接完成'?'实收(件)':'已入库(件)'}</div><div class="v" ${totIn<totQty?'style="color:var(--red)"':''}>${totIn}</div></div><div class="k"><div class="l">自营补货(件)</div><div class="v" ${dvReplQty(d)>0?'style="color:var(--amber)"':''}>${dvReplQty(d)}</div></div></div>
+    ${whrOf(d.id).length?sec('多货 / 错货 · 待退回')+box(
+      `<div style="padding:9px 0;font-size:12.5px;color:#B45309">本单被清点出 <b>${(function(l){return [...new Set(l.map(x=>x.type))].map(t=>`${t} ${l.filter(x=>x.type===t).reduce((a,x)=>a+x.qty,0)}${l.find(x=>x.type===t).unit}`).join(' · ');})(whrOf(d.id))}</b>，仓库已登记台账并留存照片，请线下取回；<b>不计入结算</b>。</div>`+
+      whrOf(d.id).map(r=>`<div style="padding:9px 0;border-top:1px solid rgba(0,0,0,.05)">
+        <div style="display:flex;align-items:center;gap:8px"><b>${r.name}</b>${stChip(r.type,r.type==='送错'?'var(--red-soft)':'var(--amber-soft)',r.type==='送错'?'var(--red)':'#B45309')}${r.status==='已取回'?stChip('已取回','var(--mint-soft)','var(--emerald-2)'):stChip('待取回','#E1EBFF','#2563EB')}</div>
+        <div style="font-size:11.5px;color:var(--sub);margin-top:3px">${r.skuCode} · ${r.spec} · ${r.qty}${r.unit} · 库位 ${r.slot}</div>
+      </div>`).join('')+
+      `<div id="dl-whr-go" style="padding:11px 0;color:var(--emerald);font-weight:700;font-size:13px;min-height:44px;display:flex;align-items:center;cursor:pointer;border-top:1px solid rgba(0,0,0,.05)">前往「退货单 › 仓库退回」查看明细与照片 ›</div>`
+    ):''}
     ${sec('商品明细 · 按 SKU 件数')}
     ${box(
       rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${r.inQty<r.qty?` · 差异 <b style="color:var(--red)">-${r.qty-r.inQty}</b>`:''} · 自营补货 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
@@ -311,6 +320,8 @@ function openSignDetail(d){
     <div style="height:8px"></div>`,
     footer:`${(d.signed&&d.status!=='交接完成')?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="width:100%" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}`,
     mount:(p)=>{
+      const wgo=p.querySelector('#dl-whr-go');
+      if(wgo)wgo.onclick=()=>{popPage();window.FM_MOD&&window.FM_MOD.return?window.FM_MOD.return():toast('退货单模块加载中');};
       const rlk=p.querySelector('#dl-repl-lk');
       if(rlk)rlk.onclick=()=>{window.FM_MOD&&window.FM_MOD.replen?window.FM_MOD.replen():toast('自营补货模块加载中');};
       const wms=p.querySelector('#dl-wms');
@@ -381,14 +392,146 @@ function returnCard(g){
     <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`剩 ${cdSpan(arriveDueMs(g.arrive,72))} 提货（逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?'已提货':g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
   </div>`;
 }
+/* ============ 仓库退回（多货 / 错货）—— 2026-08-12 纪要：不新增单据与单号，
+   沿用原送货单标记，仓库台账+多角度照片+专属虚拟库位，商家线下取回。
+   与 PC pc-modules/delivery.js 的 DB.whReturns 同源同口径。 ============ */
+window.FM.DB.whReturns = window.FM.DB.whReturns || [
+  {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
+   type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedAt:'',
+   note:'与本单小棠菜串货，实物为上海青'},
+  {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',
+   type:'送多',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'待取回',pickedAt:'',
+   note:'实收 23，超出应送 20 共 3 件'},
+  {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',
+   type:'送多',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedAt:'',
+   note:'实收 26，超出应送 22 共 4 件'},
+  {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',
+   type:'送多',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedAt:'2026-05-20 10:15',
+   note:''},
+];
+const WHR=()=>window.FM.DB.whReturns||[];
+function whrOf(id){return WHR().filter(r=>r.deliveryNo===id);}
+window.whrOfDelivery=whrOf;
+function whrGroups(){
+  const map={};WHR().forEach(r=>{(map[r.deliveryNo]=map[r.deliveryNo]||[]).push(r);});
+  return Object.keys(map).map(no=>{
+    const list=map[no].slice().sort((a,b)=>(a.type==='送错'?0:1)-(b.type==='送错'?0:1));
+    const wait=list.filter(x=>x.status==='待取回').length;
+    return {no,list,warehouse:list[0].warehouse,slot:[...new Set(list.map(x=>x.slot))].join(' / '),
+      at:list.map(x=>x.registeredAt).sort()[0],qty:list.reduce((a,x)=>a+x.qty,0),wait,
+      status:wait===0?'已取回':(wait===list.length?'待取回':'部分取回')};
+  }).sort((a,b)=>b.at.localeCompare(a.at));
+}
+function whrSum(list){
+  return [...new Set(list.map(x=>x.type))]
+    .map(t=>`${t} ${list.filter(x=>x.type===t).reduce((a,x)=>a+x.qty,0)}${list.find(x=>x.type===t).unit}`).join(' · ');
+}
+function whrTypeChip(t){return stChip(t,t==='送错'?'var(--red-soft)':'var(--amber-soft)',t==='送错'?'var(--red)':'#B45309');}
+function whrStChip(g){
+  if(g.status==='已取回')return stChip('已取回','var(--mint-soft)','var(--emerald-2)');
+  if(g.status==='部分取回')return stChip(`部分取回 ${g.list.length-g.wait}/${g.list.length}`,'var(--amber-soft)','#B45309');
+  return stChip(`待取回 ${g.list.length} 项`,'#E1EBFF','#2563EB');
+}
+// 列表：一行=一张送货单（同单多项合并）
+function whrCard(g){
+  return `<div class="dl-card" data-whr="${g.no}">
+    <div class="dl-ch"><span>来源送货单</span><span class="no">${g.no}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin:9px 0 3px;flex-wrap:wrap">
+      ${[...new Set(g.list.map(x=>x.type))].map(whrTypeChip).join('')}${whrStChip(g)}
+    </div>
+    <div class="dl-meta"><span class="k">退回商品</span><span class="vv">${g.list.map(x=>x.name).join('、')} · 共 ${g.list.length} 个 SKU</span></div>
+    <div class="dl-meta"><span class="k">类型合计</span><span class="vv">${whrSum(g.list)}</span></div>
+    <div class="dl-meta"><span class="k">存放</span><span class="vv">${g.warehouse} · ${g.slot}</span></div>
+    <div class="dl-meta"><span class="k">登记</span><span class="vv">${g.at}</span></div>
+    <div class="dl-kbox"><div class="k"><div class="l">总数量</div><div class="v">${g.qty}</div></div><div class="k"><div class="l">SKU 数</div><div class="v">${g.list.length}</div></div><div class="k"><div class="l">待取回</div><div class="v" ${g.wait?'style="color:var(--red)"':''}>${g.wait}</div></div></div>
+    <div class="dl-acts"><div class="a key" data-a="whrdetail">详情</div><div class="a" data-a="whrdeliv">送货单</div></div>
+  </div>`;
+}
+// 详情：逐 SKU 区分
+function openWhrDetail(no){
+  const g=whrGroups().find(x=>x.no===no); if(!g)return;
+  const kv=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,.05)"><span style="color:var(--sub);flex-shrink:0">${k}</span><span style="text-align:right;font-weight:500;word-break:break-all">${v||'—'}</span></div>`;
+  const sec=t=>`<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">${t}</div>`;
+  const box=i=>`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">${i}</div>`;
+  pushPage({title:'仓库退回详情',navbar:true,body:`
+    <div style="margin:12px 16px 0;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
+      本单被清点出 <b>${whrSum(g.list)}</b>，仓库已登记台账、留存实物照片并放入专属虚拟库位暂存。这批货<b>不计入结算、不产生扣款也不付款</b>，请线下与仓库约时间取回。
+    </div>
+    ${sec('单据信息')}
+    ${box(
+      kv('来源送货单',`<span style="font-family:monospace">${g.no}</span>`)+
+      kv('存放仓库',g.warehouse)+
+      kv('虚拟库位',`<span style="font-family:monospace">${g.slot}</span>`)+
+      kv('首次登记时间',g.at)+
+      kv('退回商品',`${g.list.length} 个 SKU · 合计 ${g.qty}`)+
+      kv('退回单号','无（沿用原送货单标记，不另生成单号）')
+    )}
+    ${sec('退回商品明细 · 逐 SKU')}
+    ${box(g.list.map(r=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+      <div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">${r.name}</b>${whrTypeChip(r.type)}${r.status==='已取回'?stChip('已取回','var(--mint-soft)','var(--emerald-2)'):stChip('待取回','#E1EBFF','#2563EB')}</div>
+      <div style="font-size:11.5px;color:var(--sub);margin-top:3px">${r.skuCode} · ${r.spec}</div>
+      ${r.note?`<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${r.note}</div>`:''}
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:#46604F;flex-wrap:wrap">
+        <span>数量 <b>${r.qty}</b> ${r.unit}</span><span>库位 <span style="font-family:monospace">${r.slot}</span></span><span>登记 ${r.registeredAt}</span>${r.pickedAt?`<span>取回 ${r.pickedAt}</span>`:''}
+      </div>
+      <div class="whr-ph" data-sku="${r.skuCode}" style="margin-top:8px;color:var(--emerald);font-weight:700;font-size:12.5px;min-height:32px;display:flex;align-items:center;cursor:pointer">📷 ${r.photos} 张实物照片</div>
+    </div>`).join(''))}
+    <div style="margin:12px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">状态由<b>仓库</b>在交接时<b>按项</b>回写，同单可分批取回；商家端只读，无编辑与线上预约入口。</div>
+    <div style="height:8px"></div>`,
+    footer:`<button class="btn primary" style="width:100%" id="whr-go">查看送货单</button>`,
+    mount:(p)=>{
+      p.querySelectorAll('.whr-ph').forEach(e=>e.onclick=()=>openWhrPhotos(g.no,e.dataset.sku));
+      const b=p.querySelector('#whr-go');if(b)b.onclick=()=>{popPage();window.FM.DB.delivView=g.no;openSignin();};
+    }});
+}
+function openWhrPhotos(no,sku){
+  const r=WHR().find(x=>x.deliveryNo===no&&x.skuCode===sku); if(!r)return;
+  pushPage({title:'仓库留存照片',navbar:true,body:`
+    <div style="margin:12px 16px;background:#E1EBFF;color:#2563EB;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
+      照片由仓库在登记台账时<b>多角度拍摄留存</b>，作为多货/错货的实物凭证；商家端只读。
+    </div>
+    <div style="margin:0 16px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      ${Array.from({length:r.photos}).map((_,i)=>`<div style="aspect-ratio:4/3;background:var(--muted);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:12.5px">实物照片 ${i+1}</div>`).join('')}
+    </div>
+    <div style="margin:12px 16px;font-size:12.5px;color:var(--sub)">${r.name} · ${r.type} ${r.qty}${r.unit} · 存放 ${r.warehouse} · <span style="font-family:monospace">${r.slot}</span>（专属虚拟库位，不计入正常库存）</div>`});
+}
+
 function openReturn(){
   pushPage({title:'退货单',body:`
+    <div class="iv-seg" id="rt-seg" style="display:flex;gap:6px;background:var(--muted);border-radius:14px;margin:10px 16px 4px;padding:4px">
+      <span class="s on" data-s="cust" style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;color:var(--emerald-2);border-radius:11px;background:#fff;box-shadow:var(--sh-sm);cursor:pointer">客户退货</span>
+      <span class="s" data-s="whr" style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;color:var(--sub);border-radius:11px;cursor:pointer">仓库退回</span>
+    </div>
+    <div id="rt-cust">
     <div class="dl-banner" id="dl-rbn"><span>三方退货货物到仓后不入库、仅暂存。<b>提货确认由仓库操作</b>，商家凭提货码到仓自提；到货后请在 <b>72 小时</b>内提货，逾期平台可自行处置。数量以仓库 RF 端实际确认为准，如有严重问题请拨客服 4000-616-700。</span><span class="x">✕</span></div>
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
     <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待仓库入库">待仓库入库</span><span class="t" data-t="待提货">待提货</span><span class="t" data-t="已提货">已提货</span></div>
-    <div class="dl-list" id="dl-rtl"></div>`,
+    <div class="dl-list" id="dl-rtl"></div></div>
+    <div id="rt-whr" style="display:none"></div>`,
     mount:(p)=>{
       const list=p.querySelector('#dl-rtl');
+      // 来源分段：客户退货（客户售后退回）/ 仓库退回（送货单里送错·送多）
+      const segs=p.querySelectorAll('#rt-seg .s'), cust=p.querySelector('#rt-cust'), whr=p.querySelector('#rt-whr');
+      function drawWhr(){
+        const gs=whrGroups();
+        whr.innerHTML=gs.length?`
+          <div style="margin:8px 16px 10px;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
+            <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送多</b>或<b>送错</b>的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。沿用原送货单标记，不另生成退货单号。
+          </div>
+          <div class="dl-list">${gs.map(whrCard).join('')}</div>`
+          :`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无待退回商品</h4><p>送货到仓被清点出送多或送错的商品时，仓库登记台账后在此生成取货通知</p></div>`;
+        whr.querySelectorAll('[data-whr]').forEach(c=>{
+          const no=c.dataset.whr;
+          c.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();
+            if(b.dataset.a==='whrdetail')openWhrDetail(no); else {window.FM.DB.delivView=no;openSignin();}});
+        });
+      }
+      segs.forEach(sg=>sg.onclick=()=>{
+        segs.forEach(x=>{const on=x===sg;x.style.background=on?'#fff':'transparent';x.style.color=on?'var(--emerald-2)':'var(--sub)';x.style.boxShadow=on?'var(--sh-sm)':'none';});
+        const isWhr=sg.dataset.s==='whr';
+        cust.style.display=isWhr?'none':'block'; whr.style.display=isWhr?'block':'none';
+        if(isWhr)drawWhr();
+      });
       const draw=(t)=>{
         list.innerHTML=skel(2);
         setTimeout(()=>{
