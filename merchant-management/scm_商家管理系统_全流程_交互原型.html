@@ -2326,7 +2326,9 @@ const RECON=[
             '#SG20260701004':{cust:'金****',bcrs:0.60,adj:0,ct:'2026-06-30 23:41',ft:'2026-07-01 11:20'}},
    after:[{id:'AS20260701003',order:'#SG20260701001',sku:'SKU8801',qty:1,type:'仅退款',judge:'商家责任 · 叶片腐烂',at:'2026-07-01 15:20'},
           {id:'AS20260701007',order:'#SG20260701004',sku:'SKU8804',qty:2,type:'仅退款',judge:'商家责任 · 少发',at:'2026-07-01 16:05'}],
-   repl:[{id:'RPL-20260701-001',sub:'SUB-20260701-01',sku:'SKU8801',should:20,recv:18,gap:2,qty:2,selfPrice:2.90,fineNo:'FN-20260701-001',at:'2026-07-01 07:12',status:'已结算'}],
+   repl:[{id:'RPL-20260701-001',sub:'SUB-20260701-01',sku:'SKU8801',should:20,recv:18,gap:2,qty:2,selfPrice:2.90,at:'2026-07-01 07:12',status:'已结算'}],
+   fine:[{id:'FN20260701001',sku:'SKU8801',should:20,recv:18,qty:2,rate:40,at:'2026-07-01 07:12',status:'已结算',repl:1},
+         {id:'FN20260701001',sku:'SKU8804',should:30,recv:28,qty:2,rate:40,at:'2026-07-01 07:12',status:'已结算',repl:0}],
    supply:[{hs:'HS20260701001',po:'SPO20260701001',code:'XC-LBL-001',name:'热敏标签纸 40×30',cat:'标签耗材',unit:'卷',qty:5,price:8.00,at:'2026-07-01 09:40',status:'已交付'}]},
 
   {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',
@@ -2338,7 +2340,9 @@ const RECON=[
    ordMeta:{'#SG20260630001':{cust:'福****',bcrs:0,adj:0,ct:'2026-06-29 20:50',ft:'2026-06-30 10:12'},
             '#SG20260630004':{cust:'恒****',bcrs:2.40,adj:0,ct:'2026-06-29 22:31',ft:'2026-06-30 11:05'}},
    after:[{id:'AS20260630004',order:'#SG20260630004',sku:'SKU8807',qty:1,type:'退货退款',judge:'商家责任 · 破损',at:'2026-06-30 18:22'}],
-   repl:[{id:'RPL-20260630-002',sub:'SUB-20260630-03',sku:'SKU8807',should:20,recv:19,gap:1,qty:1,selfPrice:6.80,fineNo:'FN-20260630-002',at:'2026-06-30 07:35',status:'已开票'}],
+   repl:[{id:'RPL-20260630-002',sub:'SUB-20260630-03',sku:'SKU8807',should:20,recv:19,gap:1,qty:1,selfPrice:6.80,at:'2026-06-30 07:35',status:'已开票'}],
+   fine:[{id:'FN20260630001',sku:'SKU8807',should:20,recv:19,qty:1,rate:40,at:'2026-06-30 07:35',status:'已结算',repl:1},
+         {id:'FN20260630001',sku:'SKU8803',should:12,recv:11,qty:1,rate:40,at:'2026-06-30 07:35',status:'已结算',repl:0}],
    supply:[]},
 
   {date:'2026-06-29',no:'SH20260629001',wh:'裕廊DC',
@@ -2348,7 +2352,7 @@ const RECON=[
    ],
    ordMeta:{'#SG20260629002':{cust:'悦****',bcrs:0,adj:0,ct:'2026-06-28 21:02',ft:'2026-06-29 09:48'},
             '#SG20260629005':{cust:'丰****',bcrs:0.30,adj:0,ct:'2026-06-28 23:15',ft:'2026-06-29 10:26'}},
-   after:[],repl:[],
+   after:[],repl:[],fine:[],
    supply:[{hs:'HS20260629001',po:'SPO20260629001',code:'XC-PRN-002',name:'标签打印机 TP-30',cat:'打印设备',unit:'台',qty:1,price:120.00,at:'2026-06-29 14:10',status:'已结算'}]},
 ];
 /* ---- 计算口径（全部逐行算后汇总，默认 GST 9%） ---- */
@@ -2371,6 +2375,8 @@ const rplNet =r=>Math.round(rplAmt(r)/(1+GST_DEFAULT/100)*100)/100;
 const dRpl   =d=>sum(d.repl||[],rplAmt);
 const supG   =s=>s.qty*s.price*(1+GST_DEFAULT/100), supN=s=>s.qty*s.price;
 const dSup   =d=>sum(d.supply||[],supG);
+const rcFine =x=>Math.round(x.qty*x.rate*100)/100;                        // 缺货罚款 = 缺口件数 × 罚款标准
+const dFine  =d=>sum(d.fine||[],rcFine);
 const rcOrders=d=>[...new Set(d.lines.flatMap(l=>l.byOrder.map(o=>o[0])))];
 const rcNeg=v=>v?`<span style="color:var(--r)">-${money(v)}</span>`:money(0);
 const rcPct=v=>(v||0).toFixed(1)+'%';
@@ -2389,7 +2395,7 @@ PAGES['m-recon']=()=>{
     <div><div class="k">平台服务费</div><div class="v">${rcNeg(T(dFee))}</div></div>
     <div><div class="k">售后扣款（含税）</div><div class="v">${rcNeg(T(dAftG))}</div></div>
     <div><div class="k">当日结算合计（货款）</div><div class="v" style="color:var(--g);font-size:18px">${money(T(dSettle))}</div></div>
-    <div><div class="k">另行结算：平台补采 / 耗材</div><div class="v" style="font-size:13px">${rcNeg(T(dRpl))} / ${rcNeg(T(dSup))}<div style="font-size:11px;color:var(--ts);font-weight:400">不并入结算，付款层轧差</div></div></div>
+    <div><div class="k">另行结算：平台补采 / 缺货罚款 / 耗材</div><div class="v" style="font-size:13px">${rcNeg(T(dRpl))} / ${rcNeg(T(dFine))} / ${rcNeg(T(dSup))}<div style="font-size:11px;color:var(--ts);font-weight:400">不并入结算，付款层轧差</div></div></div>
   </div></div></div>
   <div class="card"><div class="card-hd"><h3>对账单列表</h3><span class="sub">每日一张 · 共 ${rows.length} 张 · 数据源：财务结算单明细</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
@@ -2401,6 +2407,7 @@ PAGES['m-recon']=()=>{
       <th style="text-align:right">售后扣款<br><span style="font-weight:400;color:var(--ts)">含税</span></th>
       <th style="text-align:right" title="商家收入 − 售后扣款">当日结算<br><span style="font-weight:400;color:var(--ts)">货款</span></th>
       <th style="text-align:right" title="另行结算，不并入当日结算">平台补采</th>
+      <th style="text-align:right" title="另行结算，不并入当日结算；缺货即罚，与是否补采无关">缺货罚款</th>
       <th style="text-align:right" title="另行结算，不并入当日结算">耗材订单</th>
       <th>操作</th></tr></thead><tbody>
     ${rows.map(d=>{const os=rcOrders(d);return `<tr>
@@ -2414,6 +2421,7 @@ PAGES['m-recon']=()=>{
       <td style="text-align:right">${rcNeg(dAftG(d))}</td>
       <td style="text-align:right;color:var(--gd);font-weight:600">${money(dSettle(d))}</td>
       <td style="text-align:right;color:var(--ts)">${dRpl(d)?rcNeg(dRpl(d)):'—'}</td>
+      <td style="text-align:right;color:var(--r)">${dFine(d)?rcNeg(dFine(d)):'—'}</td>
       <td style="text-align:right;color:var(--ts)">${dSup(d)?rcNeg(dSup(d)):'—'}</td>
       <td><button class="btn btn-o btn-sm" onclick="act_reconDetail('${d.no}')">详情</button></td></tr>`;}).join('')}
     </tbody></table></div></div></div>`;
@@ -2421,6 +2429,7 @@ PAGES['m-recon']=()=>{
 function act_reconDetail(no){
   const d=RECON.find(x=>x.no==no);if(!d)return;
   const tab=DB.rcTab||'sku';
+  const fin=d.fine||[];
   const aft=d.after||[],rpl=d.repl||[],sup=d.supply||[];
   const nOrd=rcOrders(d).length;
   /* 订单维度：按订单汇总各 SKU 行的分配量 */
@@ -2448,12 +2457,13 @@ function act_reconDetail(no){
       <div><div class="k">售后扣款（含税）</div><div class="v">${rcNeg(dAftG(d))}</div></div>
       <div><div class="k">当日结算（货款）</div><div class="v" style="color:var(--g);font-size:18px">${money(dSettle(d))}</div></div>
     </div>
-    ${(dRpl(d)||dSup(d))?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">💡</span>当日另有<b>平台补采 ${money(dRpl(d))}</b>、<b>耗材订单 ${money(dSup(d))}</b>（含税）——两者<b>各自独立结算</b>，不并入上方当日结算，在付款时轧差：实付 = 货款应结 − 平台补采 − 耗材。</div>`:''}
+    ${(dRpl(d)||dFine(d)||dSup(d))?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">💡</span>当日另有<b>平台补采 ${money(dRpl(d))}</b>、<b>缺货罚款 ${money(dFine(d))}</b>、<b>耗材订单 ${money(dSup(d))}</b>——三者<b>各自独立结算</b>，不并入上方当日结算，在付款时轧差：实付 = 货款应结 − 平台补采 − 缺货罚款 − 耗材。<br><span style="color:var(--ts)">补采与罚款<b>互不关联</b>：补采只在自营有货补齐时产生，罚款只要清点出缺口就计。</span></div>`:''}
     <div class="tabs">
       <div class="tab ${tab=='sku'?'active':''}" onclick="DB.rcTab='sku';act_reconDetail('${no}')">SKU 维度</div>
       <div class="tab ${tab=='order'?'active':''}" onclick="DB.rcTab='order';act_reconDetail('${no}')">订单维度</div>
       <div class="tab ${tab=='after'?'active':''}" onclick="DB.rcTab='after';act_reconDetail('${no}')">售后明细${aft.length?`<span class="tb">${aft.length}</span>`:''}</div>
       <div class="tab ${tab=='repl'?'active':''}" onclick="DB.rcTab='repl';act_reconDetail('${no}')">平台补采${rpl.length?`<span class="tb">${rpl.length}</span>`:''}</div>
+      <div class="tab ${tab=='fine'?'active':''}" onclick="DB.rcTab='fine';act_reconDetail('${no}')">缺货罚款${fin.length?`<span class="tb">${fin.length}</span>`:''}</div>
       <div class="tab ${tab=='supply'?'active':''}" onclick="DB.rcTab='supply';act_reconDetail('${no}')">耗材订单${sup.length?`<span class="tb">${sup.length}</span>`:''}</div>
     </div>
     ${tab=='sku'?`<div style="overflow-x:auto"><table><thead><tr><th>SKU 编码</th><th>商品名称</th><th>规格</th>
@@ -2494,6 +2504,16 @@ function act_reconDetail(no){
         <td style="text-align:right">${rcNeg(x.qty*l.price*rcMul(l))}</td></tr>`;}).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="8">判给商家合计</td><td style="text-align:right">${rcNeg(dAftN(d))}</td><td style="text-align:right">${rcNeg(dAftG(d))}</td></tr>
       </tbody></table></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">↩️</div><div class="e-t">当日无判给商家的售后</div><div class="e-s">判责为平台/客户承担的部分不进本对账单。</div></div>`)
+    :tab=='fine'?(fin.length?`<div style="overflow-x:auto"><table><thead><tr><th>罚款单号</th><th>罚款事由</th><th>SKU 编码</th><th>商品名称</th>${TH('应送')}${TH('实收')}${TH('缺口')}${TH('罚款标准')}${TH('罚款金额')}<th>是否已补采</th><th>状态</th></tr></thead><tbody>
+      ${fin.map(x=>{const l=rcLn(d,x.sku);return `<tr><td class="mono">${x.id}</td><td><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>到仓少货</span></td><td class="mono">${x.sku}</td><td><b>${l.name||x.sku}</b></td>
+        <td style="text-align:right">${x.should}</td><td style="text-align:right;color:var(--r)">${x.recv}</td>
+        <td style="text-align:right;color:var(--r);font-weight:600">${x.qty}</td>
+        <td style="text-align:right">${money(x.rate)}</td>
+        <td style="text-align:right;color:var(--r);font-weight:700">${rcNeg(rcFine(x))}</td>
+        <td>${x.repl?'<span class="tag t-gr" style="font-size:10.5px">已补采</span>':'<span class="tag t-y" style="font-size:10.5px">未补采</span>'}</td>
+        <td><span class="tag t-b"><span class="dot"></span>${x.status}</span></td></tr>`;}).join('')}
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="8">合计（另行结算）</td><td style="text-align:right">${rcNeg(dFine(d))}</td><td colspan="2"></td></tr>
+      </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">缺货罚款 = 缺口件数 × 罚款标准（S$${DB.replCfg?DB.replCfg.finePerUnit:40}/件），<b>按件计、与货值无关</b>；<b>只要清点出缺口就计罚，与是否由自营补采无关</b>——「未补采」的行同样计罚。罚款<b>不开发票</b>，作为独立扣减项进结算单。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">⚖️</div><div class="e-t">当日无缺货罚款</div><div class="e-s">收货清点足额，未产生缺口。</div></div>`)
     :tab=='repl'?(rpl.length?`<div style="overflow-x:auto"><table><thead><tr><th>补采单号</th><th>关联子单</th><th>SKU 编码</th><th>商品名称</th>${TH('应送')}${TH('实收')}${TH('缺口')}${TH('补采数量')}${TH('单价','含税')}${TH('补采金额','未税')}${TH('补采金额','含税')}${TH('缺货罚款')}<th>状态</th></tr></thead><tbody>
       ${rpl.map(r=>{const l=rcLn(d,r.sku);return `<tr><td class="mono">${r.id}</td><td class="mono">${r.sub}</td><td class="mono">${r.sku}</td><td><b>${l.name}</b></td>
         <td style="text-align:right">${r.should}</td><td style="text-align:right">${r.recv}</td>
