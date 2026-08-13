@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>商品售卖规格设置 · 交互原型</title>
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Regular.min.css">
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Medium.min.css">
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Semibold.min.css">
+<link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/misans@4.1.0/lib/Normal/MiSans-Bold.min.css">
+<style>
+:root{
+  --g:#0E7A52;--gl:#E7F2E9;--gd:#0A6343;--gg:linear-gradient(150deg,#12885B 0%,#0A5A3C 100%);
+  --r:#C0453B;--rl:#FBEBE8;--y:#A9711F;--yl:#F7EFDD;--b:#2563EB;--bl:#EEF3FF;
+  --pp:#7E3AF2;--ppl:#F3EEFE;--gold:#A9812F;--goldl:#F6EEDC;
+  --tp:#12271D;--ts:#5F7168;--tt:#9AA99F;--bd:#E3EADF;--bd2:#EDF1E9;--bg:#F3F6F0;--w:#fff;--sw:236px;
+  --sh:0 1px 2px rgba(16,42,30,.05),0 1px 1px rgba(16,42,30,.04);
+  --sh2:0 10px 26px -14px rgba(11,54,36,.22);--rad:14px;
+  --sans:"MiSans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,sans-serif;
+  /* 三字段配色（贯穿表单与预览） */
+  --f-net:#0B7355;--f-net-l:#DCEEE7;
+  --f-sell:#3450B4;--f-sell-l:#E1E6FA;
+  --f-pack:#8A5A12;--f-pack-l:#F5EAD6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--tp);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit}
+.tnum,.price,.stock,.mono,.tstamp,.num{font-feature-settings:"tnum" 1,"lnum" 1}
+
+.app{display:grid;grid-template-columns:var(--sw) 1fr;min-height:100vh}
+.sidebar{background:var(--w);border-right:1px solid var(--bd);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{height:62px;background:rgba(255,255,255,.85);backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 26px;position:sticky;top:0;z-index:20}
+.content{padding:24px 30px 60px;max-width:1520px;width:100%}
+.tb-crumb{font-size:12px;color:var(--tt)}
+.tb-title{font-size:18.5px;font-weight:800;letter-spacing:-.3px}
+.pill-warn{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--gold);background:var(--goldl);border:1px solid #EBDDBC;padding:6px 12px;border-radius:22px}
+.avatar{width:38px;height:38px;border-radius:12px;background:var(--gg);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px;margin-left:14px}
+
+.brand{padding:20px 18px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bd2)}
+.brand .lg{width:30px;height:30px;border-radius:9px;background:var(--gg);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px}
+.brand .nm{font-weight:800;letter-spacing:-.2px}
+.shopcard{margin:12px 12px 6px;padding:11px 12px;border:1px solid var(--bd);border-radius:11px;background:#FBFCF9}
+.shopcard .s1{font-size:13px;font-weight:700}
+.shopcard .s2{font-size:11.5px;color:var(--tt);margin-top:2px}
+.nav-sec{font-size:11px;color:var(--tt);font-weight:700;padding:12px 12px 5px;letter-spacing:1.5px;text-transform:uppercase}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 12px;margin:0 10px 1px;cursor:pointer;color:var(--ts);font-size:13.5px;border-radius:8px;transition:.13s;position:relative}
+.nav-i:hover{background:var(--bd2);color:var(--tp)}
+.nav-i.active{background:var(--gl);color:var(--gd);font-weight:700}
+.nav-i.active::before{content:"";position:absolute;left:0;top:7px;bottom:7px;width:3px;border-radius:3px;background:var(--g)}
+.nav-ic{width:20px;height:20px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.nav-ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.nav-i.active .nav-ic svg{opacity:1;stroke-width:1.85}
+.nav-badge{margin-left:auto;background:var(--r);color:#fff;font-size:11px;padding:0 6px;height:18px;min-width:18px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:600}
+.nav-badge.y{background:var(--y)}
+
+.card{background:var(--w);border:1px solid var(--bd);border-radius:var(--rad);box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+.card-hd{padding:15px 20px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.card-hd h3{font-size:15px;font-weight:700}
+.card-hd .sub{font-size:12.5px;color:var(--ts);font-weight:400}
+.card-bd{padding:18px 20px}
+label.fl{font-size:12px;color:var(--ts);margin-bottom:7px;display:block;font-weight:600}
+input,select{width:100%;height:40px;border:1px solid var(--bd);border-radius:9px;padding:0 13px;font-size:13.5px;background:#FBFCF9;color:var(--tp);outline:none;transition:.16s}
+input:focus,select:focus{border-color:var(--g);background:#fff;box-shadow:0 0 0 3px rgba(14,122,82,.12)}
+input::placeholder{color:var(--tt)}
+input:disabled,input[readonly]{background:#F4F6F2;color:var(--ts);cursor:not-allowed}
+input[readonly].calc{background:var(--gl);border-color:#CCE2D6;color:var(--gd);font-weight:700;cursor:default}
+select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235F7168' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer}
+.btn{padding:9px 16px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;line-height:1}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--gg);color:#fff;box-shadow:0 8px 16px -10px rgba(11,99,67,.55)}
+.btn-p:hover{filter:brightness(1.07)}
+.btn-o{background:#fff;color:var(--tp);border-color:var(--bd)}
+.btn-o:hover{border-color:#CFE0CD;background:var(--gl);color:var(--gd)}
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.5}
+.tag .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.t-g{background:var(--gl);color:var(--gd)}.t-y{background:var(--yl);color:var(--y)}
+.t-b{background:var(--bl);color:var(--b)}.t-gr{background:#F1F3F0;color:#6B7A70}
+.ib{display:flex;gap:9px;padding:11px 14px;border-radius:12px;font-size:12.5px;line-height:1.55;margin-bottom:12px;align-items:flex-start}
+.ib-g{background:var(--gl);color:var(--gd)}.ib-y{background:var(--yl);color:var(--y)}
+.ib-b{background:var(--bl);color:var(--b)}.ib-r{background:var(--rl);color:var(--r)}
+.ib-gr{background:#F1F3F0;color:var(--ts)}
+.ib svg{width:15px;height:15px;flex-shrink:0;margin-top:2px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== 页面专属 ===== */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 424px;gap:20px;align-items:start}
+@media(max-width:1240px){.wrap{grid-template-columns:1fr}}
+
+/* 品类选择 */
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(154px,1fr));gap:10px}
+.cat{border:1px solid var(--bd);border-radius:11px;padding:11px 12px;cursor:pointer;background:#FBFCF9;transition:.15s;text-align:left}
+.cat:hover{border-color:#CFE0CD;background:var(--gl)}
+.cat.on{border-color:var(--g);background:var(--gl);box-shadow:0 0 0 3px rgba(14,122,82,.1)}
+.cat .cn{font-size:13.5px;font-weight:700;color:var(--tp)}
+.cat.on .cn{color:var(--gd)}
+.cat .cd{font-size:11px;color:var(--tt);margin-top:3px;line-height:1.4}
+.cat .ct{font-size:10.5px;font-weight:700;margin-top:7px;display:inline-block;padding:1px 7px;border-radius:20px;background:#F1F3F0;color:#6B7A70}
+.cat.on .ct{background:#fff;color:var(--gd)}
+
+/* 计量类型三选一 */
+.qtypes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.qtypes{grid-template-columns:1fr}}
+.qt{border:1.5px solid var(--bd);border-radius:12px;padding:13px 14px;cursor:pointer;background:#FBFCF9;transition:.15s;position:relative}
+.qt:hover{border-color:#CFE0CD}
+.qt.on{border-color:var(--g);background:var(--gl)}
+.qt .qn{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+.qt.on .qn{color:var(--gd)}
+.qt .qc{font-size:11px;color:var(--tt);font-feature-settings:"tnum" 1;margin-top:2px}
+.qt .qdesc{font-size:11.5px;color:var(--ts);margin-top:7px;line-height:1.5}
+.radio{width:15px;height:15px;border-radius:50%;border:1.5px solid var(--bd);flex-shrink:0;display:grid;place-items:center}
+.qt.on .radio{border-color:var(--g)}
+.qt.on .radio::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--g)}
+
+/* 开关 */
+.swrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--bd);border-radius:11px;background:#FBFCF9;margin-top:12px}
+.sw{width:40px;height:23px;border-radius:20px;background:#D6DED2;position:relative;cursor:pointer;transition:.18s;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw.on{background:var(--g)}.sw.on::after{transform:translateX(17px)}
+.swrow .swt{font-size:13px;font-weight:600}
+.swrow .swd{font-size:11.5px;color:var(--tt);margin-top:1px}
+
+/* 字段网格 */
+.grid{display:grid;gap:14px 16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:760px){.g2,.g3{grid-template-columns:1fr}}
+.fld.hide{display:none}
+.unitbox{display:grid;grid-template-columns:1fr 96px;gap:8px}
+.packbox{display:grid;grid-template-columns:1fr 22px 1fr 88px;gap:8px;align-items:center}
+@media(max-width:760px){.packbox{grid-template-columns:1fr;gap:8px}.packbox .xx{display:none}}
+.xx{text-align:center;color:var(--tt);font-size:14px}
+.fhint{font-size:11.5px;color:var(--tt);margin-top:6px;line-height:1.5}
+.fhint.warn{color:var(--y)}
+.flabel-chip{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:6px;vertical-align:1px}
+.ch-net{background:var(--f-net-l);color:var(--f-net)}
+.ch-sell{background:var(--f-sell-l);color:var(--f-sell)}
+.ch-pack{background:var(--f-pack-l);color:var(--f-pack)}
+.calcnote{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:var(--gd);background:var(--gl);padding:1px 7px;border-radius:5px;margin-left:6px;vertical-align:1px}
+
+/* 预览面板 */
+.preview{position:sticky;top:78px}
+.pv-tabs{display:flex;gap:2px;padding:8px 10px;background:var(--bd2);border-bottom:1px solid var(--bd);overflow-x:auto}
+.pv-tab{padding:6px 10px;font-size:12px;font-weight:600;color:var(--ts);border-radius:7px;cursor:pointer;white-space:nowrap;transition:.13s}
+.pv-tab:hover{color:var(--tp)}
+.pv-tab.on{background:var(--w);color:var(--gd);box-shadow:var(--sh)}
+.pv-stage{padding:20px 18px;background:#F7F9F5;min-height:300px}
+.pv-note{font-size:11.5px;color:var(--ts);line-height:1.55;padding:12px 18px;border-top:1px dashed var(--bd);background:#FBFCF9}
+
+/* 商城模拟组件 */
+.mcard{background:#fff;border:1px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh);max-width:250px;margin:0 auto}
+.mswatch{height:104px;background:repeating-linear-gradient(135deg,transparent 0 10px,#E9EFE6 10px 11px),#F2F5EF;border-bottom:1px solid var(--bd2)}
+.mbody{padding:11px 12px 13px}
+.mname{font-size:14px;font-weight:600;line-height:1.4;color:var(--tp)}
+.mspec{font-size:12px;line-height:1.55;margin-top:6px;font-feature-settings:"tnum" 1}
+.mprice{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:9px}
+.mprice .mm{font-size:18px;font-weight:700;color:var(--tp);font-feature-settings:"tnum" 1}
+.mprice .mm small{font-size:12px;font-weight:500;color:var(--ts)}
+.mprice .mu{font-size:11.5px;color:var(--ts);font-feature-settings:"tnum" 1;border-left:1px solid var(--bd);padding-left:8px}
+.mnote{margin-top:8px;display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--f-pack-l);color:var(--f-pack)}
+.n-net{color:var(--f-net);font-weight:700}
+.n-sell{color:var(--f-sell);font-weight:700}
+.n-pack{color:var(--f-pack);font-weight:700}
+
+.pdp{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px 16px;box-shadow:var(--sh)}
+.pdp .prow{display:grid;grid-template-columns:20px 1fr;gap:10px;padding:11px 0;border-bottom:1px dashed var(--bd)}
+.pdp .prow:last-child{border-bottom:0;padding-bottom:0}
+.pdp .pidx{font-size:10.5px;color:var(--tt);font-weight:700;padding-top:3px}
+.pdp .pask{font-size:10px;color:var(--tt);letter-spacing:.8px;font-weight:700;display:block;margin-bottom:4px}
+.pdp .pv1{font-size:17px;font-weight:700;letter-spacing:-.2px}
+.pdp .pv2{font-size:13px;line-height:1.6;font-feature-settings:"tnum" 1}
+.pdp .pv3{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pdp .pv3 .big{font-size:23px;font-weight:700;font-feature-settings:"tnum" 1}
+.pdp .pv3 .big small{font-size:13px;font-weight:500;color:var(--ts)}
+.pdp .pv3 .un{font-size:12.5px;color:var(--ts);border-left:1px solid var(--bd);padding-left:12px;font-feature-settings:"tnum" 1}
+
+.sheet{background:#fff;border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh2);overflow:hidden}
+.sheet-hd{padding:13px 15px;border-bottom:1px solid var(--bd2);font-size:14px;font-weight:700}
+.sheet-bd{padding:14px 15px;display:grid;gap:12px}
+.stepper{display:flex;align-items:center;gap:0;border:1px solid var(--bd);border-radius:9px;overflow:hidden;width:fit-content}
+.stepper button{width:34px;height:34px;border:none;background:#FBFCF9;color:var(--ts);font-size:16px;cursor:pointer;font-weight:600}
+.stepper button:hover{background:var(--gl);color:var(--gd)}
+.stepper .qv{width:60px;text-align:center;font-size:14px;font-weight:700;font-feature-settings:"tnum" 1;border-left:1px solid var(--bd);border-right:1px solid var(--bd);height:34px;line-height:34px}
+.sumline{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--ts)}
+.sumline b{font-size:16px;color:var(--tp);font-feature-settings:"tnum" 1}
+
+.linerow{background:#fff;border:1px solid var(--bd);border-radius:11px;padding:12px 13px;display:grid;grid-template-columns:46px 1fr auto;gap:11px;align-items:center;box-shadow:var(--sh)}
+.linerow .lsw{width:46px;height:46px;border-radius:8px;background:repeating-linear-gradient(135deg,transparent 0 8px,#E9EFE6 8px 9px),#F2F5EF;border:1px solid var(--bd2)}
+.linerow .ln{font-size:13px;font-weight:600}
+.linerow .ls{font-size:11.5px;line-height:1.5;margin-top:3px;font-feature-settings:"tnum" 1}
+.linerow .lp{text-align:right;font-size:14px;font-weight:700;font-feature-settings:"tnum" 1;white-space:nowrap}
+.linerow .lu{font-size:11px;color:var(--tt);font-weight:500;margin-top:2px}
+
+table.dn{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--bd);border-radius:11px;overflow:hidden}
+table.dn th{background:var(--bd2);padding:9px 11px;text-align:left;font-size:10.5px;color:var(--ts);font-weight:700;letter-spacing:.4px;white-space:nowrap}
+table.dn td{padding:11px;font-size:12px;border-top:1px solid var(--bd2);font-feature-settings:"tnum" 1}
+
+/* 契约 JSON */
+pre.json{background:#0F1A15;color:#CFE6D8;padding:16px 18px;border-radius:12px;font-size:12px;line-height:1.75;overflow-x:auto;font-family:ui-monospace,"SF Mono",Menlo,monospace}
+pre.json .k{color:#8FD3B0}pre.json .s{color:#E6C88A}pre.json .n{color:#9FC4F2}pre.json .c{color:#5F7168;font-style:italic}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.lg{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="lg">F</div><div class="nm">Food Max 商家端</div></div>
+    <div class="shopcard"><div class="s1">鲜丰蔬果贸易</div><div class="s2">MCH20240815 · 新加坡站</div></div>
+
+    <div class="nav-sec">经营</div>
+    <div class="nav-i"><span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>工作台</div>
+    <div class="nav-i active"><span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4 8 4 8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg></span>商品管理</div>
+    <div class="nav-i"><span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M6 2l1.5 3h9L18 2"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 11h8M8 15h5"/></svg></span>订单管理<span class="nav-badge">4</span></div>
+    <div class="nav-i"><span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="11" rx="1"/><path d="M16 10h3l2 3v5h-5z"/><circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/></svg></span>送货管理</div>
+    <div class="nav-i"><span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h12"/></svg></span>备货管理<span class="nav-badge y">2</span></div>
+    <div class="nav-sec">财务</div>
+    <div class="nav-i"><span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>对账结算</div>
+    <div class="nav-i"><span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg></span>发票管理</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div><div class="tb-crumb">商家端 / 商品管理 / 新建商品</div><div class="tb-title">售卖规格设置</div></div>
+      <div style="flex:1"></div>
+      <div class="pill-warn">4 单待发货</div>
+      <div class="avatar">陈</div>
+    </header>
+
+    <div class="content">
+
+      <div class="ib ib-b" style="margin-bottom:18px">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5M12 8h.01"/></svg>
+        <div><b>交互原型说明：</b>先选商品品类，系统按品类推荐计量类型并分流字段——不同类别看到的规格字段完全不同。右侧实时预览商城五处展示效果。<b>净含量</b>、<b>售卖规格</b>、<b>包装规格</b>三个字段全程用固定颜色标记。</div>
+      </div>
+
+      <!-- ① 品类 -->
+      <div class="card">
+        <div class="card-hd"><h3>① 选择商品品类</h3><span class="sub">品类决定计量类型的默认分流，仍可手动改</span></div>
+        <div class="card-bd"><div class="cats" id="cats"></div></div>
+      </div>
+
+      <div class="wrap">
+        <div>
+          <!-- ② 计量类型 -->
+          <div class="card">
+            <div class="card-hd"><h3>② 计量类型</h3><span class="sub" id="qtRec"></span></div>
+            <div class="card-bd">
+              <div class="qtypes" id="qtypes"></div>
+              <div class="swrow" id="packRow">
+                <div class="sw" id="packSw"></div>
+                <div><div class="swt">多联包 / 整箱销售<span class="flabel-chip ch-pack">包装规格</span></div><div class="swd">一个售卖单位里装多个独立小包装，如 12盒×500g、24罐×400mL、30枚/板</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ 规格字段 -->
+          <div class="card">
+            <div class="card-hd"><h3>③ 规格与计量</h3><span class="sub">灰色字段＝当前类型不适用，绿色字段＝系统计算</span></div>
+            <div class="card-bd">
+              <div id="valid"></div>
+
+              <div class="grid g2" style="margin-bottom:14px">
+                <div class="fld"><label class="fl">商品名称</label><input id="fName" placeholder="不要把规格写进名称"><div class="fhint">品名行只放品名，规格由下方字段生成</div></div>
+                <div class="fld"><label class="fl">售卖单位<span class="flabel-chip ch-sell">售卖规格</span></label>
+                  <select id="fSellUom"><option>包</option><option>袋</option><option>盒</option><option>箱</option><option>板</option><option>条</option><option>只</option><option>份</option><option>kg</option></select>
+                  <div class="fhint">用户下单看到的单位，决定加购步长与起订量</div></div>
+              </div>
+
+              <!-- 单件净含量 -->
+              <div class="fld grid g2" id="fldSingle" style="margin-bottom:14px">
+                <div><label class="fl">净含量<span class="flabel-chip ch-net">净含量</span></label>
+                  <div class="unitbox"><input id="fNetVal" type="number" step="0.01" placeholder="500"><select id="fNetUom"><option>g</option><option>kg</option><option>mL</option><option>L</option><option>枚</option><option>个</option></select></div>
+                  <div class="fhint">法定计量单位，禁止填「约」「左右」等修饰词</div></div>
+                <div></div>
+              </div>
+
+              <!-- 多联包 -->
+              <div class="fld" id="fldPack" style="margin-bottom:14px">
+                <label class="fl">包装规格<span class="flabel-chip ch-pack">包装规格</span></label>
+                <div class="packbox">
+                  <input id="fInnerQty" type="number" placeholder="12" title="内装数量">
+                  <div class="xx">×</div>
+                  <input id="fInnerNet" type="number" step="0.01" placeholder="500" title="单件净含量">
+                  <select id="fInnerUom"><option>g</option><option>kg</option><option>mL</option><option>L</option><option>枚</option><option>个</option></select>
+                </div>
+                <div class="grid g2" style="margin-top:12px">
+                  <div><label class="fl">总净含量<span class="calcnote">系统计算</span></label><input id="fNetTotal" class="calc" readonly><div class="fhint">校验规则：内装数量 × 单件净含量 ＝ 总净含量，不等则发布拦截</div></div>
+                  <div><label class="fl">内装单位名称</label><input id="fInnerName" placeholder="盒"><div class="fhint">用于生成规格串，如「12<b>盒</b> × 500g」</div></div>
+                </div>
+              </div>
+
+              <!-- 散称 -->
+              <div class="fld grid g3" id="fldWeight" style="margin-bottom:14px">
+                <div><label class="fl">计价单位</label><select id="fPriceUomW"><option>kg</option><option>500g（斤）</option></select></div>
+                <div><label class="fl">起订量</label><input id="fMinQty" type="number" step="0.1" placeholder="0.5"></div>
+                <div><label class="fl">加购步长</label><input id="fStep" type="number" step="0.1" placeholder="0.5"></div>
+              </div>
+
+              <!-- 变量重量 -->
+              <div class="fld grid g3" id="fldVar" style="margin-bottom:14px">
+                <div><label class="fl">参考重量 par_weight<span class="flabel-chip ch-net">净含量</span></label>
+                  <div class="unitbox"><input id="fPar" type="number" step="1" placeholder="500"><select id="fParUom"><option>g</option><option>kg</option></select></div>
+                  <div class="fhint">用于算预估价，展示为「约 500g」</div></div>
+                <div><label class="fl">重量允差 ±%</label><input id="fTol" type="number" step="1" placeholder="10"><div class="fhint warn">对应《定量包装商品计量监督管理办法》允许短缺量</div></div>
+                <div><label class="fl">重量区间<span class="calcnote">系统计算</span></label><input id="fRange" class="calc" readonly><div class="fhint">超出区间的实物不得发货</div></div>
+              </div>
+
+              <div class="ib ib-gr" id="netExempt" style="display:none">
+                <svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg>
+                <div><b>净含量字段已按计量销售豁免。</b>散称商品按秤结算，标注固定净含量会与实物不符。依据 GB 7718-2025（2027-03-16 实施）：计量销售的预包装食品免除净含量标示，改标「计量称重」。</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ④ 价格 -->
+          <div class="card">
+            <div class="card-hd"><h3>④ 价格与单位价</h3><span class="sub">单位价按未税价计算，运营不可编辑</span></div>
+            <div class="card-bd">
+              <div class="grid g3">
+                <div><label class="fl" id="lbPrice">售价（未税）</label><input id="fPrice" type="number" step="0.01" placeholder="48.00"><div class="fhint" id="hintPrice"></div></div>
+                <div><label class="fl">税率</label><select id="fTax"><option value="0">0%</option><option value="9" selected>9%</option></select></div>
+                <div><label class="fl">含税价<span class="calcnote">系统计算</span></label><input id="fTaxed" class="calc" readonly></div>
+              </div>
+              <div class="grid g2" style="margin-top:14px">
+                <div><label class="fl">单位价<span class="calcnote">系统计算 · 不可编辑</span></label><input id="fUnitPrice" class="calc" readonly><div class="fhint" id="hintUnit"></div></div>
+                <div id="estBox"><label class="fl">预估总价<span class="calcnote">系统计算</span></label><input id="fEst" class="calc" readonly><div class="fhint">＝ 单位价 × 参考重量，以实际称重结算</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑤ 契约 -->
+          <div class="card">
+            <div class="card-hd"><h3>⑤ 生成的字段（研发契约）</h3><span class="sub">随表单实时变化</span></div>
+            <div class="card-bd"><pre class="json" id="json"></pre></div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-bottom:24px">
+            <button class="btn btn-p">保存并提交平台审核</button>
+            <button class="btn btn-o">存为草稿</button>
+          </div>
+        </div>
+
+        <!-- 预览 -->
+        <div class="preview">
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd" style="padding:13px 16px"><h3 style="font-size:14px">商城展示实时预览</h3></div>
+            <div class="pv-tabs" id="pvTabs"></div>
+            <div class="pv-stage" id="pvStage"></div>
+            <div class="pv-note" id="pvNote"></div>
+          </div>
+          <div class="card">
+            <div class="card-hd" style="padding:13px 16px"><h3 style="font-size:14px">字段图例</h3></div>
+            <div class="card-bd" style="padding:14px 16px">
+              <div class="legend">
+                <span class="lg" style="background:var(--f-net-l);color:var(--f-net)">净含量 · 我买到多少</span>
+                <span class="lg" style="background:var(--f-sell-l);color:var(--f-sell)">售卖规格 · 一次买多少</span>
+                <span class="lg" style="background:var(--f-pack-l);color:var(--f-pack)">包装规格 · 里面怎么装</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--ts);line-height:1.6">规格行的读法是一条链：<b style="color:var(--f-sell)">售卖规格</b> ＝ <b style="color:var(--f-pack)">包装规格</b> → <b style="color:var(--f-net)">净含量</b>。用户从左读到右即完成换算，不需要心算。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== 品类预置（9 类，覆盖 4 种计量形态 + 4 种单位价归一） ========== */
+const CATS=[
+ {k:'veg_pack',n:'新鲜蔬菜 · 定装',d:'洗净定量装袋',qty:'FIXED',pack:false,
+  s:{name:'本地小棠菜',sellUom:'袋',netVal:1,netUom:'kg',price:9.30}},
+ {k:'veg_bulk',n:'时令蔬菜 · 散称',d:'按秤散卖，重量不定',qty:'BY_WEIGHT',pack:false,
+  s:{name:'本地菜心',sellUom:'kg',price:3.20,minQty:0.5,step:0.5}},
+ {k:'frozen',n:'冷冻肉禽',d:'整箱多联包冻品',qty:'FIXED',pack:true,
+  s:{name:'澳洲谷饲牛肩肉 · 冷冻',sellUom:'箱',innerQty:12,innerNet:500,innerUom:'g',innerName:'盒',price:48.00}},
+ {k:'cutmeat',n:'精肉分割',d:'按件买，按重结算',qty:'VARIABLE_WEIGHT',pack:false,
+  s:{name:'新西兰西冷牛排',sellUom:'份',par:300,parUom:'g',tol:10,price:52.00}},
+ {k:'seafood',n:'鲜活水产',d:'整条 / 整只，重量不定',qty:'VARIABLE_WEIGHT',pack:false,
+  s:{name:'冰鲜金目鲈 · 整条',sellUom:'条',par:500,parUom:'g',tol:10,price:8.00}},
+ {k:'egg',n:'蛋品',d:'按板计数销售',qty:'FIXED',pack:true,
+  s:{name:'新鲜鸡蛋 · 中号',sellUom:'板',innerQty:30,innerNet:1,innerUom:'枚',innerName:'枚',price:9.00}},
+ {k:'grain',n:'米面粮油',d:'大包装定量件',qty:'FIXED',pack:false,
+  s:{name:'泰国茉莉香米',sellUom:'袋',netVal:25,netUom:'kg',price:42.00}},
+ {k:'sauce',n:'调味 / 饮品',d:'整箱多瓶装',qty:'FIXED',pack:true,
+  s:{name:'泰国椰浆',sellUom:'箱',innerQty:24,innerNet:400,innerUom:'mL',innerName:'罐',price:33.60}},
+ {k:'prep',n:'净菜 / 预制',d:'小包装即用',qty:'FIXED',pack:false,
+  s:{name:'免洗菠菜 · 即用装',sellUom:'包',netVal:200,netUom:'g',price:2.40}}
+];
+
+const QT=[
+ {k:'FIXED',n:'定量件',c:'FIXED',d:'固定规格、固定价。净含量写死，用户买几件就是几件。'},
+ {k:'BY_WEIGHT',n:'散称',c:'BY_WEIGHT',d:'按重量买、按重量算钱。免填净含量，需设起订量与步长。'},
+ {k:'VARIABLE_WEIGHT',n:'变量重量',c:'VARIABLE_WEIGHT',d:'按件买、按重结算。需填参考重量与允差，页面显示「约」与预估价。'}
+];
+
+const PV=[
+ {k:'list',n:'商城列表卡片'},
+ {k:'pdp',n:'商详主信息'},
+ {k:'add',n:'加购浮层'},
+ {k:'cart',n:'购物车行'},
+ {k:'dn',n:'送货单 / 对账'}
+];
+
+let st={cat:'frozen',qty:'FIXED',pack:true,pv:'list',
+  name:'',sellUom:'箱',netVal:'',netUom:'g',innerQty:'',innerNet:'',innerUom:'g',innerName:'',
+  par:'',parUom:'g',tol:10,price:'',tax:9,minQty:'',step:''};
+
+/* ========== 工具 ========== */
+const $=id=>document.getElementById(id);
+const money=v=>'S$'+Number(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const nm=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:3});
+
+/* 归一到基准量：返回 {qty, base}  base ∈ g / mL / pc */
+function toBase(val,uom){
+  const v=Number(val||0);
+  if(uom==='kg')return{q:v*1000,b:'g'};
+  if(uom==='g')return{q:v,b:'g'};
+  if(uom==='L')return{q:v*1000,b:'mL'};
+  if(uom==='mL')return{q:v,b:'mL'};
+  return{q:v,b:'pc'};
+}
+/* 单位价归一规则：固体 ≥1kg→kg，<1kg→100g；液体 ≥1L→L，<1L→100mL；计件→pc */
+function priceUomOf(baseQty,base,pcLabel){
+  if(base==='g')  return baseQty>=1000?{u:'kg',f:1000}:{u:'100g',f:100};
+  if(base==='mL') return baseQty>=1000?{u:'L',f:1000}:{u:'100mL',f:100};
+  return {u:pcLabel||'件',f:1};
+}
+
+/* 当前商品的计算结果 */
+function calc(){
+  const r={};
+  r.name=st.name||'（未填写商品名称）';
+  r.sellUom=st.sellUom;
+  r.price=Number(st.price||0);
+  r.tax=Number(st.tax);
+  r.taxed=r.price*(1+r.tax/100);
+
+  if(st.qty==='BY_WEIGHT'){
+    r.type='BY_WEIGHT';
+    r.unitPrice=r.price; r.unitPriceUom='kg';
+    r.specHtml='<span class="n-sell">按重量销售</span> · 最小 '+nm(st.minQty)+'kg · 步长 '+nm(st.step)+'kg';
+    r.netText=null;
+    r.mainPrice=money(r.price)+' <small>/kg</small>';
+    return r;
+  }
+  if(st.qty==='VARIABLE_WEIGHT'){
+    const p=toBase(st.par,st.parUom);
+    r.type='VARIABLE_WEIGHT';
+    r.parG=p.q;
+    r.unitPrice=r.price; r.unitPriceUom='kg';
+    r.est=r.price*p.q/1000;
+    const lo=p.q*(1-st.tol/100), hi=p.q*(1+st.tol/100);
+    r.range=Math.round(lo)+'–'+Math.round(hi)+'g';
+    r.netText='约 '+nm(st.par)+st.parUom;
+    r.specHtml='<span class="n-sell">1'+r.sellUom+'</span> <span class="n-net">约 '+nm(st.par)+st.parUom+'</span>（'+r.range+'）';
+    r.mainPrice=money(r.price)+' <small>/kg</small>';
+    return r;
+  }
+  /* FIXED */
+  r.type='FIXED';
+  let baseQty,base,netLabel,pcLabel='件';
+  if(st.pack){
+    const iq=Number(st.innerQty||0), inn=toBase(st.innerNet,st.innerUom);
+    baseQty=iq*inn.q; base=inn.b;
+    const isPc = base==='pc';
+    if(isPc) pcLabel = st.innerName||st.innerUom;
+    const totalUom = base==='g' ? (baseQty>=1000?'kg':'g') : base==='mL' ? (baseQty>=1000?'L':'mL') : pcLabel;
+    const totalVal = isPc ? baseQty : (baseQty>=1000?baseQty/1000:baseQty);
+    netLabel=nm(totalVal)+totalUom;
+    r.netTotalText=netLabel;
+    if(isPc){
+      /* 计件多联包：包装规格本身即净含量，不再重复括注 */
+      r.specHtml='<span class="n-sell">1'+r.sellUom+'</span> ＝ <span class="n-pack">'+nm(st.innerQty)+pcLabel+'</span>';
+    }else{
+      const packTxt=nm(st.innerQty)+(st.innerName||'件')+' × '+nm(st.innerNet)+st.innerUom;
+      r.specHtml='<span class="n-sell">1'+r.sellUom+'</span> ＝ <span class="n-pack">'+packTxt+'</span>（<span class="n-net">净含量 '+netLabel+'</span>）';
+    }
+  }else{
+    const t=toBase(st.netVal,st.netUom);
+    baseQty=t.q; base=t.b;
+    if(base==='pc') pcLabel=st.netUom;
+    netLabel=nm(st.netVal)+st.netUom;
+    r.netTotalText=netLabel;
+    r.specHtml='<span class="n-sell">1'+r.sellUom+'</span> <span class="n-net">'+netLabel+'</span>';
+  }
+  const pu=priceUomOf(baseQty,base,pcLabel);
+  r.baseQty=baseQty; r.base=base;
+  r.unitPrice = baseQty>0 ? r.price/(baseQty/pu.f) : 0;
+  r.unitPriceUom=pu.u;
+  r.netText=netLabel;
+  r.mainPrice=money(r.price)+' <small>/'+r.sellUom+'</small>';
+  return r;
+}
+
+/* ========== 渲染：品类 / 类型 ========== */
+function renderCats(){
+  $('cats').innerHTML=CATS.map(c=>{
+    const t=QT.find(q=>q.k===c.qty).n+(c.pack?' · 多联包':'');
+    return '<button class="cat'+(st.cat===c.k?' on':'')+'" data-cat="'+c.k+'"><div class="cn">'+c.n+'</div><div class="cd">'+c.d+'</div><span class="ct">'+t+'</span></button>';
+  }).join('');
+  $('cats').querySelectorAll('.cat').forEach(b=>b.onclick=()=>applyCat(b.dataset.cat));
+}
+function renderQt(){
+  $('qtypes').innerHTML=QT.map(q=>
+    '<div class="qt'+(st.qty===q.k?' on':'')+'" data-qt="'+q.k+'"><div class="qn"><span class="radio"></span>'+q.n+'</div><div class="qc">'+q.c+'</div><div class="qdesc">'+q.d+'</div></div>'
+  ).join('');
+  $('qtypes').querySelectorAll('.qt').forEach(b=>b.onclick=()=>{st.qty=b.dataset.qt;if(st.qty!=='FIXED')st.pack=false;sync();render();});
+  const c=CATS.find(x=>x.k===st.cat);
+  $('qtRec').textContent='「'+c.n+'」推荐：'+QT.find(q=>q.k===c.qty).n+(c.pack?' · 多联包':'');
+}
+
+/* ========== 应用品类预置 ========== */
+function applyCat(k){
+  const c=CATS.find(x=>x.k===k);const s=c.s;
+  st={...st,cat:k,qty:c.qty,pack:c.pack,
+    name:s.name||'',sellUom:s.sellUom||'包',
+    netVal:s.netVal??'',netUom:s.netUom||'g',
+    innerQty:s.innerQty??'',innerNet:s.innerNet??'',innerUom:s.innerUom||'g',innerName:s.innerName||'',
+    par:s.par??'',parUom:s.parUom||'g',tol:s.tol??10,
+    price:s.price??'',minQty:s.minQty??'',step:s.step??''};
+  sync();render();
+}
+
+/* ========== state → DOM ========== */
+function sync(){
+  $('fName').value=st.name; $('fSellUom').value=st.sellUom;
+  $('fNetVal').value=st.netVal; $('fNetUom').value=st.netUom;
+  $('fInnerQty').value=st.innerQty; $('fInnerNet').value=st.innerNet;
+  $('fInnerUom').value=st.innerUom; $('fInnerName').value=st.innerName;
+  $('fPar').value=st.par; $('fParUom').value=st.parUom; $('fTol').value=st.tol;
+  $('fPrice').value=st.price; $('fTax').value=st.tax;
+  $('fMinQty').value=st.minQty; $('fStep').value=st.step;
+}
+/* DOM → state */
+function bind(){
+  const map={fName:'name',fSellUom:'sellUom',fNetVal:'netVal',fNetUom:'netUom',
+    fInnerQty:'innerQty',fInnerNet:'innerNet',fInnerUom:'innerUom',fInnerName:'innerName',
+    fPar:'par',fParUom:'parUom',fTol:'tol',fPrice:'price',fTax:'tax',fMinQty:'minQty',fStep:'step'};
+  Object.keys(map).forEach(id=>{
+    $(id).addEventListener('input',e=>{st[map[id]]=e.target.value;render();});
+    $(id).addEventListener('change',e=>{st[map[id]]=e.target.value;render();});
+  });
+  $('packSw').onclick=()=>{if(st.qty!=='FIXED')return;st.pack=!st.pack;render();};
+}
+
+/* ========== 主渲染 ========== */
+function render(){
+  renderCats();renderQt();
+  const isFixed=st.qty==='FIXED', isW=st.qty==='BY_WEIGHT', isV=st.qty==='VARIABLE_WEIGHT';
+
+  $('packRow').style.opacity=isFixed?'1':'.4';
+  $('packRow').style.pointerEvents=isFixed?'auto':'none';
+  $('packSw').className='sw'+(st.pack&&isFixed?' on':'');
+
+  $('fldSingle').classList.toggle('hide',!(isFixed&&!st.pack));
+  $('fldPack').classList.toggle('hide',!(isFixed&&st.pack));
+  $('fldWeight').classList.toggle('hide',!isW);
+  $('fldVar').classList.toggle('hide',!isV);
+  $('netExempt').style.display=isW?'flex':'none';
+  $('estBox').style.display=isV?'block':'none';
+  $('fSellUom').disabled=isW;
+
+  const r=calc();
+
+  /* 计算态字段回填 */
+  /* 只读计算字段：不适用时清空，避免残留上一个品类的值 */
+  $('fNetTotal').value=(isFixed&&st.pack)?(r.netTotalText||''):'';
+  $('fRange').value=isV?(r.range||''):'';
+  $('fEst').value=isV?money(r.est):'';
+  $('fTaxed').value=money(r.taxed);
+  $('fUnitPrice').value=r.unitPrice?money(r.unitPrice)+' / '+r.unitPriceUom:'—';
+
+  $('lbPrice').textContent = isW?'单价（未税，每 kg）' : isV?'单价（未税，每 kg）' : '售价（未税，每'+st.sellUom+'）';
+  $('hintPrice').textContent = isV?'变量重量商品按 kg 定价，页面展示预估总价':'';
+  $('hintUnit').innerHTML = isW||isV ? '按重量销售，售价本身即单位价' :
+    '归一规则：固体 ≥1kg 用 kg、&lt;1kg 用 100g；液体 ≥1L 用 L、&lt;1L 用 100mL；计件用「件」。同类目禁止混用。';
+
+  /* 校验条 */
+  const errs=[],warns=[];
+  if(!st.name)errs.push('商品名称未填写');
+  if(isFixed&&!st.pack&&!Number(st.netVal))errs.push('净含量未填写');
+  if(isFixed&&st.pack&&(!Number(st.innerQty)||!Number(st.innerNet)))errs.push('包装规格未填写完整（内装数量 × 单件净含量）');
+  if(isV&&!Number(st.par))errs.push('参考重量 par_weight 未填写');
+  if(isW&&(!Number(st.minQty)||!Number(st.step)))errs.push('散称商品必须设置起订量与加购步长');
+  if(!Number(st.price))errs.push('售价未填写');
+  if(/\d+\s*(g|kg|mL|L|ml|克|千克|毫升|升)/i.test(st.name))warns.push('商品名称里出现了规格数字——品名行只放品名，规格由字段生成');
+  let vhtml='';
+  if(errs.length)vhtml+='<div class="ib ib-r"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg><div><b>发布拦截（'+errs.length+'）：</b>'+errs.join('；')+'</div></div>';
+  warns.forEach(w=>vhtml+='<div class="ib ib-y"><svg viewBox="0 0 24 24"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><div>'+w+'</div></div>');
+  if(!errs.length&&!warns.length)vhtml='<div class="ib ib-g"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><div>校验通过：净含量、售卖规格、包装规格三字段齐备且互相对得上，可提交平台审核。</div></div>';
+  $('valid').innerHTML=vhtml;
+
+  renderPreview(r);
+  renderJson(r);
+}
+
+/* ========== 预览 ========== */
+function renderPreview(r){
+  $('pvTabs').innerHTML=PV.map(p=>'<div class="pv-tab'+(st.pv===p.k?' on':'')+'" data-pv="'+p.k+'">'+p.n+'</div>').join('');
+  $('pvTabs').querySelectorAll('.pv-tab').forEach(b=>b.onclick=()=>{st.pv=b.dataset.pv;render();});
+
+  const unitTxt=r.unitPrice?money(r.unitPrice)+' / '+r.unitPriceUom:'—';
+  const isV=r.type==='VARIABLE_WEIGHT', isW=r.type==='BY_WEIGHT';
+  let h='',note='';
+
+  if(st.pv==='list'){
+    h='<div class="mcard"><div class="mswatch"></div><div class="mbody">'
+      +'<div class="mname">'+r.name+'</div>'
+      +'<div class="mspec">'+r.specHtml+'</div>'
+      +'<div class="mprice"><span class="mm">'+r.mainPrice+'</span>'+(isW?'':'<span class="mu">'+unitTxt+'</span>')+'</div>'
+      +(isV?'<span class="mnote">以实际称重结算</span>':isW?'<span class="mnote">计量称重，不标净含量</span>':'')
+      +'</div></div>';
+    note='比价发生在这一屏。Baymard 实测 86% 的电商不展示单位价，用户被迫心算——单位价必须出现在卡片上，不能只放商详。';
+  }
+  if(st.pv==='pdp'){
+    h='<div class="pdp">'
+      +'<div class="prow"><div class="pidx">①</div><div><span class="pask">这是什么</span><div class="pv1">'+r.name+'</div></div></div>'
+      +'<div class="prow"><div class="pidx">②</div><div><span class="pask">买一次是多少</span><div class="pv2">'+r.specHtml+'</div></div></div>'
+      +'<div class="prow"><div class="pidx">③</div><div><span class="pask">多少钱 · 划不划算</span><div class="pv3"><span class="big">'+r.mainPrice+'</span>'+(isW?'':'<span class="un">'+unitTxt+'</span>')+'</div></div></div>'
+      +'</div>';
+    note='三行公式：一行只回答一个问题，顺序固定。品名行不允许塞任何规格信息。';
+  }
+  if(st.pv==='add'){
+    const q=isW?nm(st.minQty)+'kg':'1'+r.sellUom;
+    const sum=isW?Number(st.minQty||0)*r.price:(isV?r.est:r.price);
+    h='<div class="sheet"><div class="sheet-hd">加入购物车</div><div class="sheet-bd">'
+      +'<div class="mspec">'+r.specHtml+'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'
+      +'<div style="font-size:12px;color:var(--ts)">'+(isW?'重量（步长 '+nm(st.step)+'kg）':'数量（步长 1'+r.sellUom+'）')+'</div>'
+      +'<div class="stepper"><button type="button">−</button><div class="qv">'+q+'</div><button type="button">＋</button></div></div>'
+      +'<div style="border-top:1px dashed var(--bd);padding-top:11px;display:grid;gap:6px">'
+      +(isW?'':'<div class="sumline"><span>单位价</span><span>'+unitTxt+'</span></div>')
+      +(isV?'<div class="sumline"><span>参考重量</span><span>约 '+nm(st.par)+st.parUom+'（'+r.range+'）</span></div>':'')
+      +'<div class="sumline"><span>'+(isV||isW?'预估小计':'小计')+'</span><b>'+money(sum)+'</b></div></div>'
+      +'<button class="btn btn-p" style="width:100%;justify-content:center">加入购物车</button>'
+      +(isV?'<div class="ib ib-y" style="margin:0"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg><div>实际重量以出库称重为准，允差 ±'+st.tol+'%，多退少补。</div></div>':'')
+      +'</div></div>';
+    note='变量重量商品必须在加购瞬间同时给出：参考重量、单位价、预估总价——Amazon Whole Foods 的做法。';
+  }
+  if(st.pv==='cart'){
+    const q=isW?nm(st.minQty)+'kg':'×1';
+    const sum=isW?Number(st.minQty||0)*r.price:(isV?r.est:r.price);
+    h='<div class="linerow"><div class="lsw"></div>'
+      +'<div><div class="ln">'+r.name+'</div><div class="ls">'+r.specHtml+'</div>'
+      +'<div style="font-size:11px;color:var(--tt);margin-top:4px">'+q+'　'+unitTxt+'</div></div>'
+      +'<div><div class="lp">'+money(sum)+'</div>'+(isV||isW?'<div class="lu">预估</div>':'')+'</div></div>';
+    note='B2B 场景下单人与验收人常不是同一人。规格只在商详出现，收货环节必然产生争议——购物车与订单必须重复展示完整规格。';
+  }
+  if(st.pv==='dn'){
+    let rows;
+    if(isV){
+      const act=(r.parG*0.96/1000).toFixed(2);
+      rows='<tr><td>'+r.name+'</td><td>1'+r.sellUom+'（约 '+nm(st.par)+st.parUom+'）</td><td>'+act+' kg</td><td>'+money(r.unitPrice*act)+'</td><td><span class="tag t-g"><span class="dot"></span>允差内</span></td></tr>';
+    }else if(isW){
+      const act=(Number(st.minQty||0)*0.98).toFixed(2);
+      rows='<tr><td>'+r.name+'</td><td>'+nm(st.minQty)+' kg</td><td>'+act+' kg</td><td>'+money(r.price*act)+'</td><td><span class="tag t-g"><span class="dot"></span>按秤结算</span></td></tr>';
+    }else{
+      rows='<tr><td>'+r.name+'</td><td>1'+r.sellUom+'（'+r.netText+'）</td><td>'+r.netText+'</td><td>'+money(r.price)+'</td><td><span class="tag t-g"><span class="dot"></span>足量</span></td></tr>';
+    }
+    h='<table class="dn"><thead><tr><th>商品</th><th>订购</th><th>实发 / 实称</th><th>结算金额</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    note='缺重争议的唯一判据在这张表。允差写进字段（weight_tolerance_pct）而不是客服话术——依据《定量包装商品计量监督管理办法》的允许短缺量。';
+  }
+  $('pvStage').innerHTML=h;
+  $('pvNote').textContent=note;
+}
+
+/* ========== 契约 JSON ========== */
+function renderJson(r){
+  const s=v=>'<span class="s">"'+v+'"</span>', n=v=>'<span class="n">'+v+'</span>';
+  const L=[];                       /* 每项 = [key, value, comment?] */
+  L.push(['category',s(CATS.find(c=>c.k===st.cat).n)]);
+  L.push(['qty_type',s(st.qty),'计量类型分流']);
+  L.push(['sell_uom',s(st.sellUom),'售卖规格']);
+  if(st.qty==='FIXED'){
+    if(st.pack){
+      L.push(['pack_inner_qty',n(st.innerQty||0),'包装规格']);
+      L.push(['pack_inner_net',n(st.innerNet||0)]);
+      L.push(['pack_inner_uom',s(st.innerUom)]);
+    }
+    L.push(['net_content_value',n(st.pack?(r.baseQty||0):(st.netVal||0)),
+      st.pack?'校验：inner_qty × inner_net = net_content':'净含量']);
+    L.push(['net_content_uom',s(st.pack?(r.base==='pc'?'件':r.base):st.netUom)]);
+  }else{
+    L.push(['net_content_value','<span class="n">null</span>',
+      st.qty==='BY_WEIGHT'?'计量销售豁免 (GB 7718-2025)':'按参考重量展示，不落净含量']);
+  }
+  if(st.qty==='VARIABLE_WEIGHT'){
+    L.push(['par_weight',n(st.par||0),'参考重量']);
+    L.push(['par_weight_uom',s(st.parUom)]);
+    L.push(['weight_tolerance_pct',n(st.tol||0),'允许短缺量']);
+  }
+  if(st.qty==='BY_WEIGHT'){
+    L.push(['min_order_qty',n(st.minQty||0),'起订量 kg']);
+    L.push(['order_step',n(st.step||0),'加购步长 kg']);
+  }
+  L.push(['price_excl_tax',n(Number(st.price||0).toFixed(2))]);
+  L.push(['tax_rate',n(st.tax)]);
+  L.push(['price_uom',s(r.unitPriceUom||'-'),'单位价归一单位']);
+  L.push(['unit_price',n((r.unitPrice||0).toFixed(2)),'系统计算 · 只读']);
+  const body=L.map((it,i)=>
+    '  <span class="k">"'+it[0]+'"</span>: '+it[1]+(i<L.length-1?',':'')
+    +(it[2]?'  <span class="c">// '+it[2]+'</span>':'')
+  ).join('\n');
+  $('json').innerHTML='{\n'+body+'\n}';
+}
+
+/* ========== 启动 ========== */
+renderCats();bind();applyCat('frozen');
+</script>
+</body>
+</html>
