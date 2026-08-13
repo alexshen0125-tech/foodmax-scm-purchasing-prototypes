@@ -704,8 +704,8 @@ const DB = {
   ],
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
   billsHistory:[
-    {period:'2026年5月', no:'ST202605-M0815', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:140.92, replCnt:2, net:42061.88,
-      items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['自营补货扣款（含税）',2,-140.92]], payTime:'2026-06-03 09:12 已到账 DBS ****8821'},
+    {period:'2026年5月', no:'ST202605-M0815', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:118.60, replCnt:2, fine:560.00, fineCnt:2, net:41524.20,
+      items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['平台补采扣款（含税）',2,-118.60],['缺货罚款',2,-560.00]], payTime:'2026-06-03 09:12 已到账 DBS ****8821'},
     {period:'2026年4月', no:'ST202604-M0815', range:'2026-04-01 ~ 04-30', genDate:'2026-05-01', status:'paid', gross:39650.00, reverse:0, fee:1586.00, feeSvc:991.25, feeLogi:594.75, net:38064.00,
       items:[['订单货款（含历史）',80,39650.00],['逆向扣减（售后判商家责）',0,0],['平台抽佣·服务佣金（按品类佣金率）',80,-991.25],['物流抽佣·物流佣金（按品类佣金率）',80,-594.75]], payTime:'2026-05-06 09:08 已到账 DBS ****8821'},
   ],
@@ -873,7 +873,8 @@ const NAV={
     {sec:'财务'},
     {id:'m-recon',ic:'🧮',t:'对账单',p1:1},
     {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
-    {id:'m-replenish',ic:'🔁',t:'自营补货',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.status=='pending').length:0,by:'y'},
+    {id:'m-replenish',ic:'🔁',t:'平台补采',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.status=='pending').length:0,by:'y'},
+    {id:'m-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.fineNo&&r.status=='pending').length:0,by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
     {id:'m-account',ic:'💳',t:'账户管理',p1:1},
     {sec:'合规'},
@@ -895,7 +896,7 @@ const NAV={
     {sec:'结算'},
     {id:'p-commission',ic:'💹',t:'佣金配置',p1:1},
     {id:'p-weighcfg',ic:'⚖️',t:'多退少补规则',p1:1},
-    {id:'p-replcfg',ic:'🔁',t:'补货加价率',p1:1},
+    {id:'p-replcfg',ic:'⚖️',t:'缺货罚款标准',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'耗材'},
@@ -2306,12 +2307,12 @@ function ord_ops(o,i){
 }
 
 /* ---------- 商家端：对账单（每日一张 = 当日送货单，数据源=财务结算单明细汇总） ----------
-   五个页签：SKU 维度汇总 / 订单维度汇总 / 售后明细 / 自营补货明细 / 耗材订单明细。
+   五个页签：SKU 维度汇总 / 订单维度汇总 / 售后明细 / 平台补采明细 / 耗材订单明细。
    字段与口径对齐飞书《商家端·对账单表头》SKU维度汇总 / 订单维度汇总两张表：
      平台服务费 =（实发金额含税 − 商家补贴）× 平台服务费率
      商家收入   = 实发金额含税 − 商家补贴 − 平台服务费
-     当日结算   = 商家收入 − 售后扣款（自营补货、耗材另行结算，不并入，付款层轧差）
-   自营补货单与耗材订单按其在结算单明细中的计入日落到当天对账单。 */
+     当日结算   = 商家收入 − 售后扣款（平台补采、耗材另行结算，不并入，付款层轧差）
+   平台补采单与耗材订单按其在结算单明细中的计入日落到当天对账单。 */
 const RECON=[
   {date:'2026-07-01',no:'SH20260701001',wh:'裕廊DC',
    lines:[
@@ -2325,7 +2326,7 @@ const RECON=[
             '#SG20260701004':{cust:'金****',bcrs:0.60,adj:0,ct:'2026-06-30 23:41',ft:'2026-07-01 11:20'}},
    after:[{id:'AS20260701003',order:'#SG20260701001',sku:'SKU8801',qty:1,type:'仅退款',judge:'商家责任 · 叶片腐烂',at:'2026-07-01 15:20'},
           {id:'AS20260701007',order:'#SG20260701004',sku:'SKU8804',qty:2,type:'仅退款',judge:'商家责任 · 少发',at:'2026-07-01 16:05'}],
-   repl:[{id:'RPL-20260701-001',sub:'SUB-20260701-01',sku:'SKU8801',should:20,recv:18,gap:2,qty:2,taxPrice:4.14,rate:30,at:'2026-07-01 07:12',status:'已结算'}],
+   repl:[{id:'RPL-20260701-001',sub:'SUB-20260701-01',sku:'SKU8801',should:20,recv:18,gap:2,qty:2,selfPrice:2.90,fineNo:'FN-20260701-001',at:'2026-07-01 07:12',status:'已结算'}],
    supply:[{hs:'HS20260701001',po:'SPO20260701001',code:'XC-LBL-001',name:'热敏标签纸 40×30',cat:'标签耗材',unit:'卷',qty:5,price:8.00,at:'2026-07-01 09:40',status:'已交付'}]},
 
   {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',
@@ -2337,7 +2338,7 @@ const RECON=[
    ordMeta:{'#SG20260630001':{cust:'福****',bcrs:0,adj:0,ct:'2026-06-29 20:50',ft:'2026-06-30 10:12'},
             '#SG20260630004':{cust:'恒****',bcrs:2.40,adj:0,ct:'2026-06-29 22:31',ft:'2026-06-30 11:05'}},
    after:[{id:'AS20260630004',order:'#SG20260630004',sku:'SKU8807',qty:1,type:'退货退款',judge:'商家责任 · 破损',at:'2026-06-30 18:22'}],
-   repl:[{id:'RPL-20260630-002',sub:'SUB-20260630-03',sku:'SKU8807',should:20,recv:19,gap:1,qty:1,taxPrice:7.41,rate:30,at:'2026-06-30 07:35',status:'已开票'}],
+   repl:[{id:'RPL-20260630-002',sub:'SUB-20260630-03',sku:'SKU8807',should:20,recv:19,gap:1,qty:1,selfPrice:6.80,fineNo:'FN-20260630-002',at:'2026-06-30 07:35',status:'已开票'}],
    supply:[]},
 
   {date:'2026-06-29',no:'SH20260629001',wh:'裕廊DC',
@@ -2364,7 +2365,8 @@ const dSub  =d=>sum(d.lines,l=>l.sub||0), dFee=d=>sum(d.lines,rcFee), dInc=d=>su
 const dAftG =d=>sum(d.after||[],x=>{const l=rcLn(d,x.sku);return x.qty*l.price*rcMul(l);});
 const dAftN =d=>sum(d.after||[],x=>x.qty*rcLn(d,x.sku).price);
 const dSettle=d=>dInc(d)-dAftG(d);                     // 当日结算（货款口径）
-const rplAmt =r=>Math.round(r.taxPrice*r.qty*(1+r.rate/100)*100)/100;      // 总额法·含税
+const rplAmt =r=>Math.round(r.selfPrice*r.qty*100)/100;                    // 补采金额(含税)=自营原定价×数量，不加价
+const rplFine=r=>Math.round(r.qty*(DB.replCfg?DB.replCfg.finePerUnit:40)*100)/100;  // 缺货罚款=缺口件数×罚款标准
 const rplNet =r=>Math.round(rplAmt(r)/(1+GST_DEFAULT/100)*100)/100;
 const dRpl   =d=>sum(d.repl||[],rplAmt);
 const supG   =s=>s.qty*s.price*(1+GST_DEFAULT/100), supN=s=>s.qty*s.price;
@@ -2387,7 +2389,7 @@ PAGES['m-recon']=()=>{
     <div><div class="k">平台服务费</div><div class="v">${rcNeg(T(dFee))}</div></div>
     <div><div class="k">售后扣款（含税）</div><div class="v">${rcNeg(T(dAftG))}</div></div>
     <div><div class="k">当日结算合计（货款）</div><div class="v" style="color:var(--g);font-size:18px">${money(T(dSettle))}</div></div>
-    <div><div class="k">另行结算：自营补货 / 耗材</div><div class="v" style="font-size:13px">${rcNeg(T(dRpl))} / ${rcNeg(T(dSup))}<div style="font-size:11px;color:var(--ts);font-weight:400">不并入结算，付款层轧差</div></div></div>
+    <div><div class="k">另行结算：平台补采 / 耗材</div><div class="v" style="font-size:13px">${rcNeg(T(dRpl))} / ${rcNeg(T(dSup))}<div style="font-size:11px;color:var(--ts);font-weight:400">不并入结算，付款层轧差</div></div></div>
   </div></div></div>
   <div class="card"><div class="card-hd"><h3>对账单列表</h3><span class="sub">每日一张 · 共 ${rows.length} 张 · 数据源：财务结算单明细</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
@@ -2398,7 +2400,7 @@ PAGES['m-recon']=()=>{
       <th style="text-align:right" title="（实发金额含税 − 商家补贴）× 平台服务费率">平台服务费</th>
       <th style="text-align:right">售后扣款<br><span style="font-weight:400;color:var(--ts)">含税</span></th>
       <th style="text-align:right" title="商家收入 − 售后扣款">当日结算<br><span style="font-weight:400;color:var(--ts)">货款</span></th>
-      <th style="text-align:right" title="另行结算，不并入当日结算">自营补货</th>
+      <th style="text-align:right" title="另行结算，不并入当日结算">平台补采</th>
       <th style="text-align:right" title="另行结算，不并入当日结算">耗材订单</th>
       <th>操作</th></tr></thead><tbody>
     ${rows.map(d=>{const os=rcOrders(d);return `<tr>
@@ -2446,12 +2448,12 @@ function act_reconDetail(no){
       <div><div class="k">售后扣款（含税）</div><div class="v">${rcNeg(dAftG(d))}</div></div>
       <div><div class="k">当日结算（货款）</div><div class="v" style="color:var(--g);font-size:18px">${money(dSettle(d))}</div></div>
     </div>
-    ${(dRpl(d)||dSup(d))?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">💡</span>当日另有<b>自营补货 ${money(dRpl(d))}</b>、<b>耗材订单 ${money(dSup(d))}</b>（含税）——两者<b>各自独立结算</b>，不并入上方当日结算，在付款时轧差：实付 = 货款应结 − 自营补货 − 耗材。</div>`:''}
+    ${(dRpl(d)||dSup(d))?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">💡</span>当日另有<b>平台补采 ${money(dRpl(d))}</b>、<b>耗材订单 ${money(dSup(d))}</b>（含税）——两者<b>各自独立结算</b>，不并入上方当日结算，在付款时轧差：实付 = 货款应结 − 平台补采 − 耗材。</div>`:''}
     <div class="tabs">
       <div class="tab ${tab=='sku'?'active':''}" onclick="DB.rcTab='sku';act_reconDetail('${no}')">SKU 维度</div>
       <div class="tab ${tab=='order'?'active':''}" onclick="DB.rcTab='order';act_reconDetail('${no}')">订单维度</div>
       <div class="tab ${tab=='after'?'active':''}" onclick="DB.rcTab='after';act_reconDetail('${no}')">售后明细${aft.length?`<span class="tb">${aft.length}</span>`:''}</div>
-      <div class="tab ${tab=='repl'?'active':''}" onclick="DB.rcTab='repl';act_reconDetail('${no}')">自营补货${rpl.length?`<span class="tb">${rpl.length}</span>`:''}</div>
+      <div class="tab ${tab=='repl'?'active':''}" onclick="DB.rcTab='repl';act_reconDetail('${no}')">平台补采${rpl.length?`<span class="tb">${rpl.length}</span>`:''}</div>
       <div class="tab ${tab=='supply'?'active':''}" onclick="DB.rcTab='supply';act_reconDetail('${no}')">耗材订单${sup.length?`<span class="tb">${sup.length}</span>`:''}</div>
     </div>
     ${tab=='sku'?`<div style="overflow-x:auto"><table><thead><tr><th>SKU 编码</th><th>商品名称</th><th>规格</th>
@@ -2492,16 +2494,17 @@ function act_reconDetail(no){
         <td style="text-align:right">${rcNeg(x.qty*l.price*rcMul(l))}</td></tr>`;}).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="8">判给商家合计</td><td style="text-align:right">${rcNeg(dAftN(d))}</td><td style="text-align:right">${rcNeg(dAftG(d))}</td></tr>
       </tbody></table></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">↩️</div><div class="e-t">当日无判给商家的售后</div><div class="e-s">判责为平台/客户承担的部分不进本对账单。</div></div>`)
-    :tab=='repl'?(rpl.length?`<div style="overflow-x:auto"><table><thead><tr><th>补货单号</th><th>关联子单</th><th>SKU 编码</th><th>商品名称</th>${TH('应送')}${TH('实收')}${TH('缺口')}${TH('补货数量')}${TH('含税售价')}<th style="text-align:right">加价率</th>${TH('补货金额','未税')}${TH('补货金额','含税')}<th>状态</th></tr></thead><tbody>
+    :tab=='repl'?(rpl.length?`<div style="overflow-x:auto"><table><thead><tr><th>补采单号</th><th>关联子单</th><th>SKU 编码</th><th>商品名称</th>${TH('应送')}${TH('实收')}${TH('缺口')}${TH('补采数量')}${TH('自营原定价')}${TH('补采金额','未税')}${TH('补采金额','含税')}${TH('缺货罚款')}<th>状态</th></tr></thead><tbody>
       ${rpl.map(r=>{const l=rcLn(d,r.sku);return `<tr><td class="mono">${r.id}</td><td class="mono">${r.sub}</td><td class="mono">${r.sku}</td><td><b>${l.name}</b></td>
         <td style="text-align:right">${r.should}</td><td style="text-align:right">${r.recv}</td>
         <td style="text-align:right;color:var(--r)">${r.gap}</td><td style="text-align:right">${r.qty}</td>
-        <td style="text-align:right">${money(r.taxPrice)}</td><td style="text-align:right">${r.rate}%</td>
+        <td style="text-align:right">${money(r.selfPrice)}</td>
         <td style="text-align:right">${rcNeg(rplNet(r))}</td>
         <td style="text-align:right;color:var(--r);font-weight:600">${rcNeg(rplAmt(r))}</td>
+        <td style="text-align:right;color:var(--r);font-weight:700">${rcNeg(rplFine(r))}<div style="font-size:11px;color:var(--ts);font-weight:400">${r.fineNo||''}</div></td>
         <td><span class="tag t-b"><span class="dot"></span>${r.status}</span></td></tr>`;}).join('')}
-      <tr style="font-weight:700;background:var(--gl)"><td colspan="10">合计（另行结算）</td><td style="text-align:right">${rcNeg(sum(rpl,rplNet))}</td><td style="text-align:right">${rcNeg(dRpl(d))}</td><td></td></tr>
-      </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">补货金额（含税）= ROUND(含税售价 × 补货数量 ×(1+加价率), 2)，总额法一次算出，不先舍单价。缺口由平台自营现货全额补足，客户订单无感。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">📦</div><div class="e-t">当日无自营补货</div><div class="e-s">收货清点无少货，或缺口未由自营补足。</div></div>`)
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="9">合计（另行结算）</td><td style="text-align:right">${rcNeg(sum(rpl,rplNet))}</td><td style="text-align:right">${rcNeg(dRpl(d))}</td><td></td></tr>
+      </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">补采金额（含税）= ROUND(自营商品原定价 × 补采数量, 2)，<b>不加价</b>；缺货罚款 = 缺口件数 × 罚款标准（S$${DB.replCfg?DB.replCfg.finePerUnit:40}/件），与货值无关、不开发票。缺口由平台自营现货全额补足，客户订单无感。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">📦</div><div class="e-t">当日无平台补采</div><div class="e-s">收货清点无少货，或缺口未由自营补足。</div></div>`)
     :(sup.length?`<div style="overflow-x:auto"><table><thead><tr><th>耗材送货单</th><th>采购单号</th><th>耗材编码</th><th>耗材名称</th><th>类目</th>${TH('数量')}${TH('未税单价')}${TH('含税单价')}${TH('金额','未税')}${TH('金额','含税')}<th>交付时间</th><th>状态</th></tr></thead><tbody>
       ${sup.map(s=>`<tr><td class="mono">${s.hs}</td><td class="mono">${s.po}</td><td class="mono">${s.code}</td><td><b>${s.name}</b></td><td>${s.cat}</td>
         <td style="text-align:right">${s.qty}${s.unit}</td>
@@ -2513,7 +2516,7 @@ function act_reconDetail(no){
         <td><span class="tag t-b"><span class="dot"></span>${s.status}</span></td></tr>`).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="8">合计（另行结算）</td><td style="text-align:right">${rcNeg(sum(sup,supN))}</td><td style="text-align:right">${rcNeg(dSup(d))}</td><td colspan="2"></td></tr>
       </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">耗材按送货单「已交付」回写时间落期计费，支付方式固定为结算抵扣，商家无支付动作；不参与佣金、不计 GMV。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">🏷️</div><div class="e-t">当日无耗材订单</div><div class="e-s">耗材订单按交付回写日计入对账单。</div></div>`)}
-    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">数据源：<b>财务结算单明细汇总</b>，商家端不自行取数计算。平台服务费 =（实发金额含税 − 商家补贴）× 平台服务费率；商家收入 = 实发金额含税 − 商家补贴 − 平台服务费；当日结算（货款）= 商家收入 − 售后扣款。全为标品按整件对账，实发件数取仓库签收入库件数。自营补货与耗材订单<b>各自独立结算</b>，按其在结算单明细的计入日落到当天对账单，仅展示不并入当日结算，付款时轧差：实付 = 货款应结 − 自营补货 − 耗材。</div>
+    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">数据源：<b>财务结算单明细汇总</b>，商家端不自行取数计算。平台服务费 =（实发金额含税 − 商家补贴）× 平台服务费率；商家收入 = 实发金额含税 − 商家补贴 − 平台服务费；当日结算（货款）= 商家收入 − 售后扣款。全为标品按整件对账，实发件数取仓库签收入库件数。平台补采与耗材订单<b>各自独立结算</b>，按其在结算单明细的计入日落到当天对账单，仅展示不并入当日结算，付款时轧差：实付 = 货款应结 − 平台补采 − 耗材。</div>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="toast('已导出本单对账明细','ok')">⬇️ 导出本单</button><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 }
@@ -2577,7 +2580,7 @@ PAGES['m-invoice']=()=>{
     <div class="tab ${tab=='cust'?'active':''}" onclick="DB.invTab='cust';render()">① 客户开票（按订单）${pend?`<span class="tb">${pend}</span>`:''}</div>
     <div class="tab ${tab=='svc'?'active':''}" onclick="DB.invTab='svc';render()">② 服务费发票（平台开具）</div>
     <div class="tab ${tab=='sup'?'active':''}" onclick="DB.invTab='sup';render()">③ 耗材发票（平台开具）${(DB.supplyInvoices||[]).length?`<span class="tb">${DB.supplyInvoices.length}</span>`:''}</div>
-    <div class="tab ${tab=='repl'?'active':''}" onclick="DB.invTab='repl';render()">④ 自营补货发票（平台开具）${(DB.replInvoices||[]).length?`<span class="tb">${DB.replInvoices.length}</span>`:''}</div>
+    <div class="tab ${tab=='repl'?'active':''}" onclick="DB.invTab='repl';render()">④ 平台补采发票（平台开具）${(DB.replInvoices||[]).length?`<span class="tb">${DB.replInvoices.length}</span>`:''}</div>
   </div>`;
   if(tab=='svc')return tabsBar+svcInvoiceContent();
   if(tab=='sup')return tabsBar+supplyInvoiceContent();
@@ -3564,12 +3567,13 @@ function act_billDetail(key){
       <div><div class="k">平台抽佣（服务佣金）${sel.feeSvc>0?'':'· 免佣期'}</div><div class="v" style="color:var(--r)">-${money(sel.feeSvc||0)}</div></div>
       <div><div class="k">物流抽佣（物流佣金）${sel.feeLogi>0?'':'· 免佣期'}</div><div class="v" style="color:var(--r)">-${money(sel.feeLogi||0)}</div></div>
       ${isCur&&(sel.supply||0)>0?`<div><div class="k">耗材采购扣款（含税 · ${sel.supplyCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.supply)}</div></div>`:''}
-      ${(sel.repl||0)>0?`<div><div class="k">自营补货扣款（含税 · ${sel.replCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.repl)}</div></div>`:''}
+      ${(sel.repl||0)>0?`<div><div class="k">平台补采扣款（含税 · ${sel.replCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.repl)}</div></div>`:''}
+      ${(sel.fine||0)>0?`<div><div class="k">缺货罚款（${sel.fineCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.fine)}</div></div>`:''}
       <div><div class="k">应清算给供应商（应结净额）</div><div class="v" style="color:var(--g);font-size:18px">${money(sel.net)}</div></div>
     </div>
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣 − 耗材采购扣款 − 自营补货扣款</b>；平台就抽佣部分向你开具佣金税票，就耗材部分开具耗材销售发票，就自营补货部分开具补货销售发票。
-      <br>少货由自营补货的订单，<b>GMV 与抽佣仍按应送数量足额计</b>，不因少货下调。</div>
-    ${(sel.repl||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🔁</span><div>本期含自营补货扣款 <b>${money(sel.repl)}</b>（${sel.replCnt} 单，按<b>含税售价 ×(1+加价率)</b> 计）——你送货到仓少货、由平台自营现货补货的部分，视同你向平台采购。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-replenish')">查看自营补货单 →</button></div></div>`:''}
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣 − 耗材采购扣款 − 平台补采扣款 − 缺货罚款</b>；平台就抽佣部分向你开具佣金税票，就耗材部分开具耗材销售发票，就平台补采部分开具补采销售发票；<b>罚款不开发票</b>，仅作结算扣减项。
+      <br>少货由平台补采的订单，<b>GMV 与抽佣仍按应送数量足额计</b>，不因少货下调。</div>
+    ${(sel.repl||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🔁</span><div>本期含<b>平台补采扣款 ${money(sel.repl)}</b>（${sel.replCnt} 单，按<b>自营商品原定价</b>计，<b>不加价</b>）${(sel.fine||0)>0?` 与 <b>缺货罚款 ${money(sel.fine)}</b>（${sel.fineCnt} 单，缺口件数 × ${money(DB.replCfg?DB.replCfg.finePerUnit:40)}/件）`:''}——均因你送货到仓少货产生，两者<b>各自独立</b>。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-replenish')">查看平台补采单 →</button><button class="btn btn-link" onclick="closeDrawer();nav('m-fine')">查看罚款单 →</button></div></div>`:''}
     ${isCur&&(sel.supply||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🖨️</span><div>本期含耗材采购扣款 <b>${money(sel.supply)}</b>（已交付 ${sel.supplyCnt} 单，按含税金额扣）；当期应清算不足以覆盖时，差额结转下期继续扣。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-supply-order')">查看耗材订单 →</button></div></div>`:''}
     ${isCur&&sel.status!='paid'?`<div class="ib ib-b"><span class="i">ℹ️</span>第一期：结算单生成即<b>默认对账确认</b>，直接进入付款流程；如有异议请<b>线下联系平台运营/客服</b>核查。</div>`:''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
