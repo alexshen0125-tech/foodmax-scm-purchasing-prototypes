@@ -78,6 +78,10 @@
   function dvRepl(d){return (typeof replByDelivery=='function')?replByDelivery(d.id):[];}
   function dvReplQty(d){return dvRepl(d).reduce((a,r)=>a+(+r.qty||0),0);}
   function dvReplSku(d,sku){return dvRepl(d).filter(r=>r.sku==sku).reduce((a,r)=>a+(+r.qty||0),0);}
+  // 缺货罚款：来自独立的罚款单数据源，只要清点出缺口就有，与是否补采无关
+  function dvFine(d){return ((DB.fineOrders||[]).find(f=>f.deliveryNo==d.id))||null;}
+  function dvFineAmt(d){const f=dvFine(d);return f?+(f.items.reduce((a,x)=>a+x.qty,0)*f.rate).toFixed(2):0;}
+  function dvFineSku(d,sku){const f=dvFine(d);if(!f)return 0;const it=f.items.find(x=>x.sku==sku);return it?+(it.qty*f.rate).toFixed(2):0;}
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
@@ -94,7 +98,7 @@
         <td>${d.deliver}<div style="font-size:11px;color:var(--ts)">${d.window}</div></td>
         <td><b style="font-size:15px">${dvShould(d)}</b> <span style="color:var(--ts)">/ ${dvIn(d)}</span></td>
         <td>${done?(dvShort(d)
-          ?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)}</span><div style="font-size:11px;color:var(--ts);margin-top:2px">平台补采 <b style="color:var(--gold)">${dvReplQty(d)}</b> 件</div>`
+          ?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)}</span><div style="font-size:11px;color:var(--ts);margin-top:2px">平台补采 <b style="color:var(--gold)">${dvReplQty(d)}</b> 件</div>${dvFineAmt(d)>0?`<div style="font-size:11px;color:var(--r);margin-top:2px">罚款 ${money(dvFineAmt(d))}</div>`:''}`
           :'<span class="tag t-g"><span class="dot"></span>足额收货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">平台补采 0 件</div>')
           :'<span style="color:var(--ts);font-size:12px">待清点</span>'}${(typeof whrOfDelivery=='function'&&whrOfDelivery(d.id).length)?`<div style="margin-top:4px">${whrOfDelivery(d.id).some(r=>r.type=='送错')?'<span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>有错货</span>':''}${whrOfDelivery(d.id).some(r=>r.type=='送多')?'<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>有多货</span>':''}</div>`:''}</td>
         <td style="white-space:nowrap">${done
@@ -167,14 +171,17 @@
         ${kvItem('交接时间',inbound?`${d.deliver} 已交接入仓`:'未交接')}
         ${kvItem('收货清点时间',inbound?(d.receiptTime||`${d.deliver} 已清点`):'未清点')}
         ${kvItem('收货结果',inbound?(dvShort(d)?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)} 件</span>`:'<span class="tag t-g"><span class="dot"></span>足额收货</span>'):'待清点')}
-        ${kvItem('平台补采',inbound?`<b style="color:${dvReplQty(d)>0?'var(--gold)':'var(--ts)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?`（缺口由平台自营现货补货）`:'（无需补货）'}`:'0 件')}
+        ${kvItem('平台补采',inbound?`<b style="color:${dvReplQty(d)>0?'var(--gold)':'var(--ts)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?`（缺口由平台自营现货补齐）`:'（无需补采）'}`:'0 件')}
+        ${kvItem('缺货罚款',inbound?(dvFineAmt(d)>0?`<b style="color:var(--r)">${money(dvFineAmt(d))}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${dvFine(d).items.reduce((a,x)=>a+x.qty,0)} 件 × ${money(dvFine(d).rate)}/件 · 单号 <span class="mono">${dvFine(d).no}</span></div>`:'<span style="color:var(--ts)">无</span>'):'—')}
       </div>
     </div></div>
     ${(inbound&&dvShort(d))?(()=>{const rs=(typeof replByDelivery=='function')?replByDelivery(d.id):[];
       return `<div class="ib ${rs.length?'ib-y':'ib-r'}" style="margin-bottom:14px"><span class="i">${rs.length?'🔁':'⚠️'}</span><div>
         本单收货清点<b>少货 ${dvShortQty(d)} 件</b>。${rs.length
-          ?`缺口已由平台<b>自营现货全额补齐</b>，客户订单未受影响（商品/金额/发票不变），已生成平台补采单 ${rs.map(r=>`<span class="mono">${r.no}</span>`).join('、')}——按<b>自营商品原定价</b>计价（不加价），并同时生成<b>缺货罚款单</b>（缺口件数 × 罚款标准），两者均在结算单中抵扣。<br><button class="btn btn-link" style="padding-left:0" onclick="nav('m-replenish')">查看平台补采单 →</button>`
-          :`自营现货不足以全额覆盖缺口，本单按<b>实收数量</b>出库并标缺货，不生成平台补采单。`}
+          ?`缺口已由平台<b>自营现货全额补齐</b>，客户订单未受影响（商品/金额/发票不变），已生成平台补采单 ${rs.map(r=>`<span class="mono">${r.no}</span>`).join('、')}——按<b>自营商品原定价</b>计价（<b>不加价</b>），在结算单中抵扣。`
+          :`自营现货不足以全额覆盖缺口，本单按<b>实收数量</b>出库并标缺货，<b>不生成平台补采单</b>。`}
+        ${dvFineAmt(d)>0?`<br>另按缺货计<b>罚款 ${money(dvFineAmt(d))}</b>（${dvFine(d).items.reduce((a,x)=>a+x.qty,0)} 件 × ${money(dvFine(d).rate)}/件，单号 <span class="mono">${dvFine(d).no}</span>）——<b>罚款与是否补采无关，只要清点出缺口就计</b>。`:''}
+        <br>${rs.length?`<button class="btn btn-link" style="padding-left:0" onclick="nav('m-replenish')">查看平台补采单 →</button>`:''}${dvFineAmt(d)>0?`<button class="btn btn-link" ${rs.length?'':'style="padding-left:0"'} onclick="nav('m-fine')">查看罚款单 →</button>`:''}
         <br><span style="color:var(--ts)">对实收数量有异议请<b>线下联系平台运营</b>核对（可调取仓库收货监控），本期不设线上申诉入口。</span>
       </div></div>`;})():''}
     ${(meta.addr||(meta.day&&meta.day[0]))?`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:18px 22px">
@@ -201,14 +208,15 @@
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">多货/错货<b>不新增单据、不产生结算</b>，沿用本送货单标记；也可在「售后管理 › 退货单 › 仓库退回」统一查看。<button class="btn btn-link" style="padding-left:4px" onclick="DB.retSrcTab='wh';nav('m-after-return')">前往 →</button></div>
     </div></div>`:''}
     <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异</th><th style="text-align:right">平台补采</th></tr></thead><tbody>
+      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">本次预约数量</th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异</th><th style="text-align:right">平台补采</th><th style="text-align:right">缺货罚款</th></tr></thead><tbody>
       ${lines.map((r,i)=>{const diff=(r.recvQty==null)?null:(r.recvQty-r.bookQty);
         return `<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td><td style="text-align:right">${r.bookQty}</td>
         <td style="text-align:right;${r.recvQty==null?'color:var(--ts)':(diff<0?'color:var(--r);font-weight:600':'color:var(--gd);font-weight:600')}">${r.recvQty==null?'待清点':r.recvQty}</td>
         <td style="text-align:right;${diff<0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${diff==null?'—':(diff<0?diff:'0')}</td>
-        <td style="text-align:right;${dvReplSku(d,r.sku)>0?'color:var(--gold);font-weight:600':'color:var(--ts)'}">${dvReplSku(d,r.sku)}</td></tr>`;}).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+        <td style="text-align:right;${dvReplSku(d,r.sku)>0?'color:var(--gold);font-weight:600':'color:var(--ts)'}">${dvReplSku(d,r.sku)}</td>
+        <td style="text-align:right;${dvFineSku(d,r.sku)>0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${dvFineSku(d,r.sku)>0?'-'+money(dvFineSku(d,r.sku)):'—'}</td></tr>`;}).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
       </tbody></table></div>
-      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>平台补采</b>＝该 SKU 缺口由平台自营现货补齐的数量（未补为 0），按<b>自营商品原定价</b>在结算单中抵扣，并另计<b>缺货罚款</b>。</div></div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>平台补采</b>＝该 SKU 缺口由平台自营现货补齐的数量（未补为 0），按<b>自营商品原定价</b>在结算单中抵扣；<b>缺货罚款</b>＝该 SKU 缺口件数 × 罚款标准，<b>与是否补采无关</b>，两者各自独立进结算单。</div></div>
       ${(d.signed&&!inbound)?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
     </div>`;
   }
@@ -224,8 +232,9 @@
       {id:'SH20260701002',pickId:'JH20260701002',warehouse:'兀兰DC',deliver:'07-01',window:'06:00–10:00',orderIds:['#SG20260701002'],labels:lbl(30),status:'待送货',bizType:'预售品',booked:false,signed:true,demoLines:dl([['SKU8804','空心菜','1kg/件',30]])},
       {id:'SH20260628003',pickId:'JH20260628003',warehouse:'盛港DC',deliver:'06-28',window:'12:00–16:00',orderIds:['#SG20260628003'],labels:lbl(12),status:'待送货',bizType:'预售品',booked:false,signed:false,demoLines:dl([['SKU8803','菠菜','1kg/件',12]])},
       // ↓ 已入库并完成收货清点：少货部分由平台自营现货补货，对应「财务 › 平台补采」的补采单
-      {id:'SH20260628004',pickId:'JH20260628004',warehouse:'盛港DC',deliver:'06-28',window:'02:00–05:00',orderIds:['#SG20260628011'],labels:lblA(20,18),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'00:52',receiptTime:'2026-06-28 01:06',demoLines:dl([['SKU8801','小棠菜','1kg/件',20,18]])},
+      {id:'SH20260628004',pickId:'JH20260628004',warehouse:'盛港DC',deliver:'06-28',window:'02:00–05:00',orderIds:['#SG20260628011'],labels:lblA(35,30),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'00:52',receiptTime:'2026-06-28 01:06',demoLines:dl([['SKU8801','小棠菜','1kg/件',20,18],['SKU8805','菜心','1kg/件',15,12]])},
       {id:'SH20260629005',pickId:'JH20260629005',warehouse:'兀兰DC',deliver:'06-29',window:'02:00–05:00',orderIds:['#SG20260629004'],labels:lblA(30,22),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'02:41',receiptTime:'2026-06-29 03:24',demoLines:dl([['SKU8804','空心菜','1kg/件',30,22]])},
+      {id:'SH20260701008',pickId:'JH20260701008',warehouse:'淡滨尼DC',deliver:'07-01',window:'02:00–05:00',orderIds:['#SG20260701015'],labels:lblA(25,20),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'02:10',receiptTime:'2026-07-01 02:40',demoLines:dl([['SKU8807','芥蓝','1kg/件',25,20]])},
       {id:'SH20260522001',pickId:'JH20260522001',warehouse:'盛港DC',deliver:'05-22',window:'12:00–16:00',orderIds:['#SG20260522006'],labels:lblA(12,10),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'12:00–16:00',signed:true,signTime:'12:20',receiptTime:'2026-05-22 13:42',demoLines:dl([['SKU8803','菠菜','1kg/件',12,10]])},
       {id:'SH20260518001',pickId:'JH20260518001',warehouse:'裕廊DC',deliver:'05-18',window:'23:00–02:00',orderIds:['#SG20260518009'],labels:lblA(60,48),status:'交接完成',bizType:'预售品',booked:true,bookWindow:'23:00–02:00',signed:true,signTime:'01:35',receiptTime:'2026-05-18 02:18',demoLines:dl([['SKU8811','鲜鸡蛋','30枚/盘',60,48]])}
     );}
