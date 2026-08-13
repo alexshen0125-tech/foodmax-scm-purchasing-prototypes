@@ -199,6 +199,11 @@ table.dn td{padding:11px;font-size:12px;border-top:1px solid var(--bd2);font-fea
 pre.json{background:#0F1A15;color:#CFE6D8;padding:16px 18px;border-radius:12px;font-size:12px;line-height:1.75;overflow-x:auto;font-family:ui-monospace,"SF Mono",Menlo,monospace}
 pre.json .k{color:#8FD3B0}pre.json .s{color:#E6C88A}pre.json .n{color:#9FC4F2}pre.json .c{color:#5F7168;font-style:italic}
 
+/* 买家侧购买单位切换（Case / Each） */
+.vsw{border:1.5px solid var(--bd);background:#fff;border-radius:9px;padding:6px 11px;font-size:12px;font-weight:600;color:var(--ts);cursor:pointer;transition:.13s;font-feature-settings:"tnum" 1}
+.vsw:hover{border-color:#CFE0CD;color:var(--tp)}
+.vsw.on{border-color:var(--g);background:var(--gl);color:var(--gd)}
+
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .lg{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px}
 </style>
@@ -290,6 +295,17 @@ pre.json .k{color:#8FD3B0}pre.json .s{color:#E6C88A}pre.json .n{color:#9FC4F2}pr
                   <div><label class="fl">总净含量<span class="calcnote">系统计算</span></label><input id="fNetTotal" class="calc" readonly><div class="fhint">校验规则：内装数量 × 单件净含量 ＝ 总净含量，不等则发布拦截</div></div>
                   <div><label class="fl">内装单位名称</label><input id="fInnerName" placeholder="盒"><div class="fhint">用于生成规格串，如「12<b>盒</b> × 500g」</div></div>
                 </div>
+
+                <div class="swrow" style="margin-top:14px">
+                  <div class="sw" id="splitSw"></div>
+                  <div><div class="swt">支持拆零销售 · 同 SPU 再开一个「单<span id="splitUnitName">件</span>」SKU<span class="flabel-chip ch-sell">售卖规格</span></div>
+                  <div class="swd">对应 GS1 包装层级 Case / Each：每个层级一个 SKU、一个 GTIN。买家在商详切换购买单位，加购步长随之切换。</div></div>
+                </div>
+                <div class="fld grid g3" id="fldSplit" style="margin-top:14px">
+                  <div><label class="fl">单件售价（未税）</label><input id="fSplitPrice" type="number" step="0.01" placeholder="1.35"><div class="fhint">拆零单卖的价格，通常高于整箱折算价</div></div>
+                  <div><label class="fl">整箱折算单件价<span class="calcnote">系统计算</span></label><input id="fPerItemCase" class="calc" readonly><div class="fhint">＝ 整箱售价 ÷ 内装数量</div></div>
+                  <div><label class="fl">拆零溢价<span class="calcnote">系统计算</span></label><input id="fSplitPrem" class="calc" readonly><div class="fhint">溢价过高会把买家推去整箱，需业务确认</div></div>
+                </div>
               </div>
 
               <!-- 散称 -->
@@ -324,8 +340,9 @@ pre.json .k{color:#8FD3B0}pre.json .s{color:#E6C88A}pre.json .n{color:#9FC4F2}pr
                 <div><label class="fl">税率</label><select id="fTax"><option value="0">0%</option><option value="9" selected>9%</option></select></div>
                 <div><label class="fl">含税价<span class="calcnote">系统计算</span></label><input id="fTaxed" class="calc" readonly></div>
               </div>
-              <div class="grid g2" style="margin-top:14px">
-                <div><label class="fl">单位价<span class="calcnote">系统计算 · 不可编辑</span></label><input id="fUnitPrice" class="calc" readonly><div class="fhint" id="hintUnit"></div></div>
+              <div class="grid g3" style="margin-top:14px">
+                <div id="perItemBox"><label class="fl">每件价<span class="calcnote">系统计算</span></label><input id="fPerItem" class="calc" readonly><div class="fhint">计件属性强的多联包（瓶装饮料、罐头、蛋品）以此为<b>主</b>单位价——餐厅算的是「一瓶多少钱」</div></div>
+                <div><label class="fl">归一单位价<span class="calcnote">系统计算 · 不可编辑</span></label><input id="fUnitPrice" class="calc" readonly><div class="fhint" id="hintUnit"></div></div>
                 <div id="estBox"><label class="fl">预估总价<span class="calcnote">系统计算</span></label><input id="fEst" class="calc" readonly><div class="fhint">＝ 单位价 × 参考重量，以实际称重结算</div></div>
               </div>
             </div>
@@ -386,7 +403,9 @@ const CATS=[
   s:{name:'新鲜鸡蛋 · 中号',sellUom:'板',innerQty:30,innerNet:1,innerUom:'枚',innerName:'枚',price:9.00}},
  {k:'grain',n:'米面粮油',d:'大包装定量件',qty:'FIXED',pack:false,
   s:{name:'泰国茉莉香米',sellUom:'袋',netVal:25,netUom:'kg',price:42.00}},
- {k:'sauce',n:'调味 / 饮品',d:'整箱多瓶装',qty:'FIXED',pack:true,
+ {k:'drink',n:'瓶装饮料 · 整箱',d:'按箱卖，按瓶比价',qty:'FIXED',pack:true,
+  s:{name:'可口可乐 · 经典原味',sellUom:'箱',innerQty:24,innerNet:330,innerUom:'mL',innerName:'瓶',price:28.80,split:true,splitPrice:1.35}},
+ {k:'sauce',n:'调味品 · 整箱',d:'整箱多罐装',qty:'FIXED',pack:true,
   s:{name:'泰国椰浆',sellUom:'箱',innerQty:24,innerNet:400,innerUom:'mL',innerName:'罐',price:33.60}},
  {k:'prep',n:'净菜 / 预制',d:'小包装即用',qty:'FIXED',pack:false,
   s:{name:'免洗菠菜 · 即用装',sellUom:'包',netVal:200,netUom:'g',price:2.40}}
@@ -406,9 +425,10 @@ const PV=[
  {k:'dn',n:'送货单 / 对账'}
 ];
 
-let st={cat:'frozen',qty:'FIXED',pack:true,pv:'list',
+let st={cat:'frozen',qty:'FIXED',pack:true,pv:'list',variant:'case',
   name:'',sellUom:'箱',netVal:'',netUom:'g',innerQty:'',innerNet:'',innerUom:'g',innerName:'',
-  par:'',parUom:'g',tol:10,price:'',tax:9,minQty:'',step:''};
+  par:'',parUom:'g',tol:10,price:'',tax:9,minQty:'',step:'',
+  split:false,splitPrice:''};
 
 /* ========== 工具 ========== */
 const $=id=>document.getElementById(id);
@@ -494,6 +514,29 @@ function calc(){
   r.unitPriceUom=pu.u;
   r.netText=netLabel;
   r.mainPrice=money(r.price)+' <small>/'+r.sellUom+'</small>';
+
+  /* —— 多联包：每件价 + 拆零单件 SKU —— */
+  if(st.pack){
+    const iq=Number(st.innerQty||0);
+    r.itemLabel=st.innerName||'件';
+    r.innerQty=iq;
+    r.perItem = iq>0 ? r.price/iq : 0;
+    /* 计件属性强（内装单位是瓶/罐/枚/包等离散件）→ 每件价作主单位价 */
+    r.itemFirst = iq>1;
+    if(st.split){
+      const inn=toBase(st.innerNet,st.innerUom);
+      const spu=priceUomOf(inn.q,inn.b,r.itemLabel);
+      const sp=Number(st.splitPrice||0);
+      r.split={
+        price:sp,
+        specHtml:'<span class="n-sell">1'+r.itemLabel+'</span> <span class="n-net">'+nm(st.innerNet)+st.innerUom+'</span>',
+        mainPrice:money(sp)+' <small>/'+r.itemLabel+'</small>',
+        unitPrice: inn.q>0 ? sp/(inn.q/spu.f) : 0,
+        unitPriceUom:spu.u,
+        premium: r.perItem>0 ? (sp/r.perItem-1)*100 : 0
+      };
+    }
+  }
   return r;
 }
 
@@ -522,7 +565,8 @@ function applyCat(k){
     netVal:s.netVal??'',netUom:s.netUom||'g',
     innerQty:s.innerQty??'',innerNet:s.innerNet??'',innerUom:s.innerUom||'g',innerName:s.innerName||'',
     par:s.par??'',parUom:s.parUom||'g',tol:s.tol??10,
-    price:s.price??'',minQty:s.minQty??'',step:s.step??''};
+    price:s.price??'',minQty:s.minQty??'',step:s.step??'',
+    split:!!s.split,splitPrice:s.splitPrice??'',variant:'case'};
   sync();render();
 }
 
@@ -535,17 +579,20 @@ function sync(){
   $('fPar').value=st.par; $('fParUom').value=st.parUom; $('fTol').value=st.tol;
   $('fPrice').value=st.price; $('fTax').value=st.tax;
   $('fMinQty').value=st.minQty; $('fStep').value=st.step;
+  $('fSplitPrice').value=st.splitPrice;
 }
 /* DOM → state */
 function bind(){
   const map={fName:'name',fSellUom:'sellUom',fNetVal:'netVal',fNetUom:'netUom',
     fInnerQty:'innerQty',fInnerNet:'innerNet',fInnerUom:'innerUom',fInnerName:'innerName',
-    fPar:'par',fParUom:'parUom',fTol:'tol',fPrice:'price',fTax:'tax',fMinQty:'minQty',fStep:'step'};
+    fPar:'par',fParUom:'parUom',fTol:'tol',fPrice:'price',fTax:'tax',fMinQty:'minQty',fStep:'step',
+    fSplitPrice:'splitPrice'};
   Object.keys(map).forEach(id=>{
     $(id).addEventListener('input',e=>{st[map[id]]=e.target.value;render();});
     $(id).addEventListener('change',e=>{st[map[id]]=e.target.value;render();});
   });
-  $('packSw').onclick=()=>{if(st.qty!=='FIXED')return;st.pack=!st.pack;render();};
+  $('packSw').onclick=()=>{if(st.qty!=='FIXED')return;st.pack=!st.pack;if(!st.pack)st.split=false;render();};
+  $('splitSw').onclick=()=>{st.split=!st.split;if(!st.split)st.variant='case';render();};
 }
 
 /* ========== 主渲染 ========== */
@@ -568,12 +615,22 @@ function render(){
   const r=calc();
 
   /* 计算态字段回填 */
+  /* 拆零（仅多联包可用） */
+  const canSplit=isFixed&&st.pack;
+  $('splitSw').className='sw'+(st.split&&canSplit?' on':'');
+  $('splitUnitName').textContent=st.innerName||'件';
+  $('fldSplit').classList.toggle('hide',!(canSplit&&st.split));
+
   /* 只读计算字段：不适用时清空，避免残留上一个品类的值 */
   $('fNetTotal').value=(isFixed&&st.pack)?(r.netTotalText||''):'';
   $('fRange').value=isV?(r.range||''):'';
   $('fEst').value=isV?money(r.est):'';
   $('fTaxed').value=money(r.taxed);
   $('fUnitPrice').value=r.unitPrice?money(r.unitPrice)+' / '+r.unitPriceUom:'—';
+  $('perItemBox').style.display=(isFixed&&st.pack)?'block':'none';
+  $('fPerItem').value=r.perItem?money(r.perItem)+' / '+r.itemLabel:'—';
+  $('fPerItemCase').value=r.perItem?money(r.perItem):'—';
+  $('fSplitPrem').value=r.split?(r.split.premium>=0?'+':'')+r.split.premium.toFixed(1)+'%':'—';
 
   $('lbPrice').textContent = isW?'单价（未税，每 kg）' : isV?'单价（未税，每 kg）' : '售价（未税，每'+st.sellUom+'）';
   $('hintPrice').textContent = isV?'变量重量商品按 kg 定价，页面展示预估总价':'';
@@ -586,6 +643,8 @@ function render(){
   if(isFixed&&!st.pack&&!Number(st.netVal))errs.push('净含量未填写');
   if(isFixed&&st.pack&&(!Number(st.innerQty)||!Number(st.innerNet)))errs.push('包装规格未填写完整（内装数量 × 单件净含量）');
   if(isV&&!Number(st.par))errs.push('参考重量 par_weight 未填写');
+  if(canSplit&&st.split&&!Number(st.splitPrice))errs.push('已开启拆零销售，单件售价未填写');
+  if(r.split&&r.split.premium>25)warns.push('拆零溢价 '+r.split.premium.toFixed(1)+'%，高于 25%——买家大概率转投整箱，需业务确认定价');
   if(isW&&(!Number(st.minQty)||!Number(st.step)))errs.push('散称商品必须设置起订量与加购步长');
   if(!Number(st.price))errs.push('售价未填写');
   if(/\d+\s*(g|kg|mL|L|ml|克|千克|毫升|升)/i.test(st.name))warns.push('商品名称里出现了规格数字——品名行只放品名，规格由字段生成');
@@ -604,50 +663,85 @@ function renderPreview(r){
   $('pvTabs').innerHTML=PV.map(p=>'<div class="pv-tab'+(st.pv===p.k?' on':'')+'" data-pv="'+p.k+'">'+p.n+'</div>').join('');
   $('pvTabs').querySelectorAll('.pv-tab').forEach(b=>b.onclick=()=>{st.pv=b.dataset.pv;render();});
 
-  const unitTxt=r.unitPrice?money(r.unitPrice)+' / '+r.unitPriceUom:'—';
   const isV=r.type==='VARIABLE_WEIGHT', isW=r.type==='BY_WEIGHT';
+
+  /* 买家侧「购买单位」切换：整箱 SKU ↔ 单件 SKU（GS1 Case / Each 两个层级） */
+  const hasSplit=!!r.split;
+  const isEach=hasSplit&&st.variant==='each';
+  const V={
+    spec: isEach?r.split.specHtml:r.specHtml,
+    main: isEach?r.split.mainPrice:r.mainPrice,
+    uom : isEach?r.itemLabel:r.sellUom,
+    unit: isEach?(r.split.unitPrice?money(r.split.unitPrice)+' / '+r.split.unitPriceUom:'—')
+                :(r.unitPrice?money(r.unitPrice)+' / '+r.unitPriceUom:'—'),
+    perItem: (!isEach&&r.perItem)?money(r.perItem)+' / '+r.itemLabel:null,
+    price: isEach?r.split.price:r.price
+  };
+  const unitTxt=V.unit;
+  /* 单位价去重：与主价或每件价同值时不再重复一遍（散称/变量重量的主价本身就是单位价；
+     计件商品的归一单位价 = 每件价） */
+  const norm=x=>String(x||'').replace(/\s|<[^>]+>/g,'');
+  const chips=[];
+  const seen=[norm(V.main)];
+  [V.perItem,V.unit].forEach(t=>{ if(t&&t!=='—'&&!seen.includes(norm(t))){chips.push(t);seen.push(norm(t));} });
+  const swHtml = hasSplit
+    ? '<div style="display:flex;gap:7px;margin-bottom:12px">'
+      +'<div class="vsw'+(!isEach?' on':'')+'" data-v="case">整'+r.sellUom+'（'+nm(r.innerQty)+r.itemLabel+'）</div>'
+      +'<div class="vsw'+(isEach?' on':'')+'" data-v="each">单'+r.itemLabel+'</div></div>'
+    : '';
+  /* 多联包价格行：每件价在前（主比价口径）、归一价在后 */
+  const priceLine = chips.map(t=>'<span class="mu">'+t+'</span>').join('');
+  const priceLineBig = chips.map(t=>'<span class="un">'+t+'</span>').join('');
   let h='',note='';
 
   if(st.pv==='list'){
-    h='<div class="mcard"><div class="mswatch"></div><div class="mbody">'
+    h=swHtml+'<div class="mcard"><div class="mswatch"></div><div class="mbody">'
       +'<div class="mname">'+r.name+'</div>'
-      +'<div class="mspec">'+r.specHtml+'</div>'
-      +'<div class="mprice"><span class="mm">'+r.mainPrice+'</span>'+(isW?'':'<span class="mu">'+unitTxt+'</span>')+'</div>'
+      +'<div class="mspec">'+V.spec+'</div>'
+      +'<div class="mprice"><span class="mm">'+V.main+'</span>'+priceLine+'</div>'
       +(isV?'<span class="mnote">以实际称重结算</span>':isW?'<span class="mnote">计量称重，不标净含量</span>':'')
       +'</div></div>';
-    note='比价发生在这一屏。Baymard 实测 86% 的电商不展示单位价，用户被迫心算——单位价必须出现在卡片上，不能只放商详。';
+    note=V.perItem
+      ? '整箱商品的卡片给两个单位价：每'+r.itemLabel+'价（餐厅算成本的口径，放前面）＋ 归一单位价（跨规格比价与合规口径）。只给后者，用户还是要自己除以 '+nm(r.innerQty)+'。'
+      : '比价发生在这一屏。Baymard 实测 86% 的电商不展示单位价，用户被迫心算——单位价必须出现在卡片上，不能只放商详。';
   }
   if(st.pv==='pdp'){
-    h='<div class="pdp">'
+    h=swHtml+'<div class="pdp">'
       +'<div class="prow"><div class="pidx">①</div><div><span class="pask">这是什么</span><div class="pv1">'+r.name+'</div></div></div>'
-      +'<div class="prow"><div class="pidx">②</div><div><span class="pask">买一次是多少</span><div class="pv2">'+r.specHtml+'</div></div></div>'
-      +'<div class="prow"><div class="pidx">③</div><div><span class="pask">多少钱 · 划不划算</span><div class="pv3"><span class="big">'+r.mainPrice+'</span>'+(isW?'':'<span class="un">'+unitTxt+'</span>')+'</div></div></div>'
+      +'<div class="prow"><div class="pidx">②</div><div><span class="pask">买一次是多少</span><div class="pv2">'+V.spec+'</div></div></div>'
+      +'<div class="prow"><div class="pidx">③</div><div><span class="pask">多少钱 · 划不划算</span><div class="pv3"><span class="big">'+V.main+'</span>'
+      +priceLineBig+'</div></div></div>'
       +'</div>';
-    note='三行公式：一行只回答一个问题，顺序固定。品名行不允许塞任何规格信息。';
+    note=hasSplit
+      ? '整箱与单'+r.itemLabel+'是同一 SPU 下的两个 SKU（GS1 Case / Each 两个包装层级，各自一个 GTIN），在商详用购买单位切换，不是两个独立商品。'
+      : '三行公式：一行只回答一个问题，顺序固定。品名行不允许塞任何规格信息。';
   }
   if(st.pv==='add'){
-    const q=isW?nm(st.minQty)+'kg':'1'+r.sellUom;
-    const sum=isW?Number(st.minQty||0)*r.price:(isV?r.est:r.price);
-    h='<div class="sheet"><div class="sheet-hd">加入购物车</div><div class="sheet-bd">'
-      +'<div class="mspec">'+r.specHtml+'</div>'
+    const q=isW?nm(st.minQty)+'kg':'1'+V.uom;
+    const sum=isW?Number(st.minQty||0)*r.price:(isV?r.est:V.price);
+    h=swHtml+'<div class="sheet"><div class="sheet-hd">加入购物车</div><div class="sheet-bd">'
+      +'<div class="mspec">'+V.spec+'</div>'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'
-      +'<div style="font-size:12px;color:var(--ts)">'+(isW?'重量（步长 '+nm(st.step)+'kg）':'数量（步长 1'+r.sellUom+'）')+'</div>'
+      +'<div style="font-size:12px;color:var(--ts)">'+(isW?'重量（步长 '+nm(st.step)+'kg）':'数量（步长 1'+V.uom+'）')+'</div>'
       +'<div class="stepper"><button type="button">−</button><div class="qv">'+q+'</div><button type="button">＋</button></div></div>'
       +'<div style="border-top:1px dashed var(--bd);padding-top:11px;display:grid;gap:6px">'
-      +(isW?'':'<div class="sumline"><span>单位价</span><span>'+unitTxt+'</span></div>')
+      +chips.map((t,i)=>'<div class="sumline"><span>'+((!isEach&&V.perItem&&i===0)?'折合每'+r.itemLabel:'归一单位价')+'</span><span>'+t+'</span></div>').join('')
       +(isV?'<div class="sumline"><span>参考重量</span><span>约 '+nm(st.par)+st.parUom+'（'+r.range+'）</span></div>':'')
       +'<div class="sumline"><span>'+(isV||isW?'预估小计':'小计')+'</span><b>'+money(sum)+'</b></div></div>'
       +'<button class="btn btn-p" style="width:100%;justify-content:center">加入购物车</button>'
       +(isV?'<div class="ib ib-y" style="margin:0"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg><div>实际重量以出库称重为准，允差 ±'+st.tol+'%，多退少补。</div></div>':'')
       +'</div></div>';
-    note='变量重量商品必须在加购瞬间同时给出：参考重量、单位价、预估总价——Amazon Whole Foods 的做法。';
+    note=isEach
+      ? '切到单'+r.itemLabel+'后，加购步长同步变成 1'+r.itemLabel+'——步长必须跟着售卖规格走，不能写死。'
+      : (V.perItem?'整箱加购要把「折合每'+r.itemLabel+'」摆在小计上方，餐厅决定买不买整箱看的就是这个数。'
+                 :'变量重量商品必须在加购瞬间同时给出：参考重量、单位价、预估总价——Amazon Whole Foods 的做法。');
   }
   if(st.pv==='cart'){
-    const q=isW?nm(st.minQty)+'kg':'×1';
-    const sum=isW?Number(st.minQty||0)*r.price:(isV?r.est:r.price);
-    h='<div class="linerow"><div class="lsw"></div>'
-      +'<div><div class="ln">'+r.name+'</div><div class="ls">'+r.specHtml+'</div>'
-      +'<div style="font-size:11px;color:var(--tt);margin-top:4px">'+q+'　'+unitTxt+'</div></div>'
+    const q=isW?nm(st.minQty)+'kg':'×1'+V.uom;
+    const sum=isW?Number(st.minQty||0)*r.price:(isV?r.est:V.price);
+    h=swHtml+'<div class="linerow"><div class="lsw"></div>'
+      +'<div><div class="ln">'+r.name+'</div><div class="ls">'+V.spec+'</div>'
+      +'<div style="font-size:11px;color:var(--tt);margin-top:4px">'+[q].concat(chips).join('　')+'</div></div>'
       +'<div><div class="lp">'+money(sum)+'</div>'+(isV||isW?'<div class="lu">预估</div>':'')+'</div></div>';
     note='B2B 场景下单人与验收人常不是同一人。规格只在商详出现，收货环节必然产生争议——购物车与订单必须重复展示完整规格。';
   }
@@ -659,14 +753,21 @@ function renderPreview(r){
     }else if(isW){
       const act=(Number(st.minQty||0)*0.98).toFixed(2);
       rows='<tr><td>'+r.name+'</td><td>'+nm(st.minQty)+' kg</td><td>'+act+' kg</td><td>'+money(r.price*act)+'</td><td><span class="tag t-g"><span class="dot"></span>按秤结算</span></td></tr>';
+    }else if(isEach){
+      rows='<tr><td>'+r.name+'</td><td>1'+r.itemLabel+'（'+nm(st.innerNet)+st.innerUom+'）</td><td>1'+r.itemLabel+'</td><td>'+money(r.split.price)+'</td><td><span class="tag t-g"><span class="dot"></span>足量</span></td></tr>';
+    }else if(st.pack){
+      rows='<tr><td>'+r.name+'</td><td>1'+r.sellUom+'（'+nm(r.innerQty)+r.itemLabel+' · '+r.netText+'）</td><td>'+nm(r.innerQty)+r.itemLabel+'</td><td>'+money(r.price)+'</td><td><span class="tag t-g"><span class="dot"></span>件数相符</span></td></tr>';
     }else{
       rows='<tr><td>'+r.name+'</td><td>1'+r.sellUom+'（'+r.netText+'）</td><td>'+r.netText+'</td><td>'+money(r.price)+'</td><td><span class="tag t-g"><span class="dot"></span>足量</span></td></tr>';
     }
     h='<table class="dn"><thead><tr><th>商品</th><th>订购</th><th>实发 / 实称</th><th>结算金额</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table>';
-    note='缺重争议的唯一判据在这张表。允差写进字段（weight_tolerance_pct）而不是客服话术——依据《定量包装商品计量监督管理办法》的允许短缺量。';
+    note=st.pack&&!isEach
+      ? '整箱商品的验收判据是<b>件数</b>不是重量：送货单必须把「'+nm(r.innerQty)+r.itemLabel+'」打出来，厨房才知道该点几'+r.itemLabel+'。只写「1'+r.sellUom+'」等于没法验收。'
+      : '缺重争议的唯一判据在这张表。允差写进字段（weight_tolerance_pct）而不是客服话术——依据《定量包装商品计量监督管理办法》的允许短缺量。';
   }
   $('pvStage').innerHTML=h;
-  $('pvNote').textContent=note;
+  $('pvStage').querySelectorAll('.vsw').forEach(b=>b.onclick=()=>{st.variant=b.dataset.v;render();});
+  $('pvNote').innerHTML=note;
 }
 
 /* ========== 契约 JSON ========== */
@@ -678,7 +779,8 @@ function renderJson(r){
   L.push(['sell_uom',s(st.sellUom),'售卖规格']);
   if(st.qty==='FIXED'){
     if(st.pack){
-      L.push(['pack_inner_qty',n(st.innerQty||0),'包装规格']);
+      L.push(['pack_inner_qty',n(st.innerQty||0),'包装规格：一箱几'+(st.innerName||'件')]);
+      L.push(['pack_inner_name',s(st.innerName||'件')]);
       L.push(['pack_inner_net',n(st.innerNet||0)]);
       L.push(['pack_inner_uom',s(st.innerUom)]);
     }
@@ -702,6 +804,15 @@ function renderJson(r){
   L.push(['tax_rate',n(st.tax)]);
   L.push(['price_uom',s(r.unitPriceUom||'-'),'单位价归一单位']);
   L.push(['unit_price',n((r.unitPrice||0).toFixed(2)),'系统计算 · 只读']);
+  if(st.pack&&r.perItem){
+    L.push(['per_item_price',n(r.perItem.toFixed(4)),'每'+r.itemLabel+'价 · 计件多联包主单位价']);
+    L.push(['per_item_label',s(r.itemLabel)]);
+  }
+  if(r.split){
+    L.push(['split_sku_enabled','<span class="n">true</span>','拆零：本 SPU 下另开一个 Each 层级 SKU']);
+    L.push(['split_sku_price',n(r.split.price.toFixed(2))]);
+    L.push(['split_sku_uom',s(r.itemLabel)]);
+  }
   const body=L.map((it,i)=>
     '  <span class="k">"'+it[0]+'"</span>: '+it[1]+(i<L.length-1?',':'')
     +(it[2]?'  <span class="c">// '+it[2]+'</span>':'')
