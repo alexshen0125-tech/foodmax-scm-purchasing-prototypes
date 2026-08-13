@@ -22,26 +22,30 @@ window.replFineRate = function(){ return DB.replCfg.finePerUnit; };
 
 /* ================= 演示数据（挂 DB，跨 render 持久） ================= */
 DB.replOrders = DB.replOrders || [
-  {no:'RPL-20260628-003', fineNo:'FN-20260628-003', deliveryNo:'SH20260628004', subOrderNo:'#SG20260628011', warehouse:'盛港DC',
+  {no:'RPL-20260628-003', deliveryNo:'SH20260628004', subOrderNo:'#SG20260628011', warehouse:'盛港DC',
    receiptTime:'2026-06-28 01:06', sku:'SKU8801', name:'小棠菜', spec:'1kg/件', unit:'件',
    should:20, received:18, qty:2, selfPrice:2.90,
    status:'pending', billNo:'', invNo:''},
-  {no:'RPL-20260629-004', fineNo:'FN-20260629-004', deliveryNo:'SH20260629005', subOrderNo:'#SG20260629004', warehouse:'兀兰DC',
+  {no:'RPL-20260628-006', deliveryNo:'SH20260628004', subOrderNo:'#SG20260628014', warehouse:'盛港DC',
+   receiptTime:'2026-06-28 01:09', sku:'SKU8805', name:'菜心', spec:'1kg/件', unit:'件',
+   should:15, received:12, qty:3, selfPrice:3.60,
+   status:'pending', billNo:'', invNo:''},
+  {no:'RPL-20260629-004', deliveryNo:'SH20260629005', subOrderNo:'#SG20260629004', warehouse:'兀兰DC',
    receiptTime:'2026-06-29 03:24', sku:'SKU8804', name:'空心菜', spec:'1kg/件', unit:'件',
    should:30, received:22, qty:8, selfPrice:3.50,
    status:'pending', billNo:'', invNo:''},
   {no:'RPL-20260630-005', deliveryNo:'SH20260630007', subOrderNo:'#SG20260630012', warehouse:'大巴窑DC',
    receiptTime:'2026-06-30 04:11', sku:'SKU8802', name:'白菜', spec:'1kg/件', unit:'件',
    should:40, received:37, qty:3, selfPrice:2.30,
-   status:'deducted', billNo:'ST202606-M0815', invNo:'', fineNo:'FN-20260630-005'},
+   status:'deducted', billNo:'ST202606-M0815', invNo:''},
   {no:'RPL-20260522-002', deliveryNo:'SH20260522001', subOrderNo:'#SG20260522006', warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42', sku:'SKU8803', name:'菠菜', spec:'1kg/件', unit:'件',
    should:12, received:10, qty:2, selfPrice:4.10,
-   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-302', fineNo:'FN-20260522-002'},
+   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-302'},
   {no:'RPL-20260518-001', deliveryNo:'SH20260518001', subOrderNo:'#SG20260518009', warehouse:'裕廊DC',
    receiptTime:'2026-05-18 02:18', sku:'SKU8811', name:'鲜鸡蛋', spec:'30枚/盘', unit:'盘',
    should:60, received:48, qty:12, selfPrice:9.20,
-   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-301', fineNo:'FN-20260518-001'},
+   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-301'},
 ];
 DB.replInvoices = DB.replInvoices || [
   {no:'RPL-INV-2026-302', repl:'RPL-20260522-002', date:'2026-06-06', status:'已开票'},
@@ -173,7 +177,7 @@ window.repl_detail=function(no){
         <tr><td style="color:var(--ts)">不含税金额</td><td style="text-align:right">${money(rNet(r))}</td></tr>
         <tr><td style="color:var(--ts)">GST ${gst()}%</td><td style="text-align:right">${money(rGst(r))}</td></tr>
         <tr style="font-weight:700;background:var(--gl)"><td>补采扣款（含税 · 结算抵扣）</td><td style="text-align:right;color:var(--r)">-${money(rAmt(r))}</td></tr>
-        <tr><td style="color:var(--ts)">缺货罚款 = ${r.qty}${r.unit} × ${money(replFineRate())}/件<div style="font-size:11px;margin-top:2px">关联罚款单 <span class="mono">${r.fineNo||'待生成'}</span></div></td><td style="text-align:right;color:var(--r);font-weight:700">-${money(rFine(r))}</td></tr>
+        <tr><td style="color:var(--ts)">缺货罚款 = ${r.qty}${r.unit} × ${money(replFineRate())}/件<div style="font-size:11px;margin-top:2px">关联罚款单 <span class="mono">${fineNoOf(r.deliveryNo)}</span></div></td><td style="text-align:right;color:var(--r);font-weight:700">-${money(rFine(r))}</td></tr>
         <tr style="font-weight:700;background:#FDF2F2"><td>本单合计扣款</td><td style="text-align:right;color:var(--r);font-size:16px">-${money(+(rAmt(r)+rFine(r)).toFixed(2))}</td></tr>
       </tbody>
     </table></div>
@@ -181,7 +185,7 @@ window.repl_detail=function(no){
     ${sec('结算与发票')}
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px">
       ${kv('抵扣所属结算单',r.billNo?`<span class="mono">${r.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:'待本期结算单生成时抵扣')}
-      ${kv('关联罚款单',r.fineNo?`<span class="mono">${r.fineNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-fine')">查看</button>`:'随本单同时生成')}
+      ${kv('关联罚款单',`<span class="mono">${fineNoOf(r.deliveryNo)}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-fine')">查看</button><div style="font-size:11px;color:var(--ts);margin-top:2px">一张送货单一张罚款单，同单多 SKU 缺货合并计罚</div>`)}
       ${kv('补采发票',inv?`<span class="mono">${inv.no}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.invTab='repl';nav('m-invoice')">查看</button>`:'结算完成后由平台自动开具')}
     </div>
     <div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>对<b>实收数量</b>有异议，请在<b>收货清点后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567），并提供<b>装车照片或司机交接单</b>；平台将调取仓库收货监控核对，核实有误的由运营发起<b>冲正</b>，在下期结算回补并开红冲发票。逾期以清点数量为准。本期不设线上申诉入口。</div>
@@ -269,48 +273,97 @@ window.repl_saveFine=function(){
 
 /* ================= 商家端 · 罚款单 ================= */
 // 罚款单由缺货补采同时生成（1 张补采单 ↔ 1 张罚款单），独立进清结算；本期仅「缺货」一种罚款事由
-function fineRows(){
-  return DB.replOrders.filter(r=>r.fineNo).map(r=>({
-    no:r.fineNo, replNo:r.no, deliveryNo:r.deliveryNo, subOrderNo:r.subOrderNo, warehouse:r.warehouse,
-    at:r.receiptTime, sku:r.sku, name:r.name, spec:r.spec, unit:r.unit, qty:r.qty,
-    rate:replFineRate(), amt:rFine(r),
-    status:r.status=='pending'?'pending':'deducted', billNo:r.billNo
-  })).sort((a,b)=>b.at.localeCompare(a.at));
+// 罚款单 = 【一张送货单一张】，金额 = 该单各 SKU 缺口件数合计 × 罚款标准；明细逐 SKU
+window.fineNoOf = dn => 'FN' + String(dn).replace(/^SH/,'');
+function fineGroups(){
+  const map={};
+  DB.replOrders.forEach(r=>{(map[r.deliveryNo]=map[r.deliveryNo]||[]).push(r);});
+  return Object.keys(map).map(dn=>{
+    const items=map[dn].slice().sort((a,b)=>a.sku.localeCompare(b.sku));
+    const qty=items.reduce((a,x)=>a+x.qty,0);
+    const pend=items.filter(x=>x.status=='pending').length;
+    return {no:fineNoOf(dn), deliveryNo:dn, warehouse:items[0].warehouse,
+      at:items.map(x=>x.receiptTime).sort()[0], items, qty,
+      rate:replFineRate(), amt:+(qty*replFineRate()).toFixed(2),
+      billNo:items.find(x=>x.billNo)?items.find(x=>x.billNo).billNo:'',
+      status:pend==items.length?'pending':(pend==0?'deducted':'partial')};
+  }).sort((a,b)=>b.at.localeCompare(a.at));
 }
-function fnTag(s){return s=='pending'
-  ?'<span class="tag t-y"><span class="dot"></span>待结算</span>'
+function fnTag(st){return st=='pending'?'<span class="tag t-y"><span class="dot"></span>待结算</span>'
+  :st=='partial'?'<span class="tag t-y"><span class="dot"></span>部分结算</span>'
   :'<span class="tag t-b"><span class="dot"></span>已结算</span>';}
 PAGES['m-fine']=()=>{
-  const rows=fineRows();
-  if(!rows.length) return `<div class="empty"><div class="e-ic">⚖️</div><div class="e-t">暂无罚款单</div><div class="e-s">足额送货到仓即不会产生罚款单。到仓清点少货时，按缺口件数计罚并在此生成单据。</div></div>`;
-  const pend=rows.filter(r=>r.status=='pending');
+  const gs=fineGroups();
+  if(!gs.length) return `<div class="empty"><div class="e-ic">⚖️</div><div class="e-t">暂无罚款单</div><div class="e-s">足额送货到仓即不会产生罚款单。到仓清点少货时，按缺口件数计罚并在此生成单据。</div></div>`;
+  const pendCnt=gs.filter(g=>g.status!='deducted').length;
   return `<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⚖️</span><div>
-    <b>罚款单</b>＝你送货到仓被清点出<b>少货</b>时，按 <b>缺口件数 × ${money(replFineRate())}/件</b> 计罚。罚款<b>按件计、与货值无关</b>，与「平台补采单」<b>同时生成、各自独立</b>进当期结算单扣减。
+    <b>罚款单</b>＝你送货到仓被清点出<b>少货</b>时，按 <b>缺口件数 × ${money(replFineRate())}/件</b> 计罚。<b>一张送货单一张罚款单</b>，同单多个 SKU 缺货合并计罚、点详情看逐个商品。罚款<b>按件计、与货值无关</b>，与「平台补采单」<b>同时生成、各自独立</b>进当期结算单扣减，<b>不开发票</b>。
     <br><span style="color:var(--ts)">对缺口数量有异议请线下联系运营核对，本期不设线上申诉入口。</span>
   </div></div>
-  <div class="card"><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>罚款单号</th><th>事由</th><th>关联补采单 / 送货单</th><th>商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr>
-      <td class="mono" style="white-space:nowrap">${r.no}</td>
-      <td><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>到仓少货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.at}</div></td>
-      <td class="mono" style="font-size:12px;white-space:nowrap">${r.replNo}<div style="color:var(--ts);margin-top:2px">${r.deliveryNo}</div></td>
-      <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.sku} · ${r.spec}</div></td>
-      <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
-      <td style="text-align:right">${money(r.rate)} / 件</td>
-      <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">-${money(r.amt)}</td>
-      <td style="white-space:nowrap">${fnTag(r.status)}${r.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.billNo}</div>`:''}</td>
+  <div class="card"><div class="card-hd"><h3>罚款单</h3><span class="sub">待结算 ${pendCnt} 单 · 共 ${gs.length} 单 / ${DB.replOrders.length} 项 · 按送货单合并</span></div>
+  <div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>罚款单号</th><th>事由</th><th>来源送货单</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    ${gs.map(g=>`<tr>
+      <td class="mono" style="white-space:nowrap">${g.no}</td>
+      <td style="white-space:nowrap"><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>到仓少货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.at}</div></td>
+      <td class="mono" style="font-size:12px;white-space:nowrap">${g.deliveryNo}<div style="color:var(--ts);margin-top:2px">${g.warehouse}</div></td>
+      <td style="white-space:nowrap">${g.items.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.items.length} 个 SKU</div></td>
+      <td style="text-align:right"><b>${g.qty}</b></td>
+      <td style="text-align:right">${money(g.rate)} / 件</td>
+      <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">-${money(g.amt)}</td>
+      <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}</td>
+      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button> <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">送货单</button></td>
     </tr>`).join('')}
     </tbody></table></div>
     <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">本期罚款事由仅「<b>到仓少货</b>」一种；罚款标准由平台统一配置，生成单据时快照，后续调整不追溯。罚款<b>不开发票</b>，作为结算扣减项在结算单中体现。</div>
   </div>`;
 };
+// 罚款单详情（右侧抽屉）：同送货单多个 SKU 缺货逐项区分
+window.fine_detail=function(no){
+  const g=fineGroups().find(x=>x.no==no); if(!g)return;
+  const kv=(k,v)=>`<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;
+  const sec=t=>`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">${t}</h3></div>`;
+  drawer(`<div class="drawer-hd"><div><h3>${g.no} · 罚款单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${g.warehouse} · 共 ${g.items.length} 个 SKU 缺货 · 合计 ${g.qty} 件</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="row" style="gap:8px;margin-bottom:14px">${fnTag(g.status)}<span class="tag t-r"><span class="dot"></span>到仓少货</span></div>
+    <div class="ib ib-r" style="margin-bottom:16px"><span class="i">⚖️</span>本单送货到仓被清点出 <b>${g.items.length} 个 SKU 少货、合计 ${g.qty} 件</b>，按 <b>${money(g.rate)}/件</b> 计罚，罚款 <b>${money(g.amt)}</b>。罚款<b>按件计、与货值无关</b>，与平台补采扣款各自独立，均在当期结算单中扣减；罚款<b>不开发票</b>。</div>
+
+    ${sec('单据信息')}
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">
+      ${kv('罚款单号',`<span class="mono">${g.no}</span>`)}
+      ${kv('罚款事由','到仓少货')}
+      ${kv('来源送货单',`<span class="mono">${g.deliveryNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看</button>`)}
+      ${kv('入库仓库',g.warehouse)}
+      ${kv('收货清点时间',g.at)}
+      ${kv('抵扣所属结算单',g.billNo?`<span class="mono">${g.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:'待本期结算单生成时抵扣')}
+    </div>
+
+    ${sec('缺货明细 · 逐 SKU')}
+    <div style="overflow-x:auto;margin-bottom:14px"><table>
+      <thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">缺口</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>关联补采单</th></tr></thead><tbody>
+      ${g.items.map(x=>`<tr>
+        <td style="white-space:nowrap"><b>${x.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${x.sku} · ${x.spec}</div></td>
+        <td style="text-align:right">${x.should}</td>
+        <td style="text-align:right;color:var(--r);font-weight:600">${x.received}</td>
+        <td style="text-align:right;color:var(--r);font-weight:600">${x.qty} ${x.unit}</td>
+        <td style="text-align:right">${money(g.rate)}</td>
+        <td style="text-align:right;color:var(--r);font-weight:700">-${money(+(x.qty*g.rate).toFixed(2))}</td>
+        <td class="mono" style="font-size:12px;white-space:nowrap">${x.no} <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-replenish')">查看</button></td>
+      </tr>`).join('')}
+      <tr style="font-weight:700;background:var(--gl)"><td>合计</td><td style="text-align:right">—</td><td style="text-align:right">—</td><td style="text-align:right;color:var(--r)">${g.qty}</td><td style="text-align:right">—</td><td style="text-align:right;color:var(--r);font-size:15px">-${money(g.amt)}</td><td>—</td></tr>
+      </tbody></table></div>
+    <div class="ib ib-b"><span class="i">ℹ️</span>罚款标准在<b>生成单据时快照</b>，后续平台调整不追溯本单。对缺口数量有异议请<b>线下联系运营</b>核对，本期不设线上申诉入口。</div>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看送货单</button></div>`);
+};
 // 结算联动：把罚款并入当期结算单扣减项
 window.fineSettleSync=function(){
-  const pend=fineRows().filter(r=>r.status=='pending');
-  const amt=+(pend.reduce((a,r)=>a+r.amt,0)).toFixed(2);
-  DB.bill.fine=amt; DB.bill.fineCnt=pend.length;
+  const pendItems=DB.replOrders.filter(r=>r.status=='pending');
+  const amt=+(pendItems.reduce((a,r)=>a+r.qty,0)*replFineRate()).toFixed(2);
+  const docs=new Set(pendItems.map(r=>r.deliveryNo));
+  DB.bill.fine=amt; DB.bill.fineCnt=docs.size;
   DB.bill.items=DB.bill.items.filter(it=>it[0]!='缺货罚款');
-  if(amt>0)DB.bill.items.push(['缺货罚款',pend.length,-amt]);
+  if(amt>0)DB.bill.items.push(['缺货罚款',docs.size,-amt]);
   DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-(DB.bill.supply||0)-(DB.bill.repl||0)-amt).toFixed(2);
 };
 fineSettleSync();
