@@ -115,7 +115,7 @@ PAGES['m-replenish']=()=>{
   return tip+filt+tabs+`
   <div class="card">
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>补采单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">自营原定价</th><th style="text-align:right">补采扣款（含税）</th><th style="text-align:right">缺货罚款</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>补采单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">单价（含税）</th><th style="text-align:right">补采扣款（含税）</th><th style="text-align:right">缺货罚款</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>`<tr>
       <td class="mono" style="white-space:nowrap">${r.no}</td>
       <td class="mono" style="font-size:12px;white-space:nowrap">${r.deliveryNo}<div style="color:var(--ts);margin-top:2px">${r.subOrderNo}</div></td>
@@ -172,8 +172,8 @@ window.repl_detail=function(no){
     </tbody></table></div>
     <div style="overflow-x:auto;margin-bottom:20px"><table>
       <tbody>
-        <tr><td style="color:var(--ts)">自营商品原定价（含税 · 生成时快照）</td><td style="text-align:right">${money(rUnit(r))} / ${r.unit}</td></tr>
-        <tr><td style="color:var(--ts)">补采金额（含税） = ${money(rUnit(r))} × ${r.qty}${r.unit}<div style="font-size:11px;margin-top:2px">按自营商品原定价，<b>不加价</b></div></td><td style="text-align:right;font-weight:600">${money(rAmt(r))}</td></tr>
+        <tr><td style="color:var(--ts)">单价（含税）<div style="font-size:11px;margin-top:2px">取自营商品原定价，生成时快照</div></td><td style="text-align:right">${money(rUnit(r))} / ${r.unit}</td></tr>
+        <tr><td style="color:var(--ts)">补采金额（含税） = ${money(rUnit(r))} × ${r.qty}${r.unit}<div style="font-size:11px;margin-top:2px"><b>不加价</b></div></td><td style="text-align:right;font-weight:600">${money(rAmt(r))}</td></tr>
         <tr><td style="color:var(--ts)">不含税金额</td><td style="text-align:right">${money(rNet(r))}</td></tr>
         <tr><td style="color:var(--ts)">GST ${gst()}%</td><td style="text-align:right">${money(rGst(r))}</td></tr>
         <tr style="font-weight:700;background:var(--gl)"><td>补采扣款（含税 · 结算抵扣）</td><td style="text-align:right;color:var(--r)">-${money(rAmt(r))}</td></tr>
