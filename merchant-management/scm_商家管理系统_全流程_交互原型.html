@@ -253,6 +253,8 @@ label.fl .rq{color:var(--r);font-style:normal;margin-right:3px}
 /* 简介字数放到标签行右端，与标签同行——不再飘到卡片最右、也不被译文行挤走 */
 label.fl.fl-row{display:flex;align-items:baseline}
 label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
+/* 输入框下方的规则提示（如店铺简称长度口径），比 placeholder 常驻、不随输入消失 */
+.fl-h{font-size:11.5px;color:var(--tt);line-height:1.6;margin-top:5px}
 /* 平台维护的只读值：与输入框同高，但用底色区分，避免和可编辑项混淆 */
 .ro-field{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border:1px dashed var(--bd);border-radius:9px;background:var(--bd2);font-size:13.5px;color:var(--tp)}
 @media(max-width:900px){.rd-grid{grid-template-columns:1fr}.shopform .fg2{grid-template-columns:1fr}}
@@ -617,7 +619,7 @@ const DB = {
   // 店铺信息（平台商家专属，自营供应商无）
   shopEditing:false,               // 店铺资料是否处于编辑态（编辑入口在 Tab 行右侧，与线上一致）
   shop:{
-    logo:'🥬', name:'绿鲜源蔬果旗舰店', type:'蔬果生鲜店',
+    logo:'🥬', name:'绿鲜源蔬果旗舰店', abbr:'绿鲜源蔬果', type:'蔬果生鲜店',
     cats:['叶菜类','根茎类','瓜茄类'],
     intro:'新加坡本地直供叶菜，每日清晨现摘现送，主营小棠菜、白菜、菠菜等。',
     // 与线上 ShopProfileTab 字段对齐：联系人 / 客服电话(区号+号码) / UEN / 结算方式 / 最晚付款日
@@ -1251,6 +1253,18 @@ PAGES['m-shop']=()=>{
 const SHOP_CATS_ALL=['乳制品','新鲜水果','肉禽','餐厨用品','叶菜类','根茎类','瓜茄类','菌菇类','鲜活水产','豆制品'];
 const SHOP_TYPES=['蔬果生鲜店','水产海鲜店','综合食材店'];
 const SHOP_SETTLE=['现结','月结'];
+/* 店铺简称长度：按「半角宽度」计——中日韩文字与全角标点占 2，英文/数字/半角符号占 1，上限 14 宽。
+   即：纯英文最多 14 个字符、纯中文最多 7 个字，中英混排按宽度累加（如「绿鲜源 SG」= 3×2+1+2 = 9 宽）。
+   超出不是提交时报错，而是输入即截断——用户看到打不进去，不用先数字数（自检 #4 不心算）。 */
+const SHOP_ABBR_MAX=14;
+const ABBR_W2=/[\u1100-\u115F\u2E80-\uA4CF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/; // East Asian Wide/Fullwidth 区段，命中即算 2 宽
+const abbrW=s=>[...(s||'')].reduce((n,c)=>n+(ABBR_W2.test(c)?2:1),0);
+const abbrCut=(s,max)=>{let n=0,out='';for(const c of s||''){const w=ABBR_W2.test(c)?2:1;if(n+w>max)break;n+=w;out+=c;}return out;};
+function shopAbbrIn(el){
+  const cut=abbrCut(el.value,SHOP_ABBR_MAX);
+  if(cut!==el.value)el.value=cut;
+  const c=document.getElementById('es-abbr-cnt');if(c)c.textContent=abbrW(el.value);
+}
 const rdRow=(k,v,hint)=>`<div class="rd-r"><div class="rd-k">${k}</div><div class="rd-v">${v||'—'}${hint?`<span class="rd-h">${hint}</span>`:''}</div></div>`;
 const secT=(t,extra)=>`<div class="sec-t"><span class="sec-bar"></span>${t}${extra||''}</div>`;
 
@@ -1270,6 +1284,7 @@ function shopProfileView(){
             <span class="tag t-pp" style="font-size:11px">${s.type}</span>
           </div>
           <div style="color:var(--ts);font-size:12.5px;margin-top:5px">店铺编号 <span class="mono">${m.code}</span>${(m.onboard=='active'&&s.openDate)?` · 开业于 ${s.openDate}`:''} · 头像展示在 APP 端</div>
+          <div style="margin-top:12px"><div class="rd-k" style="margin-bottom:4px">店铺简称</div><div style="font-size:14.5px;font-weight:600;color:var(--tp)">${s.abbr||'—'}</div></div>
           <div style="margin-top:12px"><div class="rd-k" style="margin-bottom:6px">主营品类</div><div class="row" style="gap:6px;flex-wrap:wrap">${s.cats.map(c=>`<span class="tag t-g">${c}</span>`).join('')||'—'}</div></div>
           <div style="margin-top:12px"><div class="rd-k" style="margin-bottom:4px">店铺简介</div><div style="font-size:13.5px;line-height:1.7;color:var(--tp)">${s.intro||'—'}</div></div>
         </div>
@@ -1306,8 +1321,13 @@ function shopProfileEdit(mode){
   return `<div class="shopform">
     <div class="card"><div class="card-bd">
       ${secT('店铺形象')}
+      <div class="fr"><label class="fl"><i class="rq">*</i>店铺名称</label><input id="es-name" data-tr value="${s.name}"></div>
       <div class="fg2">
-        <div class="fr"><label class="fl"><i class="rq">*</i>店铺名称</label><input id="es-name" data-tr value="${s.name}"></div>
+        <div class="fr">
+          <label class="fl fl-row"><span><i class="rq">*</i>店铺简称</span><span class="fl-cnt"><span id="es-abbr-cnt">${abbrW(s.abbr)}</span>/${SHOP_ABBR_MAX}</span></label>
+          <input id="es-abbr" maxlength="${SHOP_ABBR_MAX}" placeholder="纯英文最多 14 个字符、纯中文最多 7 个字" oninput="shopAbbrIn(this)" value="${s.abbr||''}">
+          <div class="fl-h">中文/全角字符算 2，英文数字算 1，合计不超过 ${SHOP_ABBR_MAX}；超出部分无法输入。</div>
+        </div>
         <div class="fr"><label class="fl"><i class="rq">*</i>店铺类型</label><select id="es-type">${SHOP_TYPES.map(x=>`<option ${s.type==x?'selected':''}>${x}</option>`).join('')}</select></div>
       </div>
       <div class="fr"><label class="fl"><i class="rq">*</i>主营品类（多选）</label><div class="row" style="gap:8px;flex-wrap:wrap">${SHOP_CATS_ALL.map(c=>`<label class="chip-ck ${s.cats.includes(c)?'on':''}"><input type="checkbox" data-cat="${c}" ${s.cats.includes(c)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)">${c}</label>`).join('')}</div></div>
@@ -1404,6 +1424,7 @@ function act_editShop(){DB.shopTab='profile';DB.shopEditing=true;nav('m-shop');}
 function readShopForm(){
   const s=DB.shop,g=id=>document.getElementById(id)||{};
   s.name=g('es-name').value||s.name;
+  s.abbr=abbrCut(g('es-abbr').value||'',SHOP_ABBR_MAX)||s.abbr; // 必填，兜底再截一次（防粘贴绕过 oninput）
   s.type=g('es-type').value||s.type;
   s.intro=g('es-intro').value??s.intro;
   s.contact=g('es-contact').value||s.contact;
@@ -1417,7 +1438,13 @@ function readShopForm(){
   const cks=[...document.querySelectorAll('.shopform input[data-cat]:checked')].map(e=>e.dataset.cat);
   if(cks.length)s.cats=cks;
 }
-function doEditShop(){readShopForm();DB.shopEditing=false;render();toast('店铺信息已保存','ok');}
+// 必填校验：为空则停在当前编辑页、标红并聚焦，不提交、不退出编辑态（与线上 zod 校验回显同口径）
+function checkShopForm(){
+  const el=document.getElementById('es-abbr');
+  if(el&&!el.value.trim()){el.style.borderColor='var(--r)';el.focus();toast('请填写店铺简称','err');return false;}
+  return true;
+}
+function doEditShop(){if(!checkShopForm())return;readShopForm();DB.shopEditing=false;render();toast('店铺信息已保存','ok');}
 
 /* ---------- 商家端：营业管理（每日营业时间：start–end 可配，截止时间＝当日截单时间；截单后统一停止接单） ---------- */
 PAGES['m-biz-hours']=()=>{
@@ -3135,7 +3162,7 @@ function act_reviewTask(){
   modalWide(`<div class="mc-hd"><h3>开店任务审核 · ${s.name}</h3><p>平台商家店铺基础信息 · ${m.code} · 对应供应商 V2026-0815</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div class="ib ib-gr"><span class="i">ℹ️</span>企业资质与合同已在供应商入驻阶段核验通过，此处仅审核店铺基础信息是否合规、完整。</div>
     <h4 style="font-size:13.5px;margin-bottom:10px">🏪 店铺基础信息</h4>
-    <div class="kv" style="margin-bottom:10px"><div><div class="k">店铺名称</div><div class="v">${s.name}</div></div><div><div class="k">店铺类型</div><div class="v">${s.type}</div></div><div><div class="k">主营品类</div><div class="v">${s.cats.join(' · ')}</div></div><div><div class="k">客服电话</div><div class="v">${s.service}</div></div><div><div class="k">营业时间</div><div class="v">${s.hours}</div></div><div><div class="k">配送范围</div><div class="v">${s.delivery}</div></div></div>
+    <div class="kv" style="margin-bottom:10px"><div><div class="k">店铺名称</div><div class="v">${s.name}</div></div><div><div class="k">店铺简称</div><div class="v">${s.abbr||'—'}</div></div><div><div class="k">店铺类型</div><div class="v">${s.type}</div></div><div><div class="k">主营品类</div><div class="v">${s.cats.join(' · ')}</div></div><div><div class="k">客服电话</div><div class="v">${s.service}</div></div><div><div class="k">营业时间</div><div class="v">${s.hours}</div></div><div><div class="k">配送范围</div><div class="v">${s.delivery}</div></div></div>
     <div class="kv" style="margin-bottom:8px"><div style="grid-column:1/-1"><div class="k">店铺简介</div><div class="v" style="font-weight:400">${s.intro}</div></div><div style="grid-column:1/-1"><div class="k">经营地址</div><div class="v" style="font-weight:400">${s.addr}</div></div></div>
   </div><div class="mc-ft"><button class="btn btn-d" onclick="act_rejectTask()">✕ 驳回</button><button class="btn btn-p" onclick="act_approveTask()">✓ 审核通过 · 准予营业</button></div>`);
 }
@@ -3395,6 +3422,7 @@ PAGES['p-exit']=()=>{
 // 闭环A 入驻
 // 商家端：提交开店任务（店铺基础信息）→ 待店铺运营平台审核
 function act_submitTask(){
+  if(!checkShopForm())return;
   readShopForm();   // 与「店铺资料 · 编辑」共用同一张表单和同一套读值逻辑
   DB.merchant.onboard='task_review';DB.shopEditing=false;render();toast('开店任务已提交，等待店铺运营平台审核','ok');
 }

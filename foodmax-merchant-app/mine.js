@@ -54,6 +54,10 @@ css.textContent=`
 .mn-fld .fk .q{width:15px;height:15px;border-radius:50%;border:1px solid #B6C8BF;color:#90A79C;font-size:10px;display:inline-flex;align-items:center;justify-content:center;font-weight:400;}
 .mn-fld .fv{font-size:15px;color:var(--ink);}
 .mn-fld .fh{font-size:12.5px;color:var(--sub);margin:3px 0 12px;}
+.mn-fld .fin{width:100%;box-sizing:border-box;height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font-size:15px;color:var(--ink);background:#fff;font-family:inherit;}
+.mn-fld .fin:focus{outline:none;border-color:var(--emerald);}
+.mn-fld .fin.err{border-color:var(--red);}
+.mn-fld .fcnt{font-size:12px;color:var(--sub);text-align:right;margin-top:6px;}
 /* 经营资质卡 */
 .mn-qz{background:#fff;border-radius:18px;margin:12px 16px;padding:16px;box-shadow:var(--sh-sm);}
 .mn-qz .qt{font-size:15px;font-weight:700;margin-bottom:13px;}.mn-qz .qt .req{color:var(--red);}
@@ -158,14 +162,39 @@ function openBasic(){
 }
 
 /* ============ 店铺信息 ============ */
+/* 店铺简称长度：按「半角宽度」计——中日韩文字与全角标点占 2，英文/数字/半角符号占 1，上限 14 宽。
+   即纯英文最多 14 个字符、纯中文最多 7 个字，中英混排按宽度累加。口径与 PC「店铺资料」完全一致
+   (scm_商家管理系统_全流程_交互原型.html · SHOP_ABBR_MAX / abbrW / abbrCut)。
+   超宽不是提交时报错，而是输入即截断——用户不用先数字数。 */
+const SHOP_ABBR_MAX=14;
+const ABBR_W2=/[\u1100-\u115F\u2E80-\uA4CF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/; // East Asian Wide/Fullwidth 区段，命中即算 2 宽
+const abbrW=s=>[...(s||'')].reduce((n,c)=>n+(ABBR_W2.test(c)?2:1),0);
+const abbrCut=(s,max)=>{let n=0,out='';for(const c of s||''){const w=ABBR_W2.test(c)?2:1;if(n+w>max)break;n+=w;out+=c;}return out;};
+let STORE_ABBR='鲜丰食材';   // 已填值（演示态）
+
 function openStore(){
   pushPage({title:'店铺信息',body:`
     <div class="mn-list" style="margin-top:14px"><div class="mn-item"><span class="k">店铺名称 <span class="q">?</span></span><span class="v">鲜丰食材 Fresh Harvest Pte Ltd</span></div></div>
+    <div class="mn-fld">
+      <div class="fk"><span class="req">*</span>店铺简称</div>
+      <div class="fh">中文/全角字符算 2，英文数字算 1，合计不超过 ${SHOP_ABBR_MAX}：纯英文最多 14 个字符、纯中文最多 7 个字。超出部分无法输入。</div>
+      <input class="fin" id="st-abbr" maxlength="${SHOP_ABBR_MAX}" placeholder="请输入店铺简称" value="${STORE_ABBR}">
+      <div class="fcnt"><span id="st-abbr-c">${abbrW(STORE_ABBR)}</span>/${SHOP_ABBR_MAX}</div>
+    </div>
     <div class="mn-fld"><div class="fk">店铺logo <span class="q">?</span></div><div style="height:8px"></div><div class="mn-up">${svg('box')}上传图片</div></div>
     <div class="mn-fld"><div class="fk">店铺背景</div><div class="fh">至多上传五张图片，将按照图片顺序依次展示</div><div class="mn-up">${svg('box')}上传图片</div></div>
     <div style="height:10px"></div>`,
-    footer:`<button class="btn primary" disabled>提交审核</button>`,
-    mount:(p)=>p.querySelectorAll('.mn-up').forEach(u=>u.onclick=()=>toast('选择图片'))});
+    footer:`<button class="btn primary" id="st-sub">提交审核</button>`,
+    mount:(p)=>{
+      p.querySelectorAll('.mn-up').forEach(u=>u.onclick=()=>toast('选择图片'));
+      const inp=p.querySelector('#st-abbr'),cnt=p.querySelector('#st-abbr-c');
+      inp.oninput=()=>{const cut=abbrCut(inp.value,SHOP_ABBR_MAX);if(cut!==inp.value)inp.value=cut;cnt.textContent=abbrW(inp.value);inp.classList.remove('err');};
+      p.querySelector('#st-sub').onclick=()=>{
+        // 必填：为空停在当前页标红聚焦，不提交（与 PC checkShopForm 同口径）
+        if(!inp.value.trim()){inp.classList.add('err');inp.focus();toast('请填写店铺简称');return;}
+        STORE_ABBR=inp.value.trim();toast('已提交审核');
+      };
+    }});
 }
 
 /* ============ 营业时间与截单（对齐 PC「店铺管理·营业管理」：每日营业时段 start–end 可配，
