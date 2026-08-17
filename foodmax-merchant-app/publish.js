@@ -106,16 +106,19 @@ function netCarry(v,u){
   return{v,u};
 }
 const fmtQ=n=>{const x=parseFloat(n);return isNaN(x)?'':String(Math.round(x*10000)/10000);};
-/* 某个规格的净含量文本：
-   标品   —— 单件净含量 × 售卖规格数量（单件净含量的基准 = 售卖规格单位，见 PRD BR-03a）
+/* 建档表单里那一列「净含量」的取值（与 PC 建档抽屉同口径）：
+   标品   —— **回显上方填写的单件净含量原值**，不乘售卖规格数量。
+              标品的净含量是包装上申报的固定值，商家填什么这里就显示什么。
+              （本规格合计 = 单件净含量 × 售卖规格数量，那是列表/详情/对账的口径，
+                不在建档表单这一列展示，见 PRD BR-03 与 §6）
    非标品 —— 售卖规格数量 + 售卖规格单位 */
 function specNetTxt(f,s){
-  const q=parseFloat(s.qty);if(!(q>0))return '';
   if(f.stdType==='标品'){
-    const base=parseFloat(f.netQty);if(!(base>0)||!f.netUnit)return '';
-    const n=netCarry(+(base*q).toFixed(4),f.netUnit);
-    return fmtQ(n.v)+n.u;
+    const base=parseFloat(f.netQty);
+    if(!(base>0)||!f.netUnit)return '';
+    return fmtQ(base)+f.netUnit;
   }
+  const q=parseFloat(s.qty);if(!(q>0))return '';
   const su=f.supplyMode==='寄售'?f.stockUnit:s.specUnit;
   if(!su)return '';
   const n=netCarry(q,su);
