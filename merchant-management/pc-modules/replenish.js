@@ -295,9 +295,10 @@ function fineOpsRows(){
     .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl)
              && (!f.push||g.push==f.push));
 }
+// 推送财务结算状态：并入「状态」列展示，不另立字段列——字段集与商家端一致，运营端只多「商家」一列
 function pushTag(g){return g.push=='pushed'
-  ? `<span class="tag t-g"><span class="dot"></span>已推送</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt}<br><span class="mono">${g.batchNo}</span></div>`
-  : '<span class="tag t-y"><span class="dot"></span>待推送</span>';}
+  ? `<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>已推送财务</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt} · <span class="mono">${g.batchNo}</span></div>`
+  : '<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>待推送财务</span>';}
 PAGES['p-fine']=()=>{
   const f=DB.fineFilter, rows=fineOpsRows();
   const selectable=rows.filter(g=>g.push=='pending');
@@ -326,27 +327,27 @@ PAGES['p-fine']=()=>{
   <div class="card">
     <div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
       <span>已选 <b>${DB.fineSel.length}</b> 单 · 罚款合计 <b style="color:var(--r)">${money(selAmt)}</b></span>
-      <button class="btn btn-p btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">⬆️ 推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
-      <button class="btn btn-o btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_export()">⬇️ 导出减项清单</button>
+      <button class="btn btn-p btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
+      <button class="btn btn-o btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_export()">导出减项清单</button>
       ${DB.fineSel.length?`<button class="btn btn-link" style="margin-left:auto" onclick="DB.fineSel=[];render()">取消选择</button>`:''}
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr>
         <th style="width:34px"><input type="checkbox" class="skuchk" title="全选待推送" ${allSel?'checked':''} onclick="fineOps_selAll()"></th>
-        <th>罚款单号</th><th>商家</th><th>来源送货单 / 仓库</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>结算状态</th><th>推送财务</th><th>操作</th>
+        <th>罚款单号</th><th>商家</th><th>事由</th><th>来源送货单</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th><th>操作</th>
       </tr></thead><tbody>
       ${rows.map(g=>`<tr>
         <td>${g.push=='pending'?`<input type="checkbox" class="skuchk" ${DB.fineSel.includes(g.no)?'checked':''} onclick="fineOps_toggle('${g.no}')">`:''}</td>
-        <td class="mono" style="white-space:nowrap">${g.no}<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.at}</div></td>
+        <td class="mono" style="white-space:nowrap">${g.no}</td>
         <td style="white-space:nowrap"><b>${g.merchantName}</b><div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${g.merchant}</div></td>
+        <td style="white-space:nowrap"><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>到仓少货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.at}</div></td>
         <td class="mono" style="font-size:12px;white-space:nowrap">${g.deliveryNo}<div style="color:var(--ts);margin-top:2px">${g.warehouse}</div></td>
         <td style="white-space:nowrap">${g.items.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.items.length} 个 SKU</div></td>
         <td style="text-align:right"><b>${g.qty}</b></td>
         <td style="text-align:right">${money(g.rate)} / 件</td>
-        <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">${money(g.amt)}</td>
-        <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}</td>
-        <td style="white-space:nowrap">${pushTag(g)}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button></td>
+        <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">-${money(g.amt)}</td>
+        <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}<div style="margin-top:4px">${pushTag(g)}</div></td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button> <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">送货单</button></td>
       </tr>`).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的罚款单</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。当前罚款标准 <b>${money(replFineRate())}/件</b>（全平台统一，生成单据时快照）<button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="nav('p-replcfg')">去配置</button>。</div>
