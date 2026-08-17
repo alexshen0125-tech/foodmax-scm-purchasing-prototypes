@@ -2170,8 +2170,9 @@ const BUILD_FIELDS=[
   {k:'商品名称',req:'必填',rule:'商品标准名称；系统内不可与已有在售/审核中商品重名；同一SPU仅首行填写，其余规格行留空',ex:'芥蓝'},
   {k:'后台类目',req:'必填',rule:'枚举：新鲜蔬菜 / 肉禽蛋品 / 海鲜水产；须在店铺食品经营许可范围内，超范围类目（如调味品）导入将被资质校验拦截',ex:'新鲜蔬菜'},
   {k:'税率',req:'选填',rule:'留空默认 9%；如需其它按百分数填写，如 7% / 0%',ex:'9%'},
-  {k:'净含量',req:'选填',rule:'单件净含量数值，如 500；论只/论扎等计件商品留空',ex:'500'},
-  {k:'净含量单位',req:'条件必填',rule:'枚举：g / ml / kg / L；填了净含量则必填。多退少补仅在此列为 kg / g 时可开',ex:'g'},
+  {k:'商品类型',req:'必填',rule:'枚举：标品 / 非标品。标品＝工业预包装，净含量是包装上申报的固定值，须填「净含量+净含量单位」，售卖规格单位取计件单位；非标品＝生鲜分装，净含量＝售卖规格数量+售卖规格单位，无需填净含量',ex:'非标品'},
+  {k:'净含量',req:'条件必填',rule:'商品类型=标品时必填：单件净含量数值，如可乐填 330；非标品留空（净含量由售卖规格数量+售卖规格单位得出）',ex:''},
+  {k:'净含量单位',req:'条件必填',rule:'《建品单位规范》枚举：g / kg / ml / L；填了净含量则必填',ex:''},
   {k:'是否开启效期管理',req:'必填',rule:'枚举：是 / 否；选「是」须填写保质期与保质期单位',ex:'是'},
   {k:'保质期',req:'条件必填',rule:'「是否开启效期管理=是」时必填，正整数，如 7；为「否」时留空',ex:'7'},
   {k:'保质期单位',req:'条件必填',rule:'「是否开启效期管理=是」时必填，枚举：天 / 月 / 年',ex:'天'},
@@ -2182,6 +2183,8 @@ const BUILD_FIELDS=[
   {k:'品牌',req:'选填',rule:'无品牌可留空',ex:''},
   {k:'商品描述',req:'选填',rule:'商品卖点简述；无则留空',ex:'新鲜芥蓝'},
   {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填售卖规格数量（正整数≥1）；同一SPU下各售卖规格数量不可重复（如 1、5 表示 1kg、5kg 两个规格）',ex:'1'},
+  {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》枚举，取值随商品类型：标品＝个/打/瓶/罐/盒/袋/箱/卷/托（计件）；非标品＝g/kg/ml/L（计量）。多退少补仅在此列为 kg / g 时可开',ex:'kg'},
+  {k:'售卖单位',req:'选填',rule:'《建品单位规范》枚举：包 / 份 / 组 / 箱。填了则规格名拼为「数量+售卖规格单位/售卖单位」，如 5kg/箱；无外包装留空',ex:''},
   {k:'商品主图ID',req:'必填',rule:'来自「商品素材库 · 主图库」的图片ID（=上传文件名）；支持多张、用逗号分隔，第1张为首图；所填ID须已上传，否则该商品建品失败；同一SPU仅首行填写',ex:'芥蓝主图,芥蓝主图2'},
   {k:'商品详情图ID',req:'选填',rule:'来自「商品素材库 · 详情图库」的图片ID；支持多张、用逗号分隔；所填ID未上传的将被忽略、不阻断建品；同一SPU仅首行填写',ex:'芥蓝详情'},
 ];
@@ -2194,12 +2197,14 @@ function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 �
 function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
 function impParseBuild(){
   const spuRows=[
-    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
-    {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',unit:'盒',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
-    {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',unit:'瓶',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
-    {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',unit:'kg',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
-    {ln:6,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',unit:'扎',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''}];
-  const skuRows=[{ln:2,code:'T001',qty:1},{ln:3,code:'T001',qty:5},{ln:4,code:'T002',qty:1},{ln:5,code:'T003',qty:1},{ln:6,code:'T005',qty:2},{ln:7,code:'T999',qty:1}];
+    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
+    {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',stdType:'标品',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
+    {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',stdType:'标品',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
+    {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
+    {ln:6,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''},
+    /* 单位不合规样例：非标品的售卖规格单位填了计件单位「扎」，应被《建品单位规范》校验拦截 */
+    {ln:7,code:'T006',name:'秋葵',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'001',detailImg:''}];
+  const skuRows=[{ln:2,code:'T001',qty:1,specUnit:'kg',packUnit:''},{ln:3,code:'T001',qty:5,specUnit:'kg',packUnit:'箱'},{ln:4,code:'T002',qty:1,specUnit:'盒',packUnit:''},{ln:5,code:'T003',qty:1,specUnit:'瓶',packUnit:''},{ln:6,code:'T005',qty:2,specUnit:'kg',packUnit:'包'},{ln:7,code:'T006',qty:1,specUnit:'扎',packUnit:''},{ln:8,code:'T999',qty:1,specUnit:'kg',packUnit:''}];
   const codes=new Set(),dup=new Set();spuRows.forEach(r=>{if(r.code){if(codes.has(r.code))dup.add(r.code);codes.add(r.code);}});
   const map={};
   const spus=spuRows.map(r=>{const errs=[];
@@ -2207,7 +2212,10 @@ function impParseBuild(){
     else{if(dup.has(r.code))errs.push('SPU编号文件内重复');if(DB.products.some(p=>p.id==r.code))errs.push('SPU编号与系统已有商品冲突（请改用批量新增SKU）');}
     if(!r.name)errs.push('缺少「商品名称」');
     if(!r.cat||!r.showExp||!r.storage||!r.fulfil)errs.push('SPU必填项缺失（后台类目/APP展示效期/储存条件/履约方式）');
+    if(!r.stdType||!STD_TYPES.includes(r.stdType))errs.push('「商品类型」必填，枚举：标品 / 非标品');
+    else if(r.stdType=='标品'&&!(parseFloat(r.netQty)>0))errs.push('商品类型=标品，「净含量」必填（包装上申报的固定值）');
     if(r.netQty&&!r.netUnit)errs.push('填了净含量，净含量单位必填');
+    if(r.netUnit&&!unitNames(r.stdType||'标品','net').includes(r.netUnit))errs.push(`净含量单位「${r.netUnit}」不在《建品单位规范》取值内（g/kg/ml/L）`);
     if(r.expEn=='是'&&(!r.qp||!r.qpu))errs.push('效期管理=是，保质期/单位必填');
     if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
     else if(r.cat&&!CAT_SCOPE.includes(r.cat))errs.push('经营许可证未覆盖「'+r.cat+'」类目');
@@ -2221,7 +2229,12 @@ function impParseBuild(){
   const orphans=[];
   skuRows.forEach(r=>{if(!r.code||!map[r.code]){orphans.push({row:r,err:!r.code?'SKU行未填SPU编号':'SPU编号「'+r.code+'」在商品表中不存在（孤儿行）'});return;}
     const errs=[];if(!(r.qty>0))errs.push('数量必须为正整数≥1');
-    const grp=map[r.code];if(grp.skus.some(x=>x.row.qty==r.qty))errs.push('同商品规格(数量)重复');
+    const grp=map[r.code],st=grp.row.stdType;
+    /* 售卖规格单位 / 售卖单位 一律按《建品单位规范》校验，取值随该商品的类型 */
+    if(!r.specUnit)errs.push('「售卖规格单位」必填');
+    else if(STD_TYPES.includes(st)&&!unitNames(st,'spec').includes(r.specUnit))errs.push(`售卖规格单位「${r.specUnit}」不在${st}取值内（${unitNames(st,'spec').join('/')}）`);
+    if(r.packUnit&&!unitNames(st||'标品','sell').includes(r.packUnit))errs.push(`售卖单位「${r.packUnit}」不在规范取值内（${unitNames(st||'标品','sell').join('/')}）`);
+    if(grp.skus.some(x=>x.row.qty==r.qty))errs.push('同商品规格(数量)重复');
     grp.skus.push({row:r,errs,ok:errs.length==0});});
   spus.forEach(o=>{const v=o.skus.filter(x=>x.ok).length;if(o.errs.length==0&&v==0)o.errs.push('无有效规格(SKU)，商品建不了');o.ok=o.errs.length==0&&o.skus.some(x=>x.ok);});
   IMP={mode:'build',spus,orphans};renderImpBuild();
@@ -2235,7 +2248,7 @@ function renderImpBuild(){const spus=IMP.spus,orphans=IMP.orphans;const okS=spus
   </tbody></table></div></div></div>
   ${(()=>{const ws=spus.filter(o=>o.ok&&o.warns&&o.warns.length);return ws.length?`<div class="ib ib-y" style="margin:0 0 12px"><span class="i">⚠️</span><div>以下可建商品有<b>详情图告警</b>（不阻断建品）：<br>${ws.map(o=>`· ${o.row.name}（${o.row.code}）：${o.warns.join('；')}`).join('<br>')}</div></div>`:'';})()}
   <button class="btn btn-p btn-lg" ${okS.length?'':'disabled'} onclick="impConfirmBuild()">确认建品 ${okS.length} 个商品（进首次建档审核）</button>`;}
-function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const mainImgs=o.mainIds||[],detailImgs=o.detailIds||[];const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',netQty:r.netQty||'',netUnit:r.netUnit||'',unit:r.netUnit||'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,pack:r.unit,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
+function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const mainImgs=o.mainIds||[],detailImgs=o.detailIds||[];const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',stdType:r.stdType||'标品',netQty:r.netQty||'',netUnit:r.netUnit||'',unit:r.netUnit||'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,sellUnit:x.row.specUnit||'',packUnit:x.row.packUnit||'',price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};   /* 原先写的是无人读取的 pack 字段，导致导入的 SKU 没有售卖规格单位、净含量算不出 */const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
 function impParseAdd(){
   const P=DB.products;const e=P[0];
   const rows=e?[

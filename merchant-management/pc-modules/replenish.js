@@ -58,26 +58,40 @@ DB.replTab = DB.replTab || 'all';
    补采只在自营现货可全额覆盖缺口时才发生 —— 因此存在「有罚款单、无补采单」的情况
    （如下 FN20260701008：自营无货未补采，但缺货照罚）。两者不互为前置、不互相引用。 */
 DB.fineOrders = DB.fineOrders || [
-  {no:'FN20260628004', deliveryNo:'SH20260628004', warehouse:'盛港DC', at:'2026-06-28 01:06', rate:40,
+  {no:'FN20260628004', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260628004', warehouse:'盛港DC', at:'2026-06-28 01:06', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',should:20,received:18,qty:2},
           {sku:'SKU8805',name:'菜心',  spec:'1kg/件',unit:'件',should:15,received:12,qty:3}],
    status:'pending', billNo:''},
-  {no:'FN20260629005', deliveryNo:'SH20260629005', warehouse:'兀兰DC', at:'2026-06-29 03:24', rate:40,
+  {no:'FN20260629005', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260629005', warehouse:'兀兰DC', at:'2026-06-29 03:24', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',should:30,received:22,qty:8}],
    status:'pending', billNo:''},
-  {no:'FN20260701008', deliveryNo:'SH20260701008', warehouse:'淡滨尼DC', at:'2026-07-01 02:40', rate:40,
+  {no:'FN20260701008', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260701008', warehouse:'淡滨尼DC', at:'2026-07-01 02:40', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8807',name:'芥蓝',  spec:'1kg/件',unit:'件',should:25,received:20,qty:5}],
    status:'pending', billNo:'', noRepl:1},
-  {no:'FN20260630007', deliveryNo:'SH20260630007', warehouse:'大巴窑DC', at:'2026-06-30 04:11', rate:40,
+  {no:'FN20260630007', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260630007', warehouse:'大巴窑DC', at:'2026-06-30 04:11', rate:40, push:'pushed', pushedAt:'2026-07-01 02:05', batchNo:'FB-20260701-001',
    items:[{sku:'SKU8802',name:'白菜',  spec:'1kg/件',unit:'件',should:40,received:37,qty:3}],
    status:'deducted', billNo:'ST202606-M0815'},
-  {no:'FN20260522001', deliveryNo:'SH20260522001', warehouse:'盛港DC', at:'2026-05-22 13:42', rate:40,
+  {no:'FN20260522001', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260522001', warehouse:'盛港DC', at:'2026-05-22 13:42', rate:40, push:'pushed', pushedAt:'2026-06-01 02:05', batchNo:'FB-20260601-001',
    items:[{sku:'SKU8803',name:'菠菜',  spec:'1kg/件',unit:'件',should:12,received:10,qty:2}],
    status:'deducted', billNo:'ST202605-M0815'},
-  {no:'FN20260518001', deliveryNo:'SH20260518001', warehouse:'裕廊DC', at:'2026-05-18 02:18', rate:40,
+  {no:'FN20260518001', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260518001', warehouse:'裕廊DC', at:'2026-05-18 02:18', rate:40, push:'pushed', pushedAt:'2026-06-01 02:05', batchNo:'FB-20260601-001',
    items:[{sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',should:60,received:48,qty:12}],
    status:'deducted', billNo:'ST202605-M0815'},
+  // ↓ 其他商家（仅运营平台可见，商家端按 merchantCode 过滤）
+  {no:'FN20260702011', merchant:'M2026-0902', merchantName:'海丰水产', deliveryNo:'SH20260702011', warehouse:'裕廊DC', at:'2026-07-02 01:52', rate:40, push:'pending', pushedAt:'', batchNo:'',
+   items:[{sku:'SKU9101',name:'冰鲜三文鱼',spec:'1kg/袋',unit:'袋',should:40,received:34,qty:6}],
+   status:'pending', billNo:''},
+  {no:'FN20260702015', merchant:'M2026-1103', merchantName:'万丰肉禽', deliveryNo:'SH20260702015', warehouse:'兀兰DC', at:'2026-07-02 03:18', rate:40, push:'pending', pushedAt:'', batchNo:'',
+   items:[{sku:'SKU9201',name:'鸡胸肉',spec:'2kg/袋',unit:'袋',should:30,received:28,qty:2},
+          {sku:'SKU9202',name:'鸡全腿',spec:'2kg/袋',unit:'袋',should:20,received:16,qty:4}],
+   status:'pending', billNo:''},
+  {no:'FN20260620009', merchant:'M2026-0902', merchantName:'海丰水产', deliveryNo:'SH20260620009', warehouse:'盛港DC', at:'2026-06-20 02:44', rate:40, push:'pushed', pushedAt:'2026-07-01 02:05', batchNo:'FB-20260701-001',
+   items:[{sku:'SKU9105',name:'鲜活白虾',spec:'500g/盒',unit:'盒',should:24,received:21,qty:3}],
+   status:'deducted', billNo:'ST202606-M0902'},
 ];
+DB.fineSel = DB.fineSel || [];   // 运营端批量勾选
+DB.fineFilter = DB.fineFilter || {merchant:'',no:'',dl:'',push:''};
+DB.fineBatchSeq = DB.fineBatchSeq || 1;
 
 /* ================= 口径计算 ================= */
 const gst  = ()=> (typeof GST_DEFAULT=='number'?GST_DEFAULT:9);
@@ -272,6 +286,120 @@ window.repl_invPreview=function(no){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="repl_invDownload('${iv.no}')">下载 PDF</button></div>`);
 };
 
+/* ================= 运营平台端 · 罚款单（全平台 · 按商家查询 · 推送财务结算） ================= */
+// 运营视角看全平台罚款单；支持按商家/单号/推送状态筛选；勾选后批量推送至清结算平台（PMS）
+function fineOpsRows(){
+  const f=DB.fineFilter||{};
+  const hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
+  return fineGroups(true)
+    .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl)
+             && (!f.push||g.push==f.push));
+}
+function pushTag(g){return g.push=='pushed'
+  ? `<span class="tag t-g"><span class="dot"></span>已推送</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt}<br><span class="mono">${g.batchNo}</span></div>`
+  : '<span class="tag t-y"><span class="dot"></span>待推送</span>';}
+PAGES['p-fine']=()=>{
+  const f=DB.fineFilter, rows=fineOpsRows();
+  const selectable=rows.filter(g=>g.push=='pending');
+  DB.fineSel=DB.fineSel.filter(no=>selectable.some(g=>g.no==no));
+  const allSel=selectable.length&&selectable.every(g=>DB.fineSel.includes(g.no));
+  const selAmt=+(rows.filter(g=>DB.fineSel.includes(g.no)).reduce((a,g)=>a+g.amt,0)).toFixed(2);
+  const waitAmt=+(rows.filter(g=>g.push=='pending').reduce((a,g)=>a+g.amt,0)).toFixed(2);
+  const doneAmt=+(rows.filter(g=>g.push=='pushed').reduce((a,g)=>a+g.amt,0)).toFixed(2);
+  const merchants=[...new Set(fineGroups(true).map(g=>g.merchantName))];
+
+  return `${flowTip('')}
+  <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:16px 20px 12px">
+    <div class="fg3">
+      <div class="fr"><label class="fl">商家</label><input id="ff-mc" value="${f.merchant}" placeholder="商家名称或编码，如 绿鲜源 / M2026-0815" list="ff-mclist"><datalist id="ff-mclist">${merchants.map(m=>`<option>${m}</option>`).join('')}</datalist></div>
+      <div class="fr"><label class="fl">罚款单号</label><input id="ff-no" value="${f.no}" placeholder="如 FN20260628004"></div>
+      <div class="fr"><label class="fl">来源送货单号</label><input id="ff-dl" value="${f.dl}" placeholder="如 SH20260628004"></div>
+    </div>
+    <div class="fg3">
+      <div class="fr"><label class="fl">推送状态</label><select id="ff-push"><option value="">全部</option><option value="pending" ${f.push=='pending'?'selected':''}>待推送</option><option value="pushed" ${f.push=='pushed'?'selected':''}>已推送</option></select></div>
+      <div class="fr"></div><div class="fr"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
+      <button class="btn btn-o" onclick="fineOps_reset()">重置</button>
+      <button class="btn btn-p" onclick="fineOps_query()">查询</button>
+    </div>
+  </div></div>
+
+  <div class="sg" style="grid-template-columns:repeat(3,1fr)">
+    <div class="sc ${waitAmt>0?'warn':''}"><div class="sc-l">待推送财务结算</div><div class="sc-v">${money(waitAmt)}</div><div class="sc-s">${rows.filter(g=>g.push=='pending').length} 单 · 涉及 ${[...new Set(rows.filter(g=>g.push=='pending').map(g=>g.merchantName))].length} 个商家</div></div>
+    <div class="sc good"><div class="sc-l">已推送</div><div class="sc-v">${money(doneAmt)}</div><div class="sc-s">${rows.filter(g=>g.push=='pushed').length} 单</div></div>
+    <div class="sc"><div class="sc-l">当前罚款标准</div><div class="sc-v">${money(replFineRate())}</div><div class="sc-s">每件 · 全平台统一 · <button class="btn btn-link btn-sm" style="padding:0" onclick="nav('p-replcfg')">去配置</button></div></div>
+  </div>
+
+  <div class="card">
+    <div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
+      <span>已选 <b>${DB.fineSel.length}</b> 单 · 罚款合计 <b style="color:var(--r)">${money(selAmt)}</b></span>
+      <button class="btn btn-p btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">⬆️ 推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
+      <button class="btn btn-o btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_export()">⬇️ 导出减项清单</button>
+      ${DB.fineSel.length?`<button class="btn btn-link" style="margin-left:auto" onclick="DB.fineSel=[];render()">取消选择</button>`:''}
+    </div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th style="width:34px"><input type="checkbox" class="skuchk" title="全选待推送" ${allSel?'checked':''} onclick="fineOps_selAll()"></th>
+        <th>罚款单号</th><th>商家</th><th>来源送货单 / 仓库</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>结算状态</th><th>推送财务</th><th>操作</th>
+      </tr></thead><tbody>
+      ${rows.map(g=>`<tr>
+        <td>${g.push=='pending'?`<input type="checkbox" class="skuchk" ${DB.fineSel.includes(g.no)?'checked':''} onclick="fineOps_toggle('${g.no}')">`:''}</td>
+        <td class="mono" style="white-space:nowrap">${g.no}<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.at}</div></td>
+        <td style="white-space:nowrap"><b>${g.merchantName}</b><div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${g.merchant}</div></td>
+        <td class="mono" style="font-size:12px;white-space:nowrap">${g.deliveryNo}<div style="color:var(--ts);margin-top:2px">${g.warehouse}</div></td>
+        <td style="white-space:nowrap">${g.items.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.items.length} 个 SKU</div></td>
+        <td style="text-align:right"><b>${g.qty}</b></td>
+        <td style="text-align:right">${money(g.rate)} / 件</td>
+        <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">${money(g.amt)}</td>
+        <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}</td>
+        <td style="white-space:nowrap">${pushTag(g)}</td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button></td>
+      </tr>`).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的罚款单</td></tr>`}
+      </tbody></table></div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。</div>
+    </div>`;
+};
+window.fineOps_query=function(){
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  DB.fineFilter={merchant:g('ff-mc').trim(),no:g('ff-no').trim(),dl:g('ff-dl').trim(),push:g('ff-push')};
+  DB.fineSel=[];render();
+};
+window.fineOps_reset=function(){DB.fineFilter={merchant:'',no:'',dl:'',push:''};DB.fineSel=[];render();toast('筛选条件已重置','info');};
+window.fineOps_toggle=function(no){const i=DB.fineSel.indexOf(no);i<0?DB.fineSel.push(no):DB.fineSel.splice(i,1);render();};
+window.fineOps_selAll=function(){
+  const sel=fineOpsRows().filter(g=>g.push=='pending').map(g=>g.no);
+  DB.fineSel=(sel.length&&sel.every(n=>DB.fineSel.includes(n)))?[]:sel.slice();render();
+};
+window.fineOps_pushAsk=function(){
+  const rows=fineOpsRows().filter(g=>DB.fineSel.includes(g.no));
+  if(!rows.length){toast('请先勾选待推送的罚款单','err');return;}
+  const byM={};rows.forEach(g=>{(byM[g.merchantName]=byM[g.merchantName]||[]).push(g);});
+  const total=+(rows.reduce((a,g)=>a+g.amt,0)).toFixed(2);
+  modal(`<div class="mc-hd"><h3>推送财务结算</h3><p>将 ${rows.length} 张罚款单作为结算减项清单推送至清结算平台（PMS）</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="ib ib-y"><span class="i">⚠️</span>推送后该批罚款单<b>不可重复推送</b>，也<b>不可在本页撤回</b>；如需调整请在清结算平台侧处理。请核对商家与金额。</div>
+    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:10px 0 12px"><table style="margin:0"><thead><tr><th>商家</th><th style="text-align:right">单数</th><th style="text-align:right">罚款合计</th></tr></thead><tbody>
+      ${Object.keys(byM).map(m=>`<tr><td><b>${m}</b><div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${byM[m][0].merchant}</div></td><td style="text-align:right">${byM[m].length}</td><td style="text-align:right;color:var(--r);font-weight:600">${money(byM[m].reduce((a,g)=>a+g.amt,0))}</td></tr>`).join('')}
+      <tr style="background:#F7FBF8;font-weight:700"><td>合计 ${Object.keys(byM).length} 个商家</td><td style="text-align:right">${rows.length}</td><td style="text-align:right;color:var(--r)">${money(total)}</td></tr>
+    </tbody></table></div>
+    <div style="font-size:12.5px;color:var(--ts)">推送内容：罚款单号 / 商家编码 / 来源送货单 / 缺口件数 / 罚款标准 / 罚款金额 / 归属结算周期。<b>罚款不开发票</b>，清结算平台按减项处理。</div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="fineOps_pushDo()">确认推送</button></div>`);
+};
+window.fineOps_pushDo=function(){
+  const batch='FB-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.fineBatchSeq++).padStart(3,'0');
+  const now=ts();
+  let n=0,amt=0;
+  DB.fineOrders.forEach(o=>{if(DB.fineSel.includes(o.no)&&o.push=='pending'){o.push='pushed';o.pushedAt=now;o.batchNo=batch;n++;amt+=o.items.reduce((a,x)=>a+x.qty,0)*o.rate;}});
+  DB.fineSel=[];closeModal();render();
+  toast(`已推送 ${n} 张罚款单至清结算平台，批次 ${batch}，合计 ${money(amt)}`,'ok');
+};
+window.fineOps_export=function(){
+  const rows=fineOpsRows().filter(g=>DB.fineSel.includes(g.no));
+  toast(`已导出 ${rows.length} 张罚款单的减项清单（Excel）`,'ok');
+};
+
 /* ================= 运营平台端 · 缺货罚款标准配置 ================= */
 PAGES['p-replcfg']=()=>{
   const c=DB.replCfg;
@@ -296,8 +424,8 @@ window.repl_saveFine=function(){
 /* ================= 商家端 · 罚款单 ================= */
 // 罚款单由缺货补采同时生成（1 张补采单 ↔ 1 张罚款单），独立进清结算；本期仅「缺货」一种罚款事由
 // 罚款单 = 【一张送货单一张】，金额 = 该单各 SKU 缺口件数合计 × 罚款标准；与补采单【无任何关联】
-function fineGroups(){
-  return (DB.fineOrders||[]).map(g=>{
+function fineGroups(all){
+  return (DB.fineOrders||[]).filter(g=>all?true:g.merchant==(DB.merchant.code||'M2026-0815')).map(g=>{
     const qty=g.items.reduce((a,x)=>a+x.qty,0);
     return Object.assign({},g,{qty, amt:+(qty*g.rate).toFixed(2)});
   }).sort((a,b)=>b.at.localeCompare(a.at));
