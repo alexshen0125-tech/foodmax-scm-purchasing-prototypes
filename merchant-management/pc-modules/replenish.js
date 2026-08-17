@@ -304,8 +304,6 @@ PAGES['p-fine']=()=>{
   DB.fineSel=DB.fineSel.filter(no=>selectable.some(g=>g.no==no));
   const allSel=selectable.length&&selectable.every(g=>DB.fineSel.includes(g.no));
   const selAmt=+(rows.filter(g=>DB.fineSel.includes(g.no)).reduce((a,g)=>a+g.amt,0)).toFixed(2);
-  const waitAmt=+(rows.filter(g=>g.push=='pending').reduce((a,g)=>a+g.amt,0)).toFixed(2);
-  const doneAmt=+(rows.filter(g=>g.push=='pushed').reduce((a,g)=>a+g.amt,0)).toFixed(2);
   const merchants=[...new Set(fineGroups(true).map(g=>g.merchantName))];
 
   return `${flowTip('')}
@@ -324,12 +322,6 @@ PAGES['p-fine']=()=>{
       <button class="btn btn-p" onclick="fineOps_query()">查询</button>
     </div>
   </div></div>
-
-  <div class="sg" style="grid-template-columns:repeat(3,1fr)">
-    <div class="sc ${waitAmt>0?'warn':''}"><div class="sc-l">待推送财务结算</div><div class="sc-v">${money(waitAmt)}</div><div class="sc-s">${rows.filter(g=>g.push=='pending').length} 单 · 涉及 ${[...new Set(rows.filter(g=>g.push=='pending').map(g=>g.merchantName))].length} 个商家</div></div>
-    <div class="sc good"><div class="sc-l">已推送</div><div class="sc-v">${money(doneAmt)}</div><div class="sc-s">${rows.filter(g=>g.push=='pushed').length} 单</div></div>
-    <div class="sc"><div class="sc-l">当前罚款标准</div><div class="sc-v">${money(replFineRate())}</div><div class="sc-s">每件 · 全平台统一 · <button class="btn btn-link btn-sm" style="padding:0" onclick="nav('p-replcfg')">去配置</button></div></div>
-  </div>
 
   <div class="card">
     <div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
@@ -357,7 +349,7 @@ PAGES['p-fine']=()=>{
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button></td>
       </tr>`).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的罚款单</td></tr>`}
       </tbody></table></div>
-      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。</div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。当前罚款标准 <b>${money(replFineRate())}/件</b>（全平台统一，生成单据时快照）<button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="nav('p-replcfg')">去配置</button>。</div>
     </div>`;
 };
 window.fineOps_query=function(){
