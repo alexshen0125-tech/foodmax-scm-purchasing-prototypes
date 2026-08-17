@@ -162,7 +162,7 @@ const PRODUCTS=[
    skus:[{spec:'4kg/箱',price:29.99,stock:0,off:true,createdAt:'2026-06-10 15:00',updatedAt:'2026-06-12 17:22'}]},
   {ic:'🟡',n:'萝卜丸子',cat:'肉禽蛋品',sales:0,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00',
    skus:[{spec:'2.5kg/袋',price:12.00,stock:4,off:true,recycled:true,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00'}]},
-  // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 规格数量 × 押金单价
+  // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 售卖规格数量 × 押金单价
   {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',cat:'饮料',bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
    skus:[{spec:'1瓶',qty:1,price:2.50,stock:200,off:false,stockMode:'finite',soldToday:18,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00'},{spec:'24瓶/箱',qty:24,price:55.00,stock:40,off:false,stockMode:'finite',createdAt:'2026-07-10 10:20',updatedAt:'2026-07-18 09:40'}]},
   // ↓ 审核态样例(对齐 PC SPU8818/8821/8823)：待审核 / 审核拒绝(字段级意见) / 强制下架(原因)
@@ -189,10 +189,10 @@ const totalStock=p=>p.skus.reduce((a,s)=>a+(+s.stock||0),0);
 const GST_DEFAULT=9;
 const taxRate=p=>{const t=parseFloat(String(p&&p.tax!=null?p.tax:'').replace('%',''));return isNaN(t)?GST_DEFAULT:t;};
 const priceIncl=(net,p)=>(+net||0)*(1+taxRate(p)/100);   // 含税价 = 未税价 ×(1+税率)
-// BCRS 饮料容器押金(与 PC 同口径)：每个 SKU 押金 = 该规格数量 × 押金单价；不计 GST、随商品透传订单/发票
+// BCRS 饮料容器押金(与 PC 同口径)：每个 SKU 押金 = 该售卖规格数量 × 押金单价；不计 GST、随商品透传订单/发票
 const BCRS_UNIT_PRICE=0.10;                              // 单容器法规押金 S$0.10（平台级参数）
-// 每 SKU 押金 = 规格数量 × 每最小售卖单位容器数 × 0.10（三因子，对齐商城；押金单价平台固定 0.10）
-const skuContainers=(g,s)=>(+s.qty||1)*(+g.bcrsUnitContainers||0);           // 该 SKU 售卖单位含容器数
+// 每 SKU 押金 = 售卖规格数量 × 每最小售卖单位容器数 × 0.10（三因子，对齐商城；押金单价平台固定 0.10）
+const skuContainers=(g,s)=>(+s.qty||1)*(+g.bcrsUnitContainers||0);           // 该 SKU 售卖规格单位含容器数
 const skuBcrs=(g,s)=>(g&&g.bcrs&&+g.bcrsUnitContainers>0)?+(skuContainers(g,s)*BCRS_UNIT_PRICE).toFixed(2):0;
 
 // 扁平 SKU 卡片：每个售卖规格(SKU)一张独立卡，SKU 完全展开、无需点 SPU 展开（对齐 PC 端「每 SKU 一行」）

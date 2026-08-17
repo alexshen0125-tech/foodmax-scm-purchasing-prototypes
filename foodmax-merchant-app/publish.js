@@ -2,7 +2,7 @@
    关键约束(沈亮定)：交互流程形态照快驴 App 录屏走，但字段与校验规则一律用 PC 那套，不照搬 App 的字段。
    App 流程形态：选择建品方式 → (商品库)搜索→找品结果→修改复用 / (手动)→ 创建商品表单。
    PC 规则落点：必填(autoCheck)=商品名称/后台类目/税率/最小售卖单位/售卖规格(≥1)；
-   后台类目取 PC 的 CATS(默认税率+指导价，税率手填可改)；售卖规格按 PC=数量(正整数≥1、不可重复)，售卖单位只读=最小售卖单位；
+   后台类目取 PC 的 CATS(默认税率+指导价，税率手填可改)；售卖规格按 PC=数量(正整数≥1、不可重复)，售卖规格单位只读=最小售卖单位；
    提交跑校验；价格异常=偏离类目指导价 0.5~2 倍。前台不出现货品(Item)，后台据 SPU/SKU 自动建货品。
    PC 对齐(2026-07)：价格+库存落到每个售卖规格(SKU)，非整商品一个售价。
    PC 对齐(2026-07-03)：前台类目→后台类目、计量单位→最小售卖单位(+净含量/单位/备注)、税率手填、
@@ -74,11 +74,11 @@ const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料']);
 // BCRS 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST；与 PC 同源）。商家只填「每最小售卖单位容器数」，押金=容器数×0.10×数量
 const BCRS_UNIT_PRICE=0.10;
 const BCRS_CONTAINERS_MAX=999;   // 容器数正整数上限（防呆，非法规限额）
-// 最小售卖单位(PC 基础计量单位；SKU 售卖单位只读 = 最小售卖单位)
+// 最小售卖单位(PC 基础计量单位；SKU 售卖规格单位只读 = 最小售卖单位)
 const MEASURE_UNITS=['斤','公斤(kg)','克(g)','毫升(ml)','升(L)','个','只','件','包','袋','盒','箱','瓶','桶','罐'];
 // 净含量单位
 const NET_UNITS=['g','kg','ml','L','斤','个'];
-// 包装单位(选填)：规格名拼为 数量+售卖单位/包装单位，如「1kg/袋」，与 PC 对齐
+// 售卖单位(选填)：规格名拼为 数量+售卖规格单位/售卖单位，如「1kg/袋」，与 PC 对齐
 const PACK_UNITS=['袋','盒','箱','包','件','扎','瓶','桶','罐','托'];
 // 效期单位
 const SHELF_UNITS=['天','月','年'];
@@ -356,7 +356,7 @@ function openForm(prefill){
     shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
     appShowShelf:'展示',                    // APP 是否展示效期(展示/不展示)，放保质期后
     storage:'', fulfill:'', origin:'', brand: prefill?prefill.brand:'', desc:'',
-    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite',packUnit:''}]:[{qty:'',price:'',stock:'',mode:'finite',packUnit:''}], // 售卖单位只读=最小售卖单位；mode=库存模式(finite售完即止/daily每日恢复初始库存)；packUnit=包装单位(选填)
+    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite',packUnit:''}]:[{qty:'',price:'',stock:'',mode:'finite',packUnit:''}], // 售卖规格单位只读=最小售卖单位；mode=库存模式(finite售完即止/daily每日恢复初始库存)；packUnit=售卖单位(选填)
     imgs:{head:false,more:[false,false],video:false,label:false,detail:[false,false,false,false]},
   };
   const row=(id,lab,valHtml,req)=>`<div class="pb-cell" id="${id}"><div class="lab">${req?'<span class="rq">*</span>':''}${lab}</div><div class="val">${valHtml}</div><span class="ch">${svg('arrow')}</span></div>`;
@@ -376,7 +376,7 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="最小售卖单位备注，选填" maxlength="40" value="${f.measureNote}"></div></div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每最小售卖单位容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
-        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">押金单价由平台固定为 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</b>（法规押金·不计 GST，商家不可改）。此处填<b>一个最小售卖单位含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 规格数量 × 每最小售卖单位容器数 × S$${BCRS_UNIT_PRICE.toFixed(2)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。</div>
+        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">押金单价由平台固定为 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</b>（法规押金·不计 GST，商家不可改）。此处填<b>一个最小售卖单位含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 售卖规格数量 × 每最小售卖单位容器数 × S$${BCRS_UNIT_PRICE.toFixed(2)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。</div>
         <div class="pb-cell" id="pb-selltype-row"><div class="lab">销售类型</div><div class="val"><span class="vtxt" style="color:var(--sub)">售卖品</span></div></div>
         <div class="pb-cell" id="pb-supply-row" style="cursor:pointer"><div class="lab">售卖模式</div><div class="val"><span class="vtxt" id="pb-supply-v">${f.supplyMode}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-bcrs-tip" style="display:block;padding-top:2px">自售=经销买断，库存自行维护；<b>寄售</b>=库存由货品库存决定、逐规格不可维护。售卖模式<b>保存后不可修改</b>。</div>
@@ -425,7 +425,7 @@ function confirmExit(f){
   confirmDialog({title:'是否退出建品？',body:'已填写的信息将不会保存。',danger:1,okText:'退出',onOk:done});
 }
 
-/* ---- 售卖规格渲染(售卖单位只读 = 最小售卖单位) ---- */
+/* ---- 售卖规格渲染(售卖规格单位只读 = 最小售卖单位) ---- */
 function specRow(s,i,total,measure,consign){
   const uTxt=measure||'—';
   const wgUnit=['kg','g'].includes(measure);   // 多退少补仅计量单位为 kg/g 时可选
@@ -433,7 +433,7 @@ function specRow(s,i,total,measure,consign){
     <div class="sh"><span class="sn">规格${i+1}</span>${total>1?'<span class="del" data-del>删除</span>':''}</div>
     <div class="sbody">
       <div class="qty"><span class="lb">数量</span><input data-qty inputmode="numeric" value="${s.qty}" placeholder="如 2"></div>
-      <div class="unit" style="cursor:default;background:var(--muted);opacity:.9"><span class="lb">售卖单位</span><span class="uv ${measure?'':'ph'}">${uTxt}</span></div>
+      <div class="unit" style="cursor:default;background:var(--muted);opacity:.9"><span class="lb">售卖规格单位</span><span class="uv ${measure?'':'ph'}">${uTxt}</span></div>
     </div>
     ${wgUnit?`<div class="ms-row"><span class="lb">多退少补</span>
       <div class="modeseg" data-refundseg>
@@ -442,7 +442,7 @@ function specRow(s,i,total,measure,consign){
       </div></div>
     <div class="ms-hint">是=按重量定价（S$/${measure}），分装后按实发净重结算差额，需先称重再打标；否=定重预包装按件计价。</div>`:''}
     <div class="sbody" style="margin-top:10px">
-      <div class="unit packcell" data-packpick style="cursor:pointer"><span class="lb">包装单位</span><span class="uv ${s.packUnit?'':'ph'}" data-packv>${s.packUnit||'选填 · 如 袋/箱/盒'}</span><span style="margin-left:auto;flex:0 0 auto;color:var(--sub)">▾</span></div>
+      <div class="unit packcell" data-packpick style="cursor:pointer"><span class="lb">售卖单位</span><span class="uv ${s.packUnit?'':'ph'}" data-packv>${s.packUnit||'选填 · 如 袋/箱/盒'}</span><span style="margin-left:auto;flex:0 0 auto;color:var(--sub)">▾</span></div>
     </div>
     <div class="sbody" style="margin-top:10px">
       <div class="qty"><span class="lb">价格</span><span class="lb" style="flex:0 0 auto;padding-left:2px">S$</span><input data-price inputmode="decimal" value="${s.price}" placeholder="选填"></div>
@@ -470,7 +470,7 @@ function renderSpecs(p,f){
     const rseg=row.querySelector('[data-refundseg]');
     if(rseg)rseg.querySelectorAll('.mo').forEach(o=>o.onclick=()=>{rseg.querySelectorAll('.mo').forEach(x=>x.classList.remove('on'));o.classList.add('on');f.specs[i].refund=o.dataset.r==='1'?1:0;});
     const pk=row.querySelector('[data-packpick]');
-    if(pk)pk.onclick=()=>pbGridPicker('选择包装单位',['无',...PACK_UNITS],f.specs[i].packUnit||'无',v=>{
+    if(pk)pk.onclick=()=>pbGridPicker('选择售卖单位',['无',...PACK_UNITS],f.specs[i].packUnit||'无',v=>{
       const val=v==='无'?'':v;f.specs[i].packUnit=val;
       const el=row.querySelector('[data-packv]');if(el){el.textContent=val||'选填 · 如 袋/箱/盒';el.classList.toggle('ph',!val);}
     });
@@ -609,7 +609,7 @@ function bindForm(p,f){
     bcrsToggle(p,f);paint(p,f);});
   p.querySelector('#pb-bcrscnt').oninput=e=>{f.bcrsUnitContainers=e.target.value;paint(p,f);};
   bcrsToggle(p,f);
-  // 最小售卖单位(变更后 SKU 售卖单位联动只读)
+  // 最小售卖单位(变更后 SKU 售卖规格单位联动只读)
   p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
     f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);renderSpecs(p,f);paint(p,f);});
 
