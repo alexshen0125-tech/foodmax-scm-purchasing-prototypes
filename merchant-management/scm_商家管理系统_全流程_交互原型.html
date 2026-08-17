@@ -1162,7 +1162,7 @@ function closeDrawer(){const d=document.getElementById('drawerc');if(d)d.classLi
 function stepQty(k,dd){EDIT_SKUS[k].qty=Math.max(1,(EDIT_SKUS[k].qty||1)+dd);renderSkuEditor();}
 function skuRowSync(k){const a=document.getElementById('skn-'+k);if(a)a.textContent=skuName(k);const b=document.getElementById('ded-'+k);if(b)b.textContent=dedText(k);}
 document.getElementById('mo').addEventListener('click',e=>{if(e.target.id=='mo')closeModal();});
-function money(n){return '$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function money(n){return 'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function depositText(n){return n>0?money(n):'免保证金（$0.00）';}
 function pipe(steps,curIdx,rejIdx=-1){
   return `<div class="pipe">`+steps.map((s,i)=>{

@@ -90,7 +90,8 @@ DB.fineOrders = DB.fineOrders || [
    status:'deducted', billNo:'ST202606-M0902'},
 ];
 DB.fineSel = DB.fineSel || [];   // 运营端批量勾选
-DB.fineFilter = DB.fineFilter || {merchant:'',no:'',dl:'',push:''};
+DB.fineFilter = DB.fineFilter || {merchant:'',no:'',dl:'',bn:'',push:'pending'};  // 默认「待推送」：运营进这页主要是来推本期的
+DB.siteCode  = DB.siteCode  || 'SG';
 DB.fineBatchSeq = DB.fineBatchSeq || 1;
 
 /* ================= 口径计算 ================= */
@@ -293,11 +294,11 @@ function fineOpsRows(){
   const hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
   return fineGroups(true)
     .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl)
-             && (!f.push||g.push==f.push));
+             && hit(g.batchNo,f.bn) && (!f.push||g.push==f.push));
 }
 // 推送财务结算状态：并入「状态」列展示，不另立字段列——字段集与商家端一致，运营端只多「商家」一列
 function pushTag(g){return g.push=='pushed'
-  ? `<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>已推送财务</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt} · <span class="mono">${g.batchNo}</span></div>`
+  ? `<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>已推送财务</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt} · <span class="mono" style="color:var(--b);cursor:pointer;text-decoration:underline" title="查看该批次全部单据" onclick="fineOps_byBatch('${g.batchNo}')">${g.batchNo}</span></div>`
   : '<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>待推送财务</span>';}
 PAGES['p-fine']=()=>{
   const f=DB.fineFilter, rows=fineOpsRows();
@@ -315,7 +316,8 @@ PAGES['p-fine']=()=>{
     </div>
     <div class="fg3">
       <div class="fr"><label class="fl">推送状态</label><select id="ff-push"><option value="">全部</option><option value="pending" ${f.push=='pending'?'selected':''}>待推送</option><option value="pushed" ${f.push=='pushed'?'selected':''}>已推送</option></select></div>
-      <div class="fr"></div><div class="fr"></div>
+      <div class="fr"><label class="fl">批次号</label><input id="ff-bn" value="${f.bn||''}" placeholder="如 FB-SG-20260817-001"></div>
+      <div class="fr"></div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
       <button class="btn btn-o" onclick="fineOps_reset()">重置</button>
@@ -346,17 +348,18 @@ PAGES['p-fine']=()=>{
         <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">-${money(g.amt)}</td>
         <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}<div style="margin-top:4px">${pushTag(g)}</div></td>
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button></td>
-      </tr>`).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的罚款单</td></tr>`}
+      </tr>`).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">${fineGroups(true).length?'没有符合筛选条件的罚款单':'暂无罚款单 —— 商家足额送货到仓即不会产生罚款单'}</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。当前罚款标准 <b>${money(replFineRate())}/件</b>（全平台统一，生成单据时快照）<button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="nav('p-replcfg')">去配置</button>。</div>
     </div>`;
 };
 window.fineOps_query=function(){
   const g=id=>(document.getElementById(id)||{}).value||'';
-  DB.fineFilter={merchant:g('ff-mc').trim(),no:g('ff-no').trim(),dl:g('ff-dl').trim(),push:g('ff-push')};
+  DB.fineFilter={merchant:g('ff-mc').trim(),no:g('ff-no').trim(),dl:g('ff-dl').trim(),bn:g('ff-bn').trim(),push:g('ff-push')};
   DB.fineSel=[];render();
 };
-window.fineOps_reset=function(){DB.fineFilter={merchant:'',no:'',dl:'',push:''};DB.fineSel=[];render();toast('筛选条件已重置','info');};
+window.fineOps_reset=function(){DB.fineFilter={merchant:'',no:'',dl:'',bn:'',push:'pending'};DB.fineSel=[];render();toast('筛选条件已重置','info');};
+window.fineOps_byBatch=function(bn){DB.fineFilter={merchant:'',no:'',dl:'',bn:bn,push:''};DB.fineSel=[];render();};
 window.fineOps_toggle=function(no){const i=DB.fineSel.indexOf(no);i<0?DB.fineSel.push(no):DB.fineSel.splice(i,1);render();};
 window.fineOps_selAll=function(){
   const sel=fineOpsRows().filter(g=>g.push=='pending').map(g=>g.no);
@@ -371,20 +374,23 @@ window.fineOps_pushAsk=function(){
   <div class="mc-bd">
     <div class="ib ib-y"><span class="i">⚠️</span>推送后该批罚款单<b>不可重复推送</b>，也<b>不可在本页撤回</b>；如需调整请在清结算平台侧处理。请核对商家与金额。</div>
     <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:10px 0 12px"><table style="margin:0"><thead><tr><th>商家</th><th style="text-align:right">单数</th><th style="text-align:right">罚款合计</th></tr></thead><tbody>
-      ${Object.keys(byM).map(m=>`<tr><td><b>${m}</b><div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${byM[m][0].merchant}</div></td><td style="text-align:right">${byM[m].length}</td><td style="text-align:right;color:var(--r);font-weight:600">${money(byM[m].reduce((a,g)=>a+g.amt,0))}</td></tr>`).join('')}
-      <tr style="background:#F7FBF8;font-weight:700"><td>合计 ${Object.keys(byM).length} 个商家</td><td style="text-align:right">${rows.length}</td><td style="text-align:right;color:var(--r)">${money(total)}</td></tr>
+      ${Object.keys(byM).map(m=>`<tr><td><b>${m}</b><div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${byM[m][0].merchant}</div></td><td style="text-align:right">${byM[m].length}</td><td style="text-align:right;color:var(--r);font-weight:600">-${money(byM[m].reduce((a,g)=>a+g.amt,0))}</td></tr>`).join('')}
+      <tr style="background:#F7FBF8;font-weight:700"><td>合计 ${Object.keys(byM).length} 个商家</td><td style="text-align:right">${rows.length}</td><td style="text-align:right;color:var(--r)">-${money(total)}</td></tr>
     </tbody></table></div>
     <div style="font-size:12.5px;color:var(--ts)">推送内容：罚款单号 / 商家编码 / 来源送货单 / 缺口件数 / 罚款标准 / 罚款金额 / 归属结算周期。<b>罚款不开发票</b>，清结算平台按减项处理。</div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="fineOps_pushDo()">确认推送</button></div>`);
 };
 window.fineOps_pushDo=function(){
-  const batch='FB-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.fineBatchSeq++).padStart(3,'0');
+  const batch='FB-'+(DB.siteCode||'SG')+'-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.fineBatchSeq++).padStart(3,'0');
   const now=ts();
   let n=0,amt=0;
   DB.fineOrders.forEach(o=>{if(DB.fineSel.includes(o.no)&&o.push=='pending'){o.push='pushed';o.pushedAt=now;o.batchNo=batch;n++;amt+=o.items.reduce((a,x)=>a+x.qty,0)*o.rate;}});
-  DB.fineSel=[];closeModal();render();
-  toast(`已推送 ${n} 张罚款单至清结算平台，批次 ${batch}，合计 ${money(amt)}`,'ok');
+  DB.fineSel=[];closeModal();
+  // 推完这批就从「待推送」结果集里消失了，直接切到本批次，让运营看得见刚推的是哪几张
+  DB.fineFilter={merchant:'',no:'',dl:'',bn:batch,push:''};
+  render();
+  toast(`已推送 ${n} 张罚款单至清结算平台，批次 ${batch}，合计 -${money(amt)}`,'ok');
 };
 
 /* ================= 运营平台端 · 缺货罚款标准配置 ================= */
@@ -402,7 +408,9 @@ PAGES['p-replcfg']=()=>{
   <div class="card"><div class="card-bd" style="font-size:12.5px;color:var(--ts)">缺货同时产生两张单：<b>平台补采单</b>（按自营商品原定价计价，<b>不加价</b>）与<b>缺货罚款单</b>（缺口件数 × 本罚款标准）。本期<b>不支持</b>按商家 / 品类 / SKU / 货值分档配置；已生成的罚款单按其快照标准结算，不受此处调整影响。</div></div>`;
 };
 window.repl_saveFine=function(){
-  const v=+((document.getElementById('rcfg-fine')||{}).value);
+  const raw=String((document.getElementById('rcfg-fine')||{}).value||'').trim();
+  if(raw===''){toast('请输入罚款标准','err');return;}          // 空值≠0：0 是「有意停罚」，空是漏填
+  const v=+raw;
   if(!(v>=0&&v<=999)||!Number.isInteger(v)){toast('罚款标准需为 0–999 之间的整数','err');return;}
   DB.replCfg.finePerUnit=v;render();toast(`全平台缺货罚款标准已保存为 S$${v}/件（仅对之后生成的罚款单生效）`,'ok');
 };
@@ -465,7 +473,7 @@ window.fine_detail=function(no){
       ${kv('来源送货单',`<span class="mono">${g.deliveryNo}</span>${DB.role=='shop_ops'?'':` <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看</button>`}`)}
       ${kv('入库仓库',g.warehouse)}
       ${kv('收货清点时间',g.at)}
-      ${kv('抵扣所属结算单',g.billNo?`<span class="mono">${g.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:'待本期结算单生成时抵扣')}
+      ${kv('抵扣所属结算单',g.billNo?`<span class="mono">${g.billNo}</span>${DB.role=='shop_ops'?'':` <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`}`:'待本期结算单生成时抵扣')}
     </div>
 
     ${sec('缺货明细 · 逐 SKU')}
