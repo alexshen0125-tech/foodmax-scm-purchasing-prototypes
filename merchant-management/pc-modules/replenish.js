@@ -348,7 +348,7 @@ PAGES['p-fine']=()=>{
         <td style="text-align:right;white-space:nowrap">${money(g.rate)} / 件</td>
         <td style="text-align:right;color:var(--r);font-weight:700;font-size:15px">-${money(g.amt)}</td>
         <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}<div style="margin-top:4px">${pushTag(g)}</div></td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button> <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">送货单</button></td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button></td>
       </tr>`).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的罚款单</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。当前罚款标准 <b>${money(replFineRate())}/件</b>（全平台统一，生成单据时快照）<button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="nav('p-replcfg')">去配置</button>。</div>
@@ -455,7 +455,8 @@ PAGES['m-fine']=()=>{
 };
 // 罚款单详情（右侧抽屉）：同送货单多个 SKU 缺货逐项区分
 window.fine_detail=function(no){
-  const g=fineGroups().find(x=>x.no==no); if(!g)return;
+  // 全平台集合里查：运营端会点到其它商户的单，用按商户过滤的集合会查不到
+  const g=fineGroups(true).find(x=>x.no==no); if(!g)return;
   const kv=(k,v)=>`<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;
   const sec=t=>`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">${t}</h3></div>`;
   drawer(`<div class="drawer-hd"><div><h3>${g.no} · 罚款单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${g.warehouse} · 共 ${g.items.length} 个 SKU 缺货 · 合计 ${g.qty} 件</div></div><span class="x" onclick="closeDrawer()">×</span></div>
@@ -466,8 +467,9 @@ window.fine_detail=function(no){
     ${sec('单据信息')}
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">
       ${kv('罚款单号',`<span class="mono">${g.no}</span>`)}
+      ${DB.role=='shop_ops'?kv('商家',`<b>${g.merchantName}</b> <span class="mono" style="color:var(--ts)">${g.merchant}</span>`):''}
       ${kv('罚款事由','到仓少货')}
-      ${kv('来源送货单',`<span class="mono">${g.deliveryNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看</button>`)}
+      ${kv('来源送货单',`<span class="mono">${g.deliveryNo}</span>${DB.role=='shop_ops'?'':` <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看</button>`}`)}
       ${kv('入库仓库',g.warehouse)}
       ${kv('收货清点时间',g.at)}
       ${kv('抵扣所属结算单',g.billNo?`<span class="mono">${g.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:'待本期结算单生成时抵扣')}
@@ -488,7 +490,7 @@ window.fine_detail=function(no){
       </tbody></table></div>
     <div class="ib ib-b"><span class="i">ℹ️</span>罚款标准在<b>生成单据时快照</b>，后续平台调整不追溯本单。对缺口数量有异议请<b>线下联系运营</b>核对，本期不设线上申诉入口。</div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看送货单</button></div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${DB.role=='shop_ops'?'':`<button class="btn btn-p" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">查看送货单</button>`}</div>`);
 };
 // 结算联动：把罚款并入当期结算单扣减项
 window.fineSettleSync=function(){
