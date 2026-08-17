@@ -640,7 +640,7 @@ const DB = {
   ],
   // 商品（样例数据：入驻/开店走完后商家端可见；平台「商品审核」即时可见待审核项。含三类目/在售/待审核/低库存/售罄/价格异常，供库存·价格·质检·经营分析·备货演示）
   products:[
-    {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['小棠菜主图'],detailImgs:['小棠菜详情'],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',refund:1,qty:1,price:9.30,stock:220,safe:30,packUnit:'袋',stockMode:'daily',soldToday:45,sellUnit:'kg'}]},
+    {id:'SPU8811',name:'小棠菜',cat:'新鲜蔬菜',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'新加坡林厝港',brand:'绿鲜源',desc:'当日现摘小棠菜，叶嫩梗脆。',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['小棠菜主图'],detailImgs:['小棠菜详情'],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8815',refund:1,qty:1,price:9.30,stock:220,safe:30,packUnit:'包',stockMode:'daily',soldToday:45,sellUnit:'kg'}]},
     {id:'SPU8812',name:'娃娃菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',consign:true,stockUnit:'kg',alias:'',origin:'马来西亚金马仑',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['娃娃菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8816',refund:0,qty:1,price:7.00,stock:18,safe:30,sellUnit:'kg'}]},
     {id:'SPU8813',name:'芥蓝',cat:'新鲜蔬菜',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'新加坡',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['芥蓝主图'],detailImgs:['芥蓝详情'],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8817',refund:1,qty:1,price:6.50,stock:160,safe:20,stockMode:'daily',soldToday:28,sellUnit:'kg'},{skuId:'SKU8818',refund:1,qty:5,price:6.20,stock:42,safe:10,packUnit:'箱',stockMode:'finite',sellUnit:'kg'}]},
     {id:'SPU8814',name:'菠菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['菠菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8819',refund:1,qty:1,price:5.80,stock:95,safe:20,sellUnit:'kg'}]},
@@ -650,9 +650,9 @@ const DB = {
     {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',refund:1,qty:1,price:58.00,stock:26,safe:10,sellUnit:'kg'}]},
     {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,mainImgs:['鸡胸肉主图'],status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',refund:0,qty:1,price:13.50,stock:0,safe:20,sellUnit:'kg'}]},
     {id:'SPU8819',name:'生蚝',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'法国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8824',refund:0,qty:1,price:0,stock:0,safe:10,sellUnit:'kg'}]},
-    {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',stdType:'标品',netQty:'330',netUnit:'ml',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,price:2.50,stock:200,safe:30,packUnit:'瓶',stockMode:'finite',sellUnit:'瓶'},{skuId:'SKU8826',qty:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite',sellUnit:'瓶'}]},
+    {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',stdType:'标品',netQty:'330',netUnit:'ml',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,price:2.50,stock:200,safe:30,packUnit:'',stockMode:'finite',sellUnit:'瓶'},{skuId:'SKU8826',qty:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite',sellUnit:'瓶'}]},
     {id:'SPU8821',name:'龙虾',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'澳大利亚',brand:'',desc:'鲜活波士顿龙虾',showExp:'展示生产日期+保质期',img:true,detail:false,status:'rejected',risk:'高',reject:'',note:'',auditOpinions:[{f:'name',label:'商品名称',op:'名称过于笼统，需标注品种（如「波士顿龙虾」）与是否鲜活/冰鲜'},{f:'origin',label:'产地',op:'填写产地与上传的进口报关资料不一致，请核对后填写真实产地'},{f:'img',label:'商品主图',op:'主图含文字水印且非纯白底，不符合平台主图规范，请更换白底实拍图'}],skus:[{skuId:'SKU8827',refund:1,qty:1,price:88.00,stock:12,safe:5,sellUnit:'kg'}]},
-    {id:'SPU8823',name:'即食凉拌海带丝',cat:'海鲜水产',unit:'包',stdType:'标品',netQty:'200',netUnit:'g',saleType:'售卖品',alias:'',origin:'中国山东',brand:'',desc:'开袋即食凉拌海带丝',showExp:'展示生产日期+保质期',img:true,detail:false,status:'forced_off',risk:'高',reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',note:'',skus:[{skuId:'SKU8829',refund:0,qty:1,price:6.80,stock:0,safe:10,off:true,sellUnit:'包'}]},
+    {id:'SPU8823',name:'即食凉拌海带丝',cat:'海鲜水产',unit:'包',stdType:'标品',netQty:'200',netUnit:'g',saleType:'售卖品',alias:'',origin:'中国山东',brand:'',desc:'开袋即食凉拌海带丝',showExp:'展示生产日期+保质期',img:true,detail:false,status:'forced_off',risk:'高',reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',note:'',skus:[{skuId:'SKU8829',refund:0,qty:1,price:6.80,stock:0,safe:10,off:true,sellUnit:'袋'}]},
   ],
   // 订单履约配置（商家自履约：汇总备货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
   orderCfg:{cutoff:'18:00',commRate:0.05},
@@ -758,9 +758,8 @@ const CAT_SCOPE=['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料'];  // 食
 const UNITS=['kg','g','L','盒','袋','份','只','扎','箱'],SHELF=['常温','冷藏','冷冻'],SHOWEXP=['展示生产日期+保质期','展示到期日期','不展示'],SALETYPE=['售卖品','非卖品'];
 /* 寄售品「库存单位」枚举：寄售库存由货品库存决定，此字段说明货品库存按什么单位计
    —— 「1 规格 = 数量 个库存单位」。自售品不需要（库存商家自维护）。*/
-const SELL_UNITS=['kg','g','L','ml','件','盒','袋','份','只','扎','箱','瓶','桶'];   // 售卖规格单位（SKU 级）：自售可选，寄售锁定=商品级库存单位
-const STOCK_UNITS=['kg','g','L','ml','件','盒','袋','份','只','扎','箱','瓶','桶'];
-const PACK_UNITS=['袋','盒','箱','包','件','扎','瓶','桶','罐','托'];  // 售卖单位（选填）：规格名拼为 数量+单位（售卖单位优先，否则净含量单位）
+/* 售卖规格单位 / 售卖单位 取值一律走《建品单位规范》，且随标品/非标品切换，见 UNIT_SPEC */
+const STOCK_UNITS=['kg','g','ml','L'];   // 寄售品「库存单位」：货品库存计量口径，规范未覆盖，暂取计量单位集
 /* 账户管理 + 提现（万里汇 API 对接）：本期只做新币 SGD、无结汇、无限额；手续费商户承担 $5/笔 */
 const WD_FEE=5.00;
 DB.wallet={
@@ -841,7 +840,31 @@ function spuNetTxt(p){return p&&p.netQty?`${p.netQty}${p.netUnit||''}`:'';}   //
             净含量维护并展示在 <b>SKU</b> 维度，逐规格各填各的。
    历史数据迁移：未显式标类型时，填过 SPU 净含量的按标品，其余按非标品。 */
 const STD_TYPES=['标品','非标品'];
-const MEASURE_UNITS=['kg','g','L','ml'];
+/* ===== 建品单位规范（真值来源：飞书《建品单位规范》wiki OVWmwf16MiA6tPkszPdcdlQUnBZ）=====
+   每项 = [code, 中文, English]；code 为研发对接枚举值，中文用于界面，English 供多语言。
+   标品与非标品的「售卖规格单位」取值不同，这正是两者的分界：
+     标品   售卖规格单位 = 计件单位(个/打/瓶/罐/盒/袋/箱/卷/托) → 算不出净含量，须另填单件净含量
+     非标品 售卖规格单位 = 计量单位(g/kg/ml/L)                → 数量+单位本身即净含量
+   「净含量单位」「售卖单位」两组两类通用。 */
+const UNIT_SPEC={
+  '标品':{
+    spec:[[40,'个','piece'],[25,'打','dozen'],[1,'瓶','bottle'],[4,'罐','can'],[7,'盒','box'],[6,'袋','packet'],[20,'箱','carton'],[41,'卷','roll'],[38,'托','tray']],
+    net :[[1,'g','g'],[2,'kg','kg'],[3,'ml','ml'],[4,'L','L']],
+    sell:[[19,'包','bag'],[33,'份','portion'],[42,'组','set'],[20,'箱','carton']],
+  },
+  '非标品':{
+    spec:[[1,'g','g'],[2,'kg','kg'],[3,'ml','ml'],[4,'L','L']],
+    net :[[1,'g','g'],[2,'kg','kg'],[3,'ml','ml'],[4,'L','L']],
+    sell:[[19,'包','bag'],[33,'份','portion'],[42,'组','set'],[20,'箱','carton']],
+  },
+};
+const unitList =(t,g)=>(UNIT_SPEC[t]||UNIT_SPEC['标品'])[g];
+const unitNames=(t,g)=>unitList(t,g).map(x=>x[1]);
+const unitOf   =(t,g,n)=>unitList(t,g).find(x=>x[1]==n)||null;
+const unitCode =(t,g,n)=>{const u=unitOf(t,g,n);return u?u[0]:null;};
+/* 单位带 code 的展示，如「kg（code 2）」，供详情抽屉给研发对账 */
+function unitTxtCode(t,g,n){const u=unitOf(t,g,n);return n?(u?`${n}<span style="color:var(--tt);font-size:11px;margin-left:4px">code ${u[0]}</span>`:`${n}<span style="color:var(--r);font-size:11px;margin-left:4px">不在规范内</span>`):'—';}
+const MEASURE_UNITS=['g','kg','ml','L'];   // 计量单位（= 非标品的售卖规格单位全集）
 function isStd(p){if(p&&p.stdType)return p.stdType=='标品';return !!(p&&p.netQty);}
 function stdTypeName(p){return isStd(p)?'标品':'非标品';}
 function netCarry(v,u){   // g/ml 满 1000 进位到 kg/L，避免出现「7920ml」
@@ -887,7 +910,8 @@ function stockModeName(s){return (s.stockMode||'finite')=='daily'?'每日恢复'
 function stockModeTag(s){const daily=(s.stockMode||'finite')=='daily';return `<span class="tag ${daily?'t-b':'t-gr'}" title="库存模式" style="margin-left:6px;font-size:10.5px">${daily?'每日恢复':'售完即止'}</span>`;}
 function stkHintPC(m){return m=='daily'?'每日 0 点自动恢复至库存总数，适合每日稳定供应':'售完即止，卖完不再恢复、售罄即下线，适合尾货/限量';}
 function seModeSync(){const m=(document.querySelector('[name=se-mode]:checked')||{}).value||'finite';document.querySelectorAll('[name=se-mode]').forEach(r=>r.parentElement.classList.toggle('on',r.checked));const h=document.getElementById('se-hint');if(h)h.innerHTML='<span class="i">ℹ️</span>'+stkHintPC(m);}
-function autoCheck(p){const fails=[];const c=CATS[p.cat];if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.showExp)fails.push(['必填完整性','缺少「APP是否展示效期」']);if(!p.storage)fails.push(['必填完整性','缺少「储存条件」']);if(!p.fulfil)fails.push(['必填完整性','缺少「履约方式」']);if((p.expEn||'是')=='是'&&!p.qp)fails.push(['必填完整性','效期管理=是，需填保质期']);if(p.consign&&!p.stockUnit)fails.push(['必填完整性','寄售品需选择「库存单位」']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{const q=parseFloat(x.qty);if(!(q>0))fails.push(['售卖规格',`规格${k+1} 售卖规格数量必须大于 0`]);else if(Math.round(q*100)!==q*100)fails.push(['售卖规格',`规格${k+1} 售卖规格数量最多两位小数`]);if(!p.consign&&!x.sellUnit)fails.push(['售卖规格',`规格${k+1} 需选择「售卖规格单位」`]);if(x.refund&&!['kg','g'].includes(skuSellUnit(p,x)))fails.push(['售卖规格',`规格${k+1} 开启了多退少补，但售卖规格单位为「${skuSellUnit(p,x)||'—'}」，仅 kg/g 支持按重量定价`]);if(!isStd(p)&&skuSellUnit(p,x)&&!MEASURE_UNITS.includes(skuSellUnit(p,x)))fails.push(['净含量',`规格${k+1} 为非标品，净含量＝售卖规格数量+售卖规格单位，故售卖规格单位须为计量单位（kg/g/L/ml），当前为「${skuSellUnit(p,x)}」；若确为计件商品请改建为标品`]);});
+function autoCheck(p){const fails=[];const c=CATS[p.cat];if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.showExp)fails.push(['必填完整性','缺少「APP是否展示效期」']);if(!p.storage)fails.push(['必填完整性','缺少「储存条件」']);if(!p.fulfil)fails.push(['必填完整性','缺少「履约方式」']);if((p.expEn||'是')=='是'&&!p.qp)fails.push(['必填完整性','效期管理=是，需填保质期']);if(p.consign&&!p.stockUnit)fails.push(['必填完整性','寄售品需选择「库存单位」']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{const q=parseFloat(x.qty);if(!(q>0))fails.push(['售卖规格',`规格${k+1} 售卖规格数量必须大于 0`]);else if(Math.round(q*100)!==q*100)fails.push(['售卖规格',`规格${k+1} 售卖规格数量最多两位小数`]);if(!p.consign&&!x.sellUnit)fails.push(['售卖规格',`规格${k+1} 需选择「售卖规格单位」`]);if(x.refund&&!['kg','g'].includes(skuSellUnit(p,x)))fails.push(['售卖规格',`规格${k+1} 开启了多退少补，但售卖规格单位为「${skuSellUnit(p,x)||'—'}」，仅 kg/g 支持按重量定价`]);const su=skuSellUnit(p,x);if(su&&!p.consign&&!unitNames(stdTypeName(p),'spec').includes(su))fails.push(['单位规范',`规格${k+1} 售卖规格单位「${su}」不在《建品单位规范》的${stdTypeName(p)}取值内（${unitNames(stdTypeName(p),'spec').join('/')}）`]);if(x.packUnit&&!unitNames(stdTypeName(p),'sell').includes(x.packUnit))fails.push(['单位规范',`规格${k+1} 售卖单位「${x.packUnit}」不在《建品单位规范》取值内（${unitNames(stdTypeName(p),'sell').join('/')}）`]);});
+  if(p.netUnit&&!unitNames(stdTypeName(p),'net').includes(p.netUnit))fails.push(['单位规范',`净含量单位「${p.netUnit}」不在《建品单位规范》取值内（${unitNames(stdTypeName(p),'net').join('/')}）`]);
   /* 标品的净含量＝包装上申报的固定值，必须填；非标品的净含量由售卖规格数量+单位得出，无此字段 */
   if(isStd(p)){
     if(!(parseFloat(p.netQty)>0))fails.push(['净含量','标品需填写「单件净含量」——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推']);
@@ -951,7 +975,8 @@ const NAV={
     {sec:'结算'},
     {id:'p-commission',ic:'💹',t:'佣金配置',p1:1},
     {id:'p-weighcfg',ic:'⚖️',t:'多退少补规则',p1:1},
-    {id:'p-replcfg',ic:'⚖️',t:'缺货罚款标准',p1:1},
+    {id:'p-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.fineOrders?DB.fineOrders.filter(g=>g.push=='pending').length:0,by:'y'},
+    {id:'p-replcfg',ic:'⚙️',t:'缺货罚款标准',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'耗材'},
@@ -1732,7 +1757,7 @@ function act_spuDetail(i){
       ${dl('商品名称',p.name)}${dl('商品编码',`<span class="mono">${p.id}</span>`)}
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
       ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：各规格净含量＝单件净含量 × 售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
-      ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量单位',p.netUnit||'—'):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
+      ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit)):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
       ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 份 ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
       ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
       ${dl('商品别名(EN)',p.aliasEn||'—')}
@@ -1743,8 +1768,8 @@ function act_spuDetail(i){
       ${dl('商品详情图',(p.detailImgs&&p.detailImgs.length)?p.detailImgs.map(id=>`<span class="tag t-b" style="font-size:10.5px;margin:0 4px 4px 0">${id}</span>`).join(''):(p.detail?'已上传':'未维护'))}
     </dl>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU）· 共 ${p.skus.length} 个</h4>
-    <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th title="${isStd(p)?'标品：单件净含量 × 售卖规格数量，系统自动算':'非标品：逐规格维护'}">净含量${isStd(p)?'（自动）':''}</th><th>未税价</th><th>含税价</th>${p.bcrs?'<th>BCRS押金</th>':''}<th>可售库存</th><th>库存模式</th><th>状态</th></tr></thead><tbody>
-      ${p.skus.map(s=>{const st=skuState(p,s);const nf=skuNetFormula(p,s);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${skuSpec(p,s)}</td><td${nf?` title="${nf}"`:''}>${skuNetTxt(p,s)||'<span style="color:var(--tt)">—</span>'}${nf?`<span style="color:var(--tt);font-size:11px;margin-left:5px">${nf}</span>`:''}</td><td>${money(s.price||0)}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td>${p.bcrs?`<td><span class="tag t-b" title="${skuBcrsContainers(p,s)}容器×${money(BCRS_UNIT_PRICE)}">${money(skuBcrsAmt(p,s))}</span></td>`:''}<td>${s.stock||0}${stockModeTag(s)}</td><td>${s.stockMode=='daily'?'每日恢复':s.stockMode=='finite'?'售完即止':'—'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`;}).join('')}
+    <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th title="《建品单位规范》${stdTypeName(p)}：售卖规格单位取值 ${unitNames(stdTypeName(p),'spec').join('/')}">售卖规格单位</th><th title="${isStd(p)?'标品：单件净含量 × 售卖规格数量，系统自动算':'非标品：＝ 售卖规格数量 + 售卖规格单位'}">净含量</th><th>未税价</th><th>含税价</th>${p.bcrs?'<th>BCRS押金</th>':''}<th>可售库存</th><th>库存模式</th><th>状态</th></tr></thead><tbody>
+      ${p.skus.map(s=>{const st=skuState(p,s);const nf=skuNetFormula(p,s);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${skuSpec(p,s)}</td><td>${unitTxtCode(stdTypeName(p),'spec',skuSellUnit(p,s))}</td><td${nf?` title="${nf}"`:''}>${skuNetTxt(p,s)||'<span style="color:var(--tt)">—</span>'}${nf?`<span style="color:var(--tt);font-size:11px;margin-left:5px">${nf}</span>`:''}</td><td>${money(s.price||0)}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td>${p.bcrs?`<td><span class="tag t-b" title="${skuBcrsContainers(p,s)}容器×${money(BCRS_UNIT_PRICE)}">${money(skuBcrsAmt(p,s))}</span></td>`:''}<td>${s.stock||0}${stockModeTag(s)}</td><td>${s.stockMode=='daily'?'每日恢复':s.stockMode=='finite'?'售完即止':'—'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`;}).join('')}
     </tbody></table></div>
     ${detailAuditBlock(p)}
   </div>
@@ -1960,7 +1985,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
   const approved=!isNew&&(p.status=='onsale'||p.status=='offsale');
   EDIT_SUPPLY=p.consign?'寄售':'自售';const supplyLock=!isNew;   // 售卖模式(自售/寄售)：新建可选，已有商品保存后不可修改(dev 508003116)
   EDIT_STD=isNew?'标品':stdTypeName(p);   // 商品类型(标品/非标品)：决定净含量维护在 SPU 还是 SKU
-  const NETUNIT=['g','ml','kg','L'];
+  const NETUNIT=unitNames(stdTypeName(p),'net');
   const QPUNIT=['天','月','年'],STORAGE=['常温','冷藏','冷冻','冷鲜'],FULFIL=['平台仓配','商家直送'];
   const radio=(name,val,opts)=>`<div class="row" style="gap:14px">${opts.map(t=>`<label class="chip-ck ${val==t?'on':''}"><input type="radio" name="${name}" value="${t}" ${val==t?'checked':''} onchange="this.closest('.row').querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));this.parentElement.classList.add('on')">${t}</label>`).join('')}</div>`;
   const opt=(arr,v)=>`<option value="">请选择</option>`+arr.map(x=>`<option ${v==x?'selected':''}>${x}</option>`).join('');
@@ -2067,11 +2092,11 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
   +EDIT_SKUS.map((s,k)=>{const m=s.stockMode||'finite';const pk=s.packUnit||'';const rowUnit=consign?su:(s.sellUnit||'');
     return `<div class="skued2" style="${gc};align-items:center">`
     +`<div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div>`
-    +`<div><select title="售卖单位（选填）" onchange="EDIT_SKUS[${k}].packUnit=this.value;skuRowSync(${k})" style="${sel}"><option value="" ${pk==''?'selected':''}>无</option>${PACK_UNITS.map(u=>`<option value="${u}" ${pk==u?'selected':''}>${u}</option>`).join('')}</select></div>`
+    +`<div><select title="售卖单位（选填，《建品单位规范》：包/份/组/箱）" onchange="EDIT_SKUS[${k}].packUnit=this.value;skuRowSync(${k})" style="${sel}"><option value="" ${pk==''?'selected':''}>无</option>${unitNames(EDIT_STD,'sell').map(u=>`<option value="${u}" ${pk==u?'selected':''}>${u}</option>`).join('')}</select></div>`
     +`<div><input type="number" min="0.01" step="0.01" value="${s.qty||''}" placeholder="如 1 或 0.5" title="售卖规格数量：数字，支持两位小数" style="${inp}" oninput="edSetQty(${k},this.value)"></div>`
     +`<div>${consign
         ?`<div class="sku-unit-cell" data-k="${k}" title="寄售：售卖规格单位同商品级库存单位，不可修改" style="${roCell};justify-content:center">${su||'—'}</div>`
-        :`<select title="售卖规格单位" onchange="EDIT_SKUS[${k}].sellUnit=this.value;skuRowSync(${k});renderSkuEditor()" style="${sel};border-color:${s.sellUnit?'#dcdfe6':'var(--r)'}"><option value="">请选择</option>${SELL_UNITS.map(u=>`<option value="${u}" ${s.sellUnit==u?'selected':''}>${u}</option>`).join('')}</select>`}</div>`
+        :`<select title="售卖规格单位（《建品单位规范》：${std?'标品＝计件单位':'非标品＝计量单位'}）" onchange="EDIT_SKUS[${k}].sellUnit=this.value;skuRowSync(${k});renderSkuEditor()" style="${sel};border-color:${s.sellUnit?'#dcdfe6':'var(--r)'}"><option value="">请选择</option>${unitNames(EDIT_STD,'spec').map(u=>`<option value="${u}" ${s.sellUnit==u?'selected':''}>${u}</option>`).join('')}</select>`}</div>`
     +(std?`<div class="sku-net-cell" data-k="${k}" style="${roCell};justify-content:center" title="标品：由单件净含量 × 售卖规格数量自动算出">—</div>`:'')
     +`<div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="${inp}" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div>`
     +`<div>${skuEdRefund(k,rowUnit)}</div>`
@@ -2092,6 +2117,9 @@ function setStdType(t){
   const b=document.getElementById('netqty-block'),n=document.getElementById('netqty-nonstd');
   if(b)b.style.display=t=='标品'?'block':'none';
   if(n)n.style.display=t=='标品'?'none':'block';
+  /* 两类的「售卖规格单位」取值集互斥（计件 vs 计量），切换后原值必然失效，清空重选，避免存下不在规范内的值 */
+  const ok=unitNames(t,'spec');
+  EDIT_SKUS.forEach(s=>{if(s.sellUnit&&!ok.includes(s.sellUnit))s.sellUnit='';});
   renderSkuEditor();refreshSkuNames();
 }
 /* 标品的 SKU 净含量是派生值，随「单件净含量 / 售卖规格数量」实时变；只刷这几个只读格，不整表重渲（否则打断输入焦点） */
