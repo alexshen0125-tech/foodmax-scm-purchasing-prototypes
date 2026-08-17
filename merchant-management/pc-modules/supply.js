@@ -53,6 +53,8 @@ const odNet  = o => +(o.lines.reduce((a,l)=>a+lnNet(l),0)).toFixed(2);
 const odIncl = o => +(o.lines.reduce((a,l)=>a+lnIncl(l),0)).toFixed(2);
 const odQty  = o => o.lines.reduce((a,l)=>a+(+l.qty||0),0);
 const gOf    = c => DB.supplyGoods.find(g=>g.code==c)||{};
+// 明细行税率一致时给出税率（如 GST 9%），混合税率时只写 GST，避免标错口径
+const taxLabel = ls => {const s=[...new Set(ls.map(l=>sTax(l)))];return s.length==1?`GST ${s[0]}%`:'GST';};
 /* 状态链：待送货 → 送货中 → 已交付 →（账期聚合）已结算 →（结算完成放款后自动开票）已开票（终态）
    开票时点 = 结算完成后，与服务费发票同节奏（《对账结算 PRD》BR-10），不是交付时点。 */
 const S_ST = {pending:['待送货','t-y'],shipping:['送货中','t-b'],delivered:['已交付','t-b'],settled:['已结算','t-pp'],invoiced:['已开票','t-g'],canceled:['已取消','t-gr']};
@@ -197,7 +199,9 @@ window.sgSubmitAsk=function(){
         <td style="text-align:right">${money(l.price)}</td>
         <td style="text-align:right">${money(sIncl(l))}</td>
         <td style="text-align:right;font-weight:600;color:var(--gd)">${money(lnIncl(l))}</td></tr>`).join('')}
-      <tr style="font-weight:700;background:var(--gl)"><td colspan="4">合计（未税 ${money(cartNet())}）</td><td style="text-align:right;color:var(--gd)">${money(cartIncl())}</td></tr>
+      <tr style="background:var(--gl)"><td colspan="4">合计（未税）</td><td style="text-align:right">${money(cartNet())}</td></tr>
+      <tr style="background:var(--gl)"><td colspan="4">${taxLabel(ls)}</td><td style="text-align:right">${money(+(cartIncl()-cartNet()).toFixed(2))}</td></tr>
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="4">合计（含税）</td><td style="text-align:right;color:var(--gd)">${money(cartIncl())}</td></tr>
     </tbody></table>
     <div class="fr" style="margin-top:16px"><label class="fl">备注（选填）</label><input id="sg-note" placeholder="如：请与 07-01 送货批次一并处理"></div>
     <dl class="dl">
@@ -276,7 +280,9 @@ window.sgOrderDetail=function(no,role){
       ${o.lines.map(l=>`<tr><td class="mono">${l.code}</td><td><b>${l.name}</b><div style="font-size:11.5px;color:var(--ts)">${l.spec}</div></td>
         <td style="text-align:right">${l.qty}${l.unit}</td><td style="text-align:right">${money(l.price)}</td>
         <td style="text-align:right">${money(sIncl(l))}</td><td style="text-align:right;font-weight:600;color:var(--gd)">${money(lnIncl(l))}</td></tr>`).join('')}
-      <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计</td><td style="text-align:right;color:var(--gd)">${money(odIncl(o))}</td></tr>
+      <tr style="background:var(--gl)"><td colspan="5">合计（未税）</td><td style="text-align:right">${money(odNet(o))}</td></tr>
+      <tr style="background:var(--gl)"><td colspan="5">${taxLabel(o.lines)}</td><td style="text-align:right">${money(+(odIncl(o)-odNet(o)).toFixed(2))}</td></tr>
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计（含税）</td><td style="text-align:right;color:var(--gd)">${money(odIncl(o))}</td></tr>
     </tbody></table>
     ${o.note?`<div style="font-size:12px;color:var(--ts);margin-top:8px">备注：${o.note}</div>`:''}
 

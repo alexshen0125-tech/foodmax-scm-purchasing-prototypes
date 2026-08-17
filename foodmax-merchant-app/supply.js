@@ -122,6 +122,8 @@ const odNet = o => +(o.lines.reduce((a,l)=>a+lnNet(l),0)).toFixed(2);
 const odInc = o => +(o.lines.reduce((a,l)=>a+lnInc(l),0)).toFixed(2);
 const odQty = o => o.lines.reduce((a,l)=>a+l.qty,0);
 const gOf   = c => GOODS.find(g=>g.code==c)||{};
+// 明细行税率一致时给出税率（如 GST 9%），混合税率时只写 GST（与 PC taxLabel 同口径）
+const taxLabel = ls => {const s=[...new Set(ls.map(l=>tOf(l)))];return s.length==1?`GST ${s[0]}%`:'GST';};
 /* 状态链：待送货 → 送货中 → 已交付 →（账期聚合）已结算 →（结算完成后自动开票）已开票（终态） */
 const ST={pending:['待送货','y'],shipping:['送货中','g'],delivered:['已交付','g'],settled:['已结算',''],invoiced:['已开票','g'],canceled:['已取消','']};
 const OTABS=[['all','全部'],['pending','待送货'],['shipping','送货中'],['delivered','已交付'],['settled','已结算'],['invoiced','已开票'],['canceled','已取消']];
@@ -217,6 +219,7 @@ function openConfirm(){
         <div class="d"><span class="k">扣款时点</span><span class="v">送货单回写已交付后</span></div>
         <div class="d"><span class="k">当期结算单</span><span class="v">${BILL_NO}</span></div>
         <div class="d"><span class="k">合计（未税）</span><span class="v">${S(cartNet())}</span></div>
+        <div class="d"><span class="k">${taxLabel(ls)}</span><span class="v">${S(+(cartInc()-cartNet()).toFixed(2))}</span></div>
         <div class="d"><span class="k">合计（含税）</span><span class="v" style="color:var(--emerald-2);font-size:16px">${S(cartInc())}</span></div>
       </div>
       <div class="sp-note">提交后自动生成耗材送货单并推送仓库作业；仓库回写「已交付」后按含税金额计入当期结算单扣减项，与货款轧差。未交付前可取消。</div>`,
