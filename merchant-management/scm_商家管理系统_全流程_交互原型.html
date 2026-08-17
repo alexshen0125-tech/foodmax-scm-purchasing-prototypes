@@ -838,8 +838,9 @@ function skuFullName(p,s){return `${p.name} ${skuSpec(p,s)}`;}
 function spuNetTxt(p){return p&&p.netQty?`${p.netQty}${p.netUnit||''}`:'';}   // 「500g」，无则空
 /* ===== 标品 / 非标品（2026-08 商品结构调整·第二步）=====
    标品   = 工业预包装，同一 SPU 各规格「单件净含量」一致（如可乐恒为 330ml），
-            净含量维护在 <b>SPU</b> 维度；各 SKU 的净含量由「SPU 单件净含量 × 售卖规格数量」<b>派生</b>
-            （1瓶→330ml、24瓶/箱→7.92L），商家只填一次。
+            净含量维护在 <b>SPU</b> 维度，即包装上申报的那个数（如可乐 330ml）；
+            <b>任何地方都不乘售卖规格数量</b>——「24瓶/箱」表达的是件数，不改变单件净含量本身。
+            商家只填一次，各 SKU 一致。
    非标品 = 生鲜分装，各规格净含量互不相同（500g/盒、1kg/袋、5kg/箱），
             净含量维护并展示在 <b>SKU</b> 维度，逐规格各填各的。
    历史数据迁移：未显式标类型时，填过 SPU 净含量的按标品，其余按非标品。 */
@@ -881,35 +882,28 @@ function netCarry(v,u){   // g/ml 满 1000 进位到 kg/L，避免出现「7920m
 /* SKU 净含量：
    非标品 —— 净含量 **就是**「售卖规格数量 + 售卖规格单位」，不是另一个字段，不单独维护（1kg/袋 → 1kg、5kg/箱 → 5kg）；
    标品   —— 售卖规格单位是「瓶/罐」这类计件单位，数量×单位算不出容量，
-             故由 SPU「单件净含量」× 售卖规格数量派生（330ml × 24 → 7.92L）。 */
+             故取 SPU「单件净含量」申报值（1瓶与24瓶/箱都是 330ml，不乘数量）。 */
 function skuNet(p,s){
   if(!p||!s)return null;
-  const q=parseFloat(s.qty);
-  if(!(q>0))return null;
-  const su=skuSellUnit(p,s);
   if(isStd(p)){
-    /* 标品：净含量是商家申报的**固定值**（包装上印的），一律以「单件净含量」为准，不由数量+单位倒推。
-       · 计件单位(瓶/罐/枚/包)：一个售卖规格里装 q 件 → 本规格净含量 ＝ 固定净含量 × q
-       · 计量单位(kg/g/L/ml)  ：售卖规格单位本身就是计量口径 → 本规格净含量 ＝ 固定净含量 */
+    /* 标品：净含量 ＝ 商家申报的「单件净含量」原值，**任何地方都不乘售卖规格数量**。
+       净含量是包装上印的那个数（如可乐 330ml），与一箱装几瓶无关；
+       「24瓶/箱」表达的是件数，不改变单件净含量本身。 */
     const base=parseFloat(p.netQty);
     if(!(base>0))return null;
-    const u=p.netUnit||'';
-    return MEASURE_UNITS.includes(su)?netCarry(base,u):netCarry(+(base*q).toFixed(4),u);
+    return netCarry(base,p.netUnit||'');
   }
   /* 非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段 */
-  return su?netCarry(q,su):null;
+  const q=parseFloat(s.qty),su=skuSellUnit(p,s);
+  if(!(q>0)||!su)return null;
+  return netCarry(q,su);
 }
 /* 标品填写的固定净含量原样文本（「330ml」「200g」），供表单只读列展示 */
 function spuFixedNetTxt(p){return (p&&parseFloat(p.netQty)>0)?fmtQty(p.netQty)+(p.netUnit||''):'';}
 function skuNetTxt(p,s){const n=skuNet(p,s);return n?fmtQty(n.v)+n.u:'';}
-/* 净含量算式：仅标品 + 计件单位 + 多件装才有，如「330ml × 24 ＝ 7.92L」 */
-function skuNetFormula(p,s){
-  if(!isStd(p))return '';
-  const q=parseFloat(s.qty),base=parseFloat(p.netQty);
-  if(MEASURE_UNITS.includes(skuSellUnit(p,s)))return '';
-  if(!(base>0)||!(q>1))return '';
-  return `${fmtQty(base)}${p.netUnit||''} × ${fmtQty(q)} ＝ ${skuNetTxt(p,s)}`;
-}
+/* 净含量不再有任何「× 售卖规格数量」的算式：标品取申报值、非标品取数量+单位，两者都是直给。
+   保留空实现仅为兼容历史调用点。 */
+function skuNetFormula(){return '';}
 function skuState(p,s){if(s.review)return ['新增待审核','t-b'];if(p.status!='onsale')return ['随商品','t-gr'];if(s.off)return ['已下架','t-gr'];if(s.stock<=0)return ['售罄','t-gr'];return ['可售','t-g'];}
 // 库存模式：daily=每日恢复初始库存（每日 0 点自动补回库存总数）/ finite=售完即止（卖完不恢复、售罄下线）
 function stockModeName(s){return (s.stockMode||'finite')=='daily'?'每日恢复':'售完即止';}
@@ -1766,7 +1760,7 @@ function act_spuDetail(i){
     <dl class="dl">
       ${dl('商品名称',p.name)}${dl('商品编码',`<span class="mono">${p.id}</span>`)}
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
-      ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：各规格净含量＝单件净含量 × 售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
+      ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：取申报的单件净含量，不乘售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
       ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit)):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
       ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 份 ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
       ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
@@ -2161,9 +2155,7 @@ function refreshNetCells(){
     }
     if(!(base>0)){el.textContent='—';el.title='标品的净含量是包装上申报的固定值，请在上方「单件净含量」填写';return;}
     el.textContent=fmtQty(base)+u;
-    el.title=(!MEASURE_UNITS.includes(su)&&q>1)
-      ? `本规格净含量 ＝ ${fmtQty(base)}${u} × ${fmtQty(q)}${su} ＝ ${(n=>fmtQty(n.v)+n.u)(netCarry(+(base*q).toFixed(4),u))}`
-      : '上方填写的单件净含量';
+    el.title='上方填写的单件净含量（净含量不随售卖规格数量变化）';
   });
 }
 /* 售卖规格数量：数字、支持两位小数（超过两位自动截断） */
@@ -2229,7 +2221,7 @@ const BUILD_FIELDS_BY_TYPE={
     {k:'净含量单位',req:'必填',rule:'《建品单位规范》枚举：g / kg / ml / L（模板已挂下拉）',ex:'ml'},
     ...BUILD_FIELDS_COMMON_MID,
     {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填该规格里装几件（正整数≥1）；同一SPU下不可重复。如 1 表示单瓶、24 表示 24瓶整箱',ex:'24'},
-    {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》标品枚举：个 / 打 / 瓶 / 罐 / 盒 / 袋 / 箱 / 卷 / 托（计件单位，模板已挂下拉）。本规格净含量 ＝ 单件净含量 × 售卖规格数量',ex:'瓶'},
+    {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》标品枚举：个 / 打 / 瓶 / 罐 / 盒 / 袋 / 箱 / 卷 / 托（计件单位，模板已挂下拉）。净含量取「单件净含量」申报值，不随本列数量变化',ex:'瓶'},
     ...BUILD_FIELDS_COMMON_TAIL],
   '非标品':[...BUILD_FIELDS_COMMON_HEAD,
     ...BUILD_FIELDS_COMMON_MID,
@@ -2248,7 +2240,7 @@ function impSetType(t){DB.impType=t;IMP=null;render();}
 function impBuildUI(){const T=impType();
   const seg=STD_TYPES.map(t=>`<div class="tab ${T==t?'active':''}" onclick="impSetType('${t}')">${t}模板</div>`).join('');
   const desc=T=='标品'
-    ? '工业预包装：售卖规格单位取<b>计件单位</b>（个/打/瓶/罐/盒/袋/箱/卷/托），须申报<b>单件净含量</b>；本规格净含量 ＝ 单件净含量 × 售卖规格数量。'
+    ? '工业预包装：售卖规格单位取<b>计件单位</b>（个/打/瓶/罐/盒/袋/箱/卷/托），须申报<b>单件净含量</b>；净含量即该申报值，不乘售卖规格数量。'
     : '生鲜分装：售卖规格单位取<b>计量单位</b>（g/kg），<b>无净含量列</b>——净含量 ＝ 售卖规格数量 + 售卖规格单位。';
   return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div>
   <div class="card-hd" style="border-top:0;padding-top:0"><div class="tabs" style="border:none">${seg}</div></div>

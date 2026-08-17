@@ -481,13 +481,13 @@ function confirmExit(f){
 function specRow(s,i,total,f,consign){
   /* 售卖规格单位的可编辑性：
      · 寄售        → 恒等于商品级「库存单位」，只读
-     · 标品非首行  → 恒等于首行（单件净含量是 SPU 级单值，基准单位必须唯一，见 PRD BR-03b）
-     · 其余        → 可选，枚举随 stdType */
+     · 其余        → 可选，枚举随 stdType
+     注：标品各规格单位不再要求一致——该约束原本只为「单件净含量 × 数量」的乘法服务，
+        净含量既已改为直接取申报值、不乘数量，约束即无存在理由，已拆除。 */
   const lockByConsign=consign;
-  const lockByStd=(f.stdType==='标品'&&i>0);
-  const eff=lockByConsign?(f.stockUnit||''):(lockByStd?((f.specs[0]||{}).specUnit||''):(s.specUnit||''));
-  const locked=lockByConsign||lockByStd;
-  const lockTip=lockByConsign?'寄售 · 同库存单位':'标品各规格单位须一致';
+  const eff=lockByConsign?(f.stockUnit||''):(s.specUnit||'');
+  const locked=lockByConsign;
+  const lockTip='寄售 · 同库存单位';
   const uTxt=eff||(locked?'—':'请选择');
   const wgUnit=['kg','g'].includes(eff);   // 多退少补仅售卖规格单位为 kg/g 时可选
   const netTxt=specNetTxt(f,{...s,specUnit:eff});
@@ -533,13 +533,10 @@ function renderSpecs(p,f){
   box.innerHTML=f.specs.map((s,i)=>specRow(s,i,f.specs.length,f,consign)).join('');
   box.querySelectorAll('.pb-spec').forEach((row,i)=>{
     row.querySelector('[data-qty]').oninput=e=>{f.specs[i].qty=e.target.value;refreshNet(p,f);paint(p,f);};
-    /* 售卖规格单位：枚举随 stdType；标品首行变更会带动后续所有行（BR-03b 单位须一致） */
+    /* 售卖规格单位：枚举随 stdType，逐规格独立可选 */
     const up=row.querySelector('[data-unitpick]');
     if(up)up.onclick=()=>pbGridPicker('选择售卖规格单位',unitNames(f.stdType,'spec'),f.specs[i].specUnit,v=>{
-      f.specs[i].specUnit=v;
-      if(f.stdType==='标品'&&i===0)renderSpecs(p,f);   // 首行改了，后续只读行须同步
-      else{const el=row.querySelector('[data-unitv]');if(el){el.textContent=v;el.classList.remove('ph');}renderSpecs(p,f);}
-      paint(p,f);
+      f.specs[i].specUnit=v;renderSpecs(p,f);paint(p,f);
     });
     row.querySelector('[data-price]').oninput=e=>{f.specs[i].price=e.target.value;paint(p,f);};
     const stk=row.querySelector('[data-stock]');if(stk&&!consign)stk.oninput=e=>{f.specs[i].stock=e.target.value;paint(p,f);};
@@ -668,7 +665,6 @@ function runChecks(f){
   f.specs.forEach((s,i)=>{const q=String(s.qty).trim();if(!/^[1-9]\d*$/.test(q))fails.push(['规格',`规格${i+1} 售卖规格数量必须为正整数 ≥1`]);});
   /* 售卖规格单位：寄售取库存单位、标品非首行取首行，其余逐行必填且须在规范内 */
   if(f.supplyMode!=='寄售')f.specs.forEach((s,i)=>{
-    if(f.stdType==='标品'&&i>0)return;
     if(!s.specUnit){fails.push(['规格',`规格${i+1} 需选择「售卖规格单位」`]);return;}
     if(!unitNames(f.stdType,'spec').includes(s.specUnit))
       fails.push(['单位规范',`规格${i+1} 售卖规格单位「${s.specUnit}」不在${f.stdType}取值内（${unitNames(f.stdType,'spec').join('/')}）`]);
