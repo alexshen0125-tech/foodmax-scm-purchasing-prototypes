@@ -868,7 +868,7 @@ const NAV={
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
     {id:'m-supply-group',ic:'🖨️',t:'耗材商城',p1:1,children:[
       {id:'m-supply',ic:'🛒',t:'耗材商城'},
-      {id:'m-supply-order',ic:'📦',t:'我的耗材订单',badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.shop==DB.merchant.code&&(o.status=='pending'||o.status=='shipping')).length:0},
+      {id:'m-supply-order',ic:'📦',t:'我的耗材订单',badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.shop==DB.merchant.code&&o.status=='shipping').length:0},
     ]},
     // 「增长」组（商机推荐 m-biz / 价格分析 m-price / 经营分析 m-analysis）本期不做，已从导航移除；
     // PAGES 实现保留在 pc-modules/biz.js·price.js·analysis.js，恢复时把 NAV 条目加回即可
@@ -903,7 +903,7 @@ const NAV={
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'耗材'},
     {id:'p-supply-goods',ic:'🖨️',t:'耗材商品',p1:1},
-    {id:'p-supply-order',ic:'🛒',t:'耗材订单',p1:1,badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.status=='pending'||o.status=='shipping').length:0,by:'y'},
+    {id:'p-supply-order',ic:'🛒',t:'耗材订单',p1:1,badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.status=='shipping').length:0,by:'y'},
     {sec:'风控'},
     {id:'p-aftersale',ic:'⚖️',t:'售后判责',badge:()=>DB.afterSales.filter(a=>a.status=='pending').length},
     {id:'p-violation',ic:'🚨',t:'违规处置'},
@@ -2943,7 +2943,7 @@ function exitChecks(){
     {t:'8. 与买家/三方无处理中纠纷',ok:DB.afterSales.every(a=>a.status=='closed'),fix:'有售后订单未结案'},
     {t:'9. 无欠款或负账单',ok:DB.merchant.vioScore<6,fix:'存在未处理违规/罚款'},
     {t:'10. 符合平台规则及法律法规',ok:true,fix:''},
-    {t:'11. 无在途耗材订单、无未结清耗材款',ok:!(DB.supplyOrders||[]).some(o=>o.shop==DB.merchant.code&&(o.status=='pending'||o.status=='shipping'||o.status=='delivered')),fix:'有耗材订单未交付或未结清'},
+    {t:'11. 无在途耗材订单、无未结清耗材款',ok:!(DB.supplyOrders||[]).some(o=>o.shop==DB.merchant.code&&(o.status=='shipping'||o.status=='delivered')),fix:'有耗材订单未交付或未结清'},
   ];
 }
 
@@ -3778,7 +3778,7 @@ goHome();
 <script src="pc-modules/price.js?v=20260730f"></script>
 <script src="pc-modules/analysis.js?v=20260730f"></script>
 <script src="pc-modules/quality.js?v=20260730f"></script>
-<script src="pc-modules/supply.js?v=20260817a"></script>
+<script src="pc-modules/supply.js?v=20260817b"></script>
 <script src="pc-modules/replenish.js?v=20260810a"></script>
 </body>
 </html>
