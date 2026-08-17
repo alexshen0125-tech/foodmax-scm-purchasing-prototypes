@@ -2195,14 +2195,20 @@ let IMP=null;
 PAGES['m-import']=()=>{return impBuildUI();};
 /* 批量建品字段规范（单一数据源）：驱动 ①导出模板表头(必填/选填标记)+填写说明行 ②页面「字段填写规则」表 ③示例行。
    req：必填 / 选填 / 条件必填。ex：模板示例行首行取值。必填/枚举与建品校验(impParseBuild)、建单表单枚举保持一致。 */
-const BUILD_FIELDS=[
+/* ===== 批量建品模板：标品 / 非标品 各一套（2026-08-17 定，方案 B）=====
+   两类差的不是一两列，而是三组枚举全不同 + 净含量填法相反：
+     标品   售卖规格单位＝计件(个/打/瓶/罐/盒/袋/箱/卷/托)，单件净含量**必填**
+     非标品 售卖规格单位＝计量(g/kg)，**无**净含量列（＝售卖规格数量+售卖规格单位）
+   合成一张表会有一半列对当前行无意义，且 Excel 无法按行动态约束下拉，商家极易在
+   非标品行选到「瓶」。拆两套后每张模板的单位列可挂固定数据有效性，从源头挡住。
+   模板本身即声明类型，故不再设「商品类型」列。 */
+const BUILD_FIELDS_COMMON_HEAD=[
   {k:'自定义SPU编号',req:'必填',rule:'商家自定义商品编号；文件内唯一，且不得与系统已有商品编号重复；同一商品的多个规格行用相同编号关联',ex:'T001'},
   {k:'商品名称',req:'必填',rule:'商品标准名称；系统内不可与已有在售/审核中商品重名；同一SPU仅首行填写，其余规格行留空',ex:'芥蓝'},
   {k:'后台类目',req:'必填',rule:'枚举：新鲜蔬菜 / 肉禽蛋品 / 海鲜水产；须在店铺食品经营许可范围内，超范围类目（如调味品）导入将被资质校验拦截',ex:'新鲜蔬菜'},
   {k:'税率',req:'选填',rule:'留空默认 9%；如需其它按百分数填写，如 7% / 0%',ex:'9%'},
-  {k:'商品类型',req:'必填',rule:'枚举：标品 / 非标品。标品＝工业预包装，净含量是包装上申报的固定值，须填「净含量+净含量单位」，售卖规格单位取计件单位；非标品＝生鲜分装，净含量＝售卖规格数量+售卖规格单位，无需填净含量',ex:'非标品'},
-  {k:'净含量',req:'条件必填',rule:'商品类型=标品时必填：单件净含量数值，如可乐填 330；非标品留空（净含量由售卖规格数量+售卖规格单位得出）',ex:''},
-  {k:'净含量单位',req:'条件必填',rule:'《建品单位规范》枚举：g / kg / ml / L；填了净含量则必填',ex:''},
+];
+const BUILD_FIELDS_COMMON_MID=[
   {k:'是否开启效期管理',req:'必填',rule:'枚举：是 / 否；选「是」须填写保质期与保质期单位',ex:'是'},
   {k:'保质期',req:'条件必填',rule:'「是否开启效期管理=是」时必填，正整数，如 7；为「否」时留空',ex:'7'},
   {k:'保质期单位',req:'条件必填',rule:'「是否开启效期管理=是」时必填，枚举：天 / 月 / 年',ex:'天'},
@@ -2212,29 +2218,77 @@ const BUILD_FIELDS=[
   {k:'产地',req:'选填',rule:'如 马来西亚；无则留空',ex:'马来西亚'},
   {k:'品牌',req:'选填',rule:'无品牌可留空',ex:''},
   {k:'商品描述',req:'选填',rule:'商品卖点简述；无则留空',ex:'新鲜芥蓝'},
-  {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填售卖规格数量（正整数≥1）；同一SPU下各售卖规格数量不可重复（如 1、5 表示 1kg、5kg 两个规格）',ex:'1'},
-  {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》枚举，取值随商品类型：标品＝个/打/瓶/罐/盒/袋/箱/卷/托（计件）；非标品＝g/kg/ml/L（计量）。多退少补仅在此列为 kg / g 时可开',ex:'kg'},
-  {k:'售卖单位',req:'选填',rule:'《建品单位规范》枚举：包 / 份 / 组 / 箱。填了则规格名拼为「数量+售卖规格单位/售卖单位」，如 5kg/箱；无外包装留空',ex:''},
+];
+const BUILD_FIELDS_COMMON_TAIL=[
+  {k:'售卖单位',req:'选填',rule:'《建品单位规范》枚举：包 / 份 / 组 / 箱（模板已挂下拉）。填了则规格名拼为「数量+售卖规格单位/售卖单位」，如 5kg/箱；无外包装留空',ex:''},
   {k:'商品主图ID',req:'必填',rule:'来自「商品素材库 · 主图库」的图片ID（=上传文件名）；支持多张、用逗号分隔，第1张为首图；所填ID须已上传，否则该商品建品失败；同一SPU仅首行填写',ex:'芥蓝主图,芥蓝主图2'},
   {k:'商品详情图ID',req:'选填',rule:'来自「商品素材库 · 详情图库」的图片ID；支持多张、用逗号分隔；所填ID未上传的将被忽略、不阻断建品；同一SPU仅首行填写',ex:'芥蓝详情'},
 ];
-function buildFieldsTable(){return `<details style="margin:0 0 12px;border:1px solid var(--bd);border-radius:10px;padding:10px 12px"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--g)">📋 字段填写规则（必填 / 选填一览 · 共 ${BUILD_FIELDS.length} 列）</summary>
+const BUILD_FIELDS_BY_TYPE={
+  '标品':[...BUILD_FIELDS_COMMON_HEAD,
+    {k:'单件净含量',req:'必填',rule:'包装上申报的固定净含量数值，一个最小包装的量，如可乐填 330、海带丝填 200。标品的净含量不由售卖规格数量倒推，必须申报',ex:'330'},
+    {k:'净含量单位',req:'必填',rule:'《建品单位规范》枚举：g / kg / ml / L（模板已挂下拉）',ex:'ml'},
+    ...BUILD_FIELDS_COMMON_MID,
+    {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填该规格里装几件（正整数≥1）；同一SPU下不可重复。如 1 表示单瓶、24 表示 24瓶整箱',ex:'24'},
+    {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》标品枚举：个 / 打 / 瓶 / 罐 / 盒 / 袋 / 箱 / 卷 / 托（计件单位，模板已挂下拉）。本规格净含量 ＝ 单件净含量 × 售卖规格数量',ex:'瓶'},
+    ...BUILD_FIELDS_COMMON_TAIL],
+  '非标品':[...BUILD_FIELDS_COMMON_HEAD,
+    ...BUILD_FIELDS_COMMON_MID,
+    {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填售卖规格数量（正整数≥1）；同一SPU下不可重复（如 1、5 表示 1kg、5kg 两个规格）',ex:'1'},
+    {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》非标品枚举：g / kg（计量单位，模板已挂下拉）。净含量 ＝ 售卖规格数量 + 售卖规格单位，故本模板无净含量列。多退少补仅在此列为 kg / g 时可开',ex:'kg'},
+    ...BUILD_FIELDS_COMMON_TAIL],
+};
+const impType=()=>DB.impType||'非标品';
+const BUILD_FIELDS_OF=t=>BUILD_FIELDS_BY_TYPE[t]||BUILD_FIELDS_BY_TYPE['非标品'];
+function buildFieldsTable(){const F=BUILD_FIELDS_OF(impType());return `<details style="margin:0 0 12px;border:1px solid var(--bd);border-radius:10px;padding:10px 12px"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--g)">📋 「${impType()}」模板字段填写规则（必填 / 选填一览 · 共 ${F.length} 列）</summary>
   <div style="overflow-x:auto;margin-top:10px"><table class="subtbl"><thead><tr><th style="white-space:nowrap">字段</th><th style="white-space:nowrap">必填</th><th>填写规则</th></tr></thead><tbody>
-  ${BUILD_FIELDS.map(f=>`<tr><td style="white-space:nowrap;font-weight:600">${f.k}</td><td><span class="tag ${f.req=='必填'?'t-r':f.req=='条件必填'?'t-y':'t-gr'}" style="font-size:10.5px;white-space:nowrap">${f.req}</span></td><td style="font-size:12px;color:var(--ts);line-height:1.7">${f.rule}</td></tr>`).join('')}
+  ${F.map(f=>`<tr><td style="white-space:nowrap;font-weight:600">${f.k}</td><td><span class="tag ${f.req=='必填'?'t-r':f.req=='条件必填'?'t-y':'t-gr'}" style="font-size:10.5px;white-space:nowrap">${f.req}</span></td><td style="font-size:12px;color:var(--ts);line-height:1.7">${f.rule}</td></tr>`).join('')}
   </tbody></table></div>
   <div style="font-size:11.5px;color:var(--ts);margin-top:8px">导出模板第 1 行为表头（含「必填/选填」标记），第 2 行为各列填写说明（导入时请删除该行），第 3 行起为示例数据。</div></details>`;}
-function impBuildUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div><div class="card-bd"><div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div>${buildFieldsTable()}<div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载批量建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div></div></div>`;}
+function impSetType(t){DB.impType=t;IMP=null;render();}
+function impBuildUI(){const T=impType();
+  const seg=STD_TYPES.map(t=>`<div class="tab ${T==t?'active':''}" onclick="impSetType('${t}')">${t}模板</div>`).join('');
+  const desc=T=='标品'
+    ? '工业预包装：售卖规格单位取<b>计件单位</b>（个/打/瓶/罐/盒/袋/箱/卷/托），须申报<b>单件净含量</b>；本规格净含量 ＝ 单件净含量 × 售卖规格数量。'
+    : '生鲜分装：售卖规格单位取<b>计量单位</b>（g/kg），<b>无净含量列</b>——净含量 ＝ 售卖规格数量 + 售卖规格单位。';
+  return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div>
+  <div class="card-hd" style="border-top:0;padding-top:0"><div class="tabs" style="border:none">${seg}</div></div>
+  <div class="card-bd">
+  <div class="ib ib-b" style="margin:0 0 12px"><span class="i">📦</span><div><b>标品与非标品模板分开</b>，各自的单位列已挂固定下拉、互不串味。当前选择：<b>${T}</b> —— ${desc}<br><span style="opacity:.85">两类商品请<b>分两次</b>下载模板并分别导入；一个文件里不混填。</span></div></div>
+  <div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div>
+  ${buildFieldsTable()}
+  <div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载${T}建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的${T}模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div>
+  <div id="imp-out"></div>
+  <div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>上传时按<b>模板类型</b>解析：表头与所选类型不符会整表拒收，不做逐行猜测。库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div>
+  </div></div>`;}
 function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
+/* 两套模板各一组演示数据：类型由所选模板决定，行内不再有「商品类型」列。
+   每组都含若干校验错误样例（缺名/超范围类目/主图未上传/单位越界/孤儿行）。 */
+const IMP_DEMO={
+  '非标品':{
+    spu:[
+      {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
+      {ln:3,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
+      {ln:4,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''},
+      /* 单位越界样例：非标品模板里填了计件单位「扎」，应被拦截 */
+      {ln:5,code:'T006',name:'秋葵',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'001',detailImg:''}],
+    sku:[{ln:2,code:'T001',qty:1,specUnit:'kg',packUnit:''},{ln:3,code:'T001',qty:5,specUnit:'kg',packUnit:'箱'},{ln:4,code:'T004',qty:1,specUnit:'kg',packUnit:''},{ln:5,code:'T005',qty:2,specUnit:'kg',packUnit:'包'},{ln:6,code:'T006',qty:1,specUnit:'扎',packUnit:''},{ln:7,code:'T999',qty:1,specUnit:'kg',packUnit:''}],
+  },
+  '标品':{
+    spu:[
+      {ln:2,code:'S001',name:'可口可乐',cat:'饮料',tax:'9%',netQty:'330',netUnit:'ml',expEn:'是',qp:'12',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'新加坡',brand:'Coca-Cola',mainImg:'001',detailImg:'002'},
+      {ln:3,code:'S002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
+      {ln:4,code:'S003',name:'金标酱油',cat:'调味品',tax:'9%',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
+      /* 标品必填样例：漏填单件净含量，应被拦截 */
+      {ln:5,code:'S004',name:'即食海带丝',cat:'海鲜水产',tax:'9%',netQty:'',netUnit:'',expEn:'是',qp:'6',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'中国山东',brand:'',mainImg:'001',detailImg:''}],
+    sku:[{ln:2,code:'S001',qty:1,specUnit:'瓶',packUnit:''},{ln:3,code:'S001',qty:24,specUnit:'瓶',packUnit:'箱'},{ln:4,code:'S002',qty:1,specUnit:'盒',packUnit:''},{ln:5,code:'S003',qty:1,specUnit:'瓶',packUnit:''},{ln:6,code:'S004',qty:1,specUnit:'袋',packUnit:''},{ln:7,code:'S999',qty:1,specUnit:'瓶',packUnit:''}],
+  },
+};
 function impParseBuild(){
-  const spuRows=[
-    {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
-    {ln:3,code:'T002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',stdType:'标品',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
-    {ln:4,code:'T003',name:'金标酱油',cat:'调味品',tax:'9%',stdType:'标品',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
-    {ln:5,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
-    {ln:6,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''},
-    /* 单位不合规样例：非标品的售卖规格单位填了计件单位「扎」，应被《建品单位规范》校验拦截 */
-    {ln:7,code:'T006',name:'秋葵',cat:'新鲜蔬菜',tax:'9%',stdType:'非标品',netQty:'',netUnit:'',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'001',detailImg:''}];
-  const skuRows=[{ln:2,code:'T001',qty:1,specUnit:'kg',packUnit:''},{ln:3,code:'T001',qty:5,specUnit:'kg',packUnit:'箱'},{ln:4,code:'T002',qty:1,specUnit:'盒',packUnit:''},{ln:5,code:'T003',qty:1,specUnit:'瓶',packUnit:''},{ln:6,code:'T005',qty:2,specUnit:'kg',packUnit:'包'},{ln:7,code:'T006',qty:1,specUnit:'扎',packUnit:''},{ln:8,code:'T999',qty:1,specUnit:'kg',packUnit:''}];
+  const T=impType(),demo=IMP_DEMO[T];
+  /* 模板类型即商品类型，逐行沿用；不再从行里读「商品类型」列 */
+  const spuRows=demo.spu.map(r=>({...r,stdType:T}));
+  const skuRows=demo.sku;
   const codes=new Set(),dup=new Set();spuRows.forEach(r=>{if(r.code){if(codes.has(r.code))dup.add(r.code);codes.add(r.code);}});
   const map={};
   const spus=spuRows.map(r=>{const errs=[];
@@ -2242,10 +2296,12 @@ function impParseBuild(){
     else{if(dup.has(r.code))errs.push('SPU编号文件内重复');if(DB.products.some(p=>p.id==r.code))errs.push('SPU编号与系统已有商品冲突（请改用批量新增SKU）');}
     if(!r.name)errs.push('缺少「商品名称」');
     if(!r.cat||!r.showExp||!r.storage||!r.fulfil)errs.push('SPU必填项缺失（后台类目/APP展示效期/储存条件/履约方式）');
-    if(!r.stdType||!STD_TYPES.includes(r.stdType))errs.push('「商品类型」必填，枚举：标品 / 非标品');
-    else if(r.stdType=='标品'&&!(parseFloat(r.netQty)>0))errs.push('商品类型=标品，「净含量」必填（包装上申报的固定值）');
-    if(r.netQty&&!r.netUnit)errs.push('填了净含量，净含量单位必填');
-    if(r.netUnit&&!unitNames(r.stdType||'标品','net').includes(r.netUnit))errs.push(`净含量单位「${r.netUnit}」不在《建品单位规范》取值内（g/kg/ml/L）`);
+    /* 类型来自模板本身；标品模板必须申报单件净含量，非标品模板压根没有这两列 */
+    if(r.stdType=='标品'){
+      if(!(parseFloat(r.netQty)>0))errs.push('「单件净含量」必填——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推');
+      else if(!r.netUnit)errs.push('填了单件净含量，「净含量单位」必填');
+      if(r.netUnit&&!unitNames('标品','net').includes(r.netUnit))errs.push(`净含量单位「${r.netUnit}」不在《建品单位规范》取值内（${unitNames('标品','net').join('/')}）`);
+    }
     if(r.expEn=='是'&&(!r.qp||!r.qpu))errs.push('效期管理=是，保质期/单位必填');
     if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
     else if(r.cat&&!CAT_SCOPE.includes(r.cat))errs.push('经营许可证未覆盖「'+r.cat+'」类目');
@@ -3938,11 +3994,13 @@ function act_merchant360(){
 
 function downloadTemplate(kind){let name,rows;const all=[];
   if(kind=='addsku'){name='批量新增SKU模板.csv';const headers=['SPU编号（必填·已有SPU的编号）','SKU名称（必填）','是否多退少补（必填·是/否）','内包规格_数量（必填·正整数≥1）','包装规格_单位（必填·如 箱/盒/袋）','SKU商品描述（选填）'];const note=['【填写说明·导入时请删除本行】须是系统已存在商品的SPU编号','规格名称，如 小棠菜10kg箱','枚举：是 / 否','售卖规格数量，正整数≥1，同一SPU不可重复','枚举：袋/盒/箱/包/件/扎/瓶/桶/罐/托','该规格补充描述，无则留空'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];all.push(headers,note,...rows);}
-  else{name='批量新建商品模板.csv';
-    const headers=BUILD_FIELDS.map(f=>f.k+'（'+f.req+'）');
-    const note=BUILD_FIELDS.map((f,i)=>(i==0?'【填写说明·导入时请删除本行】':'')+f.rule);
-    const ex1=BUILD_FIELDS.map(f=>f.ex);
-    const ex2=BUILD_FIELDS.map(f=>f.k=='自定义SPU编号'?'T001':(f.k=='售卖规格数量'?'5':''));  // 同一SPU的第二个规格：仅编号+售卖规格数量
+  else{/* 建品模板按标品/非标品分两套，表头与示例各自独立；模板名自带类型，上传时据此校验表头 */
+    const T=impType(),F=BUILD_FIELDS_OF(T);
+    name=`批量新建商品模板_${T}.csv`;
+    const headers=F.map(f=>f.k+'（'+f.req+'）');
+    const note=F.map((f,i)=>(i==0?`【${T}模板·填写说明·导入时请删除本行】`:'')+f.rule);
+    const ex1=F.map(f=>f.ex);
+    const ex2=F.map(f=>f.k=='自定义SPU编号'?ex1[0]:(f.k=='售卖规格数量'?(T=='标品'?'1':'5'):''));  // 同一SPU的第二个规格：仅编号+售卖规格数量
     all.push(headers,note,ex1,ex2);}
   const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=all.map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载（表头含必填标记 + 填写说明行）','ok');}
 /* init */
