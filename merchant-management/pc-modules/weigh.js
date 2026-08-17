@@ -5,9 +5,10 @@
    - 归拢维度 = 仓库 × SKU（分组），组内 N 件逐件一行。
    - 【标签序号】每行 = 该件在「打印标签」里的序号（同 仓库×SKU，序号 1–N，与 label_seqModal 的区间一致），
      操作员照袋上标签序号找行录入，避免串行录错。
-   - 【两个 Tab】待称重（还有件未提交，可编辑）/ 已称重（整组全部件已提交，只读），录入与复核分离，降低误改风险。
+   - 【两个 Tab · 按件分】待称重＝未提交的件（可编辑）；已称重＝已提交的件（只读复核）。
+     提交后该件立刻从「待称重」消失、出现在「已称重」；同一商品的件可同时分处两个页签。
    - 【件级提交】提交粒度 = 单件（标签序号），同一商品可按序号分批提交：称完哪几件就提交哪几件，
-     已提交件立即锁定只读，未提交件继续录；整组全部件提交后才进「已称重」、才解锁该 SKU 的标签打印。
+     已提交件立即锁定只读，未提交件继续录；整组全部件提交后才解锁该 SKU 的标签打印。
    - 发货差额 = Σ各件差额（仅超容差的件计） = 商家↔平台【发货结算差额】。
      客户账单多退少补以仓库实际分拣分配为准，在下游产生。
    阈值走平台「多退少补规则」DB.weighCfg，实时读取。 */
@@ -69,8 +70,7 @@
     });
     return Object.values(agg).map(computeGroup);
   }
-  /* Tab 归属：整组全部件已提交 → 已称重（只读复核）；只要还有件没提交（含部分已提交）→ 待称重 */
-  function tabOf(r){return r.allSub?'done':'todo';}
+  /* Tab 归属按【件】判：未提交件在「待称重」，已提交件即刻移到「已称重」；同一商品的件可分处两页签 */
   function seqNo(pi,n){return '#'+String(pi+1).padStart(String(n).length,'0');}   // 标签序号，与打印标签序号一致
   /* 序号列表压缩成区间文案：[0,1,2,5] → #01–#03、#06 */
   function seqRange(idxs,n){const a=idxs.slice().sort((x,y)=>x-y);const out=[];let s=null,p=null;
@@ -158,8 +158,14 @@
     set('wg-msg-'+gi+'-'+pi,p.st=='block'&&p.msg?`⚠️ ${p.msg}`:'');
     const inp=document.getElementById('wg-in-'+gi+'-'+pi);if(inp)inp.style.borderColor=p.st=='block'?'var(--r)':'';
     const ck=document.getElementById('wg-ck-'+gi+'-'+pi);if(ck)ck.checked=isPicked(r.key,pi);}
+  const amtHtml=v=>`<b style="color:${v>0?'var(--y)':v<0?'var(--r)':'var(--gd)'}">${v?(v>0?'+':'-')+money2(Math.abs(v)):'—'}</b>`;
   function groupSumHtml(r){
-    return `已称 <b>${r.filled}/${r.portionN}</b> 件 · 已提交 <b style="color:${r.subN?'var(--gd)':'var(--ts)'}">${r.subN}/${r.portionN}</b> 件 · 实发合计 <b>${r.realSum||0}${r.unit}</b> · 差额 <b style="color:${r.amtSum>0?'var(--y)':r.amtSum<0?'var(--r)':'var(--gd)'}">${r.amtSum?(r.amtSum>0?'+':'-')+money2(Math.abs(r.amtSum)):'—'}</b>${r.blocked?` · <span style="color:var(--r)">${r.blocked} 件异常</span>`:''}${r.subN&&!r.allSub?` · <span class="tag t-b" style="font-size:10px">部分已提交</span>`:''}`;}
+    const isTodo=(DB.weighF||{}).tab!='done';const vis=r.vis||[];
+    if(!isTodo)  // 已称重页签：只算本页签这些已提交件
+      return `已提交 <b style="color:var(--gd)">${vis.length}</b> 件（共 ${r.portionN} 件）· 实发合计 <b>${r.subReal||0}${r.unit}</b> · 差额 ${amtHtml(r.subAmt)}`;
+    const fill=vis.filter(i=>r.ps[i].filled).length,amt=+vis.reduce((a,i)=>a+r.ps[i].amt,0).toFixed(2);
+    const real=+vis.reduce((a,i)=>a+(+r.ws[i]||0),0).toFixed(2);
+    return `待提交 <b>${vis.length}</b> 件（共 ${r.portionN} 件）· 已录 <b>${fill}/${vis.length}</b> · 实发合计 <b>${real}${r.unit}</b> · 差额 ${amtHtml(amt)}${r.blocked?` · <span style="color:var(--r)">${r.blocked} 件异常</span>`:''}${r.subN?` · <span class="tag t-g" style="font-size:10px">已提交 ${r.subN} 件在「已称重」</span>`:''}`;}
   function paintGroupSum(gi){const r=ROWS[gi];if(!r)return;const el=document.getElementById('wg-gsum-'+gi);if(el)el.innerHTML=groupSumHtml(r);}
   function paintBtns(){const n=pickedN();
     const f=document.getElementById('wg-btn-fill'),s=document.getElementById('wg-btn-sub');
@@ -167,14 +173,14 @@
     if(s){s.disabled=!n;s.textContent='提交勾选件'+(n?`（${n} 件）`:'');}}
   function paintSum(){const el=document.getElementById('wg-sum');if(!el)return;const rows=ROWS,isTodo=(DB.weighF||{}).tab!='done';
     const blocked=rows.reduce((a,r)=>a+r.blocked,0);
-    const restP=rows.reduce((a,r)=>a+(r.portionN-r.subN),0);                       // 未提交件数
-    const noWs=rows.reduce((a,r)=>a+r.ps.filter((p,i)=>!p.filled&&!p.subd).length,0);// 未录件数
-    const total=+rows.reduce((a,r)=>a+(isTodo?(r.amtSum-r.subAmt):r.subAmt),0).toFixed(2);
+    const visP=rows.reduce((a,r)=>a+(r.vis||[]).length,0);                          // 本页签件数
+    const noWs=rows.reduce((a,r)=>a+(r.vis||[]).filter(i=>!r.ps[i].filled).length,0);// 本页签未录件数
+    const total=+rows.reduce((a,r)=>a+(r.vis||[]).reduce((b,i)=>b+r.ps[i].amt,0),0).toFixed(2);
     el.innerHTML=(isTodo
-      ?`<span style="min-width:96px">待称重商品：<b>${rows.length}</b></span><span style="min-width:110px">未提交件：<b style="color:var(--r)">${restP}</b>（未录 ${noWs}）</span>
+      ?`<span style="min-width:96px">待称重商品：<b>${rows.length}</b></span><span style="min-width:120px">待提交件：<b style="color:var(--r)">${visP}</b>（未录 ${noWs}）</span>
         <span style="min-width:84px">异常拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b> 件</span>`
-      :`<span style="min-width:96px">已称重商品：<b>${rows.length}</b></span>`)
-      +`<span style="min-width:150px">发货差额${isTodo?'（未提交件）':'合计'}：<b style="color:${total>0?'var(--y)':total<0?'var(--r)':'var(--gd)'}">${total>0?'+':''}${money2(total)}</b></span>
+      :`<span style="min-width:96px">已称重商品：<b>${rows.length}</b></span><span style="min-width:96px">已提交件：<b style="color:var(--gd)">${visP}</b></span>`)
+      +`<span style="min-width:150px">发货差额${isTodo?'（待提交）':'合计'}：${amtHtml(total)}</span>
       <span style="color:var(--ts);font-size:12px">容差 ±${WG().TOL*100}% 不计差额 · 多发超 +${WG().BLOCK_UP*100}% / 少发超 −${WG().BLOCK_DOWN*100}% 拦截</span>`;}
 
   /* ========== 页面 ========== */
@@ -184,28 +190,32 @@
     if(f.date===undefined)f.date=dates[0]||'';
     if(!f.tab)f.tab='todo';
     ALL=buildRows();
-    const todoN=ALL.filter(r=>tabOf(r)=='todo').length,doneN=ALL.length-todoN;
-    ROWS=ALL.filter(r=>tabOf(r)==f.tab).filter(r=>!(f.tab=='done'&&f.diffOnly&&!r.amtSum));
-    const isTodo=f.tab=='todo';
+    const isTodo=f.tab!='done';
+    // 页签按【件】分：未提交件 → 待称重；已提交件 → 已称重。同一商品的件可分处两个页签
+    ALL.forEach(r=>{r.vis=[];for(let i=0;i<r.portionN;i++)if(!!r.ps[i].subd==!isTodo)r.vis.push(i);});
+    const todoN=ALL.filter(r=>r.portionN-r.subN>0).length,doneN=ALL.filter(r=>r.subN>0).length;
+    ROWS=ALL.filter(r=>r.vis.length).filter(r=>!(!isTodo&&f.diffOnly&&!r.subAmt));
     const selN=pickedN();
     let selAllN=0,selAllPicked=0;ROWS.forEach(r=>{for(let i=0;i<r.portionN;i++)if(selectable(r,i)){selAllN++;if(isPicked(r.key,i))selAllPicked++;}});
     const allSel=selAllN&&selAllPicked==selAllN;
     const opt=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     const CO=DB.weighCollapse||{};
-    const bodyHtml=ROWS.length?ROWS.map((g,gi)=>{const done=g.allSub,lock=g.locked,collapsed=!!CO[g.key];
+    const bodyHtml=ROWS.length?ROWS.map((g,gi)=>{const lock=g.locked,collapsed=!!CO[g.key];
       const gSel=[];for(let i=0;i<g.portionN;i++)if(selectable(g,i))gSel.push(i);
       const gAll=gSel.length&&gSel.every(i=>isPicked(g.key,i)),gSome=!gAll&&gSel.some(i=>isPicked(g.key,i));
       // 分组头（折叠箭头 + 商品 + 单价 + 仓库 + 汇总 + 整组按应发），点箭头/商品名折叠
       const chev=`<span class="wg-fold" onclick="wg_fold('${g.key}')" title="${collapsed?'展开':'收起'}"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${collapsed?0:90}deg);transition:.15s"><path d="M9 6l6 6-6 6"/></svg></span>`;
-      const head=`<tr class="wg-grp"><td>${gSel.length?`<input type="checkbox" title="全选本商品未提交的件" ${gAll?'checked':''} ${gSome?'data-ind="1"':''} onclick="wg_toggle(${gi})">`:''}</td>
+      const head=`<tr class="wg-grp"><td>${isTodo&&gSel.length?`<input type="checkbox" title="全选本商品未提交的件" ${gAll?'checked':''} ${gSome?'data-ind="1"':''} onclick="wg_toggle(${gi})">`:''}</td>
         <td colspan="5"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="display:inline-flex;align-items:center;gap:6px;cursor:pointer" onclick="wg_fold('${g.key}')">${chev}<b style="font-size:13.5px">${g.name}</b> <span style="color:var(--ts);font-size:11.5px">${money2(g.up)}/${g.unit} · ${g.wh} · ${g.portionN} 件 · 标签序号 <span class="mono">${seqNo(0,g.portionN)}–${seqNo(g.portionN-1,g.portionN)}</span></span></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;cursor:pointer" onclick="wg_fold('${g.key}')">${chev}<b style="font-size:13.5px">${g.name}</b> <span style="color:var(--ts);font-size:11.5px">${money2(g.up)}/${g.unit} · ${g.wh} · 本页签 ${g.vis.length} 件 · 标签序号 <span class="mono">${seqRange(g.vis,g.portionN)}</span></span></span>
           <span id="wg-gsum-${gi}" style="font-size:12px;color:var(--ts)">${groupSumHtml(g)}</span>
-          ${done||lock?`<span style="margin-left:auto;font-size:11.5px;color:${lock?'var(--ts)':'var(--gd)'}">${lock?`超 ${WG().DAYS} 天已锁定`:`✓ 全部 ${g.portionN} 件已提交${g.rec&&g.rec.at?` · ${g.rec.at}`:''} · 标签打印已解锁`}</span>`:`<button class="btn btn-link btn-sm" style="margin-left:auto" onclick="wg_fillGroup(${gi})" title="未提交的件按应发 ${g.specQty}${g.unit} 填入">未提交件按应发</button>`}
+          ${!isTodo?`<span style="margin-left:auto;font-size:11.5px;color:var(--gd)">✓ 已提交${g.rec&&g.rec.at?` · ${g.rec.at}`:''}${g.allSub?' · 标签打印已解锁':` · 还有 ${g.portionN-g.subN} 件在「待称重」`}</span>`
+            :(lock?`<span style="margin-left:auto;font-size:11.5px;color:var(--ts)">超 ${WG().DAYS} 天已锁定</span>`
+            :`<button class="btn btn-link btn-sm" style="margin-left:auto" onclick="wg_fillGroup(${gi})" title="未提交的件按应发 ${g.specQty}${g.unit} 填入">未提交件按应发</button>`)}
         </div></td></tr>`;
       if(collapsed)return head;   // 折叠：只出组头
-      // 逐件行：标签序号(=打印标签序号) | 应发(规格量) | 实发[输入] | 差异 | 差异率
-      const rows=Array.from({length:g.portionN}).map((_,pi)=>{const w=g.ws[pi];const has=w!=null&&w!=='';const p=g.ps[pi]||{};
+      // 逐件行：标签序号(=打印标签序号) | 应发(规格量) | 实发[输入] | 差异 | 差异率（只出本页签该出的件）
+      const rows=g.vis.map(pi=>{const w=g.ws[pi];const has=w!=null&&w!=='';const p=g.ps[pi]||{};
         const ro=p.subd||lock;                                   // 该件只读：已提交 或 整组已锁定
         const rc=ro
           ?`<td style="text-align:center"><b>${has?w+' '+g.unit:'—'}</b></td>`
@@ -218,7 +228,7 @@
           <td id="wg-diff-${gi}-${pi}" style="text-align:right"></td>
           <td id="wg-rate-${gi}-${pi}" style="text-align:right"></td></tr>`;}).join('');
       return head+rows;
-    }).join(''):`<tr><td colspan="6"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">${isTodo?'该筛选下没有待称重的商品':'该筛选下还没有已提交的称重记录'}</div><div class="e-s">${isTodo?'仅按重量定价（多退少补=是）的商品需要称重；切换配送日期/仓库看看。':'在「待称重」页签完成逐件录入并提交后，记录会归到这里，只读复核。'}</div></div></td></tr>`;
+    }).join(''):`<tr><td colspan="6"><div class="empty"><div class="e-ic">⚖️</div><div class="e-t">${isTodo?'该筛选下没有待称重的件':'该筛选下还没有已提交的件'}</div><div class="e-s">${isTodo?'仅按重量定价（多退少补=是）的商品需要称重；件全部提交后会移到「已称重」。切换配送日期/仓库看看。':'在「待称重」逐件录入并提交后，该件即刻移到这里，只读复核。'}</div></div></td></tr>`;
     return `
     <style>
     .wg-grp td{background:var(--gl);padding:9px 14px}
@@ -237,7 +247,7 @@
     <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span>
       按重量定价（多退少补=是）的商品按 <b>S$/kg</b> 计价、分装成件（<b>一件应发=规格量</b>，如 1kg）；<b>每一件单独称重</b>录实发净重，逐件算差异/差异率，每件一张标签印该件实发净重、<b>不含订单/客户</b>——货到仓库由 WMS 重新分拣分配。发货差额 = Σ各件差额 = <b>商家↔平台发货结算差额</b>；客户账单多退少补以仓库实际分配为准。
       <br><b>录入对位</b>：每行的<b>标签序号</b>＝「打印标签」上该商品（同仓库同 SKU）的序号，按袋上标签序号对行录入；<b>待称重 / 已称重</b>分两个页签，已提交的只读复核，避免录错行、改错单。
-      <br><b>按序号分批提交</b>：提交粒度＝<b>单件</b>，同一商品可称完几件先提交几件（勾选对应标签序号即可）；已提交件立即锁定不可改，未提交件继续录。<b>整个商品的件全部提交后</b>才进「已称重」、才解锁该 SKU 的标签打印。</div>
+      <br><b>按序号分批提交</b>：提交粒度＝<b>单件</b>，同一商品可称完几件先提交几件（勾选对应标签序号即可）。提交后该件<b>立即从「待称重」移入「已称重」</b>并锁定不可改，未提交的件继续留在本页签录；<b>整个商品的件全部提交后</b>才解锁该 SKU 的标签打印。</div>
 
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期</div><select onchange="DB.weighF.date=this.value;render()" style="min-width:140px">${dates.map(d=>`<option ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option>无</option>'}</select></div>
