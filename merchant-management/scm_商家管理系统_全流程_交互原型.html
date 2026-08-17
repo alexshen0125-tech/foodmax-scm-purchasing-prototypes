@@ -2017,7 +2017,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
             :'生鲜分装，各规格净含量不同 —— 净含量填在<b>每个规格</b>上，逐规格各填各的'}</div>
         </label>`).join('')}
       </div></div>
-    <div class="fr" id="netqty-block" style="display:${isStd(p)?'block':'none'}"><label class="fl"><b>*</b>单件净含量 <span style="font-weight:400;color:var(--ts);font-size:12px">（标品必填：包装上申报的固定净含量，一个最小包装的量，如可乐 330 ml、海带丝 200 g）</span></label><table class="itbl"><thead><tr><th>净含量</th><th>净含量单位</th></tr></thead><tbody><tr><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 330" oninput="refreshSkuNames();refreshNetCells()"></td><td><select id="f-netunit" onchange="renderSkuEditor()">${opt(NETUNIT,p.netUnit)}</select></td></tr></tbody></table></div>
+    <div class="fr" id="netqty-block" style="display:${isStd(p)?'block':'none'}"><label class="fl"><b>*</b>单件净含量 <span style="font-weight:400;color:var(--ts);font-size:12px">（标品必填：包装上申报的净含量，一个最小包装的量，如可乐 330 ml、海带丝 200 g）</span></label><table class="itbl"><thead><tr><th>净含量</th><th>净含量单位</th></tr></thead><tbody><tr><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 330" oninput="refreshSkuNames();refreshNetCells()"></td><td><select id="f-netunit" onchange="renderSkuEditor()">${opt(NETUNIT,p.netUnit)}</select></td></tr></tbody></table></div>
     <div class="fr" id="netqty-nonstd" style="display:${isStd(p)?'none':'block'}"><div class="ib ib-gr" style="margin:0"><span class="i">ℹ️</span>非标品<b>没有独立的净含量字段</b>——净含量 ＝ 下方「售卖规格(SKU)」表里的<b>售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 1kg，5 + kg → 5kg）。填好那两列即可，此处不必维护。</div></div>
     <div class="fr" id="bcrs-block" style="display:none"><label class="fl">是否支持 BCRS <span style="font-weight:400;color:var(--ts);font-size:12px">（饮料容器押金回收，仅支持的类目可选）</span></label>
       <div class="row" style="gap:14px">${radio('f-bcrs',p.bcrs?'是':'否',['否','是'])}</div>
@@ -2090,12 +2090,13 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
      标品   —— 回显上方填写的固定净含量（计件单位的多件装在悬停给合计）
      非标品 —— 由「售卖规格数量 + 售卖规格单位」自动得出 */
   const gc="grid-template-columns:1.4fr 0.75fr 0.75fr 0.8fr 0.8fr 0.8fr 0.9fr 0.65fr 1fr 32px";
+  /* 列名两类统一为「净含量」——来源差异写在悬停与上方说明条里，不挂进列名 */
   const netHead=std
-    ? `<div title="标品：回显上方填写的固定净含量；计件单位的多件装另在悬停里给出本规格合计">固定净含量</div>`
-    : `<div title="非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，系统自动得出，无需填写">净含量（自动）</div>`;
+    ? `<div title="标品：回显上方填写的单件净含量；计件单位的多件装在悬停里给出本规格合计">净含量</div>`
+    : `<div title="非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，系统自动得出，无需填写">净含量</div>`;
   box.innerHTML=`${consign?`<div class="ib ib-b" style="margin-bottom:10px"><span class="i">🔒</span>寄售品的<b>可售库存与库存模式由货品库存决定</b>，不逐规格维护；<b>售卖规格单位锁定为商品级「库存单位」${su?`（${su}）`:'（请先在上方选择）'}</b>，逐规格不可改。</div>`:''}`
   +`<div class="ib ${std?'ib-b':'ib-gr'}" style="margin-bottom:10px"><span class="i">${std?'📦':'⚖️'}</span>${std
-      ? `<b>标品</b>：净含量是包装上<b>申报的固定值</b>，在上方「单件净含量」填写，本列直接回显，不由售卖规格数量倒推。计件单位的多件装（如 24瓶/箱）另按 <b>固定净含量 × 售卖规格数量</b> 得出本规格合计（330ml × 24 ＝ 7.92L），悬停可见。`
+      ? `<b>标品</b>：净含量是包装上<b>申报的固定值</b>，在上方「单件净含量」填写，本列直接回显，不由售卖规格数量倒推。计件单位的多件装（如 24瓶/箱）另按 <b>单件净含量 × 售卖规格数量</b> 得出本规格合计（330ml × 24 ＝ 7.92L），悬停可见。`
       : `<b>非标品</b>：<b>净含量 ＝ 售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 1kg；12 + kg → 12kg），不是另一个字段，填好这两列后净含量列<b>自动带出</b>，无需重复维护。`}</div>`
   +`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>售卖单位</div><div>售卖规格数量</div><div>售卖规格单位</div>${netHead}<div>未税价(SGD)</div><div title="是=按重量定价(S$/售卖规格单位)，商家分装称重后按实发净重结算差额；否=按规格整件计价">多退少补</div><div>可售库存</div><div>库存模式</div><div></div></div>`
   +EDIT_SKUS.map((s,k)=>{const m=s.stockMode||'finite';const pk=s.packUnit||'';const rowUnit=consign?su:(s.sellUnit||'');
@@ -2161,7 +2162,7 @@ function refreshNetCells(){
     el.textContent=fmtQty(base)+u;
     el.title=(!MEASURE_UNITS.includes(su)&&q>1)
       ? `本规格净含量 ＝ ${fmtQty(base)}${u} × ${fmtQty(q)}${su} ＝ ${(n=>fmtQty(n.v)+n.u)(netCarry(+(base*q).toFixed(4),u))}`
-      : '上方填写的固定净含量';
+      : '上方填写的单件净含量';
   });
 }
 /* 售卖规格数量：数字、支持两位小数（超过两位自动截断） */
