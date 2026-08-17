@@ -34,7 +34,7 @@ DB.supplyOrders = DB.supplyOrders || [
    status:'delivered',deliveryNo:'HS20260612001',deliveryStatus:'已交付',pushAt:'2026-06-12 09:07',deliveredAt:'2026-06-13 07:20',billNo:'',settledAt:'',invNo:'',invoicedAt:''},
   {no:'HC20260628001',date:'2026-06-28 16:41',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',qty:10,price:16.80,tax:9}],
-   status:'shipping',deliveryNo:'HS20260628001',deliveryStatus:'已推送',pushAt:'2026-06-28 16:42',deliveredAt:'',billNo:'',settledAt:'',invNo:'',invoicedAt:''},
+   status:'pending',deliveryNo:'HS20260628001',deliveryStatus:'待处理',pushAt:'2026-06-28 16:42',deliveredAt:'',billNo:'',settledAt:'',invNo:'',invoicedAt:''},
 ];
 DB.supplyCart   = DB.supplyCart   || {};
 DB.supplySeq    = DB.supplySeq    || 2;      // 当日流水号
@@ -55,11 +55,11 @@ const odQty  = o => o.lines.reduce((a,l)=>a+(+l.qty||0),0);
 const gOf    = c => DB.supplyGoods.find(g=>g.code==c)||{};
 // 明细行税率一致时给出税率（如 GST 9%），混合税率时只写 GST，避免标错口径
 const taxLabel = ls => {const s=[...new Set(ls.map(l=>sTax(l)))];return s.length==1?`GST ${s[0]}%`:'GST';};
-/* 状态链：送货中 → 已交付 →（账期聚合）已结算 →（结算完成放款后自动开票）已开票（终态）
-   提交即自动推送仓库，无「待送货」中间态；未交付前（送货中）可取消。
+/* 状态链：待送货 → 已交付 →（账期聚合）已结算 →（结算完成放款后自动开票）已开票（终态）
+   提交即生成送货单下发仓库，无「送货中」中间态；仓库回写已交付前（待送货）可取消。
    开票时点 = 结算完成后，与服务费发票同节奏（《对账结算 PRD》BR-10），不是交付时点。 */
-const S_ST = {shipping:['送货中','t-b'],delivered:['已交付','t-b'],settled:['已结算','t-pp'],invoiced:['已开票','t-g'],canceled:['已取消','t-gr']};
-const S_TABS=[['all','全部'],['shipping','送货中'],['delivered','已交付'],['settled','已结算'],['invoiced','已开票'],['canceled','已取消']];
+const S_ST = {pending:['待送货','t-y'],delivered:['已交付','t-b'],settled:['已结算','t-pp'],invoiced:['已开票','t-g'],canceled:['已取消','t-gr']};
+const S_TABS=[['all','全部'],['pending','待送货'],['delivered','已交付'],['settled','已结算'],['invoiced','已开票'],['canceled','已取消']];
 function sTag(s){const[t,c]=S_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 // 发票单元格：已开票给发票号，其余给等待原因（开票在结算完成之后）
 function shipCell(o){
@@ -71,7 +71,7 @@ function invCell(o){
   if(o.status=='settled')return '<span class="tag t-y"><span class="dot"></span>待开票</span><div style="font-size:11px;color:var(--ts);margin-top:2px">结算完成后开具</div>';
   return '<span style="font-size:12px;color:var(--ts)">待结算</span>';
 }
-function dTag(s){const m={'待处理':'t-y','已推送':'t-b','已交付':'t-g','已作废':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s}</span>`;}
+function dTag(s){const m={'待处理':'t-y','已交付':'t-g','已作废':'t-gr'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s}</span>`;}
 // 可下单上限 = 平台可售库存（本期不做限购）
 function maxQty(g){return Math.max(0,g.stock);}
 /* 结算联动：已交付未结算的耗材订单，按含税金额汇总为当期结算单扣减项（BR：计费时点=交付确认） */
@@ -222,11 +222,11 @@ window.sgSubmit=function(){
   const seq=String(++DB.supplySeq).padStart(3,'0'),d='20260630';
   const note=(document.getElementById('sg-note')||{}).value||'';
   const o={no:'HC'+d+seq,date:ts(),shop:DB.merchant.code,shopName:DB.shop.name,lines:ls.map(l=>({...l})),
-    status:'shipping',deliveryNo:'HS'+d+seq,deliveryStatus:'已推送',pushAt:ts(),deliveredAt:'',billNo:'',invNo:'',note};
+    status:'pending',deliveryNo:'HS'+d+seq,deliveryStatus:'待处理',pushAt:ts(),deliveredAt:'',billNo:'',invNo:'',note};
   DB.supplyOrders.unshift(o);
   ls.forEach(l=>{const g=gOf(l.code);g.stock=Math.max(0,g.stock-l.qty);});   // 下单锁库存
   DB.supplyCart={};closeDrawer();DB.supplyTab='all';nav('m-supply-order');
-  toast(`采购单 ${o.no} 已提交，送货单 ${o.deliveryNo} 已推送仓库`,'ok');
+  toast(`采购单 ${o.no} 已提交，送货单 ${o.deliveryNo} 已下发仓库`,'ok');
 };
 
 /* ================= 商家端 · 我的耗材订单 ================= */
@@ -240,7 +240,7 @@ PAGES['m-supply-order']=()=>{
   return `
   <div class="row" style="justify-content:flex-end;margin-bottom:12px"><button class="btn btn-p" onclick="nav('m-supply')">＋ 去耗材商城采购</button></div>
   <div class="sg" style="grid-template-columns:repeat(3,1fr)">
-    <div class="sc"><div class="sc-l">在途订单</div><div class="sc-v">${mine.filter(o=>o.status=='shipping').length}</div><div class="sc-s">送货中 · 待仓库交付</div></div>
+    <div class="sc"><div class="sc-l">在途订单</div><div class="sc-v">${mine.filter(o=>o.status=='pending').length}</div><div class="sc-s">待送货 · 待仓库交付</div></div>
     <div class="sc ${unbilledAmt?'warn':''}"><div class="sc-l">待计入当期结算（含税）</div><div class="sc-v">${money(unbilledAmt)}</div><div class="sc-s">已交付 ${unbilled.length} 单 · 结算单 ${DB.bill.no}</div></div>
     <div class="sc good"><div class="sc-l">累计采购（含税）</div><div class="sc-v">${money(+(mine.filter(o=>o.status!='canceled').reduce((a,o)=>a+odIncl(o),0)).toFixed(2))}</div><div class="sc-s">不含已取消</div></div>
   </div>
@@ -257,7 +257,7 @@ PAGES['m-supply-order']=()=>{
       <td>${sTag(o.status)}</td>
       <td>${o.billNo?`<span class="mono" style="font-size:12px">${o.billNo}</span>`:(o.status=='delivered'?`<span style="font-size:12px;color:var(--y)">待计入 ${DB.bill.no}</span>`:'<span style="color:var(--tt)">—</span>')}</td>
       <td>${invCell(o)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="sgOrderDetail('${o.no}')">详情</button>${o.invNo?` <button class="btn btn-link btn-sm" onclick="sgDownloadInv('${o.no}')">下载发票</button>`:''}${o.status=='shipping'?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}</td>
+      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="sgOrderDetail('${o.no}')">详情</button>${o.invNo?` <button class="btn btn-link btn-sm" onclick="sgDownloadInv('${o.no}')">下载发票</button>`:''}${o.status=='pending'?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}</td>
     </tr>`).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:22px">该状态暂无耗材采购单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
@@ -265,7 +265,7 @@ window.sgOrderDetail=function(no,role){
   const o=DB.supplyOrders.find(x=>x.no==no);if(!o)return;
   const plat=role=='plat';
   const steps=['提交采购单','仓库交付','计入结算','开具发票'];
-  const IDX={canceled:0,shipping:1,delivered:2,settled:3,invoiced:4};
+  const IDX={canceled:0,pending:1,delivered:2,settled:3,invoiced:4};
   const idx=IDX[o.status]!=null?IDX[o.status]:0;
   drawer(`<div class="drawer-hd"><div><h3>${o.no} · 耗材采购单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.date} · ${plat?o.shopName+' · '+o.shop:'共 '+odQty(o)+' 件'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
@@ -310,11 +310,11 @@ window.sgOrderDetail=function(no,role){
     <div style="font-size:11.5px;color:var(--ts);margin-top:10px">耗材款不进对账单、不参与佣金计算；按含税金额作为结算单扣减项，与当期货款轧差。开票时点为<b>结算完成后</b>（与服务费发票同节奏），故「已结算」不等于「已开票」。</div>
   </div>
   <div class="drawer-ft">
-    ${plat&&o.status=='shipping'?`<button class="btn btn-p" onclick="sgDeliver('${o.no}')">回写已交付 · 触发计费</button>`:''}
+    ${plat&&o.status=='pending'?`<button class="btn btn-p" onclick="sgDeliver('${o.no}')">回写已交付 · 触发计费</button>`:''}
     ${plat&&o.status=='delivered'?`<button class="btn btn-o" onclick="sgSettle('${o.no}')">计入结算单</button>`:''}
     ${plat&&o.status=='settled'?`<button class="btn btn-p" onclick="sgInvoice('${o.no}')">结算完成 · 开具发票</button>`:''}
     ${!plat&&o.invNo?`<button class="btn btn-o" onclick="sgDownloadInv('${o.no}')">⬇️ 下载发票</button>`:''}
-    ${!plat&&o.status=='shipping'?`<button class="btn btn-d" onclick="sgCancelAsk('${o.no}')">取消采购单</button>`:''}
+    ${!plat&&o.status=='pending'?`<button class="btn btn-d" onclick="sgCancelAsk('${o.no}')">取消采购单</button>`:''}
     <button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 };
 window.sgCancelAsk=function(no){
@@ -416,7 +416,7 @@ PAGES['p-supply-order']=()=>{
   const cnt=k=>k=='all'?all.length:all.filter(o=>o.status==k).length;
   return `
   <div class="sg" style="grid-template-columns:repeat(4,1fr)">
-    <div class="sc ${cnt('shipping')?'warn':''}"><div class="sc-l">仓库作业中</div><div class="sc-v">${cnt('shipping')}</div><div class="sc-s">待回写交付</div></div>
+    <div class="sc ${cnt('pending')?'warn':''}"><div class="sc-l">仓库作业中</div><div class="sc-v">${cnt('pending')}</div><div class="sc-s">待回写交付</div></div>
     <div class="sc"><div class="sc-l">已交付待结算</div><div class="sc-v">${cnt('delivered')}</div><div class="sc-s">计入当期结算扣减</div></div>
     <div class="sc ${cnt('settled')?'warn':''}"><div class="sc-l">已结算待开票</div><div class="sc-v">${cnt('settled')}</div><div class="sc-s">结算完成后开具</div></div>
     <div class="sc good"><div class="sc-l">已交付金额（含税）</div><div class="sc-v">${money(+(all.filter(o=>o.status=='delivered'||o.status=='settled').reduce((a,o)=>a+odIncl(o),0)).toFixed(2))}</div></div>
@@ -436,7 +436,7 @@ PAGES['p-supply-order']=()=>{
       <td>${invCell(o)}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-o btn-sm" onclick="sgOrderDetail('${o.no}','plat')">详情</button>
-        ${o.status=='shipping'?` <button class="btn btn-p btn-sm" onclick="sgDeliver('${o.no}')">回写已交付</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}
+        ${o.status=='pending'?` <button class="btn btn-p btn-sm" onclick="sgDeliver('${o.no}')">回写已交付</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="sgCancelAsk('${o.no}')">取消</button>`:''}
         ${o.status=='delivered'?` <button class="btn btn-o btn-sm" onclick="sgSettle('${o.no}')">计入结算单</button>`:''}
         ${o.status=='settled'?` <button class="btn btn-p btn-sm" onclick="sgInvoice('${o.no}')">结算完成 · 开票</button>`:''}
       </td>
@@ -444,7 +444,7 @@ PAGES['p-supply-order']=()=>{
     </tbody></table></div></div></div>`;
 };
 window.sgDeliver=function(no){
-  const o=DB.supplyOrders.find(x=>x.no==no);if(!o||o.status!='shipping')return;
+  const o=DB.supplyOrders.find(x=>x.no==no);if(!o||o.status!='pending')return;
   askConfirm(`确认回写送货单 <b>${o.deliveryNo}</b> 为「已交付」？回写后 <b>${money(odIncl(o))}</b> 立即计入商家当期结算单 ${DB.bill.no} 扣减项，且订单不可再取消。`,()=>{
     o.status='delivered';o.deliveryStatus='已交付';o.deliveredAt=ts();
     supplySettleSync();closeDrawer();render();
