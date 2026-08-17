@@ -327,9 +327,8 @@ PAGES['p-fine']=()=>{
   <div class="card">
     <div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
       <span>已选 <b>${DB.fineSel.length}</b> 单 · 罚款合计 <b style="color:var(--r)">${money(selAmt)}</b></span>
-      <button class="btn btn-p btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
-      <button class="btn btn-o btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_export()">导出减项清单</button>
-      ${DB.fineSel.length?`<button class="btn btn-link" style="margin-left:auto" onclick="DB.fineSel=[];render()">取消选择</button>`:''}
+      ${DB.fineSel.length?`<button class="btn btn-link" onclick="DB.fineSel=[];render()">取消选择</button>`:''}
+      <button class="btn btn-p btn-sm" style="margin-left:auto" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr>
@@ -388,10 +387,6 @@ window.fineOps_pushDo=function(){
   DB.fineOrders.forEach(o=>{if(DB.fineSel.includes(o.no)&&o.push=='pending'){o.push='pushed';o.pushedAt=now;o.batchNo=batch;n++;amt+=o.items.reduce((a,x)=>a+x.qty,0)*o.rate;}});
   DB.fineSel=[];closeModal();render();
   toast(`已推送 ${n} 张罚款单至清结算平台，批次 ${batch}，合计 ${money(amt)}`,'ok');
-};
-window.fineOps_export=function(){
-  const rows=fineOpsRows().filter(g=>DB.fineSel.includes(g.no));
-  toast(`已导出 ${rows.length} 张罚款单的减项清单（Excel）`,'ok');
 };
 
 /* ================= 运营平台端 · 缺货罚款标准配置 ================= */
