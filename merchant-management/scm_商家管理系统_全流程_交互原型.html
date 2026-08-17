@@ -2076,18 +2076,17 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
   const inp='width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 8px;font-size:13px;box-sizing:border-box';
   const sel='width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 6px;font-size:12.5px;box-sizing:border-box';
   const std=(EDIT_STD||'标品')=='标品';
-  /* 非标品不出净含量列：净含量 ＝ 售卖规格数量 + 售卖规格单位，左边两列已经写着了，再列一遍是重复劳动。
-     标品才需要这一列——售卖规格单位是「瓶/罐」，数量×单位算不出容量，得由单件净含量派生。 */
-  const gc=std
-    ? "grid-template-columns:1.4fr 0.75fr 0.75fr 0.8fr 0.8fr 0.8fr 0.9fr 0.65fr 1fr 32px"
-    : "grid-template-columns:1.5fr 0.8fr 0.8fr 0.85fr 0.85fr 0.95fr 0.7fr 1.05fr 32px";
+  /* 两类都出净含量列，都是只读、不用填，只是来源不同：
+     标品   —— 回显上方填写的固定净含量（计件单位的多件装在悬停给合计）
+     非标品 —— 由「售卖规格数量 + 售卖规格单位」自动得出 */
+  const gc="grid-template-columns:1.4fr 0.75fr 0.75fr 0.8fr 0.8fr 0.8fr 0.9fr 0.65fr 1fr 32px";
   const netHead=std
-    ? `<div title="标品：展示上方填写的固定净含量；计件单位的多件装另在悬停里给出本规格合计">固定净含量</div>`
-    : '';
+    ? `<div title="标品：回显上方填写的固定净含量；计件单位的多件装另在悬停里给出本规格合计">固定净含量</div>`
+    : `<div title="非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，系统自动得出，无需填写">净含量（自动）</div>`;
   box.innerHTML=`${consign?`<div class="ib ib-b" style="margin-bottom:10px"><span class="i">🔒</span>寄售品的<b>可售库存与库存模式由货品库存决定</b>，不逐规格维护；<b>售卖规格单位锁定为商品级「库存单位」${su?`（${su}）`:'（请先在上方选择）'}</b>，逐规格不可改。</div>`:''}`
   +`<div class="ib ${std?'ib-b':'ib-gr'}" style="margin-bottom:10px"><span class="i">${std?'📦':'⚖️'}</span>${std
       ? `<b>标品</b>：净含量是包装上<b>申报的固定值</b>，在上方「单件净含量」填写，本列直接回显，不由售卖规格数量倒推。计件单位的多件装（如 24瓶/箱）另按 <b>固定净含量 × 售卖规格数量</b> 得出本规格合计（330ml × 24 ＝ 7.92L），悬停可见。`
-      : `<b>非标品</b>：<b>净含量 ＝ 售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 净含量 1kg；5 + kg → 5kg），不是另一个字段，填好这两列即可，无需重复维护。`}</div>`
+      : `<b>非标品</b>：<b>净含量 ＝ 售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 1kg；12 + kg → 12kg），不是另一个字段，填好这两列后净含量列<b>自动带出</b>，无需重复维护。`}</div>`
   +`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>售卖单位</div><div>售卖规格数量</div><div>售卖规格单位</div>${netHead}<div>未税价(SGD)</div><div title="是=按重量定价(S$/售卖规格单位)，商家分装称重后按实发净重结算差额；否=按规格整件计价">多退少补</div><div>可售库存</div><div>库存模式</div><div></div></div>`
   +EDIT_SKUS.map((s,k)=>{const m=s.stockMode||'finite';const pk=s.packUnit||'';const rowUnit=consign?su:(s.sellUnit||'');
     return `<div class="skued2" style="${gc};align-items:center">`
@@ -2097,14 +2096,14 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
     +`<div>${consign
         ?`<div class="sku-unit-cell" data-k="${k}" title="寄售：售卖规格单位同商品级库存单位，不可修改" style="${roCell};justify-content:center">${su||'—'}</div>`
         :`<select title="售卖规格单位（《建品单位规范》：${std?'标品＝计件单位':'非标品＝计量单位'}）" onchange="EDIT_SKUS[${k}].sellUnit=this.value;skuRowSync(${k});renderSkuEditor()" style="${sel};border-color:${s.sellUnit?'#dcdfe6':'var(--r)'}"><option value="">请选择</option>${unitNames(EDIT_STD,'spec').map(u=>`<option value="${u}" ${s.sellUnit==u?'selected':''}>${u}</option>`).join('')}</select>`}</div>`
-    +(std?`<div class="sku-net-cell" data-k="${k}" style="${roCell};justify-content:center" title="标品：由单件净含量 × 售卖规格数量自动算出">—</div>`:'')
+    +`<div class="sku-net-cell" data-k="${k}" style="${roCell};justify-content:center">—</div>`
     +`<div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="${inp}" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div>`
     +`<div>${skuEdRefund(k,rowUnit)}</div>`
     +(consign?`<div style="${roCell}">货品库存</div><div style="${roCell}">随货品</div>`
              :`<div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="${inp}" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><div><select title="每日恢复初始库存：每天 0 点自动补回库存总数；售完即止：卖完不恢复、售罄即下线" onchange="EDIT_SKUS[${k}].stockMode=this.value" style="${sel}"><option value="finite" ${m=='finite'?'selected':''}>售完即止</option><option value="daily" ${m=='daily'?'selected':''}>每日恢复初始库存</option></select></div>`)
     +`<button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`;}).join('')
   +skuEdRefundNote();
-  if(std)refreshNetCells();}
+  refreshNetCells();}
 /* 标品/非标品切换：标品→净含量回到 SPU（清掉各 SKU 自填值）；非标品→隐藏 SPU 净含量，SKU 表格出净含量列 */
 function setStdType(t){
   EDIT_STD=t;
@@ -2123,13 +2122,23 @@ function setStdType(t){
   renderSkuEditor();refreshSkuNames();
 }
 /* 标品的 SKU 净含量是派生值，随「单件净含量 / 售卖规格数量」实时变；只刷这几个只读格，不整表重渲（否则打断输入焦点） */
-/* 标品「固定净含量」只读列：直接回显上方填写的值；计件单位的多件装在悬停里补一句本规格合计 */
+/* 净含量只读列（两类都有，都不用填）：
+   标品   —— 回显上方填写的固定净含量；计件多件装在悬停补一句本规格合计
+   非标品 —— 由「售卖规格数量 + 售卖规格单位」自动得出 */
 function refreshNetCells(){
+  const std=(EDIT_STD||'标品')=='标品';
   const base=parseFloat((document.getElementById('f-netqty')||{}).value),u=edUnit();
   const consign=EDIT_SUPPLY=='寄售',su0=edStockUnit();
   document.querySelectorAll('.sku-net-cell').forEach(el=>{
     const k=+el.dataset.k,r=EDIT_SKUS[k]||{},q=parseFloat(r.qty);
     const su=consign?su0:(r.sellUnit||'');
+    if(!std){
+      if(!(q>0)||!su){el.textContent='—';el.title=!su?'请先选择售卖规格单位':'请先填写售卖规格数量';return;}
+      const n=netCarry(q,su);
+      el.textContent=fmtQty(n.v)+n.u;
+      el.title=`净含量 ＝ 售卖规格数量 ${fmtQty(q)} + 售卖规格单位 ${su}`;
+      return;
+    }
     if(!(base>0)){el.textContent='—';el.title='标品的净含量是包装上申报的固定值，请在上方「单件净含量」填写';return;}
     el.textContent=fmtQty(base)+u;
     el.title=(!MEASURE_UNITS.includes(su)&&q>1)
