@@ -846,7 +846,7 @@ const STD_TYPES=['标品','非标品'];
    每项 = [code, 中文, English]；code 为研发对接枚举值，中文用于界面，English 供多语言。
    标品与非标品的「售卖规格单位」取值不同，这正是两者的分界：
      标品   售卖规格单位 = 计件单位(个/打/瓶/罐/盒/袋/箱/卷/托) → 算不出净含量，须另填单件净含量
-     非标品 售卖规格单位 = 计量单位(g/kg/ml/L)                → 数量+单位本身即净含量
+     非标品 售卖规格单位 = 计量单位(g/kg)                      → 数量+单位本身即净含量
    「净含量单位」「售卖单位」两组两类通用。 */
 const UNIT_SPEC={
   '标品':{
@@ -855,7 +855,9 @@ const UNIT_SPEC={
     sell:[[19,'包','bag'],[33,'份','portion'],[42,'组','set'],[20,'箱','carton']],
   },
   '非标品':{
-    spec:[[1,'g','g'],[2,'kg','kg'],[3,'ml','ml'],[4,'L','L']],
+    /* 2026-08-17 按规范表更新：售卖规格单位收窄为 g/kg（原含 ml/L，已删）——
+       非标品即分装生鲜，一律按重量卖；净含量单位仍保留 4 个（液体类商品的净含量仍可能按 ml/L 申报） */
+    spec:[[1,'g','g'],[2,'kg','kg']],
     net :[[1,'g','g'],[2,'kg','kg'],[3,'ml','ml'],[4,'L','L']],
     sell:[[19,'包','bag'],[33,'份','portion'],[42,'组','set'],[20,'箱','carton']],
   },
@@ -866,7 +868,7 @@ const unitOf   =(t,g,n)=>unitList(t,g).find(x=>x[1]==n)||null;
 const unitCode =(t,g,n)=>{const u=unitOf(t,g,n);return u?u[0]:null;};
 /* 单位带 code 的展示，如「kg（code 2）」，供详情抽屉给研发对账 */
 function unitTxtCode(t,g,n){const u=unitOf(t,g,n);return n?(u?`${n}<span style="color:var(--tt);font-size:11px;margin-left:4px">code ${u[0]}</span>`:`${n}<span style="color:var(--r);font-size:11px;margin-left:4px">不在规范内</span>`):'—';}
-const MEASURE_UNITS=['g','kg','ml','L'];   // 计量单位（= 非标品的售卖规格单位全集）
+const MEASURE_UNITS=['g','kg','ml','L'];   // 计量单位判定集（用于区分计件/计量；非标品的售卖规格单位只取其中 g/kg）
 function isStd(p){if(p&&p.stdType)return p.stdType=='标品';return !!(p&&p.netQty);}
 function stdTypeName(p){return isStd(p)?'标品':'非标品';}
 function netCarry(v,u){   // g/ml 满 1000 进位到 kg/L，避免出现「7920ml」
