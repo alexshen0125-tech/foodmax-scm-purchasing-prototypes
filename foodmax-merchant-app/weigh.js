@@ -2,6 +2,8 @@
    移动端两级结构（mobile-ux 标准：一屏一主任务 + 渐进式呈现）：
      ① 列表 = 每个 仓库×SKU 一张摘要卡（进度/状态/差额），不在列表里塞输入框；
      ② 点卡 → 专注子页：一列式逐件输入 + 底部拇指区「提交称重」。
+   ③ 列表分「待称重 / 已称重」两段（seg），已提交的只读复核，避免录错行、改错单；
+   ④ 每件带【标签序号】=「标签打印」里该商品(同仓库同SKU)的序号 1–N，按袋上标签序号对行录入。
    口径对齐 PC：一件应发=规格量(1kg)，diff=实发−应发；容差±2%不结差额，超+15%/−20%拦截；
    发货差额=Σ超容差件差额×(S$/kg)。提交锁定并解锁该 SKU 的标签打印。前缀 wg-。 */
 (function(){
@@ -11,12 +13,18 @@ const S=v=>'S$'+(+v||0).toFixed(2);
 
 const css=document.createElement('style');
 css.textContent=`
+/* 二级分段：待称重 / 已称重 */
+.wg-seg{display:flex;gap:6px;background:#fff;border-radius:14px;margin:13px 16px 0;padding:5px;box-shadow:var(--sh-sm);}
+.wg-seg .s{flex:1;text-align:center;padding:9px 0;border-radius:10px;font-size:13.5px;font-weight:700;color:var(--sub);cursor:pointer;transition:.16s;}
+.wg-seg .s.on{color:#fff;background:var(--emerald);}
+.wg-seg .s .n{font-size:12px;font-weight:700;opacity:.85;margin-left:3px;}
 /* 列表摘要卡 */
 .wg-card{background:#fff;border-radius:18px;margin:13px 16px 0;padding:15px 16px;box-shadow:var(--sh-sm);cursor:pointer;}
 .wg-ch{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .wg-nm{font-size:15.5px;font-weight:700;}
 .wg-st{font-size:11px;font-weight:700;border-radius:8px;padding:3px 9px;white-space:nowrap;}
 .wg-st.wait{color:var(--amber);background:var(--amber-soft);}
+.wg-st.part{color:var(--emerald-2);background:var(--mint-soft);}
 .wg-st.ready{color:var(--emerald-2);background:var(--mint-soft);}
 .wg-st.block{color:var(--red);background:var(--red-soft);}
 .wg-st.done{color:var(--sub);background:var(--muted);}
@@ -40,7 +48,13 @@ css.textContent=`
 .wg-list{background:#fff;border-radius:16px;margin:0 16px;box-shadow:var(--sh-sm);overflow:hidden;}
 .wg-prow{display:flex;align-items:center;gap:12px;padding:10px 15px;min-height:56px;}
 .wg-prow+.wg-prow{border-top:1px solid var(--line);}
-.wg-prow .idx{font-size:13.5px;color:var(--sub);font-weight:600;width:52px;flex:0 0 52px;}
+.wg-prow .idx{width:58px;flex:0 0 58px;}
+.wg-prow .idx i{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:26px;padding:0 8px;border:1px solid var(--line);border-radius:9px;font-style:normal;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.3px;}
+.wg-prow .idx i.bad{border-color:var(--red);color:var(--red);}
+.wg-prow .idx i.done{border-color:var(--emerald);color:var(--emerald-2);background:var(--mint-soft);}
+.wg-prow.subd{background:var(--muted);}
+.wg-prow.subd input{background:transparent;color:var(--sub);}
+.wg-prow .d.subd{color:var(--emerald-2);}
 .wg-prow .inp{flex:1;position:relative;}
 .wg-prow .inp input{width:100%;height:46px;border:1.5px solid var(--line);border-radius:12px;text-align:right;padding:0 40px 0 14px;font-size:17px;font-family:inherit;color:var(--ink);}
 .wg-prow .inp input:focus{border-color:var(--emerald);outline:none;}
@@ -52,7 +66,11 @@ css.textContent=`
 document.head.appendChild(css);
 
 const pend=()=>(window.FM.DB.orders||[]).filter(o=>o.status==='pending');
-const state={date:null,wh:''};
+const state={date:null,wh:'',tab:'todo'};
+const seqNo=(i,n)=>'#'+String(i+1).padStart(String(n).length,'0');   // 标签序号，与「标签打印」序号一致
+function seqRange(idxs,n){const a=idxs.slice().sort((x,y)=>x-y),out=[];let s=null,p=null;   // [0,1,2,5] → #01–#03、#06
+  a.forEach(i=>{if(s===null){s=p=i;return;}if(i===p+1){p=i;return;}out.push(s===p?seqNo(s,n):`${seqNo(s,n)}–${seqNo(p,n)}`);s=p=i;});
+  if(s!==null)out.push(s===p?seqNo(s,n):`${seqNo(s,n)}–${seqNo(p,n)}`);return out.join('、');}
 const store=()=>{window.FM.DB.weigh=window.FM.DB.weigh||{};return window.FM.DB.weigh;};
 
 function calcP(w,spec,up){
@@ -79,12 +97,15 @@ function rawGroups(){
   return agg;
 }
 function decorate(g){
-  const rec=store()[g.key]||{},ws=rec.ws||{};const ps=[];let filled=0,amtSum=0,blocked=0;
-  for(let i=0;i<g.portionN;i++){const p=calcP(ws[i]==null?'':+ws[i],g.specQty,g.up);ps[i]=p;
-    if(p.filled){filled++;amtSum+=p.amt;if(p.st==='block')blocked++;}}
-  amtSum=+amtSum.toFixed(2);
-  let st;if(rec.submitted)st='done';else if(blocked)st='block';else if(filled<g.portionN)st='wait';else st='ready';
-  return Object.assign(g,{ws,ps,filled,amtSum,blocked,st,submitted:!!rec.submitted});
+  const rec=store()[g.key]||{},ws=rec.ws||{},sub=rec.sub||{};const ps=[];
+  let filled=0,amtSum=0,blocked=0,subN=0,subReal=0,subAmt=0,ready=0;
+  for(let i=0;i<g.portionN;i++){const p=calcP(ws[i]==null?'':+ws[i],g.specQty,g.up);p.subd=!!sub[i];ps[i]=p;
+    if(p.filled){filled++;amtSum+=p.amt;if(p.st==='block')blocked++;
+      if(p.subd){subN++;subReal+=+ws[i];subAmt+=p.amt;}else if(p.st!=='block')ready++;}}   // ready=已录未提交且合规，本次可提交
+  amtSum=+amtSum.toFixed(2);subReal=+subReal.toFixed(2);subAmt=+subAmt.toFixed(2);
+  const allSub=subN>0&&subN===g.portionN;
+  let st;if(allSub)st='done';else if(blocked)st='block';else if(subN)st='part';else if(filled<g.portionN)st='wait';else st='ready';
+  return Object.assign(g,{ws,sub,ps,filled,amtSum,blocked,subN,subReal,subAmt,ready,allSub,st,submitted:allSub});
 }
 function groups(){return Object.values(rawGroups()).map(decorate);}
 function groupOf(key){const g=rawGroups()[key];return g?decorate(g):null;}
@@ -96,29 +117,31 @@ function setWs(key,i,v){const s=store();s[key]=s[key]||{ws:{}};s[key].ws=Object.
 let CURPAGE=null;
 function amtLine(g){return g.amtSum>0?`补款 ${S(g.amtSum)}`:g.amtSum<0?`退款 ${S(-g.amtSum)}`:'无差额';}
 function drawDetail(box,key){
-  const g=groupOf(key);if(!g)return;const ro=g.submitted;
+  const g=groupOf(key);if(!g)return;const ro=g.allSub;
+  const restN=g.portionN-g.subN;
   box.innerHTML=`
     <div class="wg-dh">
       <div class="r"><span class="k">${g.wh} · 应发净重</span><span class="v">${g.specQty}${g.unit}/件 · ${S(g.up)}/${g.unit}</span></div>
-      <div class="r"><span class="k">已称重</span><span class="v">${g.filled} / ${g.portionN} 件</span></div>
-      <div class="r"><span class="k">发货差额</span><span class="v ${g.amtSum>0?'add':g.amtSum<0?'refund':''}">${amtLine(g)}</span></div>
+      <div class="r"><span class="k">标签序号</span><span class="v">${seqNo(0,g.portionN)} – ${seqNo(g.portionN-1,g.portionN)}</span></div>
+      <div class="r"><span class="k">已称重</span><span class="v" id="wg-filled">${g.filled} / ${g.portionN} 件</span></div>
+      <div class="r"><span class="k">已提交</span><span class="v" id="wg-subn" style="color:${g.subN?'var(--emerald-2)':'inherit'}">${g.subN} / ${g.portionN} 件</span></div>
+      <div class="r"><span class="k">发货差额</span><span class="v ${g.amtSum>0?'add':g.amtSum<0?'refund':''}" id="wg-amt">${amtLine(g)}</span></div>
     </div>
-    ${ro?'<div class="wg-hint">✓ 已提交，不可修改。可到「标签打印」打印本商品标签（印实发净重）。</div>'
-        :`<div class="wg-fill" onclick="wg_fill('${key}')">${svg('leaf','style="width:16px;height:16px;stroke:var(--emerald-2)"')} 全部按应发填入（${g.specQty}${g.unit} × ${g.portionN}）</div>
-          <div class="wg-hint">逐件录实发净重，大多数=应发，直接填入后只改称出来不同的件。超 ±2% 才结差额。</div>`}
+    ${ro?'<div class="wg-hint">✓ 全部件已提交，不可修改。可到「标签打印」打印本商品标签（印实发净重）。</div>'
+        :`<div class="wg-fill" onclick="wg_fill('${key}')">${svg('leaf','style="width:16px;height:16px;stroke:var(--emerald-2)"')} 未提交的 ${restN} 件按应发填入（${g.specQty}${g.unit}/件）</div>
+          <div class="wg-hint">按袋上<b>标签序号</b>对行录实发净重（序号与「标签打印」一致）。<b>可分批提交</b>：称完哪几件就提交哪几件，已提交件锁定不可改；全部件提交后才解锁标签打印。</div>`}
     <div class="wg-list">${g.ps.map((p,i)=>{const v=g.ws[i]==null?'':g.ws[i];
-      const dtxt=!p.filled?'待录':p.st==='block'?p.msg:p.diff===0?'✓ 合格':`${p.diff>0?'+':''}${p.diff}${g.unit}`;
-      return `<div class="wg-prow"><span class="idx">第 ${i+1} 件</span>
-        <div class="inp"><input type="number" inputmode="decimal" step="0.01" min="0" value="${v}" placeholder="${g.specQty}" class="${p.st==='block'?'bad':''}" ${ro?'disabled':''} onchange="wg_input('${key}',${i},this.value)"><span class="u">${g.unit}</span></div>
-        <span class="d ${p.st}">${dtxt}</span></div>`;}).join('')}</div>
+      const dtxt=p.subd?'✓ 已提交':!p.filled?'待录':p.st==='block'?p.msg:p.diff===0?'✓ 合格':`${p.diff>0?'+':''}${p.diff}${g.unit}`;
+      return `<div class="wg-prow ${p.subd?'subd':''}"><span class="idx"><i class="${p.subd?'done':p.st==='block'?'bad':''}">${p.subd?'✓':''}${seqNo(i,g.portionN)}</i></span>
+        <div class="inp"><input type="number" inputmode="decimal" step="0.01" min="0" value="${v}" placeholder="${g.specQty}" class="${p.st==='block'?'bad':''}" ${p.subd||ro?'disabled':''} onchange="wg_input('${key}',${i},this.value)"><span class="u">${g.unit}</span></div>
+        <span class="d ${p.subd?'subd':p.st}">${dtxt}</span></div>`;}).join('')}</div>
     <div style="height:14px"></div>`;
   refreshFooter(key);
 }
 function refreshFooter(key){if(!CURPAGE)return;const sub=CURPAGE.querySelector('#wg-sub');if(!sub)return;const g=groupOf(key);
-  if(g.submitted){sub.textContent='已提交称重';sub.disabled=true;return;}
-  const ready=g.filled===g.portionN&&!g.blocked;
-  sub.textContent=g.blocked?`有 ${g.blocked} 件超阈值`:`提交称重（${g.filled}/${g.portionN}）`;
-  sub.disabled=!ready;}
+  if(g.allSub){sub.textContent='全部件已提交';sub.disabled=true;return;}
+  sub.textContent=g.ready?`提交已称的 ${g.ready} 件`:(g.blocked?`有 ${g.blocked} 件超阈值`:'先录实发净重再提交');
+  sub.disabled=!g.ready;}
 function openSku(key){const g=groupOf(key);if(!g)return;
   CURPAGE=pushPage({title:'称重 · '+g.name,body:'<div id="wgd"></div>',
     footer:`<button class="btn primary" id="wg-sub">提交称重</button>`,
@@ -129,32 +152,46 @@ window.wg_input=function(key,i,v){setWs(key,i,v===''?'':parseFloat(v));
   const g=groupOf(key),p=g.ps[i],box=CURPAGE&&CURPAGE.querySelector('#wgd');if(!box)return;
   const row=box.querySelectorAll('.wg-prow')[i];   // 只更新该件的差异标 + 头部 + 底部，避免整页重刷导致滚动跳顶
   if(row){const inp=row.querySelector('input');if(inp)inp.classList.toggle('bad',p.st==='block');
+    const sq=row.querySelector('.idx i');if(sq)sq.classList.toggle('bad',p.st==='block');
     const d=row.querySelector('.d');if(d){d.className='d '+p.st;d.textContent=!p.filled?'待录':p.st==='block'?p.msg:p.diff===0?'✓ 合格':`${p.diff>0?'+':''}${p.diff}${g.unit}`;}}
-  const vs=box.querySelectorAll('.wg-dh .r .v');
-  if(vs[1])vs[1].textContent=`${g.filled} / ${g.portionN} 件`;
-  if(vs[2]){vs[2].textContent=amtLine(g);vs[2].className='v '+(g.amtSum>0?'add':g.amtSum<0?'refund':'');}
+  const fe=box.querySelector('#wg-filled'),ae=box.querySelector('#wg-amt');
+  if(fe)fe.textContent=`${g.filled} / ${g.portionN} 件`;
+  const se=box.querySelector('#wg-subn');if(se)se.textContent=`${g.subN} / ${g.portionN} 件`;
+  if(ae){ae.textContent=amtLine(g);ae.className='v '+(g.amtSum>0?'add':g.amtSum<0?'refund':'');}
   refreshFooter(key);};
-window.wg_fill=function(key){const g=groupOf(key);if(!g||g.submitted)return;const s=store();s[key]={ws:{},at:'2026-07-28 08:20'};for(let i=0;i<g.portionN;i++)s[key].ws[i]=g.specQty;drawDetail(CURPAGE.querySelector('#wgd'),key);toast(`已按应发 ${g.specQty}${g.unit}/件 填入 ${g.portionN} 件`,'ok');};
+window.wg_fill=function(key){const g=groupOf(key);if(!g||g.allSub)return;const s=store();s[key]=s[key]||{ws:{}};s[key].ws=Object.assign({},s[key].ws);
+  let n=0;for(let i=0;i<g.portionN;i++){if(g.sub[i])continue;s[key].ws[i]=g.specQty;n++;}
+  s[key].at='2026-07-28 08:20';drawDetail(CURPAGE.querySelector('#wgd'),key);toast(`未提交的 ${n} 件已按应发 ${g.specQty}${g.unit}/件 填入`,'ok');};
 
-function submit(key){const g=groupOf(key);if(!g||g.submitted)return;
-  if(g.filled<g.portionN){toast(`还有 ${g.portionN-g.filled} 件未称重`,'err');return;}
-  if(g.blocked){toast(`有 ${g.blocked} 件超阈值/异常，请复称`,'err');return;}
-  confirmDialog({title:`提交称重 · ${g.name}`,body:`${g.wh} · ${g.portionN} 件已称重，${amtLine(g)}。提交后锁定，可到「标签打印」打印本商品标签。`,okText:'确认提交',onOk:()=>{
-    const s=store();s[key]=s[key]||{ws:{}};s[key].submitted=true;s[key].amt=g.amtSum;
-    toast('称重已提交，标签打印已解锁','ok');window.FM.popPage();if(LISTBOX)renderBody(LISTBOX);}});}
+/* 分批提交：本次提交 = 已录实发净重、未拦截、且未提交的件（按标签序号） */
+function submit(key){const g=groupOf(key);if(!g||g.allSub)return;
+  const idxs=g.ps.map((p,i)=>p.filled&&!p.subd&&p.st!=='block'?i:-1).filter(i=>i>=0);
+  if(!idxs.length){toast(g.blocked?`有 ${g.blocked} 件超阈值/异常，请复称`:'还没有可提交的件，请先录实发净重','err');return;}
+  const amt=+idxs.reduce((a,i)=>a+g.ps[i].amt,0).toFixed(2);
+  const rest=g.portionN-g.subN-idxs.length;
+  const amtTxt=amt>0?`补款 ${S(amt)}`:amt<0?`退款 ${S(-amt)}`:'无差额';
+  confirmDialog({title:`提交称重 · ${g.name}`,body:`${g.wh} · 本次提交 ${idxs.length} 件（标签序号 ${seqRange(idxs,g.portionN)}），${amtTxt}。提交后这些件锁定不可改；${rest?`还有 ${rest} 件未提交，全部提交后才解锁标签打印。`:'该商品全部件已提交，标签打印解锁。'}`,okText:'确认提交',onOk:()=>{
+    const s=store();s[key]=s[key]||{ws:{}};s[key].sub=Object.assign({},s[key].sub);
+    idxs.forEach(i=>{s[key].sub[i]='2026-07-28 08:20';});
+    const ng=groupOf(key);
+    s[key].submitted=ng.allSub;s[key].amt=ng.subAmt;s[key].real=ng.subReal;s[key].due=+(ng.subN*g.specQty).toFixed(2);s[key].at='2026-07-28 08:20';
+    toast(ng.allSub?'全部件已提交，标签打印已解锁':`已提交 ${idxs.length} 件，其余件可继续录`,'ok');
+    if(ng.allSub){window.FM.popPage();}else{drawDetail(CURPAGE.querySelector('#wgd'),key);}
+    if(LISTBOX)renderBody(LISTBOX);}});}
 
 /* ===== 列表 Tab ===== */
 let LISTBOX=null;
 function card(g){
-  const stTxt={wait:'待称重',ready:'待提交',block:'有件异常',done:'已提交'}[g.st];
-  const pct=g.portionN?Math.round(g.filled/g.portionN*100):0;
+  const stTxt={wait:'待称重',ready:'待提交',part:`已提交 ${g.subN}/${g.portionN}`,block:'有件异常',done:'全部已提交'}[g.st];
+  const stCls={wait:'wait',ready:'ready',part:'part',block:'block',done:'done'}[g.st];
+  const pct=g.portionN?Math.round(g.subN/g.portionN*100):0;          // 进度条 = 已提交件占比
   const amtCls=g.amtSum>0?'add':g.amtSum<0?'refund':'zero';
   const amtTxt=g.st==='wait'?'':(g.amtSum>0?`补款 ${S(g.amtSum)}`:g.amtSum<0?`退款 ${S(-g.amtSum)}`:'无差额');
   return `<div class="wg-card" data-key="${g.key}">
-    <div class="wg-ch"><span class="wg-nm">${g.name}</span><span class="wg-st ${g.st==='ready'?'ready':g.st}">${stTxt}</span></div>
-    <div class="wg-meta">${g.wh} · ${g.portionN} 件 · 应发 ${g.specQty}${g.unit}/件 · ${S(g.up)}/${g.unit}</div>
+    <div class="wg-ch"><span class="wg-nm">${g.name}</span><span class="wg-st ${stCls}">${stTxt}</span></div>
+    <div class="wg-meta">${g.wh} · ${g.portionN} 件 · 标签序号 ${seqNo(0,g.portionN)}–${seqNo(g.portionN-1,g.portionN)} · ${S(g.up)}/${g.unit}</div>
     <div class="wg-prog"><i style="width:${pct}%"></i></div>
-    <div class="wg-cf"><span class="pg">已称 <b>${g.filled}/${g.portionN}</b> 件${amtTxt?` · <span class="amt ${amtCls}">${amtTxt}</span>`:''}</span>
+    <div class="wg-cf"><span class="pg">已称 <b>${g.filled}/${g.portionN}</b> · 已提交 <b>${g.subN}/${g.portionN}</b> 件${amtTxt?` · <span class="amt ${amtCls}">${amtTxt}</span>`:''}</span>
       <span class="go">${g.submitted?'查看':'去称重'} ${svg('arrow','style="width:15px;height:15px;stroke:var(--emerald-2)"')}</span></div>
   </div>`;
 }
@@ -165,18 +202,29 @@ function renderBody(root){
   const gs=groups();
   const waitN=gs.filter(g=>!g.submitted).length;
   const doneN=gs.filter(g=>g.submitted).length;
+  const isTodo=state.tab!=='done';
+  const shown=gs.filter(g=>isTodo?!g.submitted:g.submitted);
   const amtSum=+gs.filter(g=>g.submitted).reduce((a,g)=>a+g.amtSum,0).toFixed(2);
+  const leftN=gs.filter(g=>!g.allSub).reduce((a,g)=>a+(g.portionN-g.subN),0);            // 未提交件数
+  const todoAmt=+gs.filter(g=>!g.allSub).reduce((a,g)=>a+(g.amtSum-g.subAmt),0).toFixed(2);
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
   const df=window.FM_dateField(state.date,ds,d=>{state.date=d;renderBody(root);});
   root.innerHTML=`
-    <div class="lb-note">⚖️ 多退少补（按重量定价）商品需逐件录实发净重后才能打标签。点商品进入称重，大多数件按应发一键填入、只改不同的件。</div>
+    <div class="lb-note">⚖️ 多退少补（按重量定价）商品需逐件录实发净重后才能打标签。每件带<b>标签序号</b>（与「标签打印」一致），按袋上序号对行录入；<b>可按序号分批提交</b>，已提交件锁定不可改，整个商品全部件提交后进「已称重」并解锁标签打印。</div>
+    <div class="wg-seg">
+      <span class="s ${isTodo?'on':''}" data-tab="todo">待称重<span class="n">${waitN}</span></span>
+      <span class="s ${isTodo?'':'on'}" data-tab="done">已称重<span class="n">${doneN}</span></span>
+    </div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
     </div>
-    <div class="lb-sum"><div class="k"><div class="v r">${waitN}</div><div class="l">待称重</div></div><div class="k"><div class="v g">${doneN}</div><div class="l">已提交</div></div><div class="k"><div class="v ${amtSum>0?'':amtSum<0?'r':''}">${amtSum>0?'+':''}${S(amtSum).slice(2)}</div><div class="l">发货差额(S$)</div></div></div>
-    ${gs.length?gs.map(card).join(''):`<div class="empty"><div class="ei">${svg('layers')}</div><h4>该筛选下无多退少补商品</h4><p>只有按重量定价（多退少补）的商品才需称重</p></div>`}
+    ${isTodo
+      ?`<div class="lb-sum"><div class="k"><div class="v r">${waitN}</div><div class="l">待称重商品</div></div><div class="k"><div class="v">${leftN}</div><div class="l">未提交件数</div></div><div class="k"><div class="v ${todoAmt>0?'':todoAmt<0?'r':''}">${todoAmt>0?'+':''}${S(todoAmt).slice(2)}</div><div class="l">待提交差额(S$)</div></div></div>`
+      :`<div class="lb-sum"><div class="k"><div class="v g">${doneN}</div><div class="l">已称重商品</div></div><div class="k"><div class="v ${amtSum>0?'':amtSum<0?'r':''}">${amtSum>0?'+':''}${S(amtSum).slice(2)}</div><div class="l">已结差额(S$)</div></div></div>`}
+    ${shown.length?shown.map(card).join(''):`<div class="empty"><div class="ei">${svg('layers')}</div><h4>${isTodo?'该筛选下无待称重商品':'该筛选下还没有已称重记录'}</h4><p>${isTodo?'只有按重量定价（多退少补）的商品才需称重':'在「待称重」完成录入并提交后，记录会归到这里'}</p></div>`}
     <div style="height:14px"></div>`;
+  root.querySelectorAll('.wg-seg .s').forEach(el=>el.onclick=()=>{state.tab=el.dataset.tab;renderBody(root);});
   root.querySelectorAll('.wg-card').forEach(c=>c.onclick=()=>openSku(c.dataset.key));
   df.bind(root);
   root.querySelectorAll('[data-wh]').forEach(el=>el.onclick=()=>{state.wh=el.dataset.wh;renderBody(root);});
