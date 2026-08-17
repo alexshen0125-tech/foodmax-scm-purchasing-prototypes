@@ -2099,9 +2099,6 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
     ? `<div title="标品：回显上方填写的单件净含量；计件单位的多件装在悬停里给出本规格合计">净含量</div>`
     : `<div title="非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，系统自动得出，无需填写">净含量</div>`;
   box.innerHTML=`${consign?`<div class="ib ib-b" style="margin-bottom:10px"><span class="i">🔒</span>寄售品的<b>可售库存与库存模式由货品库存决定</b>，不逐规格维护；<b>售卖规格单位锁定为商品级「库存单位」${su?`（${su}）`:'（请先在上方选择）'}</b>，逐规格不可改。</div>`:''}`
-  +`<div class="ib ${std?'ib-b':'ib-gr'}" style="margin-bottom:10px"><span class="i">${std?'📦':'⚖️'}</span>${std
-      ? `<b>标品</b>：净含量是包装上<b>申报的固定值</b>，在上方「单件净含量」填写，本列直接回显，不由售卖规格数量倒推。计件单位的多件装（如 24瓶/箱）另按 <b>单件净含量 × 售卖规格数量</b> 得出本规格合计（330ml × 24 ＝ 7.92L），悬停可见。`
-      : `<b>非标品</b>：<b>净含量 ＝ 售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 1kg；12 + kg → 12kg），不是另一个字段，填好这两列后净含量列<b>自动带出</b>，无需重复维护。`}</div>`
   +`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>售卖单位</div><div>售卖规格数量</div><div>售卖规格单位</div>${netHead}<div>未税价(SGD)</div><div title="是=按重量定价(S$/售卖规格单位)，商家分装称重后按实发净重结算差额；否=按规格整件计价">多退少补</div><div>可售库存</div><div>库存模式</div><div></div></div>`
   +EDIT_SKUS.map((s,k)=>{const m=s.stockMode||'finite';const pk=s.packUnit||'';const rowUnit=consign?su:(s.sellUnit||'');
     return `<div class="skued2" style="${gc};align-items:center">`
