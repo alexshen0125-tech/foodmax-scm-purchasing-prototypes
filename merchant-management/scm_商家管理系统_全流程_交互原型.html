@@ -1031,7 +1031,9 @@ function doLogin(){
 }
 
 /* ================= ROUTER / RENDER ================= */
-const ROLE_ORDER=['merchant','shop_ops','scm'];
+// 采购SCM平台入口本期移除（沈亮 2026-08-17）：角色轮换只在 商家端 ↔ 店铺运营平台 之间；
+// SCM 的 NAV 与 PAGES（p-vendors / p-vendor-apply）实现保留，恢复时把 'scm' 加回本数组即可
+const ROLE_ORDER=['merchant','shop_ops'];
 const ROLE_META={
   merchant:{name:'商家端',sub:'商家后台',cls:'m',ic:'🏪',who:'店铺老板'},
   shop_ops:{name:'店铺运营平台',sub:'店铺运营平台',cls:'p',ic:'🛡️',who:'运营管理员'},
@@ -1984,7 +1986,11 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
   EDIT_SKUS=isNew?[{qty:1,stockMode:'finite'}]:(p.skus&&p.skus.length?JSON.parse(JSON.stringify(p.skus)).map(x=>Object.assign(x,{refundTouched:1})):[{qty:1,stockMode:'finite'}]);
   const approved=!isNew&&(p.status=='onsale'||p.status=='offsale');
   EDIT_SUPPLY=p.consign?'寄售':'自售';const supplyLock=!isNew;   // 售卖模式(自售/寄售)：新建可选，已有商品保存后不可修改(dev 508003116)
-  EDIT_STD=isNew?'标品':stdTypeName(p);   // 商品类型(标品/非标品)：决定净含量维护在 SPU 还是 SKU
+  /* 商品类型(标品/非标品)：决定净含量维护在 SPU 还是 SKU。
+     必须与下方单选按钮的渲染取值 stdTypeName(p) 同源——否则会出现「按钮显示非标品、
+     表格却按标品渲染售卖规格单位枚举」的错位。新建时 p 无 stdType/netQty，stdTypeName 返回
+     非标品，即生鲜平台的默认。 */
+  EDIT_STD=stdTypeName(p);
   const NETUNIT=unitNames(stdTypeName(p),'net');
   const QPUNIT=['天','月','年'],STORAGE=['常温','冷藏','冷冻','冷鲜'],FULFIL=['平台仓配','商家直送'];
   const radio=(name,val,opts)=>`<div class="row" style="gap:14px">${opts.map(t=>`<label class="chip-ck ${val==t?'on':''}"><input type="radio" name="${name}" value="${t}" ${val==t?'checked':''} onchange="this.closest('.row').querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));this.parentElement.classList.add('on')">${t}</label>`).join('')}</div>`;
