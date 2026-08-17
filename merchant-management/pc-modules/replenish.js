@@ -304,7 +304,6 @@ PAGES['p-fine']=()=>{
   const selectable=rows.filter(g=>g.push=='pending');
   DB.fineSel=DB.fineSel.filter(no=>selectable.some(g=>g.no==no));
   const allSel=selectable.length&&selectable.every(g=>DB.fineSel.includes(g.no));
-  const selAmt=+(rows.filter(g=>DB.fineSel.includes(g.no)).reduce((a,g)=>a+g.amt,0)).toFixed(2);
   const merchants=[...new Set(fineGroups(true).map(g=>g.merchantName))];
 
   return `${flowTip('')}
@@ -325,10 +324,9 @@ PAGES['p-fine']=()=>{
   </div></div>
 
   <div class="card">
-    <div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
-      <span>已选 <b>${DB.fineSel.length}</b> 单 · 罚款合计 <b style="color:var(--r)">${money(selAmt)}</b></span>
+    <div class="selbar" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
       ${DB.fineSel.length?`<button class="btn btn-link" onclick="DB.fineSel=[];render()">取消选择</button>`:''}
-      <button class="btn btn-p btn-sm" style="margin-left:auto" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
+      <button class="btn btn-p btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr>
