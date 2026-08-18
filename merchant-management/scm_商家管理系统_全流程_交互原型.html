@@ -981,6 +981,9 @@ const NAV={
     {id:'p-replcfg',ic:'⚙️',t:'缺货罚款标准',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
+    {sec:'供货'},
+    {id:'p-consign',ic:'🧾',t:'供货单管理',p1:1,badge:()=>DB.consigns?DB.consigns.filter(c=>c.status==10).length:0},
+    {id:'p-consign-return',ic:'↩️',t:'退货单管理',p1:1,badge:()=>DB.consignReturns?DB.consignReturns.filter(r=>r.status==10).length:0,by:'y'},
     {sec:'耗材'},
     {id:'p-supply-goods',ic:'🖨️',t:'耗材商品',p1:1},
     {id:'p-supply-order',ic:'🛒',t:'耗材订单',p1:1,badge:()=>DB.supplyOrders?DB.supplyOrders.filter(o=>o.status=='pending').length:0,by:'y'},
@@ -4008,5 +4011,6 @@ goHome();
 <script src="pc-modules/quality.js?v=20260730f"></script>
 <script src="pc-modules/supply.js?v=20260817c"></script>
 <script src="pc-modules/replenish.js?v=20260810a"></script>
+<script src="pc-modules/consign.js?v=20260819a"></script>
 </body>
 </html>
