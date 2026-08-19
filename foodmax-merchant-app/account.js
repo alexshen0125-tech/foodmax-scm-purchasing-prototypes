@@ -201,7 +201,13 @@ function hook(st,p){
   renderAccount(p);
 }
 
-/* ===== 开通：建号(BR-01/02) → PKCE 授权(BR-03/04) → WebView 承载组件 ===== */
+/* ===== 开通：建号(BR-01/02) → PKCE 授权(BR-03/04) → WebView 承载组件 =====
+   建号 payload（平台侧传，商家不可见也不填）：primary_contact.email /
+   business_details.business_name / registration_address.country_code /
+   business_details.account_usage.product_reference（枚举数组，平台按业务场景固定，待 AM 确认取值）/
+   legal_entity_type=Business / customer_agreements 两个 true。
+   随后 Update 预填 business_person_details（roles 至少一个），取自「法人信息」「经营资质」。
+   注：以下 4 步表单为示意——组件内真实字段与分步由 Airwallex 按注册国动态渲染，平台不控制。 */
 function startKyc(p){
   if(!AWX.accountId)AWX.accountId='acct_sg7k2m9x4p';        // BR-02：已有则复用
   if(AWX.status=='none'||AWX.status=='FAILURE'){AWX.status='CREATED';AWX.failReason='';}
@@ -223,7 +229,9 @@ function renderKyc(p,parent){
       <div class="aw-f"><div class="fk">${T('公司注册编号 UEN','Business registration number (UEN)')}</div><input class="fin" placeholder="202412345K"></div>
       <div class="aw-f"><div class="fk">${T('行业类目','Industry category')}</div><input class="fin" value="${T('食品与饮料批发','Food & beverage wholesale')}"></div>
       <div class="aw-f"><div class="fk">${T('注册地址','Registered address')}</div><input class="fin" placeholder="${T('门牌号 + 街道','Address line 1')}"></div>
-      <div class="aw-f"><div class="fk">${T('区 / 邮政编码','Suburb / Postcode')}</div><input class="fin" placeholder="Jurong · 619748"></div>
+      <div class="aw-f"><div class="fk">${T('区 / 城市','Suburb / City')}</div><input class="fin" placeholder="Jurong"></div>
+      <div class="aw-f"><div class="fk">${T('州 / 地区','State')}</div><input class="fin" placeholder="Singapore"></div>
+      <div class="aw-f"><div class="fk">${T('邮政编码','Postcode')}</div><input class="fin" placeholder="619748"></div>
       <div class="aw-f"><div class="fk">${T('经营范围描述','Description of goods or services')}</div><input class="fin" placeholder="${T('向餐饮客户批发新鲜蔬菜、肉禽蛋品','Wholesale of fresh produce to restaurants')}"></div>
       <div class="aw-f"><div class="fk">${T('预计月流水','Estimated monthly revenue')}</div><input class="fin" placeholder="SGD 120,000"></div>`;
   }else if(st==2){
