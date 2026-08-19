@@ -125,7 +125,7 @@ const eyeSvg='<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 
 /* ============ 我的 (填充 container) ============ */
 function mineInline(container){
   const g1=[['营业时间设置','sign','hours'],['合同管理','invoice'],['服务能力','shieldcheck']];
-  const g2=[['平台规则','box'],['联系客服','bell'],['廉正举报','alert'],['查看 Food Max 商城','tag'],['账号管理','user']];
+  const g2=[['平台规则','box'],['联系客服','bell'],['廉正举报','alert'],['查看 Food Max 商城','tag'],['账号管理','user','awx']];
   const rows=(arr)=>arr.map(m=>`<div class="mn-row" data-go="${m[2]||''}"><span class="ic">${svg(m[1])}</span><span class="nm">${m[0]}</span>${ARR}</div>`).join('');
   container.innerHTML=`
     <div class="mn-hd"><div class="t disp">我的</div></div>
@@ -140,7 +140,10 @@ function mineInline(container){
   container.querySelector('#mn-basic').onclick=openBasic;
   container.querySelectorAll('.mn-row').forEach(r=>r.onclick=()=>{
     const go=r.dataset.go;
-    if(go==='hours')openBizHours();else if(go==='biz')openBusinessStatus();else toast('待补录');
+    if(go==='hours')openBizHours();
+    else if(go==='biz')openBusinessStatus();
+    else if(go==='awx')window.FM_MOD.awxAccount();   // 账号管理 → 收款账户（Airwallex 开通/状态），见 account.js
+    else toast('待补录');
   });
 }
 

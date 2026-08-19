@@ -745,6 +745,10 @@ const S = {
   bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['待付款','t-b']},
   invoice:{none:['待平台开票','t-y'],uploaded:['开票中','t-b'],verified:['已开票','t-g'],rejected:['开票异常','t-r']},
   withdraw:{pending:['待处理','t-gr'],processing:['处理中','t-y'],success:['成功','t-g'],failed:['失败','t-r']},
+  /* 收款账户开通（Airwallex connected account）状态：以 Airwallex webhook 回传为准（BR-07），
+     none = 平台侧尚未建号；CREATED/SUBMITTED/ACTION_REQUIRED/ACTIVE/SUSPENDED 为 Airwallex 账户状态；
+     FAILURE 为组件 kycStatus 回传的开通失败态 */
+  awx:{none:['未开通','t-gr'],CREATED:['待提交','t-gr'],SUBMITTED:['审核中','t-b'],ACTION_REQUIRED:['待补充材料','t-y'],ACTIVE:['已开通','t-g'],SUSPENDED:['已冻结','t-r'],FAILURE:['开通失败','t-r']},
 };
 function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
@@ -764,10 +768,41 @@ const UNITS=['kg','g','L','盒','袋','份','只','扎','箱'],SHELF=['常温','
 /* 寄售品「库存单位」：与 SKU 的售卖规格单位是同一口径（寄售时 SKU 售卖规格单位恒等于它），
    故取值集 = 该商品类型的售卖规格单位枚举，同样受标品/非标品约束，见 unitNames(type,'spec') */
 const stockUnitList=t=>unitNames(t,'spec');
-/* 账户管理 + 提现（万里汇 API 对接）：本期只做新币 SGD、无结汇、无限额；手续费商户承担 $5/笔 */
+/* ===== 收款账户开通（Airwallex 空中云汇 · Embedded Onboarding 组件）=====
+   BR-02：一个商家主体最多绑 1 个 connected account，重复点开通走幂等，直接进组件
+   BR-07：账户状态以 Airwallex webhook 回传为准，组件 success 事件只用于前端跳转
+   BR-08：未开通不限制商家其他功能（下单/上架/发货照常），仅本页展示未开通态
+   BR-09：country 跟随商家所属 site，须在 Airwallex 可开户国清单内 */
+DB.awx={
+  accountId:'',        // Airwallex connected account id，创建后回填
+  status:'none',       // none|CREATED|SUBMITTED|ACTION_REQUIRED|ACTIVE|SUSPENDED|FAILURE
+  country:'SG',        // registration_address.country_code
+  locale:'zh',         // 组件 locale：zh|en（BR-10，注册国不支持所传 locale 时降级 en）
+  submitAt:'', activeAt:'', failReason:'',
+  rfi:null,            // 进行中的补件：{id, raiseAt, items:[], note}
+  rfiHistory:[],
+  kycStep:1,           // 组件内部步骤（模拟 Airwallex iframe 渲染进度）
+};
+/* Airwallex 可开户国家/地区（节选常用 site，全量 69 个以 Airwallex Eligible Countries 为准）
+   BR-09：商家所属 site 不在清单内 → 隐藏开通入口并提示暂不支持 */
+const AWX_COUNTRIES={SG:'新加坡 Singapore',MY:'马来西亚 Malaysia',HK:'中国香港 Hong Kong',CN:'中国大陆 China',TH:'泰国 Thailand',VN:'越南 Vietnam',ID:'印尼 Indonesia',PH:'菲律宾 Philippines',JP:'日本 Japan',AU:'澳大利亚 Australia',GB:'英国 United Kingdom',US:'美国 United States'};
+/* 开通前材料清单（按注册国配置，本期只配 SG）——仅为商家备料预告；
+   组件内实际收集哪些字段由 Airwallex 按注册国 + 主体类型动态决定，平台不硬编码 */
+const AWX_DOC_COLS=['公司','合伙企业','个体户(已注册)','个体户(未注册)'];
+const AWX_DOC_SG=[
+  {t:'公司注册编号 UEN（业务标识类型 BRN）',c:['必填','必填','必填','—']},
+  {t:'注册地址（门牌、区、邮编）',c:['必填','必填','必填','以居住地址代替']},
+  {t:'经营主体名称',c:['必填','必填','必填','可用个人姓名']},
+  {t:'经营范围描述 + 行业类目',c:['必填','必填','必填','必填']},
+  {t:'预计月流水（币种 + 金额）',c:['必填','必填','必填','必填']},
+  {t:'合伙协议 Partnership agreement',c:['—','必填','—','—']},
+  {t:'实控人(UBO) 与董事：姓名 / 出生日期 / 国籍 / 居住地址',c:['全部人员','全部人员','本人','本人']},
+  {t:'身份证件：护照 / 身份证 / 驾照（护照传正面，其余正反面）',c:['全部人员','全部人员','本人','本人']},
+];
+/* 账户管理 + 提现（Airwallex API 对接）：本期只做新币 SGD、无结汇、无限额；手续费商户承担 $5/笔 */
 const WD_FEE=5.00;
 DB.wallet={
-  ra:{cur:'SGD',no:'5210 8842 0091',st:'Active'},   // 万里汇收款账户(RA)
+  ra:{cur:'SGD',no:'5210 8842 0091',st:'Active'},   // Airwallex 收款账户(Global Account)
   avail:18426.50,                                     // 可提现余额(可用)=已结算入 RA
   pending:6240.00,                                    // 在途(未结算货款，预计，不可提现)
   banks:[
@@ -1123,7 +1158,7 @@ function render(){
   });
   document.getElementById('nav').innerHTML=nh;
   // topbar
-  const SUBPG={'p-vendor-apply':'供应商信息确认','m-qual':'店铺信息 / 经营资质','m-import':'商品管理 / 批量导入'};
+  const SUBPG={'p-vendor-apply':'供应商信息确认','m-qual':'店铺信息 / 经营资质','m-import':'商品管理 / 批量导入','m-awx-kyc':'账户管理 / 开通收款账户','m-awx-rfi':'账户管理 / 补充材料'};
   const cur=navLeaf(r,DB.page)||{t:SUBPG[DB.page]||''};
   const par=NAV[r].find(n=>n.children&&n.children.some(k=>k.id==DB.page));
   document.getElementById('tb-crumb').textContent=meta.name+' / '+(par?par.t+' / ':'')+cur.t;
@@ -2957,18 +2992,109 @@ function act_svcInvPreview(no){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${issued?`<button class="btn btn-p" onclick="act_svcInvDownload('${s.no}')">下载 PDF</button>`:''}</div>`);
 }
 
-/* ---------- 商家端：账户管理（万里汇 API · 余额 / 站内银行卡 / 提现 / 记录）---------- */
+/* ---------- 商家端：账户管理（Airwallex 空中云汇 · 开通 / 余额 / 站内银行卡 / 提现 / 记录）----------
+   页面三态（状态以 Airwallex webhook 回传为准，BR-07）：
+     未开通 none / CREATED        → 说明 + 备料清单 + 「开通收款账户」入口
+     认证中 SUBMITTED / ACTION_REQUIRED → 审核进度；有 RFI 时置顶补件待办
+     已开通 ACTIVE                → 账户信息 + 余额 / 银行卡 / 提现
+   异常态 FAILURE / SUSPENDED     → 原因 + 重新开通 / 联系客服 */
 PAGES['m-account']=()=>{
+  const a=DB.awx;
+  return awxStatusCard() + (a.status=='ACTIVE' ? awxAccountActive() : awxDocCard());
+};
+
+/* 收款账户状态卡（三态 + 异常态） */
+function awxStatusCard(){
+  const a=DB.awx, w=DB.wallet, supported=!!AWX_COUNTRIES[a.country];
+  const hd=`<div class="card-hd"><h3>收款账户</h3><span class="sub" style="margin-right:auto">Airwallex 空中云汇 · ${AWX_COUNTRIES[a.country]||a.country} · 结算币种 SGD</span>${supported?tag('awx',a.status):''}</div>`;
+  let bd='';
+  if(!supported){
+    bd=`<div class="ib ib-gr"><span class="i">🌐</span>当前站点 <b>${a.country}</b> 暂不支持在线开通收款账户（不在 Airwallex 可开户地区清单内），请联系平台运营协助处理。</div>`;
+  }else if(a.status=='none'||a.status=='CREATED'){
+    bd=`<div class="ib ib-b"><span class="i">💳</span>开通后 Food Max 结算的货款将直接入账该收款账户，可随时提现到你的本地银行卡。开户资料（UEN、证件影像、实控人信息等）由你在 Airwallex 认证页面填写并直接提交 Airwallex，<b>Food Max 不留存证件影像</b>。</div>
+      <button class="btn btn-p" style="min-width:150px" onclick="act_awxStart()">开通收款账户</button>`;
+  }else if(a.status=='SUBMITTED'){
+    bd=`<div class="ib ib-b"><span class="i">⏳</span>资料已提交 Airwallex 审核，通常 <b>1–3 个工作日</b>出结果。审核期间不影响你正常接单、发货、开票。</div>
+      <dl class="dl"><dt>账户编号</dt><dd class="mono">${a.accountId}</dd><dt>提交时间</dt><dd>${a.submitAt}</dd><dt>注册国家 / 地区</dt><dd>${AWX_COUNTRIES[a.country]}</dd></dl>
+      ${awxHookSim()}`;
+  }else if(a.status=='ACTION_REQUIRED'){
+    const r=a.rfi||{items:[],raiseAt:''};
+    bd=`<div class="ib ib-y"><span class="i">📋</span>Airwallex 需要你补充以下材料后才能完成审核（${r.raiseAt} 发起）：</div>
+      <ol style="margin:0 0 16px 20px;padding:0;font-size:13.5px;line-height:2">${r.items.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <button class="btn btn-p" style="min-width:150px" onclick="nav('m-awx-rfi')">立即补充材料</button>`;
+  }else if(a.status=='FAILURE'){
+    bd=`<div class="ib ib-r"><span class="i">⛔</span><b>开通未通过：</b>${a.failReason}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-p" onclick="act_awxStart()">重新提交</button><button class="btn btn-o" onclick="toast('已为你转接平台客服','info')">联系客服</button></div>`;
+  }else if(a.status=='SUSPENDED'){
+    bd=`<div class="ib ib-r"><span class="i">🚫</span>账户已被 Airwallex 冻结，提现暂不可用；结算货款仍会正常入账。请联系平台运营协助核实。</div>
+      <button class="btn btn-o" onclick="toast('已为你转接平台客服','info')">联系客服</button>`;
+  }else{ // ACTIVE
+    bd=`<dl class="dl">
+      <dt>收款账户</dt><dd class="mono">${w.ra.cur} · ${w.ra.no}</dd>
+      <dt>账户编号</dt><dd class="mono">${a.accountId}</dd>
+      <dt>结算主体</dt><dd>绿鲜源蔬果 Green Fresh Produce Pte Ltd</dd>
+      <dt>注册国家 / 地区</dt><dd>${AWX_COUNTRIES[a.country]}</dd>
+      <dt>结算币种</dt><dd>SGD（本期不支持结汇 / 多币种）</dd>
+      <dt>开通时间</dt><dd>${a.activeAt}</dd>
+    </dl>`;
+  }
+  return `<div class="card">${hd}<div class="card-bd">${bd}</div></div>`;
+}
+
+/* 沙箱：模拟 Airwallex 回调，用于演示审核后的三种分支（生产环境由 webhook 驱动） */
+function awxHookSim(){
+  return `<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--bd);font-size:12px;color:var(--tt)">沙箱 · 模拟 Airwallex webhook 回调：
+    <button class="btn btn-link btn-sm" onclick="act_awxHook('ACTIVE')">审核通过</button>
+    <span style="color:var(--bd)">|</span>
+    <button class="btn btn-link btn-sm" onclick="act_awxHook('ACTION_REQUIRED')">需要补件</button>
+    <span style="color:var(--bd)">|</span>
+    <button class="btn btn-link btn-sm" onclick="act_awxHook('FAILURE')">审核拒绝</button></div>`;
+}
+
+/* 开通前备料清单：仅为商家备料预告，组件内实际收集项由 Airwallex 按注册国 + 主体类型动态决定 */
+function awxDocCard(){
+  const a=DB.awx;
+  if(!AWX_COUNTRIES[a.country]) return '';
+  if(!(a.status=='none'||a.status=='CREATED'||a.status=='FAILURE')) return '';   // 已提交后不再展示备料清单
+  return `<div class="card"><div class="card-hd"><h3>开通前请准备</h3><span class="sub">${AWX_COUNTRIES[a.country]} · 按经营主体类型区分，实际填写项以 Airwallex 认证页面为准</span></div><div class="card-bd flush">
+    <table><thead><tr><th style="min-width:300px">材料 / 信息</th>${AWX_DOC_COLS.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>
+    ${AWX_DOC_SG.map(r=>`<tr><td>${r.t}</td>${r.c.map(v=>`<td style="${v=='必填'?'font-weight:600':'color:var(--ts)'}">${v}</td>`).join('')}</tr>`).join('')}
+    </tbody></table>
+  </div></div>`;
+}
+
+/* 点「开通收款账户」：建号(BR-01/02) → PKCE 授权(BR-03/04) → 进组件承载页 */
+function act_awxStart(){
+  const a=DB.awx;
+  if(!a.accountId){a.accountId='acct_sg7k2m9x4p';}      // BR-02：已有则复用，不重复建号
+  if(a.status=='none')a.status='CREATED';
+  if(a.status=='FAILURE'){a.failReason='';a.status='CREATED';}
+  a.kycStep=1;
+  nav('m-awx-kyc');
+  toast('已创建 Airwallex 账户并完成授权（scope w:awx_action:onboarding）','ok');
+}
+
+/* 模拟 Airwallex 侧审核结论回调 */
+function act_awxHook(st){
+  const a=DB.awx;a.status=st;
+  if(st=='ACTIVE'){a.activeAt='2026-08-19 15:20';toast('账户已开通，货款将结算至该账户','ok');}
+  if(st=='ACTION_REQUIRED'){a.rfi={id:'rfi_2f81c9',raiseAt:'2026-08-19 15:20',items:['董事 CHEN WEI 的护照影像不清晰，请重新上传','补充经营场所照片或租赁合同'],note:''};toast('收到 rfi.action_required，已生成补件待办','info');}
+  if(st=='FAILURE'){a.failReason='实控人身份信息与商业登记记录不一致，Airwallex 未通过审核。';toast('开通未通过','err');}
+  render();
+}
+
+/* 已开通后的账户内容：余额 / 银行卡 / 提现记录 */
+function awxAccountActive(){
   const w=DB.wallet, flt=w.wdFilter||'all';
   const recs = flt=='all' ? w.withdrawals : w.withdrawals.filter(x=>x.st==flt);
   const WF=[['all','全部'],['processing','处理中'],['success','成功'],['failed','失败']];
   return `
-  <div class="card"><div class="card-hd"><h3>万里汇账户余额</h3><span class="sub">收款账户(RA) ${w.ra.cur} · ${w.ra.no} · WorldFirst 万里汇 API 对接</span></div><div class="card-bd">
+  <div class="card"><div class="card-hd"><h3>账户余额</h3><span class="sub">收款账户 ${w.ra.cur} · ${w.ra.no} · Airwallex API 对接</span></div><div class="card-bd">
     <div style="display:flex;flex-wrap:wrap;gap:14px">
       <div style="flex:1;min-width:220px;background:var(--gl);border:1px solid var(--bd);border-radius:14px;padding:16px 18px">
         <div style="font-size:12.5px;color:var(--ts)">可提现余额（可用）</div>
         <div style="font-size:32px;font-weight:800;color:var(--g);line-height:1.1;margin-top:6px">${money(w.avail)}</div>
-        <div style="font-size:11.5px;color:var(--ts);margin-top:4px">已结算入账万里汇账户，可随时提现</div></div>
+        <div style="font-size:11.5px;color:var(--ts);margin-top:4px">已结算入账收款账户，可随时提现</div></div>
       <div style="flex:1;min-width:220px;background:var(--bd2);border:1px solid var(--bd);border-radius:14px;padding:16px 18px">
         <div style="font-size:12.5px;color:var(--ts)">在途（预计 · 未结算货款）</div>
         <div style="font-size:26px;font-weight:700;color:var(--ts);line-height:1.1;margin-top:6px">${money(w.pending)}</div>
@@ -2977,7 +3103,6 @@ PAGES['m-account']=()=>{
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--bd2)">
       <button class="btn btn-p" style="min-width:120px" onclick="act_openWithdraw()">提现</button>
       <button class="btn btn-o" onclick="toast('调用 statement 拉取账单流水','info')">账单 / 对账</button>
-      <button class="btn btn-o" onclick="toast('重新发起万里汇授权（API）','info')">重新授权</button>
     </div></div></div>
 
   <div class="card"><div class="card-hd"><h3>收款银行卡</h3><span class="sub" style="margin-right:auto">提现到账银行卡 · 站内维护</span><button class="btn btn-o btn-sm" onclick="act_openBank()">+ 绑定银行卡</button></div><div class="card-bd flush">
@@ -2998,28 +3123,141 @@ PAGES['m-account']=()=>{
     </tbody></table>`:`<div class="empty" style="padding:22px"><div class="e-ic">🧾</div><div class="e-t">${flt=='all'?'暂无提现记录':'该状态暂无提现记录'}</div></div>`}
   </div></div>
 
-  <div class="card"><div class="card-hd"><h3>账户信息</h3></div><div class="card-bd">
-    <dl class="dl">
-      <dt>收款账户(RA)</dt><dd class="mono">${w.ra.cur} · ${w.ra.no} <span class="tag t-g" style="margin-left:6px"><span class="dot"></span>${w.ra.st}</span></dd>
-      <dt>结算主体</dt><dd>绿鲜源蔬果 Green Fresh Produce Pte Ltd</dd>
-      <dt>结算币种</dt><dd>SGD（本期不支持结汇/多币种）</dd>
-      <dt>对接方</dt><dd>WorldFirst 万里汇（蚂蚁国际）· API 对接</dd>
+  `;
+}
+/* ================= 开通收款账户 · Airwallex Embedded Onboarding 组件承载页 =================
+   页面 = 我方外壳（面包屑 / 语言切换 / 返回）+ Airwallex 组件容器（iframe，内部字段由 Airwallex 按注册国动态渲染）
+   BR-03/04：进入本页前已完成 PKCE 授权（scope w:awx_action:onboarding）并拿到 authCode
+   BR-05：authCode 换的 token 有效期 1 小时，过期时前端静默重授权并重挂载，不让商家重填
+   BR-10：locale 跟随商家端语言；注册国不支持所传 locale 时组件降级 en，我方外壳仍为中文 */
+const AWX_BRAND='#612FFF';                                   // Airwallex 外部品牌色（组件区专用，与站内翡翠绿明显区隔）
+const AWX_ZH_OK={CN:true,HK:true,TW:true,SG:true,MY:true};   // 注册国是否支持 zh —— 待沙箱实测确认，见 PRD 待确认项
+const AWX_STEPS=[['企业信息','Business details'],['人员与实控人','People & UBOs'],['证件上传','Identity documents'],['确认提交','Review & submit']];
+const AWX_IN='width:100%;padding:9px 12px;border:1px solid var(--bd);border-radius:9px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--tp)';
+const AWX_LB='font-size:12.5px;color:var(--ts);margin-bottom:6px';
+
+function awxShell(inner,loc,zhOk){
+  const a=DB.awx;
+  return `
+  <div class="card"><div class="card-bd" style="padding-bottom:14px">
+    <div style="font-size:13px;color:var(--ts);line-height:1.7">认证资料由 <b>Airwallex</b> 收集并直接提交至 Airwallex 审核，Food Max 不留存你在此填写的证件影像。审核期间不影响正常接单、发货。</div>
+    <div style="margin-top:12px">
+      <button class="btn ${loc=='zh'?'btn-p':'btn-o'} btn-sm" onclick="act_awxLocale('zh')">中文</button>
+      <button class="btn ${loc=='en'?'btn-p':'btn-o'} btn-sm" style="margin-left:8px" onclick="act_awxLocale('en')">English</button>
+      ${(a.locale=='zh'&&!zhOk)?`<span style="font-size:12px;color:var(--y2,#A9711F);margin-left:12px">Airwallex 认证页面在 ${AWX_COUNTRIES[a.country]} 暂不支持中文，已自动切换为英文</span>`:''}
+    </div>
+  </div></div>
+  <div style="border:1px solid var(--bd);border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(18,39,29,.04)">
+    <div style="background:${AWX_BRAND}0F;border-bottom:1px solid var(--bd);padding:11px 20px;font-size:12.5px;color:var(--ts)">
+      <span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${AWX_BRAND};margin-right:9px;vertical-align:-1px"></span>Airwallex 安全认证页面 · iframe 嵌入 · connected account <span class="mono">${a.accountId}</span>
+    </div>
+    <div style="padding:24px 26px">${inner}</div>
+  </div>`;
+}
+function awxStepBar(cur,loc){
+  return `<div style="margin-bottom:24px;border-bottom:1px solid var(--bd2);padding-bottom:16px">${AWX_STEPS.map((s,i)=>{
+    const n=i+1,on=n==cur,done=n<cur;
+    return `<span style="display:inline-block;margin-right:26px;font-size:13px;color:${on?AWX_BRAND:done?'var(--ts)':'var(--tt)'};font-weight:${on?'600':'400'}">
+      <span style="display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;font-size:11.5px;margin-right:7px;background:${on?AWX_BRAND:done?'var(--bd2)':'transparent'};color:${on?'#fff':done?'var(--ts)':'var(--tt)'};border:1px solid ${on?AWX_BRAND:'var(--bd)'}">${done?'✓':n}</span>${loc=='zh'?s[0]:s[1]}</span>`;
+  }).join('')}</div>`;
+}
+
+PAGES['m-awx-kyc']=()=>{
+  const a=DB.awx, zhOk=!!AWX_ZH_OK[a.country], loc=(a.locale=='zh'&&!zhOk)?'en':a.locale;
+  const t=(zh,en)=>loc=='zh'?zh:en;
+  const step=a.kycStep||1;
+  let form='';
+  if(step==1){
+    form=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;max-width:760px">
+      <div><div style="${AWX_LB}">${t('经营主体类型','Business structure')}</div><select style="${AWX_IN}"><option>${t('公司 Company','Company')}</option><option>${t('合伙企业 Partnership','Partnership')}</option><option>${t('个体户（已注册）','Sole trader (registered)')}</option><option>${t('个体户（未注册）','Sole trader (non-registered)')}</option></select></div>
+      <div><div style="${AWX_LB}">${t('经营主体名称','Business name')}</div><input style="${AWX_IN}" value="Green Fresh Produce Pte Ltd"></div>
+      <div><div style="${AWX_LB}">${t('公司注册编号 UEN','Business registration number (UEN)')}</div><input style="${AWX_IN}" placeholder="202412345K"></div>
+      <div><div style="${AWX_LB}">${t('行业类目','Industry category')}</div><select style="${AWX_IN}"><option>${t('食品与饮料批发','Food & beverage wholesale')}</option><option>${t('生鲜农产品','Fresh produce')}</option></select></div>
+      <div style="grid-column:1/3"><div style="${AWX_LB}">${t('注册地址','Registered address')}</div><input style="${AWX_IN}" placeholder="${t('门牌号 + 街道','Address line 1')}"></div>
+      <div><div style="${AWX_LB}">${t('区 / 城市','Suburb / City')}</div><input style="${AWX_IN}" placeholder="Jurong"></div>
+      <div><div style="${AWX_LB}">${t('邮政编码','Postcode')}</div><input style="${AWX_IN}" placeholder="619748"></div>
+      <div style="grid-column:1/3"><div style="${AWX_LB}">${t('经营范围描述','Description of goods or services')}</div><input style="${AWX_IN}" placeholder="${t('向餐饮客户批发新鲜蔬菜、肉禽蛋品','Wholesale of fresh vegetables and poultry to restaurants')}"></div>
+      <div><div style="${AWX_LB}">${t('预计月流水（币种）','Estimated monthly revenue (currency)')}</div><select style="${AWX_IN}"><option>SGD</option></select></div>
+      <div><div style="${AWX_LB}">${t('预计月流水（金额）','Estimated monthly revenue (amount)')}</div><input style="${AWX_IN}" placeholder="120,000"></div>
+    </div>`;
+  }else if(step==2){
+    form=`<div style="font-size:13px;color:var(--ts);line-height:1.7;margin-bottom:16px">${t('须登记全部实控人（UBO）与董事。以下第一条已由 Food Max 预填（来自你已提交的法人信息），可直接确认。','All UBOs and directors are required. The first entry is pre-filled by Food Max from your submitted legal representative information.')}</div>
+    <table><thead><tr><th>${t('姓名','Name')}</th><th>${t('角色','Roles')}</th><th>${t('国籍','Nationality')}</th><th>${t('出生日期','Date of birth')}</th><th>${t('居住地址','Residential address')}</th></tr></thead><tbody>
+      <tr><td style="font-weight:600">CHEN WEI</td><td>Authorised person · Director · UBO</td><td>Singapore</td><td>1982-04-11</td><td style="color:var(--ts)">Blk 128 Jurong East St 13, 600128</td></tr>
+      <tr><td style="font-weight:600">LIM SIEW HONG</td><td>UBO</td><td>Singapore</td><td>1985-09-02</td><td style="color:var(--ts)">Blk 55 Tampines Ave 4, 521055</td></tr>
+    </tbody></table>
+    <button class="btn btn-o btn-sm" style="margin-top:14px">+ ${t('添加人员','Add person')}</button>`;
+  }else if(step==3){
+    form=`<div style="font-size:13px;color:var(--ts);line-height:1.7;margin-bottom:16px">${t('护照仅需上传正面，身份证 / 驾照需正反面。','Passport requires the front only; ID card and driver licence require both sides.')}</div>
+    <table><thead><tr><th>${t('人员','Person')}</th><th>${t('证件类型','Document type')}</th><th>${t('正面','Front')}</th><th>${t('反面','Back')}</th></tr></thead><tbody>
+      <tr><td style="font-weight:600">CHEN WEI</td><td>Passport</td><td><span class="tag t-g"><span class="dot"></span>${t('已上传','Uploaded')}</span></td><td style="color:var(--tt)">—</td></tr>
+      <tr><td style="font-weight:600">LIM SIEW HONG</td><td>NRIC</td><td><button class="btn btn-o btn-sm">${t('上传','Upload')}</button></td><td><button class="btn btn-o btn-sm">${t('上传','Upload')}</button></td></tr>
+    </tbody></table>`;
+  }else{
+    form=`<div style="font-size:13px;color:var(--ts);line-height:1.7;margin-bottom:18px">${t('请确认以上资料真实准确。提交后 Airwallex 将开始审核，通常 1–3 个工作日出结果；如需补充材料会另行通知。','Please confirm the information is accurate. Airwallex will start the review after submission, typically within 1–3 business days.')}</div>
+    <dl class="dl" style="max-width:640px">
+      <dt>${t('经营主体','Business')}</dt><dd>Green Fresh Produce Pte Ltd · Company</dd>
+      <dt>UEN</dt><dd class="mono">202412345K</dd>
+      <dt>${t('登记人员','People')}</dt><dd>2 ${t('人（含 1 名董事、2 名实控人）','people (1 director, 2 UBOs)')}</dd>
+      <dt>${t('证件','Documents')}</dt><dd>3 ${t('份','files')}</dd>
     </dl>
-  </div></div>`;
+    <label style="display:block;margin-top:16px;font-size:13px;color:var(--tp)"><input type="checkbox" checked style="margin-right:8px">${t('我已阅读并同意 Airwallex 服务条款与数据使用政策','I have read and agree to the Airwallex terms and data usage policy')}</label>`;
+  }
+  const ft=`<div style="margin-top:26px;padding-top:18px;border-top:1px solid var(--bd2)">
+    ${step>1?`<button class="btn btn-o" onclick="act_awxStep(${step-1})">${t('上一步','Back')}</button>`:''}
+    ${step<4?`<button class="btn btn-p" style="min-width:120px;margin-left:${step>1?'10px':'0'}" onclick="act_awxStep(${step+1})">${t('下一步','Next')}</button>`
+            :`<button class="btn btn-p" style="min-width:140px;margin-left:10px" onclick="act_awxSubmit()">${t('提交认证','Submit')}</button>`}
+  </div>`;
+  return awxShell(awxStepBar(step,loc)+form+ft,loc,zhOk)+
+    `<div style="margin-top:16px"><button class="btn btn-o" onclick="nav('m-account')">返回账户管理</button>
+     <span style="font-size:12px;color:var(--tt);margin-left:12px">已填内容由 Airwallex 保存，中途离开可回来继续</span></div>`;
 };
-// 提现（万里汇 API 划转，只 SGD、手续费商户承担、不设限额）
+function act_awxLocale(l){DB.awx.locale=l;render();}
+function act_awxStep(n){DB.awx.kycStep=n;render();window.scrollTo(0,0);}
+/* 组件 success 事件：仅用于前端跳转，开通与否以 webhook 为准（BR-07） */
+function act_awxSubmit(){
+  const a=DB.awx;a.status='SUBMITTED';a.submitAt='2026-08-19 14:32';a.kycStep=1;
+  nav('m-account');toast('资料已提交 Airwallex 审核','ok');
+}
+
+/* ================= 补充材料 · Airwallex Embedded KYC RFI 组件承载页 =================
+   触发：收到 rfi.action_required webhook，账户转 ACTION_REQUIRED
+   BR-03：本页授权 scope 为 r:awx_action:rfi_view + w:awx_action:rfi_edit */
+PAGES['m-awx-rfi']=()=>{
+  const a=DB.awx, r=a.rfi;
+  if(!r) return `<div class="empty" style="padding:40px"><div class="e-ic">📋</div><div class="e-t">当前没有待补充的材料</div><div class="e-s"><button class="btn btn-o btn-sm" style="margin-top:12px" onclick="nav('m-account')">返回账户管理</button></div></div>`;
+  const zhOk=!!AWX_ZH_OK[a.country], loc=(a.locale=='zh'&&!zhOk)?'en':a.locale;
+  const t=(zh,en)=>loc=='zh'?zh:en;
+  const inner=`<div style="font-size:13px;color:var(--ts);line-height:1.7;margin-bottom:18px">${t('Airwallex 审核中发现以下问题，请补充后重新提交。','Airwallex requires the following information to continue the review.')} <span class="mono" style="color:var(--tt)">${r.id}</span></div>
+    ${r.items.map((x,i)=>`<div style="border:1px solid var(--bd);border-radius:11px;padding:16px 18px;margin-bottom:12px">
+      <div style="font-size:13.5px;font-weight:600;color:var(--tp);margin-bottom:10px">${i+1}. ${x}</div>
+      <button class="btn btn-o btn-sm">${t('上传文件','Upload file')}</button>
+      <input style="${AWX_IN};margin-top:10px" placeholder="${t('补充说明（选填）','Additional notes (optional)')}">
+    </div>`).join('')}
+    <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--bd2)"><button class="btn btn-p" style="min-width:140px" onclick="act_awxRfiSubmit()">${t('提交补充材料','Submit')}</button></div>`;
+  return awxShell(inner,loc,zhOk)+
+    `<div style="margin-top:16px"><button class="btn btn-o" onclick="nav('m-account')">返回账户管理</button></div>`;
+};
+function act_awxRfiSubmit(){
+  const a=DB.awx;
+  a.rfiHistory.push(Object.assign({},a.rfi,{answerAt:'2026-08-19 16:40'}));
+  a.rfi=null;a.status='SUBMITTED';a.submitAt='2026-08-19 16:40';
+  nav('m-account');toast('补充材料已提交，等待 Airwallex 复审','ok');
+}
+
+// 提现（Airwallex API 划转，只 SGD、手续费商户承担、不设限额）
 function act_openWithdraw(){
   const w=DB.wallet;
   if(!w.banks.length){toast('请先绑定收款银行卡','err');return;}
   const def=w.banks.find(b=>b.def)||w.banks[0];
-  drawer(`<div class="drawer-hd"><div><h3>提现到银行卡</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">万里汇 API 划转 · 手续费 ${money(WD_FEE)}/笔（商户承担）</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>提现到银行卡</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">Airwallex API 划转 · 手续费 ${money(WD_FEE)}/笔（商户承担）</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="fr"><label class="fl">可提现余额</label><div style="font-size:22px;font-weight:800;color:var(--g)">${money(w.avail)}</div></div>
     <div class="fr"><label class="fl"><b>*</b>到账银行卡</label><select id="wd-bank">${w.banks.map(b=>`<option value="${b.id}" ${b.id==def.id?'selected':''}>${b.bank} ****${b.no}（${b.holder}）${b.def?' · 默认':''}</option>`).join('')}</select></div>
     <div class="fr"><label class="fl"><b>*</b>提现金额（SGD）</label><input id="wd-amt" type="number" min="0" step="0.01" placeholder="0.00" oninput="wdCalc()">
       <div class="row" style="gap:8px;margin-top:8px"><button type="button" class="btn btn-o btn-sm" onclick="wdFillAll()">全部提现 ${money(w.avail)}</button></div>
       <div id="wd-err" style="font-size:12px;color:var(--r);margin-top:6px"></div></div>
-    <dl class="dl"><dt>手续费（商户承担）</dt><dd>${money(WD_FEE)}</dd><dt>实际到账</dt><dd id="wd-net" style="font-weight:700;color:var(--g)">—</dd><dt>提现后可提现余额</dt><dd id="wd-after" style="color:var(--ts)">${money(w.avail)}</dd><dt>预计到账</dt><dd>1 个工作日内（万里汇处理）</dd></dl>
+    <dl class="dl"><dt>手续费（商户承担）</dt><dd>${money(WD_FEE)}</dd><dt>实际到账</dt><dd id="wd-net" style="font-weight:700;color:var(--g)">—</dd><dt>提现后可提现余额</dt><dd id="wd-after" style="color:var(--ts)">${money(w.avail)}</dd><dt>预计到账</dt><dd>1 个工作日内（Airwallex 处理）</dd></dl>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">取消</button><button class="btn btn-p" id="wd-ok" onclick="act_submitWithdraw()">确认提现</button></div>`);
   wdCalc();
@@ -3038,9 +3276,9 @@ function act_submitWithdraw(){const amt=wdVal(),w=DB.wallet;if(!(amt>WD_FEE&&amt
   closeDrawer();render();toast(`已提交提现 ${money(amt)}，实际到账 ${money(amt-WD_FEE)}，处理中`,'ok');}
 // 绑定/管理收款银行卡（站内维护）
 function act_openBank(){
-  drawer(`<div class="drawer-hd"><div><h3>绑定收款银行卡</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">用于万里汇提现到账 · 站内维护</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>绑定收款银行卡</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">用于收款账户提现到账 · 站内维护</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div class="ib ib-y"><span class="i">⚠️</span>户名须与经营主体一致，否则提现将被万里汇退回。</div>
+    <div class="ib ib-y"><span class="i">⚠️</span>户名须与经营主体一致，否则提现将被 Airwallex 退回。</div>
     <div class="fr"><label class="fl"><b>*</b>开户银行</label><select id="bk-bank"><option value="">请选择</option><option>DBS Bank</option><option>OCBC Bank</option><option>UOB</option><option>Maybank</option><option>Standard Chartered</option></select></div>
     <div class="fr"><label class="fl"><b>*</b>银行账号</label><input id="bk-no" placeholder="如 123-45678-9"></div>
     <div class="fr"><label class="fl"><b>*</b>户名</label><input id="bk-holder" value="绿鲜源蔬果 Green Fresh Produce Pte Ltd"></div>
