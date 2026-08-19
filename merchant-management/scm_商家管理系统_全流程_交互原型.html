@@ -772,7 +772,9 @@ const stockUnitList=t=>unitNames(t,'spec');
    BR-02：一个商家主体最多绑 1 个 connected account，重复点开通走幂等，直接进组件
    BR-07：账户状态以 Airwallex webhook 回传为准，组件 success 事件只用于前端跳转
    BR-08：未开通不限制商家其他功能（下单/上架/发货照常），仅本页展示未开通态
-   BR-09：country 跟随商家所属 site，须在 Airwallex 可开户国清单内 */
+   BR-09：country 跟随商家所属 site，须在 Airwallex 可开户国清单内
+   BR-12：运营端（店铺运营平台 · 店铺列表）可查商家收款账户状态、进度与账户信息，内容与商家端一致，
+          但为只读——不可代商家提现 / 绑定解绑银行卡 / 修改账户资料，也不可代传 RFI 补件材料 */
 DB.awx={
   accountId:'',        // Airwallex connected account id，创建后回填
   status:'none',       // none|CREATED|SUBMITTED|ACTION_REQUIRED|ACTIVE|SUSPENDED|FAILURE
@@ -783,6 +785,29 @@ DB.awx={
   rfiHistory:[],
   kycStep:1,           // 组件内部步骤（模拟 Airwallex iframe 渲染进度）
 };
+/* 运营端视角的商家收款账户（店铺运营平台 · 商家管理）
+   —— 绿鲜源直接映射 DB.awx + DB.wallet，商家端操作后运营端实时可见；其余为演示数据。
+   运营端与商家端看到的内容一致，唯一区别：运营端只读，无提现 / 绑卡 / 解绑等写操作（BR-12） */
+DB.pAwxOthers={
+  'M2026-0820':{accountId:'acct_sg4h8n2c1w',status:'ACTIVE',country:'SG',activeAt:'2026-07-02 11:05',submitAt:'2026-06-28 14:20',
+    ra:'5210 8842 0433',avail:9240.00,pending:3180.00,entity:'阳光烘焙原料 Sunny Bakery Supply Pte Ltd',
+    banks:[{bank:'UOB Bank',no:'6612',holder:'Sunny Bakery Supply Pte Ltd',swift:'UOVBSGSG',def:true}],
+    withdrawals:[{id:'WD-26081001',date:'2026-08-10 14:03',amt:6000.00,bank:'UOB ****6612',st:'success'}]},
+  'M2026-0805':{accountId:'acct_sg9j3p7v6t',status:'ACTION_REQUIRED',country:'SG',submitAt:'2026-08-15 09:12',
+    entity:'椰丰食品 Coconut Rich Foods Pte Ltd',
+    rfi:{id:'rfi_7d21a4',raiseAt:'2026-08-16 10:40',items:['经营主体名称与商业登记不一致，请上传最新 ACRA Bizfile','补充第二名实控人的身份证件正反面']}},
+  'M2026-0831':{status:'none',country:'SG',entity:'海岛鲜蔬 Island Fresh Pte Ltd'},
+};
+/* 统一视图：把商家端的 DB.awx + DB.wallet 与运营端演示数据抹平成同一结构 */
+function pAwxView(code){
+  if(code==DB.merchant.code){
+    const a=DB.awx,w=DB.wallet;
+    return {status:a.status,accountId:a.accountId,country:a.country,submitAt:a.submitAt,activeAt:a.activeAt,
+      failReason:a.failReason,rfi:a.rfi,entity:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',
+      ra:w.ra.no,avail:w.avail,pending:w.pending,banks:w.banks,withdrawals:w.withdrawals};
+  }
+  return Object.assign({status:'none',country:'SG',banks:[],withdrawals:[]},DB.pAwxOthers[code]||{});
+}
 /* Airwallex 可开户国家/地区（节选常用 site，全量 69 个以 Airwallex Eligible Countries 为准）
    BR-09：商家所属 site 不在清单内 → 隐藏开通入口并提示暂不支持 */
 const AWX_COUNTRIES={SG:'新加坡 Singapore',MY:'马来西亚 Malaysia',HK:'中国香港 Hong Kong',CN:'中国大陆 China',TH:'泰国 Thailand',VN:'越南 Vietnam',ID:'印尼 Indonesia',PH:'菲律宾 Philippines',JP:'日本 Japan',AU:'澳大利亚 Australia',GB:'英国 United Kingdom',US:'美国 United States'};
@@ -3625,14 +3650,85 @@ function shopPendingTab(){
     <thead><tr><th>店铺名称</th><th>店铺编号</th><th>主营品类</th><th>联系人/电话</th><th>提交时间</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div></div></div>`;
 }
 function shopAllTab(){
-  const m=DB.merchant;
-  const mine=m.accountOpened?`<tr><td><b>${DB.shop.name||'（未命名店铺）'}</b></td><td class="mono">${m.code}</td><td>${tag('onboard',m.onboard)}</td><td>${DB.shop.cats.join('·')||'—'}</td><td>${m.contact}<div style="font-size:12px;color:var(--ts)">${m.phone}</div></td><td>2026-06-20</td><td class="mono">V2026-0815</td><td>${shopAction(m)}</td></tr>`:'';
-  return `<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>店铺名称</th><th>店铺编号</th><th>店铺状态</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>对应供应商</th><th>操作</th></tr></thead><tbody>
-      ${mine}
-      <tr><td><b>阳光烘焙原料店</b></td><td class="mono">M2026-0820</td><td>${tag('onboard','active')}</td><td>烘焙原料</td><td>李娜<div style="font-size:12px;color:var(--ts)">+65 8890 2231</div></td><td>2026-06-22</td><td class="mono">V2026-0820</td><td><button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button></td></tr>
-      <tr><td><b>椰丰食品旗舰店</b></td><td class="mono">M2026-0805</td><td>${tag('onboard','active')}</td><td>椰浆·调味</td><td>黄文<div style="font-size:12px;color:var(--ts)">+65 9001 7788</div></td><td>2026-06-10</td><td class="mono">V2026-0805</td><td><button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button></td></tr>
-    </tbody></table></div></div></div>`;
+  const m=DB.merchant, flt=DB.shopAwxFilter||'all';
+  const all=[
+    {name:DB.shop.name||'（未命名店铺）',code:m.code,onboard:m.onboard,cats:DB.shop.cats.join('·')||'—',contact:m.contact,phone:m.phone,open:'2026-06-20',vendor:'V2026-0815',mine:true},
+    {name:'阳光烘焙原料店',code:'M2026-0820',onboard:'active',cats:'烘焙原料',contact:'李娜',phone:'+65 8890 2231',open:'2026-06-22',vendor:'V2026-0820'},
+    {name:'椰丰食品旗舰店',code:'M2026-0805',onboard:'active',cats:'椰浆·调味',contact:'黄文',phone:'+65 9001 7788',open:'2026-06-10',vendor:'V2026-0805'},
+  ].filter(r=>!(r.mine&&!m.accountOpened));
+  // 收款账户状态筛选（口径同商家端 S.awx，全部走 pAwxView 统一取数）
+  const FL=[['all','全部'],['none','未开通'],['SUBMITTED','审核中'],['ACTION_REQUIRED','待补充材料'],['ACTIVE','已开通'],['FAILURE','开通失败']];
+  const rows=all.filter(r=>flt=='all'||pAwxView(r.code).status==flt);
+  const tabs=`<div class="tabs" style="margin-bottom:0">${FL.map(([k,l])=>{
+    const n=k=='all'?all.length:all.filter(r=>pAwxView(r.code).status==k).length;
+    return `<div class="tab ${flt==k?'active':''}" onclick="DB.shopAwxFilter='${k}';render()">${l}<span style="color:var(--tt);font-weight:600">（${n}）</span></div>`;}).join('')}</div>`;
+  const tr=r=>{const a=pAwxView(r.code);
+    return `<tr><td><b>${r.name}</b></td><td class="mono">${r.code}</td><td>${tag('onboard',r.onboard)}</td>
+      <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
+      <td>${r.cats}</td><td>${r.contact}</td><td class="mono">${r.phone}</td><td>${r.open}</td><td class="mono">${r.vendor}</td>
+      <td><button class="btn btn-link" onclick="act_pAwxView('${r.code}')">收款账户</button>${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}</td></tr>`;};
+  return `<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
+    <div style="padding:12px 20px 0">${tabs}</div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>店铺名称</th><th>店铺编号</th><th>店铺状态</th><th>收款账户</th><th>主营品类</th><th>联系人</th><th>联系电话</th><th>开通时间</th><th>对应供应商</th><th>操作</th></tr></thead>
+    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="10"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">该状态下暂无店铺</div></div></td></tr>`}</tbody>
+    </table></div></div></div>`;
+}
+
+/* 运营端查看商家收款账户（只读）——内容与商家端一致，唯一区别：无提现 / 绑卡 / 解绑等写操作（BR-12） */
+function act_pAwxView(code){
+  const a=pAwxView(code), st=S.awx[a.status];
+  let body='';
+  if(a.status=='none'||a.status=='CREATED'){
+    body=`<div class="ib ib-gr"><span class="i">💳</span>该商家尚未开通 Airwallex 收款账户。开通入口在商家端「账户管理」，需商家本人完成实名认证，平台不可代办。</div>`;
+  }else if(a.status=='SUBMITTED'){
+    body=`<div class="ib ib-b"><span class="i">⏳</span>商家已提交资料，等待 Airwallex 审核（通常 1–3 个工作日）。</div>
+      <dl class="dl"><dt>账户编号</dt><dd class="mono">${a.accountId}</dd><dt>提交时间</dt><dd>${a.submitAt}</dd><dt>注册国家 / 地区</dt><dd>${AWX_COUNTRIES[a.country]||a.country}</dd></dl>`;
+  }else if(a.status=='ACTION_REQUIRED'){
+    const r=a.rfi||{items:[],raiseAt:''};
+    body=`<div class="ib ib-y"><span class="i">📋</span>Airwallex 已于 ${r.raiseAt} 要求商家补充材料，补齐后继续审核。平台不可代传，需联系商家自行补充。</div>
+      <ol style="margin:0 0 14px 20px;padding:0;font-size:13.5px;line-height:2">${r.items.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <dl class="dl"><dt>账户编号</dt><dd class="mono">${a.accountId}</dd><dt>首次提交</dt><dd>${a.submitAt}</dd></dl>`;
+  }else if(a.status=='FAILURE'){
+    body=`<div class="ib ib-r"><span class="i">⛔</span><b>开通未通过：</b>${a.failReason||'—'}</div>`;
+  }else if(a.status=='SUSPENDED'){
+    body=`<div class="ib ib-r"><span class="i">🚫</span>账户已被 Airwallex 冻结，商家提现不可用；结算货款仍正常入账。</div>`;
+  }else{ // ACTIVE
+    body=`<h4 style="font-size:13.5px;margin:0 0 10px">账户信息</h4>
+      <dl class="dl" style="margin-bottom:18px">
+        <dt>收款账户</dt><dd class="mono">SGD · ${a.ra}</dd>
+        <dt>账户编号</dt><dd class="mono">${a.accountId}</dd>
+        <dt>结算主体</dt><dd>${a.entity}</dd>
+        <dt>注册国家 / 地区</dt><dd>${AWX_COUNTRIES[a.country]||a.country}</dd>
+        <dt>结算币种</dt><dd>SGD</dd>
+        <dt>提交时间</dt><dd>${a.submitAt||'—'}</dd>
+        <dt>开通时间</dt><dd>${a.activeAt||'—'}</dd>
+      </dl>
+      <h4 style="font-size:13.5px;margin:0 0 10px">账户余额</h4>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+        <div style="flex:1;min-width:170px;background:var(--gl);border:1px solid var(--bd);border-radius:12px;padding:13px 15px">
+          <div style="font-size:12px;color:var(--ts)">可提现余额（可用）</div>
+          <div style="font-size:23px;font-weight:800;color:var(--g);line-height:1.2;margin-top:4px">${money(a.avail)}</div></div>
+        <div style="flex:1;min-width:170px;background:var(--bd2);border:1px solid var(--bd);border-radius:12px;padding:13px 15px">
+          <div style="font-size:12px;color:var(--ts)">在途（未结算货款）</div>
+          <div style="font-size:20px;font-weight:700;color:var(--ts);line-height:1.2;margin-top:4px">${money(a.pending)}</div></div>
+      </div>
+      <h4 style="font-size:13.5px;margin:0 0 10px">收款银行卡</h4>
+      ${a.banks.length?`<table style="margin-bottom:18px"><thead><tr><th>银行</th><th>账号</th><th>户名</th><th>SWIFT</th><th>默认</th></tr></thead><tbody>
+        ${a.banks.map(b=>`<tr><td>${b.bank}</td><td class="mono">****${b.no}</td><td>${b.holder}</td><td class="mono">${b.swift}</td><td>${b.def?'<span class="tag t-g"><span class="dot"></span>默认</span>':'—'}</td></tr>`).join('')}
+      </tbody></table>`:`<div class="ib ib-gr" style="margin-bottom:18px"><span class="i">💳</span>商家尚未绑定收款银行卡</div>`}
+      <h4 style="font-size:13.5px;margin:0 0 10px">提现记录</h4>
+      ${a.withdrawals.length?`<table><thead><tr><th>提现单号</th><th>时间</th><th>提现金额</th><th>手续费</th><th>实际到账</th><th>到账银行卡</th><th>状态</th></tr></thead><tbody>
+        ${a.withdrawals.map(x=>`<tr><td class="mono">${x.id}</td><td style="color:var(--ts);font-size:12.5px">${x.date}</td><td style="font-weight:600">${money(x.amt)}</td><td style="color:var(--ts)">${money(WD_FEE)}</td><td style="font-weight:600;color:var(--g)">${money(x.amt-WD_FEE)}</td><td class="mono">${x.bank}</td><td>${tag('withdraw',x.st)}</td></tr>`).join('')}
+      </tbody></table>`:`<div class="empty" style="padding:18px"><div class="e-ic">🧾</div><div class="e-t">暂无提现记录</div></div>`}`;
+  }
+  drawer(`<div class="drawer-hd"><div><h3>收款账户 · ${a.entity||code}</h3>
+    <div style="font-size:12.5px;color:var(--ts);margin-top:2px">${code} · Airwallex 空中云汇 ${tag('awx',a.status)}</div></div>
+    <span class="x" onclick="closeDrawer()">×</span></div>
+    <div class="drawer-bd">${body}
+      <div class="ib ib-gr" style="margin-top:18px"><span class="i">🔒</span>运营端为<b>只读视图</b>：不可代商家提现、绑定 / 解绑银行卡或修改账户资料。如需协助请联系商家在商家端操作。</div>
+    </div>
+    <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 }
 function shopAction(m){
   if(m.onboard=='task_review')return `<button class="btn btn-p btn-sm" onclick="act_reviewTask()">审核</button>`;
