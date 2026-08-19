@@ -3656,19 +3656,21 @@ function shopAllTab(){
     {name:'阳光烘焙原料店',code:'M2026-0820',onboard:'active',cats:'烘焙原料',contact:'李娜',phone:'+65 8890 2231',open:'2026-06-22',vendor:'V2026-0820'},
     {name:'椰丰食品旗舰店',code:'M2026-0805',onboard:'active',cats:'椰浆·调味',contact:'黄文',phone:'+65 9001 7788',open:'2026-06-10',vendor:'V2026-0805'},
   ].filter(r=>!(r.mine&&!m.accountOpened));
-  // 收款账户状态筛选（口径同商家端 S.awx，全部走 pAwxView 统一取数）
-  const FL=[['all','全部'],['none','未开通'],['SUBMITTED','审核中'],['ACTION_REQUIRED','待补充材料'],['ACTIVE','已开通'],['FAILURE','开通失败']];
-  const rows=all.filter(r=>flt=='all'||pAwxView(r.code).status==flt);
-  const tabs=`<div class="tabs" style="margin-bottom:0">${FL.map(([k,l])=>{
-    const n=k=='all'?all.length:all.filter(r=>pAwxView(r.code).status==k).length;
-    return `<div class="tab ${flt==k?'active':''}" onclick="DB.shopAwxFilter='${k}';render()">${l}<span style="color:var(--tt);font-weight:600">（${n}）</span></div>`;}).join('')}</div>`;
+  // 收款账户状态：走顶部筛选卡（口径同商家端 S.awx，全部经 pAwxView 统一取数）
+  const FL=[['none','未开通'],['SUBMITTED','审核中'],['ACTION_REQUIRED','待补充材料'],['ACTIVE','已开通'],['FAILURE','开通失败'],['SUSPENDED','已冻结']];
+  const rows=all.filter(r=>!flt||flt=='all'||pAwxView(r.code).status==flt);
+  const filter=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">收款账户状态</div>
+      <select id="sf-awx" style="min-width:170px"><option value="">全部</option>${FL.map(([k,l])=>`<option value="${k}" ${flt==k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <button class="btn btn-p btn-sm" onclick="DB.shopAwxFilter=document.getElementById('sf-awx').value;render()">查询</button>
+    <button class="btn btn-o btn-sm" onclick="DB.shopAwxFilter='';render()">重置</button>
+  </div></div>`;
   const tr=r=>{const a=pAwxView(r.code);
     return `<tr><td><b>${r.name}</b></td><td class="mono">${r.code}</td><td>${tag('onboard',r.onboard)}</td>
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact}</td><td class="mono">${r.phone}</td><td>${r.open}</td><td class="mono">${r.vendor}</td>
       <td><button class="btn btn-link" onclick="act_pAwxView('${r.code}')">收款账户</button>${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}</td></tr>`;};
-  return `<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
-    <div style="padding:12px 20px 0">${tabs}</div>
+  return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>店铺名称</th><th>店铺编号</th><th>店铺状态</th><th>收款账户</th><th>主营品类</th><th>联系人</th><th>联系电话</th><th>开通时间</th><th>对应供应商</th><th>操作</th></tr></thead>
     <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="10"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">该状态下暂无店铺</div></div></td></tr>`}</tbody>
