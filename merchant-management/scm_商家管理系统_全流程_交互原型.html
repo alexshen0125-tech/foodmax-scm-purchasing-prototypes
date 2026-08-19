@@ -749,6 +749,10 @@ const S = {
      none = 平台侧尚未建号；CREATED/SUBMITTED/ACTION_REQUIRED/ACTIVE/SUSPENDED 为 Airwallex 账户状态；
      FAILURE 为组件 kycStatus 回传的开通失败态 */
   awx:{none:['未开通','t-gr'],CREATED:['待提交','t-gr'],SUBMITTED:['审核中','t-b'],ACTION_REQUIRED:['待补充材料','t-y'],ACTIVE:['已开通','t-g'],SUSPENDED:['已冻结','t-r'],FAILURE:['开通失败','t-r']},
+  /* 店铺营业状态：对齐运营端 ShopOperationStatusEnum（字典 FM_SHOP_OPERATION_STATUS）
+     1=OPERATING 营业中(success) / 2=SUSPENDED 暂停营业(info)
+     代码依据：h5-foodmax-platform src/views/shop/components/ShopListTab.vue:247 getOperationStatusTagType */
+  opstatus:{1:['营业中','t-g'],2:['暂停营业','t-gr']},
 };
 function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
@@ -3651,53 +3655,57 @@ function shopPendingTab(){
 }
 function shopAllTab(){
   const m=DB.merchant, f=DB.shopFilter||{};
+  /* 筛选项与列 1:1 对齐线上运营端「店铺管理 / 店铺列表」
+     代码依据：h5-foodmax-platform src/views/shop/components/ShopListTab.vue
+       筛选 = shopName / shopCode / merchantCode / operationStatus（契约 src/services/common/typings/shop.d.ts:33 ShopListQuery）
+       列 = 店铺名称·店铺简称·店铺编号·营业状态·主营品类·联系人/电话·开通时间·结算方式·最晚付款日·对应供应商·操作
+       操作 = 查看 / 查看营业时间 / 变更营业状态（下拉）
+     本期新增：「收款账户」列 + 「收款账户状态」筛选项 + 操作「收款账户」（线上暂无） */
   const all=[
-    {name:DB.shop.name||'（未命名店铺）',code:m.code,onboard:m.onboard,cats:DB.shop.cats.join('·')||'—',contact:m.contact,phone:m.phone,open:'2026-06-20',vendor:'V2026-0815',mine:true},
-    {name:'阳光烘焙原料店',code:'M2026-0820',onboard:'active',cats:'烘焙原料',contact:'李娜',phone:'+65 8890 2231',open:'2026-06-22',vendor:'V2026-0820'},
-    {name:'椰丰食品旗舰店',code:'M2026-0805',onboard:'active',cats:'椰浆·调味',contact:'黄文',phone:'+65 9001 7788',open:'2026-06-10',vendor:'V2026-0805'},
+    {shopName:DB.shop.name||'（未命名店铺）',shopShort:DB.shop.abbr||'—',shopCode:'SH2026062000001',op:m.onboard=='active'?1:2,
+     cats:DB.shop.cats.join('、')||'—',contact:m.contact,phone:m.phone,openTime:'2026-06-20 10:12',settle:'周结',latestPay:'T+3',mcode:m.code,mine:true},
+    {shopName:'阳光烘焙原料店',shopShort:'阳光烘焙',shopCode:'SH2026062200003',op:1,
+     cats:'烘焙原料',contact:'李娜',phone:'+65 8890 2231',openTime:'2026-06-22 15:40',settle:'周结',latestPay:'T+3',mcode:'M2026-0820'},
+    {shopName:'椰丰食品旗舰店',shopShort:'椰丰',shopCode:'SH2026061000002',op:1,
+     cats:'椰浆、调味品',contact:'黄文',phone:'+65 9001 7788',openTime:'2026-06-10 09:05',settle:'半月结',latestPay:'T+5',mcode:'M2026-0805'},
   ].filter(r=>!(r.mine&&!m.accountOpened));
-  /* 顶部筛选卡：按列表可筛字段一次配齐（对齐运营端 list.vue 的 filter-form 形态）。
-     店铺名称/编号/供应商为模糊匹配，店铺状态与收款账户状态为枚举，开通时间为区间。
-     收款账户状态口径同商家端 S.awx，取数统一走 pAwxView。 */
   const AWXFL=[['none','未开通'],['SUBMITTED','审核中'],['ACTION_REQUIRED','待补充材料'],['ACTIVE','已开通'],['FAILURE','开通失败'],['SUSPENDED','已冻结']];
-  const OBFL=[['scm_pending','入驻审核中'],['task','待完成开店任务'],['task_review','开店任务审核中'],['task_rejected','开店任务被驳回'],['active','营业中']];
+  const OPFL=[[1,'营业中'],[2,'暂停营业']];
   const low=s=>(s||'').toLowerCase();
   const rows=all.filter(r=>{
-    const a=pAwxView(r.code);
-    if(f.name&&!r.name.includes(f.name))return false;
-    if(f.code&&!low(r.code).includes(low(f.code)))return false;
-    if(f.onboard&&r.onboard!=f.onboard)return false;
+    const a=pAwxView(r.mcode);
+    if(f.shopName&&!r.shopName.includes(f.shopName))return false;
+    if(f.shopCode&&!low(r.shopCode).includes(low(f.shopCode)))return false;
+    if(f.mcode&&!low(r.mcode).includes(low(f.mcode)))return false;
+    if(f.op&&r.op!=+f.op)return false;
     if(f.awx&&a.status!=f.awx)return false;
-    if(f.cat&&!r.cats.includes(f.cat))return false;
-    if(f.vendor&&!low(r.vendor).includes(low(f.vendor)))return false;
-    if(f.from&&r.open<f.from)return false;
-    if(f.to&&r.open>f.to)return false;
     return true;
   });
   const ENTER=`onkeydown="if(event.key=='Enter')shopQuery()"`;
   const filter=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">店铺名称</div><input id="sf-name" value="${f.name||''}" placeholder="支持模糊搜索" style="min-width:180px" ${ENTER}></div>
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">店铺编号</div><input id="sf-code" value="${f.code||''}" placeholder="如 M2026-0820" style="min-width:160px" ${ENTER}></div>
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">店铺状态</div>
-      <select id="sf-onboard" style="min-width:170px"><option value="">全部</option>${OBFL.map(([k,l])=>`<option value="${k}" ${f.onboard==k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">店铺名称</div><input id="sf-shopname" value="${f.shopName||''}" placeholder="请输入店铺名称" style="min-width:190px" ${ENTER}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">店铺编号</div><input id="sf-shopcode" value="${f.shopCode||''}" placeholder="请输入店铺编号" style="min-width:190px" ${ENTER}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">商家编号</div><input id="sf-mcode" value="${f.mcode||''}" placeholder="请输入商家编号" style="min-width:190px" ${ENTER}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">营业状态</div>
+      <select id="sf-op" style="min-width:170px"><option value="">全部</option>${OPFL.map(([k,l])=>`<option value="${k}" ${f.op==k?'selected':''}>${l}</option>`).join('')}</select></div>
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">收款账户状态</div>
       <select id="sf-awx" style="min-width:170px"><option value="">全部</option>${AWXFL.map(([k,l])=>`<option value="${k}" ${f.awx==k?'selected':''}>${l}</option>`).join('')}</select></div>
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">主营品类</div><input id="sf-cat" value="${f.cat||''}" placeholder="如 叶菜类" style="min-width:150px" ${ENTER}></div>
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">对应供应商</div><input id="sf-vendor" value="${f.vendor||''}" placeholder="如 V2026-0820" style="min-width:160px" ${ENTER}></div>
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开通时间起</div><input type="date" id="sf-from" value="${f.from||''}" style="min-width:160px"></div>
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开通时间止</div><input type="date" id="sf-to" value="${f.to||''}" style="min-width:160px"></div>
     <button class="btn btn-p btn-sm" onclick="shopQuery()">查询</button>
     <button class="btn btn-o btn-sm" onclick="DB.shopFilter={};render()">重置</button>
   </div></div>`;
-  const tr=r=>{const a=pAwxView(r.code);
-    return `<tr><td><b>${r.name}</b></td><td class="mono">${r.code}</td><td>${tag('onboard',r.onboard)}</td>
+  const tr=r=>{const a=pAwxView(r.mcode);
+    return `<tr><td><b>${r.shopName}</b></td><td>${r.shopShort}</td><td class="mono">${r.shopCode}</td>
+      <td>${tag('opstatus',r.op)}</td>
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
-      <td>${r.cats}</td><td>${r.contact}</td><td class="mono">${r.phone}</td><td>${r.open}</td><td class="mono">${r.vendor}</td>
-      <td><button class="btn btn-link" onclick="act_pAwxView('${r.code}')">收款账户</button>${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}</td></tr>`;};
+      <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
+      <td><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
+        ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
+        <button class="btn btn-link" onclick="toast('查看营业时间（只读）','info')">查看营业时间</button>
+        <button class="btn btn-link" onclick="toast('变更营业状态：${r.op==1?'暂停营业':'营业中'}','info')">变更营业状态</button></td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>店铺名称</th><th>店铺编号</th><th>店铺状态</th><th>收款账户</th><th>主营品类</th><th>联系人</th><th>联系电话</th><th>开通时间</th><th>对应供应商</th><th>操作</th></tr></thead>
-    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="10"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
+    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>操作</th></tr></thead>
+    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="12"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
 }
 
@@ -3705,8 +3713,8 @@ function shopAllTab(){
 function shopQuery(){
   const v=id=>((document.getElementById(id)||{}).value||'');
   DB.shopFilter={
-    name:v('sf-name').trim(), code:v('sf-code').trim(), onboard:v('sf-onboard'), awx:v('sf-awx'),
-    cat:v('sf-cat').trim(), vendor:v('sf-vendor').trim(), from:v('sf-from'), to:v('sf-to'),
+    shopName:v('sf-shopname').trim(), shopCode:v('sf-shopcode').trim(),
+    mcode:v('sf-mcode').trim(), op:v('sf-op'), awx:v('sf-awx'),
   };
   render();
 }
