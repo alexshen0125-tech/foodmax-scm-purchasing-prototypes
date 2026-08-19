@@ -1,5 +1,5 @@
 /* Food Max 商家端 v2 · 收款账户（Airwallex 空中云汇 · Embedded Onboarding 组件）
-   入口：底部「账户」Tab（一级，主入口）+「我的 → 账号管理」（二级，兜底）。三态与 PC 端账户管理页口径完全一致
+   入口：底部「账户」Tab（唯一菜单入口）。三态与 PC 端账户管理页口径完全一致
    (scm_商家管理系统_全流程_交互原型.html · PAGES['m-account'] / awxStatusCard)：
      未开通 none / CREATED            → 说明 + 备料清单 + 「开通收款账户」
      认证中 SUBMITTED / ACTION_REQUIRED → 审核进度 / 补件待办
@@ -118,9 +118,9 @@ let DOC_TYPE='COMPANY';
 const loc=()=>(AWX.locale=='zh'&&!ZH_OK[AWX.country])?'en':AWX.locale;
 const T=(zh,en)=>loc()=='zh'?zh:en;
 
-/* ===== 主页：底部「账户」Tab（一级入口）/ 「我的 → 账号管理」（二级入口）=====
-   两个入口渲染同一内容：Tab 内联渲染（主按钮内嵌，底部让给 tabbar）；
-   二级入口走 pushPage（主按钮走固定 page-footer）。CTX 记录当前宿主，供子页返回后重渲染。 */
+/* ===== 主页：底部「账户」Tab（唯一菜单入口，内联渲染，主按钮 sticky 吸底）=====
+   openAwxAccount 为推页形态，保留给消息中心 / 工作台的「补件待办」等场景直接跳转，不挂菜单。
+   两者渲染同一内容；CTX 记录当前宿主，供子页返回后重渲染。 */
 let CTX={host:null,inline:false};
 function accountInline(container){
   container.innerHTML=`<div class="aw-hd"><div class="t disp">账户</div></div><div id="aw-root"></div>`;
@@ -350,6 +350,6 @@ function openRfi(){
 }
 
 window.FM_MOD=window.FM_MOD||{};
-window.FM_MOD.accountInline=accountInline;   // 底部「账户」Tab（一级入口）
-window.FM_MOD.awxAccount=openAwxAccount;     // 「我的 → 账号管理」（二级入口）
+window.FM_MOD.accountInline=accountInline;   // 底部「账户」Tab —— 唯一菜单入口
+window.FM_MOD.awxAccount=openAwxAccount;     // 推页形态，供消息/工作台待办跳转，不挂菜单
 })();
