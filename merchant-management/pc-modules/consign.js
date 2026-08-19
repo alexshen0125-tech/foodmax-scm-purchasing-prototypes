@@ -158,10 +158,11 @@ PAGES['p-consign']=()=>{
       <button class="btn btn-p">新建供货单</button><button class="btn btn-o">预约发货</button><button class="btn btn-o">导出</button>
     </div></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>供货单号</th><th>商家店铺</th><th>仓库</th><th>期望到货时间</th><th>WMS 入库单</th><th>状态</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
+    <thead><tr><th>供货单号</th><th>商家编码</th><th>商家店铺</th><th>仓库</th><th>期望到货时间</th><th>WMS 入库单</th><th>状态</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
     <tbody>${list.map(c=>`<tr>
       <td class="mono">${c.consignOrderNo}</td>
-      <td>${c.shopName}<div style="font-size:11px;color:var(--ts)">${c.merchantCode}</div></td>
+      <td class="mono">${c.merchantCode}</td>
+      <td>${c.shopName}</td>
       <td>${c.warehouseName}</td>
       <td>${c.expectArrivalTime.slice(0,16)}</td>
       <td class="mono" style="font-size:12px">${dash(c.wmsOrderNo)}</td>
@@ -172,7 +173,7 @@ PAGES['p-consign']=()=>{
         <button class="btn btn-o btn-sm" onclick="cgDetail('${c.consignOrderNo}')">详情</button>
         ${canReturn(c)?` <button class="btn btn-link btn-sm" onclick="crCreate('${c.consignOrderNo}')">退货</button>`:''}
         ${canCancel(c)?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="cgCancelAsk('${c.consignOrderNo}')">作废</button>`:''}
-      </td></tr>`).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:22px">该状态暂无供货单</td></tr>`}
+      </td></tr>`).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--ts);padding:22px">该状态暂无供货单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 
@@ -187,24 +188,28 @@ window.cgDetail=function(no){
     ${c.status==50?`<div class="ib ib-gr"><span class="i">🚫</span>本单已于 ${c.cancelTime} 由 ${c.cancelName} 作废，不可恢复，也不能发起退货。</div>`:''}
     <dl class="dl">
       <dt>状态</dt><dd>${cgTag(c.status)}</dd>
-      <dt>商家店铺</dt><dd>${c.shopName} · <span class="mono">${c.merchantCode}</span></dd>
-      <dt>仓库</dt><dd>${c.warehouseName} · <span class="mono">${c.warehouseCode}</span></dd>
+      <dt>商家编码</dt><dd class="mono">${c.merchantCode}</dd>
+      <dt>商家店铺</dt><dd>${c.shopName}</dd>
+      <dt>仓库编码</dt><dd class="mono">${c.warehouseCode}</dd>
+      <dt>仓库</dt><dd>${c.warehouseName}</dd>
       <dt>期望到货时间</dt><dd>${c.expectArrivalTime}</dd>
       <dt>预约到货时间</dt><dd>${dash(c.bookingArrivalTime)}</dd>
       <dt>WMS 入库单号</dt><dd class="mono">${dash(c.wmsOrderNo)}</dd>
       <dt>WMS 推送状态</dt><dd>${WMS_PUSH[c.wmsPushStatus]}</dd>
       <dt>入库完成时间</dt><dd>${dash(c.inboundFinishTime)}</dd>
-      <dt>创建人 / 时间</dt><dd>${c.createName} · ${c.createTime}</dd>
-      ${c.status==50?`<dt>作废人 / 时间</dt><dd>${c.cancelName} · ${c.cancelTime}</dd>`:''}
+      <dt>创建人</dt><dd>${c.createName}</dd>
+      <dt>创建时间</dt><dd>${c.createTime}</dd>
+      ${c.status==50?`<dt>作废人</dt><dd>${c.cancelName}</dd><dt>作废时间</dt><dd>${c.cancelTime}</dd>`:''}
       <dt>备注</dt><dd>${dash(c.remark)}</dd>
     </dl>
 
     <div style="font-weight:600;font-size:13px;margin:18px 2px 6px">商品明细</div>
-    <table><thead><tr><th>货品编码</th><th>商品名称 / 规格</th><th>单位</th>
+    <table><thead><tr><th>货品编码</th><th>商品名称</th><th>规格</th><th>单位</th>
       <th style="text-align:right">供货数量</th><th style="text-align:right">实际入库数量</th><th style="text-align:right">已退数量</th></tr></thead><tbody>
       ${c.items.map(i=>{const rq=returnedQty(no,i.itemCode);return `<tr>
         <td class="mono">${i.itemCode}</td>
-        <td><b>${i.itemName}</b><div style="font-size:11.5px;color:var(--ts)">${i.itemSpec}</div></td>
+        <td><b>${i.itemName}</b></td>
+        <td style="color:var(--ts)">${i.itemSpec}</td>
         <td>${i.measureUnitDesc}</td>
         <td style="text-align:right">${i.quantity}</td>
         <td style="text-align:right;font-weight:600">${i.actualQuantity==null?'<span style="color:var(--tt)">—</span>':i.actualQuantity}</td>
@@ -272,20 +277,22 @@ PAGES['p-consign-return']=()=>{
   <div class="card"><div class="card-hd"><h3>退货单列表</h3><span class="sub">共 ${list.length} 单 · 每张退货单必须关联一张已完成的供货单</span>
     <div class="row" style="margin-left:auto;gap:8px"><button class="btn btn-p" onclick="crPick()">＋ 新建退货单</button><button class="btn btn-o">导出</button></div></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>退货单号</th><th>关联供货单</th><th>商家店铺</th><th>仓库</th><th>退货明细</th><th>WMS 出库单</th><th>状态</th><th>创建人 / 时间</th><th>操作</th></tr></thead>
+    <thead><tr><th>退货单号</th><th>关联供货单</th><th>商家店铺</th><th>仓库</th><th>退货商品</th><th>退货数量</th><th>WMS 出库单</th><th>状态</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
     <tbody>${list.map(r=>`<tr>
       <td class="mono">${r.returnOrderNo}</td>
       <td><button class="btn btn-link btn-sm" style="padding:0" onclick="cgDetail('${r.consignOrderNo}')">${r.consignOrderNo}</button></td>
       <td>${r.shopName}</td>
       <td>${r.warehouseName}</td>
-      <td style="min-width:180px;max-width:250px;white-space:normal">${r.items.map(i=>`<div>${meta(i.itemCode).itemName} <span style="color:var(--ts)">${i.returnQuantity}${meta(i.itemCode).measureUnitDesc}</span></div>`).join('')}</td>
+      <td style="min-width:130px;white-space:normal">${r.items.map(i=>`<div>${meta(i.itemCode).itemName}</div>`).join('')}</td>
+      <td style="white-space:nowrap">${r.items.map(i=>`<div>${i.returnQuantity} ${meta(i.itemCode).measureUnitDesc}</div>`).join('')}</td>
       <td class="mono" style="font-size:12px">${dash(r.wmsOrderNo)}</td>
       <td>${crTag(r.status)}</td>
-      <td>${r.createName}<div style="font-size:11px;color:var(--ts)">${r.createTime}</div></td>
+      <td>${r.createName}</td>
+      <td style="font-size:12px">${r.createTime}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-o btn-sm" onclick="crDetail('${r.returnOrderNo}')">详情</button>
         ${r.status==10?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="crCancelAsk('${r.returnOrderNo}')">作废</button>`:''}
-      </td></tr>`).join('')||`<tr><td colspan="9" style="text-align:center;color:var(--ts);padding:22px">该状态暂无退货单</td></tr>`}
+      </td></tr>`).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">该状态暂无退货单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 
@@ -322,7 +329,7 @@ window.crPick=function(){
       <span style="font-size:12.5px;color:var(--ts)">可退供货单 <b id="cr-pick-cnt">${pool.length}</b> 单</span>
       <button class="btn btn-link btn-sm" style="margin-left:auto;padding:0" onclick="crPickReset()">重置筛选</button>
     </div>
-    <table><thead><tr><th>供货单号</th><th>商家店铺</th><th>仓库</th><th>入库完成时间</th><th style="text-align:right">可退合计</th><th></th></tr></thead>
+    <table><thead><tr><th>供货单号</th><th>商家编码</th><th>商家店铺</th><th>仓库</th><th>入库完成时间</th><th style="text-align:right">可退合计</th><th></th></tr></thead>
     <tbody id="cr-pick-tb">${crPickRows()}</tbody></table>`
     :`<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无可退货的供货单</div><div class="e-s">只有「已完成」且实际入库数量未退完的供货单可以发起退货</div></div>`}
   </div>
@@ -330,10 +337,11 @@ window.crPick=function(){
 };
 function crPickRows(){
   const list=crPickList();
-  if(!list.length)return `<tr><td colspan="6" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的可退供货单</td></tr>`;
+  if(!list.length)return `<tr><td colspan="7" style="text-align:center;color:var(--ts);padding:22px">没有符合筛选条件的可退供货单</td></tr>`;
   return list.map(c=>{const tot=c.items.reduce((a,i)=>a+returnableQty(c,i),0);return `<tr>
     <td class="mono">${c.consignOrderNo}</td>
-    <td>${c.shopName}<div style="font-size:11px;color:var(--ts)">${c.merchantCode}</div></td>
+    <td class="mono">${c.merchantCode}</td>
+    <td>${c.shopName}</td>
     <td>${c.warehouseName}</td>
     <td style="font-size:12px">${c.inboundFinishTime}</td>
     <td style="text-align:right;font-weight:600">${tot}</td>
@@ -371,7 +379,8 @@ function crPaint(){
   <div class="drawer-bd">
     <dl class="dl">
       <dt>关联供货单</dt><dd class="mono">${c.consignOrderNo}</dd>
-      <dt>商家店铺</dt><dd>${c.shopName} · <span class="mono">${c.merchantCode}</span></dd>
+      <dt>商家编码</dt><dd class="mono">${c.merchantCode}</dd>
+      <dt>商家店铺</dt><dd>${c.shopName}</dd>
       <dt>退货出库仓</dt><dd>${c.warehouseName}（与供货单入库仓一致，不可改）</dd>
       <dt>入库完成时间</dt><dd>${c.inboundFinishTime}</dd>
     </dl>
@@ -379,11 +388,13 @@ function crPaint(){
     <div style="font-weight:600;font-size:13px;margin:18px 2px 6px">退货商品明细 · 勾选后填写本次退货数量</div>
     <table><thead><tr>
       <th style="width:36px"><input type="checkbox" ${d.lines.every(l=>l.able<=0||l.checked)&&picked.length?'checked':''} onclick="crCheckAll(this.checked)"></th>
-      <th>商品名称 / 规格</th><th style="text-align:right">实际入库</th><th style="text-align:right">已退</th><th style="text-align:right">可退</th><th style="text-align:right">本次退货数量</th>
+      <th>货品编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">实际入库</th><th style="text-align:right">已退</th><th style="text-align:right">可退</th><th style="text-align:right">本次退货数量</th>
     </tr></thead><tbody>
       ${d.lines.map((l,ix)=>`<tr style="${l.able<=0?'opacity:.5':''}">
         <td><input type="checkbox" ${l.checked?'checked':''} ${l.able<=0?'disabled':''} onclick="crCheck(${ix},this.checked)"></td>
-        <td><b>${l.itemName}</b><div style="font-size:11.5px;color:var(--ts)">${l.itemSpec} · <span class="mono">${l.itemCode}</span></div></td>
+        <td class="mono" style="font-size:12px">${l.itemCode}</td>
+        <td><b>${l.itemName}</b></td>
+        <td style="color:var(--ts)">${l.itemSpec}</td>
         <td style="text-align:right">${l.actualQuantity}</td>
         <td style="text-align:right">${l.returned||'—'}</td>
         <td style="text-align:right;font-weight:600">${l.able}</td>
@@ -463,21 +474,24 @@ window.crDetail=function(no){
       <dt>状态</dt><dd>${crTag(r.status)}</dd>
       <dt>关联供货单</dt><dd><button class="btn btn-link btn-sm" style="padding:0" onclick="cgDetail('${r.consignOrderNo}')">${r.consignOrderNo}</button></dd>
       <dt>商家店铺</dt><dd>${r.shopName}</dd>
-      <dt>退货出库仓</dt><dd>${r.warehouseName} · <span class="mono">${r.warehouseCode}</span></dd>
+      <dt>出库仓编码</dt><dd class="mono">${r.warehouseCode}</dd>
+      <dt>退货出库仓</dt><dd>${r.warehouseName}</dd>
       <dt>WMS 出库单号</dt><dd class="mono">${dash(r.wmsOrderNo)}</dd>
       <dt>WMS 推送状态</dt><dd>${WMS_PUSH[r.wmsPushStatus]}</dd>
       <dt>出库完成时间</dt><dd>${dash(r.outboundFinishTime)}</dd>
-      <dt>创建人 / 时间</dt><dd>${r.createName} · ${r.createTime}</dd>
-      ${r.status==30?`<dt>作废人 / 时间</dt><dd>${r.cancelName} · ${r.cancelTime}</dd>`:''}
+      <dt>创建人</dt><dd>${r.createName}</dd>
+      <dt>创建时间</dt><dd>${r.createTime}</dd>
+      ${r.status==30?`<dt>作废人</dt><dd>${r.cancelName}</dd><dt>作废时间</dt><dd>${r.cancelTime}</dd>`:''}
       <dt>备注</dt><dd>${dash(r.remark)}</dd>
     </dl>
 
     <div style="font-weight:600;font-size:13px;margin:18px 2px 6px">退货商品明细</div>
-    <table><thead><tr><th>货品编码</th><th>商品名称 / 规格</th><th>单位</th>
+    <table><thead><tr><th>货品编码</th><th>商品名称</th><th>规格</th><th>单位</th>
       <th style="text-align:right">实际入库数量</th><th style="text-align:right">本次退货数量</th><th style="text-align:right">实际出库数量</th></tr></thead><tbody>
       ${r.items.map(i=>{const m=meta(i.itemCode);const src=c?c.items.find(x=>x.itemCode==i.itemCode):null;return `<tr>
         <td class="mono">${i.itemCode}</td>
-        <td><b>${m.itemName}</b><div style="font-size:11.5px;color:var(--ts)">${m.itemSpec}</div></td>
+        <td><b>${m.itemName}</b></td>
+        <td style="color:var(--ts)">${m.itemSpec}</td>
         <td>${m.measureUnitDesc}</td>
         <td style="text-align:right">${src&&src.actualQuantity!=null?src.actualQuantity:'<span style="color:var(--tt)">—</span>'}</td>
         <td style="text-align:right;font-weight:600">${i.returnQuantity}</td>
