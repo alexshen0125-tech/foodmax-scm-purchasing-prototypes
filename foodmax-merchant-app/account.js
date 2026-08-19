@@ -81,7 +81,11 @@ css.textContent=`
 .aw-warn{font-size:12.5px;color:var(--amber);line-height:1.6;padding:10px 20px 0;}
 .aw-sim{font-size:12px;color:var(--sub);line-height:2;padding:16px 20px 0;border-top:1px dashed var(--line);margin:16px 16px 0;}
 .aw-sim a{color:var(--emerald);font-weight:700;margin-right:14px;cursor:pointer;}
-.aw-tip{font-size:12.5px;color:var(--sub);line-height:1.7;padding:14px 20px 0;}`;
+.aw-tip{font-size:12.5px;color:var(--sub);line-height:1.7;padding:14px 20px 0;}
+/* Tab 内联模式的吸底主按钮：sticky 常驻在滚动容器底部，不用滚到底才看得到
+   （pushPage 进入时走 FM 的固定 page-footer，形态一致） */
+.aw-fab{position:sticky;bottom:0;padding:14px 16px 16px;z-index:12;
+  background:linear-gradient(180deg,rgba(244,251,247,0) 0%,var(--bg) 42%);}`;
 document.head.appendChild(css);
 
 /* ===== 状态与配置（与 PC 端 DB.awx / AWX_* 常量同口径）===== */
@@ -184,9 +188,8 @@ function renderAccount(){
       </div>`;
   }
   const act=()=>foot.a=='go'?startKyc():openRfi();
-  root.innerHTML=hero+extra
-    +(CTX.inline&&foot?`<div style="padding:20px 16px 0"><button class="btn primary" id="aw-foot2">${foot.t}</button></div>`:'')
-    +'<div style="height:20px"></div>';
+  root.innerHTML=hero+extra+'<div style="height:20px"></div>'
+    +(CTX.inline&&foot?`<div class="aw-fab"><button class="btn primary" id="aw-foot2">${foot.t}</button></div>`:'');
   if(CTX.inline){
     const b=root.querySelector('#aw-foot2'); if(b)b.onclick=act;
   }else{
