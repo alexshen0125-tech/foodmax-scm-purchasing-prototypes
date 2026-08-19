@@ -1,5 +1,5 @@
 /* Food Max 商家端 v2 · 收款账户（Airwallex 空中云汇 · Embedded Onboarding 组件）
-   入口：「我的」→ 账号管理。三态与 PC 端账户管理页口径完全一致
+   入口：底部「账户」Tab（一级，主入口）+「我的 → 账号管理」（二级，兜底）。三态与 PC 端账户管理页口径完全一致
    (scm_商家管理系统_全流程_交互原型.html · PAGES['m-account'] / awxStatusCard)：
      未开通 none / CREATED            → 说明 + 备料清单 + 「开通收款账户」
      认证中 SUBMITTED / ACTION_REQUIRED → 审核进度 / 补件待办
@@ -14,6 +14,8 @@ const {pushPage,popPage,toast,confirmDialog,svg}=window.FM;
 
 const css=document.createElement('style');
 css.textContent=`
+.aw-hd{padding:14px 20px 6px;}
+.aw-hd .t{font-size:26px;font-weight:700;color:var(--ink);}
 .aw-hero{margin:14px 16px 0;border-radius:20px;padding:20px 18px;background:#fff;box-shadow:var(--sh-sm);}
 .aw-hero .st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:20px;}
 .aw-hero .st .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
@@ -100,7 +102,7 @@ const ZH_OK={CN:1,HK:1,TW:1,SG:1,MY:1};   // 注册国是否支持 zh —— 待
 const BIZ_TYPES=[['COMPANY','公司'],['PARTNERSHIP','合伙企业'],['SOLE_REG','个体户(已注册)'],['SOLE_UNREG','个体户(未注册)']];
 const DOCS=[
   {t:'公司注册编号 UEN',n:'业务标识类型 BRN',c:{COMPANY:1,PARTNERSHIP:1,SOLE_REG:1,SOLE_UNREG:0}},
-  {t:'注册地址',n:'门牌、区、邮编',c:{COMPANY:1,PARTNERSHIP:1,SOLE_REG:1,SOLE_UNREG:'以居住地址代替'}},
+  {t:'注册地址',n:'门牌、区、州、邮编',c:{COMPANY:1,PARTNERSHIP:1,SOLE_REG:1,SOLE_UNREG:'以居住地址代替'}},
   {t:'经营主体名称',n:'',c:{COMPANY:1,PARTNERSHIP:1,SOLE_REG:1,SOLE_UNREG:'可用个人姓名'}},
   {t:'经营范围描述 + 行业类目',n:'',c:{COMPANY:1,PARTNERSHIP:1,SOLE_REG:1,SOLE_UNREG:1}},
   {t:'预计月流水',n:'币种 + 金额',c:{COMPANY:1,PARTNERSHIP:1,SOLE_REG:1,SOLE_UNREG:1}},
@@ -112,12 +114,22 @@ let DOC_TYPE='COMPANY';
 const loc=()=>(AWX.locale=='zh'&&!ZH_OK[AWX.country])?'en':AWX.locale;
 const T=(zh,en)=>loc()=='zh'?zh:en;
 
-/* ===== 主页：账号管理 → 收款账户 ===== */
-function openAwxAccount(){
-  const p=pushPage({title:'账号管理',body:'<div id="aw-root"></div>',footer:'<button class="btn primary" id="aw-foot"></button>'});
-  renderAccount(p);
+/* ===== 主页：底部「账户」Tab（一级入口）/ 「我的 → 账号管理」（二级入口）=====
+   两个入口渲染同一内容：Tab 内联渲染（主按钮内嵌，底部让给 tabbar）；
+   二级入口走 pushPage（主按钮走固定 page-footer）。CTX 记录当前宿主，供子页返回后重渲染。 */
+let CTX={host:null,inline:false};
+function accountInline(container){
+  container.innerHTML=`<div class="aw-hd"><div class="t disp">账户</div></div><div id="aw-root"></div>`;
+  CTX={host:container,inline:true};
+  renderAccount();
 }
-function renderAccount(p){
+function openAwxAccount(){
+  const p=pushPage({title:'账户',body:'<div id="aw-root"></div>',footer:'<button class="btn primary" id="aw-foot"></button>'});
+  CTX={host:p,inline:false};
+  renderAccount();
+}
+function renderAccount(){
+  const p=CTX.host; if(!p||!p.querySelector('#aw-root'))return;
   const root=p.querySelector('#aw-root');
   const a=AWX, ok=!!COUNTRIES[a.country], s=ST[a.status];
   let hero='',extra='',foot='';
@@ -171,12 +183,19 @@ function renderAccount(p){
         <div class="aw-it"><span class="k">开通时间</span><span class="v">${a.activeAt}</span></div>
       </div>`;
   }
-  root.innerHTML=hero+extra+'<div style="height:20px"></div>';
-  const ftw=p.querySelector('.page-footer'), fb=p.querySelector('#aw-foot');
-  if(foot){ftw.style.display='';fb.textContent=foot.t;fb.className='btn primary';fb.onclick=foot.a=='go'?()=>startKyc(p):()=>openRfi(p);}
-  else ftw.style.display='none';
-  p.querySelectorAll('.aw-tab').forEach(t=>t.onclick=()=>{DOC_TYPE=t.dataset.k;renderAccount(p);});
-  p.querySelectorAll('.aw-sim a').forEach(a=>a.onclick=()=>hook(a.dataset.st,p));
+  const act=()=>foot.a=='go'?startKyc():openRfi();
+  root.innerHTML=hero+extra
+    +(CTX.inline&&foot?`<div style="padding:20px 16px 0"><button class="btn primary" id="aw-foot2">${foot.t}</button></div>`:'')
+    +'<div style="height:20px"></div>';
+  if(CTX.inline){
+    const b=root.querySelector('#aw-foot2'); if(b)b.onclick=act;
+  }else{
+    const ftw=p.querySelector('.page-footer'), fb=p.querySelector('#aw-foot');
+    if(foot){ftw.style.display='';fb.textContent=foot.t;fb.className='btn primary';fb.onclick=act;}
+    else ftw.style.display='none';
+  }
+  p.querySelectorAll('.aw-tab').forEach(t=>t.onclick=()=>{DOC_TYPE=t.dataset.k;renderAccount();});
+  p.querySelectorAll('.aw-sim a').forEach(a=>a.onclick=()=>hook(a.dataset.st));
 }
 function docSection(){
   return `<div class="aw-sec">开通前请准备</div>
@@ -193,12 +212,12 @@ function simRow(){
   return `<div class="aw-sim">沙箱 · 模拟 Airwallex webhook 回调<br>
     <a data-st="ACTIVE">审核通过</a><a data-st="ACTION_REQUIRED">需要补件</a><a data-st="FAILURE">审核拒绝</a></div>`;
 }
-function hook(st,p){
+function hook(st){
   AWX.status=st;
   if(st=='ACTIVE'){AWX.activeAt='2026-08-19 15:20';toast('账户已开通');}
   if(st=='ACTION_REQUIRED'){AWX.rfi={id:'rfi_2f81c9',raiseAt:'2026-08-19 15:20',items:['董事 CHEN WEI 的护照影像不清晰，请重新上传','补充经营场所照片或租赁合同']};toast('收到补件通知');}
   if(st=='FAILURE'){AWX.failReason='实控人身份信息与商业登记记录不一致，Airwallex 未通过审核。';toast('开通未通过');}
-  renderAccount(p);
+  renderAccount();
 }
 
 /* ===== 开通：建号(BR-01/02) → PKCE 授权(BR-03/04) → WebView 承载组件 =====
@@ -208,18 +227,18 @@ function hook(st,p){
    legal_entity_type=Business / customer_agreements 两个 true。
    随后 Update 预填 business_person_details（roles 至少一个），取自「法人信息」「经营资质」。
    注：以下 4 步表单为示意——组件内真实字段与分步由 Airwallex 按注册国动态渲染，平台不控制。 */
-function startKyc(p){
+function startKyc(){
   if(!AWX.accountId)AWX.accountId='acct_sg7k2m9x4p';        // BR-02：已有则复用
   if(AWX.status=='none'||AWX.status=='FAILURE'){AWX.status='CREATED';AWX.failReason='';}
   AWX.kycStep=1;
-  openKyc(p);
+  openKyc();
 }
 const STEPS=[['企业信息','Business details'],['人员与实控人','People & UBOs'],['证件上传','Identity documents'],['确认提交','Review & submit']];
-function openKyc(parent){
+function openKyc(){
   const p=pushPage({title:'开通收款账户',body:'<div id="aw-kyc"></div>',footer:'<button class="btn primary" id="aw-nx"></button>'});
-  renderKyc(p,parent);
+  renderKyc(p);
 }
-function renderKyc(p,parent){
+function renderKyc(p){
   const a=AWX, st=a.kycStep, L=loc();
   let form='';
   if(st==1){
@@ -275,16 +294,16 @@ function renderKyc(p,parent){
   const btn=p.querySelector('#aw-nx');
   btn.textContent=st<4?T('下一步','Next'):T('提交认证','Submit');
   btn.onclick=()=>{
-    if(st<4){AWX.kycStep=st+1;renderKyc(p,parent);p.querySelector('.screen').scrollTop=0;}
+    if(st<4){AWX.kycStep=st+1;renderKyc(p);p.querySelector('.screen').scrollTop=0;}
     else{
       btn.classList.add('loading');
       setTimeout(()=>{
         AWX.status='SUBMITTED';AWX.submitAt='2026-08-19 14:32';AWX.kycStep=1;
-        popPage();renderAccount(parent);toast('资料已提交 Airwallex 审核');
+        popPage();renderAccount();toast('资料已提交 Airwallex 审核');
       },600);
     }
   };
-  p.querySelectorAll('.lg').forEach(l=>l.onclick=()=>{AWX.locale=l.dataset.l;renderKyc(p,parent);});
+  p.querySelectorAll('.lg').forEach(l=>l.onclick=()=>{AWX.locale=l.dataset.l;renderKyc(p);});
   const addp=p.querySelector('#aw-addp'); if(addp)addp.onclick=()=>toast(T('打开新增人员表单','Add person form'));
   /* App 特有：拍摄证件需相机权限，首次点击先申请 */
   p.querySelectorAll('.aw-cam').forEach(c=>c.onclick=()=>{
@@ -296,7 +315,7 @@ function renderKyc(p,parent){
 }
 
 /* ===== 补件：Embedded KYC RFI 组件（scope r:awx_action:rfi_view + w:awx_action:rfi_edit）===== */
-function openRfi(parent){
+function openRfi(){
   const r=AWX.rfi;
   if(!r){toast('当前没有待补充的材料');return;}
   const p=pushPage({title:'补充材料',body:`
@@ -311,7 +330,7 @@ function openRfi(parent){
       <input class="fin" placeholder="${T('补充说明（选填）','Additional notes (optional)')}"></div>`).join('')}
     <div style="height:20px"></div>`,
     footer:`<button class="btn primary" id="aw-rs">${T('提交补充材料','Submit')}</button>`});
-  p.querySelectorAll('.lg').forEach(l=>l.onclick=()=>{AWX.locale=l.dataset.l;popPage();openRfi(parent);});
+  p.querySelectorAll('.lg').forEach(l=>l.onclick=()=>{AWX.locale=l.dataset.l;popPage();openRfi();});
   p.querySelectorAll('.aw-cam').forEach(c=>c.onclick=()=>{
     if(AWX.camGranted){c.classList.add('done');c.innerHTML='✓ '+T('已上传','Uploaded');return;}
     confirmDialog({title:'允许 Food Max 访问相机？',body:'用于拍摄证件照片，照片将直接上传至 Airwallex 完成身份认证，Food Max 不留存。',okText:'允许',onOk:()=>{
@@ -322,11 +341,12 @@ function openRfi(parent){
     const b=p.querySelector('#aw-rs');b.classList.add('loading');
     setTimeout(()=>{
       AWX.rfi=null;AWX.status='SUBMITTED';AWX.submitAt='2026-08-19 16:40';
-      popPage();renderAccount(parent);toast('补充材料已提交，等待复审');
+      popPage();renderAccount();toast('补充材料已提交，等待复审');
     },600);
   };
 }
 
 window.FM_MOD=window.FM_MOD||{};
-window.FM_MOD.awxAccount=openAwxAccount;
+window.FM_MOD.accountInline=accountInline;   // 底部「账户」Tab（一级入口）
+window.FM_MOD.awxAccount=openAwxAccount;     // 「我的 → 账号管理」（二级入口）
 })();
