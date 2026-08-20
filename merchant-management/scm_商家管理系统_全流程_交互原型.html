@@ -3668,7 +3668,7 @@ function shopAllTab(){
      cats:'烘焙原料',contact:'李娜',phone:'+65 8890 2231',openTime:'2026-06-22 15:40',settle:'周结',latestPay:'T+3',mcode:'M2026-0820'},
     {shopName:'椰丰食品旗舰店',shopShort:'椰丰',shopCode:'SH2026061000002',op:1,
      cats:'椰浆、调味品',contact:'黄文',phone:'+65 9001 7788',openTime:'2026-06-10 09:05',settle:'半月结',latestPay:'T+5',mcode:'M2026-0805'},
-  ].filter(r=>!(r.mine&&!m.accountOpened));
+  ].filter(r=>!(r.mine&&!m.accountOpened)).map(r=>Object.assign(r,{op:shopOpOf(r)}));
   const AWXFL=[['none','未开通'],['SUBMITTED','审核中'],['ACTION_REQUIRED','待补充材料'],['ACTIVE','已开通'],['FAILURE','开通失败'],['SUSPENDED','已冻结']];
   const OPFL=[[1,'营业中'],[2,'暂停营业']];
   const low=s=>(s||'').toLowerCase();
@@ -3700,13 +3700,59 @@ function shopAllTab(){
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
       <td><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
-        <button class="btn btn-link" onclick="toast('查看营业时间（只读）','info')">查看营业时间</button>
-        <button class="btn btn-link" onclick="toast('变更营业状态：${r.op==1?'暂停营业':'营业中'}','info')">变更营业状态</button></td></tr>`;};
+        <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
+        <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button></td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>操作</th></tr></thead>
     <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="12"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
+}
+
+/* 营业状态：运营变更过则以变更值为准，否则用行默认值（绿鲜源按开店任务状态推导） */
+function shopOpOf(r){const s=DB.shopOpStatus||{};return s[r.mcode]!==undefined?s[r.mcode]:r.op;}
+
+/* 各店铺每日营业时间：绿鲜源直接读商家自维护的 DB.bizCfg.week（商家端「营业管理」改完运营端即时可见），
+   其余为演示数据。线上由平台后端代理 merchant-service 拉取，运营端只读
+   代码依据：h5-foodmax-platform src/views/shop/components/ShopListTab.vue openBusinessHoursDialog */
+const SHOP_HOURS={
+  'M2026-0820':[{d:'周一',on:true,start:'00:00',end:'16:00'},{d:'周二',on:true,start:'00:00',end:'16:00'},{d:'周三',on:true,start:'00:00',end:'16:00'},
+    {d:'周四',on:true,start:'00:00',end:'16:00'},{d:'周五',on:true,start:'00:00',end:'16:00'},{d:'周六',on:true,start:'07:00',end:'13:00'},{d:'周日',on:false,start:'00:00',end:'00:00'}],
+  'M2026-0805':[{d:'周一',on:true,start:'00:00',end:'15:00'},{d:'周二',on:true,start:'00:00',end:'15:00'},{d:'周三',on:true,start:'00:00',end:'15:00'},
+    {d:'周四',on:true,start:'00:00',end:'15:00'},{d:'周五',on:true,start:'00:00',end:'15:00'},{d:'周六',on:true,start:'00:00',end:'15:00'},{d:'周日',on:true,start:'00:00',end:'15:00'}],
+};
+function shopHoursOf(mcode){return mcode==DB.merchant.code?DB.bizCfg.week:(SHOP_HOURS[mcode]||[]);}
+function shopNameOf(mcode){return mcode==DB.merchant.code?(DB.shop.name||'（未命名店铺）'):(mcode=='M2026-0820'?'阳光烘焙原料店':'椰丰食品旗舰店');}
+
+/* 查看营业时间（只读）：展示商家自维护的每日营业时段，运营不可改 */
+function act_shopHours(mcode){
+  const wk=shopHoursOf(mcode), ti=bizTodayIdx();
+  modalWide(`<div class="mc-hd"><h3>查看营业时间 · ${shopNameOf(mcode)}</h3><p>商家在商家端「营业管理」自维护 · 运营端只读 · 平台公共截单时间 ${DB.bizCfg.platformCutoff}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <table><thead><tr><th>星期</th><th>营业状态</th><th>营业时段</th><th>当日截单时间</th></tr></thead><tbody>
+    ${wk.map((w,i)=>`<tr${i===ti?' style="background:#F1F8F1"':''}>
+      <td><b>${w.d}</b>${i===ti?' <span class="tag t-b" style="font-size:10px">今日</span>':''}</td>
+      <td>${w.on?'<span class="tag t-g"><span class="dot"></span>营业</span>':'<span class="tag t-gr">休息</span>'}</td>
+      <td class="mono">${w.on?`${w.start} – ${w.end}`:'—'}</td>
+      <td>${w.on?`<span class="tag t-b">${w.end}</span>`:'—'}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="ib ib-gr" style="margin-top:14px"><span class="i">🔒</span>营业时间由商家自行维护，运营端只读；如需调整请联系商家在商家端「营业管理」修改。</div>
+  </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">确定</button></div>`);
+}
+
+/* 变更营业状态：营业中(1) ⇄ 暂停营业(2)，切换前确认（对应线上操作列的状态下拉） */
+function act_shopOpStatus(mcode){
+  const cur=(DB.shopOpStatus||{})[mcode];
+  const now=cur!==undefined?cur:(mcode==DB.merchant.code?(DB.merchant.onboard=='active'?1:2):1);
+  const next=now==1?2:1;
+  modal(`<div class="mc-hd"><h3>变更营业状态</h3><p>${shopNameOf(mcode)} · ${mcode}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <dl class="dl"><dt>当前状态</dt><dd>${tag('opstatus',now)}</dd><dt>变更为</dt><dd>${tag('opstatus',next)}</dd></dl>
+    ${next==2?`<div class="ib ib-y" style="margin-top:14px"><span class="i">⚠️</span>暂停营业后该店铺商品在商城<b>不可下单</b>，已生成的订单不受影响。</div>`
+              :`<div class="ib ib-g" style="margin-top:14px"><span class="i">✓</span>恢复营业后该店铺商品按其每日营业时间正常接单。</div>`}
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="act_shopOpConfirm('${mcode}',${next})">确认变更</button></div>`);
+}
+function act_shopOpConfirm(mcode,next){
+  DB.shopOpStatus=DB.shopOpStatus||{};DB.shopOpStatus[mcode]=next;
+  closeModal();render();toast(`已变更为${S.opstatus[next][0]}`,'ok');
 }
 
 /* 店铺列表筛选：读齐所有筛选控件后一次查询（回车等同点「查询」） */
