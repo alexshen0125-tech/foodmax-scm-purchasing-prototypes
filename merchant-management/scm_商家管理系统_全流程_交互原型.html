@@ -990,6 +990,7 @@ const NAV={
   merchant:[
     {sec:'经营'},
     {id:'m-dash',ic:'🏠',t:'工作台'},
+    {id:'m-message',ic:'🔔',t:'消息中心',p1:1,badge:()=>typeof msgUnread=='function'?msgUnread():0},
     {id:'m-shop-group',ic:'🏪',t:'店铺管理',p1:1,children:[
       {id:'m-shop',ic:'🏪',t:'店铺信息',badge:()=>(DB.merchant.onboard=='task'||DB.merchant.onboard=='task_rejected')?1:0,by:'y'},
       {id:'m-biz-hours',ic:'🕐',t:'营业管理'},
@@ -1187,7 +1188,7 @@ function render(){
   });
   document.getElementById('nav').innerHTML=nh;
   // topbar
-  const SUBPG={'p-vendor-apply':'供应商信息确认','m-qual':'店铺信息 / 经营资质','m-import':'商品管理 / 批量导入','m-awx-kyc':'账户管理 / 开通收款账户','m-awx-rfi':'账户管理 / 补充材料'};
+  const SUBPG={'p-vendor-apply':'供应商信息确认','m-qual':'店铺信息 / 经营资质','m-import':'商品管理 / 批量导入','m-awx-kyc':'账户管理 / 开通收款账户','m-awx-rfi':'账户管理 / 补充材料','m-message-pref':'消息设置'};
   const cur=navLeaf(r,DB.page)||{t:SUBPG[DB.page]||''};
   const par=NAV[r].find(n=>n.children&&n.children.some(k=>k.id==DB.page));
   document.getElementById('tb-crumb').textContent=meta.name+' / '+(par?par.t+' / ':'')+cur.t;
@@ -1203,8 +1204,10 @@ function topRight(){
     if(DB.orders.filter(o=>o.status=='pending').length) p=`<span class="pill warn">📦 ${DB.orders.filter(o=>o.status=='pending').length} 单待发货</span>`;
     else if(DB.merchant.onboard!='active') p=`<span class="pill info">${S.onboard[DB.merchant.onboard][0]}</span>`;
     else p=`<span class="pill ok">✓ 正常经营 · 信用 ${DB.merchant.grade} 级</span>`;
+    const un=typeof msgUnread=='function'?msgUnread():0;
+    const bell=`<span class="tb-bell" title="消息中心" onclick="nav('m-message')" style="position:relative;cursor:pointer;width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:17px;line-height:1">🔔${un?`<span class="nav-badge" style="position:absolute;top:-2px;right:-4px;margin:0">${un>99?'99+':un}</span>`:''}</span>`;
     return `<div class="tb-dl"><button class="tb-btn">📱 下载 App</button>
-      <div class="tb-dl-pop"><div class="tb-dl-card"><div class="wp-dl" style="border:none;box-shadow:none">${wpDlInner()}</div></div></div></div>`+p+`<div class="avatar" title="${DB.merchant.contact}">陈</div>`;
+      <div class="tb-dl-pop"><div class="tb-dl-card"><div class="wp-dl" style="border:none;box-shadow:none">${wpDlInner()}</div></div></div></div>`+p+bell+`<div class="avatar" title="${DB.merchant.contact}">陈</div>`;
   }
   if(DB.role=='scm'){
     return `<span class="pill info">🏭 供应商主数据 ${DB.merchant.vendorCreated?3:2} 家 · 入驻待审核 4</span><div class="avatar" title="采购管理员">采</div>`;
@@ -4452,5 +4455,6 @@ goHome();
 <script src="pc-modules/supply.js?v=20260817c"></script>
 <script src="pc-modules/replenish.js?v=20260810a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
+<script src="pc-modules/message.js?v=20260821d"></script>
 </body>
 </html>
