@@ -477,7 +477,7 @@ label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
       <div class="rc-go">进入店铺运营平台 →</div>
     </div>
   </div>
-  <div class="home-foot">💡 演示提示：入驻统一走<b>供应商入驻</b>（采购SCM · 二级审批不变），选「平台商家」渠道的建档时<b>自动开通店铺管理系统</b>账号 → 商家登录<b>商家端</b>填「开店任务」(店铺基础信息) → 提交 <b>店铺运营平台</b>「开店任务审核」→ 通过即营业。<br>顶部 / 侧边栏可随时切换角色。 · v1.2 · 2026-06-30</div>
+  <div class="home-foot">💡 演示提示：入驻统一走<b>供应商入驻</b>（采购SCM · 二级审批不变），选「平台商家」渠道的建档时<b>自动开通店铺管理系统</b>账号 → 商家登录<b>商家端</b>填「开店任务」(店铺基础信息) → 提交 <b>店铺运营平台</b>「开店任务审核」→ 通过即营业。<br>顶部 / 侧边栏可随时切换角色。 · v2.3 · 2026-08-20</div>
 </div>
 
 <!-- ================= LOGIN（商家端入口 · 高端视觉版） ================= -->
@@ -652,9 +652,9 @@ const DB = {
     {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',refund:1,qty:1,price:58.00,stock:26,safe:10,sellUnit:'kg'}]},
     {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,mainImgs:['鸡胸肉主图'],status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',refund:0,qty:1,price:13.50,stock:0,safe:20,sellUnit:'kg'}]},
     {id:'SPU8819',name:'生蚝',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'法国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8824',refund:0,qty:1,price:0,stock:0,safe:10,sellUnit:'kg'}]},
-    {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',stdType:'标品',netQty:'330',netUnit:'ml',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,price:2.50,stock:200,safe:30,packUnit:'',stockMode:'finite',sellUnit:'瓶'},{skuId:'SKU8826',qty:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite',sellUnit:'瓶'}]},
+    {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',stdType:'标品',netQty:'330',netUnit:'ml',netPackType:'单品',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,containedPackCount:1,price:2.50,stock:200,safe:30,packUnit:'',stockMode:'finite',sellUnit:'瓶'},{skuId:'SKU8826',qty:24,containedPackCount:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite',sellUnit:'瓶'}]},
     {id:'SPU8821',name:'龙虾',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'澳大利亚',brand:'',desc:'鲜活波士顿龙虾',showExp:'展示生产日期+保质期',img:true,detail:false,status:'rejected',risk:'高',reject:'',note:'',auditOpinions:[{f:'name',label:'商品名称',op:'名称过于笼统，需标注品种（如「波士顿龙虾」）与是否鲜活/冰鲜'},{f:'origin',label:'产地',op:'填写产地与上传的进口报关资料不一致，请核对后填写真实产地'},{f:'img',label:'商品主图',op:'主图含文字水印且非纯白底，不符合平台主图规范，请更换白底实拍图'}],skus:[{skuId:'SKU8827',refund:1,qty:1,price:88.00,stock:12,safe:5,sellUnit:'kg'}]},
-    {id:'SPU8823',name:'即食凉拌海带丝',cat:'海鲜水产',unit:'包',stdType:'标品',netQty:'200',netUnit:'g',saleType:'售卖品',alias:'',origin:'中国山东',brand:'',desc:'开袋即食凉拌海带丝',showExp:'展示生产日期+保质期',img:true,detail:false,status:'forced_off',risk:'高',reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',note:'',skus:[{skuId:'SKU8829',refund:0,qty:1,price:6.80,stock:0,safe:10,off:true,sellUnit:'袋'}]},
+    {id:'SPU8823',name:'即食凉拌海带丝',cat:'海鲜水产',unit:'包',stdType:'标品',netQty:'200',netUnit:'g',netPackType:'单包',saleType:'售卖品',alias:'',origin:'中国山东',brand:'',desc:'开袋即食凉拌海带丝',showExp:'展示生产日期+保质期',img:true,detail:false,status:'forced_off',risk:'高',reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',note:'',skus:[{skuId:'SKU8829',refund:0,qty:1,containedPackCount:1,price:6.80,stock:0,safe:10,off:true,sellUnit:'袋'}]},
   ],
   // 订单履约配置（商家自履约：汇总备货+分拣贴标+交接仓库；下单截止决定送达日；下单即锁佣金）
   orderCfg:{cutoff:'18:00',commRate:0.05},
@@ -865,7 +865,7 @@ DB.materials={
   ],
 };
 const RISK_META={'低':['t-g','r-low'],'中':['t-y','r-mid'],'高':['t-r','r-high']};
-let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[],EDIT_SUPPLY='自售',EDIT_STD='标品';DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};DB.matTab='main';DB.matQ='';
+let SKU_SEQ=8830,SPU_SEQ=8820,EDIT_SKUS=[],EDIT_SUPPLY='自售',EDIT_STD='标品',EDIT_NET_PACK_TYPE='',EDIT_LOCK_SKU_STRUCTURE=false;DB.mTab='all';DB.sel=[];DB.exp=[];DB.auditCfg={auto:true};DB.matTab='main';DB.matQ='';
 /* 多退少补规则（平台统一配置，称重录入 weigh.js 实时读取；单位=差异率%，向上=多发/客户补钱，向下=少发/退客户） */
 DB.weighCfg={tol:2, blockUp:15, blockDown:20, days:7};
 function riskTag(r){if(!r)return '';return `<span class="tag ${RISK_META[r][0]}"><span class="riskdot ${RISK_META[r][1]}"></span>${r}风险</span>`;}
@@ -889,26 +889,48 @@ function act_skuToggle(pi,ki){const p=DB.products[pi];const s=p.skus[ki];const t
 function spuUnit(p){return (p&&(p.netUnit||p.unit))||'';}          // 商品计量单位 = 净含量单位
 function skuSellUnit(p,s){return (s&&s.sellUnit)||(p&&p.consign?(p.stockUnit||''):'')||spuUnit(p);}   // SKU 售卖规格单位；寄售恒等于商品级库存单位；历史数据回落净含量单位
 function skuUnitTxt(p,s){return skuSellUnit(p,s);}
-/* 规格文本：① 填了售卖单位 → 数量+售卖单位（如 1袋 / 24箱）
-   ② 未填售卖单位但有净含量 → 数量×净含量（如 1×500g），避免出现「1g」这种把净含量单位当数量单位的读法
-   ③ 都没有 → 数量+净含量单位（历史数据 unit 兜底，如 1kg） */
+/* 规格文本只表达 SKU 的售卖规格；净含量口径与内含最小包装数由独立字段维护，不从规格字符串反推。 */
 /* 规格文本 = 售卖规格数量 + 售卖规格单位 + /售卖单位，如「1kg/袋」「24瓶/箱」；无售卖单位则「1kg」 */
 function skuSpec(p,s){
   const q=fmtQty(s.qty), u=skuSellUnit(p,s);
   return `${q}${u}${s&&s.packUnit?'/'+s.packUnit:''}`;
 }
-function fmtQty(v){const n=parseFloat(v);if(isNaN(n))return '0';return (Math.round(n*100)/100).toString();}   // 售卖规格数量支持两位小数，去掉多余的 0
+const MAX_SPEC_QTY=2147483647;
+function parseSpecQty(v){const raw=String(v==null?'':v);if(!/^[1-9]\d*$/.test(raw))return null;const n=BigInt(raw);return n<=BigInt(MAX_SPEC_QTY)?Number(n):null;}
+function fmtQty(v){const n=parseSpecQty(v);return n==null?'0':String(n);}   // 售卖规格数量为 1..INT32_MAX
+/* 单件净含量全程保持 DECIMAL(18,6) 的规范字符串，不转 JS Number：
+   正数、整数部分最多12位、小数最多6位；禁止 330abc/1.2.3/1e3 等前缀容错。 */
+function normalizePositiveDecimal(v,maxIntegerDigits,maxScale){
+  const source=String(v==null?'':v);if(source!==source.trim())return null;const raw=source;if(!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(raw))return null;
+  const [ip0,fp0='']=raw.split('.'),ip=ip0.replace(/^0+(?=\d)/,'')||'0',fp=fp0.replace(/0+$/,'');
+  if(maxIntegerDigits&&ip.length>maxIntegerDigits)return null;
+  if(maxScale!=null&&fp0.length>maxScale)return null;
+  if(ip=='0'&&!fp)return null;return fp?`${ip}.${fp}`:ip;
+}
+function parseMeasure(v){return normalizePositiveDecimal(v,12,6);}
+function fmtMeasure(v){return parseMeasure(v)||'';}
+function fmtDerivedMeasure(v){return normalizePositiveDecimal(v,null)||'';}
+function measureGte1000(v){const s=normalizePositiveDecimal(v,null);if(!s)return false;const ip=s.split('.')[0];return ip.length>4||(ip.length==4&&ip>='1000');}
+function measureDiv1000(v){const s=normalizePositiveDecimal(v,null);if(!s)return null;const [ip,fp='']=s.split('.'),digits=(ip+fp).replace(/^0+/,'')||'0',scale=fp.length+3;let out;if(digits.length<=scale)out='0.'+'0'.repeat(scale-digits.length)+digits;else out=digits.slice(0,digits.length-scale)+'.'+digits.slice(digits.length-scale);return normalizePositiveDecimal(out,null);}
+function measureMulInt(v,n){const s=parseMeasure(v),k=parseSpecQty(n);if(!s||k==null)return null;const [ip,fp='']=s.split('.'),raw=(BigInt(ip+fp)*BigInt(k)).toString(),scale=fp.length;let out;if(!scale)out=raw;else if(raw.length<=scale)out='0.'+'0'.repeat(scale-raw.length)+raw;else out=raw.slice(0,raw.length-scale)+'.'+raw.slice(raw.length-scale);return normalizePositiveDecimal(out,null);}
 function skuFullName(p,s){return `${p.name} ${skuSpec(p,s)}`;}
-function spuNetTxt(p){return p&&p.netQty?`${p.netQty}${p.netUnit||''}`:'';}   // 「500g」，无则空
+function spuNetTxt(p){const q=p&&parseMeasure(p.netQty);if(!q||!p.netUnit)return '';const n=netCarry(q,p.netUnit);return `${fmtDerivedMeasure(n.v)}${n.u}${p.netPackType?'/'+p.netPackType:''}`;}   // 「330ml/单品」/「1.5kg/单包」，无则空
 /* ===== 标品 / 非标品（2026-08 商品结构调整·第二步）=====
    标品   = 工业预包装，同一 SPU 各规格「单件净含量」一致（如可乐恒为 330ml），
             净含量维护在 <b>SPU</b> 维度，即包装上申报的那个数（如可乐 330ml）；
             <b>任何地方都不乘售卖规格数量</b>——「24瓶/箱」表达的是件数，不改变单件净含量本身。
             商家只填一次，各 SKU 一致。
    非标品 = 生鲜分装，各规格净含量互不相同（500g/盒、1kg/袋、5kg/箱），
-            净含量维护并展示在 <b>SKU</b> 维度，逐规格各填各的。
+            净含量在 <b>SKU</b> 维度由“售卖规格数量+售卖规格单位”自动派生，不设独立输入框。
    历史数据迁移：未显式标类型时，填过 SPU 净含量的按标品，其余按非标品。 */
 const STD_TYPES=['标品','非标品'];
+/* ===== 最小包装单位（2026-08-27）=====
+   回答「上方那个单件净含量，是哪一层的量」——同样 200 g，可能是一个独立小包，也可能是一整袋：
+     单品 = 净含量是 1 个单品的量（可乐 1 瓶 330 ml、1 罐八宝粥 360 g）
+     单包 = 净含量是 1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）
+   标品必填；非标品的净含量 ＝ 售卖规格数量 + 售卖规格单位，无此字段。
+   它只声明净含量口径，不参与金额/库存/BCRS 计算；一个规格里装几个最小包装由 SKU 的「内含最小包装数」表达。 */
+const NET_PACK_TYPES=['单品','单包'];
 /* ===== 建品单位规范（真值来源：飞书《建品单位规范》wiki OVWmwf16MiA6tPkszPdcdlQUnBZ）=====
    每项 = [code, 中文, English]；code 为研发对接枚举值，中文用于界面，English 供多语言。
    标品与非标品的「售卖规格单位」取值不同，这正是两者的分界：
@@ -938,10 +960,20 @@ function unitTxtCode(t,g,n){const u=unitOf(t,g,n);return n?(u?`${n}<span style="
 const MEASURE_UNITS=['g','kg','ml','L'];   // 计量单位判定集（用于区分计件/计量；非标品的售卖规格单位只取其中 g/kg）
 function isStd(p){if(p&&p.stdType)return p.stdType=='标品';return !!(p&&p.netQty);}
 function stdTypeName(p){return isStd(p)?'标品':'非标品';}
-function netCarry(v,u){   // g/ml 满 1000 进位到 kg/L，避免出现「7920ml」
-  if(u=='g'&&v>=1000)return{v:v/1000,u:'kg'};
-  if(u=='ml'&&v>=1000)return{v:v/1000,u:'L'};
-  return{v,u};
+function skuPackCount(p,s){
+  /* 该 SKU 实际含几个「最小包装」。最小包装单位是口径标记(单品/单包)、不是可比对的计件单位，
+     故不再做「售卖规格单位==最小包装单位」的推断：商家填了就用填的，没填即按 1 份 = 1 个最小包装，
+     默认等于售卖规格数量（24瓶/箱 → 24）。只有「2打/箱」这类一份含多件的才需要手工改写。 */
+  if(!isStd(p))return null;
+  const n=parseSpecQty(s&&s.containedPackCount);
+  if(n!=null)return n;
+  return parseSpecQty(s&&s.qty);
+}
+function netCarry(v,u,derived){   // g/ml 满 1000 进位到 kg/L，避免出现「7920ml」
+  const s=derived?normalizePositiveDecimal(v,null):parseMeasure(v);if(!s)return null;
+  if(u=='g'&&measureGte1000(s))return{v:measureDiv1000(s),u:'kg'};
+  if(u=='ml'&&measureGte1000(s))return{v:measureDiv1000(s),u:'L'};
+  return{v:s,u};
 }
 /* SKU 净含量：
    非标品 —— 净含量 **就是**「售卖规格数量 + 售卖规格单位」，不是另一个字段，不单独维护（1kg/袋 → 1kg、5kg/箱 → 5kg）；
@@ -953,8 +985,8 @@ function skuNet(p,s){
     /* 标品：净含量 ＝ 商家申报的「单件净含量」原值，**任何地方都不乘售卖规格数量**。
        净含量是包装上印的那个数（如可乐 330ml），与一箱装几瓶无关；
        「24瓶/箱」表达的是件数，不改变单件净含量本身。 */
-    const base=parseFloat(p.netQty);
-    if(!(base>0))return null;
+    const base=parseMeasure(p.netQty);
+    if(!base)return null;
     return netCarry(base,p.netUnit||'');
   }
   /* 非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段 */
@@ -963,8 +995,10 @@ function skuNet(p,s){
   return netCarry(q,su);
 }
 /* 标品填写的固定净含量原样文本（「330ml」「200g」），供表单只读列展示 */
-function spuFixedNetTxt(p){return (p&&parseFloat(p.netQty)>0)?fmtQty(p.netQty)+(p.netUnit||''):'';}
-function skuNetTxt(p,s){const n=skuNet(p,s);return n?fmtQty(n.v)+n.u:'';}
+function spuFixedNetTxt(p){const q=p&&parseMeasure(p.netQty);return q?fmtMeasure(q)+(p.netUnit||'')+(p.netPackType?'/'+p.netPackType:''):'';}
+function skuNetTxt(p,s){const n=skuNet(p,s);return n?fmtDerivedMeasure(n.v)+n.u+(isStd(p)&&p.netPackType?'/'+p.netPackType:''):'';}
+/* 审核专用：标品「单价计算含量」=单件净含量×实际最小包装数；只读、不称净含量、不落库。 */
+function unitPriceContentTxt(p,s){if(!isStd(p))return skuNetTxt(p,s);const total=measureMulInt(p.netQty,skuPackCount(p,s)),n=total&&netCarry(total,p.netUnit||'',true);return n?fmtDerivedMeasure(n.v)+n.u:'';}
 /* 净含量不再有任何「× 售卖规格数量」的算式：标品取申报值、非标品取数量+单位，两者都是直给。
    保留空实现仅为兼容历史调用点。 */
 function skuNetFormula(){return '';}
@@ -974,15 +1008,17 @@ function stockModeName(s){return (s.stockMode||'finite')=='daily'?'每日恢复'
 function stockModeTag(s){const daily=(s.stockMode||'finite')=='daily';return `<span class="tag ${daily?'t-b':'t-gr'}" title="库存模式" style="margin-left:6px;font-size:10.5px">${daily?'每日恢复':'售完即止'}</span>`;}
 function stkHintPC(m){return m=='daily'?'每日 0 点自动恢复至库存总数，适合每日稳定供应':'售完即止，卖完不再恢复、售罄即下线，适合尾货/限量';}
 function seModeSync(){const m=(document.querySelector('[name=se-mode]:checked')||{}).value||'finite';document.querySelectorAll('[name=se-mode]').forEach(r=>r.parentElement.classList.toggle('on',r.checked));const h=document.getElementById('se-hint');if(h)h.innerHTML='<span class="i">ℹ️</span>'+stkHintPC(m);}
-function autoCheck(p){const fails=[];const c=CATS[p.cat];if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.showExp)fails.push(['必填完整性','缺少「APP是否展示效期」']);if(!p.storage)fails.push(['必填完整性','缺少「储存条件」']);if(!p.fulfil)fails.push(['必填完整性','缺少「履约方式」']);if((p.expEn||'是')=='是'&&!p.qp)fails.push(['必填完整性','效期管理=是，需填保质期']);if(p.consign&&!p.stockUnit)fails.push(['必填完整性','寄售品需选择「库存单位」']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{const q=parseFloat(x.qty);if(!(q>0))fails.push(['售卖规格',`规格${k+1} 售卖规格数量必须大于 0`]);else if(Math.round(q*100)!==q*100)fails.push(['售卖规格',`规格${k+1} 售卖规格数量最多两位小数`]);if(!p.consign&&!x.sellUnit)fails.push(['售卖规格',`规格${k+1} 需选择「售卖规格单位」`]);if(x.refund&&!['kg','g'].includes(skuSellUnit(p,x)))fails.push(['售卖规格',`规格${k+1} 开启了多退少补，但售卖规格单位为「${skuSellUnit(p,x)||'—'}」，仅 kg/g 支持按重量定价`]);const su=skuSellUnit(p,x);if(su&&!p.consign&&!unitNames(stdTypeName(p),'spec').includes(su))fails.push(['单位规范',`规格${k+1} 售卖规格单位「${su}」不在《建品单位规范》的${stdTypeName(p)}取值内（${unitNames(stdTypeName(p),'spec').join('/')}）`]);if(x.packUnit&&!unitNames(stdTypeName(p),'sell').includes(x.packUnit))fails.push(['单位规范',`规格${k+1} 售卖单位「${x.packUnit}」不在《建品单位规范》取值内（${unitNames(stdTypeName(p),'sell').join('/')}）`]);});
+function autoCheck(p){const fails=[];const c=CATS[p.cat],typeValid=['标品','非标品'].includes(p.stdType);if(!typeValid)fails.push(['必填完整性','商品类型必须是「标品」或「非标品」，不得缺失或使用未知枚举']);if(!p.name)fails.push(['必填完整性','缺少「商品名称」']);if(!p.cat)fails.push(['必填完整性','缺少「前台类目」']);if(!p.showExp)fails.push(['必填完整性','缺少「APP是否展示效期」']);if(!p.storage)fails.push(['必填完整性','缺少「储存条件」']);if(!p.fulfil)fails.push(['必填完整性','缺少「履约方式」']);if((p.expEn||'是')=='是'&&!p.qp)fails.push(['必填完整性','效期管理=是，需填保质期']);if(p.consign&&!p.stockUnit)fails.push(['必填完整性','寄售品需选择「库存单位」']);const sk=p.skus||[];if(!sk.length)fails.push(['售卖规格','至少添加 1 个售卖规格']);sk.forEach((x,k)=>{const q=parseSpecQty(x.qty);if(q==null)fails.push(['售卖规格',`规格${k+1} 售卖规格数量必须为1~${MAX_SPEC_QTY}的正整数`]);if(!p.consign&&!x.sellUnit)fails.push(['售卖规格',`规格${k+1} 需选择「售卖规格单位」`]);if(x.refund&&!['kg','g'].includes(skuSellUnit(p,x)))fails.push(['售卖规格',`规格${k+1} 开启了多退少补，但售卖规格单位为「${skuSellUnit(p,x)||'—'}」，仅 kg/g 支持按重量定价`]);const su=skuSellUnit(p,x);if(su&&typeValid&&!p.consign&&!unitNames(p.stdType,'spec').includes(su))fails.push(['单位规范',`规格${k+1} 售卖规格单位「${su}」不在《建品单位规范》的${p.stdType}取值内（${unitNames(p.stdType,'spec').join('/')}）`]);if(x.packUnit&&typeValid&&!unitNames(p.stdType,'sell').includes(x.packUnit))fails.push(['单位规范',`规格${k+1} 售卖单位「${x.packUnit}」不在《建品单位规范》取值内（${unitNames(p.stdType,'sell').join('/')}）`]);if(p.stdType=='标品'){const n=skuPackCount(p,x);if(n==null)fails.push(['售卖规格',`规格${k+1} 需填写1~${MAX_SPEC_QTY}的正整数「内含最小包装数」，不得小数、超上限或带字符后缀`]);else if(su==p.netPackType&&n!==q)fails.push(['售卖规格',`规格${k+1} 的售卖规格单位与最小包装单位相同，内含最小包装数必须等于售卖规格数量`]);}else if(p.stdType=='非标品'&&x.containedPackCount!=null&&x.containedPackCount!=='')fails.push(['售卖规格',`规格${k+1} 非标品不得携带「内含最小包装数」`]);});
   if(p.netUnit&&!unitNames(stdTypeName(p),'net').includes(p.netUnit))fails.push(['单位规范',`净含量单位「${p.netUnit}」不在《建品单位规范》取值内（${unitNames(stdTypeName(p),'net').join('/')}）`]);
   /* 寄售：库存单位与售卖规格单位同一口径，同样受标品/非标品约束 */
   if(p.consign&&p.stockUnit&&!stockUnitList(stdTypeName(p)).includes(p.stockUnit))fails.push(['单位规范',`库存单位「${p.stockUnit}」不在${stdTypeName(p)}的售卖规格单位取值内（${stockUnitList(stdTypeName(p)).join('/')}）`]);
   /* 标品的净含量＝包装上申报的固定值，必须填；非标品的净含量由售卖规格数量+单位得出，无此字段 */
-  if(isStd(p)){
-    if(!(parseFloat(p.netQty)>0))fails.push(['净含量','标品需填写「单件净含量」——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推']);
+  if(p.stdType=='标品'){
+    if(!parseMeasure(p.netQty))fails.push(['净含量','「单件净含量」须为大于0的普通十进制，整数部分最多12位、小数最多6位；不得含单位、字母、科学计数法或多个小数点']);
     else if(!p.netUnit)fails.push(['净含量','标品填了单件净含量，净含量单位必填']);
-  }const qs=sk.map(x=>x.qty);if(new Set(qs).size!=qs.length)fails.push(['售卖规格','各规格「数量」不可重复']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);if(p.bcrs){const c2=parseInt(p.bcrsUnitContainers,10);if(!Number.isInteger(c2)||c2<1)fails.push(['BCRS','支持 BCRS 需填「每最小售卖单位容器数」（正整数 ≥1）']);else if(c2>999)fails.push(['BCRS','容器数不合理（>999），请核对最小售卖单位']);}return fails;}
+    if(!p.netPackType)fails.push(['净含量','标品需选择「最小包装单位」——说明上方净含量是 1 个单品的量还是 1 整包的量']);
+    else if(!NET_PACK_TYPES.includes(p.netPackType))fails.push(['净含量',`最小包装单位「${p.netPackType}」不在取值内（${NET_PACK_TYPES.join('/')}）`]);
+  }else if(p.stdType=='非标品'&&(p.netQty||p.netUnit||p.netPackType))fails.push(['净含量','非标品不得携带标品专用的单件净含量/计量单位/最小包装单位']);const specKeys=sk.map(x=>`${x.qty}|${skuSellUnit(p,x)}|${x.packUnit||''}`);if(new Set(specKeys).size!=specKeys.length)fails.push(['售卖规格','同一商品不可存在完全相同的规格（售卖规格数量+售卖规格单位+售卖单位）']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);if(p.bcrs){const c2=parseInt(p.bcrsUnitContainers,10);if(!Number.isInteger(c2)||c2<1)fails.push(['BCRS','支持 BCRS 需填「每最小售卖单位容器数」（正整数 ≥1）']);else if(c2>999)fails.push(['BCRS','容器数不合理（>999），请核对最小售卖单位']);}return fails;}
 function computeRisk(p){const c=CATS[p.cat];if(c&&c.baseRisk=='高')return '高';if((p.skus||[]).some(x=>x.price>0&&priceAbnormal(x.price,p.cat)))return '中';if(c&&c.baseRisk=='中')return '中';return '低';}
 
 /* ================= NAV CONFIG ================= */
@@ -1702,7 +1738,7 @@ PAGES['m-product']=()=>{
   const selIds=rows.filter(r=>skuSelectable(r.p,r.s,f)).map(r=>r.s.skuId);const allSel=selIds.length&&selIds.every(id=>DB.sel.includes(id));
   const recN=recycleCount();const isRec=f=='recycle';const isReview=f=='review',isRejected=f=='rejected',isForced=f=='forced',isSimple=isReview||isRejected||isForced;
   return `${assume(['Q1','Q2','Q6'])}
-  ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。审核<b>仅首次建档</b>（命中自动审核规则可免人工）；<b>上下架 / 改价 / 改库存即时生效、无需重审</b>。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>批量修改</b>（商品名称 / 商品别名，中英双语）走<b>表格导入</b>、不依赖勾选：选改名称还是别名 → 下载模板（3 列：SKU 编码 / 新中文 / 新英文，编码已带出，留空即不变）→ 上传按 <b>SKU 编码</b>匹配；名称/别名是 <b>SPU 级</b>字段，同一商品多个规格共用，组内新值不一致则整组报错。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
+  ${flowTip(`商品按 <b>SPU+SKU 两层</b>维护，库存/价格落到 SKU。商品结构审核覆盖<b>首次建档与新增 SKU</b>（命中自动审核规则可免人工）；已审核商品的普通字段编辑及<b>上下架 / 改价 / 改库存即时生效、无需重审</b>，但全部非草稿写入仍先执行统一发布校验。勾选 SKU 可批量<b>上下架</b> / 改价 / 改库存 / <b>移入回收站</b>；表头「全选」只选<b>当前页</b>。<b>批量修改</b>（商品名称 / 商品别名，中英双语）走<b>表格导入</b>、不依赖勾选：选改名称还是别名 → 下载模板（3 列：SKU 编码 / 新中文 / 新英文，编码已带出，留空即不变）→ 上传按 <b>SKU 编码</b>匹配；名称/别名是 <b>SPU 级</b>字段，同一商品多个规格共用，组内新值不一致则整组报错。<b>仅已下架规格</b>可移入回收站，回收站永久保留、可随时<b>移出再用</b>（无删除）。`)}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">品类</div><select id="pf-cat" onchange="DB.pFilter.cat=this.value;DB.pPage=1;render()" style="min-width:150px"><option value="">全部品类</option>${Object.keys(CATS).map(c=>`<option ${pf.cat==c?'selected':''}>${c}</option>`).join('')}</select></div>
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">商品名称 / 编码</div><input id="pf-name" value="${pf.name||''}" placeholder="输入名称或 SPU 编码" onkeydown="if(event.key=='Enter'){DB.pFilter.name=this.value.trim();DB.pPage=1;render()}" style="min-width:220px"></div>
@@ -1714,6 +1750,7 @@ PAGES['m-product']=()=>{
   <div class="card"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
     <div class="tabs" style="margin:0;border:none">${[['onsale','销售中',0,''],['review','待审核',reviewCount(),'t-y'],['rejected','审核拒绝',rejectCount(),'t-r'],['forced','强制下架',forcedCount(),'t-r'],['off','未上架',0,''],['recycle','回收站',recN,'t-gr']].map(x=>`<div class="tab ${f==x[0]?'active':''}" onclick="DB.mTab='${x[0]}';DB.pPage=1;DB.sel=[];render()">${x[1]}${x[2]?` <span class="tag ${x[3]}" style="font-size:10px;margin-left:2px">${x[2]}</span>`:''}</div>`).join('')}</div>
     <div class="row" style="gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      ${skuRejectOpenCount()?`<button class="btn btn-o btn-sm" style="color:var(--r);border-color:var(--r)" onclick="act_openSkuRejects()">新增 SKU 驳回待修正 <b>${skuRejectOpenCount()}</b></button>`:''}
       <span style="font-size:12.5px;color:var(--ts);align-self:center">${isSimple?(isReview?'平台审核中，可编辑后重新提交':isForced?'平台强制下架，查看原因整改后重新提报':'审核未通过，查看字段意见并修改重提'):(selN?`已选 <b style="color:var(--tp)">${selN}</b>`:(isRec?'勾选 SKU 后可批量还原':'勾选 SKU 后可批量操作'))}</span>
       ${isSimple?'':isRec?`
       <button class="btn btn-p btn-sm" ${selN?'':'disabled'} onclick="act_batchRestore()">批量移出/还原</button>
@@ -1769,6 +1806,8 @@ function skuSelectable(p,s,f){if(f=='recycle')return !!s.recycled;return !s.recy
 function recycleCount(){return DB.products.reduce((a,p)=>a+(p.skus||[]).filter(s=>s.recycled).length,0);}
 function reviewCount(){return DB.products.filter(p=>p.status=='reviewing').length;}   // 待审核 SPU 数
 function rejectCount(){return DB.products.filter(p=>p.status=='rejected').length;}      // 审核拒绝 SPU 数
+function skuRejectOpenCount(){return DB.products.reduce((n,p)=>n+(p.skuRejects||[]).filter(r=>r.status!='resubmitted').length,0);}
+function act_openSkuRejects(){const i=DB.products.findIndex(p=>(p.skuRejects||[]).some(r=>r.status!='resubmitted'));if(i<0){toast('暂无新增 SKU 驳回待修正','info');return;}DB.mTab=isOnShelf(DB.products[i])?'onsale':'off';render();act_spuDetail(i);}
 function forcedCount(){return DB.products.filter(p=>p.status=='forced_off').length;}    // 平台强制下架 SPU 数
 function act_skuRecycle(i,k){const p=DB.products[i],s=p.skus[k];if(!skuRecyclable(p,s)){toast('仅已下架规格可移入回收站','err');return;}askConfirm(`确认将规格「${p.name} ${skuSpec(p,s)}」移入回收站？移入后停止售卖，可随时移出再用。`,()=>{s.recycled=true;s.updatedAt=ts();p.updatedAt=ts();render();toast('已移入回收站','info');});}
 function act_skuRestore(i,k){const p=DB.products[i],s=p.skus[k];askConfirm(`确认将规格「${p.name} ${skuSpec(p,s)}」移出回收站？还原后为已下架，可再上架售卖。`,()=>{s.recycled=false;s.off=true;s.updatedAt=ts();p.updatedAt=ts();render();toast('已移出回收站（已下架）','ok');});}
@@ -1793,11 +1832,13 @@ function selAllProducts(){const f=DB.mTab||'onsale';const ids=prodPageInfo().pag
 function act_batchShelf(off){const label=off?'下架':'上架';const targets=[];DB.products.forEach(p=>{if(p.status!='onsale')return;(p.skus||[]).forEach(s=>{if(DB.sel.includes(s.skuId))targets.push({p,s});});});if(!targets.length){toast('未选择可'+label+'的 SKU','err');return;}const chg=targets.filter(t=>!!t.s.off!==off).length;askConfirm(`确认将已选 <b>${targets.length}</b> 个 SKU 批量${label}？${chg<targets.length?`（其中 ${targets.length-chg} 个已是${label}状态）`:''}`,()=>{targets.forEach(t=>{t.s.off=off;t.s.updatedAt=ts();t.p.updatedAt=ts();});DB.sel=[];render();toast(`已批量${label} ${targets.length} 个 SKU`,off?'info':'ok');});}
 function skuRowOps(p,i,s,k){
   const detail=` <button class="btn btn-link" onclick="act_spuDetail(${i})">详情</button>`;   // 每行只读详情
+  const add=k===0&&['onsale','offsale'].includes(p.status)?` <button class="btn btn-link" onclick="act_addSkusBatch(${i})">＋添加规格</button>`:'';
+  const rejected=k===0&&(p.skuRejects||[]).some(r=>r.status!='resubmitted')?` <button class="btn btn-link" style="color:var(--r)" onclick="act_spuDetail(${i})">新增SKU驳回待修正</button>`:'';
   if((DB.mTab||'onsale')=='recycle')return `<button class="btn btn-p btn-sm" onclick="act_skuRestore(${i},${k})">移出/还原</button>${detail}`;
   const rec=skuRecyclable(p,s)?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_skuRecycle(${i},${k})">移入回收站</button>`:'';
-  if(p.status=='onsale')return `${s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`} <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>${rec}${detail}`;
+  if(p.status=='onsale')return `${s.off?`<button class="btn btn-p btn-sm" onclick="act_skuToggle(${i},${k})">上架</button>`:`<button class="btn btn-o btn-sm" onclick="act_skuToggle(${i},${k})">下架</button>`} <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>${add}${rejected}${rec}${detail}`;
   if(p.status=='draft')return `<button class="btn btn-p btn-sm" onclick="act_submit(${i})">提交审核</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>${detail}`;
-  if(p.status=='offsale')return `<button class="btn btn-p btn-sm" onclick="act_relist(${i})">上架</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>${rec}${detail}`;
+  if(p.status=='offsale')return `<button class="btn btn-p btn-sm" onclick="act_relist(${i})">上架</button> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>${add}${rejected}${rec}${detail}`;
   if(p.status=='reviewing')return `<span style="color:var(--y);font-size:12px">平台审核中</span> <button class="btn btn-link" onclick="act_editSpu(${i})">编辑</button>${detail}`;
   if(p.status=='rejected')return `<button class="btn btn-o btn-sm" onclick="showReject(${i})">审核意见</button> <button class="btn btn-p btn-sm" onclick="act_editSpu(${i})">修改重提</button>${detail}`;
   if(p.status=='forced_off')return `<button class="btn btn-o btn-sm" onclick="showReject(${i})">原因</button> <button class="btn btn-p btn-sm" onclick="act_editSpu(${i})">整改重提</button>${detail}`;
@@ -1831,7 +1872,7 @@ function act_spuDetail(i){
       ${dl('商品名称',p.name)}${dl('商品编码',`<span class="mono">${p.id}</span>`)}
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
       ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：取申报的单件净含量，不乘售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
-      ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit)):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
+      ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量计量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit))+dl('最小包装单位',p.netPackType?`${p.netPackType}<span style="color:var(--ts);font-size:11.5px;margin-left:6px">净含量为 1 个${p.netPackType=='单品'?'单品':'整包'}的量</span>`:'—'):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
       ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 份 ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
       ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
       ${dl('商品别名(EN)',p.aliasEn||'—')}
@@ -1841,9 +1882,10 @@ function act_spuDetail(i){
       ${dl('商品主图',(p.mainImgs&&p.mainImgs.length)?p.mainImgs.map(id=>`<span class="tag t-g" style="font-size:10.5px;margin:0 4px 4px 0"><span class="dot"></span>${id}</span>`).join(''):(p.img?'已上传':'未上传'))}
       ${dl('商品详情图',(p.detailImgs&&p.detailImgs.length)?p.detailImgs.map(id=>`<span class="tag t-b" style="font-size:10.5px;margin:0 4px 4px 0">${id}</span>`).join(''):(p.detail?'已上传':'未维护'))}
     </dl>
+    ${skuRejectNotice(p,i)}
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU）· 共 ${p.skus.length} 个</h4>
-    <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th title="《建品单位规范》${stdTypeName(p)}：售卖规格单位取值 ${unitNames(stdTypeName(p),'spec').join('/')}">售卖规格单位</th><th title="${isStd(p)?'标品：单件净含量 × 售卖规格数量，系统自动算':'非标品：＝ 售卖规格数量 + 售卖规格单位'}">净含量</th><th>未税价</th><th>含税价</th>${p.bcrs?'<th>BCRS押金</th>':''}<th>可售库存</th><th>库存模式</th><th>状态</th></tr></thead><tbody>
-      ${p.skus.map(s=>{const st=skuState(p,s);const nf=skuNetFormula(p,s);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${skuSpec(p,s)}</td><td>${unitTxtCode(stdTypeName(p),'spec',skuSellUnit(p,s))}</td><td${nf?` title="${nf}"`:''}>${skuNetTxt(p,s)||'<span style="color:var(--tt)">—</span>'}${nf?`<span style="color:var(--tt);font-size:11px;margin-left:5px">${nf}</span>`:''}</td><td>${money(s.price||0)}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td>${p.bcrs?`<td><span class="tag t-b" title="${skuBcrsContainers(p,s)}容器×${money(BCRS_UNIT_PRICE)}">${money(skuBcrsAmt(p,s))}</span></td>`:''}<td>${s.stock||0}${stockModeTag(s)}</td><td>${s.stockMode=='daily'?'每日恢复':s.stockMode=='finite'?'售完即止':'—'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`;}).join('')}
+    <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>商品编码</th><th>商品名称</th><th title="《建品单位规范》${stdTypeName(p)}：售卖规格单位取值 ${unitNames(stdTypeName(p),'spec').join('/')}">售卖规格单位</th>${isStd(p)?'<th>内含最小包装数</th>':''}<th title="${isStd(p)?'标品：展示申报的单件净含量及最小包装单位，不乘包装数量':'非标品：＝ 售卖规格数量 + 售卖规格单位'}">净含量</th><th>未税价</th><th>含税价</th>${p.bcrs?'<th>BCRS押金</th>':''}<th>可售库存</th><th>库存模式</th><th>状态</th></tr></thead><tbody>
+      ${p.skus.map(s=>{const st=skuState(p,s);const nf=skuNetFormula(p,s);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${skuSpec(p,s)}</td><td>${unitTxtCode(stdTypeName(p),'spec',skuSellUnit(p,s))}</td>${isStd(p)?`<td>${skuPackCount(p,s)||'—'} ${p.netPackType||''}</td>`:''}<td${nf?` title="${nf}"`:''}>${skuNetTxt(p,s)||'<span style="color:var(--tt)">—</span>'}${nf?`<span style="color:var(--tt);font-size:11px;margin-left:5px">${nf}</span>`:''}</td><td>${money(s.price||0)}</td><td><span style="color:var(--ts)">${money(priceIncl(s.price,p))}</span></td>${p.bcrs?`<td><span class="tag t-b" title="${skuBcrsContainers(p,s)}容器×${money(BCRS_UNIT_PRICE)}">${money(skuBcrsAmt(p,s))}</span></td>`:''}<td>${s.stock||0}${stockModeTag(s)}</td><td>${s.stockMode=='daily'?'每日恢复':s.stockMode=='finite'?'售完即止':'—'}</td><td><span class="tag ${st[1]}">${st[0]}</span></td></tr>`;}).join('')}
     </tbody></table></div>
     ${detailAuditBlock(p)}
   </div>
@@ -1915,7 +1957,8 @@ function skuRefundCell(p,s,i,k){
   if(s.refund)return `<span class="tag t-b" title="按 S$/${skuSellUnit(p,s)} 定价；商家分装称重后，实发与应发的差额随对账单多退少补">按重量</span>`;
   return `<span style="color:var(--tt)" title="${skuWeighable(p,s)?'按规格整件计价，不产生重量差额':`售卖规格单位为「${skuSellUnit(p,s)||'—'}」，非重量单位不支持按重量定价`}">—</span>`;
 }
-function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const rate=taxRate(p);return `<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th title="是=按重量定价(S$/计量单位)，商家分装称重后按实发净重结算差额；否=定重预包装，按件计价">多退少补</th><th title="商家维护未税价">未税价(SGD)</th><th title="含税价 = 未税价 ×(1+税率)，税率 ${rate}%，系统自动计算，不可直接编辑">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+function skuRejectNotice(p,i){const rs=p.skuRejects||[],open=rs.filter(r=>r.status!='resubmitted');return rs.length?`<div class="ib ${open.length?'ib-r':'ib-b'}" style="margin:10px 12px"><span class="i">${open.length?'⛔':'🗂️'}</span><div style="flex:1"><b>${open.length?`${open.length} 个新增 SKU 驳回待修正`:'新增 SKU 驳回/重提历史'}</b>${rs.map((r,k)=>`<div style="margin-top:6px">${r.s.skuId} · ${skuSpec(p,r.s)} · <b>${r.label}</b>：${r.reason}<span style="color:var(--ts)"> · 驳回 ${r.at||'—'}${r.resubmittedAt?` · 已重提 ${r.resubmittedAt}`:''}</span> ${r.status=='resubmitted'?'<span class="tag t-b">已重提</span>':`<button class="btn btn-link btn-sm" onclick="act_resubmitSkuReject(${i},${k})">修改重提</button>`}</div>`).join('')}</div></div>`:'';}
+function skuSubTable(p,i){const onsale=p.status=='onsale';const edit=p.status!='rejected'&&p.status!='forced_off';const rate=taxRate(p);return `${skuRejectNotice(p,i)}<table class="subtbl"><thead><tr>${onsale?`<th style="width:30px"><input type="checkbox" class="skuchk" title="全选本商品 SKU" ${p.skus.length&&p.skus.every(s=>DB.sel.includes(s.skuId))?'checked':''} onclick="toggleSelSpu('${p.id}')"></th>`:''}<th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th title="是=按重量定价(S$/计量单位)，商家分装称重后按实发净重结算差额；否=定重预包装，按件计价">多退少补</th><th title="商家维护未税价">未税价(SGD)</th><th title="含税价 = 未税价 ×(1+税率)，税率 ${rate}%，系统自动计算，不可直接编辑">含税价(SGD)</th><th>可售库存</th><th>SKU 状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
   ${p.skus.map((s,k)=>{const st=skuState(p,s);const sel=DB.sel.includes(s.skuId);
     const priceCell=`${money(s.price||0)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditPrice(${i},${k})">编辑</button>`:''}`;
     const stockCell=`${s.stock||0}${stockModeTag(s)}${edit?` <button class="btn btn-link btn-sm" onclick="act_skuEditStock(${i},${k})">编辑</button>`:''}`;
@@ -2057,20 +2100,23 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
   p.name=p.name||p.itemName||'';
   EDIT_SKUS=isNew?[{qty:1,stockMode:'finite'}]:(p.skus&&p.skus.length?JSON.parse(JSON.stringify(p.skus)).map(x=>Object.assign(x,{refundTouched:1})):[{qty:1,stockMode:'finite'}]);
   const approved=!isNew&&(p.status=='onsale'||p.status=='offsale');
+  const publishedStructure=!isNew&&['onsale','offsale','forced_off'].includes(p.status);
+  EDIT_LOCK_SKU_STRUCTURE=publishedStructure;
   EDIT_SUPPLY=p.consign?'寄售':'自售';const supplyLock=!isNew;   // 售卖模式(自售/寄售)：新建可选，已有商品保存后不可修改(dev 508003116)
   /* 商品类型(标品/非标品)：决定净含量维护在 SPU 还是 SKU。
      必须与下方单选按钮的渲染取值 stdTypeName(p) 同源——否则会出现「按钮显示非标品、
      表格却按标品渲染售卖规格单位枚举」的错位。新建时 p 无 stdType/netQty，stdTypeName 返回
      非标品，即生鲜平台的默认。 */
   EDIT_STD=stdTypeName(p);
+  EDIT_NET_PACK_TYPE=p.netPackType||'';
   const NETUNIT=unitNames(stdTypeName(p),'net');
   const QPUNIT=['天','月','年'],STORAGE=['常温','冷藏','冷冻','冷鲜'],FULFIL=['平台仓配','商家直送'];
   const radio=(name,val,opts)=>`<div class="row" style="gap:14px">${opts.map(t=>`<label class="chip-ck ${val==t?'on':''}"><input type="radio" name="${name}" value="${t}" ${val==t?'checked':''} onchange="this.closest('.row').querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));this.parentElement.classList.add('on')">${t}</label>`).join('')}</div>`;
   const opt=(arr,v)=>`<option value="">请选择</option>`+arr.map(x=>`<option ${v==x?'selected':''}>${x}</option>`).join('');
   // 审核拒绝：平台针对具体字段返回的意见，内联展示在对应字段下方，改完提交即重新进入待审核
-  const AO=(field)=>{if(isNew||p.status!='rejected'||!p.auditOpinions)return '';const o=p.auditOpinions.find(x=>x.f==field);return o?`<div class="ib ib-r" style="margin-top:6px"><span class="i">⛔</span><div><b>平台审核意见</b>：${o.op}</div></div>`:'';};
-  const resubmit=!isNew&&(p.status=='reviewing'||p.status=='rejected');
-  const ft=approved?`<button class="btn btn-p" onclick="doSaveSpu(${i},false)">保存（即时生效）</button>`:(resubmit?`<button class="btn btn-p" onclick="doSaveSpu(${i},false)">${p.status=='rejected'?'修改并重新提交':'保存并重新提交'}</button>`:`<button class="btn btn-p" onclick="doSaveSpu(${isNew?-1:i},false)">保存并创建</button>`);
+  const AO=(field)=>{if(isNew||p.status!='rejected'||!p.auditOpinions)return '';const os=p.auditOpinions.filter(x=>x.f==field||(field=='skuSpec'&&String(x.f||'').startsWith('sku:')));return os.map(o=>`<div class="ib ib-r" style="margin-top:6px"><span class="i">⛔</span><div><b>平台审核意见·${o.label||'字段'}</b>：${o.op}</div></div>`).join('');};
+  const resubmit=!isNew&&(p.status=='reviewing'||p.status=='rejected'||p.status=='forced_off');
+  const ft=approved?`<button class="btn btn-p" onclick="doSaveSpu(${i},false)">保存（即时生效）</button>`:(resubmit?`<button class="btn btn-p" onclick="doSaveSpu(${i},false)">${p.status=='forced_off'?'整改并重新提交':p.status=='rejected'?'修改并重新提交':'保存并重新提交'}</button>`:`<button class="btn btn-p" onclick="doSaveSpu(${isNew?-1:i},false)">保存并创建</button>`);
   drawer(`<div class="drawer-hd"><h3>${isNew?'新建商品':(p.status=='rejected'?'修改重提 · ':p.status=='forced_off'?'整改重提 · ':'编辑 · ')+p.name}</h3><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <h4 style="font-size:14px;margin-bottom:12px;color:var(--g)">① 商品信息（SPU）</h4>
@@ -2081,11 +2127,11 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
         ${STD_TYPES.map(t=>`<label class="stdopt ${stdTypeName(p)==t?'on':''}" onclick="setStdType('${t}')" style="flex:1;min-width:250px;border:1.5px solid ${stdTypeName(p)==t?'var(--g)':'var(--bd)'};background:${stdTypeName(p)==t?'var(--gl)':'#FBFCF9'};border-radius:10px;padding:10px 13px;cursor:pointer;display:block">
           <div style="font-weight:700;font-size:13.5px;color:${stdTypeName(p)==t?'var(--gd)':'var(--tp)'}">${t}<input type="radio" name="f-stdtype" value="${t}" ${stdTypeName(p)==t?'checked':''} style="display:none"></div>
           <div style="font-size:11.5px;color:var(--ts);margin-top:3px;line-height:1.5">${t=='标品'
-            ?'工业预包装，各规格单件净含量一致 —— 净含量填在<b>商品</b>上，只填一次；各规格净含量＝单件净含量×售卖规格数量，系统自动算'
-            :'生鲜分装，各规格净含量不同 —— 净含量填在<b>每个规格</b>上，逐规格各填各的'}</div>
+            ?'工业预包装：净含量按<b>最小包装</b>申报且不乘包装数；另维护每个规格实际内含多少个最小包装，供下游单位价派生计算'
+            :'生鲜分装：每个 SKU 的净含量由「售卖规格数量+售卖规格单位」自动生成，<b>无需另填</b>'}</div>
         </label>`).join('')}
-      </div></div>
-    <div class="fr" id="netqty-block" style="display:${isStd(p)?'block':'none'}"><label class="fl"><b>*</b>单件净含量 <span style="font-weight:400;color:var(--ts);font-size:12px">（标品必填：包装上申报的净含量，一个最小包装的量，如可乐 330 ml、海带丝 200 g）</span></label><table class="itbl"><thead><tr><th>净含量</th><th>净含量单位</th></tr></thead><tbody><tr><td><input id="f-netqty" value="${p.netQty||''}" placeholder="如 330" oninput="refreshSkuNames();refreshNetCells()"></td><td><select id="f-netunit" onchange="renderSkuEditor()">${opt(NETUNIT,p.netUnit)}</select></td></tr></tbody></table></div>
+      </div>${AO('stdType')}</div>
+    <div class="fr" id="netqty-block" style="display:${isStd(p)?'block':'none'}"><label class="fl"><b>*</b>单件净含量 <span style="font-weight:400;color:var(--ts);font-size:12px">（标品必填：包装上申报的净含量，再说明它是单品的量还是整包的量，如 330 ml / 单品、200 g / 单包）</span></label><table class="itbl"><thead><tr><th>净含量</th><th>净含量单位</th><th title="这个净含量申报的是 1 个单品的量，还是 1 整包的量">最小包装单位</th></tr></thead><tbody><tr><td><input id="f-netqty" data-testid="net-content-value" type="number" min="0.000001" max="999999999999.999999" step="0.000001" inputmode="decimal" value="${p.netQty||''}" placeholder="如 330" oninput="refreshSkuNames();refreshNetCells()"></td><td><select id="f-netunit" data-testid="net-content-unit" onchange="renderSkuEditor()">${opt(NETUNIT,p.netUnit)}</select></td><td><select id="f-netpacktype" data-testid="net-content-pack-type" onchange="changeNetPackType()">${opt(NET_PACK_TYPES,p.netPackType||'')}</select></td></tr></tbody></table><div class="ib ib-gr" id="netpack-hint" style="margin:8px 0 0"><span class="i">ℹ️</span><b>最小包装单位</b>说明左边净含量是<b>哪一层</b>的量：<b>单品</b>＝1 个单品的量（可乐 1 瓶 330 ml）；<b>单包</b>＝1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）。净含量展示为「数值+计量单位/最小包装单位」，如 <b>330ml/单品</b>。净含量只接受正数普通十进制（整数最多12位、小数最多6位），<b>不乘包装数量</b>——一个规格里装几个最小包装由下方各规格的「内含最小包装数」表达。</div>${AO('netQty')}${AO('netPackType')}</div>
     <div class="fr" id="netqty-nonstd" style="display:${isStd(p)?'none':'block'}"><div class="ib ib-gr" style="margin:0"><span class="i">ℹ️</span>非标品<b>没有独立的净含量字段</b>——净含量 ＝ 下方「售卖规格(SKU)」表里的<b>售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 1kg，5 + kg → 5kg）。填好那两列即可，此处不必维护。</div></div>
     <div class="fr" id="bcrs-block" style="display:none"><label class="fl">是否支持 BCRS <span style="font-weight:400;color:var(--ts);font-size:12px">（饮料容器押金回收，仅支持的类目可选）</span></label>
       <div class="row" style="gap:14px">${radio('f-bcrs',p.bcrs?'是':'否',['否','是'])}</div>
@@ -2107,9 +2153,9 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
     <div class="fg2"><div class="fr"><label class="fl">品牌</label><input id="f-brand" data-tr value="${p.brand||''}" placeholder="选填">${AO('brand')}</div><div class="fr"><label class="fl">商品描述</label><input id="f-desc" data-tr value="${p.desc||''}" placeholder="最多 500 字（选填）">${AO('desc')}</div></div>
     <div id="cat-hint"></div>
     <h4 style="font-size:14px;margin:16px 0 8px;color:var(--g)">② 售卖规格（SKU）</h4>
-    <div class="ib ib-gr" style="margin-bottom:8px"><span class="i">ℹ️</span>每行 1 个 SKU，规格名称自动 = 商品名 + 数量 + 单位（填了售卖单位取售卖单位，否则取净含量单位）；价格、库存与<b>库存模式</b>逐规格维护。库存模式：<b>每日恢复初始库存</b>=每天 0 点自动补回库存总数（适合每日稳定供应）；<b>售完即止</b>=卖完不恢复、售罄即下线（适合尾货/限量）。</div>
+    <div class="ib ib-gr" style="margin-bottom:8px"><span class="i">ℹ️</span>每行 1 个 SKU，规格名称自动 = 商品名 + 售卖规格数量 + 售卖规格单位 + 可选售卖单位。标品还需维护真实<b>内含最小包装数</b>；系统不会猜「打/箱/托」倍率。价格、库存与<b>库存模式</b>逐规格维护。</div>${AO('skuSpec')}
     <div id="sku-editor"></div>
-    <button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button>
+    ${approved?`<div class="ib ib-b" style="margin-top:8px"><span class="i">🔒</span>已审核商品的 SKU 新增/删除不在通用编辑中即时生效；请从商品列表的「添加规格」专用入口提交审核。</div>`:`<button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button>`}
     <h4 style="font-size:14px;margin:18px 0 8px;color:var(--g)">③ 展示配置</h4>
     <div class="fg2"><div class="fr"><label class="fl">商品主图</label><div class="up ${p.img?'done':''}" id="f-img" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">🖼️</div><div class="ut">${p.img?'已上传 ✓':'上传主图'}</div><div class="us">首图白底 ≥800×800 · 最多 15 张</div></div>${AO('img')}</div><div class="fr"><label class="fl">商品详情</label><div class="up ${p.detail?'done':''}" id="f-detail" onclick="this.classList.add('done');this.querySelector('.ut').textContent='已上传 ✓'"><div class="uic">📄</div><div class="ut">${p.detail?'已上传 ✓':'上传详情图'}</div><div class="us">宽 750–1242px · 最多 10 张</div></div></div></div>
   </div>
@@ -2121,8 +2167,9 @@ function supplyToggle(){const b=document.getElementById('stockunit-block');if(b)
 function edStockUnit(){return (EDIT_SUPPLY=='寄售')?((document.getElementById('f-stockunit')||{}).value||''):'';}
 function itemNameSync(){const iv=(document.getElementById('f-itemname')||{}).value||'';const nm=document.getElementById('f-name');if(nm&&nm.dataset.auto!=='0'){nm.value=iv;refreshSkuNames();}}
 function dedText(k){const unit=(EDIT_SKUS[k]||{}).packUnit||edUnit()||'单位';const q=EDIT_SKUS[k].qty||0;return `下单 1 份扣减 ${q} ${unit} 货品库存`;}
-/* 规格名 = 商品名 + 数量 + 单位；单位取「售卖单位」，未填售卖单位时退回「净含量单位」（最小售卖单位已下线） */
+/* 规格名 = 商品名 + 售卖规格数量 + 售卖规格单位 + 可选售卖单位。 */
 function edUnit(){return (document.getElementById('f-netunit')||{}).value||'';}
+function edNetPackType(){return (document.getElementById('f-netpacktype')||{}).value||'';}
 function edNet(){const q=(document.getElementById('f-netqty')||{}).value||'';return q?q+edUnit():'';}
 function skuName(k){const name=(document.getElementById('f-name')||{}).value||'商品名';const r=EDIT_SKUS[k]||{};
   const u=(EDIT_SUPPLY=='寄售')?edStockUnit():(r.sellUnit||'');
@@ -2155,33 +2202,35 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
   const sel='width:100%;height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 6px;font-size:12.5px;box-sizing:border-box';
   const std=(EDIT_STD||'标品')=='标品';
   /* 两类都出净含量列，都是只读、不用填，只是来源不同：
-     标品   —— 回显上方填写的固定净含量（计件单位的多件装在悬停给合计）
+     标品   —— 回显上方填写的固定净含量及最小包装单位，不展示包装合计
      非标品 —— 由「售卖规格数量 + 售卖规格单位」自动得出 */
-  const gc="grid-template-columns:1.4fr 0.75fr 0.75fr 0.8fr 0.8fr 0.8fr 0.9fr 0.65fr 1fr 32px";
+  const gc=std?"grid-template-columns:1.3fr 0.68fr 0.68fr 0.72fr 0.78fr 0.72fr 0.72fr 0.85fr 0.65fr 0.9fr 32px":"grid-template-columns:1.4fr 0.75fr 0.75fr 0.8fr 0.8fr 0.8fr 0.9fr 0.65fr 1fr 32px";
   /* 列名两类统一为「净含量」——来源差异写在悬停与上方说明条里，不挂进列名 */
   const netHead=std
-    ? `<div title="标品：回显上方填写的单件净含量；计件单位的多件装在悬停里给出本规格合计">净含量</div>`
+    ? `<div title="标品：回显上方申报的单件净含量及最小包装单位；不乘包装数量">净含量</div>`
     : `<div title="非标品：净含量 ＝ 售卖规格数量 + 售卖规格单位，系统自动得出，无需填写">净含量</div>`;
   box.innerHTML=`${consign?`<div class="ib ib-b" style="margin-bottom:10px"><span class="i">🔒</span>寄售品的<b>可售库存与库存模式由货品库存决定</b>，不逐规格维护；<b>售卖规格单位锁定为商品级「库存单位」${su?`（${su}）`:'（请先在上方选择）'}</b>，逐规格不可改。</div>`:''}`
-  +`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>售卖单位</div><div>售卖规格数量</div><div>售卖规格单位</div>${netHead}<div>未税价(SGD)</div><div title="是=按重量定价(S$/售卖规格单位)，商家分装称重后按实发净重结算差额；否=按规格整件计价">多退少补</div><div>可售库存</div><div>库存模式</div><div></div></div>`
+  +`<div class="skued2" style="${gc};font-size:11px;color:var(--ts);font-weight:600"><div>规格名称（自动）</div><div>售卖单位</div><div>售卖规格数量</div><div>售卖规格单位</div>${std?'<div title="该 SKU 实际包含几个最小包装；留空默认等于售卖规格数量">内含最小包装数（选填）</div>':''}${netHead}<div>未税价(SGD)</div><div title="是=按重量定价(S$/售卖规格单位)，商家分装称重后按实发净重结算差额；否=按规格整件计价">多退少补</div><div>可售库存</div><div>库存模式</div><div></div></div>`
   +EDIT_SKUS.map((s,k)=>{const m=s.stockMode||'finite';const pk=s.packUnit||'';const rowUnit=consign?su:(s.sellUnit||'');
     return `<div class="skued2" style="${gc};align-items:center">`
     +`<div class="mono" id="skn-${k}" style="font-size:12.5px;color:var(--tp)">${skuName(k)}</div>`
     +`<div><select title="售卖单位（选填，《建品单位规范》：包/份/组/箱）" onchange="EDIT_SKUS[${k}].packUnit=this.value;skuRowSync(${k})" style="${sel}"><option value="" ${pk==''?'selected':''}>无</option>${unitNames(EDIT_STD,'sell').map(u=>`<option value="${u}" ${pk==u?'selected':''}>${u}</option>`).join('')}</select></div>`
-    +`<div><input type="number" min="0.01" step="0.01" value="${s.qty||''}" placeholder="如 1 或 0.5" title="售卖规格数量：数字，支持两位小数" style="${inp}" oninput="edSetQty(${k},this.value)"></div>`
+    +`<div><input type="number" min="1" max="${MAX_SPEC_QTY}" step="1" value="${s.qty||''}" placeholder="如 1 或 24" title="售卖规格数量：1~${MAX_SPEC_QTY}的正整数" style="${inp}" oninput="edSetQty(${k},this.value)"></div>`
     +`<div>${consign
         ?`<div class="sku-unit-cell" data-k="${k}" title="寄售：售卖规格单位同商品级库存单位，不可修改" style="${roCell};justify-content:center">${su||'—'}</div>`
-        :`<select title="售卖规格单位（《建品单位规范》：${std?'标品＝计件单位':'非标品＝计量单位'}）" onchange="EDIT_SKUS[${k}].sellUnit=this.value;skuRowSync(${k});renderSkuEditor()" style="${sel};border-color:${s.sellUnit?'#dcdfe6':'var(--r)'}"><option value="">请选择</option>${unitNames(EDIT_STD,'spec').map(u=>`<option value="${u}" ${s.sellUnit==u?'selected':''}>${u}</option>`).join('')}</select>`}</div>`
+        :`<select title="售卖规格单位（《建品单位规范》：${std?'标品＝计件单位':'非标品＝计量单位'}）" onchange="changeSellSpecUnit(${k},this.value)" style="${sel};border-color:${s.sellUnit?'#dcdfe6':'var(--r)'}"><option value="">请选择</option>${unitNames(EDIT_STD,'spec').map(u=>`<option value="${u}" ${s.sellUnit==u?'selected':''}>${u}</option>`).join('')}</select>`}</div>`
+    +(std?`<div><input data-testid="contained-pack-count-${k}" type="number" min="1" max="${MAX_SPEC_QTY}" step="1" value="${s.containedPackCount||''}" placeholder="${parseSpecQty(s.qty)!=null?'默认 '+s.qty:'默认同数量'}" title="该 SKU 实际包含几个最小包装，范围1~${MAX_SPEC_QTY}。留空即按「1 份 = 1 个最小包装」取售卖规格数量；只有 2打/箱 这类一份含多件的才需要改写，不按打/箱/托猜倍率" style="${inp}" oninput="edSetPackCount(${k},this.value)"></div>`:'')
     +`<div class="sku-net-cell" data-k="${k}" style="${roCell};justify-content:center">—</div>`
     +`<div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="${inp}" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div>`
     +`<div>${skuEdRefund(k,rowUnit)}</div>`
     +(consign?`<div style="${roCell}">货品库存</div><div style="${roCell}">随货品</div>`
              :`<div><input type="number" min="0" value="${s.stock||''}" placeholder="0" style="${inp}" oninput="EDIT_SKUS[${k}].stock=parseInt(this.value)||0"></div><div><select title="每日恢复初始库存：每天 0 点自动补回库存总数；售完即止：卖完不恢复、售罄即下线" onchange="EDIT_SKUS[${k}].stockMode=this.value" style="${sel}"><option value="finite" ${m=='finite'?'selected':''}>售完即止</option><option value="daily" ${m=='daily'?'selected':''}>每日恢复初始库存</option></select></div>`)
-    +`<button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button></div>`;}).join('')
+    +`${EDIT_LOCK_SKU_STRUCTURE?'<span style="color:var(--tt);text-align:center" title="已审核商品的 SKU 结构不在通用编辑中修改">—</span>':`<button class="btn btn-link" style="color:var(--r)" onclick="delSkuRow(${k})">删</button>`}</div>`;}).join('')
   +skuEdRefundNote();
   refreshNetCells();}
 /* 标品/非标品切换：标品→净含量回到 SPU（清掉各 SKU 自填值）；非标品→隐藏 SPU 净含量，SKU 表格出净含量列 */
 function setStdType(t){
+  const prev=EDIT_STD;if(prev==t)return;
   EDIT_STD=t;
   document.querySelectorAll('[name=f-stdtype]').forEach(r=>{
     const on=r.value==t,box=r.closest('.stdopt');
@@ -2193,45 +2242,71 @@ function setStdType(t){
   if(b)b.style.display=t=='标品'?'block':'none';
   if(n)n.style.display=t=='标品'?'none':'block';
   /* 两类的「售卖规格单位」取值集互斥（计件 vs 计量），切换后原值必然失效，清空重选，避免存下不在规范内的值 */
-  const ok=unitNames(t,'spec');
-  EDIT_SKUS.forEach(s=>{if(s.sellUnit&&!ok.includes(s.sellUnit))s.sellUnit='';});
+  const ok=unitNames(t,'spec');let affectedRows=0,clearedSpu=false,clearedStock=false;
+  EDIT_SKUS.forEach(s=>{let changed=false;if(s.sellUnit&&!ok.includes(s.sellUnit)){s.sellUnit='';changed=true;}if(s.containedPackCount){s.containedPackCount=null;changed=true;}if(changed)affectedRows++;});
+  if(t!='标品'){
+    ['f-netqty','f-netunit','f-netpacktype'].forEach(id=>{const el=document.getElementById(id);if(el&&el.value){el.value='';clearedSpu=true;}});EDIT_NET_PACK_TYPE='';
+  }
   /* 寄售的「库存单位」与售卖规格单位同一口径，下拉一并重建；原值失效则清空 */
   const su=document.getElementById('f-stockunit');
-  if(su){const cur=su.value;const keep=ok.includes(cur)?cur:'';
+  if(su){const cur=su.value;const keep=ok.includes(cur)?cur:'';clearedStock=!!cur&&!keep;
     su.innerHTML=ok.map(u=>`<option value="${u}" ${u==keep?'selected':''}>${u}</option>`).join('');
     su.value=keep;
     const hint=su.parentElement&&su.parentElement.querySelector('div');
     if(hint)hint.innerHTML=`取值同<b>售卖规格单位</b>枚举、随商品类型变（当前<b>${t}</b>：${ok.join(' / ')}）。选定后寄售各规格的<b>售卖规格单位恒等于它、逐规格不可改</b>，「1 份 = 数量」即表示 <b>数量 个该单位</b>（如库存单位 kg、数量 5 → 规格「5kg」）。`;
   }
-  renderSkuEditor();refreshSkuNames();
+  renderSkuEditor();refreshSkuNames();toast(`已切换为${t}${affectedRows?`，已清空 ${affectedRows} 个受影响规格行`:''}${clearedSpu?'；并清空商品级单件净含量/最小包装单位字段':''}${clearedStock?'；并清空不再适用的库存单位，请重新选择':''}`,'info');
 }
-/* 标品的 SKU 净含量是派生值，随「单件净含量 / 售卖规格数量」实时变；只刷这几个只读格，不整表重渲（否则打断输入焦点） */
+function changeNetPackType(){
+  /* 最小包装单位只声明净含量口径(单品/单包)，不参与件数换算 —— 切换时不动各规格已填的「内含最小包装数」 */
+  const next=edNetPackType();if(next==EDIT_NET_PACK_TYPE)return;
+  EDIT_NET_PACK_TYPE=next;refreshNetCells();netPackSync();
+  if(next)toast(`已声明净含量为「${next}」的量`,'info');
+}
+/* 提示条随所选口径改写，选完只留这一档的解释 */
+function netPackSync(){
+  const v=edNetPackType(),h=document.getElementById('netpack-hint');if(!h)return;
+  h.innerHTML=v
+    ?`<span class="i">ℹ️</span>已选 <b>${v}</b>：上方净含量是 <b>1 个${v=='单品'?'单品':'整包'}</b>的量${v=='单品'?'（如可乐 1 瓶 330 ml）':'（如海带丝 1 袋 200 g，袋内可再分小份）'}。它只声明口径、<b>不参与金额与库存计算</b>；一个规格装几个最小包装由下方「内含最小包装数」表达。`
+    :`<span class="i">ℹ️</span><b>最小包装单位</b>说明左边净含量是<b>哪一层</b>的量：<b>单品</b>＝1 个单品的量（可乐 1 瓶 330 ml）；<b>单包</b>＝1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）。净含量展示为「数值+计量单位/最小包装单位」，如 <b>330ml/单品</b>，<b>不乘包装数量</b>。`;
+}
+function changeSellSpecUnit(k,next){const s=EDIT_SKUS[k],prev=s.sellUnit||'',hadBase=!!s.containedPackCount;s.sellUnit=next;
+  /* 换了售卖规格单位（如 瓶→打），原先按旧单位核实的「内含最小包装数」不再成立，清空让商家按包装资料重填；
+     不填也不阻断——留空即按默认「1 份 = 1 个最小包装」取售卖规格数量 */
+  if(EDIT_STD=='标品'&&next!=prev)s.containedPackCount='';
+  skuRowSync(k);renderSkuEditor();
+  if(hadBase&&!s.containedPackCount){toast(`第 ${k+1} 行售卖规格单位已变更，原内含最小包装数已清空；留空按售卖规格数量计`,'info');setTimeout(()=>{const el=document.querySelector(`[data-testid="contained-pack-count-${k}"]`);if(el)el.focus();},0);}}
+/* 标品的 SKU 净含量始终回显申报值/最小包装单位；包装数量只进入「内含最小包装数」，不改净含量。 */
 /* 净含量只读列（两类都有，都不用填）：
-   标品   —— 回显上方填写的固定净含量；计件多件装在悬停补一句本规格合计
+   标品   —— 回显上方填写的固定净含量及最小包装单位，不显示包装合计
    非标品 —— 由「售卖规格数量 + 售卖规格单位」自动得出 */
 function refreshNetCells(){
   const std=(EDIT_STD||'标品')=='标品';
-  const base=parseFloat((document.getElementById('f-netqty')||{}).value),u=edUnit();
+  const base=parseMeasure((document.getElementById('f-netqty')||{}).value),u=edUnit(),bu=edNetPackType();
   const consign=EDIT_SUPPLY=='寄售',su0=edStockUnit();
   document.querySelectorAll('.sku-net-cell').forEach(el=>{
     const k=+el.dataset.k,r=EDIT_SKUS[k]||{},q=parseFloat(r.qty);
     const su=consign?su0:(r.sellUnit||'');
     if(!std){
-      if(!(q>0)||!su){el.textContent='—';el.title=!su?'请先选择售卖规格单位':'请先填写售卖规格数量';return;}
+      if(!(q>0)){el.textContent='请填数量';el.title='请先填写售卖规格数量';return;}
+      if(!su){el.textContent='请选规格单位';el.title='请先选择售卖规格单位';return;}
       const n=netCarry(q,su);
-      el.textContent=fmtQty(n.v)+n.u;
+      el.textContent=fmtDerivedMeasure(n.v)+n.u;
       el.title=`净含量 ＝ 售卖规格数量 ${fmtQty(q)} + 售卖规格单位 ${su}`;
       return;
     }
-    if(!(base>0)){el.textContent='—';el.title='标品的净含量是包装上申报的固定值，请在上方「单件净含量」填写';return;}
-    el.textContent=fmtQty(base)+u;
-    el.title='上方填写的单件净含量（净含量不随售卖规格数量变化）';
+    if(!base){el.textContent='请填合法净含量';el.title='请输入大于0的普通十进制，整数最多12位、小数最多6位';return;}
+    if(!u){el.textContent='请选计量单位';el.title='请选择净含量单位（g/kg/ml/L）';return;}
+    if(!bu){el.textContent=fmtMeasure(base)+u;el.title='请在上方选择「最小包装单位」，声明这是单品还是整包的量';return;}
+    el.textContent=fmtMeasure(base)+u+(bu?'/'+bu:'');
+    el.title='上方申报的单件净含量及最小包装单位（净含量不随包装数量变化）；一个规格装几个最小包装见「内含最小包装数」';
   });
 }
-/* 售卖规格数量：数字、支持两位小数（超过两位自动截断） */
-function edSetQty(k,v){const n=parseFloat(v);EDIT_SKUS[k].qty=isNaN(n)?'':Math.round(n*100)/100;skuRowSync(k);refreshNetCells();}
-function addSkuRow(){EDIT_SKUS.push({qty:'',price:'',stockMode:'finite',sellUnit:((EDIT_SKUS[EDIT_SKUS.length-1]||{}).sellUnit)||''});renderSkuEditor();}
-function delSkuRow(k){EDIT_SKUS.splice(k,1);if(!EDIT_SKUS.length)EDIT_SKUS.push({qty:'',price:'',pack:'',stockMode:'finite'});renderSkuEditor();}
+/* 售卖规格数量、内含最小包装数都只接受正整数。 */
+function edSetQty(k,v){const n=parseSpecQty(v);EDIT_SKUS[k].qty=n==null?'':n;skuRowSync(k);refreshNetCells();}
+function edSetPackCount(k,v){const n=parseSpecQty(v);EDIT_SKUS[k].containedPackCount=n==null?'':n;}
+function addSkuRow(){if(EDIT_LOCK_SKU_STRUCTURE){toast('已审核商品请从商品列表的「添加规格」专用入口提交','info');return;}EDIT_SKUS.push({qty:'',price:'',stockMode:'finite',sellUnit:((EDIT_SKUS[EDIT_SKUS.length-1]||{}).sellUnit)||''});renderSkuEditor();}
+function delSkuRow(k){if(EDIT_LOCK_SKU_STRUCTURE){toast('已审核商品的 SKU 结构不能在通用编辑中删除','info');return;}EDIT_SKUS.splice(k,1);if(!EDIT_SKUS.length)EDIT_SKUS.push({qty:'',price:'',pack:'',stockMode:'finite'});renderSkuEditor();}
 function expToggle(){const e=document.querySelector('input[name=f-expen]:checked');const on=(!e||e.value=='是');['f-qp','f-qpu'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=!on;});const cell=document.getElementById('qp-cell');if(cell)cell.style.opacity=on?'1':'.45';}
 function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS[cat];const box=document.getElementById('cat-hint');
   // BCRS 类目门控：仅支持 BCRS 的类目显示「是否支持 BCRS」；否则隐藏并重置为否
@@ -2239,21 +2314,25 @@ function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS
   if(!box)return;let h='';if(c&&!CAT_SCOPE.includes(cat))h=`<div class="ib ib-r" style="margin:10px 0"><span class="i">⛔</span>经营许可证未覆盖「${cat}」类目，提交将被资质校验拦截。</div>`;else if(c&&c.baseRisk=='高')h=`<div class="ib ib-gr" style="margin:10px 0"><span class="i">ℹ️</span>「${cat}」为高风险类目，首次建档默认进人工审核。</div>`;box.innerHTML=h;}
 function bcrsToggle(){const e=document.querySelector('input[name=f-bcrs]:checked');const on=e&&e.value=='是';const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display=on?'':'none';if(on)bcrsPreview();}
 function bcrsPreview(){const c=parseInt((document.getElementById('f-bcrscnt')||{}).value,10)||0;const el=document.getElementById('bcrs-prev');if(el)el.textContent=c>0?`· 每 1 份押金 ${money(c*BCRS_UNIT_PRICE)}（${c}容器×${money(BCRS_UNIT_PRICE)}）`:'';}
-function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{const e=document.querySelector('input[name='+n+']:checked');return e?e.value:'';};const p=i<0?{id:'SPU'+(++SPU_SEQ)}:{...DB.products[i]};p.cat=g('f-cat').value;p.tax=g('f-tax').value.trim();p.stdType=gr('f-stdtype')||EDIT_STD||'标品';   /* 标品=净含量落 SPU；非标品=净含量落 SKU */p.netQty=p.stdType=='标品'?g('f-netqty').value.trim():'';p.netUnit=p.stdType=='标品'?((g('f-netunit')||{}).value||''):'';p.unit=p.netUnit;p.stockUnit=(((g('f-supply')||{}).value||'自售')=='寄售')?((g('f-stockunit')||{}).value||''):'';   /* 最小售卖单位/规格备注已下线：unit 由净含量单位派生，仅供历史数据与下游兼容 */p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';p.consign=((g('f-supply')||{}).value||'自售')=='寄售';   // 售卖模式：寄售=true
-  const bcrsOn=(gr('f-bcrs')=='是')&&!!(CATS[p.cat]&&CATS[p.cat].bcrs);p.bcrs=bcrsOn;p.bcrsUnitContainers=bcrsOn?(parseInt((g('f-bcrscnt')||{}).value,10)||0):0;   /* BCRS：仅支持类目+选是才存；每 1 份容器数(押金单价平台固定0.10) */ const prev=(i>=0&&DB.products[i].skus)||[];p.skus=EDIT_SKUS.map((s,k)=>({skuId:(prev[k]&&prev[k].skuId)||('SKU'+(++SKU_SEQ)),qty:(Math.round((parseFloat(s.qty)||0)*100)/100),packUnit:s.packUnit||'',sellUnit:(p.consign?(p.stockUnit||''):(s.sellUnit||'')),refund:(['kg','g'].includes(p.consign?(p.stockUnit||''):(s.sellUnit||''))&&s.refund?1:0),   /* 多退少补按「该规格的售卖规格单位」判定；原先取 spuUnit(p)=净含量单位，非标品已不落 SPU 净含量，会把 refund 全部清零 */price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(prev[k]&&prev[k].safe)||0,stockMode:s.stockMode||'finite',soldToday:(s.soldToday!=null?s.soldToday:(prev[k]&&prev[k].soldToday))||0,createdAt:(prev[k]&&prev[k].createdAt)||ts(),updatedAt:ts()}));p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
+function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{const e=document.querySelector('input[name='+n+']:checked');return e?e.value:'';};const p=i<0?{id:'SPU'+(++SPU_SEQ)}:{...DB.products[i]};p.cat=g('f-cat').value;p.tax=g('f-tax').value.trim();p.stdType=gr('f-stdtype')||EDIT_STD||'标品';   /* 标品=净含量落 SPU；非标品=净含量落 SKU */p.netQty=p.stdType=='标品'?(parseMeasure(g('f-netqty').value)||g('f-netqty').value.trim()):'';p.netUnit=p.stdType=='标品'?((g('f-netunit')||{}).value||''):'';p.netPackType=p.stdType=='标品'?((g('f-netpacktype')||{}).value||''):'';p.unit=p.netUnit;p.stockUnit=(((g('f-supply')||{}).value||'自售')=='寄售')?((g('f-stockunit')||{}).value||''):'';   /* 最小售卖单位/规格备注已下线：unit 由净含量单位派生，仅供历史数据与下游兼容 */p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';p.consign=((g('f-supply')||{}).value||'自售')=='寄售';   // 售卖模式：寄售=true
+  const bcrsOn=(gr('f-bcrs')=='是')&&!!(CATS[p.cat]&&CATS[p.cat].bcrs);p.bcrs=bcrsOn;p.bcrsUnitContainers=bcrsOn?(parseInt((g('f-bcrscnt')||{}).value,10)||0):0;   /* BCRS：仅支持类目+选是才存；每 1 份容器数(押金单价平台固定0.10) */ const prev=(i>=0&&DB.products[i].skus)||[],prevById=new Map(prev.map(x=>[x.skuId,x]));p.skus=EDIT_SKUS.map(s=>{const old=s.skuId?prevById.get(s.skuId):null,sellUnit=p.consign?(p.stockUnit||''):(s.sellUnit||''),qty=parseInt(s.qty,10)||0;return{skuId:(old&&old.skuId)||s.skuId||('SKU'+(++SKU_SEQ)),qty,packUnit:s.packUnit||'',sellUnit,containedPackCount:p.stdType=='标品'?(sellUnit&&sellUnit==p.netPackType?qty:(parseInt(s.containedPackCount,10)||0)):null,refund:(['kg','g'].includes(sellUnit)&&s.refund?1:0),price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(old&&old.safe)||0,stockMode:s.stockMode||'finite',soldToday:(s.soldToday!=null?s.soldToday:(old&&old.soldToday))||0,createdAt:(old&&old.createdAt)||s.createdAt||ts(),updatedAt:ts()};});p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
 function upsert(i,p){if(i<0)DB.products.unshift(p);else DB.products[i]=p;}
-function doSaveSpu(i,asDraft){const prev=i>=0?DB.products[i]:null;const approved=prev&&(prev.status=='onsale'||prev.status=='offsale');const p=collectSpu(i);if(asDraft){p.status='draft';upsert(i,p);closeModal();render();toast('已存草稿','info');return;}if(approved){p.status=prev.status;upsert(i,p);closeModal();render();toast('已保存，即时生效（已审核商品编辑无需重审）','ok');return;}
+function showSchemaFailures(fails){toast(fails[0][1],'err');modalWide(`<div class="mc-hd"><h3>⛔ 发布校验未通过</h3><p>已拦截本次保存/提交，原表单保留</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">${fails.map((f,i)=>`<div class="ck no"><div class="cb">✕</div><div><b>${f[0]}</b><div style="font-size:12px;color:var(--ts);margin-top:3px">${f[1]}</div></div><span class="cx">${i+1}</span></div>`).join('')}</div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">返回修正</button></div>`);}
+function doSaveSpu(i,asDraft){const prev=i>=0?DB.products[i]:null;const approved=prev&&(prev.status=='onsale'||prev.status=='offsale');const p=collectSpu(i);if(asDraft){p.status='draft';upsert(i,p);closeModal();render();toast('已存草稿','info');return;}const fails=autoCheck(p);if(fails.length){showSchemaFailures(fails);return;}if(approved){p.status=prev.status;upsert(i,p);closeModal();render();toast('已保存，即时生效（已审核商品编辑无需重审）','ok');return;}
+  if(prev&&prev.status=='forced_off'){p.status='reviewing';p.auditOpinions=[];p.reject='';upsert(i,p);closeModal();DB.mTab='review';render();toast('整改内容已重新提交平台审核；原SKU结构保持锁定','ok');return;}
   if(prev&&(prev.status=='reviewing'||prev.status=='rejected')){p.status='reviewing';p.auditOpinions=[];p.reject='';upsert(i,p);closeModal();render();DB.mTab='review';toast(prev.status=='rejected'?'已修改并重新提交，进入待审核':'已更新，重新提交平台审核','ok');return;}
   submitForAudit(p,i);}
 function act_submit(i){const p=JSON.parse(JSON.stringify(DB.products[i]));submitForAudit(p,i);}
-function submitForAudit(p,i){if(DB.auditCfg.auto){closeModal();runFunnel(p,i,autoCheck(p));}else{p.status='reviewing';p.autoApproved=false;p.note='';p.risk=computeRisk(p);upsert(i,p);closeModal();render();modal(`<div class="mc-hd"><h3>📨 已提交人工审核</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📨</span>自动审核未开启，商品「${p.name||'新商品'}」建档信息已提交<b>平台人工审核</b>，审核通过后上架在售。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">留在商家端</button><button class="btn btn-p" onclick="closeModal();setRole('shop_ops')">去平台审核 →</button></div>`);toast('已提交人工审核','ok');}}
+function submitForAudit(p,i){const fails=autoCheck(p);if(fails.length){showSchemaFailures(fails);return;}if(DB.auditCfg.auto){closeModal();runFunnel(p,i,fails);}else{p.status='reviewing';p.autoApproved=false;p.note='';p.risk=computeRisk(p);upsert(i,p);closeModal();render();modal(`<div class="mc-hd"><h3>📨 已提交人工审核</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📨</span>自动审核未开启，商品「${p.name||'新商品'}」建档信息已提交<b>平台人工审核</b>，审核通过后上架在售。</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">留在商家端</button><button class="btn btn-p" onclick="closeModal();setRole('shop_ops')">去平台审核 →</button></div>`);toast('已提交人工审核','ok');}}
 function act_setStatus(i,st){const p=DB.products[i];const label=st=='offsale'?'下架':'上架';askConfirm(`确认将商品「${p.name}」整体${label}？`,()=>{p.status=st;p.updatedAt=ts();render();toast(`「${p.name}」已${label}`,'info');});}
 function act_relist(i){const p=DB.products[i];askConfirm(`确认上架商品「${p.name}」（全部规格）？`,()=>{p.status='onsale';(p.skus||[]).forEach(s=>{s.off=false;s.updatedAt=ts();});p.updatedAt=ts();render();toast(`「${p.name}」已上架`,'ok');});}
-function runFunnel(p,i,fails){const items=['必填完整性','售卖规格','资质关联','重复建档'];const failMap={};fails.forEach(x=>{(failMap[x[0]]=failMap[x[0]]||[]).push(x[1]);});modalWide(`<div class="mc-hd"><h3>🔍 建档信息自动校验</h3><p>${p.name||'新商品'} · ${(p.skus||[]).length} 个 SKU · 提交即时校验（仅校验建档信息）</p></div><div class="mc-bd"><div id="chk-list">${items.map(it=>`<div class="ck run"><div class="cb">…</div>${it}<span class="cx">校验中…</span></div>`).join('')}</div><div id="chk-result"></div></div>`);let idx=0;const tick=()=>{const list=document.querySelectorAll('#chk-list .ck');if(idx<items.length){const el=list[idx];const it=items[idx];const fs=failMap[it];el.className='ck '+(fs?'no':'ok');el.querySelector('.cb').textContent=fs?'✕':'✓';el.querySelector('.cx').textContent=fs?fs.join('；'):'通过';idx++;setTimeout(tick,340);}else finishFunnel(p,i,fails);};setTimeout(tick,300);}
+function runFunnel(p,i,fails){const base=['必填完整性','净含量','单位规范','售卖规格','资质关联','重复建档','BCRS'],extra=fails.map(x=>x[0]).filter(x=>!base.includes(x)),items=[...base,...extra];const failMap={};fails.forEach(x=>{(failMap[x[0]]=failMap[x[0]]||[]).push(x[1]);});modalWide(`<div class="mc-hd"><h3>🔍 建档信息自动校验</h3><p>${p.name||'新商品'} · ${(p.skus||[]).length} 个 SKU · 提交即时校验（仅校验建档信息）</p></div><div class="mc-bd"><div id="chk-list">${items.map(it=>`<div class="ck run"><div class="cb">…</div>${it}<span class="cx">校验中…</span></div>`).join('')}</div><div id="chk-result"></div></div>`);let idx=0;const tick=()=>{const list=document.querySelectorAll('#chk-list .ck');if(idx<items.length){const el=list[idx];const it=items[idx];const fs=failMap[it];el.className='ck '+(fs?'no':'ok');el.querySelector('.cb').textContent=fs?'✕':'✓';el.querySelector('.cx').textContent=fs?fs.join('；'):'通过';idx++;setTimeout(tick,340);}else finishFunnel(p,i,fails);};setTimeout(tick,300);}
 function finishFunnel(p,i,fails){const box=document.getElementById('chk-result');if(fails.length){p.status='draft';upsert(i,p);box.innerHTML=`<div class="ib ib-r" style="margin-top:14px"><span class="i">⛔</span><div><b>自动校验未通过，已拦截</b><br>修正 ${fails.length} 项后重新提交，商品已存草稿。</div></div><div class="mc-ft" style="margin:14px -24px -22px"><button class="btn btn-o" onclick="closeModal();render()">关闭</button><button class="btn btn-p" onclick="closeModal();render();act_editSpu(${DB.products.indexOf(p)})">去修正</button></div>`;toast('自动校验拦截，已退回草稿','err');return;}p.risk=computeRisk(p);p.status='onsale';p.note='';p.autoApproved=true;upsert(i,p);box.innerHTML=`<div class="ib ib-g" style="margin-top:14px"><span class="i">✅</span>建档信息自动校验全部通过。</div><div class="card" style="box-shadow:none;margin:0"><div class="card-bd"><div class="ib ib-g" style="margin:0"><span class="i">🎉</span>自动审核已开启，商品建档审核<b>自动通过</b>，所有规格已直接上架在售。</div></div></div><div class="mc-ft" style="margin:14px -24px -22px"><button class="btn btn-p" onclick="closeModal();render()">完成</button></div>`;toast('自动通过，已上架','ok');}
 /* 批量导入（每行=SKU，按商品名聚合 SPU） */
 let IMP=null;
-PAGES['m-import']=()=>{return impBuildUI();};
+const impMode=()=>DB.impMode||'build';
+function impSetMode(m){DB.impMode=m;IMP=null;render();}
+PAGES['m-import']=()=>{const m=impMode();return `<div class="tabs" style="margin-bottom:12px"><div class="tab ${m=='build'?'active':''}" onclick="impSetMode('build')">新建商品</div><div class="tab ${m=='add'?'active':''}" onclick="impSetMode('add')">向已有商品新增 SKU</div></div>${m=='add'?impAddUI():impBuildUI()}`;};
 /* 批量建品字段规范（单一数据源）：驱动 ①导出模板表头(必填/选填标记)+填写说明行 ②页面「字段填写规则」表 ③示例行。
    req：必填 / 选填 / 条件必填。ex：模板示例行首行取值。必填/枚举与建品校验(impParseBuild)、建单表单枚举保持一致。 */
 /* ===== 批量建品模板：标品 / 非标品 各一套（2026-08-17 定，方案 B）=====
@@ -2287,15 +2366,17 @@ const BUILD_FIELDS_COMMON_TAIL=[
 ];
 const BUILD_FIELDS_BY_TYPE={
   '标品':[...BUILD_FIELDS_COMMON_HEAD,
-    {k:'单件净含量',req:'必填',rule:'包装上申报的固定净含量数值，一个最小包装的量，如可乐填 330、海带丝填 200。标品的净含量不由售卖规格数量倒推，必须申报',ex:'330'},
+    {k:'单件净含量',req:'必填',rule:'包装上申报的固定净含量数值，一个最小包装的量，如可乐填 330、海带丝填 200。须为大于0的普通十进制，整数最多12位、小数最多6位；不得含单位、字母或科学计数法',ex:'330'},
     {k:'净含量单位',req:'必填',rule:'《建品单位规范》枚举：g / kg / ml / L（模板已挂下拉）',ex:'ml'},
+    {k:'最小包装单位',req:'必填',rule:'声明左列净含量是哪一层的量，枚举：单品 / 单包（模板已挂下拉）。单品＝1 个单品的量（可乐 1 瓶 330ml）；单包＝1 整包/袋的量（海带丝 1 袋 200g）。只声明口径，不参与金额/库存计算',ex:'单品'},
     ...BUILD_FIELDS_COMMON_MID,
-    {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填该规格里装几件（正整数≥1）；同一SPU下不可重复。如 1 表示单瓶、24 表示 24瓶整箱',ex:'24'},
+    {k:'售卖规格数量',req:'必填',rule:`每行一个售卖规格，范围1~${MAX_SPEC_QTY}的正整数；同一SPU下「数量+售卖规格单位+售卖单位」完整组合不可重复。如 1瓶 与 1托/箱 可并存，第二个1瓶不可重复`,ex:'24'},
     {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》标品枚举：个 / 打 / 瓶 / 罐 / 盒 / 袋 / 箱 / 卷 / 托（计件单位，模板已挂下拉）。净含量取「单件净含量」申报值，不随本列数量变化',ex:'瓶'},
+    {k:'内含最小包装数',req:'选填',rule:`当前 SKU 实际包含几个最小包装，范围1~${MAX_SPEC_QTY}的正整数。留空即按「1 份 = 1 个最小包装」取售卖规格数量（24瓶/箱 → 24）；只有 2打/箱 这类 1 份含多件的才需填写实际数（24），不按打/箱/托猜倍率`,ex:'24'},
     ...BUILD_FIELDS_COMMON_TAIL],
   '非标品':[...BUILD_FIELDS_COMMON_HEAD,
     ...BUILD_FIELDS_COMMON_MID,
-    {k:'售卖规格数量',req:'必填',rule:'每行一个售卖规格，填售卖规格数量（正整数≥1）；同一SPU下不可重复（如 1、5 表示 1kg、5kg 两个规格）',ex:'1'},
+    {k:'售卖规格数量',req:'必填',rule:`每行一个售卖规格，范围1~${MAX_SPEC_QTY}的正整数；同一SPU下「数量+售卖规格单位+售卖单位」完整组合不可重复（如 1kg 与 1kg/箱 可并存）`,ex:'1'},
     {k:'售卖规格单位',req:'必填',rule:'《建品单位规范》非标品枚举：g / kg（计量单位，模板已挂下拉）。净含量 ＝ 售卖规格数量 + 售卖规格单位，故本模板无净含量列。多退少补仅在此列为 kg / g 时可开',ex:'kg'},
     ...BUILD_FIELDS_COMMON_TAIL],
 };
@@ -2310,19 +2391,20 @@ function impSetType(t){DB.impType=t;IMP=null;render();}
 function impBuildUI(){const T=impType();
   const seg=STD_TYPES.map(t=>`<div class="tab ${T==t?'active':''}" onclick="impSetType('${t}')">${t}模板</div>`).join('');
   const desc=T=='标品'
-    ? '工业预包装：售卖规格单位取<b>计件单位</b>（个/打/瓶/罐/盒/袋/箱/卷/托），须申报<b>单件净含量</b>；净含量即该申报值，不乘售卖规格数量。'
+    ? '工业预包装：须申报<b>单件净含量/最小包装单位</b>（如330ml/瓶），每个 SKU 再填<b>内含最小包装数</b>；净含量本身不乘包装数量。'
     : '生鲜分装：售卖规格单位取<b>计量单位</b>（g/kg），<b>无净含量列</b>——净含量 ＝ 售卖规格数量 + 售卖规格单位。';
   return `<div class="card"><div class="card-hd"><h3>📥 批量建品</h3><span class="sub">主子两表：商品(SPU) + 规格(SKU)，靠「自定义SPU编号」关联</span></div>
   <div class="card-hd" style="border-top:0;padding-top:0"><div class="tabs" style="border:none">${seg}</div></div>
   <div class="card-bd">
-  <div class="ib ib-b" style="margin:0 0 12px"><span class="i">📦</span><div><b>标品与非标品模板分开</b>，各自的单位列已挂固定下拉、互不串味。当前选择：<b>${T}</b> —— ${desc}<br><span style="opacity:.85">两类商品请<b>分两次</b>下载模板并分别导入；一个文件里不混填。</span></div></div>
+  <div class="ib ib-b" style="margin:0 0 12px"><span class="i">📦</span><div><b>标品与非标品模板分开</b>，各自的单位列按固定字典校验、互不串味。当前选择：<b>${T}</b> —— ${desc}<br><span style="opacity:.85">两类商品请<b>分两次</b>下载模板并分别导入；一个文件里不混填。下载物为可直接用 Excel 打开的 XLSX：标品 4 个单位列、非标品 2 个单位列均含 Data Validation 下拉。</span></div></div>
   <div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div>
   ${buildFieldsTable()}
-  <div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载${T}建品模板</button><div class="up" style="flex:1" onclick="impParseBuild()"><div class="uic">📄</div><div class="ut">上传已填写的${T}模板</div><div class="us">演示：点此模拟解析（含各类校验错误样例）</div></div></div>
+  <div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载${T}建品 XLSX</button><div class="up" style="flex:1" onclick="impParseBuild('valid')"><div class="uic">📄</div><div class="ut">上传已填写的${T}模板</div><div class="us">演示：点此解析合规模板</div></div></div>
+  <div class="row" style="gap:8px;margin:-4px 0 12px"><button class="btn btn-o btn-sm" onclick="impParseBuild('invalid')">模拟非法单位/缺最小包装数</button><button class="btn btn-o btn-sm" onclick="impRejectWrongType()">模拟上传错类型模板</button></div>
   <div id="imp-out"></div>
   <div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>上传时按<b>模板类型</b>解析：表头与所选类型不符会整表拒收，不做逐行猜测。库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div>
   </div></div>`;}
-function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；新增 SKU 单独审核</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；新增的 SKU 进审核队列<b>单独审核</b>，通过后可售。</div></div></div>`;}
+function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批量新增 SKU</h3><span class="sub">给已有商品(SPU)追加规格；完整SPU统一校验后按审核配置处理</span></div><div class="card-bd"><div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('addsku')">⬇️ 下载新增SKU模板</button><div class="up" style="flex:1" onclick="impParseAdd()"><div class="uic">📄</div><div class="ut">上传已填写的模板</div><div class="us">演示：点此模拟解析</div></div></div><div id="imp-out"></div><div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>SPU编号必须是系统已有商品；确认时先校验“原SPU+全部新增SKU”，通过后${DB.auditCfg.auto?'自动生效':'进入SKU审核队列'}，失败则整组不写入。</div></div></div>`;}
 /* 两套模板各一组演示数据：类型由所选模板决定，行内不再有「商品类型」列。
    每组都含若干校验错误样例（缺名/超范围类目/主图未上传/单位越界/孤儿行）。 */
 const IMP_DEMO={
@@ -2337,16 +2419,17 @@ const IMP_DEMO={
   },
   '标品':{
     spu:[
-      {ln:2,code:'S001',name:'可口可乐',cat:'饮料',tax:'9%',netQty:'330',netUnit:'ml',expEn:'是',qp:'12',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'新加坡',brand:'Coca-Cola',mainImg:'001',detailImg:'002'},
-      {ln:3,code:'S002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',netQty:'500',netUnit:'g',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
-      {ln:4,code:'S003',name:'金标酱油',cat:'调味品',tax:'9%',netQty:'500',netUnit:'ml',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
+      {ln:2,code:'S001',name:'可口可乐',cat:'饮料',tax:'9%',netQty:'330',netUnit:'ml',netPackType:'单品',expEn:'是',qp:'12',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'新加坡',brand:'Coca-Cola',mainImg:'001',detailImg:'002'},
+      {ln:3,code:'S002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',netQty:'500',netUnit:'g',netPackType:'单品',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
+      {ln:4,code:'S003',name:'金标酱油',cat:'调味品',tax:'9%',netQty:'500',netUnit:'ml',netPackType:'单品',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
       /* 标品必填样例：漏填单件净含量，应被拦截 */
-      {ln:5,code:'S004',name:'即食海带丝',cat:'海鲜水产',tax:'9%',netQty:'',netUnit:'',expEn:'是',qp:'6',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'中国山东',brand:'',mainImg:'001',detailImg:''}],
-    sku:[{ln:2,code:'S001',qty:1,specUnit:'瓶',packUnit:''},{ln:3,code:'S001',qty:24,specUnit:'瓶',packUnit:'箱'},{ln:4,code:'S002',qty:1,specUnit:'盒',packUnit:''},{ln:5,code:'S003',qty:1,specUnit:'瓶',packUnit:''},{ln:6,code:'S004',qty:1,specUnit:'袋',packUnit:''},{ln:7,code:'S999',qty:1,specUnit:'瓶',packUnit:''}],
+      {ln:5,code:'S004',name:'即食海带丝',cat:'海鲜水产',tax:'9%',netQty:'',netUnit:'',netPackType:'单包',expEn:'是',qp:'6',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'中国山东',brand:'',mainImg:'001',detailImg:''}],
+    sku:[{ln:2,code:'S001',qty:1,specUnit:'瓶',containedPackCount:1,packUnit:''},{ln:3,code:'S001',qty:24,specUnit:'瓶',containedPackCount:24,packUnit:'箱'},{ln:4,code:'S001',qty:2,specUnit:'打',containedPackCount:24,packUnit:'箱'},{ln:5,code:'S002',qty:1,specUnit:'盒',containedPackCount:1,packUnit:''},{ln:6,code:'S003',qty:2,specUnit:'打',containedPackCount:'',packUnit:'箱'},{ln:7,code:'S004',qty:1,specUnit:'袋',containedPackCount:1,packUnit:''},{ln:8,code:'S999',qty:1,specUnit:'瓶',containedPackCount:1,packUnit:''}],
   },
 };
-function impParseBuild(){
-  const T=impType(),demo=IMP_DEMO[T];
+function impRejectWrongType(){const T=impType(),other=T=='标品'?'非标品':'标品',box=document.getElementById('imp-out');box.innerHTML=`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span><div><b>整表拒收，未进入逐行解析</b><br>当前声明类型为「${T}」，上传文件表头检测为「${other}」。请切换 Tab 并下载对应 XLSX 模板。</div></div>`;toast('模板类型与当前 Tab 不一致，已整表拒收','err');}
+function impParseBuild(mode='invalid'){
+  const T=impType(),src=IMP_DEMO[T],first=src.spu[0].code,demo=mode=='valid'?{spu:[src.spu[0]],sku:src.sku.filter(r=>r.code==first)}:src;
   /* 模板类型即商品类型，逐行沿用；不再从行里读「商品类型」列 */
   const spuRows=demo.spu.map(r=>({...r,stdType:T}));
   const skuRows=demo.sku;
@@ -2359,9 +2442,11 @@ function impParseBuild(){
     if(!r.cat||!r.showExp||!r.storage||!r.fulfil)errs.push('SPU必填项缺失（后台类目/APP展示效期/储存条件/履约方式）');
     /* 类型来自模板本身；标品模板必须申报单件净含量，非标品模板压根没有这两列 */
     if(r.stdType=='标品'){
-      if(!(parseFloat(r.netQty)>0))errs.push('「单件净含量」必填——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推');
+      if(!parseMeasure(r.netQty))errs.push('「单件净含量」须为大于0的普通十进制，整数最多12位、小数最多6位，不得含单位/字母/科学计数法');
       else if(!r.netUnit)errs.push('填了单件净含量，「净含量单位」必填');
       if(r.netUnit&&!unitNames('标品','net').includes(r.netUnit))errs.push(`净含量单位「${r.netUnit}」不在《建品单位规范》取值内（${unitNames('标品','net').join('/')}）`);
+      if(!r.netPackType)errs.push('「最小包装单位」必填');
+      else if(!NET_PACK_TYPES.includes(r.netPackType))errs.push(`最小包装单位「${r.netPackType}」不在取值内（${NET_PACK_TYPES.join('/')}）`);
     }
     if(r.expEn=='是'&&(!r.qp||!r.qpu))errs.push('效期管理=是，保质期/单位必填');
     if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
@@ -2375,56 +2460,95 @@ function impParseBuild(){
     const o={row:r,errs,skus:[],ok:false,mainIds,detailIds:detOk,warns};if(r.code)map[r.code]=o;return o;});
   const orphans=[];
   skuRows.forEach(r=>{if(!r.code||!map[r.code]){orphans.push({row:r,err:!r.code?'SKU行未填SPU编号':'SPU编号「'+r.code+'」在商品表中不存在（孤儿行）'});return;}
-    const errs=[];if(!(r.qty>0))errs.push('数量必须为正整数≥1');
+    const errs=[];if(parseSpecQty(r.qty)==null)errs.push(`数量必须为1~${MAX_SPEC_QTY}的正整数`);
     const grp=map[r.code],st=grp.row.stdType;
     /* 售卖规格单位 / 售卖单位 一律按《建品单位规范》校验，取值随该商品的类型 */
     if(!r.specUnit)errs.push('「售卖规格单位」必填');
     else if(STD_TYPES.includes(st)&&!unitNames(st,'spec').includes(r.specUnit))errs.push(`售卖规格单位「${r.specUnit}」不在${st}取值内（${unitNames(st,'spec').join('/')}）`);
+    if(st=='标品'&&parseSpecQty(r.containedPackCount)==null)errs.push(`「内含最小包装数」必须为1~${MAX_SPEC_QTY}的正整数`);
+    /* 最小包装单位是口径标记(单品/单包)、不是可比对的计件单位，故不再做「同单位必须相等」校验；内含最小包装数留空即按售卖规格数量 */
     if(r.packUnit&&!unitNames(st||'标品','sell').includes(r.packUnit))errs.push(`售卖单位「${r.packUnit}」不在规范取值内（${unitNames(st||'标品','sell').join('/')}）`);
-    if(grp.skus.some(x=>x.row.qty==r.qty))errs.push('同商品规格(数量)重复');
+    const specKey=`${r.qty}|${r.specUnit||''}|${r.packUnit||''}`;if(grp.skus.some(x=>`${x.row.qty}|${x.row.specUnit||''}|${x.row.packUnit||''}`==specKey))errs.push('同商品完整规格（数量+售卖规格单位+售卖单位）重复');
     grp.skus.push({row:r,errs,ok:errs.length==0});});
-  spus.forEach(o=>{const v=o.skus.filter(x=>x.ok).length;if(o.errs.length==0&&v==0)o.errs.push('无有效规格(SKU)，商品建不了');o.ok=o.errs.length==0&&o.skus.some(x=>x.ok);});
+  spus.forEach(o=>{const v=o.skus.filter(x=>x.ok).length,bad=o.skus.length-v;if(o.errs.length==0&&v==0)o.errs.push('无有效规格(SKU)，商品建不了');if(bad)o.errs.push(`包含 ${bad} 行非法 SKU，该 SPU 必须整组修正后再导入`);o.ok=o.errs.length==0&&o.skus.length>0&&o.skus.every(x=>x.ok);});
   IMP={mode:'build',spus,orphans};renderImpBuild();
 }
 function renderImpBuild(){const spus=IMP.spus,orphans=IMP.orphans;const okS=spus.filter(x=>x.ok);const box=document.getElementById('imp-out');
   box.innerHTML=`<div class="sg" style="grid-template-columns:repeat(4,1fr);margin:14px 0 12px"><div class="sc"><div class="sc-l">商品(SPU)</div><div class="sc-v">${spus.length}</div></div><div class="sc good"><div class="sc-l">可建</div><div class="sc-v">${okS.length}</div></div><div class="sc alert"><div class="sc-l">失败商品</div><div class="sc-v">${spus.length-okS.length}</div></div><div class="sc alert"><div class="sc-l">孤儿SKU行</div><div class="sc-v">${orphans.length}</div></div></div>
   <div class="card" style="box-shadow:none;margin:0 0 14px"><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>SPU编号</th><th>商品</th><th>后台类目</th><th>有效规格</th><th>图片(主图/详情)</th><th>校验</th></tr></thead><tbody>
-  ${spus.map(o=>{const mn=(o.mainIds||[]).length,dn=(o.detailIds||[]).length;const imgCell=`<span class="tag ${mn?'t-g':'t-r'}" style="font-size:10.5px">主 ${mn}</span> <span class="tag ${dn?'t-b':'t-gr'}" style="font-size:10.5px">详 ${dn}</span>${(o.warns&&o.warns.length)?` <span class="tag t-y" style="font-size:10.5px" title="${o.warns.join('；')}">⚠︎</span>`:''}`;
-    return `<tr><td class="mono">${o.row.code||'—'}</td><td><b>${o.row.name||'—'}</b></td><td>${o.row.cat||'—'}</td><td>${o.skus.filter(x=>x.ok).length}/${o.skus.length}</td><td style="white-space:nowrap">${imgCell}</td><td>${o.ok?`<span class="tag t-g">可建`:`<span class="tag t-r">${o.errs[0]||(o.skus.find(x=>!x.ok)?'规格:'+o.skus.find(x=>!x.ok).errs[0]:'失败')}`}</span></td></tr>`;}).join('')}
+  ${spus.map(o=>{const mn=(o.mainIds||[]).length,dn=(o.detailIds||[]).length;const imgCell=`<span class="tag ${mn?'t-g':'t-r'}" style="font-size:10.5px">主 ${mn}</span> <span class="tag ${dn?'t-b':'t-gr'}" style="font-size:10.5px">详 ${dn}</span>${(o.warns&&o.warns.length)?` <span class="tag t-y" style="font-size:10.5px" title="${o.warns.join('；')}">⚠︎</span>`:''}`;const skuErr=o.skus.filter(x=>!x.ok).map(x=>`第${x.row.ln}行 ${x.row.qty||'—'}${x.row.specUnit||''}${x.row.packUnit?'/'+x.row.packUnit:''}：${x.errs.join('；')}`);
+    return `<tr><td class="mono">${o.row.code||'—'}</td><td><b>${o.row.name||'—'}</b></td><td>${o.row.cat||'—'}</td><td>${o.skus.filter(x=>x.ok).length}/${o.skus.length}</td><td style="white-space:nowrap">${imgCell}</td><td>${o.ok?`<span class="tag t-g">可建`:`<span class="tag t-r">失败`}</span>${o.errs.length?`<div style="font-size:11px;color:var(--r);margin-top:4px">${o.errs.join('<br>')}</div>`:''}${skuErr.length?`<div style="font-size:11px;color:var(--r);margin-top:4px">${skuErr.join('<br>')}</div>`:''}</td></tr>`;}).join('')}
   ${orphans.map(o=>`<tr><td class="mono">${o.row.code||'—'}</td><td colspan="4" style="color:var(--ts)">孤儿SKU行 第${o.row.ln}行 · ${o.row.name}</td><td><span class="tag t-r">${o.err}</span></td></tr>`).join('')}
   </tbody></table></div></div></div>
   ${(()=>{const ws=spus.filter(o=>o.ok&&o.warns&&o.warns.length);return ws.length?`<div class="ib ib-y" style="margin:0 0 12px"><span class="i">⚠️</span><div>以下可建商品有<b>详情图告警</b>（不阻断建品）：<br>${ws.map(o=>`· ${o.row.name}（${o.row.code}）：${o.warns.join('；')}`).join('<br>')}</div></div>`:'';})()}
-  <button class="btn btn-p btn-lg" ${okS.length?'':'disabled'} onclick="impConfirmBuild()">确认建品 ${okS.length} 个商品（进首次建档审核）</button>`;}
-function impConfirmBuild(){let n=0,sk=0;IMP.spus.filter(x=>x.ok).forEach(o=>{const r=o.row;const vs=o.skus.filter(x=>x.ok);const mainImgs=o.mainIds||[],detailImgs=o.detailIds||[];const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',stdType:r.stdType||'标品',netQty:r.netQty||'',netUnit:r.netUnit||'',unit:r.netUnit||'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map(x=>({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,sellUnit:x.row.specUnit||'',packUnit:x.row.packUnit||'',price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};   /* 原先写的是无人读取的 pack 字段，导致导入的 SKU 没有售卖规格单位、净含量算不出 */const risk=computeRisk(p);const autoOk=DB.auditCfg.auto&&DB.auditCfg[risk];p.status=autoOk?'onsale':'reviewing';p.risk=risk;p.autoApproved=autoOk;DB.products.unshift(p);n++;sk+=vs.length;});IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU，进首次建档审核`,'ok');nav('m-product');}
+  <button class="btn btn-p btn-lg" ${okS.length?'':'disabled'} onclick="impConfirmBuild()">确认建品 ${okS.length} 个商品（统一发布校验）</button>`;}
+function impConfirmBuild(){
+  const ready=[],rejected=[];
+  IMP.spus.filter(x=>x.ok).forEach(o=>{
+    const r=o.row,vs=o.skus.filter(x=>x.ok),mainImgs=o.mainIds||[],detailImgs=o.detailIds||[];
+    const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',stdType:r.stdType||'标品',netQty:r.netQty||'',netUnit:r.netUnit||'',netPackType:r.netPackType||'',unit:r.netUnit||'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map((x,k)=>({skuId:`PENDING-${r.code}-${k}`,qty:Number(x.row.qty),sellUnit:x.row.specUnit||'',packUnit:x.row.packUnit||'',containedPackCount:r.stdType=='标品'?Number(x.row.containedPackCount):null,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};
+    p.netQty=isStd(p)?(parseMeasure(p.netQty)||p.netQty):'';const fails=autoCheck(p);if(fails.length){rejected.push(...fails.map(f=>[f[0],`${r.code}：${f[1]}`]));return;}ready.push(p);
+  });
+  if(!ready.length){showSchemaFailures(rejected.length?rejected:[['发布校验','没有可发布的商品']]);return;}
+  let sk=0;ready.forEach(p=>{p.skus.forEach(s=>{s.skuId='SKU'+(++SKU_SEQ);sk++;});p.risk=computeRisk(p);p.autoApproved=!!DB.auditCfg.auto;p.status=p.autoApproved?'onsale':'reviewing';DB.products.unshift(p);});
+  const n=ready.length;IMP=null;toast(`已建 ${n} 个商品 / ${sk} 个 SKU${rejected.length?`；${rejected.length} 项最终发布校验失败未写入`:''}${DB.auditCfg.auto?'，自动审核通过并上架':'，已进入人工审核'}`,rejected.length?'info':'ok');nav('m-product');
+}
 function impParseAdd(){
   const P=DB.products;const e=P[0];
+  const e2=P.find(x=>x!==e);
+  const firstSellUnit=x=>((x&&x.skus||[])[0]||{}).sellUnit||'';
+  const defaultUnit=e?(isStd(e)?(firstSellUnit(e)||'瓶'):'kg'):'';   // 最小包装单位已非计件单位，默认取该 SPU 首个规格的售卖规格单位
+  const first=e&&e.skus[0];
+  const nextQty=p=>{const u=isStd(p)?(firstSellUnit(p)||'瓶'):'kg',used=new Set([...(p.skus||[]),...(p.pendingSkus||[])].filter(s=>skuSellUnit(p,s)==u&&!(s.packUnit||'')).map(s=>Number(s.qty)));let q=97;while(used.has(q))q++;return q;};
+  const q2=e2?nextQty(e2):null,u2=e2?(isStd(e2)?(firstSellUnit(e2)||'瓶'):'kg'):'';
   const rows=e?[
-    {ln:2,code:e.id,name:e.name+' 10装',refund:'是',qty:10,pack:'箱'},
-    {ln:3,code:e.id,name:e.name+' 20装',refund:'是',qty:20,pack:'箱'},
-    {ln:4,code:e.id,name:e.name+' 重复规格',refund:'是',qty:(e.skus[0]?e.skus[0].qty:1),pack:(e.skus[0]?(e.skus[0].pack||e.unit):'kg')},
-    {ln:5,code:'SPU9999',name:'系统不存在',refund:'是',qty:5,pack:'盒'},
-    {ln:6,code:'',name:'缺SPU编号',refund:'是',qty:1,pack:'kg'}
-  ]:[{ln:2,code:'SPU9999',name:'系统不存在(请先建品)',refund:'是',qty:5,pack:'盒'}];
+    ...(e2?[{ln:2,code:e2.id,name:e2.name+' 合法新增',refund:'否',qty:q2,specUnit:u2,containedPackCount:isStd(e2)?q2:null,packUnit:''}]:[]),
+    {ln:3,code:e.id,name:e.name+' 10装',refund:'否',qty:10,specUnit:defaultUnit,containedPackCount:isStd(e)?10:null,packUnit:'箱'},
+    {ln:4,code:e.id,name:e.name+' 重复规格',refund:'否',qty:first?first.qty:1,specUnit:first?skuSellUnit(e,first):defaultUnit,containedPackCount:first?skuPackCount(e,first):(isStd(e)?1:null),packUnit:first?(first.packUnit||''):''},
+    {ln:5,code:'SPU9999',name:'系统不存在',refund:'否',qty:5,specUnit:'kg',containedPackCount:null,packUnit:'箱'},
+    {ln:6,code:'',name:'缺SPU编号',refund:'否',qty:1,specUnit:defaultUnit,containedPackCount:isStd(e)?1:null,packUnit:''}
+  ]:[{ln:2,code:'SPU9999',name:'系统不存在(请先建品)',refund:'否',qty:5,specUnit:'kg',containedPackCount:null,packUnit:'箱'}];
   const seen=new Set();
   IMP={mode:'add',rows:rows.map(r=>{const errs=[];const p=DB.products.find(x=>x.id==r.code);
-    if(!r.code)errs.push('缺少SPU编号');else if(!p)errs.push('SPU编号在系统中不存在');
-    if(!r.name)errs.push('缺少SKU名称');if(!r.refund)errs.push('缺少是否多退少补');if(!(r.qty>0))errs.push('内包规格_数量必须≥1');if(!r.pack)errs.push('缺少包装规格_单位');
-    if(p&&p.skus.some(sk=>sk.qty==r.qty))errs.push('规格与该商品已有SKU重复');
-    const key=r.code+'|'+r.qty+'|'+r.pack;if(seen.has(key))errs.push('文件内重复');seen.add(key);
+    if(!r.code)errs.push('缺少SPU编号');else if(!p)errs.push('SPU编号在系统中不存在');if(!r.name)errs.push('缺少SKU名称');
+    if(parseSpecQty(r.qty)==null)errs.push(`售卖规格数量必须为1~${MAX_SPEC_QTY}的正整数`);if(!r.specUnit)errs.push('缺少售卖规格单位');
+    if(p&&r.specUnit&&!unitNames(stdTypeName(p),'spec').includes(r.specUnit))errs.push('售卖规格单位不在当前商品类型字典');
+    if(p&&r.packUnit&&!unitNames(stdTypeName(p),'sell').includes(r.packUnit))errs.push('售卖单位不在字典');
+    if(p&&isStd(p)&&parseSpecQty(r.containedPackCount)==null)errs.push(`标品需填写1~${MAX_SPEC_QTY}的正整数内含最小包装数`);
+    /* 同上：不再与售卖规格单位比对 */
+    const key=r.code+'|'+r.qty+'|'+(r.specUnit||'')+'|'+(r.packUnit||'');if(p&&[...(p.skus||[]),...(p.pendingSkus||[])].some(sk=>`${p.id}|${sk.qty}|${skuSellUnit(p,sk)}|${sk.packUnit||''}`==key))errs.push('完整规格与已有或待审SKU重复');if(seen.has(key))errs.push('文件内完整规格重复');seen.add(key);
     return {row:r,p,errs,ok:errs.length==0};})};
   renderImpAdd();
 }
-function renderImpAdd(){const rows=IMP.rows;const okR=rows.filter(x=>x.ok);const box=document.getElementById('imp-out');
-  box.innerHTML=`<div class="sg" style="grid-template-columns:repeat(3,1fr);margin:14px 0 12px"><div class="sc"><div class="sc-l">SKU 行</div><div class="sc-v">${rows.length}</div></div><div class="sc good"><div class="sc-l">可新增</div><div class="sc-v">${okR.length}</div></div><div class="sc alert"><div class="sc-l">失败</div><div class="sc-v">${rows.length-okR.length}</div></div></div>
+function impAddGroups(){const groups=new Map();(IMP.rows||[]).forEach(x=>{const key=x.p?x.p.id:`UNKNOWN-${x.row.ln}`;if(!groups.has(key))groups.set(key,{key,p:x.p,items:[]});groups.get(key).items.push(x);});return [...groups.values()].map(g=>{const errors=g.items.flatMap(x=>x.errs.map(e=>`第${x.row.ln}行：${e}`)),p=g.p,additions=p?g.items.map((x,k)=>{const r=x.row;return{skuId:`PENDING-${p.id}-${k}`,qty:Number(r.qty),sellUnit:r.specUnit||'',packUnit:r.packUnit||'',containedPackCount:isStd(p)?Number(r.containedPackCount):null,refund:r.refund=='是'?1:0,price:0,stock:0,safe:0,review:!DB.auditCfg.auto,createdAt:ts(),updatedAt:ts()};}):[];if(p&&!errors.length){const candidate={...p,skus:[...(p.skus||[]).map(s=>({...s})),...(p.pendingSkus||[]).map(s=>({...s})),...additions]},fails=autoCheck(candidate);errors.push(...fails.map(f=>`发布校验：${f[1]}`));}return {...g,additions,ok:!!p&&!errors.length,errors,skuCount:g.items.length};});}
+function renderImpAdd(){const rows=IMP.rows,groups=impAddGroups(),ready=groups.filter(g=>g.ok),okN=ready.reduce((n,g)=>n+g.skuCount,0),failN=groups.filter(g=>!g.ok).reduce((n,g)=>n+g.skuCount,0),box=document.getElementById('imp-out');
+  box.innerHTML=`<div class="sg" style="grid-template-columns:repeat(4,1fr);margin:14px 0 12px"><div class="sc"><div class="sc-l">SPU 组</div><div class="sc-v">${groups.length}</div></div><div class="sc"><div class="sc-l">SKU 行</div><div class="sc-v">${rows.length}</div></div><div class="sc good"><div class="sc-l">整组可新增</div><div class="sc-v">${okN}</div></div><div class="sc alert"><div class="sc-l">整组拦截</div><div class="sc-v">${failN}</div></div></div>
   <div class="card" style="box-shadow:none;margin:0 0 14px"><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>行</th><th>SPU编号</th><th>所属商品</th><th>SKU名称</th><th>数量/单位</th><th>校验</th></tr></thead><tbody>
-  ${rows.map(x=>`<tr><td class="mono">${x.row.ln}</td><td class="mono">${x.row.code||'—'}</td><td>${x.p?x.p.name:'<span style=&quot;color:var(--ts)&quot;>—</span>'}</td><td>${x.row.name}</td><td>${x.row.qty}/${x.row.pack}</td><td>${x.ok?'<span class="tag t-g">可新增</span>':`<span class="tag t-r">${x.errs[0]}</span>`}</td></tr>`).join('')}
+  ${rows.map(x=>{const g=groups.find(y=>y.items.includes(x));return `<tr><td class="mono">${x.row.ln}</td><td class="mono">${x.row.code||'—'}</td><td>${x.p?x.p.name:'<span style=&quot;color:var(--ts)&quot;>—</span>'}</td><td>${x.row.name}</td><td>${x.row.qty}${x.row.specUnit||''}${x.row.packUnit?'/'+x.row.packUnit:''}${x.p&&isStd(x.p)?`（含${x.row.containedPackCount||x.row.qty||'—'}个最小包装）`:''}</td><td>${g&&g.ok?'<span class="tag t-g">SPU整组可新增</span>':`<span class="tag t-r">SPU整组拦截：${(g&&g.errors[0])||'契约异常'}</span>`}</td></tr>`;}).join('')}
   </tbody></table></div></div></div>
-  <button class="btn btn-p btn-lg" ${okR.length?'':'disabled'} onclick="impConfirmAdd()">确认新增 ${okR.length} 个 SKU（进审核队列）</button>`;}
-function impConfirmAdd(){let n=0;IMP.rows.filter(x=>x.ok).forEach(x=>{const p=x.p;const autoOk=DB.auditCfg.auto&&DB.auditCfg[p.risk];p.skus.push({skuId:'SKU'+(++SKU_SEQ),qty:x.row.qty,pack:x.row.pack,refund:x.row.refund,price:0,stock:0,safe:0,review:!autoOk});n++;});IMP=null;toast(`已新增 ${n} 个 SKU，进审核队列（命中自动审核规则者已可售）`,'ok');nav('m-product');}
+  <button class="btn btn-p btn-lg" ${okN?'':'disabled'} onclick="impConfirmAdd()">确认提交 ${ready.length} 个 SPU / ${okN} 个 SKU（按SPU原子校验）</button>`;}
+function impConfirmAdd(){
+  const groups=impAddGroups(),plans=[],results=[];
+  groups.forEach(g=>{if(!g.ok){results.push({id:g.p?g.p.id:g.key,name:g.p?g.p.name:'未知SPU',skuCount:g.skuCount,status:'失败',reason:g.errors.join('；')||'契约异常'});return;}plans.push({p:g.p,additions:g.additions});});
+  let n=0;plans.forEach(({p,additions})=>{const target=DB.auditCfg.auto?p.skus:(p.pendingSkus=p.pendingSkus||[]);additions.forEach(s=>{s.skuId='SKU'+(++SKU_SEQ);target.push(s);n++;});p.updatedAt=ts();results.push({id:p.id,name:p.name,skuCount:additions.length,status:DB.auditCfg.auto?'已生效':'待审核',reason:DB.auditCfg.auto?'已原子并入可售快照':'已进入审核影子集合，可售快照未变'});});
+  const box=document.getElementById('imp-out'),failed=results.filter(x=>x.status=='失败').length;IMP=null;if(box)box.innerHTML=`<div class="ib ${failed?'ib-y':'ib-g'}"><span class="i">${failed?'⚠️':'✅'}</span><div><b>按 SPU 原子提交完成：${plans.length} 组成功，${failed} 组失败</b></div></div><div class="card" style="box-shadow:none;margin-top:10px"><div class="card-bd flush"><table><thead><tr><th>SPU</th><th>商品</th><th>SKU数</th><th>结果</th><th>说明</th></tr></thead><tbody>${results.map(r=>`<tr><td class="mono">${r.id}</td><td>${r.name}</td><td>${r.skuCount}</td><td><span class="tag ${r.status=='失败'?'t-r':r.status=='待审核'?'t-y':'t-g'}">${r.status}</span></td><td>${r.reason}</td></tr>`).join('')}</tbody></table></div></div><button class="btn btn-p" style="margin-top:10px" onclick="nav('m-product')">查看商品列表</button>`;toast(`已提交 ${plans.length} 个 SPU / ${n} 个 SKU；${failed} 个 SPU 原子拦截`,failed?'info':'ok');
+}
 function parseQtys(v){return (v||'').split(/[,，\s]+/).map(x=>parseInt(x)).filter(x=>x>0);}
-function act_addSkusBatch(i){const p=DB.products[i];EDIT_SUPPLY=p.consign?'寄售':'自售';EDIT_STD=stdTypeName(p);EDIT_SKUS=[{qty:'',price:'',stock:'',stockMode:'finite',sellUnit:((p.skus||[])[0]||{}).sellUnit||'',netQty:'',netUnit:p.netUnit||''}];modalWide(`<div class="mc-hd"><h3>添加规格 · ${p.name}</h3><p>为已有商品追加售卖规格(SKU)，即时生效、无需重审；交互同新建 — 规格名自动 = 商品名 + 数量 + 单位（售卖单位优先，否则净含量单位 ${spuUnit(p)||'—'}）</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><input id="f-name" type="hidden" value="${p.name}"><input id="f-unit" type="hidden" value="${p.unit}"><input id="f-netunit" type="hidden" value="${p.netUnit||''}"><input id="f-netqty" type="hidden" value="${p.netQty||''}"><select id="f-stockunit" style="display:none">${opt(stockUnitList(stdTypeName(p)),p.stockUnit)}</select><div id="sku-editor"></div><div style="margin-top:8px"><button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doAddSkusBatch(${i})">确认追加</button></div>`);setTimeout(()=>renderSkuEditor(),0);}
+function act_addSkusBatch(i){const p=DB.products[i];EDIT_SUPPLY=p.consign?'寄售':'自售';EDIT_STD=stdTypeName(p);EDIT_SKUS=[{qty:'',price:'',stock:'',stockMode:'finite',sellUnit:((p.skus||[])[0]||{}).sellUnit||'',containedPackCount:'',netQty:'',netUnit:p.netUnit||''}];modalWide(`<div class="mc-hd"><h3>添加规格 · ${p.name}</h3><p>为已有商品追加售卖规格(SKU)。确认前对“原SPU+新增SKU”执行完整发布校验；${DB.auditCfg.auto?'通过后自动生效':'通过后进入SKU审核队列'}。标品需维护该 SKU 实际内含的净含量最小包装数。</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><input id="f-name" type="hidden" value="${p.name}"><input id="f-unit" type="hidden" value="${p.unit}"><input id="f-netunit" type="hidden" value="${p.netUnit||''}"><input id="f-netqty" type="hidden" value="${p.netQty||''}"><input id="f-netpacktype" type="hidden" value="${p.netPackType||''}"><select id="f-stockunit" style="display:none">${opt(stockUnitList(stdTypeName(p)),p.stockUnit)}</select><div id="add-sku-errors"></div><div id="sku-editor"></div><div style="margin-top:8px"><button class="btn btn-o btn-sm" onclick="addSkuRow()">＋ 添加规格</button></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doAddSkusBatch(${i})">确认追加</button></div>`);setTimeout(()=>renderSkuEditor(),0);}
 function previewAddSkus(i){const p=DB.products[i];const box=document.getElementById('add-preview');if(!box)return;const qs=parseQtys((document.getElementById('add-qtys')||{}).value);const ex=new Set(p.skus.map(s=>s.qty)),seen=new Set();const items=qs.map(q=>{let st;if(ex.has(q))st='exist';else if(seen.has(q))st='dup';else{seen.add(q);st='ok';}return {q,st};});const okN=items.filter(x=>x.st=='ok').length;box.innerHTML=qs.length?`<div class="card" style="box-shadow:none;margin:0"><div class="card-bd flush"><table class="subtbl"><thead><tr><th>规格名称</th><th>数量</th><th>状态</th></tr></thead><tbody>${items.map(x=>`<tr><td>${p.name} ${x.q}${spuUnit(p)}</td><td>${x.q}</td><td>${x.st=='ok'?'<span class="tag t-g">将追加</span>':x.st=='exist'?'<span class="tag t-gr">已存在，跳过</span>':'<span class="tag t-y">重复，跳过</span>'}</td></tr>`).join('')}</tbody></table></div></div><div style="font-size:12.5px;color:var(--ts);margin-top:8px">将追加 <b>${okN}</b> 个规格</div>`:'<div style="font-size:12.5px;color:var(--ts)">请输入数量</div>';}
-function doAddSkusBatch(i){const p=DB.products[i];const rows=EDIT_SKUS.filter(s=>parseFloat(s.qty)>0);if(!rows.length){toast('请至少添加一个有效规格（数量≥1）','err');return;}const ex=new Set((p.skus||[]).map(s=>s.qty)),seen=new Set();let n=0,dup=0;rows.forEach(s=>{const q=Math.round((parseFloat(s.qty)||0)*100)/100;if(ex.has(q)||seen.has(q)){dup++;return;}seen.add(q);p.skus.push({skuId:'SKU'+(++SKU_SEQ),qty:q,packUnit:s.packUnit||'',sellUnit:(p.consign?(p.stockUnit||''):(s.sellUnit||'')),price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:0,stockMode:s.stockMode||'finite',soldToday:0,createdAt:ts(),updatedAt:ts()});n++;});if(n)p.updatedAt=ts();closeModal();render();toast(n?(dup?`已追加 ${n} 个规格，${dup} 个数量重复已跳过`:`已追加 ${n} 个规格，即时生效`):'售卖规格数量都已存在，未追加',n?'ok':'info');}
+function doAddSkusBatch(i){
+  const p=DB.products[i],rows=EDIT_SKUS;if(!rows.length){toast('请至少添加一个规格','err');return;}
+  const keyOf=(q,u,pk)=>`${q}|${u||''}|${pk||''}`,existing=[...(p.skus||[]),...(p.pendingSkus||[])],ex=new Set(existing.map(s=>keyOf(s.qty,skuSellUnit(p,s),s.packUnit))),seen=new Set(),additions=[];let dup=0;
+  for(const s of rows){const q=Number(s.qty),sellUnit=p.consign?(p.stockUnit||''):(s.sellUnit||''),baseQty=isStd(p)?(Number(s.containedPackCount)||q):null,   /* 留空即按 1 份 = 1 个最小包装，取售卖规格数量 */key=keyOf(q,sellUnit,s.packUnit);if(ex.has(key)||seen.has(key)){dup++;continue;}seen.add(key);additions.push({skuId:`PENDING-${p.id}-${additions.length}`,qty:q,packUnit:s.packUnit||'',sellUnit,containedPackCount:baseQty,price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:0,stockMode:s.stockMode||'finite',soldToday:0,review:!DB.auditCfg.auto,createdAt:ts(),updatedAt:ts()});}
+  if(dup){const box=document.getElementById('add-sku-errors');if(box)box.innerHTML=`<div class="ib ib-r" style="margin-bottom:10px"><span class="i">⛔</span><div><b>未写入</b><br>提交集合含 ${dup} 个与已有/文件内重复的完整规格；请删除或修正后整组重提。</div></div>`;toast('存在重复完整规格，整组未写入','err');return;}
+  if(!additions.length){toast('没有可追加的规格','info');return;}
+  const candidate={...p,skus:[...(p.skus||[]).map(s=>({...s})),...(p.pendingSkus||[]).map(s=>({...s})),...additions]};const fails=autoCheck(candidate);if(fails.length){const box=document.getElementById('add-sku-errors');if(box)box.innerHTML=`<div class="ib ib-r" style="margin-bottom:10px"><span class="i">⛔</span><div><b>未写入，请修正以下字段</b><br>${fails.map(f=>`· ${f[1]}`).join('<br>')}</div></div>`;toast(fails[0][1],'err');return;}
+  const target=DB.auditCfg.auto?p.skus:(p.pendingSkus=p.pendingSkus||[]);additions.forEach(s=>{s.skuId='SKU'+(++SKU_SEQ);target.push(s);});p.updatedAt=ts();closeModal();render();toast(`${additions.length} 个规格已通过统一发布校验${DB.auditCfg.auto?'并自动生效':'，进入SKU审核队列（已发布快照未变）'}${dup?`；${dup} 个完全重复规格已跳过`:''}`,'ok');
+}
+
+/* 专用新增 SKU 弹窗允许编辑候选行；通用编辑对已审核商品仍锁定 SKU 结构。 */
+const _actAddSkusBatch=act_addSkusBatch;
+act_addSkusBatch=function(i){EDIT_LOCK_SKU_STRUCTURE=false;return _actAddSkusBatch(i);};
 
 /* ---------- 商家端：商品素材库（主图库 / 详情图库；批量建品按「图片ID = 上传文件名」引用图片） ---------- */
 const MAT_META={main:{name:'商品主图',lib:'主图素材库',ic:'🖼️',col:'商品主图ID',req:'必填',aspect:'1:1 · 建议 ≥800×800 白底'},detail:{name:'商品详情图',lib:'详情图素材库',ic:'📄',col:'商品详情图ID',req:'选填',aspect:'宽 750–1242px 长图'}};
@@ -3841,29 +3965,38 @@ function act_reviewTask(){
 
 /* ---------- 平台：商品审核（闭环B 平台侧 · 建档信息 SPU 整体审核：自动通过 / 人工审核） ---------- */
 PAGES['p-prodaudit']=()=>{
-  DB.exp=DB.exp||[];const q=DB.products.filter(p=>p.status=='reviewing');const on=DB.products.filter(p=>p.status=='onsale');const pend=[];DB.products.forEach((p,pi)=>p.skus.forEach((sk,ki)=>{if(sk.review)pend.push({p,pi,s:sk,ki});}));
+  DB.exp=DB.exp||[];const q=DB.products.filter(p=>p.status=='reviewing');const on=DB.products.filter(p=>p.status=='onsale');const pend=[];DB.products.forEach((p,pi)=>(p.pendingSkus||[]).forEach((sk,ki)=>pend.push({p,pi,s:sk,ki})));
   return `${assume(['Q2','Q6'])}
   ${flowTip(`自动审核关闭时，商家提交的商品<b>建档信息</b>在此<b>人工审核</b>（SPU 整体，含全部 SKU 规格）；自动审核开启时校验通过直接上架、不入此队列。上下架 / 改价 / 改库存不在审核范围。`)}
   <div class="card"><div class="card-hd"><h3>待人工审核</h3><span class="sub">建档信息审核 · ${q.length} 个 SPU</span></div><div class="card-bd flush">
     ${q.length?`<div style="overflow-x:auto"><table><thead><tr><th style="width:30px"></th><th>商品</th><th>品类</th><th>规格数</th><th>价格</th><th>操作</th></tr></thead><tbody>${q.map(p=>{const i=DB.products.indexOf(p);const open=DB.exp.includes(p.id);return `<tr style="cursor:pointer" onclick="toggleExp('${p.id}')"><td><span class="exp-ic">${open?'▾':'▸'}</span></td><td><b>${p.name}</b><div style="font-size:11.5px;color:var(--ts)">${p.id}</div></td><td>${p.cat}</td><td>${p.skus.length}</td><td>${spuPriceRange(p)}</td><td onclick="event.stopPropagation()"><button class="btn btn-p btn-sm" onclick="act_approveProduct(${i})">通过</button> <button class="btn btn-d btn-sm" onclick="act_rejectProduct(${i})">驳回</button></td></tr>${open?`<tr><td colspan="6" style="padding:0;background:#FbFcFd">${auditSkuTable(p)}</td></tr>`:''}`;}).join('')}</tbody></table></div>`:`<div class="empty"><div class="e-ic">✅</div><div class="e-t">人工审核队列已清空</div><div class="e-s">商家端新建商品（未命中自动通过规则）会进入此队列</div></div>`}
   </div></div>
-  ${pend.length?`<div class="card"><div class="card-hd"><h3>🆕 新增 SKU 待审核</h3><span class="sub">已有商品追加的规格 · ${pend.length} 个</span></div><div class="card-bd flush"><table><thead><tr><th>商品</th><th>SKU 编码</th><th>规格名称</th><th>数量</th><th>操作</th></tr></thead><tbody>${pend.map(x=>`<tr><td><b>${x.p.name}</b> <span class="mono" style="color:var(--ts)">${x.p.id}</span></td><td class="mono">${x.s.skuId}</td><td>${skuFullName(x.p,x.s)}</td><td>${x.s.qty}</td><td><button class="btn btn-p btn-sm" onclick="act_approveSku(${x.pi},${x.ki})">通过</button> <button class="btn btn-d btn-sm" onclick="act_rejectSku(${x.pi},${x.ki})">驳回</button></td></tr>`).join('')}</tbody></table></div></div>`:''}
+  ${pend.length?`<div class="card"><div class="card-hd"><h3>🆕 新增 SKU 待审核</h3><span class="sub">已有商品追加的规格 · ${pend.length} 个</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>商品</th><th>商品类型</th><th>SKU 编码</th><th>完整规格</th><th>最小包装单位</th><th>实际最小包装数</th><th>单件净含量</th><th title="只读派生，不是商家净含量">单价计算含量</th><th>操作</th></tr></thead><tbody>${pend.map(x=>`<tr><td><b>${x.p.name}</b> <span class="mono" style="color:var(--ts)">${x.p.id}</span></td><td>${stdTypeName(x.p)}</td><td class="mono">${x.s.skuId}</td><td>${skuFullName(x.p,x.s)}</td><td>${isStd(x.p)?(x.p.netPackType||'—'):'不适用'}</td><td>${isStd(x.p)?(skuPackCount(x.p,x.s)||'—'):'不适用'}</td><td>${skuNetTxt(x.p,x.s)||'—'}</td><td>${unitPriceContentTxt(x.p,x.s)||'—'}${isStd(x.p)?'<div style="font-size:10.5px;color:var(--ts)">只读·不落库</div>':''}</td><td><button class="btn btn-p btn-sm" onclick="act_approveSku(${x.pi},${x.ki})">通过</button> <button class="btn btn-d btn-sm" onclick="act_rejectSku(${x.pi},${x.ki})">驳回</button></td></tr>`).join('')}</tbody></table></div></div></div>`:''}
   <div class="card"><div class="card-hd"><h3>在售商品监管</h3><span class="sub">SPU 强制下架 · ${on.length} 在售</span></div><div class="card-bd flush"><table><thead><tr><th>商品</th><th>品类</th><th>规格数</th><th>状态</th><th>操作</th></tr></thead><tbody>${on.map(p=>{const i=DB.products.indexOf(p);return `<tr><td><b>${p.name}</b> <span class="mono" style="color:var(--ts)">${p.id}</span></td><td>${p.cat||'—'}</td><td>${p.skus.length}</td><td>${tag('product','onsale')}</td><td><button class="btn btn-d btn-sm" onclick="act_forceOff(${i})">强制下架</button></td></tr>`;}).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--ts);padding:20px">暂无在售商品</td></tr>'}</tbody></table></div></div>`;
 };
-function auditSkuTable(p){return `<table class="subtbl"><thead><tr><th>SKU 编码</th><th>规格名称</th><th>数量</th><th>单位</th><th>价格</th><th>可售库存</th><th>价格校验</th></tr></thead><tbody>${p.skus.map(s=>{const abn=s.price>0&&priceAbnormal(s.price,p.cat);return `<tr><td class="mono">${s.skuId}</td><td>${p.name} ${skuSpec(p,s)}</td><td>${s.qty}</td><td>${skuUnitTxt(p,s)}</td><td>${money(s.price||0)}</td><td>${s.stock||0}</td><td>${abn?'<span class="tag t-y">价格异常</span>':'<span class="tag t-g">正常</span>'}</td></tr>`;}).join('')}</tbody></table>`;}
-function act_approveSku(pi,ki){delete DB.products[pi].skus[ki].review;DB.products[pi].skus[ki].updatedAt=ts();render();toast('新增规格审核通过，已可售','ok');}
-function act_rejectSku(pi,ki){const p=DB.products[pi];const sid=p.skus[ki].skuId;p.skus.splice(ki,1);render();toast('已驳回并移除规格 '+sid,'info');}
+function skuGovernanceIssue(p,s){if(!isStd(p))return '';const n=skuPackCount(p,s);if(!p.netPackType)return '缺最小包装单位';if(!n)return '内含最小包装数不是正整数';return '';}
+function auditSkuTable(p){const type=stdTypeName(p),net=isStd(p)?(spuNetTxt(p)||'缺失'):'按SKU自动派生';return `<div class="ib ${autoCheck(p).length?'ib-r':'ib-b'}" style="margin:10px 12px"><span class="i">${autoCheck(p).length?'⛔':'🔎'}</span><div><b>${type}</b> · 申报单件净含量：<b>${net}</b> · 最小包装单位：<b>${p.netPackType||'—'}</b>${autoCheck(p).length?`<br><span style="color:var(--r)">${autoCheck(p).map(x=>x[1]).join('；')}</span>`:''}</div></div><table class="subtbl"><thead><tr><th>SKU 编码</th><th>完整规格</th><th>内含最小包装数</th><th>单件净含量</th><th title="只读派生，不是商家净含量">单价计算含量</th><th>价格</th><th>库存</th><th>治理校验</th></tr></thead><tbody>${p.skus.map(s=>{const issue=skuGovernanceIssue(p,s),abn=s.price>0&&priceAbnormal(s.price,p.cat);return `<tr style="${issue?'background:#FFF4F2':''}"><td class="mono">${s.skuId}</td><td>${p.name} ${skuSpec(p,s)}</td><td>${isStd(p)?(skuPackCount(p,s)||'—'):'不适用'}</td><td>${skuNetTxt(p,s)||'—'}</td><td>${unitPriceContentTxt(p,s)||'—'}${isStd(p)?'<div style="font-size:10.5px;color:var(--ts)">只读·不落库</div>':''}</td><td>${money(s.price||0)}${abn?' ⚠️':''}</td><td>${s.stock||0}</td><td>${issue?`<span class="tag t-r">${issue}</span>`:'<span class="tag t-g">通过</span>'}</td></tr>`;}).join('')}</tbody></table>`;}
+function act_approveSku(pi,ki){const p=DB.products[pi],s=(p.pendingSkus||[])[ki];if(!s)return;const candidate={...p,skus:[...(p.skus||[]).map(x=>({...x})),...(p.pendingSkus||[]).map(x=>({...x}))]},fails=autoCheck(candidate);if(fails.length){toast('完整候选SPU发布校验未通过：'+fails[0][1],'err');return;}p.skus.push({...s,review:false,updatedAt:ts()});p.pendingSkus.splice(ki,1);p.updatedAt=ts();render();toast('完整候选SPU校验通过；该新增规格已原子写入可售快照','ok');}
+function act_rejectSku(pi,ki){const p=DB.products[pi],s=p.skus[ki];modal(`<div class="mc-hd"><h3>驳回新增 SKU · ${s.skuId}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">问题字段</label><select id="sr-field"><option value="containedPackCount|内含最小包装数">内含最小包装数</option><option value="sellSpecUnit|售卖规格单位">售卖规格单位</option><option value="packUnit|售卖单位">售卖单位</option><option value="overall|整体规格">整体规格</option></select></div><div class="fr"><label class="fl">驳回原因</label><textarea id="sr-reason" placeholder="说明正确值或修正要求"></textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="commitSkuReject(${pi},${ki})">确认驳回并回写</button></div>`);}
+function commitSkuReject(pi,ki){const p=DB.products[pi],s=p.skus[ki],raw=(document.getElementById('sr-field')||{}).value,[field,label]=raw.split('|'),reason=((document.getElementById('sr-reason')||{}).value||'').trim();if(!reason){toast('请填写驳回原因','err');return;}p.skuRejects=p.skuRejects||[];p.skuRejects.push({s:{...s,review:false},field,label,reason,at:ts()});p.skus.splice(ki,1);p.updatedAt=ts();closeModal();render();toast('已驳回；结构化意见已回写商家端，SKU 未进入可售列表','info');}
+function act_resubmitSkuReject(pi,ri){const p=DB.products[pi],r=(p.skuRejects||[])[ri];if(!r)return;const s=r.s;modal(`<div class="mc-hd"><h3>修改重提 · ${s.skuId}</h3><p><b>${r.label}</b>：${r.reason}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fg2"><div class="fr"><label class="fl">售卖规格数量</label><input id="rr-qty" type="number" min="1" step="1" value="${s.qty}"></div><div class="fr"><label class="fl">售卖规格单位</label><select id="rr-unit">${opt(unitNames(stdTypeName(p),'spec'),skuSellUnit(p,s))}</select></div><div class="fr"><label class="fl">售卖单位</label><select id="rr-pack"><option value="">无</option>${opt(unitNames(stdTypeName(p),'sell'),s.packUnit||'')}</select></div>${isStd(p)?`<div class="fr"><label class="fl">内含最小包装数</label><input id="rr-base" type="number" min="1" step="1" value="${s.containedPackCount||''}"></div>`:''}</div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="commitSkuResubmit(${pi},${ri})">统一校验并重提</button></div>`);}
+function commitSkuResubmit(pi,ri){const p=DB.products[pi],r=(p.skuRejects||[])[ri];if(!r)return;const s={...r.s,qty:Number((document.getElementById('rr-qty')||{}).value),sellUnit:(document.getElementById('rr-unit')||{}).value||'',packUnit:(document.getElementById('rr-pack')||{}).value||'',containedPackCount:isStd(p)?Number((document.getElementById('rr-base')||{}).value):null,review:true,updatedAt:ts()},candidate={...p,skus:[...p.skus.map(x=>({...x})),s]},fails=autoCheck(candidate);if(fails.length){toast(fails[0][1],'err');return;}p.skus.push(s);p.skuRejects.splice(ri,1);p.updatedAt=ts();closeModal();render();toast('修改已通过统一校验并重新进入 SKU 审核队列','ok');}
 function act_viewQC(id){const p=DB.products.find(x=>x.id==id);modalWide(`<div class="mc-hd"><h3>🧪 质检报告复核 · ${p.name}</h3><p>第三层品控前置 · ${p.cat}（高风险）</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ck ok"><div class="cb">✓</div>报告编号 QC-2026-${(6600+DB.products.indexOf(p))}<span class="cx">有效</span></div><div class="ck ok"><div class="cb">✓</div>检测机构 SGS 新加坡<span class="cx">认证</span></div><div class="ck ok"><div class="cb">✓</div>农残/微生物/重金属<span class="cx">全部合格</span></div><div class="ck ok"><div class="cb">✓</div>报告有效期内（2026-12-31）<span class="cx">通过</span></div><div class="up done" style="margin-top:6px"><div class="uic">📎</div><div class="ut">质检报告_${p.name}.pdf ✓</div></div></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">复核通过</button></div>`);}
 
-/* ---------- 平台：审核配置（自动审核规则，仅作用于首次建档） ---------- */
+/* 人工审核的新增 SKU 保存在 pendingSkus 影子集合：提交/驳回/重提不改已发布 skus，只有审核通过才原子并入。 */
+act_rejectSku=function(pi,ki){const p=DB.products[pi],s=(p.pendingSkus||[])[ki];if(!s)return;modal(`<div class="mc-hd"><h3>驳回新增 SKU · ${s.skuId}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">问题字段</label><select id="sr-field"><option value="qty|售卖规格数量">售卖规格数量</option><option value="containedPackCount|内含最小包装数">内含最小包装数</option><option value="sellSpecUnit|售卖规格单位">售卖规格单位</option><option value="packUnit|售卖单位">售卖单位</option><option value="overall|整体规格">整体规格</option></select></div><div class="fr"><label class="fl">驳回原因</label><textarea id="sr-reason" placeholder="说明正确值或修正要求"></textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="commitSkuReject(${pi},${ki})">确认驳回并回写</button></div>`);};
+commitSkuReject=function(pi,ki){const p=DB.products[pi],s=(p.pendingSkus||[])[ki],raw=(document.getElementById('sr-field')||{}).value,[field,label]=raw.split('|'),reason=((document.getElementById('sr-reason')||{}).value||'').trim();if(!s)return;if(!reason){toast('请填写驳回原因','err');return;}p.skuRejects=p.skuRejects||[];p.skuRejects.push({s:{...s,review:false},field,label,reason,at:ts(),status:'rejected'});p.pendingSkus.splice(ki,1);p.updatedAt=ts();closeModal();render();toast('已驳回；结构化意见已回写商家端，已发布快照未变','info');};
+commitSkuResubmit=function(pi,ri){const p=DB.products[pi],r=(p.skuRejects||[])[ri];if(!r||r.status=='resubmitted')return;const s={...r.s,qty:Number((document.getElementById('rr-qty')||{}).value),sellUnit:(document.getElementById('rr-unit')||{}).value||'',packUnit:(document.getElementById('rr-pack')||{}).value||'',containedPackCount:isStd(p)?Number((document.getElementById('rr-base')||{}).value):null,review:true,updatedAt:ts()},candidate={...p,skus:[...(p.skus||[]).map(x=>({...x})),...(p.pendingSkus||[]).map(x=>({...x})),s]},fails=autoCheck(candidate);if(fails.length){toast('完整候选SPU校验未通过：'+fails[0][1],'err');return;}p.pendingSkus=p.pendingSkus||[];p.pendingSkus.push(s);r.status='resubmitted';r.resubmittedAt=ts();r.resubmittedSkuId=s.skuId;p.updatedAt=ts();closeModal();render();toast('修改已通过完整候选SPU校验并重新进入 SKU 审核队列；驳回历史已保留','ok');};
+
+/* ---------- 平台：审核配置（自动审核规则作用于首次建档与新增SKU） ---------- */
 PAGES['p-auditcfg']=()=>{
   const c=DB.auditCfg;
   const sw=(k,label,desc)=>`<div class="ck ${c[k]?'ok':''}" style="cursor:pointer" onclick="toggleAuditCfg('${k}')"><div class="cb">${c[k]?'✓':'○'}</div><div style="flex:1"><div style="font-weight:600">${label}</div><div style="font-size:12px;color:var(--ts)">${desc}</div></div><span class="tag ${c[k]?'t-g':'t-gr'}">${c[k]?'已开启':'关闭'}</span></div>`;
-  return `${flowTip(`<b>自动审核规则</b>：命中规则的<b>首次建档</b>提交跳过人工、自动通过上架；未命中进人工队列。上下架/改价/改库存不在审核范围。`)}
-  <div class="card"><div class="card-hd"><h3>⚙️ 自动审核配置</h3><span class="sub">仅作用于首次建档审核</span></div><div class="card-bd">
-    <div class="ib ib-b"><span class="i">ℹ️</span>审核只发生在商品<b>首次建档</b>（及强制下架/驳回后整改重提）。已审核通过的商品，上下架、改价、改库存全部即时生效、无需重审。</div>
-    ${sw('auto','启用自动审核','开启：建档信息自动校验通过即自动上架，无需人工。关闭：所有商品建档一律走人工审核')}
-    ${c.auto?`<div class="ib ib-g" style="margin-top:12px"><span class="i">✅</span>当前为<b>自动审核</b>：建档校验通过直接上架，无人工介入。</div>`:`<div class="ib ib-b" style="margin-top:12px"><span class="i">📨</span>当前为<b>人工审核</b>：所有商品建档提交后进入平台人工审核队列。</div>`}
+  return `${flowTip(`<b>自动审核规则</b>：命中规则的<b>首次建档或新增 SKU</b>提交跳过人工、自动通过；未命中进入对应人工队列。上下架/改价/改库存不在审核范围。`)}
+  <div class="card"><div class="card-hd"><h3>⚙️ 自动审核配置</h3><span class="sub">首次建档与新增 SKU</span></div><div class="card-bd">
+    <div class="ib ib-b"><span class="i">ℹ️</span>商品结构审核发生在<b>首次建档、新增 SKU</b>及强制下架/驳回后的整改重提。已审核通过的商品，上下架、改价、改库存全部即时生效、无需重审。</div>
+    ${sw('auto','启用自动审核','开启：首次建档或新增 SKU 通过统一发布校验后自动通过。关闭：两类提交分别进入 SPU / SKU 人工审核队列')}
+    ${c.auto?`<div class="ib ib-g" style="margin-top:12px"><span class="i">✅</span>当前为<b>自动审核</b>：首次建档或新增 SKU 校验通过即自动发布。</div>`:`<div class="ib ib-b" style="margin-top:12px"><span class="i">📨</span>当前为<b>人工审核</b>：首次建档与新增 SKU 均不改已发布快照，审核通过后才原子发布。</div>`}
   </div></div>`;
 };
 function toggleAuditCfg(k){DB.auditCfg[k]=!DB.auditCfg[k];render();toast('审核配置已更新','ok');}
@@ -4106,9 +4239,13 @@ function act_rejectTask(){
 // 资质
 function act_renewQual(i){DB.quals[i].status='valid';DB.quals[i].expire='2028-06-29';render();toast(`${DB.quals[i].name} 新证已上传，审核通过，自动恢复`,'ok');}
 // 闭环B 商品（平台侧）
-function act_approveProduct(i){const p=DB.products[i];p.status='onsale';p.reject='';p.note='';p.updatedAt=ts();render();toast(`「${p.name}」审核通过，已上架在售（落商家商品表）`,'ok');}
-function act_rejectProduct(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>驳回 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">驳回原因（回写商家端）</label><textarea id="pr-reason">商品主图不清晰，且产地信息与资质备案地不符，请补充后重新提报。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.products[${i}].status='rejected';DB.products[${i}].reject=document.getElementById('pr-reason').value;closeModal();render();toast('已驳回，原因已回写商家端','info')">确认驳回</button></div>`);}
+function act_approveProduct(i){const p=DB.products[i],fails=autoCheck(p);if(fails.length){toast('发布校验未通过：'+fails[0][1],'err');return;}p.status='onsale';p.reject='';p.note='';p.updatedAt=ts();render();toast(`「${p.name}」审核通过，已上架在售（落商家商品表）`,'ok');}
+function act_rejectProduct(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>驳回 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">问题字段（结构化回写）</label><select id="pr-field"><option value="stdType|商品类型">商品类型</option><option value="netQty|单件净含量">单件净含量</option><option value="netPackType|最小包装单位">最小包装单位</option><option value="skuSpec|SKU售卖规格/内含最小包装数">SKU售卖规格/内含最小包装数</option><option value="img|商品主图">商品主图</option><option value="origin|产地">产地</option><option value="overall|整体商品">整体商品</option></select></div><div class="fr"><label class="fl">审核意见（回写商家端）</label><textarea id="pr-reason">请核对包装资料并修正所选字段后重新提报。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="commitProductReject(${i})">确认驳回</button></div>`);}
+function commitProductReject(i){const p=DB.products[i],raw=(document.getElementById('pr-field')||{}).value||'overall|整体商品',[field,label]=raw.split('|'),reason=((document.getElementById('pr-reason')||{}).value||'').trim();if(!reason){toast('请填写审核意见','err');return;}p.status='rejected';p.reject=reason;p.auditOpinions=field=='overall'?[]:[{f:field,label,op:reason}];p.updatedAt=ts();closeModal();render();toast(field=='overall'?'已驳回，整体原因已回写商家端':'已驳回，字段级意见已回写对应编辑位置','info');}
 function act_forceOff(i){const p=DB.products[i];modal(`<div class="mc-hd"><h3>强制下架 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>强制下架立即生效并通知商家整改；恢复需整改重提 + 品控二次复核。</div><div class="fr"><label class="fl">下架原因</label><select id="fo-reason"><option>品控抽检农残超标</option><option>资质到期失效</option><option>价格/规格违规</option><option>食品安全投诉</option></select></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.products[${i}].status='forced_off';DB.products[${i}].reject=document.getElementById('fo-reason').value+'，已强制下架，整改后重新提报（需品控复核）。';closeModal();render();toast('已强制下架并通知商家','info')">确认强制下架</button></div>`);}
+/* 首次建档的字段级驳回精确到稳定 SKU ID + 具体字段，商家修改页按同一 key 内联展示。 */
+act_rejectProduct=function(i){const p=DB.products[i],skuOptions=(p.skus||[]).flatMap(s=>[['packQty','售卖规格数量'],['sellSpecUnit','售卖规格单位'],['packUnit','售卖单位'],['containedPackCount','内含最小包装数']].map(([f,l])=>`<option value="sku:${s.skuId}:${f}|SKU ${s.skuId} · ${l}">SKU ${s.skuId} · ${skuSpec(p,s)} · ${l}</option>`)).join('');modal(`<div class="mc-hd"><h3>驳回 · ${p.name}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">问题字段（精确到 SKU + 字段）</label><select id="pr-field"><option value="stdType|商品类型">商品类型</option><option value="netQty|单件净含量">单件净含量</option><option value="netPackType|最小包装单位">最小包装单位</option>${skuOptions}<option value="img|商品主图">商品主图</option><option value="origin|产地">产地</option><option value="overall|整体商品">整体商品</option></select></div><div class="fr"><label class="fl">审核意见（回写商家端）</label><textarea id="pr-reason">请核对包装资料并修正所选字段后重新提报。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="commitProductReject(${i})">确认驳回</button></div>`);};
+
 // 闭环C 订单履约：待发货 →（汇总备货·按SKU总量 + 分拣贴标·客户×SKU）已贴标 →（仓库确认收货·标签到齐）已发货 → 订单主状态；缺货整单取消退款
 // ===== 汇总备货（按预计送达日圈一波，按 SKU 备总量）=====
 let ordPickDay=null;
@@ -4429,17 +4566,27 @@ function act_merchant360(){
   </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 
+function xmlEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function le16(n){return new Uint8Array([n&255,(n>>>8)&255]);}
+function le32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
+function bytesJoin(parts){const len=parts.reduce((s,p)=>s+p.length,0),out=new Uint8Array(len);let o=0;parts.forEach(p=>{out.set(p,o);o+=p.length;});return out;}
+let XLSX_CRC_TABLE=null;
+function crc32(bytes){if(!XLSX_CRC_TABLE){XLSX_CRC_TABLE=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);return c>>>0;});}let c=0xFFFFFFFF;bytes.forEach(b=>c=XLSX_CRC_TABLE[(c^b)&255]^(c>>>8));return (c^0xFFFFFFFF)>>>0;}
+function zipStore(fileMap){const enc=new TextEncoder(),locals=[],centrals=[];let offset=0;Object.entries(fileMap).forEach(([name,text])=>{const nb=enc.encode(name),data=enc.encode(text),crc=crc32(data),local=bytesJoin([le32(0x04034b50),le16(20),le16(0),le16(0),le16(0),le16(0),le32(crc),le32(data.length),le32(data.length),le16(nb.length),le16(0),nb,data]);locals.push(local);centrals.push(bytesJoin([le32(0x02014b50),le16(20),le16(20),le16(0),le16(0),le16(0),le16(0),le32(crc),le32(data.length),le32(data.length),le16(nb.length),le16(0),le16(0),le16(0),le16(0),le32(0),le32(offset),nb]));offset+=local.length;});const central=bytesJoin(centrals),end=bytesJoin([le32(0x06054b50),le16(0),le16(0),le16(centrals.length),le16(centrals.length),le32(central.length),le32(offset),le16(0)]);return new Blob([bytesJoin([...locals,central,end])],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});}
+function xlsxCol(n){let s='';for(;n>0;n=Math.floor((n-1)/26))s=String.fromCharCode(65+(n-1)%26)+s;return s;}
+function downloadBuildXlsx(T,F,rows){const rowXml=rows.map((r,ri)=>`<row r="${ri+1}">${r.map((v,ci)=>`<c r="${xlsxCol(ci+1)}${ri+1}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`).join('')}</row>`).join('');const lists={'售卖规格单位':unitNames(T,'spec'),'售卖单位':unitNames(T,'sell'),'净含量单位':unitNames(T,'net'),'最小包装单位':unitNames('标品','spec')},validations=Object.entries(lists).map(([field,vals])=>{const i=F.findIndex(f=>f.k==field);if(i<0)return '';const col=xlsxCol(i+1);return `<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorStyle="stop" errorTitle="非法单位" error="请从当前商品类型的下拉列表选择" sqref="${col}3:${col}1000"><formula1>&quot;${xmlEsc(vals.join(','))}&quot;</formula1></dataValidation>`;}).filter(Boolean);const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowXml}</sheetData>${validations.length?`<dataValidations count="${validations.length}">${validations.join('')}</dataValidations>`:''}</worksheet>`,files={'[Content_Types].xml':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>','_rels/.rels':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>','xl/workbook.xml':`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${T}建品模板" sheetId="1" r:id="rId1"/></sheets></workbook>`,'xl/_rels/workbook.xml.rels':'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>','xl/worksheets/sheet1.xml':sheet};const blob=zipStore(files),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`批量新建商品模板_${T}.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast(`已下载${T} XLSX：${validations.length} 个单位列已写入 Data Validation 下拉`,'ok');}
 function downloadTemplate(kind){let name,rows;const all=[];
-  if(kind=='addsku'){name='批量新增SKU模板.csv';const headers=['SPU编号（必填·已有SPU的编号）','SKU名称（必填）','是否多退少补（必填·是/否）','内包规格_数量（必填·正整数≥1）','包装规格_单位（必填·如 箱/盒/袋）','SKU商品描述（选填）'];const note=['【填写说明·导入时请删除本行】须是系统已存在商品的SPU编号','规格名称，如 小棠菜10kg箱','枚举：是 / 否','售卖规格数量，正整数≥1，同一SPU不可重复','枚举：袋/盒/箱/包/件/扎/瓶/桶/罐/托','该规格补充描述，无则留空'];rows=[['SPU8811','小棠菜10kg箱','是','10','箱',''],['SPU8811','小棠菜20kg箱','是','20','箱','']];all.push(headers,note,...rows);}
+  if(kind=='addsku'){name='批量新增SKU模板.csv';const headers=['SPU编号（必填·已有SPU的编号）','SKU名称（必填）','是否多退少补（必填·是/否）','售卖规格数量（必填·正整数≥1）','售卖规格单位（必填·按SPU类型）','内含最小包装数（标品选填·留空按售卖规格数量）','售卖单位（选填）','SKU商品描述（选填）'];const note=['【填写说明·导入时请删除本行】须是系统已存在商品的SPU编号','规格名称，如 可乐24瓶/箱','枚举：是 / 否','正整数≥1；唯一性按数量+售卖规格单位+售卖单位完整组合','标品取计件单位，非标品取g/kg','标品填本SKU实际含几个最小包装，留空按售卖规格数量；非标品留空','包/份/组/箱；无外包装留空','该规格补充描述，无则留空'];rows=[['SPU8820','椰子水24瓶/箱','否','24','瓶','24','箱',''],['SPU8820','椰子水2打/箱','否','2','打','24','箱','']];all.push(headers,note,...rows);}
   else{/* 建品模板按标品/非标品分两套，表头与示例各自独立；模板名自带类型，上传时据此校验表头 */
     const T=impType(),F=BUILD_FIELDS_OF(T);
-    name=`批量新建商品模板_${T}.csv`;
     const headers=F.map(f=>f.k+'（'+f.req+'）');
     const note=F.map((f,i)=>(i==0?`【${T}模板·填写说明·导入时请删除本行】`:'')+f.rule);
     const ex1=F.map(f=>f.ex);
-    const ex2=F.map(f=>f.k=='自定义SPU编号'?ex1[0]:(f.k=='售卖规格数量'?(T=='标品'?'1':'5'):''));  // 同一SPU的第二个规格：仅编号+售卖规格数量
-    all.push(headers,note,ex1,ex2);}
-  const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=all.map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载（表头含必填标记 + 填写说明行）','ok');}
+    const ex2=F.map(f=>{if(f.k=='自定义SPU编号')return ex1[0];if(f.k=='售卖规格数量')return T=='标品'?'1':'5';if(f.k=='售卖规格单位')return T=='标品'?'瓶':'kg';if(T=='标品'&&f.k=='内含最小包装数')return '1';return '';});  // 同一SPU的第二个规格：补齐所有SKU级必填列
+    all.push(headers,note,ex1,ex2);downloadBuildXlsx(T,F,all);return;}
+  const esc=c=>{c=''+c;return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;};const csv=all.map(r=>r.map(esc).join(',')).join('\r\n');const blob=new Blob([String.fromCharCode(0xFEFF)+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},0);toast('模板「'+name+'」已下载','ok');}
+/* 测试/录屏复位：本原型数据只保存在当前页面内存，刷新即可恢复初始 fixture。 */
+window.__resetDemo=()=>window.location.reload();
 /* init */
 goHome();
 </script>

@@ -82,6 +82,13 @@ const MEASURE_UNITS=['斤','公斤(kg)','克(g)','毫升(ml)','升(L)','个','�
      非标品 售卖规格单位 = 计量单位 → 数量+单位本身即净含量
    「净含量单位」「售卖单位」两组两类通用。 */
 const STD_TYPES=['标品','非标品'];
+/* ===== 最小包装单位（2026-08-27，与 PC 同枚举同口径）=====
+   声明上方「单件净含量」是哪一层的量：
+     单品 = 1 个单品的量（可乐 1 瓶 330 ml）
+     单包 = 1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）
+   标品必填；只声明口径，不参与金额/库存计算。
+   一个规格里装几个最小包装，由规格级「内含最小包装数」表达（选填，留空＝售卖规格数量）。 */
+const NET_PACK_TYPES=['单品','单包'];
 const UNIT_SPEC={
   '标品':{
     spec:[[40,'个','piece'],[25,'打','dozen'],[1,'瓶','bottle'],[4,'罐','can'],[7,'盒','box'],[6,'袋','packet'],[20,'箱','carton'],[41,'卷','roll'],[38,'托','tray']],
@@ -116,7 +123,7 @@ function specNetTxt(f,s){
   if(f.stdType==='标品'){
     const base=parseFloat(f.netQty);
     if(!(base>0)||!f.netUnit)return '';
-    return fmtQ(base)+f.netUnit;
+    return fmtQ(base)+f.netUnit+(f.netPackType?'/'+f.netPackType:'');   // 「330ml/单品」
   }
   const q=parseFloat(s.qty);if(!(q>0))return '';
   const su=f.supplyMode==='寄售'?f.stockUnit:s.specUnit;
@@ -217,6 +224,7 @@ css.textContent=`
 .pb-cell:first-of-type{border-top:none;}
 .pb-cell .lab{font-size:15px;font-weight:600;color:#27433A;flex:0 0 92px;}
 .pb-cell .lab .rq{color:var(--red);margin-right:2px;}
+#pb-netpack-row .lab{flex:0 0 116px;white-space:nowrap;}   /* 「最小包装单位」6字，92px 标签列会折行 */
 .pb-cell .val{flex:1;display:flex;align-items:center;gap:6px;min-width:0;}
 .pb-cell .val input{flex:1;border:none;background:transparent;outline:none;font-size:15px;font-family:inherit;width:100%;text-align:right;}
 .pb-cell .val .ph{color:#94A3B8;flex:1;text-align:right;font-size:15px;}
@@ -397,7 +405,7 @@ function openForm(prefill){
     stdType:'非标品',                       // 商品类型：决定净含量算法与售卖规格单位枚举（生鲜平台默认非标品）
     stockUnit:'',                          // 寄售专用·商品级库存单位：取值同售卖规格单位枚举；寄售时各规格售卖规格单位恒等于它
     measure: prefill?prefill.measure:'',   // 【兼容】旧「最小售卖单位」，已被 stdType + 规格级 specUnit 取代
-    netQty:'', netUnit:'', measureNote:'',  // netQty/netUnit = 标品的「单件净含量」，非标品不填
+    netQty:'', netUnit:'', netPackType:'', measureNote:'',  // netQty/netUnit = 标品的「单件净含量」，非标品不填；netPackType=最小包装单位(单品/单包)
     bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每最小售卖单位容器数(整数)，押金单价平台固定 0.10
     sellType:'售卖品',                      // 销售类型固定，不可改
     supplyMode:'自售',                      // 售卖模式(dev supplyMode 1=自售/2=寄售)：默认自售，保存后不可修改；寄售→SKU库存只读
@@ -405,7 +413,7 @@ function openForm(prefill){
     shelfLife: pfLife, shelfUnit: pfUnit,   // 保质期 + 单位
     appShowShelf:'展示',                    // APP 是否展示效期(展示/不展示)，放保质期后
     storage:'', fulfill:'', origin:'', brand: prefill?prefill.brand:'', desc:'',
-    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite',packUnit:'',specUnit:''}]:[{qty:'',price:'',stock:'',mode:'finite',packUnit:'',specUnit:''}], // specUnit=售卖规格单位(规格级,枚举随 stdType)；mode=库存模式(finite售完即止/daily每日恢复初始库存)；packUnit=售卖单位(选填)
+    specs: prefill?[{qty:'1',price:'',stock:'',mode:'finite',packUnit:'',specUnit:'',containedPackCount:''}]:[{qty:'',price:'',stock:'',mode:'finite',packUnit:'',specUnit:'',containedPackCount:''}], // specUnit=售卖规格单位(规格级,枚举随 stdType)；mode=库存模式(finite售完即止/daily每日恢复初始库存)；packUnit=售卖单位(选填)
     imgs:{head:false,more:[false,false],video:false,label:false,detail:[false,false,false,false]},
   };
   const row=(id,lab,valHtml,req)=>`<div class="pb-cell" id="${id}"><div class="lab">${req?'<span class="rq">*</span>':''}${lab}</div><div class="val">${valHtml}</div><span class="ch">${svg('arrow')}</span></div>`;
@@ -423,6 +431,7 @@ function openForm(prefill){
         ${picker('pb-std-row','pb-std-v',f.stdType,1,'商品类型')}
         <div class="pb-hint" id="pb-std-hint" style="padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
         <div class="pb-cell" id="pb-net-row"><div class="lab"><span class="rq">*</span>单件净含量</div><div class="val"><input id="pb-netqty" inputmode="decimal" placeholder="如 330" value="${f.netQty}"><span class="vtxt" id="pb-netunit" style="flex:0 0 auto;max-width:70px">${f.netUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
+        ${picker('pb-netpack-row','pb-netpack-v',f.netPackType,1,'最小包装单位')}
         <div class="pb-hint" id="pb-net-hint" style="padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
         ${picker('pb-stockunit-row','pb-stockunit-v',f.stockUnit,1,'库存单位')}
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>
@@ -471,7 +480,7 @@ function openForm(prefill){
 }
 
 function confirmExit(f){
-  const dirty=f.name||f.alias||f.cat||f.tax||f.stdType!=="非标品"||f.netQty||f.specs.some(s=>s.specUnit)||f.origin||f.brand||f.desc||f.specs.some(s=>s.qty||s.price||s.stock);
+  const dirty=f.name||f.alias||f.cat||f.tax||f.stdType!=="非标品"||f.netQty||f.netPackType||f.specs.some(s=>s.specUnit)||f.origin||f.brand||f.desc||f.specs.some(s=>s.qty||s.price||s.stock);
   const done=()=>{popPage();pbPages.pop();};
   if(!dirty)return done();
   confirmDialog({title:'是否退出建品？',body:'已填写的信息将不会保存。',danger:1,okText:'退出',onOk:done});
@@ -501,7 +510,9 @@ function specRow(s,i,total,f,consign){
     </div>
     <div class="sbody" style="margin-top:10px">
       <div class="unit" style="cursor:default;background:var(--muted);opacity:.9"><span class="lb">净含量</span><span class="uwrap"><span class="uv ${netTxt?'':'ph'}" data-netv>${netTxt||'—'}</span></span></div>
+      ${f.stdType==='标品'?`<div class="qty"><span class="lb">内含最小包装数</span><input data-packcount inputmode="numeric" value="${s.containedPackCount||''}" placeholder="${s.qty?'默认 '+s.qty:'默认同数量'}"></div>`:''}
     </div>
+    ${f.stdType==='标品'?'<div class="ms-hint">内含最小包装数选填：留空即按「1 份 = 1 个最小包装」取售卖规格数量（24瓶/箱 → 24）；只有 2打/箱 这类 1 份含多件的才需填实际数。</div>':''}
     ${locked?`<div class="ms-hint">🔒 ${lockTip}，本规格售卖规格单位不可单独修改。</div>`:''}
     ${wgUnit?`<div class="ms-row"><span class="lb">多退少补</span>
       <div class="modeseg" data-refundseg>
@@ -533,6 +544,8 @@ function renderSpecs(p,f){
   box.innerHTML=f.specs.map((s,i)=>specRow(s,i,f.specs.length,f,consign)).join('');
   box.querySelectorAll('.pb-spec').forEach((row,i)=>{
     row.querySelector('[data-qty]').oninput=e=>{f.specs[i].qty=e.target.value;refreshNet(p,f);paint(p,f);};
+    const pc=row.querySelector('[data-packcount]');
+    if(pc)pc.oninput=e=>{f.specs[i].containedPackCount=e.target.value;paint(p,f);};
     /* 售卖规格单位：枚举随 stdType，逐规格独立可选 */
     const up=row.querySelector('[data-unitpick]');
     if(up)up.onclick=()=>pbGridPicker('选择售卖规格单位',unitNames(f.stdType,'spec'),f.specs[i].specUnit,v=>{
@@ -587,10 +600,14 @@ function stdToggle(p,f){
   const std=f.stdType==='标品';
   const consign=f.supplyMode==='寄售';
   const netRow=p.querySelector('#pb-net-row'),netHint=p.querySelector('#pb-net-hint');
+  const npRow=p.querySelector('#pb-netpack-row');
   const suRow=p.querySelector('#pb-stockunit-row');
   if(netRow)netRow.style.display=std?'':'none';
+  if(npRow)npRow.style.display=std?'':'none';   // 最小包装单位跟随单件净含量：只有标品才有
   if(netHint){netHint.style.display=std?'':'none';
-    netHint.innerHTML='包装上申报的固定净含量，指 <b>1 个「售卖规格单位」</b>的量（如可乐按瓶卖就填一瓶 330 ml）。各规格净含量 = 单件净含量 × 售卖规格数量。';}
+    netHint.innerHTML=f.netPackType
+      ?`包装上申报的固定净含量，<b>不乘售卖规格数量</b>。已选 <b>${f.netPackType}</b>：这是 1 个${f.netPackType==='单品'?'单品':'整包'}的量${f.netPackType==='单品'?'（如可乐 1 瓶 330 ml）':'（如海带丝 1 袋 200 g，袋内可再分小份）'}。一个规格装几个最小包装见各规格的「内含最小包装数」。`
+      :'包装上申报的固定净含量，<b>不乘售卖规格数量</b>（1 瓶与 24 瓶/箱都是 330 ml）。再用<b>最小包装单位</b>声明它是哪一层的量：<b>单品</b>＝1 个单品的量；<b>单包</b>＝1 整包/袋的量。';}
   if(suRow)suRow.style.display=consign?'':'none';
   const sh=p.querySelector('#pb-std-hint');
   if(sh)sh.innerHTML=std
@@ -618,6 +635,8 @@ function paint(p,f,submitted){
   p.querySelector('#pb-std-row').classList.toggle('err',submitted&&!f.stdType);
   const nr=p.querySelector('#pb-net-row');
   if(nr)nr.classList.toggle('err',submitted&&f.stdType==='标品'&&!(parseFloat(f.netQty)>0));
+  const npr=p.querySelector('#pb-netpack-row');
+  if(npr)npr.classList.toggle('err',submitted&&f.stdType==='标品'&&!f.netPackType);
   const sur=p.querySelector('#pb-stockunit-row');
   if(sur)sur.classList.toggle('err',submitted&&f.supplyMode==='寄售'&&!f.stockUnit);
   // BCRS 押金单价：选「是」时必填 >0 且 ≤ 上限（即时标红）
@@ -657,6 +676,10 @@ function runChecks(f){
   if(f.stdType==='标品'){
     if(!(parseFloat(f.netQty)>0)) fails.push(['净含量','「单件净含量」必填——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推']);
     else if(!f.netUnit)           fails.push(['净含量','填了单件净含量，「净含量单位」必填']);
+    if(!f.netPackType)            fails.push(['净含量','「最小包装单位」必填——声明净含量是 1 个单品的量还是 1 整包的量']);
+    else if(!NET_PACK_TYPES.includes(f.netPackType)) fails.push(['净含量',`最小包装单位「${f.netPackType}」不在取值内（${NET_PACK_TYPES.join('/')}）`]);
+    f.specs.forEach((s,i)=>{const v=String(s.containedPackCount||'').trim();
+      if(v&&!/^[1-9]\d*$/.test(v))fails.push(['规格',`规格${i+1} 内含最小包装数须为正整数，留空即按售卖规格数量`]);});
   }
   if(f.supplyMode==='寄售'&&!f.stockUnit) fails.push(['必填','寄售品需选择「库存单位」']);
   if(f.supplyMode==='寄售'&&f.stockUnit&&!unitNames(f.stdType,'spec').includes(f.stockUnit))
@@ -749,6 +772,9 @@ function bindForm(p,f){
   // 单件净含量（标品必填）：数值即时重算各规格净含量
   p.querySelector('#pb-net-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('净含量单位',unitNames(f.stdType,'net'),f.netUnit,v=>{f.netUnit=v;setPH(p.querySelector('#pb-netunit'),v,1);refreshNet(p,f);paint(p,f);});};
   // 库存单位（寄售专用）：取值同售卖规格单位枚举；变更后各规格只读单位与净含量联动
+  p.querySelector('#pb-netpack-row').onclick=()=>pbGridPicker('最小包装单位',NET_PACK_TYPES,f.netPackType,v=>{
+    f.netPackType=v;setPH(p.querySelector('#pb-netpack-v'),v,1);stdToggle(p,f);refreshNet(p,f);paint(p,f);
+  });
   p.querySelector('#pb-stockunit-row').onclick=()=>pbGridPicker('库存单位',unitNames(f.stdType,'spec'),f.stockUnit,v=>{
     f.stockUnit=v;setPH(p.querySelector('#pb-stockunit-v'),v,1);renderSpecs(p,f);paint(p,f);});
   // 效期管理 / 保质期单位 / APP是否展示效期 / 储存条件 / 履约方式
@@ -760,7 +786,7 @@ function bindForm(p,f){
   // 输入框单元格点击空白不抢焦点
   ['pb-name-row','pb-alias-row','pb-tax-row','pb-mnote-row','pb-bcrsdep-row','pb-origin-row','pb-brand-row','pb-desc-row','pb-selltype-row'].forEach(id=>{const el=p.querySelector('#'+id);if(el)el.onclick=null;});
 
-  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite',packUnit:''});renderSpecs(p,f);paint(p,f);};
+  p.querySelector('#pb-addspec').onclick=()=>{f.specs.push({qty:'',price:'',stock:'',mode:'finite',packUnit:'',specUnit:'',containedPackCount:''});renderSpecs(p,f);paint(p,f);};
 
   // 实时翻译：商品名/别名/产地/品牌/描述 露出买家可见英文译文行(中↔英)，可手改、手改后锁定
   PBTR.init(p);
