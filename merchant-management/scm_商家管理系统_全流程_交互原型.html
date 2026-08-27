@@ -1307,7 +1307,9 @@ function closeModal(){document.getElementById('mo').classList.remove('open');clo
 function drawer(html){let d=document.getElementById('drawerc');if(!d){d=document.createElement('div');d.id='drawerc';d.className='drawer-mask';document.body.appendChild(d);d.addEventListener('click',e=>{if(e.target.id=='drawerc')closeDrawer();});}d.innerHTML=`<div class="drawer-panel">${html}</div>`;requestAnimationFrame(()=>d.classList.add('open'));}
 function closeDrawer(){const d=document.getElementById('drawerc');if(d)d.classList.remove('open');}
 function stepQty(k,dd){EDIT_SKUS[k].qty=Math.max(1,(EDIT_SKUS[k].qty||1)+dd);renderSkuEditor();}
-function skuRowSync(k){const a=document.getElementById('skn-'+k);if(a)a.textContent=skuName(k);const b=document.getElementById('ded-'+k);if(b)b.textContent=dedText(k);}
+function skuRowSync(k){const a=document.getElementById('skn-'+k);if(a)a.textContent=skuName(k);const b=document.getElementById('ded-'+k);if(b)b.textContent=dedText(k);refreshPackCells();}
+/* 「内含最小包装数（自动）」= 售卖规格数量 × 库存换算比例，随数量/比例实时刷新（只刷这几个只读格，不整表重渲，避免打断输入焦点） */
+function refreshPackCells(){document.querySelectorAll('.sku-pack-cell').forEach(el=>{const n=edPackCount(+el.dataset.k);el.textContent=n!=null?n:'—';});}
 document.getElementById('mo').addEventListener('click',e=>{if(e.target.id=='mo')closeModal();});
 function money(n){return 'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function depositText(n){return n>0?money(n):'免保证金（$0.00）';}
@@ -2256,22 +2258,32 @@ function stockPackPreview(){
   const el=document.getElementById('stockpack-prev');if(!el)return;
   const npt=edNetPackType(),su=edStockUnit(),n=parseSpecQty((document.getElementById('f-packqty')||{}).value);
   el.textContent=(npt&&su&&n)?`· 1 ${su} = ${n} ${npt}`:'';
-  renderSkuEditor();                            // 各规格「内含最小包装数」随比例变
+  refreshPackCells();                           // 各规格「内含最小包装数」随比例变
 }
 function supplyToggle(){const b=document.getElementById('stockunit-block');if(b)b.style.display=(EDIT_SUPPLY=='寄售')?'':'none';if(typeof stockPackSync=='function')stockPackSync();if(typeof bcrsPreview=='function')bcrsPreview();}
 function edStockUnit(){return (EDIT_SUPPLY=='寄售')?((document.getElementById('f-stockunit')||{}).value||''):'';}
 function itemNameSync(){const iv=(document.getElementById('f-itemname')||{}).value||'';const nm=document.getElementById('f-name');if(nm&&nm.dataset.auto!=='0'){nm.value=iv;refreshSkuNames();}}
-function dedText(k){const unit=(EDIT_SKUS[k]||{}).packUnit||edUnit()||'单位';const q=EDIT_SKUS[k].qty||0;return `下单 1 份扣减 ${q} ${unit} 货品库存`;}
+function dedText(k){const unit=edRowSellUnit(k)||'单位';const q=EDIT_SKUS[k].qty||0;return `下单 1 份扣减 ${q} ${unit} 货品库存`;}   /* 扣的是库存单位，不是售卖单位/净含量单位 */
 /* 规格名 = 商品名 + 售卖规格数量 + 售卖规格单位 + 可选售卖单位。 */
 function edUnit(){return (document.getElementById('f-netunit')||{}).value||'';}
 function edNetPackType(){return (document.getElementById('f-netpacktype')||{}).value||'';}
 function edNet(){const q=(document.getElementById('f-netqty')||{}).value||'';return q?q+edUnit():'';}
+/* 编辑态本行的售卖规格单位（与展示态 skuSellUnit 同规则）：
+     寄售        → 商品级库存单位
+     自售 + 标品 → 商品级最小包装单位
+     其余        → 逐规格自选值 */
+function edRowSellUnit(k){
+  if(EDIT_SUPPLY=='寄售')return edStockUnit();
+  if((EDIT_STD||'标品')=='标品'&&edNetPackType())return edNetPackType();
+  return (EDIT_SKUS[k]||{}).sellUnit||'';
+}
+function edRowUnitLocked(){return EDIT_SUPPLY=='寄售'||((EDIT_STD||'标品')=='标品'&&!!edNetPackType());}
 function skuName(k){const name=(document.getElementById('f-name')||{}).value||'商品名';const r=EDIT_SKUS[k]||{};
-  const u=(EDIT_SUPPLY=='寄售')?edStockUnit():(r.sellUnit||'');
+  const u=edRowSellUnit(k);
   return `${name} ${fmtQty(r.qty)}${u}${r.packUnit?'/'+r.packUnit:''}`;}
 function refreshSkuNames(){EDIT_SKUS.forEach((s,k)=>{const el=document.getElementById('skn-'+k);if(el)el.textContent=skuName(k);});renderSkuEditorUnits();}
 // SKU 编辑器「单位」列：跟随该行售卖单位；未填则显示净含量单位
-function renderSkuEditorUnits(){document.querySelectorAll('.sku-unit-cell').forEach(el=>{const k=+el.dataset.k;const pk=(EDIT_SKUS[k]||{}).packUnit||'';el.textContent=pk||edStockUnit()||edUnit()||'—';});}
+function renderSkuEditorUnits(){document.querySelectorAll('.sku-unit-cell').forEach(el=>{const k=+el.dataset.k;const u=edRowSellUnit(k);el.textContent=(u&&edRowUnitLocked()?'🔒 ':'')+(u||'—');});}
 /* 建档/追加规格时选「多退少补」：仅计量单位 kg/g 可选（BR-01），重量单位下默认开启（生鲜高频场景预设默认值） */
 function skuEdRefund(k,unit){
   const w=['kg','g'].includes(unit),s=EDIT_SKUS[k];
@@ -2326,7 +2338,7 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
     +`<div><select title="售卖单位（选填，《建品单位规范》：包/份/组/箱）" onchange="EDIT_SKUS[${k}].packUnit=this.value;skuRowSync(${k})" style="${sel}"><option value="" ${pk==''?'selected':''}>无</option>${unitNames(EDIT_STD,'sell').map(u=>`<option value="${u}" ${pk==u?'selected':''}>${u}</option>`).join('')}</select></div>`
     +`<div><input type="number" min="1" max="${MAX_SPEC_QTY}" step="1" value="${s.qty||''}" placeholder="如 1 或 24" title="售卖规格数量：1~${MAX_SPEC_QTY}的正整数" style="${inp}" oninput="edSetQty(${k},this.value)"></div>`
     +`<div>${consign
-        ?`<div class="sku-unit-cell" data-k="${k}" title="寄售：售卖规格单位同商品级库存单位，不可修改" style="${roCell};justify-content:center">${su||'—'}</div>`
+        ?`<div class="sku-unit-cell" data-k="${k}" title="寄售：售卖规格单位同商品级库存单位，不可修改" style="${roCell};justify-content:center">${su?'🔒 '+su:'—'}</div>`
         :stdLock
         ?`<div class="sku-unit-cell" data-k="${k}" title="自售标品：售卖规格单位恒等商品级「最小包装单位」（${npt}），逐规格不可改——净含量申报的就是这一件" style="${roCell};justify-content:center">🔒 ${npt}</div>`
         :`<select title="售卖规格单位（《建品单位规范》：${std?'标品＝计件单位':'非标品＝计量单位'}）" onchange="changeSellSpecUnit(${k},this.value)" style="${sel};border-color:${s.sellUnit?'#dcdfe6':'var(--r)'}"><option value="">请选择</option>${unitNames(EDIT_STD,'spec').map(u=>`<option value="${u}" ${s.sellUnit==u?'selected':''}>${u}</option>`).join('')}</select>`}</div>`
@@ -2334,7 +2346,7 @@ function renderSkuEditor(){const box=document.getElementById('sku-editor');if(!b
         const tip=consign
           ?(r===1?'寄售且库存单位就是最小包装单位，1 份即 1 个最小包装':(r?`寄售按「1 ${su||'库存单位'} = ${r} ${npt||'最小包装'}」换算：售卖规格数量 × ${r}`:'请先在上方填写「包装数量」'))
           :'自售标品的售卖规格单位恒等最小包装单位，1 份即 1 个最小包装';
-        return `<div><div title="${tip}" style="${roCell};justify-content:center">${n!=null?n:'—'}</div></div>`;})():'')
+        return `<div><div class="sku-pack-cell" data-k="${k}" title="${tip}" style="${roCell};justify-content:center">${n!=null?n:'—'}</div></div>`;})():'')
     +`<div class="sku-net-cell" data-k="${k}" style="${roCell};justify-content:center">—</div>`
     +`<div><input type="number" min="0" step="0.01" value="${s.price||''}" placeholder="0.00" style="${inp}" oninput="EDIT_SKUS[${k}].price=parseFloat(this.value)||0"></div>`
     +`<div>${skuEdRefund(k,rowUnit)}</div>`
