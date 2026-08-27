@@ -430,8 +430,8 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-tax-row"><div class="lab"><span class="rq">*</span>税率</div><div class="val"><input id="pb-tax" inputmode="decimal" placeholder="选择类目后自动带出，可改" value="${f.tax}"><span class="pre">%</span></div></div>
         ${picker('pb-std-row','pb-std-v',f.stdType,1,'商品类型')}
         <div class="pb-hint" id="pb-std-hint" style="padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
-        <div class="pb-cell" id="pb-net-row"><div class="lab"><span class="rq">*</span>单件净含量</div><div class="val"><input id="pb-netqty" inputmode="decimal" placeholder="如 330" value="${f.netQty}"><span class="vtxt" id="pb-netunit" style="flex:0 0 auto;max-width:70px">${f.netUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
         ${picker('pb-netpack-row','pb-netpack-v',f.netPackType,1,'最小包装单位')}
+        <div class="pb-cell" id="pb-net-row"><div class="lab"><span class="rq">*</span>单件净含量</div><div class="val"><input id="pb-netqty" inputmode="decimal" placeholder="如 330" value="${f.netQty}"><span class="vtxt" id="pb-netunit" style="flex:0 0 auto;max-width:70px">${f.netUnit||'<span class=ph>单位</span>'}</span><span class="ch" style="flex:0 0 auto">${svg('arrow')}</span></div></div>
         <div class="pb-hint" id="pb-net-hint" style="padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
         ${picker('pb-stockunit-row','pb-stockunit-v',f.stockUnit,1,'库存单位')}
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>

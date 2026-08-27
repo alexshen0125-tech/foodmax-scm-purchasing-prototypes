@@ -1016,7 +1016,7 @@ function autoCheck(p){const fails=[];const c=CATS[p.cat],typeValid=['标品','�
   if(p.stdType=='标品'){
     if(!parseMeasure(p.netQty))fails.push(['净含量','「单件净含量」须为大于0的普通十进制，整数部分最多12位、小数最多6位；不得含单位、字母、科学计数法或多个小数点']);
     else if(!p.netUnit)fails.push(['净含量','标品填了单件净含量，净含量单位必填']);
-    if(!p.netPackType)fails.push(['净含量','标品需选择「最小包装单位」——说明上方净含量是 1 个单品的量还是 1 整包的量']);
+    if(!p.netPackType)fails.push(['净含量','标品需选择「最小包装单位」——说明单件净含量是 1 个单品的量还是 1 整包的量']);
     else if(!NET_PACK_TYPES.includes(p.netPackType))fails.push(['净含量',`最小包装单位「${p.netPackType}」不在取值内（${NET_PACK_TYPES.join('/')}）`]);
   }else if(p.stdType=='非标品'&&(p.netQty||p.netUnit||p.netPackType))fails.push(['净含量','非标品不得携带标品专用的单件净含量/计量单位/最小包装单位']);const specKeys=sk.map(x=>`${x.qty}|${skuSellUnit(p,x)}|${x.packUnit||''}`);if(new Set(specKeys).size!=specKeys.length)fails.push(['售卖规格','同一商品不可存在完全相同的规格（售卖规格数量+售卖规格单位+售卖单位）']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);if(p.bcrs){const c2=parseInt(p.bcrsUnitContainers,10);if(!Number.isInteger(c2)||c2<1)fails.push(['BCRS','支持 BCRS 需填「每最小售卖单位容器数」（正整数 ≥1）']);else if(c2>999)fails.push(['BCRS','容器数不合理（>999），请核对最小售卖单位']);}return fails;}
 function computeRisk(p){const c=CATS[p.cat];if(c&&c.baseRisk=='高')return '高';if((p.skus||[]).some(x=>x.price>0&&priceAbnormal(x.price,p.cat)))return '中';if(c&&c.baseRisk=='中')return '中';return '低';}
@@ -2131,7 +2131,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
             :'生鲜分装：每个 SKU 的净含量由「售卖规格数量+售卖规格单位」自动生成，<b>无需另填</b>'}</div>
         </label>`).join('')}
       </div>${AO('stdType')}</div>
-    <div class="fr" id="netqty-block" style="display:${isStd(p)?'block':'none'}"><label class="fl"><b>*</b>单件净含量 <span style="font-weight:400;color:var(--ts);font-size:12px">（标品必填：包装上申报的净含量，再说明它是单品的量还是整包的量，如 330 ml / 单品、200 g / 单包）</span></label><table class="itbl"><thead><tr><th>净含量</th><th>净含量单位</th><th title="这个净含量申报的是 1 个单品的量，还是 1 整包的量">最小包装单位</th></tr></thead><tbody><tr><td><input id="f-netqty" data-testid="net-content-value" type="number" min="0.000001" max="999999999999.999999" step="0.000001" inputmode="decimal" value="${p.netQty||''}" placeholder="如 330" oninput="refreshSkuNames();refreshNetCells()"></td><td><select id="f-netunit" data-testid="net-content-unit" onchange="renderSkuEditor()">${opt(NETUNIT,p.netUnit)}</select></td><td><select id="f-netpacktype" data-testid="net-content-pack-type" onchange="changeNetPackType()">${opt(NET_PACK_TYPES,p.netPackType||'')}</select></td></tr></tbody></table><div class="ib ib-gr" id="netpack-hint" style="margin:8px 0 0"><span class="i">ℹ️</span><b>最小包装单位</b>说明左边净含量是<b>哪一层</b>的量：<b>单品</b>＝1 个单品的量（可乐 1 瓶 330 ml）；<b>单包</b>＝1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）。净含量展示为「数值+计量单位/最小包装单位」，如 <b>330ml/单品</b>。净含量只接受正数普通十进制（整数最多12位、小数最多6位），<b>不乘包装数量</b>——一个规格里装几个最小包装由下方各规格的「内含最小包装数」表达。</div>${AO('netQty')}${AO('netPackType')}</div>
+    <div class="fr" id="netqty-block" style="display:${isStd(p)?'block':'none'}"><label class="fl"><b>*</b>单件净含量 <span style="font-weight:400;color:var(--ts);font-size:12px">（标品必填：先选这个净含量是单品的量还是整包的量，再填包装上申报的数值，如 单品 / 330 ml、单包 / 200 g）</span></label><table class="itbl"><thead><tr><th title="先声明下面填的净含量是 1 个单品的量，还是 1 整包的量">最小包装单位</th><th>净含量</th><th>净含量单位</th></tr></thead><tbody><tr><td><select id="f-netpacktype" data-testid="net-content-pack-type" onchange="changeNetPackType()">${opt(NET_PACK_TYPES,p.netPackType||'')}</select></td><td><input id="f-netqty" data-testid="net-content-value" type="number" min="0.000001" max="999999999999.999999" step="0.000001" inputmode="decimal" value="${p.netQty||''}" placeholder="如 330" oninput="refreshSkuNames();refreshNetCells()"></td><td><select id="f-netunit" data-testid="net-content-unit" onchange="renderSkuEditor()">${opt(NETUNIT,p.netUnit)}</select></td></tr></tbody></table><div class="ib ib-gr" id="netpack-hint" style="margin:8px 0 0"><span class="i">ℹ️</span><b>最小包装单位</b>说明这个净含量是<b>哪一层</b>的量：<b>单品</b>＝1 个单品的量（可乐 1 瓶 330 ml）；<b>单包</b>＝1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）。净含量展示为「数值+计量单位/最小包装单位」，如 <b>330ml/单品</b>。净含量只接受正数普通十进制（整数最多12位、小数最多6位），<b>不乘包装数量</b>——一个规格里装几个最小包装由下方各规格的「内含最小包装数」表达。</div>${AO('netQty')}${AO('netPackType')}</div>
     <div class="fr" id="netqty-nonstd" style="display:${isStd(p)?'none':'block'}"><div class="ib ib-gr" style="margin:0"><span class="i">ℹ️</span>非标品<b>没有独立的净含量字段</b>——净含量 ＝ 下方「售卖规格(SKU)」表里的<b>售卖规格数量 + 售卖规格单位</b>（如 1 + kg → 1kg，5 + kg → 5kg）。填好那两列即可，此处不必维护。</div></div>
     <div class="fr" id="bcrs-block" style="display:none"><label class="fl">是否支持 BCRS <span style="font-weight:400;color:var(--ts);font-size:12px">（饮料容器押金回收，仅支持的类目可选）</span></label>
       <div class="row" style="gap:14px">${radio('f-bcrs',p.bcrs?'是':'否',['否','是'])}</div>
@@ -2267,8 +2267,8 @@ function changeNetPackType(){
 function netPackSync(){
   const v=edNetPackType(),h=document.getElementById('netpack-hint');if(!h)return;
   h.innerHTML=v
-    ?`<span class="i">ℹ️</span>已选 <b>${v}</b>：上方净含量是 <b>1 个${v=='单品'?'单品':'整包'}</b>的量${v=='单品'?'（如可乐 1 瓶 330 ml）':'（如海带丝 1 袋 200 g，袋内可再分小份）'}。它只声明口径、<b>不参与金额与库存计算</b>；一个规格装几个最小包装由下方「内含最小包装数」表达。`
-    :`<span class="i">ℹ️</span><b>最小包装单位</b>说明左边净含量是<b>哪一层</b>的量：<b>单品</b>＝1 个单品的量（可乐 1 瓶 330 ml）；<b>单包</b>＝1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）。净含量展示为「数值+计量单位/最小包装单位」，如 <b>330ml/单品</b>，<b>不乘包装数量</b>。`;
+    ?`<span class="i">ℹ️</span>已选 <b>${v}</b>：这个净含量是 <b>1 个${v=='单品'?'单品':'整包'}</b>的量${v=='单品'?'（如可乐 1 瓶 330 ml）':'（如海带丝 1 袋 200 g，袋内可再分小份）'}。它只声明口径、<b>不参与金额与库存计算</b>；一个规格装几个最小包装由下方「内含最小包装数」表达。`
+    :`<span class="i">ℹ️</span><b>最小包装单位</b>说明这个净含量是<b>哪一层</b>的量：<b>单品</b>＝1 个单品的量（可乐 1 瓶 330 ml）；<b>单包</b>＝1 整包/袋的量（海带丝 1 袋 200 g，袋内可再分小份）。净含量展示为「数值+计量单位/最小包装单位」，如 <b>330ml/单品</b>，<b>不乘包装数量</b>。`;
 }
 function changeSellSpecUnit(k,next){const s=EDIT_SKUS[k],prev=s.sellUnit||'',hadBase=!!s.containedPackCount;s.sellUnit=next;
   /* 换了售卖规格单位（如 瓶→打），原先按旧单位核实的「内含最小包装数」不再成立，清空让商家按包装资料重填；
@@ -2297,9 +2297,9 @@ function refreshNetCells(){
     }
     if(!base){el.textContent='请填合法净含量';el.title='请输入大于0的普通十进制，整数最多12位、小数最多6位';return;}
     if(!u){el.textContent='请选计量单位';el.title='请选择净含量单位（g/kg/ml/L）';return;}
-    if(!bu){el.textContent=fmtMeasure(base)+u;el.title='请在上方选择「最小包装单位」，声明这是单品还是整包的量';return;}
+    if(!bu){el.textContent=fmtMeasure(base)+u;el.title='请先选择「最小包装单位」，声明这是单品还是整包的量';return;}
     el.textContent=fmtMeasure(base)+u+(bu?'/'+bu:'');
-    el.title='上方申报的单件净含量及最小包装单位（净含量不随包装数量变化）；一个规格装几个最小包装见「内含最小包装数」';
+    el.title='商品级申报的单件净含量及最小包装单位（净含量不随包装数量变化）；一个规格装几个最小包装见「内含最小包装数」';
   });
 }
 /* 售卖规格数量、内含最小包装数都只接受正整数。 */
