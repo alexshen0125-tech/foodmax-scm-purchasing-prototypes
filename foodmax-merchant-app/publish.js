@@ -71,7 +71,10 @@ const CATS=[
 ];
 // 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖(与 PC CAT_SCOPE 一致)
 const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料']);
-// BCRS 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST；与 PC 同源）。商家只填「每最小售卖单位容器数」，押金=容器数×0.10×数量
+// BCRS 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST；与 PC 同源）。商家只填「每 1 <单位> 容器数」，押金=容器数×0.10×数量
+/* BCRS 的「一份」是哪一件：与售卖规格单位同源——自售标品＝最小包装单位（瓶/罐/袋…）、寄售＝库存单位；都没有时回落「份」 */
+function bcrsUnitName(f){return ((f&&(f.supplyMode==='寄售'?f.stockUnit:f.netPackType))||'份');}
+function bcrsTipHtml(u){return `押金单价由平台固定为 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</b>（法规押金·不计 GST，商家不可改）。此处填<b>每 1 ${u}含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 售卖规格数量 × 每 1 ${u}容器数 × S$${BCRS_UNIT_PRICE.toFixed(2)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。`;}
 const BCRS_UNIT_PRICE=0.10;
 const BCRS_CONTAINERS_MAX=999;   // 容器数正整数上限（防呆，非法规限额）
 // 最小售卖单位(PC 基础计量单位；SKU 售卖规格单位只读 = 最小售卖单位)
@@ -224,6 +227,7 @@ css.textContent=`
 .pb-cell .lab{font-size:15px;font-weight:600;color:#27433A;flex:0 0 92px;}
 .pb-cell .lab .rq{color:var(--red);margin-right:2px;}
 #pb-netpack-row .lab{flex:0 0 116px;white-space:nowrap;}   /* 「最小包装单位」6字，92px 标签列会折行 */
+#pb-bcrsdep-row .lab{flex:0 0 116px;white-space:nowrap;}   /* 「每 1 X 容器数」同样超 92px */
 .pb-cell .val{flex:1;display:flex;align-items:center;gap:6px;min-width:0;}
 .pb-cell .val input{flex:1;border:none;background:transparent;outline:none;font-size:15px;font-family:inherit;width:100%;text-align:right;}
 .pb-cell .val .ph{color:#94A3B8;flex:1;text-align:right;font-size:15px;}
@@ -405,7 +409,7 @@ function openForm(prefill){
     stockUnit:'',                          // 寄售专用·商品级库存单位：取值同售卖规格单位枚举；寄售时各规格售卖规格单位恒等于它
     measure: prefill?prefill.measure:'',   // 【兼容】旧「最小售卖单位」，已被 stdType + 规格级 specUnit 取代
     netQty:'', netUnit:'', netPackType:'', measureNote:'',  // netQty/netUnit = 标品的「单件净含量」，非标品不填；netPackType=最小包装单位(单品/单包)
-    bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每最小售卖单位容器数(整数)，押金单价平台固定 0.10
+    bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每 1 <最小包装单位/库存单位> 容器数(整数)，押金单价平台固定 0.10
     sellType:'售卖品',                      // 销售类型固定，不可改
     supplyMode:'自售',                      // 售卖模式(dev supplyMode 1=自售/2=寄售)：默认自售，保存后不可修改；寄售→SKU库存只读
     validEnable:'是',                       // 效期管理默认「是」
@@ -435,8 +439,8 @@ function openForm(prefill){
         ${picker('pb-stockunit-row','pb-stockunit-v',f.stockUnit,1,'库存单位')}
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每最小售卖单位容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
-        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">押金单价由平台固定为 <b>S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</b>（法规押金·不计 GST，商家不可改）。此处填<b>一个最小售卖单位含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 售卖规格数量 × 每最小售卖单位容器数 × S$${BCRS_UNIT_PRICE.toFixed(2)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。</div>
+        <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每 1 <b id="pb-bcrs-unit">${bcrsUnitName(f)}</b> 容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
+        <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">${bcrsTipHtml(bcrsUnitName(f))}</div>
         <div class="pb-cell" id="pb-selltype-row"><div class="lab">销售类型</div><div class="val"><span class="vtxt" style="color:var(--sub)">售卖品</span></div></div>
         <div class="pb-cell" id="pb-supply-row" style="cursor:pointer"><div class="lab">售卖模式</div><div class="val"><span class="vtxt" id="pb-supply-v">${f.supplyMode}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-bcrs-tip" style="display:block;padding-top:2px">自售=经销买断，库存自行维护；<b>寄售</b>=库存由货品库存决定、逐规格不可维护。售卖模式<b>保存后不可修改</b>。</div>
@@ -707,7 +711,7 @@ function runChecks(f){
   if(f.cat&&!LICENSE.has(f.cat.n)) fails.push(['资质',`经营许可证未覆盖「${f.cat.n}」类目`]);
   if(f.bcrs==='是'&&f.cat&&f.cat.bcrs){
     const d=parseInt(f.bcrsUnitContainers,10);
-    if(!Number.isInteger(d)||d<1)          fails.push(['BCRS','支持 BCRS 需填「每最小售卖单位容器数」（正整数 ≥1）']);
+    if(!Number.isInteger(d)||d<1)          fails.push(['BCRS',`支持 BCRS 需填「每 1 ${bcrsUnitName(f)}容器数」（正整数 ≥1）`]);
     else if(d>BCRS_CONTAINERS_MAX)         fails.push(['BCRS',`容器数不合理（>${BCRS_CONTAINERS_MAX}），请核对最小售卖单位`]);
   }
   if(f.name.trim()&&EXISTING.includes(f.name.trim())) fails.push(['查重','已存在同名商品']);
@@ -732,6 +736,10 @@ function bcrsToggle(p,f){
   const depOn=catOn&&f.bcrs==='是';
   rowD.style.display=depOn?'':'none';
   tip.style.display=depOn?'':'none';
+  /* 「每 1 X 容器数」的 X 同源于售卖规格单位：自售标品取最小包装单位、寄售取库存单位 */
+  const u=bcrsUnitName(f);
+  const un=p.querySelector('#pb-bcrs-unit');if(un)un.textContent=u;
+  if(tip)tip.innerHTML=bcrsTipHtml(u);
 }
 
 /* ---- 表单绑定 ---- */
@@ -760,7 +768,7 @@ function bindForm(p,f){
   bcrsToggle(p,f);
   // 最小售卖单位(变更后 SKU 售卖规格单位联动只读)
   p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
-    f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);stdToggle(p,f);renderSpecs(p,f);paint(p,f);});
+    f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);stdToggle(p,f);renderSpecs(p,f);bcrsToggle(p,f);paint(p,f);});   // 换模式即换 BCRS 单位来源（最小包装单位 ↔ 库存单位）
 
   /* 商品类型：切换后两类的售卖规格单位取值集互斥，原值必然失效 → 清空重选（与 PC 同口径，PRD BR-11） */
   p.querySelector('#pb-std-row').onclick=()=>pbGridPicker('商品类型',STD_TYPES,f.stdType,v=>{
@@ -781,10 +789,10 @@ function bindForm(p,f){
   p.querySelector('#pb-net-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('净含量单位',unitNames(f.stdType,'net'),f.netUnit,v=>{f.netUnit=v;setPH(p.querySelector('#pb-netunit'),v,1);refreshNet(p,f);paint(p,f);});};
   // 库存单位（寄售专用）：取值同售卖规格单位枚举；变更后各规格只读单位与净含量联动
   p.querySelector('#pb-netpack-row').onclick=()=>pbGridPicker('最小包装单位',netPackUnits(),f.netPackType,v=>{
-    f.netPackType=v;setPH(p.querySelector('#pb-netpack-v'),v,1);stdToggle(p,f);renderSpecs(p,f);refreshNet(p,f);paint(p,f);   // 各规格售卖规格单位随之锁定，需整段重渲
+    f.netPackType=v;setPH(p.querySelector('#pb-netpack-v'),v,1);stdToggle(p,f);renderSpecs(p,f);refreshNet(p,f);bcrsToggle(p,f);paint(p,f);   // 各规格售卖规格单位随之锁定，BCRS 单位同源
   });
   p.querySelector('#pb-stockunit-row').onclick=()=>pbGridPicker('库存单位',unitNames(f.stdType,'spec'),f.stockUnit,v=>{
-    f.stockUnit=v;setPH(p.querySelector('#pb-stockunit-v'),v,1);renderSpecs(p,f);paint(p,f);});
+    f.stockUnit=v;setPH(p.querySelector('#pb-stockunit-v'),v,1);renderSpecs(p,f);bcrsToggle(p,f);paint(p,f);});   // 寄售时 BCRS「每 1 X 容器数」取库存单位
   // 效期管理 / 保质期单位 / APP是否展示效期 / 储存条件 / 履约方式
   p.querySelector('#pb-valid-row').onclick=()=>pbGridPicker('效期管理',['是','否'],f.validEnable,v=>{f.validEnable=v;setPH(p.querySelector('#pb-valid-v'),v,1);});
   p.querySelector('#pb-shelf-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('保质期单位',SHELF_UNITS,f.shelfUnit,v=>{f.shelfUnit=v;setPH(p.querySelector('#pb-shelfunit'),v,1);});};

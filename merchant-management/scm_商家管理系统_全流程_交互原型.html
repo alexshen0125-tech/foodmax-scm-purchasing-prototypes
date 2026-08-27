@@ -760,7 +760,12 @@ function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><s
 const ASSUME={Q1:'假设：品类指导价已存在，价格正常区间=指导价×[0.5,2.0]',Q2:'假设：低风险商品本期开启自动通过（抽审 10%）',Q5:'假设：审核通过商品落「商家商品表」，与货品中心打通本期留接口位',Q6:'假设：高风险品类=冻品/进口/即食/农残抽检叶菜，强制传质检报告',Q7:'假设：图片违禁词识别复用 ad_compliance（qwen-vl）'};
 // 后台类目（含税率/风险/指导价 + 是否支持 BCRS）；bcrs=true 的类目，商家建品时才可选「是否支持 BCRS」
 const CATS={'新鲜蔬菜':{tax:0,baseRisk:'低',guide:6.0},'肉禽蛋品':{tax:0.09,baseRisk:'中',guide:14.0},'海鲜水产':{tax:0.09,baseRisk:'高',guide:25.0},'调味品':{tax:0.09,baseRisk:'低',guide:18.0},'饮料':{tax:0.09,baseRisk:'低',guide:5.0,bcrs:true}};
-const BCRS_UNIT_PRICE=0.10;   // 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST）——商家只填「每 1 份容器数」
+const BCRS_UNIT_PRICE=0.10;   // 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST）——商家只填「每 1 <单位> 容器数」
+/* BCRS 的「一份」是哪一件：与售卖规格单位同源——自售标品＝最小包装单位（瓶/罐/袋…）、寄售＝库存单位；
+   都没有时回落「份」。这样「每 1 瓶容器数」「每 1 瓶押金 S$0.10」读起来就是商家包装上的那一件。 */
+function bcrsUnitName(p){return (p&&(p.consign?p.stockUnit:p.netPackType))||'份';}
+function edBcrsUnit(){return ((EDIT_SUPPLY=='寄售')?edStockUnit():edNetPackType())||'份';}
+function bcrsTipHtml(u){return `押金单价由平台固定为 <b>${money(BCRS_UNIT_PRICE)}/容器</b>（法规押金·不计 GST·商家不可改）。此处填<b>每 1 ${u}含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 售卖规格数量 × 每 1 ${u}容器数 × ${money(BCRS_UNIT_PRICE)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。`;}
 // BCRS 三因子（对齐商城）：SKU 容器数=售卖规格数量×每 1 份容器数；SKU 押金=容器数×0.10；订单行押金=件数×行容器数×0.10
 function skuBcrsContainers(p,s){return (+s.qty||0)*(+p.bcrsUnitContainers||0);}
 function skuBcrsAmt(p,s){return p.bcrs?+(skuBcrsContainers(p,s)*BCRS_UNIT_PRICE).toFixed(2):0;}
@@ -1026,7 +1031,7 @@ function autoCheck(p){const fails=[];const c=CATS[p.cat],typeValid=['标品','�
     else if(!p.netUnit)fails.push(['净含量','标品填了单件净含量，净含量单位必填']);
     if(!p.netPackType)fails.push(['净含量','标品需选择「最小包装单位」——单件净含量申报的是哪一件（如 330ml/瓶 中的「瓶」）；自售标品的售卖规格单位由它决定']);
     else if(!netPackUnits().includes(p.netPackType))fails.push(['单位规范',`最小包装单位「${p.netPackType}」不在标品计件单位枚举内（${netPackUnits().join('/')}）`]);
-  }else if(p.stdType=='非标品'&&(p.netQty||p.netUnit||p.netPackType))fails.push(['净含量','非标品不得携带标品专用的单件净含量/计量单位/最小包装单位']);const specKeys=sk.map(x=>`${x.qty}|${skuSellUnit(p,x)}|${x.packUnit||''}`);if(new Set(specKeys).size!=specKeys.length)fails.push(['售卖规格','同一商品不可存在完全相同的规格（售卖规格数量+售卖规格单位+售卖单位）']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);if(p.bcrs){const c2=parseInt(p.bcrsUnitContainers,10);if(!Number.isInteger(c2)||c2<1)fails.push(['BCRS','支持 BCRS 需填「每最小售卖单位容器数」（正整数 ≥1）']);else if(c2>999)fails.push(['BCRS','容器数不合理（>999），请核对最小售卖单位']);}return fails;}
+  }else if(p.stdType=='非标品'&&(p.netQty||p.netUnit||p.netPackType))fails.push(['净含量','非标品不得携带标品专用的单件净含量/计量单位/最小包装单位']);const specKeys=sk.map(x=>`${x.qty}|${skuSellUnit(p,x)}|${x.packUnit||''}`);if(new Set(specKeys).size!=specKeys.length)fails.push(['售卖规格','同一商品不可存在完全相同的规格（售卖规格数量+售卖规格单位+售卖单位）']);if(c&&!CAT_SCOPE.includes(p.cat))fails.push(['资质关联',`经营许可证未覆盖「${p.cat}」类目`]);if(DB.products.some(x=>x.id!=p.id&&x.name==p.name&&x.status!='draft'))fails.push(['重复建档','已存在同名商品']);if(p.bcrs){const c2=parseInt(p.bcrsUnitContainers,10);if(!Number.isInteger(c2)||c2<1)fails.push(['BCRS',`支持 BCRS 需填「每 1 ${bcrsUnitName(p)}容器数」（正整数 ≥1）`]);else if(c2>999)fails.push(['BCRS','容器数不合理（>999），请核对最小售卖单位']);}return fails;}
 function computeRisk(p){const c=CATS[p.cat];if(c&&c.baseRisk=='高')return '高';if((p.skus||[]).some(x=>x.price>0&&priceAbnormal(x.price,p.cat)))return '中';if(c&&c.baseRisk=='中')return '中';return '低';}
 
 /* ================= NAV CONFIG ================= */
@@ -1881,7 +1886,7 @@ function act_spuDetail(i){
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
       ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：取申报的单件净含量，不乘售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
       ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量计量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit))+dl('最小包装单位',unitTxtCode('标品','spec',p.netPackType)):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
-      ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 份 ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
+      ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 ${bcrsUnitName(p)} ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
       ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
       ${dl('商品别名(EN)',p.aliasEn||'—')}
       ${dl('产地',p.origin)}${dl('品牌',p.brand)}
@@ -2144,8 +2149,8 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
     <div class="fr" id="bcrs-block" style="display:none"><label class="fl">是否支持 BCRS <span style="font-weight:400;color:var(--ts);font-size:12px">（饮料容器押金回收，仅支持的类目可选）</span></label>
       <div class="row" style="gap:14px">${radio('f-bcrs',p.bcrs?'是':'否',['否','是'])}</div>
       <div id="bcrs-deposit" style="display:none;margin-top:10px">
-        <div class="row" style="gap:8px;align-items:center"><span style="font-size:13px"><b>*</b>每 1 份容器数</span><input id="f-bcrscnt" type="number" step="1" min="1" value="${p.bcrsUnitContainers||1}" placeholder="如 1（一瓶=1容器）" style="max-width:120px" oninput="bcrsPreview()"><span style="font-size:12px;color:var(--ts)">个 · 押金单价 ${money(BCRS_UNIT_PRICE)}/容器（平台固定）</span><span id="bcrs-prev" style="font-size:12px;color:var(--gd)"></span></div>
-        <div class="ib ib-b" style="margin-top:8px"><span class="i">ℹ️</span><div>押金单价由平台固定为 <b>${money(BCRS_UNIT_PRICE)}/容器</b>（法规押金·不计 GST·商家不可改）。此处填<b>「1 份 = 数量」里每 1 份含几个容器</b>（一瓶/一罐=1）。<b>每个 SKU 押金 = 售卖规格数量 × 每 1 份容器数 × ${money(BCRS_UNIT_PRICE)}</b>，随货透传客户下单/订单/发票。适用容量 150ml–3L。</div></div>
+        <div class="row" style="gap:8px;align-items:center"><span style="font-size:13px"><b>*</b>每 1 <b id="bcrs-unit">${bcrsUnitName(p)}</b> 容器数</span><input id="f-bcrscnt" type="number" step="1" min="1" value="${p.bcrsUnitContainers||1}" placeholder="如 1（一瓶=1容器）" style="max-width:120px" oninput="bcrsPreview()"><span style="font-size:12px;color:var(--ts)">个 · 押金单价 ${money(BCRS_UNIT_PRICE)}/容器（平台固定）</span><span id="bcrs-prev" style="font-size:12px;color:var(--gd)"></span></div>
+        <div class="ib ib-b" style="margin-top:8px"><span class="i">ℹ️</span><div id="bcrs-tip">${bcrsTipHtml(bcrsUnitName(p))}</div></div>
       </div>
     </div>
     <div class="fg3"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div>
@@ -2153,7 +2158,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
       <div class="fr"><label class="fl">产地</label><input id="f-origin" data-tr value="${p.origin||''}" placeholder="选填">${AO('origin')}</div></div>
     <div class="k" style="font-size:11.5px;color:var(--ts);margin:-4px 0 12px">自售=经销买断，库存自维护；<b>寄售</b>=库存由货品库存决定、逐规格不可维护。售卖模式${supplyLock?'已保存，<b>不可修改</b>':'<b>保存后不可修改</b>'}。</div>
     <div class="fr" id="stockunit-block" style="display:none"><label class="fl"><b>*</b>库存单位 <span style="font-weight:400;color:var(--ts);font-size:12px">（寄售专用·商品级：货品库存按什么单位计，全部规格通用）</span></label>
-      <select id="f-stockunit" onchange="renderSkuEditor()" style="max-width:200px">${opt(stockUnitList(stdTypeName(p)),p.stockUnit)}</select>
+      <select id="f-stockunit" onchange="renderSkuEditor();bcrsPreview()" style="max-width:200px">${opt(stockUnitList(stdTypeName(p)),p.stockUnit)}</select>
       <div style="font-size:11.5px;color:var(--ts);margin-top:6px">取值同<b>售卖规格单位</b>枚举、随商品类型变（当前<b>${stdTypeName(p)}</b>：${stockUnitList(stdTypeName(p)).join(' / ')}）。选定后寄售各规格的<b>售卖规格单位恒等于它、逐规格不可改</b>，「1 份 = 数量」即表示 <b>数量 个该单位</b>（如库存单位 kg、数量 5 → 规格「5kg」）。</div>
     </div>
     <div class="fg2"><div class="fr"><label class="fl"><b>*</b>效期管理</label>${radio('f-expen',p.expEn||'是',['否','是'])}</div><div class="fr" id="qp-cell"><label class="fl">保质期</label><div class="row" style="gap:8px"><input id="f-qp" value="${p.qp||''}" placeholder="如 7" style="flex:1"><select id="f-qpu" style="max-width:88px">${opt(QPUNIT,p.qpu||'天')}</select></div></div></div>
@@ -2171,7 +2176,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
   setTimeout(()=>{supplyToggle();renderSkuEditor();catHint();document.querySelectorAll('input[name=f-bcrs]').forEach(r=>r.addEventListener('change',bcrsToggle));bcrsToggle();document.querySelectorAll('input[name=f-expen]').forEach(r=>r.addEventListener('change',expToggle));expToggle();TR.init(document);},0);
 }
 // 售卖模式联动：仅寄售显示商品级「库存单位」
-function supplyToggle(){const b=document.getElementById('stockunit-block');if(b)b.style.display=(EDIT_SUPPLY=='寄售')?'':'none';}
+function supplyToggle(){   /* 自售/寄售切换会改变 BCRS「每 1 X 容器数」的取值来源（最小包装单位 ↔ 库存单位）*/const b=document.getElementById('stockunit-block');if(b)b.style.display=(EDIT_SUPPLY=='寄售')?'':'none';if(typeof bcrsPreview=='function')bcrsPreview();}
 function edStockUnit(){return (EDIT_SUPPLY=='寄售')?((document.getElementById('f-stockunit')||{}).value||''):'';}
 function itemNameSync(){const iv=(document.getElementById('f-itemname')||{}).value||'';const nm=document.getElementById('f-name');if(nm&&nm.dataset.auto!=='0'){nm.value=iv;refreshSkuNames();}}
 function dedText(k){const unit=(EDIT_SKUS[k]||{}).packUnit||edUnit()||'单位';const q=EDIT_SKUS[k].qty||0;return `下单 1 份扣减 ${q} ${unit} 货品库存`;}
@@ -2280,7 +2285,7 @@ function changeNetPackType(){
     if(next&&su==next&&q!=null){s.containedPackCount=q;auto++;}
     else if(s.containedPackCount){s.containedPackCount='';cleared++;}
   });
-  EDIT_NET_PACK_TYPE=next;renderSkuEditor();refreshSkuNames();netPackSync();
+  EDIT_NET_PACK_TYPE=next;renderSkuEditor();refreshSkuNames();netPackSync();bcrsPreview();   /* BCRS 的「每 1 X 容器数」同源于它 */
   toast(`最小包装单位已改为「${next}」${auto?`；${auto} 个规格的售卖规格单位同步锁定、内含件数自动带入`:''}${cleared?`；已清空 ${cleared} 行需重新核实的内含最小包装数`:''}`,'info');
 }
 /* 提示条随所选口径改写，选完只留这一档的解释 */
@@ -2332,7 +2337,14 @@ function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS
   const bb=document.getElementById('bcrs-block');if(bb){if(c&&c.bcrs){bb.style.display='';}else{bb.style.display='none';const r=document.querySelector('input[name=f-bcrs][value="否"]');if(r){r.checked=true;const row=r.closest('.row');if(row){row.querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));r.parentElement.classList.add('on');}}const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display='none';}}
   if(!box)return;let h='';if(c&&!CAT_SCOPE.includes(cat))h=`<div class="ib ib-r" style="margin:10px 0"><span class="i">⛔</span>经营许可证未覆盖「${cat}」类目，提交将被资质校验拦截。</div>`;else if(c&&c.baseRisk=='高')h=`<div class="ib ib-gr" style="margin:10px 0"><span class="i">ℹ️</span>「${cat}」为高风险类目，首次建档默认进人工审核。</div>`;box.innerHTML=h;}
 function bcrsToggle(){const e=document.querySelector('input[name=f-bcrs]:checked');const on=e&&e.value=='是';const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display=on?'':'none';if(on)bcrsPreview();}
-function bcrsPreview(){const c=parseInt((document.getElementById('f-bcrscnt')||{}).value,10)||0;const el=document.getElementById('bcrs-prev');if(el)el.textContent=c>0?`· 每 1 份押金 ${money(c*BCRS_UNIT_PRICE)}（${c}容器×${money(BCRS_UNIT_PRICE)}）`:'';}
+function bcrsPreview(){
+  const u=edBcrsUnit();
+  const un=document.getElementById('bcrs-unit');if(un)un.textContent=u;
+  const tip=document.getElementById('bcrs-tip');if(tip)tip.innerHTML=bcrsTipHtml(u);
+  const c=parseInt((document.getElementById('f-bcrscnt')||{}).value,10)||0;
+  const el=document.getElementById('bcrs-prev');
+  if(el)el.textContent=c>0?`· 每 1 ${u}押金 ${money(c*BCRS_UNIT_PRICE)}（${c}容器×${money(BCRS_UNIT_PRICE)}）`:'';
+}
 function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{const e=document.querySelector('input[name='+n+']:checked');return e?e.value:'';};const p=i<0?{id:'SPU'+(++SPU_SEQ)}:{...DB.products[i]};p.cat=g('f-cat').value;p.tax=g('f-tax').value.trim();p.stdType=gr('f-stdtype')||EDIT_STD||'标品';   /* 标品=净含量落 SPU；非标品=净含量落 SKU */p.netQty=p.stdType=='标品'?(parseMeasure(g('f-netqty').value)||g('f-netqty').value.trim()):'';p.netUnit=p.stdType=='标品'?((g('f-netunit')||{}).value||''):'';p.netPackType=p.stdType=='标品'?((g('f-netpacktype')||{}).value||''):'';p.unit=p.netUnit;p.stockUnit=(((g('f-supply')||{}).value||'自售')=='寄售')?((g('f-stockunit')||{}).value||''):'';   /* 最小售卖单位/规格备注已下线：unit 由净含量单位派生，仅供历史数据与下游兼容 */p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';p.consign=((g('f-supply')||{}).value||'自售')=='寄售';   // 售卖模式：寄售=true
   const bcrsOn=(gr('f-bcrs')=='是')&&!!(CATS[p.cat]&&CATS[p.cat].bcrs);p.bcrs=bcrsOn;p.bcrsUnitContainers=bcrsOn?(parseInt((g('f-bcrscnt')||{}).value,10)||0):0;   /* BCRS：仅支持类目+选是才存；每 1 份容器数(押金单价平台固定0.10) */ const prev=(i>=0&&DB.products[i].skus)||[],prevById=new Map(prev.map(x=>[x.skuId,x]));p.skus=EDIT_SKUS.map(s=>{const old=s.skuId?prevById.get(s.skuId):null,sellUnit=p.consign?(p.stockUnit||''):(p.stdType=='标品'&&p.netPackType?p.netPackType:(s.sellUnit||'')),qty=parseInt(s.qty,10)||0;   /* 自售标品：售卖规格单位恒等最小包装单位 */return{skuId:(old&&old.skuId)||s.skuId||('SKU'+(++SKU_SEQ)),qty,packUnit:s.packUnit||'',sellUnit,containedPackCount:p.stdType=='标品'?(sellUnit&&sellUnit==p.netPackType?qty:(parseInt(s.containedPackCount,10)||0)):null,refund:(['kg','g'].includes(sellUnit)&&s.refund?1:0),price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(old&&old.safe)||0,stockMode:s.stockMode||'finite',soldToday:(s.soldToday!=null?s.soldToday:(old&&old.soldToday))||0,createdAt:(old&&old.createdAt)||s.createdAt||ts(),updatedAt:ts()};});p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
 function upsert(i,p){if(i<0)DB.products.unshift(p);else DB.products[i]=p;}
