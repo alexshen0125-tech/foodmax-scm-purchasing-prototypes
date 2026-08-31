@@ -86,12 +86,13 @@
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
     return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</div>
-    <div class="card"><div class="card-hd"><h3>送货单</h3><span class="sub">共 ${DL.length} 单 · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length}</span></div>
+    <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单 · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>送货单</th><th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
       ${DL.map(d=>{if(d.booked===undefined)d.booked=false;if(d.signed===undefined)d.signed=(d.status=='已签到'||d.status=='交接完成');const done=d.status=='交接完成';
+      const cf=dvCutoff(d);
       return `<tr>
-        <td class="mono">${d.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">备货单 ${d.pickId}</div></td>
+        <td class="mono" style="white-space:nowrap">${d.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">备货单 ${d.pickId}</div>${d.printed?`<div style="font-size:11px;color:var(--gd);margin-top:2px">🖨️ 已打印 ${d.printedAt||''}</div>`:''}</td>
         <td>${d.booked?`<span class="tag t-y"><span class="dot"></span>已预约</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${d.bookWindow||d.window}</div>`:'<span class="tag t-gr"><span class="dot"></span>未预约</span>'}</td>
         <td>${done?'<span class="tag t-g"><span class="dot"></span>已入库</span>':(d.signed?'<span class="tag t-b"><span class="dot"></span>已签到</span>':'<span class="tag t-gr"><span class="dot"></span>未签到</span>')}</td>
         <td><b>${d.warehouse}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${d.orderIds.length} 单</div></td>
@@ -103,12 +104,124 @@
           :'<span style="color:var(--ts);font-size:12px">待清点</span>'}${(typeof whrOfDelivery=='function'&&whrOfDelivery(d.id).length)?`<div style="margin-top:4px">${whrOfDelivery(d.id).some(r=>r.type=='送错')?'<span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>有错货</span>':''}${whrOfDelivery(d.id).some(r=>r.type=='送多')?'<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>有多货</span>':''}</div>`:''}</td>
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
-          :`${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">已签到 · 待仓库交接</span>':`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} <button class="btn btn-p btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
+          :`${cf.passed
+              ?`<button class="btn btn-p btn-sm" onclick="deliv_print('${d.id}')">${d.printed?'重新打印':'打印'}</button>`
+              :`<button class="btn btn-o btn-sm" disabled style="opacity:.42;cursor:not-allowed" title="未到营业截单时间 ${cf.at}${cf.wd?'（'+cf.wd+'）':''}，截单后送货单内容才固定，届时可打印">打印</button>`
+            } ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">已签到 · 待仓库交接</span>':`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
       </tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   }
   window.deliv_togglePrivacy=function(){DB.delivShareItems=!DB.delivShareItems;render();toast(DB.delivShareItems?'已允许对方查看商品清单':'已关闭商品清单查看','info');};
   function dvGet(id){return (DB.deliveries||[]).find(x=>x.id==id);}
+
+  /* ============================================================
+     送货单打印（截单后可打印，打印纸含签到二维码）
+     口径：送货单内容在【营业截单】后才固定——截单前客户仍可下单/改单，
+     打印出来的明细会作废，故截单前打印按钮置灰。
+     截单时刻 = 送达日【前一日】的营业截止时间（bizCfg 当日 end 即当日截单时间，
+     取不到星期时回退平台公共截单时间 platformCutoff），生成送货单时快照。
+  ============================================================ */
+  const WD=['周日','周一','周二','周三','周四','周五','周六'];
+  // 'MM-DD' → 前一日的 {date:'MM-DD', wd:'周X'}（原型 mock 无年份，按 2026 年推算）
+  function prevBizDay(mmdd){
+    if(!mmdd)return null;
+    const m=String(mmdd).match(/(\d{1,2})-(\d{1,2})/); if(!m)return null;
+    const dt=new Date(2026,+m[1]-1,+m[2]); dt.setDate(dt.getDate()-1);
+    const pad=n=>String(n).padStart(2,'0');
+    return {date:pad(dt.getMonth()+1)+'-'+pad(dt.getDate()), wd:WD[dt.getDay()], js:dt};
+  }
+  window.dvCutoff=function(d){
+    const b=DB.bizCfg||{}, prev=prevBizDay(d.deliver);
+    let end=b.platformCutoff||'18:00', wd='';
+    if(prev&&b.week){const row=b.week.find(x=>x.d==prev.wd); wd=prev.wd; if(row&&row.on&&row.end)end=row.end;}
+    const at=prev?`${prev.date} ${end}`:'—';
+    // 演示开关：强制视为「未截单」，便于查看禁用态
+    if(DB.delivDemoPreCutoff)return {at,wd,end,passed:false};
+    let passed=true;
+    if(prev){const [hh,mm]=end.split(':').map(Number);const c=new Date(prev.js);c.setHours(hh||0,mm||0,0,0);passed=Date.now()>=c.getTime();}
+    return {at,wd,end,passed};
+  };
+  window.deliv_toggleDemoCutoff=function(){DB.delivDemoPreCutoff=!DB.delivDemoPreCutoff;render();
+    toast(DB.delivDemoPreCutoff?'演示：已切为「未截单」——打印按钮置灰':'演示：已切回「已截单」——可打印送货单','info');};
+
+  // 打印纸上的商品明细：按 SKU 聚合标签
+  function dvItems(d){
+    const map={};
+    (d.labels||[]).forEach(p=>{const k=p.code+'|'+p.name+'|'+p.unit;
+      if(!map[k])map[k]={code:p.code,name:p.name,unit:p.unit,qty:0,tags:0};
+      map[k].qty+=(p.qty||0); map[k].tags++;});
+    return Object.values(map);
+  }
+
+  window.deliv_print=function(id){
+    const d=dvGet(id); if(!d)return;
+    const cf=dvCutoff(d);
+    if(!cf.passed){toast(`未到营业截单时间（${cf.at}），送货单内容可能还会变动，暂不可打印`,'err');return;}
+    const items=dvItems(d), totalQty=items.reduce((a,x)=>a+x.qty,0);
+    const now=new Date(),pad=n=>String(n).padStart(2,'0');
+    const printedAt=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const row=(k,v)=>`<tr><td style="padding:5px 10px 5px 0;color:#555;white-space:nowrap;width:96px">${k}</td><td style="padding:5px 0;font-weight:600">${v}</td></tr>`;
+    modalWide(`<div class="mc-hd"><h3>打印送货单 · ${d.id}</h3><p>纸张 A4 · 含<b>送货签到二维码</b>，到仓出示本单由仓库扫码签到</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd" style="background:var(--bd2);padding:18px">
+      <!-- 打印纸预览（A4 比例） -->
+      <div id="dv-paper" style="background:#fff;padding:26px 30px;border:1px solid var(--bd);border-radius:4px;max-width:720px;margin:0 auto;color:#111">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px">
+          <div>
+            <div style="font-size:21px;font-weight:800;letter-spacing:.5px">Food Max 送货单</div>
+            <div style="font-size:11.5px;color:#666;margin-top:2px;letter-spacing:1px">DELIVERY NOTE</div>
+            <div style="font-size:19px;font-weight:700;margin-top:10px;font-family:ui-monospace,monospace">${d.id}</div>
+          </div>
+          <div style="text-align:center">
+            ${qrBlock(d.id,116)}
+            <div style="font-size:11px;font-weight:700;margin-top:6px">送货签到码</div>
+            <div style="font-size:10px;color:#666;margin-top:1px">到仓由仓库扫码签到</div>
+          </div>
+        </div>
+        <table style="width:100%;font-size:12.5px;margin-bottom:16px"><tbody>
+          ${row('商家',(DB.merchant&&DB.merchant.name)||'绿鲜源蔬果')+row('备货单号',d.pickId||'—')}
+          ${row('入库仓库',d.warehouse)+row('送达时段',`${d.deliver} ${d.window||''}`)}
+          ${row('预约时段',d.booked?(d.bookWindow||d.window):'未预约（可直接到仓签到）')}
+          ${row('营业截单',`${cf.at}${cf.wd?`（${cf.wd}）`:''} · 已截单`)}
+          ${row('应送 / 订单',`${dvShould(d)} 张标签 · ${d.orderIds.length} 个订单`)}
+        </tbody></table>
+        <div style="font-size:12.5px;font-weight:700;margin-bottom:6px">商品明细</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead><tr style="background:#F3F4F6">
+            <th style="text-align:left;padding:6px 8px;border:1px solid #ddd;width:34px">#</th>
+            <th style="text-align:left;padding:6px 8px;border:1px solid #ddd">SKU 编码</th>
+            <th style="text-align:left;padding:6px 8px;border:1px solid #ddd">商品名称</th>
+            <th style="text-align:right;padding:6px 8px;border:1px solid #ddd;width:76px">数量</th>
+            <th style="text-align:right;padding:6px 8px;border:1px solid #ddd;width:70px">标签数</th>
+          </tr></thead>
+          <tbody>${items.length?items.map((x,i)=>`<tr>
+            <td style="padding:6px 8px;border:1px solid #ddd">${i+1}</td>
+            <td style="padding:6px 8px;border:1px solid #ddd;font-family:ui-monospace,monospace">${x.code}</td>
+            <td style="padding:6px 8px;border:1px solid #ddd">${x.name}</td>
+            <td style="padding:6px 8px;border:1px solid #ddd;text-align:right">${x.qty} ${x.unit}</td>
+            <td style="padding:6px 8px;border:1px solid #ddd;text-align:right">${x.tags}</td>
+          </tr>`).join(''):`<tr><td colspan="5" style="padding:14px;border:1px solid #ddd;text-align:center;color:#888">暂无标签明细</td></tr>`}
+          <tr style="background:#FAFAFA;font-weight:700">
+            <td colspan="3" style="padding:6px 8px;border:1px solid #ddd">合计</td>
+            <td style="padding:6px 8px;border:1px solid #ddd;text-align:right">${totalQty}</td>
+            <td style="padding:6px 8px;border:1px solid #ddd;text-align:right">${dvShould(d)}</td>
+          </tr></tbody>
+        </table>
+        <div style="display:flex;gap:24px;margin-top:22px;font-size:12px;color:#333">
+          <div style="flex:1;border-top:1px solid #999;padding-top:6px">送货人签字</div>
+          <div style="flex:1;border-top:1px solid #999;padding-top:6px">仓库收货签字</div>
+          <div style="flex:1;border-top:1px solid #999;padding-top:6px">日期</div>
+        </div>
+        <div style="margin-top:14px;font-size:10.5px;color:#888;border-top:1px dashed #ccc;padding-top:8px">
+          打印时间 ${printedAt}　|　本单据由 Food Max 商家后台生成，仅供到仓交接使用
+        </div>
+      </div>
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="deliv_doPrint('${d.id}')">🖨️ 打印</button></div>`);
+  };
+  window.deliv_doPrint=function(id){const d=dvGet(id);if(!d)return;
+    d.printed=true; d.printedAt=d.printedAt||new Date().toLocaleString('zh-CN',{hour12:false}).slice(5,16);
+    closeModal(); render(); toast(`${id} 送货单已打印（含签到二维码），到仓出示本单由仓库扫码签到`,'ok');};
+
   window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
     modal(`<div class="mc-hd"><h3>送货签到码 · ${d.warehouse}</h3><p>送货单 ${d.id} · 备货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv" style="margin-bottom:14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">送达时段</div><div class="v" style="font-size:13px">${d.deliver} ${d.window}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div></div>
