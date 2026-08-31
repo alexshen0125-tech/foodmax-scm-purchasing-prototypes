@@ -207,7 +207,7 @@ const TILES=[
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
 ];
 // 备货(备货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
-const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
+const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'presend',l:'预送确认',ic:'trend',badge:'2'},{k:'presendstock',l:'在仓预送',ic:'box'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
 const READY=new Set(['goods']);
 
 /* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
@@ -411,5 +411,6 @@ renderHome();
 <script src="message.js?v=20260821b"></script>
 <script src="publish.js"></script>
 <script src="supply.js"></script>
+<script src="presend.js?v=20260831a"></script>
 </body>
 </html>

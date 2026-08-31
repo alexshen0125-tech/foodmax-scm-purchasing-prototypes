@@ -1091,12 +1091,14 @@ const NAV={
     {id:'m-order',ic:'📋',t:'订单管理',p1:1,badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
     {id:'m-pick-group',ic:'📦',t:'备货管理',p1:1,children:[
       {id:'m-pick-ref',ic:'📊',t:'备货参考'},
+      {id:'m-presend',ic:'📈',t:'预送确认',badge:()=>typeof presendPending=='function'?presendPending():0,by:'y'},
       {id:'m-pick-weigh',ic:'⚖️',t:'称重录入',badge:()=>typeof weighPending=='function'?weighPending():0},
       {id:'m-pick-label',ic:'🏷️',t:'打印标签',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
     ]},
     {id:'m-stock-group',ic:'📦',t:'库存管理',p1:1,children:[
       {id:'m-stock',ic:'📋',t:'库存列表',badge:()=>typeof invOutCount=='function'?invOutCount():0,by:'y'},
       {id:'m-stock-transit',ic:'🚚',t:'在途库存',badge:()=>typeof invTransitCount=='function'?invTransitCount():0},
+      {id:'m-stock-presend',ic:'🏬',t:'在仓预送库存'},
     ]},
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
     {id:'m-supply-group',ic:'🖨️',t:'耗材商城',p1:1,children:[
@@ -4810,7 +4812,7 @@ goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260811k"></script>
-<script src="pc-modules/pick.js?v=20260730f"></script>
+<script src="pc-modules/pick.js?v=20260831b"></script>
 <script src="pc-modules/weigh.js?v=20260817d"></script>
 <script src="pc-modules/delivery.js?v=20260810a"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
@@ -4821,5 +4823,6 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260821d"></script>
+<script src="pc-modules/presend.js?v=20260831a"></script>
 </body>
 </html>

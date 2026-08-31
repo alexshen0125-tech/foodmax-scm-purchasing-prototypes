@@ -52,12 +52,13 @@
           <td rowspan="${rs}" style="vertical-align:top">${specLabel(s)}</td>
           <td rowspan="${rs}" style="vertical-align:top;font-size:12px;color:var(--ts)">${s.cat}</td>
           <td rowspan="${rs}" style="vertical-align:top;text-align:right"><b>${total}</b> ${s.unit}</td>`:'';
-        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right"><b>${q}</b> ${s.unit}</td></tr>`;
+        const pq=typeof presendQty=='function'?presendQty(s.name,wh):0;
+        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${q} <span style="color:var(--ts)">${s.unit}</span></td><td style="text-align:right">${pq?`<span style="color:var(--gold)">+${pq}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${q+pq}</b> ${s.unit}</td></tr>`;
       }).join('');
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送；<b>合计应送 = 订单量 + 预送量</b>，明细与确认在「预送确认」菜单。</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -75,8 +76,8 @@
     </div>
     <div class="card-bd" style="padding:8px 16px 0"><div class="ib ib-r" style="margin:0"><span class="i">⚠️</span>由于订单延退支付/取消，请以仓库展示销量停止为准。</div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">销量</th></tr></thead>
-      <tbody>${body||`<tr><td colspan="9"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
+      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">订单量</th><th style="text-align:right">预送量</th><th style="text-align:right">合计应送</th></tr></thead>
+      <tbody>${body||`<tr><td colspan="11"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
   }
 
