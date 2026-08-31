@@ -272,10 +272,7 @@ function dvPrint(d){
           </div>
         </div>
         ${row('商家','鲜丰食材 Fresh Harvest')}
-        ${row('备货单号',d.pickId||'—')}
         ${row('入库仓库',d.warehouse)}
-        ${row('送达时段',`${d.deliver} ${d.window||''}`)}
-        ${row('预约时段',d.booked?(d.bookWindow||d.window):'未预约（可直接到仓签到）')}
         ${row('营业截单',`${cf.at}${cf.wd?`（${cf.wd}）`:''} · 已截单`)}
         ${row('应送 / 订单',`${tags} 张标签 · ${d.orderIds.length} 个订单`)}
         <div style="font-size:12.5px;font-weight:700;margin:16px 0 6px">商品明细</div>

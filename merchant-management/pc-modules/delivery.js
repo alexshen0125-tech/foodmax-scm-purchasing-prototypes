@@ -173,9 +173,8 @@
           </div>
         </div>
         <table style="width:100%;font-size:12.5px;margin-bottom:16px"><tbody>
-          ${row('商家',(DB.merchant&&DB.merchant.name)||'绿鲜源蔬果')+row('备货单号',d.pickId||'—')}
-          ${row('入库仓库',d.warehouse)+row('送达时段',`${d.deliver} ${d.window||''}`)}
-          ${row('预约时段',d.booked?(d.bookWindow||d.window):'未预约（可直接到仓签到）')}
+          ${row('商家',(DB.merchant&&DB.merchant.name)||'绿鲜源蔬果')}
+          ${row('入库仓库',d.warehouse)}
           ${row('营业截单',`${cf.at}${cf.wd?`（${cf.wd}）`:''} · 已截单`)}
           ${row('应送 / 订单',`${dvShould(d)} 张标签 · ${d.orderIds.length} 个订单`)}
         </tbody></table>
