@@ -96,7 +96,10 @@ function rows(){
       if(!agg[key])agg[key]={key,wh:o.warehouse,sku:l.sku,name:l.name,unit:l.unit,cat:m.cat,spec:m.spec,refund:m.refund,qty:0};
       agg[key].qty+=l.qty;});
   });
-  return Object.values(agg);
+  // 应送货 = 订单量 + 预送量（预送量标签形态与订单货一致：按 SKU 一件一张、不含订单/客户信息）
+  const out=Object.values(agg);
+  out.forEach(r=>{r.ordQty=r.qty;r.psQty=(typeof PS_QTY==='function')?PS_QTY(r.name,r.wh):0;r.qty=r.ordQty+r.psQty;});
+  return out;
 }
 
 function renderPrint(box){
@@ -126,6 +129,7 @@ function renderPrint(box){
         return `<div class="lb-row" data-key="${r.key}">
         <div class="top"><span class="nm">${r.name}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
+        <div class="meta">订单 ${r.ordQty}${r.psQty?` · <b style="color:var(--amber)">预送 ${r.psQty}</b>`:''}</div>
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span></div>
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
@@ -140,7 +144,8 @@ function renderPrint(box){
 /* ================= 标签打印 · SKU 详情页（点击进入打印） ================= */
 function rowOf(key){const [wh,sku]=key.split('|');const m=metaOf(sku);let qty=0,name='',unit='件';
   pend().forEach(o=>{if(o.warehouse!==wh)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;qty+=(+l.qty||0);name=l.name;unit=l.unit;});});
-  return {key,wh,sku,name,unit,qty,cat:m.cat,spec:m.spec,refund:m.refund};}
+  const ps=(typeof PS_QTY==='function')?PS_QTY(name,wh):0;
+  return {key,wh,sku,name,unit,ordQty:qty,psQty:ps,qty:qty+ps,cat:m.cat,spec:m.spec,refund:m.refund};}
 const printer=()=>{window.FM.DB.printer=window.FM.DB.printer||{connected:false,name:''};return window.FM.DB.printer;};
 function connectPrinter(then){window.FM.sheet([
   {label:'FoodMax 标签机 · TSC-A1（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='TSC-A1';window.FM.toast('已连接 TSC-A1 标签机','ok');then&&then();}},

@@ -269,4 +269,6 @@ window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.presend=()=>{ensure();pushPage({title:'预送确认',body:'<div id="psw"></div>',mount:p=>draw(p.querySelector('#psw'))});};
 window.FM_MOD.presendstock=()=>{ensure();pushPage({title:'在仓预送库存',body:'<div id="psw"></div>',mount:p=>drawStock(p.querySelector('#psw'))});};
 window.PS_PENDING=()=>{ensure();return ROWS.filter(r=>r.status==='wait').length;};
+// 供「打印标签」取最终预送量（按 商品名 + 仓库 匹配）
+window.PS_QTY=(name,wh)=>{ensure();const r=ROWS.find(x=>x.name===name&&x.wh===wh);return r?finalQty(r):0;};
 })();
