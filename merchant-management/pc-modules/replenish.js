@@ -1,5 +1,12 @@
 /* PC · 平台补采（商家端）+ 缺货罚款标准配置（运营平台端）+ 罚款单（商家端）
-   适用范围：仅【出库前·仓内收货清点】场景；差异只有一种——实收数量 < 应送数量（数量少了），无原因分类。
+   ▍补采单有【两种来源】，共用同一单据模型（source 字段区分），计价/结算/发票口径一致：
+   ① source='receipt'  到仓少货：出库前·仓内收货清点，实收 < 应送。自营全额覆盖才补，且【照计缺货罚款】。
+   ② source='aftersale' 售后补货：客户签收后（次日）发现缺货、判【商家责】、客户要货不要退款，
+      平台以自营现货补发给客户，挂在售后工单上。【允许部分补发】，不足部分转退款（按客户成交价走逆向扣减）；
+      【不计缺货罚款】（沈亮 2026-08-31 拍板）。补发立即执行、不等申诉窗口，补货类不开放线上申诉。
+      归期按【补发出库时间】，不按缺货发生时间。
+   两来源的共同点：补采单价 = 自营商品原定价（不加价）；结算抵扣；平台开补采销售发票；客户订单金额/发票不变。
+   适用范围（场景①）：仅【出库前·仓内收货清点】场景；差异只有一种——实收数量 < 应送数量（数量少了），无原因分类。
    业务链：商家送货到仓 → 收货清点发现少货 → 自营现货可【全额覆盖】缺口 → 自营出库补齐
            → 同时生成【平台补采单】与【缺货罚款单】两张单 → 均计入当期结算单扣减项
            → 平台就补采部分向商家开【补采销售发票】(TAX INVOICE)；罚款不开发票。
@@ -25,29 +32,43 @@ DB.replOrders = DB.replOrders || [
   {no:'RPL-20260628-003', deliveryNo:'SH20260628004', subOrderNo:'#SG20260628011', warehouse:'盛港DC',
    receiptTime:'2026-06-28 01:06', sku:'SKU8801', name:'小棠菜', spec:'1kg/件', unit:'件',
    should:20, received:18, qty:2, selfPrice:2.90,
-   status:'pending', billNo:'', invNo:''},
+   source:'receipt', status:'pending', billNo:'', invNo:''},
   {no:'RPL-20260628-006', deliveryNo:'SH20260628004', subOrderNo:'#SG20260628014', warehouse:'盛港DC',
    receiptTime:'2026-06-28 01:09', sku:'SKU8805', name:'菜心', spec:'1kg/件', unit:'件',
    should:15, received:12, qty:3, selfPrice:3.60,
-   status:'pending', billNo:'', invNo:''},
+   source:'receipt', status:'pending', billNo:'', invNo:''},
   {no:'RPL-20260629-004', deliveryNo:'SH20260629005', subOrderNo:'#SG20260629004', warehouse:'兀兰DC',
    receiptTime:'2026-06-29 03:24', sku:'SKU8804', name:'空心菜', spec:'1kg/件', unit:'件',
    should:30, received:22, qty:8, selfPrice:3.50,
-   status:'pending', billNo:'', invNo:''},
+   source:'receipt', status:'pending', billNo:'', invNo:''},
   {no:'RPL-20260630-005', deliveryNo:'SH20260630007', subOrderNo:'#SG20260630012', warehouse:'大巴窑DC',
    receiptTime:'2026-06-30 04:11', sku:'SKU8802', name:'白菜', spec:'1kg/件', unit:'件',
    should:40, received:37, qty:3, selfPrice:2.30,
-   status:'deducted', billNo:'ST202606-M0815', invNo:''},
+   source:'receipt', status:'deducted', billNo:'ST202606-M0815', invNo:''},
   {no:'RPL-20260522-002', deliveryNo:'SH20260522001', subOrderNo:'#SG20260522006', warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42', sku:'SKU8803', name:'菠菜', spec:'1kg/件', unit:'件',
    should:12, received:10, qty:2, selfPrice:4.10,
-   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-302'},
+   source:'receipt', status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-302'},
   {no:'RPL-20260518-001', deliveryNo:'SH20260518001', subOrderNo:'#SG20260518009', warehouse:'裕廊DC',
    receiptTime:'2026-05-18 02:18', sku:'SKU8811', name:'鲜鸡蛋', spec:'30枚/盘', unit:'盘',
    should:60, received:48, qty:12, selfPrice:9.20,
-   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-301'},
+   source:'receipt', status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-301'},
+  // ↓ source='aftersale' 售后补货：挂售后工单，无「应送/实收」概念，缺口数记在 gap；归期按补发出库时间
+  {no:'RPL-20260518-002', source:'aftersale', afterNo:'AS-26051801', subOrderNo:'#SG20260517022', client:'新味坊', warehouse:'裕廊DC',
+   receiptTime:'2026-05-18 15:40', sku:'SKU8811', name:'鲜鸡蛋', spec:'30枚/盘', unit:'盘',
+   gap:6, qty:6, selfPrice:9.20, refundQty:0,
+   status:'invoiced', billNo:'ST202605-M0815', invNo:'RPL-INV-2026-303'},
+  {no:'RPL-20260702-011', source:'aftersale', afterNo:'AS-26070206', subOrderNo:'#SG20260702006', client:'丰盛轩', warehouse:'盛港DC',
+   receiptTime:'2026-07-02 14:20', sku:'SKU8806', name:'上海青', spec:'1kg/件', unit:'件',
+   gap:12, qty:12, selfPrice:4.10, refundQty:0,
+   status:'pending', billNo:'', invNo:''},
+  {no:'RPL-20260702-012', source:'aftersale', afterNo:'AS-26070207', subOrderNo:'#SG20260702018', client:'食为天餐厅', warehouse:'兀兰DC',
+   receiptTime:'2026-07-02 16:05', sku:'SKU8803', name:'菠菜', spec:'1kg/件', unit:'件',
+   gap:20, qty:12, selfPrice:4.10, refundQty:8, custPrice:5.80,
+   status:'pending', billNo:'', invNo:''},
 ];
 DB.replInvoices = DB.replInvoices || [
+  {no:'RPL-INV-2026-303', repl:'RPL-20260518-002', date:'2026-06-06', status:'已开票'},
   {no:'RPL-INV-2026-302', repl:'RPL-20260522-002', date:'2026-06-06', status:'已开票'},
   {no:'RPL-INV-2026-301', repl:'RPL-20260518-001', date:'2026-06-06', status:'已开票'},
 ];
@@ -96,7 +117,13 @@ DB.fineBatchSeq = DB.fineBatchSeq || 1;
 
 /* ================= 口径计算 ================= */
 const gst  = ()=> (typeof GST_DEFAULT=='number'?GST_DEFAULT:9);
-const rGap  = r => Math.max(0, r.should - r.received);                    // 缺口数量
+// 缺口数量：到仓少货 = 应送−实收；售后补货无应送/实收概念，缺口直接记在 gap
+const rGap  = r => r.source=='aftersale' ? (r.gap||r.qty) : Math.max(0, r.should - r.received);
+const rSrc  = r => r.source||'receipt';                                   // 兼容存量数据，缺省视为到仓少货
+const R_SRC = {receipt:['到仓少货','t-gr'], aftersale:['售后补货','t-b']};
+function srcTag(r){const[t,c]=R_SRC[rSrc(r)]||R_SRC.receipt;return `<span class="tag ${c}" style="font-size:10.5px"><span class="dot"></span>${t}</span>`;}
+window.replSrc=rSrc;
+window.replByAfter=function(no){return DB.replOrders.filter(r=>r.afterNo==no);};
 const rUnit = r => +(r.selfPrice).toFixed(2);                             // 补采单价（含税）= 自营商品原定价，无加价
 const rAmt  = r => +(rUnit(r)*r.qty).toFixed(2);                          // 补采金额（含税）
 const rNet  = r => +(rAmt(r)/(1+gst()/100)).toFixed(2);                   // 不含税
@@ -110,36 +137,74 @@ const R_ST = {pending:['待结算','t-y'], deducted:['已结算','t-b'], invoice
 const R_TABS = [['all','全部'],['pending','待结算'],['deducted','已结算'],['invoiced','已开票']];   // 已作废/已冲正不设独立 Tab（运营侧极少发生），单据仍在「全部」中按状态标签展示
 function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c}"><span class="dot"></span>${t}</span>`;}
 
-/* 结算联动：待结算的补采单按含税金额汇总为当期结算单扣减项 */
+/* 结算联动：待结算的补采单按含税金额汇总为当期结算单扣减项。
+   两种来源分属【两个独立清分科目】，不合并——商家要能看出这笔钱是「到仓少货」还是「售后补货」造成的。
+   线上结算科目是可扩展数组（contracts/reconciliation.ts:29-36 SettlementClearing{clearingType,clearingTypeLabel,amount,sortNo}），
+   新增科目不需要改结算主表结构。 */
+// 应清算 = 汇总总额 − 逆向扣减 − 服务佣金 − 物流佣金 − 耗材 − 平台补采 − 缺货罚款 − 售后补货
+// 每个 sync 都用这一条完整公式（缺席科目 ||0 兜底），谁最后跑结果都一致，避免互相覆盖漏项
+window.recalcBillNet=function(){
+  DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)
+    -(DB.bill.supply||0)-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)).toFixed(2);
+};
 window.replSettleSync=function(){
-  const pend=DB.replOrders.filter(r=>r.status=='pending');
+  // 仅统计 source='receipt'（到仓少货）；售后补货走 fillSettleSync 的独立科目
+  const pend=DB.replOrders.filter(r=>r.status=='pending'&&rSrc(r)=='receipt');
   const amt=+(pend.reduce((a,r)=>a+rAmt(r),0)).toFixed(2);
   DB.bill.repl=amt; DB.bill.replCnt=pend.length;
   DB.bill.items=DB.bill.items.filter(it=>it[0]!='平台补采扣款（含税）');
   if(amt>0)DB.bill.items.push(['平台补采扣款（含税）',pend.length,-amt]);
-  DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-(DB.bill.supply||0)-amt).toFixed(2);
+  recalcBillNet();
+};
+/* 售后补货扣款（含税）—— 独立科目。
+   注意：一张售后补货单可能同时产生两笔钱，分属两个科目、计价基准不同：
+   ① 补发部分 → 本科目，按【自营商品原定价】计价
+   ② 差额退款部分 → 既有【逆向扣减】科目，按【客户成交价】计价
+   不可混算成一笔。 */
+window.fillSettleSync=function(){
+  const pend=DB.replOrders.filter(r=>r.status=='pending'&&rSrc(r)=='aftersale');
+  const amt=+(pend.reduce((a,r)=>a+rAmt(r),0)).toFixed(2);
+  DB.bill.fill=amt; DB.bill.fillCnt=pend.length;
+  DB.bill.items=DB.bill.items.filter(it=>it[0]!='售后补货扣款（含税）');
+  if(amt>0)DB.bill.items.push(['售后补货扣款（含税）',pend.length,-amt]);
+  // 差额退款并入逆向扣减：以首次载入值为基线，保证反复调用幂等
+  if(typeof DB.bill.reverseBase!='number'){DB.bill.reverseBase=DB.bill.reverse;DB.bill.reverseBaseCnt=2;}
+  const refund=+(pend.reduce((a,r)=>a+(r.refundQty||0)*(r.custPrice||0),0)).toFixed(2);
+  const refundCnt=pend.filter(r=>r.refundQty>0).length;
+  DB.bill.fillRefund=refund;
+  DB.bill.reverse=+(DB.bill.reverseBase+refund).toFixed(2);
+  const iv=DB.bill.items.findIndex(it=>String(it[0]).indexOf('逆向扣减')===0);
+  if(iv>=0){DB.bill.items[iv][1]=DB.bill.reverseBaseCnt+refundCnt;DB.bill.items[iv][2]=-DB.bill.reverse;}
+  recalcBillNet();
 };
 replSettleSync();
+fillSettleSync();
 
 /* ================= 商家端 · 平台补采 ================= */
 PAGES['m-replenish']=()=>{
   const t=DB.replTab;
   const all=DB.replOrders;
   const hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
+  const ff=DB.replFilter||{};
   const rows=all
     .filter(r=>t=='all'||r.status==t)
-    .filter(r=>hit(r.no,DB.replFilter&&DB.replFilter.no)&&hit(r.deliveryNo,DB.replFilter&&DB.replFilter.dl)&&hit(r.subOrderNo,DB.replFilter&&DB.replFilter.od));
+    .filter(r=>!ff.src||rSrc(r)==ff.src)
+    .filter(r=>hit(r.no,ff.no)
+             && (!ff.dl||hit(r.deliveryNo,ff.dl)||hit(r.afterNo,ff.dl))   // 关联单据号：送货单 或 售后工单
+             && hit(r.subOrderNo,ff.od));
 
   const tabs=`<div class="tabs">${R_TABS.map(x=>{
     const n=x[0]=='all'?all.length:all.filter(r=>r.status==x[0]).length;
     return `<div class="tab ${t==x[0]?'active':''}" onclick="DB.replTab='${x[0]}';render()">${x[1]}${n?`<span class="tb">${n}</span>`:''}</div>`;
   }).join('')}</div>`;
 
-  const f=DB.replFilter=DB.replFilter||{no:'',dl:'',od:''};
+  const f=DB.replFilter=DB.replFilter||{no:'',dl:'',od:'',src:''};
+  if(typeof f.src!='string')f.src='';
   const filt=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:16px 20px 12px">
-    <div class="fg3">
+    <div class="fg3" style="grid-template-columns:repeat(4,1fr)">
       <div class="fr"><label class="fl">补采单号</label><input id="rf-no" value="${f.no}" placeholder="如 RPL-20260628-003"></div>
-      <div class="fr"><label class="fl">关联送货单号</label><input id="rf-dl" value="${f.dl}" placeholder="如 SH20260628004"></div>
+      <div class="fr"><label class="fl">来源</label><select id="rf-src"><option value=""${f.src?'':' selected'}>全部来源</option><option value="receipt"${f.src=='receipt'?' selected':''}>到仓少货</option><option value="aftersale"${f.src=='aftersale'?' selected':''}>售后补货</option></select></div>
+      <div class="fr"><label class="fl">关联单据号（送货单 / 售后工单）</label><input id="rf-dl" value="${f.dl}" placeholder="如 SH20260628004 或 AS-26070206"></div>
       <div class="fr"><label class="fl">原订单号（供应商子单）</label><input id="rf-od" value="${f.od}" placeholder="如 #SG20260628011"></div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
@@ -150,82 +215,104 @@ PAGES['m-replenish']=()=>{
 
   const tip=flowTip('');
 
-  if(!rows.length) return tip+filt+tabs+`<div class="empty"><div class="e-ic">🔁</div><div class="e-t">${(f.no||f.dl||f.od)?'没有符合筛选条件的补采单':(t=='all'?'暂无自营补采单':'该状态下暂无补采单')}</div><div class="e-s">${(f.no||f.dl||f.od)?'换个单号试试，或点「重置」查看全部。':(t=='all'?'足额送货到仓即不会产生补采单。仓库收货清点少货且自营有货补货时，此处生成单据。':'切换上方状态查看其它补采单。')}</div></div>`;
+  if(!rows.length) return tip+filt+tabs+`<div class="empty"><div class="e-ic">🔁</div><div class="e-t">${(f.no||f.dl||f.od||f.src)?'没有符合筛选条件的补采单':(t=='all'?'暂无平台补采单':'该状态下暂无补采单')}</div><div class="e-s">${(f.no||f.dl||f.od||f.src)?'换个条件试试，或点「重置」查看全部。':(t=='all'?'两种情况会生成补采单：① 送货到仓清点少货、自营有货补齐；② 客户签收后缺货判你责、客户要补货不要退款，由自营补发。':'切换上方状态查看其它补采单。')}</div></div>`;
 
   return tip+filt+tabs+`
   <div class="card">
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>补采单号</th><th>关联送货单 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">单价（含税）</th><th style="text-align:right">补采扣款（含税）</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>补采单号</th><th>来源</th><th>关联单据 / 原订单</th><th>商品</th><th style="text-align:right">应送 / 实收</th><th style="text-align:right">缺口·补货</th><th style="text-align:right">单价（含税）</th><th style="text-align:right">补采扣款（含税）</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>`<tr>
       <td class="mono" style="white-space:nowrap">${r.no}</td>
-      <td class="mono" style="font-size:12px;white-space:nowrap">${r.deliveryNo}<div style="color:var(--ts);margin-top:2px">${r.subOrderNo}</div></td>
+      <td style="white-space:nowrap">${srcTag(r)}</td>
+      <td class="mono" style="font-size:12px;white-space:nowrap">${rSrc(r)=='aftersale'?r.afterNo:r.deliveryNo}<div style="color:var(--ts);margin-top:2px">${r.subOrderNo}</div></td>
       <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.sku} · ${r.spec}</div></td>
-      <td style="text-align:right">${r.should} <span style="color:var(--ts)">/</span> <b style="color:var(--r)">${r.received}</b></td>
-      <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
+      <td style="text-align:right">${rSrc(r)=='aftersale'?`<span style="color:var(--ts)">缺货</span> <b style="color:var(--r)">${rGap(r)}</b>`:`${r.should} <span style="color:var(--ts)">/</span> <b style="color:var(--r)">${r.received}</b>`}</td>
+      <td style="text-align:right"><b>${r.qty}</b> ${r.unit}${r.refundQty?`<div style="font-size:11px;color:var(--ts);margin-top:2px">另退款 ${r.refundQty} ${r.unit}</div>`:''}</td>
       <td style="text-align:right">${money(rUnit(r))}</td>
       <td style="text-align:right;color:var(--r);font-weight:600">-${money(rAmt(r))}</td>
       <td style="white-space:nowrap">${rTag(r.status)}${r.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.billNo}</div>`:''}</td>
       <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="repl_detail('${r.no}')">详情</button></td>
     </tr>`).join('')}
     </tbody></table></div></div>
-  <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">口径：<b>平台补采单</b>＝缺口由平台自营现货补齐的部分，按<b>自营商品原定价</b>计价（<b>不加价</b>），视同你向平台采购，在当期结算单中扣减。缺货另有<b>罚款单</b>（见「财务 › 罚款单」），<b>与本单无关联、各自独立</b>。客户订单按<b>应送数量</b>足额计入 GMV 与平台佣金，缺口部分不冲减。自营现货<b>不足以全额覆盖</b>缺口时不生成补采单，按实收数量出库并标缺货。</div>
+  <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">口径：<b>平台补采单</b>＝缺口由平台<b>自营现货</b>补齐的部分，按<b>自营商品原定价</b>计价（<b>不加价</b>），视同你向平台采购，在当期结算单中扣减。客户订单按<b>应送数量</b>足额计入 GMV 与平台佣金，缺口部分不冲减。<br><b>两种来源规则不同：</b>① <b>到仓少货</b>——送货到仓清点实收少于应送；自营现货<b>不足以全额覆盖</b>时不生成补采单，按实收出库并标缺货；<b>另计缺货罚款</b>（见「财务 › 罚款单」，与本单各自独立）。② <b>售后补货</b>——客户签收后发现缺货、判你责且客户要补货不退款；<b>允许部分补发</b>，自营不足的部分转<b>退款</b>（按客户成交价走逆向扣减）；<b>不计缺货罚款</b>；归期按<b>补发出库时间</b>。</div>
   </div>`;
 };
 
 window.repl_doFilter=function(){
   const g=id=>(document.getElementById(id)||{}).value||'';
-  DB.replFilter={no:g('rf-no').trim(),dl:g('rf-dl').trim(),od:g('rf-od').trim()};
+  DB.replFilter={no:g('rf-no').trim(),dl:g('rf-dl').trim(),od:g('rf-od').trim(),src:g('rf-src')};
   render();
 };
-window.repl_resetFilter=function(){DB.replFilter={no:'',dl:'',od:''};render();toast('筛选条件已重置','info');};
+window.repl_resetFilter=function(){DB.replFilter={no:'',dl:'',od:'',src:''};render();toast('筛选条件已重置','info');};
 
 /* ---------- 详情（右侧抽屉 · 三段式）---------- */
 window.repl_detail=function(no){
   const r=rOf(no); if(!r) return;
   const inv=(DB.replInvoices||[]).find(x=>x.repl==no);
+  const isAS=rSrc(r)=='aftersale';                                     // 售后补货 vs 到仓少货
+  const refundAmt=+(((r.refundQty||0)*(r.custPrice||0))).toFixed(2);   // 差额退款（按客户成交价）
+  const total=+(rAmt(r)+refundAmt).toFixed(2);
   const kv=(k,v)=>`<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;
   const sec=t=>`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">${t}</h3></div>`;
-  drawer(`<div class="drawer-hd"><div><h3>${r.no} · 补采单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${r.warehouse} · 收货清点 ${r.receiptTime}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+
+  drawer(`<div class="drawer-hd"><div><h3>${r.no} · 补采单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${r.warehouse} · ${isAS?'补发出库':'收货清点'} ${r.receiptTime}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div class="row" style="gap:8px;margin-bottom:14px">${rTag(r.status)}<span class="tag t-r"><span class="dot"></span>少货 ${rGap(r)} ${r.unit}</span></div>
-    <div class="ib ib-y" style="margin-bottom:16px"><span class="i">🔁</span>本单少货 <b>${rGap(r)} ${r.unit}</b>，已由平台<b>自营现货全额补齐</b>，客户订单未受影响（商品/金额/发票不变）。缺口部分视同你向平台采购，货款在结算单中抵扣。</div>
+    <div class="row" style="gap:8px;margin-bottom:14px">${rTag(r.status)}${srcTag(r)}<span class="tag t-r"><span class="dot"></span>${isAS?'缺货':'少货'} ${rGap(r)} ${r.unit}</span></div>
+    ${isAS
+      ? `<div class="ib ib-b" style="margin-bottom:16px"><span class="i">📦</span>客户签收后发现少送 <b>${rGap(r)} ${r.unit}</b>，判<b>你方责任</b>，客户要求<b>补货不退款</b>。平台已用<b>自营现货</b>补发 <b>${r.qty} ${r.unit}</b>${r.refundQty?`，自营库存不足的 <b>${r.refundQty} ${r.unit}</b> 转为<b>退款</b>`:'（<b>全额覆盖</b>）'}。补发部分视同你向平台采购，货款在结算单中抵扣；客户订单商品/金额/发票<b>均未变更</b>。</div>`
+      : `<div class="ib ib-y" style="margin-bottom:16px"><span class="i">🔁</span>本单少货 <b>${rGap(r)} ${r.unit}</b>，已由平台<b>自营现货全额补齐</b>，客户订单未受影响（商品/金额/发票不变）。缺口部分视同你向平台采购，货款在结算单中抵扣。</div>`}
 
     ${sec('单据信息')}
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">
       ${kv('补采单号',`<span class="mono">${r.no}</span>`)}
-      ${kv('关联送货单',`<span class="mono">${r.deliveryNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${r.deliveryNo}';nav('m-delivery')">查看</button>`)}
+      ${kv('来源',srcTag(r))}
+      ${isAS
+        ? kv('关联售后工单',`<span class="mono">${r.afterNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-aftersale')">查看</button>`)
+        : kv('关联送货单',`<span class="mono">${r.deliveryNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.delivTab='sign';DB.delivView='${r.deliveryNo}';nav('m-delivery')">查看</button>`)}
       ${kv('关联原订单（供应商子单）',`<span class="mono">${r.subOrderNo}</span>`)}
-      ${kv('入库仓库',r.warehouse)}
-      ${kv('收货清点时间',`${r.receiptTime}（出库前·仓内清点）`)}
-      ${kv('差异',`实收 ${r.received} − 应送 ${r.should} = <b style="color:var(--r)">-${rGap(r)}</b> ${r.unit}（数量少送）`)}
+      ${kv(isAS?'客户':'入库仓库',isAS?(typeof ord_mask=='function'?ord_mask(r.client||''):(r.client||'—')):r.warehouse)}
+      ${kv(isAS?'补发出库时间':'收货清点时间',`${r.receiptTime}（${isAS?'签收后·售后补发':'出库前·仓内清点'}）`)}
+      ${kv('差异',isAS
+        ? `客户缺货 <b style="color:var(--r)">${rGap(r)}</b> ${r.unit} → 自营补发 <b>${r.qty}</b>${r.refundQty?` ＋ 退款 <b>${r.refundQty}</b>`:''} ${r.unit}`
+        : `实收 ${r.received} − 应送 ${r.should} = <b style="color:var(--r)">-${rGap(r)}</b> ${r.unit}（数量少送）`)}
     </div>
 
     ${sec('商品明细')}
     <div style="overflow-x:auto;margin-bottom:10px"><table>
-      <thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">缺口</th><th style="text-align:right">补货数量</th></tr></thead><tbody>
-      <tr><td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.sku} · ${r.spec}</div></td>
-        <td style="text-align:right">${r.should}</td>
-        <td style="text-align:right;color:var(--r);font-weight:600">${r.received}</td>
-        <td style="text-align:right;color:var(--r);font-weight:600">${rGap(r)}</td>
-        <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td></tr>
+      ${isAS
+        ? `<thead><tr><th>商品</th><th style="text-align:right">客户缺货</th><th style="text-align:right">自营补发</th><th style="text-align:right">差额退款</th></tr></thead><tbody>
+          <tr><td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.sku} · ${r.spec}</div></td>
+            <td style="text-align:right;color:var(--r);font-weight:600">${rGap(r)}</td>
+            <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
+            <td style="text-align:right">${r.refundQty?`<b>${r.refundQty}</b> ${r.unit}`:'—'}</td></tr>`
+        : `<thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">缺口</th><th style="text-align:right">补货数量</th></tr></thead><tbody>
+          <tr><td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.sku} · ${r.spec}</div></td>
+            <td style="text-align:right">${r.should}</td>
+            <td style="text-align:right;color:var(--r);font-weight:600">${r.received}</td>
+            <td style="text-align:right;color:var(--r);font-weight:600">${rGap(r)}</td>
+            <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td></tr>`}
     </tbody></table></div>
     <div style="overflow-x:auto;margin-bottom:20px"><table>
       <tbody>
         <tr><td style="color:var(--ts)">单价（含税）<div style="font-size:11px;margin-top:2px">取自营商品原定价，生成时快照</div></td><td style="text-align:right">${money(rUnit(r))} / ${r.unit}</td></tr>
-        <tr><td style="color:var(--ts)">补采金额（含税） = ${money(rUnit(r))} × ${r.qty}${r.unit}<div style="font-size:11px;margin-top:2px"><b>不加价</b></div></td><td style="text-align:right;font-weight:600">${money(rAmt(r))}</td></tr>
+        <tr><td style="color:var(--ts)">${isAS?'补发金额':'补采金额'}（含税） = ${money(rUnit(r))} × ${r.qty}${r.unit}<div style="font-size:11px;margin-top:2px"><b>不加价</b></div></td><td style="text-align:right;font-weight:600">${money(rAmt(r))}</td></tr>
         <tr><td style="color:var(--ts)">不含税金额</td><td style="text-align:right">${money(rNet(r))}</td></tr>
         <tr><td style="color:var(--ts)">GST ${gst()}%</td><td style="text-align:right">${money(rGst(r))}</td></tr>
-        <tr style="font-weight:700;background:var(--gl)"><td>补采扣款（含税 · 结算抵扣）</td><td style="text-align:right;color:var(--r)">-${money(rAmt(r))}</td></tr>
-
+        <tr style="font-weight:700;background:var(--gl)"><td>${isAS?'售后补货扣款':'补采扣款'}（含税 · 结算抵扣）</td><td style="text-align:right;color:var(--r)">-${money(rAmt(r))}</td></tr>
+        ${isAS&&r.refundQty?`<tr><td style="color:var(--ts)">差额退款 = ${money(r.custPrice)} × ${r.refundQty}${r.unit}<div style="font-size:11px;margin-top:2px">自营库存不足部分，按<b>客户成交价</b>计价，走<b>逆向扣减</b>科目（与上方补货货款分属两笔）</div></td><td style="text-align:right;color:var(--r);font-weight:600">-${money(refundAmt)}</td></tr>
+        <tr style="font-weight:700;background:var(--gl)"><td>本单合计扣减</td><td style="text-align:right;color:var(--r)">-${money(total)}</td></tr>`:''}
+        ${isAS?`<tr><td style="color:var(--ts)">缺货罚款<div style="font-size:11px;margin-top:2px">售后补货场景<b>不计罚款</b>（区别于到仓少货）</div></td><td style="text-align:right;color:var(--ts)">${money(0)}</td></tr>`:''}
       </tbody>
     </table></div>
 
     ${sec('结算与发票')}
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px">
-      ${kv('抵扣所属结算单',r.billNo?`<span class="mono">${r.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:'待本期结算单生成时抵扣')}
-      ${kv('补采发票',inv?`<span class="mono">${inv.no}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.invTab='repl';nav('m-invoice')">查看</button>`:'结算完成后由平台自动开具')}
+      ${kv('抵扣所属结算单',r.billNo?`<span class="mono">${r.billNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();nav('m-settle')">查看</button>`:`待本期结算单生成时抵扣${isAS?'（按<b>补发出库时间</b>归期）':''}`)}
+      ${kv('补采发票',inv?`<span class="mono">${inv.no}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.invTab='repl';nav('m-invoice')">查看</button>`:`结算完成后由平台自动开具${isAS&&r.refundQty?'（<b>仅就补发部分</b>开票，退款部分不开票）':''}`)}
     </div>
-    <div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>对<b>实收数量</b>有异议，请在<b>收货清点后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567），并提供<b>装车照片或司机交接单</b>；平台将调取仓库收货监控核对，核实有误的由运营发起<b>冲正</b>，在下期结算回补并开红冲发票。逾期以清点数量为准。本期不设线上申诉入口。</div>
+    ${isAS
+      ? `<div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>补货类售后<b>不开放线上申诉</b>，补发在判责后<b>立即执行</b>、不等申诉窗口。对判责结论或补发数量有异议，请在<b>结案后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567）并提供出库装车凭证；核实有误的由运营发起<b>冲正</b>，在下期结算回补并开红冲发票（货已交付客户，<b>不追回</b>）。</div>`
+      : `<div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>对<b>实收数量</b>有异议，请在<b>收货清点后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567），并提供<b>装车照片或司机交接单</b>；平台将调取仓库收货监控核对，核实有误的由运营发起<b>冲正</b>，在下期结算回补并开红冲发票。逾期以清点数量为准。本期不设线上申诉入口。</div>`}
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${inv?`<button class="btn btn-p" onclick="repl_invDownload('${inv.no}')">下载发票 PDF</button>`:''}</div>`);
 };
@@ -233,12 +320,13 @@ window.repl_detail=function(no){
 /* ================= 发票管理 Tab ④ · 补采发票（平台开具） ================= */
 window.replInvoiceContent=function(){
   const rows=(DB.replInvoices||[]).map(iv=>({iv,r:rOf(iv.repl)})).filter(x=>x.r);
-  return `${flowTip(`<b>补采发票</b>由平台在与你<b>结算完成后自动开具</b>并推送给你——平台就<b>自营现货补货的缺口数量</b>向你开具销售发票（TAX INVOICE, GST ${gst()}%），<b>无需你申请</b>。此处仅供<b>查看与下载</b>。`)}
+  return `${flowTip(`<b>补采发票</b>由平台在与你<b>结算完成后自动开具</b>并推送给你——平台就<b>自营现货补货的数量</b>向你开具销售发票（TAX INVOICE, GST ${gst()}%），<b>无需你申请</b>。<b>到仓少货</b>与<b>售后补货</b>两种来源共用同一发票序列；售后补货中<b>转退款的部分不开票</b>。此处仅供<b>查看与下载</b>。`)}
   <div class="card"><div class="card-hd"><h3>自营补采发票记录</h3><span class="sub">平台开具 · 共 ${rows.length} 张</span></div><div class="card-bd ${rows.length?'flush':''}">
-    ${rows.length?`<table><thead><tr><th>发票号</th><th>关联补采单</th><th>商品 / 数量</th><th style="text-align:right">不含税</th><th style="text-align:right">GST ${gst()}%</th><th style="text-align:right">价税合计</th><th>开票日期</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    ${rows.length?`<table><thead><tr><th>发票号</th><th>关联补采单</th><th>来源</th><th>商品 / 数量</th><th style="text-align:right">不含税</th><th style="text-align:right">GST ${gst()}%</th><th style="text-align:right">价税合计</th><th>开票日期</th><th>状态</th><th>操作</th></tr></thead><tbody>
       ${rows.map(({iv,r})=>`<tr>
         <td class="mono">${iv.no}</td>
         <td class="mono" style="font-size:12px">${r.no}</td>
+        <td style="white-space:nowrap">${srcTag(r)}</td>
         <td>${r.name} <span style="color:var(--ts)">× ${r.qty} ${r.unit}</span></td>
         <td style="text-align:right">${money(rNet(r))}</td>
         <td style="text-align:right">${money(rGst(r))}</td>
@@ -257,7 +345,7 @@ window.repl_invPreview=function(no){
   const r=rOf(iv.repl); if(!r) return;
   drawer(`<div class="drawer-hd"><div><h3>补采发票预览</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${iv.no} · 平台已开具</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>本发票由<b>平台</b>就补采单 <span class="mono">${r.no}</span>（自营现货补货你少送的 ${r.qty} ${r.unit}）向<b>你（商家）</b>开具，开票方＝平台、收票方＝商家。</div>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>本发票由<b>平台</b>就补采单 <span class="mono">${r.no}</span>（${rSrc(r)=='aftersale'?'售后补货·自营现货补发给客户':'到仓少货·自营现货补齐'} ${r.qty} ${r.unit}）向<b>你（商家）</b>开具，开票方＝平台、收票方＝商家。</div>
     <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd">
       <div style="text-align:center;font-size:18px;font-weight:700;margin-bottom:2px">平台补采销售发票 · TAX INVOICE</div>
       <div style="text-align:center;font-size:12px;color:var(--ts);margin-bottom:16px">Food Max 平台就平台补采商品向商家开具（GST ${gst()}%）</div>
@@ -267,7 +355,7 @@ window.repl_invPreview=function(no){
         <dt>开票方（平台）</dt><dd>10X AI Technology Pte Ltd · GST Reg 202412345K</dd>
         <dt>收票方（商家）</dt><dd>绿鲜源蔬果 Green Fresh Produce Pte Ltd</dd>
         <dt>关联补采单</dt><dd class="mono">${r.no}</dd>
-        <dt>关联送货单 / 原订单</dt><dd class="mono">${r.deliveryNo} / ${r.subOrderNo}</dd>
+        <dt>${rSrc(r)=='aftersale'?'关联售后工单 / 原订单':'关联送货单 / 原订单'}</dt><dd class="mono">${rSrc(r)=='aftersale'?r.afterNo:r.deliveryNo} / ${r.subOrderNo}</dd>
         <dt>抵扣结算单</dt><dd class="mono">${r.billNo||'—'}</dd>
       </dl>
       <table style="margin-top:12px"><thead><tr><th>#</th><th>项目</th><th style="text-align:right">数量</th><th style="text-align:right">单价(含税)</th><th style="text-align:right">金额</th></tr></thead><tbody>
@@ -498,9 +586,10 @@ window.fineSettleSync=function(){
   const pend=fineGroups().filter(g=>g.status=='pending');
   const amt=+(pend.reduce((a,g)=>a+g.amt,0)).toFixed(2);
   DB.bill.fine=amt; DB.bill.fineCnt=pend.length;
+  DB.bill.fine=amt; DB.bill.fineCnt=pend.length;
   DB.bill.items=DB.bill.items.filter(it=>it[0]!='缺货罚款');
   if(amt>0)DB.bill.items.push(['缺货罚款',pend.length,-amt]);
-  DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-(DB.bill.supply||0)-(DB.bill.repl||0)-amt).toFixed(2);
+  recalcBillNet();
 };
 fineSettleSync();
 })();

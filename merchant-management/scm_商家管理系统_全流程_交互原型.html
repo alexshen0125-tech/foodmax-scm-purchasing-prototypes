@@ -724,8 +724,14 @@ const DB = {
   afterSales:[
     {id:'AS-26070201', client:'食为天餐厅', order:'#SG20260701018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'签收后12小时', type:'退款不退货', amt:116.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
     {id:'AS-26070202', client:'海底捞（新加坡）', order:'#SG20260701005', item:'白菜 24kg', reason:'误发精品装，规格不符，要求退回', age:'签收后8小时', type:'退货退款', amt:84.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
+    {id:'AS-26070206', client:'丰盛轩', order:'#SG20260702006', item:'上海青 12件', reason:'次日清点发现少送 12 件，客户要求补货、不退款', age:'签收后20小时', type:'补货', amt:49.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
+     fill:{sku:'SKU8806',name:'上海青',spec:'1kg/件',unit:'件',gap:12,fillQty:12,refundQty:0,selfPrice:4.10,custPrice:5.80}, fillAmt:49.20, refundAmt:0, fillStatus:'已补发', fillAt:'2026-07-02 14:20', replNo:'RPL-20260702-011'},
+    {id:'AS-26070207', client:'食为天餐厅', order:'#SG20260702018', item:'菠菜 20件', reason:'次日清点发现少送 20 件，客户要求尽量补货、不足部分退款', age:'签收后16小时', type:'补货', amt:95.60, status:'judged', liable:'商家', refundType:'商家责·部分补发＋差额退款·扣商家补货货款与退款', appeal:'', returnStatus:'',
+     fill:{sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',gap:20,fillQty:12,refundQty:8,selfPrice:4.10,custPrice:5.80}, fillAmt:49.20, refundAmt:46.40, fillStatus:'补发中', fillAt:'', replNo:'RPL-20260702-012'},
     {id:'AS-26070203', client:'金鼎轩', order:'#SG20260701009', item:'娃娃菜 15kg', reason:'规格不符，要求退回', age:'签收后10小时', type:'退货退款', amt:105.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待仓库入库'},
     {id:'AS-26070205', client:'鼎泰丰', order:'#SG20260701012', item:'芥蓝 10kg', reason:'到货偏软，要求退回', age:'签收后9小时', type:'退货退款', amt:65.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待提货', arriveAt:'2026-07-20 21:30'},
+    {id:'AS-26051801', client:'新味坊', order:'#SG20260517022', item:'鲜鸡蛋 6盘', reason:'次日清点发现少送 6 盘，客户要求补货、不退款', age:'签收后14小时', type:'补货', amt:55.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
+     fill:{sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',gap:6,fillQty:6,refundQty:0,selfPrice:9.20,custPrice:12.80}, fillAmt:55.20, refundAmt:0, fillStatus:'已补发', fillAt:'2026-05-18 15:40', replNo:'RPL-20260518-002'},
     {id:'AS-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'逾期未提', arriveAt:'2026-07-16 18:00'},
   ],
   // 违规
@@ -3617,25 +3623,40 @@ function act_unbindBank(id){const b=DB.wallet.banks.find(x=>x.id==id);if(!b||b.d
 /* ---------- 商家端：售后订单（售后管理子菜单）——判责/扣款/必关联正向订单 ---------- */
 PAGES['m-aftersale']=()=>{
   const pend=DB.afterSales.filter(a=>a.status=='pending').length;
-  return `${flowTip(`<b>售后订单</b>由客户对<b>已收货正向订单</b>发起，平台<b>三方判责</b>（商家/平台/买家）；判<b>商家责任</b>时按售后金额<b>逆向扣款</b>。每张售后订单<b>必关联一张正向订单</b>。`)}
-  <div class="card"><div class="card-hd"><h3>售后订单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+  return `${flowTip(`<b>售后订单</b>由客户对<b>已收货正向订单</b>发起，平台<b>四方判责</b>（商家/平台/用户/服务商）；判<b>商家责任</b>时按售后金额<b>逆向扣款</b>。每张售后订单<b>必关联一张正向订单</b>。`)}
+  <div class="card"><div class="card-hd"><h3>售后订单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 补货 ${DB.afterSales.filter(a=>a.type=='补货').length} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
     ${DB.afterSales.map((a,i)=>`<tr>
       <td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>
-      <td><span class="tag ${a.type=='退货退款'?'t-pp':'t-y'}" style="font-size:11px">${a.type}</span></td>
+      <td><span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></td>
       <td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td>
-      <td>${money(a.amt)}</td>
+      <td>${afterAmtCell(a)}</td>
       <td>${afterStatus(a)}</td>
       <td>${afterMerchantOps(a,i)}</td>
     </tr>`).join('')}
     </tbody></table></div></div></div>`;
 };
-function liableTag(a){const m={'商家':'t-r','平台':'t-b','买家':'t-gr'}[a.liable];return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span>`;}
+/* 判责方色板 —— 线上枚举为【四方】：0未判责 1商家 2平台 3用户(买家) 4服务商
+   代码依据 apps/web/src/features/aftersale/lib/aftersaleEnum.ts:6-14（原型此前只列三方，已补齐服务商） */
+const LIABLE_TONE={'商家':'t-r','平台':'t-b','买家':'t-gr','用户':'t-gr','服务商':'t-gr'};
+/* 售后类型色板 —— 线上 afterSaleType 1~10（aftersaleEnum.ts:16-21）：退款相关=紫，补货=蓝，其余=黄 */
+function afterTypeTone(t){return t=='退货退款'?'t-pp':t=='补货'?'t-b':'t-y';}
+/* 补发进度（补货类专用） */
+function fillTag(s){const m={'待补发':'t-y','补发中':'t-b','已补发':'t-g'}[s]||'t-gr';return `<span class="tag ${m}" style="font-size:10.5px"><span class="dot"></span>${s}</span>`;}
+function liableTag(a){const m=LIABLE_TONE[a.liable]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span>`;}
+/* 金额单元格：补货类拆「补货 ＋ 退款」两笔——两者计价基准不同（补货按自营原定价、退款按客户成交价），不合并成一个数 */
+function afterAmtCell(a){
+  if(a.type!='补货')return money(a.amt);
+  const parts=[];
+  if(a.fillAmt)parts.push(`补货 ${money(a.fillAmt)}`);
+  if(a.refundAmt)parts.push(`退款 ${money(a.refundAmt)}`);
+  return `${money(a.amt)}<div style="font-size:11px;color:var(--ts);margin-top:2px">${parts.join(' ＋ ')}</div>`;
+}
 function afterStatus(a){
   if(a.status=='pending')return '<span class="tag t-y"><span class="dot"></span>平台判责中</span>';
   if(a.status=='appealing')return '<span class="tag t-b"><span class="dot"></span>申诉复核中</span>';
-  const m={'商家':'t-r','平台':'t-b','买家':'t-gr'}[a.liable];
-  return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">${a.refundType}</div>${(a.returnStatus&&a.status!='closed')?`<div style="font-size:11.5px;color:var(--pp);margin-top:2px">退货：${a.returnStatus}</div>`:''}${a.status=='closed'?'<div style="font-size:11px;color:var(--gd);margin-top:2px">✓ 已结案</div>':''}`;
+  const m=LIABLE_TONE[a.liable]||'t-gr';
+  return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">${a.refundType}</div>${(a.type=='补货'&&a.fillStatus)?`<div style="margin-top:3px">${fillTag(a.fillStatus)}</div>`:''}${(a.returnStatus&&a.status!='closed')?`<div style="font-size:11.5px;color:var(--pp);margin-top:2px">退货：${a.returnStatus}</div>`:''}${a.status=='closed'?'<div style="font-size:11px;color:var(--gd);margin-top:2px">✓ 已结案</div>':''}`;
 }
 function afterMerchantOps(a,i){
   const b=[];
@@ -3664,7 +3685,7 @@ PAGES['m-after-return']=()=>{
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
     const dueMs=arriveDueMs(a.arriveAt,72);
     const deadline=a.returnStatus=='待提货'?`<b style="color:var(--r)">剩 ${cdSpan(dueMs)} 提货</b><div style="font-size:11px;color:var(--ts)">到货 ${a.arriveAt||''} · 逾期平台处置</div>`:(a.returnStatus=='已提货'?('已提货 '+(a.pickupAt||'')):(a.returnStatus=='逾期未提'?'已逾期·平台处置':(a.returnStatus=='待仓库入库'?'待仓库确认到货':'—')));
-    return `<tr><td class="mono">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${money(a.amt)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td>${a.returnStatus?stTag(a.returnStatus):'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td style="font-size:12px">${deadline}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('');
+    return `<tr><td class="mono">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${a.item}</td><td>${afterAmtCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td>${a.returnStatus?stTag(a.returnStatus):'<span class="tag t-y"><span class="dot"></span>待判责</span>'}</td><td style="font-size:12px">${deadline}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button></td></tr>`;}).join('');
   return srcTabs+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货，触发 <b>72 小时</b>倒计时）→ 已提货 / 逾期未提。<b>BR-R1</b> 商家端<b>只读</b>展示状态与剩余提货时长，<b>状态确认均由仓库操作</b>、商家无确认权限；<b>BR-R2</b> 超 72 小时未提货，平台可自行处置货物。`)}
   <div class="card"><div class="card-hd"><h3>客户退货</h3><span class="sub">客户售后「退货退款」判责后到仓暂存提货（商家只读 · 仓库确认 · 超 72h 未提平台处置）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th>金额</th><th>到仓时间</th><th>状态</th><th>提货时限</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
 };
@@ -4320,7 +4341,7 @@ PAGES['p-invoice']=()=>{
 PAGES['p-aftersale']=()=>{
   return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">三方判责（商家/平台/买家）· 待判责 ${DB.afterSales.filter(a=>a.status=='pending').length} · 待复核 ${DB.afterSales.filter(a=>a.status=='appealing').length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>时效</th><th>金额</th><th>操作</th></tr></thead><tbody>
-    ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td><span class="tag ${a.type=='退货退款'?'t-pp':'t-y'}" style="font-size:11px">${a.type}</span></td><td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td><span class="tag t-g">${a.age}</span></td><td>${money(a.amt)}</td><td>${afterPlatOps(a,i)}</td></tr>`).join('')}
+    ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td><span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></td><td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td><span class="tag t-g">${a.age}</span></td><td>${afterAmtCell(a)}</td><td>${afterPlatOps(a,i)}</td></tr>`).join('')}
   </tbody></table></div></div></div>`;
 };
 function afterPlatOps(a,i){
@@ -4571,6 +4592,7 @@ function act_billDetail(key){
       ${isCur&&(sel.supply||0)>0?`<div><div class="k">耗材采购扣款（含税 · ${sel.supplyCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.supply)}</div></div>`:''}
       ${(sel.repl||0)>0?`<div><div class="k">平台补采扣款（含税 · ${sel.replCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.repl)}</div></div>`:''}
       ${(sel.fine||0)>0?`<div><div class="k">缺货罚款（${sel.fineCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.fine)}</div></div>`:''}
+      ${(sel.fill||0)>0?`<div><div class="k">售后补货扣款（含税 · ${sel.fillCnt||0} 单）</div><div class="v" style="color:var(--r)">-${money(sel.fill)}</div></div>`:''}
       <div><div class="k">应清算给供应商（应结净额）</div><div class="v" style="color:var(--g);font-size:18px">${money(sel.net)}</div></div>
     </div>
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣 − 耗材采购扣款 − 平台补采扣款 − 缺货罚款</b>；平台就抽佣部分向你开具佣金税票，就耗材部分开具耗材销售发票，就平台补采部分开具补采销售发票；<b>罚款不开发票</b>，仅作结算扣减项。
@@ -4631,7 +4653,7 @@ function ord_doAfterSale(i){const o=DB.orders[i],type=document.getElementById('a
 }
 // 平台端：三方判责
 function act_judge(i){const a=DB.afterSales[i];
-  modalWide(`<div class="mc-hd"><h3>售后判责 · ${a.id}</h3><p>${ord_mask(a.client)} · ${a.item} · <span class="tag ${a.type=='退货退款'?'t-pp':'t-y'}" style="font-size:11px">${a.type}</span></p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modalWide(`<div class="mc-hd"><h3>售后判责 · ${a.id}</h3><p>${ord_mask(a.client)} · ${a.item} · <span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div class="ib ib-gr"><span class="i">⚖️</span>申请原因：${a.reason}（${a.age}）。${a.type=='退货退款'?'判非买家责后需餐厅退货回仓再结案。':'退款不退货，判责即结案。'}选择责任方：</div>
     <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="rc" style="background:var(--rl);border:1px solid #FCA5A5;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'商家')"><div style="font-weight:700">商家责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">腐烂/缺斤/规格不符<br><b style="color:var(--r)">退款，扣商家货款${a.type=='退货退款'?'·货回商家仓':''}</b></p></div>
@@ -4666,7 +4688,58 @@ function act_returnPickup(i){const a=DB.afterSales[i];askConfirm(`（仓库操�
 function act_returnExpire(i){const a=DB.afterSales[i];askConfirm(`（仓库操作）确认「${a.item}」超 72h 未提货、由平台处置？处置后退货单结案，不可恢复。`,()=>{a.returnStatus='逾期未提';a.status='closed';render();toast(`${a.id} 逾期未提，货物由平台处置`,'info');});}
 // 售后详情
 function act_afterDetail(i){const a=DB.afterSales[i];
-  modal(`<div class="mc-hd"><h3>售后订单 ${a.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><dl class="dl"><dt>关联正向订单</dt><dd class="mono">${a.order}</dd><dt>客户</dt><dd>${ord_mask(a.client)}</dd><dt>类型</dt><dd>${a.type}</dd><dt>商品</dt><dd>${a.item}</dd><dt>原因</dt><dd>${a.reason}</dd><dt>金额</dt><dd>${money(a.amt)}</dd><dt>判责</dt><dd>${a.liable?a.liable+'责 · '+a.refundType:'待判责'}</dd>${a.appeal?`<dt>申诉</dt><dd>${a.appeal}</dd>`:''}${a.returnStatus?`<dt>退货</dt><dd>${a.returnStatus}</dd>`:''}</dl></div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
+  const kv=(k,v)=>`<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;
+  const sec=t=>`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">${t}</h3></div>`;
+  const f=a.fill;
+  // 补货类：缺口拆「自营补发」+「差额退款」两段，两段计价基准不同，逐段列出后再合计
+  const fillBlock=(a.type=='补货'&&f)?`
+    ${sec('补货明细')}
+    <div class="ib ${a.fillStatus=='已补发'?'ib-g':'ib-b'}" style="margin-bottom:16px"><span class="i">📦</span>客户签收后发现少送 <b>${f.gap} ${f.unit}</b>，要求<b>补货不退款</b>。平台以<b>自营现货</b>补发 <b>${f.fillQty} ${f.unit}</b>${f.refundQty?`，自营库存不足的 <b>${f.refundQty} ${f.unit}</b> 转为<b>退款</b>`:'（<b>全额覆盖</b>）'}。客户正向订单<b>金额与发票不变</b>，你的 GMV 与平台佣金按原订单<b>足额计</b>。</div>
+    <div style="overflow-x:auto;margin-bottom:14px"><table>
+      <thead><tr><th>商品</th><th style="text-align:right">缺货</th><th style="text-align:right">自营补发</th><th style="text-align:right">差额退款</th></tr></thead><tbody>
+      <tr><td style="white-space:nowrap"><b>${f.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${f.sku} · ${f.spec}</div></td>
+        <td style="text-align:right;color:var(--r);font-weight:600">${f.gap}</td>
+        <td style="text-align:right"><b>${f.fillQty}</b> ${f.unit}</td>
+        <td style="text-align:right">${f.refundQty?`<b>${f.refundQty}</b> ${f.unit}`:'—'}</td></tr>
+    </tbody></table></div>
+    <div style="overflow-x:auto;margin-bottom:20px"><table><tbody>
+      <tr><td style="color:var(--ts)">补发部分 = ${money(f.selfPrice)} × ${f.fillQty}${f.unit}<div style="font-size:11px;margin-top:2px">按<b>自营商品原定价</b>计价，<b>不加价</b>，生成时快照</div></td><td style="text-align:right;font-weight:600">${money(a.fillAmt)}</td></tr>
+      ${f.refundQty?`<tr><td style="color:var(--ts)">退款部分 = ${money(f.custPrice)} × ${f.refundQty}${f.unit}<div style="font-size:11px;margin-top:2px">按<b>客户成交价</b>计价，走逆向扣减</div></td><td style="text-align:right;font-weight:600">${money(a.refundAmt)}</td></tr>`:''}
+      <tr><td style="color:var(--ts)">缺货罚款<div style="font-size:11px;margin-top:2px">补货场景<b>不计罚款</b>（区别于到仓少货场景）</div></td><td style="text-align:right;color:var(--ts)">${money(0)}</td></tr>
+      <tr style="font-weight:700;background:var(--gl)"><td>合计扣减（结算抵扣）</td><td style="text-align:right;color:var(--r)">-${money(a.amt)}</td></tr>
+    </tbody></table></div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:4px">
+      ${kv('补发进度',fillTag(a.fillStatus)+(a.fillAt?`<span style="font-size:12px;color:var(--ts);margin-left:6px">${a.fillAt}</span>`:''))}
+      ${kv('关联补采单',a.replNo?`<span class="mono">${a.replNo}</span> <button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="closeDrawer();DB.replTab='all';DB.replFilter={no:'${a.replNo}',dl:'',od:'',src:''};nav('m-replenish')">查看</button>`:'补发完成后生成')}
+    </div>`:'';
+
+  drawer(`<div class="drawer-hd"><div><h3>${a.id} · 售后订单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ord_mask(a.client)} · ${a.age}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="row" style="gap:8px;margin-bottom:16px"><span class="tag ${afterTypeTone(a.type)}"><span class="dot"></span>${a.type}</span>${a.liable?liableTag(a):'<span class="tag t-y"><span class="dot"></span>平台判责中</span>'}${(a.type=='补货'&&a.fillStatus)?fillTag(a.fillStatus):''}</div>
+
+    ${sec('工单信息')}
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">
+      ${kv('关联正向订单',`<span class="mono">${a.order}</span>`)}
+      ${kv('客户',ord_mask(a.client))}
+      ${kv('类型',a.type)}
+      ${kv('发起时效',a.age)}
+      ${kv('商品',a.item)}
+      ${kv('金额',afterAmtCell(a))}
+    </div>
+    <div style="margin-bottom:20px">${kv('申请原因',a.reason)}</div>
+
+    ${fillBlock}
+
+    ${sec('判责信息')}
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px">
+      ${kv('判责方',a.liable?liableTag(a):'待判责')}
+      ${kv('处理方式',a.refundType||'—')}
+      ${a.appeal?kv('申诉',a.appeal):''}
+      ${a.returnStatus?kv('退货状态',a.returnStatus):''}
+    </div>
+    ${a.type=='补货'?`<div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>补货类售后<b>不开放线上申诉</b>。对判责结论或补发数量有异议，请在<b>结案后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567）并提供出库装车凭证；核实有误的由运营发起<b>冲正</b>，在下期结算回补。</div>`:''}
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 }
 // 闭环F 违规
 function act_addViolation(type,score,fine,detail){
@@ -4744,8 +4817,8 @@ goHome();
 <script src="pc-modules/price.js?v=20260730f"></script>
 <script src="pc-modules/analysis.js?v=20260730f"></script>
 <script src="pc-modules/quality.js?v=20260730f"></script>
-<script src="pc-modules/supply.js?v=20260817c"></script>
-<script src="pc-modules/replenish.js?v=20260810a"></script>
+<script src="pc-modules/supply.js?v=20260831a"></script>
+<script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260821d"></script>
 </body>

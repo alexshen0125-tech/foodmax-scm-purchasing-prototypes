@@ -38,6 +38,11 @@ css.textContent=`
 .ac .ah .ty{font-size:15.5px;font-weight:700;}
 .ac .ah .resp{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--amber-soft);color:#B45309;}
 .ac .ah .resp.kl{background:var(--mint-soft);color:var(--emerald-2);}
+/* 补货类售后：补发进度徽章 + 承担金额拆分行 */
+.ac .ah .fill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:#DBEAFE;color:#1D4ED8;}
+.ac .ah .fill.done{background:var(--mint-soft);color:var(--emerald-2);}
+.judge .jsplit{display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);}
+.judge .jsplit b{color:#27433A;font-weight:600;}
 .ac .ah .rt{margin-left:auto;font-size:12.5px;color:var(--sub);font-weight:600;}
 .ac .gr{display:flex;gap:12px;}
 .ac .gr .img{width:60px;height:60px;border-radius:12px;flex:0 0 60px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;font-size:28px;}
@@ -193,6 +198,20 @@ const DATA={
      paid:'S$11.99',needPay:'S$11.99',judgeTime:'2026-06-28 08:11:02',appealAmt:'S$0',
      reason:'商品质量问题-商品变质',orderNo:'TK2606280028409',oid:'KL2606270056244',
      orderDate:'2026-06-27',wh:'盛港DC',afAmt:'S$11.99',afQty:1,city:'东区'},
+    // ── 补货类售后（客户签收后缺货、判商家责、客户要补货不退款 → 平台自营补发，钱找商家结算）──
+    // 与 PC 原型 AS-26070207 / AS-26070206 同源；补货类【不开放线上申诉】，异议走线下
+    {ty:'补货',resp:'合作商承担100%',img:'🥬',nm:'菠菜',sp:'1kg/件',price:'S$5.80',qty:20,
+     paid:'S$116.00',needPay:'S$95.60',judgeTime:'2026-07-02 16:05:12',appealAmt:'—',noAppeal:1,
+     reason:'缺货-次日清点发现少送，客户要求补货、不退款',orderNo:'AS-26070207',oid:'#SG20260702018',
+     orderDate:'2026-07-01',wh:'兀兰DC',afAmt:'S$95.60',afQty:20,city:'东区',
+     fill:{gap:20,fillQty:12,refundQty:8,unit:'件',selfPrice:'S$4.10',custPrice:'S$5.80'},
+     fillAmt:'S$49.20',refundAmt:'S$46.40',fillStatus:'补发中',replNo:'RPL-20260702-012'},
+    {ty:'补货',resp:'合作商承担100%',img:'🥬',nm:'上海青',sp:'1kg/件',price:'S$5.80',qty:12,
+     paid:'S$69.60',needPay:'S$49.20',judgeTime:'2026-07-02 14:20:33',appealAmt:'—',noAppeal:1,
+     reason:'缺货-次日清点发现少送，客户要求补货、不退款',orderNo:'AS-26070206',oid:'#SG20260702006',
+     orderDate:'2026-07-01',wh:'盛港DC',afAmt:'S$49.20',afQty:12,city:'中区',
+     fill:{gap:12,fillQty:12,refundQty:0,unit:'件',selfPrice:'S$4.10',custPrice:'S$5.80'},
+     fillAmt:'S$49.20',refundAmt:'S$0.00',fillStatus:'已补发',replNo:'RPL-20260702-011'},
   ],
   appeal:[
     {ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
@@ -227,7 +246,13 @@ const ALL=[
 function respClass(r){return r===RESP_KL?'kl':'';}
 
 function judgeCard(d){
-  const judge = d.countdown
+  // 补货类：承担金额拆「自营补发 ＋ 差额退款」两笔（计价基准不同，不合并）；不开放线上申诉
+  const judge = d.fill
+    ? `<div class="judge"><div class="jh">您需承担金额<span class="amt">${d.needPay}</span></div>
+         <div class="jr"><span>判责时间</span><b>${d.judgeTime}</b></div>
+         <div class="jsplit"><span>自营补发 ${d.fill.fillQty}${d.fill.unit} <b>${d.fillAmt}</b></span>${d.fill.refundQty?`<span>差额退款 ${d.fill.refundQty}${d.fill.unit} <b>${d.refundAmt}</b></span>`:'<span>全额覆盖，无退款</span>'}</div>
+         <div class="jr"><span>可申诉金额</span><b>补货类不支持申诉</b></div></div>`
+    : d.countdown
     ? `<div class="judge"><div class="jh appeal">判责结果申诉 <span class="cd">${d.countdown}</span></div>
          <div class="jr"><span>判责时间</span><b>${d.judgeTime}</b></div>
          <div class="jr"><span>可申诉金额</span><b>${d.appealAmt}</b></div></div>`
@@ -235,7 +260,7 @@ function judgeCard(d){
          <div class="jr"><span>判责时间</span><b>${d.judgeTime}</b></div>
          <div class="jr"><span>可申诉金额</span><b>${d.appealAmt}</b></div></div>`;
   return `<div class="ac">
-    <div class="ah"><span class="ty">${d.ty}</span><span class="resp ${respClass(d.resp)}">${d.resp}</span></div>
+    <div class="ah"><span class="ty">${d.ty}</span><span class="resp ${respClass(d.resp)}">${d.resp}</span>${d.fillStatus?`<span class="fill ${d.fillStatus=='已补发'?'done':''}">${d.fillStatus}</span>`:''}</div>
     <div class="gr"><div class="img">${d.img}</div>
       <div class="gi"><div class="nm"><span>${d.nm}</span><span>${d.price}</span></div>
         <div class="sp"><span>${d.sp}</span><span>x${d.qty}</span></div></div></div>
@@ -317,13 +342,26 @@ function openDetail(d){
        <div class="sub">您需承担金额 <b>${d.needPay||'S$0'}</b></div>`;
   const body=`
     <div class="as-dhead">${head}</div>
-    <div class="as-dred">${appealable?'判责结果为合作商承担，若有异议请在剩余时间内发起申诉，逾期视为认责。':'本次售后已判责，如对结果有异议可发起申诉，逾期视为认可判责结果。'}</div>
+    <div class="as-dred">${d.fill?'客户签收后发现缺货、判合作商责任，客户要求<b>补货不退款</b>。平台已用自营现货补发给客户，补发货款在结算单中扣减。<b>补货类不支持线上申诉</b>，有异议请联系运营对接人。':(appealable?'判责结果为合作商承担，若有异议请在剩余时间内发起申诉，逾期视为认责。':'本次售后已判责，如对结果有异议可发起申诉，逾期视为认可判责结果。')}</div>
     <div class="as-dblock">
       <div class="bt"><span>判责信息</span></div>
       <div class="as-row"><span class="k">判责时间</span><span class="v">${d.judgeTime}</span></div>
-      <div class="as-row"><span class="k">可申诉金额</span><span class="v red">${d.appealAmt}</span></div>
+      <div class="as-row"><span class="k">可申诉金额</span><span class="v ${d.fill?'':'red'}">${d.fill?'补货类不支持申诉':d.appealAmt}</span></div>
       <div class="as-row" style="align-items:center"><span class="k">判责记录</span><span class="v" style="text-align:right"><span class="cp" data-rec style="border-color:var(--emerald)">查看 ›</span></span></div>
     </div>
+    ${d.fill?`<div class="as-dblock">
+      <div class="bt"><span>补货明细</span></div>
+      <div class="as-row"><span class="k">客户缺货</span><span class="v red">${d.fill.gap} ${d.fill.unit}</span></div>
+      <div class="as-row"><span class="k">自营补发</span><span class="v">${d.fill.fillQty} ${d.fill.unit} × ${d.fill.selfPrice} = <b>${d.fillAmt}</b></span></div>
+      <div class="as-row"><span class="k"></span><span class="v" style="color:var(--sub);font-size:11.5px">按<b>自营商品原定价</b>计价，不加价，生成时快照</span></div>
+      ${d.fill.refundQty?`<div class="as-row"><span class="k">差额退款</span><span class="v">${d.fill.refundQty} ${d.fill.unit} × ${d.fill.custPrice} = <b>${d.refundAmt}</b></span></div>
+      <div class="as-row"><span class="k"></span><span class="v" style="color:var(--sub);font-size:11.5px">自营库存不足部分，按<b>客户成交价</b>计价，走逆向扣减科目</span></div>`:`<div class="as-row"><span class="k">差额退款</span><span class="v" style="color:var(--sub)">无（自营全额覆盖）</span></div>`}
+      <div class="as-row"><span class="k">缺货罚款</span><span class="v" style="color:var(--sub)">S$0.00 · 补货场景不计罚款</span></div>
+      <div class="as-row"><span class="k">合计扣减</span><span class="v red"><b>${d.needPay}</b></span></div>
+      <div class="as-row"><span class="k">补发进度</span><span class="v">${d.fillStatus}</span></div>
+      <div class="as-row"><span class="k">关联补采单</span><span class="v">${d.replNo}<span class="cp" data-cp="${d.replNo}">复制</span></span></div>
+      <div class="as-row"><span class="k">客户订单</span><span class="v" style="color:var(--sub);font-size:11.5px">商品/金额/发票<b>均未变更</b>，你的 GMV 与平台佣金按原订单足额计</span></div>
+    </div>`:''}
     <div class="as-dblock">
       <div class="bt"><span>商品信息</span></div>
       <div class="as-gline"><div class="img">${d.img}</div>
