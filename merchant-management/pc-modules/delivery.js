@@ -176,7 +176,6 @@
           ${row('商家',(DB.merchant&&DB.merchant.name)||'绿鲜源蔬果')}
           ${row('入库仓库',d.warehouse)}
           ${row('营业截单',`${cf.at}${cf.wd?`（${cf.wd}）`:''} · 已截单`)}
-          ${row('应送 / 订单',`${dvShould(d)} 张标签 · ${d.orderIds.length} 个订单`)}
         </tbody></table>
         <div style="font-size:12.5px;font-weight:700;margin-bottom:6px">商品明细</div>
         <table style="width:100%;font-size:12px;border-collapse:collapse">

@@ -251,7 +251,7 @@ function dvCutoff(d){
 function dvPrint(d){
   const cf=dvCutoff(d);
   if(!cf.passed){toast(`未到营业截单时间（${cf.at}），送货单内容可能还会变动，暂不可打印`);return;}
-  const items=dvSku(d), totalQty=items.reduce((a,x)=>a+(+x.qty||0),0), tags=(d.labels||[]).length;
+  const items=dvSku(d), totalQty=items.reduce((a,x)=>a+(+x.qty||0),0);
   // dvSku 的 code 是【标签码】(LBL-<订单后5位>-<SKU后4位>)，打印纸要的是 SKU 编码，与 PC 保持一致
   const skuOf=x=>{const m=String(x.code||'').match(/(\d{4})$/);return m?('SKU'+m[1]):(x.code||'—');};
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
@@ -274,7 +274,6 @@ function dvPrint(d){
         ${row('商家','鲜丰食材 Fresh Harvest')}
         ${row('入库仓库',d.warehouse)}
         ${row('营业截单',`${cf.at}${cf.wd?`（${cf.wd}）`:''} · 已截单`)}
-        ${row('应送 / 订单',`${tags} 张标签 · ${d.orderIds.length} 个订单`)}
         <div style="font-size:12.5px;font-weight:700;margin:16px 0 6px">商品明细</div>
         <table style="width:100%;font-size:11.5px;border-collapse:collapse">
           <thead><tr style="background:#F3F4F6">
