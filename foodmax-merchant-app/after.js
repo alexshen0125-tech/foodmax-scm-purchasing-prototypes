@@ -180,33 +180,33 @@ const TABS=[
 ];
 const DATA={
   pending:[
-    {ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
+    {refundNo:'RF-2606290006946',ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
      paid:'S$11.99',countdown:'剩余1天2时33分',judgeTime:'2026-06-29 21:45:45',appealAmt:'S$11.99',
      reason:'商品质量问题-商品异味问题',orderNo:'KL2606290006946',oid:'KL2606270056244410',
      orderDate:'2026-06-27',wh:'裕廊DC',afAmt:'S$11.99',afQty:1,city:'中区'},
-    {ty:'缺货退款',resp:'合作商承担100%',img:'🍢',nm:'鲜丰 · 小油豆腐',sp:'2斤/袋',price:'S$8.80',qty:1,
+    {refundNo:'RF-2606300012088',ty:'缺货退款',resp:'合作商承担100%',img:'🍢',nm:'鲜丰 · 小油豆腐',sp:'2斤/袋',price:'S$8.80',qty:1,
      paid:'S$8.80',countdown:'剩余0天23时39分',judgeTime:'2026-06-29 08:35:50',appealAmt:'S$8.80',
      reason:'缺货-司机未送达',orderNo:'TK2606300012088',oid:'KL2606280091233',
      orderDate:'2026-06-28',wh:'兀兰DC',afAmt:'S$8.80',afQty:1,city:'西区'},
   ],
   merchant:[
-    {ty:'退货退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
+    {refundNo:'RF-2606280028401',ty:'退货退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
      paid:'S$11.99',needPay:'S$11.99',judgeTime:'2026-06-28 09:20:48',appealAmt:'S$0',
      reason:'商品质量问题-商品异味问题',orderNo:'TK2606280028401',oid:'KL2606270056200',
      orderDate:'2026-06-27',wh:'裕廊DC',afAmt:'S$11.99',afQty:1,city:'中区'},
-    {ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
+    {refundNo:'RF-2606280028409',ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
      paid:'S$11.99',needPay:'S$11.99',judgeTime:'2026-06-28 08:11:02',appealAmt:'S$0',
      reason:'商品质量问题-商品变质',orderNo:'TK2606280028409',oid:'KL2606270056244',
      orderDate:'2026-06-27',wh:'盛港DC',afAmt:'S$11.99',afQty:1,city:'东区'},
     // ── 补货类售后（客户签收后缺货、判商家责、客户要补货不退款 → 平台自营补发，钱找商家结算）──
     // 与 PC 原型 AS-26070207 / AS-26070206 同源；补货类【不开放线上申诉】，异议走线下
-    {ty:'补货',resp:'合作商承担100%',img:'🥬',nm:'菠菜',sp:'1kg/件',price:'S$5.80',qty:20,
+    {refundNo:'RF-26070207',ty:'补货',resp:'合作商承担100%',img:'🥬',nm:'菠菜',sp:'1kg/件',price:'S$5.80',qty:20,
      paid:'S$116.00',needPay:'S$95.60',judgeTime:'2026-07-02 16:05:12',appealAmt:'—',noAppeal:1,
      reason:'缺货-次日清点发现少送，客户要求补货、不退款',orderNo:'AS-26070207',oid:'#SG20260702018',
      orderDate:'2026-07-01',wh:'兀兰DC',afAmt:'S$95.60',afQty:20,city:'东区',
      fill:{gap:20,fillQty:12,refundQty:8,unit:'件',selfPrice:'S$4.10',custPrice:'S$5.80'},
      fillAmt:'S$49.20',refundAmt:'S$46.40',fillStatus:'补发中',replNo:'RPL-20260702-012'},
-    {ty:'补货',resp:'合作商承担100%',img:'🥬',nm:'上海青',sp:'1kg/件',price:'S$5.80',qty:12,
+    {refundNo:'',ty:'补货',resp:'合作商承担100%',img:'🥬',nm:'上海青',sp:'1kg/件',price:'S$5.80',qty:12,
      paid:'S$69.60',needPay:'S$49.20',judgeTime:'2026-07-02 14:20:33',appealAmt:'—',noAppeal:1,
      reason:'缺货-次日清点发现少送，客户要求补货、不退款',orderNo:'AS-26070206',oid:'#SG20260702006',
      orderDate:'2026-07-01',wh:'盛港DC',afAmt:'S$49.20',afQty:12,city:'中区',
@@ -214,22 +214,22 @@ const DATA={
      fillAmt:'S$49.20',refundAmt:'S$0.00',fillStatus:'已补发',replNo:'RPL-20260702-011'},
   ],
   appeal:[
-    {ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
+    {refundNo:'RF-2606290006946',ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
      paid:'S$11.99',countdown:'剩余1天2时33分',judgeTime:'2026-06-29 21:45:45',appealAmt:'S$11.99',
      reason:'商品质量问题-商品异味问题',orderNo:'TK2606290006946',oid:'KL2606270056244410',
      orderDate:'2026-06-27',wh:'裕廊DC',afAmt:'S$11.99',afQty:1,city:'中区'},
-    {ty:'仅退款',resp:'合作商承担100%',img:'🥬',nm:'嫩豆腐 5斤',sp:'2.5kg/盒',price:'S$7.99',qty:2,
+    {refundNo:'RF-2606290006947',ty:'仅退款',resp:'合作商承担100%',img:'🥬',nm:'嫩豆腐 5斤',sp:'2.5kg/盒',price:'S$7.99',qty:2,
      paid:'S$15.98',countdown:'剩余0天23时39分',judgeTime:'2026-06-29 08:35:50',appealAmt:'S$15.98',
      reason:'商品质量问题-商品异味问题',orderNo:'TK2606290006946',oid:'KL2606270056244410',
      orderDate:'2026-06-27',wh:'裕廊DC',afAmt:'S$15.98',afQty:2,city:'西区'},
   ],
   appealing:[], // 申诉中 → 空态
   done:[
-    {ty:'仅退款',resp:'合作商无需承担',img:'🍢',nm:'鲜丰 · 小油豆腐',sp:'1kg/组(2袋)',price:'S$11.88',qty:1,
+    {refundNo:'RF-2606170018866',ty:'仅退款',resp:'合作商无需承担',img:'🍢',nm:'鲜丰 · 小油豆腐',sp:'1kg/组(2袋)',price:'S$11.88',qty:1,
      paid:'S$11.88',needPay:'S$0',judgeTime:'2026-06-17 14:15:47',appealAmt:'S$0',done:1,
      reason:'其它原因-货品送错',orderNo:'TK2606170018866',oid:'KL2606160077120',
      orderDate:'2026-06-16',wh:'大巴窑DC',afAmt:'S$11.88',afQty:1,city:'北区'},
-    {ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤 - 严选',sp:'5斤/袋',price:'S$11.99',qty:2,
+    {refundNo:'RF-2606160009921',ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤 - 严选',sp:'5斤/袋',price:'S$11.99',qty:2,
      paid:'S$23.98',needPay:'S$23.98',judgeTime:'2026-06-16 10:02:31',appealAmt:'S$0',done:1,
      reason:'商品质量问题-商品变质',orderNo:'TK2606160009921',oid:'KL2606150033410',
      orderDate:'2026-06-15',wh:'淡滨尼DC',afAmt:'S$23.98',afQty:2,city:'东区'},
@@ -237,27 +237,41 @@ const DATA={
 };
 // 全部售后（不同布局：右侧状态文案 + 售后时间/单号/金额）
 const ALL=[
-  {ty:'优惠券赔付',red:1,st:'发券成功',afTime:'2026-06-30 14:43:58',no:'TQ2606300001435',amt:'-S$10.00',img:'🧈'},
-  {ty:'仅退款',st:'待确认责任方',afTime:'2026-06-30 14:25:04',no:'TK2606300028409',amt:'-S$23.97',img:'🧈'},
-  {ty:'仅退款',st:'已退款',afTime:'2026-06-30 11:08:17',no:'TK2606300018002',amt:'-S$11.99',img:'🥬'},
+  {refundNo:'',ty:'优惠券赔付',red:1,st:'发券成功',afTime:'2026-06-30 14:43:58',no:'TQ2606300001435',amt:'-S$10.00',img:'🧈'},
+  {refundNo:'',ty:'仅退款',st:'待确认责任方',afTime:'2026-06-30 14:25:04',no:'TK2606300028409',amt:'-S$23.97',img:'🧈'},
+  {refundNo:'RF-2606300018002',ty:'仅退款',st:'已退款',afTime:'2026-06-30 11:08:17',no:'TK2606300018002',amt:'-S$11.99',img:'🥬'},
 ];
 
 /* ========== A 售后列表 ========== */
 function respClass(r){return r===RESP_KL?'kl':'';}
+/* 退款单号：仅【实际向客户发生退款】的售后单才有——退款类、以及补货类中「自营不足转差额退款」的部分。
+   全额补发 / 安抚 / 备注 / 补券 类无退款动作；待判责期间退款未发起。均显示「—」。
+   线上契约暂无此字段（contracts/aftersale.ts 仅 refundAmount），待研发新增。 */
+function refundNoReason(d){
+  if(d.refundNo)return '';
+  if(d.fill)return '自营全额补发，未向客户退款';
+  if(d.st==='待确认责任方')return '判责完成后发起退款时生成';
+  if(String(d.ty||'').indexOf('券')>=0)return '补券赔付，无退款';
+  return '本单无退款动作';
+}
+function refundNoTxt(d){return d.refundNo||'—';}
 
 function judgeCard(d){
   // 补货类：承担金额拆「自营补发 ＋ 差额退款」两笔（计价基准不同，不合并）；不开放线上申诉
   const judge = d.fill
     ? `<div class="judge"><div class="jh">您需承担金额<span class="amt">${d.needPay}</span></div>
          <div class="jr"><span>判责时间</span><b>${d.judgeTime}</b></div>
+         <div class="jr"><span>退款单号</span><b>${refundNoTxt(d)}</b></div>
          <div class="jsplit"><span>自营补发 ${d.fill.fillQty}${d.fill.unit} <b>${d.fillAmt}</b></span>${d.fill.refundQty?`<span>差额退款 ${d.fill.refundQty}${d.fill.unit} <b>${d.refundAmt}</b></span>`:'<span>全额覆盖，无退款</span>'}</div>
          <div class="jr"><span>可申诉金额</span><b>补货类不支持申诉</b></div></div>`
     : d.countdown
     ? `<div class="judge"><div class="jh appeal">判责结果申诉 <span class="cd">${d.countdown}</span></div>
          <div class="jr"><span>判责时间</span><b>${d.judgeTime}</b></div>
+         <div class="jr"><span>退款单号</span><b>${refundNoTxt(d)}</b></div>
          <div class="jr"><span>可申诉金额</span><b>${d.appealAmt}</b></div></div>`
     : `<div class="judge"><div class="jh">您需承担金额<span class="amt">${d.needPay}</span></div>
          <div class="jr"><span>判责时间</span><b>${d.judgeTime}</b></div>
+         <div class="jr"><span>退款单号</span><b>${refundNoTxt(d)}</b></div>
          <div class="jr"><span>可申诉金额</span><b>${d.appealAmt}</b></div></div>`;
   return `<div class="ac">
     <div class="ah"><span class="ty">${d.ty}</span><span class="resp ${respClass(d.resp)}">${d.resp}</span>${d.fillStatus?`<span class="fill ${d.fillStatus=='已补发'?'done':''}">${d.fillStatus}</span>`:''}</div>
@@ -275,6 +289,7 @@ function allCard(d){
     <div class="meta">
       <div class="r"><span class="k">售后时间</span><span class="v">${d.afTime}</span></div>
       <div class="r"><span class="k">售后单号</span><span class="v">${d.no}</span></div>
+      <div class="r"><span class="k">退款单号</span><span class="v">${refundNoTxt(d)}</span></div>
       <div class="r"><span class="k">售后金额</span><span class="v red">${d.amt}</span></div></div>
     <hr>
     <div class="gr"><div class="img">${d.img}</div><div class="gi"><div class="nm"><span>　</span></div></div></div>
@@ -374,6 +389,7 @@ function openDetail(d){
       <div class="as-row" style="align-items:flex-start"><span class="k">相关图片</span><span class="v"><div class="as-imgs">${[0,1,2,3].map(()=>`<div class="im">${svg('box')}</div>`).join('')}</div></span></div>
       <div class="as-row"><span class="k">售后时间</span><span class="v">${d.judgeTime}</span></div>
       <div class="as-row"><span class="k">售后单号</span><span class="v">${d.orderNo}<span class="cp" data-cp="${d.orderNo}">复制</span></span></div>
+      <div class="as-row"><span class="k">退款单号</span><span class="v">${d.refundNo?`${d.refundNo}<span class="cp" data-cp="${d.refundNo}">复制</span>`:`<span style="color:var(--sub)">—　${refundNoReason(d)}</span>`}</span></div>
       <div class="as-row"><span class="k">订单编号</span><span class="v">${d.oid}<span class="cp" data-cp="${d.oid}">复制</span></span></div>
       <div class="as-row"><span class="k">下单日期</span><span class="v">${d.orderDate}</span></div>
       <div class="as-row"><span class="k">发货仓库</span><span class="v">${d.wh}</span></div>

@@ -722,17 +722,17 @@ const DB = {
   ],
   // 售后（逆向）：餐厅对「已收货」订单在时效内发起；退款不退货 / 退货退款两类；平台三方判责；商家可申诉；判商家责逆向扣减货款
   afterSales:[
-    {id:'AS-26070201', client:'食为天餐厅', order:'#SG20260701018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'签收后12小时', type:'退款不退货', amt:116.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
-    {id:'AS-26070202', client:'海底捞（新加坡）', order:'#SG20260701005', item:'白菜 24kg', reason:'误发精品装，规格不符，要求退回', age:'签收后8小时', type:'退货退款', amt:84.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
-    {id:'AS-26070206', client:'丰盛轩', order:'#SG20260702006', item:'上海青 12件', reason:'次日清点发现少送 12 件，客户要求补货、不退款', age:'签收后20小时', type:'补货', amt:49.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
+    {id:'AS-26070201', refundNo:'', client:'食为天餐厅', order:'#SG20260701018', item:'菠菜 20kg', reason:'部分腐烂变质，附图3张', age:'签收后12小时', type:'退款不退货', amt:116.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
+    {id:'AS-26070202', refundNo:'', client:'海底捞（新加坡）', order:'#SG20260701005', item:'白菜 24kg', reason:'误发精品装，规格不符，要求退回', age:'签收后8小时', type:'退货退款', amt:84.00, status:'pending', liable:'', refundType:'', appeal:'', returnStatus:''},
+    {id:'AS-26070206', refundNo:'', client:'丰盛轩', order:'#SG20260702006', item:'上海青 12件', reason:'次日清点发现少送 12 件，客户要求补货、不退款', age:'签收后20小时', type:'补货', amt:49.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
      fill:{sku:'SKU8806',name:'上海青',spec:'1kg/件',unit:'件',gap:12,fillQty:12,refundQty:0,selfPrice:4.10,custPrice:5.80}, fillAmt:49.20, refundAmt:0, fillStatus:'已补发', fillAt:'2026-07-02 14:20', replNo:'RPL-20260702-011'},
-    {id:'AS-26070207', client:'食为天餐厅', order:'#SG20260702018', item:'菠菜 20件', reason:'次日清点发现少送 20 件，客户要求尽量补货、不足部分退款', age:'签收后16小时', type:'补货', amt:95.60, status:'judged', liable:'商家', refundType:'商家责·部分补发＋差额退款·扣商家补货货款与退款', appeal:'', returnStatus:'',
+    {id:'AS-26070207', refundNo:'RF-26070207', client:'食为天餐厅', order:'#SG20260702018', item:'菠菜 20件', reason:'次日清点发现少送 20 件，客户要求尽量补货、不足部分退款', age:'签收后16小时', type:'补货', amt:95.60, status:'judged', liable:'商家', refundType:'商家责·部分补发＋差额退款·扣商家补货货款与退款', appeal:'', returnStatus:'',
      fill:{sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',gap:20,fillQty:12,refundQty:8,selfPrice:4.10,custPrice:5.80}, fillAmt:49.20, refundAmt:46.40, fillStatus:'补发中', fillAt:'', replNo:'RPL-20260702-012'},
-    {id:'AS-26070203', client:'金鼎轩', order:'#SG20260701009', item:'娃娃菜 15kg', reason:'规格不符，要求退回', age:'签收后10小时', type:'退货退款', amt:105.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待仓库入库'},
-    {id:'AS-26070205', client:'鼎泰丰', order:'#SG20260701012', item:'芥蓝 10kg', reason:'到货偏软，要求退回', age:'签收后9小时', type:'退货退款', amt:65.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待提货', arriveAt:'2026-07-20 21:30'},
-    {id:'AS-26051801', client:'新味坊', order:'#SG20260517022', item:'鲜鸡蛋 6盘', reason:'次日清点发现少送 6 盘，客户要求补货、不退款', age:'签收后14小时', type:'补货', amt:55.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
+    {id:'AS-26070203', refundNo:'RF-26070203', client:'金鼎轩', order:'#SG20260701009', item:'娃娃菜 15kg', reason:'规格不符，要求退回', age:'签收后10小时', type:'退货退款', amt:105.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待仓库入库'},
+    {id:'AS-26070205', refundNo:'RF-26070205', client:'鼎泰丰', order:'#SG20260701012', item:'芥蓝 10kg', reason:'到货偏软，要求退回', age:'签收后9小时', type:'退货退款', amt:65.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待提货', arriveAt:'2026-07-20 21:30'},
+    {id:'AS-26051801', refundNo:'', client:'新味坊', order:'#SG20260517022', item:'鲜鸡蛋 6盘', reason:'次日清点发现少送 6 盘，客户要求补货、不退款', age:'签收后14小时', type:'补货', amt:55.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
      fill:{sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',gap:6,fillQty:6,refundQty:0,selfPrice:9.20,custPrice:12.80}, fillAmt:55.20, refundAmt:0, fillStatus:'已补发', fillAt:'2026-05-18 15:40', replNo:'RPL-20260518-002'},
-    {id:'AS-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'逾期未提', arriveAt:'2026-07-16 18:00'},
+    {id:'AS-26070204', refundNo:'RF-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'逾期未提', arriveAt:'2026-07-16 18:00'},
   ],
   // 违规
   violations:[],
@@ -3628,9 +3628,9 @@ PAGES['m-aftersale']=()=>{
   const pend=DB.afterSales.filter(a=>a.status=='pending').length;
   return `${flowTip(`<b>售后订单</b>由客户对<b>已收货正向订单</b>发起，平台<b>四方判责</b>（商家/平台/用户/服务商）；判<b>商家责任</b>时按售后金额<b>逆向扣款</b>。每张售后订单<b>必关联一张正向订单</b>。`)}
   <div class="card"><div class="card-hd"><h3>售后订单</h3><span class="sub">仅「已收货」订单可发起（已完成不可售后）· 待平台判责 ${pend} · 补货 ${DB.afterSales.filter(a=>a.type=='补货').length} · 共 ${DB.afterSales.length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>工单号</th><th>退款单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>金额</th><th>判责/状态</th><th>操作</th></tr></thead><tbody>
     ${DB.afterSales.map((a,i)=>`<tr>
-      <td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>
+      <td class="mono" style="white-space:nowrap">${a.id}</td><td class="mono" style="white-space:nowrap">${refundNoCell(a)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td>
       <td><span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></td>
       <td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td>
       <td>${afterAmtCell(a)}</td>
@@ -3654,6 +3654,21 @@ function afterAmtCell(a){
   if(a.fillAmt)parts.push(`补货 ${money(a.fillAmt)}`);
   if(a.refundAmt)parts.push(`退款 ${money(a.refundAmt)}`);
   return `${money(a.amt)}<div style="font-size:11px;color:var(--ts);margin-top:2px">${parts.join(' ＋ ')}</div>`;
+}
+/* 退款单号：仅【实际向客户发生退款】的售后单才有——退款不退货 / 退货退款判非买家责、
+   以及补货类中「自营不足转差额退款」的部分。全额补发、安抚、备注、补券类均无退款动作，显示「—」。
+   待判责期间退款尚未发起，也无单号。线上契约暂无此字段（contracts/aftersale.ts 仅 refundAmount），待研发新增。 */
+function refundNoReason(a){
+  if(a.refundNo)return '';
+  if(a.status=='pending'||a.status=='appealing')return '判责完成后发起退款时生成';
+  if(a.type=='补货')return '自营全额补发，未向客户退款';
+  if(a.liable=='买家'||a.liable=='用户')return '判用户责·驳回，未退款';
+  return '本单无退款动作';
+}
+function refundNoCell(a){
+  if(a.refundNo)return a.refundNo;
+  const r=refundNoReason(a);
+  return `<span style="color:var(--tt)" title="${r}">—</span>`;
 }
 function afterStatus(a){
   if(a.status=='pending')return '<span class="tag t-y"><span class="dot"></span>平台判责中</span>';
@@ -4728,6 +4743,7 @@ function act_afterDetail(i){const a=DB.afterSales[i];
       ${kv('发起时效',a.age)}
       ${kv('商品',a.item)}
       ${kv('金额',afterAmtCell(a))}
+      ${kv('退款单号',a.refundNo?`<span class="mono">${a.refundNo}</span>`:`<span style="color:var(--tt)">—</span><span style="font-size:12px;color:var(--ts);margin-left:6px">${refundNoReason(a)}</span>`)}
     </div>
     <div style="margin-bottom:20px">${kv('申请原因',a.reason)}</div>
 
