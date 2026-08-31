@@ -246,18 +246,14 @@ function dvCutoff(d){
   if(prev){const [hh,mm]=end.split(':').map(Number);const c=new Date(prev.js);c.setHours(hh||0,mm||0,0,0);passed=Date.now()>=c.getTime();}
   return {at,wd,end,passed};
 }
-// 打印纸上的商品明细：按 SKU 聚合
-function dvPrintItems(d){
-  const map={};
-  (d.labels||[]).forEach(p=>{const k=p.code+'|'+p.name+'|'+p.unit;
-    if(!map[k])map[k]={code:p.code,name:p.name,unit:p.unit,qty:0,tags:0};
-    map[k].qty+=(p.qty||0); map[k].tags++;});
-  return Object.values(map);
-}
+// 打印纸商品明细：复用既有 dvSku(d)（已覆盖 demoLines 与 labels 两种来源）。
+// ⚠️ 不要单独从 d.labels 聚合：部分单的 labels 只是标签张数占位，无商品名/数量。
 function dvPrint(d){
   const cf=dvCutoff(d);
   if(!cf.passed){toast(`未到营业截单时间（${cf.at}），送货单内容可能还会变动，暂不可打印`);return;}
-  const items=dvPrintItems(d), totalQty=items.reduce((a,x)=>a+x.qty,0), tags=(d.labels||[]).length;
+  const items=dvSku(d), totalQty=items.reduce((a,x)=>a+(+x.qty||0),0), tags=(d.labels||[]).length;
+  // dvSku 的 code 是【标签码】(LBL-<订单后5位>-<SKU后4位>)，打印纸要的是 SKU 编码，与 PC 保持一致
+  const skuOf=x=>{const m=String(x.code||'').match(/(\d{4})$/);return m?('SKU'+m[1]):(x.code||'—');};
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const printedAt=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const row=(k,v)=>`<div style="display:flex;padding:6px 0;border-bottom:1px solid #EEE;font-size:12.5px"><span style="width:82px;color:#666;flex:0 0 82px">${k}</span><span style="font-weight:600;color:#111">${v}</span></div>`;
@@ -285,15 +281,15 @@ function dvPrint(d){
         <div style="font-size:12.5px;font-weight:700;margin:16px 0 6px">商品明细</div>
         <table style="width:100%;font-size:11.5px;border-collapse:collapse">
           <thead><tr style="background:#F3F4F6">
-            <th style="text-align:left;padding:5px 6px;border:1px solid #ddd">SKU</th>
-            <th style="text-align:left;padding:5px 6px;border:1px solid #ddd">商品</th>
-            <th style="text-align:right;padding:5px 6px;border:1px solid #ddd">数量</th>
+            <th style="text-align:left;padding:5px 6px;border:1px solid #ddd">SKU 编码</th>
+            <th style="text-align:left;padding:5px 6px;border:1px solid #ddd">商品名称</th>
+            <th style="text-align:right;padding:5px 6px;border:1px solid #ddd;width:76px">送货数量</th>
           </tr></thead>
           <tbody>${items.length?items.map(x=>`<tr>
-            <td style="padding:5px 6px;border:1px solid #ddd;font-family:monospace">${x.code}</td>
-            <td style="padding:5px 6px;border:1px solid #ddd">${x.name}</td>
-            <td style="padding:5px 6px;border:1px solid #ddd;text-align:right">${x.qty} ${x.unit}</td>
-          </tr>`).join(''):`<tr><td colspan="3" style="padding:12px;border:1px solid #ddd;text-align:center;color:#888">暂无标签明细</td></tr>`}
+            <td style="padding:5px 6px;border:1px solid #ddd;font-family:monospace">${skuOf(x)}</td>
+            <td style="padding:5px 6px;border:1px solid #ddd">${x.name||'—'}</td>
+            <td style="padding:5px 6px;border:1px solid #ddd;text-align:right"><b>${x.qty}</b> ${x.unit||'件'}</td>
+          </tr>`).join(''):`<tr><td colspan="3" style="padding:12px;border:1px solid #ddd;text-align:center;color:#888">暂无商品明细</td></tr>`}
           <tr style="background:#FAFAFA;font-weight:700"><td colspan="2" style="padding:5px 6px;border:1px solid #ddd">合计</td><td style="padding:5px 6px;border:1px solid #ddd;text-align:right">${totalQty}</td></tr>
           </tbody>
         </table>
