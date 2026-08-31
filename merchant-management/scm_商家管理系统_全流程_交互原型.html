@@ -1092,6 +1092,7 @@ const NAV={
     {id:'m-pick-group',ic:'📦',t:'备货管理',p1:1,children:[
       {id:'m-pick-ref',ic:'📊',t:'备货参考'},
       {id:'m-presend',ic:'📈',t:'预送确认',badge:()=>typeof presendPending=='function'?presendPending():0,by:'y'},
+      {id:'m-presend-recon',ic:'📊',t:'送货复盘'},
       {id:'m-pick-weigh',ic:'⚖️',t:'称重录入',badge:()=>typeof weighPending=='function'?weighPending():0},
       {id:'m-pick-label',ic:'🏷️',t:'打印标签',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
     ]},
@@ -4823,6 +4824,6 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260821d"></script>
-<script src="pc-modules/presend.js?v=20260831a"></script>
+<script src="pc-modules/presend.js?v=20260831b"></script>
 </body>
 </html>

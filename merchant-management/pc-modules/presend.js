@@ -352,4 +352,149 @@
       </tr></thead><tbody>${body}</tbody>
     </table></div></div></div>`;
   };
+
+  /* ---------- 送货复盘（日结：今天送多/送少 → 明天送多少） ---------- */
+  window.ensurePresendRecon=function(){
+    ensurePresend();
+    if(DB.presendRecon)return;
+    DB.presendReconTab='all';DB.presendReconF={};
+    DB.presendReconDate='2026-08-30';
+    DB.presendRecon=DB.presend.map(r=>{
+      const ps=finalQty(r);
+      const planned=r.orderQty+ps;                                  // 应送 = 订单量 + 预送量
+      // 商家实际送达：约 1/5 少送（BR-16 按实收计）
+      const shortHit=hnum(r.sku+r.wh+'ss',10)<2;
+      const received=shortHit?Math.max(r.orderQty,planned-(2+hnum(r.sku+'sd',5))):planned;
+      // T0 后真实需求（围绕预送量波动 50%–160%）——大于预送量即卖爆、小于即留仓
+      const realAfter=Math.round(ps*(0.55+hnum(r.sku+r.wh+'ra',80)/100));
+      const demand=r.orderQty+realAfter;                            // 当日真实总需求
+      const sold=Math.min(received,demand);
+      const leftover=received-sold;
+      const missed=Math.max(0,demand-received);                     // 没接住的需求（送少了的代价）
+      // 售罄时点：按已售占 T0 后可售的进度折算到 16:00–22:00
+      let soldOutAt='';
+      if(missed>0){
+        const avail=Math.max(1,received-r.orderQty);
+        const h=16+Math.min(5.9,avail/Math.max(1,realAfter)*6);
+        soldOutAt=`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.round(h%1*60/10)*10%60).padStart(2,'0')}`;
+      }
+      const nextOrderNeed=Math.max(2,Math.round(r.orderQty*(0.7+hnum(r.sku+r.wh+'no',70)/100)));
+      const nextFcst=Math.max(2,Math.round(ps*(0.7+hnum(r.sku+r.wh+'nf',70)/100)));
+      const nextShould=Math.max(0,nextOrderNeed+nextFcst-leftover);
+      const result=missed>0?'short':(leftover>0?'over':'fit');
+      return {sku:r.sku,name:r.name,unit:r.unit,spec:r.spec,wh:r.wh,
+        orderQty:r.orderQty,psQty:ps,planned,received,shortSend:planned-received,
+        demand,sold,leftover,missed,soldOutAt,
+        nextOrderNeed,nextFcst,nextShould,result};
+    });
+  };
+  function rcRows(){
+    const f=DB.presendReconF||{},tab=DB.presendReconTab;
+    return DB.presendRecon.filter(r=>{
+      if(tab!='all'&&r.result!=tab)return false;
+      if(f.wh&&r.wh!=f.wh)return false;
+      if(f.kw&&!(r.name.includes(f.kw)||r.sku.includes(f.kw)))return false;
+      return true;
+    });
+  }
+  function rcTag(r){
+    const m={over:['t-y','送多了'],short:['t-r','送少了'],fit:['t-g','刚好']}[r.result];
+    return `<span class="tag ${m[0]}"><span class="dot"></span>${m[1]}</span>`;
+  }
+  window.rcTabTo=function(k){DB.presendReconTab=k;render();};
+  window.rcFilter=function(k,v){DB.presendReconF=DB.presendReconF||{};DB.presendReconF[k]=v;render();};
+  window.rcReset=function(){DB.presendReconF={};render();};
+  window.rcDrawer=function(key){
+    const[sku,wh]=key.split('|');const r=DB.presendRecon.find(x=>x.sku==sku&&x.wh==wh);if(!r)return;
+    const line=(k,v,hl)=>`<tr><td style="width:46%;color:var(--ts)">${k}</td><td${hl?' style="font-weight:600"':''}>${v}</td></tr>`;
+    drawer(`<div class="drawer-hd"><div><h3>${r.name} <span class="mono" style="font-size:12.5px;color:var(--ts)">${r.sku}</span></h3>
+      <div style="margin-top:4px">${rcTag(r)} <span class="sub" style="font-size:12px">${r.wh} · ${DB.presendReconDate}</span></div></div>
+      <span class="x" onclick="closeDrawer()">×</span></div>
+    <div class="drawer-bd">
+      <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">当天这批货去哪了</h4>
+      <table class="subtbl" style="margin-bottom:22px"><tbody>
+        ${line('应送（订单 '+r.orderQty+' + 预送 '+r.psQty+'）',r.planned+' '+r.unit,1)}
+        ${line('实际送达',r.received+' '+r.unit+(r.shortSend>0?` <span style="color:var(--r)">少送 ${r.shortSend}</span>`:''))}
+        ${line('当日真实需求',r.demand+' '+r.unit)}
+        ${line('实际卖出',r.sold+' '+r.unit,1)}
+        ${line('卖剩留仓',r.leftover>0?`<span style="color:var(--y)">${r.leftover} ${r.unit}</span>`:'0')}
+        ${line('没接住的需求',r.missed>0?`<span style="color:var(--r)">${r.missed} ${r.unit}</span>（${r.soldOutAt} 售罄）`:'0')}
+      </tbody></table>
+
+      <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">${r.result=='over'?'为什么送多了':r.result=='short'?'为什么送少了':'昨天送得刚好'}</h4>
+      <div class="ib ${r.result=='over'?'ib-y':r.result=='short'?'ib-r':'ib-g'}" style="margin-bottom:22px"><span class="i">${icon(r.result=='short'?'⚠️':'📈')}</span><div>
+        ${r.result=='over'
+          ? `预送 ${r.psQty} ${r.unit}，${DB.presendCfg.t0} 后实际只卖出 ${r.demand-r.orderQty} ${r.unit}，多送的 <b>${r.leftover} ${r.unit}</b> 留在仓里，<b>已自动抵扣今日应送量</b>，不用重复送。`
+          : r.result=='short'
+          ? `${DB.presendCfg.t0} 后实际需求 ${r.demand-r.orderQty} ${r.unit}，超过当时可卖的量，<b>${r.soldOutAt} 就售罄</b>，少接了 <b>${r.missed} ${r.unit}</b> 的单。${r.shortSend>0?`其中 ${r.shortSend} ${r.unit} 是你当天没送足。`:'预送量本身给少了，算法会据此修正。'}`
+          : `送达 ${r.received} ${r.unit}、卖出 ${r.sold} ${r.unit}，既没压货也没断货。`}
+      </div></div>
+
+      <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">那今天该送多少</h4>
+      <table class="subtbl"><tbody>
+        ${line('今日订单需求',r.nextOrderNeed+' '+r.unit)}
+        ${line('今日预送量（算法）','+ '+r.nextFcst+' '+r.unit)}
+        ${line('减去在仓剩余','− '+r.leftover+' '+r.unit)}
+        <tr><td style="color:var(--ts)"><b>今日应送</b></td><td><b style="color:var(--g);font-size:16px">${r.nextShould}</b> ${r.unit}${r.nextShould==0?' <span style="color:var(--ts);font-size:12px">（在仓货已够，今日免送）</span>':''}</td></tr>
+      </tbody></table>
+    </div>
+    <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="closeDrawer();nav('m-pick-label')">去打印标签</button></div>`);
+  };
+
+  PAGES['m-presend-recon']=()=>{
+    ensurePresendRecon();
+    const rows=rcRows(),f=DB.presendReconF||{},tab=DB.presendReconTab;
+    const cnt=k=>DB.presendRecon.filter(r=>k=='all'||r.result==k).length;
+    const body=rows.length?rows.map(r=>{
+      const key=r.sku+'|'+r.wh;
+      return `<tr onclick="rcDrawer('${key}')" style="cursor:pointer">
+        <td><b style="font-weight:600">${r.name}</b><div style="font-size:11px;color:var(--ts)" class="mono">${r.sku}</div></td>
+        <td>${r.wh}</td>
+        <td style="text-align:right">${r.planned} <span style="color:var(--ts)">${r.unit}</span>
+          <div style="font-size:11px;color:var(--ts)">订单 ${r.orderQty} · <span style="color:var(--gold)">预送 ${r.psQty}</span></div></td>
+        <td style="text-align:right">${r.received}${r.shortSend>0?`<div style="font-size:11px;color:var(--r)">少送 ${r.shortSend}</div>`:''}</td>
+        <td style="text-align:right;color:var(--ts)">${r.sold}</td>
+        <td style="text-align:right">${r.leftover>0?`<span style="color:var(--y)">${r.leftover}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
+        <td style="text-align:right">${r.missed>0?`<span style="color:var(--r)">${r.missed}</span><div style="font-size:11px;color:var(--tt)">${r.soldOutAt} 售罄</div>`:'<span style="color:var(--tt)">—</span>'}</td>
+        <td>${rcTag(r)}</td>
+        <td style="text-align:right"><b style="color:var(--g)">${r.nextShould}</b> <span style="color:var(--ts)">${r.unit}</span>${r.nextShould==0?'<div style="font-size:11px;color:var(--g)">今日免送</div>':''}</td>
+      </tr>`;}).join('')
+      : `<tr><td colspan="9"><div class="empty"><div class="e-ic">${icon('📊')}</div><div class="e-t">当前筛选下无复盘记录</div><div class="e-s">换个仓库或结果类型再看看</div></div></td></tr>`;
+
+    return `
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">${icon('📊')}</span><div>
+      <b>送货复盘</b>：看昨天送的货<b>送多了还是送少了</b>，以及<b>今天该送多少</b>。
+      送多了 → 卖剩的留仓，<b>自动抵扣今日应送量</b>；送少了 → 提前售罄、少接的单在这里能看到，算法会据此修正后续预送量。
+      <b>今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余</b>。</div></div>
+
+    <div class="tabs" style="margin-bottom:12px">
+      ${[['all','全部'],['over','送多了'],['short','送少了'],['fit','刚好']]
+        .map(([k,t])=>`<div class="tab ${tab==k?'active':''}" onclick="rcTabTo('${k}')">${t} (${cnt(k)})</div>`).join('')}
+    </div>
+
+    <div class="card"><div class="card-hd">
+      <div class="row" style="gap:10px;align-items:center">
+        <span style="font-size:12.5px;color:var(--ts)">送货日</span>
+        <select style="width:150px"><option>${DB.presendReconDate}</option></select>
+        <select style="width:130px" onchange="rcFilter('wh',this.value)">
+          <option value="">全部仓库</option>${WHS.map(w=>`<option ${f.wh==w?'selected':''}>${w}</option>`).join('')}
+        </select>
+        <input style="width:180px" placeholder="商品名称 / SKU" value="${f.kw||''}" oninput="DB.presendReconF.kw=this.value" onchange="render()">
+        <button class="btn btn-o btn-sm" onclick="rcReset()">重置</button>
+      </div>
+      <div class="row" style="gap:8px">
+        <button class="btn btn-o btn-sm" onclick="toast('已导出送货复盘.xlsx','ok')">导出</button>
+        <button class="btn btn-p btn-sm" onclick="nav('m-pick-label')">去打印今日标签</button>
+      </div>
+    </div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr>
+        <th>商品</th><th>入库仓库</th>
+        <th style="text-align:right">应送</th><th style="text-align:right">实际送达</th><th style="text-align:right">卖出</th>
+        <th style="text-align:right">卖剩留仓</th><th style="text-align:right">没接住</th><th>结果</th>
+        <th style="text-align:right">今日应送</th>
+      </tr></thead><tbody>${body}</tbody>
+    </table></div></div></div>`;
+  };
+
 })();
