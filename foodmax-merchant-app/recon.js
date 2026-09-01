@@ -45,6 +45,25 @@ css.textContent=`
 .rc-row .stt{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:8px;background:#EAF1FF;color:#2563EB;margin-top:6px;}
 .rc-empty{margin:24px 16px;text-align:center;color:var(--sub);font-size:12.5px;line-height:1.7;}
 .rc-note{margin:6px 16px 24px;font-size:11.5px;color:var(--sub);line-height:1.6;}
+/* 多选批量导出：勾选圈常驻在卡片上，不做"长按才进多选" */
+.rc-bar{display:flex;align-items:center;gap:10px;margin:0 16px 12px;background:#fff;border-radius:14px;padding:10px 14px;box-shadow:var(--sh-sm);}
+.rc-bar .all{font-size:12.5px;font-weight:700;color:var(--emerald-2);min-height:24px;line-height:24px;}
+.rc-bar .cnt{flex:1;font-size:12px;color:var(--sub);}
+.rc-bar .cnt b{color:#27433A;}
+.rc-bar .exp{flex:0 0 auto;min-height:34px;padding:0 15px;border:none;border-radius:12px;background:var(--emerald-2);color:#fff;font-size:12.5px;font-weight:700;}
+.rc-bar .exp.off{background:var(--muted);color:var(--sub);}
+.rc-ck{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:1.6px solid var(--line);display:flex;align-items:center;justify-content:center;margin-right:2px;}
+.rc-ck.on{background:var(--emerald-2);border-color:var(--emerald-2);}
+.rc-ck.on::after{content:'';width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px);}
+.rc-card.sel{box-shadow:0 0 0 1.5px var(--emerald-2),var(--sh-sm);}
+.rc-exp-row{display:flex;align-items:center;gap:11px;background:#fff;margin:0 16px 10px;border-radius:16px;padding:13px 15px;box-shadow:var(--sh-sm);}
+.rc-exp-row .tx{flex:1;}
+.rc-exp-row .t{font-size:13.5px;font-weight:700;color:#27433A;}
+.rc-exp-row .s{font-size:11.5px;color:var(--sub);margin-top:3px;}
+.rc-exp-row .n{font-size:13px;font-weight:700;color:#27433A;font-family:'Lora',serif;}
+.rc-exp-row.off{opacity:.5;}
+.rc-exp-hd{margin:14px 16px 8px;font-size:12px;font-weight:700;color:var(--sub);}
+.rc-exp-tip{margin:10px 16px 20px;font-size:11.5px;line-height:1.6;border-radius:12px;padding:9px 12px;background:var(--amber-soft);color:#B45309;}
 `;
 document.head.appendChild(css);
 
@@ -107,6 +126,25 @@ const supN=s=>s.qty*s.price, supG=s=>s.qty*s.price*(1+GST/100);
 const dSup=d=>sum(d.supply||[],supG);
 const ordersOf=d=>[...new Set(d.lines.flatMap(l=>l.byOrder.map(o=>o[0])))];
 
+/* ---------- 多选批量导出（与 PC「财务 › 对账单」同口径，改一端记得同步另一端） ----------
+   导出结构对齐《商家端对账单与结算单统一导出模板》(飞书 wiki AwbawWyD9i2s6jkFrF5cYBPwnid)：
+   6 张平表，每张前置「结算单号/结算周期/结算状态」，Sheet1-4 另前置「送货单号/送货日期/入库仓库」；
+   正逆向分表、表内不做减法；逆向只收商家责任且金额负向展示；补货与耗材独立结算，只挂结算单号。
+   多选后一次导出一个 Excel 文件、多 Sheet；> 5000 行走异步，完成后站内信推送下载链接。 */
+const EXP_ASYNC=5000;
+const EXP_SHEETS=[
+  {k:'sku', n:'SKU汇总明细',           g:'送货单号 + SKU编码 + 未税单价',   f:d=>d.lines.length},
+  {k:'skuR',n:'SKU汇总明细【逆向】',    g:'同上（仅商家责任售后）',          f:d=>new Set((d.after||[]).map(x=>x.sku)).size},
+  {k:'ord', n:'订单级商品明细',         g:'送货单号 + 订单号 + SKU编码',     f:d=>d.lines.reduce((a,l)=>a+l.byOrder.length,0)},
+  {k:'ordR',n:'订单级商品明细【逆向】',  g:'售后单号 + SKU编码（仅商家责任）', f:d=>(d.after||[]).length},
+  {k:'rpl', n:'自营补货商品明细',       g:'补采单号 + 商品编码 + 子单号',     f:d=>(d.repl||[]).length},
+  {k:'sup', n:'耗材采购商品明细',       g:'耗材送货单号 + 耗材编码',          f:d=>(d.supply||[]).length},
+];
+let RC_SEL=[];                                  // 已勾选的送货单号
+let RC_EXP=EXP_SHEETS.map(x=>x.k);              // 勾选的 Sheet，默认全选
+let RC_DRAW=null;                               // 列表重绘句柄（导出完成后回列表刷新勾选态）
+const expRows=(ds,keys)=>EXP_SHEETS.filter(x=>keys.includes(x.k)).reduce((a,x)=>a+ds.reduce((b,d)=>b+x.f(d),0),0);
+
 function openRecon(){
   const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
   const T=f=>rows.reduce((a,d)=>a+f(d),0);
@@ -126,14 +164,22 @@ function openRecon(){
     </div>
     <div id="rcl">${skel(3)}</div>`,
     mount:(p)=>{
-      setTimeout(()=>{
+      const draw=()=>{
         const box=p.querySelector('#rcl');if(!box)return;
-        box.innerHTML=`<div class="rc-list">${rows.map(d=>{
-          const os=ordersOf(d),ex=[];
+        RC_SEL=RC_SEL.filter(no=>rows.some(r=>r.no==no));
+        const selRows=rows.filter(r=>RC_SEL.includes(r.no));
+        const allSel=rows.length&&selRows.length==rows.length;
+        box.innerHTML=`<div class="rc-bar">
+          <span class="all" id="rc-all">${allSel?'取消全选':'全选'}</span>
+          <span class="cnt">${selRows.length?`已选 <b>${selRows.length}</b> 张 · 预计 <b>${expRows(selRows,RC_EXP)}</b> 行`:`共 <b>${rows.length}</b> 张 · 勾选后可导出`}</span>
+          <button class="exp ${selRows.length?'':'off'}" id="rc-exp">导出所选${selRows.length?` (${selRows.length})`:''}</button>
+        </div>
+        <div class="rc-list">${rows.map(d=>{
+          const os=ordersOf(d),ex=[];const sel=RC_SEL.includes(d.no);
           if(dRpl(d))ex.push(`自营补货 ${S(dRpl(d))}`);
           if(dSup(d))ex.push(`耗材订单 ${S(dSup(d))}`);
-          return `<div class="rc-card" data-no="${d.no}">
-            <div class="r1"><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
+          return `<div class="rc-card ${sel?'sel':''}" data-no="${d.no}">
+            <div class="r1"><span class="rc-ck ${sel?'on':''}" data-ck="${d.no}"></span><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
             <div class="meta">${d.date} · ${os.length} 个订单 · ${d.lines.length} 个 SKU${(d.after||[]).length?` · 售后 ${(d.after||[]).length} 笔`:''}</div>
             <div class="r2">
               <div class="g"><div class="k">实发金额（含税）</div><div class="v">${S(dRealG(d))}</div></div>
@@ -142,7 +188,49 @@ function openRecon(){
             ${ex.length?`<div class="extra">另行结算：${ex.join(' · ')}，不并入当日结算，付款时轧差</div>`:''}
           </div>`;}).join('')}</div>`;
         box.querySelectorAll('.rc-card').forEach(c=>c.onclick=()=>openReconDetail(c.dataset.no));
-      },420);
+        box.querySelectorAll('.rc-ck').forEach(el=>el.onclick=e=>{
+          e.stopPropagation();const no=el.dataset.ck;const i=RC_SEL.indexOf(no);
+          if(i<0)RC_SEL.push(no);else RC_SEL.splice(i,1);draw();});
+        box.querySelector('#rc-all').onclick=()=>{RC_SEL=allSel?[]:rows.map(r=>r.no);draw();};
+        box.querySelector('#rc-exp').onclick=()=>openReconExport(rows);
+      };
+      RC_DRAW=draw;setTimeout(draw,420);
+    }});
+}
+
+/* 导出对账单：选单（列表页已选）+ 选 Sheet + 预计行数，确认后一个 Excel 多 Sheet */
+function openReconExport(rows){
+  const targets=rows.filter(r=>RC_SEL.includes(r.no));      // 导出范围 = 勾选，日期筛选不参与
+  if(!targets.length){toast('请先勾选要导出的对账单');return;}
+  pushPage({title:'导出对账单',
+    body:`<div id="rc-exp-body"></div>`,
+    footer:`<button class="btn primary" id="rc-exp-go">确认导出</button>`,
+    mount:(p)=>{
+      const box=p.querySelector('#rc-exp-body'),go=p.querySelector('#rc-exp-go');
+      const draw=()=>{
+        const total=expRows(targets,RC_EXP);
+        box.innerHTML=`
+        <div class="rc-exp-hd">导出范围 · 已勾选 ${targets.length} 张</div>
+        ${targets.map(t=>`<div class="rc-exp-row"><div class="tx"><div class="t">${t.no}</div><div class="s">${t.date} · ${t.wh} · ${ordersOf(t).length} 个订单</div></div><div class="n">${S(dSettle(t))}</div></div>`).join('')}
+        <div class="rc-exp-hd">导出内容（Sheet）</div>
+        ${EXP_SHEETS.map(x=>{const n=targets.reduce((a,d)=>a+x.f(d),0);const on=RC_EXP.includes(x.k);
+          return `<div class="rc-exp-row ${on?'':'off'}" data-sh="${x.k}"><span class="rc-ck ${on?'on':''}"></span><div class="tx"><div class="t">${x.n}</div><div class="s">${x.g}</div></div><div class="n">${n?n+' 行':'0 行'}</div></div>`;}).join('')}
+        <div class="rc-exp-row"><div class="tx"><div class="t">合计</div><div class="s">${RC_EXP.length} 张 Sheet · 一个 Excel 文件</div></div><div class="n">${total} 行</div></div>
+        ${total>EXP_ASYNC?`<div class="rc-exp-tip">预计 ${total} 行，超过 ${EXP_ASYNC} 行将转为异步导出，完成后站内信推送下载链接。</div>`
+          :`<div class="rc-exp-tip">送货单与结算单通过订单号关联，每张表同时带结算单号与送货单号；分组列逐行重复、不合并单元格。</div>`}`;
+        box.querySelectorAll('[data-sh]').forEach(el=>el.onclick=()=>{
+          const k=el.dataset.sh,i=RC_EXP.indexOf(k);
+          if(i<0)RC_EXP.push(k);else RC_EXP.splice(i,1);draw();});
+        go.disabled=!RC_EXP.length;
+        go.textContent=RC_EXP.length?`确认导出（${targets.length} 张 / ${total} 行）`:'请至少选一个 Sheet';
+      };
+      draw();RC_DRAW&&0;
+      go.onclick=()=>{
+        if(!RC_EXP.length)return;
+        const total=expRows(targets,RC_EXP);
+        popPage();RC_SEL=[];RC_DRAW&&RC_DRAW();
+        toast(total>EXP_ASYNC?`已提交异步导出：${targets.length} 张 / ${total} 行`:`已导出 ${targets.length} 张对账单（${total} 行）`);
+      };
     }});
 }
 

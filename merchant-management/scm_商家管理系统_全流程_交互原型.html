@@ -698,6 +698,8 @@ const DB = {
   // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
   billSel:[],                     // 对账结算·已勾选待导出的结算单号
+  rcSel:[],                       // 对账单·已勾选待导出的送货单号（支持多选批量导出）
+  rcExpSheets:null,               // 对账单导出·勾选的 Sheet（null=默认全选，见 RC_SHEETS）
   // 结算（第一期：账单生成即默认商家已确认，直接待付款。绿鲜源处免佣期 freeUntil 2026-09-25 → 抽佣两项=0，net=gross−逆向）
   bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'confirmed', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
     items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]},
@@ -2985,10 +2987,15 @@ const rcPct=v=>(v||0).toFixed(1)+'%';
 PAGES['m-recon']=()=>{
   const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
   const T=f=>rows.reduce((a,d)=>a+f(d),0);
+  DB.rcSel=(DB.rcSel||[]).filter(no=>rows.some(r=>r.no==no));   // 清理已不存在的勾选
+  const allSel=rows.length&&rows.every(r=>DB.rcSel.includes(r.no));
+  const selRows=rows.filter(r=>DB.rcSel.includes(r.no));
+  const selSettle=selRows.reduce((a,d)=>a+dSettle(d),0);
+  const selLines=rcExpRows(selRows,RC_SHEETS.map(x=>x.k));
   return `
   <div class="card"><div class="card-bd" style="padding:12px 20px"><div class="row" style="gap:10px;align-items:center">
     <select style="max-width:190px"><option>近 7 天（06-29 – 07-01）</option><option>近 30 天</option><option>自定义区间</option></select>
-    <button class="btn btn-o" style="margin-left:auto" onclick="toast('已导出对账明细（Excel）','ok')">⬇️ 导出明细</button>
+    <button class="btn btn-p" style="margin-left:auto" ${DB.rcSel.length?'':'disabled'} title="${DB.rcSel.length?'':'请先勾选要导出的对账单'}" onclick="act_exportRecon()">⬇️ 导出所选${DB.rcSel.length?` (${DB.rcSel.length})`:''}</button>
   </div></div></div>
   <div class="card"><div class="card-bd"><div class="kv" style="grid-template-columns:repeat(3,1fr)">
     <div><div class="k">实发金额（含税）</div><div class="v">${money(T(dRealG))}</div></div>
@@ -2999,8 +3006,9 @@ PAGES['m-recon']=()=>{
     <div><div class="k">另行结算：平台补采 / 缺货罚款 / 耗材</div><div class="v" style="font-size:13px">${rcNeg(T(dRpl))} / ${rcNeg(T(dFine))} / ${rcNeg(T(dSup))}<div style="font-size:11px;color:var(--ts);font-weight:400">不并入结算，付款层轧差</div></div></div>
   </div></div></div>
   <div class="card"><div class="card-hd"><h3>对账单列表</h3><span class="sub">每日一张 · 共 ${rows.length} 张 · 数据源：财务结算单明细</span></div>
+  ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 当日结算合计 <b style="color:var(--gd)">${money(selSettle)}</b> · 预计导出 <b>${selLines}</b> 行</span><button class="btn btn-p btn-sm" onclick="act_exportRecon()">⬇️ 导出所选</button><button class="btn btn-link" style="margin-left:auto" onclick="DB.rcSel=[];render()">取消选择</button></div>`:''}
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>送货单号</th><th>送货日期</th><th>入库仓库</th><th>关联订单</th><th>SKU 数</th>
+    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选" ${allSel?'checked':''} onclick="selAllRecon()"></th><th>送货单号</th><th>送货日期</th><th>入库仓库</th><th>关联订单</th><th>SKU 数</th>
       <th style="text-align:right">实发金额<br><span style="font-weight:400;color:var(--ts)">未税</span></th>
       <th style="text-align:right">实发金额<br><span style="font-weight:400;color:var(--ts)">含税</span></th>
       <th style="text-align:right">商家补贴</th>
@@ -3012,6 +3020,7 @@ PAGES['m-recon']=()=>{
       <th style="text-align:right" title="另行结算，不并入当日结算">耗材订单</th>
       <th>操作</th></tr></thead><tbody>
     ${rows.map(d=>{const os=rcOrders(d);return `<tr>
+      <td><input type="checkbox" class="skuchk" ${DB.rcSel.includes(d.no)?'checked':''} onclick="toggleReconSel('${d.no}')"></td>
       <td class="mono">${d.no}</td><td>${d.date}</td><td>${d.wh}</td>
       <td>${os.length} 单<div style="font-size:11px;color:var(--ts)">${os.join('、')}</div></td>
       <td>${d.lines.length}</td>
@@ -3027,6 +3036,58 @@ PAGES['m-recon']=()=>{
       <td><button class="btn btn-o btn-sm" onclick="act_reconDetail('${d.no}')">详情</button></td></tr>`;}).join('')}
     </tbody></table></div></div></div>`;
 };
+/* ---------- 对账单 · 多选批量导出 ----------
+   导出结构对齐《商家端对账单与结算单统一导出模板》(飞书 wiki AwbawWyD9i2s6jkFrF5cYBPwnid)：
+   6 张平表，每张前置「结算单号/结算周期/结算状态」，Sheet1-4 另前置「送货单号/送货日期/入库仓库」；
+   正逆向分表、表内不做减法；逆向只收商家责任且金额负向展示；补货与耗材独立结算，只挂结算单号。
+   多选后一次导出一个 Excel 文件、多 Sheet；分组列逐行重复、不合并单元格；> 5000 行走异步。 */
+const RC_EXP_ASYNC=5000;
+const RC_SHEETS=[
+  {k:'sku', n:'SKU汇总明细',          g:'送货单号 + SKU编码 + 未税单价', f:d=>d.lines.length},
+  {k:'skuR',n:'SKU汇总明细【逆向】',   g:'同上（仅商家责任售后）',        f:d=>new Set((d.after||[]).map(x=>x.sku)).size},
+  {k:'ord', n:'订单级商品明细',        g:'送货单号 + 订单号 + SKU编码',   f:d=>d.lines.reduce((a,l)=>a+l.byOrder.length,0)},
+  {k:'ordR',n:'订单级商品明细【逆向】', g:'售后单号 + SKU编码（仅商家责任）',f:d=>(d.after||[]).length},
+  {k:'rpl', n:'自营补货商品明细',      g:'补采单号 + 商品编码 + 子单号',   f:d=>(d.repl||[]).length},
+  {k:'sup', n:'耗材采购商品明细',      g:'耗材送货单号 + 耗材编码',        f:d=>(d.supply||[]).length},
+];
+const rcExpSel=()=>DB.rcExpSheets||RC_SHEETS.map(x=>x.k);
+const rcExpRows=(ds,keys)=>RC_SHEETS.filter(x=>keys.includes(x.k)).reduce((a,x)=>a+ds.reduce((b,d)=>b+x.f(d),0),0);
+function toggleReconSel(no){const k=DB.rcSel.indexOf(no);if(k<0)DB.rcSel.push(no);else DB.rcSel.splice(k,1);render();}
+function selAllRecon(){const nos=RECON.map(r=>r.no);const all=nos.length&&nos.every(n=>DB.rcSel.includes(n));DB.rcSel=all?[]:nos.slice();render();}
+function toggleRcSheet(k){const cur=rcExpSel().slice();const i=cur.indexOf(k);if(i<0)cur.push(k);else cur.splice(i,1);DB.rcExpSheets=cur;act_exportRecon();}
+function act_exportRecon(){
+  const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
+  const targets=rows.filter(r=>DB.rcSel.includes(r.no));      // 导出范围 = 勾选，日期筛选不参与
+  if(!targets.length){toast('请先勾选要导出的对账单','info');return;}
+  const keys=rcExpSel();
+  const total=rcExpRows(targets,keys);
+  const settle=targets.reduce((a,d)=>a+dSettle(d),0);
+  modal(`<div class="mc-hd"><h3>⬇️ 导出对账单</h3><p>按《对账单与结算单统一导出模板》导出，一个 Excel 文件多 Sheet；分组列逐行重复、不合并单元格</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="ib ib-b"><span class="i">ℹ️</span>将导出已勾选的 <b>${targets.length}</b> 张对账单。送货单与结算单通过<b>订单号</b>关联，每张表同时带结算单号与送货单号。</div>
+    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:6px 0 14px"><table style="margin:0"><thead><tr><th>送货单号（对账单号）</th><th>送货日期</th><th>入库仓库</th><th style="text-align:right">当日结算（货款）</th></tr></thead><tbody>
+      ${targets.map(t=>`<tr><td class="mono">${t.no}</td><td>${t.date}</td><td>${t.wh}</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(dSettle(t))}</td></tr>`).join('')}
+      <tr style="background:#F7FBF8"><td colspan="3" style="font-weight:600">合计 ${targets.length} 张</td><td style="text-align:right;font-weight:700;color:var(--gd)">${money(settle)}</td></tr>
+    </tbody></table></div>
+    <label class="fl" style="display:block;margin-bottom:6px">导出内容（Sheet）</label>
+    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:12px"><table style="margin:0"><thead><tr><th style="width:34px"></th><th>Sheet</th><th>粒度（主键）</th><th style="text-align:right">预计行数</th></tr></thead><tbody>
+      ${RC_SHEETS.map(x=>{const n=targets.reduce((a,d)=>a+x.f(d),0);const on=keys.includes(x.k);return `<tr style="${on?'':'opacity:.5'}">
+        <td><input type="checkbox" class="skuchk" ${on?'checked':''} onclick="toggleRcSheet('${x.k}')"></td>
+        <td>${x.n}</td><td style="color:var(--ts);font-size:12px">${x.g}</td>
+        <td style="text-align:right" class="mono">${n?n:'<span style="color:var(--tt)">0（空表）</span>'}</td></tr>`;}).join('')}
+      <tr style="background:#F7FBF8"><td colspan="3" style="font-weight:600">合计 ${keys.length} 张 Sheet</td><td style="text-align:right;font-weight:700" class="mono">${total} 行</td></tr>
+    </tbody></table></div>
+    ${total>RC_EXP_ASYNC?`<div class="ib ib-y"><span class="i">⚠️</span>预计 <b>${total}</b> 行，超过 ${RC_EXP_ASYNC} 行将转为<b>异步导出</b>，完成后站内信推送下载链接。</div>`:''}
+    ${!keys.length?`<div class="ib ib-r"><span class="i">⚠️</span>请至少勾选一个 Sheet。</div>`:''}
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" ${keys.length?'':'disabled'} onclick="doExportRecon(${targets.length},${total})">确认导出</button></div>`);
+}
+function doExportRecon(n,total){
+  const names=RC_SHEETS.filter(x=>rcExpSel().includes(x.k)).map(x=>x.n).join('、');
+  closeModal();DB.rcSel=[];render();
+  if(total>RC_EXP_ASYNC){toast(`已提交异步导出：${n} 张对账单 / ${total} 行，完成后站内信推送下载链接`,'info');}
+  else{toast(`已导出 ${n} 张对账单（${names}，共 ${total} 行）`,'ok');}
+}
 function act_reconDetail(no){
   const d=RECON.find(x=>x.no==no);if(!d)return;
   const tab=DB.rcTab||'sku';
