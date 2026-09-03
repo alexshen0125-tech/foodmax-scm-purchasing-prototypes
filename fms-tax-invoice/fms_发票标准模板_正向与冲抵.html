@@ -96,6 +96,13 @@
   tr.esum .seg.na b{color:var(--amber);font-weight:700}
   tr.esum .pay{margin-left:14px;white-space:nowrap;font-size:11.5px;color:var(--accent);font-weight:800}
   tr.esum .pay span{color:var(--sub);font-weight:600;font-size:10px;margin-right:5px}
+  tr.esum .l-comp{padding-bottom:1px}
+  tr.esum .l-gst{padding:2px 0;font-size:11px;color:var(--ink);font-weight:700;
+    border-top:1px dotted var(--line);border-bottom:1px dotted var(--line)}
+  tr.esum .l-gst b{color:var(--accent);font-size:11.5px;font-weight:800;margin-left:8px}
+  tr.esum .l-gst.na b{color:var(--amber)}
+  .doc.cn tr.esum .l-gst b{color:var(--red)}
+  tr.esum .l-pay{padding-top:2px}
 
   .sumrow{display:flex;gap:20px;align-items:flex-start;margin-top:11px;position:relative;z-index:1}
   .sumrow .note{flex:1;font-size:9.5px;color:#8a95a1;line-height:1.6}
@@ -238,13 +245,17 @@
       <tr><td>3</td><td>Coca-Cola 300ml × 24/case</td><td>1 case (24 cans)</td><td class="r">10</td><td class="r">$18.00</td><td class="r">$180.00</td></tr>
       <tr class="bcrs"><td>4</td><td><span class="fn biz">29</span>BCRS Deposit <small>· not subject to GST</small></td><td>1 can</td><td class="r">240</td><td class="r">$0.10</td><td class="r">$24.00</td></tr>
       <tr class="esum"><td colspan="6">
-        <span class="seg"><span class="fn biz">30</span>Goods <b>$570.00</b></span>
-        <span class="seg minus"><span class="fn biz">31</span>Discount <b>−$30.00</b></span>
-        <span class="seg"><span class="fn biz">32</span>Shipping <b>$20.00</b></span>
-        <span class="seg"><span class="fn mand">33</span>Sub-total Before GST <b>$560.00</b></span>
-        <span class="seg"><span class="fn mand">34</span>GST @ 9% <b>$50.40</b></span>
-        <span class="seg bcrs"><span class="fn biz">35</span>BCRS <b>$24.00</b></span>
-        <span class="pay"><span class="fn mand">36</span><span>Amount Payable</span>$634.40</span>
+        <div class="l-comp">
+          <span class="seg"><span class="fn biz">30</span>Goods <b>$570.00</b></span>
+          <span class="seg minus"><span class="fn biz">31</span>Discount <b>−$30.00</b></span>
+          <span class="seg"><span class="fn biz">32</span>Shipping <b>$20.00</b></span>
+          <span class="seg"><span class="fn mand">33</span>Sub-total Before GST <b>$560.00</b></span>
+        </div>
+        <div class="l-gst"><span class="fn mand">34</span>GST @ 9%<b>$50.40</b></div>
+        <div class="l-pay">
+          <span class="seg bcrs"><span class="fn biz">35</span>BCRS <b>$24.00</b></span>
+          <span class="pay"><span class="fn mand">36</span><span>Amount Payable</span>$634.40</span>
+        </div>
       </td></tr>
     </tbody>
 
@@ -259,9 +270,9 @@
       </td></tr>
       <tr><td>1</td><td>Chilled Sri Lankan Crab</td><td>1 piece</td><td class="r">6</td><td class="r">$23.00</td><td class="r">$138.00</td></tr>
       <tr class="esum"><td colspan="6">
-        <span class="seg">Sub-total Before GST <b>$138.00</b></span>
-        <span class="seg">GST @ 9% <b>$12.42</b></span>
-        <span class="pay"><span>Amount Payable</span>$150.42</span>
+        <div class="l-comp"><span class="seg">Sub-total Before GST <b>$138.00</b></span></div>
+        <div class="l-gst">GST @ 9%<b>$12.42</b></div>
+        <div class="l-pay"><span class="pay"><span>Amount Payable</span>$150.42</span></div>
       </td></tr>
     </tbody>
 
@@ -276,9 +287,9 @@
       </td></tr>
       <tr><td>1</td><td>Stainless Kitchen Shears</td><td>1 piece</td><td class="r">10</td><td class="r">$5.00</td><td class="r">$50.00</td></tr>
       <tr class="esum"><td colspan="6">
-        <span class="seg">Sub-total <b>$50.00</b></span>
-        <span class="seg na"><span class="fn mand">38</span>GST <b>Not applicable</b></span>
-        <span class="pay"><span>Amount Payable</span>$50.00</span>
+        <div class="l-comp"><span class="seg">Sub-total <b>$50.00</b></span></div>
+        <div class="l-gst na"><span class="fn mand">38</span>GST<b>Not applicable</b></div>
+        <div class="l-pay"><span class="pay"><span>Amount Payable</span>$50.00</span></div>
       </td></tr>
     </tbody>
   </table>
@@ -524,10 +535,12 @@
       <tr><td>1</td><td>Live Boston Lobster</td><td>1 piece</td><td class="r neg">−2</td><td class="r">$42.00</td><td class="r neg">−$84.00</td></tr>
       <tr class="bcrs"><td>2</td><td>BCRS Deposit <small>· not subject to GST</small></td><td>1 can</td><td class="r">−24</td><td class="r">$0.10</td><td class="r">−$2.40</td></tr>
       <tr class="esum"><td colspan="6">
-        <span class="seg minus">Sub-total Before GST <b>−$84.00</b></span>
-        <span class="seg minus"><span class="fn mand">C8</span>GST @ 9% <b>−$7.56</b></span>
-        <span class="seg bcrs">BCRS <b>−$2.40</b></span>
-        <span class="pay"><span>Amount Credited</span>−$93.96</span>
+        <div class="l-comp"><span class="seg minus">Sub-total Before GST <b>−$84.00</b></span></div>
+        <div class="l-gst"><span class="fn mand">C8</span>GST @ 9%<b>−$7.56</b></div>
+        <div class="l-pay">
+          <span class="seg bcrs">BCRS <b>−$2.40</b></span>
+          <span class="pay"><span>Amount Credited</span>−$93.96</span>
+        </div>
       </td></tr>
     </tbody>
 
@@ -541,9 +554,9 @@
       </td></tr>
       <tr><td>1</td><td>Stainless Kitchen Shears</td><td>1 piece</td><td class="r neg">−1</td><td class="r">$5.00</td><td class="r neg">−$5.00</td></tr>
       <tr class="esum"><td colspan="6">
-        <span class="seg minus">Sub-total <b>−$5.00</b></span>
-        <span class="seg na">GST <b>Not applicable</b></span>
-        <span class="pay"><span>Amount Credited</span>−$5.00</span>
+        <div class="l-comp"><span class="seg minus">Sub-total <b>−$5.00</b></span></div>
+        <div class="l-gst na">GST<b>Not applicable</b></div>
+        <div class="l-pay"><span class="pay"><span>Amount Credited</span>−$5.00</span></div>
       </td></tr>
     </tbody>
   </table>
