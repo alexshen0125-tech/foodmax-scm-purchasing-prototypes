@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="zh">
+<meta charset="utf-8">
+<title>FoodMax 发票标准模板 · 正向 Invoice / 冲抵 Credit Note</title>
+<style>
+  :root{--logo:url(data:image/png;base64,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)}
+  .brand .logo{display:inline-block;height:31px;width:188px;vertical-align:middle;background:var(--logo) left center/contain no-repeat}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:#eceff2;color:#1f2933;
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",-apple-system,sans-serif;font-size:14px;line-height:1.6}
+  .topbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid #e3e8ee;box-shadow:0 2px 12px rgba(20,40,60,.06)}
+  .topbar-in{max-width:1040px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .topbar .brandtxt{font-size:13px;font-weight:800;color:#0a7d3f;letter-spacing:.5px;text-transform:uppercase;margin-right:auto}
+  .tabbtn{border:1px solid #e3e8ee;background:#fff;color:#66727e;font-size:13px;font-weight:600;padding:7px 16px;border-radius:20px;cursor:pointer}
+  .tabbtn:hover{border-color:#c7d0da}
+  .tabbtn.active{color:#fff;border-color:transparent}
+  .tabbtn[data-t="inv"].active{background:#0a7d3f}
+  .tabbtn[data-t="cn"].active{background:#c0392b}
+  .pane{display:none}
+  .pane.show{display:block}
+
+  /* ===== 共用票面样式 ===== */
+  .doc{
+    --green:#0a7d3f;--green-soft:#e8f5ee;--ink:#1f2933;--sub:#66727e;--line:#e3e8ee;
+    --red:#d64545;--amber:#c47a10;--amber-bg:#fdf3e2;--paper:#fff;--gray:#8a95a1;--blue:#1b4f9c;
+    --band:#f2f7f4;--bandline:#0a7d3f;--accent:#0a7d3f;--accent-soft:#e8f5ee;
+  }
+  .doc.cn{--accent:#c0392b;--accent-soft:#fdecea;--band:#fdf4f3;--bandline:#c0392b}
+
+  .banner{max-width:210mm;margin:22px auto 0;padding:12px 16px;background:#fff;border-left:4px solid var(--accent);
+    border-radius:8px;box-shadow:0 4px 16px rgba(20,40,60,.08);font-size:12px;color:var(--sub);line-height:1.7}
+  .banner b{color:var(--ink)}
+  .banner .tag{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:1px 7px;font-size:10.5px;font-weight:700;margin-right:6px}
+
+  .page{background:var(--paper);width:210mm;min-height:297mm;margin:18px auto;padding:14mm 13mm;
+    box-shadow:0 6px 26px rgba(20,40,60,.12);position:relative;color:var(--ink);font-size:13px;line-height:1.5}
+  .cn-watermark{position:absolute;top:40mm;left:50%;transform:translateX(-50%) rotate(-16deg);
+    font-size:74px;font-weight:800;color:rgba(192,57,43,.06);letter-spacing:6px;pointer-events:none;z-index:0}
+
+  .inv-top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;
+    border-bottom:2px solid var(--accent);padding-bottom:10px;position:relative;z-index:1}
+  .brand{font-size:19px;font-weight:800;color:var(--green)}
+  .payblk{border:1.5px solid var(--line);border-radius:9px;padding:9px 13px;width:340px;margin-top:9px;font-size:11px;color:var(--sub);line-height:1.6}
+  .payblk .onbehalf{padding-bottom:6px;margin-bottom:6px;border-bottom:1px dashed var(--line)}
+  .payblk b{color:var(--ink);font-weight:700}
+  .tbd{color:var(--amber);font-weight:700;background:var(--amber-bg);padding:0 4px;border-radius:3px}
+
+  .inv-title{text-align:right}
+  .inv-title .t{font-size:21px;font-weight:800;letter-spacing:1px;color:var(--accent)}
+  .doc:not(.cn) .inv-title .t{color:var(--ink)}
+  .inv-title .t small{display:block;font-size:10.5px;color:var(--sub);font-weight:600;letter-spacing:.3px;margin-top:3px}
+  .meta{margin-top:9px;font-size:11.5px;color:var(--sub)}
+  .meta div{display:flex;justify-content:flex-end;gap:8px;padding:1px 0}
+  .meta b{color:var(--ink);font-weight:600}
+  .meta .grand{margin-top:5px;padding-top:5px;border-top:1px solid var(--line);font-size:13.5px;color:var(--accent);font-weight:800}
+  .meta .grand b{color:var(--accent);font-weight:800}
+
+  .parties{display:flex;gap:18px;margin:9px 0;position:relative;z-index:1}
+  .parties .box{flex:1;background:#fafbfc;border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+  .parties .label{font-size:10px;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;font-weight:700}
+  .parties .name{font-weight:700}
+  .parties .addr{font-size:11.5px;color:var(--sub);line-height:1.5}
+
+  table.items{width:100%;border-collapse:collapse;margin-top:4px;font-size:10px;table-layout:fixed;position:relative;z-index:1}
+  table.items col.c1{width:5%}table.items col.c2{width:34%}table.items col.c3{width:16%}
+  table.items col.c4{width:7%}table.items col.c5{width:18%}table.items col.c6{width:20%}
+  table.items thead th{background:var(--accent-soft);color:var(--accent);text-align:left;padding:6px;font-size:10px;letter-spacing:.3px}
+  table.items th.r,table.items td.r{text-align:right}
+  table.items thead th small{font-weight:500}
+  table.items td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:break-word}
+  table.items td small{color:var(--sub)}
+  table.items tr.bcrs td{background:#E8F1FF;color:#1A56DB;font-weight:600}
+  .neg{color:var(--red);font-weight:600}
+
+  /* 开票主体分段带 */
+  tr.band td{background:var(--band);border-top:1.5px solid var(--bandline);border-bottom:1px solid #dfe8e3;
+    padding:5px 8px;font-size:10px;line-height:1.55;color:var(--ink)}
+  tr.band .ix{font-weight:800;color:var(--accent);margin-right:4px}
+  tr.band .badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.4px;padding:1px 7px;border-radius:3px;
+    background:var(--accent);color:#fff;margin-right:6px;vertical-align:1px}
+  tr.band .badge.nogst{background:#fff;color:var(--amber);border:1px solid var(--amber)}
+  tr.band .nm{font-weight:800;font-size:11px}
+  tr.band .kv{color:var(--sub);margin-left:10px}
+  tr.band .kv b{color:var(--ink);font-weight:700}
+  tr.band .ad{display:block;color:var(--sub);font-size:9px;margin-top:1px}
+  tr.band .nogst-note{display:block;color:var(--amber);font-size:9px;font-weight:600;margin-top:2px}
+
+  /* 主体小计行 */
+  tr.esum td{background:#fbfdfc;border-bottom:1.5px solid var(--bandline);padding:5px 8px;text-align:right;font-size:10px;color:var(--sub)}
+  .doc.cn tr.esum td{background:#fffbfb}
+  tr.esum .seg{margin-left:12px;white-space:nowrap}
+  tr.esum .seg b{color:var(--ink);font-weight:600}
+  tr.esum .seg.minus b{color:var(--red)}
+  tr.esum .seg.bcrs b{color:#1A56DB}
+  tr.esum .seg.na b{color:var(--amber);font-weight:700}
+  tr.esum .pay{margin-left:14px;white-space:nowrap;font-size:11.5px;color:var(--accent);font-weight:800}
+  tr.esum .pay span{color:var(--sub);font-weight:600;font-size:10px;margin-right:5px}
+
+  .sumrow{display:flex;gap:20px;align-items:flex-start;margin-top:11px;position:relative;z-index:1}
+  .sumrow .note{flex:1;font-size:9.5px;color:#8a95a1;line-height:1.6}
+  .sumrow .note b{color:var(--sub)}
+  .totals{width:46%;flex:none;font-size:11.5px}
+  .totals .row{display:flex;justify-content:space-between;padding:2px 2px}
+  .totals .row.bcrs{color:#1A56DB;font-weight:600}
+  .totals .row.base{border-top:1px dashed var(--line);margin-top:3px;padding-top:6px}
+  .totals .row.grand{border-top:2px solid var(--accent);margin-top:4px;padding-top:8px;font-size:15px;font-weight:800;color:var(--accent)}
+  .foot{margin-top:7px;font-size:10px;color:#9aa5b1;font-style:italic;border-top:1px solid var(--line);padding-top:5px;text-align:center;position:relative;z-index:1}
+
+  /* 票面字段编号（仅屏幕） */
+  .fn{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;
+    background:var(--ink);color:#fff;font-size:9px;font-weight:700;margin:0 3px;vertical-align:middle;flex:none}
+  .fn.mand{background:var(--red)}.fn.biz{background:var(--blue)}.fn.sys{background:var(--gray)}.fn.opt{background:var(--amber)}
+
+  /* ===== 字段说明表 ===== */
+  .dict{width:230mm;max-width:97vw;margin:22px auto 40px;background:#fff;border-radius:10px;
+    box-shadow:0 4px 18px rgba(20,40,60,.07);padding:18px 22px}
+  .dict h2{font-size:16px;margin:0 0 4px;color:var(--ink)}
+  .dict .sub{font-size:12px;color:var(--sub);margin:0 0 14px}
+  .dict h3{font-size:13px;margin:20px 0 7px;color:var(--accent);border-left:3px solid var(--accent);padding-left:8px}
+  .dict h3:first-of-type{margin-top:8px}
+  table.fd{width:100%;border-collapse:collapse;font-size:11.5px;table-layout:fixed}
+  table.fd col.f1{width:4%}table.fd col.f2{width:16%}table.fd col.f3{width:18%}
+  table.fd col.f4{width:36%}table.fd col.f5{width:9%}table.fd col.f6{width:17%}
+  table.fd th{background:#f3f5f8;color:var(--sub);text-align:left;padding:7px 8px;font-weight:700;border-bottom:1px solid var(--line)}
+  table.fd td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+  table.fd td:first-child{text-align:center;font-weight:700;color:var(--sub)}
+  table.fd code{background:#f3f5f8;border-radius:3px;padding:1px 4px;font-size:10.5px;color:#37474f}
+  table.fd b{color:var(--ink)}
+  .pill{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;white-space:nowrap}
+  .pill.mand{background:#fdecea;color:#c0392b}
+  .pill.biz{background:#e8f0fb;color:#1b4f9c}
+  .pill.sys{background:#eef1f4;color:#66727e}
+  .pill.opt{background:#fdf3e2;color:#c47a10}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--sub);margin:0 0 14px}
+  .warnbox{background:#fdf3e2;border-left:4px solid #c47a10;border-radius:7px;padding:11px 14px;font-size:11.5px;color:#7a4d05;line-height:1.7;margin:14px 0}
+  .warnbox b{color:#5c3a03}
+  .okbox{background:#e8f5ee;border-left:4px solid #0a7d3f;border-radius:7px;padding:11px 14px;font-size:11.5px;color:#134c30;line-height:1.7;margin:14px 0}
+  .okbox b{color:#0a3d24}
+
+  @media print{
+    @page{size:A4;margin:0}
+    body{background:#fff}
+    .topbar,.banner,.dict{display:none}
+    .pane{display:none!important}.pane.show{display:block!important}
+    .fn{display:none}
+    .page{box-shadow:none;margin:0;width:auto;min-height:auto;padding:12mm}
+    table.items thead{display:table-header-group}
+    table.items tbody{page-break-inside:avoid}
+    .sumrow{page-break-inside:avoid}
+  }
+</style>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <span class="brandtxt">FoodMax 发票标准模板 · 新加坡 IRAS 口径</span>
+    <button class="tabbtn" data-t="inv">正向 · Invoice</button>
+    <button class="tabbtn" data-t="cn">冲抵 · Credit Note</button>
+  </div>
+</div>
+
+<!-- ==================== 正向 ==================== -->
+<div id="pane-inv" class="pane">
+<div class="doc">
+
+<div class="banner">
+  <span class="tag">正向单据</span>
+  <b>一张主订单 = 一份正向单据</b>，内含 N 个<b>开票主体分段</b>，每段就是该主体自己的一张发票。
+  本示例覆盖三种主体形态：<b>① 自营（已注册 GST）</b>、<b>② 三方商家（已注册 GST）</b>、<b>③ 三方商家（未注册 GST）</b>。
+  <br>票面上带编号的圆点（<span class="fn mand">1</span> 等）与下方<b>字段说明表</b>一一对应；打印 / 导出 PDF 时圆点与本说明区自动隐藏，只留纯净单据。
+</div>
+
+<div class="page">
+  <div class="inv-top">
+    <div>
+      <div class="brand"><span class="logo" role="img" aria-label="Foodmax"></span></div>
+      <div class="payblk">
+        <div>
+          <span class="fn biz">3</span><b>Payment · Payable to:</b> <span class="tbd">«户名 · 待财务提供»</span><br>
+          <b>Bank / A/C No.:</b> <span class="tbd">«开户行 · 账号 · 待财务提供»</span><br>
+          <b>PayNow UEN:</b> <span class="tbd">«待财务提供»</span>　<span class="fn biz">4</span><b>Credit Term:</b> 30 Days
+        </div>
+      </div>
+    </div>
+    <div class="inv-title">
+      <div class="t"><span class="fn mand">5</span>INVOICE<small><span class="fn sys">6</span>2 Tax Invoices · 1 Invoice — see sections below</small></div>
+      <div class="meta">
+        <div><span class="fn biz">7</span>Order Number: <b>SO-20260705-0342</b></div>
+        <div><span class="fn mand">9</span>Invoice Date: <b>07 Jul 2026</b></div>
+        <div class="grand"><span class="fn mand">10</span>Total Payable (SGD): <b>$834.82</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="box">
+      <div class="label"><span class="fn mand">11</span>Bill To</div>
+      <div class="name">Ah Hng Seafood Restaurant Pte. Ltd.</div>
+      <div class="addr">
+        <span class="fn mand">12</span>12 Bedok North Ave 4, #01-05, Singapore 469662<br>
+        <span class="fn opt">13</span>Customer GST Reg No.: 200912345D
+      </div>
+    </div>
+    <div class="box">
+      <div class="label"><span class="fn biz">14</span>Deliver To</div>
+      <div class="addr">
+        Ah Hng Central Kitchen<br>
+        <span class="fn biz">15</span>38 Woodlands Ind Park E1, #03-11, Singapore 757700<br>
+        <span class="fn biz">16</span>Delivery No.: <b style="color:var(--ink)">DO-20260706-0088</b>　Delivery Date: <b style="color:var(--ink)">06 Jul 2026</b>
+      </div>
+    </div>
+  </div>
+
+  <table class="items">
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <thead>
+      <tr>
+        <th><span class="fn sys">23</span>#</th>
+        <th><span class="fn mand">24</span>Description</th>
+        <th><span class="fn biz">25</span>Specification</th>
+        <th class="r"><span class="fn mand">26</span>Qty</th>
+        <th class="r"><span class="fn mand">27</span>Unit Price<br><small>excl. GST</small></th>
+        <th class="r"><span class="fn mand">28</span>Amount<br><small>excl. GST</small></th>
+      </tr>
+    </thead>
+
+    <!-- ① 自营 · 已注册 GST -->
+    <tbody>
+      <tr class="band"><td colspan="6">
+        <span class="fn mand">17</span><span class="ix">①</span><span class="badge"><span class="fn mand">18</span>TAX INVOICE</span>
+        <span class="nm"><span class="fn mand">20</span>10X AI Technology Pte. Ltd.</span>
+        <span class="kv"><span class="fn mand">21</span>GST Reg No. <b>202245757M</b></span>
+        <span class="kv"><span class="fn mand">19</span>Invoice No. <b>INV-20260707-0342-01</b></span>
+        <span class="ad"><span class="fn mand">22</span>6 Fishery Port Road, #01-01, Singapore 619747</span>
+      </td></tr>
+      <tr><td>1</td><td>Live Boston Lobster</td><td>1 piece</td><td class="r">8</td><td class="r">$42.00</td><td class="r">$336.00</td></tr>
+      <tr><td>2</td><td>Organic Lettuce</td><td>1 head</td><td class="r">30</td><td class="r">$1.80</td><td class="r">$54.00</td></tr>
+      <tr><td>3</td><td>Coca-Cola 300ml × 24/case</td><td>1 case (24 cans)</td><td class="r">10</td><td class="r">$18.00</td><td class="r">$180.00</td></tr>
+      <tr class="bcrs"><td>4</td><td><span class="fn biz">29</span>BCRS Deposit <small>· not subject to GST</small></td><td>1 can</td><td class="r">240</td><td class="r">$0.10</td><td class="r">$24.00</td></tr>
+      <tr class="esum"><td colspan="6">
+        <span class="seg"><span class="fn biz">30</span>Goods <b>$570.00</b></span>
+        <span class="seg minus"><span class="fn biz">31</span>Discount <b>−$30.00</b></span>
+        <span class="seg"><span class="fn biz">32</span>Shipping <b>$20.00</b></span>
+        <span class="seg"><span class="fn mand">33</span>Sub-total Before GST <b>$560.00</b></span>
+        <span class="seg"><span class="fn mand">34</span>GST @ 9% <b>$50.40</b></span>
+        <span class="seg bcrs"><span class="fn biz">35</span>BCRS <b>$24.00</b></span>
+        <span class="pay"><span class="fn mand">36</span><span>Amount Payable</span>$634.40</span>
+      </td></tr>
+    </tbody>
+
+    <!-- ② 三方 · 已注册 GST -->
+    <tbody>
+      <tr class="band"><td colspan="6">
+        <span class="ix">②</span><span class="badge">TAX INVOICE</span>
+        <span class="nm">Ocean Fresh Trading Pte. Ltd.</span>
+        <span class="kv">GST Reg No. <b>201812345K</b></span>
+        <span class="kv">Invoice No. <b>INV-20260707-0342-02</b></span>
+        <span class="ad">18 Jurong Port Road, #05-12, Singapore 619096</span>
+      </td></tr>
+      <tr><td>1</td><td>Chilled Sri Lankan Crab</td><td>1 piece</td><td class="r">6</td><td class="r">$23.00</td><td class="r">$138.00</td></tr>
+      <tr class="esum"><td colspan="6">
+        <span class="seg">Sub-total Before GST <b>$138.00</b></span>
+        <span class="seg">GST @ 9% <b>$12.42</b></span>
+        <span class="pay"><span>Amount Payable</span>$150.42</span>
+      </td></tr>
+    </tbody>
+
+    <!-- ③ 三方 · 未注册 GST -->
+    <tbody>
+      <tr class="band"><td colspan="6">
+        <span class="ix">③</span><span class="badge nogst">INVOICE</span>
+        <span class="nm">KitchenPro Supplies Pte. Ltd.</span>
+        <span class="kv">Invoice No. <b>INV-20260707-0342-03</b></span>
+        <span class="ad">27 Mandai Estate, #03-08, Singapore 729931</span>
+        <span class="nogst-note"><span class="fn mand">37</span>This supplier is not GST-registered. No GST is charged on the lines below and no input tax may be claimed on them.</span>
+      </td></tr>
+      <tr><td>1</td><td>Stainless Kitchen Shears</td><td>1 piece</td><td class="r">10</td><td class="r">$5.00</td><td class="r">$50.00</td></tr>
+      <tr class="esum"><td colspan="6">
+        <span class="seg">Sub-total <b>$50.00</b></span>
+        <span class="seg na"><span class="fn mand">38</span>GST <b>Not applicable</b></span>
+        <span class="pay"><span>Amount Payable</span>$50.00</span>
+      </td></tr>
+    </tbody>
+  </table>
+
+  <div class="sumrow">
+    <div class="note">
+      <b><span class="fn biz">43</span>Notes.</b>
+      (1) Each section above is a separate invoice issued by the Issuing Entity named in it. FoodMax issues them on their behalf and collects <b>one single payment of the Grand Total</b> on their behalf.<br>
+      (2) Payment is due within the Credit Term to the account shown above. Please quote the <b>Order Number</b> when making payment.<br>
+      (3) Shortages, damage or discrepancies must be reported within <b>7 days</b> of delivery, quoting the Order Number and the affected lines.<br>
+      (4) The BCRS deposit is refunded upon container return.
+    </div>
+    <div class="totals">
+      <div class="row"><span class="k"><span class="fn biz">39</span>Sub-total Before GST</span><span>$748.00</span></div>
+      <div class="row"><span class="k"><span class="fn biz">40</span>GST</span><span>$62.82</span></div>
+      <div class="row bcrs"><span class="k"><span class="fn biz">41</span>BCRS Deposit (not subject to GST)</span><span>$24.00</span></div>
+      <div class="row grand"><span class="k"><span class="fn mand">42</span>Grand Total (Inc GST)</span><span>$834.82</span></div>
+    </div>
+  </div>
+  <div class="foot"><span class="fn sys">44</span>Computer generated document. No signature is required.</div>
+</div>
+
+<!-- ========== 字段说明表 · 正向 ========== -->
+<div class="dict">
+  <h2>字段说明 · 正向单据</h2>
+  <p class="sub">编号与票面圆点一一对应，为<b>稳定 ID 而非连续序号</b>——本版删除的字段其编号不再出现，去向见文末「本版删了什么」。「属性」列决定该字段能否省略。</p>
+  <div class="legend">
+    <span><span class="pill mand">法定</span> IRAS 要求，缺失则该段不构成有效 Tax Invoice，客户无法抵扣</span>
+    <span><span class="pill biz">业务</span> 合规不要求，但对账 / 收款 / 售后需要</span>
+    <span><span class="pill opt">可选</span> 有值才渲染，无值不占版面</span>
+    <span><span class="pill sys">系统</span> 系统固定或自动生成</span>
+  </div>
+
+  <div class="warnbox">
+    <b>关于「未注册 GST 的商家税率写 0」——不能这么写。</b><br>
+    新加坡 GST 里 <b>0%（zero-rated）是一种应税供应</b>（出口 / 国际服务），前提是<b>供应方本身已注册 GST</b>；而未注册 GST 的商家所作供应属于 <b>out-of-scope（不属应税供应）</b>，两者税务性质完全不同。
+    更关键的是：<b>未注册 GST 的主体在法律上不能开具 Tax Invoice</b>。<br>
+    因此本模板对未注册主体的处理是：段落徽标降为 <b>INVOICE</b>（非 TAX INVOICE）→ <b>不出现税率行、不出现税额行</b> → 段内显式声明「供应方未注册 GST、该段不可抵扣」。
+    若写成 <code>GST @ 0%</code>，会误导客户把该段当零税率应税供应去申报，属实质性错误。
+  </div>
+
+  <h3>区块 1 · 页头（平台与付款）</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>品牌标识</b><br>Brand logo</td><td>Foodmax 图标</td><td>对客展示的商业品牌。<b>注意：品牌 ≠ 开票主体</b>——本单的税务主体是各分段带内的法人，不是 Logo</td><td><span class="pill sys">系统</span></td><td>非 IRAS 要素，纯展示</td></tr>
+      <tr><td>3</td><td><b>收款信息</b><br>Payment / Remittance</td><td>户名 / 开户行 / 账号 / PayNow UEN</td><td>客户往哪付款：户名 / 开户行 / 账号 / PayNow UEN。<b>付款路径「一笔总额付给 FoodMax、平台代收后与各主体结算」的说明已并入 Notes(1)</b>，页头只留账户本身——待确认见 Q1</td><td><span class="pill biz">业务</span></td><td><b>当前为占位</b>，需财务提供真实账户；缺失则账期发票无法执行付款</td></tr>
+      <tr><td>4</td><td><b>账期</b><br>Credit Term</td><td><code>30 Days</code></td><td>付款期限，自开票日起算。取自客户主数据的信用账期</td><td><span class="pill biz">业务</span></td><td>缺失会引发付款时点争议</td></tr>
+    </tbody>
+  </table>
+
+  <h3>区块 2 · 页头（单据标识）</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>5</td><td><b>单据标题</b><br>Document title</td><td><code>INVOICE</code></td><td><b>动态取值</b>：本单所有开票主体<b>均已注册 GST</b> → <code>TAX INVOICE</code>；<b>含任一未注册主体</b> → <code>INVOICE</code>。真正承载「Tax Invoice」字样的是各分段带徽标（#18）</td><td><span class="pill mand">法定</span></td><td>IRAS 要求 Tax Invoice 须在显著位置标明该字样；混合单在主标题写 TAX INVOICE 会与非 GST 段冲突</td></tr>
+      <tr><td>6</td><td><b>构成副标题</b></td><td><code>2 Tax Invoices · 1 Invoice</code></td><td>一句话说明本单含几张税务发票、几张普通发票，由主体类型统计得出</td><td><span class="pill sys">系统</span></td><td>非法定，帮客户快速判断可抵扣范围</td></tr>
+      <tr><td>7</td><td><b>订单号</b><br>Order Number</td><td><code>SO-20260705-0342</code></td><td>客户下的<b>主订单号</b>。付款备注、售后报障、对账都用它</td><td><span class="pill biz">业务</span></td><td>客户侧最常用的追溯键</td></tr>
+      <tr><td>9</td><td><b>开票日期</b><br>Invoice Date</td><td><code>07 Jul 2026</code></td><td>单据签发日 = 履约（配送）完成时点。IRAS 要求供应时点起 <b>30 天内</b>开出</td><td><span class="pill mand">法定</span></td><td>缺失即不合规；超 30 天违规</td></tr>
+      <tr><td>10</td><td><b>应付总额</b><br>Total Payable (SGD)</td><td><code>$834.82</code></td><td>全单含税应付，= 各主体 Amount Payable 之和。币种以 <code>(SGD)</code> 内联标注，不单独占行</td><td><span class="pill mand">法定</span></td><td>= #42 Grand Total，放页头让客户不必翻到末尾。<b>若以外币计价</b>，须另并列 SGD 的未税额 / 税额 / 含税额三项</td></tr>
+    </tbody>
+  </table>
+
+  <h3>区块 3 · 交易双方</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>11</td><td><b>客户法定名称</b><br>Bill To</td><td>Ah Hng Seafood Restaurant Pte. Ltd.</td><td>购买方公司<b>法定全称</b>（非门店名、非个人名）。取自 CRM 客户主数据，随主订单带出</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：受供方名称。缺失 / 写成门店名则客户不能抵扣</td></tr>
+      <tr><td>12</td><td><b>账单地址</b><br>Billing Address</td><td>12 Bedok North Ave 4, #01-05, Singapore 469662</td><td>购买方注册 / 账单地址</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：受供方地址。<b>此前被误列为「建议」，实为法定必填</b></td></tr>
+      <tr><td>13</td><td><b>客户 GST 号</b><br>Customer GST Reg No.</td><td><code>200912345D</code></td><td>购买方自己的 GST 注册号</td><td><span class="pill opt">可选</span></td><td>IRAS <b>不要求</b>。有值才渲染，无值整行不出现</td></tr>
+      <tr><td>14</td><td><b>收货方</b><br>Consignee</td><td>Ah Hng Central Kitchen</td><td>实际收货主体，常与账单主体不同（总部下单、中央厨房收货）</td><td><span class="pill biz">业务</span></td><td>与账单主体相同时不渲染</td></tr>
+      <tr><td>15</td><td><b>送达地址</b><br>Delivery Address</td><td>38 Woodlands Ind Park E1, #03-11</td><td>本次实际送达地点</td><td><span class="pill biz">业务</span></td><td>与账单地址分列，避免收发货争议</td></tr>
+      <tr><td>16</td><td><b>送货单号 / 日期</b><br>Delivery No. / Date</td><td><code>DO-20260706-0088</code> / 06 Jul 2026</td><td>把发票与具体一次配送履约挂钩</td><td><span class="pill biz">业务</span></td><td>收货争议时的对照键</td></tr>
+    </tbody>
+  </table>
+
+  <h3>区块 4 · 开票主体分段带（本模板的核心）</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>17</td><td><b>主体序号</b><br>Index</td><td>① ② ③</td><td>该主体在本单内的序号，段内商品行号<b>各自从 1 重新开始</b></td><td><span class="pill sys">系统</span></td><td>视觉与编号双重表明「这是该主体自己的一张发票」</td></tr>
+      <tr><td>18</td><td><b>分段单据类型</b><br>Type badge</td><td><code>TAX INVOICE</code> / <code>INVOICE</code></td><td><b>由该主体是否注册 GST 决定</b>：已注册 → TAX INVOICE（绿底）；未注册 → INVOICE（琥珀描边）。<b>这是承载 IRAS「Tax Invoice 字样须显著」要求的位置</b></td><td><span class="pill mand">法定</span></td><td>未注册主体标成 TAX INVOICE = 违规出票</td></tr>
+      <tr><td>19</td><td><b>主体发票号</b><br>Invoice No.</td><td><code>INV-20260707-0342-01</code></td><td>该主体自己的唯一发票号，规则 = 单据号 + 主体序号后缀。同一子订单重复触发不重复开（幂等）</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：识别编号。冲抵时被 Credit Note 引用</td></tr>
+      <tr><td>20</td><td><b>主体法定名称</b><br>Legal name</td><td>10X AI Technology Pte. Ltd.</td><td>该段供应方的<b>法定全称</b>。自营 = FoodMax 开票法人；三方 = 商户开票主数据</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：供应方名称</td></tr>
+      <tr><td>21</td><td><b>主体 GST 号</b><br>GST Reg No.</td><td><code>202245757M</code></td><td>该主体的 GST 注册号，UEN 格式 = 9 位数字 + 校验字母。<b>未注册主体此字段整体不渲染</b></td><td><span class="pill mand">法定</span></td><td>已注册主体缺号 → <b>拦截不开票</b>，不得出「TBC」占位票，否则客户抵扣被税局否掉</td></tr>
+      <tr><td>22</td><td><b>主体注册地址</b><br>Registered address</td><td>6 Fishery Port Road, #01-01, Singapore 619747</td><td>该主体的注册 / 经营地址</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：供应方地址。<b>不是装饰，不可为省版面删除</b></td></tr>
+      <tr><td>37</td><td><b>未注册 GST 声明</b></td><td><code>This supplier is not GST-registered. No GST is charged… no input tax may be claimed…</code></td><td>未注册主体段落<b>必须</b>显式声明，让客户明确该段不可抵扣</td><td><span class="pill mand">法定</span></td><td>仅未注册主体渲染。缺失可能导致客户错误申报抵扣</td></tr>
+    </tbody>
+  </table>
+
+  <h3>区块 5 · 商品明细</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>23</td><td><b>行号</b> #</td><td>1 / 2 / 3</td><td>段内连续行号，<b>每个主体各自从 1 开始</b></td><td><span class="pill sys">系统</span></td><td>—</td></tr>
+      <tr><td>24</td><td><b>商品描述</b><br>Description</td><td>Live Boston Lobster</td><td>足以识别该货品的名称描述，取自子订单明细</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：足以识别所供货品的描述</td></tr>
+      <tr><td>25</td><td><b>规格</b><br>Specification</td><td>1 case (24 cans)</td><td>计价单位与包装规格。同名商品不同规格单价不同，对账必看</td><td><span class="pill biz">业务</span></td><td><b>本版已删除原「Storage Conditions」列</b>——储存条件是收货当场核验用的，属送货单；发票为事后凭证，边际价值低且占 16% 列宽。需要可一句话加回</td></tr>
+      <tr><td>26</td><td><b>数量</b> Qty</td><td>8 / 30 / 240</td><td>该行数量，纯数字，单位由规格列承载</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：每项描述的数量</td></tr>
+      <tr><td>27</td><td><b>未税单价</b><br>Unit Price (excl. GST)</td><td><code>$42.00</code></td><td><b>不含 GST</b> 的单价。B2B 一律未税口径，税额在小计行单列</td><td><span class="pill mand">法定</span></td><td>与 B2C 含税标价相反，不可混用</td></tr>
+      <tr><td>28</td><td><b>未税金额</b><br>Amount (excl. GST)</td><td><code>$336.00</code></td><td>= Qty × Unit Price，不含 GST</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：每项不含 GST 的应付金额</td></tr>
+      <tr><td>29</td><td><b>BCRS 押金行</b></td><td>BCRS · 240 × $0.10 = $24.00</td><td>饮料容器押金，单价 $0.10 / 容器，Qty = 容器数。<b>不计 GST</b>，退还容器时退回。<b>按开票主体归集</b>——哪个主体卖的饮料就挂在哪一段</td><td><span class="pill biz">业务</span></td><td><b>本版改为仅在该主体确有押金时渲染</b>（无则整行不出现），与旧 BR-12「恒渲染 0 行」冲突，待确认</td></tr>
+    </tbody>
+  </table>
+
+  <h3>区块 6 · 主体小计行（段尾单行内联）</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>30</td><td><b>Goods</b></td><td><code>$570.00</code></td><td>该主体商品行未税金额合计（<b>不含 BCRS</b>）</td><td><span class="pill biz">业务</span></td><td><b>仅当该主体有折扣或运费时渲染</b>；否则 Goods 与 Sub-total 是同一数字，只渲染 Sub-total（见示例 ② ③）</td></tr>
+      <tr><td>31</td><td><b>Discount</b></td><td><code>−$30.00</code></td><td>该主体授予的折扣，减项。<b>折扣归属哪个主体就挂哪一段</b></td><td><span class="pill mand">法定</span></td><td>IRAS 要素：须列示所提供的现金折扣。无折扣时该段不渲染</td></tr>
+      <tr><td>32</td><td><b>Shipping</b></td><td><code>$20.00</code></td><td>该主体收取的配送费，加项，<b>计入计税基数</b></td><td><span class="pill biz">业务</span></td><td>「配送费是否进计税基数」需财务书面确认（附录 C4）</td></tr>
+      <tr><td>33</td><td><b>Sub-total Before GST</b></td><td><code>$560.00</code></td><td><b>计税基数</b>。公式：<code>Goods − Discount + Shipping</code>，<b>BCRS 不计入</b>。示例 570 − 30 + 20 = 560</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：不含 GST 的应付总额</td></tr>
+      <tr><td>34</td><td><b>GST @ 9%</b></td><td><code>$50.40</code> / <code>Not applicable</code></td><td>公式：<code>Sub-total Before GST × 9%</code>。<b>税率与税额必须同时上票面</b>。<br><b>未注册 GST 的主体渲染为 <code>GST Not applicable</code>，不写 0%、不写 $0.00</b></td><td><span class="pill mand">法定</span></td><td>IRAS 要素：税率 + 单独列示的税额。GST 谁收谁申报——自营归 FoodMax、三方归各商户</td></tr>
+      <tr><td>35</td><td><b>BCRS</b></td><td><code>$24.00</code></td><td>该主体的容器押金合计，<b>不计 GST、不进计税基数</b>，作为加项并入应付</td><td><span class="pill biz">业务</span></td><td>押金的 GST 定性需财务确认（可退还保证金 vs 部分对价）</td></tr>
+      <tr><td>36</td><td><b>Amount Payable</b></td><td><code>$634.40</code></td><td>该主体含税应付。公式：<code>Sub-total Before GST + GST + BCRS</code>。示例 560 + 50.40 + 24 = 634.40</td><td><span class="pill mand">法定</span></td><td>IRAS 要素：含 GST 的应付总额</td></tr>
+    </tbody>
+  </table>
+
+  <h3>区块 7 · 全单合计与页脚</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>39</td><td><b>全单 Sub-total Before GST</b></td><td><code>$748.00</code></td><td>各主体计税基数之和：560 + 138 + 50</td><td><span class="pill biz">业务</span></td><td><b>仅当开票主体 &gt; 1 时渲染</b>；单主体时与段尾小计重复，整块不出</td></tr>
+      <tr><td>40</td><td><b>全单 GST</b></td><td><code>$62.82</code></td><td>各主体税额之和：50.40 + 12.42（<b>③ 未注册主体不计入</b>）</td><td><span class="pill biz">业务</span></td><td>同上</td></tr>
+      <tr><td>41</td><td><b>全单 BCRS</b></td><td><code>$24.00</code></td><td>各主体押金之和</td><td><span class="pill biz">业务</span></td><td>同上</td></tr>
+      <tr><td>42</td><td><b>Grand Total (Inc GST)</b></td><td><code>$834.82</code></td><td>= 748.00 + 62.82 + 24.00，亦 = 634.40 + 150.42 + 50.00。<b>与页头 #10 三处勾稽</b></td><td><span class="pill mand">法定</span></td><td>—</td></tr>
+      <tr><td>43</td><td><b>Notes 条款</b></td><td>4 条</td><td>(1) 各段为独立发票、平台代开，并<b>代收一笔总额</b>；(2) 付款期限与备注订单号；(3) <b>收货异常 7 日内申报</b>；(4) BCRS 退还容器时退回</td><td><span class="pill biz">业务</span></td><td><b>7 天时限为占位</b>，需业务确认。原「非 GST 段不可抵扣」一条与段内 #37 逐字重复，已删；「BCRS 不计 GST」与行标签重复，已删</td></tr>
+      <tr><td>44</td><td><b>系统生成声明</b></td><td><code>Computer generated document. No signature is required.</code></td><td>避免客户索要盖章原件</td><td><span class="pill pill sys">系统</span></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>本版相对上一版删掉了什么（为了少给纸）</h3>
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>删除项</th><th>原位置</th><th>删除理由</th><th>省</th><th>可否找回</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td><b>Currency: SGD</b> 独立行</td><td>页头右侧</td><td>IRAS 无「单列币种」要素；改为内联到 Total Payable (SGD)。仅外币计价时才须并列 SGD 三金额</td><td>1 行</td><td>—</td></tr>
+      <tr><td>—</td><td><b>Delivery Time</b> 配送时段</td><td>页头左侧</td><td>属送货单字段；发票在收货之后开，时段窗口对对账无用</td><td>1 行</td><td>可</td></tr>
+      <tr><td>—</td><td><b>Delivery Line number</b> 线路号</td><td>页头左侧</td><td>内部配送调度字段，客户不认识</td><td>1 行</td><td>可</td></tr>
+      <tr><td>—</td><td><b>Phone</b>（打码号码）</td><td>页头左侧</td><td>打码电话无用途；位置改放收款信息</td><td>1 行</td><td>换成客服电话</td></tr>
+      <tr><td>—</td><td><b>Storage Conditions</b> 列</td><td>商品表</td><td>冷链条件是收货当场核验用的，属送货单；占 16% 列宽</td><td>1 列</td><td><b>可，一句话加回</b></td></tr>
+      <tr><td>—</td><td><b>Notes 计税公式两条</b></td><td>页脚</td><td>写给研发的口径说明，不是给客户的；票面数字本身就对得上</td><td>~5 行</td><td>—</td></tr>
+      <tr><td>—</td><td><b>全单合计 Goods / Discount / Shipping 三行</b></td><td>合计区</td><td>折扣与运费按主体各自归集，加总对客户无意义</td><td>3 行</td><td>—</td></tr>
+      <tr><td>—</td><td><b>「3 Issuing Entities」原副标题</b></td><td>标题下</td><td>改为信息量更高的「2 Tax Invoices · 1 Invoice」，让客户一眼看到可抵扣范围</td><td>0</td><td>—</td></tr>
+      <tr><td colspan="6" style="background:#f3f5f8;font-weight:700;color:#66727e;text-align:left">本轮追加删除 —— 均为纯重复，零信息损失</td></tr>
+      <tr><td>2</td><td><b>页头代开声明</b></td><td>页头左侧</td><td>与 Notes(1) 逐字表达同一件事（各段独立发票、平台代开）。保留 Notes 版本，因为它同时承载付款路径说明</td><td>2 行</td><td>—</td></tr>
+      <tr><td>—</td><td><b>付款路径解释句</b></td><td>收款信息框</td><td>移入 Notes(1)，页头只留账户三行——账户是「怎么付」，路径说明是「为什么这么付」，后者属条款</td><td>2 行</td><td>—</td></tr>
+      <tr><td>8</td><td><b>Document No.</b></td><td>页头右侧</td><td>三级编号砍成两级。客户实际只用 <b>Order Number</b>；文档级编号是我们定位交付物用的，<b>改为只落在文件名与元数据</b>，不上票面</td><td>1 行</td><td>可</td></tr>
+      <tr><td>—</td><td><b>Notes「非 GST 段不可抵扣」一条</b></td><td>页脚</td><td>与段内 #37 声明逐字重复；#37 是法定必须留在段内的，故删 Notes 这条</td><td>1 行</td><td>—</td></tr>
+      <tr><td>—</td><td><b>Notes「BCRS 不计 GST」前半句</b></td><td>页脚</td><td>BCRS 行标签与合计行标签均已写明 not subject to GST。只留「退还容器时退回」这一句新信息</td><td>半行</td><td>—</td></tr>
+      <tr><td>30</td><td><b>Goods 段（无折扣无运费时）</b></td><td>段尾小计</td><td>此时 Goods 与 Sub-total 是<b>同一个数字印两遍</b>（原示例 ② ③ 即如此）。改为条件渲染</td><td>降噪</td><td>—</td></tr>
+      <tr><td>C2</td><td><b>冲抵单据 Document No.</b></td><td>冲抵页头</td><td>与 #8 同理；各主体 CN 号仍在段内保留</td><td>1 行</td><td>可</td></tr>
+      <tr><td>—</td><td><b>冲抵页头信息框整块</b></td><td>冲抵页头左侧</td><td>去掉重复的代开声明后只剩 Settlement 一句，为一句话保留一个边框不值当；Settlement 移入 Notes(2)</td><td>整块</td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warnbox">
+    <b>待确认（阻塞真实出票）</b><br>
+    <b>Q1 收款路径</b> —— 客户是「一笔总额付给 FoodMax、平台代收后与各主体结算」，还是「按主体分别付款」？本模板按前者设计（#3）。这直接决定收款区写谁的账户，也牵涉代收的税务与合同定性。<br>
+    <b>Q2 收款账户</b> —— 户名 / 开户行 / 账号 / PayNow UEN，需财务提供真实值替换占位。<br>
+    <b>Q8 文档级编号去向</b> —— Document No. 已从票面移除，需确认改落在<b>文件名 + PDF 元数据</b>是否满足归档与重出定位需求（<code>INV-20260707-0342.pdf</code>）。<br>
+    <b>Q3 收货异常申报时限</b> —— Notes(4) 现按 7 天占位，需业务确认。<br>
+    <b>Q4 多主体同页出票的合规认可</b> —— 一份文档承载多个 GST 供应方，IRAS 认可的前提是每笔供应及其供应方、GST 号、税额可被单独识别；本版式靠「分段带徽标 + 各主体独立发票号 + 段尾完整小计」满足该条件。<b>仍需 Mariko / 兰建刚书面确认</b>。<br>
+    <b>Q5 未注册 GST 商家的准入</b> —— 商户主数据须新增「是否 GST 注册」标志位，且已注册主体缺 GST 号时<b>拦截不开票</b>（不得出 TBC 占位票）。<br>
+    <b>Q6 BCRS 押金定性</b> —— 可退还保证金（不属供应、不计 GST）还是部分对价（须计 GST），需财务结论。<br>
+    <b>Q7 InvoiceNow</b> —— 存量 GST 商家 2028–2031 分阶段强制，FoodMax 落在哪个阶段需按年供应额确认；届时 PDF 单通道须并行 Peppol 传输。
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== 冲抵 ==================== -->
+<div id="pane-cn" class="pane">
+<div class="doc cn">
+
+<div class="banner">
+  <span class="tag">冲抵单据</span>
+  <b>与正向完全分开的独立单据</b>，不与发票合并交付。结构与正向同构：有退货的主体各自成段（<b>无退货的主体不出现</b>），段内只列被退回的行，金额<b>纯负数</b>红冲，原发票保留不动。
+  <br>本示例覆盖：<b>① 已注册 GST 主体的红冲</b>（负 GST，客户须相应冲减已抵扣的进项税）+ <b>③ 未注册 GST 主体的冲抵</b>（无 GST 调整）。
+</div>
+
+<div class="page">
+  <div class="cn-watermark">CREDIT</div>
+  <div class="inv-top">
+    <div>
+      <div class="brand"><span class="logo" role="img" aria-label="Foodmax"></span></div>
+    </div>
+    <div class="inv-title">
+      <div class="t"><span class="fn mand">C1</span>CREDIT NOTE<small>2 sections · 1 with GST adjustment</small></div>
+      <div class="meta">
+        <div>Order Number: <b>SO-20260705-0342</b></div>
+        <div><span class="fn mand">C3</span>Credit Note Date: <b>10 Jul 2026</b></div>
+        <div><span class="fn biz">C5</span>Reason: <b>Partial return</b></div>
+        <div><span class="fn biz">C6</span>Return No.: <b>RT-20260709-0031</b>　Return Date: <b>09 Jul 2026</b></div>
+        <div class="grand">Total Credited (SGD): <b>−$98.96</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="box">
+      <div class="label">Bill To</div>
+      <div class="name">Ah Hng Seafood Restaurant Pte. Ltd.</div>
+      <div class="addr">
+        12 Bedok North Ave 4, #01-05, Singapore 469662<br>
+        Customer GST Reg No.: 200912345D
+      </div>
+    </div>
+    <div class="box">
+      <div class="label">Collected From</div>
+      <div class="addr">
+        Ah Hng Central Kitchen<br>
+        38 Woodlands Ind Park E1, #03-11, Singapore 757700
+      </div>
+    </div>
+  </div>
+
+  <table class="items">
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <thead>
+      <tr>
+        <th>#</th><th>Description</th><th>Specification</th>
+        <th class="r">Qty</th><th class="r">Unit Price<br><small>excl. GST</small></th><th class="r">Amount<br><small>excl. GST</small></th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr class="band"><td colspan="6">
+        <span class="ix">①</span><span class="badge">CREDIT NOTE</span>
+        <span class="nm">10X AI Technology Pte. Ltd.</span>
+        <span class="kv">GST Reg No. <b>202245757M</b></span>
+        <span class="kv">Credit Note No. <b>CN-20260710-0342-01</b></span>
+        <span class="ad"><span class="fn mand">C7</span>Against Tax Invoice No. <b>INV-20260707-0342-01</b> dated <b>07 Jul 2026</b>　·　6 Fishery Port Road, #01-01, Singapore 619747</span>
+      </td></tr>
+      <tr><td>1</td><td>Live Boston Lobster</td><td>1 piece</td><td class="r neg">−2</td><td class="r">$42.00</td><td class="r neg">−$84.00</td></tr>
+      <tr class="bcrs"><td>2</td><td>BCRS Deposit <small>· not subject to GST</small></td><td>1 can</td><td class="r">−24</td><td class="r">$0.10</td><td class="r">−$2.40</td></tr>
+      <tr class="esum"><td colspan="6">
+        <span class="seg minus">Sub-total Before GST <b>−$84.00</b></span>
+        <span class="seg minus"><span class="fn mand">C8</span>GST @ 9% <b>−$7.56</b></span>
+        <span class="seg bcrs">BCRS <b>−$2.40</b></span>
+        <span class="pay"><span>Amount Credited</span>−$93.96</span>
+      </td></tr>
+    </tbody>
+
+    <tbody>
+      <tr class="band"><td colspan="6">
+        <span class="ix">③</span><span class="badge nogst">CREDIT NOTE</span>
+        <span class="nm">KitchenPro Supplies Pte. Ltd.</span>
+        <span class="kv">Credit Note No. <b>CN-20260710-0342-03</b></span>
+        <span class="ad">Against Invoice No. <b>INV-20260707-0342-03</b> dated <b>07 Jul 2026</b>　·　27 Mandai Estate, #03-08, Singapore 729931</span>
+        <span class="nogst-note"><span class="fn mand">C9</span>This supplier is not GST-registered. This is not a credit note for GST purposes and no GST adjustment arises.</span>
+      </td></tr>
+      <tr><td>1</td><td>Stainless Kitchen Shears</td><td>1 piece</td><td class="r neg">−1</td><td class="r">$5.00</td><td class="r neg">−$5.00</td></tr>
+      <tr class="esum"><td colspan="6">
+        <span class="seg minus">Sub-total <b>−$5.00</b></span>
+        <span class="seg na">GST <b>Not applicable</b></span>
+        <span class="pay"><span>Amount Credited</span>−$5.00</span>
+      </td></tr>
+    </tbody>
+  </table>
+
+  <div class="sumrow">
+    <div class="note">
+      <b>Notes.</b>
+      (1) Each section above is a separate credit note issued by the Issuing Entity named in it, against the original invoice stated in that section.<br>
+      (2) <span class="fn mand">C4</span>The credited amount is offset against the outstanding balance of Order <b>SO-20260705-0342</b>; any excess is refunded to the original payment method.<br>
+      (3) For sections with a GST adjustment, the customer must correspondingly reduce the input tax previously claimed on the original invoice.<br>
+      (4) The original invoice remains valid for all lines not listed above.<br>
+      (5) The BCRS deposit is refunded upon container return.
+    </div>
+    <div class="totals">
+      <div class="row"><span class="k">Sub-total Before GST</span><span class="neg">−$89.00</span></div>
+      <div class="row"><span class="k">GST</span><span class="neg">−$7.56</span></div>
+      <div class="row bcrs"><span class="k">BCRS Deposit (not subject to GST)</span><span>−$2.40</span></div>
+      <div class="row grand"><span class="k">Total Credited</span><span>−$98.96</span></div>
+    </div>
+  </div>
+  <div class="foot">Computer generated document. No signature is required.</div>
+</div>
+
+<div class="dict">
+  <h2>字段说明 · 冲抵单据</h2>
+  <p class="sub">与正向同名的字段（客户主体、地址、商品行、小计公式等）含义完全一致，此处只列<b>冲抵单据特有或口径不同</b>的字段。</p>
+
+  <table class="fd">
+    <colgroup><col class="f1"><col class="f2"><col class="f3"><col class="f4"><col class="f5"><col class="f6"></colgroup>
+    <thead><tr><th>#</th><th>字段</th><th>票面示例</th><th>含义与取数</th><th>属性</th><th>缺失后果 / 备注</th></tr></thead>
+    <tbody>
+      <tr><td>C1</td><td><b>单据标题</b></td><td><code>CREDIT NOTE</code></td><td>逆向凭证标题，必须与 Invoice 明确区分；另加 <i>CREDIT</i> 水印防混淆</td><td><span class="pill mand">法定</span></td><td>与正向<b>完全分开出具</b>，不并入发票 PDF</td></tr>
+      <tr><td>C3</td><td><b>冲抵日期</b><br>Credit Note Date</td><td><code>10 Jul 2026</code></td><td>签发日。<b>供应商与客户均在「开具 CN 的会计期」调整 GST 申报</b>（F5 Box 1 与 Box 6）</td><td><span class="pill mand">法定</span></td><td>决定进哪一期申报</td></tr>
+      <tr><td>C4</td><td><b>结算方式</b><br>Settlement</td><td>Notes(2)：冲减本单未付余额，多余原路退回</td><td>说明这笔贷记怎么落地：抵未付款 or 退款。<b>本版已从页头信息框移入 Notes(2)</b>——它是条款不是标识</td><td><span class="pill biz">业务</span></td><td>缺失会引发「到底退不退钱」争议</td></tr>
+      <tr><td>C5</td><td><b>冲抵原因</b><br>Reason</td><td><code>Partial return</code></td><td>退货 / 短少 / 质量问题 / 价格调整等枚举</td><td><span class="pill biz">业务</span></td><td>财务分类与客诉分析用</td></tr>
+      <tr><td>C6</td><td><b>退货单号 / 日期</b></td><td><code>RT-20260709-0031</code> / 09 Jul 2026</td><td>关联实际退货作业，追溯用</td><td><span class="pill biz">业务</span></td><td>—</td></tr>
+      <tr><td>C7</td><td><b>引用原发票</b><br>Against Invoice No. + date</td><td><code>INV-20260707-0342-01</code> dated 07 Jul 2026</td><td><b>本模板最关键的新增字段。</b>IRAS 明确要求 Credit Note 载明<b>原 Tax Invoice 的号码与日期</b>；做不到则须另存已就原供应申报 GST 的书面证据。<br><b>必须逐主体引用各自的原发票号</b>（-01 / -03），不能只给文档级单号</td><td><span class="pill mand">法定</span></td><td>建立「原发票 ↔ CN」冲销勾稽，防重复红冲。<b>上一版仅有文档级 Against Invoice，属缺失，本版已补</b></td></tr>
+      <tr><td>C8</td><td><b>GST 冲回</b><br>GST @ 9%</td><td><code>−$7.56</code></td><td>负数税额 = 负计税基数 × 9%。供应方冲减销项税，<b>客户须相应冲减已抵扣的进项税</b></td><td><span class="pill mand">法定</span></td><td>税率与税额同样须上票面</td></tr>
+      <tr><td>C9</td><td><b>无 GST 调整声明</b></td><td><code>This is not a credit note for GST purposes and no GST adjustment arises.</code></td><td>未注册 GST 主体的段落<b>必须</b>声明本段不产生 GST 调整。IRAS 对「不调整 GST 的贷记单」有明文的声明要求</td><td><span class="pill mand">法定</span></td><td>仅未注册主体（或其他无 GST 调整的情形）渲染</td></tr>
+      <tr><td>—</td><td><b>主体出现规则</b></td><td>只有 ① 与 ③</td><td><b>无退货的主体整段不渲染</b>（本例 ② Ocean Fresh 无退货，不出现）</td><td><span class="pill sys">系统</span></td><td>省版面，也避免客户误以为该主体也退了</td></tr>
+      <tr><td>—</td><td><b>金额符号</b></td><td>全部负数</td><td>数量与金额一律纯负数红字，不用「退货」正数表</td><td><span class="pill mand">法定</span></td><td>与正向对称，便于勾稽</td></tr>
+    </tbody>
+  </table>
+
+  <div class="okbox">
+    <b>为什么正向与冲抵必须分开出具</b><br>
+    ① 两者是<b>不同会计期</b>的凭证——正向进配送完成当期，冲抵进 CN 开具当期，合在一份文档会让客户与我们都难以定位申报期；<br>
+    ② 冲抵可能发生<b>多次</b>（分批退货），一份正向发票对应 N 份 CN，天然是一对多；<br>
+    ③ IRAS 要求 CN 引用原发票号与日期（C7）——引用关系要求两者是<b>独立单据</b>，不能是同一份文档的两页。
+  </div>
+</div>
+
+</div>
+</div>
+
+<script>
+  var btns=document.querySelectorAll('.tabbtn');
+  function show(t){
+    document.querySelectorAll('.pane').forEach(function(p){p.classList.toggle('show',p.id==='pane-'+t)});
+    btns.forEach(function(b){b.classList.toggle('active',b.dataset.t===t)});
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){show(b.dataset.t)})});
+  show('inv');
+</script>
+</html>
