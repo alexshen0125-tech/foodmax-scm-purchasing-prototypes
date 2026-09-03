@@ -124,6 +124,32 @@ const unitNames=(t,g)=>unitList(t,g).map(x=>x[1]);
 const MEASURE_UNITS_SET=['g','kg','ml','L'];   // 计量单位判定集
 const NET_UNITS=['g','kg','ml','L'];           // 兼容旧引用
 const PACK_UNITS=['包','份','组','箱'];         // 兼容旧引用
+/* ===== 类目字段模板（2026-09-03，与 PC 同数据同口径；运营平台「后台类目 › 字段模板库」维护，App 只消费）=====
+   模板 = { 字段 → 允许的字典项子集[, 默认值] }；解析：类目自身挂载 › 父类目 › 平台默认（全量字典）。
+   只裁「商家手选」的 3 个字段：最小包装单位 / 净含量单位 / 售卖单位；售卖规格单位是派生值不进模板。 */
+const TPL_FIELDS={netPackType:{t:'最小包装单位',full:()=>unitNames('标品','spec')},netUnit:{t:'净含量单位',full:()=>unitNames('标品','net')},packUnit:{t:'售卖单位',full:()=>unitNames('标品','sell')}};
+const FIELD_TPLS={
+  0:{name:'平台默认',fields:{}},
+  1:{name:'饮料',    fields:{netPackType:{allow:['瓶','罐','箱'],def:'瓶'},netUnit:{allow:['ml','L'],def:'ml'},packUnit:{allow:['箱'],def:''}}},
+  2:{name:'生鲜蔬菜',fields:{netPackType:{allow:['袋','盒','箱'],def:'袋'},netUnit:{allow:['g','kg'],def:'kg'},packUnit:{allow:['包','份','箱'],def:''}}},
+  3:{name:'肉禽水产',fields:{netPackType:{allow:['盒','袋','箱'],def:'盒'},netUnit:{allow:['g','kg'],def:'g'},packUnit:{allow:['包','份'],def:''}}},
+};
+const CAT_TPL_MOUNT={'饮料':1,'新鲜蔬菜':2,'肉禽蛋品':3,'海鲜水产':3};   // 类目名 → 模板 id；调味品未挂载 → 平台默认
+function tplResolve(cat){const id=cat&&CAT_TPL_MOUNT[cat];return id!=null&&FIELD_TPLS[id]?{tpl:FIELD_TPLS[id],source:'own'}:{tpl:FIELD_TPLS[0],source:'default'};}
+function tplAllowed(cat,k){const full=TPL_FIELDS[k].full();const c=tplResolve(cat).tpl.fields[k];if(!c||!c.allow||!c.allow.length)return full;return full.filter(u=>c.allow.includes(u));}
+function tplDefault(cat,k){const c=tplResolve(cat).tpl.fields[k];const d=c&&c.def;return (d&&tplAllowed(cat,k).includes(d))?d:'';}
+function tplTitle(cat){const r=tplResolve(cat);return r.source=='own'?`模板「${r.tpl.name}」`:'平台默认';}   // 选择器标题后缀：告知商家可选值来自哪个类目模板
+/* 类目变更后（BR-09）：三个单位字段越界清空并提示、空值预填模板默认值；返回被清空的字段名 */
+function catUnitSyncApp(p,f){
+  const cat=f.cat&&f.cat.n;if(!cat)return;const cleared=[];
+  ['netPackType','netUnit'].forEach(k=>{const ok=tplAllowed(cat,k);if(f[k]&&!ok.includes(f[k])){f[k]='';cleared.push(TPL_FIELDS[k].t);}if(!f[k]&&f.stdType==='标品')f[k]=tplDefault(cat,k);});
+  const okSell=tplAllowed(cat,'packUnit');let n=0;f.specs.forEach(s=>{if(s.packUnit&&!okSell.includes(s.packUnit)){s.packUnit='';n++;}});if(n)cleared.push(`${n} 个规格的售卖单位`);
+  const ph=(el,txt,filled)=>{if(el)el.innerHTML=filled?txt:`<span class="ph">${txt}</span>`;};   // 同 openForm 内的 setPH（作用域不同，此处自备）
+  ph(p.querySelector('#pb-netpack-v'),f.netPackType||'请选择',!!f.netPackType);
+  ph(p.querySelector('#pb-netunit'),f.netUnit||'单位',!!f.netUnit);
+  stdToggle(p,f);renderSpecs(p,f);refreshNet(p,f);
+  if(cleared.length)FM.toast(`类目已变更，${cleared.join('、')}不在可选范围，已清空`);
+}
 /* g/ml 满 1000 进位到 kg/L，避免出现「7920ml」——与 PC netCarry 同口径 */
 function netCarry(v,u){
   if(u==='g'&&v>=1000)return{v:v/1000,u:'kg'};
@@ -586,10 +612,10 @@ function renderSpecs(p,f){
     const rseg=row.querySelector('[data-refundseg]');
     if(rseg)rseg.querySelectorAll('.mo').forEach(o=>o.onclick=()=>{rseg.querySelectorAll('.mo').forEach(x=>x.classList.remove('on'));o.classList.add('on');f.specs[i].refund=o.dataset.r==='1'?1:0;});
     const pk=row.querySelector('[data-packpick]');
-    if(pk)pk.onclick=()=>pbGridPicker('选择售卖单位',['无',...PACK_UNITS],f.specs[i].packUnit||'无',v=>{
+    if(pk)pk.onclick=()=>{const cat=f.cat&&f.cat.n;if(!cat)return FM.toast('请先选择后台类目，单位可选值按类目限定');pbGridPicker('售卖单位 · '+tplTitle(cat),['无',...tplAllowed(cat,'packUnit')],f.specs[i].packUnit||'无',v=>{
       const val=v==='无'?'':v;f.specs[i].packUnit=val;
       const el=row.querySelector('[data-packv]');if(el){el.textContent=val||'选填 · 如 袋/箱/盒';el.classList.toggle('ph',!val);}
-    });
+    });};
     const seg=row.querySelector('[data-modeseg]');
     if(seg)seg.querySelectorAll('.mo').forEach(o=>o.onclick=()=>{
       seg.querySelectorAll('.mo').forEach(x=>x.classList.remove('on'));o.classList.add('on');
@@ -736,7 +762,8 @@ function runChecks(f){
     if(!(parseFloat(f.netQty)>0)) fails.push(['净含量','「单件净含量」必填——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推']);
     else if(!f.netUnit)           fails.push(['净含量','填了单件净含量，「净含量单位」必填']);
     if(!f.netPackType)            fails.push(['净含量','「最小包装单位」必填——声明净含量是 1 个单品的量还是 1 整包的量']);
-    else if(!netPackUnits().includes(f.netPackType)) fails.push(['单位规范',`最小包装单位「${f.netPackType}」不在标品计件单位枚举内（${netPackUnits().join('/')}）`]);
+    else if(f.cat&&!tplAllowed(f.cat.n,'netPackType').includes(f.netPackType)) fails.push(['单位规范',`最小包装单位「${f.netPackType}」不在类目「${f.cat.n}」字段模板可选值内（${tplAllowed(f.cat.n,'netPackType').join('/')}）`]);
+    if(f.netUnit&&f.cat&&!tplAllowed(f.cat.n,'netUnit').includes(f.netUnit)) fails.push(['单位规范',`净含量单位「${f.netUnit}」不在类目「${f.cat.n}」字段模板可选值内（${tplAllowed(f.cat.n,'netUnit').join('/')}）`]);
     if(f.supplyMode==='寄售'){
       const isPack=f.stockUnitIsPack||'是';
       if(!['是','否'].includes(isPack))fails.push(['库存单位','寄售标品需说明「库存单位是否为最小包装单位」']);
@@ -759,8 +786,8 @@ function runChecks(f){
     if(!unitNames(f.stdType,'spec').includes(s.specUnit))
       fails.push(['单位规范',`规格${i+1} 售卖规格单位「${s.specUnit}」不在${f.stdType}取值内（${unitNames(f.stdType,'spec').join('/')}）`]);
   });
-  f.specs.forEach((s,i)=>{if(s.packUnit&&!unitNames(f.stdType,'sell').includes(s.packUnit))
-    fails.push(['单位规范',`规格${i+1} 售卖单位「${s.packUnit}」不在规范取值内（${unitNames(f.stdType,'sell').join('/')}）`]);});
+  f.specs.forEach((s,i)=>{if(s.packUnit&&f.cat&&!tplAllowed(f.cat.n,'packUnit').includes(s.packUnit))
+    fails.push(['单位规范',`规格${i+1} 售卖单位「${s.packUnit}」不在类目「${f.cat.n}」字段模板可选值内（${tplAllowed(f.cat.n,'packUnit').join('/')}）`]);});
   const qtys=f.specs.map(s=>String(s.qty).trim()).filter(q=>/^[1-9]\d*$/.test(q));
   if(new Set(qtys).size!==qtys.length) fails.push(['规格','各规格「数量」不可重复']);
   if(f.cat&&!LICENSE.has(f.cat.n)) fails.push(['资质',`经营许可证未覆盖「${f.cat.n}」类目`]);
@@ -813,7 +840,7 @@ function bindForm(p,f){
   p.querySelector('#pb-brand').oninput=e=>{f.brand=e.target.value;};
   p.querySelector('#pb-desc').oninput=e=>{f.desc=e.target.value;};
   // 后台类目(选中后自动带出默认税率，手填可改；联动 BCRS 类目门控)
-  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}bcrsToggle(p,f);paint(p,f);});
+  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}catUnitSyncApp(p,f);bcrsToggle(p,f);paint(p,f);});   // 单位可选值随类目字段模板联动(BR-09)
   // BCRS：是否支持(仅 bcrs 类目可见) + 押金单价
   p.querySelector('#pb-bcrs-row').onclick=()=>pbGridPicker('是否支持 BCRS',['否','是'],f.bcrs,v=>{
     f.bcrs=v;setPH(p.querySelector('#pb-bcrs-v'),v,1);
@@ -833,7 +860,8 @@ function bindForm(p,f){
     f.specs.forEach(s=>{if(s.specUnit&&!ok.includes(s.specUnit)){s.specUnit='';cleared++;}});
     if(f.stockUnit&&!ok.includes(f.stockUnit))f.stockUnit='';
     if(v==='非标品'){f.netQty='';f.netUnit='';}      // 非标品无净含量字段
-    f.stdType=v;setPH(p.querySelector('#pb-std-v'),v,1);
+    if(v==='标品'&&f.cat){if(!f.netPackType)f.netPackType=tplDefault(f.cat.n,'netPackType');if(!f.netUnit)f.netUnit=tplDefault(f.cat.n,'netUnit');}   // 切成标品时按类目模板预填默认单位
+    f.stdType=v;setPH(p.querySelector('#pb-std-v'),v,1);setPH(p.querySelector('#pb-netpack-v'),f.netPackType||'请选择',!!f.netPackType);
     setPH(p.querySelector('#pb-stockunit-v'),f.stockUnit||'请选择',!!f.stockUnit);
     p.querySelector('#pb-netqty').value=f.netQty;
     setPH(p.querySelector('#pb-netunit'),f.netUnit||'单位',!!f.netUnit);
@@ -841,11 +869,11 @@ function bindForm(p,f){
     if(cleared)toast(`已清空 ${cleared} 个规格的售卖规格单位，请重新选择`);   // 多规格静默清空会让商家以为没改动
   });
   // 单件净含量（标品必填）：数值即时重算各规格净含量
-  p.querySelector('#pb-net-row').onclick=e=>{if(e.target.closest('input'))return;pbGridPicker('净含量单位',unitNames(f.stdType,'net'),f.netUnit,v=>{f.netUnit=v;setPH(p.querySelector('#pb-netunit'),v,1);refreshNet(p,f);paint(p,f);});};
+  p.querySelector('#pb-net-row').onclick=e=>{if(e.target.closest('input'))return;const cat=f.cat&&f.cat.n;if(!cat)return FM.toast('请先选择后台类目，单位可选值按类目限定');pbGridPicker('净含量单位 · '+tplTitle(cat),tplAllowed(cat,'netUnit'),f.netUnit,v=>{f.netUnit=v;setPH(p.querySelector('#pb-netunit'),v,1);refreshNet(p,f);paint(p,f);});};
   // 库存单位（寄售专用）：取值同售卖规格单位枚举；变更后各规格只读单位与净含量联动
-  p.querySelector('#pb-netpack-row').onclick=()=>pbGridPicker('最小包装单位',netPackUnits(),f.netPackType,v=>{
+  p.querySelector('#pb-netpack-row').onclick=()=>{const cat=f.cat&&f.cat.n;if(!cat)return FM.toast('请先选择后台类目，单位可选值按类目限定');pbGridPicker('最小包装单位 · '+tplTitle(cat),tplAllowed(cat,'netPackType'),f.netPackType,v=>{
     f.netPackType=v;setPH(p.querySelector('#pb-netpack-v'),v,1);stdToggle(p,f);renderSpecs(p,f);refreshNet(p,f);bcrsToggle(p,f);paint(p,f);   // 各规格售卖规格单位随之锁定，BCRS 单位同源
-  });
+  });};
   p.querySelector('#pb-stockispack-row').onclick=()=>pbGridPicker('库存单位就是最小包装单位吗',['是','否'],f.stockUnitIsPack,v=>{
     f.stockUnitIsPack=v;setPH(p.querySelector('#pb-stockispack-v'),v,1);
     if(v==='否'&&f.stockUnit===f.netPackType)f.stockUnit='';   // 放开时清掉自动赋的值，让商家重选
