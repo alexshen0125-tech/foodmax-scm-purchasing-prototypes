@@ -1,6 +1,9 @@
 /* Food Max 商家端 v2 · 开票管理模块
    与 PC 端(scm_商家管理系统_全流程_交互原型.html)同一业务模型：
-   ① 客户开票(按订单)：客户销售发票由【平台代商家开具】(GST 9%)，商家【无需开具/上传】，仅展示【已开具】发票，供预览/下载；客户信息脱敏；不做多客户合并。
+   ① 客户开票(按订单)：客户销售发票由【平台代商家开具】(GST 9%)，商家【无需开具/上传】，仅展示【已开具】发票，供预览/下载；不做多客户合并。
+      口径 = 一个开票主体一张发票；商家只看到【自己那一张】。客户名称与账单地址【不脱敏】——这是商家自己的销项凭证，
+      IRAS 要求载明受供方名称与地址，脱敏版不构成有效税务发票、商家无法据此申报(2026-09-04 沈亮定)。
+      票面【不出现全单金额】：只写「第X张/共Y张」，防止商家反推同单其他开票主体的合计。
    ② 服务费发票(平台开具)：平台在与商家结算完成后【自动开具】佣金税票(GST 9%)并推送，商家仅【查看/下载】，无需申请。
    ③ 补采发票(平台开具)：平台就【自营现货补货商家到仓少送的缺口】向商家开销售发票(GST 9%)，结算完成后自动开具推送，商家仅【查看/下载】。
    交互形态可与 PC 不同(App 分段+卡片+推页预览)，但业务规则/字段/状态/模式与 PC 一致。 */
@@ -58,9 +61,15 @@ document.head.appendChild(css);
 // ---- 数据(SG 本地化；金额 S$) ----
 // ① 客户开票·已开具(按订单，一单对一个客户；与 PC 端 DB.invoices 对齐)
 const CUST=[
-  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'9820.00',no:'INV-2026-6600',date:'2026-07-01'},
-  {order:'#SG20260629012',client:'食为天餐厅',amt:'7360.00',no:'INV-2026-6601',date:'2026-07-01'},
-  {order:'#SG20260630021',client:'丰盛轩',amt:'6120.00',no:'INV-2026-6602',date:'2026-07-01'},
+  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'9820.00',no:'INV-2026-6600',date:'2026-07-01',
+    cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
+    goods:9050.00,disc:60.83,ship:20.00,sub:9009.17,gst:810.83,bcrs:0,seq:1,total:2},
+  {order:'#SG20260629012',client:'食为天餐厅',amt:'7360.00',no:'INV-2026-6601',date:'2026-07-01',
+    cliAddr:'18 Boon Lay Way, #01-98, Singapore 609966',cliGst:'',
+    goods:6800.00,disc:47.71,ship:0,sub:6752.29,gst:607.71,bcrs:0,seq:1,total:1},
+  {order:'#SG20260630021',client:'丰盛轩',amt:'6120.00',no:'INV-2026-6602',date:'2026-07-01',
+    cliAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',cliGst:'201033445B',
+    goods:5650.00,disc:35.32,ship:0,sub:5614.68,gst:505.32,bcrs:0,seq:2,total:3},
 ];
 // ② 服务费发票·平台开具(与 PC 端 DB.svcInvoices 对齐)
 const SVC=[
@@ -74,7 +83,9 @@ const RPL=[
   {no:'RPL-INV-2026-301',repl:'RPL-20260518-001',billNo:'ST202605-M0815',item:'鲜鸡蛋 × 12 盘',net:'120.22',gst:'10.82',total:'131.04',date:'2026-06-06'},
 ];
 
-// 客户信息脱敏：商家端不展示完整下单客户名(平台代开，隐私保护)，保留首字符 + **（与 PC maskClient 一致）
+// 客户信息脱敏工具（与 PC maskClient 一致）。
+// 注意：【发票场景不再脱敏】(2026-09-04 沈亮定) —— 发票是商家自己的销项凭证，客户名称与地址为 IRAS 法定必填。
+// 本函数保留供其他非凭证场景使用。
 function maskClient(s){s=String(s||'');return s.length<=1?s:s[0]+'**';}
 function fmt(v){return Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function money(v){return 'S$'+fmt(v);}
@@ -83,7 +94,7 @@ function empty(t,p){return `<div class="empty"><div class="ei">${svg('invoice')}
 function custCard(c,i){
   return `<div class="iv-card" data-i="${i}">
     <div class="hd"><span class="ord">${c.order}</span><span class="bd">已开票</span></div>
-    <div class="cli">开票客户 <b>${maskClient(c.client)}</b></div>
+    <div class="cli">开票客户 <b>${c.client}</b></div>
     <div class="g">
       <div class="col"><div class="l">价税合计</div><div class="v amt">${money(c.amt)}</div></div>
       <div class="col"><div class="l">发票号</div><div class="v">${c.no}</div></div>
@@ -124,20 +135,27 @@ function previewPage(title,docHtml,no){
     mount:(pg)=>{pg.querySelector('#ivdl').onclick=()=>toast('发票 '+no+' 已下载 (PDF)');}});
 }
 function previewCust(c){
-  const amt=parseFloat(c.amt),sub=amt/1.09,gst=amt-sub;
+  const amt=parseFloat(c.amt);
   previewPage('客户销售发票',`<div class="doc">
-    <div class="th"><div class="co">绿鲜源蔬果 Green Fresh Produce Pte Ltd<small>GST Reg No 202398765M</small></div><div class="ti">TAX INVOICE<small>销售发票</small></div></div>
+    <div class="th"><div class="co">绿鲜源蔬果 Green Fresh Produce Pte Ltd<small>GST Reg No 202398765M · Blk 21 Jurong Port Rd, #03-12, Singapore 619098</small></div><div class="ti">TAX INVOICE<small>Issued by FoodMax on behalf</small></div></div>
     <div class="kv"><span class="k">发票号</span><span class="v">${c.no}</span></div>
     <div class="kv"><span class="k">开票日期</span><span class="v">${c.date}</span></div>
     <div class="kv"><span class="k">对应订单号</span><span class="v">${c.order}</span></div>
-    <div class="kv"><span class="k">开票客户</span><span class="v">${maskClient(c.client)}</span></div>
-    <div class="kv"><span class="k">开票方</span><span class="v">平台代商家开具 · Food Max Platform</span></div>
+    <div class="kv"><span class="k">开票客户 Bill To</span><span class="v">${c.client}</span></div>
+    <div class="kv"><span class="k">账单地址</span><span class="v">${c.cliAddr||'—'}</span></div>
+    ${c.cliGst?`<div class="kv"><span class="k">客户 GST 号</span><span class="v">${c.cliGst}</span></div>`:''}
     <div class="tot">
-      <div class="r"><span>订单商品货款（明细见对应订单）</span><span>${money(sub)}</span></div>
-      <div class="r"><span>GST 9%</span><span>${money(gst)}</span></div>
-      <div class="r big"><span>价税合计 Total Payable</span><span>${money(amt)}</span></div>
+      <div class="r"><span>Total Before GST</span><span>${money(c.goods)}</span></div>
+      ${c.disc?`<div class="r"><span>Discount Before GST</span><span>−${money(c.disc)}</span></div>`:''}
+      ${c.ship?`<div class="r"><span>Shipping Fees Before GST</span><span>${money(c.ship)}</span></div>`:''}
+      <div class="r"><span>Sub-total Before GST</span><span>${money(c.sub)}</span></div>
+      <div class="r"><span><b>GST @ 9%</b></span><span><b>${money(c.gst)}</b></span></div>
+      ${c.bcrs?`<div class="r"><span>BCRS Deposit（不计 GST）</span><span>${money(c.bcrs)}</span></div>`:''}
+      <div class="r big"><span>Amount Payable (Inc GST)</span><span>${money(amt)}</span></div>
     </div>
-    <div class="note">本发票由平台代商家就订单商品向下单客户开具；金额与订单一致，作为结算凭证。商家端客户信息已脱敏。</div>
+    <div class="note">本发票由 <b>FoodMax 代本店（开票主体）</b>向下单客户开具，供应关系与 GST 申报义务在本店。
+    GST 计税基数 = 商品未税小计 − 折扣 + 配送费。客户按订单号一笔总额付款至平台，由平台代收后与本店结算。<br>
+    本单为订单 ${c.order} 项下<b>第 ${c.seq||1} 张 / 共 ${c.total||1} 张</b>发票（按开票主体拆分）。</div>
   </div>`,c.no);
 }
 function previewSvc(s){

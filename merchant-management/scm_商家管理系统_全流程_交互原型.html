@@ -704,10 +704,37 @@ const DB = {
   bill:{period:'2026年6月', no:'ST202606-M0815', range:'2026-06-01 ~ 06-30', genDate:'2026-07-01', status:'confirmed', gross:47530.00, reverse:268.00, fee:1901.20, feeSvc:1188.25, feeLogi:712.95, net:45360.80, dispute:'',
     items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95]]},
   invoices:[
-    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',no:'INV-2026-6600',reject:''},
-    {order:'#SG20260629012',client:'食为天餐厅',amt:7360.00,status:'verified',no:'INV-2026-6601',reject:''},
-    {order:'#SG20260630021',client:'丰盛轩',amt:6120.00,status:'verified',no:'INV-2026-6602',reject:''},
+    // 平台代商家开给客户的销售发票（TAX INVOICE）。amt = 含税应付；sub/gst/goods/disc/ship 满足
+    // sub = goods − disc + ship，gst = ROUND(sub×9%,2)，amt = sub + gst + bcrs。seq/total = 该订单内第几张/共几张（跨商家）
+    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',no:'INV-2026-6600',reject:'',
+      date:'2026-07-01',goods:9050.00,disc:60.83,ship:20.00,sub:9009.17,gst:810.83,bcrs:0,seq:1,total:2,
+      cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
+      consignee:'海底捞 · 城市广场店',dlvAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',dlvNo:'DO-20260628-0117',dlvDate:'2026-06-28',
+      lines:[['有机菜心','1 箱(10kg)',120,68.00,8160.00],['本地小白菜','1 箱(8kg)',60,14.00,840.00],['芥蓝','1 箱(5kg)',10,5.00,50.00]]},
+    {order:'#SG20260629012',client:'食为天餐厅',amt:7360.00,status:'verified',no:'INV-2026-6601',reject:'',
+      date:'2026-07-01',goods:6800.00,disc:47.71,ship:0,sub:6752.29,gst:607.71,bcrs:0,seq:1,total:1,
+      cliAddr:'18 Boon Lay Way, #01-98, Singapore 609966',cliGst:'',
+      consignee:'食为天中央厨房',dlvAddr:'18 Boon Lay Way, #01-98, Singapore 609966',dlvNo:'DO-20260629-0125',dlvDate:'2026-06-29',
+      lines:[['泰国芥蓝仔','150g',800,4.50,3600.00],['荷兰豆','1 箱(5kg)',160,20.00,3200.00]]},
+    {order:'#SG20260630021',client:'丰盛轩',amt:6120.00,status:'verified',no:'INV-2026-6602',reject:'',
+      date:'2026-07-01',goods:5650.00,disc:35.32,ship:0,sub:5614.68,gst:505.32,bcrs:0,seq:2,total:3,
+      cliAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',cliGst:'201033445B',
+      consignee:'丰盛轩 · 裕廊店',dlvAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',dlvNo:'DO-20260630-0131',dlvDate:'2026-06-30',
+      lines:[['娃娃菜','1 箱(10头)',250,12.00,3000.00],['西兰花','1 箱(6kg)',106,25.00,2650.00]]},
   ],
+  /* 运营平台·发票查询：全平台代开税票总账（跨商家 / 正向 inv + 冲抵 cn）。
+     ent=开票主体法定名称，gstNo 为空 = 该主体未注册 GST（票面降为 INVOICE、不计税、不可抵扣，gst 记 null）。 */
+  taxInvoices:[
+    {no:'INV-2026-6600',type:'inv',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:9009.17,gst:810.83,bcrs:0,amt:9820.00,date:'2026-07-01',status:'credited',against:''},
+    {no:'INV-2026-6601',type:'inv',order:'#SG20260629012',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'食为天餐厅',sub:6752.29,gst:607.71,bcrs:0,amt:7360.00,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-2026-6602',type:'inv',order:'#SG20260630021',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'丰盛轩',sub:5614.68,gst:505.32,bcrs:0,amt:6120.00,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-2026-6603',type:'inv',order:'#SG20260628007',ent:'福满自营 10X AI Technology Pte Ltd',gstNo:'202245757M',client:'海底捞（新加坡）',sub:2140.00,gst:192.60,bcrs:24.00,amt:2356.60,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-2026-6604',type:'inv',order:'#SG20260630021',ent:'厨匠厨具 KitchenPro Supplies Pte Ltd',gstNo:'',client:'丰盛轩',sub:380.00,gst:null,bcrs:0,amt:380.00,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-2026-6605',type:'inv',order:'#SG20260630021',ent:'洋海水产 Ocean Fresh Trading Pte Ltd',gstNo:'201812345K',client:'丰盛轩',sub:1280.00,gst:115.20,bcrs:0,amt:1395.20,date:'2026-07-01',status:'issued',against:''},
+    {no:'CN-2026-0033',type:'cn',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:-680.00,gst:-61.20,bcrs:0,amt:-741.20,date:'2026-07-04',status:'issued',against:'INV-2026-6600'},
+    {no:'INV-2026-6606',type:'inv',order:'#SG20260701008',ent:'鲜集冻品 FreshHub Frozen Pte Ltd',gstNo:'',client:'一品轩',sub:0,gst:null,bcrs:0,amt:0,date:'',status:'failed',against:''},
+  ],
+  tiFilter:{},tiSel:[],
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
   billsHistory:[
     {period:'2026年5月', no:'ST202605-M0815', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:118.60, replCnt:2, fine:560.00, fineCnt:2, net:41524.20,
@@ -752,6 +779,8 @@ const S = {
   order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['备货中','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
   bill:{none:['未生成','t-gr'],generated:['待商家确认','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['待付款','t-b']},
   invoice:{none:['待平台开票','t-y'],uploaded:['开票中','t-b'],verified:['已开票','t-g'],rejected:['开票异常','t-r']},
+  /* 平台代开税票状态（运营平台·发票查询）：issued 已开具 / credited 已冲抵（存在对应 Credit Note）/ failed 生成失败（可重出） */
+  taxinv:{issued:['已开具','t-g'],credited:['已冲抵','t-y'],failed:['生成失败','t-r']},
   withdraw:{pending:['待处理','t-gr'],processing:['处理中','t-y'],success:['成功','t-g'],failed:['失败','t-r']},
   /* 收款账户开通（Airwallex connected account）状态：以 Airwallex webhook 回传为准（BR-07），
      none = 平台侧尚未建号；CREATED/SUBMITTED/ACTION_REQUIRED/ACTIVE/SUSPENDED 为 Airwallex 账户状态；
@@ -1189,6 +1218,8 @@ const NAV={
     {id:'p-replcfg',ic:'⚙️',t:'缺货罚款标准',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
+    {sec:'财务'},
+    {id:'p-inv-query',ic:'🔎',t:'发票查询',p1:1,badge:()=>(DB.taxInvoices||[]).filter(t=>t.status=='failed').length,by:'y'},
     {sec:'供货'},
     {id:'p-consign',ic:'🧾',t:'供货单管理',p1:1,badge:()=>DB.consigns?DB.consigns.filter(c=>c.status==10).length:0},
     {id:'p-consign-return',ic:'↩️',t:'退货单管理',p1:1,badge:()=>DB.consignReturns?DB.consignReturns.filter(r=>r.status==10).length:0,by:'y'},
@@ -3339,11 +3370,12 @@ PAGES['m-invoice']=()=>{
   return tabsBar+`${flowTip(`客户销售发票由<b>平台代你（商家）开具</b>：平台按订单向下单客户开出<b>销售发票（TAX INVOICE, GST 9%）</b>并作为结算凭证。<b>你无需开具或上传</b>，此处仅展示<b>已开具</b>的发票，供<b>预览与下载</b>。`)}
   <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">平台代开 · 已开具 ${issued.length} 张 · 每张对应一个订单/客户</span></div><div class="card-bd ${issued.length?'flush':''}">
     ${issued.length?`<table>
-    <thead><tr><th>订单号</th><th>开票客户</th><th>金额</th><th>发票号</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>发票号</th><th>订单号</th><th>开票客户</th><th>开票日期</th><th style="text-align:right">未税金额</th><th style="text-align:right">GST</th><th style="text-align:right">应付金额</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${issued.map(({iv,i})=>`<tr>
-      <td class="mono">${iv.order}</td><td>${maskClient(iv.client)}</td><td>${money(iv.amt)}</td>
-      <td class="mono">${iv.no||'—'}</td><td>${tag('invoice',iv.status)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_custInvPreview(${i},1)">预览</button> <button class="btn btn-link" onclick="act_custInvDownload(${i})">下载</button></td>
+      <td class="mono">${iv.no||'—'}</td><td class="mono">${iv.order}</td><td>${iv.client}</td><td>${iv.date||'—'}</td>
+      <td style="text-align:right">${money(iv.sub||0)}</td><td style="text-align:right">${money(iv.gst||0)}</td><td style="text-align:right"><b>${money(iv.amt)}</b></td>
+      <td>${tag('invoice',iv.status)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_custInvPreview(${i})">预览</button> <button class="btn btn-link" onclick="act_custInvDownload(${i})">下载</button></td>
     </tr>`).join('')}
     </tbody></table>`
     :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无已开具发票</div><div class="e-s">平台按订单代你开具客户销售发票后，将显示在此供预览与下载。</div></div>`}
@@ -3362,45 +3394,78 @@ function svcInvoiceContent(){
 // 服务费发票由平台结算后自动开具、商家端只查看/下载：原「勾选合并申请开票」流程(act_svcToggle/svcAll/applySvcInvoice/svcInvIssue)已移除
 function act_svcInvDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
 // 客户信息脱敏：商家端不展示完整下单客户名（平台代开，隐私保护），保留首字符 + **
+// 客户信息脱敏工具。注意：【发票场景不再脱敏】(2026-09-04 沈亮定) —— 平台代开的销售发票是商家自己的销项凭证，
+// 客户名称与账单地址属 IRAS 法定必填，脱敏版不构成有效税务发票、商家无法据此申报。本函数保留供其他非凭证场景使用。
 function maskClient(s){s=String(s||'');return s.length<=1?s:s[0]+'**';}
-// 客户销售发票预览：平台代商家开具的正式发票（TAX INVOICE），商家端只读预览/下载；masked=1 时客户信息脱敏
-function act_custInvPreview(i,masked){
+// 客户销售发票预览：平台代商家开具的正式发票（TAX INVOICE），商家端只读预览/下载。
+// 票面口径 = 《【FMS税票管理】发票标准模板_一主体一页版》的「商家版」：
+//   ① 开票主体 = 商家自己（法定名称/GST号/注册地址），平台仅代开；
+//   ② 客户名称与账单地址【不脱敏】——这是商家自己的销项凭证，IRAS 要求载明受供方名称与地址，
+//      脱敏版不构成有效税务发票，商家也无法据此申报（2026-09-04 沈亮定）；
+//   ③ 交叉引用行【只写第几张/共几张，不带全单金额】——防止商家反推同单其他商家的合计。
+function act_custInvPreview(i){
   const iv=DB.invoices[i];if(!iv)return;
   const issued=iv.status=='verified';
-  const cli=masked?maskClient(iv.client):iv.client;
-  const sub=iv.amt/1.09, gst=iv.amt-sub;
+  const M={nm:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gst:'202398765M',addr:'Blk 21 Jurong Port Rd, #03-12, Singapore 619098'};
+  const L=(iv.lines||[]);
   drawer(`<div class="drawer-hd"><div><h3>客户销售发票预览</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${iv.no||'待平台开票'} · ${issued?'平台已代开':'待平台开票'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>本发票由<b>平台代商家（绿鲜源蔬果）</b>就订单 <span class="mono">${iv.order}</span> 向下单客户开具，金额与订单一致，作为结算凭证。你可预览与下载正式 PDF。</div>
     <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
-        <div>
-          <div style="font-size:15px;font-weight:700">绿鲜源蔬果 Green Fresh Produce Pte Ltd</div>
-          <div style="font-size:12px;color:var(--ts);margin-top:2px">Blk 21 Jurong Port Rd, #03-12, Singapore 619098</div>
-          <div style="font-size:12px;color:var(--ts)">GST Reg No：<span class="mono">202398765M</span></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:2px solid var(--g);padding-bottom:10px">
+        <div style="border:1.5px solid var(--g);background:var(--gl);border-radius:9px;padding:9px 12px;max-width:290px">
+          <div style="font-size:13px;font-weight:800">${M.nm}</div>
+          <div style="font-size:11.5px;color:var(--ts);line-height:1.6;margin-top:2px">
+            <b style="color:var(--tp)">GST Reg No.:</b> <span class="mono">${M.gst}</span><br>${M.addr}<br>
+            <span style="color:var(--tt)">Issued by FoodMax on behalf of this Issuing Entity</span>
+          </div>
         </div>
-        <div style="text-align:right"><div style="font-size:18px;font-weight:700;letter-spacing:.5px">TAX INVOICE</div><div style="font-size:12px;color:var(--ts)">销售发票</div></div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:800;letter-spacing:.5px">TAX INVOICE</div>
+          <div style="font-size:11.5px;color:var(--ts);line-height:1.8;margin-top:6px">
+            Invoice No.: <b style="color:var(--tp)" class="mono">${iv.no||'—'}</b><br>
+            Invoice Date: <b style="color:var(--tp)">${iv.date||'—'}</b><br>
+            Order Number: <b style="color:var(--tp)" class="mono">${iv.order}</b>
+          </div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--bd);font-size:14px;font-weight:800;color:var(--g)">Amount Payable: ${money(iv.amt)}</div>
+        </div>
       </div>
-      <dl class="dl">
-        <dt>发票号</dt><dd class="mono">${iv.no||'—（待平台开票）'}</dd>
-        <dt>开票日期</dt><dd>${DB.bill.genDate||'2026-07-01'}</dd>
-        <dt>对应订单号</dt><dd class="mono">${iv.order}</dd>
-        <dt>开票客户（Bill To）</dt><dd>${cli}</dd>
-        <dt>开票方（代开）</dt><dd>平台代商家开具 · Food Max Platform</dd>
-      </dl>
-      <table style="margin-top:12px"><thead><tr><th>#</th><th>项目</th><th style="text-align:right">金额</th></tr></thead><tbody>
-        <tr><td>1</td><td>订单商品货款（${iv.order} · 明细见对应订单）</td><td style="text-align:right">${money(sub)}</td></tr>
+
+      <div style="display:flex;gap:12px;margin:12px 0">
+        <div style="flex:1;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 11px">
+          <div style="font-size:10.5px;color:var(--ts);letter-spacing:.6px;font-weight:700;margin-bottom:4px">BILL TO</div>
+          <div style="font-weight:700;font-size:13px">${iv.client}</div>
+          <div style="font-size:11.5px;color:var(--ts);line-height:1.55">${iv.cliAddr||'—'}${iv.cliGst?`<br>Customer GST Reg No.: <span class="mono">${iv.cliGst}</span>`:''}</div>
+        </div>
+        <div style="flex:1;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 11px">
+          <div style="font-size:10.5px;color:var(--ts);letter-spacing:.6px;font-weight:700;margin-bottom:4px">DELIVER TO</div>
+          <div style="font-size:11.5px;color:var(--ts);line-height:1.55">${iv.consignee||'—'}<br>${iv.dlvAddr||'—'}<br>
+            Delivery No.: <b style="color:var(--tp)" class="mono">${iv.dlvNo||'—'}</b>　Delivery Date: <b style="color:var(--tp)">${iv.dlvDate||'—'}</b></div>
+        </div>
+      </div>
+
+      <table><thead><tr><th>#</th><th>Description</th><th>Specification</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit Price<br><span style="font-weight:400;color:var(--ts)">excl. GST</span></th><th style="text-align:right">Amount<br><span style="font-weight:400;color:var(--ts)">excl. GST</span></th></tr></thead><tbody>
+        ${L.map((l,n)=>`<tr><td>${n+1}</td><td>${l[0]}</td><td>${l[1]}</td><td style="text-align:right">${l[2]}</td><td style="text-align:right">${money(l[3])}</td><td style="text-align:right">${money(l[4])}</td></tr>`).join('')}
       </tbody></table>
-      <table style="margin-top:10px"><tbody>
-        <tr><td style="color:var(--ts)">小计（不含税 / Subtotal）</td><td style="text-align:right">${money(sub)}</td></tr>
-        <tr><td style="color:var(--ts)">GST 9%</td><td style="text-align:right">${money(gst)}</td></tr>
-        <tr style="font-weight:700;background:var(--gl)"><td>价税合计（Total Payable）</td><td style="text-align:right;color:var(--gd)">${money(iv.amt)}</td></tr>
-      </tbody></table>
-      <dl class="dl" style="margin-top:14px">
-        <dt>付款条款</dt><dd>NET 30 天</dd>
-        <dt>收款账户</dt><dd>DBS Bank · <span class="mono">****8821</span></dd>
-        <dt>备注</dt><dd style="color:var(--ts)">本发票由平台代商家就订单商品向下单客户开具；金额与订单一致。</dd>
-      </dl>
+
+      <div style="margin-left:auto;width:62%;margin-top:12px;font-size:12.5px">
+        <div style="display:flex;justify-content:space-between;padding:3px 2px"><span>Total Before GST</span><span>${money(iv.goods||0)}</span></div>
+        ${iv.disc?`<div style="display:flex;justify-content:space-between;padding:3px 2px;color:var(--r)"><span>Discount Before GST</span><span>−${money(iv.disc)}</span></div>`:''}
+        ${iv.ship?`<div style="display:flex;justify-content:space-between;padding:3px 2px"><span>Shipping Fees Before GST</span><span>${money(iv.ship)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:7px 2px 3px;border-top:1px dashed var(--bd)"><span>Sub-total Before GST</span><span>${money(iv.sub||0)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 2px;border-top:1px dotted var(--bd);border-bottom:1px dotted var(--bd);font-weight:700"><span>GST @ 9%</span><span style="color:var(--g);font-weight:800">${money(iv.gst||0)}</span></div>
+        ${iv.bcrs?`<div style="display:flex;justify-content:space-between;padding:3px 2px;color:var(--b);font-weight:600"><span>BCRS Deposit (not subject to GST)</span><span>${money(iv.bcrs)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;padding:9px 2px 0;margin-top:5px;border-top:2px solid var(--g);font-size:15px;font-weight:800;color:var(--g)"><span>Amount Payable (Inc GST)</span><span>${money(iv.amt)}</span></div>
+      </div>
+
+      <div style="margin-top:12px;font-size:11px;color:var(--ts);line-height:1.6">
+        <b>Notes.</b> (1) 本发票由 <b>FoodMax 代本开票主体开具</b>，供应关系与 GST 申报义务在本主体。
+        (2) GST 计税基数 = 商品未税小计 − 折扣 + 配送费。
+        (3) 客户按订单号一笔总额付款至平台，由平台代收后与本主体结算。
+      </div>
+      <div style="margin-top:9px;padding:7px 11px;background:var(--bg);border-radius:7px;font-size:11.5px;color:var(--ts)">
+        本单为订单 <b class="mono" style="color:var(--tp)">${iv.order}</b> 项下<b style="color:var(--tp)">第 ${iv.seq||1} 张 / 共 ${iv.total||1} 张</b>发票（按开票主体拆分）。
+      </div>
     </div></div>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${issued?`<button class="btn btn-p" onclick="act_custInvDownload(${i})">下载发票 PDF</button>`:''}</div>`);
@@ -4649,6 +4714,119 @@ PAGES['p-settle']=()=>{
     ${b.status=='disputed'?`<div class="ib ib-r"><span class="i">📝</span>商家提出异议：<b>${b.dispute}</b><br>请核查后调整对账单（数量差异/价格差异/退货未冲减/单边账）。</div><button class="btn btn-p btn-lg" onclick="act_adjustBill()">核查并出具调整后对账单</button>`:''}
     ${b.status=='adjusted'?`<div class="ib ib-b"><span class="i">⏳</span>调整后对账单已推送，等待商家复核确认。</div>`:''}
     ${b.status=='confirmed'?`<div class="ib ib-g"><span class="i">✅</span>商家已确认对账单。前往「发票开票付款」代商家开具客户发票并付款。</div>`:''}
+  </div></div>`;
+};
+
+/* ---------- 平台·财务：发票查询（全平台代开税票总账 · 跨商家 / 正向+冲抵） ----------
+   口径：一个开票主体一张发票（一主体一页版）。平台代开后，同一份渲染产物按主体切分为三个版本：
+     买家版 = 全部 N 页合并 PDF（随送货单交付）｜商家版 = 只有自己那一页（商家后台下载）｜运营版 = 本页，可查全部、可重出。
+   未注册 GST 的开票主体：gstNo 为空、gst 记 null，票面降为 INVOICE，列表 GST 列显示「不适用」。 */
+function tiRows(){
+  const f=DB.tiFilter||{};
+  return (DB.taxInvoices||[]).filter(t=>{
+    if(f.no&&!t.no.toLowerCase().includes(f.no.toLowerCase()))return false;
+    if(f.order&&!t.order.toLowerCase().includes(f.order.toLowerCase()))return false;
+    if(f.ent&&!t.ent.includes(f.ent))return false;
+    if(f.client&&!t.client.includes(f.client))return false;
+    if(f.type&&t.type!=f.type)return false;
+    if(f.status&&t.status!=f.status)return false;
+    if(f.d1&&(!t.date||t.date<f.d1))return false;
+    if(f.d2&&(!t.date||t.date>f.d2))return false;
+    return true;
+  });
+}
+function tiQuery(){const g=id=>(document.getElementById(id)||{}).value||'';
+  DB.tiFilter={no:g('ti-no').trim(),order:g('ti-order').trim(),ent:g('ti-ent').trim(),client:g('ti-client').trim(),
+    type:g('ti-type'),status:g('ti-status'),d1:g('ti-d1'),d2:g('ti-d2')};DB.tiSel=[];render();}
+function tiReset(){DB.tiFilter={};DB.tiSel=[];render();}
+function tiToggle(no){const a=DB.tiSel||[];const i=a.indexOf(no);i<0?a.push(no):a.splice(i,1);DB.tiSel=a;render();}
+function tiToggleAll(){const rows=tiRows().filter(t=>t.status!='failed');
+  DB.tiSel=(DB.tiSel||[]).length==rows.length?[]:rows.map(t=>t.no);render();}
+function tiBatchDownload(){const n=(DB.tiSel||[]).length;if(!n)return;toast(`已打包下载 ${n} 张发票 PDF`,'ok');}
+function act_tiRetry(no){const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t)return;
+  toast(`已重新提交生成：${no}`,'info');}
+function act_tiDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
+function act_tiPreview(no){
+  const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t)return;
+  const noGst=!t.gstNo, isCn=t.type=='cn';
+  drawer(`<div class="drawer-hd"><div><h3>${isCn?'冲抵单据':'销售发票'}详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${t.no} · ${S.taxinv[t.status][0]}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    ${noGst?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">⚠️</span>该开票主体<b>未注册 GST</b>：票面标题为 <b>INVOICE</b>（非 TAX INVOICE），<b>不计税额</b>，客户<b>不可就本单抵扣进项税</b>。</div>`:''}
+    ${t.status=='failed'?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>生成失败：开票主体缺 GST 注册号或开票主数据不完整，已<b>拦截不开票</b>（不出占位票）。补全主数据后可重出。</div>`:''}
+    <div class="sec-t">单据信息</div>
+    <dl class="dl">
+      <dt>发票号</dt><dd class="mono">${t.no}</dd>
+      <dt>单据类型</dt><dd>${isCn?'冲抵 Credit Note':'正向 Invoice'}</dd>
+      ${isCn?`<dt>关联原发票</dt><dd class="mono">${t.against||'—'}</dd>`:''}
+      <dt>开票日期</dt><dd>${t.date||'—'}</dd>
+      <dt>对应订单号</dt><dd class="mono">${t.order}</dd>
+      <dt>状态</dt><dd>${tag('taxinv',t.status)}</dd>
+    </dl>
+    <div class="sec-t">开票主体（供应方）</div>
+    <dl class="dl">
+      <dt>法定名称</dt><dd>${t.ent}</dd>
+      <dt>GST 注册号</dt><dd>${t.gstNo?`<span class="mono">${t.gstNo}</span>`:'<span style="color:var(--y2,#A9711F);font-weight:700">未注册 GST</span>'}</dd>
+      <dt>票面标题</dt><dd><b>${isCn?'CREDIT NOTE':(noGst?'INVOICE':'TAX INVOICE')}</b></dd>
+    </dl>
+    <div class="sec-t">开票客户（受供方）</div>
+    <dl class="dl"><dt>客户名称</dt><dd>${t.client}</dd></dl>
+    <div class="sec-t">金额</div>
+    <dl class="dl">
+      <dt>未税金额</dt><dd>${money(t.sub)}</dd>
+      <dt>GST @ 9%</dt><dd>${t.gst===null?'<span style="color:var(--y2,#A9711F);font-weight:700">不适用（主体未注册 GST）</span>':money(t.gst)}</dd>
+      ${t.bcrs?`<dt>BCRS 押金</dt><dd style="color:var(--b)">${money(t.bcrs)}（不计 GST）</dd>`:''}
+      <dt>${isCn?'冲抵金额':'应付金额'}</dt><dd><b style="color:${isCn?'var(--r)':'var(--g)'}">${money(t.amt)}</b></dd>
+    </dl>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
+    ${t.status=='failed'?`<button class="btn btn-p" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-p" onclick="act_tiDownload('${t.no}')">下载 PDF</button>`}</div>`);
+}
+PAGES['p-inv-query']=()=>{
+  const f=DB.tiFilter||{}, rows=tiRows(), sel=DB.tiSel||[];
+  const EN=`onkeydown="if(event.key=='Enter')tiQuery()"`;
+  const selectable=rows.filter(t=>t.status!='failed');
+  const filter=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">发票号</div><input id="ti-no" value="${f.no||''}" placeholder="请输入发票号" style="min-width:180px" ${EN}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">订单号</div><input id="ti-order" value="${f.order||''}" placeholder="请输入订单号" style="min-width:180px" ${EN}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开票主体</div><input id="ti-ent" value="${f.ent||''}" placeholder="商家/自营主体名称" style="min-width:190px" ${EN}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开票客户</div><input id="ti-client" value="${f.client||''}" placeholder="请输入客户名称" style="min-width:180px" ${EN}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">单据类型</div>
+      <select id="ti-type" style="min-width:150px"><option value="">全部</option><option value="inv" ${f.type=='inv'?'selected':''}>正向 Invoice</option><option value="cn" ${f.type=='cn'?'selected':''}>冲抵 Credit Note</option></select></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">状态</div>
+      <select id="ti-status" style="min-width:150px"><option value="">全部</option>${Object.keys(S.taxinv).map(k=>`<option value="${k}" ${f.status==k?'selected':''}>${S.taxinv[k][0]}</option>`).join('')}</select></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开票日期</div>
+      <div class="row" style="gap:6px;align-items:center"><input id="ti-d1" type="date" value="${f.d1||''}" style="width:150px"><span style="color:var(--ts)">至</span><input id="ti-d2" type="date" value="${f.d2||''}" style="width:150px"></div></div>
+    <button class="btn btn-p btn-sm" onclick="tiQuery()">查询</button>
+    <button class="btn btn-o btn-sm" onclick="tiReset()">重置</button>
+  </div></div>`;
+  return filter+`<div class="card" style="margin:0"><div class="card-hd"><h3>发票查询</h3>
+    <span class="sub">平台代各开票主体开具的销售发票总账 · 一个开票主体一张发票 · 共 ${rows.length} 条</span>
+    <div class="row" style="gap:8px">
+      <button class="btn btn-o btn-sm" ${sel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="tiBatchDownload()">批量下载 PDF${sel.length?`（${sel.length}）`:''}</button>
+    </div></div>
+    <div class="card-bd ${rows.length?'flush':''}">
+    ${rows.length?`<table>
+      <thead><tr>
+        <th style="width:34px"><input type="checkbox" ${selectable.length&&sel.length==selectable.length?'checked':''} onclick="tiToggleAll()"></th>
+        <th>发票号</th><th>单据类型</th><th>订单号</th><th>开票主体</th><th>开票客户</th><th>开票日期</th>
+        <th style="text-align:right">未税金额</th><th style="text-align:right">GST</th><th style="text-align:right">应付金额</th><th>状态</th><th>操作</th>
+      </tr></thead><tbody>
+      ${rows.map(t=>`<tr>
+        <td>${t.status=='failed'?'':`<input type="checkbox" ${sel.includes(t.no)?'checked':''} onclick="tiToggle('${t.no}')">`}</td>
+        <td class="mono">${t.no}</td>
+        <td>${t.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
+        <td class="mono">${t.order}</td>
+        <td>${t.ent}${t.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>'}</td>
+        <td>${t.client}</td><td>${t.date||'—'}</td>
+        <td style="text-align:right">${money(t.sub)}</td>
+        <td style="text-align:right">${t.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(t.gst)}</td>
+        <td style="text-align:right"><b style="color:${t.type=='cn'?'var(--r)':'inherit'}">${money(t.amt)}</b></td>
+        <td>${tag('taxinv',t.status)}</td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_tiPreview('${t.no}')">详情</button>
+          ${t.status=='failed'?`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
+      </tr>`).join('')}
+      </tbody></table>`
+    :`<div class="empty" style="padding:28px 0"><div class="e-ic">🔎</div><div class="e-t">无匹配发票</div><div class="e-s">调整筛选条件后重试。</div></div>`}
   </div></div>`;
 };
 
