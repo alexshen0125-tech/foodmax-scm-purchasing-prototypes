@@ -173,9 +173,9 @@ function openRecon(){
       <div class="lbl">近 7 天 · 结算合计（货款）</div>
       <div class="big disp"><span class="c">S$</span>${T(dSettle).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="lbl">${rows.length} 张对账单 · 数据源：财务结算单明细</div>
-      <div class="tip"><b>口径</b>：结算合计 = 金额（含税，即客户实付）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。按所选区间累计，跨结算周期时不等于任一结算单净额。</div>
+      <div class="tip"><b>口径</b>：结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。按所选区间累计，跨结算周期时不等于任一结算单净额。</div>
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
-      ${rcLine('','金额（含税）','客户实付金额，已扣商家补贴与平台补贴',T(dPaidG))}
+      ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',T(dPaidG))}
       ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',T(dPlat))}
       ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率',T(dFee))}
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
@@ -207,7 +207,7 @@ function openRecon(){
             <div class="r1"><span class="rc-ck ${sel?'on':''}" data-ck="${d.no}"></span><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
             <div class="meta">${d.date} · ${os.length} 个订单 · ${d.lines.length} 个 SKU${(d.after||[]).length?` · 售后 ${(d.after||[]).length} 笔`:''}</div>
             <div class="r2">
-              <div class="g"><div class="k">金额（含税 · 客户实付）</div><div class="v">${S(dPaidG(d))}</div></div>
+              <div class="g"><div class="k">实付金额（含税）</div><div class="v">${S(dPaidG(d))}</div></div>
               <div class="g settle"><div class="k">当日结算（货款）</div><div class="v">${S(dSettle(d))}</div></div>
             </div>
             ${ex.length?`<div class="extra">另行结算：${ex.join(' · ')}，不并入当日结算，付款时轧差</div>`:''}
@@ -334,8 +334,8 @@ function openReconDetail(no,tab){
       <div class="lbl" style="margin-top:6px">当日结算（货款）</div>
       <div class="big disp"><span class="c">S$</span>${dSettle(d).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="grid">
-        <div><div class="k">金额（未税 · 客户实付）</div><div class="v">${S(dPaidN(d))}</div></div>
-        <div><div class="k">金额（含税 · 客户实付）</div><div class="v">${S(dPaidG(d))}</div></div>
+        <div><div class="k">实付金额（未税）</div><div class="v">${S(dPaidN(d))}</div></div>
+        <div><div class="k">实付金额（含税）</div><div class="v">${S(dPaidG(d))}</div></div>
         <div><div class="k">商家补贴</div><div class="v">${NEG(dSub(d))}</div></div>
         <div><div class="k">平台服务费</div><div class="v">${NEG(dFee(d))}</div></div>
         <div><div class="k">商家收入</div><div class="v">${S(dInc(d))}</div></div>
