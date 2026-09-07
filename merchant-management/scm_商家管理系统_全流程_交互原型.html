@@ -4807,22 +4807,41 @@ function tiBatchDownload(){const n=(DB.tiSel||[]).length;if(!n)return;toast(`已
 function act_tiOrdDownload(order){const o=tiOrderGroup(order);
   toast(`主单 ${order} 整单发票已下载（买家版 · 合并 ${o.invs.length} 页）`,'ok');}
 function entBadge(t){return t.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>';}
-function act_tiOrdDetail(order){
+function act_tiOrdDetail(order,tab){
   const o=tiOrderGroup(order);if(!o.invs.length&&!o.cns.length)return;
+  tab=tab||DB.tiDrawerTab||'order';DB.tiDrawerTab=tab;
   const all=[...o.invs,...o.cns];
-  drawer(`<div class="drawer-hd"><div><h3>主单发票详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.order} · ${o.client} · ${o.invs.length} 个开票主体${o.cns.length?` · 冲抵 ${o.cns.length} 张`:''}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
-  <div class="drawer-bd">
-    ${o.failed?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>本单有 <b>${o.failed}</b> 张发票生成失败（开票主体缺法定名称/地址等），整单 PDF <b>不完整、暂不可下载</b>；补全主数据后对该张点「重新生成」。</div>`:''}
-    <div class="sec-t">整单合计（订单整合维度 · 仅正向发票）</div>
+  const tabs=`<div class="tabs" style="margin-bottom:14px">
+    <div class="tab ${tab=='order'?'active':''}" onclick="act_tiOrdDetail('${o.order}','order')">整单维度</div>
+    <div class="tab ${tab=='merchant'?'active':''}" onclick="act_tiOrdDetail('${o.order}','merchant')">商家维度${o.invs.length>1?`<span class="tb">${o.invs.length}</span>`:''}</div>
+  </div>`;
+  const failTip=o.failed?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>本单有 <b>${o.failed}</b> 张发票生成失败（开票主体缺法定名称/地址等），整单 PDF <b>不完整、暂不可下载</b>；到「商家维度」对该张点「重新生成」。</div>`:'';
+  // 整单维度：买家拿到的那份——整单合计 + 合并 PDF 的页组成
+  const orderView=`${failTip}
+    <div class="sec-t">整单合计（仅正向发票）</div>
     <dl class="dl">
       <dt>主单号</dt><dd class="mono">${o.order}</dd>
       <dt>开票客户</dt><dd>${o.client}</dd>
       <dt>开票日期</dt><dd>${o.date||'—'}</dd>
+      <dt>开票主体</dt><dd>${o.invs.length} 个（一主体一张）</dd>
       <dt>未税金额</dt><dd>${money(o.sub)}</dd>
       <dt>GST @ 9%</dt><dd>${money(o.gst)}</dd>
       <dt>应付金额</dt><dd><b style="color:var(--g)">${money(o.amt)}</b></dd>
+      ${o.cns.length?`<dt>冲抵</dt><dd><span style="color:var(--r);font-weight:600">${o.cns.length} 张 Credit Note</span>，合计 <span style="color:var(--r)">${money(o.cns.reduce((x,t)=>x+t.amt,0))}</span>（不并入整单合计，随原票单独出具）</dd>`:''}
     </dl>
-    <div class="sec-t">各开票主体发票（商家维度 · 一主体一张，每张可单独下载商家版）</div>
+    <div class="sec-t">整单 PDF 页组成（买家版 · 与买家收到的一致）</div>
+    <table style="font-size:12.5px"><thead><tr><th>页</th><th>开票主体</th><th>票面标题</th><th style="text-align:right">应付</th><th>状态</th></tr></thead><tbody>
+    ${o.invs.map((t,i)=>`<tr>
+      <td>第 ${i+1} 页</td>
+      <td>${t.ent}${entBadge(t)}</td>
+      <td>${t.gstNo?'TAX INVOICE':'INVOICE'}</td>
+      <td style="text-align:right"><b>${money(t.amt)}</b></td>
+      <td>${tag('taxinv',t.status)}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  // 商家维度：各开票主体各自那张——单张详情 / 下载商家版 / 失败重出
+  const merchantView=`${failTip}
+    <div class="sec-t">各开票主体发票（一主体一张 · 每张可单独下载商家版）</div>
     <table style="font-size:12.5px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>开票主体</th><th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">应付</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${all.map((t,i)=>`<tr>
       <td>${t.type=='cn'?'—':`${i+1}/${o.invs.length}`}</td>
@@ -4836,11 +4855,17 @@ function act_tiOrdDetail(order){
       <td style="white-space:nowrap"><button class="btn btn-link" onclick="act_tiPreview('${t.no}')">详情</button>
         ${t.status=='failed'?`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
     </tr>`).join('')}
-    </tbody></table>
-  </div>
+    </tbody></table>`;
+  const okCnt=all.filter(t=>t.status!='failed').length;
+  drawer(`<div class="drawer-hd"><div><h3>主单发票详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.order} · ${o.client} · ${o.invs.length} 个开票主体${o.cns.length?` · 冲抵 ${o.cns.length} 张`:''}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">${tabs}${tab=='order'?orderView:merchantView}</div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
-    <button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单 PDF（买家版 · ${o.invs.length} 页）</button></div>`);
+    ${tab=='order'
+      ?`<button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单 PDF（买家版 · ${o.invs.length} 页）</button>`
+      :`<button class="btn btn-p" ${okCnt?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="act_tiMerchantDownloadAll('${o.order}')">打包下载各张（商家版 · ${okCnt} 张）</button>`}</div>`);
 }
+function act_tiMerchantDownloadAll(order){const o=tiOrderGroup(order);const n=[...o.invs,...o.cns].filter(t=>t.status!='failed').length;
+  toast(`主单 ${order} 各开票主体发票已打包下载（商家版 · ${n} 张）`,'ok');}
 PAGES['p-inv-query']=()=>{
   const f=DB.tiFilter||{}, rows=tiRows(), sel=DB.tiSel||[];
   const EN=`onkeydown="if(event.key=='Enter')tiQuery()"`;
