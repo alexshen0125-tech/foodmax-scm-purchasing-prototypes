@@ -4,7 +4,8 @@
      · 折扣 = 活动价 ÷ 原价快照（BR-03）；限购 每客户每日 N 件，留空不限（BR-05）
      · 同一 SKU 时间重叠只能在 1 个活动内，跨出资方互斥（BR-04）——平台活动占用的 SKU 对商家只显示「平台活动」
      · 状态复用 PromoActivityStatus：0 未开始 / 1 进行中 / 2 已结束 / 4 已终止；商家端无草稿（BR-13）
-     · 进行中：不可改开始时间、不可改已有行活动价（改价=移除后重加）；可加/移 SKU、可改结束时间、可终止（BR-14）
+     · 进行中：只读，不可编辑（对齐运营平台 D11：进行中活动不可直接改）；可终止、可复制新建（BR-14）
+     · 活动链接 = special_activity.url（C 端落地页，首页活动位可关联整场活动），商家详情只读展示 + 复制（格式待研发确认）
      · 差价 100% 商家承担，落 seller_discount_amount，不进平台优惠、不影响商家应付（BR-01/09）
      · 门店范围固定全部门店；不审核，平台可强制终止（BR-16/18）
    依赖 inline 全局：DB / money / toast / modal / closeModal / askConfirm / drawer / closeDrawer / nav / render / ts /
@@ -23,16 +24,16 @@
     if(DB.promos)return;
     const who=DB.merchant.contact||'店铺管理员';
     DB.promos=[
-      {id:'AC118',fund:1,name:'叶菜周中特惠',start:shift(-2,0,0),end:shift(3,23,59),status:1,createdBy:who,createdAt:shift(-3,10,12),updatedAt:shift(-3,10,12),
+      {id:'AC118',url:'https://m.foodexmart.com/activity/special?id=AC118',fund:1,name:'叶菜周中特惠',start:shift(-2,0,0),end:shift(3,23,59),status:1,createdBy:who,createdAt:shift(-3,10,12),updatedAt:shift(-3,10,12),
         items:[{skuId:'SKU8815',orig:9.30,price:7.90,limit:20},{skuId:'SKU8817',orig:6.50,price:5.20,limit:null}],
         logs:[{t:shift(-3,10,12),who,act:'创建活动',d:'2 个 SKU · '+shift(-2,0,0)+' ~ '+shift(3,23,59)}]},
-      {id:'AC121',fund:1,name:'菠菜清仓',start:shift(2,0,0),end:shift(4,23,59),status:0,createdBy:who,createdAt:shift(-1,16,40),updatedAt:shift(-1,16,40),
+      {id:'AC121',url:'https://m.foodexmart.com/activity/special?id=AC121',fund:1,name:'菠菜清仓',start:shift(2,0,0),end:shift(4,23,59),status:0,createdBy:who,createdAt:shift(-1,16,40),updatedAt:shift(-1,16,40),
         items:[{skuId:'SKU8819',orig:5.80,price:4.50,limit:10}],
         logs:[{t:shift(-1,16,40),who,act:'创建活动',d:'1 个 SKU'}]},
-      {id:'AC102',fund:1,name:'8 月椰子水促销',start:'2026-08-20 00:00',end:'2026-08-31 23:59',status:2,createdBy:who,createdAt:'2026-08-18 09:30',updatedAt:'2026-08-31 23:59',
+      {id:'AC102',url:'https://m.foodexmart.com/activity/special?id=AC102',fund:1,name:'8 月椰子水促销',start:'2026-08-20 00:00',end:'2026-08-31 23:59',status:2,createdBy:who,createdAt:'2026-08-18 09:30',updatedAt:'2026-08-31 23:59',
         items:[{skuId:'SKU8825',orig:2.50,price:2.10,limit:null},{skuId:'SKU8826',orig:55.00,price:48.00,limit:5}],
         logs:[{t:'2026-08-18 09:30',who,act:'创建活动',d:'2 个 SKU'},{t:'2026-08-31 23:59',who:'系统',act:'到期结束',d:''}]},
-      {id:'AC109',fund:1,name:'空心菜限时',start:'2026-08-28 00:00',end:'2026-09-05 23:59',status:4,endedBy:'platform',endReason:'活动价低于平台价格监管下限，运营强制终止（客服已通知）',createdBy:who,createdAt:'2026-08-27 14:05',updatedAt:'2026-08-29 11:20',
+      {id:'AC109',url:'https://m.foodexmart.com/activity/special?id=AC109',fund:1,name:'空心菜限时',start:'2026-08-28 00:00',end:'2026-09-05 23:59',status:4,endedBy:'platform',endReason:'活动价低于平台价格监管下限，运营强制终止（客服已通知）',createdBy:who,createdAt:'2026-08-27 14:05',updatedAt:'2026-08-29 11:20',
         items:[{skuId:'SKU8830',orig:7.00,price:2.00,limit:null}],
         logs:[{t:'2026-08-27 14:05',who,act:'创建活动',d:'1 个 SKU'},{t:'2026-08-29 11:20',who:'平台运营',act:'强制终止',d:'活动价低于平台价格监管下限'}]},
       // 平台活动（出资方=平台）：商家端不可见明细，仅用于 SKU 占用校验
@@ -42,7 +43,7 @@
   window.ensurePromos=ensure;
 
   /* ===== 状态 ===== */
-  const ST={0:['未开始','t-b'],1:['进行中','t-g'],2:['已结束','t-gr'],4:['已终止','t-r']};
+  const ST={0:['待开始','t-b'],1:['进行中','t-g'],2:['已结束','t-gr'],4:['已终止','t-r']};
   function calcStatus(a){if(a.status==4)return 4;const n=nowStr();if(n<a.start)return 0;if(n>a.end)return 2;return 1;}
   function refresh(){ensure();DB.promos.forEach(a=>{a.status=calcStatus(a);});}
   function stTag(a){const s=ST[calcStatus(a)];return `<span class="tag ${s[1]}"><span class="dot"></span>${s[0]}${calcStatus(a)==4&&a.endedBy=='platform'?'（平台）':''}</span>`;}
@@ -109,7 +110,7 @@
         <td>${stTag(a)}</td>
         <td>${a.createdBy||'—'}</td>
         <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.updatedAt||'—'}</td>
-        <td style="white-space:nowrap">${st<2?`<button class="btn btn-o btn-sm" onclick="act_promoEdit('${a.id}')">编辑</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_promoStop('${a.id}')">终止</button>`:''} <button class="btn btn-link" onclick="act_promoDetail('${a.id}')">详情</button></td>
+        <td style="white-space:nowrap">${st==0?`<button class="btn btn-o btn-sm" onclick="act_promoEdit('${a.id}')">编辑</button> `:''}${st<2?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_promoStop('${a.id}')">终止</button> `:''}<button class="btn btn-link btn-sm" onclick="act_promoCopy('${a.id}')">复制</button> <button class="btn btn-link" onclick="act_promoDetail('${a.id}')">详情</button></td>
       </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">${tab=='all'?'还没有商品特价活动':'该状态下暂无活动'}</div><div class="e-s">给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</div>${tab=='all'?`<div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button></div>`:''}</div></td></tr>`}
       </tbody></table></div></div></div>`;
   };
@@ -120,12 +121,14 @@
     const totalSave=a.items.reduce((n,x)=>n+((x.orig-x.price)*calc(x).factor),0);
     drawer(`<div class="mc-hd"><div><h3>${a.name} <span style="font-size:12px;color:var(--ts);font-weight:400;margin-left:6px" class="mono">${a.id}</span></h3><p>${stTag(a)} <span style="margin-left:8px">${a.start} ~ ${a.end}</span></p></div><button class="mc-x" onclick="closeDrawer()">×</button></div>
     <div class="mc-bd">
+      ${st==1?`<div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>活动进行中<b>不可编辑</b>（与平台活动同规则）。要调整活动价 / 商品 / 时间：先<b>终止</b>本场，再用<b>复制新建</b>快速重建。</div>`:''}
       ${st==4?`<div class="ib ${a.endedBy=='platform'?'ib-r':'ib-gr'}" style="margin-bottom:12px"><span class="i">${a.endedBy=='platform'?'⛔':'ℹ️'}</span><div><b>${a.endedBy=='platform'?'平台强制终止':'商家终止'}</b>${a.endReason?'：'+a.endReason:''}<div style="font-size:12px;margin-top:2px">终止后 C 端已立即恢复原价；活动期间已生成订单按活动价快照不受影响。</div></div></div>`:''}
       <div class="fg2" style="margin-bottom:12px">
         <div><div style="font-size:12px;color:var(--ts)">出资方</div><div><b>商家 100%</b> <span style="font-size:12px;color:var(--ts)">差价由商家承担，不进平台优惠</span></div></div>
         <div><div style="font-size:12px;color:var(--ts)">门店范围</div><div>全部门店</div></div>
         <div><div style="font-size:12px;color:var(--ts)">叠加规则</div><div>可与平台优惠券叠加<span style="font-size:12px;color:var(--ts)">（券由平台承担）</span></div></div>
         <div><div style="font-size:12px;color:var(--ts)">创建</div><div>${a.createdBy||'—'} · <span style="color:var(--ts)">${a.createdAt||'—'}</span></div></div>
+        <div style="grid-column:1/-1"><div style="font-size:12px;color:var(--ts)">活动链接 <span style="color:var(--tt)">（C 端活动落地页，可分享给客户；平台首页活动位也可关联本活动）</span></div><div class="row" style="gap:8px;align-items:center"><span class="mono" style="font-size:12.5px">${a.url||'—'}</span>${a.url?`<button class="btn btn-link btn-sm" onclick="navigator.clipboard&&navigator.clipboard.writeText('${a.url}');toast('活动链接已复制','ok')">复制链接</button>`:''}</div></div>
       </div>
       <h4 style="margin:6px 0 8px;font-size:13.5px">活动商品 <span style="font-weight:400;color:var(--ts);font-size:12px">${a.items.length} 个 SKU · 单件让利合计（含税） ${money(totalSave)}</span></h4>
       <div style="overflow-x:auto"><table class="subtbl"><thead><tr><th>SKU 编码</th><th>商品名称</th><th>原价(未税)</th><th>活动价(未税)</th><th>活动含税价</th><th>折扣</th><th>限购</th><th>预计到手/件</th><th>生效</th></tr></thead><tbody>
@@ -135,7 +138,7 @@
       <h4 style="margin:6px 0 8px;font-size:13.5px">操作日志</h4>
       ${(a.logs||[]).slice().reverse().map(l=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--bd2);font-size:12.5px"><span style="color:var(--ts);white-space:nowrap">${l.t}</span><span style="white-space:nowrap"><b>${l.who}</b> · ${l.act}</span><span style="color:var(--ts)">${l.d||''}</span></div>`).join('')||'<div style="color:var(--tt);font-size:12.5px">暂无</div>'}
     </div>
-    <div class="mc-ft">${st<2?`<button class="btn btn-o" style="color:var(--r);border-color:var(--r)" onclick="closeDrawer();act_promoStop('${a.id}')">终止活动</button><button class="btn btn-p" onclick="closeDrawer();act_promoEdit('${a.id}')">编辑</button>`:`<button class="btn btn-o" onclick="closeDrawer()">关闭</button>`}</div>`);
+    <div class="mc-ft"><button class="btn btn-link" onclick="toast('已导出活动商品：${a.id}_活动商品.xlsx（SKU编号 / 商品名称 / 原价 / 活动价 / 限购 / 生效）','ok')">导出活动商品</button><span style="flex:1"></span>${st<2?`<button class="btn btn-o" style="color:var(--r);border-color:var(--r)" onclick="closeDrawer();act_promoStop('${a.id}')">终止活动</button>`:''}<button class="btn btn-o" onclick="closeDrawer();act_promoCopy('${a.id}')">复制新建</button>${st==0?`<button class="btn btn-p" onclick="closeDrawer();act_promoEdit('${a.id}')">编辑</button>`:''}</div>`);
   };
 
   /* ===== 终止 ===== */
@@ -145,12 +148,20 @@
   /* ===== 新建 / 编辑 ===== */
   let ED=null;   // {id,name,start,end,items:[{skuId,orig,price,limit,locked}],isNew,status}
   window.act_promoEdit=function(id){ensure();
-    if(id){const a=DB.promos.find(x=>x.id==id);if(!a)return;const st=calcStatus(a);if(st>=2){toast('已结束/已终止的活动不可编辑','err');return;}
-      ED={id:a.id,name:a.name,start:a.start,end:a.end,status:st,isNew:false,items:a.items.map(x=>({...x,locked:st==1}))};}
+    if(id){const a=DB.promos.find(x=>x.id==id);if(!a)return;const st=calcStatus(a);if(st==1){toast('进行中活动不可编辑：请先终止，再复制新建','err');return;}if(st>=2){toast('已结束/已终止的活动不可编辑，可复制新建','err');return;}
+      ED={id:a.id,name:a.name,start:a.start,end:a.end,status:st,isNew:false,items:a.items.map(x=>({...x,locked:false}))};}
     else ED={id:null,name:'',start:shift(1,0,0),end:shift(7,23,59),status:-1,isNew:true,items:[]};
     DB.promoView='edit';render();};
+  /* 复制新建（对齐运营平台「复制」：按实时售价重取原价；活动价若已不低于现售价则清空待填；时间重置） */
+  window.act_promoCopy=function(id){ensure();const a=DB.promos.find(x=>x.id==id);if(!a)return;
+    // 默认时间：源活动仍在生效（待开始/进行中）→ 接在源活动结束之后（避免与自己撞期）；否则明天起 7 天
+    const liveSrc=live(a);const st0=liveSrc?(()=>{const d=new Date(toLocal(a.end));d.setMinutes(d.getMinutes()+1);return fmt(d);})():shift(1,0,0);const en0=(()=>{const d=new Date(toLocal(st0));d.setDate(d.getDate()+7);d.setHours(23,59,0,0);return fmt(d);})();
+    const range={start:st0,end:en0};let dropped=0,cleared=0,conflict=0;const items=[];
+    a.items.forEach(x=>{const f=findSku(x.skuId);if(!f||f.p.status!='onsale'||f.s.off||f.s.recycled){dropped++;return;}if(occupiedBy(x.skuId,range,a.id))conflict++;const orig=f.s.price||0;let price=x.price;if(!(price>0&&price<orig)){price='';cleared++;}items.push({skuId:x.skuId,orig,price,limit:x.limit,locked:false});});
+    ED={id:null,name:(a.name+'（复制）').slice(0,50),start:range.start,end:range.end,status:-1,isNew:true,items};DB.promoView='edit';render();
+    toast(`已按「${a.name}」复制 ${items.length} 个 SKU${dropped?`，${dropped} 个因下架未带入`:''}${cleared?`，${cleared} 个活动价已不低于现售价需重填`:''}${conflict?`，${conflict} 个与其他活动撞期、提交时会拦截`:''}`,dropped||cleared||conflict?'info':'ok');};
   window.promoBack=function(){ED=null;DB.promoView='';render();};
-  function editPage(){if(!ED){DB.promoView='';return PAGES['m-promo']();}const run=ED.status==1;
+  function editPage(){if(!ED){DB.promoView='';return PAGES['m-promo']();}const run=false;
     return `<div style="margin-bottom:14px" class="row"><button class="btn btn-o btn-sm" onclick="promoBack()">← 返回商品特价</button><span style="margin-left:12px;font-size:16px;font-weight:700">${ED.isNew?'新建商品特价':'编辑商品特价 · '+ED.id}</span>${run?'<span class="tag t-g" style="margin-left:8px">进行中</span>':''}</div>
     ${run?`<div class="ib ib-b" style="margin-bottom:14px"><span class="i">ℹ️</span>活动进行中：<b>开始时间与已有 SKU 的活动价不可修改</b>；可延长/缩短结束时间、新增 SKU（立即生效）、移除 SKU（该 SKU 立即恢复原价）。要改活动价请移除后重新添加。</div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>基本信息</h3><span class="sub">出资方 商家 100% · 门店范围 全部门店 · 可与平台优惠券叠加</span></div><div class="card-bd">
@@ -214,7 +225,6 @@
     if(!ED.start||!ED.end){toast('请填写活动起止时间','err');return;}
     if(ED.isNew&&ED.start<nowStr()){toast('开始时间不能早于当前时间','err');return;}
     if(ED.end<=ED.start){toast('结束时间必须晚于开始时间','err');return;}
-    if(ED.status==1&&ED.end<nowStr()){toast('进行中活动的结束时间不能早于当前；要立即结束请用「终止」','err');return;}
     if((new Date(toLocal(ED.end))-new Date(toLocal(ED.start)))>30*86400000){toast('单场活动最长 30 天','err');return;}
     if(!ED.items.length){toast('至少添加 1 个活动商品','err');return;}
     const ids=ED.items.map(x=>x.skuId);if(new Set(ids).size!=ids.length){toast('同一 SKU 不可重复','err');return;}
@@ -227,7 +237,7 @@
     const go=()=>save();
     if(lows.length)askConfirm(`有 <b>${lows.length}</b> 个 SKU 活动价低于当前售价的 <b>30%</b>（如 ${(()=>{const x=lows[0];const f=findSku(x.skuId);return `${f?f.p.name:x.skuId} ${money(x.orig)} → ${money(+x.price)}`;})()}），差价全部由商家承担。确认按此价格提交？`,go);else go();};
   function save(){const who=DB.merchant.contact||'店铺管理员';const items=ED.items.map(x=>({skuId:x.skuId,orig:x.orig,price:+(+x.price).toFixed(2),limit:x.limit}));
-    if(ED.isNew){const a={id:'AC'+seq(),fund:1,name:ED.name,start:ED.start,end:ED.end,status:0,createdBy:who,createdAt:ts(),updatedAt:ts(),items,logs:[{t:ts(),who,act:'创建活动',d:`${items.length} 个 SKU · ${ED.start} ~ ${ED.end}`}]};a.status=calcStatus(a);DB.promos.unshift(a);promoBack();toast(`活动「${a.name}」已提交，${a.status==1?'已生效':'将于 '+a.start+' 自动开始'}`,'ok');return;}
+    if(ED.isNew){const nid='AC'+seq();const a={id:nid,url:'https://m.foodexmart.com/activity/special?id='+nid,fund:1,name:ED.name,start:ED.start,end:ED.end,status:0,createdBy:who,createdAt:ts(),updatedAt:ts(),items,logs:[{t:ts(),who,act:'创建活动',d:`${items.length} 个 SKU · ${ED.start} ~ ${ED.end}`}]};a.status=calcStatus(a);DB.promos.unshift(a);promoBack();toast(`活动「${a.name}」已提交，${a.status==1?'已生效':'将于 '+a.start+' 自动开始'}`,'ok');return;}
     const a=DB.promos.find(x=>x.id==ED.id);const before=a.items.map(x=>x.skuId);const after=items.map(x=>x.skuId);const added=after.filter(x=>!before.includes(x)),removed=before.filter(x=>!after.includes(x));const chg=[];
     if(a.name!=ED.name)chg.push(`名称「${a.name}」→「${ED.name}」`);if(a.start!=ED.start)chg.push(`开始 ${a.start} → ${ED.start}`);if(a.end!=ED.end)chg.push(`结束 ${a.end} → ${ED.end}`);if(added.length)chg.push(`新增 SKU ${added.join('、')}`);if(removed.length)chg.push(`移除 SKU ${removed.join('、')}`);
     a.items.forEach(o=>{const n=items.find(x=>x.skuId==o.skuId);if(n&&(n.price!=o.price||n.limit!=o.limit))chg.push(`${o.skuId} 活动价 ${money(o.price)}→${money(n.price)} / 限购 ${lim(o.limit)}→${lim(n.limit)}`);});
