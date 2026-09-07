@@ -734,7 +734,7 @@ const DB = {
     {no:'CN-2026-0033',type:'cn',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:-680.00,gst:-61.20,bcrs:0,amt:-741.20,date:'2026-07-04',status:'issued',against:'INV-2026-6600'},
     {no:'INV-2026-6606',type:'inv',order:'#SG20260701008',ent:'鲜集冻品 FreshHub Frozen Pte Ltd',gstNo:'',client:'一品轩',sub:0,gst:null,bcrs:0,amt:0,date:'',status:'failed',against:''},
   ],
-  tiFilter:{},tiSel:[],
+  tiFilter:{},tiSel:[],tiView:'inv',tiOrdSel:[],   // tiView: inv 按发票（商家维度·单张）/ order 按订单（整单·买家版合并 PDF）
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
   billsHistory:[
     {period:'2026年5月', no:'ST202605-M0815', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:118.60, replCnt:2, fine:560.00, fineCnt:2, net:41524.20,
@@ -4745,8 +4745,8 @@ function tiRows(){
 }
 function tiQuery(){const g=id=>(document.getElementById(id)||{}).value||'';
   DB.tiFilter={no:g('ti-no').trim(),order:g('ti-order').trim(),ent:g('ti-ent').trim(),client:g('ti-client').trim(),
-    type:g('ti-type'),status:g('ti-status'),d1:g('ti-d1'),d2:g('ti-d2')};DB.tiSel=[];render();}
-function tiReset(){DB.tiFilter={};DB.tiSel=[];render();}
+    type:g('ti-type'),status:g('ti-status'),d1:g('ti-d1'),d2:g('ti-d2')};DB.tiSel=[];DB.tiOrdSel=[];render();}
+function tiReset(){DB.tiFilter={};DB.tiSel=[];DB.tiOrdSel=[];render();}
 function tiToggle(no){const a=DB.tiSel||[];const i=a.indexOf(no);i<0?a.push(no):a.splice(i,1);DB.tiSel=a;render();}
 function tiToggleAll(){const rows=tiRows().filter(t=>t.status!='failed');
   DB.tiSel=(DB.tiSel||[]).length==rows.length?[]:rows.map(t=>t.no);render();}
@@ -4789,6 +4789,53 @@ function act_tiPreview(no){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
     ${t.status=='failed'?`<button class="btn btn-p" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-p" onclick="act_tiDownload('${t.no}')">下载 PDF</button>`}</div>`);
 }
+/* 运营平台·发票查询「按订单」维度：把同一订单下各开票主体的票聚合成一行——像买家一样下载整单合并 PDF（买家版 = N 页），
+   也可从抽屉里下任意一张（商家版）。合计只累加正向发票；冲抵 Credit Note 单独计数，不并入整单合计。 */
+function tiOrderRows(){
+  const m={};
+  tiRows().forEach(t=>{
+    const o=m[t.order]||(m[t.order]={order:t.order,client:t.client,invs:[],cns:[],sub:0,gst:0,amt:0,date:'',failed:0});
+    if(t.type=='cn'){o.cns.push(t);return;}
+    o.invs.push(t);
+    if(t.status=='failed'){o.failed++;return;}
+    o.sub+=t.sub;o.gst+=(t.gst||0);o.amt+=t.amt;if(t.date>o.date)o.date=t.date;
+  });
+  return Object.values(m).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+function tiOrdToggle(o){const a=DB.tiOrdSel||[];const i=a.indexOf(o);i<0?a.push(o):a.splice(i,1);DB.tiOrdSel=a;render();}
+function tiOrdToggleAll(){const rows=tiOrderRows().filter(o=>!o.failed);
+  DB.tiOrdSel=(DB.tiOrdSel||[]).length==rows.length?[]:rows.map(o=>o.order);render();}
+function tiOrdBatchDownload(){const n=(DB.tiOrdSel||[]).length;if(!n)return;toast(`已打包下载 ${n} 个订单的整单发票 PDF（买家版·合并）`,'ok');}
+function act_tiOrdDownload(order){const o=tiOrderRows().find(x=>x.order==order);if(!o)return;
+  toast(`订单 ${order} 整单发票已下载（买家版 · 共 ${o.invs.length} 页）`,'ok');}
+function act_tiOrdDetail(order){
+  const o=tiOrderRows().find(x=>x.order==order);if(!o)return;
+  const all=[...o.invs,...o.cns];
+  drawer(`<div class="drawer-hd"><div><h3>订单发票 · 整单视图</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.order} · ${o.client} · 共 ${o.invs.length} 张${o.cns.length?` · 冲抵 ${o.cns.length} 张`:''}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    ${o.failed?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>本单有 <b>${o.failed}</b> 张发票生成失败，整单 PDF <b>不完整、暂不可下载</b>；补全该主体主数据并重新生成后再下。</div>`:''}
+    <div class="sec-t">整单合计（仅正向发票）</div>
+    <dl class="dl">
+      <dt>未税金额</dt><dd>${money(o.sub)}</dd>
+      <dt>GST @ 9%</dt><dd>${money(o.gst)}</dd>
+      <dt>应付金额</dt><dd><b style="color:var(--g)">${money(o.amt)}</b></dd>
+    </dl>
+    <div class="sec-t">各开票主体（一主体一张 · 每张可单独下载商家版）</div>
+    <table style="font-size:12.5px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>开票主体</th><th style="text-align:right">应付</th><th>状态</th><th></th></tr></thead><tbody>
+    ${all.map((t,i)=>`<tr>
+      <td>${t.type=='cn'?'—':`${i+1}/${o.invs.length}`}</td>
+      <td class="mono">${t.no}</td>
+      <td>${t.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
+      <td>${t.ent}${t.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>'}</td>
+      <td style="text-align:right"><b style="color:${t.type=='cn'?'var(--r)':'inherit'}">${money(t.amt)}</b></td>
+      <td>${tag('taxinv',t.status)}</td>
+      <td style="white-space:nowrap">${t.status=='failed'?`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
+    </tr>`).join('')}
+    </tbody></table>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
+    <button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单 PDF（买家版）</button></div>`);
+}
 PAGES['p-inv-query']=()=>{
   const f=DB.tiFilter||{}, rows=tiRows(), sel=DB.tiSel||[];
   const EN=`onkeydown="if(event.key=='Enter')tiQuery()"`;
@@ -4807,7 +4854,42 @@ PAGES['p-inv-query']=()=>{
     <button class="btn btn-p btn-sm" onclick="tiQuery()">查询</button>
     <button class="btn btn-o btn-sm" onclick="tiReset()">重置</button>
   </div></div>`;
-  return filter+`<div class="card" style="margin:0"><div class="card-hd"><h3>发票查询</h3>
+  const view=DB.tiView||'inv';
+  const viewBar=`<div class="tabs" style="margin-bottom:0">
+    <div class="tab ${view=='inv'?'active':''}" onclick="DB.tiView='inv';render()">按发票（商家维度 · 单张）</div>
+    <div class="tab ${view=='order'?'active':''}" onclick="DB.tiView='order';render()">按订单（整单 · 买家版合并 PDF）</div>
+  </div>`;
+  if(view=='order'){
+    const ords=tiOrderRows(), osel=DB.tiOrdSel||[], oselectable=ords.filter(o=>!o.failed);
+    return filter+viewBar+`<div class="card" style="margin:0"><div class="card-hd"><h3>发票查询 · 按订单</h3>
+      <span class="sub">一个订单一行 · 整单 PDF = 该订单下各开票主体的发票合并（与买家收到的一致）· 共 ${ords.length} 单</span>
+      <div class="row" style="gap:8px">
+        <button class="btn btn-o btn-sm" ${osel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="tiOrdBatchDownload()">批量下载整单 PDF${osel.length?`（${osel.length}）`:''}</button>
+      </div></div>
+      <div class="card-bd ${ords.length?'flush':''}">
+      ${ords.length?`<table>
+        <thead><tr>
+          <th style="width:34px"><input type="checkbox" ${oselectable.length&&osel.length==oselectable.length?'checked':''} onclick="tiOrdToggleAll()"></th>
+          <th>订单号</th><th>开票客户</th><th style="text-align:right">发票张数</th><th style="text-align:right">冲抵张数</th><th>开票日期</th>
+          <th style="text-align:right">未税合计</th><th style="text-align:right">GST 合计</th><th style="text-align:right">应付合计</th><th>状态</th><th>操作</th>
+        </tr></thead><tbody>
+        ${ords.map(o=>`<tr>
+          <td>${o.failed?'':`<input type="checkbox" ${osel.includes(o.order)?'checked':''} onclick="tiOrdToggle('${o.order}')">`}</td>
+          <td class="mono">${o.order}</td><td>${o.client}</td>
+          <td style="text-align:right">${o.invs.length}</td>
+          <td style="text-align:right">${o.cns.length?`<span style="color:var(--r);font-weight:600">${o.cns.length}</span>`:'0'}</td>
+          <td>${o.date||'—'}</td>
+          <td style="text-align:right">${money(o.sub)}</td><td style="text-align:right">${money(o.gst)}</td>
+          <td style="text-align:right"><b>${money(o.amt)}</b></td>
+          <td>${o.failed?`${tag('taxinv','failed')}<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.failed}/${o.invs.length} 张失败</div>`:o.cns.length?tag('taxinv','credited'):tag('taxinv','issued')}</td>
+          <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_tiOrdDetail('${o.order}')">详情</button>
+            ${o.failed?`<span style="font-size:11.5px;color:var(--ts);margin-left:4px">整单不完整</span>`:`<button class="btn btn-link" onclick="act_tiOrdDownload('${o.order}')">下载整单</button>`}</td>
+        </tr>`).join('')}
+        </tbody></table>`
+      :`<div class="empty" style="padding:28px 0"><div class="e-ic">🔎</div><div class="e-t">无匹配订单</div><div class="e-s">调整筛选条件后重试。</div></div>`}
+    </div></div>`;
+  }
+  return filter+viewBar+`<div class="card" style="margin:0"><div class="card-hd"><h3>发票查询 · 按发票</h3>
     <span class="sub">平台代各开票主体开具的销售发票总账 · 一个开票主体一张发票 · 共 ${rows.length} 条</span>
     <div class="row" style="gap:8px">
       <button class="btn btn-o btn-sm" ${sel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="tiBatchDownload()">批量下载 PDF${sel.length?`（${sel.length}）`:''}</button>
