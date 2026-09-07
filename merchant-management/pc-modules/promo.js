@@ -110,7 +110,7 @@
         <td>${a.createdBy||'—'}</td>
         <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.updatedAt||'—'}</td>
         <td style="white-space:nowrap">${st<2?`<button class="btn btn-o btn-sm" onclick="act_promoEdit('${a.id}')">编辑</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_promoStop('${a.id}')">终止</button>`:''} <button class="btn btn-link" onclick="act_promoDetail('${a.id}')">详情</button></td>
-      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">${tab=='all'?'还没有特价活动':'该状态下暂无活动'}</div><div class="e-s">给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</div>${tab=='all'?`<div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button></div>`:''}</div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">${tab=='all'?'还没有商品特价活动':'该状态下暂无活动'}</div><div class="e-s">给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</div>${tab=='all'?`<div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button></div>`:''}</div></td></tr>`}
       </tbody></table></div></div></div>`;
   };
   window.promoQuery=function(){const g=id=>(document.getElementById(id)||{}).value||'';DB.promoFilter={name:g('pm-name').trim(),sku:g('pm-sku').trim(),from:g('pm-from'),to:g('pm-to')};render();};
@@ -151,7 +151,7 @@
     DB.promoView='edit';render();};
   window.promoBack=function(){ED=null;DB.promoView='';render();};
   function editPage(){if(!ED){DB.promoView='';return PAGES['m-promo']();}const run=ED.status==1;
-    return `<div style="margin-bottom:14px" class="row"><button class="btn btn-o btn-sm" onclick="promoBack()">← 返回特价活动</button><span style="margin-left:12px;font-size:16px;font-weight:700">${ED.isNew?'新建特价活动':'编辑特价活动 · '+ED.id}</span>${run?'<span class="tag t-g" style="margin-left:8px">进行中</span>':''}</div>
+    return `<div style="margin-bottom:14px" class="row"><button class="btn btn-o btn-sm" onclick="promoBack()">← 返回商品特价</button><span style="margin-left:12px;font-size:16px;font-weight:700">${ED.isNew?'新建商品特价':'编辑商品特价 · '+ED.id}</span>${run?'<span class="tag t-g" style="margin-left:8px">进行中</span>':''}</div>
     ${run?`<div class="ib ib-b" style="margin-bottom:14px"><span class="i">ℹ️</span>活动进行中：<b>开始时间与已有 SKU 的活动价不可修改</b>；可延长/缩短结束时间、新增 SKU（立即生效）、移除 SKU（该 SKU 立即恢复原价）。要改活动价请移除后重新添加。</div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>基本信息</h3><span class="sub">出资方 商家 100% · 门店范围 全部门店 · 可与平台优惠券叠加</span></div><div class="card-bd">
       <div class="fg3">

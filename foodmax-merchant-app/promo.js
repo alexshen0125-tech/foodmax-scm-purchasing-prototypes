@@ -152,7 +152,7 @@ const stPill=a=>{const s=stOf(a);return `<span class="pm-st s${s}">${ST[s]}${s==
 /* ===== 列表 ===== */
 let TAB='all';
 function openPromo(){
-  pushPage({title:'特价活动',body:`<div id="pm-root"></div><div class="pm-fab" id="pm-fab"><svg viewBox='0 0 24 24'><path d='M12 5v14M5 12h14'/></svg>新建活动</div>`,
+  pushPage({title:'商品特价',body:`<div id="pm-root"></div><div class="pm-fab" id="pm-fab"><svg viewBox='0 0 24 24'><path d='M12 5v14M5 12h14'/></svg>新建活动</div>`,
     mount:(p)=>{const root=p.querySelector('#pm-root');root.innerHTML=skel(3);setTimeout(()=>renderList(root),420);p.querySelector('#pm-fab').onclick=()=>openEdit(null,()=>renderList(root));}});
 }
 function renderList(root){
@@ -168,7 +168,7 @@ function renderList(root){
       ${s==4&&a.endedBy=='platform'?`<div class="pm-warn"><b>平台强制终止</b>：${a.endReason||''}</div>`:''}
       ${ineff&&s<2?`<div class="pm-warn" style="background:var(--amber-soft);color:#B45309">${ineff} 个 SKU 已下架，活动行不生效</div>`:''}
       <div class="acts"><div class="a" data-a="detail">详情</div>${s<2?`<div class="a dgr" data-a="stop">终止</div><div class="a pri" data-a="edit">编辑</div>`:''}</div>
-    </div>`;}).join('')||`<div class="pm-empty"><div class="ic">${svg('tag')}</div><h4>${TAB=='all'?'还没有特价活动':'该状态下暂无活动'}</h4><p>给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</p></div>`}</div>`;
+    </div>`;}).join('')||`<div class="pm-empty"><div class="ic">${svg('tag')}</div><h4>${TAB=='all'?'还没有商品特价活动':'该状态下暂无活动'}</h4><p>给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</p></div>`}</div>`;
   root.querySelectorAll('.pm-pill').forEach(el=>el.onclick=()=>{TAB=el.dataset.t;renderList(root);});
   root.querySelectorAll('.pm-card .a').forEach(el=>el.onclick=(e)=>{e.stopPropagation();const a=ACTS.find(x=>x.id==el.closest('.pm-card').dataset.id);
     if(el.dataset.a=='detail')openDetail(a,()=>renderList(root));
@@ -272,7 +272,15 @@ function openPick(ED,after){const range={start:ED.start,end:ED.end};let q='';con
       draw();p.querySelector('#pk-q').oninput=(e)=>{q=e.target.value.trim().toLowerCase();draw();};
       ok.onclick=()=>{sel.forEach(id=>{const s=sku(id);ED.items.push({skuId:id,orig:s.price,price:'',limit:null,locked:false});});toast(`已加入 ${sel.size} 个 SKU，请填写活动价`);popPage();after&&after();};}});}
 
+/* ===== 营销活动 · 子菜单页（与 PC 侧栏「营销活动 > 商品特价」对齐） ===== */
+function openMkt(){
+  pushPage({title:'营销活动',body:`<div class="pm-dl" style="margin-top:14px;padding:4px 15px">
+    <div class="r" id="mk-promo" style="min-height:64px;cursor:pointer"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:13px;background:var(--red-soft);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--red);fill:none;stroke-width:2"><path d="M20 12l-8 8-9-9V3h8l9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg></div><div><div style="font-size:15px;font-weight:700">商品特价</div><div style="font-size:12px;color:var(--sub);margin-top:2px">给本店 SKU 设活动价 · 差价商家 100% 承担</div></div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--emerald-2);font-weight:700">${ACTS.filter(a=>a.fund==1&&stOf(a)==1).length} 进行中</span><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#94A3B8;fill:none;stroke-width:2"><path d="M9 6l6 6-6 6"/></svg></div></div>
+  </div>
+  <div class="pm-hint" style="padding:12px 16px">更多玩法（满减 / 满赠 / 优惠券）后续开放。</div>`,
+    mount:(p)=>{p.querySelector('#mk-promo').onclick=openPromo;}});
+}
 window.FM_MOD=window.FM_MOD||{};
-window.FM_MOD.mkt=openPromo;
+window.FM_MOD.mkt=openMkt;
 window.FM_MOD.promo=openPromo;
 })();
