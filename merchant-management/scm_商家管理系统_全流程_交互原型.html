@@ -3868,15 +3868,23 @@ function afterStatus(a){
   if(a.status=='pending')return '<span class="tag t-y"><span class="dot"></span>平台判责中</span>';
   if(a.status=='appealing')return '<span class="tag t-b"><span class="dot"></span>申诉复核中</span>';
   const m=LIABLE_TONE[a.liable]||'t-gr';
-  return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">${a.refundType}</div>${(a.type=='补货'&&a.fillStatus)?`<div style="margin-top:3px">${fillTag(a.fillStatus)}</div>`:''}${(a.returnStatus&&a.status!='closed')?`<div style="font-size:11.5px;color:var(--pp);margin-top:2px">退货：${a.returnStatus}</div>`:''}${a.status=='closed'?'<div style="font-size:11px;color:var(--gd);margin-top:2px">✓ 已结案</div>':''}`;
+  return `<span class="tag ${m}"><span class="dot"></span>${a.liable}责</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">${a.refundType}</div>${(a.type=='补货'&&a.fillStatus)?`<div style="margin-top:3px">${fillTag(a.fillStatus)}</div>`:''}${(a.returnStatus&&a.status!='closed')?`<div style="font-size:11.5px;color:var(--pp);margin-top:2px">退货：${a.returnStatus}</div>`:''}${a.accepted?`<div style="font-size:11px;color:var(--gd);margin-top:2px">✓ 已认可判责 · ${a.acceptedAt}</div>`:''}${a.status=='closed'?'<div style="font-size:11px;color:var(--gd);margin-top:2px">✓ 已结案</div>':''}`;
+}
+// 申诉/认可判责的开放条件（BR-07/08/12）：判商家责 + 退货/退款类（补货类不开放线上申诉，异议走线下）+ 未申诉 + 未认可
+function afterAppealOpen(a){
+  return a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&a.type!='补货'&&!a.appeal&&!a.accepted;
 }
 function afterMerchantOps(a,i){
   const b=[];
   // 申诉：判商家责后开放(退款前)，仅 1 次，24h 可配窗口内；窗口用倒计时展示，逾期入口关闭；退货单确认由仓库操作、商家侧不出现
-  if(a.liable=='商家'&&(a.status=='judged'||a.status=='closed')&&!a.appeal){
+  // 认可判责：商家明确是自己责任时无需等倒计时，立刻认可 → 申诉窗口即时关闭、直接进入扣款/退货流程（BR-12）
+  if(afterAppealOpen(a)){
     if(!a.appealDeadline)a.appealDeadline=Date.now()+24*3600*1000;   // 判商家责起 24h 窗口(演示：首次渲染起算)
-    if(a.appealDeadline>Date.now())b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉<span style="font-size:10px;color:var(--r);margin-left:4px">剩 ${cdSpan(a.appealDeadline)}</span></button>`);
-    else b.push(`<span style="font-size:11.5px;color:var(--ts)">申诉已截止</span>`);
+    if(a.appealDeadline>Date.now()){
+      b.push(`<button class="btn btn-p btn-sm" onclick="act_acceptLiab(${i})">认可判责</button>`);
+      b.push(`<button class="btn btn-o btn-sm" onclick="act_appeal(${i})">申诉<span style="font-size:10px;color:var(--r);margin-left:4px">剩 ${cdSpan(a.appealDeadline)}</span></button>`);
+    }
+    else b.push(`<span style="font-size:11.5px;color:var(--ts)" title="逾期未申诉视为认可判责">申诉已截止</span>`);
   }
   b.push(`<button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>`);
   return b.join(' ');
@@ -5187,6 +5195,19 @@ function doJudge(i,liable){const a=DB.afterSales[i];a.liable=liable;
 function act_appeal(i){const a=DB.afterSales[i];
   modal(`<div class="mc-hd"><h3>申诉 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-b"><span class="i">📣</span><div>判商家责后可申诉，平台客服将<b>二次判责</b>。申诉窗口 <b>24 小时</b>（平台可配），<b style="color:var(--r)">剩 ${cdSpan(a.appealDeadline||Date.now()+24*3600*1000)}</b> 截止，逾期入口关闭；<b>仅可申诉 1 次</b>。用户退款不受申诉影响。</div></div><div class="fr"><label class="fl">申诉理由</label><textarea id="ap-reason">出库前已拍照留证，货品无质量问题，疑为配送环节导致，申请重新判责。</textarea></div><div class="fr"><label class="fl">上传证据照片 <span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span></label><div class="up" onclick="this.classList.add('done');this.querySelector('.uic').textContent='✓';this.querySelector('.ut').textContent='已上传 3 张'"><div class="uic">📷</div><div class="ut">点击上传照片</div><div class="us">选填 · 支持 jpg/png，最多 9 张 · 出库品相 / 分拣记录 / 配送签收等证据</div></div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.afterSales[${i}].status='appealing';DB.afterSales[${i}].appeal=document.getElementById('ap-reason').value;closeModal();render();toast('申诉已提交，平台客服二次判责中','ok')">提交申诉</button></div>`);
 }
+// 商家端：认可判责（BR-12）——明确是自己责任时不必等 24h 倒计时，立刻认可：申诉入口即时关闭、不可撤销；售后金额按原判责逆向扣减，退货退款类退货单流程不受影响
+function act_acceptLiab(i){
+  const a=DB.afterSales[i];
+  modal(`<div class="mc-hd"><h3>认可判责 · ${a.id}</h3><p>${a.item} · 判${a.liable}责</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span><div>认可后即视为<b>接受商家责</b>：售后金额 <b style="color:var(--r)">S$${a.amt.toFixed(2)}</b> 按判责结论逆向扣减进本期对账；<b>申诉入口立即关闭</b>（原剩 ${cdSpan(a.appealDeadline)}），<b>不可撤销</b>。${a.type=='退货退款'?'退货实物仍按退货单流程退回平台仓，到仓后 72h 内凭提货码自提。':'退款不退货类认可后直接结案。'}</div></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 24px;margin-top:14px"><div><div style="font-size:11.5px;color:var(--ts)">处理方式</div><div style="font-size:13px;margin-top:3px">${a.refundType}</div></div><div><div style="font-size:11.5px;color:var(--ts)">申请原因</div><div style="font-size:13px;margin-top:3px">${a.reason}</div></div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-p" onclick="confirmAcceptLiab(${i})">确认认可</button></div>`);
+}
+function confirmAcceptLiab(i){
+  const a=DB.afterSales[i];
+  const d=new Date();const p=n=>String(n).padStart(2,'0');
+  a.accepted=1;a.acceptedAt=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  a.appealDeadline=Date.now();                       // 申诉窗口即时关闭
+  if(a.type=='退款不退货')a.status='closed';          // 退款不退货：无后续实物流程，认可即结案；退货退款：等退货单闭环后结案
+  closeModal();render();toast('已认可判责，申诉入口已关闭','ok');
+}
 // 平台端：复核申诉
 function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];
   if(uphold){a.status='closed';a.appeal=(a.appeal||'')+'（平台复核：维持原判·商家责）';render();toast('复核完成：维持原判','info');}
@@ -5251,8 +5272,10 @@ function act_afterDetail(i){const a=DB.afterSales[i];
       ${kv('判责方',a.liable?liableTag(a):'待判责')}
       ${kv('处理方式',a.refundType||'—')}
       ${a.appeal?kv('申诉',a.appeal):''}
+      ${a.accepted?kv('判责认可',`<span style="color:var(--gd)">✓ 商家已认可 · ${a.acceptedAt}</span><div style="font-size:11.5px;color:var(--ts);margin-top:2px">申诉入口已关闭，不可撤销</div>`):''}
       ${a.returnStatus?kv('退货状态',a.returnStatus):''}
     </div>
+    ${afterAppealOpen(a)&&a.appealDeadline>Date.now()?`<div class="ib ib-y" style="margin-top:16px"><span class="i">⏳</span><div>判商家责，申诉窗口<b style="color:var(--r)">剩 ${cdSpan(a.appealDeadline)}</b>。明确是自己责任的可直接<b>认可判责</b>，不必等倒计时；逾期未申诉视为认可。</div></div>`:''}
     ${a.type=='补货'?`<div class="ib ib-b" style="margin-top:16px"><span class="i">ℹ️</span>补货类售后<b>不开放线上申诉</b>。对判责结论或补发数量有异议，请在<b>结案后 7 个自然日内</b>联系你的运营对接人（微信群「Food Max 供应商-绿鲜源」/ +65 6123 4567）并提供出库装车凭证；核实有误的由运营发起<b>冲正</b>，在下期结算回补。</div>`:''}
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);

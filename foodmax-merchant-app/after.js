@@ -71,7 +71,10 @@ css.textContent=`
 .ac .meta .r .v.red{color:var(--red);font-weight:600;}
 .ac hr{border:none;border-top:1px solid var(--line);margin:11px 0;}
 .ac .det{margin-top:12px;display:flex;justify-content:flex-end;}
+.ac .det{gap:8px;}
 .ac .det .btn-d{min-height:38px;display:flex;align-items:center;padding:0 18px;border:1px solid var(--emerald);color:var(--emerald);font-size:13.5px;font-weight:700;border-radius:10px;cursor:pointer;}
+.ac .det .btn-d.ghost{border-color:var(--line);color:var(--sub);font-weight:600;}
+.ac .acc-note{margin-top:10px;font-size:12px;color:var(--emerald);}
 /* 空态 */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 40px;gap:14px;text-align:center;}
 .empty .ei{width:96px;height:96px;border-radius:28px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;}
@@ -280,7 +283,23 @@ function judgeCard(d){
         <div class="sp"><span>${d.sp}</span><span>x${d.qty}</span></div></div></div>
     <div class="paid">共${d.qty}件商品　客户实付 <b>${d.paid}</b></div>
     ${judge}
-    <div class="det"><span class="btn-d" data-det>查看详情</span></div></div>`;
+    ${d.accepted?`<div class="acc-note">已认可判责 · ${d.acceptedAt} · 申诉入口已关闭</div>`:''}
+    <div class="det">${(d.countdown&&!d.fill)?`<span class="btn-d ghost" data-acc>认可判责</span>`:''}<span class="btn-d" data-det>查看详情</span></div></div>`;
+}
+/* 认可判责（BR-12）：商家明确是自己责任时不必等 24h 倒计时，立刻认可 → 申诉入口即时关闭、不可撤销；
+   金额按原判责逆向扣减；退货退款类退货单流程不受影响。数据层：从「待处理/可申诉」移到「商责」 */
+let AF_REDRAW=null;
+function acceptLiab(d,after){
+  confirmDialog({title:'确认认可判责？',body:`认可后由合作商承担本次售后金额 ${d.appealAmt}，在结算单中扣减；申诉入口立即关闭（原${d.countdown}），该操作不可撤销。`,danger:1,okText:'确认认可',onOk:()=>{
+    const t=new Date(),p=n=>String(n).padStart(2,'0');
+    d.accepted=1;d.acceptedAt=`${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}`;
+    d.needPay=d.appealAmt;d.appealAmt='S$0';d.countdown='';
+    ['pending','appeal'].forEach(k=>{const i=DATA[k].indexOf(d);if(i>=0)DATA[k].splice(i,1);});
+    if(DATA.merchant.indexOf(d)<0)DATA.merchant.unshift(d);
+    toast('已认可判责，申诉入口已关闭');
+    if(AF_REDRAW)AF_REDRAW();
+    if(after)after();
+  }});
 }
 function allCard(d){
   return `<div class="ac">
@@ -336,9 +355,12 @@ function renderList(container){
     list.innerHTML=arr.map(judgeCard).join('');
     list.querySelectorAll('.ac').forEach((el,i)=>{
       el.querySelector('[data-det]').onclick=()=>openDetail(arr[i]);
+      const acc=el.querySelector('[data-acc]');if(acc)acc.onclick=()=>acceptLiab(arr[i]);
     });
   };
-  const draw=(k)=>{list.innerHTML=skel(3);setTimeout(()=>drawData(k),420);};
+  let curTab='pending';
+  const draw=(k)=>{curTab=k;list.innerHTML=skel(3);setTimeout(()=>drawData(k),420);};
+  AF_REDRAW=()=>drawData(curTab);   // 认可判责后就地刷新当前 Tab（不走骨架）
 
   container.querySelectorAll('#tabs .tb').forEach(t=>t.onclick=()=>{
     container.querySelectorAll('#tabs .tb').forEach(x=>x.classList.remove('on'));
@@ -357,11 +379,12 @@ function openDetail(d){
        <div class="sub">您需承担金额 <b>${d.needPay||'S$0'}</b></div>`;
   const body=`
     <div class="as-dhead">${head}</div>
-    <div class="as-dred">${d.fill?'客户签收后发现缺货、判合作商责任，客户要求<b>补货不退款</b>。平台已用自营现货补发给客户，补发货款在结算单中扣减。<b>补货类不支持线上申诉</b>，有异议请联系运营对接人。':(appealable?'判责结果为合作商承担，若有异议请在剩余时间内发起申诉，逾期视为认责。':'本次售后已判责，如对结果有异议可发起申诉，逾期视为认可判责结果。')}</div>
+    <div class="as-dred">${d.fill?'客户签收后发现缺货、判合作商责任，客户要求<b>补货不退款</b>。平台已用自营现货补发给客户，补发货款在结算单中扣减。<b>补货类不支持线上申诉</b>，有异议请联系运营对接人。':(appealable?'判责结果为合作商承担。明确是自己责任的可直接<b>认可判责</b>，不必等倒计时；有异议请在剩余时间内发起申诉，逾期视为认责。':(d.accepted?'本次判责已由您<b>认可</b>，售后金额在结算单中扣减，申诉入口已关闭、不可撤销。':'本次售后已判责，如对结果有异议可发起申诉，逾期视为认可判责结果。'))}</div>
     <div class="as-dblock">
       <div class="bt"><span>判责信息</span></div>
       <div class="as-row"><span class="k">判责时间</span><span class="v">${d.judgeTime}</span></div>
       <div class="as-row"><span class="k">可申诉金额</span><span class="v ${d.fill?'':'red'}">${d.fill?'补货类不支持申诉':d.appealAmt}</span></div>
+      ${d.accepted?`<div class="as-row"><span class="k">判责认可</span><span class="v" style="color:var(--emerald)">商家已认可 · ${d.acceptedAt}</span></div>`:''}
       <div class="as-row" style="align-items:center"><span class="k">判责记录</span><span class="v" style="text-align:right"><span class="cp" data-rec style="border-color:var(--emerald)">查看 ›</span></span></div>
     </div>
     ${d.fill?`<div class="as-dblock">
@@ -396,7 +419,7 @@ function openDetail(d){
     </div>
     <div style="height:6px"></div>`;
   const footer=appealable
-    ? `<div class="as-foot"><button class="btn ghost" id="acc">认责</button><button class="btn primary" id="apl">去申诉</button></div>`
+    ? `<div class="as-foot"><button class="btn ghost" id="acc">认可判责</button><button class="btn primary" id="apl">去申诉</button></div>`
     : `<div class="as-foot"><button class="btn ghost" id="rec2" style="flex:1">查看判责记录</button></div>`;
   pushPage({title:'判责详情',navbar:false,body:`<div class="navbar" style="background:linear-gradient(135deg,#059669,#10B981)"><span class="back" style="background:rgba(255,255,255,.2)">${svg('back')}</span><span class="nt" style="color:#fff">判责详情</span></div>`+body,
     footer,
@@ -406,7 +429,7 @@ function openDetail(d){
       const rec2=p.querySelector('#rec2');if(rec2)rec2.onclick=openRecord;
       p.querySelectorAll('[data-cp]').forEach(c=>c.onclick=()=>toast('已复制 '+c.dataset.cp));
       const acc=p.querySelector('#acc');
-      if(acc)acc.onclick=()=>confirmDialog({title:'确认认责？',body:`认责后将由合作商承担本次售后金额 ${d.appealAmt}，该操作不可撤销，且无法再发起申诉。`,danger:1,okText:'确认认责',onOk:()=>{toast('已认责');setTimeout(popPage,600);}});
+      if(acc)acc.onclick=()=>acceptLiab(d,()=>setTimeout(popPage,600));
       const apl=p.querySelector('#apl');
       if(apl)apl.onclick=()=>openAppeal(d);
     }});
