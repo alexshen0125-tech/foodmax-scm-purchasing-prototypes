@@ -14,9 +14,21 @@ css.textContent=`
 .rc-sum .big{font-size:28px;font-weight:700;color:var(--emerald-2);margin:2px 0 3px;}
 .rc-sum .big .c{font-size:17px;opacity:.8;margin-right:2px;}
 .rc-sum .lbl{font-size:12px;color:var(--sub);}
-.rc-sum .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 12px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
-.rc-sum .grid .k{font-size:11.5px;color:var(--sub);}
-.rc-sum .grid .v{font-size:14px;font-weight:700;color:#27433A;margin-top:3px;}
+.rc-sum .tip{margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--mint-soft);color:#27433A;font-size:11.5px;line-height:1.55;}
+.rc-sum .tip b{color:var(--emerald-2);}
+.rc-sum .tt{font-size:12px;font-weight:700;color:#27433A;margin:12px 0 2px;padding-top:12px;border-top:1px solid var(--line);}
+.rc-sum .tt span{font-weight:400;color:var(--sub);margin-left:6px;}
+.rc-sum .warn{font-size:11.5px;color:#B45309;background:var(--amber-soft);border-radius:10px;padding:7px 10px;line-height:1.5;margin:6px 0 2px;}
+.rc-ln{display:grid;grid-template-columns:14px 1fr auto;align-items:baseline;gap:0 6px;padding:7px 0;border-bottom:1px dashed var(--line);}
+.rc-ln:last-child{border-bottom:0;}
+.rc-ln .op{font-size:12.5px;color:var(--sub);text-align:center;}
+.rc-ln .lb{font-size:13px;color:#27433A;}
+.rc-ln .cap{font-size:10.5px;color:var(--sub);margin-top:1px;line-height:1.4;}
+.rc-ln .amt{font-size:13.5px;font-weight:700;color:#27433A;white-space:nowrap;}
+.rc-ln .amt.neg{color:var(--red);}.rc-ln .amt.zero{color:#9AA99F;font-weight:400;}.rc-ln .amt.info{color:var(--sub);font-weight:500;}
+.rc-ln.total{border-top:1px solid var(--line);border-bottom:0;margin-top:2px;padding-top:9px;}
+.rc-ln.total .lb,.rc-ln.total .op{font-weight:700;color:var(--emerald-2);}.rc-ln.total .amt{color:var(--emerald-2);font-size:15px;}
+.rc-tag{display:inline-block;margin-left:5px;padding:0 5px;border-radius:6px;background:var(--muted);color:var(--sub);font-size:10px;line-height:15px;vertical-align:1px;}
 .rc-list{padding:0 16px 24px;}
 .rc-card{background:#fff;border-radius:18px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;min-height:44px;}
 .rc-card .r1{display:flex;align-items:center;gap:8px;}
@@ -109,6 +121,12 @@ const RECON=[
 const GST=9;
 const S=n=>'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const NEG=n=>n?`<span class="rc-neg">-${S(n)}</span>`:S(0);
+/* 汇总卡算式行：与 PC 汇总卡同字段同序（线上 StatementSummary：amountInclTax/platformSubsidy/merchantSubsidy/platformServiceFee/aftersaleDeduction/daySettleAmount + 另行结算三项）。
+   扣项红字带 −；平台补贴不扣、单独标签；0 置灰不隐藏；null（未接入）显 —。*/
+const rcLine=(op,lb,cap,v,opt)=>{opt=opt||{};const isNeg=op=='−';
+  const amt=v==null?'—':(!v?S(0):(isNeg?'−':'')+S(v));
+  const cls=(v==null||!v)?' zero':(isNeg?' neg':(opt.muted?' info':''));
+  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
 const tax=l=>(l.tax==null?GST:l.tax), mul=l=>1+tax(l)/100;
 const ln=(d,s)=>d.lines.find(l=>l.sku==s)||{price:0,name:s,unit:'件',spec:''};
 const realN=l=>l.real*l.price, realG=l=>l.real*l.price*mul(l);
@@ -150,17 +168,22 @@ function openRecon(){
   const T=f=>rows.reduce((a,d)=>a+f(d),0);
   pushPage({title:'对账单',body:`
     <div class="rc-sum">
-      <div class="lbl">近 7 天 · 当日结算合计（货款）</div>
+      <div class="lbl">近 7 天 · 结算合计（货款）</div>
       <div class="big disp"><span class="c">S$</span>${T(dSettle).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div class="lbl">数据源：财务结算单明细汇总</div>
-      <div class="grid">
-        <div><div class="k">实发金额（含税）</div><div class="v">${S(T(dRealG))}</div></div>
-        <div><div class="k">商家补贴</div><div class="v">${NEG(T(dSub))}</div></div>
-        <div><div class="k">平台服务费</div><div class="v">${NEG(T(dFee))}</div></div>
-        <div><div class="k">售后扣款（含税）</div><div class="v">${NEG(T(dAftG))}</div></div>
-        <div><div class="k">自营补货（另行结算）</div><div class="v">${NEG(T(dRpl))}</div></div>
-        <div><div class="k">耗材订单（另行结算）</div><div class="v">${NEG(T(dSup))}</div></div>
-      </div>
+      <div class="lbl">${rows.length} 张对账单 · 数据源：财务结算单明细</div>
+      <div class="tip"><b>口径</b>：结算合计 = 金额（含税）− 商家补贴 − 平台服务费 − 售后扣款（含税）。平台补贴由平台出资、不从货款扣。按所选区间累计，跨结算周期时不等于任一结算单净额。</div>
+      <div class="tt">货款算式<span>列表各单同列累计</span></div>
+      ${rcLine('','金额（含税）','仓库签收入库件数 × 含税售价',T(dRealG))}
+      ${rcLine('−','商家补贴','商家自担的促销让利，客户已少付',T(dSub))}
+      ${rcLine('−','平台服务费','（金额含税 − 商家补贴）× 平台服务费率',T(dFee))}
+      ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
+      ${rcLine('','平台补贴','平台出资的优惠，已含在金额里，不从货款扣',T(d=>d.platSub||0),{muted:true,tag:'不扣'})}
+      ${rcLine('=','结算合计（货款）','进入结算单的货款金额',T(dSettle),{total:true})}
+      <div class="tt">另行结算<span>不从上方货款扣</span></div>
+      <div class="warn">以下三项不计入结算合计，在结算单付款时单独抵扣：实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款。同一笔不重复扣。</div>
+      ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计',T(dRpl))}
+      ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup))}
+      ${rcLine('−','缺货罚款','缺口件数 × S$40/件，缺货即罚、与是否补采无关；以「财务 › 罚款单」为准',null)}
     </div>
     <div id="rcl">${skel(3)}</div>`,
     mount:(p)=>{
