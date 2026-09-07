@@ -126,23 +126,29 @@ const NET_UNITS=['g','kg','ml','L'];           // 兼容旧引用
 const PACK_UNITS=['包','份','组','箱'];         // 兼容旧引用
 /* ===== 类目字段模板（2026-09-03，与 PC 同数据同口径；运营平台「后台类目 › 字段模板库」维护，App 只消费）=====
    模板 = { 字段 → 允许的字典项子集[, 默认值] }；解析：类目自身挂载 › 父类目 › 平台默认（全量字典）。
-   只裁「商家手选」的 3 个字段：最小包装单位 / 净含量单位 / 售卖单位；售卖规格单位是派生值不进模板。 */
-const TPL_FIELDS={netPackType:{t:'最小包装单位',full:()=>unitNames('标品','spec')},netUnit:{t:'净含量单位',full:()=>unitNames('标品','net')},packUnit:{t:'售卖单位',full:()=>unitNames('标品','sell')}};
+   只裁「商家手选」的 4 个字段：最小包装单位 / 净含量单位 / 售卖单位 / 库存单位（寄售专用，2026-09-07 补）；售卖规格单位是派生值不进模板。
+   库存单位：仅寄售标品且「库存单位≠最小包装单位」时按子集选；「＝最小包装单位」时直接取最小包装单位不受限；非标品寄售恒 g/kg 不受限。 */
+const TPL_FIELDS={netPackType:{t:'最小包装单位',full:()=>unitNames('标品','spec')},netUnit:{t:'净含量单位',full:()=>unitNames('标品','net')},packUnit:{t:'售卖单位',full:()=>unitNames('标品','sell')},stockUnit:{t:'库存单位',full:()=>unitNames('标品','spec')}};
 const FIELD_TPLS={
   0:{name:'平台默认',fields:{}},
-  1:{name:'饮料',    fields:{netPackType:{allow:['瓶','罐','箱'],def:'瓶'},netUnit:{allow:['ml','L'],def:'ml'},packUnit:{allow:['箱'],def:''}}},
-  2:{name:'生鲜蔬菜',fields:{netPackType:{allow:['袋','盒','箱'],def:'袋'},netUnit:{allow:['g','kg'],def:'kg'},packUnit:{allow:['包','份','箱'],def:''}}},
-  3:{name:'肉禽水产',fields:{netPackType:{allow:['盒','袋','箱'],def:'盒'},netUnit:{allow:['g','kg'],def:'g'},packUnit:{allow:['包','份'],def:''}}},
+  1:{name:'饮料',    fields:{netPackType:{allow:['瓶','罐','箱'],def:'瓶'},netUnit:{allow:['ml','L'],def:'ml'},packUnit:{allow:['箱'],def:''},stockUnit:{allow:['瓶','罐','箱'],def:'箱'}}},
+  2:{name:'生鲜蔬菜',fields:{netPackType:{allow:['袋','盒','箱'],def:'袋'},netUnit:{allow:['g','kg'],def:'kg'},packUnit:{allow:['包','份','箱'],def:''},stockUnit:{allow:['袋','箱'],def:'箱'}}},
+  3:{name:'肉禽水产',fields:{netPackType:{allow:['盒','袋','箱'],def:'盒'},netUnit:{allow:['g','kg'],def:'g'},packUnit:{allow:['包','份'],def:''},stockUnit:{allow:['盒','袋','箱'],def:'箱'}}},
 };
 const CAT_TPL_MOUNT={'饮料':1,'新鲜蔬菜':2,'肉禽蛋品':3,'海鲜水产':3};   // 类目名 → 模板 id；调味品未挂载 → 平台默认
 function tplResolve(cat){const id=cat&&CAT_TPL_MOUNT[cat];return id!=null&&FIELD_TPLS[id]?{tpl:FIELD_TPLS[id],source:'own'}:{tpl:FIELD_TPLS[0],source:'default'};}
 function tplAllowed(cat,k){const full=TPL_FIELDS[k].full();const c=tplResolve(cat).tpl.fields[k];if(!c||!c.allow||!c.allow.length)return full;return full.filter(u=>c.allow.includes(u));}
 function tplDefault(cat,k){const c=tplResolve(cat).tpl.fields[k];const d=c&&c.def;return (d&&tplAllowed(cat,k).includes(d))?d:'';}
 function tplTitle(cat){const r=tplResolve(cat);return r.source=='own'?`模板「${r.tpl.name}」`:'平台默认';}   // 选择器标题后缀：告知商家可选值来自哪个类目模板
-/* 类目变更后（BR-09）：三个单位字段越界清空并提示、空值预填模板默认值；返回被清空的字段名 */
+/* 寄售库存单位实际可选：标品按类目模板「库存单位」子集裁剪，非标品恒 g/kg */
+function stockUnitOptsApp(f){const full=unitNames(f.stdType,'spec');const cat=f.cat&&f.cat.n;if(f.stdType!=='标品'||!cat)return full;const ok=tplAllowed(cat,'stockUnit');return full.filter(u=>ok.includes(u));}
+/* 类目变更后（BR-09）：单位字段越界清空并提示、空值预填模板默认值；返回被清空的字段名 */
 function catUnitSyncApp(p,f){
   const cat=f.cat&&f.cat.n;if(!cat)return;const cleared=[];
   ['netPackType','netUnit'].forEach(k=>{const ok=tplAllowed(cat,k);if(f[k]&&!ok.includes(f[k])){f[k]='';cleared.push(TPL_FIELDS[k].t);}if(!f[k]&&f.stdType==='标品')f[k]=tplDefault(cat,k);});
+  /* 寄售标品且库存单位≠最小包装单位：库存单位按模板裁剪；「＝」由 stdToggle 赋值＝最小包装单位不受限 */
+  if(f.supplyMode==='寄售'&&f.stdType==='标品'&&(f.stockUnitIsPack||'是')==='否'){const ok=stockUnitOptsApp(f);if(f.stockUnit&&!ok.includes(f.stockUnit)){f.stockUnit='';cleared.push('库存单位');}if(!f.stockUnit)f.stockUnit=tplDefault(cat,'stockUnit');
+    const v=p.querySelector('#pb-stockunit-v');if(v)v.innerHTML=f.stockUnit?f.stockUnit:'<span class="ph">请选择</span>';}
   const okSell=tplAllowed(cat,'packUnit');let n=0;f.specs.forEach(s=>{if(s.packUnit&&!okSell.includes(s.packUnit)){s.packUnit='';n++;}});if(n)cleared.push(`${n} 个规格的售卖单位`);
   const ph=(el,txt,filled)=>{if(el)el.innerHTML=filled?txt:`<span class="ph">${txt}</span>`;};   // 同 openForm 内的 setPH（作用域不同，此处自备）
   ph(p.querySelector('#pb-netpack-v'),f.netPackType||'请选择',!!f.netPackType);
@@ -776,6 +782,8 @@ function runChecks(f){
     }
   }
   if(f.supplyMode==='寄售'&&!f.stockUnit) fails.push(['必填','寄售品需选择「库存单位」']);
+  if(f.supplyMode==='寄售'&&f.stdType==='标品'&&(f.stockUnitIsPack||'是')==='否'&&f.stockUnit&&f.cat&&!tplAllowed(f.cat.n,'stockUnit').includes(f.stockUnit))
+    fails.push(['单位规范',`库存单位「${f.stockUnit}」不在类目「${f.cat.n}」字段模板可选值内（${tplAllowed(f.cat.n,'stockUnit').join('/')}）`]);
   if(f.supplyMode==='寄售'&&f.stockUnit&&!unitNames(f.stdType,'spec').includes(f.stockUnit))
     fails.push(['单位规范',`库存单位「${f.stockUnit}」不在${f.stdType}的售卖规格单位取值内（${unitNames(f.stdType,'spec').join('/')}）`]);
   if(!f.specs.length)          fails.push(['规格','至少添加 1 个售卖规格']);
@@ -882,7 +890,8 @@ function bindForm(p,f){
   p.querySelector('#pb-packqty').oninput=e=>{f.stockPackQty=e.target.value;stdToggle(p,f);renderSpecs(p,f);paint(p,f);};
   p.querySelector('#pb-stockunit-row').onclick=()=>{
     if(f.supplyMode==='寄售'&&f.stdType==='标品'&&(f.stockUnitIsPack||'是')==='是')return FM.toast('库存单位已锁定为最小包装单位');
-    pbGridPicker('库存单位',unitNames(f.stdType,'spec'),f.stockUnit,v=>{
+    if(f.stdType==='标品'&&!(f.cat&&f.cat.n))return FM.toast('请先选择后台类目，库存单位可选值按类目限定');
+    pbGridPicker('库存单位'+(f.stdType==='标品'&&f.cat?' · '+tplTitle(f.cat.n):''),stockUnitOptsApp(f),f.stockUnit,v=>{
     f.stockUnit=v;setPH(p.querySelector('#pb-stockunit-v'),v,1);stdToggle(p,f);renderSpecs(p,f);bcrsToggle(p,f);paint(p,f);});};
   // 效期管理 / 保质期单位 / APP是否展示效期 / 储存条件 / 履约方式
   p.querySelector('#pb-valid-row').onclick=()=>pbGridPicker('效期管理',['是','否'],f.validEnable,v=>{f.validEnable=v;setPH(p.querySelector('#pb-valid-v'),v,1);});

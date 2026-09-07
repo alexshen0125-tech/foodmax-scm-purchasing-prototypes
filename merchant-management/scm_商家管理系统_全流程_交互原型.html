@@ -841,6 +841,8 @@ const UNITS=['kg','g','L','盒','袋','份','只','扎','箱'],SHELF=['常温','
 /* 寄售品「库存单位」：与 SKU 的售卖规格单位是同一口径（寄售时 SKU 售卖规格单位恒等于它），
    故取值集 = 该商品类型的售卖规格单位枚举，同样受标品/非标品约束，见 unitNames(type,'spec') */
 const stockUnitList=t=>unitNames(t,'spec');
+/* 建品下拉实际可选：标品按类目字段模板「库存单位」子集裁剪（tplAllowed），非标品恒 g/kg 不受模板限制 */
+const stockUnitOpts=t=>{const full=stockUnitList(t);if(t!='标品'||typeof tplAllowed!='function')return full;const cat=(typeof edCat=='function'?edCat():'');if(!cat)return full;const ok=tplAllowed(cat,'stockUnit');return full.filter(u=>ok.includes(u));};
 function stockUnitHintHtml(t){return `取值同<b>售卖规格单位</b>枚举、随商品类型变（当前<b>${t}</b>：${stockUnitList(t).join(' / ')}）。选定后寄售各规格的<b>售卖规格单位恒等于它、逐规格不可改</b>，「1 份 = 数量」即表示 <b>数量 个该单位</b>（如库存单位 kg、数量 5 → 规格「5kg」）。`;}
 /* ===== 寄售标品的库存单位与最小包装单位的换算（2026-08-27）=====
    寄售的库存按「库存单位」计，而净含量按「最小包装单位」申报，两者可能不是同一层：
@@ -1059,11 +1061,13 @@ function unitTxtCode(t,g,n){const u=unitOf(t,g,n);return n?(u?`${n}<span style="
      模板 = { 字段 → 允许的字典项子集[, 默认值] }；1 类目最多挂 1 个模板，1 模板可挂 N 类目（BR-01）
      解析：类目自身挂载 > 父类目挂载 > 「平台默认」（系统内置＝全量字典，不可编辑/停用/删除）（BR-02）
      子类目自挂即整体覆盖父级，不做字段级合并（BR-03）；模板改动即时作用于新建/编辑/导入，存量商品不动（BR-07）
-   可配字段只收「商家手选 + 关联字典」的三个；售卖规格单位是派生值（自售标品＝最小包装单位、寄售＝库存单位、非标品＝g/kg），不进模板。 */
+   可配字段只收「商家手选 + 关联字典」的四个（第四个「库存单位」仅寄售场景出现，2026-09-07 补）；售卖规格单位是派生值（自售标品＝最小包装单位、寄售＝库存单位、非标品＝g/kg），不进模板。
+   库存单位（寄售专用）：字典同最小包装单位（SPECIFICATIONS_UNIT）；商家答「库存单位就是最小包装单位＝是」时取最小包装单位的值、不受本字段子集限制，答「否」时才按本字段子集选。非标品寄售库存单位恒为 g/kg，也不受模板限制。 */
 const TPL_FIELDS=[
   {k:'netPackType',t:'最小包装单位',en:'Min. Pack Unit',   grp:'SPU',dict:'SPECIFICATIONS_UNIT',code:'measure_unit',   opts:()=>unitList('标品','spec')},
   {k:'netUnit',    t:'净含量单位',  en:'Net Content Unit', grp:'SPU',dict:'NET_WEIGHT_UNIT',    code:'net_weight_unit',opts:()=>unitList('标品','net')},
   {k:'packUnit',   t:'售卖单位',    en:'Sales Unit',       grp:'SKU',dict:'SPECIFICATIONS_UNIT',code:'pack_unit',      opts:()=>unitList('标品','sell')},
+  {k:'stockUnit',  t:'库存单位',    en:'Stock Unit',       grp:'SPU · 寄售',dict:'SPECIFICATIONS_UNIT',code:'stock_unit',opts:()=>unitList('标品','spec')},
 ];
 const tplField=k=>TPL_FIELDS.find(f=>f.k==k);
 const tplFullNames=k=>tplField(k).opts().map(x=>x[1]);
@@ -1080,11 +1084,11 @@ function opsCatLevel(n){return OPS_CATS.some(c=>c.n==n)?1:(opsCatParent(n)?2:0);
 function opsCatChildren(n){const c=OPS_CATS.find(x=>x.n==n);return c?(c.children||[]):[];}
 DB.fieldTpls=[
   {id:0,name:'平台默认',en:'Platform Default',sys:true,status:1,fields:{},updBy:'系统',updAt:'—'},
-  {id:1,name:'饮料',    en:'Beverage',              status:1,fields:{netPackType:{allow:['瓶','罐','箱'],def:'瓶'},netUnit:{allow:['ml','L'],def:'ml'},packUnit:{allow:['箱'],def:''}},updBy:'李敏',updAt:'2026-09-01 10:20'},
-  {id:2,name:'生鲜蔬菜',en:'Fresh Vegetables',      status:1,fields:{netPackType:{allow:['袋','盒','箱'],def:'袋'},netUnit:{allow:['g','kg'],def:'kg'},packUnit:{allow:['包','份','箱'],def:''}},updBy:'李敏',updAt:'2026-08-28 15:02'},
-  {id:3,name:'肉禽水产',en:'Meat & Seafood',        status:1,fields:{netPackType:{allow:['盒','袋','箱'],def:'盒'},netUnit:{allow:['g','kg'],def:'g'},packUnit:{allow:['包','份'],def:''}},updBy:'王恺',updAt:'2026-08-28 15:10'},
-  {id:4,name:'冰鲜整箱',en:'Chilled Carton',        status:1,fields:{netPackType:{allow:['箱'],def:'箱'},netUnit:{allow:['kg'],def:'kg'},packUnit:{allow:['箱'],def:'箱'}},updBy:'王恺',updAt:'2026-08-30 09:41'},
-  {id:5,name:'调味干货',en:'Condiments & Dry Goods',status:0,fields:{netPackType:{allow:['瓶','罐','袋','盒'],def:''},netUnit:{allow:['g','ml','L'],def:''},packUnit:{allow:['包','箱'],def:''}},updBy:'李敏',updAt:'2026-08-20 11:05'},
+  {id:1,name:'饮料',    en:'Beverage',              status:1,fields:{netPackType:{allow:['瓶','罐','箱'],def:'瓶'},netUnit:{allow:['ml','L'],def:'ml'},packUnit:{allow:['箱'],def:''},stockUnit:{allow:['瓶','罐','箱'],def:'箱'}},updBy:'李敏',updAt:'2026-09-07 14:20'},
+  {id:2,name:'生鲜蔬菜',en:'Fresh Vegetables',      status:1,fields:{netPackType:{allow:['袋','盒','箱'],def:'袋'},netUnit:{allow:['g','kg'],def:'kg'},packUnit:{allow:['包','份','箱'],def:''},stockUnit:{allow:['袋','箱'],def:'箱'}},updBy:'李敏',updAt:'2026-09-07 14:22'},
+  {id:3,name:'肉禽水产',en:'Meat & Seafood',        status:1,fields:{netPackType:{allow:['盒','袋','箱'],def:'盒'},netUnit:{allow:['g','kg'],def:'g'},packUnit:{allow:['包','份'],def:''},stockUnit:{allow:['盒','袋','箱'],def:'箱'}},updBy:'王恺',updAt:'2026-09-07 14:25'},
+  {id:4,name:'冰鲜整箱',en:'Chilled Carton',        status:1,fields:{netPackType:{allow:['箱'],def:'箱'},netUnit:{allow:['kg'],def:'kg'},packUnit:{allow:['箱'],def:'箱'},stockUnit:{allow:['箱'],def:'箱'}},updBy:'王恺',updAt:'2026-09-07 14:26'},
+  {id:5,name:'调味干货',en:'Condiments & Dry Goods',status:0,fields:{netPackType:{allow:['瓶','罐','袋','盒'],def:''},netUnit:{allow:['g','ml','L'],def:''},packUnit:{allow:['包','箱'],def:''},stockUnit:{allow:['瓶','罐','袋','盒','箱'],def:''}},updBy:'李敏',updAt:'2026-08-20 11:05'},
 ];
 DB.catTplMount={'饮料':1,'新鲜蔬菜':2,'肉禽蛋品':3,'海鲜水产':3,'冰鲜水产':4};   // 类目名 → 模板 id；未挂载（调味品）走平台默认
 DB.tplSeq=5;
@@ -1169,6 +1173,7 @@ function autoCheck(p){const fails=[];const c=CATS[p.cat],typeValid=['标品','�
       if(p.netPackType&&p.stockUnit&&p.stockUnit==p.netPackType)fails.push(['库存单位',`库存单位「${p.stockUnit}」与最小包装单位相同，应改选「是」而非填写包装数量`]);
     }
   }
+  if(p.consign&&isStd(p)&&p.stockUnit&&(p.stockUnitIsPack||'是')=='否'&&p.cat&&!tplAllowed(p.cat,'stockUnit').includes(p.stockUnit))fails.push(['单位规范',`库存单位「${p.stockUnit}」不在类目「${p.cat}」字段模板可选值内（${tplAllowed(p.cat,'stockUnit').join('/')}）`]);
   if(p.consign&&p.stockUnit&&!stockUnitList(stdTypeName(p)).includes(p.stockUnit))fails.push(['单位规范',`库存单位「${p.stockUnit}」不在${stdTypeName(p)}的售卖规格单位取值内（${stockUnitList(stdTypeName(p)).join('/')}）`]);
   /* 标品的净含量＝包装上申报的固定值，必须填；非标品的净含量由售卖规格数量+单位得出，无此字段 */
   if(p.stdType=='标品'){
@@ -2365,6 +2370,7 @@ function stockPackSync(){
   if(!on){det.style.display='none';sel.disabled=false;sel.style.background='';if(lock)lock.style.display='none';return;}
   const isPack=((document.querySelector('input[name=f-stockispack]:checked')||{}).value)||'是';
   if(isPack=='是'){
+    if(npt&&![...sel.options].some(o=>o.value==npt))sel.insertAdjacentHTML('afterbegin',`<option value="${npt}">${npt}</option>`);   // 「是」不受模板库存单位子集限制
     if(npt)sel.value=npt;                      // 库存单位赋值＝最小包装单位
     sel.disabled=true;sel.style.background='#F3F4F6';
     if(lock)lock.style.display='';
@@ -2499,8 +2505,8 @@ function setStdType(t){
   }
   /* 寄售的「库存单位」与售卖规格单位同一口径，下拉一并重建；原值失效则清空 */
   const su=document.getElementById('f-stockunit');
-  if(su){const cur=su.value;const keep=ok.includes(cur)?cur:'';clearedStock=!!cur&&!keep;
-    su.innerHTML=ok.map(u=>`<option value="${u}" ${u==keep?'selected':''}>${u}</option>`).join('');
+  if(su){const cur=su.value;const okS=stockUnitOpts(t);const keep=okS.includes(cur)?cur:'';clearedStock=!!cur&&!keep;
+    su.innerHTML=okS.map(u=>`<option value="${u}" ${u==keep?'selected':''}>${u}</option>`).join('');
     su.value=keep;
     const hint=document.getElementById('stockunit-hint');
     if(hint)hint.innerHTML=stockUnitHintHtml(t);
@@ -2577,11 +2583,15 @@ function catUnitSync(init){
     let v=allow.includes(cur)?cur:'';if(cur&&!v)cleared.push(tplField(k).t);if(!v&&!init)v=tplDefault(cat,k);if(!v&&init&&!cur)v=tplDefault(cat,k);
     sel.innerHTML='<option value="">请选择</option>'+allow.map(u=>`<option ${u==v?'selected':''}>${u}</option>`).join('');sel.value=v;};
   rebuild('f-netpacktype','netPackType');rebuild('f-netunit','netUnit');
+  /* 寄售标品的库存单位也按模板裁剪（仅「库存单位≠最小包装单位」时生效；「是」由 stockPackSync 赋值＝最小包装单位） */
+  {const su=document.getElementById('f-stockunit');if(su&&(EDIT_STD||'标品')=='标品'){const cur=su.value,isPack=((document.querySelector('input[name=f-stockispack]:checked')||{}).value)||'是';
+    if(cat){const okS=stockUnitOpts('标品');let v=okS.includes(cur)?cur:'';if(cur&&!v&&EDIT_SUPPLY=='寄售'&&isPack!='是')cleared.push('库存单位');if(!v&&!init&&EDIT_SUPPLY=='寄售')v=tplDefault(cat,'stockUnit');
+      su.innerHTML=okS.map(u=>`<option value="${u}" ${u==v?'selected':''}>${u}</option>`).join('');su.value=v;}}}
   if(cat){const ok=tplAllowed(cat,'packUnit');let n=0;(EDIT_SKUS||[]).forEach(s=>{if(s.packUnit&&!ok.includes(s.packUnit)){s.packUnit='';n++;}});if(n)cleared.push(`${n} 个规格的售卖单位`);}
   const h=document.getElementById('tpl-hint');
   if(h)h.innerHTML=cat
-    ?`可选值由类目「<b>${cat}</b>」的字段模板「<b>${r.tpl.name}</b>」${r.source=='inherit'?`（继承自「${r.from}」）`:r.source=='default'?'（未挂载模板 · 全量字典）':''}限定：最小包装单位 ${tplAllowed(cat,'netPackType').join('/')} · 净含量单位 ${tplAllowed(cat,'netUnit').join('/')} · 售卖单位 ${tplAllowed(cat,'packUnit').join('/')||'—'}`
-    :'请先选择后台类目——最小包装单位 / 净含量单位 / 售卖单位的可选值按类目字段模板限定';
+    ?`可选值由类目「<b>${cat}</b>」的字段模板「<b>${r.tpl.name}</b>」${r.source=='inherit'?`（继承自「${r.from}」）`:r.source=='default'?'（未挂载模板 · 全量字典）':''}限定：最小包装单位 ${tplAllowed(cat,'netPackType').join('/')} · 净含量单位 ${tplAllowed(cat,'netUnit').join('/')} · 售卖单位 ${tplAllowed(cat,'packUnit').join('/')||'—'}${EDIT_SUPPLY=='寄售'?` · 库存单位 ${tplAllowed(cat,'stockUnit').join('/')}（库存单位＝最小包装单位时不受限）`:''}`
+    :'请先选择后台类目——最小包装单位 / 净含量单位 / 售卖单位（寄售另含库存单位）的可选值按类目字段模板限定';
   netPackSync();stockPackSync();renderSkuEditor();bcrsPreview();
   if(!init&&cleared.length)toast(`类目已变更为「${cat}」，${cleared.join('、')}不在该类目可选范围内，已清空请重选`,'info');
 }
@@ -4588,7 +4598,7 @@ function tplLibTab(){
       <td style="white-space:nowrap">${t.sys?`<span style="color:var(--ts)">未挂载类目兜底</span>`:s.total?`<a href="javascript:act_tplScope(${t.id})" style="color:var(--g);font-weight:600">${s.total} 个</a> <span class="tag t-g" style="font-size:10px">直接 ${s.direct.length}</span><span class="tag t-gr" style="font-size:10px">继承 ${s.inherit.length}</span>`:`<span style="color:var(--ts)">未应用</span>`}</td>
       <td>${t.sys?'<span class="tag t-g"><span class="dot"></span>启用</span>':t.status?'<span class="tag t-g"><span class="dot"></span>启用</span>':'<span class="tag t-gr"><span class="dot"></span>停用</span>'}</td><td>${t.updBy}</td><td class="mono" style="font-size:12px;white-space:nowrap">${t.updAt}</td>
       <td style="white-space:nowrap"><div class="row" style="gap:10px">${t.sys?`<button class="btn btn-link btn-sm" onclick="act_editTpl(0)">查看</button>`:`<button class="btn btn-link btn-sm" onclick="act_editTpl(${t.id})">编辑</button><button class="btn btn-link btn-sm" onclick="act_copyTpl(${t.id})">复制</button><button class="btn btn-link btn-sm" onclick="act_toggleTpl(${t.id})">${t.status?'停用':'启用'}</button><button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_delTpl(${t.id})">删除</button>`}</div></td></tr>`;}).join('');
-  return `<div class="card" style="margin:0"><div class="card-hd"><h3>字段模板库</h3><span class="sub">模板 = 三个单位字段的「可选字典子集 + 默认值」；类目挂载模板后，商家建品下拉只显示子集</span><div class="row" style="gap:8px"><input placeholder="搜索模板名称" value="${DB.tplKw}" onchange="DB.tplKw=this.value;render()" style="width:200px"><button class="btn btn-p btn-sm" onclick="act_editTpl(null)">＋ 新建模板</button></div></div>
+  return `<div class="card" style="margin:0"><div class="card-hd"><h3>字段模板库</h3><span class="sub">模板 = 四个单位字段的「可选字典子集 + 默认值」（库存单位仅寄售商品出现）；类目挂载模板后，商家建品下拉只显示子集</span><div class="row" style="gap:8px"><input placeholder="搜索模板名称" value="${DB.tplKw}" onchange="DB.tplKw=this.value;render()" style="width:200px"><button class="btn btn-p btn-sm" onclick="act_editTpl(null)">＋ 新建模板</button></div></div>
     <div class="card-bd" style="padding-bottom:0"><div class="ib ib-b"><span class="i">ℹ️</span>解析顺序：<b>类目自身挂载 › 父类目挂载 › 平台默认</b>。子类目自挂模板即整体覆盖父级；被类目挂载中的模板<b>不可停用/删除</b>，需先在类目页解除挂载。模板变更即时作用于商家新建/编辑/导入，存量商品不动。</div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>模板名称</th><th>英文名</th>${TPL_FIELDS.map(f=>`<th>${f.t}<span style="font-weight:400;color:var(--ts);font-size:11px;margin-left:4px">${f.grp}</span></th>`).join('')}<th>应用类目</th><th>状态</th><th>更新人</th><th>更新时间</th><th>操作</th></tr></thead><tbody>${rows||`<tr><td colspan="10"><div class="empty"><div class="e-t">无匹配模板</div></div></td></tr>`}</tbody></table></div></div></div>`;
 }
@@ -4610,7 +4620,7 @@ function renderTplModal(){
     <div class="mc-bd">
       <div class="fg2"><div class="fr"><label class="fl"><b>*</b>模板名称（中文）</label><input id="tpl-zh" value="${e.name}" maxlength="30" ${ro?'readonly':''} placeholder="如 饮料"></div><div class="fr"><label class="fl"><b>*</b>模板名称（英文）</label><div class="row" style="gap:8px"><input id="tpl-en" value="${e.en}" maxlength="60" ${ro?'readonly':''} placeholder="Beverage" style="flex:1">${ro?'':`<button class="btn btn-o btn-sm" onclick="tplTranslate()">重新翻译</button>`}</div></div></div>
       ${TPL_FIELDS.map(fld).join('')}
-      ${ro?'':`<div class="ib ib-gr" style="margin:0"><span class="i">ℹ️</span>售卖规格单位不进模板：自售标品恒＝最小包装单位、寄售＝库存单位、非标品＝g/kg，由系统派生。</div>`}
+      ${ro?'':`<div class="ib ib-gr" style="margin:0"><span class="i">ℹ️</span>售卖规格单位不进模板：自售标品恒＝最小包装单位、寄售＝库存单位、非标品＝g/kg，由系统派生。<br>「库存单位」只在<b>寄售</b>商品出现：商家答「库存单位就是最小包装单位」时直接取最小包装单位、不受本子集限制；答「否」（如按箱囤、按瓶卖）时才在本子集内选。非标品寄售库存单位恒为 g/kg。</div>`}
     </div>
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">${ro?'关闭':'取消'}</button>${ro?'':`<button class="btn btn-p" onclick="act_saveTpl()">保存</button>`}</div>`);
 }
