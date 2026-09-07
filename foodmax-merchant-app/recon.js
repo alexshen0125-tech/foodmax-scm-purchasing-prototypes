@@ -1,9 +1,9 @@
 /* Food Max 商家端 v2 · 对账单模块（商家视角·只读）
    PC 对齐：与 PC 商家管理系统「财务 › 对账单」同口径、同数据——
    每天一张对账单 = 当日送货单；数据源 = 财务结算单明细汇总，商家端不自行取数计算。
-     平台服务费 =（实发金额含税 − 商家补贴）× 平台服务费率
-     商家收入   = 实发金额含税 − 商家补贴 − 平台服务费
-     当日结算   = 商家收入 − 售后扣款
+     金额（含税）= 客户实付 = 实发含税 − 商家补贴 − 平台补贴
+     平台服务费 =（客户实付 + 平台补贴）× 平台服务费率（抽佣基数=商家优惠后金额）
+     当日结算   = 客户实付 + 平台补贴 − 平台服务费 − 售后扣款（商家补贴已在实付中扣除，不重复扣）
    自营补货、耗材订单按其在结算单明细的计入日落到当天对账单，各自独立结算、不并入当日结算，付款层轧差。
    五个页签：SKU 维度 / 订单维度 / 售后明细 / 自营补货 / 耗材订单。金额 S$。 */
 (function(){
@@ -25,7 +25,7 @@ css.textContent=`
 .rc-ln .lb{font-size:13px;color:#27433A;}
 .rc-ln .cap{font-size:10.5px;color:var(--sub);margin-top:1px;line-height:1.4;}
 .rc-ln .amt{font-size:13.5px;font-weight:700;color:#27433A;white-space:nowrap;}
-.rc-ln .amt.neg{color:var(--red);}.rc-ln .amt.zero{color:#9AA99F;font-weight:400;}.rc-ln .amt.info{color:var(--sub);font-weight:500;}
+.rc-ln .amt.neg{color:var(--red);}.rc-ln .amt.pos{color:var(--emerald-2);}.rc-ln .amt.zero{color:#9AA99F;font-weight:400;}.rc-ln .amt.info{color:var(--sub);font-weight:500;}
 .rc-ln.total{border-top:1px solid var(--line);border-bottom:0;margin-top:2px;padding-top:9px;}
 .rc-ln.total .lb,.rc-ln.total .op{font-weight:700;color:var(--emerald-2);}.rc-ln.total .amt{color:var(--emerald-2);font-size:15px;}
 .rc-tag{display:inline-block;margin-left:5px;padding:0 5px;border-radius:6px;background:var(--muted);color:var(--sub);font-size:10px;line-height:15px;vertical-align:1px;}
@@ -123,16 +123,18 @@ const S=n=>'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractio
 const NEG=n=>n?`<span class="rc-neg">-${S(n)}</span>`:S(0);
 /* 汇总卡算式行：与 PC 汇总卡同字段同序（线上 StatementSummary：amountInclTax/platformSubsidy/merchantSubsidy/platformServiceFee/aftersaleDeduction/daySettleAmount + 另行结算三项）。
    扣项红字带 −；平台补贴不扣、单独标签；0 置灰不隐藏；null（未接入）显 —。*/
-const rcLine=(op,lb,cap,v,opt)=>{opt=opt||{};const isNeg=op=='−';
-  const amt=v==null?'—':(!v?S(0):(isNeg?'−':'')+S(v));
-  const cls=(v==null||!v)?' zero':(isNeg?' neg':(opt.muted?' info':''));
+const rcLine=(op,lb,cap,v,opt)=>{opt=opt||{};const isNeg=op=='−',isPos=op=='+';
+  const amt=v==null?'—':(!v?S(0):(isNeg?'−':isPos?'+':'')+S(v));
+  const cls=(v==null||!v)?' zero':(isNeg?' neg':isPos?' pos':(opt.muted?' info':''));
   return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
 const tax=l=>(l.tax==null?GST:l.tax), mul=l=>1+tax(l)/100;
 const ln=(d,s)=>d.lines.find(l=>l.sku==s)||{price:0,name:s,unit:'件',spec:''};
 const realN=l=>l.real*l.price, realG=l=>l.real*l.price*mul(l);
-const fee=l=>(realG(l)-(l.sub||0))*(l.rate||0)/100, inc=l=>realG(l)-(l.sub||0)-fee(l);
+const fee=l=>(paidG(l)+plat(l))*(l.rate||0)/100, inc=l=>paidG(l)+plat(l)-fee(l);   // 平台服务费 =（客户实付 + 平台补贴）× 费率；商家收入 = 客户实付 + 平台补贴 − 服务费
 const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
 const dRealN=d=>sum(d.lines,realN), dRealG=d=>sum(d.lines,realG);
+const plat=l=>l.platSub||0, paidG=l=>realG(l)-(l.sub||0)-plat(l), paidN=l=>paidG(l)/mul(l);   // 金额 = 客户实付
+const dPaidN=d=>sum(d.lines,paidN), dPaidG=d=>sum(d.lines,paidG), dPlat=d=>sum(d.lines,plat);
 const dSub=d=>sum(d.lines,l=>l.sub||0), dFee=d=>sum(d.lines,fee), dInc=d=>sum(d.lines,inc);
 const dAftN=d=>sum(d.after||[],x=>x.qty*ln(d,x.sku).price);
 const dAftG=d=>sum(d.after||[],x=>{const l=ln(d,x.sku);return x.qty*l.price*mul(l);});
@@ -171,13 +173,13 @@ function openRecon(){
       <div class="lbl">近 7 天 · 结算合计（货款）</div>
       <div class="big disp"><span class="c">S$</span>${T(dSettle).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="lbl">${rows.length} 张对账单 · 数据源：财务结算单明细</div>
-      <div class="tip"><b>口径</b>：结算合计 = 金额（含税）− 商家补贴 − 平台服务费 − 售后扣款（含税）。平台补贴由平台出资、不从货款扣。按所选区间累计，跨结算周期时不等于任一结算单净额。</div>
+      <div class="tip"><b>口径</b>：结算合计 = 金额（含税，即客户实付）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。按所选区间累计，跨结算周期时不等于任一结算单净额。</div>
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
-      ${rcLine('','金额（含税）','仓库签收入库件数 × 含税售价',T(dRealG))}
-      ${rcLine('−','商家补贴','商家自担的促销让利，客户已少付',T(dSub))}
-      ${rcLine('−','平台服务费','（金额含税 − 商家补贴）× 平台服务费率',T(dFee))}
+      ${rcLine('','金额（含税）','客户实付金额，已扣商家补贴与平台补贴',T(dPaidG))}
+      ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',T(dPlat))}
+      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率',T(dFee))}
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
-      ${rcLine('','平台补贴','平台出资的优惠，已含在金额里，不从货款扣',T(d=>d.platSub||0),{muted:true,tag:'不扣'})}
+      ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',T(dSub),{muted:true,tag:'已扣'})}
       ${rcLine('=','结算合计（货款）','进入结算单的货款金额',T(dSettle),{total:true})}
       <div class="tt">另行结算<span>不从上方货款扣</span></div>
       <div class="warn">以下三项不计入结算合计，在结算单付款时单独抵扣：实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款。同一笔不重复扣。</div>
@@ -205,7 +207,7 @@ function openRecon(){
             <div class="r1"><span class="rc-ck ${sel?'on':''}" data-ck="${d.no}"></span><span class="no">${d.no}</span><span class="wh">${d.wh}</span></div>
             <div class="meta">${d.date} · ${os.length} 个订单 · ${d.lines.length} 个 SKU${(d.after||[]).length?` · 售后 ${(d.after||[]).length} 笔`:''}</div>
             <div class="r2">
-              <div class="g"><div class="k">实发金额（含税）</div><div class="v">${S(dRealG(d))}</div></div>
+              <div class="g"><div class="k">金额（含税 · 客户实付）</div><div class="v">${S(dPaidG(d))}</div></div>
               <div class="g settle"><div class="k">当日结算（货款）</div><div class="v">${S(dSettle(d))}</div></div>
             </div>
             ${ex.length?`<div class="extra">另行结算：${ex.join(' · ')}，不并入当日结算，付款时轧差</div>`:''}
@@ -332,8 +334,8 @@ function openReconDetail(no,tab){
       <div class="lbl" style="margin-top:6px">当日结算（货款）</div>
       <div class="big disp"><span class="c">S$</span>${dSettle(d).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="grid">
-        <div><div class="k">实发金额（未税）</div><div class="v">${S(dRealN(d))}</div></div>
-        <div><div class="k">实发金额（含税）</div><div class="v">${S(dRealG(d))}</div></div>
+        <div><div class="k">金额（未税 · 客户实付）</div><div class="v">${S(dPaidN(d))}</div></div>
+        <div><div class="k">金额（含税 · 客户实付）</div><div class="v">${S(dPaidG(d))}</div></div>
         <div><div class="k">商家补贴</div><div class="v">${NEG(dSub(d))}</div></div>
         <div><div class="k">平台服务费</div><div class="v">${NEG(dFee(d))}</div></div>
         <div><div class="k">商家收入</div><div class="v">${S(dInc(d))}</div></div>
@@ -349,7 +351,7 @@ function openReconDetail(no,tab){
       <div class="rc-tab ${tab=='supply'?'on':''}" data-t="supply">耗材${sup.length?` ${sup.length}`:''}</div>
     </div>
     ${tab=='sku'?skuRows:tab=='order'?ordRows:tab=='after'?aftRows:tab=='repl'?rplRows:supRows}
-    <div class="rc-note">数据源：财务结算单明细汇总，商家端不自行取数计算。平台服务费 =（实发金额含税 − 商家补贴）× 平台服务费率；商家收入 = 实发金额含税 − 商家补贴 − 平台服务费；当日结算（货款）= 商家收入 − 售后扣款。全为标品按整件对账，实发件数取仓库签收入库件数。</div>`,
+    <div class="rc-note">数据源：财务结算单明细汇总，商家端不自行取数计算。金额 = 客户实付 = 实发金额含税 − 商家补贴 − 平台补贴；平台服务费 =（客户实付 + 平台补贴）× 平台服务费率；当日结算（货款）= 客户实付 + 平台补贴 − 平台服务费 − 售后扣款，商家补贴不重复扣。全为标品按整件对账，实发件数取仓库签收入库件数。</div>`,
     mount:(p)=>{p.querySelectorAll('.rc-tab').forEach(t=>t.onclick=()=>{if(t.dataset.t==tab)return;popPage();openReconDetail(no,t.dataset.t);});}});
 }
 
