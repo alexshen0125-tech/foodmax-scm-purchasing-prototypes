@@ -4541,7 +4541,11 @@ function catDetail(cat){
   if(!cat||!opsCatLevel(cat))return `<div class="card" style="margin:0"><div class="empty" style="padding:120px 20px"><div class="e-ic">🗂️</div><div class="e-t">请选择或新增分类</div></div></div>`;
   const lv=opsCatLevel(cat),par=opsCatParent(cat),r=tplResolve(cat),kids=opsCatChildren(cat),affected=kids.filter(k=>DB.catTplMount[k]==null),own=r.source=='own';
   const options=DB.fieldTpls.filter(t=>!t.sys&&(t.status==1||DB.catTplMount[cat]==t.id));
-  const tplRows=TPL_FIELDS.map(f=>{const allow=tplAllowed(cat,f.k),full=tplFullNames(f.k),d=tplDefault(cat,f.k),cfg=r.tpl.fields[f.k];
+  /* 挂载改动先进 DB.catTplPending（未保存），预览表按待保存值渲染；保存需二次确认（act_saveMount） */
+  DB.catTplPending=DB.catTplPending||{};const pending=DB.catTplPending[cat];const curId=DB.catTplMount[cat]==null?'':String(DB.catTplMount[cat]);
+  const dirty=pending!==undefined&&String(pending)!==curId;const pendTpl=dirty&&pending!==''?tplById(+pending):null;
+  const rPrev=dirty?(pending===''?(()=>{const par=opsCatParent(cat);return par&&DB.catTplMount[par]!=null?{tpl:tplById(DB.catTplMount[par]),source:'inherit',from:par}:{tpl:tplById(0),source:'default',from:'平台默认'};})():{tpl:pendTpl,source:'own',from:cat}):r;
+  const tplRows=TPL_FIELDS.map(f=>{const full=tplFullNames(f.k),cfg=rPrev.tpl.fields[f.k];const allow=(!cfg||!cfg.allow||!cfg.allow.length)?full:full.filter(u=>cfg.allow.includes(u));const d=(cfg&&cfg.def&&allow.includes(cfg.def))?cfg.def:'';
     return `<tr><td style="font-weight:600">${f.t}</td><td>${f.grp}</td><td class="mono" style="font-size:12px">${f.dict}</td><td>${allow.map(u=>`<span class="tpl-chip ${u==d?'def':''}">${u}${u==d?' ★':''}</span>`).join('')}</td><td style="white-space:nowrap">${cfg&&cfg.allow&&cfg.allow.length<full.length?`<b>${allow.length}</b> / ${full.length}`:`<span class="tag t-gr">全量 ${full.length}</span>`}</td><td>${d?`<b>${d}</b>`:'<span style="color:var(--tt)">—</span>'}</td></tr>`;}).join('');
   const fRows=catFieldRows(cat).map(f=>`<tr><td>${f.source=='own'?'<span class="tag t-g"><span class="dot"></span>本级</span>':`<span class="tag t-gr"><span class="dot"></span>继承 · ${f.from}</span>`}</td><td>${f.zh}</td><td>${f.en}</td><td>${FIELD_GRP[f.grp]}</td><td>${FIELD_CTL[f.ctl]}</td><td class="mono" style="font-size:12px">${f.dict||'—'}</td><td>${FIELD_RULE[f.rule]}</td><td>${f.tpl?`<span class="tag t-y"><span class="dot"></span>模板「${r.tpl.name}」 ${tplAllowed(cat,f.tpl).length}/${tplFullNames(f.tpl).length}</span>`:'—'}</td><td>${f.source=='own'&&!f.sys?`<button class="btn btn-link btn-sm" onclick="toast('演示：取消挂载「${f.zh}」','info')">删除</button>`:'—'}</td></tr>`).join('');
   return `<div class="card" style="margin:0 0 18px"><div class="card-hd"><div class="row" style="gap:10px;align-items:center"><span class="ct-lv" style="font-size:11px;padding:2px 6px">L${lv}</span><h3>编辑类目</h3><span class="tag t-g"><span class="dot"></span>启用</span></div><div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="toast('演示：删除类目需先清空商品与子类目','info')">删除</button><button class="btn btn-p btn-sm" onclick="toast('类目「${cat}」已保存','ok')">保存</button></div></div>
@@ -4549,17 +4553,20 @@ function catDetail(cat){
       <div class="fg3"><div class="fr"><label class="fl"><b>*</b>类目名称</label><input value="${cat}"></div><div class="fr"><label class="fl">排序</label><input type="number" value="${lv==1?OPS_CATS.findIndex(c=>c.n==cat)+1:opsCatChildren(par).indexOf(cat)+1}"></div><div class="fr"><label class="fl">父类目</label><input value="${par||'（根分类，无上级）'}" readonly style="background:#F3F4F6;color:var(--ts)"></div></div>
       <div class="fg3"><div class="fr"><label class="fl">中文名</label><input value="${cat}"></div><div class="fr"><label class="fl">英文名</label><input value="${({'新鲜蔬菜':'Fresh Vegetables','肉禽蛋品':'Meat, Poultry & Eggs','海鲜水产':'Seafood','调味品':'Condiments','饮料':'Beverages'})[cat]||''}" placeholder="English name"></div><div class="fr"><label class="fl">税率 / 风险</label><input value="${(CATS[cat]||CATS[par])?((CATS[cat]||CATS[par]).tax*100)+'% · '+(CATS[cat]||CATS[par]).baseRisk+'风险':'—'}" readonly style="background:#F3F4F6;color:var(--ts)"></div></div>
     </div></div>
-  <div class="card" style="margin:0 0 18px"><div class="card-hd"><h3>字段模板</h3><span class="sub">决定商家建品时「最小包装单位 / 净含量单位 / 售卖单位」的可选值与默认值 · 每级均可挂载，1 类目 1 模板</span></div>
+  <div class="card" style="margin:0 0 18px"><div class="card-hd"><h3>字段模板</h3><span class="sub">决定商家建品时「最小包装单位 / 净含量单位 / 售卖单位 / 售卖规格单位（寄售）」的可选值与默认值 · 每级均可挂载，1 类目 1 模板 · <b>单独保存</b>，不随上方类目信息一起提交</span></div>
     <div class="card-bd">
       <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap">
         <span style="font-size:14px">生效模板：<b>${r.tpl.name}</b></span>${tplSourceTag(cat)}
         <span class="row" style="margin-left:auto;gap:8px;align-items:center">
           <span style="font-size:12.5px;color:var(--ts)">本级挂载</span>
-          <select onchange="act_mountTpl('${cat}',this.value)" style="max-width:260px"><option value="">${lv==2?'不单独挂载（继承父级 / 平台默认）':'不挂载（平台默认）'}</option>${options.map(t=>`<option value="${t.id}" ${DB.catTplMount[cat]==t.id?'selected':''}>${t.name} · ${t.en}${t.status?'':'（已停用）'}</option>`).join('')}</select>
-          ${own?`<button class="btn btn-o btn-sm" onclick="act_mountTpl('${cat}','')">取消挂载</button>`:''}
+          <select id="tpl-mount-sel" onchange="tplMountPick('${cat}',this.value)" style="max-width:260px"><option value="">${lv==2?'不单独挂载（继承父级 / 平台默认）':'不挂载（平台默认）'}</option>${options.map(t=>`<option value="${t.id}" ${(pending!==undefined?pending:DB.catTplMount[cat])==t.id?'selected':''}>${t.name} · ${t.en}${t.status?'':'（已停用）'}</option>`).join('')}</select>
+          ${own?`<button class="btn btn-o btn-sm" onclick="tplMountPick('${cat}','')">取消挂载</button>`:''}
+          <button class="btn btn-o btn-sm" ${dirty?'':'disabled'} onclick="tplMountReset('${cat}')">放弃更改</button>
+          <button class="btn btn-p btn-sm" ${dirty?'':'disabled'} title="${dirty?'':'挂载未变更'}" onclick="act_saveMount('${cat}')">保存挂载</button>
           <button class="btn btn-link btn-sm" onclick="DB.catTab='tpl';render()">管理模板 ›</button>
         </span>
       </div>
+      ${dirty?`<div class="ib ib-y" style="margin:12px 0 0"><span class="i">✎</span>挂载已改为 <b>${pendTpl?pendTpl.name:(lv==2?'不单独挂载（继承父级 / 平台默认）':'不挂载（平台默认）')}</b>，<b>尚未保存</b>——点「保存挂载」并二次确认后才生效；下方预览为保存后的可选值。</div>`:''}
       ${kids.length?`<div class="ib ib-gr" style="margin:12px 0 0"><span class="i">ℹ️</span>本级挂载变更将同步作用于 <b>${affected.length}</b> 个未自挂模板的子类目${affected.length?`（${affected.join('、')}）`:''}${kids.length-affected.length?`；<b>${kids.length-affected.length}</b> 个子类目已自挂模板（${kids.filter(k=>DB.catTplMount[k]!=null).join('、')}），不受影响`:''}。</div>`:''}
       ${r.source=='inherit'?`<div class="ib ib-y" style="margin:12px 0 0"><span class="i">↳</span>当前沿用父类目「${r.from}」的模板；如需不同取值，在上方为本级单独挂载即可<b>整体覆盖</b>（不做字段级合并）。</div>`:''}
       <div style="overflow-x:auto;margin-top:14px"><table><thead><tr><th>字段</th><th>分组</th><th>关联字典</th><th>商家可选值（★ 默认预填）</th><th>裁剪</th><th>默认值</th></tr></thead><tbody>${tplRows}</tbody></table></div>
@@ -4568,14 +4575,24 @@ function catDetail(cat){
   <div class="card" style="margin:0"><div class="card-hd"><h3>类目字段</h3><span class="sub">每一级均可挂载；子类目自动继承所有上级启用字段 · 字段定义由字段库统一维护，此处只读</span><button class="btn btn-o btn-sm" onclick="toast('演示：从字段库挑选字段挂载到「${cat}」','info')">挂载字段</button></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table><thead><tr><th>来源</th><th>中文名称</th><th>英文名称</th><th>所在分组</th><th>控件</th><th>字典</th><th>校验</th><th>可选项</th><th>操作</th></tr></thead><tbody>${fRows}</tbody></table></div></div></div>`;
 }
-function act_mountTpl(cat,val){
-  const prev=DB.catTplMount[cat];
-  if(val===''||val==null){if(prev==null){render();return;}delete DB.catTplMount[cat];render();toast(`已取消「${cat}」的模板挂载，改为${opsCatParent(cat)&&DB.catTplMount[opsCatParent(cat)]!=null?'继承父类目':'平台默认'}`,'ok');return;}
-  const t=tplById(+val);if(!t)return;
-  if(!t.status){toast(`模板「${t.name}」已停用，不可挂载`,'err');render();return;}
-  DB.catTplMount[cat]=t.id;render();
-  const aff=opsCatChildren(cat).filter(k=>DB.catTplMount[k]==null).length;
-  toast(`「${cat}」已挂载模板「${t.name}」${aff?`，同步作用于 ${aff} 个子类目`:''}，商家建品即时生效`,'ok');
+/* 模板挂载：选择只记待保存值（不落库、不生效）→「保存挂载」→ 二次确认弹窗（列出影响面）→ 确认才写 DB.catTplMount */
+function tplMountPick(cat,val){DB.catTplPending=DB.catTplPending||{};const t=val===''?null:tplById(+val);if(t&&!t.status){toast(`模板「${t.name}」已停用，不可挂载`,'err');render();return;}DB.catTplPending[cat]=val===''?'':String(t.id);render();}
+function tplMountReset(cat){if(DB.catTplPending)delete DB.catTplPending[cat];render();}
+function act_saveMount(cat){
+  const pending=(DB.catTplPending||{})[cat];const curId=DB.catTplMount[cat]==null?'':String(DB.catTplMount[cat]);
+  if(pending===undefined||String(pending)===curId)return toast('挂载未变更','info');
+  const t=pending===''?null:tplById(+pending);if(pending!==''&&!t)return;
+  const cur=DB.catTplMount[cat]!=null?tplById(DB.catTplMount[cat]):null;
+  const par=opsCatParent(cat),fallback=par&&DB.catTplMount[par]!=null?`继承父类目「${par}」的模板「${tplById(DB.catTplMount[par]).name}」`:'平台默认（全量字典）';
+  const aff=opsCatChildren(cat).filter(k=>DB.catTplMount[k]==null);
+  const msg=`确认将类目「<b>${cat}</b>」的字段模板由 <b>${cur?cur.name:'未挂载'}</b> 改为 <b>${t?t.name:'不挂载 → '+fallback}</b>？<br><br>
+    · 保存后<b>即时生效</b>：商家在该类目下新建 / 编辑 / 批量导入商品时，四个单位字段的可选值与默认值立即按新模板裁剪<br>
+    · 存量已上架商品不受影响；修改重提时越界仅在审核页标黄${aff.length?`<br>· 同步作用于 <b>${aff.length}</b> 个未自挂模板的子类目：${aff.join('、')}`:''}`;
+  askConfirm(msg,()=>{
+    if(pending==='')delete DB.catTplMount[cat];else DB.catTplMount[cat]=t.id;
+    delete DB.catTplPending[cat];closeModal();render();
+    toast(t?`「${cat}」已挂载模板「${t.name}」${aff.length?`，同步作用于 ${aff.length} 个子类目`:''}，商家建品即时生效`:`已取消「${cat}」的模板挂载，改为${fallback}`,'ok');
+  });
 }
 /* ===== Tab 2 · 字段库（三列，照线上）===== */
 function fieldLibTab(){
