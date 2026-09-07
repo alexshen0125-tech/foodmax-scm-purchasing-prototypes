@@ -4747,16 +4747,12 @@ function tiQuery(){const g=id=>(document.getElementById(id)||{}).value||'';
   DB.tiFilter={no:g('ti-no').trim(),order:g('ti-order').trim(),ent:g('ti-ent').trim(),client:g('ti-client').trim(),
     type:g('ti-type'),status:g('ti-status'),d1:g('ti-d1'),d2:g('ti-d2')};DB.tiSel=[];render();}
 function tiReset(){DB.tiFilter={};DB.tiSel=[];render();}
-function tiToggle(no){const a=DB.tiSel||[];const i=a.indexOf(no);i<0?a.push(no):a.splice(i,1);DB.tiSel=a;render();}
-function tiToggleAll(){const rows=tiRows().filter(t=>t.status!='failed');
-  DB.tiSel=(DB.tiSel||[]).length==rows.length?[]:rows.map(t=>t.no);render();}
-function tiBatchDownload(){const n=(DB.tiSel||[]).length;if(!n)return;toast(`已打包下载 ${n} 张发票 PDF`,'ok');}
 function act_tiRetry(no){const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t)return;
   toast(`已重新提交生成：${no}`,'info');}
 function act_tiDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
 function act_tiPreview(no){
   const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t)return;
-  const noGst=!t.gstNo, isCn=t.type=='cn', o=tiOrderGroup(t.order);
+  const noGst=!t.gstNo, isCn=t.type=='cn';
   drawer(`<div class="drawer-hd"><div><h3>${isCn?'冲抵单据':'销售发票'}详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${t.no} · ${S.taxinv[t.status][0]}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${noGst?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">⚠️</span>该开票主体<b>未注册 GST</b>：票面标题为 <b>INVOICE</b>（非 TAX INVOICE），<b>不计税额</b>，客户<b>不可就本单抵扣进项税</b>。</div>`:''}
@@ -4785,46 +4781,69 @@ function act_tiPreview(no){
       ${t.bcrs?`<dt>BCRS 押金</dt><dd style="color:var(--b)">${money(t.bcrs)}（不计 GST）</dd>`:''}
       <dt>${isCn?'冲抵金额':'应付金额'}</dt><dd><b style="color:${isCn?'var(--r)':'var(--g)'}">${money(t.amt)}</b></dd>
     </dl>
-    <div class="sec-t">所属订单 · 整单（订单整合维度）</div>
-    ${o.failed?`<div class="ib ib-r" style="margin-bottom:10px"><span class="i">⛔</span>本单有 <b>${o.failed}</b> 张发票生成失败，整单 PDF <b>不完整、暂不可下载</b>；补全后重新生成再下。</div>`:''}
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="act_tiOrdDetail('${t.order}')">← 返回主单</button>
+    ${t.status=='failed'?`<button class="btn btn-p" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-p" onclick="act_tiDownload('${t.no}')">下载本张 PDF（商家版）</button>`}</div>`);
+}
+/* 运营平台·发票查询：列表一行 = 一个主单（订单整合维度）；「开票主体」列在多商家时列出多个主体（一主体一张发票）。
+   详情抽屉 = 该主单下各开票主体的发票（商家维度），每张可单独下载商家版；底部「下载整单」= 买家版合并 PDF（与买家收到的一致）。
+   整单合计只累加正向发票；冲抵 Credit Note 单独计数不并入；同单任一张生成失败则整单不完整、不可下载。 */
+function tiOrderRows(){
+  const m={};
+  tiRows().forEach(t=>{
+    const o=m[t.order]||(m[t.order]={order:t.order,client:t.client,invs:[],cns:[],sub:0,gst:0,amt:0,date:'',failed:0});
+    if(t.type=='cn'){o.cns.push(t);return;}
+    o.invs.push(t);
+    if(t.status=='failed'){o.failed++;return;}
+    o.sub+=t.sub;o.gst+=(t.gst||0);o.amt+=t.amt;if(t.date>o.date)o.date=t.date;
+  });
+  return Object.values(m).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+function tiOrderGroup(order){return tiOrderRows().find(o=>o.order==order)||{order,invs:[],cns:[],sub:0,gst:0,amt:0,failed:0};}
+function tiToggle(order){const a=DB.tiSel||[];const i=a.indexOf(order);i<0?a.push(order):a.splice(i,1);DB.tiSel=a;render();}
+function tiToggleAll(){const rows=tiOrderRows().filter(o=>!o.failed);
+  DB.tiSel=(DB.tiSel||[]).length==rows.length?[]:rows.map(o=>o.order);render();}
+function tiBatchDownload(){const n=(DB.tiSel||[]).length;if(!n)return;toast(`已打包下载 ${n} 个主单的整单发票 PDF（买家版·合并）`,'ok');}
+function act_tiOrdDownload(order){const o=tiOrderGroup(order);
+  toast(`主单 ${order} 整单发票已下载（买家版 · 合并 ${o.invs.length} 页）`,'ok');}
+function entBadge(t){return t.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>';}
+function act_tiOrdDetail(order){
+  const o=tiOrderGroup(order);if(!o.invs.length&&!o.cns.length)return;
+  const all=[...o.invs,...o.cns];
+  drawer(`<div class="drawer-hd"><div><h3>主单发票详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.order} · ${o.client} · ${o.invs.length} 个开票主体${o.cns.length?` · 冲抵 ${o.cns.length} 张`:''}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    ${o.failed?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>本单有 <b>${o.failed}</b> 张发票生成失败（开票主体缺法定名称/地址等），整单 PDF <b>不完整、暂不可下载</b>；补全主数据后对该张点「重新生成」。</div>`:''}
+    <div class="sec-t">整单合计（订单整合维度 · 仅正向发票）</div>
     <dl class="dl">
-      <dt>订单号</dt><dd class="mono">${o.order}</dd>
-      <dt>发票张数</dt><dd>${o.invs.length} 张（一开票主体一张）${o.cns.length?` · 冲抵 ${o.cns.length} 张`:''}</dd>
-      <dt>整单未税</dt><dd>${money(o.sub)}</dd>
-      <dt>整单 GST</dt><dd>${money(o.gst)}</dd>
-      <dt>整单应付</dt><dd><b style="color:var(--g)">${money(o.amt)}</b></dd>
+      <dt>主单号</dt><dd class="mono">${o.order}</dd>
+      <dt>开票客户</dt><dd>${o.client}</dd>
+      <dt>开票日期</dt><dd>${o.date||'—'}</dd>
+      <dt>未税金额</dt><dd>${money(o.sub)}</dd>
+      <dt>GST @ 9%</dt><dd>${money(o.gst)}</dd>
+      <dt>应付金额</dt><dd><b style="color:var(--g)">${money(o.amt)}</b></dd>
     </dl>
-    <table style="font-size:12.5px;margin-top:6px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>开票主体</th><th style="text-align:right">应付</th><th>状态</th></tr></thead><tbody>
-    ${[...o.invs,...o.cns].map((x,i)=>`<tr style="${x.no==t.no?'background:var(--gl,#EEF6F0)':''}">
-      <td>${x.type=='cn'?'—':`${i+1}/${o.invs.length}`}</td>
-      <td class="mono">${x.no}${x.no==t.no?'<span style="margin-left:6px;font-size:11px;color:var(--g)">当前</span>':''}</td>
-      <td>${x.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
-      <td>${x.ent}</td>
-      <td style="text-align:right"><b style="color:${x.type=='cn'?'var(--r)':'inherit'}">${money(x.amt)}</b></td>
-      <td>${tag('taxinv',x.status)}</td>
+    <div class="sec-t">各开票主体发票（商家维度 · 一主体一张，每张可单独下载商家版）</div>
+    <table style="font-size:12.5px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>开票主体</th><th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">应付</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    ${all.map((t,i)=>`<tr>
+      <td>${t.type=='cn'?'—':`${i+1}/${o.invs.length}`}</td>
+      <td class="mono">${t.no}${t.type=='cn'&&t.against?`<div style="font-size:11px;color:var(--ts)">冲 ${t.against}</div>`:''}</td>
+      <td>${t.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
+      <td>${t.ent}${entBadge(t)}</td>
+      <td style="text-align:right">${money(t.sub)}</td>
+      <td style="text-align:right">${t.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(t.gst)}</td>
+      <td style="text-align:right"><b style="color:${t.type=='cn'?'var(--r)':'inherit'}">${money(t.amt)}</b></td>
+      <td>${tag('taxinv',t.status)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-link" onclick="act_tiPreview('${t.no}')">详情</button>
+        ${t.status=='failed'?`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
     </tr>`).join('')}
     </tbody></table>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
-    ${t.status=='failed'?`<button class="btn btn-p" onclick="act_tiRetry('${t.no}')">重新生成</button>`
-      :`<button class="btn btn-o" onclick="act_tiDownload('${t.no}')">下载本张（商家维度）</button>
-         <button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单（订单维度 · 买家版）</button>`}</div>`);
+    <button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单 PDF（买家版 · ${o.invs.length} 页）</button></div>`);
 }
-/* 运营平台·发票查询 详情里的两个下载维度（列表只有一个：按发票）：
-   ① 商家维度 = 下载本张（商家版，只含该开票主体那一页）；② 订单整合维度 = 下载整单（买家版 = 同一订单下各开票主体的票合并 PDF，与买家收到的一致）。
-   整单合计只累加正向发票；冲抵 Credit Note 单独列出不并入；同单任一张生成失败则整单不完整、不可下载。 */
-function tiOrderGroup(order){
-  const all=(DB.taxInvoices||[]).filter(t=>t.order==order);
-  const invs=all.filter(t=>t.type!='cn'), cns=all.filter(t=>t.type=='cn'), ok=invs.filter(t=>t.status!='failed');
-  return {order,invs,cns,failed:invs.length-ok.length,
-    sub:ok.reduce((a,t)=>a+t.sub,0),gst:ok.reduce((a,t)=>a+(t.gst||0),0),amt:ok.reduce((a,t)=>a+t.amt,0)};
-}
-function act_tiOrdDownload(order){const o=tiOrderGroup(order);
-  toast(`订单 ${order} 整单发票已下载（买家版 · 合并 ${o.invs.length} 页）`,'ok');}
 PAGES['p-inv-query']=()=>{
   const f=DB.tiFilter||{}, rows=tiRows(), sel=DB.tiSel||[];
   const EN=`onkeydown="if(event.key=='Enter')tiQuery()"`;
-  const selectable=rows.filter(t=>t.status!='failed');
   const filter=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">发票号</div><input id="ti-no" value="${f.no||''}" placeholder="请输入发票号" style="min-width:180px" ${EN}></div>
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">订单号</div><input id="ti-order" value="${f.order||''}" placeholder="请输入订单号" style="min-width:180px" ${EN}></div>
@@ -4839,31 +4858,32 @@ PAGES['p-inv-query']=()=>{
     <button class="btn btn-p btn-sm" onclick="tiQuery()">查询</button>
     <button class="btn btn-o btn-sm" onclick="tiReset()">重置</button>
   </div></div>`;
+  const ords=tiOrderRows(), selectableO=ords.filter(o=>!o.failed);
   return filter+`<div class="card" style="margin:0"><div class="card-hd"><h3>发票查询</h3>
-    <span class="sub">平台代各开票主体开具的销售发票总账 · 一个开票主体一张发票 · 共 ${rows.length} 条</span>
+    <span class="sub">一行一个主单 · 多商家即多个开票主体、一主体一张发票 · 共 ${ords.length} 单 / ${rows.filter(t=>t.type!='cn').length} 张</span>
     <div class="row" style="gap:8px">
-      <button class="btn btn-o btn-sm" ${sel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="tiBatchDownload()">批量下载 PDF${sel.length?`（${sel.length}）`:''}</button>
+      <button class="btn btn-o btn-sm" ${sel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="tiBatchDownload()">批量下载整单 PDF${sel.length?`（${sel.length}）`:''}</button>
     </div></div>
-    <div class="card-bd ${rows.length?'flush':''}">
-    ${rows.length?`<table>
+    <div class="card-bd ${ords.length?'flush':''}">
+    ${ords.length?`<table>
       <thead><tr>
-        <th style="width:34px"><input type="checkbox" ${selectable.length&&sel.length==selectable.length?'checked':''} onclick="tiToggleAll()"></th>
-        <th>发票号</th><th>单据类型</th><th>订单号</th><th>开票主体</th><th>开票客户</th><th>开票日期</th>
-        <th style="text-align:right">未税金额</th><th style="text-align:right">GST</th><th style="text-align:right">应付金额</th><th>状态</th><th>操作</th>
+        <th style="width:34px"><input type="checkbox" ${selectableO.length&&sel.length==selectableO.length?'checked':''} onclick="tiToggleAll()"></th>
+        <th>主单号</th><th>开票客户</th><th>开票主体</th><th style="text-align:right">发票张数</th><th style="text-align:right">冲抵张数</th><th>开票日期</th>
+        <th style="text-align:right">未税合计</th><th style="text-align:right">GST 合计</th><th style="text-align:right">应付合计</th><th>状态</th><th>操作</th>
       </tr></thead><tbody>
-      ${rows.map(t=>`<tr>
-        <td>${t.status=='failed'?'':`<input type="checkbox" ${sel.includes(t.no)?'checked':''} onclick="tiToggle('${t.no}')">`}</td>
-        <td class="mono">${t.no}</td>
-        <td>${t.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
-        <td class="mono">${t.order}</td>
-        <td>${t.ent}${t.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>'}</td>
-        <td>${t.client}</td><td>${t.date||'—'}</td>
-        <td style="text-align:right">${money(t.sub)}</td>
-        <td style="text-align:right">${t.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(t.gst)}</td>
-        <td style="text-align:right"><b style="color:${t.type=='cn'?'var(--r)':'inherit'}">${money(t.amt)}</b></td>
-        <td>${tag('taxinv',t.status)}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_tiPreview('${t.no}')">详情</button>
-          ${t.status=='failed'?`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
+      ${ords.map(o=>`<tr>
+        <td>${o.failed?'':`<input type="checkbox" ${sel.includes(o.order)?'checked':''} onclick="tiToggle('${o.order}')">`}</td>
+        <td class="mono">${o.order}</td><td>${o.client}</td>
+        <td>${o.invs.map(t=>`<div style="white-space:nowrap;line-height:1.7">${t.ent}${entBadge(t)}${t.status=='failed'?'<span style="margin-left:6px;font-size:11px;color:var(--r)">生成失败</span>':''}</div>`).join('')}</td>
+        <td style="text-align:right">${o.invs.length}</td>
+        <td style="text-align:right">${o.cns.length?`<span style="color:var(--r);font-weight:600">${o.cns.length}</span>`:'0'}</td>
+        <td>${o.date||'—'}</td>
+        <td style="text-align:right">${money(o.sub)}</td>
+        <td style="text-align:right">${money(o.gst)}</td>
+        <td style="text-align:right"><b>${money(o.amt)}</b></td>
+        <td>${o.failed?tag('taxinv','failed'):o.cns.length?tag('taxinv','credited'):tag('taxinv','issued')}</td>
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_tiOrdDetail('${o.order}')">详情</button>
+          ${o.failed?`<span style="font-size:11.5px;color:var(--ts);margin-left:4px">整单不完整</span>`:`<button class="btn btn-link" onclick="act_tiOrdDownload('${o.order}')">下载整单</button>`}</td>
       </tr>`).join('')}
       </tbody></table>`
     :`<div class="empty" style="padding:28px 0"><div class="e-ic">🔎</div><div class="e-t">无匹配发票</div><div class="e-s">调整筛选条件后重试。</div></div>`}
