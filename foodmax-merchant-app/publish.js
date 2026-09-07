@@ -126,9 +126,9 @@ const NET_UNITS=['g','kg','ml','L'];           // 兼容旧引用
 const PACK_UNITS=['包','份','组','箱'];         // 兼容旧引用
 /* ===== 类目字段模板（2026-09-03，与 PC 同数据同口径；运营平台「后台类目 › 字段模板库」维护，App 只消费）=====
    模板 = { 字段 → 允许的字典项子集[, 默认值] }；解析：类目自身挂载 › 父类目 › 平台默认（全量字典）。
-   只裁「商家手选」的 4 个字段：最小包装单位 / 净含量单位 / 售卖单位 / 库存单位（寄售专用，2026-09-07 补）；售卖规格单位是派生值不进模板。
-   库存单位：仅寄售标品且「库存单位≠最小包装单位」时按子集选；「＝最小包装单位」时直接取最小包装单位不受限；非标品寄售恒 g/kg 不受限。 */
-const TPL_FIELDS={netPackType:{t:'最小包装单位',full:()=>unitNames('标品','spec')},netUnit:{t:'净含量单位',full:()=>unitNames('标品','net')},packUnit:{t:'售卖单位',full:()=>unitNames('标品','sell')},stockUnit:{t:'库存单位',full:()=>unitNames('标品','spec')}};
+   只裁「商家手选」的 4 个字段：最小包装单位 / 净含量单位 / 售卖单位 / 售卖规格单位（寄售，＝商品级库存单位，2026-09-07 补）；自售标品与非标品的售卖规格单位是派生值不受模板限制。
+   寄售库存单位：仅寄售标品且「库存单位≠最小包装单位」时按子集选；「＝最小包装单位」时直接取最小包装单位不受限；非标品寄售恒 g/kg 不受限。 */
+const TPL_FIELDS={netPackType:{t:'最小包装单位',full:()=>unitNames('标品','spec')},netUnit:{t:'净含量单位',full:()=>unitNames('标品','net')},packUnit:{t:'售卖单位',full:()=>unitNames('标品','sell')},stockUnit:{t:'售卖规格单位（寄售·库存单位）',full:()=>unitNames('标品','spec')}};
 const FIELD_TPLS={
   0:{name:'平台默认',fields:{}},
   1:{name:'饮料',    fields:{netPackType:{allow:['瓶','罐','箱'],def:'瓶'},netUnit:{allow:['ml','L'],def:'ml'},packUnit:{allow:['箱'],def:''},stockUnit:{allow:['瓶','罐','箱'],def:'箱'}}},
