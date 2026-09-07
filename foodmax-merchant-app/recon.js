@@ -27,7 +27,7 @@ css.textContent=`
 .rc-ln .amt{font-size:13.5px;font-weight:700;color:#27433A;white-space:nowrap;}
 .rc-ln .amt.neg{color:var(--red);}.rc-ln .amt.pos{color:var(--emerald-2);}.rc-ln .amt.zero{color:#9AA99F;font-weight:400;}.rc-ln .amt.info{color:var(--sub);font-weight:500;}
 .rc-ln.total{border-top:1px solid var(--line);border-bottom:0;margin-top:2px;padding-top:9px;}
-.rc-ln.total .lb,.rc-ln.total .op{font-weight:700;color:var(--emerald-2);}.rc-ln.total .amt{color:var(--emerald-2);font-size:15px;}
+.rc-ln.total .lb,.rc-ln.total .op{font-weight:700;color:var(--emerald-2);}.rc-ln.total .cap{color:var(--sub);}.rc-ln.total .cap b{color:var(--emerald-2);}.rc-ln.total .amt{color:var(--emerald-2);font-size:15px;}
 .rc-tag{display:inline-block;margin-left:5px;padding:0 5px;border-radius:6px;background:var(--muted);color:var(--sub);font-size:10px;line-height:15px;vertical-align:1px;}
 .rc-list{padding:0 16px 24px;}
 .rc-card{background:#fff;border-radius:18px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;min-height:44px;}
@@ -180,7 +180,7 @@ function openRecon(){
       ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率',T(dFee))}
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
       ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',T(dSub),{muted:true,tag:'已扣'})}
-      ${rcLine('=','结算合计（货款）','进入结算单的货款金额',T(dSettle),{total:true})}
+      ${rcLine('=','结算合计（货款）',`实付金额 ${S(T(dPaidG))} + 平台补贴 ${S(T(dPlat))} − 平台服务费 ${S(T(dFee))} − 售后扣款 ${S(T(dAftG))} = <b>${S(T(dSettle))}</b>`,T(dSettle),{total:true})}
       <div class="tt">另行结算<span>不从上方货款扣</span></div>
       <div class="warn">以下三项不计入结算合计，在结算单付款时单独抵扣：实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款。同一笔不重复扣。</div>
       ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计',T(dRpl))}
