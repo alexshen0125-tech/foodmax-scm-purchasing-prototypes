@@ -94,7 +94,7 @@
       <div class="tabs" style="margin:0;border:none">${TABS.map(x=>`<div class="tab ${tab==x[0]?'active':''}" onclick="DB.promoTab='${x[0]}';render()">${x[1]}${cnt(x[0])?` <span class="tag ${x[0]=='1'?'t-g':x[0]=='4'?'t-r':'t-gr'}" style="font-size:10px;margin-left:2px">${cnt(x[0])}</span>`:''}</div>`).join('')}</div>
       <div class="row" style="gap:8px">
         <span style="font-size:12.5px;color:var(--ts)">差价由商家 100% 承担 · 佣金按活动价成交额计 · 提交即到点生效，无需平台审核</span>
-        <button class="btn btn-o btn-sm" onclick="act_promoImport()">📥 导入活动价</button>
+        <button class="btn btn-o btn-sm" onclick="act_promoEdit();setTimeout(act_promoImport,50)">📥 批量导入</button>
         <button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button>
       </div>
     </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
@@ -161,7 +161,7 @@
       </div>
       <div style="font-size:11.5px;color:var(--ts)">开始时间不早于当前；结束时间须晚于开始且单场 ≤ 30 天；到点自动开始 / 结束，C 端同步切换活动价 / 原价。</div>
     </div></div>
-    <div class="card"><div class="card-hd"><h3>活动商品</h3><span class="sub">${ED.items.length} 个 SKU · 活动价为未税价，须低于当前未税售价</span><div class="row" style="margin-left:auto;gap:8px"><button class="btn btn-p btn-sm" onclick="act_promoPick()">＋ 添加商品</button></div></div>
+    <div class="card"><div class="card-hd"><h3>活动商品</h3><span class="sub">${ED.items.length} 个 SKU · 活动价为未税价，须低于当前未税售价</span><div class="row" style="margin-left:auto;gap:8px"><button class="btn btn-o btn-sm" onclick="act_promoImport()">📥 批量导入</button><button class="btn btn-p btn-sm" onclick="act_promoPick()">＋ 添加商品</button></div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>SKU 编码</th><th>商品名称</th><th>税率</th><th>当前未税售价</th><th>当前含税价</th><th style="min-width:130px">活动价(未税) <b style="color:var(--r)">*</b></th><th>活动含税价</th><th>折扣</th><th>预计到手/件</th><th style="min-width:110px">限购(件/客/日)</th><th>操作</th></tr></thead><tbody id="pe-rows">
       ${ED.items.map((x,k)=>{const f=findSku(x.skuId);const c=calc(x);const bad=x.price!==''&&x.price!=null&&(!(+x.price>0)||+x.price>=x.orig);const low=+x.price>0&&+x.price<x.orig*0.3;
@@ -174,7 +174,7 @@
         <td style="color:var(--gd)" id="pe-inc-${k}">${+x.price>0?money(c.inc):'—'}</td>
         <td><input class="ministock" type="number" min="1" step="1" value="${x.limit==null?'':x.limit}" placeholder="不限" oninput="ED_limit(${k},this.value)"></td>
         <td><button class="btn btn-link btn-sm" style="color:var(--r)" onclick="ED_remove(${k})">移除</button></td>
-      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🥬</div><div class="e-t">还没有添加商品</div><div class="e-s">点「添加商品」从本店在售 SKU 中选择；已在其他活动（含平台活动）中的 SKU 不可选</div></div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🥬</div><div class="e-t">还没有添加商品</div><div class="e-s">点「添加商品」从本店在售 SKU 中选择，或「批量导入」按模板（SKU编号 / 商品名称 / 活动价格 / 限购数量）一次导入；已在其他活动（含平台活动）中的 SKU 不可选</div></div></td></tr>`}
       </tbody></table></div></div>
     <div class="card-bd" style="border-top:1px solid var(--bd2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div style="font-size:11.5px;color:var(--ts)">预计到手/件 = 活动含税价 − 活动含税价 × 服务费率 − 预估揽收费（免佣期内佣金为 0）；仅供参考，以订单结算为准。</div>
@@ -234,15 +234,61 @@
     a.name=ED.name;a.start=ED.start;a.end=ED.end;a.items=items;a.updatedAt=ts();a.status=calcStatus(a);(a.logs=a.logs||[]).push({t:ts(),who,act:'编辑活动',d:chg.join('；')||'无字段变化'});
     const id=a.id;promoBack();toast(`活动「${a.name}」已保存${removed.length&&a.status==1?'，移除的 SKU 已恢复原价':''}`,'ok');}
 
-  /* 导入活动价（P1）：模板 3 列 SKU 编码 / 活动价(未税) / 限购 */
-  window.promoImportOk=function(){const g=id=>(document.getElementById(id)||{}).value||'';const nm=g('pi-name'),st=fromLocal(g('pi-start')),en=fromLocal(g('pi-end'));closeModal();act_promoEdit();ED.name=nm;if(st)ED.start=st;if(en)ED.end=en;
-    // 演示：模板 3 行匹配到本店在售 SKU，写入编辑页待确认
-    [['SKU8820',2.60,null],['SKU8822',49.00,5],['SKU8830',5.90,null]].forEach(r=>{const f=findSku(r[0]);if(!f||occupiedBy(r[0],{start:ED.start,end:ED.end},null))return;ED.items.push({skuId:r[0],orig:f.s.price||0,price:r[1],limit:r[2],locked:false});});render();toast(`导入校验通过：${ED.items.length} 行 SKU 已带入，请确认后提交`,'ok');};
-  window.act_promoImport=function(){modal(`<div class="mc-hd"><h3>导入活动价</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>先下载模板（3 列：<b>SKU 编码 / 活动价(未税) / 限购</b>，限购留空 = 不限），填好后上传；系统按 SKU 编码匹配本店在售 SKU，逐行按活动价 &lt; 售价、未被其他活动占用校验，任一行不通过整单不导入并返回错误行。</div>
-    <div class="fr"><label class="fl">活动名称</label><input id="pi-name" placeholder="≤50 字"></div>
-    <div class="fg2"><div class="fr"><label class="fl">开始时间</label><input type="datetime-local" id="pi-start" value="${toLocal(shift(1,0,0))}"></div><div class="fr"><label class="fl">结束时间</label><input type="datetime-local" id="pi-end" value="${toLocal(shift(7,23,59))}"></div></div>
-    <div class="row" style="gap:8px;margin:6px 0 10px"><button class="btn btn-o btn-sm" onclick="toast('模板已下载：特价活动商品导入模板.xlsx','ok')">📄 下载模板</button></div>
-    <div class="up" onclick="toast('演示：已选择文件 活动价.xlsx（3 行）','info')"><div class="uic">📤</div><div class="ut">点击上传 .xlsx</div><div class="us">按 SKU 编码匹配 · 单次 ≤ 500 行</div></div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="promoImportOk()">上传并校验</button></div>`);};
+  /* ===== 批量导入活动商品（PC 专有；App 无导入能力）=====
+     模板 4 列：SKU编号 / 商品名称 / 活动价格 / 限购数量（模板文件：商品特价批量导入模板.xlsx）
+     规则：按 SKU编号 匹配本店在售 SKU；商品名称仅核对（不一致以 SKU 为准、仅提示）；活动价=未税价 >0 且 < 当前售价；
+           限购留空=不限、非空须正整数；同一文件 SKU 不可重复；不可与其他活动（含平台）时间重叠；不可已在本活动；
+           两阶段（先校验后导入）：任一行错误整单不导入、错误行可下载；单次 ≤ 500 行。 */
+  const IMP_FILE_A=[ // 第一次上传：含错误行，演示校验
+    ['SKU8820','土豆 1kg','2.60',''],['SKU8822','冰鲜三文鱼 1kg','49.00','5'],['SKU8830','空心菜 1kg','5.90',''],
+    ['SKU8816','娃娃菜 1kg','5.00',''],['SKU8819','菠菜 1kg','6.50','10'],['SKU9999','不存在的商品','3.00',''],
+    ['SKU8821','白菜 1kg','2.00','abc'],['SKU8820','土豆','2.50','']];
+  const IMP_FILE_B=[ // 重新上传：修正后
+    ['SKU8820','土豆 1kg','2.60',''],['SKU8822','冰鲜三文鱼 1kg','49.00','5'],['SKU8830','空心菜 1kg','5.90',''],['SKU8818','芥蓝 5kg/箱','5.20','20']];
+  function impValidate(rows){const seen={};const range={start:ED.start,end:ED.end};
+    return rows.map((r,idx)=>{const [code,name,price,limit]=r.map(x=>String(x==null?'':x).trim());const out={row:idx+2,code,name,price,limit,errs:[],warns:[],f:null};
+      if(!code){out.errs.push('SKU编号为空');return out;}
+      const f=findSku(code);
+      if(!f||f.p.status!='onsale'||f.s.off||f.s.recycled||f.s.review)out.errs.push('SKU 不存在或非在售');else out.f=f;
+      if(seen[code])out.errs.push(`与第 ${seen[code]} 行 SKU 重复`);else seen[code]=out.row;
+      if(f&&name&&!name.startsWith(f.p.name))out.warns.push('商品名称与 SKU 不一致，以 SKU 为准');
+      const pv=parseFloat(price);if(!price||isNaN(pv)||pv<=0)out.errs.push('活动价格须为 >0 的数字');else if(f&&pv>=(f.s.price||0))out.errs.push(`活动价 ≥ 当前售价 ${money(f.s.price||0)}`);
+      if(limit!==''&&!/^[1-9]\d*$/.test(limit))out.errs.push('限购数量须为正整数或留空');
+      if(f&&ED.items.some(x=>x.skuId==code))out.errs.push('已在本活动中');
+      if(f){const occ=occupiedBy(code,range,ED.id);if(occ)out.errs.push(`已在${occ.fund==0?'平台活动':'活动《'+occ.name+'》'}中（至 ${occ.end.slice(5)}）`);}
+      return out;});}
+  window.act_promoImport=function(){if(!ED){act_promoEdit();}DB.impStep=DB.impStep||'upload';DB.impTry=DB.impTry||0;renderImport();};
+  function renderImport(){const step=DB.impStep;const res=DB.impRes||[];const bad=res.filter(r=>r.errs.length).length;const warn=res.filter(r=>r.warns.length).length;
+    modalWide(`<div class="mc-hd"><div><h3>批量导入活动商品</h3><p>按模板填写后上传，系统按 <b>SKU编号</b> 匹配本店在售 SKU · 活动时间 ${ED.start} ~ ${ED.end}</p></div><button class="mc-x" onclick="promoImpClose()">×</button></div>
+    <div class="mc-bd">
+      ${step=='upload'?`
+      <div class="fg2" style="gap:14px;margin-bottom:12px">
+        <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd" style="padding:14px">
+          <div style="font-weight:700;margin-bottom:6px">① 下载模板</div>
+          <div style="font-size:12.5px;color:var(--ts);line-height:1.7;margin-bottom:10px">4 列：<b>SKU编号</b>（必填）/ <b>商品名称</b>（选填·仅核对）/ <b>活动价格</b>（必填·未税，须低于当前售价）/ <b>限购数量</b>（选填·件/客/日，留空不限）</div>
+          <a class="btn btn-o btn-sm" href="商品特价批量导入模板.xlsx" download onclick="toast('模板已下载：商品特价批量导入模板.xlsx','ok')">📄 下载模板 .xlsx</a>
+          <button class="btn btn-link btn-sm" onclick="toast('已导出本店在售 SKU 清单（含 SKU编号 / 商品名称 / 当前售价）','ok')">导出在售 SKU 清单</button>
+        </div></div>
+        <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd" style="padding:14px">
+          <div style="font-weight:700;margin-bottom:6px">② 上传文件</div>
+          <div class="up" style="margin:0" onclick="promoImpUpload()"><div class="uic">📤</div><div class="ut">点击选择 / 拖入 .xlsx</div><div class="us">单次 ≤ 500 行 · 先校验后导入，任一行错误整单不导入</div></div>
+        </div></div>
+      </div>
+      <table class="subtbl" style="width:100%"><thead><tr><th>SKU编号</th><th>商品名称</th><th>活动价格</th><th>限购数量</th></tr></thead><tbody><tr><td class="mono">SKU8820</td><td>土豆 1kg</td><td>2.60</td><td></td></tr><tr><td class="mono">SKU8822</td><td>冰鲜三文鱼 1kg</td><td>49.00</td><td>5</td></tr></tbody></table>
+      <div style="font-size:11.5px;color:var(--ts);margin-top:6px">模板示例行 · 商品名称与 SKU 不一致时以 SKU编号为准并提示；同一文件内 SKU 不可重复；已在其他活动（含平台活动）中的 SKU 会被拦下。</div>`
+      :`
+      <div class="ib ${bad?'ib-r':'ib-g'}" style="margin-bottom:10px"><span class="i">${bad?'⛔':'✅'}</span><div><b>${DB.impName}</b> · 共 ${res.length} 行：${bad?`<b style="color:var(--r)">${bad} 行不通过</b>，整单未导入——请修正后重新上传，或下载错误文件`:`全部通过${warn?`，其中 ${warn} 行商品名称与 SKU 不一致（以 SKU 为准）`:''}`}</div></div>
+      <div style="max-height:400px;overflow:auto"><table style="white-space:nowrap"><thead><tr><th>行</th><th>SKU编号</th><th>商品名称(文件)</th><th>匹配到的 SKU</th><th>当前售价</th><th>活动价格</th><th>折扣</th><th>限购数量</th><th>校验结果</th></tr></thead><tbody>
+        ${res.map(r=>`<tr style="${r.errs.length?'background:#FFF5F4':''}"><td style="color:var(--ts)">${r.row}</td><td class="mono">${r.code||'—'}</td><td>${r.name||'<span style=color:var(--tt)>—</span>'}</td><td>${r.f?skuFullName(r.f.p,r.f.s):'<span style=color:var(--tt)>—</span>'}</td><td>${r.f?money(r.f.s.price||0):'—'}</td><td>${r.price||'—'}</td><td>${r.f&&parseFloat(r.price)>0&&r.f.s.price?((parseFloat(r.price)/r.f.s.price)*10).toFixed(1)+' 折':'—'}</td><td>${r.limit===''?'<span style=color:var(--ts)>不限</span>':r.limit}</td>
+          <td style="white-space:normal;max-width:300px">${r.errs.length?r.errs.map(e=>`<div style="color:var(--r);font-size:12px">⛔ ${e}</div>`).join(''):`<span class="tag t-g" style="font-size:10px">通过</span>`}${r.warns.map(w=>`<div style="color:var(--y);font-size:12px">⚠️ ${w}</div>`).join('')}</td></tr>`).join('')}
+      </tbody></table></div>`}
+    </div>
+    <div class="mc-ft">
+      ${step=='upload'?`<button class="btn btn-o" onclick="promoImpClose()">取消</button>`
+      :bad?`<button class="btn btn-o" onclick="toast('错误文件已下载：商品特价导入_错误行.xlsx（含错误原因列）','ok')">下载错误文件</button><button class="btn btn-o" onclick="DB.impStep='upload';renderImport()">重新上传</button><button class="btn btn-p" disabled>导入（${res.length-bad}/${res.length}）</button>`
+      :`<button class="btn btn-o" onclick="DB.impStep='upload';renderImport()">重新上传</button><button class="btn btn-p" onclick="promoImpCommit()">确认导入 ${res.length} 行</button>`}
+    </div>`);widen();}
+  window.promoImpUpload=function(){DB.impTry=(DB.impTry||0)+1;const first=DB.impTry%2==1;DB.impName=first?'特价活动_9月.xlsx':'特价活动_9月(修正).xlsx';DB.impRes=impValidate(first?IMP_FILE_A:IMP_FILE_B);DB.impStep='result';renderImport();toast(`已解析 ${DB.impRes.length} 行，校验完成`,'info');};
+  window.promoImpCommit=function(){const res=DB.impRes||[];if(res.some(r=>r.errs.length))return;res.forEach(r=>{ED.items.push({skuId:r.code,orig:r.f.s.price||0,price:+parseFloat(r.price).toFixed(2),limit:r.limit===''?null:parseInt(r.limit),locked:false});});const n=res.length;DB.impStep='upload';DB.impRes=null;unwiden();closeModal();render();toast(`已导入 ${n} 个 SKU 到活动，确认后提交`,'ok');};
+  window.promoImpClose=function(){DB.impStep='upload';DB.impRes=null;unwiden();closeModal();};
 })();
