@@ -54,6 +54,11 @@ css.textContent=`
 .ivp .tot .r{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#27433A;}
 .ivp .tot .r.big{font-weight:700;font-size:15px;color:var(--emerald-2);border-top:1px solid rgba(0,0,0,.07);margin-top:5px;padding-top:8px;}
 .ivp .note{font-size:11.5px;color:var(--sub);margin-top:12px;line-height:1.5;}
+.iv-sec{margin-bottom:14px;}
+.iv-sec-h{display:flex;justify-content:space-between;align-items:baseline;padding:4px 2px 8px;font-size:13.5px;}
+.iv-sec-h span{font-size:11.5px;color:var(--sub);}
+.iv-sec-e{padding:14px;border-radius:12px;background:rgba(0,0,0,.03);text-align:center;font-size:13px;color:var(--sub);}
+.iv-sec-e small{display:block;margin-top:4px;font-size:11.5px;opacity:.8;}
 .iv-dl{width:100%;min-height:48px;border:none;border-radius:14px;background:var(--emerald);color:#fff;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 8px 20px rgba(5,150,105,.3);}
 `;
 document.head.appendChild(css);
@@ -216,7 +221,7 @@ function render(page){
   let head='';
   if(st.seg==='cust'){
     head=`<div class="iv-tip cust">客户销售发票由<b>平台代你开具</b>（按订单，GST 9%），你<b>无需开具或上传</b>；此处仅展示<b>已开具</b>的发票，供预览与下载。</div>
-      <div class="iv-stat"><span>共 <b>${CUST.length}</b> 张（含冲抵单）· 你为开票主体 · 与 PC 端数据一致，App 只做单张下载</span></div>`;
+      <div class="iv-stat"><span>正向 <b>${CUST.filter(c=>c.type!='cn').length}</b> 张 · 冲抵 <b>${CUST.filter(c=>c.type=='cn').length}</b> 张 · 你为开票主体 · 与 PC 端数据一致，App 只做单张下载</span></div>`;
   }else if(st.seg==='svc'){
     head=`<div class="iv-tip fm">服务费发票由平台在与你<b>结算完成后自动开具</b>并推送（就平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${SVC.length}</b> 张</span></div>`;
@@ -229,7 +234,11 @@ function render(page){
   // 骨架屏→数据(H1)
   setTimeout(()=>{
     if(st.seg==='cust'){
-      listEl.innerHTML=CUST.length?CUST.map(custCard).join(''):empty('暂无已开具发票','平台按订单代你开具客户销售发票后，将显示在此供预览与下载');
+      // 正向与逆向冲抵分开两块（与 PC / 运营平台商家维度口径一致，2026-09-08 沈亮定）
+      {const fwd=CUST.filter(c=>c.type!='cn'), rev=CUST.filter(c=>c.type=='cn');
+       const sec=(t2,sub,rows,emptyT,emptyS)=>`<div class="iv-sec"><div class="iv-sec-h"><b>${t2}</b><span>${sub}</span></div>${rows.length?rows.map(c=>custCard(c,CUST.indexOf(c))).join(''):`<div class="iv-sec-e">${emptyT}<small>${emptyS}</small></div>`}</div>`;
+       listEl.innerHTML=sec('正向发票',fwd.length+' 张',fwd,'暂无已开具发票','平台按订单代你开具客户销售发票后显示在此')
+                       +sec('逆向冲抵 Credit Note',rev.length+' 张',rev,'暂无冲抵单','客户退款完成后平台开具并显示在此');}
       bindCards(listEl,'cust');
     }else if(st.seg==='svc'){
       listEl.innerHTML=SVC.length?SVC.map(svcCard).join(''):empty('暂无服务费发票','平台与你结算完成后会开具服务费发票并显示在此');
