@@ -343,6 +343,8 @@ label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
 .rc-tag.inv{background:var(--bl);color:var(--b);font-size:11.5px;font-weight:600;line-height:19px;padding:0 8px;border:1px solid #C7D7FE}
 .rc-tag.inv::before{content:'🧾';font-size:11px;margin-right:3px}
 .rc-tag.noinv{background:var(--rl);color:var(--r);font-size:11.5px;font-weight:600;line-height:19px;padding:0 8px;border:1px solid #F1C4BF}
+.rc-tag.rev{background:var(--ppl);color:var(--pp);font-size:11.5px;font-weight:600;line-height:19px;padding:0 8px;border:1px solid #DCCDFB}
+.rc-tag.rev::before{content:'↺';margin-right:3px}
 .rc-tag.noinv::before{content:'⃠';margin-right:3px}
 .rc-ln.total{border-top:1px solid var(--bd);border-bottom:0;margin-top:2px;padding-top:9px}
 .rc-ln.total .lb,.rc-ln.total .op{font-weight:600;color:var(--g)}.rc-ln.total .cap{color:var(--ts);font-feature-settings:"tnum" 1,"lnum" 1}.rc-ln.total .cap b{color:var(--g);font-weight:600}.rc-ln.total .amt{color:var(--g);font-size:15px;font-weight:700}
@@ -744,23 +746,23 @@ const DB = {
   invoices:[
     // 平台代商家开给客户的销售发票（TAX INVOICE）。amt = 含税应付；sub/gst/goods/disc/ship 满足
     // sub = goods − disc + ship，gst = ROUND(sub×9%,2)，amt = sub + gst + bcrs。seq/total = 该订单内第几张/共几张（跨商家）
-    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',tstatus:'credited',no:'INV-2026-6600',reject:'',
+    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',tstatus:'credited',no:'INV-SG-2026-006600',reject:'',
       date:'2026-07-01',goods:9050.00,disc:60.83,ship:20.00,sub:9009.17,gst:810.83,bcrs:0,seq:1,total:2,
       cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
       consignee:'海底捞 · 城市广场店',dlvAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',dlvNo:'DO-20260628-0117',dlvDate:'2026-06-28',
       lines:[['有机菜心','1 箱(10kg)',120,68.00,8160.00],['本地小白菜','1 箱(8kg)',60,14.00,840.00],['芥蓝','1 箱(5kg)',10,5.00,50.00]]},
-    {order:'#SG20260629012',client:'食为天餐厅',amt:7360.00,status:'verified',no:'INV-2026-6601',reject:'',
+    {order:'#SG20260629012',client:'食为天餐厅',amt:7360.00,status:'verified',no:'INV-SG-2026-006601',reject:'',
       date:'2026-07-01',goods:6800.00,disc:47.71,ship:0,sub:6752.29,gst:607.71,bcrs:0,seq:1,total:1,
       cliAddr:'18 Boon Lay Way, #01-98, Singapore 609966',cliGst:'',
       consignee:'食为天中央厨房',dlvAddr:'18 Boon Lay Way, #01-98, Singapore 609966',dlvNo:'DO-20260629-0125',dlvDate:'2026-06-29',
       lines:[['泰国芥蓝仔','150g',800,4.50,3600.00],['荷兰豆','1 箱(5kg)',160,20.00,3200.00]]},
-    {order:'#SG20260630021',client:'丰盛轩',amt:6120.00,status:'verified',no:'INV-2026-6602',reject:'',
+    {order:'#SG20260630021',client:'丰盛轩',amt:6120.00,status:'verified',no:'INV-SG-2026-006602',reject:'',
       date:'2026-07-01',goods:5650.00,disc:35.32,ship:0,sub:5614.68,gst:505.32,bcrs:0,seq:2,total:3,
       cliAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',cliGst:'201033445B',
       consignee:'丰盛轩 · 裕廊店',dlvAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',dlvNo:'DO-20260630-0131',dlvDate:'2026-06-30',
       lines:[['娃娃菜','1 箱(10头)',250,12.00,3000.00],['西兰花','1 箱(6kg)',106,25.00,2650.00]]},
-    // 冲抵 Credit Note：开票后售后退款，冲 INV-2026-6600（与运营端 taxInvoices 的 CN-2026-0033 同源）
-    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:-741.20,status:'verified',tstatus:'issued',type:'cn',against:'INV-2026-6600',no:'CN-2026-0033',reject:'',
+    // 冲抵 Credit Note：开票后售后退款，冲 INV-SG-2026-006600（与运营端 taxInvoices 的 CN-SG-2026-000033 同源）
+    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:-741.20,status:'verified',tstatus:'issued',type:'cn',against:'INV-SG-2026-006600',no:'CN-SG-2026-000033',reject:'',
       date:'2026-07-04',goods:-680.00,disc:0,ship:0,sub:-680.00,gst:-61.20,bcrs:0,seq:1,total:2,
       cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
       consignee:'海底捞 · 城市广场店',dlvAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',dlvNo:'DO-20260628-0117',dlvDate:'2026-06-28',
@@ -770,14 +772,14 @@ const DB = {
   /* 运营平台·发票查询：全平台代开税票总账（跨商家 / 正向 inv + 冲抵 cn）。
      ent=开票主体法定名称，gstNo 为空 = 该主体未注册 GST（票面降为 INVOICE、不计税、不可抵扣，gst 记 null）。 */
   taxInvoices:[
-    {no:'INV-2026-6600',type:'inv',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:9009.17,gst:810.83,bcrs:0,amt:9820.00,date:'2026-07-01',status:'credited',against:''},
-    {no:'INV-2026-6601',type:'inv',order:'#SG20260629012',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'食为天餐厅',sub:6752.29,gst:607.71,bcrs:0,amt:7360.00,date:'2026-07-01',status:'issued',against:''},
-    {no:'INV-2026-6602',type:'inv',order:'#SG20260630021',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'丰盛轩',sub:5614.68,gst:505.32,bcrs:0,amt:6120.00,date:'2026-07-01',status:'issued',against:''},
-    {no:'INV-2026-6603',type:'inv',order:'#SG20260628007',ent:'福满自营 10X AI Technology Pte Ltd',gstNo:'202245757M',client:'海底捞（新加坡）',sub:2140.00,gst:192.60,bcrs:24.00,amt:2356.60,date:'2026-07-01',status:'issued',against:''},
-    {no:'INV-2026-6604',type:'inv',order:'#SG20260630021',ent:'厨匠厨具 KitchenPro Supplies Pte Ltd',gstNo:'',client:'丰盛轩',sub:380.00,gst:null,bcrs:0,amt:380.00,date:'2026-07-01',status:'issued',against:''},
-    {no:'INV-2026-6605',type:'inv',order:'#SG20260630021',ent:'洋海水产 Ocean Fresh Trading Pte Ltd',gstNo:'201812345K',client:'丰盛轩',sub:1280.00,gst:115.20,bcrs:0,amt:1395.20,date:'2026-07-01',status:'issued',against:''},
-    {no:'CN-2026-0033',type:'cn',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:-680.00,gst:-61.20,bcrs:0,amt:-741.20,date:'2026-07-04',status:'issued',against:'INV-2026-6600'},
-    {no:'INV-2026-6606',type:'inv',order:'#SG20260701008',ent:'鲜集冻品 FreshHub Frozen Pte Ltd',gstNo:'',client:'一品轩',sub:0,gst:null,bcrs:0,amt:0,date:'',status:'failed',against:'',failReason:'MISSING_ADDRESS'},
+    {no:'INV-SG-2026-006600',type:'inv',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:9009.17,gst:810.83,bcrs:0,amt:9820.00,date:'2026-07-01',status:'credited',against:''},
+    {no:'INV-SG-2026-006601',type:'inv',order:'#SG20260629012',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'食为天餐厅',sub:6752.29,gst:607.71,bcrs:0,amt:7360.00,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-SG-2026-006602',type:'inv',order:'#SG20260630021',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'丰盛轩',sub:5614.68,gst:505.32,bcrs:0,amt:6120.00,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-SG-2026-006603',type:'inv',order:'#SG20260628007',ent:'福满自营 10X AI Technology Pte Ltd',gstNo:'202245757M',client:'海底捞（新加坡）',sub:2140.00,gst:192.60,bcrs:24.00,amt:2356.60,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-SG-2026-006604',type:'inv',order:'#SG20260630021',ent:'厨匠厨具 KitchenPro Supplies Pte Ltd',gstNo:'',client:'丰盛轩',sub:380.00,gst:null,bcrs:0,amt:380.00,date:'2026-07-01',status:'issued',against:''},
+    {no:'INV-SG-2026-006605',type:'inv',order:'#SG20260630021',ent:'洋海水产 Ocean Fresh Trading Pte Ltd',gstNo:'201812345K',client:'丰盛轩',sub:1280.00,gst:115.20,bcrs:0,amt:1395.20,date:'2026-07-01',status:'issued',against:''},
+    {no:'CN-SG-2026-000033',type:'cn',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:-680.00,gst:-61.20,bcrs:0,amt:-741.20,date:'2026-07-04',status:'issued',against:'INV-SG-2026-006600'},
+    {no:'INV-SG-2026-006606',type:'inv',order:'#SG20260701008',ent:'鲜集冻品 FreshHub Frozen Pte Ltd',gstNo:'',client:'一品轩',sub:0,gst:null,bcrs:0,amt:0,date:'',status:'failed',against:'',failReason:'MISSING_ADDRESS'},
   ],
   tiFilter:{},tiSel:[],
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
@@ -3162,7 +3164,7 @@ function rcLine(op,lb,cap,v,opt){
   let amt;
   if(v==null) amt='—'; else if(!v) amt=money(0); else amt=(isNeg?'−':isPos?'+':'')+money(v);
   const cls=z?' zero':(isNeg?' neg':isPos?' pos':(opt.muted?' info':''));
-  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;
+  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}${opt.tag2?`<span class="rc-tag ${opt.tag2Cls||''}">${opt.tag2}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;
 }
 /* 通用汇总体：左=预计实付大数 + 口径；中=货款算式；右=另行结算块。列表汇总卡与详情抽屉头共用（形式一致）。
    v = {paidG, plat, fee, aft, sub, settle, rpl, sup, fine}；opts.heroLabel / opts.subLines(数组) */
@@ -3180,11 +3182,12 @@ function rcSumBody(v,opts){
     <div class="rc-ledger">
       <div class="tt">货款算式<span>${opts.ledgerSub||'列表各单同列累计'}</span></div>
       ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',v.paidG)}
-      ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',v.plat)}
-      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；平台按此金额向你开具服务费发票',v.fee,{tag:'服务费发票',tagCls:'inv'})}
+      ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家；<b>含逆向</b>——售后退款时对应补贴按比例冲回，此处为正向 + 逆向净额',v.plat,{tag:'含逆向',tagCls:'rev'})}
+      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；<b>含逆向</b>——售后退款对应的服务费同步退还，此处为正向 + 逆向净额；平台按净额向你开具服务费发票',v.fee,{tag:'含逆向',tagCls:'rev',tag2:'服务费发票',tag2Cls:'inv'})}
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',v.aft)}
       ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',v.sub,{muted:true,tag:'已扣'})}
       ${rcLine('=',opts.settleLabel||'结算合计（货款）',`实付金额 ${money(v.paidG)} + 平台补贴 ${money(v.plat)} − 平台服务费 ${money(v.fee)} − 售后扣款 ${money(v.aft)} = <b>${money(v.settle)}</b>`,v.settle,{total:true})}
+      <div style="font-size:11px;color:var(--ts);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd2)"><b>逆向说明</b>：实付金额、平台补贴、平台服务费三项均为<b>正向 + 逆向净额</b>——售后退款时，客户实付、平台补贴、平台服务费同步按比例冲回。逐笔逆向行见详情「售后明细」页签，正向合计 + 逆向合计 = 此处净额。</div>
     </div>
     <div class="rc-side">
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
@@ -4924,6 +4927,8 @@ function act_tiPreview(no){
       <dt>开票日期</dt><dd>${t.date||'—'}</dd>
       <dt>对应订单号</dt><dd class="mono">${t.order}</dd>
       <dt>状态</dt><dd>${tag('taxinv',t.status)}</dd>
+      ${t.reissuedFrom?`<dt>重开自</dt><dd class="mono">${t.reissuedFrom}</dd>`:''}
+      ${t.supersededBy?`<dt>已重开为</dt><dd class="mono">${t.supersededBy}</dd><dt>重开原因</dt><dd>${t.reissueReason||'—'}</dd><dt>重开时间</dt><dd>${t.reissueAt||'—'}</dd>`:''}
     </dl>
     <div class="sec-t">开票主体（供应方）</div>
     <dl class="dl">
@@ -4942,6 +4947,7 @@ function act_tiPreview(no){
     </dl>
   </div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="act_tiOrdDetail('${t.order}')">← 返回主单</button>
+    ${canReissue(t)?`<button class="btn btn-o" onclick="closeDrawer();act_tiReissue('${t.order}','${t.no}')">重新开票</button>`:''}
     ${t.status=='failed'?`<button class="btn btn-p" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-p" onclick="act_tiDownload('${t.no}')">下载本张 PDF（商家版）</button>`}</div>`);
 }
 /* 运营平台·发票查询：列表一行 = 一个主单（订单整合维度）；「开票主体」列在多商家时列出多个主体（一主体一张发票）。
@@ -4952,15 +4958,16 @@ function tiOrderRows(){
   const hit=new Set(tiRows().map(t=>t.order));
   const m={};
   (DB.taxInvoices||[]).filter(t=>hit.has(t.order)).forEach(t=>{
-    const o=m[t.order]||(m[t.order]={order:t.order,client:t.client,invs:[],cns:[],sub:0,gst:0,amt:0,date:'',failed:0});
+    const o=m[t.order]||(m[t.order]={order:t.order,client:t.client,invs:[],cns:[],superseded:[],sub:0,gst:0,amt:0,date:'',failed:0});
     if(t.type=='cn'){o.cns.push(t);if(t.status=='failed')o.failed++;return;}
+    if(t.supersededBy){o.superseded.push(t);return;}   // 被重新开票替代的原票：记录保留，但不计张数、不进合计、不进买家版 PDF
     o.invs.push(t);
     if(t.status=='failed'){o.failed++;return;}
     o.sub+=t.sub;o.gst+=(t.gst||0);o.amt+=t.amt;if(t.date>o.date)o.date=t.date;
   });
   return Object.values(m).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
 }
-function tiOrderGroup(order){return tiOrderRows().find(o=>o.order==order)||{order,invs:[],cns:[],sub:0,gst:0,amt:0,failed:0};}
+function tiOrderGroup(order){return tiOrderRows().find(o=>o.order==order)||{order,invs:[],cns:[],superseded:[],sub:0,gst:0,amt:0,failed:0};}
 function tiToggle(order){const a=DB.tiSel||[];const i=a.indexOf(order);i<0?a.push(order):a.splice(i,1);DB.tiSel=a;render();}
 function tiToggleAll(){const rows=tiOrderRows().filter(o=>!o.failed);
   DB.tiSel=(DB.tiSel||[]).length==rows.length?[]:rows.map(o=>o.order);render();}
@@ -4972,7 +4979,6 @@ function act_tiOrdDetail(order,tab){
   const o=tiOrderGroup(order);if(!o.invs.length&&!o.cns.length)return;
   const f=DB.tiFilter||{};
   tab=tab||((f.no||f.ent)?'merchant':'order');   // 默认整单维度；按发票号/开票主体查到的，默认落商家维度（客服最高频是找某一张）
-  const all=[...o.invs,...o.cns];
   const tabs=`<div class="tabs" style="margin-bottom:14px">
     <div class="tab ${tab=='order'?'active':''}" onclick="act_tiOrdDetail('${o.order}','order')">整单维度</div>
     <div class="tab ${tab=='merchant'?'active':''}" onclick="act_tiOrdDetail('${o.order}','merchant')">商家维度${o.invs.length>1?`<span class="tb">${o.invs.length}</span>`:''}</div>
@@ -4990,6 +4996,7 @@ function act_tiOrdDetail(order,tab){
       <dt>GST @ 9%</dt><dd>${money(o.gst)}</dd>
       <dt>应付金额</dt><dd><b style="color:var(--g)">${money(o.amt)}</b></dd>
       ${o.cns.length?`<dt>冲抵</dt><dd><span style="color:var(--r);font-weight:600">${o.cns.length} 张 Credit Note</span>，合计 <span style="color:var(--r)">${money(o.cns.reduce((x,t)=>x+t.amt,0))}</span>（不并入整单合计，随原票单独出具）</dd>`:''}
+      ${(o.superseded||[]).length?`<dt>已重开原票</dt><dd><span style="color:var(--ts)">${o.superseded.length} 张</span>（作废保留、不计入合计、不进买家版 PDF）</dd>`:''}
     </dl>
     <div class="sec-t">整单 PDF 页组成（买家版 · 与买家收到的一致）</div>
     <table style="font-size:12.5px"><thead><tr><th>页</th><th>开票主体</th><th>票面标题</th><th style="text-align:right">应付</th><th>状态</th></tr></thead><tbody>
@@ -5001,24 +5008,44 @@ function act_tiOrdDetail(order,tab){
       <td>${tag('taxinv',t.status)}</td>
     </tr>`).join('')}
     </tbody></table>`;
-  // 商家维度：各开票主体各自那张——单张详情 / 下载商家版 / 失败重出
-  const merchantView=`${failTip}
-    <div class="sec-t">各开票主体发票（一主体一张 · 每张可单独下载商家版）</div>
-    <table style="font-size:12.5px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>关联原发票</th><th>开票主体</th><th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">应付</th><th>状态</th><th>操作</th></tr></thead><tbody>
-    ${all.map((t,i)=>`<tr style="${(f.no&&t.no.toLowerCase().includes(f.no.toLowerCase()))||(f.ent&&t.ent.includes(f.ent))?'background:var(--gl,#EEF6F0)':''}">
-      <td>${t.type=='cn'?'—':`${i+1}/${o.invs.length}`}</td>
-      <td class="mono">${t.no}</td>
-      <td>${t.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
-      <td class="mono">${t.against||'—'}</td>
-      <td>${t.ent}${entBadge(t)}</td>
+  const sup=(o.superseded||[]);
+  // 商家维度：按【开票主体】分组，组内【正向】与【逆向冲抵】分开两块（2026-09-08 沈亮定）
+  const ents=[];
+  [...o.invs,...sup,...o.cns].forEach(t=>{if(!ents.some(e=>e.ent==t.ent))ents.push({ent:t.ent,gstNo:t.gstNo});});
+  const entGroups=ents.map(e=>{
+    const fwd=[];
+    o.invs.filter(t=>t.ent==e.ent).forEach(t=>{const src=sup.find(x=>x.supersededBy==t.no);if(src)fwd.push(src);fwd.push(t);});
+    sup.filter(x=>x.ent==e.ent&&!o.invs.some(t=>x.supersededBy==t.no)).forEach(x=>fwd.push(x));
+    return {e:e,fwd:fwd,rev:o.cns.filter(t=>t.ent==e.ent)};
+  });
+  const all=[...o.invs,...sup,...o.cns];
+  const invRow=t=>{const old=!!t.supersededBy, idx=o.invs.indexOf(t);
+    return `<tr style="${old?'opacity:.5;':''}${(!old)&&((f.no&&t.no.toLowerCase().includes(f.no.toLowerCase()))||(f.ent&&t.ent.includes(f.ent)))?'background:var(--gl,#EEF6F0)':''}">
+      <td>${old?'<span style="font-size:11px;color:var(--ts)">原票</span>':(t.type=='cn'?'—':`${idx+1}/${o.invs.length}`)}</td>
+      <td class="mono">${t.no}${old?`<div style="font-size:11px;color:var(--ts)">已重开 → ${t.supersededBy}</div>`:(t.reissuedFrom?`<div style="font-size:11px;color:var(--ts)">重开自 ${t.reissuedFrom}</div>`:'')}</td>
+      ${t.type=='cn'?`<td class="mono">${t.against||'—'}</td>`:''}
       <td style="text-align:right">${money(t.sub)}</td>
       <td style="text-align:right">${t.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(t.gst)}</td>
       <td style="text-align:right"><b style="color:${t.type=='cn'?'var(--r)':'inherit'}">${money(t.amt)}</b></td>
+      <td>${t.date||'—'}</td>
       <td>${tag('taxinv',t.status)}</td>
       <td style="white-space:nowrap"><button class="btn btn-link" onclick="act_tiPreview('${t.no}')">详情</button>
-        ${t.status=='failed'?(t.retrying?`<span style="font-size:11.5px;color:var(--ts)">生成中…</span>`:`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`):`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+        ${t.status=='failed'?(t.retrying?`<span style="font-size:11.5px;color:var(--ts)">生成中…</span>`:`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`):`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}
+        ${canReissue(t)?`<button class="btn btn-link" onclick="act_tiReissue('${o.order}','${t.no}')">重新开票</button>`:''}</td>
+    </tr>`;};
+  const subTable=(rows,rev)=>`<table style="font-size:12.5px;margin-bottom:4px"><thead><tr>
+      <th style="width:52px">#</th><th>${rev?'冲抵单号':'发票号'}</th>${rev?'<th>冲抵原发票</th>':''}
+      <th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">${rev?'冲抵金额':'应付'}</th><th>${rev?'冲抵日期':'开票日期'}</th><th>状态</th><th>操作</th>
+    </tr></thead><tbody>${rows.map(invRow).join('')}</tbody></table>`;
+  const merchantView=`${failTip}
+    <div class="sec-t">各开票主体发票（一主体一张 · 正向与逆向分开 · 每张可单独下载商家版）</div>
+    ${entGroups.map(g=>`<div style="border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:13.5px;margin-bottom:8px">${g.e.ent}${g.e.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>'}</div>
+      <div style="font-size:12px;color:var(--ts);margin:2px 0 4px">正向发票 ${g.fwd.filter(t=>!t.supersededBy).length} 张${g.fwd.some(t=>t.supersededBy)?`（另有 ${g.fwd.filter(t=>t.supersededBy).length} 张已重开原票）`:''}</div>
+      ${g.fwd.length?subTable(g.fwd,false):'<div style="font-size:12.5px;color:var(--ts);padding:4px 0 8px">无正向发票</div>'}
+      <div style="font-size:12px;color:var(--r);margin:10px 0 4px">逆向冲抵 Credit Note ${g.rev.length} 张</div>
+      ${g.rev.length?subTable(g.rev,true):'<div style="font-size:12.5px;color:var(--ts);padding:4px 0 2px">无冲抵单</div>'}
+    </div>`).join('')}`;
   const okCnt=all.filter(t=>t.status!='failed').length;
   drawer(`<div class="drawer-hd"><div><h3>主单发票详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.order} · ${o.client} · ${o.invs.length} 个开票主体${o.cns.length?` · 冲抵 ${o.cns.length} 张`:''}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">${tabs}${tab=='order'?orderView:merchantView}</div>
@@ -5026,6 +5053,48 @@ function act_tiOrdDetail(order,tab){
     ${tab=='order'
       ?`<button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单 PDF（买家版 · ${o.invs.length} 页）</button>`
       :`<button class="btn btn-p" ${okCnt?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="act_tiMerchantDownloadAll('${o.order}')">打包下载各张（商家版 · ${okCnt} 张${o.failed?'，失败张不含':''}）</button>`}</div>`);
+}
+/* ---- 重新开票（2026-09-08 与开发会议定：旧「发票管理」后台的核心逻辑迁入本模块）----
+   用途：票面信息错误（客户抬头/税号变更、仓库字段缺失、模板变更、渲染错漏）时作废原票、按最新主数据重开一张【新号】票。
+   边界：① 金额不变——重开金额须与原票一致；金额有变化必须走售后退款冲抵 CN，不得用重新开票。
+        ② 与「重新生成」不同：重新生成 = FAILED 票补主数据后【沿用原号】重出；重新开票 = 已开具票【换新号】重开。
+        ③ 已冲抵(credited)、已被重开的原票、FAILED 票均不可重新开票。
+   展示：原票记录保留但【不加已作废状态标】（会议定：状态标出来对生态是干扰），列表不计张数/不进合计，详情内弱化并标「已重开 →」。*/
+function canReissue(t){return !!t&&t.type!='cn'&&t.status=='issued'&&!t.supersededBy;}
+const REISSUE_REASON=['客户抬头 / 税号变更','票面字段缺失或错误','发票模板变更','系统渲染错漏','其他（请说明）'];
+function act_tiReissue(order,only){
+  const o=tiOrderGroup(order);
+  const cands=o.invs.filter(canReissue).filter(t=>!only||t.no==only);
+  if(!cands.length)return toast('该主单无可重新开票的发票','info');
+  modal(`<div class="mc-hd"><h3>重新开票 · ${order}</h3><p>${o.client} · 可重开 ${cands.length} 张</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="ib ib-y"><span class="i">⚠️</span><div>重开后：原票<b>作废且不再对客户交付</b>（记录保留、可查），系统按<b>最新主数据</b>重新渲染并出<b>新发票号</b>；<b>金额必须与原票一致</b>——金额有变化请走<b>售后退款冲抵</b>，不要用重新开票。</div></div>
+    <div class="sec-t" style="margin-top:14px">选择要重开的发票</div>
+    <table style="font-size:12.5px"><thead><tr><th style="width:34px"></th><th>发票号</th><th>开票主体</th><th style="text-align:right">应付</th></tr></thead><tbody>
+    ${cands.map(t=>`<tr><td><input type="checkbox" class="ri-ck" value="${t.no}" checked></td><td class="mono">${t.no}</td><td>${t.ent}</td><td style="text-align:right">${money(t.amt)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="sec-t" style="margin-top:14px">重开原因（必填，写入操作日志）</div>
+    <select id="ri-reason" style="width:100%">${REISSUE_REASON.map(r=>`<option>${r}</option>`).join('')}</select>
+    <input id="ri-note" placeholder="补充说明（选填；原因为「其他」时必填）" style="width:100%;margin-top:8px">
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="confirmReissue('${order}')">确认重开</button></div>`);
+}
+function confirmReissue(order){
+  const nos=[...document.querySelectorAll('.ri-ck')].filter(c=>c.checked).map(c=>c.value);
+  if(!nos.length)return toast('请至少选择一张发票','err');
+  const reason=(document.getElementById('ri-reason')||{}).value||'';
+  const note=((document.getElementById('ri-note')||{}).value||'').trim();
+  if(reason.indexOf('其他')==0&&!note)return toast('原因为「其他」时必须填写说明','err');
+  const d=new Date(),pd=n=>String(n).padStart(2,'0');
+  const today=`${d.getFullYear()}-${pd(d.getMonth()+1)}-${pd(d.getDate())}`;
+  let seq=Math.max.apply(null,(DB.taxInvoices||[]).filter(t=>t.type!='cn').map(t=>+String(t.no).split('-').pop()||0));
+  nos.forEach(no=>{
+    const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!canReissue(t))return;
+    const newNo='INV-SG-'+d.getFullYear()+'-'+String(++seq).padStart(6,'0');
+    t.supersededBy=newNo;t.reissueReason=reason+(note?'：'+note:'');t.reissueAt=today;
+    DB.taxInvoices.push(Object.assign({},t,{no:newNo,date:today,supersededBy:null,reissueReason:null,reissueAt:null,reissuedFrom:t.no,status:'issued'}));
+  });
+  closeModal();render();toast('已重新开票 '+nos.length+' 张（新票号已生成，原票作废并保留记录）','ok');
 }
 function act_tiMerchantDownloadAll(order){const o=tiOrderGroup(order);const n=[...o.invs,...o.cns].filter(t=>t.status!='failed').length;
   toast(`主单 ${order} 各开票主体发票已打包下载（商家版 · ${n} 张）`,'ok');}
@@ -5071,7 +5140,8 @@ PAGES['p-inv-query']=()=>{
         <td style="text-align:right"><b>${money(o.amt)}</b></td>
         <td>${o.failed?tag('taxinv','failed'):o.cns.length?tag('taxinv','credited'):tag('taxinv','issued')}</td>
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_tiOrdDetail('${o.order}')">详情</button>
-          ${o.failed?`<span style="font-size:11.5px;color:var(--ts);margin-left:4px">整单不完整</span>`:`<button class="btn btn-link" onclick="act_tiOrdDownload('${o.order}')">下载整单</button>`}</td>
+          ${o.failed?`<span style="font-size:11.5px;color:var(--ts);margin-left:4px">整单不完整</span>`:`<button class="btn btn-link" onclick="act_tiOrdDownload('${o.order}')">下载整单</button>`}
+          ${o.invs.some(canReissue)?`<button class="btn btn-link" onclick="act_tiReissue('${o.order}')">重新开票</button>`:''}</td>
       </tr>`).join('')}
       </tbody></table>`
     :(Object.values(f).some(v=>v)?`<div class="empty" style="padding:28px 0"><div class="e-ic">🔎</div><div class="e-t">无匹配发票</div><div class="e-s">调整筛选条件后重试。</div></div>`
