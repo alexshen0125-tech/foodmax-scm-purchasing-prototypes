@@ -3194,7 +3194,7 @@ function rcSumCard(rows,T){
   const v={paidG:T(dPaidG),plat:T(dPlat),fee:T(dFee),aft:T(dAftG),sub:T(dSub),settle:T(dSettle),rpl:T(dRpl),sup:T(dSup),fine:T(dFine)};
   return `<div class="card"><div class="card-bd" style="padding:18px 20px">${rcSumBody(v,{
     subLines:[`本结算周期 ${cyc.from}（周一）– ${cyc.to}（周日）· 截至 ${last} · ${rows.length} 张对账单`,`数据源：财务结算单明细 · <a href="javascript:nav('m-settle')" style="color:var(--g);font-weight:500">查看本期结算单 ›</a>`],
-    tipExtra:'<br>结算周期默认<b>周一至周日</b>，周期结束后本数即该周结算单的实付净额；自定义跨周期区间只是累计值，不对应任一张结算单。'
+    tipExtra:'<br>结算周期为<b>周一至周日</b>，只按周期查看；周期结束后本数即该周结算单的实付净额。'
   })}</div></div>`;
 }
 
@@ -3208,8 +3208,8 @@ PAGES['m-recon']=()=>{
   const selLines=rcExpRows(selRows,RC_SHEETS.map(x=>x.k));
   return `
   <div class="card"><div class="card-bd" style="padding:12px 20px"><div class="row" style="gap:10px;align-items:center">
-    <select style="max-width:300px" title="结算周期默认周一至周日"><option>本结算周期 · 06-29（周一）– 07-05（周日）</option><option>上结算周期 · 06-22（周一）– 06-28（周日）</option><option>近 30 天</option><option>自定义区间</option></select>
-    <span style="font-size:12px;color:var(--ts)">结算周期：周一 – 周日，每周期一张结算单</span>
+    <select style="max-width:300px" title="结算周期默认周一至周日"><option>本结算周期 · 06-29（周一）– 07-05（周日）</option><option>上结算周期 · 06-22（周一）– 06-28（周日）</option><option>06-15（周一）– 06-21（周日）</option><option>06-08（周一）– 06-14（周日）</option><option>06-01（周一）– 06-07（周日）</option></select>
+    <span style="font-size:12px;color:var(--ts)">结算周期：周一 – 周日，每周期一张结算单；按周期查看，与结算单一一对应</span>
     <button class="btn btn-p" style="margin-left:auto" ${DB.rcSel.length?'':'disabled'} title="${DB.rcSel.length?'':'请先勾选要导出的对账单'}" onclick="act_exportRecon()">⬇️ 导出所选${DB.rcSel.length?` (${DB.rcSel.length})`:''}</button>
   </div></div></div>
   ${rcSumCard(rows,T)}

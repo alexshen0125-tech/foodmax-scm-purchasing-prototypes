@@ -178,7 +178,7 @@ function openRecon(){
       <div class="big disp"><span class="c">S$</span>${(T(dSettle)-T(dRpl)-T(dSup)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
       <div class="lbl" style="color:#27433A">= 结算合计（货款）<b>${S(T(dSettle))}</b> − 另行结算 <b class="rc-neg">${S(T(dRpl)+T(dSup))}</b></div>
       <div class="lbl">截至 ${rows.map(r=>r.date).sort().slice(-1)[0]||'—'} · ${rows.length} 张对账单 · 数据源：财务结算单明细</div>
-      <div class="tip"><b>口径</b>：预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款；结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期默认<b>周一至周日</b>，周期结束后本数即该周结算单的实付净额；自定义跨周期区间只是累计值，不对应任一张结算单。</div>
+      <div class="tip"><b>口径</b>：预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款；结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期为<b>周一至周日</b>，只按周期查看；周期结束后本数即该周结算单的实付净额。</div>
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
       ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',T(dPaidG))}
       ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',T(dPlat))}
