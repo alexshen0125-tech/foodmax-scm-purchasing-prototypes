@@ -24,6 +24,8 @@ css.textContent=`
 .rc-ln .op{font-size:12.5px;color:var(--sub);text-align:center;}
 .rc-ln .lb{font-size:13px;color:#27433A;}
 .rc-ln .cap{font-size:10.5px;color:var(--sub);margin-top:1px;line-height:1.4;}
+.rc-ln .fr{font-size:11px;color:var(--sub);margin-top:2px;}
+.rc-ln .fr b{color:#27433A;font-weight:700;}
 .rc-ln .amt{font-size:13.5px;font-weight:700;color:#27433A;white-space:nowrap;}
 .rc-ln .amt.neg{color:var(--red);}.rc-ln .amt.pos{color:var(--emerald-2);}.rc-ln .amt.zero{color:#9AA99F;font-weight:400;}.rc-ln .amt.info{color:var(--sub);font-weight:500;}
 .rc-ln.total{border-top:1px solid var(--line);border-bottom:0;margin-top:2px;padding-top:9px;}
@@ -131,7 +133,8 @@ const NEG=n=>n?`<span class="rc-neg">-${S(n)}</span>`:S(0);
 const rcLine=(op,lb,cap,v,opt)=>{opt=opt||{};const isNeg=op=='−',isPos=op=='+';
   const amt=v==null?'—':(!v?S(0):(isNeg?'−':isPos?'+':'')+S(v));
   const cls=(v==null||!v)?' zero':(isNeg?' neg':isPos?' pos':(opt.muted?' info':''));
-  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}${opt.tag2?`<span class="rc-tag ${opt.tag2Cls||''}">${opt.tag2}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
+  const fr=opt.fwd!=null?`<div class="fr">正向 <b>${S(opt.fwd)}</b> · 逆向 <b class="${opt.rev?'rc-neg':''}">${opt.rev?'−'+S(opt.rev):'—'}</b></div>`:'';
+  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}${opt.tag2?`<span class="rc-tag ${opt.tag2Cls||''}">${opt.tag2}</span>`:''}</div>${fr}${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
 const tax=l=>(l.tax==null?GST:l.tax), mul=l=>1+tax(l)/100;
 const ln=(d,s)=>d.lines.find(l=>l.sku==s)||{price:0,name:s,unit:'件',spec:''};
 const realN=l=>l.real*l.price, realG=l=>l.real*l.price*mul(l);
@@ -143,7 +146,15 @@ const dPaidN=d=>sum(d.lines,paidN), dPaidG=d=>sum(d.lines,paidG), dPlat=d=>sum(d
 const dSub=d=>sum(d.lines,l=>l.sub||0), dFee=d=>sum(d.lines,fee), dInc=d=>sum(d.lines,inc);
 const dAftN=d=>sum(d.after||[],x=>x.qty*ln(d,x.sku).price);
 const dAftG=d=>sum(d.after||[],x=>{const l=ln(d,x.sku);return x.qty*l.price*mul(l);});
-const dSettle=d=>dInc(d)-dAftG(d);
+/* 逆向（售后）分解：按退货件数占该 SKU 实发件数的比例，同步冲回商家补贴/平台补贴/平台服务费。
+   售后扣款 = 逆向应付商家 = 逆向实付 + 逆向平台补贴 − 逆向平台服务费。同 PC。 */
+const aftPart=(d,x)=>{const l=ln(d,x.sku);const r=l.real?x.qty/l.real:0;
+  const gross=x.qty*l.price*mul(l), sub=(l.sub||0)*r, pl=plat(l)*r, pd=gross-sub-pl, fe=(pd+pl)*(l.rate||0)/100;
+  return {sub,plat:pl,paid:pd,fee:fe,inc:pd+pl-fe};};
+const dRevSub=d=>sum(d.after||[],x=>aftPart(d,x).sub), dRevPlat=d=>sum(d.after||[],x=>aftPart(d,x).plat);
+const dRevPaid=d=>sum(d.after||[],x=>aftPart(d,x).paid), dRevFee=d=>sum(d.after||[],x=>aftPart(d,x).fee);
+const dRevInc=d=>sum(d.after||[],x=>aftPart(d,x).inc);
+const dSettle=d=>dInc(d)-dRevInc(d);   // 当日结算（货款）= 正向商家收入 − 售后扣款（逆向应付商家）
 const dNet=d=>dSettle(d)-dRpl(d)-dSup(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 耗材订单（罚款未接入按 0），同汇总卡「预计实付」
 const rplAmt=r=>Math.round(r.taxPrice*r.qty*(1+r.rate/100)*100)/100;
 const rplNet=r=>Math.round(rplAmt(r)/(1+GST/100)*100)/100;
@@ -182,13 +193,12 @@ function openRecon(){
       <div class="lbl">截至 ${rows.map(r=>r.date).sort().slice(-1)[0]||'—'} · ${rows.length} 张对账单 · 数据源：财务结算单明细</div>
       <div class="tip"><b>口径</b>：预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款；结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期为<b>周一至周日</b>，只按周期查看；周期结束后本数即该周结算单的实付净额。</div>
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
-      ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',T(dPaidG))}
-      ${rcLine('+','平台补贴','平台出资的优惠；<b>含逆向</b>——售后退款时按比例冲回，此处为正向 + 逆向净额',T(dPlat),{tag:'含逆向',tagCls:'rev'})}
-      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；<b>含逆向</b>——售后退款对应服务费同步退还，按净额开具服务费发票',T(dFee),{tag:'含逆向',tagCls:'rev',tag2:'服务费发票',tag2Cls:'inv'})}
-      ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
-      ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',T(dSub),{muted:true,tag:'已扣'})}
-      ${rcLine('=','结算合计（货款）',`实付金额 ${S(T(dPaidG))} + 平台补贴 ${S(T(dPlat))} − 平台服务费 ${S(T(dFee))} − 售后扣款 ${S(T(dAftG))} = <b>${S(T(dSettle))}</b>`,T(dSettle),{total:true})}
-      <div class="rc-note" style="margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line)"><b>逆向说明</b>：实付金额、平台补贴、平台服务费三项均为<b>正向 + 逆向净额</b>——售后退款时同步按比例冲回。逐笔逆向行见「售后明细」页签。</div>
+      ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴；退款按含税售价冲回',T(dPaidG)-T(dRevPaid),{fwd:T(dPaidG),rev:T(dRevPaid)})}
+      ${rcLine('+','平台补贴','平台出资的优惠；退款时按退货比例冲回',T(dPlat)-T(dRevPlat),{fwd:T(dPlat),rev:T(dRevPlat)})}
+      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；退款对应服务费同步退还，按净额开票',T(dFee)-T(dRevFee),{fwd:T(dFee),rev:T(dRevFee),tag:'服务费发票',tagCls:'inv'})}
+      ${rcLine('','商家补贴','商家让利，客户已少付、已从实付金额中扣除，不重复扣；退款时按比例冲回',T(dSub)-T(dRevSub),{muted:true,fwd:T(dSub),rev:T(dRevSub),tag:'已扣'})}
+      ${rcLine('=','结算合计（货款）',`正向商家收入 ${S(T(dInc))} − 售后扣款 ${S(T(dRevInc))} = <b>${S(T(dSettle))}</b>`,T(dSettle),{fwd:T(dInc),rev:T(dRevInc),total:true})}
+      <div class="rc-note" style="margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line)"><b>逆向说明</b>：发生商家责任售后退款时，客户实付、平台补贴、商家补贴、平台服务费<b>按退货件数占实发件数的比例同步冲回</b>；各科目正向 + 逆向 = 净额。合计行逆向列即<b>售后扣款（逆向应付商家）</b>= 逆向实付 ${S(T(dRevPaid))} + 逆向平台补贴 ${S(T(dRevPlat))} − 逆向平台服务费 ${S(T(dRevFee))}。逐笔见「售后明细」页签。</div>
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
       <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
       ${rcLine('','结算合计（货款）','上方算式结果',T(dSettle))}
