@@ -61,7 +61,7 @@ document.head.appendChild(css);
 // ---- 数据(SG 本地化；金额 S$) ----
 // ① 客户开票·已开具(按订单，一单对一个客户；与 PC 端 DB.invoices 对齐)
 const CUST=[
-  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'9820.00',no:'INV-2026-6600',date:'2026-07-01',
+  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'9820.00',no:'INV-2026-6600',date:'2026-07-01',st:'credited',
     cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
     goods:9050.00,disc:60.83,ship:20.00,sub:9009.17,gst:810.83,bcrs:0,seq:1,total:2},
   {order:'#SG20260629012',client:'食为天餐厅',amt:'7360.00',no:'INV-2026-6601',date:'2026-07-01',
@@ -70,7 +70,13 @@ const CUST=[
   {order:'#SG20260630021',client:'丰盛轩',amt:'6120.00',no:'INV-2026-6602',date:'2026-07-01',
     cliAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',cliGst:'201033445B',
     goods:5650.00,disc:35.32,ship:0,sub:5614.68,gst:505.32,bcrs:0,seq:2,total:3},
+  // 冲抵 Credit Note（开票后售后退款，冲 INV-2026-6600；与 PC/运营端 CN-2026-0033 同源）
+  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'-741.20',no:'CN-2026-0033',date:'2026-07-04',type:'cn',against:'INV-2026-6600',
+    cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
+    goods:-680.00,disc:0,ship:0,sub:-680.00,gst:-61.20,bcrs:0,seq:1,total:2},
 ];
+// 单据状态文案（与 PC/运营端 taxinv 枚举一致：issued 已开具 / credited 已冲抵）
+const TSTAT={issued:'已开具',credited:'已冲抵'};
 // ② 服务费发票·平台开具(与 PC 端 DB.svcInvoices 对齐)
 const SVC=[
   {no:'SVC-INV-2026-702',billNo:'ST202605-M0815',range:'2026-05-01 ~ 05-31',fee:'1104.50',gst:'99.41',total:'1203.91',date:'2026-06-06'},
@@ -93,11 +99,13 @@ function empty(t,p){return `<div class="empty"><div class="ei">${svg('invoice')}
 
 function custCard(c,i){
   return `<div class="iv-card" data-i="${i}">
-    <div class="hd"><span class="ord">${c.order}</span><span class="bd">已开票</span></div>
-    <div class="cli">开票客户 <b>${c.client}</b></div>
+    <div class="hd"><span class="ord">${c.order}</span><span class="bd" ${c.st=='credited'?'style="background:#FBF3E4;color:#A9711F"':''}>${TSTAT[c.st||'issued']}</span></div>
+    <div class="cli">${c.type=='cn'?`<span style="color:#C0392B;font-weight:700">冲抵 Credit Note</span> · 冲 ${c.against}`:'正向 Invoice'} · 开票客户 <b>${c.client}</b></div>
     <div class="g">
-      <div class="col"><div class="l">价税合计</div><div class="v amt">${money(c.amt)}</div></div>
+      <div class="col"><div class="l">${c.type=='cn'?'冲抵金额':'应付金额'}</div><div class="v amt" ${c.type=='cn'?'style="color:#C0392B"':''}>${money(c.amt)}</div></div>
       <div class="col"><div class="l">发票号</div><div class="v">${c.no}</div></div>
+      <div class="col"><div class="l">未税</div><div class="v">${money(c.sub)}</div></div>
+      <div class="col"><div class="l">GST</div><div class="v">${money(c.gst)}</div></div>
     </div>
     <div class="ft"><span>开票日期 ${c.date}</span><span class="acts"><button class="prev" data-prev>预览</button><button class="dl" data-dl>下载</button></span></div>
   </div>`;
@@ -137,7 +145,7 @@ function previewPage(title,docHtml,no){
 function previewCust(c){
   const amt=parseFloat(c.amt);
   previewPage('客户销售发票',`<div class="doc">
-    <div class="th"><div class="co">绿鲜源蔬果 Green Fresh Produce Pte Ltd<small>GST Reg No 202398765M · Blk 21 Jurong Port Rd, #03-12, Singapore 619098</small></div><div class="ti">TAX INVOICE<small>Issued by FoodMax on behalf</small></div></div>
+    <div class="th"><div class="co">绿鲜源蔬果 Green Fresh Produce Pte Ltd<small>GST Reg No 202398765M · Blk 21 Jurong Port Rd, #03-12, Singapore 619098</small></div><div class="ti">${c.type=='cn'?'CREDIT NOTE':'TAX INVOICE'}<small>${c.type=='cn'?'Against '+c.against:'第 '+c.seq+' 张 / 共 '+c.total+' 张'}</small></div></div>
     <div class="kv"><span class="k">发票号</span><span class="v">${c.no}</span></div>
     <div class="kv"><span class="k">开票日期</span><span class="v">${c.date}</span></div>
     <div class="kv"><span class="k">对应订单号</span><span class="v">${c.order}</span></div>
@@ -208,7 +216,7 @@ function render(page){
   let head='';
   if(st.seg==='cust'){
     head=`<div class="iv-tip cust">客户销售发票由<b>平台代你开具</b>（按订单，GST 9%），你<b>无需开具或上传</b>；此处仅展示<b>已开具</b>的发票，供预览与下载。</div>
-      <div class="iv-stat"><span>已开具 <b>${CUST.length}</b> 张 · 每张对应一个订单/客户</span></div>`;
+      <div class="iv-stat"><span>共 <b>${CUST.length}</b> 张（含冲抵单）· 你为开票主体 · 与 PC 端数据一致，App 只做单张下载</span></div>`;
   }else if(st.seg==='svc'){
     head=`<div class="iv-tip fm">服务费发票由平台在与你<b>结算完成后自动开具</b>并推送（就平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${SVC.length}</b> 张</span></div>`;
