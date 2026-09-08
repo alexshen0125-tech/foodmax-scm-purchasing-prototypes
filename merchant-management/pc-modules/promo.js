@@ -99,19 +99,18 @@
         <button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button>
       </div>
     </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>活动ID</th><th>活动名称</th><th>开始时间</th><th>结束时间</th><th>商品数</th><th>最低折扣</th><th>状态</th><th>创建人</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
-      ${rows.map(a=>{const st=calcStatus(a);const minD=Math.min(...a.items.map(x=>calc(x).disc));const eff=a.items.filter(x=>rowEffective(x)[0]).length;
+      <thead><tr><th>活动ID</th><th>活动名称</th><th>开始时间</th><th>结束时间</th><th>商品数</th><th>状态</th><th>创建人</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+      ${rows.map(a=>{const st=calcStatus(a);const eff=a.items.filter(x=>rowEffective(x)[0]).length;
         return `<tr>
         <td class="mono">${a.id}</td>
         <td><b>${a.name}</b>${st==4&&a.endedBy=='platform'?`<div style="font-size:11px;color:var(--r)">平台强制终止</div>`:''}</td>
         <td style="white-space:nowrap">${a.start}</td><td style="white-space:nowrap">${a.end}</td>
         <td>${a.items.length}${eff<a.items.length&&st<2?` <span class="tag t-y" style="font-size:10px" title="有 SKU 已下架/驳回，活动行不生效">${a.items.length-eff} 不生效</span>`:''}</td>
-        <td>${discTxt(minD)}</td>
         <td>${stTag(a)}</td>
         <td>${a.createdBy||'—'}</td>
         <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.updatedAt||'—'}</td>
         <td style="white-space:nowrap">${st==0?`<button class="btn btn-o btn-sm" onclick="act_promoEdit('${a.id}')">编辑</button> `:''}${st<2?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_promoStop('${a.id}')">终止</button> `:''}<button class="btn btn-link btn-sm" onclick="act_promoCopy('${a.id}')">复制</button> <button class="btn btn-link" onclick="act_promoDetail('${a.id}')">详情</button></td>
-      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">${tab=='all'?'还没有商品特价活动':'该状态下暂无活动'}</div><div class="e-s">给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</div>${tab=='all'?`<div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button></div>`:''}</div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="10"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">${tab=='all'?'还没有商品特价活动':'该状态下暂无活动'}</div><div class="e-s">给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</div>${tab=='all'?`<div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button></div>`:''}</div></td></tr>`}
       </tbody></table></div></div></div>`;
   };
   window.promoQuery=function(){const g=id=>(document.getElementById(id)||{}).value||'';DB.promoFilter={name:g('pm-name').trim(),sku:g('pm-sku').trim(),from:g('pm-from'),to:g('pm-to')};render();};

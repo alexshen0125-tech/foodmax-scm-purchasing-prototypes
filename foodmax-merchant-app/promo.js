@@ -160,11 +160,11 @@ function renderList(root){
   const rows=mine.filter(a=>TAB=='all'||stOf(a)==+TAB).sort((a,b)=>b.createdAt<a.createdAt?-1:1);
   root.innerHTML=`<div class="pm-bar"><div class="pm-pills">${[['all','全部'],['1','进行中'],['0','未开始'],['2','已结束'],['4','已终止']].map(x=>`<div class="pm-pill ${TAB==x[0]?'on':''}" data-t="${x[0]}">${x[1]}${cnt(x[0])?`<span class="c">${cnt(x[0])}</span>`:''}</div>`).join('')}</div></div>
   <div class="pm-note">差价由商家 100% 承担 · 佣金按活动价成交额计 · 提交即到点生效，无需平台审核</div>
-  <div class="pm-list">${rows.map(a=>{const s=stOf(a);const minD=Math.min(...a.items.map(x=>calc(x).disc));const ineff=a.items.filter(x=>!effective(x)[0]).length;
+  <div class="pm-list">${rows.map(a=>{const s=stOf(a);const ineff=a.items.filter(x=>!effective(x)[0]).length;
     return `<div class="pm-card" data-id="${a.id}">
       <div class="hd"><div class="nm">${a.name}<div class="id">${a.id} · ${a.items.length} 个 SKU</div></div>${stPill(a)}</div>
       <div class="tm">${a.start} ~ ${a.end}</div>
-      <div class="kpis"><div class="k"><div class="v">${a.items.length}</div><div class="l">活动 SKU</div></div><div class="k"><div class="v">${discTxt(minD)}</div><div class="l">最低折扣</div></div><div class="k"><div class="v">${lim(Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))==Infinity?null:Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))).replace(' 件/客/日','')}</div><div class="l">最低限购</div></div></div>
+      <div class="kpis"><div class="k"><div class="v">${a.items.length}</div><div class="l">活动 SKU</div></div><div class="k"><div class="v">${lim(Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))==Infinity?null:Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))).replace(' 件/客/日','')}</div><div class="l">最低限购</div></div></div>
       ${s==4&&a.endedBy=='platform'?`<div class="pm-warn"><b>平台强制终止</b>：${a.endReason||''}</div>`:''}
       ${ineff&&s<2?`<div class="pm-warn" style="background:var(--amber-soft);color:#B45309">${ineff} 个 SKU 已下架，活动行不生效</div>`:''}
       <div class="acts"><div class="a" data-a="detail">详情</div><div class="a" data-a="copy">复制</div>${s<2?`<div class="a dgr" data-a="stop">终止</div>`:''}${s==0?`<div class="a pri" data-a="edit">编辑</div>`:''}</div>
