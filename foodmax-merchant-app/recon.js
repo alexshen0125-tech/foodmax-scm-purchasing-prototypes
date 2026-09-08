@@ -10,6 +10,49 @@
 const {pushPage,popPage,toast,svg,skel}=window.FM;
 const css=document.createElement('style');
 css.textContent=`
+/* ===== 对账单汇总（移动端信息架构 v2）=====
+   原则：一屏一个主数字（预计实付）→ 两块并列的构成 → 明细按「货款算式 / 另行结算」两段折叠，默认只展开货款算式。
+   长口径不再内联占版面，收进底部说明弹层（点科目行或段头 ⓘ 打开）。行高 ≥56px、段头 ≥52px，满足触达尺寸。*/
+.rc2-hero{margin:0 16px 12px;background:#fff;border-radius:18px;padding:16px;box-shadow:var(--sh-sm);}
+.rc2-cyc{font-size:12px;color:var(--sub);}
+.rc2-lb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);margin-top:9px;}
+.rc2-big{font-size:33px;font-weight:800;color:var(--emerald-2);letter-spacing:-.02em;line-height:1.15;margin:3px 0 13px;}
+.rc2-big .c{font-size:18px;font-weight:700;margin-right:2px;opacity:.85;}
+.rc2-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.rc2-sp{background:var(--muted);border-radius:13px;padding:10px 12px;}
+.rc2-sp .k{font-size:11.5px;color:var(--sub);}
+.rc2-sp .v{font-size:16px;font-weight:700;color:#27433A;margin-top:3px;}
+.rc2-sp .v.neg{color:var(--red);}
+.rc2-meta{font-size:11.5px;color:var(--sub);margin-top:11px;line-height:1.5;}
+.rc2-q{flex:0 0 auto;width:17px;height:17px;border-radius:50%;background:var(--muted);color:var(--sub);font-size:11px;line-height:17px;text-align:center;font-weight:700;}
+.rc2-sec{margin:0 16px 12px;background:#fff;border-radius:18px;box-shadow:var(--sh-sm);overflow:hidden;}
+.rc2-h{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 16px;}
+.rc2-h .t{font-size:15px;font-weight:700;color:#27433A;}
+.rc2-h .sub{font-size:11.5px;color:var(--sub);font-weight:400;}
+.rc2-h .n{margin-left:auto;font-size:15.5px;font-weight:700;color:#27433A;}
+.rc2-h .n.neg{color:var(--red);}
+.rc2-h .cv{flex:0 0 auto;width:16px;color:var(--sub);font-size:11px;transition:transform .2s;}
+.rc2-sec.on .rc2-h .cv{transform:rotate(180deg);}
+.rc2-b{display:none;padding:2px 16px 10px;border-top:1px solid var(--line);}
+.rc2-sec.on .rc2-b{display:block;}
+.rc2-r{display:flex;align-items:flex-start;gap:9px;min-height:56px;padding:12px 0;border-bottom:1px dashed var(--line);}
+.rc2-r:last-child{border-bottom:0;}
+.rc2-r .op{flex:0 0 11px;font-size:13px;color:var(--sub);line-height:21px;}
+.rc2-r .tx{flex:1;min-width:0;}
+.rc2-r .n1{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:14.5px;font-weight:600;color:#27433A;line-height:21px;}
+.rc2-r .s1{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.45;}
+.rc2-r .s1 .tk{color:var(--red);}
+.rc2-r .s1 .bk{color:var(--emerald-2);}
+.rc2-r .amt{flex:0 0 auto;font-size:15px;font-weight:700;color:#27433A;white-space:nowrap;line-height:21px;}
+.rc2-r .amt.neg{color:var(--red);}.rc2-r .amt.zero{color:#9AA99F;font-weight:500;}
+.rc2-r.tot{border-top:1px solid var(--line);border-bottom:0;margin-top:2px;}
+.rc2-r.tot .n1,.rc2-r.tot .op{color:var(--emerald-2);font-weight:700;}
+.rc2-r.tot .amt{color:var(--emerald-2);font-size:17px;}
+.rc2-ex{max-height:72vh;overflow-y:auto;padding:4px 18px 8px;}
+.rc2-ex h4{font-size:16px;font-weight:700;color:#27433A;margin:12px 0 8px;}
+.rc2-ex p{font-size:13px;color:#41564C;line-height:1.65;margin:0 0 10px;}
+.rc2-ex .fml{background:var(--muted);border-radius:12px;padding:11px 13px;font-size:12.5px;color:#27433A;line-height:1.6;margin:0 0 10px;}
+.rc2-ex .tk{color:var(--red);font-weight:700;}.rc2-ex .bk{color:var(--emerald-2);font-weight:700;}
 .rc-sum{margin:0 16px 13px;background:#fff;border-radius:18px;padding:15px 16px;box-shadow:var(--sh-sm);}
 .rc-sum .big{font-size:28px;font-weight:700;color:var(--emerald-2);margin:2px 0 3px;}
 .rc-sum .big .c{font-size:17px;opacity:.8;margin-right:2px;}
@@ -134,14 +177,6 @@ const RECON=[
 const GST=9;
 const S=n=>'S$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const NEG=n=>n?`<span class="rc-neg">-${S(n)}</span>`:S(0);
-/* 汇总卡算式行：与 PC 汇总卡同字段同序（线上 StatementSummary：amountInclTax/platformSubsidy/merchantSubsidy/platformServiceFee/aftersaleDeduction/daySettleAmount + 另行结算三项）。
-   扣项红字带 −；平台补贴不扣、单独标签；0 置灰不隐藏；null（未接入）显 —。*/
-const rcLine=(op,lb,cap,v,opt)=>{opt=opt||{};const isNeg=op=='−',isPos=op=='+';
-  const amt=v==null?'—':(!v?S(0):(isNeg?'−':isPos?'+':'')+S(v));
-  const cls=(v==null||!v)?' zero':(isNeg?' neg':isPos?' pos':(opt.muted?' info':''));
-  const dir=opt.revDir||'take';   // take=从商家扣回（红） back=退还给商家（绿）
-  const fr=opt.fwd!=null?`<div class="fr">正向 <b>${S(opt.fwd)}</b> · 逆向 <b class="${opt.rev?(dir=='back'?'rc-back':'rc-neg'):''}">${opt.rev?'−'+S(opt.rev):'—'}</b>${opt.rev?`<span class="dirt ${dir}">${dir=='back'?'退回你':'扣回'}</span>`:''}</div>`:'';
-  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}${opt.tag2?`<span class="rc-tag ${opt.tag2Cls||''}">${opt.tag2}</span>`:''}</div>${fr}${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
 const tax=l=>(l.tax==null?GST:l.tax), mul=l=>1+tax(l)/100;
 const ln=(d,s)=>d.lines.find(l=>l.sku==s)||{price:0,name:s,unit:'件',spec:''};
 const realN=l=>l.real*l.price, realG=l=>l.real*l.price*mul(l);
@@ -189,33 +224,95 @@ let RC_EXP=EXP_SHEETS.map(x=>x.k);              // 勾选的 Sheet，默认全�
 let RC_DRAW=null;                               // 列表重绘句柄（导出完成后回列表刷新勾选态）
 const expRows=(ds,keys)=>EXP_SHEETS.filter(x=>keys.includes(x.k)).reduce((a,x)=>a+ds.reduce((b,d)=>b+x.f(d),0),0);
 
+/* 底部说明弹层：把长口径从主界面挪走，点行或段头 ⓘ 打开 */
+function rc2Sheet(title,html){
+  const m=document.createElement('div');m.className='sheet-mask';
+  m.innerHTML=`<div class="sheet"><div class="rc2-ex"><h4>${title}</h4>${html}</div><div class="si cancel">知道了</div></div>`;
+  (document.querySelector('.phone')||document.body).appendChild(m);
+  const close=()=>m.remove();
+  m.addEventListener('click',e=>{if(e.target===m||e.target.classList.contains('cancel'))close();});
+  return m;
+}
+/* 一行科目：名称 + 可选标签 + 一行副信息（正向/逆向 或 短口径）+ 右侧净额；整行可点开说明 */
+function rc2Row(o){
+  const amtCls=o.amt==null?' zero':(o.neg?' neg':(o.tot?'':''));
+  const amtTxt=o.amt==null?'—':((o.neg?'−':'')+S(Math.abs(o.amt)));
+  const sub=o.fwd!=null
+    ? `正向 ${S(o.fwd)} · <span class="${o.revDir=='back'?'bk':'tk'}">逆向 ${o.rev?'−'+S(o.rev):'—'}${o.rev?(o.revDir=='back'?' 退回你':' 扣回'):''}</span>`
+    : (o.sub||'');
+  return `<div class="rc2-r${o.tot?' tot':''}" data-ex="${o.k||''}">
+    <span class="op">${o.op||''}</span>
+    <div class="tx"><div class="n1">${o.name}${o.tag?`<span class="rc-tag ${o.tagCls||''}">${o.tag}</span>`:''}${o.k?'<span class="rc2-q">?</span>':''}</div>${sub?`<div class="s1">${sub}</div>`:''}</div>
+    <span class="amt${amtCls}">${amtTxt}</span></div>`;
+}
+/* 科目说明文案库：主界面只留一行，详情进弹层 */
+const RC2_EX={
+  paid:['实付金额（含税）','<p>客户在这笔订单里<b>实际付出去的钱</b>，已经扣掉商家补贴与平台补贴。</p><p>发生商家责任售后退款时，这部分按退货比例<span class="tk">退还给客户、从你账上扣回</span>。</p>'],
+  plat:['平台补贴','<p>平台出资的优惠。客户少付的那部分由平台补给你，所以在算式里是<b>加项</b>。</p><p>退款后该笔销售不成立，平台会按退货比例<span class="tk">收回补贴</span>，同样从你账上扣回。</p>'],
+  fee:['平台服务费','<div class="fml">平台服务费 =（客户实付 + 平台补贴）× 平台服务费率<br>费率取下单时该 SKU 的快照费率</div><p>退款对应的那部分服务费<span class="bk">平台会退还给你</span>，也就是这笔佣金少收，平台按净额向你开具服务费发票。</p>'],
+  sub:['商家补贴','<p>你自己让利的金额，客户下单时已经少付，<b>已经含在上面的实付金额里</b>，不会再扣一次，这里只作展示。</p><p>退款后这部分让利<span class="bk">不用你承担</span>，按比例退回。</p>'],
+  settle:['结算合计（货款）','<div class="fml">结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款</div><p>也可以按正逆向看：正向商家收入 − 售后扣款（逆向应付商家）。</p><p>售后扣款 = 逆向实付 + 逆向平台补贴 − 逆向平台服务费。</p>'],
+  rpl:['平台补采','<p>货送到仓清点少货时，由平台自营现货补足缺口，这部分视同你向平台采购，按<b>自营商品原定价</b>计价，不加价，含 GST 9%。</p><p>平台会为补采<b>单独开一张销售发票</b>，结算单付款后自动开具，可在「发票管理」查看。</p>'],
+  sup:['耗材订单','<p>你在耗材商城下的单，按送货单「已交付」回写当日计费，支付方式固定为结算抵扣，你没有单独付款动作。</p><p>耗材同样<b>单独开票</b>，与服务费发票互不顶替。</p>'],
+  fine:['缺货罚款','<div class="fml">缺货罚款 = 缺口件数 × S$40/件</div><p>只要清点出缺口就计罚，与是否由自营补采<b>无关</b>，两者是各自独立的单据。</p><p>罚款不是商品交易，<b>不开发票</b>。明细见「财务 › 罚款单」。</p>'],
+  net:['预计实付（本期到账）','<div class="fml">预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款</div><p>另行结算三项不并入结算合计，在结算单<b>付款环节单独抵扣</b>，同一笔不会重复扣，也不会回写对账单金额。</p>'],
+  ledger:['货款算式怎么看','<p>四个科目都分<b>正向</b>与<b>逆向</b>：正向是正常成交产生的，逆向是商家责任售后退款按「退货件数 ÷ 该 SKU 实发件数」的比例冲回的。正向 + 逆向 = 净额。</p><p>逆向对你的钱有两个方向：<br><span class="tk">实付金额、平台补贴 = 从你账上扣回</span>（货款退还客户、平台收回补贴）<br><span class="bk">平台服务费、商家补贴 = 退还给你</span>（平台少收佣金、让利不用你承担）</p><p>逐笔逆向记录见对账单详情的「售后明细」页签。</p>'],
+  sep:['另行结算怎么抵扣','<p>平台补采、耗材订单、缺货罚款三项<b>不计入结算合计（货款）</b>，而是在结算单付款时从货款里单独抵扣，同一笔不会重复扣。</p><div class="fml">预计实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款</div><p><b>开票</b>：平台补采、耗材订单由平台各自单独向你开具销售发票，结算单付款后自动开，在「发票管理」查看，与服务费发票互不顶替；缺货罚款不是商品交易，不开发票。</p>'],
+  cycle:['结算周期与预计实付','<p>结算周期默认<b>周一至周日</b>，每个周期出一张结算单，对账单只按周期查看。</p><p>周期结束后，这里的「预计实付」就是该周结算单的实付净额。周期进行中时它是截至今天的累计值。</p>'],
+};
+let RC2_OPEN={ledger:true,sep:false};
+/* 绑定：段头折叠 + 行/ⓘ 打开说明 */
+function rc2Bind(p){
+  p.querySelectorAll('.rc2-sec').forEach(sec=>{
+    const h=sec.querySelector('.rc2-h');if(!h)return;
+    h.onclick=e=>{if(e.target.closest('.rc2-q'))return;const k=sec.dataset.k;RC2_OPEN[k]=!RC2_OPEN[k];sec.classList.toggle('on',RC2_OPEN[k]);};
+  });
+  p.querySelectorAll('[data-ex]').forEach(el=>{
+    const k=el.dataset.ex;if(!k||!RC2_EX[k])return;
+    el.onclick=e=>{e.stopPropagation();rc2Sheet(RC2_EX[k][0],RC2_EX[k][1]);};
+  });
+}
+
 function openRecon(){
   const rows=[...RECON].sort((a,b)=>b.date.localeCompare(a.date));
   const T=f=>rows.reduce((a,d)=>a+f(d),0);
+  const net=T(dSettle)-T(dRpl)-T(dSup), sep=T(dRpl)+T(dSup);
   pushPage({title:'对账单',body:`
-    <div class="rc-sum">
-      <div class="lbl">本结算周期 06-29（周一）– 07-05（周日）· 预计实付（本期到账）</div>
-      <div class="big disp"><span class="c">S$</span>${(T(dSettle)-T(dRpl)-T(dSup)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-      <div class="lbl" style="color:#27433A">= 结算合计（货款）<b>${S(T(dSettle))}</b> − 另行结算 <b class="rc-neg">${S(T(dRpl)+T(dSup))}</b></div>
-      <div class="lbl">截至 ${rows.map(r=>r.date).sort().slice(-1)[0]||'—'} · ${rows.length} 张对账单 · 数据源：财务结算单明细</div>
-      <div class="tip"><b>口径</b>：预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款；结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期为<b>周一至周日</b>，只按周期查看；周期结束后本数即该周结算单的实付净额。</div>
-      <div class="tt">货款算式<span>列表各单同列累计</span></div>
-      ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴；退款时<b>退还给客户、从你账上扣回</b>',T(dPaidG)-T(dRevPaid),{fwd:T(dPaidG),rev:T(dRevPaid),revDir:'take'})}
-      ${rcLine('+','平台补贴','平台出资的优惠；退款后该笔销售不成立，平台<b>按退货比例收回</b>',T(dPlat)-T(dRevPlat),{fwd:T(dPlat),rev:T(dRevPlat),revDir:'take'})}
-      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；退款对应服务费<b>平台退还给你</b>，按净额开票',T(dFee)-T(dRevFee),{fwd:T(dFee),rev:T(dRevFee),revDir:'back',tag:'服务费发票',tagCls:'inv'})}
-      ${rcLine('','商家补贴','商家让利，已从实付金额中扣除，不重复扣；退款后这部分让利<b>不用你承担</b>，按比例退回',T(dSub)-T(dRevSub),{muted:true,fwd:T(dSub),rev:T(dRevSub),revDir:'back',tag:'已扣'})}
-      ${rcLine('=','结算合计（货款）',`正向商家收入 ${S(T(dInc))} − 售后扣款 ${S(T(dRevInc))} = <b>${S(T(dSettle))}</b>`,T(dSettle),{fwd:T(dInc),rev:T(dRevInc),revDir:'take',total:true})}
-      <div class="rc-note" style="margin:8px 0 0;padding-top:8px;border-top:1px dashed var(--line)"><b>逆向说明</b>：商家责任售后退款时，四项按<b>退货件数 ÷ 该 SKU 实发件数</b>的比例同步冲回，正向 + 逆向 = 净额。方向两种：<b class="rc-neg">实付金额、平台补贴＝从你账上扣回</b>；<b style="color:var(--emerald-2)">平台服务费、商家补贴＝退还给你</b>。合计行逆向列即<b>售后扣款（逆向应付商家）</b>= 逆向实付 ${S(T(dRevPaid))} + 逆向平台补贴 ${S(T(dRevPlat))} − 逆向平台服务费 ${S(T(dRevFee))}。逐笔见「售后明细」页签。</div>
-      <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
-      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
-      ${rcLine('','结算合计（货款）','上方算式结果',T(dSettle))}
-      ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',T(dRpl),{tag:'单独开票',tagCls:'inv'})}
-      ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup),{tag:'单独开票',tagCls:'inv'})}
-      ${rcLine('−','缺货罚款','缺口件数 × S$40/件，缺货即罚、与是否补采无关；暂未接入，以「财务 › 罚款单」为准',null,{tag:'不开发票',tagCls:'noinv'})}
-      ${rcLine('=','预计实付（本期到账）',`${S(T(dSettle))} − ${S(T(dRpl))} − ${S(T(dSup))} − 罚款（未接入按 0）= <b>${S(T(dSettle)-T(dRpl)-T(dSup))}</b>`,T(dSettle)-T(dRpl)-T(dSup),{total:true})}
+    <div class="rc2-hero">
+      <div class="rc2-cyc">本结算周期 · 06-29 – 07-05（周一–周日）</div>
+      <div class="rc2-lb">预计实付（本期到账）<span class="rc2-q" data-ex="cycle">?</span></div>
+      <div class="rc2-big"><span class="c">S$</span>${net.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="rc2-split">
+        <div class="rc2-sp"><div class="k">结算合计（货款）</div><div class="v">${S(T(dSettle))}</div></div>
+        <div class="rc2-sp"><div class="k">另行结算抵扣</div><div class="v neg">−${S(sep)}</div></div>
+      </div>
+      <div class="rc2-meta">截至 ${rows.map(r=>r.date).sort().slice(-1)[0]||'—'} · ${rows.length} 张对账单 · 数据源：财务结算单明细</div>
     </div>
+
+    <div class="rc2-sec${RC2_OPEN.ledger?' on':''}" data-k="ledger">
+      <div class="rc2-h"><span class="t">货款算式</span><span class="rc2-q" data-ex="ledger">?</span><span class="n">${S(T(dSettle))}</span><span class="cv">▾</span></div>
+      <div class="rc2-b">
+        ${rc2Row({k:'paid',name:'实付金额（含税）',amt:T(dPaidG)-T(dRevPaid),fwd:T(dPaidG),rev:T(dRevPaid),revDir:'take'})}
+        ${rc2Row({k:'plat',op:'+',name:'平台补贴',amt:T(dPlat)-T(dRevPlat),fwd:T(dPlat),rev:T(dRevPlat),revDir:'take'})}
+        ${rc2Row({k:'fee',op:'−',name:'平台服务费',amt:T(dFee)-T(dRevFee),neg:true,fwd:T(dFee),rev:T(dRevFee),revDir:'back',tag:'服务费发票',tagCls:'inv'})}
+        ${rc2Row({k:'sub',name:'商家补贴',amt:T(dSub)-T(dRevSub),fwd:T(dSub),rev:T(dRevSub),revDir:'back',tag:'已扣'})}
+        ${rc2Row({k:'settle',op:'=',name:'结算合计（货款）',amt:T(dSettle),fwd:T(dInc),rev:T(dRevInc),revDir:'take',tot:true})}
+      </div>
+    </div>
+
+    <div class="rc2-sec${RC2_OPEN.sep?' on':''}" data-k="sep">
+      <div class="rc2-h"><span class="t">另行结算</span><span class="rc2-q" data-ex="sep">?</span><span class="n neg">−${S(sep)}</span><span class="cv">▾</span></div>
+      <div class="rc2-b">
+        ${rc2Row({k:'rpl',op:'−',name:'平台补采',amt:T(dRpl),neg:true,sub:'到仓少货由自营补足',tag:'单独开票',tagCls:'inv'})}
+        ${rc2Row({k:'sup',op:'−',name:'耗材订单',amt:T(dSup),neg:true,sub:'送货单「已交付」当日计费',tag:'单独开票',tagCls:'inv'})}
+        ${rc2Row({k:'fine',op:'−',name:'缺货罚款',amt:null,sub:'缺口件数 × S$40/件',tag:'不开发票',tagCls:'noinv'})}
+        ${rc2Row({k:'net',op:'=',name:'预计实付（本期到账）',amt:net,tot:true,sub:`${S(T(dSettle))} − ${S(sep)} = ${S(net)}`})}
+      </div>
+    </div>
+
     <div id="rcl">${skel(3)}</div>`,
     mount:(p)=>{
+      rc2Bind(p);
       const draw=()=>{
         const box=p.querySelector('#rcl');if(!box)return;
         RC_SEL=RC_SEL.filter(no=>rows.some(r=>r.no==no));
