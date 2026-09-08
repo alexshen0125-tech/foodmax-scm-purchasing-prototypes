@@ -333,9 +333,12 @@ label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
 .rc-ledger .tt,.rc-side .tt{font-size:12px;font-weight:600;color:var(--tp);margin-bottom:6px}
 .rc-ledger .tt span,.rc-side .tt span{font-weight:400;color:var(--ts);margin-left:6px}
 .rc-ln{display:grid;grid-template-columns:16px 1fr auto;align-items:baseline;gap:0 8px;padding:6px 0;border-bottom:1px dashed var(--bd2)}
-.rc-ln.cols3{grid-template-columns:16px minmax(150px,1fr) 86px 96px 92px}
+.rc-ln.cols3{grid-template-columns:16px minmax(146px,1fr) 84px 108px 90px}
 .rc-ln.cols3 .amt{text-align:right}
 .rc-ln.cols3 .amt.net{font-weight:700}
+.rc-ln .amt.rv em{display:block;font-style:normal;font-size:10px;font-weight:400;line-height:1.2;margin-top:1px}
+.rc-ln .amt.back{color:var(--g)}
+.rc-ln.hd .amt em{display:block;font-style:normal;font-size:9.5px;font-weight:400;margin-top:1px}
 .rc-ln.hd{border-bottom:1px solid var(--bd);padding-bottom:5px}
 .rc-ln.hd .lb,.rc-ln.hd .amt{font-size:11px;color:var(--ts);font-weight:500}
 .rc-ln:last-child{border-bottom:0}
@@ -3177,11 +3180,12 @@ const rcPct=v=>(v||0).toFixed(1)+'%';
 /* 三列算式行：正向 / 逆向 / 净额。逆向为 0 时显「—」，不留空 */
 function rcLine3(op,lb,cap,fwd,rev,net,opt){
   opt=opt||{};
-  const revTxt=rev?`−${money(rev)}`:'—';
+  const dir=opt.revDir||'take';   // take=从商家扣回（红） back=退还给商家（绿）
+  const revTxt=rev?`−${money(rev)}<em>${dir=='back'?'退回你':'扣回'}</em>`:'—';
   return `<div class="rc-ln cols3${opt.total?' total':''}"><span class="op">${op}</span>`
     +`<div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}${opt.tag2?`<span class="rc-tag ${opt.tag2Cls||''}">${opt.tag2}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div>`
     +`<span class="amt${fwd?'':' zero'}">${money(fwd)}</span>`
-    +`<span class="amt${rev?' neg':' zero'}">${revTxt}</span>`
+    +`<span class="amt rv ${rev?(dir=='back'?'back':'neg'):'zero'}">${revTxt}</span>`
     +`<span class="amt net${net?'':' zero'}">${money(net)}</span></div>`;
 }
 function rcLine(op,lb,cap,v,opt){
@@ -3207,13 +3211,13 @@ function rcSumBody(v,opts){
     </div>`}
     <div class="rc-ledger">
       <div class="tt">货款算式<span>${opts.ledgerSub||'列表各单同列累计'} · 正向 / 逆向 / 净额</span></div>
-      <div class="rc-ln cols3 hd"><span class="op"></span><div class="lb">科目</div><span class="amt">正向</span><span class="amt">逆向（售后冲回）</span><span class="amt net">净额</span></div>
-      ${rcLine3('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴；退款按含税售价冲回',v.paidG,v.revPaid,v.paidG-v.revPaid)}
-      ${rcLine3('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家；退款时按退货比例冲回',v.plat,v.revPlat,v.plat-v.revPlat)}
-      ${rcLine3('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；退款对应的服务费同步退还，按净额开具服务费发票',v.fee,v.revFee,v.fee-v.revFee,{tag:'服务费发票',tagCls:'inv'})}
-      ${rcLine3('','商家补贴','商家让利，客户已少付、已从实付金额中扣除，不重复扣；退款时按退货比例冲回',v.sub,v.revSub,v.sub-v.revSub,{tag:'已扣'})}
-      ${rcLine3('=',opts.settleLabel||'结算合计（货款）',`正向商家收入 ${money(v.incFwd)} − 售后扣款 ${money(v.aft)} = <b>${money(v.settle)}</b>；逆向列即<b>售后扣款（逆向应付商家）</b> = 逆向实付 ${money(v.revPaid)} + 逆向平台补贴 ${money(v.revPlat)} − 逆向平台服务费 ${money(v.revFee)}`,v.incFwd,v.aft,v.settle,{total:true})}
-      <div style="font-size:11px;color:var(--ts);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd2)"><b>逆向说明</b>：发生商家责任售后退款时，客户实付、平台补贴、商家补贴、平台服务费<b>按退货件数占实发件数的比例同步冲回</b>；四项的<b>正向合计 + 逆向合计 = 净额</b>。逐笔逆向行见详情「售后明细」页签。</div>
+      <div class="rc-ln cols3 hd"><span class="op"></span><div class="lb">科目</div><span class="amt">正向</span><span class="amt">逆向（售后冲回）<em style="color:var(--tt)">红=扣回 / 绿=退回你</em></span><span class="amt net">净额</span></div>
+      ${rcLine3('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴；退款时这部分<b>退还给客户、从你账上扣回</b>',v.paidG,v.revPaid,v.paidG-v.revPaid,{revDir:'take'})}
+      ${rcLine3('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家；退款后该笔销售不成立，平台<b>按退货比例收回</b>补贴',v.plat,v.revPlat,v.plat-v.revPlat,{revDir:'take'})}
+      ${rcLine3('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；退款对应的服务费<b>平台退还给你</b>，少收这部分佣金，按净额开具服务费发票',v.fee,v.revFee,v.fee-v.revFee,{revDir:'back',tag:'服务费发票',tagCls:'inv'})}
+      ${rcLine3('','商家补贴','商家让利，客户已少付、已从实付金额中扣除，不重复扣；退款后这部分让利<b>不用你承担</b>，按比例退回',v.sub,v.revSub,v.sub-v.revSub,{revDir:'back',tag:'已扣'})}
+      ${rcLine3('=',opts.settleLabel||'结算合计（货款）',`正向商家收入 ${money(v.incFwd)} − 售后扣款 ${money(v.aft)} = <b>${money(v.settle)}</b>；逆向列即<b>售后扣款（逆向应付商家）</b> = 逆向实付 ${money(v.revPaid)} + 逆向平台补贴 ${money(v.revPlat)} − 逆向平台服务费 ${money(v.revFee)}`,v.incFwd,v.aft,v.settle,{revDir:'take',total:true})}
+      <div style="font-size:11px;color:var(--ts);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd2)"><b>逆向说明</b>：商家责任售后退款时，四项按<b>退货件数 ÷ 该 SKU 实发件数</b>的比例同步冲回，<b>正向 + 逆向 = 净额</b>。方向有两种：<span style="color:var(--r)">实付金额、平台补贴＝从你账上扣回</span>（货款退还客户、平台收回补贴）；<span style="color:var(--g)">平台服务费、商家补贴＝退还给你</span>（平台少收这部分佣金、让利不用你承担）。逐笔逆向行见详情「售后明细」页签。</div>
     </div>
     <div class="rc-side">
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
