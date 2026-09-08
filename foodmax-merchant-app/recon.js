@@ -170,10 +170,11 @@ function openRecon(){
   const T=f=>rows.reduce((a,d)=>a+f(d),0);
   pushPage({title:'对账单',body:`
     <div class="rc-sum">
-      <div class="lbl">本结算周期 06-29（周一）– 07-05（周日）· 结算合计（货款）</div>
-      <div class="big disp"><span class="c">S$</span>${T(dSettle).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="lbl">本结算周期 06-29（周一）– 07-05（周日）· 预计实付（本期到账）</div>
+      <div class="big disp"><span class="c">S$</span>${(T(dSettle)-T(dRpl)-T(dSup)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="lbl" style="color:#27433A">= 结算合计（货款）<b>${S(T(dSettle))}</b> − 另行结算 <b class="rc-neg">${S(T(dRpl)+T(dSup))}</b></div>
       <div class="lbl">截至 ${rows.map(r=>r.date).sort().slice(-1)[0]||'—'} · ${rows.length} 张对账单 · 数据源：财务结算单明细</div>
-      <div class="tip"><b>口径</b>：结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期默认<b>周一至周日</b>，周期结束后本数即该周结算单的货款净额（另行结算三项单独抵扣）；自定义跨周期区间只是累计值，不对应任一张结算单。</div>
+      <div class="tip"><b>口径</b>：预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款；结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期默认<b>周一至周日</b>，周期结束后本数即该周结算单的实付净额；自定义跨周期区间只是累计值，不对应任一张结算单。</div>
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
       ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',T(dPaidG))}
       ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',T(dPlat))}
@@ -181,11 +182,13 @@ function openRecon(){
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
       ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',T(dSub),{muted:true,tag:'已扣'})}
       ${rcLine('=','结算合计（货款）',`实付金额 ${S(T(dPaidG))} + 平台补贴 ${S(T(dPlat))} − 平台服务费 ${S(T(dFee))} − 售后扣款 ${S(T(dAftG))} = <b>${S(T(dSettle))}</b>`,T(dSettle),{total:true})}
-      <div class="tt">另行结算<span>不从上方货款扣</span></div>
-      <div class="warn">以下三项不计入结算合计，在结算单付款时单独抵扣：实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款。同一笔不重复扣。</div>
+      <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
+      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。</div>
+      ${rcLine('','结算合计（货款）','上方算式结果',T(dSettle))}
       ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计',T(dRpl))}
       ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup))}
-      ${rcLine('−','缺货罚款','缺口件数 × S$40/件，缺货即罚、与是否补采无关；以「财务 › 罚款单」为准',null)}
+      ${rcLine('−','缺货罚款','缺口件数 × S$40/件，缺货即罚、与是否补采无关；暂未接入，以「财务 › 罚款单」为准',null)}
+      ${rcLine('=','预计实付（本期到账）',`${S(T(dSettle))} − ${S(T(dRpl))} − ${S(T(dSup))} − 罚款（未接入按 0）= <b>${S(T(dSettle)-T(dRpl)-T(dSup))}</b>`,T(dSettle)-T(dRpl)-T(dSup),{total:true})}
     </div>
     <div id="rcl">${skel(3)}</div>`,
     mount:(p)=>{

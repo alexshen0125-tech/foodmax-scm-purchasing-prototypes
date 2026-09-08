@@ -3150,13 +3150,15 @@ function rcSumCard(rows,T){
   const cyc={from:'2026-06-29',to:'2026-07-05'};
   const fineUnit=DB.replCfg?DB.replCfg.finePerUnit:40;
   const platSub=T(dPlat);   // 平台补贴：原型数据暂无出资拆分，按 0 展示（线上字段 platformSubsidy）
+  const sep=T(dRpl)+T(dSup)+T(dFine), net=T(dSettle)-sep;   // 预计实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款（付款层轧差，前端派生展示，不回写对账单金额）
   return `<div class="card"><div class="card-bd" style="padding:18px 20px"><div class="rc-sum">
     <div class="rc-hero">
-      <div class="k">结算合计（货款）</div>
-      <div class="big"><span class="c">S$</span>${money(T(dSettle)).replace('S$','')}</div>
-      <div class="sub">本结算周期 ${cyc.from}（周一）– ${cyc.to}（周日）· 截至 ${last} · ${rows.length} 张对账单</div>
+      <div class="k">预计实付（本期到账）</div>
+      <div class="big"><span class="c">S$</span>${money(net).replace('S$','')}</div>
+      <div class="sub" style="font-size:12.5px;color:var(--tp)">= 结算合计（货款）<b>${money(T(dSettle))}</b> − 另行结算三项 <b style="color:var(--r)">${money(sep)}</b></div>
+      <div class="sub" style="margin-top:4px">本结算周期 ${cyc.from}（周一）– ${cyc.to}（周日）· 截至 ${last} · ${rows.length} 张对账单</div>
       <div class="sub" style="margin-top:4px">数据源：财务结算单明细 · <a href="javascript:nav('m-settle')" style="color:var(--g);font-weight:500">查看本期结算单 ›</a></div>
-      <div class="rc-tip"><b>口径</b>：结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期默认<b>周一至周日</b>，周期结束后本数即该周结算单的货款净额（另行结算三项单独抵扣）；自定义跨周期区间只是累计值，不对应任一张结算单。</div>
+      <div class="rc-tip"><b>口径</b>：预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款；结算合计 = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。<br>结算周期默认<b>周一至周日</b>，周期结束后本数即该周结算单的实付净额；自定义跨周期区间只是累计值，不对应任一张结算单。</div>
     </div>
     <div class="rc-ledger">
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
@@ -3168,11 +3170,13 @@ function rcSumCard(rows,T){
       ${rcLine('=','结算合计（货款）',`实付金额 ${money(T(dPaidG))} + 平台补贴 ${money(platSub)} − 平台服务费 ${money(T(dFee))} − 售后扣款 ${money(T(dAftG))} = <b>${money(T(dSettle))}</b>`,T(dSettle),{total:true})}
     </div>
     <div class="rc-side">
-      <div class="tt">另行结算<span>不从上方货款扣</span></div>
-      <div class="warn">以下三项不计入结算合计，在结算单付款时单独抵扣：实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款。同一笔不重复扣。</div>
+      <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
+      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。</div>
+      ${rcLine('','结算合计（货款）','左侧算式结果',T(dSettle))}
       ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计',T(dRpl))}
       ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup))}
       ${rcLine('−','缺货罚款',`缺口件数 × ${money(fineUnit)}/件，缺货即罚、与是否补采无关`,T(dFine))}
+      ${rcLine('=','预计实付（本期到账）',`${money(T(dSettle))} − ${money(T(dRpl))} − ${money(T(dSup))} − ${money(T(dFine))} = <b>${money(net)}</b>`,net,{total:true})}
     </div>
   </div></div></div>`;
 }
