@@ -14,6 +14,7 @@ const CATS=[
   {k:'CATALOG',     n:'商品与库存'},
   {k:'FINANCE',     n:'结算与票据'},
   {k:'COMPLIANCE',  n:'合规与账号'},
+  {k:'MARKETING',   n:'营销活动'},
   {k:'ANNOUNCEMENT',n:'公告与培训'},
 ];
 const LV={L1:['L1 必达','t-r'],L2:['L2 待办','t-y'],L3:['L3 告知','t-gr'],L4:['L4 公告','t-g']};
@@ -98,6 +99,14 @@ function seed(){return [
   t:'货款已到账 S$9,820.00',b:'本期货款已打款成功，请注意查收。',
   rel:[['结算单','ST20260811A'],['到账银行','DBS ****4192'],['流水号','TXN20260818K']],go:['去看结算单','m-settle'],
   ch:[['站内信','已送达','16:40'],['App Push','已送达','16:40'],['邮件','已送达','16:42']]},
+ {id:'M020',cat:'MARKETING',ev:'ENROLL_REJECTED',lv:'L2',read:0,tm:'2026-08-21 11:10',
+  t:'报名被驳回 · 开学季食堂采购周',b:'报名单 EN0910 终审驳回：冰鲜三文鱼不属于本会场主推品类（叶菜/肉禽），且承诺库存偏低；建议改报海鲜类会场。报名截止前可修改并重报。',
+  rel:[['报名单','EN0910'],['会场','CP2608'],['审核人','招商运营·Li']],go:['去看报名单','m-enroll'],
+  ch:[['站内信','已送达','11:10'],['App Push','已送达','11:10']]},
+ {id:'M021',cat:'MARKETING',ev:'ENROLL_APPROVED',lv:'L2',read:1,tm:'2026-08-20 09:30',
+  t:'报名已通过 · 开学季食堂采购周',b:'报名单 EN0915 终审通过（3 个 SKU 通过 / 1 个剔除）。活动将于活动开始时间自动生效，活动期内请保证承诺库存。',
+  rel:[['报名单','EN0915'],['活动实例','ACT-CP2608-M0815'],['出资','共担 · 平台 50%']],go:['去看报名单','m-enroll'],
+  ch:[['站内信','已送达','09:30'],['App Push','已送达','09:30']]},
  {id:'M019',cat:'ANNOUNCEMENT',ev:'PLATFORM_ANNOUNCEMENT',lv:'L4',read:1,tm:'2026-08-15 10:00',
   t:'国庆假期配送与揽收安排',b:'08-09 国庆当日仓库正常收货，配送时段调整为 06:00~12:00，请提前安排备货与送货预约。',
   rel:[['生效日','2026-08-09']],go:['',''],
@@ -117,9 +126,14 @@ function ensureMsgs(){
   if(DB.msgLv===undefined)DB.msgLv='';
   if(DB.msgUnreadOnly===undefined)DB.msgUnreadOnly=false;
   if(!DB.msgPref)DB.msgPref={FULFILLMENT:{push:1,mail:0},DISPUTE:{push:1,mail:0},CATALOG:{push:1,mail:0},
-    FINANCE:{push:1,mail:1},COMPLIANCE:{push:1,mail:1},ANNOUNCEMENT:{push:0,mail:0},quiet:1};
+    FINANCE:{push:1,mail:1},COMPLIANCE:{push:1,mail:1},MARKETING:{push:1,mail:0},ANNOUNCEMENT:{push:0,mail:0},quiet:1};
 }
 /* 侧栏与顶栏未读角标同源 */
+/* 报名结果通知（由 enroll.js 终审结果触发）：事件 ENROLL_APPROVED / ENROLL_REJECTED，L2 待办，站内信 + App Push */
+window.enrollNotify=function(e,c){ensureMsgs();const ok=e.status=='approved';const tm=ts();
+  DB.msgs.unshift({id:'M'+(100+DB.msgs.length),cat:'MARKETING',ev:ok?'ENROLL_APPROVED':'ENROLL_REJECTED',lv:'L2',read:0,tm,
+    t:(ok?'报名已通过 · ':'报名被驳回 · ')+c.name,b:ok?`报名单 ${e.id} 终审通过${e.audit&&e.audit.note?'（'+e.audit.note+'）':''}。活动将于 ${c.actStart} 自动生效，活动期内请保证承诺库存。`:`报名单 ${e.id} 终审驳回：${e.audit?e.audit.note:''}。报名截止前可修改并重报。`,
+    rel:[['报名单',e.id],['会场',c.id]],go:['去看报名单','m-enroll'],ch:[['站内信','已送达',tm.slice(11)],['App Push','已送达',tm.slice(11)]]});};
 window.msgUnread=function(){ensureMsgs();return DB.msgs.filter(m=>!m.read).length;};
 const badgeTxt=n=>n>99?'99+':''+n;
 

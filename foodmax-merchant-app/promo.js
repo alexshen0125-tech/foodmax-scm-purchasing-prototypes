@@ -116,6 +116,7 @@ const SKUS=[
   {id:'SKU0125-10',n:'鲜丰 · 豆浆 1L',spec:'12瓶/箱',price:31.00,stock:40},
 ];
 const sku=id=>SKUS.find(s=>s.id==id);
+window.FM_PROMO_SKUS=SKUS;   // 供 enroll.js（平台活动报名）复用同店 SKU 镜像
 
 const pad=n=>(''+n).padStart(2,'0');
 const fmt=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -303,15 +304,17 @@ function openPick(ED,after){const range={start:ED.start,end:ED.end};let q='';con
 function openMkt(){
   pushPage({title:'营销活动',body:`<div class="pm-dl" style="margin-top:14px;padding:4px 15px">
     <div class="r" id="mk-promo" style="min-height:64px;cursor:pointer"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:13px;background:var(--red-soft);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--red);fill:none;stroke-width:2"><path d="M20 12l-8 8-9-9V3h8l9 9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg></div><div><div style="font-size:15px;font-weight:700">商品特价</div><div style="font-size:12px;color:var(--sub);margin-top:2px">给本店 SKU 设活动价 · 差价商家 100% 承担</div></div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--emerald-2);font-weight:700">${ACTS.filter(a=>a.fund==1&&stOf(a)==1).length} 进行中</span><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#94A3B8;fill:none;stroke-width:2"><path d="M9 6l6 6-6 6"/></svg></div></div>
+    <div class="r" id="mk-enroll" style="min-height:64px;cursor:pointer"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:13px;background:#E1EBFF;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#2563EB;fill:none;stroke-width:2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 11-5.8-1.6"/></svg></div><div><div style="font-size:15px;font-weight:700">平台活动</div><div style="font-size:12px;color:var(--sub);margin-top:2px">报名平台招商会场 · 出资方式以会场为准</div></div></div><div style="display:flex;align-items:center;gap:8px">${window.FM_ENROLL&&window.FM_ENROLL.todo()?`<span style="font-size:12px;color:#B45309;font-weight:700">${window.FM_ENROLL.todo()} 待处理</span>`:window.FM_ENROLL?`<span style="font-size:12px;color:var(--emerald-2);font-weight:700">${window.FM_ENROLL.liveCount()} 进行中</span>`:''}<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#94A3B8;fill:none;stroke-width:2"><path d="M9 6l6 6-6 6"/></svg></div></div>
   </div>
-  <div class="pm-hint" style="padding:12px 16px">更多玩法（满减 / 满赠 / 优惠券）后续开放。</div>`,
-    mount:(p)=>{p.querySelector('#mk-promo').onclick=openPromo;}});
+  <div class="pm-hint" style="padding:12px 16px">更多玩法（满赠 / 优惠券）后续开放。</div>`,
+    mount:(p)=>{p.querySelector('#mk-promo').onclick=openPromo;p.querySelector('#mk-enroll').onclick=()=>window.FM_MOD.enroll&&window.FM_MOD.enroll();}});
 }
 /* F8 商品列表联动（供 goods.js 调用）：按 商品名 + 规格 匹配本模块 SKU */
 const skuByNS=(n,spec)=>SKUS.find(s=>s.n===n&&s.spec===spec);
 const promoOf=(id)=>ACTS.find(a=>a.fund==1&&live(a)&&a.items.some(x=>x.skuId==id))||null;
 window.FM_PROMO={
   badge:(n,spec)=>{const s=skuByNS(n,spec);const a=s&&promoOf(s.id);if(!a)return '';const it=a.items.find(x=>x.skuId==s.id);const on=stOf(a)==1;return ` <span style="display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px;background:${on?'var(--red-soft)':'#E1EBFF'};color:${on?'var(--red)':'#2563EB'};vertical-align:middle">${on?'特价中':'特价待开始'} ${money(it.price)}</span>`;},
+  occupied:(skuId,range)=>{const a=ACTS.find(a=>live(a)&&a.items.some(x=>x.skuId==skuId)&&overlap(a,range));return a?(a.fund==0?'平台活动':`特价活动《${a.name}》`):'';},   // 供 enroll.js 撞期校验
   guard:(n,spec,newPrice)=>{const s=skuByNS(n,spec);const a=s&&promoOf(s.id);if(!a)return true;const it=a.items.find(x=>x.skuId==s.id);if(newPrice<=it.price){toast(`该 SKU 在特价活动《${a.name}》中，活动价 ${money(it.price)}；新售价须高于活动价，或先终止活动`);return false;}it.orig=newPrice;s.price=newPrice;return true;},
 };
 window.FM_MOD=window.FM_MOD||{};
