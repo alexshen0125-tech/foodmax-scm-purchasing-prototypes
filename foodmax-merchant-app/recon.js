@@ -27,6 +27,8 @@ css.textContent=`
 .rc-ln .fr{font-size:11px;color:var(--sub);margin-top:2px;}
 .rc-ln .fr b{color:#27433A;font-weight:700;}
 .rc-ln .fr b.rc-back{color:var(--emerald-2);}
+.rc-ln .lb{font-size:14.5px;font-weight:600;}
+.rc-ln .cap{font-size:11.5px;}
 .rc-ln .fr .dirt{margin-left:4px;padding:0 5px;border-radius:5px;font-size:10px;line-height:15px;}
 .rc-ln .fr .dirt.back{background:var(--mint-soft);color:var(--emerald-2);}
 .rc-ln .fr .dirt.take{background:var(--red-soft);color:var(--red);}
