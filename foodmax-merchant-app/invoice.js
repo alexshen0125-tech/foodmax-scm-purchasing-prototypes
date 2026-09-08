@@ -61,17 +61,17 @@ document.head.appendChild(css);
 // ---- 数据(SG 本地化；金额 S$) ----
 // ① 客户开票·已开具(按订单，一单对一个客户；与 PC 端 DB.invoices 对齐)
 const CUST=[
-  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'9820.00',no:'INV-2026-6600',date:'2026-07-01',st:'credited',
+  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'9820.00',no:'INV-SG-2026-006600',date:'2026-07-01',st:'credited',
     cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
     goods:9050.00,disc:60.83,ship:20.00,sub:9009.17,gst:810.83,bcrs:0,seq:1,total:2},
-  {order:'#SG20260629012',client:'食为天餐厅',amt:'7360.00',no:'INV-2026-6601',date:'2026-07-01',
+  {order:'#SG20260629012',client:'食为天餐厅',amt:'7360.00',no:'INV-SG-2026-006601',date:'2026-07-01',
     cliAddr:'18 Boon Lay Way, #01-98, Singapore 609966',cliGst:'',
     goods:6800.00,disc:47.71,ship:0,sub:6752.29,gst:607.71,bcrs:0,seq:1,total:1},
-  {order:'#SG20260630021',client:'丰盛轩',amt:'6120.00',no:'INV-2026-6602',date:'2026-07-01',
+  {order:'#SG20260630021',client:'丰盛轩',amt:'6120.00',no:'INV-SG-2026-006602',date:'2026-07-01',
     cliAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',cliGst:'201033445B',
     goods:5650.00,disc:35.32,ship:0,sub:5614.68,gst:505.32,bcrs:0,seq:2,total:3},
-  // 冲抵 Credit Note（开票后售后退款，冲 INV-2026-6600；与 PC/运营端 CN-2026-0033 同源）
-  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'-741.20',no:'CN-2026-0033',date:'2026-07-04',type:'cn',against:'INV-2026-6600',
+  // 冲抵 Credit Note（开票后售后退款，冲 INV-SG-2026-006600；与 PC/运营端 CN-SG-2026-000033 同源）
+  {order:'#SG20260628007',client:'海底捞（新加坡）',amt:'-741.20',no:'CN-SG-2026-000033',date:'2026-07-04',type:'cn',against:'INV-SG-2026-006600',
     cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
     goods:-680.00,disc:0,ship:0,sub:-680.00,gst:-61.20,bcrs:0,seq:1,total:2},
 ];
