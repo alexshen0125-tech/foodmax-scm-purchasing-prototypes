@@ -90,10 +90,10 @@ document.head.appendChild(css);
 const RECON=[
   {date:'2026-07-01',no:'SH20260701001',wh:'裕廊DC',
    lines:[
-    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:20,real:18,sub:2.00,rate:6,byOrder:[['#SG20260701001',12,11],['#SG20260701004',8,7]]},
+    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:20,real:18,sub:2.00,platSub:6.40,rate:6,byOrder:[['#SG20260701001',12,11],['#SG20260701004',8,7]]},
     {sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',price:2.60,due:10,real:10,sub:0,rate:6,byOrder:[['#SG20260701001',6,6],['#SG20260701004',4,4]]},
-    {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',price:3.20,due:30,real:28,sub:1.50,rate:5,byOrder:[['#SG20260701002',18,17],['#SG20260701004',12,11]]},
-    {sku:'SKU8806',name:'土豆',spec:'2kg/件',unit:'件',price:4.50,due:16,real:16,sub:0,rate:5,byOrder:[['#SG20260701002',10,10],['#SG20260701001',6,6]]},
+    {sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',price:3.20,due:30,real:28,sub:1.50,platSub:4.20,rate:5,byOrder:[['#SG20260701002',18,17],['#SG20260701004',12,11]]},
+    {sku:'SKU8806',name:'土豆',spec:'2kg/件',unit:'件',price:4.50,due:16,real:16,sub:0,platSub:2.40,rate:5,byOrder:[['#SG20260701002',10,10],['#SG20260701001',6,6]]},
    ],
    ordMeta:{'#SG20260701001':{cust:'海****',bcrs:1.20,adj:0,ct:'2026-06-30 21:14',ft:'2026-07-01 10:32'},
             '#SG20260701002':{cust:'新****',bcrs:0,adj:0,ct:'2026-06-30 22:03',ft:'2026-07-01 10:58'},
@@ -105,9 +105,9 @@ const RECON=[
 
   {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',
    lines:[
-    {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',price:4.10,due:12,real:11,sub:0,rate:6,byOrder:[['#SG20260630001',12,11]]},
+    {sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',price:4.10,due:12,real:11,sub:0,platSub:3.60,rate:6,byOrder:[['#SG20260630001',12,11]]},
     {sku:'SKU8805',name:'胡萝卜',spec:'1kg/件',unit:'件',price:2.20,due:25,real:25,sub:1.00,rate:6,byOrder:[['#SG20260630001',15,15],['#SG20260630004',10,10]]},
-    {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:19,sub:0,rate:5,byOrder:[['#SG20260630004',20,19]]},
+    {sku:'SKU8807',name:'鸡蛋',spec:'30枚/盘',unit:'盘',price:6.80,due:20,real:19,sub:0,platSub:5.00,rate:5,byOrder:[['#SG20260630004',20,19]]},
    ],
    ordMeta:{'#SG20260630001':{cust:'福****',bcrs:0,adj:0,ct:'2026-06-29 20:50',ft:'2026-06-30 10:12'},
             '#SG20260630004':{cust:'恒****',bcrs:2.40,adj:0,ct:'2026-06-29 22:31',ft:'2026-06-30 11:05'}},
@@ -117,8 +117,8 @@ const RECON=[
 
   {date:'2026-06-29',no:'SH20260629001',wh:'裕廊DC',
    lines:[
-    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:18,real:18,sub:0,rate:6,byOrder:[['#SG20260629002',10,10],['#SG20260629005',8,8]]},
-    {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:38,sub:0,rate:5,byOrder:[['#SG20260629002',25,24],['#SG20260629005',15,14]]},
+    {sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',price:3.80,due:18,real:18,sub:0,platSub:6.40,rate:6,byOrder:[['#SG20260629002',10,10],['#SG20260629005',8,8]]},
+    {sku:'SKU8808',name:'豆腐',spec:'400g/盒',unit:'盒',price:1.40,due:40,real:38,sub:0,platSub:2.80,rate:5,byOrder:[['#SG20260629002',25,24],['#SG20260629005',15,14]]},
    ],
    ordMeta:{'#SG20260629002':{cust:'悦****',bcrs:0,adj:0,ct:'2026-06-28 21:02',ft:'2026-06-29 09:48'},
             '#SG20260629005':{cust:'丰****',bcrs:0.30,adj:0,ct:'2026-06-28 23:15',ft:'2026-06-29 10:26'}},
