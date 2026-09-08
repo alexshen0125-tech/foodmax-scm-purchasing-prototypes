@@ -59,7 +59,7 @@
   window.promoSkuTag=function(skuId){const a=window.promoOfSku(skuId);if(!a)return '';const it=a.items.find(x=>x.skuId==skuId);const on=calcStatus(a)==1;return ` <span class="tag ${on?'t-r':'t-b'}" style="font-size:10.5px;cursor:pointer" title="${a.name} · ${a.start} ~ ${a.end}" onclick="act_promoDetail('${a.id}')">${on?'特价中':'特价待开始'} ${money(it.price)}</span>`;};
   // 改价守门（BR-12）：活动内 SKU 新售价 ≤ 活动价 → 拦截
   window.promoRepriceGuard=function(skuId,newPrice){const a=window.promoOfSku(skuId);if(!a)return true;const it=a.items.find(x=>x.skuId==skuId);if(newPrice<=it.price){toast(`该 SKU 在特价活动《${a.name}》中，活动价 ${money(it.price)}；新售价须高于活动价，或先从活动移除 / 终止活动`,'err');return false;}it.orig=newPrice;a.updatedAt=ts();return true;};
-  // 下架/回收守门（BR-12）：活动行自动失效——这里只提示，行本身留在活动里、渲染时按 SKU 状态标「不生效」
+  // 下架/回收（BR-12）：不拦不提示，活动行按 SKU 当前状态实时判定生效；活动期内重新上架即恢复活动价
   function rowEffective(it){const f=findSku(it.skuId);if(!f)return [false,'SKU 不存在'];if(f.s.recycled)return [false,'已移入回收站'];if(f.p.status!='onsale')return [false,f.p.status=='forced_off'?'平台强制下架':f.p.status=='rejected'?'审核驳回':'商品未上架'];if(f.s.off)return [false,'SKU 已下架'];return [true,''];}
 
   /* ===== 金额 ===== */
@@ -226,6 +226,7 @@
     if(!ED.items.length){toast('至少添加 1 个活动商品','err');return;}
     const ids=ED.items.map(x=>x.skuId);if(new Set(ids).size!=ids.length){toast('同一 SKU 不可重复','err');return;}
     for(const x of ED.items){const f=findSku(x.skuId);const nm=f?skuFullName(f.p,f.s):x.skuId;
+      const ef=rowEffective(x);if(!ef[0]){toast(`「${nm}」${ef[1]}，请移除后再提交`,'err');return;}   // 提交复验在售状态（沈亮 2026-09-08）：非在售 SKU 直接拦下，不带不生效行提交
       if(f)x.orig=f.s.price||0;   // 售价在编辑过程中被改 → 以最新售价复验
       if(!(+x.price>0)){toast(`「${nm}」请填写活动价`,'err');return;}
       if(+x.price>=x.orig){toast(`「${nm}」活动价须低于当前未税售价 ${money(x.orig)}`,'err');return;}

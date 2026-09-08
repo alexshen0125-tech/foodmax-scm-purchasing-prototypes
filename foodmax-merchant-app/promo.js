@@ -253,7 +253,7 @@ function openEdit(a,after,preset){const isNew=!a;const st=isNew?-1:stOf(a);const
         if(ED.end<=ED.start)return toast('结束时间必须晚于开始时间');
         if((new Date(toLocal(ED.end))-new Date(toLocal(ED.start)))>30*86400000)return toast('单场活动最长 30 天');
         if(!ED.items.length)return toast('至少添加 1 个活动商品');
-        for(const x of ED.items){const s=sku(x.skuId);const nm=s?s.n+' '+s.spec:x.skuId;if(s)x.orig=s.price;
+        for(const x of ED.items){const s=sku(x.skuId);const nm=s?s.n+' '+s.spec:x.skuId;const ef=effective(x);if(!ef[0])return toast(`「${nm}」${ef[1]}，请移除后再提交`);if(s)x.orig=s.price;
           if(!(+x.price>0))return toast(`「${nm}」请填写活动价`);if(+x.price>=x.orig)return toast(`「${nm}」活动价须低于当前售价 ${money(x.orig)}`);
           const occ=occupiedBy(x.skuId,{start:ED.start,end:ED.end},ED.id);if(occ)return toast(`「${nm}」已在${occ.fund==0?'平台活动':'活动《'+occ.name+'》'}中，至 ${occ.end}`);}
         const lows=ED.items.filter(x=>+x.price<x.orig*0.3);
