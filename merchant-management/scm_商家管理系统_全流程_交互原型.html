@@ -3526,43 +3526,93 @@ PAGES['m-invoice']=()=>{
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开票日期</div><div class="row" style="gap:6px;align-items:center"><input id="ci-d1" type="date" value="${cf.d1||''}" style="width:150px"><span style="color:var(--ts)">至</span><input id="ci-d2" type="date" value="${cf.d2||''}" style="width:150px"></div></div>
     <button class="btn btn-p btn-sm" onclick="ciQuery()">查询</button><button class="btn btn-o btn-sm" onclick="ciReset()">重置</button>
   </div></div>
-  ${(()=>{const fwd=issued.filter(x=>x.iv.type!='cn'), rev=issued.filter(x=>x.iv.type=='cn');
-    // 商家端与运营平台「商家维度」口径对齐：正向发票与逆向冲抵单【分开两块】展示（2026-09-08 沈亮定）
-    const tbl=(rows,isRev)=>rows.length?`<table>
-      <thead><tr><th style="width:34px"><input type="checkbox" ${rows.length&&rows.every(x=>csel.includes(x.iv.no))?'checked':''} onclick="ciToggleAll('${isRev?'cn':'inv'}')"></th>
-      <th>${isRev?'冲抵单号':'发票号'}</th>${isRev?'<th>冲抵原发票</th>':''}<th>订单号</th><th>开票客户</th><th>${isRev?'冲抵日期':'开票日期'}</th>
-      <th style="text-align:right">未税金额</th><th style="text-align:right">GST</th><th style="text-align:right">${isRev?'冲抵金额':'应付金额'}</th><th>状态</th><th>操作</th></tr></thead><tbody>
-      ${rows.map(({iv,i})=>`<tr>
-        <td><input type="checkbox" ${csel.includes(iv.no)?'checked':''} onclick="ciToggle('${iv.no}')"></td>
-        <td class="mono">${iv.no||'—'}</td>${isRev?`<td class="mono">${iv.against||'—'}</td>`:''}
-        <td class="mono">${iv.order}</td><td>${iv.client}</td><td>${iv.date||'—'}</td>
-        <td style="text-align:right">${money(iv.sub||0)}</td>
-        <td style="text-align:right">${iv.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(iv.gst||0)}</td>
-        <td style="text-align:right"><b style="color:${isRev?'var(--r)':'inherit'}">${money(iv.amt)}</b></td>
-        <td>${tag('taxinv',iv.tstatus||'issued')}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_custInvPreview(${i})">预览</button> <button class="btn btn-link" onclick="act_custInvDownload(${i})">下载</button></td>
-      </tr>`).join('')}</tbody></table>`
-      :`<div class="empty" style="padding:18px 0"><div class="e-ic">${isRev?'↩️':'🧾'}</div><div class="e-t">${isRev?'暂无冲抵单':'暂无已开具发票'}</div><div class="e-s">${isRev?'客户退款完成后平台会开具冲抵单（Credit Note）并显示在此。':'平台按订单代你开具客户销售发票后，将显示在此供预览与下载。'}</div></div>`;
-    return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>正向发票</h3><span class="sub">平台代开 · ${fwd.length} 张 · 一个订单一张（你为开票主体）</span>
+  ${(()=>{const ords=ciOrderRows();
+    // 商家端与运营平台同构：列表【一行一个订单】（本商家在该单下的开票口径），正逆向进详情页看（2026-09-08 沈亮定）
+    return `<div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">平台代开 · ${ords.length} 个订单 · 金额均为<b>你（本商家）</b>在该订单下的口径，不含同单其他商家</span>
       <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" ${csel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="ciBatchDownload()">批量下载 PDF${csel.length?`（${csel.length}）`:''}</button></div></div>
-      <div class="card-bd ${fwd.length?'flush':''}">${tbl(fwd,false)}</div></div>
-    <div class="card"><div class="card-hd"><h3>逆向冲抵 Credit Note</h3><span class="sub">客户退款完成后开具 · ${rev.length} 张 · 金额为负、冲减你的销项</span></div>
-      <div class="card-bd ${rev.length?'flush':''}">${tbl(rev,true)}</div></div>`;})()}
+      <div class="card-bd ${ords.length?'flush':''}">
+      ${ords.length?`<table>
+        <thead><tr><th style="width:34px"><input type="checkbox" ${ords.length&&ords.every(o=>csel.includes(o.order))?'checked':''} onclick="ciToggleAll()"></th>
+        <th>订单号</th><th>开票客户</th><th style="text-align:right">发票张数</th><th style="text-align:right">冲抵张数</th><th>开票日期</th>
+        <th style="text-align:right">未税净额</th><th style="text-align:right">GST 净额</th><th style="text-align:right">冲抵金额</th><th style="text-align:right">应收净额</th><th>状态</th><th>操作</th></tr></thead><tbody>
+        ${ords.map(o=>`<tr>
+          <td><input type="checkbox" ${csel.includes(o.order)?'checked':''} onclick="ciToggle('${o.order}')"></td>
+          <td class="mono">${o.order}</td><td>${o.client}</td>
+          <td style="text-align:right">${o.fwd.length}</td>
+          <td style="text-align:right">${o.rev.length?`<span style="color:var(--r);font-weight:600">${o.rev.length}</span>`:'0'}</td>
+          <td>${o.date||'—'}</td>
+          <td style="text-align:right">${money(o.sub+o.cnSub)}</td>
+          <td style="text-align:right">${money(o.gst+o.cnGst)}</td>
+          <td style="text-align:right"><span style="color:${o.cnAmt?'var(--r)':'inherit'}">${money(o.cnAmt)}</span></td>
+          <td style="text-align:right"><b>${money(o.amt+o.cnAmt)}</b></td>
+          <td>${tag('taxinv',o.rev.length?'credited':'issued')}</td>
+          <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_custOrderDetail('${o.order}')">详情</button> <button class="btn btn-link" onclick="act_custOrderDownload('${o.order}')">下载</button></td>
+        </tr>`).join('')}</tbody></table>`
+        :(Object.values(cf).some(v=>v)?`<div class="empty" style="padding:20px"><div class="e-ic">🔎</div><div class="e-t">无匹配订单</div><div class="e-s">调整筛选条件后重试。</div></div>`
+          :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无已开具发票</div><div class="e-s">平台按订单代你开具客户销售发票后，将显示在此供预览与下载。</div></div>`)}
+      </div></div>`;})()}
     ${DB.payment=='paid'?`<div class="ib ib-g"><span class="i">💰</span>平台已完成打款 ${money(DB.bill.net)}，预计 1 个工作日到账 DBS ****8821。本期结算闭环完成 🎉</div>`
     :DB.payment!='none'?`<div class="ib ib-b"><span class="i">⏳</span>发票全部校验通过，平台付款审批中…</div>`:''}`;
 };
 function ciQuery(){const g=id=>(document.getElementById(id)||{}).value||'';DB.ciFilter={order:g('ci-order').trim(),type:g('ci-type'),d1:g('ci-d1'),d2:g('ci-d2')};DB.ciSel=[];render();}
 function ciReset(){DB.ciFilter={};DB.ciSel=[];render();}
-function ciToggle(no){const a=DB.ciSel||[];const i=a.indexOf(no);i<0?a.push(no):a.splice(i,1);DB.ciSel=a;render();}
-// 正向 / 冲抵两块各自全选：只切换本块的行，另一块的勾选保持
-function ciToggleAll(kind){const cf=DB.ciFilter||{};
-  const rows=DB.invoices.filter(iv=>iv.status=='verified')
+function ciToggle(order){const a=DB.ciSel||[];const i=a.indexOf(order);i<0?a.push(order):a.splice(i,1);DB.ciSel=a;render();}
+/* 商家端客户开票：列表按【订单】聚合成一行（本商家自己的口径），正逆向进详情看。
+   与运营平台一致：筛选按单据匹配 → 命中订单成行；聚合永远按该订单下本商家的全量单据算。*/
+function ciOrderRows(){
+  const cf=DB.ciFilter||{};
+  const hit=new Set(DB.invoices.filter(iv=>iv.status=='verified')
     .filter(iv=>(!cf.order||iv.order.toLowerCase().includes(cf.order.toLowerCase()))&&(!cf.type||(cf.type=='cn'?iv.type=='cn':iv.type!='cn'))&&(!cf.d1||iv.date>=cf.d1)&&(!cf.d2||iv.date<=cf.d2))
-    .filter(iv=>kind=='cn'?iv.type=='cn':iv.type!='cn');
-  const nos=rows.map(iv=>iv.no), cur=DB.ciSel||[];
-  DB.ciSel=nos.every(n=>cur.includes(n))?cur.filter(n=>!nos.includes(n)):cur.concat(nos.filter(n=>!cur.includes(n)));render();}
+    .map(iv=>iv.order));
+  const m={};
+  DB.invoices.forEach((iv,i)=>{
+    if(iv.status!='verified'||!hit.has(iv.order))return;
+    const o=m[iv.order]||(m[iv.order]={order:iv.order,client:iv.client,fwd:[],rev:[],sub:0,gst:0,amt:0,cnSub:0,cnGst:0,cnAmt:0,date:''});
+    const row={iv,i};
+    if(iv.type=='cn'){o.rev.push(row);o.cnSub+=iv.sub;o.cnGst+=(iv.gst||0);o.cnAmt+=iv.amt;}
+    else{o.fwd.push(row);o.sub+=iv.sub;o.gst+=(iv.gst||0);o.amt+=iv.amt;}
+    if(iv.date>o.date)o.date=iv.date;
+  });
+  return Object.values(m).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+function ciToggleAll(){const nos=ciOrderRows().map(o=>o.order),cur=DB.ciSel||[];
+  DB.ciSel=nos.every(n=>cur.includes(n))?[]:nos;render();}
+// 订单详情：本商家在该单下的正向发票与逆向冲抵单，分两块列出
+function act_custOrderDetail(order){
+  const o=ciOrderRows().find(x=>x.order==order);if(!o)return;
+  const tbl=(rows,rev)=>rows.length?`<table style="font-size:12.5px"><thead><tr>
+      <th>${rev?'冲抵单号':'发票号'}</th>${rev?'<th>冲抵原发票</th>':''}<th>${rev?'冲抵日期':'开票日期'}</th>
+      <th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">${rev?'冲抵金额':'应付'}</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      ${rows.map(({iv,i})=>`<tr><td class="mono">${iv.no}</td>${rev?`<td class="mono">${iv.against||'—'}</td>`:''}<td>${iv.date||'—'}</td>
+        <td style="text-align:right">${money(iv.sub||0)}</td>
+        <td style="text-align:right">${iv.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(iv.gst||0)}</td>
+        <td style="text-align:right"><b style="color:${rev?'var(--r)':'inherit'}">${money(iv.amt)}</b></td>
+        <td>${tag('taxinv',iv.tstatus||'issued')}</td>
+        <td style="white-space:nowrap"><button class="btn btn-link" onclick="act_custInvPreview(${i})">预览</button> <button class="btn btn-link" onclick="act_custInvDownload(${i})">下载</button></td>
+      </tr>`).join('')}</tbody></table>`
+      :`<div style="font-size:12.5px;color:var(--ts);padding:6px 0 10px">${rev?'无冲抵单':'无正向发票'}</div>`;
+  drawer(`<div class="drawer-hd"><div><h3>订单开票详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${o.order} · ${o.client} · 正向 ${o.fwd.length} 张${o.rev.length?` · 冲抵 ${o.rev.length} 张`:''}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>以下为<b>你（本商家）</b>在该订单下的开票记录与金额；同一订单如有其他商家，其发票与金额不在此展示。</div>
+    <div class="sec-t">本单合计（正向 + 逆向一起算）</div>
+    <table style="font-size:12.5px"><thead><tr><th></th><th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">金额</th><th style="text-align:right">张数</th></tr></thead><tbody>
+      <tr><td>正向发票</td><td style="text-align:right">${money(o.sub)}</td><td style="text-align:right">${money(o.gst)}</td><td style="text-align:right">${money(o.amt)}</td><td style="text-align:right">${o.fwd.length}</td></tr>
+      <tr><td style="color:var(--r)">逆向冲抵 Credit Note</td><td style="text-align:right;color:var(--r)">${money(o.cnSub)}</td><td style="text-align:right;color:var(--r)">${money(o.cnGst)}</td><td style="text-align:right;color:var(--r)">${money(o.cnAmt)}</td><td style="text-align:right">${o.rev.length}</td></tr>
+      <tr style="border-top:2px solid var(--bd)"><td><b>应收净额</b></td><td style="text-align:right"><b>${money(o.sub+o.cnSub)}</b></td><td style="text-align:right"><b>${money(o.gst+o.cnGst)}</b></td><td style="text-align:right"><b style="color:var(--g)">${money(o.amt+o.cnAmt)}</b></td><td></td></tr>
+    </tbody></table>
+    <div class="sec-t">正向发票</div>${tbl(o.fwd,false)}
+    <div class="sec-t">逆向冲抵 Credit Note</div>${tbl(o.rev,true)}
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button><button class="btn btn-p" onclick="act_custOrderDownload('${o.order}')">下载本单全部（${o.fwd.length+o.rev.length} 张）</button></div>`);
+}
+function act_custOrderDownload(order){const o=ciOrderRows().find(x=>x.order==order);if(!o)return;
+  toast(`订单 ${order} 的发票已打包下载（${o.fwd.length+o.rev.length} 张：正向 ${o.fwd.length} + 冲抵 ${o.rev.length}）`,'ok');}
 // 批量下载：已冲抵原票与其 CN 一并打包；返回 zipUrl 签名链接（PRD 第 11 章）
-function ciBatchDownload(){const sel=DB.ciSel||[];if(!sel.length)return;const extra=DB.invoices.filter(iv=>iv.type=='cn'&&sel.includes(iv.against)&&!sel.includes(iv.no)).length;toast(`已打包下载 ${sel.length+extra} 张发票 PDF${extra?`（含 ${extra} 张关联 Credit Note）`:''}`,'ok');}
+// 批量下载：按勾选的【订单】打包，含该单下本商家的正向票与冲抵单
+function ciBatchDownload(){const sel=DB.ciSel||[];if(!sel.length)return;
+  const rows=ciOrderRows().filter(o=>sel.includes(o.order));
+  const n=rows.reduce((x,o)=>x+o.fwd.length+o.rev.length,0);
+  toast(`已打包下载 ${sel.length} 个订单共 ${n} 张发票 PDF（含冲抵单）`,'ok');}
 // ② 服务费发票：平台与商家【结算完成后自动开具】并推送给商家（佣金税票 GST 9%），商家端【只查看/下载】，无需申请
 function svcInvoiceContent(){
   return `${flowTip(`<b>服务费发票</b>由平台在与你<b>结算完成后自动开具</b>并推送给你（就平台服务佣金开具，GST 9%），<b>无需你申请</b>。此处仅供<b>查看与下载</b>。`)}

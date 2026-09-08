@@ -54,6 +54,12 @@ css.textContent=`
 .ivp .tot .r{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#27433A;}
 .ivp .tot .r.big{font-weight:700;font-size:15px;color:var(--emerald-2);border-top:1px solid rgba(0,0,0,.07);margin-top:5px;padding-top:8px;}
 .ivp .note{font-size:11.5px;color:var(--sub);margin-top:12px;line-height:1.5;}
+.ivd-h{font-size:12.5px;font-weight:700;margin:14px 0 6px;color:var(--ink,#111);}
+.ivd-e{font-size:12.5px;color:var(--sub);padding:8px 0;}
+.ivd-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+.ivd-l{font-size:13px;} .ivd-l small,.ivd-r small{display:block;font-size:11px;color:var(--sub);margin-top:2px;}
+.ivd-r{text-align:right;font-size:13.5px;}
+.ivd-a{display:inline-flex;gap:8px;margin-top:6px;} .ivd-a button{border:none;background:none;color:var(--emerald);font-size:12px;font-family:inherit;cursor:pointer;padding:0;}
 .iv-sec{margin-bottom:14px;}
 .iv-sec-h{display:flex;justify-content:space-between;align-items:baseline;padding:4px 2px 8px;font-size:13.5px;}
 .iv-sec-h span{font-size:11.5px;color:var(--sub);}
@@ -102,17 +108,47 @@ function fmt(v){return Number(v).toLocaleString('en-US',{minimumFractionDigits:2
 function money(v){return 'S$'+fmt(v);}
 function empty(t,p){return `<div class="empty"><div class="ei">${svg('invoice')}</div><h4>${t}</h4><p>${p}</p></div>`;}
 
-function custCard(c,i){
-  return `<div class="iv-card" data-i="${i}">
-    <div class="hd"><span class="ord">${c.order}</span><span class="bd" ${c.st=='credited'?'style="background:#FBF3E4;color:#A9711F"':''}>${TSTAT[c.st||'issued']}</span></div>
-    <div class="cli">${c.type=='cn'?`<span style="color:#C0392B;font-weight:700">冲抵 Credit Note</span> · 冲 ${c.against}`:'正向 Invoice'} · 开票客户 <b>${c.client}</b></div>
+/* 商家端 App 与 PC 同构：卡片【一个订单一张】，正逆向进详情看（2026-09-08 沈亮定）。
+   金额均为本商家在该订单下的口径，不含同单其他商家。*/
+function custOrders(){
+  const m={};
+  CUST.forEach((c,i)=>{
+    const o=m[c.order]||(m[c.order]={order:c.order,client:c.client,fwd:[],rev:[],sub:0,gst:0,amt:0,cnSub:0,cnGst:0,cnAmt:0,date:''});
+    const r={c:c,i:i};
+    if(c.type=='cn'){o.rev.push(r);o.cnSub+=c.sub;o.cnGst+=c.gst;o.cnAmt+=Number(c.amt);}
+    else{o.fwd.push(r);o.sub+=c.sub;o.gst+=c.gst;o.amt+=Number(c.amt);}
+    if(c.date>o.date)o.date=c.date;
+  });
+  return Object.values(m).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+}
+function custCard(o,idx){
+  return `<div class="iv-card" data-ord="${o.order}">
+    <div class="hd"><span class="ord">${o.order}</span><span class="bd" ${o.rev.length?'style="background:#FBF3E4;color:#A9711F"':''}>${o.rev.length?'已冲抵':'已开具'}</span></div>
+    <div class="cli">开票客户 <b>${o.client}</b> · 正向 ${o.fwd.length} 张${o.rev.length?` · <span style="color:#C0392B;font-weight:700">冲抵 ${o.rev.length} 张</span>`:''}</div>
     <div class="g">
-      <div class="col"><div class="l">${c.type=='cn'?'冲抵金额':'应付金额'}</div><div class="v amt" ${c.type=='cn'?'style="color:#C0392B"':''}>${money(c.amt)}</div></div>
-      <div class="col"><div class="l">发票号</div><div class="v">${c.no}</div></div>
-      <div class="col"><div class="l">未税</div><div class="v">${money(c.sub)}</div></div>
-      <div class="col"><div class="l">GST</div><div class="v">${money(c.gst)}</div></div>
+      <div class="col"><div class="l">应收净额</div><div class="v amt">${money(o.amt+o.cnAmt)}</div></div>
+      <div class="col"><div class="l">未税净额</div><div class="v">${money(o.sub+o.cnSub)}</div></div>
+      <div class="col"><div class="l">GST 净额</div><div class="v">${money(o.gst+o.cnGst)}</div></div>
+      <div class="col"><div class="l">冲抵金额</div><div class="v" ${o.cnAmt?'style="color:#C0392B"':''}>${money(o.cnAmt)}</div></div>
     </div>
-    <div class="ft"><span>开票日期 ${c.date}</span><span class="acts"><button class="prev" data-prev>预览</button><button class="dl" data-dl>下载</button></span></div>
+    <div class="ft"><span>开票日期 ${o.date}</span><span class="acts"><button class="prev" data-detail>详情</button><button class="dl" data-dlord>下载</button></span></div>
+  </div>`;
+}
+// 订单详情：本商家在该单下的正向与逆向单据
+function custOrderDetail(o){
+  const row=(r,rev)=>`<div class="ivd-row"><div class="ivd-l"><b>${r.c.no}</b>${rev&&r.c.against?`<small>冲 ${r.c.against}</small>`:''}<small>${r.c.date}</small></div>
+    <div class="ivd-r"><b ${rev?'style="color:#C0392B"':''}>${money(r.c.amt)}</b><small>未税 ${money(r.c.sub)} · GST ${money(r.c.gst)}</small>
+    <span class="ivd-a"><button data-prev="${r.i}">预览</button><button data-dl="${r.i}">下载</button></span></div></div>`;
+  return `<div class="ivp">
+    <div class="note" style="margin:0 0 10px">以下为<b>你（本商家）</b>在该订单下的开票记录与金额；同单如有其他商家，其发票不在此展示。</div>
+    <div class="th"><div class="co">${o.order}<small>${o.client}</small></div><div class="ti">应收净额<small>${money(o.amt+o.cnAmt)}</small></div></div>
+    <div class="tot">
+      <div class="r"><span>正向发票 ${o.fwd.length} 张</span><span>${money(o.amt)}</span></div>
+      <div class="r"><span style="color:#C0392B">逆向冲抵 ${o.rev.length} 张</span><span style="color:#C0392B">${money(o.cnAmt)}</span></div>
+      <div class="r big"><span>应收净额</span><span>${money(o.amt+o.cnAmt)}</span></div>
+    </div>
+    <div class="ivd-h">正向发票</div>${o.fwd.length?o.fwd.map(r=>row(r,false)).join(''):'<div class="ivd-e">无正向发票</div>'}
+    <div class="ivd-h">逆向冲抵 Credit Note</div>${o.rev.length?o.rev.map(r=>row(r,true)).join(''):'<div class="ivd-e">无冲抵单</div>'}
   </div>`;
 }
 function svcCard(s,i){
@@ -208,11 +244,27 @@ function previewRpl(r){
 
 function bindCards(listEl,kind){
   listEl.querySelectorAll('.iv-card').forEach(el=>{
-    const i=+el.dataset.i, item=kind==='cust'?CUST[i]:(kind==='svc'?SVC[i]:RPL[i]);
+    // 客户开票：卡片是【订单】维度，详情里再看正逆向单据
+    if(kind==='cust'){
+      const o=custOrders().find(x=>x.order===el.dataset.ord);if(!o)return;
+      const dt=el.querySelector('[data-detail]'), dl=el.querySelector('[data-dlord]');
+      if(dt)dt.onclick=()=>openCustOrder(o);
+      if(dl)dl.onclick=()=>toast('订单 '+o.order+' 的发票已打包下载（'+(o.fwd.length+o.rev.length)+' 张）');
+      return;
+    }
+    const i=+el.dataset.i, item=kind==='svc'?SVC[i]:RPL[i];
     const pv=el.querySelector('[data-prev]'), dl=el.querySelector('[data-dl]');
-    if(pv)pv.onclick=()=>kind==='cust'?previewCust(item):(kind==='svc'?previewSvc(item):previewRpl(item));
+    if(pv)pv.onclick=()=>kind==='svc'?previewSvc(item):previewRpl(item);
     if(dl)dl.onclick=()=>toast('发票 '+item.no+' 已下载 (PDF)');
   });
+}
+// 订单详情页：列出本商家在该单下的正向与逆向单据，逐张可预览/下载
+function openCustOrder(o){
+  previewPage('订单开票详情',custOrderDetail(o));
+  setTimeout(()=>{
+    document.querySelectorAll('[data-prev]').forEach(b=>{const i=+b.dataset.prev;if(!isNaN(i))b.onclick=()=>previewCust(CUST[i]);});
+    document.querySelectorAll('[data-dl]').forEach(b=>{const i=+b.dataset.dl;if(!isNaN(i))b.onclick=()=>toast('发票 '+CUST[i].no+' 已下载 (PDF)');});
+  },0);
 }
 
 function render(page){
@@ -221,7 +273,7 @@ function render(page){
   let head='';
   if(st.seg==='cust'){
     head=`<div class="iv-tip cust">客户销售发票由<b>平台代你开具</b>（按订单，GST 9%），你<b>无需开具或上传</b>；此处仅展示<b>已开具</b>的发票，供预览与下载。</div>
-      <div class="iv-stat"><span>正向 <b>${CUST.filter(c=>c.type!='cn').length}</b> 张 · 冲抵 <b>${CUST.filter(c=>c.type=='cn').length}</b> 张 · 你为开票主体 · 与 PC 端数据一致，App 只做单张下载</span></div>`;
+      <div class="iv-stat"><span>${custOrders().length} 个订单 · 正向 <b>${CUST.filter(c=>c.type!='cn').length}</b> 张 · 冲抵 <b>${CUST.filter(c=>c.type=='cn').length}</b> 张 · 金额为你在该订单下的口径，正逆向进详情看</span></div>`;
   }else if(st.seg==='svc'){
     head=`<div class="iv-tip fm">服务费发票由平台在与你<b>结算完成后自动开具</b>并推送（就平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${SVC.length}</b> 张</span></div>`;
@@ -234,11 +286,8 @@ function render(page){
   // 骨架屏→数据(H1)
   setTimeout(()=>{
     if(st.seg==='cust'){
-      // 正向与逆向冲抵分开两块（与 PC / 运营平台商家维度口径一致，2026-09-08 沈亮定）
-      {const fwd=CUST.filter(c=>c.type!='cn'), rev=CUST.filter(c=>c.type=='cn');
-       const sec=(t2,sub,rows,emptyT,emptyS)=>`<div class="iv-sec"><div class="iv-sec-h"><b>${t2}</b><span>${sub}</span></div>${rows.length?rows.map(c=>custCard(c,CUST.indexOf(c))).join(''):`<div class="iv-sec-e">${emptyT}<small>${emptyS}</small></div>`}</div>`;
-       listEl.innerHTML=sec('正向发票',fwd.length+' 张',fwd,'暂无已开具发票','平台按订单代你开具客户销售发票后显示在此')
-                       +sec('逆向冲抵 Credit Note',rev.length+' 张',rev,'暂无冲抵单','客户退款完成后平台开具并显示在此');}
+      {const ords=custOrders();
+       listEl.innerHTML=ords.length?ords.map(custCard).join(''):empty('暂无已开具发票','平台按订单代你开具客户销售发票后，将显示在此供预览与下载');}
       bindCards(listEl,'cust');
     }else if(st.seg==='svc'){
       listEl.innerHTML=SVC.length?SVC.map(svcCard).join(''):empty('暂无服务费发票','平台与你结算完成后会开具服务费发票并显示在此');
