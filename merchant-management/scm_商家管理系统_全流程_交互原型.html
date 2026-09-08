@@ -3123,6 +3123,7 @@ const dSub  =d=>sum(d.lines,l=>l.sub||0), dFee=d=>sum(d.lines,rcFee), dInc=d=>su
 const dAftG =d=>sum(d.after||[],x=>{const l=rcLn(d,x.sku);return x.qty*l.price*rcMul(l);});
 const dAftN =d=>sum(d.after||[],x=>x.qty*rcLn(d,x.sku).price);
 const dSettle=d=>dInc(d)-dAftG(d);                     // 当日结算（货款口径）
+const dNet   =d=>dSettle(d)-dRpl(d)-dFine(d)-dSup(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 缺货罚款 − 耗材订单（同汇总卡「预计实付」）
 const rplAmt =r=>Math.round(r.selfPrice*r.qty*100)/100;                    // 补采金额(含税)=自营原定价×数量，不加价
 const rplFine=r=>Math.round(r.qty*(DB.replCfg?DB.replCfg.finePerUnit:40)*100)/100;  // 缺货罚款=缺口件数×罚款标准
 const rplNet =r=>Math.round(rplAmt(r)/(1+GST_DEFAULT/100)*100)/100;
@@ -3191,7 +3192,7 @@ PAGES['m-recon']=()=>{
   DB.rcSel=(DB.rcSel||[]).filter(no=>rows.some(r=>r.no==no));   // 清理已不存在的勾选
   const allSel=rows.length&&rows.every(r=>DB.rcSel.includes(r.no));
   const selRows=rows.filter(r=>DB.rcSel.includes(r.no));
-  const selSettle=selRows.reduce((a,d)=>a+dSettle(d),0);
+  const selSettle=selRows.reduce((a,d)=>a+dNet(d),0);
   const selLines=rcExpRows(selRows,RC_SHEETS.map(x=>x.k));
   return `
   <div class="card"><div class="card-bd" style="padding:12px 20px"><div class="row" style="gap:10px;align-items:center">
@@ -3201,7 +3202,7 @@ PAGES['m-recon']=()=>{
   </div></div></div>
   ${rcSumCard(rows,T)}
   <div class="card"><div class="card-hd"><h3>对账单列表</h3><span class="sub">每日一张 · 共 ${rows.length} 张 · 数据源：财务结算单明细</span></div>
-  ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 当日结算合计 <b style="color:var(--gd)">${money(selSettle)}</b> · 预计导出 <b>${selLines}</b> 行</span><button class="btn btn-p btn-sm" onclick="act_exportRecon()">⬇️ 导出所选</button><button class="btn btn-link" style="margin-left:auto" onclick="DB.rcSel=[];render()">取消选择</button></div>`:''}
+  ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 预估当日结算合计 <b style="color:var(--gd)">${money(selSettle)}</b> · 预计导出 <b>${selLines}</b> 行</span><button class="btn btn-p btn-sm" onclick="act_exportRecon()">⬇️ 导出所选</button><button class="btn btn-link" style="margin-left:auto" onclick="DB.rcSel=[];render()">取消选择</button></div>`:''}
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选" ${allSel?'checked':''} onclick="selAllRecon()"></th><th>送货单号</th><th>送货日期</th><th>入库仓库</th><th>关联订单</th><th>SKU 数</th>
       <th style="text-align:right" title="客户实付金额（未税）">实付金额<br><span style="font-weight:400;color:var(--ts)">未税</span></th>
@@ -3210,10 +3211,10 @@ PAGES['m-recon']=()=>{
       <th style="text-align:right" title="商家让利，已在客户实付中扣除">商家补贴</th>
       <th style="text-align:right" title="（客户实付 + 平台补贴）× 平台服务费率">平台服务费</th>
       <th style="text-align:right">售后扣款<br><span style="font-weight:400;color:var(--ts)">含税</span></th>
-      <th style="text-align:right" title="客户实付 + 平台补贴 − 平台服务费 − 售后扣款">当日结算<br><span style="font-weight:400;color:var(--ts)">货款</span></th>
-      <th style="text-align:right" title="另行结算，不并入当日结算">平台补采</th>
-      <th style="text-align:right" title="另行结算，不并入当日结算；缺货即罚，与是否补采无关">缺货罚款</th>
-      <th style="text-align:right" title="另行结算，不并入当日结算">耗材订单</th>
+      <th style="text-align:right" title="另行结算，付款时抵扣；单独开票">平台补采</th>
+      <th style="text-align:right" title="另行结算，付款时抵扣；缺货即罚，与是否补采无关；不开发票">缺货罚款</th>
+      <th style="text-align:right" title="另行结算，付款时抵扣；单独开票">耗材订单</th>
+      <th style="text-align:right" title="（客户实付 + 平台补贴 − 平台服务费 − 售后扣款）− 平台补采 − 缺货罚款 − 耗材订单，公式同汇总卡「预计实付」">预估当日结算<br><span style="font-weight:400;color:var(--ts)">扣补采/罚款/耗材后</span></th>
       <th>操作</th></tr></thead><tbody>
     ${rows.map(d=>{const os=rcOrders(d);return `<tr>
       <td><input type="checkbox" class="skuchk" ${DB.rcSel.includes(d.no)?'checked':''} onclick="toggleReconSel('${d.no}')"></td>
@@ -3226,10 +3227,10 @@ PAGES['m-recon']=()=>{
       <td style="text-align:right;color:var(--ts)">${money(dSub(d))}</td>
       <td style="text-align:right">${rcNeg(dFee(d))}</td>
       <td style="text-align:right">${rcNeg(dAftG(d))}</td>
-      <td style="text-align:right;color:var(--gd);font-weight:600">${money(dSettle(d))}</td>
       <td style="text-align:right;color:var(--ts)">${dRpl(d)?rcNeg(dRpl(d)):'—'}</td>
       <td style="text-align:right;color:var(--r)">${dFine(d)?rcNeg(dFine(d)):'—'}</td>
       <td style="text-align:right;color:var(--ts)">${dSup(d)?rcNeg(dSup(d)):'—'}</td>
+      <td style="text-align:right;color:var(--gd);font-weight:600" title="当日结算货款 ${money(dSettle(d))} − 补采 ${money(dRpl(d))} − 罚款 ${money(dFine(d))} − 耗材 ${money(dSup(d))}">${money(dNet(d))}</td>
       <td><button class="btn btn-o btn-sm" onclick="act_reconDetail('${d.no}')">详情</button></td></tr>`;}).join('')}
     </tbody></table></div></div></div>`;
 };

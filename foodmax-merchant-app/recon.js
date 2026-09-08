@@ -142,6 +142,7 @@ const dSub=d=>sum(d.lines,l=>l.sub||0), dFee=d=>sum(d.lines,fee), dInc=d=>sum(d.
 const dAftN=d=>sum(d.after||[],x=>x.qty*ln(d,x.sku).price);
 const dAftG=d=>sum(d.after||[],x=>{const l=ln(d,x.sku);return x.qty*l.price*mul(l);});
 const dSettle=d=>dInc(d)-dAftG(d);
+const dNet=d=>dSettle(d)-dRpl(d)-dSup(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 耗材订单（罚款未接入按 0），同汇总卡「预计实付」
 const rplAmt=r=>Math.round(r.taxPrice*r.qty*(1+r.rate/100)*100)/100;
 const rplNet=r=>Math.round(rplAmt(r)/(1+GST/100)*100)/100;
 const dRpl=d=>sum(d.repl||[],rplAmt);
@@ -214,7 +215,7 @@ function openRecon(){
             <div class="meta">${d.date} · ${os.length} 个订单 · ${d.lines.length} 个 SKU${(d.after||[]).length?` · 售后 ${(d.after||[]).length} 笔`:''}</div>
             <div class="r2">
               <div class="g"><div class="k">实付金额（含税）</div><div class="v">${S(dPaidG(d))}</div></div>
-              <div class="g settle"><div class="k">当日结算（货款）</div><div class="v">${S(dSettle(d))}</div></div>
+              <div class="g settle"><div class="k">预估当日结算</div><div class="v">${S(dNet(d))}</div></div>
             </div>
             ${ex.length?`<div class="extra">另行结算：${ex.join(' · ')}，不并入当日结算，付款时轧差</div>`:''}
           </div>`;}).join('')}</div>`;
