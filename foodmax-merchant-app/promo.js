@@ -4,7 +4,8 @@
      · 限购 每客户每日 N 件，留空不限；立减金额=原价−活动价（未税）
      · 同一 SKU 时间重叠只能在 1 个活动内，跨出资方互斥（平台活动占用的 SKU 只显示「平台活动」）
      · 状态 0 待开始 / 1 进行中 / 2 已结束 / 4 已终止；无草稿；进行中只读（对齐运营平台 D11），可终止 / 复制新建；活动链接与门店范围界面不展示
-     · 差价 100% 商家承担，不进平台优惠、不影响商家应付；佣金按活动价成交额计；不审核、平台可强制终止 */
+     · 差价 100% 商家承担，不进平台优惠、不影响商家应付；佣金按活动价成交额计；不审核、平台可强制终止
+     · 活动总预算（BR-24）：让利上限（含税），选填、留空=不限；消耗=Σ已成交让利，退款不回补；用尽即自动结束（终态）；达 80% 提醒 */
 (function(){
 const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
 const css=document.createElement('style');
@@ -125,21 +126,29 @@ const money=n=>'S$'+(+n||0).toFixed(2);
 const WHO='陈志强';
 let SEQ=130;
 const ACTS=[
-  {id:'AC118',url:'https://m.foodexmart.com/activity/special?id=AC118',fund:1,name:'豆制品周中特惠',start:shift(-2,0,0),end:shift(3,23,59),status:1,createdBy:WHO,createdAt:shift(-3,10,12),updatedAt:shift(-3,10,12),
+  {id:'AC118',url:'https://m.foodexmart.com/activity/special?id=AC118',fund:1,name:'豆制品周中特惠',start:shift(-2,0,0),end:shift(3,23,59),status:1,budget:500,used:312.40,createdBy:WHO,createdAt:shift(-3,10,12),updatedAt:shift(-3,10,12),
     items:[{skuId:'SKU0125-01',orig:9.99,price:8.50,limit:20},{skuId:'SKU0125-04',orig:8.80,price:6.90,limit:null}],
     logs:[{t:shift(-3,10,12),who:WHO,act:'创建活动',d:'2 个 SKU'}]},
-  {id:'AC121',url:'https://m.foodexmart.com/activity/special?id=AC121',fund:1,name:'千张清仓',start:shift(2,0,0),end:shift(4,23,59),status:0,createdBy:WHO,createdAt:shift(-1,16,40),updatedAt:shift(-1,16,40),
+  {id:'AC121',url:'https://m.foodexmart.com/activity/special?id=AC121',fund:1,name:'千张清仓',start:shift(2,0,0),end:shift(4,23,59),status:0,budget:null,used:0,createdBy:WHO,createdAt:shift(-1,16,40),updatedAt:shift(-1,16,40),
     items:[{skuId:'SKU0125-06',orig:6.20,price:4.90,limit:10}],logs:[{t:shift(-1,16,40),who:WHO,act:'创建活动',d:'1 个 SKU'}]},
-  {id:'AC102',url:'https://m.foodexmart.com/activity/special?id=AC102',fund:1,name:'8 月豆浆促销',start:'2026-08-20 00:00',end:'2026-08-31 23:59',status:2,createdBy:WHO,createdAt:'2026-08-18 09:30',updatedAt:'2026-08-31 23:59',
+  {id:'AC102',url:'https://m.foodexmart.com/activity/special?id=AC102',fund:1,name:'8 月豆浆促销',start:'2026-08-20 00:00',end:'2026-08-31 23:59',status:2,budget:800,used:800,endedBy:'budget',createdBy:WHO,createdAt:'2026-08-18 09:30',updatedAt:'2026-08-31 23:59',
     items:[{skuId:'SKU0125-09',orig:2.80,price:2.30,limit:null},{skuId:'SKU0125-10',orig:31.00,price:26.00,limit:5}],
     logs:[{t:'2026-08-18 09:30',who:WHO,act:'创建活动',d:'2 个 SKU'},{t:'2026-08-31 23:59',who:'系统',act:'到期结束',d:''}]},
-  {id:'AC109',url:'https://m.foodexmart.com/activity/special?id=AC109',fund:1,name:'腐竹限时',start:'2026-08-28 00:00',end:'2026-09-05 23:59',status:4,endedBy:'platform',endReason:'活动价低于平台价格监管下限，运营强制终止（客服已通知）',createdBy:WHO,createdAt:'2026-08-27 14:05',updatedAt:'2026-08-29 11:20',
+  {id:'AC109',url:'https://m.foodexmart.com/activity/special?id=AC109',fund:1,name:'腐竹限时',start:'2026-08-28 00:00',end:'2026-09-05 23:59',status:4,budget:200,used:36.80,endedBy:'platform',endReason:'活动价低于平台价格监管下限，运营强制终止（客服已通知）',createdBy:WHO,createdAt:'2026-08-27 14:05',updatedAt:'2026-08-29 11:20',
     items:[{skuId:'SKU0125-08',orig:5.40,price:1.50,limit:null}],
     logs:[{t:'2026-08-27 14:05',who:WHO,act:'创建活动',d:'1 个 SKU'},{t:'2026-08-29 11:20',who:'平台运营',act:'强制终止',d:'活动价低于平台价格监管下限'}]},
-  {id:'AC115',fund:0,name:'平台·9 月豆制品季',start:shift(-1,0,0),end:shift(6,23,59),status:1,items:[{skuId:'SKU0125-03',orig:11.99,price:9.60,limit:null}],logs:[]},
+  {id:'AC115',fund:0,budget:null,used:0,name:'平台·9 月豆制品季',start:shift(-1,0,0),end:shift(6,23,59),status:1,items:[{skuId:'SKU0125-03',orig:11.99,price:9.60,limit:null}],logs:[]},
 ];
 const ST={0:'待开始',1:'进行中',2:'已结束',4:'已终止'};
-const stOf=a=>a.status==4?4:(now()<a.start?0:(now()>a.end?2:1));
+/* 预算（BR-24）：null=不限；used=已成交让利含税累计，退款不回补；用尽即结束、终态不可逆 */
+const hasBudget=a=>a.budget!=null&&a.budget>0;
+const budgetUsed=a=>+(a.used||0);
+const budgetPct=a=>hasBudget(a)?Math.min(100,budgetUsed(a)/a.budget*100):0;
+const budgetOut=a=>hasBudget(a)&&budgetUsed(a)>=a.budget;
+const budgetTxt=a=>hasBudget(a)?money(a.budget):'不限';
+const budgetColor=a=>{const p=budgetPct(a);return p>=100?'var(--red)':p>=80?'#B45309':'var(--emerald)';};
+const budgetBar=a=>hasBudget(a)?`<div style="margin-top:11px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--sub)"><span>预算 ${money(a.budget)} · 已用 ${money(budgetUsed(a))}</span><span style="color:${budgetColor(a)};font-weight:700">${budgetPct(a).toFixed(0)}%</span></div><div style="height:6px;border-radius:3px;background:var(--muted);margin-top:5px;overflow:hidden"><div style="width:${budgetPct(a)}%;height:100%;background:${budgetColor(a)}"></div></div></div>`:'';
+const stOf=a=>a.status==4?4:(budgetOut(a)?2:(now()<a.start?0:(now()>a.end?2:1)));
 const live=a=>[0,1].includes(stOf(a));
 const overlap=(a,b)=>a.start<=b.end&&b.start<=a.end;
 const occupiedBy=(skuId,range,exceptId)=>ACTS.find(a=>a.id!=exceptId&&live(a)&&a.items.some(x=>x.skuId==skuId)&&(!range||overlap(a,range)))||null;
@@ -150,7 +159,7 @@ const lim=v=>(v==null||v==='')?'不限':`${v} 件/客/日`;
 const effective=it=>{const s=sku(it.skuId);if(!s)return [false,'SKU 不存在'];if(s.off)return [false,'SKU 已下架'];return [true,''];};
 /* BR-19：仅店铺管理员可写；子账号只读。原型演示态恒为管理员，真实实现取登录态 isAdmin */
 let ADMIN=true;const noPerm=()=>{toast('仅店铺管理员可操作，子账号只读');return false;};
-const stPill=a=>{const s=stOf(a);return `<span class="pm-st s${s}">${ST[s]}${s==4&&a.endedBy=='platform'?'·平台':''}</span>`;};
+const stPill=a=>{const s=stOf(a);const suf=s==4&&a.endedBy=='platform'?'·平台':(s==2&&budgetOut(a)?'·预算用尽':'');return `<span class="pm-st s${s}">${ST[s]}${suf}</span>`;};
 
 /* ===== 列表 ===== */
 let TAB='all';
@@ -167,7 +176,8 @@ function renderList(root){
     return `<div class="pm-card" data-id="${a.id}">
       <div class="hd"><div class="nm">${a.name}<div class="id">${a.id} · ${a.items.length} 个 SKU</div></div>${stPill(a)}</div>
       <div class="tm">${a.start} ~ ${a.end}</div>
-      <div class="kpis"><div class="k"><div class="v">${a.items.length}</div><div class="l">活动 SKU</div></div><div class="k"><div class="v">${lim(Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))==Infinity?null:Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))).replace(' 件/客/日','')}</div><div class="l">最低限购</div></div></div>
+      <div class="kpis"><div class="k"><div class="v">${a.items.length}</div><div class="l">活动 SKU</div></div><div class="k"><div class="v">${lim(Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))==Infinity?null:Math.min(...a.items.map(x=>x.limit==null?Infinity:x.limit))).replace(' 件/客/日','')}</div><div class="l">最低限购</div></div><div class="k"><div class="v">${budgetTxt(a)}</div><div class="l">活动预算</div></div></div>
+      ${budgetBar(a)}
       ${s==4&&a.endedBy=='platform'?`<div class="pm-warn"><b>平台强制终止</b>：${a.endReason||''}</div>`:''}
       ${ineff&&s<2?`<div class="pm-warn" style="background:var(--amber-soft);color:#B45309">${ineff} 个 SKU 已下架，活动行不生效</div>`:''}
       <div class="acts"><div class="a" data-a="detail">详情</div>${ADMIN?`<div class="a" data-a="copy">复制</div>${s<2?`<div class="a dgr" data-a="stop">终止</div>`:''}${s==0?`<div class="a pri" data-a="edit">编辑</div>`:''}`:''}</div>
@@ -193,8 +203,11 @@ function openDetail(a,after){const s=stOf(a);const save=a.items.reduce((n,x)=>n+
       <div class="r"><span class="k">活动时间</span><span class="v">${a.start}<br>~ ${a.end}</span></div>
       <div class="r"><span class="k">出资方</span><span class="v"><b>商家 100%</b><br><span style="font-size:11.5px;color:var(--sub)">差价商家承担，不进平台优惠</span></span></div>
       <div class="r"><span class="k">叠加规则</span><span class="v">可与平台优惠券叠加<br><span style="font-size:11.5px;color:var(--sub)">券由平台承担</span></span></div>
+      <div class="r"><span class="k">活动总预算</span><span class="v"><b>${budgetTxt(a)}</b><br><span style="font-size:11.5px;color:var(--sub)">${hasBudget(a)?'让利上限（含税）· 已用 '+money(budgetUsed(a))+'（'+budgetPct(a).toFixed(0)+'%）':'不限预算'}</span></span></div>
       <div class="r"><span class="k">创建</span><span class="v">${a.createdBy||'—'} · ${a.createdAt||'—'}</span></div>
 </div>
+    ${s==2&&budgetOut(a)?`<div class="pm-tip" style="background:var(--amber-soft);color:#B45309"><b>预算已用尽，活动自动结束</b>：已消耗让利 ${money(budgetUsed(a))} 达到预算 ${money(a.budget)}。预算用尽为终态、退款不回补；要继续做请用「复制新建」并设新预算。</div>`:''}
+    ${s==1&&hasBudget(a)&&budgetPct(a)>=80?`<div class="pm-tip" style="background:var(--amber-soft);color:#B45309">预算已使用 <b>${budgetPct(a).toFixed(0)}%</b>（${money(budgetUsed(a))} / ${money(a.budget)}），用尽后活动将自动结束。</div>`:''}
     ${s==1?`<div class="pm-tip">活动进行中<b>不可编辑</b>（与平台活动同规则）。要调整活动价 / 商品 / 时间：先终止本场，再用「复制新建」快速重建。</div>`:''}
     ${s==4?`<div class="pm-tip" style="${a.endedBy=='platform'?'background:var(--red-soft);color:var(--red)':''}"><b>${a.endedBy=='platform'?'平台强制终止':'商家终止'}</b>${a.endReason?'：'+a.endReason:''}。终止后 C 端已立即恢复原价；活动期间订单按活动价快照不受影响。</div>`:''}
     <div class="pm-dl" style="padding:10px 15px 4px"><div style="font-size:13px;font-weight:700;margin-bottom:2px">活动商品 <span style="font-weight:500;color:var(--sub);font-size:12px">${a.items.length} 个 · 单件让利合计(含税) ${money(save)}</span></div>
@@ -213,16 +226,17 @@ function copyAct(a,after){if(!ADMIN)return noPerm();const liveSrc=live(a);const 
   const range={start:st0,end:en0};let dropped=0,cleared=0,conflict=0;const items=[];
   a.items.forEach(x=>{const s=sku(x.skuId);if(!s||s.off){dropped++;return;}if(occupiedBy(x.skuId,range,a.id))conflict++;let price=x.price;if(!(price>0&&price<s.price)){price='';cleared++;}items.push({skuId:x.skuId,orig:s.price,price,limit:x.limit});});
   toast(`已复制 ${items.length} 个 SKU${dropped?`，${dropped} 个因下架未带入`:''}${cleared?`，${cleared} 个活动价需重填`:''}${conflict?`，${conflict} 个撞期提交时会拦截`:''}`);
-  openEdit(null,after,{name:(a.name+'（复制）').slice(0,50),start:range.start,end:range.end,items});}
+  openEdit(null,after,{name:(a.name+'（复制）').slice(0,50),start:range.start,end:range.end,budget:a.budget==null?null:+a.budget,items});}
 function openEdit(a,after,preset){if(!ADMIN)return noPerm();const isNew=!a;const st=isNew?-1:stOf(a);
   if(!isNew&&st!=0){toast(st==1?'进行中活动不可编辑：请先终止，再复制新建':'已结束/已终止的活动不可编辑，可复制新建');return;}
-  const ED=preset?{id:null,name:preset.name,start:preset.start,end:preset.end,items:preset.items}:{id:isNew?null:a.id,name:isNew?'':a.name,start:isNew?shift(1,0,0):a.start,end:isNew?shift(7,23,59):a.end,items:isNew?[]:a.items.map(x=>({...x}))};
+  const ED=preset?{id:null,name:preset.name,start:preset.start,end:preset.end,budget:preset.budget,items:preset.items}:{id:isNew?null:a.id,name:isNew?'':a.name,start:isNew?shift(1,0,0):a.start,end:isNew?shift(7,23,59):a.end,budget:isNew?null:(a.budget==null?null:+a.budget),items:isNew?[]:a.items.map(x=>({...x}))};
   pushPage({title:isNew?'新建特价活动':'编辑活动',body:`
     <div class="pm-sec"><div class="st">基本信息 · 出资方 商家 100% · 可与平台券叠加</div>
       <div class="pm-row"><div class="lb"><b>*</b>活动名称</div><input id="pe-name" maxlength="50" value="${ED.name}" placeholder="仅商家内部可见，≤50 字"></div>
       <div class="pm-row"><div class="lb"><b>*</b>开始时间</div><input type="datetime-local" id="pe-start" value="${toLocal(ED.start)}" min="${toLocal(now())}"></div>
       <div class="pm-row"><div class="lb"><b>*</b>结束时间</div><input type="datetime-local" id="pe-end" value="${toLocal(ED.end)}" min="${toLocal(ED.start)}"></div>
-      <div class="pm-hint">开始不早于当前；结束晚于开始且单场 ≤ 30 天；到点自动开始 / 结束，C 端同步切换活动价 / 原价。</div></div>
+      <div class="pm-row"><div class="lb">活动总预算</div><input id="pe-budget" inputmode="decimal" value="${ED.budget==null?'':(+ED.budget).toFixed(2)}" placeholder="S$ 留空 = 不限预算"></div>
+      <div class="pm-hint">开始不早于当前；结束晚于开始且单场 ≤ 30 天。<b>活动总预算</b>＝本场愿承担的<b>让利总额上限</b>（含税）：每成交一单累计「原价 − 活动价 × 件数」，达到预算后活动<b>自动结束</b>；退款不回补；活动开始后不可修改。留空 = 不限预算。</div></div>
     <div id="pe-items"></div>
     <div class="pm-add" id="pe-add"><svg viewBox='0 0 24 24'><path d='M12 5v14M5 12h14'/></svg>添加商品</div>
     <div class="pm-hint" style="padding:10px 16px 16px">活动价为<b>未税价</b>，须低于当前未税售价；预计到手 = 活动含税价 − 佣金 − 揽收费，仅供参考。</div>`,
@@ -246,7 +260,7 @@ function openEdit(a,after,preset){if(!ADMIN)return noPerm();const isNew=!a;const
       const flash=(k)=>{const card=box.querySelectorAll('.pm-sku')[k];if(!card)return;card.scrollIntoView({behavior:'smooth',block:'center'});card.style.boxShadow='0 0 0 2px var(--red)';setTimeout(()=>{card.style.boxShadow='';},2000);};
       draw();
       const gv=id=>(p.querySelector('#'+id)||{}).value||'';
-      const sync=()=>{ED.name=gv('pe-name').trim();ED.start=fromLocal(gv('pe-start'));ED.end=fromLocal(gv('pe-end'));};
+      const sync=()=>{ED.name=gv('pe-name').trim();ED.start=fromLocal(gv('pe-start'));ED.end=fromLocal(gv('pe-end'));const b=gv('pe-budget').trim();ED.budget=b===''?null:+b;};
       p.querySelector('#pe-add').onclick=()=>{sync();openPick(ED,()=>draw());};
       p.querySelector('#pe-sub').onclick=()=>{sync();
         if(!ED.name)return toast('请填写活动名称');if(ED.name.length>50)return toast('活动名称不超过 50 字');
@@ -254,6 +268,8 @@ function openEdit(a,after,preset){if(!ADMIN)return noPerm();const isNew=!a;const
         if(isNew&&ED.start<now())return toast('开始时间不能早于当前');
         if(ED.end<=ED.start)return toast('结束时间必须晚于开始时间');
         if((new Date(toLocal(ED.end))-new Date(toLocal(ED.start)))>30*86400000)return toast('单场活动最长 30 天');
+        if(ED.budget!=null&&!(ED.budget>0))return toast('活动总预算须大于 0，或留空表示不限预算');
+        if(ED.budget!=null&&ED.budget>999999.99)return toast('活动总预算不得超过 S$999,999.99');
         if(!ED.items.length)return toast('至少添加 1 个活动商品');
         for(let k=0;k<ED.items.length;k++){const x=ED.items[k];const s=sku(x.skuId);const nm=s?s.n+' '+s.spec:x.skuId;const ef=effective(x);if(!ef[0]){flash(k);return toast(`「${nm}」${ef[1]}，请移除后再提交`);}if(s)x.orig=s.price;
           if(!(+x.price>0)){flash(k);return toast(`「${nm}」请填写活动价`);}if(+x.price>=x.orig){flash(k);return toast(`「${nm}」活动价须低于当前售价 ${money(x.orig)}`);}
@@ -263,12 +279,12 @@ function openEdit(a,after,preset){if(!ADMIN)return noPerm();const isNew=!a;const
         if(lows.length)confirmDialog({title:'活动价偏低，确认提交？',okText:'确认提交',body:`有 <b>${lows.length}</b> 个 SKU 活动价低于当前售价的 <b>30%</b>，差价全部由商家承担。`,onOk:go});else go();};
     }});}
 function save(ED,isNew,a){const items=ED.items.map(x=>({skuId:x.skuId,orig:x.orig,price:+(+x.price).toFixed(2),limit:x.limit}));
-  if(isNew){const nid='AC'+(++SEQ);const n={id:nid,url:'https://m.foodexmart.com/activity/special?id='+nid,fund:1,name:ED.name,start:ED.start,end:ED.end,status:0,createdBy:WHO,createdAt:now(),updatedAt:now(),items,logs:[{t:now(),who:WHO,act:'创建活动',d:`${items.length} 个 SKU · ${ED.start} ~ ${ED.end}`}]};ACTS.unshift(n);return;}
+  if(isNew){const nid='AC'+(++SEQ);const n={id:nid,url:'https://m.foodexmart.com/activity/special?id='+nid,fund:1,name:ED.name,start:ED.start,end:ED.end,budget:ED.budget,used:0,status:0,createdBy:WHO,createdAt:now(),updatedAt:now(),items,logs:[{t:now(),who:WHO,act:'创建活动',d:`${items.length} 个 SKU · ${ED.start} ~ ${ED.end} · 预算 ${ED.budget==null?'不限':money(ED.budget)}`}]};ACTS.unshift(n);return;}
   const before=a.items.map(x=>x.skuId),after=items.map(x=>x.skuId);const chg=[];
-  if(a.name!=ED.name)chg.push(`名称「${a.name}」→「${ED.name}」`);if(a.start!=ED.start)chg.push(`开始 ${a.start} → ${ED.start}`);if(a.end!=ED.end)chg.push(`结束 ${a.end} → ${ED.end}`);
+  if(a.name!=ED.name)chg.push(`名称「${a.name}」→「${ED.name}」`);if((a.budget==null?null:+a.budget)!==(ED.budget==null?null:+ED.budget))chg.push(`预算 ${a.budget==null?'不限':money(a.budget)} → ${ED.budget==null?'不限':money(ED.budget)}`);if(a.start!=ED.start)chg.push(`开始 ${a.start} → ${ED.start}`);if(a.end!=ED.end)chg.push(`结束 ${a.end} → ${ED.end}`);
   const add=after.filter(x=>!before.includes(x)),rm=before.filter(x=>!after.includes(x));if(add.length)chg.push('新增 SKU '+add.join('、'));if(rm.length)chg.push('移除 SKU '+rm.join('、'));
   a.items.forEach(o=>{const n=items.find(x=>x.skuId==o.skuId);if(n&&(n.price!=o.price||n.limit!=o.limit))chg.push(`${o.skuId} 活动价 ${money(o.price)}→${money(n.price)} / 限购 ${lim(o.limit)}→${lim(n.limit)}`);});
-  a.name=ED.name;a.start=ED.start;a.end=ED.end;a.items=items;a.updatedAt=now();a.logs.push({t:now(),who:WHO,act:'编辑活动',d:chg.join('；')||'无字段变化'});}
+  a.name=ED.name;a.start=ED.start;a.end=ED.end;a.budget=ED.budget;a.items=items;a.updatedAt=now();a.logs.push({t:now(),who:WHO,act:'编辑活动',d:chg.join('；')||'无字段变化'});}
 
 /* ===== 选品 ===== */
 function openPick(ED,after){const range={start:ED.start,end:ED.end};let q='';const sel=new Set();
