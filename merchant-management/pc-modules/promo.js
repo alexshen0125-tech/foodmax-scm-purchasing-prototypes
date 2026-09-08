@@ -41,6 +41,10 @@
     ];
   }
   window.ensurePromos=ensure;
+  /* BR-19 权限：仅店铺管理员可写。原型用 DB.promoAdmin 模拟（默认管理员），列表头可切「子账号视角」演示 */
+  const isAdmin=()=>DB.promoAdmin!==false;
+  const noPerm=()=>{toast('仅店铺管理员可操作特价活动，子账号只读','err');return false;};
+  window.promoToggleAdmin=function(){DB.promoAdmin=!isAdmin();render();toast(isAdmin()?'已切回管理员视角':'已切到子账号视角（只读）','info');};
 
   /* ===== 状态 ===== */
   const ST={0:['待开始','t-b'],1:['进行中','t-g'],2:['已结束','t-gr'],4:['已终止','t-r']};
@@ -96,7 +100,8 @@
       <div class="tabs" style="margin:0;border:none">${TABS.map(x=>`<div class="tab ${tab==x[0]?'active':''}" onclick="DB.promoTab='${x[0]}';render()">${x[1]}${cnt(x[0])?` <span class="tag ${x[0]=='1'?'t-g':x[0]=='4'?'t-r':'t-gr'}" style="font-size:10px;margin-left:2px">${cnt(x[0])}</span>`:''}</div>`).join('')}</div>
       <div class="row" style="gap:8px">
         <span style="font-size:12.5px;color:var(--ts)">差价由商家 100% 承担 · 佣金按活动价成交额计 · 提交即到点生效，无需平台审核</span>
-        <button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button>
+        <button class="btn btn-link btn-sm" onclick="promoToggleAdmin()" title="演示：切换管理员 / 子账号视角">${isAdmin()?'管理员':'子账号（只读）'} ⇄</button>
+        <button class="btn btn-p btn-sm" ${isAdmin()?'':'disabled title="仅店铺管理员可新建"'} onclick="act_promoEdit()">＋ 新建特价活动</button>
       </div>
     </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>活动ID</th><th>活动名称</th><th>开始时间</th><th>结束时间</th><th>商品数</th><th>状态</th><th>创建人</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
@@ -109,7 +114,7 @@
         <td>${stTag(a)}</td>
         <td>${a.createdBy||'—'}</td>
         <td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.createdAt||'—'}</td><td style="font-size:11.5px;color:var(--ts);white-space:nowrap">${a.updatedAt||'—'}</td>
-        <td style="white-space:nowrap">${st==0?`<button class="btn btn-o btn-sm" onclick="act_promoEdit('${a.id}')">编辑</button> `:''}${st<2?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_promoStop('${a.id}')">终止</button> `:''}<button class="btn btn-link btn-sm" onclick="act_promoCopy('${a.id}')">复制</button> <button class="btn btn-link" onclick="act_promoDetail('${a.id}')">详情</button></td>
+        <td style="white-space:nowrap">${isAdmin()?`${st==0?`<button class="btn btn-o btn-sm" onclick="act_promoEdit('${a.id}')">编辑</button> `:''}${st<2?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="act_promoStop('${a.id}')">终止</button> `:''}<button class="btn btn-link btn-sm" onclick="act_promoCopy('${a.id}')">复制</button> `:''}<button class="btn btn-link" onclick="act_promoDetail('${a.id}')">详情</button></td>
       </tr>`;}).join('')||`<tr><td colspan="10"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">${tab=='all'?'还没有商品特价活动':'该状态下暂无活动'}</div><div class="e-s">给本店 SKU 设活动价与起止时间，C 端按特价展示；差价由商家承担、佣金按活动价成交额计</div>${tab=='all'?`<div style="margin-top:10px"><button class="btn btn-p btn-sm" onclick="act_promoEdit()">＋ 新建特价活动</button></div>`:''}</div></td></tr>`}
       </tbody></table></div></div></div>`;
   };
@@ -135,37 +140,36 @@
       <h4 style="margin:6px 0 8px;font-size:13.5px">操作日志</h4>
       ${(a.logs||[]).slice().reverse().map(l=>`<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--bd2);font-size:12.5px"><span style="color:var(--ts);white-space:nowrap">${l.t}</span><span style="white-space:nowrap"><b>${l.who}</b> · ${l.act}</span><span style="color:var(--ts)">${l.d||''}</span></div>`).join('')||'<div style="color:var(--tt);font-size:12.5px">暂无</div>'}
     </div>
-    <div class="mc-ft"><button class="btn btn-link" onclick="toast('已导出活动商品：${a.id}_活动商品.xlsx（SKU编号 / 商品名称 / 原价 / 活动价 / 限购 / 生效）','ok')">导出活动商品</button><span style="flex:1"></span>${st<2?`<button class="btn btn-o" style="color:var(--r);border-color:var(--r)" onclick="closeDrawer();act_promoStop('${a.id}')">终止活动</button>`:''}<button class="btn btn-o" onclick="closeDrawer();act_promoCopy('${a.id}')">复制新建</button>${st==0?`<button class="btn btn-p" onclick="closeDrawer();act_promoEdit('${a.id}')">编辑</button>`:''}</div>`);
+    <div class="mc-ft"><button class="btn btn-link" ${isAdmin()?'':'disabled'} onclick="toast('已导出活动商品：${a.id}_活动商品.xlsx（SKU编号 / 商品名称 / 原价 / 活动价 / 限购 / 生效）','ok')">导出活动商品</button><span style="flex:1"></span>${!isAdmin()?`<span style="font-size:12px;color:var(--ts)">子账号只读</span><button class="btn btn-o" onclick="closeDrawer()">关闭</button>`:`${st<2?`<button class="btn btn-o" style="color:var(--r);border-color:var(--r)" onclick="closeDrawer();act_promoStop('${a.id}')">终止活动</button>`:''}<button class="btn btn-o" onclick="closeDrawer();act_promoCopy('${a.id}')">复制新建</button>${st==0?`<button class="btn btn-p" onclick="closeDrawer();act_promoEdit('${a.id}')">编辑</button>`:''}`}</div>`);
   };
 
   /* ===== 终止 ===== */
-  window.act_promoStop=function(id){const a=DB.promos.find(x=>x.id==id);if(!a)return;const st=calcStatus(a);
+  window.act_promoStop=function(id){if(!isAdmin())return noPerm();const a=DB.promos.find(x=>x.id==id);if(!a)return;const st=calcStatus(a);
     askConfirm(`确认终止特价活动「<b>${a.name}</b>」？<br><span style="font-size:12.5px;color:var(--ts)">${st==1?'终止后 C 端<b>立即</b>恢复原价，已生成订单不受影响；':'活动尚未开始，终止后不会生效；'}终止不可撤销，如需再做需新建活动。</span>`,()=>{a.status=4;a.endedBy='merchant';a.updatedAt=ts();(a.logs=a.logs||[]).push({t:ts(),who:DB.merchant.contact||'店铺管理员',act:'终止活动',d:st==1?'进行中终止，C 端已恢复原价':'未开始终止'});render();toast(`「${a.name}」已终止`,'info');});};
 
   /* ===== 新建 / 编辑 ===== */
   let ED=null;   // {id,name,start,end,items:[{skuId,orig,price,limit,locked}],isNew,status}
-  window.act_promoEdit=function(id){ensure();
+  window.act_promoEdit=function(id){if(!isAdmin())return noPerm();ensure();
     if(id){const a=DB.promos.find(x=>x.id==id);if(!a)return;const st=calcStatus(a);if(st==1){toast('进行中活动不可编辑：请先终止，再复制新建','err');return;}if(st>=2){toast('已结束/已终止的活动不可编辑，可复制新建','err');return;}
-      ED={id:a.id,name:a.name,start:a.start,end:a.end,status:st,isNew:false,items:a.items.map(x=>({...x,locked:false}))};}
+      ED={id:a.id,name:a.name,start:a.start,end:a.end,status:st,isNew:false,items:a.items.map(x=>({...x}))};}
     else ED={id:null,name:'',start:shift(1,0,0),end:shift(7,23,59),status:-1,isNew:true,items:[]};
     DB.promoView='edit';render();};
   /* 复制新建（对齐运营平台「复制」：按实时售价重取原价；活动价若已不低于现售价则清空待填；时间重置） */
-  window.act_promoCopy=function(id){ensure();const a=DB.promos.find(x=>x.id==id);if(!a)return;
+  window.act_promoCopy=function(id){if(!isAdmin())return noPerm();ensure();const a=DB.promos.find(x=>x.id==id);if(!a)return;
     // 默认时间：源活动仍在生效（待开始/进行中）→ 接在源活动结束之后（避免与自己撞期）；否则明天起 7 天
     const liveSrc=live(a);const st0=liveSrc?(()=>{const d=new Date(toLocal(a.end));d.setMinutes(d.getMinutes()+1);return fmt(d);})():shift(1,0,0);const en0=(()=>{const d=new Date(toLocal(st0));d.setDate(d.getDate()+7);d.setHours(23,59,0,0);return fmt(d);})();
     const range={start:st0,end:en0};let dropped=0,cleared=0,conflict=0;const items=[];
-    a.items.forEach(x=>{const f=findSku(x.skuId);if(!f||f.p.status!='onsale'||f.s.off||f.s.recycled){dropped++;return;}if(occupiedBy(x.skuId,range,a.id))conflict++;const orig=f.s.price||0;let price=x.price;if(!(price>0&&price<orig)){price='';cleared++;}items.push({skuId:x.skuId,orig,price,limit:x.limit,locked:false});});
+    a.items.forEach(x=>{const f=findSku(x.skuId);if(!f||f.p.status!='onsale'||f.s.off||f.s.recycled){dropped++;return;}if(occupiedBy(x.skuId,range,a.id))conflict++;const orig=f.s.price||0;let price=x.price;if(!(price>0&&price<orig)){price='';cleared++;}items.push({skuId:x.skuId,orig,price,limit:x.limit});});
     ED={id:null,name:(a.name+'（复制）').slice(0,50),start:range.start,end:range.end,status:-1,isNew:true,items};DB.promoView='edit';render();
     toast(`已按「${a.name}」复制 ${items.length} 个 SKU${dropped?`，${dropped} 个因下架未带入`:''}${cleared?`，${cleared} 个活动价已不低于现售价需重填`:''}${conflict?`，${conflict} 个与其他活动撞期、提交时会拦截`:''}`,dropped||cleared||conflict?'info':'ok');};
   window.promoBack=function(){ED=null;DB.promoView='';render();};
-  function editPage(){if(!ED){DB.promoView='';return PAGES['m-promo']();}const run=false;
-    return `<div style="margin-bottom:14px" class="row"><button class="btn btn-o btn-sm" onclick="promoBack()">← 返回商品特价</button><span style="margin-left:12px;font-size:16px;font-weight:700">${ED.isNew?'新建商品特价':'编辑商品特价 · '+ED.id}</span>${run?'<span class="tag t-g" style="margin-left:8px">进行中</span>':''}</div>
-    ${run?`<div class="ib ib-b" style="margin-bottom:14px"><span class="i">ℹ️</span>活动进行中：<b>开始时间与已有 SKU 的活动价不可修改</b>；可延长/缩短结束时间、新增 SKU（立即生效）、移除 SKU（该 SKU 立即恢复原价）。要改活动价请移除后重新添加。</div>`:''}
+  function editPage(){if(!ED){DB.promoView='';return PAGES['m-promo']();}
+    return `<div style="margin-bottom:14px" class="row"><button class="btn btn-o btn-sm" onclick="promoBack()">← 返回商品特价</button><span style="margin-left:12px;font-size:16px;font-weight:700">${ED.isNew?'新建商品特价':'编辑商品特价 · '+ED.id}</span></div>
     <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>基本信息</h3><span class="sub">出资方 商家 100% · 可与平台优惠券叠加</span></div><div class="card-bd">
       <div class="fg3">
         <div class="fr"><label class="fl"><b>*</b>活动名称</label><input id="pe-name" maxlength="50" value="${ED.name}" placeholder="仅商家内部可见，≤50 字" oninput="ED_set('name',this.value)"></div>
-        <div class="fr"><label class="fl"><b>*</b>开始时间</label><input type="datetime-local" id="pe-start" value="${toLocal(ED.start)}" ${run?'disabled':''} min="${toLocal(nowStr())}" onchange="ED_set('start',this.value)"></div>
-        <div class="fr"><label class="fl"><b>*</b>结束时间</label><input type="datetime-local" id="pe-end" value="${toLocal(ED.end)}" min="${toLocal(run?nowStr():ED.start)}" onchange="ED_set('end',this.value)"></div>
+        <div class="fr"><label class="fl"><b>*</b>开始时间</label><input type="datetime-local" id="pe-start" value="${toLocal(ED.start)}" min="${toLocal(nowStr())}" onchange="ED_set('start',this.value)"></div>
+        <div class="fr"><label class="fl"><b>*</b>结束时间</label><input type="datetime-local" id="pe-end" value="${toLocal(ED.end)}" min="${toLocal(ED.start)}" onchange="ED_set('end',this.value)"></div>
       </div>
       <div style="font-size:11.5px;color:var(--ts)">开始时间不早于当前；结束时间须晚于开始且单场 ≤ 30 天；到点自动开始 / 结束，C 端同步切换活动价 / 原价。</div>
     </div></div>
@@ -176,7 +180,7 @@
         return `<tr>
         <td class="mono">${x.skuId}</td><td style="white-space:nowrap">${f?skuFullName(f.p,f.s):'—'}${f&&f.s.refund?` <span class="tag t-y" style="font-size:10px" title="按重量定价：活动价为每 ${f.s.sellUnit||'kg'} 活动价，按实重结算">多退少补</span>`:''}</td>
         <td>${c.rate}%</td><td>${money(x.orig)}</td><td style="color:var(--ts)">${money(c.origIncl)}</td>
-        <td><input class="miniprice" type="number" step="0.01" min="0.01" max="${(x.orig-0.01).toFixed(2)}" value="${x.price===''||x.price==null?'':(+x.price).toFixed(2)}" placeholder="< ${money(x.orig)}" ${x.locked?'disabled title="进行中不可改活动价，移除后重加"':''} style="${bad?'border-color:var(--r)':''}" oninput="ED_price(${k},this.value)">${bad?`<div style="font-size:11px;color:var(--r)">须 &gt;0 且低于 ${money(x.orig)}</div>`:low?`<div style="font-size:11px;color:var(--y)">低于售价 30%，提交时需二次确认</div>`:''}</td>
+        <td><input class="miniprice" type="number" step="0.01" min="0.01" max="${(x.orig-0.01).toFixed(2)}" value="${x.price===''||x.price==null?'':(+x.price).toFixed(2)}" placeholder="< ${money(x.orig)}" style="${bad?'border-color:var(--r)':''}" oninput="ED_price(${k},this.value)" onblur="ED_blur(${k})">${bad?`<div style="font-size:11px;color:var(--r)">须 &gt;0 且低于 ${money(x.orig)}</div>`:low?`<div style="font-size:11px;color:var(--y)">低于售价 30%，提交时需二次确认</div>`:''}</td>
         <td style="color:var(--ts)" id="pe-incl-${k}">${+x.price>0?money(c.incl):'—'}</td>
         <td id="pe-disc-${k}" style="color:var(--r)">${+x.price>0?'−'+cutTxt(x):'—'}</td>
         <td style="color:var(--gd)" id="pe-inc-${k}">${+x.price>0?money(c.inc):'—'}</td>
@@ -191,7 +195,11 @@
   window.ED_set=function(k,v){if(!ED)return;ED[k]=(k=='start'||k=='end')?fromLocal(v):v;};
   window.ED_price=function(k,v){const x=ED.items[k];x.price=v===''?'':+v;const c=calc(x);const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t;};set('pe-incl-'+k,+x.price>0?money(c.incl):'—');set('pe-disc-'+k,+x.price>0?'−'+cutTxt(x):'—');set('pe-inc-'+k,+x.price>0?money(c.inc):'—');};
   window.ED_limit=function(k,v){ED.items[k].limit=v===''?null:Math.max(1,parseInt(v)||1);};
-  window.ED_remove=function(k){const x=ED.items[k];const f=findSku(x.skuId);const nm=f?skuFullName(f.p,f.s):x.skuId;if(x.locked){askConfirm(`活动进行中，移除「<b>${nm}</b>」后该 SKU <b>立即恢复原价</b>，确认移除？`,()=>{ED.items.splice(k,1);render();toast('已移除，保存后生效','info');});return;}ED.items.splice(k,1);render();};
+  window.ED_remove=function(k){ED.items.splice(k,1);render();};
+  /* 失焦复校验：有效性状态变化才整页重渲（避免打断「输入后直接点按钮」） */
+  window.ED_blur=function(k){const x=ED.items[k];const bad=x.price!==''&&x.price!=null&&(!(+x.price>0)||+x.price>=x.orig);const low=+x.price>0&&+x.price<x.orig*0.3;const key=`${bad}|${low}`;if(x._shown!==key){x._shown=key;setTimeout(render,120);}};
+  /* 校验失败定位：滚动到行并高亮 2 秒 */
+  window.promoFlashRow=function(k){const tr=document.querySelectorAll('#pe-rows tr')[k];if(!tr)return;tr.scrollIntoView({behavior:'smooth',block:'center'});tr.style.transition='box-shadow .2s';tr.style.boxShadow='inset 0 0 0 2px var(--r)';setTimeout(()=>{tr.style.boxShadow='';},2000);};
 
   /* 选品弹窗：本店在售 SKU，已占用（含平台活动）置灰 */
   window.act_promoPick=function(){ensure();const range={start:ED.start,end:ED.end};DB.promoPickSel=[];DB.promoPickQ='';renderPick(range);};
@@ -213,7 +221,7 @@
   window.promoPickToggle=function(id){const a=DB.promoPickSel;const k=a.indexOf(id);if(k<0)a.push(id);else a.splice(k,1);renderPick({start:ED.start,end:ED.end});};
   const unwiden=()=>{const mc=document.getElementById('mc');if(mc)mc.style.width='';};
   window.promoPickClose=function(){unwiden();closeModal();};
-  window.promoPickOk=function(){unwiden();DB.promoPickSel.forEach(id=>{const f=findSku(id);if(!f)return;ED.items.push({skuId:id,orig:f.s.price||0,price:'',limit:null,locked:false});});const n=DB.promoPickSel.length;DB.promoPickSel=[];closeModal();render();toast(`已加入 ${n} 个 SKU，请填写活动价`,'ok');};
+  window.promoPickOk=function(){unwiden();DB.promoPickSel.forEach(id=>{const f=findSku(id);if(!f)return;ED.items.push({skuId:id,orig:f.s.price||0,price:'',limit:null});});const n=DB.promoPickSel.length;DB.promoPickSel=[];closeModal();render();toast(`已加入 ${n} 个 SKU，请填写活动价`,'ok');};
 
   /* 提交：全量复验（对齐平台 BR-13） */
   window.act_promoSubmit=function(){if(!ED)return;
@@ -225,12 +233,12 @@
     if((new Date(toLocal(ED.end))-new Date(toLocal(ED.start)))>30*86400000){toast('单场活动最长 30 天','err');return;}
     if(!ED.items.length){toast('至少添加 1 个活动商品','err');return;}
     const ids=ED.items.map(x=>x.skuId);if(new Set(ids).size!=ids.length){toast('同一 SKU 不可重复','err');return;}
-    for(const x of ED.items){const f=findSku(x.skuId);const nm=f?skuFullName(f.p,f.s):x.skuId;
-      const ef=rowEffective(x);if(!ef[0]){toast(`「${nm}」${ef[1]}，请移除后再提交`,'err');return;}   // 提交复验在售状态（沈亮 2026-09-08）：非在售 SKU 直接拦下，不带不生效行提交
+    for(let k=0;k<ED.items.length;k++){const x=ED.items[k];const f=findSku(x.skuId);const nm=f?skuFullName(f.p,f.s):x.skuId;
+      const ef=rowEffective(x);if(!ef[0]){toast(`「${nm}」${ef[1]}，请移除后再提交`,'err');promoFlashRow(k);return;}   // 提交复验在售状态（沈亮 2026-09-08）：非在售 SKU 直接拦下，不带不生效行提交
       if(f)x.orig=f.s.price||0;   // 售价在编辑过程中被改 → 以最新售价复验
-      if(!(+x.price>0)){toast(`「${nm}」请填写活动价`,'err');return;}
-      if(+x.price>=x.orig){toast(`「${nm}」活动价须低于当前未税售价 ${money(x.orig)}`,'err');return;}
-      const occ=occupiedBy(x.skuId,{start:ED.start,end:ED.end},ED.id);if(occ){toast(`「${nm}」已在${occ.fund==0?'平台活动':'活动《'+occ.name+'》'}中（至 ${occ.end}），请移除或调整活动时间`,'err');return;}}
+      if(!(+x.price>0)){toast(`「${nm}」请填写活动价`,'err');promoFlashRow(k);return;}
+      if(+x.price>=x.orig){toast(`「${nm}」活动价须低于当前未税售价 ${money(x.orig)}`,'err');promoFlashRow(k);return;}
+      const occ=occupiedBy(x.skuId,{start:ED.start,end:ED.end},ED.id);if(occ){toast(`「${nm}」已在${occ.fund==0?'平台活动':'活动《'+occ.name+'》'}中（至 ${occ.end}），请移除或调整活动时间`,'err');promoFlashRow(k);return;}}
     const lows=ED.items.filter(x=>+x.price<x.orig*0.3);
     const go=()=>save();
     if(lows.length)askConfirm(`有 <b>${lows.length}</b> 个 SKU 活动价低于当前售价的 <b>30%</b>（如 ${(()=>{const x=lows[0];const f=findSku(x.skuId);return `${f?f.p.name:x.skuId} ${money(x.orig)} → ${money(+x.price)}`;})()}），差价全部由商家承担。确认按此价格提交？`,go);else go();};
@@ -265,7 +273,7 @@
       if(f&&ED.items.some(x=>x.skuId==code))out.errs.push('已在本活动中');
       if(f){const occ=occupiedBy(code,range,ED.id);if(occ)out.errs.push(`已在${occ.fund==0?'平台活动':'活动《'+occ.name+'》'}中（至 ${occ.end.slice(5)}）`);}
       return out;});}
-  window.act_promoImport=function(){if(!ED){act_promoEdit();}DB.impStep=DB.impStep||'upload';DB.impTry=DB.impTry||0;renderImport();};
+  window.act_promoImport=function(){if(!isAdmin())return noPerm();if(!ED){act_promoEdit();}DB.impStep=DB.impStep||'upload';DB.impTry=DB.impTry||0;renderImport();};
   function renderImport(){const step=DB.impStep;const res=DB.impRes||[];const bad=res.filter(r=>r.errs.length).length;const warn=res.filter(r=>r.warns.length).length;
     modalWide(`<div class="mc-hd"><div><h3>批量导入活动商品</h3><p>按模板填写后上传，系统按 <b>SKU编号</b> 匹配本店在售 SKU · 活动时间 ${ED.start} ~ ${ED.end}</p></div><button class="mc-x" onclick="promoImpClose()">×</button></div>
     <div class="mc-bd">
@@ -297,6 +305,6 @@
       :`<button class="btn btn-o" onclick="DB.impStep='upload';renderImport()">重新上传</button><button class="btn btn-p" onclick="promoImpCommit()">确认导入 ${res.length} 行</button>`}
     </div>`);widen();}
   window.promoImpUpload=function(){DB.impTry=(DB.impTry||0)+1;const first=DB.impTry%2==1;DB.impName=first?'特价活动_9月.xlsx':'特价活动_9月(修正).xlsx';DB.impRes=impValidate(first?IMP_FILE_A:IMP_FILE_B);DB.impStep='result';renderImport();toast(`已解析 ${DB.impRes.length} 行，校验完成`,'info');};
-  window.promoImpCommit=function(){const res=DB.impRes||[];if(res.some(r=>r.errs.length))return;res.forEach(r=>{ED.items.push({skuId:r.code,orig:r.f.s.price||0,price:+parseFloat(r.price).toFixed(2),limit:r.limit===''?null:parseInt(r.limit),locked:false});});const n=res.length;DB.impStep='upload';DB.impRes=null;unwiden();closeModal();render();toast(`已导入 ${n} 个 SKU 到活动，确认后提交`,'ok');};
+  window.promoImpCommit=function(){const res=DB.impRes||[];if(res.some(r=>r.errs.length))return;res.forEach(r=>{ED.items.push({skuId:r.code,orig:r.f.s.price||0,price:+parseFloat(r.price).toFixed(2),limit:r.limit===''?null:parseInt(r.limit)});});const n=res.length;DB.impStep='upload';DB.impRes=null;unwiden();closeModal();render();toast(`已导入 ${n} 个 SKU 到活动，确认后提交`,'ok');};
   window.promoImpClose=function(){DB.impStep='upload';DB.impRes=null;unwiden();closeModal();};
 })();

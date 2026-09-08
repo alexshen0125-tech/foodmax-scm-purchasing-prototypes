@@ -230,7 +230,7 @@ function skuCard(g,s,gi,si,manage,tab){
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}
           ${audRow}</div>
         <div class="rt"><div class="sk-st only${aud?' aud':''}">${st}</div></div></div>
-      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%）${bc?` · BCRS 押金 <b>S$${bc.toFixed(2)}</b>` :''} · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复</span>`:`<span class="mode once">售完即止</span>`}`}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
+      <div class="skl"><b>S$${(+s.price||0).toFixed(2)}</b> 未税 · 含税 S$${priceIncl(s.price,g).toFixed(2)}（税率 ${taxRate(g)}%）${bc?` · BCRS 押金 <b>S$${bc.toFixed(2)}</b>` :''} · 库存 ${stockTxt}${s.off?'':` ${s.stockMode==='daily'?`<span class="mode daily">每日恢复</span>`:`<span class="mode once">售完即止</span>`}`}${window.FM_PROMO?window.FM_PROMO.badge(g.n,s.spec):''}${s.updatedAt?`<span class="up">更新 ${s.updatedAt}</span>`:''}</div>
       ${manage?'':acts}
     </div></div>`;
 }
@@ -458,7 +458,8 @@ function openPrice(g,only){
         sub.disabled=!(anyValid&&!anyErr);};
       p.querySelectorAll('[data-price]').forEach(i=>i.oninput=check);
       sub.onclick=()=>{sub.classList.add('loading');setTimeout(()=>{
-        p.querySelectorAll('[data-price]').forEach(inp=>{const n=parseFloat(inp.value);if(!isNaN(n)&&n>0){const sk=g.skus[+inp.dataset.i];sk.price=n;sk.updatedAt=ts();}});g.updatedAt=ts();
+        // BR-12 改价守门：活动内 SKU 新售价须高于活动价（特价活动模块提供 FM_PROMO.guard）
+        let blocked=false;p.querySelectorAll('[data-price]').forEach(inp=>{const n=parseFloat(inp.value);if(!isNaN(n)&&n>0){const sk=g.skus[+inp.dataset.i];if(window.FM_PROMO&&!window.FM_PROMO.guard(g.n,sk.spec,n)){blocked=true;return;}sk.price=n;sk.updatedAt=ts();}});if(blocked){sub.classList.remove('loading');return;}g.updatedAt=ts();
         sub.classList.remove('loading');toast('改价成功，即时生效');setTimeout(popPage,600);},700);};
     }});
 }
