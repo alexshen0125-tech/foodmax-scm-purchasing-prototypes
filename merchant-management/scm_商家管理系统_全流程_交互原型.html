@@ -340,6 +340,10 @@ label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
 .rc-ln .amt{font-size:13.5px;font-weight:600;color:var(--tp);font-feature-settings:"tnum" 1,"lnum" 1;white-space:nowrap}
 .rc-ln .amt.neg{color:var(--r)}.rc-ln .amt.pos{color:var(--g)}.rc-ln .amt.zero{color:var(--tt);font-weight:400}.rc-ln .amt.info{color:var(--ts);font-weight:500}
 .rc-tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;background:var(--bd2);color:var(--ts);font-size:10.5px;line-height:16px;vertical-align:1px}
+.rc-tag.inv{background:var(--bl);color:var(--b);font-size:11.5px;font-weight:600;line-height:19px;padding:0 8px;border:1px solid #C7D7FE}
+.rc-tag.inv::before{content:'🧾';font-size:11px;margin-right:3px}
+.rc-tag.noinv{background:var(--rl);color:var(--r);font-size:11.5px;font-weight:600;line-height:19px;padding:0 8px;border:1px solid #F1C4BF}
+.rc-tag.noinv::before{content:'⃠';margin-right:3px}
 .rc-ln.total{border-top:1px solid var(--bd);border-bottom:0;margin-top:2px;padding-top:9px}
 .rc-ln.total .lb,.rc-ln.total .op{font-weight:600;color:var(--g)}.rc-ln.total .cap{color:var(--ts);font-feature-settings:"tnum" 1,"lnum" 1}.rc-ln.total .cap b{color:var(--g);font-weight:600}.rc-ln.total .amt{color:var(--g);font-size:15px;font-weight:700}
 .rc-side{background:var(--bg);border-radius:10px;border-left:0!important;padding:14px 16px!important;margin-left:24px}
@@ -3142,7 +3146,7 @@ function rcLine(op,lb,cap,v,opt){
   let amt;
   if(v==null) amt='—'; else if(!v) amt=money(0); else amt=(isNeg?'−':isPos?'+':'')+money(v);
   const cls=z?' zero':(isNeg?' neg':isPos?' pos':(opt.muted?' info':''));
-  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;
+  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;
 }
 function rcSumCard(rows,T){
   const ds=rows.map(r=>r.date).sort(), last=ds.length?ds[ds.length-1]:'—';
@@ -3164,18 +3168,18 @@ function rcSumCard(rows,T){
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
       ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',T(dPaidG))}
       ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',platSub)}
-      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；平台按此金额向你开具服务费发票',T(dFee),{tag:'服务费发票'})}
+      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；平台按此金额向你开具服务费发票',T(dFee),{tag:'服务费发票',tagCls:'inv'})}
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
       ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',T(dSub),{muted:true,tag:'已扣'})}
       ${rcLine('=','结算合计（货款）',`实付金额 ${money(T(dPaidG))} + 平台补贴 ${money(platSub)} − 平台服务费 ${money(T(dFee))} − 售后扣款 ${money(T(dAftG))} = <b>${money(T(dSettle))}</b>`,T(dSettle),{total:true})}
     </div>
     <div class="rc-side">
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
-      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。<br><b>开票</b>：平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
+      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
       ${rcLine('','结算合计（货款）','左侧算式结果',T(dSettle))}
-      ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',T(dRpl),{tag:'单独开票'})}
-      ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup),{tag:'单独开票'})}
-      ${rcLine('−','缺货罚款',`缺口件数 × ${money(fineUnit)}/件，缺货即罚、与是否补采无关`,T(dFine),{tag:'不开发票'})}
+      ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',T(dRpl),{tag:'单独开票',tagCls:'inv'})}
+      ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup),{tag:'单独开票',tagCls:'inv'})}
+      ${rcLine('−','缺货罚款',`缺口件数 × ${money(fineUnit)}/件，缺货即罚、与是否补采无关`,T(dFine),{tag:'不开发票',tagCls:'noinv'})}
       ${rcLine('=','预计实付（本期到账）',`${money(T(dSettle))} − ${money(T(dRpl))} − ${money(T(dSup))} − ${money(T(dFine))} = <b>${money(net)}</b>`,net,{total:true})}
     </div>
   </div></div></div>`;

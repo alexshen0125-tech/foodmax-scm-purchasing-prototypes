@@ -29,6 +29,9 @@ css.textContent=`
 .rc-ln.total{border-top:1px solid var(--line);border-bottom:0;margin-top:2px;padding-top:9px;}
 .rc-ln.total .lb,.rc-ln.total .op{font-weight:700;color:var(--emerald-2);}.rc-ln.total .cap{color:var(--sub);}.rc-ln.total .cap b{color:var(--emerald-2);}.rc-ln.total .amt{color:var(--emerald-2);font-size:15px;}
 .rc-tag{display:inline-block;margin-left:5px;padding:0 5px;border-radius:6px;background:var(--muted);color:var(--sub);font-size:10px;line-height:15px;vertical-align:1px;}
+.rc-tag.inv{background:#EAF1FF;color:#2563EB;font-size:11px;font-weight:700;line-height:18px;padding:0 7px;border:1px solid #C7D7FE;}
+.rc-tag.inv::before{content:'🧾';font-size:10px;margin-right:2px;}
+.rc-tag.noinv{background:var(--red-soft);color:var(--red);font-size:11px;font-weight:700;line-height:18px;padding:0 7px;border:1px solid #F1C4BF;}
 .rc-list{padding:0 16px 24px;}
 .rc-card{background:#fff;border-radius:18px;padding:15px 16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;min-height:44px;}
 .rc-card .r1{display:flex;align-items:center;gap:8px;}
@@ -126,7 +129,7 @@ const NEG=n=>n?`<span class="rc-neg">-${S(n)}</span>`:S(0);
 const rcLine=(op,lb,cap,v,opt)=>{opt=opt||{};const isNeg=op=='−',isPos=op=='+';
   const amt=v==null?'—':(!v?S(0):(isNeg?'−':isPos?'+':'')+S(v));
   const cls=(v==null||!v)?' zero':(isNeg?' neg':isPos?' pos':(opt.muted?' info':''));
-  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
+  return `<div class="rc-ln${opt.total?' total':''}"><span class="op">${op}</span><div><div class="lb">${lb}${opt.tag?`<span class="rc-tag ${opt.tagCls||''}">${opt.tag}</span>`:''}</div>${cap?`<div class="cap">${cap}</div>`:''}</div><span class="amt${cls}">${amt}</span></div>`;};
 const tax=l=>(l.tax==null?GST:l.tax), mul=l=>1+tax(l)/100;
 const ln=(d,s)=>d.lines.find(l=>l.sku==s)||{price:0,name:s,unit:'件',spec:''};
 const realN=l=>l.real*l.price, realG=l=>l.real*l.price*mul(l);
@@ -178,16 +181,16 @@ function openRecon(){
       <div class="tt">货款算式<span>列表各单同列累计</span></div>
       ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',T(dPaidG))}
       ${rcLine('+','平台补贴','平台出资的优惠，客户少付的部分由平台补给商家',T(dPlat))}
-      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；平台按此金额向你开具服务费发票',T(dFee),{tag:'服务费发票'})}
+      ${rcLine('−','平台服务费','（客户实付 + 平台补贴）× 平台服务费率；平台按此金额向你开具服务费发票',T(dFee),{tag:'服务费发票',tagCls:'inv'})}
       ${rcLine('−','售后扣款（含税）','商家责任售后，按含税售价退客户',T(dAftG))}
       ${rcLine('','商家补贴','商家让利，客户已少付、已从上方金额中扣除，不重复扣',T(dSub),{muted:true,tag:'已扣'})}
       ${rcLine('=','结算合计（货款）',`实付金额 ${S(T(dPaidG))} + 平台补贴 ${S(T(dPlat))} − 平台服务费 ${S(T(dFee))} − 售后扣款 ${S(T(dAftG))} = <b>${S(T(dSettle))}</b>`,T(dSettle),{total:true})}
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
-      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。<br><b>开票</b>：平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
+      <div class="warn">以下三项不计入结算合计（货款），在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
       ${rcLine('','结算合计（货款）','上方算式结果',T(dSettle))}
-      ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',T(dRpl),{tag:'单独开票'})}
-      ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup),{tag:'单独开票'})}
-      ${rcLine('−','缺货罚款','缺口件数 × S$40/件，缺货即罚、与是否补采无关；暂未接入，以「财务 › 罚款单」为准',null,{tag:'不开发票'})}
+      ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',T(dRpl),{tag:'单独开票',tagCls:'inv'})}
+      ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',T(dSup),{tag:'单独开票',tagCls:'inv'})}
+      ${rcLine('−','缺货罚款','缺口件数 × S$40/件，缺货即罚、与是否补采无关；暂未接入，以「财务 › 罚款单」为准',null,{tag:'不开发票',tagCls:'noinv'})}
       ${rcLine('=','预计实付（本期到账）',`${S(T(dSettle))} − ${S(T(dRpl))} − ${S(T(dSup))} − 罚款（未接入按 0）= <b>${S(T(dSettle)-T(dRpl)-T(dSup))}</b>`,T(dSettle)-T(dRpl)-T(dSup),{total:true})}
     </div>
     <div id="rcl">${skel(3)}</div>`,
