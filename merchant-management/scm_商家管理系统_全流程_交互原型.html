@@ -349,7 +349,8 @@ label.fl .fl-cnt{margin-left:auto;color:var(--tt);font-weight:400}
 .rc-side{background:var(--bg);border-radius:10px;border-left:0!important;padding:14px 16px!important;margin-left:24px}
 .rc-side .warn{font-size:11.5px;color:var(--y);background:var(--yl,#FBF3E4);border-radius:8px;padding:7px 10px;line-height:1.5;margin-bottom:8px}
 @media(max-width:1180px){.rc-sum{grid-template-columns:1fr 1fr}.rc-side{grid-column:1/-1;margin:14px 0 0}.rc-sum>div{padding:2px 18px}}
-.drawer-panel .rc-sum{grid-template-columns:1fr 1.3fr}.drawer-panel .rc-side{grid-column:1/-1;margin:14px 0 0}.drawer-panel .rc-hero .big{font-size:26px}
+.rc-sum.no-hero{grid-template-columns:1.15fr 1fr}.rc-sum.no-hero .rc-ledger{padding-left:0}.rc-sum.no-hero .rc-side{grid-column:auto;margin:0 0 0 18px}
+@media(max-width:900px){.rc-sum.no-hero{grid-template-columns:1fr}.rc-sum.no-hero .rc-side{margin:14px 0 0}}
 /* empty */
 .empty{text-align:center;padding:48px 20px;color:var(--ts)}
 .empty .e-ic{font-size:42px;margin-bottom:12px;opacity:.6}
@@ -3155,14 +3156,14 @@ function rcLine(op,lb,cap,v,opt){
 function rcSumBody(v,opts){
   opts=opts||{};const fineUnit=DB.replCfg?DB.replCfg.finePerUnit:40;
   const sep=v.rpl+v.sup+v.fine, net=v.settle-sep;
-  return `<div class="rc-sum">
-    <div class="rc-hero">
+  return `<div class="rc-sum${opts.noHero?' no-hero':''}">
+    ${opts.noHero?'':`<div class="rc-hero">
       <div class="k">${opts.heroLabel||'预计实付（本期到账）'}</div>
       <div class="big"><span class="c">S$</span>${money(net).replace('S$','')}</div>
       <div class="sub" style="font-size:12.5px;color:var(--tp)">= ${opts.settleLabel||'结算合计（货款）'}<b>${money(v.settle)}</b> − 另行结算三项 <b style="color:var(--r)">${money(sep)}</b></div>
       ${(opts.subLines||[]).map((l,i)=>`<div class="sub"${i?' style="margin-top:4px"':''}>${l}</div>`).join('')}
       <div class="rc-tip"><b>口径</b>：${opts.heroShort||'预计实付'} = ${opts.settleLabel||'结算合计（货款）'} − 平台补采 − 耗材订单 − 缺货罚款；${opts.settleLabel||'结算合计（货款）'} = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。${opts.tipExtra||''}</div>
-    </div>
+    </div>`}
     <div class="rc-ledger">
       <div class="tt">货款算式<span>${opts.ledgerSub||'列表各单同列累计'}</span></div>
       ${rcLine('','实付金额（含税）','客户实际支付的金额，已扣商家补贴与平台补贴',v.paidG)}
@@ -3174,7 +3175,7 @@ function rcSumBody(v,opts){
     </div>
     <div class="rc-side">
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
-      <div class="warn">以下三项不计入${opts.settleLabel||'结算合计（货款）'}，在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。</div>
+      <div class="warn">以下三项不计入${opts.settleLabel||'结算合计（货款）'}，在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。${opts.warnExtra||''}</div>
       ${rcLine('',opts.settleLabel||'结算合计（货款）','左侧算式结果',v.settle)}
       ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',v.rpl,{tag:'单独开票',tagCls:'inv'})}
       ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',v.sup,{tag:'单独开票',tagCls:'inv'})}
@@ -3315,12 +3316,11 @@ function act_reconDetail(no){
     return {id,cust:m.cust||'',bcrs:m.bcrs||0,adj:m.adj||0,ct:m.ct||'',ft:m.ft||'',n,due,real,rn,rg,sub,fee,inc,rate:n?rateSum/n:0};
   });
   const TH=(t,s)=>`<th style="text-align:right">${t}${s?`<br><span style="font-weight:400;color:var(--ts)">${s}</span>`:''}</th>`;
-  drawer(`<div class="drawer-hd"><div><h3>${d.no} · 对账单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${d.date} · ${d.wh} · 关联 ${nOrd} 个订单 · 数据源：财务结算单明细</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>${d.no} · 对账单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${d.date} · ${d.wh} · 关联 ${nOrd} 个订单 · 实付金额未税 ${money(dPaidN(d))} / 含税 ${money(dPaidG(d))} · 数据源：财务结算单明细</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div style="margin-bottom:16px;padding:14px 16px;border:1px solid var(--bd);border-radius:10px;background:#fff">${rcSumBody({paidG:dPaidG(d),plat:dPlat(d),fee:dFee(d),aft:dAftG(d),sub:dSub(d),settle:dSettle(d),rpl:dRpl(d),sup:dSup(d),fine:dFine(d)},{
-      heroLabel:'预估当日结算',heroShort:'预估当日结算',settleLabel:'当日结算（货款）',ledgerSub:'本单各行累计',
-      subLines:[`${d.date} · ${d.wh} · 关联 ${nOrd} 个订单 · 实付金额未税 ${money(dPaidN(d))} / 含税 ${money(dPaidG(d))}`],
-      tipExtra:'<br>补采与罚款<b>互不关联</b>：补采只在自营有货补齐时产生，罚款只要清点出缺口就计。'
+      noHero:true,heroLabel:'预估当日结算',settleLabel:'当日结算（货款）',ledgerSub:'本单各行累计',
+      warnExtra:'<br>补采与罚款<b>互不关联</b>：补采只在自营有货补齐时产生，罚款只要清点出缺口就计。'
     })}</div>
     <div class="tabs">
       <div class="tab ${tab=='sku'?'active':''}" onclick="DB.rcTab='sku';act_reconDetail('${no}')">SKU 维度</div>
