@@ -742,7 +742,7 @@ const DB = {
   invoices:[
     // 平台代商家开给客户的销售发票（TAX INVOICE）。amt = 含税应付；sub/gst/goods/disc/ship 满足
     // sub = goods − disc + ship，gst = ROUND(sub×9%,2)，amt = sub + gst + bcrs。seq/total = 该订单内第几张/共几张（跨商家）
-    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',no:'INV-2026-6600',reject:'',
+    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:9820.00,status:'verified',tstatus:'credited',no:'INV-2026-6600',reject:'',
       date:'2026-07-01',goods:9050.00,disc:60.83,ship:20.00,sub:9009.17,gst:810.83,bcrs:0,seq:1,total:2,
       cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
       consignee:'海底捞 · 城市广场店',dlvAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',dlvNo:'DO-20260628-0117',dlvDate:'2026-06-28',
@@ -757,7 +757,14 @@ const DB = {
       cliAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',cliGst:'201033445B',
       consignee:'丰盛轩 · 裕廊店',dlvAddr:'50 Jurong Gateway Rd, #03-07, Singapore 608549',dlvNo:'DO-20260630-0131',dlvDate:'2026-06-30',
       lines:[['娃娃菜','1 箱(10头)',250,12.00,3000.00],['西兰花','1 箱(6kg)',106,25.00,2650.00]]},
+    // 冲抵 Credit Note：开票后售后退款，冲 INV-2026-6600（与运营端 taxInvoices 的 CN-2026-0033 同源）
+    {order:'#SG20260628007',client:'海底捞（新加坡）',amt:-741.20,status:'verified',tstatus:'issued',type:'cn',against:'INV-2026-6600',no:'CN-2026-0033',reject:'',
+      date:'2026-07-04',goods:-680.00,disc:0,ship:0,sub:-680.00,gst:-61.20,bcrs:0,seq:1,total:2,
+      cliAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',cliGst:'200812345A',
+      consignee:'海底捞 · 城市广场店',dlvAddr:'3 Temasek Boulevard, #02-11, Singapore 038983',dlvNo:'DO-20260628-0117',dlvDate:'2026-06-28',
+      lines:[['有机菜心','1 箱(10kg)',-10,68.00,-680.00]]},
   ],
+  ciFilter:{},ciSel:[],   // 商家端·客户开票：筛选（订单号/单据类型/开票日期区间）与勾选
   /* 运营平台·发票查询：全平台代开税票总账（跨商家 / 正向 inv + 冲抵 cn）。
      ent=开票主体法定名称，gstNo 为空 = 该主体未注册 GST（票面降为 INVOICE、不计税、不可抵扣，gst 记 null）。 */
   taxInvoices:[
@@ -768,7 +775,7 @@ const DB = {
     {no:'INV-2026-6604',type:'inv',order:'#SG20260630021',ent:'厨匠厨具 KitchenPro Supplies Pte Ltd',gstNo:'',client:'丰盛轩',sub:380.00,gst:null,bcrs:0,amt:380.00,date:'2026-07-01',status:'issued',against:''},
     {no:'INV-2026-6605',type:'inv',order:'#SG20260630021',ent:'洋海水产 Ocean Fresh Trading Pte Ltd',gstNo:'201812345K',client:'丰盛轩',sub:1280.00,gst:115.20,bcrs:0,amt:1395.20,date:'2026-07-01',status:'issued',against:''},
     {no:'CN-2026-0033',type:'cn',order:'#SG20260628007',ent:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gstNo:'202398765M',client:'海底捞（新加坡）',sub:-680.00,gst:-61.20,bcrs:0,amt:-741.20,date:'2026-07-04',status:'issued',against:'INV-2026-6600'},
-    {no:'INV-2026-6606',type:'inv',order:'#SG20260701008',ent:'鲜集冻品 FreshHub Frozen Pte Ltd',gstNo:'',client:'一品轩',sub:0,gst:null,bcrs:0,amt:0,date:'',status:'failed',against:''},
+    {no:'INV-2026-6606',type:'inv',order:'#SG20260701008',ent:'鲜集冻品 FreshHub Frozen Pte Ltd',gstNo:'',client:'一品轩',sub:0,gst:null,bcrs:0,amt:0,date:'',status:'failed',against:'',failReason:'MISSING_ADDRESS'},
   ],
   tiFilter:{},tiSel:[],
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
@@ -1236,7 +1243,7 @@ const NAV={
     {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
     {id:'m-replenish',ic:'🔁',t:'平台补采',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.status=='pending').length:0,by:'y'},
     {id:'m-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.fineNo&&r.status=='pending').length:0,by:'y'},
-    {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1,badge:()=>DB.invoices.filter(i=>i.status=='verified').length,by:'y'},
+    {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1},
     {id:'m-account',ic:'💳',t:'账户管理',p1:1},
     {sec:'合规'},
     {id:'m-after-group',ic:'↩️',t:'售后管理',p1:1,children:[
@@ -1264,7 +1271,7 @@ const NAV={
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'财务'},
-    {id:'p-inv-query',ic:'🔎',t:'发票查询',p1:1,badge:()=>(DB.taxInvoices||[]).filter(t=>t.status=='failed').length,by:'y'},
+    {id:'p-inv-query',ic:'🔎',t:'发票查询',p1:1},
     {sec:'供货'},
     {id:'p-consign',ic:'🧾',t:'供货单管理',p1:1,badge:()=>DB.consigns?DB.consigns.filter(c=>c.status==10).length:0},
     {id:'p-consign-return',ic:'↩️',t:'退货单管理',p1:1,badge:()=>DB.consignReturns?DB.consignReturns.filter(r=>r.status==10).length:0,by:'y'},
@@ -3462,9 +3469,8 @@ function doExportBills(n){const fmt=(document.querySelector('[name=expfmt]:check
 /* ---------- 商家端：发票管理（闭环D 续） ---------- */
 PAGES['m-invoice']=()=>{
   const tab=DB.invTab||'cust';
-  const pend=DB.invoices.filter(i=>i.status=='verified').length;
   const tabsBar=`<div class="tabs">
-    <div class="tab ${tab=='cust'?'active':''}" onclick="DB.invTab='cust';render()">① 客户开票（按订单）${pend?`<span class="tb">${pend}</span>`:''}</div>
+    <div class="tab ${tab=='cust'?'active':''}" onclick="DB.invTab='cust';render()">① 客户开票（按订单）</div>
     <div class="tab ${tab=='svc'?'active':''}" onclick="DB.invTab='svc';render()">② 服务费发票（平台开具）</div>
     <div class="tab ${tab=='sup'?'active':''}" onclick="DB.invTab='sup';render()">③ 耗材发票（平台开具）${(DB.supplyInvoices||[]).length?`<span class="tb">${DB.supplyInvoices.length}</span>`:''}</div>
     <div class="tab ${tab=='repl'?'active':''}" onclick="DB.invTab='repl';render()">④ 平台补采发票（平台开具）${(DB.replInvoices||[]).length?`<span class="tb">${DB.replInvoices.length}</span>`:''}</div>
@@ -3472,23 +3478,44 @@ PAGES['m-invoice']=()=>{
   if(tab=='svc')return tabsBar+svcInvoiceContent();
   if(tab=='sup')return tabsBar+supplyInvoiceContent();
   if(tab=='repl')return tabsBar+(typeof replInvoiceContent=='function'?replInvoiceContent():'');
-  const issued=DB.invoices.map((iv,i)=>({iv,i})).filter(x=>x.iv.status=='verified');
-  return tabsBar+`${flowTip(`客户销售发票由<b>平台代你（商家）开具</b>：平台按订单向下单客户开出<b>销售发票（TAX INVOICE, GST 9%）</b>并作为结算凭证。<b>你无需开具或上传</b>，此处仅展示<b>已开具</b>的发票，供<b>预览与下载</b>。`)}
-  <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">平台代开 · 已开具 ${issued.length} 张 · 每张对应一个订单/客户</span></div><div class="card-bd ${issued.length?'flush':''}">
+  const cf=DB.ciFilter||{}, csel=DB.ciSel||[];
+  const issued=DB.invoices.map((iv,i)=>({iv,i})).filter(x=>x.iv.status=='verified')
+    .filter(({iv})=>(!cf.order||iv.order.toLowerCase().includes(cf.order.toLowerCase()))&&(!cf.type||(cf.type=='cn'?iv.type=='cn':iv.type!='cn'))&&(!cf.d1||iv.date>=cf.d1)&&(!cf.d2||iv.date<=cf.d2));
+  const EN=`onkeydown="if(event.key=='Enter')ciQuery()"`;
+  return tabsBar+`${flowTip(`客户销售发票由<b>平台代你（商家）开具</b>：平台按订单向下单客户开出<b>销售发票（TAX INVOICE, GST 9%；未注册 GST 则为 INVOICE）</b>。<b>你无需开具或上传</b>，此处展示<b>已开具</b>的发票与售后冲抵单（Credit Note），供<b>预览与下载</b>。`)}
+  <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">订单号</div><input id="ci-order" value="${cf.order||''}" placeholder="请输入订单号" style="min-width:180px" ${EN}></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">单据类型</div><select id="ci-type" style="min-width:140px"><option value="">全部</option><option value="inv" ${cf.type=='inv'?'selected':''}>正向 Invoice</option><option value="cn" ${cf.type=='cn'?'selected':''}>冲抵 Credit Note</option></select></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">开票日期</div><div class="row" style="gap:6px;align-items:center"><input id="ci-d1" type="date" value="${cf.d1||''}" style="width:150px"><span style="color:var(--ts)">至</span><input id="ci-d2" type="date" value="${cf.d2||''}" style="width:150px"></div></div>
+    <button class="btn btn-p btn-sm" onclick="ciQuery()">查询</button><button class="btn btn-o btn-sm" onclick="ciReset()">重置</button>
+  </div></div>
+  <div class="card"><div class="card-hd"><h3>客户开票明细</h3><span class="sub">平台代开 · 共 ${issued.length} 张 · 一个订单一张（你为开票主体）</span>
+    <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" ${csel.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="ciBatchDownload()">批量下载 PDF${csel.length?`（${csel.length}）`:''}</button></div></div><div class="card-bd ${issued.length?'flush':''}">
     ${issued.length?`<table>
-    <thead><tr><th>发票号</th><th>订单号</th><th>开票客户</th><th>开票日期</th><th style="text-align:right">未税金额</th><th style="text-align:right">GST</th><th style="text-align:right">应付金额</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th style="width:34px"><input type="checkbox" ${issued.length&&csel.length==issued.length?'checked':''} onclick="ciToggleAll()"></th><th>发票号</th><th>单据类型</th><th>关联原发票</th><th>订单号</th><th>开票客户</th><th>开票日期</th><th style="text-align:right">未税金额</th><th style="text-align:right">GST</th><th style="text-align:right">应付金额</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${issued.map(({iv,i})=>`<tr>
-      <td class="mono">${iv.no||'—'}</td><td class="mono">${iv.order}</td><td>${iv.client}</td><td>${iv.date||'—'}</td>
-      <td style="text-align:right">${money(iv.sub||0)}</td><td style="text-align:right">${money(iv.gst||0)}</td><td style="text-align:right"><b>${money(iv.amt)}</b></td>
-      <td>${tag('invoice',iv.status)}</td>
+      <td><input type="checkbox" ${csel.includes(iv.no)?'checked':''} onclick="ciToggle('${iv.no}')"></td>
+      <td class="mono">${iv.no||'—'}</td>
+      <td>${iv.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
+      <td class="mono">${iv.against||'—'}</td>
+      <td class="mono">${iv.order}</td><td>${iv.client}</td><td>${iv.date||'—'}</td>
+      <td style="text-align:right">${money(iv.sub||0)}</td><td style="text-align:right">${iv.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(iv.gst||0)}</td><td style="text-align:right"><b style="color:${iv.type=='cn'?'var(--r)':'inherit'}">${money(iv.amt)}</b></td>
+      <td>${tag('taxinv',iv.tstatus||'issued')}</td>
       <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_custInvPreview(${i})">预览</button> <button class="btn btn-link" onclick="act_custInvDownload(${i})">下载</button></td>
     </tr>`).join('')}
     </tbody></table>`
-    :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无已开具发票</div><div class="e-s">平台按订单代你开具客户销售发票后，将显示在此供预览与下载。</div></div>`}
+    :(Object.values(cf).some(v=>v)?`<div class="empty" style="padding:20px"><div class="e-ic">🔎</div><div class="e-t">无匹配发票</div><div class="e-s">调整筛选条件后重试。</div></div>`
+      :`<div class="empty" style="padding:20px"><div class="e-ic">🧾</div><div class="e-t">暂无已开具发票</div><div class="e-s">平台按订单代你开具客户销售发票后，将显示在此供预览与下载。</div></div>`)}
   </div></div>
     ${DB.payment=='paid'?`<div class="ib ib-g"><span class="i">💰</span>平台已完成打款 ${money(DB.bill.net)}，预计 1 个工作日到账 DBS ****8821。本期结算闭环完成 🎉</div>`
     :DB.payment!='none'?`<div class="ib ib-b"><span class="i">⏳</span>发票全部校验通过，平台付款审批中…</div>`:''}`;
 };
+function ciQuery(){const g=id=>(document.getElementById(id)||{}).value||'';DB.ciFilter={order:g('ci-order').trim(),type:g('ci-type'),d1:g('ci-d1'),d2:g('ci-d2')};DB.ciSel=[];render();}
+function ciReset(){DB.ciFilter={};DB.ciSel=[];render();}
+function ciToggle(no){const a=DB.ciSel||[];const i=a.indexOf(no);i<0?a.push(no):a.splice(i,1);DB.ciSel=a;render();}
+function ciToggleAll(){const cf=DB.ciFilter||{};const rows=DB.invoices.filter(iv=>iv.status=='verified').filter(iv=>(!cf.order||iv.order.toLowerCase().includes(cf.order.toLowerCase()))&&(!cf.type||(cf.type=='cn'?iv.type=='cn':iv.type!='cn'))&&(!cf.d1||iv.date>=cf.d1)&&(!cf.d2||iv.date<=cf.d2));DB.ciSel=(DB.ciSel||[]).length==rows.length?[]:rows.map(iv=>iv.no);render();}
+// 批量下载：已冲抵原票与其 CN 一并打包；返回 zipUrl 签名链接（PRD 第 11 章）
+function ciBatchDownload(){const sel=DB.ciSel||[];if(!sel.length)return;const extra=DB.invoices.filter(iv=>iv.type=='cn'&&sel.includes(iv.against)&&!sel.includes(iv.no)).length;toast(`已打包下载 ${sel.length+extra} 张发票 PDF${extra?`（含 ${extra} 张关联 Credit Note）`:''}`,'ok');}
 // ② 服务费发票：平台与商家【结算完成后自动开具】并推送给商家（佣金税票 GST 9%），商家端【只查看/下载】，无需申请
 function svcInvoiceContent(){
   return `${flowTip(`<b>服务费发票</b>由平台在与你<b>结算完成后自动开具</b>并推送给你（就平台服务佣金开具，GST 9%），<b>无需你申请</b>。此处仅供<b>查看与下载</b>。`)}
@@ -3514,7 +3541,7 @@ function act_custInvPreview(i){
   const issued=iv.status=='verified';
   const M={nm:'绿鲜源蔬果 Green Fresh Produce Pte Ltd',gst:'202398765M',addr:'Blk 21 Jurong Port Rd, #03-12, Singapore 619098'};
   const L=(iv.lines||[]);
-  drawer(`<div class="drawer-hd"><div><h3>客户销售发票预览</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${iv.no||'待平台开票'} · ${issued?'平台已代开':'待平台开票'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>${iv.type=='cn'?'冲抵单据预览':'客户销售发票预览'}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${iv.no||'待平台开票'} · ${issued?'平台已代开':'待平台开票'} · 预览为商家版 PDF 同源渲染</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="card" style="box-shadow:none;border:1px solid var(--bd)"><div class="card-bd">
 
@@ -3527,7 +3554,7 @@ function act_custInvPreview(i){
           </div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:18px;font-weight:800;letter-spacing:.5px">TAX INVOICE</div>
+          <div style="font-size:18px;font-weight:800;letter-spacing:.5px">${iv.type=='cn'?'CREDIT NOTE':(M.gst?'TAX INVOICE':'INVOICE')}</div>${iv.type=='cn'?`<div style="font-size:11px;color:var(--ts)">Against ${iv.against}</div>`:''}
           <div style="font-size:11.5px;color:var(--ts);line-height:1.8;margin-top:6px">
             Invoice No.: <b style="color:var(--tp)" class="mono">${iv.no||'—'}</b><br>
             Invoice Date: <b style="color:var(--tp)">${iv.date||'—'}</b><br>
@@ -4870,8 +4897,14 @@ function tiQuery(){const g=id=>(document.getElementById(id)||{}).value||'';
   DB.tiFilter={no:g('ti-no').trim(),order:g('ti-order').trim(),ent:g('ti-ent').trim(),client:g('ti-client').trim(),
     type:g('ti-type'),status:g('ti-status'),d1:g('ti-d1'),d2:g('ti-d2')};DB.tiSel=[];render();}
 function tiReset(){DB.tiFilter={};DB.tiSel=[];render();}
-function act_tiRetry(no){const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t)return;
-  toast(`已重新提交生成：${no}`,'info');}
+function act_tiRetry(no){const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t||t.retrying)return;
+  t.retrying=1;toast(`已提交重新生成：${no}（异步，≤30s 出结果）`,'info');closeDrawer();render();
+  setTimeout(()=>{t.retrying=0;
+    if(t.fixed){t.status='issued';t.date='2026-09-08';t.sub=t.sub||420;t.gst=t.gstNo?Math.round(t.sub*9)/100:null;t.amt=t.sub+(t.gst||0)+(t.bcrs||0);toast(`${no} 已重新生成 · 已开具`,'ok');}
+    else toast(`${no} 仍生成失败：${FAIL_REASON[t.failReason||'MISSING_ADDRESS'][0]}——${FAIL_REASON[t.failReason||'MISSING_ADDRESS'][1]}`,'err');
+    render();},2000);}
+/* failReason 枚举 → 展示文案 → 建议动作（PRD 6.2 映射表）。缺 GST 号【不是】失败原因（票面降为 INVOICE，BR-07） */
+const FAIL_REASON={MISSING_NAME:['开票主体缺法定名称','去商家档案补全后重新生成'],MISSING_ADDRESS:['开票主体缺注册地址','去商家档案补全后重新生成'],RENDER_TIMEOUT:['票面渲染超时（>30s）','直接重新生成'],STORAGE_ERROR:['PDF 存储写入失败','直接重新生成']};
 function act_tiDownload(no){toast('发票 '+no+' 已下载 (PDF)','ok');}
 function act_tiPreview(no){
   const t=(DB.taxInvoices||[]).find(x=>x.no==no);if(!t)return;
@@ -4879,7 +4912,7 @@ function act_tiPreview(no){
   drawer(`<div class="drawer-hd"><div><h3>${isCn?'冲抵单据':'销售发票'}详情</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${t.no} · ${S.taxinv[t.status][0]}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${noGst?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">⚠️</span>该开票主体<b>未注册 GST</b>：票面标题为 <b>INVOICE</b>（非 TAX INVOICE），<b>不计税额</b>，客户<b>不可就本单抵扣进项税</b>。</div>`:''}
-    ${t.status=='failed'?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>生成失败：开票主体缺 GST 注册号或开票主数据不完整，已<b>拦截不开票</b>（不出占位票）。补全主数据后可重出。</div>`:''}
+    ${t.status=='failed'?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span>生成失败：<b>${FAIL_REASON[t.failReason||'MISSING_ADDRESS'][0]}</b>，不出占位票。建议：${FAIL_REASON[t.failReason||'MISSING_ADDRESS'][1]}。</div>`:''}
     <div class="sec-t">单据信息</div>
     <dl class="dl">
       <dt>发票号</dt><dd class="mono">${t.no}</dd>
@@ -4912,10 +4945,12 @@ function act_tiPreview(no){
    详情抽屉 = 该主单下各开票主体的发票（商家维度），每张可单独下载商家版；底部「下载整单」= 买家版合并 PDF（与买家收到的一致）。
    整单合计只累加正向发票；冲抵 Credit Note 单独计数不并入；同单任一张生成失败则整单不完整、不可下载。 */
 function tiOrderRows(){
+  // 筛选按【票】匹配 → 取命中主单号集合；聚合行永远按该主单【全量票】计算（PRD 10.2），筛选只决定哪些主单成行
+  const hit=new Set(tiRows().map(t=>t.order));
   const m={};
-  tiRows().forEach(t=>{
+  (DB.taxInvoices||[]).filter(t=>hit.has(t.order)).forEach(t=>{
     const o=m[t.order]||(m[t.order]={order:t.order,client:t.client,invs:[],cns:[],sub:0,gst:0,amt:0,date:'',failed:0});
-    if(t.type=='cn'){o.cns.push(t);return;}
+    if(t.type=='cn'){o.cns.push(t);if(t.status=='failed')o.failed++;return;}
     o.invs.push(t);
     if(t.status=='failed'){o.failed++;return;}
     o.sub+=t.sub;o.gst+=(t.gst||0);o.amt+=t.amt;if(t.date>o.date)o.date=t.date;
@@ -4932,7 +4967,8 @@ function act_tiOrdDownload(order){const o=tiOrderGroup(order);
 function entBadge(t){return t.gstNo?'':'<span style="margin-left:6px;font-size:11px;font-weight:700;color:var(--y2,#A9711F);background:var(--goldl,#F6EEDC);border-radius:4px;padding:1px 6px">未注册 GST</span>';}
 function act_tiOrdDetail(order,tab){
   const o=tiOrderGroup(order);if(!o.invs.length&&!o.cns.length)return;
-  tab=tab||DB.tiDrawerTab||'order';DB.tiDrawerTab=tab;
+  const f=DB.tiFilter||{};
+  tab=tab||((f.no||f.ent)?'merchant':'order');   // 默认整单维度；按发票号/开票主体查到的，默认落商家维度（客服最高频是找某一张）
   const all=[...o.invs,...o.cns];
   const tabs=`<div class="tabs" style="margin-bottom:14px">
     <div class="tab ${tab=='order'?'active':''}" onclick="act_tiOrdDetail('${o.order}','order')">整单维度</div>
@@ -4965,18 +5001,19 @@ function act_tiOrdDetail(order,tab){
   // 商家维度：各开票主体各自那张——单张详情 / 下载商家版 / 失败重出
   const merchantView=`${failTip}
     <div class="sec-t">各开票主体发票（一主体一张 · 每张可单独下载商家版）</div>
-    <table style="font-size:12.5px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>开票主体</th><th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">应付</th><th>状态</th><th>操作</th></tr></thead><tbody>
-    ${all.map((t,i)=>`<tr>
+    <table style="font-size:12.5px"><thead><tr><th>#</th><th>发票号</th><th>类型</th><th>关联原发票</th><th>开票主体</th><th style="text-align:right">未税</th><th style="text-align:right">GST</th><th style="text-align:right">应付</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    ${all.map((t,i)=>`<tr style="${(f.no&&t.no.toLowerCase().includes(f.no.toLowerCase()))||(f.ent&&t.ent.includes(f.ent))?'background:var(--gl,#EEF6F0)':''}">
       <td>${t.type=='cn'?'—':`${i+1}/${o.invs.length}`}</td>
-      <td class="mono">${t.no}${t.type=='cn'&&t.against?`<div style="font-size:11px;color:var(--ts)">冲 ${t.against}</div>`:''}</td>
+      <td class="mono">${t.no}</td>
       <td>${t.type=='cn'?'<span style="color:var(--r);font-weight:600">冲抵</span>':'正向'}</td>
+      <td class="mono">${t.against||'—'}</td>
       <td>${t.ent}${entBadge(t)}</td>
       <td style="text-align:right">${money(t.sub)}</td>
       <td style="text-align:right">${t.gst===null?'<span style="color:var(--y2,#A9711F)">不适用</span>':money(t.gst)}</td>
       <td style="text-align:right"><b style="color:${t.type=='cn'?'var(--r)':'inherit'}">${money(t.amt)}</b></td>
       <td>${tag('taxinv',t.status)}</td>
       <td style="white-space:nowrap"><button class="btn btn-link" onclick="act_tiPreview('${t.no}')">详情</button>
-        ${t.status=='failed'?`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`:`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
+        ${t.status=='failed'?(t.retrying?`<span style="font-size:11.5px;color:var(--ts)">生成中…</span>`:`<button class="btn btn-link" onclick="act_tiRetry('${t.no}')">重新生成</button>`):`<button class="btn btn-link" onclick="act_tiDownload('${t.no}')">下载</button>`}</td>
     </tr>`).join('')}
     </tbody></table>`;
   const okCnt=all.filter(t=>t.status!='failed').length;
@@ -4985,7 +5022,7 @@ function act_tiOrdDetail(order,tab){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
     ${tab=='order'
       ?`<button class="btn btn-p" ${o.failed?'disabled style="opacity:.45;cursor:not-allowed"':''} onclick="act_tiOrdDownload('${o.order}')">下载整单 PDF（买家版 · ${o.invs.length} 页）</button>`
-      :`<button class="btn btn-p" ${okCnt?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="act_tiMerchantDownloadAll('${o.order}')">打包下载各张（商家版 · ${okCnt} 张）</button>`}</div>`);
+      :`<button class="btn btn-p" ${okCnt?'':'disabled style="opacity:.45;cursor:not-allowed"'} onclick="act_tiMerchantDownloadAll('${o.order}')">打包下载各张（商家版 · ${okCnt} 张${o.failed?'，失败张不含':''}）</button>`}</div>`);
 }
 function act_tiMerchantDownloadAll(order){const o=tiOrderGroup(order);const n=[...o.invs,...o.cns].filter(t=>t.status!='failed').length;
   toast(`主单 ${order} 各开票主体发票已打包下载（商家版 · ${n} 张）`,'ok');}
@@ -5034,7 +5071,8 @@ PAGES['p-inv-query']=()=>{
           ${o.failed?`<span style="font-size:11.5px;color:var(--ts);margin-left:4px">整单不完整</span>`:`<button class="btn btn-link" onclick="act_tiOrdDownload('${o.order}')">下载整单</button>`}</td>
       </tr>`).join('')}
       </tbody></table>`
-    :`<div class="empty" style="padding:28px 0"><div class="e-ic">🔎</div><div class="e-t">无匹配发票</div><div class="e-s">调整筛选条件后重试。</div></div>`}
+    :(Object.values(f).some(v=>v)?`<div class="empty" style="padding:28px 0"><div class="e-ic">🔎</div><div class="e-t">无匹配发票</div><div class="e-s">调整筛选条件后重试。</div></div>`
+      :`<div class="empty" style="padding:28px 0"><div class="e-ic">🧾</div><div class="e-t">暂无开票记录</div><div class="e-s">主单履约稳定后平台自动代各开票主体开票，记录将显示在此。</div></div>`)}
   </div></div>`;
 };
 
@@ -5044,7 +5082,8 @@ PAGES['p-invoice']=()=>{
   const wait=DB.invoices.filter(i=>i.status=='none');
   const allVer=DB.invoices.length&&DB.invoices.every(i=>i.status=='verified');
   return `${flowTip(`平台<b>代商家开具客户销售发票</b>（按订单，GST 9%）：确认金额与订单一致后开具，开票号回填并推送商家预览/下载。<b>全部开具后</b>生成付款计划→双签审批→打款。`)}
-  <div class="card"><div class="card-hd"><h3>平台代商家开票</h3><span style="display:flex;align-items:center;gap:12px">${wait.length?`<button class="btn btn-p btn-sm" onclick="act_issueAllInvoices()">一键代开全部（${wait.length}）</button>`:''}<span class="sub">待开具 ${wait.length} · 共 ${DB.invoices.length}</span></span></div><div class="card-bd flush"><table>
+  <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>客户发票已改为<b>主单履约稳定后自动代开</b>（见「财务 > 发票查询」），本页不再提供手工代开；以下仅保留开票结果核对与付款执行。</div>
+  <div class="card"><div class="card-hd"><h3>客户发票核对</h3><span style="display:flex;align-items:center;gap:12px"><span class="sub">共 ${DB.invoices.length} 张</span></span></div><div class="card-bd flush"><table>
     <thead><tr><th>订单号</th><th>客户</th><th>金额</th><th>发票号</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${DB.invoices.map((iv,i)=>`<tr><td class="mono">${iv.order}</td><td>${iv.client}</td><td>${money(iv.amt)}</td><td class="mono">${iv.no||'—'}</td><td>${tag('invoice',iv.status)}</td><td style="white-space:nowrap">${
       iv.status=='none'?`<button class="btn btn-p btn-sm" onclick="act_issueInvoice(${i})">代商家开具</button>`
@@ -5561,6 +5600,6 @@ goHome();
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260821d"></script>
 <script src="pc-modules/presend.js?v=20260831b"></script>
-<script src="pc-modules/promo.js?v=20260908a"></script>
+<script src="pc-modules/promo.js?v=20260908b"></script>
 </body>
 </html>

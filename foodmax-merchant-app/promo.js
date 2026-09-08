@@ -1,9 +1,9 @@
 /* Food Max 商家端 v2 · 特价活动（商家自主特价 · 商家 100% 出资）
    与 PC pc-modules/promo.js 同一套口径（框架 PRD/scm_商家特价活动_功能框架.md）：
      · 活动价=未税价，>0 且 < 当前未税售价；含税=活动价×(1+税率 9%)；预计到手=含税−佣金(含税×服务费率)−揽收费
-     · 限购 每客户每日 N 件，留空不限；折扣=活动价÷原价
+     · 限购 每客户每日 N 件，留空不限；立减金额=原价−活动价（未税）
      · 同一 SKU 时间重叠只能在 1 个活动内，跨出资方互斥（平台活动占用的 SKU 只显示「平台活动」）
-     · 状态 0 待开始 / 1 进行中 / 2 已结束 / 4 已终止；无草稿；进行中只读（对齐运营平台 D11），可终止 / 复制新建；活动链接只读展示+复制
+     · 状态 0 待开始 / 1 进行中 / 2 已结束 / 4 已终止；无草稿；进行中只读（对齐运营平台 D11），可终止 / 复制新建；活动链接与门店范围界面不展示
      · 差价 100% 商家承担，不进平台优惠、不影响商家应付；佣金按活动价成交额计；不审核、平台可强制终止 */
 (function(){
 const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel}=window.FM;
@@ -145,6 +145,7 @@ const overlap=(a,b)=>a.start<=b.end&&b.start<=a.end;
 const occupiedBy=(skuId,range,exceptId)=>ACTS.find(a=>a.id!=exceptId&&live(a)&&a.items.some(x=>x.skuId==skuId)&&(!range||overlap(a,range)))||null;
 const calc=it=>{const incl=(+it.price||0)*(1+RATE);return {incl,comm:incl*SVC,inc:incl-incl*SVC-PICKUP,disc:it.orig?(+it.price/it.orig*10):0,origIncl:(+it.orig||0)*(1+RATE)};};
 const discTxt=d=>d>0?d.toFixed(1)+' 折':'—';
+const cutTxt=it=>(+it.price>0&&it.orig>+it.price)?money(it.orig-(+it.price)):'—';
 const lim=v=>(v==null||v==='')?'不限':`${v} 件/客/日`;
 const effective=it=>{const s=sku(it.skuId);if(!s)return [false,'SKU 不存在'];if(s.off)return [false,'SKU 已下架'];return [true,''];};
 const stPill=a=>{const s=stOf(a);return `<span class="pm-st s${s}">${ST[s]}${s==4&&a.endedBy=='platform'?'·平台':''}</span>`;};
@@ -189,21 +190,19 @@ function openDetail(a,after){const s=stOf(a);const save=a.items.reduce((n,x)=>n+
     <div class="pm-dl"><div class="r" style="min-height:56px"><div style="font-size:17px;font-weight:700">${a.name}<div style="font-size:11.5px;color:var(--sub);font-weight:500;margin-top:2px">${a.id}</div></div>${stPill(a)}</div>
       <div class="r"><span class="k">活动时间</span><span class="v">${a.start}<br>~ ${a.end}</span></div>
       <div class="r"><span class="k">出资方</span><span class="v"><b>商家 100%</b><br><span style="font-size:11.5px;color:var(--sub)">差价商家承担，不进平台优惠</span></span></div>
-      <div class="r"><span class="k">门店范围</span><span class="v">全部门店</span></div>
       <div class="r"><span class="k">叠加规则</span><span class="v">可与平台优惠券叠加<br><span style="font-size:11.5px;color:var(--sub)">券由平台承担</span></span></div>
       <div class="r"><span class="k">创建</span><span class="v">${a.createdBy||'—'} · ${a.createdAt||'—'}</span></div>
-      <div class="r" style="min-height:56px"><span class="k">活动链接</span><span class="v" style="min-width:0"><span style="font-size:11.5px;color:var(--sub);word-break:break-all">${a.url||'—'}</span><br><span id="pd-copy" style="color:var(--emerald);font-weight:700;font-size:13px;display:inline-block;min-height:32px;line-height:32px">复制链接 · 分享给客户</span></span></div></div>
+</div>
     ${s==1?`<div class="pm-tip">活动进行中<b>不可编辑</b>（与平台活动同规则）。要调整活动价 / 商品 / 时间：先终止本场，再用「复制新建」快速重建。</div>`:''}
     ${s==4?`<div class="pm-tip" style="${a.endedBy=='platform'?'background:var(--red-soft);color:var(--red)':''}"><b>${a.endedBy=='platform'?'平台强制终止':'商家终止'}</b>${a.endReason?'：'+a.endReason:''}。终止后 C 端已立即恢复原价；活动期间订单按活动价快照不受影响。</div>`:''}
     <div class="pm-dl" style="padding:10px 15px 4px"><div style="font-size:13px;font-weight:700;margin-bottom:2px">活动商品 <span style="font-weight:500;color:var(--sub);font-size:12px">${a.items.length} 个 · 单件让利合计(含税) ${money(save)}</span></div>
-      ${a.items.map(x=>{const k=sku(x.skuId);const c=calc(x);const ef=effective(x);return `<div class="pm-line"><div class="n">${k?k.n:x.skuId}${s<2&&!ef[0]?`<span class="pm-ineff">不生效·${ef[1]}</span>`:''}<span class="c">${k?k.spec:''} · ${x.skuId}<br>限购 ${lim(x.limit)} · 预计到手/件 <b style="color:var(--emerald-2)">${money(c.inc)}</b></span></div><div class="p"><div class="a">${money(x.price)}</div><div class="o">${money(x.orig)}</div><div class="d">${discTxt(c.disc)} · 含税 ${money(c.incl)}</div></div></div>`;}).join('')}
+      ${a.items.map(x=>{const k=sku(x.skuId);const c=calc(x);const ef=effective(x);return `<div class="pm-line"><div class="n">${k?k.n:x.skuId}${s<2&&!ef[0]?`<span class="pm-ineff">不生效·${ef[1]}</span>`:''}<span class="c">${k?k.spec:''} · ${x.skuId}<br>限购 ${lim(x.limit)} · 预计到手/件 <b style="color:var(--emerald-2)">${money(c.inc)}</b></span></div><div class="p"><div class="a">${money(x.price)}</div><div class="o">${money(x.orig)}</div><div class="d">立减 ${cutTxt(x)} · 含税 ${money(c.incl)}</div></div></div>`;}).join('')}
       <div class="pm-hint">价格均为未税价；预计到手 = 活动含税价 − 佣金(活动含税价×服务费率 ${(SVC*100).toFixed(0)}%) − 揽收费。佣金按<b>活动价成交额</b>计，让利部分不再抽佣。</div></div>
     <div class="pm-dl" style="padding:10px 15px"><div style="font-size:13px;font-weight:700;margin-bottom:4px">操作日志</div>${a.logs.slice().reverse().map(l=>`<div class="pm-log"><span class="t">${l.t}</span> · <b>${l.who}</b> ${l.act}${l.d?`<div class="t">${l.d}</div>`:''}</div>`).join('')||'<div class="pm-hint">暂无</div>'}</div>
     <div style="height:16px"></div>`,
     footer:`<div style="display:flex;gap:10px">${s<2?`<button class="btn" style="flex:1;background:var(--red-soft);color:var(--red)" id="pd-stop">终止活动</button>`:''}<button class="btn" style="flex:1;background:var(--muted);color:#27433A" id="pd-copy2">复制新建</button>${s==0?`<button class="btn primary" style="flex:1.4" id="pd-edit">编辑</button>`:''}</div>`,
     mount:(p)=>{const re=()=>{popPage();setTimeout(()=>{after&&after();openDetail(ACTS.find(x=>x.id==a.id),after);},320);};
       const ed=p.querySelector('#pd-edit');if(ed)ed.onclick=()=>openEdit(a,re);const nr=p.querySelector('#nr');if(nr&&s==0)nr.onclick=()=>openEdit(a,re);
-      const cp=p.querySelector('#pd-copy');if(cp)cp.onclick=()=>{try{navigator.clipboard&&navigator.clipboard.writeText(a.url);}catch(e){}toast('活动链接已复制');};
       const cp2=p.querySelector('#pd-copy2');if(cp2)cp2.onclick=()=>copyAct(a,()=>{popPage();setTimeout(()=>after&&after(),320);});
       const stp=p.querySelector('#pd-stop');if(stp)stp.onclick=()=>stopAct(a,()=>{popPage();setTimeout(()=>after&&after(),320);});}});}
 
@@ -218,7 +217,7 @@ function openEdit(a,after,preset){const isNew=!a;const st=isNew?-1:stOf(a);const
   const ED=preset?{id:null,name:preset.name,start:preset.start,end:preset.end,items:preset.items}:{id:isNew?null:a.id,name:isNew?'':a.name,start:isNew?shift(1,0,0):a.start,end:isNew?shift(7,23,59):a.end,items:isNew?[]:a.items.map(x=>({...x,locked:false}))};
   pushPage({title:isNew?'新建特价活动':'编辑活动',body:`
     ${run?`<div class="pm-tip">活动进行中：<b>开始时间与已有 SKU 的活动价不可修改</b>；可改结束时间、新增 SKU（立即生效）、移除 SKU（该 SKU 立即恢复原价）。要改活动价请移除后重新添加。</div>`:''}
-    <div class="pm-sec"><div class="st">基本信息 · 出资方 商家 100% · 全部门店 · 可与平台券叠加</div>
+    <div class="pm-sec"><div class="st">基本信息 · 出资方 商家 100% · 可与平台券叠加</div>
       <div class="pm-row"><div class="lb"><b>*</b>活动名称</div><input id="pe-name" maxlength="50" value="${ED.name}" placeholder="仅商家内部可见，≤50 字"></div>
       <div class="pm-row"><div class="lb"><b>*</b>开始时间</div><input type="datetime-local" id="pe-start" value="${toLocal(ED.start)}" ${run?'disabled':''} min="${toLocal(now())}"></div>
       <div class="pm-row"><div class="lb"><b>*</b>结束时间</div><input type="datetime-local" id="pe-end" value="${toLocal(ED.end)}" min="${toLocal(run?now():ED.start)}"></div>
@@ -234,12 +233,12 @@ function openEdit(a,after,preset){const isNew=!a;const st=isNew?-1:stOf(a);const
           <div class="grid">
             <div class="f"><div class="l">当前未税售价</div><div class="ro">${money(x.orig)}<span style="font-size:11px;color:var(--sub);font-family:inherit;font-weight:500;margin-left:6px">含税 ${money(c.origIncl)}</span></div></div>
             <div class="f"><div class="l">活动价(未税) <b style="color:var(--red)">*</b></div><div class="in ${bad?'bad':''}"><span class="u">S$</span><input data-price inputmode="decimal" value="${x.price===''||x.price==null?'':(+x.price).toFixed(2)}" placeholder="< ${(+x.orig).toFixed(2)}" ${x.locked?'disabled':''}></div></div>
-            <div class="f"><div class="l">活动含税价 / 折扣</div><div class="ro red" data-incl>${v>0?money(c.incl)+' · '+discTxt(c.disc):'—'}</div></div>
+            <div class="f"><div class="l">活动含税价 / 立减</div><div class="ro red" data-incl>${v>0?money(c.incl)+' · 立减 '+cutTxt(x):'—'}</div></div>
             <div class="f"><div class="l">预计到手/件</div><div class="ro grn" data-inc>${v>0?money(c.inc):'—'}</div></div>
             <div class="f" style="grid-column:1/-1"><div class="l">限购（件/客/日）</div><div class="in"><input data-limit inputmode="numeric" value="${x.limit==null?'':x.limit}" placeholder="留空 = 不限购"></div></div>
           </div>${bad?`<div class="err">须 &gt;0 且低于当前售价 ${money(x.orig)}</div>`:low?`<div class="soft">低于售价 30%，提交时需二次确认</div>`:x.locked?`<div class="soft" style="color:var(--sub)">进行中不可改活动价，移除后重加</div>`:''}</div>`;}).join('')||`<div class="pm-sec" style="text-align:center;padding:22px 15px;color:var(--sub);font-size:13px">还没有添加商品<br><span style="font-size:12px">从本店在售 SKU 中选择；已在其他活动（含平台活动）中的 SKU 不可选</span></div>`;
         box.querySelectorAll('.pm-sku').forEach(card=>{const k=+card.dataset.k;const x=ED.items[k];
-          const pi=card.querySelector('[data-price]');pi.oninput=()=>{x.price=pi.value===''?'':+pi.value;const c=calc(x);const v=+x.price;const bad=x.price!==''&&(!(v>0)||v>=x.orig);pi.closest('.in').classList.toggle('bad',bad);card.querySelector('[data-incl]').textContent=v>0?money(c.incl)+' · '+discTxt(c.disc):'—';card.querySelector('[data-inc]').textContent=v>0?money(c.inc):'—';};
+          const pi=card.querySelector('[data-price]');pi.oninput=()=>{x.price=pi.value===''?'':+pi.value;const c=calc(x);const v=+x.price;const bad=x.price!==''&&(!(v>0)||v>=x.orig);pi.closest('.in').classList.toggle('bad',bad);card.querySelector('[data-incl]').textContent=v>0?money(c.incl)+' · 立减 '+cutTxt(x):'—';card.querySelector('[data-inc]').textContent=v>0?money(c.inc):'—';};
           pi.onblur=draw;
           const li=card.querySelector('[data-limit]');li.oninput=()=>{x.limit=li.value===''?null:Math.max(1,parseInt(li.value)||1);};
           card.querySelector('[data-rm]').onclick=()=>{const nm=(sku(x.skuId)||{}).n||x.skuId;if(x.locked){confirmDialog({title:'移除该 SKU？',danger:1,okText:'移除',body:`活动进行中，移除「${nm}」后该 SKU <b>立即恢复原价</b>。`,onOk:()=>{ED.items.splice(k,1);draw();toast('已移除，保存后生效');}});return;}ED.items.splice(k,1);draw();};});};
