@@ -148,16 +148,15 @@ const discTxt=d=>d>0?d.toFixed(1)+' 折':'—';
 const cutTxt=it=>(+it.price>0&&it.orig>+it.price)?money(it.orig-(+it.price)):'—';
 const lim=v=>(v==null||v==='')?'不限':`${v} 件/客/日`;
 const effective=it=>{const s=sku(it.skuId);if(!s)return [false,'SKU 不存在'];if(s.off)return [false,'SKU 已下架'];return [true,''];};
-/* BR-19：仅店铺管理员可写；原型用 ADMIN 开关模拟，列表右上可切子账号视角 */
+/* BR-19：仅店铺管理员可写；子账号只读。原型演示态恒为管理员，真实实现取登录态 isAdmin */
 let ADMIN=true;const noPerm=()=>{toast('仅店铺管理员可操作，子账号只读');return false;};
 const stPill=a=>{const s=stOf(a);return `<span class="pm-st s${s}">${ST[s]}${s==4&&a.endedBy=='platform'?'·平台':''}</span>`;};
 
 /* ===== 列表 ===== */
 let TAB='all';
 function openPromo(){
-  pushPage({title:'商品特价',right:ADMIN?'管理员 ⇄':'子账号 ⇄',body:`<div id="pm-root"></div><div class="pm-fab" id="pm-fab" style="${ADMIN?'':'display:none'}"><svg viewBox='0 0 24 24'><path d='M12 5v14M5 12h14'/></svg>新建活动</div>`,
-    mount:(p)=>{const root=p.querySelector('#pm-root');root.innerHTML=skel(3);setTimeout(()=>renderList(root),420);p.querySelector('#pm-fab').onclick=()=>openEdit(null,()=>renderList(root));
-      const nr=p.querySelector('#nr');if(nr)nr.onclick=()=>{ADMIN=!ADMIN;nr.textContent=ADMIN?'管理员 ⇄':'子账号 ⇄';p.querySelector('#pm-fab').style.display=ADMIN?'':'none';renderList(root);toast(ADMIN?'已切回管理员视角':'已切到子账号视角（只读）');};}});
+  pushPage({title:'商品特价',body:`<div id="pm-root"></div><div class="pm-fab" id="pm-fab" style="${ADMIN?'':'display:none'}"><svg viewBox='0 0 24 24'><path d='M12 5v14M5 12h14'/></svg>新建活动</div>`,
+    mount:(p)=>{const root=p.querySelector('#pm-root');root.innerHTML=skel(3);setTimeout(()=>renderList(root),420);p.querySelector('#pm-fab').onclick=()=>openEdit(null,()=>renderList(root));}});
 }
 function renderList(root){
   const mine=ACTS.filter(a=>a.fund==1);const cnt=k=>mine.filter(a=>k=='all'||stOf(a)==+k).length;

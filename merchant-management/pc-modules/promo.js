@@ -41,10 +41,9 @@
     ];
   }
   window.ensurePromos=ensure;
-  /* BR-19 权限：仅店铺管理员可写。原型用 DB.promoAdmin 模拟（默认管理员），列表头可切「子账号视角」演示 */
-  const isAdmin=()=>DB.promoAdmin!==false;
+  /* BR-19 权限：仅店铺管理员可写；子账号只读（按钮不渲染 + 入口二次拦截）。原型默认管理员视角 */
+  const isAdmin=()=>DB.promoAdmin!==false;   // 演示态恒为管理员；真实实现取登录态 isAdmin
   const noPerm=()=>{toast('仅店铺管理员可操作特价活动，子账号只读','err');return false;};
-  window.promoToggleAdmin=function(){DB.promoAdmin=!isAdmin();render();toast(isAdmin()?'已切回管理员视角':'已切到子账号视角（只读）','info');};
 
   /* ===== 状态 ===== */
   const ST={0:['待开始','t-b'],1:['进行中','t-g'],2:['已结束','t-gr'],4:['已终止','t-r']};
@@ -100,7 +99,6 @@
       <div class="tabs" style="margin:0;border:none">${TABS.map(x=>`<div class="tab ${tab==x[0]?'active':''}" onclick="DB.promoTab='${x[0]}';render()">${x[1]}${cnt(x[0])?` <span class="tag ${x[0]=='1'?'t-g':x[0]=='4'?'t-r':'t-gr'}" style="font-size:10px;margin-left:2px">${cnt(x[0])}</span>`:''}</div>`).join('')}</div>
       <div class="row" style="gap:8px">
         <span style="font-size:12.5px;color:var(--ts)">差价由商家 100% 承担 · 佣金按活动价成交额计 · 提交即到点生效，无需平台审核</span>
-        <button class="btn btn-link btn-sm" onclick="promoToggleAdmin()" title="演示：切换管理员 / 子账号视角">${isAdmin()?'管理员':'子账号（只读）'} ⇄</button>
         <button class="btn btn-p btn-sm" ${isAdmin()?'':'disabled title="仅店铺管理员可新建"'} onclick="act_promoEdit()">＋ 新建特价活动</button>
       </div>
     </div><div class="card-bd flush"><div style="overflow-x:auto"><table>
