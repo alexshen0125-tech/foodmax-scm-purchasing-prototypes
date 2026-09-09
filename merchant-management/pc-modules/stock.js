@@ -118,18 +118,17 @@
      寄售：同商品各 SKU 共享货品库存池 → 在库/已占用/在途为**货品单位**且同商品同仓各行相同，
            可售库存按 convertRatio 折成件（BR-04），故必须打「共享」标，否则会被读成各自有货 */
   function rows(){
-    const wh=DB.invWh||'',kw=(DB.invKw||'').trim().toLowerCase(),md=DB.invMode||'';
+    const kw=(DB.invKw||'').trim().toLowerCase(),md=DB.invMode||'';   // 无仓库筛选：一行 = 1 SKU × 1 仓，仓库已是列
     const out=[];
     DB.invItems.forEach(it=>{
       if(md&&it.mode!=md)return;
       const hit=k=>!kw||it.name.toLowerCase().includes(kw)||it.item.toLowerCase().includes(kw)||k.skuId.toLowerCase().includes(kw);
       if(isSelf(it)){
-        if(wh)return;                                   // 自售不分仓：选了具体仓就不出现
         it.skus.forEach(k=>{if(!hit(k))return;
           out.push({it,k,wh:SELF_WH,self:true,unit:'件',qtyUnit:'件',
             stock:k.stock,locked:k.locked,transit:0,sellable:left(k.stock,k.locked),shared:false});});
       }else{
-        it.stocks.filter(s=>!wh||s.wh==wh).forEach(s=>{
+        it.stocks.forEach(s=>{
           const il=left(s.wms,s.locked);
           it.skus.forEach(k=>{if(!hit(k))return;
             /* 全部换算成本规格的「件」。注意：已占用必须由 在库件 − 可售件 反推，
@@ -350,21 +349,56 @@
     <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
   };
 
+  /* 当前筛选（关键词 + 供货模式）+ Tab 命中的全部行。页面渲染与导出共用同一份，
+     防止「页面看到 3 行、导出却是 18 行」这类口径漂移。 */
+  function invFiltered(){
+    let list=rows();const q=DB.invQuick||'';
+    if(q=='out')list=list.filter(r=>r.sellable<=0);
+    if(q=='transit')list=list.filter(r=>r.transit>0);
+    return list;
+  }
+
   /* ---------- 筛选 ---------- */
-  window.inv_wh=function(v){DB.invWh=v;render();};
   window.inv_mode=function(v){DB.invMode=v;render();};
   window.inv_search=function(){DB.invKw=(document.getElementById('inv-kw')||{}).value||'';render();};
-  window.inv_reset=function(){DB.invKw='';DB.invWh='';DB.invMode='';DB.invQuick='';render();};
+  window.inv_reset=function(){DB.invKw='';DB.invMode='';DB.invQuick='';render();};   // 只清筛选，Tab 也归「全部」
   window.inv_quick=function(v){DB.invQuick=v;render();};   // Tab：全部 / 已缺货 / 有在途（互斥，非 toggle）
+
+  /* ---------- 导出（跟随当前筛选，所见即所得） ----------
+     口径：导出行 = 当前「关键词 + 供货模式 + Tab」命中的全部行，**忽略分页**（不是只导本页）。
+     列 = 表格 12 个数据列 + SPU 编码 + 仓库编码，顺序与页面一致；数量列为折算后件数，表头带「(件)」。
+     同步直下 xlsx（与商品/订单/备货参考/称重导出同款），无异步、无消息通知。
+     INV_EXPORT_MAX：一次导出行数上限 = min(商定上限, 后端候选集上限)；超出在计数阶段即拒、不生成文件，
+     提示须给出可执行出路（按供货模式分开导出），不许只说「缩小筛选范围」。具体数值待研发确认（Q-10）。 */
+  const INV_EXPORT_MAX=50000;                               // 演示值；真实值 = min(商定上限, 后端候选集上限)，待研发确认（Q-10）
+  function invExportFileName(d){const p=n=>String(n).padStart(2,'0');
+    return `inventory_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.xlsx`;}
+  window.invExportFileName=invExportFileName;
+  /* 按钮文案恒为「导出全部 N 行」：
+     ① 0 行时语义自解释，**不用 disabled + title** —— 真实 Button 带 disabled:pointer-events-none，
+        disabled 态不派发鼠标事件，原生 title 根本弹不出来，那是写了也做不到的方案；
+     ② 商家停在第 4 页只看到 3 行、导出却是 63 行（BR-22 忽略分页），行数写在按钮上才不会被当成导错。 */
+  window.invExportLabel=function(){return `⬇️ 导出全部 ${invFiltered().length} 行`;};
+  window.inv_export=function(btn){
+    const n=invFiltered().length;
+    if(!n){toast('当前筛选下没有可导出的库存','info');return;}   // 不发请求
+    if(n>INV_EXPORT_MAX){                                    // 计数阶段即拒，不生成文件
+      toast(`导出结果 ${n.toLocaleString()} 行，超过单次上限 ${INV_EXPORT_MAX.toLocaleString()} 行。可按「供货模式」分开导出（自售、寄售各导一次），或用商品名称 / 编码缩小范围`,'err');return;}
+    if(btn){btn.disabled=true;btn.textContent='导出中…';}
+    const slow=setTimeout(()=>toast('文件较大，仍在生成中，请勿关闭页面','info'),10000);  // 同步导出超时 30s，久等要给交代
+    setTimeout(()=>{
+      clearTimeout(slow);
+      if(btn){btn.disabled=false;btn.innerHTML=invExportLabel();}
+      toast(`已导出 ${n} 行 · ${invExportFileName(new Date())}`,'ok');
+    },600);
+  };
 
   /* ---------- 页面 1：库存列表（自售 + 寄售通用） ---------- */
   PAGES['m-stock']=()=>{
     invSeed();
-    DB.invWh=DB.invWh||'';DB.invKw=DB.invKw||'';DB.invMode=DB.invMode||'';DB.invQuick=DB.invQuick||'';
-    let list=rows();
+    DB.invKw=DB.invKw||'';DB.invMode=DB.invMode||'';DB.invQuick=DB.invQuick||'';
+    const list=invFiltered();
     const q=DB.invQuick;
-    if(q=='out')list=list.filter(r=>r.sellable<=0);
-    if(q=='transit')list=list.filter(r=>r.transit>0);
     const base=rows(),cAll=base.length,cOut=base.filter(r=>r.sellable<=0).length,cTr=base.filter(r=>r.transit>0).length;
     const qb=(v,t,n)=>`<div class="tab ${q==v?'active':''}" onclick="inv_quick('${v}')">${t}<span style="color:var(--ts);font-weight:400;margin-left:4px">${n}</span></div>`;
     const tabs=`<div class="tabs" style="margin:0;border:none">${qb('','全部',cAll)}${qb('out','已缺货',cOut)}${qb('transit','有在途',cTr)}</div>`;
@@ -389,22 +423,21 @@
 
     return `
     <div class="card"><div class="card-bd">
-      <div class="fg3">
+      <div class="fg2">
         <div class="fr"><label class="fl">商品名称 / 编码</label><input id="inv-kw" value="${DB.invKw}" placeholder="输入商品名或编码" onkeydown="if(event.key=='Enter')inv_search()"></div>
         <div class="fr"><label class="fl">供货模式</label><select onchange="inv_mode(this.value)"><option value="">全部</option><option value="self" ${DB.invMode=='self'?'selected':''}>自售</option><option value="consign" ${DB.invMode=='consign'?'selected':''}>寄售</option></select></div>
-        <div class="fr"><label class="fl">仓库（仅寄售分仓）</label><select onchange="inv_wh(this.value)"><option value="">全部仓库</option>${WH.map(w=>`<option ${DB.invWh==w?'selected':''}>${w}</option>`).join('')}</select></div>
       </div>
       <div class="row" style="gap:8px;margin-top:4px"><button class="btn btn-p" onclick="inv_search()">查询</button><button class="btn btn-o" onclick="inv_reset()">重置</button></div>
     </div></div>
 
     <div class="card"><div class="card-hd">${tabs}
-      <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="toast('已导出当前筛选结果','ok')">⬇️ 导出库存</button></div>
+      <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="inv_export(this)">${invExportLabel()}</button></div>
     </div>
     <div class="card-bd">
       <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度；<b>数量列一律按本行规格折算成「件」</b>（不足 1 件不计）。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>——鼠标悬停可看该仓实物总量，卖掉任一规格，其他规格件数会同步下降。</div>
       <div style="overflow-x:auto"><table>
         <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">${DB.invMode=='self'?'库存总数':DB.invMode=='consign'?'在仓实物':'库存/在仓'}</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
-        <tbody>${body||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invWh||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invWh||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
+        <tbody>${body||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
       </table></div>
     </div></div>`;
   };
