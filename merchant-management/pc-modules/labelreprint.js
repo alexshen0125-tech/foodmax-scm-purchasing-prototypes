@@ -12,12 +12,14 @@
    - **不查原单**：不按送货单/备货单/序号定位，补打粒度只剩「填张数」一种
      （多退少补例外，见下）。
 
-   两点代价：
-   ① 多退少补拿不到原重量（标签都读不出了），只能**现场复称**——走既有
-      BR-14「DC 交接抽检复称，与报重偏差 >3% 以平台为准并计质量分」，会影响商家
-      发货差额与对账单，须回推商家（见 scm_多退少补称重_prd.md BR-14/BR-16）；
-   ② 失去「补打上限 = 已打张数」这道天然管控，改用 单次上限 + 全量留痕 +
-      商家今日已打张数参考 来兜。
+   多退少补怎么办：**不复称**。重量本来就在系统里（商家提交过称重），补打时按
+   「该供应商今日送货的这个品」把逐件重量列出来，仓库对着实物挑要补哪几件——
+   标签纸面上的实发净重是人眼可读的（`LabelTag.tsx:99`），照着找得到。
+   这样补出来的重量与商家报重一致，**不触发 BR-14 复称改账、不动发货差额与对账单**。
+   实物不在清单里（漏称/多送）才走「手动输重量」兜底，那一张会标记为现场复称。
+
+   代价：失去「补打上限 = 已打张数」这道天然管控，改用 单次上限 + 全量留痕 +
+   商家今日已打张数参考 来兜。
 
    标签号用 RL 前缀（商家自己预贴是 PL），一眼能倒查哪些是仓库补的。
 
@@ -43,7 +45,17 @@
     {sku:'xmITEM260731090021',name:'鲜切椰肉',      spec:'800g/盒', unit:'盒',shop:'椰丰食品旗舰店',  weigh:false,todayPrinted:32},
     {sku:'xmITEM260731090022',name:'去壳生蚝',      spec:'1kg/袋',  unit:'袋',shop:'椰丰食品旗舰店',  weigh:true, specW:1.00,wUnit:'kg',todayPrinted:25},
   ];
+  // 多退少补品：该供应商今日送货的逐件实发净重（演示；真实取 /stockprep/weigh/list 的 portions）
+  function hnum(str,mod){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+    h^=h>>>13;h=Math.imul(h,0x5bd1e995)>>>0;h^=h>>>15;return (h>>>0)%mod;}
+  ITEMS.forEach(r=>{
+    if(!r.weigh)return;
+    r.portions=[];
+    for(let i=1;i<=r.todayPrinted;i++)
+      r.portions.push({seq:i,w:+(r.specW+(hnum(r.sku+'p'+i,26)-13)/100).toFixed(2)});
+  });
   function itemOf(sku){return ITEMS.find(x=>x.sku==sku);}
+  function portionOf(sku,seq){return (itemOf(sku).portions||[]).find(p=>p.seq==seq);}
   // 输入串 → item：编码优先，其次商品名（含模糊）。编码印在标签纸面上，读不出码时还能照着敲。
   function resolveItem(tok){
     const t=String(tok||'').trim();if(!t)return null;
@@ -71,16 +83,21 @@
   function cart(){return DB.lrCart||(DB.lrCart=[]);}
   function cartIdx(sku){return cart().findIndex(x=>x.sku==sku);}
   function labels(){return DB.lrLabels||(DB.lrLabels=[]);}
+  // 本次补打 = 进这个页面之后打的那些，只做即时反馈；完整历史在「补打记录」Tab
+  function session(){return DB.lrSession||(DB.lrSession=[]);}
+  function logIt(rec){labels().unshift(rec);session().unshift(rec);}
   function nextId(){DB.lrSeq=(DB.lrSeq||0)+1;return 'RL2609'+String(DB.lrSeq).padStart(5,'0');}
   function nowTxt(){const d=new Date();return TODAY+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
   function defQty(){return DB.lrLastQty||10;}
-  function doneOf(sku){return labels().filter(x=>x.sku==sku&&x.type=='weigh').length;}
+  // 清单里这一项本次要打几张
+  function itemCount(x){const r=itemOf(x.sku);return r.weigh?(x.sel.length+x.manual.length):(x.qty||0);}
+  function cartTotal(){return cart().reduce((a,x)=>a+itemCount(x),0);}
 
   function cartAdd(sku,qty){
     const r=itemOf(sku);if(!r)return {ok:false};
     const i=cartIdx(sku);
     if(i>=0){if(!r.weigh)cart()[i].qty=Math.min(MAX_ONCE,cart()[i].qty+(qty||defQty()));return {ok:true,dup:true,name:r.name,weigh:r.weigh};}
-    cart().push({sku:r.sku,qty:r.weigh?0:(qty||defQty())});
+    cart().push({sku:r.sku,qty:r.weigh?0:(qty||defQty()),sel:[],manual:[]});
     return {ok:true,name:r.name,weigh:r.weigh};
   }
 
@@ -137,30 +154,108 @@
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button>
       <button class="btn btn-d" onclick="DB.lrCart=[];DB.lrSku='';closeModal();render();toast('已清空清单','info')">确认清空</button></div>`);
   };
-  window.lr_weighStart=function(sku){DB.lrSku=sku;render();
-    setTimeout(()=>{const el=document.getElementById('lr-w');if(el)el.focus();},60);};
+  /* ── 多退少补：挑要补哪几件（重量取商家已提交的称重结果，不复称）── */
+  window.lr_pickWeigh=function(sku){DB.lrSku=sku;lr_weighDrawer();};
+  window.lr_wToggle=function(seq){
+    const x=cart()[cartIdx(DB.lrSku)];if(!x)return;
+    const i=x.sel.indexOf(seq);if(i<0)x.sel.push(seq);else x.sel.splice(i,1);lr_weighDrawer();
+  };
+  window.lr_wAll=function(){
+    const r=itemOf(DB.lrSku);const x=cart()[cartIdx(DB.lrSku)];if(!x)return;
+    x.sel=x.sel.length==r.portions.length?[]:r.portions.map(p=>p.seq);lr_weighDrawer();
+  };
+  window.lr_wFilter=function(v){DB.lrWq=v;lr_weighDrawer();};
+  window.lr_wManualDel=function(i){const x=cart()[cartIdx(DB.lrSku)];if(!x)return;x.manual.splice(i,1);lr_weighDrawer();};
+  window.lr_wManualAdd=function(){
+    const x=cart()[cartIdx(DB.lrSku)];const el=document.getElementById('lr-mw');
+    const w=parseFloat((el||{}).value);
+    if(!(w>0)){toast('请输入净重','err');if(el)el.focus();return;}
+    x.manual.push(+w.toFixed(2));lr_weighDrawer();
+    const n=document.getElementById('lr-mw');if(n){n.value='';n.focus();}
+    toast(`已加入现场复称 ${w.toFixed(2)}，该张会标记为复称`,'info');
+  };
+  window.lr_wDone=function(){closeDrawer();render();};
+
+  function lr_weighDrawer(){
+    const r=itemOf(DB.lrSku);const x=cart()[cartIdx(DB.lrSku)];if(!r||!x)return;
+    const q=(DB.lrWq||'').trim();
+    const list=r.portions.filter(p=>!q||String(p.w).includes(q)||String(p.seq)==q);
+    const all=x.sel.length==r.portions.length&&r.portions.length>0;
+    drawer(`
+      <div class="mc-hd">
+        <h3>选择要补打的件 · ${r.name}</h3>
+        <p>${r.shop} · 今日送货 <b>${r.portions.length}</b> 件 · 已选 <b>${x.sel.length+x.manual.length}</b> 件</p>
+        <button class="mc-x" onclick="closeDrawer()">×</button>
+      </div>
+      <div class="mc-bd" style="padding:18px 20px">
+        <div class="ib ib-b"><span class="i">⚖️</span>下面是<b>该供应商今日送货</b>这个品的逐件实发净重，取自商家已提交的称重结果。
+          坏标签纸面上的<b>实发净重</b>是人眼可读的，照着找到对应那件勾上即可——补出来的重量与商家报重一致，<b>不改发货差额、不动对账单</b>。</div>
+        <div class="row" style="gap:10px;align-items:flex-end;margin:12px 0 10px">
+          <div class="fr" style="flex:0 0 220px;margin:0"><label class="fl">按重量 / 序号筛</label>
+            <input value="${DB.lrWq||''}" placeholder="如 1.02 或 7" oninput="lr_wFilter(this.value)"></div>
+          <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">一件应发 ${r.specW.toFixed(2)}${r.wUnit}</div>
+        </div>
+        <div style="overflow-x:auto;max-height:380px;overflow-y:auto;border:1px solid var(--bd2);border-radius:8px"><table>
+          <thead><tr>
+            <th style="width:34px"><input type="checkbox" ${all?'checked':''} onclick="lr_wAll()"></th>
+            <th style="width:70px">序号</th><th style="text-align:right">实发净重</th><th style="text-align:right">差异</th>
+          </tr></thead><tbody>${list.map(pp=>{const d=+(pp.w-r.specW).toFixed(2);
+            return `<tr${x.sel.includes(pp.seq)?' style="background:var(--gl)"':''}>
+              <td><input type="checkbox" ${x.sel.includes(pp.seq)?'checked':''} onclick="lr_wToggle(${pp.seq})"></td>
+              <td>${pp.seq}</td>
+              <td style="text-align:right"><b>${pp.w.toFixed(2)}</b> <span style="color:var(--ts)">${r.wUnit}</span></td>
+              <td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td>
+            </tr>`;}).join('')||`<tr><td colspan="4"><div class="empty" style="padding:22px 0"><div class="e-t">没有匹配的件</div><div class="e-s">清空筛选，或用下方「手动输重量」兜底。</div></div></td></tr>`}</tbody>
+        </table></div>
+
+        <div style="display:flex;align-items:baseline;gap:8px;margin:18px 0 8px">
+          <div style="font-size:14px;font-weight:600">实物不在清单里？手动输重量</div>
+          <div style="font-size:12px;color:var(--ts)">商家漏称 / 多送时才用</div>
+        </div>
+        <div class="ib ib-y"><span class="i">⚠️</span>手输的重量属<b>现场复称</b>：按 BR-14，与商家报重偏差 &gt;3% 以平台为准并计质量分，<b>会改动发货差额与对账单</b>，补完请知会商家。</div>
+        <div class="row" style="gap:10px;align-items:flex-end;margin-top:10px">
+          <div class="fr" style="flex:0 0 200px;margin:0"><label class="fl">本袋净重（${r.wUnit}）</label>
+            <input id="lr-mw" type="number" step="0.01" min="0" placeholder="过秤后输入，回车加入"
+              onkeydown="if(event.key=='Enter'){event.preventDefault();lr_wManualAdd()}"></div>
+          <button class="btn btn-o btn-sm" onclick="lr_wManualAdd()">加入</button>
+        </div>
+        ${x.manual.length?`<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${x.manual.map((w,i)=>
+          `<span class="tag t-y" style="font-size:12px">复称 ${w.toFixed(2)}${r.wUnit} <b style="cursor:pointer;margin-left:4px" onclick="lr_wManualDel(${i})">×</b></span>`).join('')}</div>`:''}
+      </div>
+      <div class="mc-ft">
+        <button class="btn btn-o" onclick="closeDrawer()">取消</button>
+        <button class="btn btn-p" onclick="lr_wDone()">确定（已选 ${x.sel.length+x.manual.length} 件）</button>
+      </div>`);
+  }
 
   /* ============================================================
      打印
   ============================================================ */
   window.lr_printBatch=function(){
     if(!ensurePaper())return;
-    const normals=cart().filter(x=>!itemOf(x.sku).weigh&&x.qty>=1);
-    const weighs=cart().filter(x=>itemOf(x.sku).weigh);
-    if(!normals.length){toast(weighs.length?'清单里只有多退少补商品，需逐袋复称打印':'清单里没有可批量打印的普通商品','err');return;}
-    const total=normals.reduce((a,x)=>a+x.qty,0);
+    const ready=cart().filter(x=>itemCount(x)>0);
+    const pending=cart().filter(x=>itemOf(x.sku).weigh&&itemCount(x)==0);
+    if(!ready.length){toast(pending.length?'多退少补商品还没挑要补哪几件，请先点「选择要补的件」':'清单里没有可打印的商品','err');return;}
+    const total=cartTotal();
     if(total>MAX_ONCE){toast(`单次上限 ${MAX_ONCE} 张，当前 ${total} 张，请分批`,'err');return;}
-    modalWide(`<div class="mc-hd"><h3>批量补打确认</h3><p>${normals.length} 个商品 · ${total} 张</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    const anyManual=ready.some(x=>x.manual.length);
+    modalWide(`<div class="mc-hd"><h3>批量补打确认</h3><p>${ready.length} 个商品 · ${total} 张</p><button class="mc-x" onclick="closeModal()">×</button></div>
     <div class="mc-bd">
-      <div class="ib ib-y"><span class="i">🏷️</span>打的是<b>不绑送货单</b>的新标签（张张相同、无序号），到仓 WMS 扫码后按数量逻辑匹配。<b>请务必销毁扫不出的旧标签</b>，否则同一件货会被计两次。</div>
+      <div class="ib ib-y"><span class="i">🏷️</span>打的是<b>不绑送货单</b>的新标签，到仓 WMS 扫码后按数量逻辑匹配。<b>请务必销毁扫不出的旧标签</b>，否则同一件货会被计两次。</div>
       <div style="overflow-x:auto;margin-top:10px"><table>
-        <thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th>供货商</th><th style="text-align:right">商家今日已打</th><th style="text-align:right">本次补打</th></tr></thead>
-        <tbody>${normals.map(x=>{const r=itemOf(x.sku);
+        <thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th>供货商</th><th>计价方式</th><th style="text-align:right">商家今日已打</th><th>补打内容</th><th style="text-align:right">张数</th></tr></thead>
+        <tbody>${ready.map(x=>{const r=itemOf(x.sku);
+          const detail=r.weigh
+            ?`<span class="mono" style="font-size:12px">${x.sel.slice(0,5).map(q=>portionOf(x.sku,q).w.toFixed(2)).join('、')}${x.sel.length>5?` 等 ${x.sel.length} 件`:''}${x.manual.length?`<span style="color:var(--y)"> + 复称 ${x.manual.length} 件</span>`:''}</span>`
+            :'<span style="color:var(--ts)">张张相同、无序号</span>';
           return `<tr><td class="mono">${x.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td>${r.shop}</td>
+          <td>${r.weigh?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</td>
           <td style="text-align:right;color:var(--ts)">${r.todayPrinted} 张</td>
-          <td style="text-align:right"><b>${x.qty}</b></td></tr>`;}).join('')}</tbody>
+          <td>${detail}</td>
+          <td style="text-align:right"><b>${itemCount(x)}</b></td></tr>`;}).join('')}</tbody>
       </table></div>
-      ${weighs.length?`<div class="ib ib-r" style="margin-top:10px"><span class="i">⚖️</span>清单里另有 <b>${weighs.length}</b> 个多退少补商品<b>不进批量</b>：每袋重量不同，需逐袋现场复称打印。</div>`:''}
+      ${pending.length?`<div class="ib ib-r" style="margin-top:10px"><span class="i">⚖️</span>另有 <b>${pending.length}</b> 个多退少补商品还没挑件，本次不打；挑完再打一轮即可。</div>`:''}
+      ${anyManual?`<div class="ib ib-y" style="margin-top:10px"><span class="i">⚠️</span>本次含<b>手动输入重量</b>的件，属现场复称（BR-14），会改动发货差额与对账单，补完请知会商家。</div>`:''}
       <div class="fr" style="margin-top:12px"><label class="fl"><b>*</b>补打原因</label>
         <select id="lr-reason">${REASONS.map(x=>`<option>${x}</option>`).join('')}</select></div>
     </div>
@@ -170,48 +265,21 @@
   };
   window.lr_doBatch=function(){
     const reason=(document.getElementById('lr-reason')||{}).value||REASONS[0];
-    const normals=cart().filter(x=>!itemOf(x.sku).weigh&&x.qty>=1);
+    const ready=cart().filter(x=>itemCount(x)>0);
     let n=0;
-    normals.forEach(x=>{const r=itemOf(x.sku);
-      labels().unshift({id:nextId(),shop:r.shop,sku:r.sku,name:r.name,spec:r.spec,
-        type:'normal',qty:x.qty,time:nowTxt(),op:'运营管理员',reason,paper:DB.lrPaper});n+=x.qty;});
-    DB.lrCart=cart().filter(x=>itemOf(x.sku).weigh);   // 打完移出，留下多退少补待称
-    closeModal();render();
-    toast(`已补打 ${normals.length} 个商品共 ${n} 张（不绑送货单）；请销毁旧标签`,'ok');
-  };
-
-  // 多退少补：一袋一称一打，回车即打；不整页重渲以保住输入焦点
-  window.lr_printWeigh=function(){
-    if(!ensurePaper())return;
-    const r=itemOf(DB.lrSku);if(!r)return;
-    const el=document.getElementById('lr-w');const w=parseFloat((el||{}).value);
-    if(!(w>0)){toast('请输入本袋净重','err');if(el)el.focus();return;}
-    const reason=(document.getElementById('lr-wreason')||{}).value||REASONS[0];
-    const rec={id:nextId(),shop:r.shop,sku:r.sku,name:r.name,spec:r.spec,
-      type:'weigh',w:+w.toFixed(2),wUnit:r.wUnit,qty:1,time:nowTxt(),op:'运营管理员',reason,paper:DB.lrPaper};
-    labels().unshift(rec);
-    const tb=document.getElementById('lr-batch');
-    if(tb){
-      const d=+(w-r.specW).toFixed(2);
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td class="mono">${rec.id}</td><td style="text-align:right"><b>${rec.w.toFixed(2)}</b> <span style="color:var(--ts)">${rec.wUnit}</span></td>`+
-        `<td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td><td style="color:var(--ts)">${rec.time}</td>`;
-      tb.insertBefore(tr,tb.firstChild);
-    }
-    const c=document.getElementById('lr-cnt');if(c)c.textContent=doneOf(r.sku);
-    const cc=document.getElementById('lr-cart-'+r.sku);if(cc)cc.textContent=doneOf(r.sku)+' 袋';
-    const db=document.getElementById('lr-done-btn');if(db)db.style.display='';
-    const cd=document.getElementById('lr-cart-done-'+r.sku);if(cd)cd.style.display='';
-    ledgerSync(rec);
-    if(el){el.value='';el.focus();}
-    toast(`已补打 ${rec.id} · ${rec.w.toFixed(2)}${rec.wUnit}`,'ok');
-  };
-  window.lr_weighDone=function(sku){
-    const n=doneOf(sku);
-    if(!n){toast('该商品还没打过标签','err');return;}
-    const i=cartIdx(sku);const nm=itemOf(sku).name;
-    if(i>=0)cart().splice(i,1);
-    DB.lrSku='';render();toast(`「${nm}」已补打 ${n} 袋，已移出清单`,'ok');
+    ready.forEach(x=>{
+      const r=itemOf(x.sku);
+      const base={shop:r.shop,sku:r.sku,name:r.name,spec:r.spec,time:nowTxt(),op:'运营管理员',reason,paper:DB.lrPaper};
+      if(!r.weigh){logIt(Object.assign({id:nextId(),type:'normal',qty:x.qty},base));n+=x.qty;return;}
+      // 多退少补：一件一张，各带各的重量；手输的标记 recheck（现场复称）
+      x.sel.slice().sort((a,b)=>a-b).forEach(q=>{
+        logIt(Object.assign({id:nextId(),type:'weigh',qty:1,w:portionOf(x.sku,q).w,wUnit:r.wUnit,srcSeq:q},base));n++;});
+      x.manual.forEach(w=>{
+        logIt(Object.assign({id:nextId(),type:'weigh',qty:1,w,wUnit:r.wUnit,recheck:true},base));n++;});
+    });
+    DB.lrCart=cart().filter(x=>itemCount(x)==0);   // 打完的移出，没挑件的留着
+    DB.lrSku='';closeModal();render();
+    toast(`已补打 ${ready.length} 个商品共 ${n} 张（不绑送货单）；请销毁旧标签`,'ok');
   };
 
   function ledgerRow(x){return `<tr>
@@ -221,7 +289,7 @@
       <td>${x.spec}</td>
       <td>${x.shop}</td>
       <td>${x.type=='weigh'?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</td>
-      <td style="text-align:right">${x.type=='weigh'?`<b>${x.w.toFixed(2)}</b> <span style="color:var(--ts)">${x.wUnit}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
+      <td style="text-align:right">${x.type=='weigh'?`<b>${x.w.toFixed(2)}</b> <span style="color:var(--ts)">${x.wUnit}</span>${x.recheck?' <span class="tag t-y" style="font-size:10px">现场复称</span>':''}`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right"><b>${x.qty}</b></td>
       <td>${x.reason=='二维码扫不出'?`<span class="tag t-r"><span class="dot"></span>${x.reason}</span>`:x.reason}</td>
       <td>${x.op}</td>
@@ -229,9 +297,11 @@
     </tr>`;}
   function ledgerSync(rec){
     const tb=document.getElementById('lr-ledger');
-    if(tb){const e=tb.querySelector('.empty');if(e)tb.innerHTML='';tb.insertAdjacentHTML('afterbegin',ledgerRow(rec));}
+    if(tb)tb.insertAdjacentHTML('afterbegin',ledgerRow(rec));
     const h=document.getElementById('lr-ledger-cnt');
-    if(h)h.textContent=`共 ${labels().length} 条 · ${labels().reduce((a,x)=>a+x.qty,0)} 张`;
+    if(h)h.textContent=`${session().length} 条 · ${session().reduce((a,x)=>a+x.qty,0)} 张`;
+    // 卡片本身在本次第一张打出来之前不存在 → 整页重渲把它带出来
+    if(!tb)render();
   }
 
   /* ============================================================
@@ -240,15 +310,12 @@
   function listView(){
     DB.lrCart=DB.lrCart||[];
     const c=cart();
-    const cur=DB.lrSku?itemOf(DB.lrSku):null;
-    const curInCart=cur&&cartIdx(cur.sku)>=0;
-    const batch=cur&&cur.weigh?labels().filter(x=>x.sku==cur.sku&&x.type=='weigh'):[];
-    const normals=c.filter(x=>!itemOf(x.sku).weigh&&x.qty>=1);
-    const total=normals.reduce((a,x)=>a+x.qty,0);
-    const list=labels();
+    const total=cartTotal();
+    const pending=c.filter(x=>itemOf(x.sku).weigh&&itemCount(x)==0).length;
+    const list=labels(), sess=session();
 
-    const cartBody=c.map(x=>{const r=itemOf(x.sku);
-      return `<tr ${cur&&cur.sku==x.sku?'style="background:var(--gl)"':''}>
+    const cartBody=c.map(x=>{const r=itemOf(x.sku);const need=r.weigh&&itemCount(x)==0;
+      return `<tr${need?' style="background:#FDF6F5"':''}>
       <td class="mono">${r.sku}</td>
       <td><b>${r.name}</b></td>
       <td>${r.spec}</td>
@@ -256,12 +323,13 @@
       <td>${r.weigh?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</td>
       <td style="text-align:right;color:var(--ts)">${r.todayPrinted} 张</td>
       <td style="text-align:right">${r.weigh
-        ?'<span style="color:var(--ts)">逐袋复称</span>'
+        ?(itemCount(x)
+          ?`<span class="mono" style="font-size:12px">${x.sel.slice().sort((a,b)=>a-b).slice(0,4).map(q=>portionOf(x.sku,q).w.toFixed(2)).join('、')}${x.sel.length>4?' 等':''}${x.manual.length?`<span style="color:var(--y)"> +复称 ${x.manual.length}</span>`:''}</span>`
+          :'<span style="color:var(--r)">待挑件</span>')
         :`<input type="number" min="1" max="${MAX_ONCE}" value="${x.qty}" class="ministock" style="width:84px;text-align:right" onchange="lr_cartQty('${r.sku}',this.value)">`}</td>
-      <td style="text-align:right">${r.weigh?`<b id="lr-cart-${r.sku}" style="color:var(--gd)">${doneOf(r.sku)} 袋</b>`:'<span style="color:var(--tt)">—</span>'}</td>
+      <td style="text-align:right"><b>${itemCount(x)}</b></td>
       <td style="white-space:nowrap">${r.weigh
-        ?`<button class="btn ${cur&&cur.sku==r.sku?'btn-o':'btn-p'} btn-sm" onclick="lr_weighStart('${r.sku}')">${cur&&cur.sku==r.sku?'称重中':'开始复称'}</button>
-           <button class="btn btn-link btn-sm" id="lr-cart-done-${r.sku}" style="display:${doneOf(r.sku)?'':'none'}" onclick="lr_weighDone('${r.sku}')">完成</button>`
+        ?`<button class="btn ${itemCount(x)?'btn-o':'btn-p'} btn-sm" onclick="lr_pickWeigh('${r.sku}')">${itemCount(x)?`已选 ${itemCount(x)} 件，改选`:'选择要补的件'}</button>`
         :''}
         <button class="btn btn-link btn-sm" onclick="lr_cartDel('${r.sku}')">移除</button></td>
     </tr>`;}).join('');
@@ -289,45 +357,24 @@
     <div class="card" style="margin-bottom:14px"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
         <h3 style="margin-right:6px">待打印清单</h3>
-        <button class="btn btn-p btn-sm" ${normals.length?'':'disabled'} onclick="lr_printBatch()">批量补打${total?`（${normals.length} 个商品 ${total} 张）`:''}</button>
+        <button class="btn btn-p btn-sm" ${total?'':'disabled'} onclick="lr_printBatch()">批量补打${total?`（${total} 张）`:''}</button>
         <button class="btn btn-o btn-sm" ${c.length?'':'disabled'} onclick="lr_cartClear()">清空清单</button>
+        ${pending?`<span style="font-size:12px;color:var(--r)">${pending} 个多退少补商品还没挑件</span>`:''}
       </div>
-      <span class="sub">补打的是<b>不绑送货单</b>的新标签，到仓 WMS 扫码后按数量逻辑匹配；多退少补需逐袋现场复称</span>
+      <span class="sub">补打的是<b>不绑送货单</b>的新标签，到仓 WMS 扫码后按数量逻辑匹配；多退少补按该供应商今日送货的逐件重量挑</span>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th>供货商</th><th>计价方式</th><th style="text-align:right">商家今日已打</th><th style="text-align:right">补打张数</th><th style="text-align:right">已打</th><th>操作</th></tr></thead>
+      <thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th>供货商</th><th>计价方式</th><th style="text-align:right">商家今日已打</th><th style="text-align:right">补打张数 / 重量</th><th style="text-align:right">张数</th><th>操作</th></tr></thead>
       <tbody>${cartBody||`<tr><td colspan="9"><div class="empty"><div class="e-ic">🧾</div><div class="e-t">清单还是空的</div><div class="e-s">照坏标签上印的商品编码敲进去，或用「批量粘贴」一次贴一列。<br>供货商随编码自动带出，不用选。</div></div></td></tr>`}</tbody>
     </table></div></div></div>
 
-    ${cur&&cur.weigh&&curInCart?`
-    <div class="card" style="margin-bottom:14px"><div class="card-hd">
-      <h3>现场复称 · ${cur.name}</h3>
-      <span class="sub">一袋一称一打，回车即打；每张带唯一标签号与本袋净重，不含备货单号</span></div>
-      <div class="card-bd">
-        <div class="ib ib-y"><span class="i">⚖️</span>旧标签读不出，原重量取不到，只能<b>现场复称</b>。按 BR-14，复称值与商家报重偏差 <b>&gt;3%</b> 时<b>以平台为准</b>并计商家质量分，会改动该商家的发货差额与对账单——补打完请知会商家。</div>
-        <div class="row" style="gap:10px;align-items:flex-end;margin-top:12px">
-          <div class="fr" style="flex:0 0 200px;margin:0"><label class="fl"><b>*</b>本袋净重（${cur.wUnit}）</label>
-            <input id="lr-w" type="number" step="0.01" min="0" placeholder="过秤后输入，回车即打"
-              onkeydown="if(event.key=='Enter'){event.preventDefault();lr_printWeigh()}"></div>
-          <div class="fr" style="flex:0 0 180px;margin:0"><label class="fl">补打原因</label>
-            <select id="lr-wreason">${REASONS.map(x=>`<option>${x}</option>`).join('')}</select></div>
-          <button class="btn btn-p" onclick="lr_printWeigh()">打印并继续</button>
-          <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">一件应发 ${cur.specW.toFixed(2)}${cur.wUnit} · 已补打 <b id="lr-cnt">${batch.length}</b> 袋</div>
-          <div style="padding-bottom:6px;margin-left:auto"><button class="btn btn-o btn-sm" id="lr-done-btn" style="display:${batch.length?'':'none'}" onclick="lr_weighDone('${cur.sku}')">这个商品称完了</button></div>
-        </div>
-        <div style="overflow-x:auto;max-height:240px;overflow-y:auto;border:1px solid var(--bd2);border-radius:8px;margin-top:12px"><table>
-          <thead><tr><th>标签号</th><th style="text-align:right">本袋净重</th><th style="text-align:right">差异</th><th>打印时间</th></tr></thead>
-          <tbody id="lr-batch">${batch.map(b=>{const d=+(b.w-cur.specW).toFixed(2);
-            return `<tr><td class="mono">${b.id}</td><td style="text-align:right"><b>${b.w.toFixed(2)}</b> <span style="color:var(--ts)">${b.wUnit}</span></td><td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td><td style="color:var(--ts)">${b.time}</td></tr>`;}).join('')}</tbody>
-        </table></div>
-      </div></div>`:''}
-
-    <div class="card"><div class="card-hd"><h3>补打记录</h3>
-      <span class="sub" id="lr-ledger-cnt">共 ${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张</span></div>
+    ${sess.length?`
+    <div class="card"><div class="card-hd"><h3>本次补打</h3>
+      <span class="sub"><b id="lr-ledger-cnt">${sess.length} 条 · ${sess.reduce((a,x)=>a+x.qty,0)} 张</b> —— 刚打出来的这批，完整历史见上方「补打记录」</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>标签号</th><th>商品编码</th><th>商品名称</th><th>规格</th><th>供货商</th><th>计价方式</th><th style="text-align:right">本袋净重</th><th style="text-align:right">张数</th><th>补打原因</th><th>操作人</th><th>补打时间</th></tr></thead>
-      <tbody id="lr-ledger">${list.map(ledgerRow).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">📄</div><div class="e-t">暂无补打记录</div><div class="e-s">仓库补打的标签都会留在这里，可按原因统计倒查商家打印质量。</div></div></td></tr>`}</tbody>
-    </table></div></div></div>`;
+      <tbody id="lr-ledger">${sess.map(ledgerRow).join('')}</tbody>
+    </table></div></div></div>`:''}`;
   }
 
   function logView(){
