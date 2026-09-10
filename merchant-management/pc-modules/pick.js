@@ -301,15 +301,125 @@
   function preList(){return DB.preLabels||(DB.preLabels=[]);}
   function preNow(){const d=new Date();return '2026-09-10 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 
-  window.pre_pickSku=function(v){DB.preSku=v;render();};
-  // 普通品：张张相同，一次打 N 张，一条台账记 N 张
-  window.pre_printQty=function(){
+  /* ── 待打印清单（购物车式，支持批量录入 SKU）───────────────────── */
+  function preCart(){return DB.preCart||(DB.preCart=[]);}
+  function cartIdx(sku){return preCart().findIndex(x=>x.sku==sku);}
+  function preDefQty(){return DB.preLastQty||10;}
+  // 加一个 SKU 进清单；已在清单里则普通品累加张数、多退少补提示已存在
+  function cartAdd(sku,qty){
+    const r=preOf(sku);if(!r)return {ok:false,why:'not-found'};
+    const i=cartIdx(sku);
+    if(i>=0){
+      if(!r.weigh)preCart()[i].qty=Math.min(MAX_PRE,preCart()[i].qty+(qty||preDefQty()));
+      return {ok:true,dup:true,name:r.name};
+    }
+    preCart().push({sku:r.sku,name:r.name,spec:r.spec,weigh:r.weigh,specQty:r.specQty,unit:r.sellUnit,
+      qty:r.weigh?0:(qty||preDefQty())});
+    return {ok:true,name:r.name};
+  }
+  // 输入串 → SKU：支持商品编码、商品名称（含模糊），不区分大小写
+  function resolveSku(tok){
+    const t=String(tok||'').trim();if(!t)return null;
+    const all=preSkus();
+    return (all.find(x=>x.sku.toLowerCase()==t.toLowerCase())
+      ||all.find(x=>x.name==t)
+      ||all.find(x=>x.name.includes(t))
+      ||null);
+  }
+
+  window.pre_scanAdd=function(){
+    const el=document.getElementById('pre-scan');const v=(el||{}).value||'';
+    if(!v.trim()){if(el)el.focus();return;}
+    const hit=resolveSku(v);
+    if(!hit){toast(`没找到「${v.trim()}」对应的在售商品，请核对编码或名称`,'err');if(el){el.select();}return;}
+    const r=cartAdd(hit.sku);
+    DB.preSku=hit.weigh?hit.sku:DB.preSku;      // 多退少补自动切到它，直接开始称
+    render();
+    // 重渲后把光标弹回扫码框，支持扫码枪连扫
+    const n=document.getElementById('pre-scan');if(n){n.value='';n.focus();}
+    toast(r.dup?`「${hit.name}」已在清单中${hit.weigh?'':'，张数已累加'}`:`已加入清单：${hit.name}`,r.dup?'info':'ok');
+  };
+  window.pre_pickAdd=function(v){
+    if(!v)return;const hit=preOf(v);if(!hit)return;
+    const r=cartAdd(v);
+    if(hit.weigh)DB.preSku=v;
+    render();toast(r.dup?`「${hit.name}」已在清单中${hit.weigh?'':'，张数已累加'}`:`已加入清单：${hit.name}`,r.dup?'info':'ok');
+  };
+  // 批量粘贴：一行一个，支持「编码」或「编码,张数」（逗号/空格/Tab 均可），可从 Excel 直接贴两列
+  window.pre_pasteModal=function(){
+    modal(`<div class="mc-hd"><h3>批量录入商品</h3><p>一行一个，支持「商品编码」或「商品编码 + 打印张数」两列</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd">
+      <div class="ib ib-b"><span class="i">📋</span>可直接从 Excel 复制两列粘进来；分隔符支持<b>逗号 / 空格 / Tab</b>。只写编码时按默认 <b>${preDefQty()}</b> 张；<b>多退少补商品张数忽略</b>，加进清单后逐袋称重打印。</div>
+      <div class="fr" style="margin-top:10px"><label class="fl">商品编码清单</label>
+        <textarea id="pre-paste" rows="8" placeholder="SKU8816,20&#10;SKU8815&#10;小棠菜 15"></textarea></div>
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button>
+      <button class="btn btn-p" onclick="pre_pasteDo()">解析并加入清单</button></div>`);
+    setTimeout(()=>{const t=document.getElementById('pre-paste');if(t)t.focus();},60);
+  };
+  window.pre_pasteDo=function(){
+    const raw=(document.getElementById('pre-paste')||{}).value||'';
+    const rows=raw.split(/[\n\r;]+/).map(x=>x.trim()).filter(Boolean);
+    if(!rows.length){toast('请先粘贴商品编码','err');return;}
+    let added=0,dup=0;const bad=[];
+    rows.forEach(line=>{
+      const parts=line.split(/[,，\t ]+/).filter(Boolean);
+      const hit=resolveSku(parts[0]);
+      if(!hit){bad.push(line);return;}
+      const q=parts.length>1?parseInt(parts[1],10):0;
+      const r=cartAdd(hit.sku,(q>=1&&q<=MAX_PRE)?q:0);
+      if(r.dup)dup++;else added++;
+    });
+    closeModal();render();
+    if(bad.length)toast(`已加入 ${added} 项${dup?`，${dup} 项已在清单`:''}；${bad.length} 行没认出：${bad.slice(0,3).join('、')}${bad.length>3?' 等':''}`,'err');
+    else toast(`已加入 ${added} 项${dup?`，${dup} 项已在清单（普通品张数已累加）`:''}`,'ok');
+  };
+  window.pre_cartQty=function(sku,v){
+    const i=cartIdx(sku);if(i<0)return;
+    const n=parseInt(v,10);
+    preCart()[i].qty=(n>=1&&n<=MAX_PRE)?n:0;
+    if(n>=1&&n<=MAX_PRE)DB.preLastQty=n;
+    render();
+  };
+  window.pre_cartDel=function(sku){const i=cartIdx(sku);if(i<0)return;
+    const nm=preCart()[i].name;preCart().splice(i,1);if(DB.preSku==sku)DB.preSku='';render();toast(`已移出清单：${nm}`,'info');};
+  window.pre_cartClear=function(){
+    if(!preCart().length)return;
+    modal(`<div class="mc-hd"><h3>清空待打印清单</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>将移除清单里全部 <b>${preCart().length}</b> 项，已打印的标签与台账不受影响。</div></div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button>
+      <button class="btn btn-d" onclick="DB.preCart=[];DB.preSku='';closeModal();render();toast('已清空清单','info')">确认清空</button></div>`);
+  };
+  window.pre_weighStart=function(sku){DB.preSku=sku;render();
+    setTimeout(()=>{const el=document.getElementById('pre-w');if(el)el.focus();},60);};
+
+  /* ── 打印 ────────────────────────────────────────────────────── */
+  // 普通品批量打印：清单里所有普通品一次打完，一个 SKU 一条台账
+  window.pre_printBatch=function(){
     if(!ensurePaper())return;
-    const r=preOf(DB.preSku);if(!r)return;
-    const n=parseInt((document.getElementById('pre-qty')||{}).value,10);
-    if(!(n>=1)||n>MAX_PRE){toast(`打印张数需为 1–${MAX_PRE} 的整数`,'err');return;}
-    preList().unshift({id:preNextId(),sku:r.sku,name:r.name,spec:r.spec,type:'normal',qty:n,time:preNow(),status:'待使用'});
-    render();toast(`已预贴打印「${r.name}」${n} 张（不绑送货单）`,'ok');
+    const normals=preCart().filter(x=>!x.weigh&&x.qty>=1);
+    const weighs=preCart().filter(x=>x.weigh);
+    if(!normals.length){toast(weighs.length?'清单里只有多退少补商品，需逐袋称重打印':'清单里没有可批量打印的普通商品','err');return;}
+    const total=normals.reduce((a,x)=>a+x.qty,0);
+    if(total>MAX_PRE){toast(`单次上限 ${MAX_PRE} 张，当前 ${total} 张，请减少张数或分批`,'err');return;}
+    modal(`<div class="mc-hd"><h3>批量预贴打印</h3><p>共 ${normals.length} 个商品 · ${total} 张</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd">
+      <div class="ib ib-b"><span class="i">🏷️</span>预贴标签<b>不绑送货单/备货单</b>，同商品张张相同、无序号；不计入备货单打印进度。</div>
+      <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">张数</th></tr></thead>
+      <tbody>${normals.map(x=>`<tr><td class="mono">${x.sku}</td><td><b>${x.name}</b></td><td>${x.spec}</td><td style="text-align:right"><b>${x.qty}</b></td></tr>`).join('')}</tbody></table></div>
+      ${weighs.length?`<div class="ib ib-y" style="margin-top:10px"><span class="i">⚖️</span>清单里另有 <b>${weighs.length}</b> 个多退少补商品<b>不进批量</b>：每袋重量不同，需逐袋称重打印。</div>`:''}
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button>
+      <button class="btn btn-p" onclick="pre_doPrintBatch()">确认打印（${total} 张）</button></div>`);
+  };
+  window.pre_doPrintBatch=function(){
+    const normals=preCart().filter(x=>!x.weigh&&x.qty>=1);
+    let n=0;
+    normals.forEach(x=>{preList().unshift({id:preNextId(),sku:x.sku,name:x.name,spec:x.spec,type:'normal',qty:x.qty,time:preNow(),status:'待使用'});n+=x.qty;});
+    // 打完把普通品移出清单，留下多退少补待称
+    DB.preCart=preCart().filter(x=>x.weigh);
+    closeModal();render();
+    toast(`已预贴打印 ${normals.length} 个商品共 ${n} 张（不绑送货单）`,'ok');
   };
   // 多退少补：一袋一称一打，回车即打；不整页重渲以保住输入焦点
   window.pre_printWeigh=function(){
@@ -326,12 +436,24 @@
       tr.innerHTML=`<td class="mono">${rec.id}</td><td style="text-align:right"><b>${rec.w.toFixed(2)}</b> <span style="color:var(--ts)">${rec.wUnit}</span></td>`+
         `<td style="text-align:right;color:${diff>=0?'var(--gd)':'var(--y)'}">${diff>=0?'+':''}${diff.toFixed(2)}</td><td style="color:var(--ts)">${rec.time}</td>`;
       tb.insertBefore(tr,tb.firstChild);
-      const c=document.getElementById('pre-cnt');if(c)c.textContent=preList().filter(x=>x.sku==r.sku&&x.type=='weigh').length;
+      const c=document.getElementById('pre-cnt');if(c)c.textContent=preDone(r.sku);
+      const cc=document.getElementById('pre-cart-'+r.sku);if(cc)cc.textContent=preDone(r.sku)+' 袋';
+      const db=document.getElementById('pre-done-btn');if(db)db.style.display='';
+      const cd=document.getElementById('pre-cart-done-'+r.sku);if(cd)cd.style.display='';
     }
     preLedgerSync(rec);
     if(el){el.value='';el.focus();}
     toast(`已打印 ${rec.id} · ${rec.w.toFixed(2)}${rec.wUnit}`,'ok');
   };
+  function preDone(sku){return preList().filter(x=>x.sku==sku&&x.type=='weigh').length;}
+  window.pre_weighDone=function(sku){
+    const n=preDone(sku);
+    if(!n){toast('该商品还没打过标签','err');return;}
+    const i=cartIdx(sku);const nm=i>=0?preCart()[i].name:'';
+    if(i>=0)preCart().splice(i,1);
+    DB.preSku='';render();toast(`「${nm}」已完成 ${n} 袋预贴，已移出清单`,'ok');
+  };
+
   function preLedgerRow(x){return `<tr>
         <td class="mono">${x.id}</td>
         <td class="mono">${x.sku}</td>
@@ -377,35 +499,31 @@
   const MAX_PRE=200;   // BR：单次预贴打印/补打张数上限
 
   function preView(){
-    DB.preLabels=DB.preLabels||[];
+    DB.preLabels=DB.preLabels||[];DB.preCart=DB.preCart||[];
     const skus=preSkus();
-    const cur=preOf(DB.preSku);
+    const cart=preCart();
+    const cur=DB.preSku?preOf(DB.preSku):null;
+    const curInCart=cur&&cartIdx(cur.sku)>=0;
     const batch=cur&&cur.weigh?preList().filter(x=>x.sku==cur.sku&&x.type=='weigh'):[];
     const list=preList();
+    const normals=cart.filter(x=>!x.weigh&&x.qty>=1);
+    const total=normals.reduce((a,x)=>a+x.qty,0);
 
-    const opBox=!cur?`<div class="empty" style="padding:26px 0"><div class="e-ic">🏷️</div><div class="e-t">先选一个商品</div><div class="e-s">预贴标签不绑送货单，选定商品后即可打印。</div></div>`
-      :(cur.weigh
-        ?`<div class="ib ib-y"><span class="i">⚖️</span><b>${cur.name}</b> 按重量售卖，一袋一称一打：每张标签带<b>唯一标签号</b>与本袋净重，二维码不含备货单号。到仓 WMS 扫码后按数量逻辑匹配。</div>
-          <div class="row" style="gap:10px;align-items:flex-end;margin-top:12px">
-            <div class="fr" style="flex:0 0 220px;margin:0"><label class="fl"><b>*</b>本袋净重（${cur.sellUnit}）</label>
-              <input id="pre-w" type="number" step="0.01" min="0" placeholder="过秤后输入，回车即打"
-                onkeydown="if(event.key=='Enter'){event.preventDefault();pre_printWeigh()}"></div>
-            <button class="btn btn-p" onclick="pre_printWeigh()">打印并继续</button>
-            <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">一件应发 ${cur.specQty}${cur.sellUnit} · 本商品已预贴 <b id="pre-cnt">${batch.length}</b> 张</div>
-          </div>
-          <div style="overflow-x:auto;max-height:240px;overflow-y:auto;border:1px solid var(--bd2);border-radius:8px;margin-top:12px"><table>
-            <thead><tr><th>标签号</th><th style="text-align:right">本袋净重</th><th style="text-align:right">差异</th><th>打印时间</th></tr></thead>
-            <tbody id="pre-batch">${batch.map(b=>{const d=+(b.w-cur.specQty).toFixed(2);
-              return `<tr><td class="mono">${b.id}</td><td style="text-align:right"><b>${b.w.toFixed(2)}</b> <span style="color:var(--ts)">${b.wUnit}</span></td><td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td><td style="color:var(--ts)">${b.time}</td></tr>`;}).join('')}</tbody>
-          </table></div>`
-        :`<div class="ib ib-b"><span class="i">🏷️</span><b>${cur.name}</b> 为定重商品，预贴标签<b>张张相同</b>、无序号，直接填张数打印。</div>
-          <div class="row" style="gap:10px;align-items:flex-end;margin-top:12px">
-            <div class="fr" style="flex:0 0 180px;margin:0"><label class="fl"><b>*</b>打印张数</label>
-              <input id="pre-qty" type="number" min="1" max="${MAX_PRE}" value="10"
-                onkeydown="if(event.key=='Enter'){event.preventDefault();pre_printQty()}"></div>
-            <button class="btn btn-p" onclick="pre_printQty()">打印</button>
-            <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">单次上限 ${MAX_PRE} 张</div>
-          </div>`);
+    const cartBody=cart.map(x=>`<tr ${cur&&cur.sku==x.sku?'style="background:var(--gl)"':''}>
+      <td class="mono">${x.sku}</td>
+      <td><b>${x.name}</b></td>
+      <td>${x.spec}</td>
+      <td>${x.weigh?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</td>
+      <td style="text-align:right">${x.weigh
+        ?'<span style="color:var(--ts)">逐袋称重</span>'
+        :`<input type="number" min="1" max="${MAX_PRE}" value="${x.qty}" class="ministock" style="width:84px;text-align:right" onchange="pre_cartQty('${x.sku}',this.value)">`}</td>
+      <td style="text-align:right">${x.weigh?`<b id="pre-cart-${x.sku}" style="color:var(--gd)">${preDone(x.sku)} 袋</b>`:'<span style="color:var(--tt)">—</span>'}</td>
+      <td style="white-space:nowrap">${x.weigh
+        ?`<button class="btn ${cur&&cur.sku==x.sku?'btn-o':'btn-p'} btn-sm" onclick="pre_weighStart('${x.sku}')">${cur&&cur.sku==x.sku?'称重中':'开始称重'}</button>
+           <button class="btn btn-link btn-sm" id="pre-cart-done-${x.sku}" style="display:${preDone(x.sku)?'':'none'}" onclick="pre_weighDone('${x.sku}')">完成</button>`
+        :''}
+        <button class="btn btn-link btn-sm" onclick="pre_cartDel('${x.sku}')">移除</button></td>
+    </tr>`).join('');
 
     return `
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
@@ -419,19 +537,51 @@
         </div>
       </div>
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
-        <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">选择商品</div>
-          <select onchange="pre_pickSku(this.value)" style="min-width:320px">
-            <option value="">请选择要预贴的商品</option>
-            ${skus.map(x=>`<option value="${x.sku}" ${DB.preSku==x.sku?'selected':''}>${x.name}（${x.sku}）· ${x.spec}${x.weigh?' · 多退少补':''}</option>`).join('')}
+        <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">扫码 / 输编码加入清单</div>
+          <input id="pre-scan" placeholder="扫码枪扫一个加一个，或手输编码后回车" style="min-width:300px"
+            onkeydown="if(event.key=='Enter'){event.preventDefault();pre_scanAdd()}"></div>
+        <button class="btn btn-p btn-sm" onclick="pre_scanAdd()">加入清单</button>
+        <button class="btn btn-o btn-sm" onclick="pre_pasteModal()">批量粘贴</button>
+        <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">或从商品列表挑</div>
+          <select onchange="pre_pickAdd(this.value);this.value=''" style="min-width:300px">
+            <option value="">选择商品加入清单…</option>
+            ${skus.map(x=>`<option value="${x.sku}">${x.name}（${x.sku}）· ${x.spec}${x.weigh?' · 多退少补':''}</option>`).join('')}
           </select></div>
-        ${cur?`<div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">规格</div><div style="padding-bottom:9px">${cur.spec}</div></div>
-        <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">计价方式</div><div style="padding-bottom:6px">${cur.weigh?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</div></div>`:''}
       </div>
     </div></div>
 
-    <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>预贴打印</h3>
-      <span class="sub">不绑送货单/备货单，不计入备货单打印进度</span></div>
-      <div class="card-bd">${opBox}</div></div>
+    <div class="card" style="margin-bottom:14px"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <h3 style="margin-right:6px">待打印清单</h3>
+        <button class="btn btn-p btn-sm" ${normals.length?'':'disabled'} onclick="pre_printBatch()">批量打印${total?`（${normals.length} 个商品 ${total} 张）`:''}</button>
+        <button class="btn btn-o btn-sm" ${cart.length?'':'disabled'} onclick="pre_cartClear()">清空清单</button>
+      </div>
+      <span class="sub">不绑送货单/备货单，不计入备货单打印进度；多退少补需逐袋称重，不进批量</span>
+    </div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr><th>商品编码</th><th>商品名称</th><th>规格</th><th>计价方式</th><th style="text-align:right">打印张数</th><th style="text-align:right">已打</th><th>操作</th></tr></thead>
+      <tbody>${cartBody||`<tr><td colspan="7"><div class="empty"><div class="e-ic">🧾</div><div class="e-t">清单还是空的</div><div class="e-s">用扫码枪连扫、粘贴一列编码，或从商品列表挑几个加进来。</div></div></td></tr>`}</tbody>
+    </table></div></div></div>
+
+    ${cur&&cur.weigh&&curInCart?`
+    <div class="card" style="margin-bottom:14px"><div class="card-hd">
+      <h3>称重打印 · ${cur.name}</h3>
+      <span class="sub">一袋一称一打，回车即打；每张带唯一标签号与本袋净重，二维码不含备货单号</span></div>
+      <div class="card-bd">
+        <div class="row" style="gap:10px;align-items:flex-end">
+          <div class="fr" style="flex:0 0 220px;margin:0"><label class="fl"><b>*</b>本袋净重（${cur.sellUnit}）</label>
+            <input id="pre-w" type="number" step="0.01" min="0" placeholder="过秤后输入，回车即打"
+              onkeydown="if(event.key=='Enter'){event.preventDefault();pre_printWeigh()}"></div>
+          <button class="btn btn-p" onclick="pre_printWeigh()">打印并继续</button>
+          <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">一件应发 ${cur.specQty}${cur.sellUnit} · 本商品已预贴 <b id="pre-cnt">${batch.length}</b> 张</div>
+          <div style="padding-bottom:6px;margin-left:auto"><button class="btn btn-o btn-sm" id="pre-done-btn" style="display:${batch.length?'':'none'}" onclick="pre_weighDone('${cur.sku}')">这个商品称完了</button></div>
+        </div>
+        <div style="overflow-x:auto;max-height:240px;overflow-y:auto;border:1px solid var(--bd2);border-radius:8px;margin-top:12px"><table>
+          <thead><tr><th>标签号</th><th style="text-align:right">本袋净重</th><th style="text-align:right">差异</th><th>打印时间</th></tr></thead>
+          <tbody id="pre-batch">${batch.map(b=>{const d=+(b.w-cur.specQty).toFixed(2);
+            return `<tr><td class="mono">${b.id}</td><td style="text-align:right"><b>${b.w.toFixed(2)}</b> <span style="color:var(--ts)">${b.wUnit}</span></td><td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td><td style="color:var(--ts)">${b.time}</td></tr>`;}).join('')}</tbody>
+        </table></div>
+      </div></div>`:''}
 
     <div class="card"><div class="card-hd"><h3>预贴标签台账</h3>
       <span class="sub" id="pre-ledger-cnt">共 ${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张；到仓扫码后由 WMS 逻辑匹配到当日送货单</span></div>
