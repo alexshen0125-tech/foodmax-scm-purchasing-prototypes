@@ -1290,6 +1290,7 @@ const NAV={
     {sec:'财务'},
     {id:'p-inv-query',ic:'🔎',t:'发票查询',p1:1},
     {sec:'供货'},
+    {id:'p-label-reprint',ic:'🏷️',t:'标签补打',p1:1},
     {id:'p-consign',ic:'🧾',t:'供货单管理',p1:1,badge:()=>DB.consigns?DB.consigns.filter(c=>c.status==10).length:0},
     {id:'p-consign-return',ic:'↩️',t:'退货单管理',p1:1,badge:()=>DB.consignReturns?DB.consignReturns.filter(r=>r.status==10).length:0,by:'y'},
     {sec:'耗材'},
@@ -5790,5 +5791,6 @@ goHome();
 <script src="pc-modules/presend.js?v=20260831b"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
+<script src="pc-modules/labelreprint.js?v=20260910a"></script>
 </body>
 </html>
