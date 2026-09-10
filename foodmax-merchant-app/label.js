@@ -141,6 +141,122 @@ function renderPrint(box){
   const s=box.querySelector('#lb-name');if(s)s.oninput=()=>{state.name=s.value.trim();const p=s.selectionStart;renderPrint(box);const n=box.querySelector('#lb-name');if(n){n.focus();n.setSelectionRange(p,p);}};
 }
 
+/* ================= 按商品打印（预贴标签，不绑送货单）=================
+   与 PC「打印标签 › 按商品打印」同口径（pc-modules/pick.js）：
+   - 二维码不含备货单号；普通品张张相同，多退少补每张带唯一标签号 + 本袋净重
+   - 不计入备货单已打张数/序号，不触发送货单生成
+   - 到仓由 WMS 扫码后按数量逻辑匹配到当日送货单
+   ============================================================ */
+const MAX_PRE=200;
+function preSkus(){
+  return Object.keys(META).map(sku=>{
+    const m=META[sku];
+    let name=sku;
+    pend().forEach(o=>(o.lines||[]).forEach(l=>{if(l.sku===sku&&l.name)name=l.name;}));
+    return {sku,name,spec:m.spec,weigh:!!m.refund,specQty:m.specQty||1,unit:m.unit||'kg',cat:m.cat};
+  });
+}
+function preOf(sku){return preSkus().find(x=>x.sku===sku);}
+function preList(){const D=window.FM.DB;return D.preLabels||(D.preLabels=[]);}
+function preNextId(){const D=window.FM.DB;D.preSeq=(D.preSeq||0)+1;return 'PL2609'+String(D.preSeq).padStart(5,'0');}
+function preNow(){const d=new Date();return '2026-09-10 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+function renderPre(box){
+  const skus=preSkus();
+  const cur=preOf(state.preSku);
+  const batch=cur&&cur.weigh?preList().filter(x=>x.sku===cur.sku&&x.type==='weigh'):[];
+  const list=preList();
+
+  const opBox=!cur
+    ? `<div class="empty"><div class="ei">${svg('ticket')}</div><h4>先选一个商品</h4><p>预贴标签不绑送货单，选定商品后即可打印</p></div>`
+    : (cur.weigh
+      ? `<div class="lb-note">⚖️ <b>${cur.name}</b> 按重量售卖，一袋一称一打：每张带<b>唯一标签号</b>与本袋净重，二维码不含备货单号。一件应发 ${cur.specQty}${cur.unit}。</div>
+         <div class="lb-filter">
+           <div class="lb-frow"><span class="lb-fl">本袋净重（${cur.unit}）</span>
+             <input class="lb-search" id="pre-w" type="number" inputmode="decimal" step="0.01" placeholder="过秤后输入"></div>
+         </div>
+         <div style="padding:0 16px"><button class="btn primary" id="pre-go">🖨 打印并继续</button></div>
+         <div class="lb-sec">本商品已预贴<span class="hint" id="pre-cnt">${batch.length} 张</span></div>
+         <div class="lb-tbl" id="pre-batch">${batch.map(b=>preBatchRow(b,cur)).join('')||'<div class="lb-row"><div class="meta">还没打，输入重量后点「打印并继续」</div></div>'}</div>`
+      : `<div class="lb-note">🏷️ <b>${cur.name}</b> 为定重商品，预贴标签<b>张张相同</b>、无序号，直接填张数打印。</div>
+         <div class="lb-filter">
+           <div class="lb-frow"><span class="lb-fl">打印张数</span>
+             <input class="lb-search" id="pre-q" type="number" inputmode="numeric" value="10"></div>
+         </div>
+         <div style="padding:0 16px"><button class="btn primary" id="pre-go">🖨 打印</button></div>`);
+
+  box.innerHTML=`
+    <div class="lb-note">📦 预贴标签<b>不绑送货单 / 备货单</b>，提前分装时先打先贴；不计入备货单打印进度，到仓由 WMS 扫码后按数量逻辑匹配到当日送货单。</div>
+    <div class="lb-filter">
+      <div class="lb-frow"><span class="lb-fl">选择商品</span>
+        <div class="lb-field" id="pre-pick">${cur?`<b>${cur.name}</b><span class="caret">▾</span>`:'<b>请选择商品</b><span class="caret">▾</span>'}</div></div>
+      ${cur?`<div class="lb-frow"><span class="lb-fl">规格</span><span>${cur.spec} · ${cur.weigh?'多退少补':'普通'}</span></div>`:''}
+    </div>
+    ${opBox}
+    <div class="lb-sec">预贴标签台账<span class="hint" id="pre-ledger-cnt">${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张</span></div>
+    <div class="lb-tbl" id="pre-ledger">${list.map(preLedgerRow).join('')||`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>还没有预贴标签</h4><p>选商品打印后，这里会留下台账</p></div>`}
+    <div style="height:12px"></div>`;
+
+  const pick=box.querySelector('#pre-pick');
+  if(pick)pick.onclick=()=>window.FM.sheet(skus.map(x=>({
+    label:`${x.name}（${x.spec}）${x.weigh?' · 多退少补':''}`,
+    onClick:()=>{state.preSku=x.sku;renderPre(box);}})));
+  const go=box.querySelector('#pre-go');
+  if(go)go.onclick=()=>cur.weigh?prePrintWeigh(box,cur):prePrintQty(box,cur);
+  const wi=box.querySelector('#pre-w');
+  if(wi){wi.focus();wi.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();prePrintWeigh(box,cur);}};}
+  box.querySelectorAll('[data-pre]').forEach(el=>el.onclick=()=>preReprint(el.dataset.pre,box));
+}
+function preLedgerRow(x){return `<div class="lb-row" data-pre="${x.id}">
+    <div class="top"><span class="nm">${x.name}${x.type==='weigh'?'<span class="wtag wait">多退少补</span>':''}</span><span class="q">${x.qty}<span>张</span></span></div>
+    <div class="meta"><span class="code">${x.id}</span> · ${x.spec}${x.type==='weigh'?` · 净重 <b>${x.w.toFixed(2)}${x.wUnit}</b>`:''}</div>
+    <div class="kv"><span class="i">打印 <b>${x.time}</b></span><span class="i">${x.status}</span>${x.re?`<span class="i">已补打 <b>${x.re}</b></span>`:''}</div>
+    <span class="chev">›</span>
+  </div>`;}
+function preBatchRow(b,cur){
+  const d=+(b.w-cur.specQty).toFixed(2);
+  return `<div class="lb-row"><div class="top"><span class="nm"><span class="code">${b.id}</span></span>
+    <span class="q">${b.w.toFixed(2)}<span>${b.wUnit}</span></span></div>
+    <div class="meta">一件应发 ${cur.specQty}${cur.unit} · 差异 <b class="${d<0?'r':''}">${d>=0?'+':''}${d.toFixed(2)}</b> · ${b.time}</div></div>`;
+}
+function prePrintWeigh(box,cur){
+  const el=box.querySelector('#pre-w');const w=parseFloat((el||{}).value);
+  if(!(w>0)){window.FM.toast('请输入本袋净重');if(el)el.focus();return;}
+  const rec={id:preNextId(),sku:cur.sku,name:cur.name,spec:cur.spec,type:'weigh',w:+w.toFixed(2),wUnit:cur.unit,qty:1,time:preNow(),status:'待使用'};
+  preList().unshift(rec);
+  // 只增量插一行 + 清空重聚焦：站在秤边连打，不整页重渲
+  const tb=box.querySelector('#pre-batch');
+  if(tb){const ph=tb.querySelector('.lb-row .meta');if(tb.children.length===1&&ph&&!tb.querySelector('.code'))tb.innerHTML='';
+    tb.insertAdjacentHTML('afterbegin',preBatchRow(rec,cur));}
+  const c=box.querySelector('#pre-cnt');
+  if(c)c.textContent=preList().filter(x=>x.sku===cur.sku&&x.type==='weigh').length+' 张';
+  const lg=box.querySelector('#pre-ledger');
+  if(lg){const e=lg.querySelector('.empty');if(e)lg.innerHTML='';
+    lg.insertAdjacentHTML('afterbegin',preLedgerRow(rec));
+    const nr=lg.firstElementChild;if(nr)nr.onclick=()=>preReprint(nr.dataset.pre,box);}
+  const lc=box.querySelector('#pre-ledger-cnt');
+  if(lc)lc.textContent=`${preList().length} 条 · ${preList().reduce((a,x)=>a+x.qty,0)} 张`;
+  if(el){el.value='';el.focus();}
+  window.FM.toast(`已打印 ${rec.id} · ${rec.w.toFixed(2)}${rec.wUnit}`);
+}
+function prePrintQty(box,cur){
+  const n=parseInt((box.querySelector('#pre-q')||{}).value,10);
+  if(!(n>=1)||n>MAX_PRE){window.FM.toast(`打印张数需为 1–${MAX_PRE} 的整数`);return;}
+  preList().unshift({id:preNextId(),sku:cur.sku,name:cur.name,spec:cur.spec,type:'normal',qty:n,time:preNow(),status:'待使用'});
+  renderPre(box);window.FM.toast(`已预贴打印「${cur.name}」${n} 张（不绑送货单）`);
+}
+function preReprint(id,box){
+  const r=preList().find(x=>x.id===id);if(!r)return;
+  if(r.type==='weigh'){
+    window.FM.confirmDialog({title:'补打这张预贴标签',
+      body:`${r.name} · ${r.id}<br>本袋净重 <b>${r.w.toFixed(2)}${r.wUnit}</b><br>原样重出这一张，不改重量、不发新号。<b>请销毁旧标签</b>。`,
+      okText:'确认补打',onOk:()=>{r.re=(r.re||0)+1;renderPre(box);window.FM.toast(`已原样补打 ${r.id}`);}});
+  }else{
+    window.FM.sheet([1,2,5,10,20].map(n=>({label:`补打 ${n} 张`,
+      onClick:()=>{r.re=(r.re||0)+n;renderPre(box);window.FM.toast(`已补打「${r.name}」${n} 张`);}})));
+  }
+}
+
 /* ================= 标签打印 · SKU 详情页（点击进入打印） ================= */
 function rowOf(key){const [wh,sku]=key.split('|');const m=metaOf(sku);let qty=0,name='',unit='件';
   pend().forEach(o=>{if(o.warehouse!==wh)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;qty+=(+l.qty||0);name=l.name;unit=l.unit;});});
@@ -223,12 +339,14 @@ function openLabelDetail(key){const r=rowOf(key);
 let LBTAB='print',LBROOT=null;
 function renderActive(bodyEl){
   if(LBTAB==='print'){bodyEl.innerHTML=skel(3);setTimeout(()=>renderPrint(bodyEl),380);}
+  else if(LBTAB==='pre'){renderPre(bodyEl);}
   else{if(window.FM_WEIGH&&window.FM_WEIGH.render)window.FM_WEIGH.render(bodyEl);else bodyEl.innerHTML='<div class="empty"><h4>称重模块未加载</h4></div>';}
 }
 function mount(root){
   LBROOT=root;
   root.innerHTML=`<div class="lb-tabs">
     <div class="lb-tab ${LBTAB==='print'?'on':''}" data-t="print">🏷️ 标签打印</div>
+    <div class="lb-tab ${LBTAB==='pre'?'on':''}" data-t="pre">📦 按商品打印</div>
     <div class="lb-tab ${LBTAB==='weigh'?'on':''}" data-t="weigh">⚖️ 称重商品</div>
   </div><div id="lb-body"></div>`;
   const body=root.querySelector('#lb-body');

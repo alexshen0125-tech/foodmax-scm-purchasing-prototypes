@@ -225,7 +225,8 @@
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">
         <div class="tabs" style="margin:0;border:none">
-          <div class="tab active">按销量打印</div>
+          <div class="tab ${DB.labelTab!='product'?'active':''}" onclick="DB.labelTab='sales';render()">按销量打印</div>
+          <div class="tab ${DB.labelTab=='product'?'active':''}" onclick="DB.labelTab='product';render()">按商品打印</div>
         </div>
         <div style="display:flex;gap:16px;font-size:12.5px;padding:6px 0">
           <span class="btn btn-link" onclick="nav('m-delivery')">查看预约送货时间</span>
@@ -276,10 +277,174 @@
       </tbody></table></div></div></div>`;
   }
 
+  /* ============================================================
+     按商品打印（预贴标签）—— 不绑送货单/备货单
+     - 二维码不含备货单号；普通品张张相同，多退少补每张带唯一标签号 + 本袋净重
+     - 不计入备货单的已打张数/序号，不触发送货单生成
+     - 到仓由 WMS 扫码后按数量逻辑匹配到当日送货单（沈亮 2026-09-10 定）
+  ============================================================ */
+  function preSkus(){
+    const out=[];
+    (DB.products||[]).forEach(p=>{
+      if(p.status!='onsale')return;
+      (p.skus||[]).forEach(s=>{
+        if(s.off)return;
+        out.push({sku:s.skuId,name:p.name,cat:p.cat,
+          spec:`${s.qty}${p.unit}/${s.packUnit||'件'}`,
+          weigh:s.refund==1,specQty:s.qty,unit:p.unit,sellUnit:s.sellUnit||p.unit});
+      });
+    });
+    return out;
+  }
+  function preOf(sku){return preSkus().find(x=>x.sku==sku);}
+  function preNextId(){DB.preSeq=(DB.preSeq||0)+1;return 'PL2609'+String(DB.preSeq).padStart(5,'0');}
+  function preList(){return DB.preLabels||(DB.preLabels=[]);}
+  function preNow(){const d=new Date();return '2026-09-10 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+
+  window.pre_pickSku=function(v){DB.preSku=v;render();};
+  // 普通品：张张相同，一次打 N 张，一条台账记 N 张
+  window.pre_printQty=function(){
+    if(!ensurePaper())return;
+    const r=preOf(DB.preSku);if(!r)return;
+    const n=parseInt((document.getElementById('pre-qty')||{}).value,10);
+    if(!(n>=1)||n>MAX_PRE){toast(`打印张数需为 1–${MAX_PRE} 的整数`,'err');return;}
+    preList().unshift({id:preNextId(),sku:r.sku,name:r.name,spec:r.spec,type:'normal',qty:n,time:preNow(),status:'待使用'});
+    render();toast(`已预贴打印「${r.name}」${n} 张（不绑送货单）`,'ok');
+  };
+  // 多退少补：一袋一称一打，回车即打；不整页重渲以保住输入焦点
+  window.pre_printWeigh=function(){
+    if(!ensurePaper())return;
+    const r=preOf(DB.preSku);if(!r)return;
+    const el=document.getElementById('pre-w');const w=parseFloat((el||{}).value);
+    if(!(w>0)){toast('请输入本袋净重','err');if(el)el.focus();return;}
+    const rec={id:preNextId(),sku:r.sku,name:r.name,spec:r.spec,type:'weigh',w:+w.toFixed(2),wUnit:r.sellUnit,qty:1,time:preNow(),status:'待使用'};
+    preList().unshift(rec);
+    const tb=document.getElementById('pre-batch');
+    if(tb){
+      const diff=+(w-r.specQty).toFixed(2);
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td class="mono">${rec.id}</td><td style="text-align:right"><b>${rec.w.toFixed(2)}</b> <span style="color:var(--ts)">${rec.wUnit}</span></td>`+
+        `<td style="text-align:right;color:${diff>=0?'var(--gd)':'var(--y)'}">${diff>=0?'+':''}${diff.toFixed(2)}</td><td style="color:var(--ts)">${rec.time}</td>`;
+      tb.insertBefore(tr,tb.firstChild);
+      const c=document.getElementById('pre-cnt');if(c)c.textContent=preList().filter(x=>x.sku==r.sku&&x.type=='weigh').length;
+    }
+    preLedgerSync(rec);
+    if(el){el.value='';el.focus();}
+    toast(`已打印 ${rec.id} · ${rec.w.toFixed(2)}${rec.wUnit}`,'ok');
+  };
+  function preLedgerRow(x){return `<tr>
+        <td class="mono">${x.id}</td>
+        <td class="mono">${x.sku}</td>
+        <td><b>${x.name}</b></td>
+        <td>${x.spec}</td>
+        <td>${x.type=='weigh'?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</td>
+        <td style="text-align:right">${x.type=='weigh'?`<b>${x.w.toFixed(2)}</b> <span style="color:var(--ts)">${x.wUnit}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
+        <td style="text-align:right"><b>${x.qty}</b></td>
+        <td style="text-align:right">${x.re?`<b style="color:var(--gold)">${x.re}</b>`:'<span style="color:var(--tt)">—</span>'}</td>
+        <td style="color:var(--ts)">${x.time}</td>
+        <td><span class="tag t-b"><span class="dot"></span>${x.status}</span></td>
+        <td><button class="btn btn-o btn-sm" onclick="pre_reprint('${x.id}')">补打</button></td>
+      </tr>`;}
+  function preLedgerSync(rec){
+    const tb=document.getElementById('pre-ledger');
+    if(tb){const e=tb.querySelector('.empty');if(e)tb.innerHTML='';tb.insertAdjacentHTML('afterbegin',preLedgerRow(rec));}
+    const h=document.getElementById('pre-ledger-cnt');
+    if(h)h.textContent=`共 ${preList().length} 条 · ${preList().reduce((a,x)=>a+x.qty,0)} 张；到仓扫码后由 WMS 逻辑匹配到当日送货单`;
+  }
+
+  window.pre_reprint=function(id){
+    if(!ensurePaper())return;
+    const r=preList().find(x=>x.id==id);if(!r)return;
+    modal(`<div class="mc-hd"><h3>补打预贴标签</h3><p>${r.name} · <span class="mono">${r.id}</span></p><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd">
+      ${r.type=='weigh'
+        ?`<div class="ib ib-y"><span class="i">⚖️</span>该标签为多退少补预贴标签，带唯一标签号与本袋净重 <b>${r.w.toFixed(2)}${r.wUnit}</b>，补打<b>原样重出这一张</b>，不改重量、不发新号。</div>
+          <div class="ib ib-gr" style="margin-top:8px"><span class="i">ℹ️</span>请销毁旧标签，避免同一标签号两张实物被重复扫码。</div>`
+        :`<div class="ib ib-b"><span class="i">🏷️</span>该标签为普通预贴标签，同商品张张相同、无序号，按<b>张数</b>补打即可。</div>
+          <div class="fr" style="margin-top:10px"><label class="fl"><b>*</b>补打张数</label><input id="pre-rq" type="number" min="1" max="${MAX_PRE}" value="${r.qty}"></div>`}
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button>
+      <button class="btn btn-p" onclick="pre_doReprint('${id}')">确认补打</button></div>`);
+  };
+  window.pre_doReprint=function(id){
+    const r=preList().find(x=>x.id==id);if(!r)return;
+    let n=1;
+    if(r.type=='normal'){n=parseInt((document.getElementById('pre-rq')||{}).value,10);
+      if(!(n>=1)||n>MAX_PRE){toast(`补打张数需为 1–${MAX_PRE} 的整数`,'err');return;}}
+    r.re=(r.re||0)+n;closeModal();render();
+    toast(r.type=='weigh'?`已原样补打 ${r.id}（${r.w.toFixed(2)}${r.wUnit}），请销毁旧标签`:`已补打「${r.name}」${n} 张`,'ok');
+  };
+  const MAX_PRE=200;   // BR：单次预贴打印/补打张数上限
+
+  function preView(){
+    DB.preLabels=DB.preLabels||[];
+    const skus=preSkus();
+    const cur=preOf(DB.preSku);
+    const batch=cur&&cur.weigh?preList().filter(x=>x.sku==cur.sku&&x.type=='weigh'):[];
+    const list=preList();
+
+    const opBox=!cur?`<div class="empty" style="padding:26px 0"><div class="e-ic">🏷️</div><div class="e-t">先选一个商品</div><div class="e-s">预贴标签不绑送货单，选定商品后即可打印。</div></div>`
+      :(cur.weigh
+        ?`<div class="ib ib-y"><span class="i">⚖️</span><b>${cur.name}</b> 按重量售卖，一袋一称一打：每张标签带<b>唯一标签号</b>与本袋净重，二维码不含备货单号。到仓 WMS 扫码后按数量逻辑匹配。</div>
+          <div class="row" style="gap:10px;align-items:flex-end;margin-top:12px">
+            <div class="fr" style="flex:0 0 220px;margin:0"><label class="fl"><b>*</b>本袋净重（${cur.sellUnit}）</label>
+              <input id="pre-w" type="number" step="0.01" min="0" placeholder="过秤后输入，回车即打"
+                onkeydown="if(event.key=='Enter'){event.preventDefault();pre_printWeigh()}"></div>
+            <button class="btn btn-p" onclick="pre_printWeigh()">打印并继续</button>
+            <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">一件应发 ${cur.specQty}${cur.sellUnit} · 本商品已预贴 <b id="pre-cnt">${batch.length}</b> 张</div>
+          </div>
+          <div style="overflow-x:auto;max-height:240px;overflow-y:auto;border:1px solid var(--bd2);border-radius:8px;margin-top:12px"><table>
+            <thead><tr><th>标签号</th><th style="text-align:right">本袋净重</th><th style="text-align:right">差异</th><th>打印时间</th></tr></thead>
+            <tbody id="pre-batch">${batch.map(b=>{const d=+(b.w-cur.specQty).toFixed(2);
+              return `<tr><td class="mono">${b.id}</td><td style="text-align:right"><b>${b.w.toFixed(2)}</b> <span style="color:var(--ts)">${b.wUnit}</span></td><td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td><td style="color:var(--ts)">${b.time}</td></tr>`;}).join('')}</tbody>
+          </table></div>`
+        :`<div class="ib ib-b"><span class="i">🏷️</span><b>${cur.name}</b> 为定重商品，预贴标签<b>张张相同</b>、无序号，直接填张数打印。</div>
+          <div class="row" style="gap:10px;align-items:flex-end;margin-top:12px">
+            <div class="fr" style="flex:0 0 180px;margin:0"><label class="fl"><b>*</b>打印张数</label>
+              <input id="pre-qty" type="number" min="1" max="${MAX_PRE}" value="10"
+                onkeydown="if(event.key=='Enter'){event.preventDefault();pre_printQty()}"></div>
+            <button class="btn btn-p" onclick="pre_printQty()">打印</button>
+            <div style="padding-bottom:9px;font-size:12px;color:var(--ts)">单次上限 ${MAX_PRE} 张</div>
+          </div>`);
+
+    return `
+    <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">
+        <div class="tabs" style="margin:0;border:none">
+          <div class="tab" onclick="DB.labelTab='sales';render()">按销量打印</div>
+          <div class="tab active">按商品打印</div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12.5px;padding:6px 0">
+          <span class="btn btn-link" onclick="label_paperModal()">🖨️ 打印机设置 · ${DB.labelPaper?`<b style="color:var(--gd)">${DB.labelPaper}</b>`:'<b style="color:var(--r)">未设置纸张</b>'}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
+        <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">选择商品</div>
+          <select onchange="pre_pickSku(this.value)" style="min-width:320px">
+            <option value="">请选择要预贴的商品</option>
+            ${skus.map(x=>`<option value="${x.sku}" ${DB.preSku==x.sku?'selected':''}>${x.name}（${x.sku}）· ${x.spec}${x.weigh?' · 多退少补':''}</option>`).join('')}
+          </select></div>
+        ${cur?`<div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">规格</div><div style="padding-bottom:9px">${cur.spec}</div></div>
+        <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">计价方式</div><div style="padding-bottom:6px">${cur.weigh?'<span class="tag t-y"><span class="dot"></span>多退少补</span>':'<span class="tag t-gr"><span class="dot"></span>普通</span>'}</div></div>`:''}
+      </div>
+    </div></div>
+
+    <div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>预贴打印</h3>
+      <span class="sub">不绑送货单/备货单，不计入备货单打印进度</span></div>
+      <div class="card-bd">${opBox}</div></div>
+
+    <div class="card"><div class="card-hd"><h3>预贴标签台账</h3>
+      <span class="sub" id="pre-ledger-cnt">共 ${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张；到仓扫码后由 WMS 逻辑匹配到当日送货单</span></div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr><th>标签号</th><th>商品编码</th><th>商品名称</th><th>规格</th><th>计价方式</th><th style="text-align:right">本袋净重</th><th style="text-align:right">张数</th><th style="text-align:right">已补打</th><th>打印时间</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="pre-ledger">${list.map(preLedgerRow).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">还没有预贴标签</div><div class="e-s">上方选商品后打印，这里会留下台账，仓库补打也照这份台账查。</div></div></td></tr>`}
+      </tbody></table></div></div></div>`;
+  }
+
   // 菜单①：备货参考（快驴式决策表，纯查看）
   PAGES['m-pick-ref']=()=>{ ensurePickOrders(); return refView(); };
   // 菜单③：打印标签（快驴式 productLabelPrint 复刻）
-  PAGES['m-pick-label']=()=>{ ensurePickOrders(); return labelView(); };
+  PAGES['m-pick-label']=()=>{ ensurePickOrders(); return DB.labelTab=='product'?preView():labelView(); };
   // 菜单②：备货单（单据链：备货→贴码→送货）
   PAGES['m-pick']=()=>{
     ensurePickOrders();
