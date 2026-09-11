@@ -1285,6 +1285,11 @@ const NAV={
     {id:'p-weighcfg',ic:'⚖️',t:'多退少补规则',p1:1},
     {id:'p-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.fineOrders?DB.fineOrders.filter(g=>g.push=='pending').length:0,by:'y'},
     {id:'p-replcfg',ic:'⚙️',t:'缺货罚款标准',p1:1},
+    {id:'p-adjust',ic:'💰',t:'业务调整单',p1:1,badge:()=>{
+      const m=(DB.adjOrders||[]).filter(r=>r.out=='pending'||r.out=='failed').length;
+      const f=(DB.fineOrders||[]).filter(g=>g.push=='pending').length;   // 罚款单已收编，统一出口按总数提示
+      return m+f;},by:'y'},
+    {id:'p-adjust-type',ic:'⚙️',t:'调整类型配置',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'财务'},
@@ -5792,5 +5797,6 @@ goHome();
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
+<script src="pc-modules/adjust.js?v=20260911a"></script>
 </body>
 </html>
