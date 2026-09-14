@@ -11,8 +11,8 @@
        推送展示态 pushDisplayStatus = pushStatus × 下游 syncStatus 合成：PENDING / PUSH_FAILED / PUSHED
        （本侧事务内翻 PUSHED、下游同步在提交后才发起，只看 pushStatus 会把"没进下游"显示成已推送）
    - 金额恒正（amount），方向由类型决定，红冲用单据级 reversal 标记取反。
-   - 推送：只有 PENDING 可勾选；单批 ≤500、不跨币种；入参只有单号 + requestId，操作人服务端取；
-     结果 {batchNo|null, pushedCount, skippedCount}，已被他人推送 = 跳过 ≠ 失败。
+   - 推送：只有 PENDING 可勾选；单次 ≤500；入参只有单号 + requestId，操作人服务端取；
+     结果 {pushedCount, skippedCount}，已被他人推送 = 跳过 ≠ 失败。调整单【不设批次号】（2026-09-14 沈亮定）。
      PUSH_FAILED 不给运营重推入口，由服务端补偿重试（同罚款单）。
    - 操作记录独立成表：operateTime / operateUser / content，服务端在状态变更事务内写入。
    依赖主文件全局：DB / money / toast / modal / modalWide / closeModal / drawer / closeDrawer
@@ -50,45 +50,44 @@ DB.adjOrders = DB.adjOrders || [
    adjustTypeCode:'ADJ-CLAIM', adjustTypeName:'售后判责赔付', amount:186.00, currency:'SGD',
    bizNo:'AS-26090801', remark:'客户反馈菜心腐烂，判商家责任，按客户成交价赔付', effectiveTime:'2026-09-08 10:22',
    sourceType:'MANUAL', sourceNo:'', reversal:0, reversalOfAdjustNo:'',
-   status:'effective', pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', batchNo:'AB-SG-20260908-001', pushedAt:'2026-09-08 11:00'},
+   status:'effective', pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-09-08 11:00'},
   {adjustNo:'ADJ-SG-20260909-002', shopCode:'SH2026070200005', merchantCode:'M2026-1103',
    adjustTypeCode:'ADJ-DELAY', adjustTypeName:'逾期送货违约金', amount:300.00, currency:'SGD',
    bizNo:'SH20260909012', remark:'9/9 送货晚到 4 小时，影响 3 家门店备货，按合同约定计违约金', effectiveTime:'2026-09-09 15:40',
    sourceType:'MANUAL', sourceNo:'', reversal:0, reversalOfAdjustNo:'',
-   status:'reversed', pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', batchNo:'AB-SG-20260909-001', pushedAt:'2026-09-09 16:02'},
+   status:'reversed', pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-09-09 16:02'},
   {adjustNo:'ADJ-SG-20260910-004', shopCode:'SH2026070200005', merchantCode:'M2026-1103',
    adjustTypeCode:'ADJ-DELAY', adjustTypeName:'逾期送货违约金', amount:300.00, currency:'SGD',
    bizNo:'SH20260909012', remark:'核实为平台派车延误，非商家责任', effectiveTime:'2026-09-10 09:05',
    sourceType:'MANUAL', sourceNo:'', reversal:1, reversalOfAdjustNo:'ADJ-SG-20260909-002',
-   status:'effective', pushStatus:'PUSHED', syncStatus:'FAILED', syncErrorText:'下游同步超时，系统将自动重试', batchNo:'AB-SG-20260910-001', pushedAt:'2026-09-10 09:30'},
+   status:'effective', pushStatus:'PUSHED', syncStatus:'FAILED', syncErrorText:'下游同步超时，系统将自动重试', pushedAt:'2026-09-10 09:30'},
   {adjustNo:'ADJ-SG-20260910-005', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
    adjustTypeCode:'ADJ-PROMO', adjustTypeName:'平台活动补贴', amount:1250.00, currency:'SGD',
    bizNo:'', remark:'9 月中秋海鲜专场活动，平台承担的让利补贴，线下已与商家确认金额', effectiveTime:'2026-09-10 17:12',
    sourceType:'MANUAL', sourceNo:'', reversal:0, reversalOfAdjustNo:'',
-   status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', batchNo:'', pushedAt:''},
+   status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:''},
   {adjustNo:'ADJ-SG-20260911-006', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
    adjustTypeCode:'ADJ-QC', adjustTypeName:'质量问题扣款', amount:78.50, currency:'SGD',
    bizNo:'QC-26091102', remark:'到仓抽检不合格整批拒收，按货值扣款', effectiveTime:'2026-09-11 08:30',
    sourceType:'MANUAL', sourceNo:'', reversal:0, reversalOfAdjustNo:'',
-   status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', batchNo:'', pushedAt:''},
+   status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:''},
 ];
 /* 操作记录表 adjust_operator_log（同罚款单 OperatorLogRepVO：operateTime / operateUser / content） */
 DB.adjLogs = DB.adjLogs || {
-  'ADJ-SG-20260908-001':[{operateTime:'2026-09-08 10:22',operateUser:'陈敏',content:'创建调整单'},{operateTime:'2026-09-08 11:00',operateUser:'陈敏',content:'推送，批次 AB-SG-20260908-001'}],
-  'ADJ-SG-20260909-002':[{operateTime:'2026-09-09 15:40',operateUser:'陈敏',content:'创建调整单'},{operateTime:'2026-09-09 16:02',operateUser:'陈敏',content:'推送，批次 AB-SG-20260909-001'},{operateTime:'2026-09-10 09:05',operateUser:'陈敏',content:'被红冲，红冲单 ADJ-SG-20260910-004'}],
-  'ADJ-SG-20260910-004':[{operateTime:'2026-09-10 09:05',operateUser:'陈敏',content:'红冲 ADJ-SG-20260909-002，原因：核实为平台派车延误，非商家责任'},{operateTime:'2026-09-10 09:30',operateUser:'陈敏',content:'推送，批次 AB-SG-20260910-001'}],
+  'ADJ-SG-20260908-001':[{operateTime:'2026-09-08 10:22',operateUser:'陈敏',content:'创建调整单'},{operateTime:'2026-09-08 11:00',operateUser:'陈敏',content:'推送'}],
+  'ADJ-SG-20260909-002':[{operateTime:'2026-09-09 15:40',operateUser:'陈敏',content:'创建调整单'},{operateTime:'2026-09-09 16:02',operateUser:'陈敏',content:'推送'},{operateTime:'2026-09-10 09:05',operateUser:'陈敏',content:'被红冲，红冲单 ADJ-SG-20260910-004'}],
+  'ADJ-SG-20260910-004':[{operateTime:'2026-09-10 09:05',operateUser:'陈敏',content:'红冲 ADJ-SG-20260909-002，原因：核实为平台派车延误，非商家责任'},{operateTime:'2026-09-10 09:30',operateUser:'陈敏',content:'推送'}],
   'ADJ-SG-20260910-005':[{operateTime:'2026-09-10 17:12',operateUser:'林凯',content:'创建调整单'}],
   'ADJ-SG-20260911-006':[{operateTime:'2026-09-11 08:30',operateUser:'林凯',content:'创建调整单'}],
 };
-DB.adjFilter = DB.adjFilter || {shop:'',no:'',type:'',dir:'',src:'',push:'',bn:'',from:'',to:''};
+DB.adjFilter = DB.adjFilter || {shop:'',no:'',type:'',dir:'',src:'',push:'',from:'',to:''};
 DB.adjSel    = DB.adjSel    || [];
 DB.adjSeq    = DB.adjSeq    || 7;
-DB.adjBatchSeq = DB.adjBatchSeq || 2;
 const logOf = no => (DB.adjLogs[no] = DB.adjLogs[no] || []);
 const addLog = (no,content) => logOf(no).push({operateTime:ts(), operateUser:'当前账号', content});
 
 /* ================= 行模型：人工单 + 收编的罚款单 ================= */
-// 罚款单不复制数据，实时从 DB.fineOrders 映射；推送状态与批次号写回罚款单自身（同源）
+// 罚款单不复制数据，实时从 DB.fineOrders 映射；推送状态写回罚款单自身（同源）
 function fineAsAdj(){
   return (typeof fineGroups=='function'?fineGroups(true):[]).map(g=>({
     adjustNo:g.no, shopCode:shopOfMerchant(g.merchant), merchantCode:g.merchant,
@@ -96,7 +95,7 @@ function fineAsAdj(){
     bizNo:g.deliveryNo, remark:`到仓少货 ${g.qty} 件 × ${money(g.rate)}/件（${g.items.map(x=>x.name).join('、')}）`,
     effectiveTime:g.at, sourceType:'SHORTAGE_FINE', sourceNo:g.no, reversal:0, reversalOfAdjustNo:'',
     status:'effective', pushStatus:g.push=='pushed'?'PUSHED':'PENDING', syncStatus:g.push=='pushed'?'SUCCESS':'',
-    syncErrorText:'', batchNo:g.batchNo||'', pushedAt:g.pushedAt||'',
+    syncErrorText:'', pushedAt:g.pushedAt||'',
   }));
 }
 function adjAll(){
@@ -136,7 +135,6 @@ function adjRows(){
        hit(shopName(r.shopCode)+' '+r.shopCode, f.shop) && hit(r.adjustNo, f.no)
     && (!f.type||r.adjustTypeCode==f.type) && (!f.dir||adjDir(r)==f.dir)
     && (!f.src||r.sourceType==f.src) && (!f.push||pushDisplay(r)==f.push)
-    && hit(r.batchNo, f.bn)
     && (!f.from||r.effectiveTime>=f.from) && (!f.to||r.effectiveTime<=f.to+' 23:59'));
 }
 
@@ -163,7 +161,7 @@ PAGES['p-adjust']=()=>{
     <div class="fg3">
       <div class="fr"><label class="fl">生效时间 起</label><input id="af-from" type="date" value="${f.from}"></div>
       <div class="fr"><label class="fl">生效时间 止</label><input id="af-to" type="date" value="${f.to}"></div>
-      <div class="fr"><label class="fl">批次号</label><input id="af-bn" value="${f.bn||''}" placeholder="如 AB-SG-20260910-001"></div>
+      <div class="fr"></div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
       <button class="btn btn-o" onclick="adj_reset()">重置</button>
@@ -184,7 +182,7 @@ PAGES['p-adjust']=()=>{
         <th style="width:34px"><input type="checkbox" class="skuchk" title="全选待推送" ${allSel?'checked':''} onclick="adj_selAll()"></th>
         <th>调整单号</th><th>店铺名称</th><th>店铺编码</th><th>调整类型</th><th>方向</th>
         <th style="text-align:right">金额</th><th>关联业务单</th><th>来源</th><th>生效时间</th>
-        <th>状态</th><th>推送状态</th><th>批次号</th><th>操作</th>
+        <th>状态</th><th>推送状态</th><th>操作</th>
       </tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${selectable(r)?`<input type="checkbox" class="skuchk" ${DB.adjSel.includes(r.adjustNo)?'checked':''} onclick="adj_toggle('${r.adjustNo}')">`:''}</td>
@@ -199,9 +197,8 @@ PAGES['p-adjust']=()=>{
         <td style="white-space:nowrap;font-size:12.5px;color:var(--ts)">${r.effectiveTime}</td>
         <td style="white-space:nowrap">${statusTag(r)}</td>
         <td style="white-space:nowrap" ${r.syncErrorText?`title="${r.syncErrorText}"`:''}>${pushTag(r)}</td>
-        <td class="mono" style="font-size:12px;white-space:nowrap">${r.batchNo?`<span style="color:var(--b);cursor:pointer;text-decoration:underline" title="查看该批次全部单据" onclick="adj_byBatch('${r.batchNo}')">${r.batchNo}</span>`:'—'}</td>
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button></td>
-      </tr>`).join('')||`<tr><td colspan="14" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
+      </tr>`).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">
         业务调整单只负责<b>产生一笔正/负向款项</b>并推送给下游，<b>不涉及结算归期、结算单与开票</b>。建单<b>即时生效、不可修改不可删除</b>，错单走<b>红冲</b>。
@@ -212,12 +209,10 @@ PAGES['p-adjust']=()=>{
 
 window.adj_query=function(){
   const g=id=>(document.getElementById(id)||{}).value||'';
-  DB.adjFilter={shop:g('af-shop').trim(),no:g('af-no').trim(),type:g('af-type'),dir:g('af-dir'),src:g('af-src'),push:g('af-push'),bn:g('af-bn').trim(),from:g('af-from'),to:g('af-to')};
+  DB.adjFilter={shop:g('af-shop').trim(),no:g('af-no').trim(),type:g('af-type'),dir:g('af-dir'),src:g('af-src'),push:g('af-push'),from:g('af-from'),to:g('af-to')};
   DB.adjSel=[];render();
 };
-window.adj_reset=function(){DB.adjFilter={shop:'',no:'',type:'',dir:'',src:'',push:'',bn:'',from:'',to:''};DB.adjSel=[];render();toast('筛选条件已重置','info');};
-// 批次号可点回填：财务拿到批次号要能一键反查这批推了哪些单
-window.adj_byBatch=function(bn){DB.adjFilter={shop:'',no:'',type:'',dir:'',src:'',push:'',bn:bn,from:'',to:''};DB.adjSel=[];render();};
+window.adj_reset=function(){DB.adjFilter={shop:'',no:'',type:'',dir:'',src:'',push:'',from:'',to:''};DB.adjSel=[];render();toast('筛选条件已重置','info');};
 window.adj_toggle=function(no){const i=DB.adjSel.indexOf(no);i<0?DB.adjSel.push(no):DB.adjSel.splice(i,1);render();};
 window.adj_selAll=function(){
   const sel=adjRows().filter(selectable).map(r=>r.adjustNo);
@@ -286,7 +281,7 @@ window.adj_newDo=function(){
   DB.adjOrders.unshift({adjustNo:no, shopCode:d.sc, merchantCode:(SHOPS[d.sc]||{}).merchant||'',
     adjustTypeCode:d.tc, adjustTypeName:tOf(d.tc).cn, amount:+d.amt.toFixed(2), currency:'SGD',
     bizNo:d.biz, remark:d.rk, effectiveTime:ts(), sourceType:'MANUAL', sourceNo:'', reversal:0, reversalOfAdjustNo:'',
-    status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', batchNo:'', pushedAt:''});
+    status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:''});
   addLog(no,'创建调整单');
   DB.adjDraft=null; closeModal(); DB.adjSel=[]; render();
   toast('调整单 '+no+' 已创建并生效，待推送','ok');
@@ -303,7 +298,7 @@ window.adj_detail=function(no){
   const link=n=>`<span class="mono" style="color:var(--b);cursor:pointer;text-decoration:underline" onclick="adj_detail('${n}')">${n}</span>`;
   const canReverse = r.sourceType=='MANUAL' && r.status=='effective' && !r.reversal;
   const logs = r.sourceType=='SHORTAGE_FINE'
-    ? [{operateTime:r.effectiveTime,operateUser:'系统',content:'到仓少货自动生成罚款单'}].concat(r.pushedAt?[{operateTime:r.pushedAt,operateUser:'运营',content:'推送，批次 '+r.batchNo}]:[])
+    ? [{operateTime:r.effectiveTime,operateUser:'系统',content:'到仓少货自动生成罚款单'}].concat(r.pushedAt?[{operateTime:r.pushedAt,operateUser:'运营',content:'推送'}]:[])
     : logOf(r.adjustNo);
 
   drawer(`<div class="drawer-hd"><div><h3>${r.adjustNo}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${r.adjustTypeName} · ${shopName(r.shopCode)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
@@ -330,7 +325,7 @@ window.adj_detail=function(no){
     ${r.reversalOfAdjustNo||reversedBy?sec('红冲关系')+grid((r.reversalOfAdjustNo?kv('红冲的原单',link(r.reversalOfAdjustNo)):'')+(reversedBy?kv('红冲单',link(reversedBy.adjustNo)):'')):''}
 
     ${sec('推送信息')}
-    ${grid(kv('推送状态',pushTag(r))+kv('批次号',`<span class="mono">${r.batchNo||'—'}</span>`)+kv('推送时间',r.pushedAt))}
+    ${grid(kv('推送状态',pushTag(r))+kv('推送时间',r.pushedAt))}
     ${d=='PUSH_FAILED'?`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span>${r.syncErrorText||'下游同步失败'}。系统将自动重试，<b>无需重复推送</b>；按单号幂等，不会产生双份款项。</div>`:''}
 
     ${sec('操作记录')}
@@ -367,7 +362,7 @@ window.adj_reverseDo=function(no){
   if(!why){toast('请填写红冲原因','err');return;}
   const rn='ADJ-'+(DB.siteCode||'SG')+'-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.adjSeq++).padStart(3,'0');
   DB.adjOrders.unshift(Object.assign({},r,{adjustNo:rn, remark:why, effectiveTime:ts(), reversal:1, reversalOfAdjustNo:r.adjustNo,
-    status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', batchNo:'', pushedAt:''}));
+    status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:''}));
   r.status='reversed';
   addLog(rn,'红冲 '+r.adjustNo+'，原因：'+why);
   addLog(r.adjustNo,'被红冲，红冲单 '+rn);
@@ -379,41 +374,39 @@ window.adj_reverseDo=function(no){
 window.adj_pushAsk=function(){
   const rows=adjRows().filter(r=>DB.adjSel.includes(r.adjustNo));
   if(!rows.length){toast('请先勾选待推送的调整单','err');return;}
-  if(rows.length>500){toast('单批最多 500 单，请缩小筛选范围分批推送','err');return;}
-  if(new Set(rows.map(r=>r.currency)).size>1){toast('同一批次不可跨币种推送，请分别推送','err');return;}
+  if(rows.length>500){toast('单次最多推送 500 张，请缩小筛选范围分次推送','err');return;}
   const byS={};rows.forEach(r=>{(byS[r.shopCode]=byS[r.shopCode]||[]).push(r);});
-  const net=a=>+a.reduce((x,r)=>+(x+adjSign(r)*r.amount).toFixed(2),0).toFixed(2);   // 逐行收敛两位，同罚款单 groupByShop
+  const net=a=>+a.reduce((x,r)=>+(x+adjSign(r)*r.amount).toFixed(2),0).toFixed(2);   // 逐行收敛两位
   const fmt=v=>`<span style="color:${v>=0?'var(--g)':'var(--r)'}">${v>=0?'+':'-'}${money(Math.abs(v))}</span>`;
+  const curs=[...new Set(rows.map(r=>r.currency))].sort();
   modal(`<div class="mc-hd"><h3>推送调整单</h3><p>将 ${rows.length} 张调整单推送至下游</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
     <div class="ib ib-y"><span class="i">⚠️</span>推送后<b>不可重复推送</b>，也<b>不可在本页撤回</b>；如需调整只能红冲。请核对店铺与金额。</div>
     <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:10px 0 12px"><table style="margin:0"><thead><tr><th>店铺</th><th>店铺编码</th><th style="text-align:right">单数</th><th style="text-align:right">净额</th></tr></thead><tbody>
-      ${Object.keys(byS).map(c=>`<tr><td><b>${shopName(c)}</b></td><td class="mono">${c}</td><td style="text-align:right">${byS[c].length}</td><td style="text-align:right;font-weight:600">${fmt(net(byS[c]))}</td></tr>`).join('')}
-      <tr style="background:#F7FBF8;font-weight:700"><td colspan="2">${rows[0].currency} 小计 · ${Object.keys(byS).length} 个店铺</td><td style="text-align:right">${rows.length}</td><td style="text-align:right">${fmt(net(rows))}</td></tr>
+      ${Object.keys(byS).map(k=>`<tr><td><b>${shopName(k)}</b></td><td class="mono">${k}</td><td style="text-align:right">${byS[k].length}</td><td style="text-align:right;font-weight:600">${fmt(net(byS[k]))}</td></tr>`).join('')}
+      ${curs.map(cu=>{const x=rows.filter(r=>r.currency==cu);return `<tr style="background:#F7FBF8;font-weight:700"><td colspan="2">${cu} 小计</td><td style="text-align:right">${x.length}</td><td style="text-align:right">${fmt(net(x))}</td></tr>`;}).join('')}
     </tbody></table></div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="adj_pushDo()">确认推送</button></div>`);
 };
 window.adj_pushDo=function(){
-  const now=ts(); let pushed=0, skipped=0; const hitNos=[];
+  const now=ts(); let pushed=0, skipped=0;
   DB.adjSel.forEach(no=>{
     const m=(DB.adjOrders||[]).find(x=>x.adjustNo==no);
-    if(m){ if(m.pushStatus=='PENDING'){hitNos.push(no);pushed++;} else skipped++; return; }
+    if(m){
+      if(m.pushStatus=='PENDING'){ m.pushStatus='PUSHED'; m.syncStatus='SUCCESS'; m.pushedAt=now; addLog(no,'推送'); pushed++; } else skipped++;
+      return;
+    }
+    // 收编的罚款单：推送状态写回罚款单自身；罚款单原有批次号字段按罚款单自己的规则照写，调整单页不展示
     const f=(DB.fineOrders||[]).find(x=>x.no==no);
-    if(f){ if(f.push=='pending'){hitNos.push(no);pushed++;} else skipped++; }
-  });
-  // 生效集合为空不生成批次号（同罚款单：batchNo=null 不是失败）
-  const batch = pushed ? 'AB-'+(DB.siteCode||'SG')+'-'+now.slice(0,10).replace(/-/g,'')+'-'+String(DB.adjBatchSeq++).padStart(3,'0') : null;
-  hitNos.forEach(no=>{
-    const m=(DB.adjOrders||[]).find(x=>x.adjustNo==no);
-    if(m){ m.pushStatus='PUSHED'; m.syncStatus='SUCCESS'; m.batchNo=batch; m.pushedAt=now; addLog(no,'推送，批次 '+batch); return; }
-    const f=(DB.fineOrders||[]).find(x=>x.no==no);   // 收编的罚款单写回罚款单自身
-    if(f){ f.push='pushed'; f.pushedAt=now; f.batchNo=batch; }
+    if(f){
+      if(f.push=='pending'){ f.push='pushed'; f.pushedAt=now; f.batchNo='FB-'+(DB.siteCode||'SG')+'-'+now.slice(0,10).replace(/-/g,'')+'-'+String(DB.fineBatchSeq=(DB.fineBatchSeq||1)+1).padStart(3,'0'); pushed++; } else skipped++;
+    }
   });
   DB.adjSel=[];closeModal();
-  if(batch) DB.adjFilter={shop:'',no:'',type:'',dir:'',src:'',push:'',bn:batch,from:'',to:''};   // 推完切到本批次，免得列表瞬间清空
+  if(DB.adjFilter.push=='PENDING') DB.adjFilter.push='';   // 停在「待推送」筛选时刚推的单会整批消失，切回全部让运营看得见
   render();
-  toast(batch?`已推送 ${pushed} 张${skipped?`，跳过 ${skipped} 张（已被他人推送）`:''}，批次 ${batch}`:`所选 ${skipped} 张已被他人推送，未生成批次`, batch?'ok':'info');
+  toast(pushed?`已推送 ${pushed} 张${skipped?`，跳过 ${skipped} 张（已被他人推送）`:''}`:`所选 ${skipped} 张已被他人推送`, pushed?'ok':'info');
 };
 
 /* ================= 调整类型配置 ================= */
