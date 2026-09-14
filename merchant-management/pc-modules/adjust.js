@@ -15,6 +15,7 @@
        未推送（PENDING）→ 作废：单据置 voided，永不推送，下游无感知；作废原因必填。
        已推送（PUSHED） → 本单不可再动；线下沟通后由运营新建一张反方向类型的调整单纠正。
      系统来源单（罚款）不在此作废，走罚款单自身撤销。
+   - 建单两种提交：新建（待推送，无重复时不弹确认）/ 新建并推送（必须二次确认，推送后不可作废）。
    - 推送：只有 PENDING 可勾选；单次 ≤500；入参只有单号 + requestId，操作人服务端取；
      结果 {pushedCount, skippedCount}，已被他人推送 = 跳过 ≠ 失败。调整单【不设批次号】（2026-09-14 沈亮定）。
      PUSH_FAILED 不给运营重推入口，由服务端补偿重试（同罚款单）。
@@ -231,26 +232,33 @@ window.adj_selAll=function(){
 };
 
 /* ================= 新建调整单（建单 → 二次确认 → 生效，待推送） ================= */
-window.adj_newAsk=function(){
+window.adj_newAsk=function(keep){
   const types=(DB.adjTypes||[]).filter(t=>t.on&&!t.sys);   // 系统来源类型不可人工建单
-  modalWide(`<div class="mc-hd"><h3>新建业务调整单</h3><p>产生一笔正向（补商家）或负向（扣商家）款项；<b>提交即生效，不可修改不可删除</b></p><button class="mc-x" onclick="closeModal()">×</button></div>
+  const d=(keep&&DB.adjDraft)||{sc:'',tc:'',amt:'',biz:'',rk:''};   // 「返回修改」回填上次输入，不清空
+  const sel=(v,x)=>v==x?'selected':'';
+  modalWide(`<div class="mc-hd"><h3>新建业务调整单</h3><p>产生一笔正向（补商家）或负向（扣商家）款项；建单即生效、不可修改</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
     <div class="fg2">
-      <div class="fr"><label class="fl"><b>*</b>店铺</label><select id="an-shop" onchange="adj_shopChange()">${Object.keys(SHOPS).map(c=>`<option value="${c}">${shopName(c)}（${c}）</option>`).join('')}</select></div>
+      <div class="fr"><label class="fl"><b>*</b>店铺</label><select id="an-shop" onchange="adj_shopChange()">${Object.keys(SHOPS).map(c=>`<option value="${c}" ${sel(d.sc,c)}>${shopName(c)}（${c}）</option>`).join('')}</select></div>
       <div class="fr"><label class="fl">所属商家（随店铺带出，财务归集用）</label><div id="an-mc" style="padding:9px 0"></div></div>
     </div>
     <div class="fg2">
-      <div class="fr"><label class="fl"><b>*</b>调整类型</label><select id="an-type" onchange="adj_typeChange()">${types.map(t=>`<option value="${t.code}">${t.cn}</option>`).join('')}</select></div>
+      <div class="fr"><label class="fl"><b>*</b>调整类型</label><select id="an-type" onchange="adj_typeChange()">${types.map(t=>`<option value="${t.code}" ${sel(d.tc,t.code)}>${t.cn}</option>`).join('')}</select></div>
       <div class="fr"><label class="fl">方向（随类型带出，不可改）</label><div id="an-dir" style="padding:9px 0"></div></div>
     </div>
     <div class="fg2">
-      <div class="fr"><label class="fl"><b>*</b>金额（S$）</label><input id="an-amt" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
-      <div class="fr"><label class="fl" id="an-bizl">关联业务单号</label><input id="an-biz" placeholder="订单号 / 送货单号 / 售后单号；纠正已推送的调整单时填原调整单号"></div>
+      <div class="fr"><label class="fl"><b>*</b>金额（S$）</label><input id="an-amt" type="number" min="0.01" step="0.01" placeholder="0.00" value="${d.amt||''}"></div>
+      <div class="fr"><label class="fl" id="an-bizl">关联业务单号</label><input id="an-biz" value="${d.biz||''}" placeholder="订单号 / 送货单号 / 售后单号；纠正已推送的调整单时填原调整单号"></div>
     </div>
-    <div class="fr"><label class="fl"><b>*</b>调整说明</label><textarea id="an-remark" rows="3" placeholder="写清为什么补/扣这笔钱、线下与商家沟通的结论；只留在运营侧，不随推送报文输出"></textarea></div>
+    <div class="fr"><label class="fl"><b>*</b>调整说明</label><textarea id="an-remark" rows="3" placeholder="写清为什么补/扣这笔钱、线下与商家沟通的结论；只留在运营侧，不随推送报文输出">${d.rk||''}</textarea></div>
     <div class="fr"><label class="fl">附件（沟通记录 / 凭证，选填）</label><div class="up" onclick="toast('原型不做真实上传','info')"><div class="uic">📎</div><div class="ut">点击上传</div><div class="us">支持 jpg / png / pdf，单个 ≤ 10MB</div></div></div>
+    <div style="font-size:12.5px;color:var(--ts);margin-top:4px"><b>新建</b>：生成后待推送，推送前可作废。<b>新建并推送</b>：生成后立即推送给下游，推送后不可作废。</div>
   </div>
-  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="adj_newConfirm()">提交</button></div>`);
+  <div class="mc-ft">
+    <button class="btn btn-o" onclick="closeModal()">取消</button>
+    <button class="btn btn-o" onclick="adj_newSubmit(false)">新建</button>
+    <button class="btn btn-p" onclick="adj_newSubmit(true)">新建并推送</button>
+  </div>`);
   adj_shopChange(); adj_typeChange();
 };
 window.adj_shopChange=function(){
@@ -262,40 +270,49 @@ window.adj_typeChange=function(){
   const d=document.getElementById('an-dir'); if(d) d.innerHTML=dirTag({adjustTypeCode:t.code});
   const l=document.getElementById('an-bizl'); if(l) l.innerHTML=(t.needBiz?'<b>*</b>':'')+'关联业务单号'+(t.needBiz?'':'（选填）');
 };
-window.adj_newConfirm=function(){
+// 校验 → 暂存草稿。新建：无重复直接生成；新建并推送：必须二次确认（推送不可逆）
+window.adj_newSubmit=function(withPush){
   const g=id=>String((document.getElementById(id)||{}).value||'').trim();
   const sc=g('an-shop'), tc=g('an-type'), amt=+g('an-amt'), biz=g('an-biz'), rk=g('an-remark');
-  const t=tOf(tc), mc=(SHOPS[sc]||{}).merchant||'';
+  const t=tOf(tc);
   if(!(amt>0)){toast('请填写大于 0 的金额','err');return;}
   if(t.needBiz&&!biz){toast('该调整类型必须填写关联业务单号','err');return;}
   if(!rk){toast('请填写调整说明','err');return;}
-  const dup=(DB.adjOrders||[]).filter(r=>r.shopCode==sc&&r.adjustTypeCode==tc&&r.amount==amt&&String(r.effectiveTime).slice(0,10)==ts().slice(0,10));
-  const plus=t.dir=='ADDITION';
   DB.adjDraft={sc,tc,amt,biz,rk};
-  modal(`<div class="mc-hd"><h3>确认创建调整单</h3><p>提交后立即生效，<b>不可修改</b>；推送前发现错误可作废</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  const dup=(DB.adjOrders||[]).filter(r=>r.status!='voided'&&r.shopCode==sc&&r.adjustTypeCode==tc&&r.amount==amt&&String(r.effectiveTime).slice(0,10)==ts().slice(0,10)).length;
+  if(!withPush&&!dup){ adj_newDo(false); return; }
+  adj_newConfirm(withPush,dup);
+};
+window.adj_newConfirm=function(withPush,dup){
+  const d=DB.adjDraft; if(!d) return;
+  const t=tOf(d.tc), mc=(SHOPS[d.sc]||{}).merchant||'', plus=t.dir=='ADDITION';
+  modal(`<div class="mc-hd"><h3>${withPush?'确认新建并推送':'确认新建'}</h3><p>${withPush?'生成后立即推送给下游':'生成后待推送，推送前可作废'}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    ${dup.length?`<div class="ib ib-y"><span class="i">⚠️</span>今日已有 <b>${dup.length}</b> 张相同店铺 + 相同类型 + 相同金额的调整单，请确认不是重复创建。</div>`:''}
+    ${withPush?`<div class="ib ib-y"><span class="i">⚠️</span>推送后本单<b>不可作废、不可撤回</b>；如需纠正只能新建一张反方向类型的调整单。请核对店铺与金额。</div>`:''}
+    ${dup?`<div class="ib ib-y"><span class="i">⚠️</span>今日已有 <b>${dup}</b> 张相同店铺 + 相同类型 + 相同金额的调整单，请确认不是重复创建。</div>`:''}
     <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:10px 0 12px"><table style="margin:0"><tbody>
-      <tr><td style="color:var(--ts);width:120px">店铺</td><td><b>${shopName(sc)}</b> <span class="mono" style="color:var(--ts)">${sc}</span></td></tr>
+      <tr><td style="color:var(--ts);width:120px">店铺</td><td><b>${shopName(d.sc)}</b> <span class="mono" style="color:var(--ts)">${d.sc}</span></td></tr>
       <tr><td style="color:var(--ts)">所属商家</td><td>${merchantName(mc)} <span class="mono" style="color:var(--ts)">${mc}</span></td></tr>
       <tr><td style="color:var(--ts)">调整类型</td><td>${t.cn} <span class="mono" style="color:var(--ts);font-size:12px">${t.code}</span></td></tr>
-      <tr><td style="color:var(--ts)">方向</td><td>${dirTag({adjustTypeCode:tc})}</td></tr>
-      <tr><td style="color:var(--ts)">金额</td><td><span style="color:${plus?'var(--g)':'var(--r)'};font-weight:700;font-size:17px">${plus?'+':'-'}${money(amt)}</span></td></tr>
-      <tr><td style="color:var(--ts)">关联业务单</td><td class="mono">${biz||'—'}</td></tr>
+      <tr><td style="color:var(--ts)">方向</td><td>${dirTag({adjustTypeCode:d.tc})}</td></tr>
+      <tr><td style="color:var(--ts)">金额</td><td><span style="color:${plus?'var(--g)':'var(--r)'};font-weight:700;font-size:17px">${plus?'+':'-'}${money(d.amt)}</span></td></tr>
+      <tr><td style="color:var(--ts)">关联业务单</td><td class="mono">${d.biz||'—'}</td></tr>
     </tbody></table></div>
   </div>
-  <div class="mc-ft"><button class="btn btn-o" onclick="adj_newAsk()">返回修改</button><button class="btn btn-p" onclick="adj_newDo()">确认创建</button></div>`);
+  <div class="mc-ft"><button class="btn btn-o" onclick="adj_newAsk(true)">返回修改</button><button class="btn btn-p" onclick="adj_newDo(${withPush?'true':'false'})">${withPush?'确认新建并推送':'确认新建'}</button></div>`);
 };
-window.adj_newDo=function(){
+window.adj_newDo=function(withPush){
   const d=DB.adjDraft; if(!d) return;
-  const no='ADJ-'+(DB.siteCode||'SG')+'-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.adjSeq++).padStart(3,'0');
+  const now=ts();
+  const no='ADJ-'+(DB.siteCode||'SG')+'-'+now.slice(0,10).replace(/-/g,'')+'-'+String(DB.adjSeq++).padStart(3,'0');
   DB.adjOrders.unshift({adjustNo:no, shopCode:d.sc, merchantCode:(SHOPS[d.sc]||{}).merchant||'',
     adjustTypeCode:d.tc, adjustTypeName:tOf(d.tc).cn, amount:+d.amt.toFixed(2), currency:'SGD',
-    bizNo:d.biz, remark:d.rk, effectiveTime:ts(), sourceType:'MANUAL', sourceNo:'',
-    status:'effective', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:''});
+    bizNo:d.biz, remark:d.rk, effectiveTime:now, sourceType:'MANUAL', sourceNo:'',
+    status:'effective', pushStatus:withPush?'PUSHED':'PENDING', syncStatus:withPush?'SUCCESS':'', syncErrorText:'', pushedAt:withPush?now:''});
   addLog(no,'创建调整单');
+  if(withPush) addLog(no,'推送');   // 同一事务内：建单成功才推送；推送同样按单号幂等
   DB.adjDraft=null; closeModal(); DB.adjSel=[]; render();
-  toast('调整单 '+no+' 已创建并生效，待推送','ok');
+  toast(withPush?'调整单 '+no+' 已新建并推送':'调整单 '+no+' 已新建，待推送','ok');
 };
 
 /* ================= 详情抽屉 ================= */
