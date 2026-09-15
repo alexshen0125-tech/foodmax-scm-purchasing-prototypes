@@ -82,8 +82,9 @@ function ensure(){
   if(waits[1]){waits[1].status='capped';waits[1].decidedAt='15:00 超时';}
   STOCK=ROWS.filter((r,i)=>i%2===0).slice(0,7).map(r=>{
     const sent=r.fcst,sold=Math.max(0,sent-2-hnum(r.sku+r.wh+'s',12));
-    return {sku:r.sku,name:r.name,unit:r.unit,wh:r.wh,inDate:'2026-08-30',sent,sold,
-      left:sent-sold,hold:1+hnum(r.sku+'d',3),shelfLeft:1+hnum(r.sku+'d',3)+1+hnum(r.sku+'e',5),
+    const over=hnum(r.sku+r.wh+'ov',10)<4?(2+hnum(r.sku+'ovq',6)):0;   // 多收入账（BR-16c：当日不可卖，直接留仓）
+    return {sku:r.sku,name:r.name,unit:r.unit,wh:r.wh,inDate:'2026-08-30',sent,sold,over,
+      left:sent-sold+over,hold:1+hnum(r.sku+'d',3),shelfLeft:1+hnum(r.sku+'d',3)+1+hnum(r.sku+'e',5),
       nextNeed:5+hnum(r.sku+r.wh+'n',30),returning:false};
   });
 }
@@ -202,7 +203,7 @@ function stockCard(s){
   return `<div class="ps-card" data-key="${s.sku}|${s.wh}">
     <div class="ps-ch"><div><div class="nm">${s.name}</div><div class="sku">${s.sku}</div></div>
       ${s.returning?'<span class="ps-st capped">退回中</span>':s.shelfLeft<=2?'<span class="ps-st wait">临期</span>':''}</div>
-    <div class="ps-tags"><span class="ps-tag">${s.wh}</span><span class="ps-tag">入仓 ${s.inDate}</span><span class="ps-tag">预送 ${s.sent} · 已售 ${s.sold}</span></div>
+    <div class="ps-tags"><span class="ps-tag">${s.wh}</span><span class="ps-tag">入仓 ${s.inDate}</span><span class="ps-tag">预送 ${s.sent} · 已售 ${s.sold}</span>${s.over?`<span class="ps-tag" style="background:var(--amber-soft);color:#8A5A12">多收 +${s.over}</span>`:''}</div>
     <div class="ps-kbox">
       <div class="k"><div class="v">${s.left}</div><div class="l">在仓剩余</div></div>
       <div class="k"><div class="v ${s.shelfLeft<=2?'gap':''}">${s.shelfLeft}</div><div class="l">剩余保质期(天)</div></div>
@@ -216,7 +217,7 @@ function stockCard(s){
 function drawStock(box){
   const expN=STOCK.filter(s=>s.shelfLeft<=2).length;
   box.innerHTML=`
-    <div class="ps-note" style="margin-top:12px">当日预送到仓、截单后没卖完的货留在仓里，<b>次日订单优先消耗</b>——次日应送量 = 次日需求 − 在仓剩余，够了就不用再送。货权归你，可申请退回。</div>
+    <div class="ps-note" style="margin-top:12px">当日预送到仓、截单后没卖完的货留在仓里，<b>次日订单优先消耗</b>——次日应送量 = 次日需求 − 在仓剩余，够了就不用再送。你<b>多送</b>的部分仓库照收，也直接进这里（当天不参与售卖）。货权归你，<b>滞销与临期由你处理</b>、可申请退回；保管期间的<b>损坏与丢失由平台承担</b>。</div>
     <div class="ps-tabs">
       <div class="ps-tab ${STAB==='all'?'on':''}" data-t="all">全部 ${STOCK.length}</div>
       <div class="ps-tab ${STAB==='exp'?'on':''}" data-t="exp">临期 ≤2天 ${expN}</div>
@@ -251,6 +252,7 @@ function openStockDetail(s){
       <div class="ps-row"><span class="k">入仓日期</span><span class="v">${s.inDate}</span></div>
       <div class="ps-row"><span class="k">当日预送量</span><span class="v">${s.sent} ${s.unit}</span></div>
       <div class="ps-row"><span class="k">当日已售</span><span class="v">${s.sold} ${s.unit}</span></div>
+      ${s.over?`<div class="ps-row"><span class="k">当日多收（送多照收）</span><span class="v">+${s.over} ${s.unit}</span></div>`:''}
       <div class="ps-row"><span class="k">在仓剩余</span><span class="v hl">${s.left} ${s.unit}</span></div>
       <div class="ps-row"><span class="k">已留仓</span><span class="v">${s.hold} 天</span></div>
       <div class="ps-row"><span class="k">剩余保质期</span><span class="v ${s.shelfLeft<=2?'warn':''}">${s.shelfLeft} 天</span></div>
@@ -280,18 +282,25 @@ function ensureRecon(){
   if(RECON)return;
   RECON=ROWS.map(r=>{
     const ps=finalQty(r),planned=r.orderQty+ps;
-    const shortHit=hnum(r.sku+r.wh+'ss',10)<2;
-    const received=shortHit?Math.max(r.orderQty,planned-(2+hnum(r.sku+'sd',5))):planned;
+    // 约 1/5 少送、约 1/5 多送（BR-16 按实收计；BR-16c 多收不设上限）
+    const h5=hnum(r.sku+r.wh+'ss',10);
+    const received=h5<2?Math.max(r.orderQty,planned-(2+hnum(r.sku+'sd',5)))
+                  :h5<4?planned+(2+hnum(r.sku+'od',6))
+                  :planned;
     const realAfter=Math.round(ps*(0.55+hnum(r.sku+r.wh+'ra',80)/100));
     const demand=r.orderQty+realAfter;
-    const sold=Math.min(received,demand),leftover=received-sold,missed=Math.max(0,demand-received);
+    // 当日可卖上限 = 定稿应送（BR-16d 多收不进当日配额）；少送时按实收下调
+    const sellable=Math.min(received,planned);
+    const sold=Math.min(sellable,demand),leftover=received-sold,missed=Math.max(0,demand-sellable);
     let soldOutAt='';
-    if(missed>0){const avail=Math.max(1,received-r.orderQty),h=16+Math.min(5.9,avail/Math.max(1,realAfter)*6);
+    if(missed>0){const avail=Math.max(1,sellable-r.orderQty),h=16+Math.min(5.9,avail/Math.max(1,realAfter)*6);
       soldOutAt=String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round(h%1*60/10)*10%60).padStart(2,'0');}
     const nextOrderNeed=Math.max(2,Math.round(r.orderQty*(0.7+hnum(r.sku+r.wh+'no',70)/100)));
     const nextFcst=Math.max(2,Math.round(ps*(0.7+hnum(r.sku+r.wh+'nf',70)/100)));
     return {sku:r.sku,name:r.name,unit:r.unit,wh:r.wh,orderQty:r.orderQty,psQty:ps,planned,received,
-      shortSend:planned-received,demand,sold,leftover,missed,soldOutAt,nextOrderNeed,nextFcst,
+      shortSend:Math.max(0,planned-received),      // 短收：实收 < 应送
+      overSend:Math.max(0,received-planned),        // 多收：实收 > 应送，照收入寄存（BR-16c）
+      demand,sold,leftover,missed,soldOutAt,nextOrderNeed,nextFcst,
       nextShould:Math.max(0,nextOrderNeed+nextFcst-leftover),
       result:missed>0?'short':(leftover>0?'over':'fit')};
   });
@@ -302,9 +311,9 @@ function reconCard(r){
   return `<div class="ps-card" data-key="${r.sku}|${r.wh}">
     <div class="ps-ch"><div><div class="nm">${r.name}</div><div class="sku">${r.sku}</div></div>
       <span class="ps-st ${r.result==='short'?'wait':r.result==='over'?'capped':'confirmed'}">${label}</span></div>
-    <div class="ps-tags"><span class="ps-tag">${r.wh}</span><span class="ps-tag">应送 ${r.planned}（订单 ${r.orderQty} · 预送 ${r.psQty}）</span>${r.shortSend>0?`<span class="ps-tag">少送 ${r.shortSend}</span>`:''}</div>
+    <div class="ps-tags"><span class="ps-tag">${r.wh}</span><span class="ps-tag">应送 ${r.planned}（订单 ${r.orderQty} · 预送 ${r.psQty}）</span>${r.shortSend>0?`<span class="ps-tag">短收 ${r.shortSend}</span>`:''}${r.overSend>0?`<span class="ps-tag" style="background:var(--amber-soft);color:#8A5A12">多收 +${r.overSend}</span>`:''}</div>
     <div class="ps-kbox">
-      <div class="k"><div class="v">${r.received}</div><div class="l">实际送达</div></div>
+      <div class="k"><div class="v">${r.received}</div><div class="l">仓库实收</div></div>
       <div class="k"><div class="v">${r.sold}</div><div class="l">卖出</div></div>
       <div class="k"><div class="v ${r.result==='short'?'gap':''}">${r.result==='short'?r.missed:r.leftover}</div><div class="l">${r.result==='short'?'没接住':'卖剩留仓'}</div></div>
     </div>
@@ -315,6 +324,7 @@ function reconCard(r){
         ? `多送的 <b>${r.leftover} ${r.unit}</b> 留在仓里，已自动抵扣今日应送量。`
         : '既没压货也没断货。'}
       今日应送 <b>${r.nextShould} ${r.unit}</b>${r.nextShould===0?'（今日免送）':''}
+      ${r.overSend>0?`<br>多送的 <b>${r.overSend} ${r.unit}</b> 仓库已照收入寄存，<b>当天不参与售卖</b>，已在今日应送里抵扣。`:''}
     </div>
     <div class="ps-acts"><div class="b link" data-act="detail">看是怎么算的 ›</div></div>
   </div>`;
@@ -322,7 +332,17 @@ function reconCard(r){
 function drawRecon(box){
   const cnt=k=>k==='all'?RECON.length:RECON.filter(r=>r.result===k).length;
   box.innerHTML=`
-    <div class="ps-note" style="margin-top:12px">看 <b>${RDATE}</b> 送的货是<b>送多了还是送少了</b>，以及<b>今天该送多少</b>。送多了→卖剩的留仓、自动抵扣今日应送量；送少了→提前售罄少接的单在这看得到。<br><b>今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余</b>。</div>
+    <div class="ps-note" style="margin-top:12px">一页看完 <b>${RDATE}</b> 这批货的<b>送收</b>与<b>卖出</b>：送了多少、仓库收了多少、卖了多少、剩多少，以及<b>今天该送多少</b>。<br><b>今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余</b>。</div>
+    ${(()=>{const T=f=>RECON.reduce((a,r)=>a+f(r),0);
+      const sp=T(r=>r.planned),sr=T(r=>r.received),ss=T(r=>r.shortSend),so=T(r=>r.overSend);
+      return `<div class="ps-sec" style="margin-bottom:8px">送收对账 · ${RDATE}</div>
+      <div class="ps-kbox" style="margin:0 16px">
+        <div class="k"><div class="v">${sp}</div><div class="l">应送合计</div></div>
+        <div class="k"><div class="v">${sr}</div><div class="l">仓库实收</div></div>
+        <div class="k"><div class="v ${ss?'gap':''}">${ss?'−'+ss:0}</div><div class="l">短收</div></div>
+        <div class="k"><div class="v" style="${so?'color:var(--amber)':''}">${so?'+'+so:0}</div><div class="l">多收</div></div>
+      </div>
+      <div class="ps-note" style="margin-top:10px">应送 = 订单量 + 预送量。<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存库存，<b>当天不参与售卖</b>、不结算，次日优先抵扣应送量。</div>`;})()}
     <div class="ps-tabs">${[['all','全部'],['over','送多了'],['short','送少了'],['fit','刚好']]
       .map(([k,t])=>`<div class="ps-tab ${RTAB===k?'on':''}" data-t="${k}">${t} ${cnt(k)}</div>`).join('')}</div>
     <div class="ps-list" id="psl"></div>`;
@@ -344,7 +364,8 @@ function openReconDetail(r){
     <div class="ps-sec">${RDATE} 这批货去哪了</div>
     <div class="ps-tbl">
       <div class="ps-row"><span class="k">应送（订单 ${r.orderQty} + 预送 ${r.psQty}）</span><span class="v">${r.planned} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">实际送达</span><span class="v ${r.shortSend>0?'warn':''}">${r.received} ${r.unit}${r.shortSend>0?`（少送 ${r.shortSend}）`:''}</span></div>
+      <div class="ps-row"><span class="k">仓库实收</span><span class="v ${r.shortSend>0?'warn':''}">${r.received} ${r.unit}${r.shortSend>0?`（短收 ${r.shortSend}）`:''}${r.overSend>0?`（多收 +${r.overSend}）`:''}</span></div>
+      ${r.overSend>0?`<div class="ps-row"><span class="k">其中多收（当日不可卖）</span><span class="v">${r.overSend} ${r.unit} · 已入寄存</span></div>`:''}
       <div class="ps-row"><span class="k">当日真实需求</span><span class="v">${r.demand} ${r.unit}</span></div>
       <div class="ps-row"><span class="k">实际卖出</span><span class="v hl">${r.sold} ${r.unit}</span></div>
       <div class="ps-row"><span class="k">卖剩留仓</span><span class="v">${r.leftover} ${r.unit}</span></div>

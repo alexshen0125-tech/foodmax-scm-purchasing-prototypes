@@ -154,7 +154,8 @@ const ADDR={'裕廊DC':'1 Jurong West Ave 1, #01-23 裕廊配送中心三号库'
 // 各 DC 收货人 / 入门位置（送货单详情·交货地点信息）
 const RECV={'裕廊DC':{d:'王志明 8123****7813',n:'林国强 9012****0250',g:'裕廊西门进，2号库3号闸口，只收不卸'},'兀兰DC':{d:'黄俊 8765****1122',n:'李文 9033****3344',g:'兀兰北门进，8号库1楼9–11号门'},'盛港DC':{d:'吴成 8201****5566',n:'/ 9111****1111',g:'东门进，1号平台，只收不卸'},'大巴窑DC':{d:'许尚 8678****7788',n:'史金超 9158****0250',g:'中门进，只收不卸'},'淡滨尼DC':{d:'周强 8299****9900',n:'郑凯 9088****2233',g:'A门进，3号卸货区'},'义顺DC':{d:'马良 8322****4455',n:'孙浩 9077****6677',g:'西门进，2号库'}};
 function dvWave(d){const h=parseInt((d.window||'0'),10);return h<12?'上午达':'下午达';}                 // 履约波次(由送达时段派生)
-// 商品明细按SKU聚合(件)；demoLines 带 recvQty=仓库收货清点(出库前)回写的实收数量。差异只有「数量少送」一种，无原因分类
+// 商品明细按SKU聚合(件)；demoLines 带 recvQty=仓库收货清点(出库前)回写的实收数量。
+// 差异双向：实收<应送=短收；实收>应送=多收（BR-16c 仓库照收不设上限，多收入在仓寄存库存、当日不可卖）
 function dvSku(d){
   if(d.demoLines)return d.demoLines.map(l=>({name:l.name,unit:l.unit,code:l.code,qty:l.qty,
     inQty:(l.recvQty!=null?l.recvQty:(d.status==='交接完成'?l.qty:0))}));
@@ -207,7 +208,8 @@ function signinCard(d){
     <div class="dl-meta"><span class="k">入库仓库</span><span class="vv">${d.warehouse} · ${d.orderIds.length}单</span></div>
     ${d.signed&&!done?`<div class="dl-meta"><span class="k"></span><span class="vv" style="color:var(--sub)">待仓库扫码交接</span></div>`:''}
     <div class="dl-kbox"><div class="k"><div class="l">应送货(件)</div><div class="v">${dvSku(d).reduce((s,r)=>s+r.qty,0)}</div></div><div class="k"><div class="l">${done?'实收(件)':'已入库(件)'}</div><div class="v" ${dvShort(d)?'style="color:var(--red)"':''}>${dvSku(d).reduce((s,r)=>s+r.inQty,0)}</div></div><div class="k"><div class="l">平台补采(件)</div><div class="v" ${dvReplQty(d)>0?'style="color:var(--amber)"':''}>${dvReplQty(d)}</div></div></div>
-    ${whrOf(d.id).length?`<div style="display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap">${whrOf(d.id).some(r=>r.type==='送错')?stChip('有错货','var(--red-soft)','var(--red)'):''}${whrOf(d.id).some(r=>r.type==='送多')?stChip('有多货','var(--amber-soft)','#B45309'):''}</div>`:''}
+    ${(()=>{const rs=dvSku(d),ov=rs.reduce((a,r)=>a+Math.max(0,r.inQty-r.qty),0);const err=whrOf(d.id).some(r=>r.type==='送错');
+      return (ov||err)?`<div style="display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap">${err?stChip('有错货','var(--red-soft)','var(--red)'):''}${ov?stChip('多收 '+ov+' 件·已入寄存','var(--amber-soft)','#B45309'):''}</div>`:'';})()}
     ${done?`<div style="display:flex;align-items:center;gap:8px;margin-top:11px">${dvShort(d)
       ?stChip('收货清点 · 少货 '+dvShortQty(d)+' 件','var(--red-soft)','var(--red)')+(dvReplQty(d)>0?stChip('平台补采 '+dvReplQty(d)+' 件','var(--amber-soft)','#B45309'):'')
       :stChip('收货清点 · 足额收货','var(--mint-soft)','var(--emerald-2)')}</div>`:''}
@@ -345,7 +347,7 @@ function openSignin(){
        demoLines:[{code:'LBL-x-8801',name:'小棠菜',unit:'件',qty:20,recvQty:18}]},
       {id:'SH20260629005',pickId:'JH20260629005',warehouse:'兀兰DC',deliver:'06-29',window:'02:00–05:00',orderIds:['#SG20260629004'],labels:[],should:30,
        status:'交接完成',booked:true,bookWindow:'02:00–05:00',signed:true,signTime:'02:41',receiptTime:'2026-06-29 03:24',
-       demoLines:[{code:'LBL-x-8804',name:'空心菜',unit:'件',qty:30,recvQty:22}]}
+       demoLines:[{code:'LBL-x-8804',name:'空心菜',unit:'件',qty:30,recvQty:34}]}   // 多收 4：商家多送，仓库照收入寄存（BR-16c）
     );}
   pushPage({title:'送货签到',body:`
     <div class="dl-banner"><span>送货单由<b>电脑端打印首个标签</b>时按入库仓库自动生成（移动端不打印标签）。<b>预约与签到相互独立</b>；签到由<b>仓库扫码</b>核验交接入仓。</span></div>
@@ -372,7 +374,7 @@ function openSignDetail(d){
       kv('入库仓库',d.warehouse)+
       kv('送达时段',`${d.deliver} ${d.window||''}`)+
       kv('应送货',`${totQty} 件`)+
-      kv('实收数量（收货清点）',d.status==='交接完成'?`<b style="color:${totIn<totQty?'var(--red)':'var(--emerald)'}">${totIn}</b> 件${totIn<totQty?`（少货 ${totQty-totIn} 件）`:''}`:'待清点')+
+      kv('实收数量（收货清点）',d.status==='交接完成'?`<b style="color:${totIn<totQty?'var(--red)':(totIn>totQty?'var(--amber)':'var(--emerald)')}">${totIn}</b> 件${totIn<totQty?`（短收 ${totQty-totIn} 件）`:''}${totIn>totQty?`（多收 ${totIn-totQty} 件 · 已入寄存）`:''}`:'待清点')+
       kv('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')+
       kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认`:'未签到')+
       kv('交接时间',d.status==='交接完成'?`${d.deliver} 已交接入仓`:'未交接')+
@@ -396,7 +398,7 @@ function openSignDetail(d){
       kv('联系电话',meta.d?(String(meta.d).split(' ')[1]||''):'')
     ):''}
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">${d.status==='交接完成'?'实收(件)':'已入库(件)'}</div><div class="v" ${totIn<totQty?'style="color:var(--red)"':''}>${totIn}</div></div><div class="k"><div class="l">平台补采(件)</div><div class="v" ${dvReplQty(d)>0?'style="color:var(--amber)"':''}>${dvReplQty(d)}</div></div></div>
-    ${whrOf(d.id).length?sec('多货 / 错货 · 待退回')+box(
+    ${whrOf(d.id).length?sec('错货 · 待退回')+box(
       `<div style="padding:9px 0;font-size:12.5px;color:#B45309">本单被清点出 <b>${(function(l){return [...new Set(l.map(x=>x.type))].map(t=>`${t} ${l.filter(x=>x.type===t).reduce((a,x)=>a+x.qty,0)}${l.find(x=>x.type===t).unit}`).join(' · ');})(whrOf(d.id))}</b>，仓库已登记台账并留存照片，请线下取回；<b>不计入结算</b>。</div>`+
       whrOf(d.id).map(r=>`<div style="padding:9px 0;border-top:1px solid rgba(0,0,0,.05)">
         <div style="display:flex;align-items:center;gap:8px"><b>${r.name}</b>${stChip(r.type,r.type==='送错'?'var(--red-soft)':'var(--amber-soft)',r.type==='送错'?'var(--red)':'#B45309')}${r.status==='已取回'?stChip('已取回','var(--mint-soft)','var(--emerald-2)'):stChip('待取回','#E1EBFF','#2563EB')}</div>
@@ -406,9 +408,9 @@ function openSignDetail(d){
     ):''}
     ${sec('商品明细 · 按 SKU 件数')}
     ${box(
-      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${r.inQty<r.qty?` · 差异 <b style="color:var(--red)">-${r.qty-r.inQty}</b>`:''} · 平台补采 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
+      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${r.inQty<r.qty?` · 差异 <b style="color:var(--red)">-${r.qty-r.inQty}</b>`:''}${r.inQty>r.qty?` · 差异 <b style="color:var(--amber)">+${r.inQty-r.qty}</b>（多收·已入寄存）`:''} · 平台补采 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
     )}
-    <div style="margin:8px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>平台补采</b>＝缺口由平台自营现货补货的数量（未补货为 0），按含税售价 ×(1+加价率) 在结算单中抵扣。</div>
+    <div style="margin:8px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>平台补采</b>＝缺口由平台自营现货补货的数量（未补货为 0），按含税售价 ×(1+加价率) 在结算单中抵扣。<br><b>多收</b>：你送的比应送多，仓库<b>照收不设上限</b>，超出部分计入<b>在仓寄存库存</b>，<b>当天不参与售卖</b>、不结算，次日优先抵扣应送量。送来应送清单外的 SKU 属<b>送错</b>，仍需线下取回。</div>
     <div style="height:8px"></div>`,
     footer:`${(d.signed&&d.status!=='交接完成')?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" id="dl-wms">🔬 演示：模拟仓库扫码交接</button>`:`<button class="btn primary" style="width:100%" disabled>${d.status==='交接完成'?'已交接入仓':'待仓库交接'}</button>`}`,
     mount:(p)=>{
@@ -484,22 +486,23 @@ function returnCard(g){
     <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`剩 ${cdSpan(arriveDueMs(g.arrive,72))} 提货（逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?'已提货':g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
   </div>`;
 }
-/* ============ 仓库退回（多货 / 错货）—— 2026-08-12 纪要：不新增单据与单号，
+/* ============ 仓库退回（错货）—— 2026-08-12 纪要：不新增单据与单号，
    沿用原送货单标记，仓库台账+多角度照片+专属虚拟库位，商家线下取回。
-   与 PC pc-modules/delivery.js 的 DB.whReturns 同源同口径。 ============ */
+   与 PC pc-modules/delivery.js 的 DB.whReturns 同源同口径。
+
+   ⚠️ 2026-09-15 沈亮拍板（BR-16c）：「送多」不再走退回。商家实送多于应送时仓库
+   照收不设上限，多收量在送货单商品明细的差异里正向展示，并入在仓寄存库存
+   （当日不可卖、次日优先抵扣，BR-16d）。本台账只保留「送错」一种类型。 ============ */
 window.FM.DB.whReturns = window.FM.DB.whReturns || [
   {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
    type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedAt:'',
    note:'与本单小棠菜串货，实物为上海青'},
-  {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',
-   type:'送多',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'待取回',pickedAt:'',
-   note:'实收 23，超出应送 20 共 3 件'},
-  {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',
-   type:'送多',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedAt:'',
-   note:'实收 26，超出应送 22 共 4 件'},
-  {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',
-   type:'送多',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedAt:'2026-05-20 10:15',
-   note:''},
+  {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8806',name:'芥兰',spec:'1kg/件',unit:'件',
+   type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedAt:'',
+   note:'应送清单无此 SKU，实物为芥兰'},
+  {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8812',name:'咸鸭蛋',spec:'30枚/盘',unit:'盘',
+   type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedAt:'2026-05-20 10:15',
+   note:'与本单鲜鸡蛋串货'},
 ];
 const WHR=()=>window.FM.DB.whReturns||[];
 function whrOf(id){return WHR().filter(r=>r.deliveryNo===id);}
@@ -580,7 +583,7 @@ function openWhrPhotos(no,sku){
   const r=WHR().find(x=>x.deliveryNo===no&&x.skuCode===sku); if(!r)return;
   pushPage({title:'仓库留存照片',navbar:true,body:`
     <div style="margin:12px 16px;background:#E1EBFF;color:#2563EB;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
-      照片由仓库在登记台账时<b>多角度拍摄留存</b>，作为多货/错货的实物凭证；商家端只读。
+      照片由仓库在登记台账时<b>多角度拍摄留存</b>，作为错货的实物凭证；商家端只读。
     </div>
     <div style="margin:0 16px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
       ${Array.from({length:r.photos}).map((_,i)=>`<div style="aspect-ratio:4/3;background:var(--muted);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:12.5px">实物照片 ${i+1}</div>`).join('')}
@@ -602,16 +605,16 @@ function openReturn(){
     <div id="rt-whr" style="display:none"></div>`,
     mount:(p)=>{
       const list=p.querySelector('#dl-rtl');
-      // 来源分段：客户退货（客户售后退回）/ 仓库退回（送货单里送错·送多）
+      // 来源分段：客户退货（客户售后退回）/ 仓库退回（送货单里送错；送多自 2026-09-15 起照收不退）
       const segs=p.querySelectorAll('#rt-seg .s'), cust=p.querySelector('#rt-cust'), whr=p.querySelector('#rt-whr');
       function drawWhr(){
         const gs=whrGroups();
         whr.innerHTML=gs.length?`
           <div style="margin:8px 16px 10px;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
-            <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送多</b>或<b>送错</b>的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。沿用原送货单标记，不另生成退货单号。
+            <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送错</b>（应送清单外的 SKU）的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。沿用原送货单标记，不另生成退货单号。<br><b>多送同一 SKU 不进这里</b>：仓库照收，计入你的在仓寄存库存，当日不参与售卖、次日优先抵扣应送量。
           </div>
           <div class="dl-list">${gs.map(whrCard).join('')}</div>`
-          :`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无待退回商品</h4><p>送货到仓被清点出送多或送错的商品时，仓库登记台账后在此生成取货通知</p></div>`;
+          :`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无待退回商品</h4><p>送货到仓被清点出送错（应送清单外的 SKU）时，仓库登记台账后在此生成取货通知；多送同一 SKU 仓库照收，不在这里</p></div>`;
         whr.querySelectorAll('[data-whr]').forEach(c=>{
           const no=c.dataset.whr;
           c.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();

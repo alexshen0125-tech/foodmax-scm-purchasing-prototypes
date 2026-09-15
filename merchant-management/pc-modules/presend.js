@@ -47,9 +47,10 @@
     // 在仓预送库存（昨日预送未售完，留仓顺延抵扣次日）
     DB.presendStock=rows.filter((r,i)=>i%2==0).slice(0,7).map(r=>{
       const sent=r.fcst,sold=Math.max(0,sent-2-hnum(r.sku+r.wh+'s',12));
-      const left=sent-sold,hold=1+hnum(r.sku+'d',3),shelf=hold+1+hnum(r.sku+'e',5);
+      const over=hnum(r.sku+r.wh+'ov',10)<4?(2+hnum(r.sku+'ovq',6)):0;   // 多收入账（BR-16c：当日不可卖，直接留仓）
+      const left=sent-sold+over,hold=1+hnum(r.sku+'d',3),shelf=hold+1+hnum(r.sku+'e',5);
       return {sku:r.sku,name:r.name,unit:r.unit,spec:r.spec,wh:r.wh,inDate:'2026-08-30',
-        sent,sold,left,hold,shelfLeft:shelf,nextNeed:5+hnum(r.sku+r.wh+'n',30),returning:false};
+        sent,sold,over,left,hold,shelfLeft:shelf,nextNeed:5+hnum(r.sku+r.wh+'n',30),returning:false};
     });
   };
 
@@ -282,7 +283,8 @@
         <tr><td style="width:42%;color:var(--ts)">入仓日期</td><td>${r.inDate}</td></tr>
         <tr><td style="color:var(--ts)">当日预送量</td><td>${r.sent} ${r.unit}</td></tr>
         <tr><td style="color:var(--ts)">当日已售</td><td>${r.sold} ${r.unit}</td></tr>
-        <tr><td style="color:var(--ts)"><b>在仓剩余</b></td><td><b>${r.left}</b> ${r.unit}</td></tr>
+        <tr><td style="color:var(--ts)">当日多收（送多照收）</td><td>${r.over?`<span style="color:var(--gold)">+${r.over}</span> ${r.unit}`:'<span style="color:var(--tt)">—</span>'}</td></tr>
+        <tr><td style="color:var(--ts)"><b>在仓剩余</b></td><td><b>${r.left}</b> ${r.unit} <span style="font-size:12px;color:var(--ts)">= 预送 ${r.sent} − 已售 ${r.sold}${r.over?' + 多收 '+r.over:''}</span></td></tr>
         <tr><td style="color:var(--ts)">已留仓</td><td>${r.hold} 天</td></tr>
         <tr><td style="color:var(--ts)">剩余保质期</td><td>${r.shelfLeft<=2?`<span style="color:var(--r)">${r.shelfLeft} 天</span>`:`${r.shelfLeft} 天`}</td></tr>
       </tbody></table>
@@ -313,7 +315,7 @@
         <td style="color:var(--ts)">${r.inDate}</td>
         <td style="text-align:right;color:var(--ts)">${r.sent}</td>
         <td style="text-align:right;color:var(--ts)">${r.sold}</td>
-        <td style="text-align:right"><b>${r.left}</b> <span style="color:var(--ts)">${r.unit}</span></td>
+        <td style="text-align:right"><b>${r.left}</b> <span style="color:var(--ts)">${r.unit}</span>${r.over?`<div style="font-size:11px;color:var(--gold)">含多收 ${r.over}</div>`:''}</td>
         <td style="text-align:right">${r.hold} 天</td>
         <td style="text-align:right">${r.shelfLeft<=2?`<span style="color:var(--r)">${r.shelfLeft} 天</span>`:`<span style="color:var(--ts)">${r.shelfLeft} 天</span>`}</td>
         <td style="text-align:right"><b>${need}</b> <span style="color:var(--ts)">${r.unit}</span>${need==0?'<div style="font-size:11px;color:var(--g)">次日免送</div>':''}</td>
@@ -325,7 +327,8 @@
     return `
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">${icon('🏬')}</span><div>
       <b>在仓预送库存</b>：当日预送到仓、截单后没卖完的货留在仓里，<b>次日订单优先消耗</b>——次日应送量 = 次日需求 − 在仓剩余，够了就不用再送。
-      货权归你，滞销与临期由你处理，可申请退回。</div></div>
+      你<b>多送</b>的部分仓库照收，也直接进这里（当天不参与售卖，见送货单「差异」列）。
+      货权归你，<b>滞销与临期由你处理</b>、可申请退回；保管期间的<b>损坏与丢失由平台承担</b>。</div></div>
 
     <div class="tabs" style="margin-bottom:12px">
       <div class="tab ${DB.presendStockTab=='all'?'active':''}" onclick="psStockTab('all')">全部 (${DB.presendStock.length})</div>
@@ -362,19 +365,23 @@
     DB.presendRecon=DB.presend.map(r=>{
       const ps=finalQty(r);
       const planned=r.orderQty+ps;                                  // 应送 = 订单量 + 预送量
-      // 商家实际送达：约 1/5 少送（BR-16 按实收计）
-      const shortHit=hnum(r.sku+r.wh+'ss',10)<2;
-      const received=shortHit?Math.max(r.orderQty,planned-(2+hnum(r.sku+'sd',5))):planned;
+      // 商家实际送达：约 1/5 少送、约 1/5 多送（BR-16 按实收计；BR-16c 多收不设上限）
+      const h=hnum(r.sku+r.wh+'ss',10);
+      const received=h<2?Math.max(r.orderQty,planned-(2+hnum(r.sku+'sd',5)))
+                    :h<4?planned+(2+hnum(r.sku+'od',6))
+                    :planned;
       // T0 后真实需求（围绕预送量波动 50%–160%）——大于预送量即卖爆、小于即留仓
       const realAfter=Math.round(ps*(0.55+hnum(r.sku+r.wh+'ra',80)/100));
       const demand=r.orderQty+realAfter;                            // 当日真实总需求
-      const sold=Math.min(received,demand);
-      const leftover=received-sold;
-      const missed=Math.max(0,demand-received);                     // 没接住的需求（送少了的代价）
+      // 当日可卖上限 = 定稿应送（BR-16d 多收不进当日配额）；少送时按实收下调（BR-16）
+      const sellable=Math.min(received,planned);
+      const sold=Math.min(sellable,demand);
+      const leftover=received-sold;                                 // 留仓 = 实收 − 卖出（含多收部分）
+      const missed=Math.max(0,demand-sellable);                     // 没接住的需求（配额给少 / 商家没送足的代价）
       // 售罄时点：按已售占 T0 后可售的进度折算到 16:00–22:00
       let soldOutAt='';
       if(missed>0){
-        const avail=Math.max(1,received-r.orderQty);
+        const avail=Math.max(1,sellable-r.orderQty);
         const h=16+Math.min(5.9,avail/Math.max(1,realAfter)*6);
         soldOutAt=`${String(Math.floor(h)).padStart(2,'0')}:${String(Math.round(h%1*60/10)*10%60).padStart(2,'0')}`;
       }
@@ -383,7 +390,9 @@
       const nextShould=Math.max(0,nextOrderNeed+nextFcst-leftover);
       const result=missed>0?'short':(leftover>0?'over':'fit');
       return {sku:r.sku,name:r.name,unit:r.unit,spec:r.spec,wh:r.wh,
-        orderQty:r.orderQty,psQty:ps,planned,received,shortSend:planned-received,
+        orderQty:r.orderQty,psQty:ps,planned,received,
+        shortSend:Math.max(0,planned-received),      // 短收：实收 < 应送
+        overSend:Math.max(0,received-planned),        // 多收：实收 > 应送，仓库照收入寄存（BR-16c）
         demand,sold,leftover,missed,soldOutAt,
         nextOrderNeed,nextFcst,nextShould,result};
     });
@@ -414,7 +423,8 @@
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">当天这批货去哪了</h4>
       <table class="subtbl" style="margin-bottom:22px"><tbody>
         ${line('应送（订单 '+r.orderQty+' + 预送 '+r.psQty+'）',r.planned+' '+r.unit,1)}
-        ${line('实际送达',r.received+' '+r.unit+(r.shortSend>0?` <span style="color:var(--r)">少送 ${r.shortSend}</span>`:''))}
+        ${line('仓库实收',r.received+' '+r.unit+(r.shortSend>0?` <span style="color:var(--r)">短收 ${r.shortSend}</span>`:'')+(r.overSend>0?` <span style="color:var(--gold)">多收 +${r.overSend}</span>`:''))}
+        ${r.overSend>0?line('其中多收（当日不可卖）',`<span style="color:var(--gold)">${r.overSend} ${r.unit}</span> 已入在仓寄存，次日优先抵扣`):''}
         ${line('当日真实需求',r.demand+' '+r.unit)}
         ${line('实际卖出',r.sold+' '+r.unit,1)}
         ${line('卖剩留仓',r.leftover>0?`<span style="color:var(--y)">${r.leftover} ${r.unit}</span>`:'0')}
@@ -428,6 +438,7 @@
           : r.result=='short'
           ? `${DB.presendCfg.t0} 后实际需求 ${r.demand-r.orderQty} ${r.unit}，超过当时可卖的量，<b>${r.soldOutAt} 就售罄</b>，少接了 <b>${r.missed} ${r.unit}</b> 的单。${r.shortSend>0?`其中 ${r.shortSend} ${r.unit} 是你当天没送足。`:'预送量本身给少了，算法会据此修正。'}`
           : `送达 ${r.received} ${r.unit}、卖出 ${r.sold} ${r.unit}，既没压货也没断货。`}
+        ${r.overSend>0?`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--bd2)">你比应送多送了 <b>${r.overSend} ${r.unit}</b>，仓库已照收入寄存库存。<b>多送的部分当天不参与售卖</b>（当日可卖上限仍是定稿的 ${r.planned} ${r.unit}），但会在今日应送里优先抵扣掉。</div>`:''}
       </div></div>
 
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">那今天该送多少</h4>
@@ -452,7 +463,7 @@
         <td>${r.wh}</td>
         <td style="text-align:right">${r.planned} <span style="color:var(--ts)">${r.unit}</span>
           <div style="font-size:11px;color:var(--ts)">订单 ${r.orderQty} · <span style="color:var(--gold)">预送 ${r.psQty}</span></div></td>
-        <td style="text-align:right">${r.received}${r.shortSend>0?`<div style="font-size:11px;color:var(--r)">少送 ${r.shortSend}</div>`:''}</td>
+        <td style="text-align:right">${r.received}${r.shortSend>0?`<div style="font-size:11px;color:var(--r)">短收 ${r.shortSend}</div>`:''}${r.overSend>0?`<div style="font-size:11px;color:var(--gold)">多收 +${r.overSend}</div>`:''}</td>
         <td style="text-align:right;color:var(--ts)">${r.sold}</td>
         <td style="text-align:right">${r.leftover>0?`<span style="color:var(--y)">${r.leftover}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
         <td style="text-align:right">${r.missed>0?`<span style="color:var(--r)">${r.missed}</span><div style="font-size:11px;color:var(--tt)">${r.soldOutAt} 售罄</div>`:'<span style="color:var(--tt)">—</span>'}</td>
@@ -461,11 +472,31 @@
       </tr>`;}).join('')
       : `<tr><td colspan="9"><div class="empty"><div class="e-ic">${icon('📊')}</div><div class="e-t">当前筛选下无复盘记录</div><div class="e-s">换个仓库或结果类型再看看</div></div></td></tr>`;
 
+    // 送收对账（日结盘点）：今天送了多少、仓库收了多少、差多少
+    const T=f=>DB.presendRecon.reduce((a,r)=>a+f(r),0);
+    const sumPlanned=T(r=>r.planned),sumRecv=T(r=>r.received),sumShort=T(r=>r.shortSend),sumOver=T(r=>r.overSend);
+    const kpi=(l,v,c,sub)=>`<div style="flex:1;min-width:110px">
+      <div style="font-size:11.5px;color:var(--ts)">${l}</div>
+      <div style="font-size:19px;font-weight:600;margin-top:2px;${c?'color:'+c:''}">${v}</div>
+      ${sub?`<div style="font-size:11px;color:var(--tt);margin-top:2px">${sub}</div>`:''}</div>`;
+
     return `
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">${icon('📊')}</span><div>
-      <b>送货复盘</b>：看昨天送的货<b>送多了还是送少了</b>，以及<b>今天该送多少</b>。
+      <b>送货复盘</b>：一页看完当天这批货的<b>送收</b>与<b>卖出</b>——送了多少、仓库收了多少、卖了多少、剩多少，以及<b>今天该送多少</b>。
       送多了 → 卖剩的留仓，<b>自动抵扣今日应送量</b>；送少了 → 提前售罄、少接的单在这里能看到，算法会据此修正后续预送量。
       <b>今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余</b>。</div></div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hd"><h3>送收对账 · ${DB.presendReconDate}</h3><span class="sub">你送的 vs 仓库收的，逐日盘点；多收照收入寄存，当日不参与售卖</span></div>
+      <div class="card-bd">
+        <div class="row" style="gap:26px;flex-wrap:wrap;align-items:flex-start">
+          ${kpi('应送合计',sumPlanned,'','订单量 + 预送量')}
+          ${kpi('仓库实收',sumRecv,'','收货清点回写')}
+          ${kpi('短收',sumShort?'−'+sumShort:'0',sumShort?'var(--r)':'','没送足，当日配额同步下调')}
+          ${kpi('多收',sumOver?'+'+sumOver:'0',sumOver?'var(--gold)':'','已入在仓寄存，次日优先抵扣')}
+        </div>
+      </div>
+    </div>
 
     <div class="tabs" style="margin-bottom:12px">
       ${[['all','全部'],['over','送多了'],['short','送少了'],['fit','刚好']]
@@ -490,7 +521,7 @@
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr>
         <th>商品</th><th>入库仓库</th>
-        <th style="text-align:right">应送</th><th style="text-align:right">实际送达</th><th style="text-align:right">卖出</th>
+        <th style="text-align:right">应送</th><th style="text-align:right">仓库实收</th><th style="text-align:right">卖出</th>
         <th style="text-align:right">卖剩留仓</th><th style="text-align:right">没接住</th><th>结果</th>
         <th style="text-align:right">今日应送</th>
       </tr></thead><tbody>${body}</tbody>
