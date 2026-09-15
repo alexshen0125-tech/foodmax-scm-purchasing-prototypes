@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【FMS主数据-法人公司】原型</title>
+<style>
+:root{--p:#009919;--p9:#ebf9ec;--p8:#d6f3d9;--bg:#f2f2f2;--border:#dcdfe6;--text:#333;--text2:#606266;--text3:#909399;--th-bg:#f4f4f4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:PingFang SC,Helvetica Neue,Helvetica,Hiragino Sans GB,Microsoft YaHei,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{text-decoration:none;color:inherit}
+/* Header */
+.hd{display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 20px 0 32px;background:var(--p);position:fixed;top:0;left:0;right:0;z-index:100}
+.hd span{color:#fff}
+.hd-t{flex-shrink:0;display:flex;align-items:center;gap:14px}
+.hd-t .st{color:#fff;font-size:16px;font-weight:600}
+.ui{flex-shrink:0;display:flex;align-items:center;gap:16px;color:#fff;font-size:13px}
+/* Form */
+.sf{padding:12px;margin-bottom:10px;background:#fff}
+.sr{display:flex;flex-wrap:wrap;margin:0 -10px}
+.sc{padding:0 10px}
+.sc4{width:16.666%;flex:0 0 16.666%}
+.sc6{width:25%;flex:0 0 25%}
+.fi{display:flex;align-items:center;margin-bottom:4px}
+.fl{font-size:13px;color:var(--text);white-space:nowrap;min-width:90px;text-align:right;padding-right:8px}
+.inp{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none;background:#fff;height:32px}
+.inp:focus{border-color:var(--p)}
+.sel{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:#fff;outline:none;height:32px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.sb{display:flex;align-items:center;gap:8px}
+.sf.cl .sc4:nth-child(n+4){display:none}
+/* Buttons */
+.bt{padding:8px 15px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--text2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.bt:hover{border-color:var(--p);color:var(--p)}
+.bp{background:var(--p);color:#fff;border-color:var(--p)}
+.bp:hover{opacity:.85;color:#fff}
+.bs{padding:5px 11px;font-size:13px}
+.bl{background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;padding:0 2px}
+.bl:hover{opacity:.7}
+.bd{background:none;border:none;color:#E12121;cursor:pointer;font-size:13px;padding:0 2px}
+/* Table */
+.tl{background:#fff;padding:8px 12px;overflow:auto}
+.ta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;height:32px}
+.ta>div{display:flex;align-items:center;gap:8px}
+.tt{font-size:16px;color:var(--text);font-weight:600;margin-right:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--th-bg)}
+th{padding:10px 12px;text-align:left;font-weight:500;color:var(--text);border-bottom:1px solid #e8e8e8;white-space:nowrap;font-size:13px}
+td{padding:3px 12px;border-bottom:1px solid #f0f0f0;color:var(--text);height:40px}
+tr:hover td{background:var(--p9)}
+.dl{cursor:pointer;color:var(--p)}
+.dl:hover{opacity:.7}
+.ts{overflow-x:auto}
+small.su{font-size:12px;color:#999}
+/* Status */
+.sb2{height:24px;line-height:24px;padding:0 6px;font-size:12px;border-radius:2px;text-align:center;width:max-content;display:inline-block}
+.s1{border:1px solid #81D89B;background:#F0F9EB;color:#2FB157}
+.s2{background:#FFEDEA;border:1px solid #F78D94;color:#E12121}
+.s3{background:#ECF7FF;border:1px solid #73C2FF;color:#0091FF}
+.s4{background:#FEF6EC;border:1px solid #FCA971;color:#F96500}
+.s5{border:1px solid #DDD;background:#FCFCFC;color:#999}
+.s6{border:1px solid #B680EB;background:#F6EDFF;color:#751FCC}
+/* Pagination */
+.pn{padding:14px 0 0;display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.pn select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px}
+.pb{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;background:#fff;color:var(--text2)}
+.pb.on{background:var(--p);color:#fff;border-color:var(--p)}
+/* Dialog */
+.vm{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:center}
+.vm.show{display:flex}
+.dg{background:#fff;border-radius:4px;max-height:85vh;overflow-y:auto}
+.dh{padding:16px 20px;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center}
+.dh .dt{font-size:16px;font-weight:600;color:var(--text)}
+.dc{cursor:pointer;font-size:18px;color:var(--text3);border:none;background:none}
+.db{padding:20px}
+.df{padding:12px 20px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;gap:8px}
+.dr{display:flex;gap:16px;margin-bottom:16px}
+.dx{flex:1}
+.dx label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.dx label .rq{color:#f56c6c;margin-right:4px}
+.dx .inp,.dx .sel{width:100%}
+/* Drawer */
+.dw-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:150}
+.dw-ov.show{display:block}
+.dw{position:fixed;top:0;right:0;width:75%;height:100vh;background:#fff;box-shadow:-4px 0 12px rgba(0,0,0,.1);z-index:151;display:flex;flex-direction:column}
+.dw-h{height:48px;line-height:48px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.dw-h .dt{font-weight:600;font-size:16px}
+.dw-b{flex:1;overflow-y:auto;border:10px solid var(--bg);border-bottom:1px solid var(--bg);padding:16px}
+.dw-f{padding:10px 14px;box-shadow:0px -2px 15px rgba(0,0,0,.1);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+/* Detail */
+.det-sec{margin-bottom:20px}
+.det-t{font-size:15px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e8e8e8}
+.det-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.det-item{display:flex;align-items:center;height:40px;padding:0 12px}
+.det-l{font-size:13px;color:#999;min-width:100px}
+.det-v{font-size:13px;color:var(--text)}
+/* Config chip */
+.ck{background:#F0F9EB;padding:2px 10px;border-radius:12px;font-size:12px;color:#2FB157;border:1px solid #81D89B}
+/* Feature notes */
+.fn{margin-top:12px;background:#FFFDF2;border:1px solid #FCA971;border-radius:4px;padding:12px 16px;font-size:13px;color:#333}
+.fn-t{font-weight:600;font-size:14px;margin-bottom:8px;color:#F96500}
+.fn ul{padding-left:20px;margin:0}
+.fn li{margin-bottom:4px;line-height:1.6}
+.fn .tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;margin-right:4px}
+.fn .t-new{background:#ECF7FF;color:#0091FF}
+.fn .t-chg{background:#FEF6EC;color:#F96500}
+.fn .t-del{background:#FFEDEA;color:#E12121}
+.fn .t-keep{background:#F0F9EB;color:#2FB157}
+/* Confirm */
+.cf-box{background:#fff;border-radius:4px;width:420px;padding:24px}
+.cf-icon{font-size:24px;color:#F96500;margin-right:12px}
+.cf-msg{font-size:16px;margin-bottom:20px;display:flex;align-items:center}
+.cf-btns{display:flex;justify-content:flex-end;gap:8px}
+/* Index page */
+.ix-wrap{padding:32px;max-width:1200px;margin:0 auto}
+.ix-h{font-size:22px;font-weight:600;margin-bottom:8px;color:var(--text)}
+.ix-d{font-size:13px;color:var(--text3);margin-bottom:24px}
+.ix-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ix-card{background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:18px 20px;cursor:pointer;transition:all .2s;display:block}
+.ix-card:hover{border-color:var(--p);box-shadow:0 4px 12px rgba(0,153,25,.12);transform:translateY(-2px)}
+.ix-card .ix-t{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.ix-card .ix-tag{font-size:11px;padding:1px 6px;border-radius:2px;font-weight:400}
+.ix-card .ix-d2{font-size:12px;color:var(--text3);line-height:1.6;min-height:40px}
+.ix-section{font-size:13px;font-weight:600;color:var(--text2);margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
+</style>
+<style>body{padding-top:54px}.main{padding:10px}.hd a{color:#fff;text-decoration:none;font-size:13px}.hd a:hover{opacity:.8}</style>
+</head>
+<body>
+<div class="hd">
+  <div class="hd-t"><span class="st">财务中台国际 — 法人公司</span></div>
+  <div class="ui"><a href="【FMS主数据】原型入口.html">← 返回原型入口</a></div>
+</div>
+<div class="main">
+
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">公司核算编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">公司名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">客商核算编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">企业税号</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">所属账簿</label><div style="flex:1"><select class="sel"><option>请选择</option><option>DDMC_SOB_KA_SR</option><option>DDMC_SOB_KM_USD</option><option>DDMC_SOB_MY_MYR</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">核算本位币</label><div style="flex:1"><select class="sel"><option>请选择</option><option>SGD</option><option>MYR</option><option>SAR</option><option>AED</option><option>AUD</option><option>USD</option><option>JPY</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">法人公司</div></div><div><button class="bt bp bs" onclick="sd('d-corp-add')">新增</button></div></div>
+  <div class="ts"><table><thead><tr><th>公司名称</th><th>企业税号</th><th>核算本位币</th><th>公司状态</th><th>开业时间</th><th>客商核算编码</th><th>所属账簿</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>MUTTHUMASAL-ARBIA For logistics (OnePartner)<br><small class="su">6001</small></td><td>1010927457</td><td>SAR</td><td><span class="sb2 s1">开业</span></td><td>2025-03-15</td><td><span class="dl">ACC-6001</span></td><td>DDMC_SOB_KA_SR</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>SUNSHINE LINE FOODSTUFF TRADING L.L.C<br><small class="su">6002</small></td><td>2050012345</td><td>AED</td><td><span class="sb2 s1">开业</span></td><td>2025-04-20</td><td><span class="dl">ACC-6002</span></td><td>DDMC_SOB_UAE_AED</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>EAT BETTER VEGETABLES &amp; FRUITS TRADING LLC<br><small class="su">6003</small></td><td>3080045678</td><td>AED</td><td><span class="sb2 s1">开业</span></td><td>2025-05-10</td><td><span class="dl">ACC-6003</span></td><td>DDMC_SOB_UAE_AED</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Company one kilometer deep agricultural technology<br><small class="su">6004</small></td><td>7050967939</td><td>SAR</td><td><span class="sb2 s1">开业</span></td><td>2025-07-30</td><td><span class="dl">ACC-6004</span></td><td>DDMC_SOB_KA_SR</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td>SI-343779</td><td>SGD</td><td><span class="sb2 s1">开业</span></td><td>2024-12-24</td><td><span class="dl">ACC-9051</span></td><td>DDMC_SOB_KM_USD</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Feel Green PTY LTD<br><small class="su">9063</small></td><td>AUD-00123</td><td>AUD</td><td><span class="sb2 s1">开业</span></td><td>2025-08-01</td><td><span class="dl">ACC-9063</span></td><td>DDMC_SOB_AU_AUD</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>FOODMAX SDN. BHD.<br><small class="su">9064</small></td><td>MYR-00456</td><td>MYR</td><td><span class="sb2 s1">开业</span></td><td>2025-06-01</td><td><span class="dl">ACC-9064</span></td><td>DDMC_SOB_MY_MYR</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 7 条</span><select><option>10 条/页</option><option>20 条/页</option><option>50 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 法人公司（沿用，小改动）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-del">移除</span>弹框去掉「纳税类型」「公司类型」字段（海外各国税制不同，不适用统一分类）</li>
+  <li><span class="tag t-del">移除</span>列表去掉「租户」列（法人公司与租户无绑定关系，一个公司可被多个站点使用）</li>
+  <li><span class="tag t-new">新增</span>弹框新增「客商核算档案」字段</li>
+  <li><span class="tag t-new">新增</span>搜索条件新增「核算本位币」筛选</li>
+  <li><span class="tag t-chg">修复</span>公司名称允许包含空格，不做 trim 处理</li>
+  <li><span class="tag t-chg">数据</span>存量公司名称空格修复（对照上游数据源刷一轮）</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">字段说明</p><ul>
+  <li><b>法人公司名称</b>（必填）：允许空格，支持多语言</li>
+  <li><b>法人公司编码</b>（必填）：全局唯一，创建后不可修改</li>
+  <li><b>企业税号</b>（必填）：不可重复</li>
+  <li><b>核算本位币</b>（必填）：SGD/MYR/SAR/AED/AUD/USD 等</li>
+  <li><b>客商核算档案</b>（选填）：关联客商核算档案，用于标记关联方</li>
+  <li><b>EBS 核算编码</b>（选填）：若存在内部往来业务需填写，用于往来记账</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-13：法人公司名称、编码、税号不可重复</li>
+  <li>BR-14：法人公司与租户无绑定关系，一个公司可被多个站点使用</li>
+  <li>BR-15：公司名称允许包含空格，不做 trim 处理</li>
+  <li>BR-16a：「所属账簿」字段取值来自<a class="dl" onclick="sd('d-book-dict')">账簿字典</a>，新增账簿需先在字典中维护并启用；仅启用状态的账簿在表单下拉中可选</li>
+</ul></div>
+
+<!-- 法人公司-新增弹框 -->
+<div class="vm" id="d-corp-add"><div class="dg" style="width:60%"><div class="dh"><span class="dt">新增</span><button class="dc" onclick="hd('d-corp-add')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>法人公司名称</label><input class="inp" placeholder="请输入"></div><div class="dx"><label><span class="rq">*</span>法人公司编码</label><input class="inp" placeholder="请输入"></div><div class="dx"><label><span class="rq">*</span>企业税号</label><input class="inp" placeholder="请输入"></div></div>
+  <div class="dr"><div class="dx"><label>公司状态</label><select class="sel"><option>开业</option><option>注销</option></select></div><div class="dx"><label><span class="rq">*</span>开业时间</label><input class="inp" type="date"></div><div class="dx"><label>注销时间</label><input class="inp" type="date"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>核算本位币</label><select class="sel"><option>请选择</option><option>SGD</option><option>MYR</option><option>SAR</option><option>AED</option><option>AUD</option></select></div><div class="dx"><label>EBS核算编码</label><input class="inp" placeholder="请输入"></div><div class="dx"><label>所属账簿 <small style="color:#999">（取自字典）</small></label><select class="sel"><option>请选择</option><option>DDMC_SOB_KA_SR — 沙特账簿（SAR）</option><option>DDMC_SOB_UAE_AED — 阿联酋账簿（AED）</option><option>DDMC_SOB_KM_USD — 开曼账簿（USD/SGD）</option><option>DDMC_SOB_MY_MYR — 马来西亚账簿（MYR）</option><option>DDMC_SOB_AU_AUD — 澳大利亚账簿（AUD）</option></select></div></div>
+  <div class="dr"><div class="dx"><label>客商核算档案</label><select class="sel"><option>请选择</option></select></div><div class="dx"><label>是否测试</label><select class="sel"><option>请选择</option><option>是</option><option>否</option></select></div><div class="dx"></div></div>
+  <div style="color:#F96500;font-size:12px">若该公司存在内部往来业务，请填写EBS核算编码，用于往来记账</div>
+  <div style="color:#999;font-size:12px;margin-top:4px">「所属账簿」选项来源于<a class="dl" onclick="sd('d-book-dict')">账簿字典</a>，仅展示「启用」状态的账簿；如需新增账簿请先在字典管理中维护并启用</div>
+</div><div class="df"><button class="bt" onclick="hd('d-corp-add')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 法人公司-编辑弹框 -->
+<div class="vm" id="d-corp-edit"><div class="dg" style="width:60%"><div class="dh"><span class="dt">编辑</span><button class="dc" onclick="hd('d-corp-edit')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>法人公司名称</label><input class="inp" value="Dingdong (Cayman) Limited"></div><div class="dx"><label><span class="rq">*</span>法人公司编码</label><input class="inp" value="9051" disabled style="background:#f5f7fa"></div><div class="dx"><label><span class="rq">*</span>企业税号</label><input class="inp" value="SI-343779"></div></div>
+  <div class="dr"><div class="dx"><label>公司状态</label><select class="sel"><option selected>开业</option><option>注销</option></select></div><div class="dx"><label><span class="rq">*</span>开业时间</label><input class="inp" type="date" value="2024-12-24"></div><div class="dx"><label>注销时间</label><input class="inp" type="date"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>核算本位币</label><select class="sel"><option>SGD</option></select></div><div class="dx"><label>EBS核算编码</label><input class="inp" value="500008"></div><div class="dx"><label>所属账簿 <small style="color:#999">（取自字典）</small></label><select class="sel"><option selected>DDMC_SOB_KM_USD — 开曼账簿（USD/SGD）</option><option>DDMC_SOB_KA_SR — 沙特账簿（SAR）</option><option>DDMC_SOB_UAE_AED — 阿联酋账簿（AED）</option><option>DDMC_SOB_MY_MYR — 马来西亚账簿（MYR）</option><option>DDMC_SOB_AU_AUD — 澳大利亚账簿（AUD）</option></select></div></div>
+  <div class="dr"><div class="dx"><label>客商核算档案</label><select class="sel"><option>ACC-9051</option></select></div><div class="dx"><label>是否测试</label><select class="sel"><option>否</option><option>是</option></select></div><div class="dx"></div></div>
+</div><div class="df"><button class="bt" onclick="hd('d-corp-edit')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 账簿字典抽屉 -->
+<div class="dw-ov" id="d-book-dict"><div class="dw"><div class="dw-h"><span class="dt">账簿字典维护</span><button class="dc" onclick="hd('d-book-dict')">×</button></div><div class="dw-b">
+  <div class="ta" style="margin-bottom:12px"><div><span style="color:#999;font-size:12px">所属账簿字段的取值来源；新增账簿后法人公司表单即可选用</span></div><div><button class="bt bp bs">新增账簿</button></div></div>
+  <table><thead><tr><th>账簿编码</th><th>账簿名称</th><th>本位币</th><th>关联法人公司数</th><th>状态</th><th>操作人/时间</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td><b>DDMC_SOB_KA_SR</b></td><td>沙特账簿</td><td>SAR</td><td>2</td><td><span class="sb2 s1">启用</span></td><td>SYSTEM<br><small class="su">2024-01-15 03:00</small></td><td><button class="bl">编辑</button> <button class="bl">停用</button></td></tr>
+    <tr><td><b>DDMC_SOB_UAE_AED</b></td><td>阿联酋账簿</td><td>AED</td><td>2</td><td><span class="sb2 s1">启用</span></td><td>SYSTEM<br><small class="su">2024-01-15 03:00</small></td><td><button class="bl">编辑</button> <button class="bl">停用</button></td></tr>
+    <tr><td><b>DDMC_SOB_KM_USD</b></td><td>开曼账簿（含 SGD）</td><td>USD</td><td>1</td><td><span class="sb2 s1">启用</span></td><td>SYSTEM<br><small class="su">2024-01-15 03:00</small></td><td><button class="bl">编辑</button> <button class="bl">停用</button></td></tr>
+    <tr><td><b>DDMC_SOB_MY_MYR</b></td><td>马来西亚账簿</td><td>MYR</td><td>1</td><td><span class="sb2 s1">启用</span></td><td>SYSTEM<br><small class="su">2024-01-15 03:00</small></td><td><button class="bl">编辑</button> <button class="bl">停用</button></td></tr>
+    <tr><td><b>DDMC_SOB_AU_AUD</b></td><td>澳大利亚账簿</td><td>AUD</td><td>1</td><td><span class="sb2 s1">启用</span></td><td>SYSTEM<br><small class="su">2024-01-15 03:00</small></td><td><button class="bl">编辑</button> <button class="bl">停用</button></td></tr>
+    <tr><td><b>DDMC_SOB_KW_KWD</b></td><td>科威特账簿（筹）</td><td>KWD</td><td>0</td><td><span class="sb2 s4">待启用</span></td><td>宋润芃<br><small class="su">2026-04-10 14:20</small></td><td><button class="bl">编辑</button> <button class="bl">启用</button></td></tr>
+    <tr><td>DDMC_SOB_OLD</td><td>叮咚国际账簿（旧）</td><td>CNY</td><td>0</td><td><span class="sb2 s5">停用</span></td><td>宋润芃<br><small class="su">2024-08-01 11:00</small></td><td><button class="bl">编辑</button> <button class="bl">启用</button></td></tr>
+  </tbody></table>
+  <div style="color:#F96500;font-size:12px;margin-top:12px">⚠ 停用账簿不影响已绑定的法人公司历史值，但下拉中不再展示；如需删除请先解除所有引用</div>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-book-dict')">关闭</button></div></div></div>
+
+<!-- 法人公司-日志抽屉 -->
+<div class="dw-ov" id="d-corp-log"><div class="dw"><div class="dw-h"><span class="dt">操作日志</span><button class="dc" onclick="hd('d-corp-log')">×</button></div><div class="dw-b">
+  <table><thead><tr><th>操作人</th><th>操作时间</th><th>操作类型</th><th>变更内容</th></tr></thead>
+  <tbody>
+    <tr><td>宋润芃</td><td>2026-04-12 14:30:22</td><td>编辑</td><td>公司名称：Dingdong(Cayman)Limited → Dingdong (Cayman) Limited</td></tr>
+    <tr><td>SYSTEM</td><td>2024-12-24 03:00:00</td><td>新增</td><td>新增法人公司：Dingdong(Cayman)Limited</td></tr>
+  </tbody></table>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-corp-log')">关闭</button></div></div></div>
+
+</div>
+<script>
+function sd(id){var el=document.getElementById(id);if(el)el.classList.add('show')}
+function hd(id){var el=document.getElementById(id);if(el)el.classList.remove('show')}
+function tf(b){var f=b.closest('.sf');if(f.classList.contains('cl')){f.classList.remove('cl');b.textContent='收起 ▴'}else{f.classList.add('cl');b.textContent='展开 ▾'}}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.vm').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+  document.querySelectorAll('.dw-ov').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+});
+</script>
+</body>
+</html>

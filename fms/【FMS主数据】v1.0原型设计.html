@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【FMS主数据】V1.0 原型设计</title>
+<style>
+:root{--p:#009919;--p9:#ebf9ec;--p8:#d6f3d9;--bg:#f2f2f2;--border:#dcdfe6;--text:#333;--text2:#606266;--text3:#909399;--th-bg:#f4f4f4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:PingFang SC,Helvetica Neue,Helvetica,Hiragino Sans GB,Microsoft YaHei,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+/* Header */
+.hd{display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 20px 0 32px;background:var(--p);position:fixed;top:0;left:0;right:0;z-index:100}
+.hd span{color:#fff}.hd-t{flex-shrink:0;width:230px;display:flex;align-items:center;gap:14px}.hd-t .st{color:#fff;font-size:16px;font-weight:600}
+.tm-bar{display:flex;align-items:center;flex:1}.tm{padding:0 16px;color:rgba(255,255,255,.75);font-size:14px;font-weight:500;cursor:pointer;text-decoration:none;height:54px;line-height:54px;display:inline-block;white-space:nowrap}.tm:hover{color:#fff}.tm.on{color:#fff;background:rgba(255,255,255,.15)}
+.ui{flex-shrink:0;display:flex;align-items:center;gap:16px;color:#fff;font-size:13px}
+/* Layout */
+.ly{display:flex;margin-top:54px;min-height:calc(100vh - 54px)}
+.lm{width:84px;background:#fff;border-right:1px solid #e8e8e8;position:fixed;top:54px;bottom:0;overflow-y:auto;z-index:50}
+.sm{display:flex;flex-direction:column;align-items:center;justify-content:center;height:72px;font-size:12px;color:#666;cursor:pointer;text-decoration:none;border-left:3px solid transparent;gap:4px}.sm:hover{color:var(--p);background:#f0faf1}.sm.on{color:var(--p);background:var(--p9);border-left-color:var(--p);font-weight:500}.sm .ic{font-size:20px}
+.rm{width:140px;background:#fff;border-right:1px solid #f0f0f0;position:fixed;top:54px;left:84px;bottom:0;overflow-y:auto;padding:8px 0}
+.ri{display:block;padding:10px 16px;font-size:13px;color:#666;cursor:pointer;text-decoration:none}.ri:hover{color:var(--p);background:#f0faf1}.ri.on{color:var(--p);background:var(--p9);font-weight:500}
+.tr{background:#fff;border-bottom:1px solid #e8e8e8;padding:0 12px;display:flex;align-items:center;height:36px;position:sticky;top:0;z-index:30;overflow-x:auto}
+.ti{display:flex;align-items:center;gap:4px;padding:4px 12px;font-size:12px;color:#666;background:#f5f5f5;border-radius:3px;margin-right:6px;cursor:pointer;white-space:nowrap;border:1px solid #e8e8e8}.ti.on{color:var(--p);background:var(--p9);border-color:var(--p)}
+.rc{margin-left:224px;flex:1;min-width:0}.rb{padding:10px}
+.pg{display:none}.pg.on{display:block}
+/* Form */
+.sf{padding:12px;margin-bottom:10px;background:#fff}
+.sr{display:flex;flex-wrap:wrap;margin:0 -10px}
+.sc{padding:0 10px}.sc4{width:16.666%;flex:0 0 16.666%}.sc6{width:25%;flex:0 0 25%}
+.fi{display:flex;align-items:center;margin-bottom:4px}
+.fl{font-size:13px;color:var(--text);white-space:nowrap;min-width:90px;text-align:right;padding-right:8px}
+.inp{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none;background:#fff;height:32px}
+.inp:focus{border-color:var(--p)}
+.sel{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:#fff;outline:none;height:32px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.sb{display:flex;align-items:center;gap:8px}
+.sf.cl .sc4:nth-child(n+4){display:none}
+/* Buttons */
+.bt{padding:8px 15px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--text2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.bt:hover{border-color:var(--p);color:var(--p)}
+.bp{background:var(--p);color:#fff;border-color:var(--p)}.bp:hover{opacity:.8;color:#fff}
+.bs{padding:5px 11px;font-size:13px}
+.bl{background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;padding:0 2px}.bl:hover{opacity:.7}
+.bd{background:none;border:none;color:#E12121;cursor:pointer;font-size:13px;padding:0 2px}
+/* Table */
+.tl{background:#fff;padding:8px 12px;overflow:auto}
+.ta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;height:32px}.ta>div{display:flex;align-items:center;gap:8px}
+.tt{font-size:16px;color:var(--text);font-weight:600;margin-right:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--th-bg)}
+th{padding:10px 12px;text-align:left;font-weight:500;color:var(--text);border-bottom:1px solid #e8e8e8;white-space:nowrap;font-size:13px}
+td{padding:3px 12px;border-bottom:1px solid #f0f0f0;color:var(--text);height:40px}
+tr:hover td{background:var(--p9)}
+.dl{cursor:pointer;color:var(--p)}.dl:hover{opacity:.7}
+.ts{overflow-x:auto}
+small.su{font-size:12px;color:#999}
+/* Status */
+.sb2{height:24px;line-height:24px;padding:0 6px;font-size:12px;border-radius:2px;text-align:center;width:max-content;display:inline-block}
+.s1{border:1px solid #81D89B;background:#F0F9EB;color:#2FB157}
+.s2{background:#FFEDEA;border:1px solid #F78D94;color:#E12121}
+.s3{background:#ECF7FF;border:1px solid #73C2FF;color:#0091FF}
+.s4{background:#FEF6EC;border:1px solid #FCA971;color:#F96500}
+.s5{border:1px solid #DDD;background:#FCFCFC;color:#999}
+.s6{border:1px solid #B680EB;background:#F6EDFF;color:#751FCC}
+/* Pagination */
+.pn{padding:14px 0 0;display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.pn select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px}
+.pb{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;background:#fff;color:var(--text2)}.pb.on{background:var(--p);color:#fff;border-color:var(--p)}
+/* Dialog */
+.vm{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:center}.vm.show{display:flex}
+.dg{background:#fff;border-radius:4px;max-height:85vh;overflow-y:auto}
+.dh{padding:16px 20px;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center}
+.dh .dt{font-size:16px;font-weight:600;color:var(--text)}
+.dc{cursor:pointer;font-size:18px;color:var(--text3);border:none;background:none}
+.db{padding:20px}.df{padding:12px 20px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;gap:8px}
+.dr{display:flex;gap:16px;margin-bottom:16px}.dx{flex:1}
+.dx label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.dx label .rq{color:#f56c6c;margin-right:4px}
+.dx .inp,.dx .sel{width:100%}
+/* Drawer */
+.dw-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:150}.dw-ov.show{display:block}
+.dw{position:fixed;top:0;right:0;width:75%;height:100vh;background:#fff;box-shadow:-4px 0 12px rgba(0,0,0,.1);z-index:151;display:flex;flex-direction:column}
+.dw-h{height:48px;line-height:48px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8e8e8;flex-shrink:0}.dw-h .dt{font-weight:600;font-size:16px}
+.dw-b{flex:1;overflow-y:auto;border:10px solid var(--bg);border-bottom:1px solid var(--bg);padding:16px}
+.dw-f{padding:10px 14px;box-shadow:0px -2px 15px rgba(0,0,0,.1);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+/* Detail */
+.det-sec{margin-bottom:20px}.det-t{font-size:15px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e8e8e8}
+.det-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.det-item{display:flex;align-items:center;height:40px;padding:0 12px}.det-l{font-size:13px;color:#999;min-width:100px}.det-v{font-size:13px;color:var(--text)}
+/* Config */
+.ck{background:#F0F9EB;padding:2px 10px;border-radius:12px;font-size:12px;color:#2FB157;border:1px solid #81D89B}
+.ep{padding:60px;text-align:center;color:var(--text3)}.ep p:first-child{font-size:16px;margin-bottom:8px;color:var(--text2)}
+/* Feature notes */
+.fn{margin-top:12px;background:#FFFDF2;border:1px solid #FCA971;border-radius:4px;padding:12px 16px;font-size:13px;color:#333}
+.fn-t{font-weight:600;font-size:14px;margin-bottom:8px;color:#F96500}
+.fn ul{padding-left:20px;margin:0}.fn li{margin-bottom:4px;line-height:1.6}
+.fn .tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;margin-right:4px}
+.fn .t-new{background:#ECF7FF;color:#0091FF}.fn .t-chg{background:#FEF6EC;color:#F96500}.fn .t-del{background:#FFEDEA;color:#E12121}.fn .t-keep{background:#F0F9EB;color:#2FB157}
+/* Confirm */
+.cf-box{background:#fff;border-radius:4px;width:420px;padding:24px}.cf-icon{font-size:24px;color:#F96500;margin-right:12px}
+.cf-msg{font-size:16px;margin-bottom:20px;display:flex;align-items:center}.cf-btns{display:flex;justify-content:flex-end;gap:8px}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-t"><img src="https://pub.foodexcdn.com/intl-ddxm-base-service/logo_foodmax_34a360f5cbf6464880fb04475ebbc208.png" alt="FoodMax" style="width:107px;height:32px"><span class="st">财务中台国际</span></div>
+  <div class="tm-bar"><a class="tm">应付管理</a><a class="tm">资金管理</a><a class="tm">存货核算</a><a class="tm">会计平台</a><a class="tm on">系统设置</a></div>
+  <div class="ui"><span>切换主题色</span><span>中文(Asia/Riyadh)</span><span>宋润芃 ▾</span></div>
+</div>
+<div class="ly">
+<div class="lm">
+  <a class="sm"><span class="ic">⚙</span>系统设置</a><a class="sm on"><span class="ic">📋</span>公共档案</a><a class="sm"><span class="ic">🔗</span>供应链档案</a><a class="sm"><span class="ic">💰</span>资金档案</a><a class="sm"><span class="ic">📄</span>税档案</a><a class="sm"><span class="ic">📑</span>单据中心</a><a class="sm"><span class="ic">🔔</span>预警规则</a>
+</div>
+<div class="rm">
+  <a class="ri on" onclick="sp('corp')">法人公司</a><a class="ri" onclick="sp('product')">商品/货品档案</a><a class="ri" onclick="sp('dept')">部门档案</a><a class="ri" onclick="sp('cc')">成本中心</a><a class="ri" onclick="sp('wh')">仓库档案</a><a class="ri" onclick="sp('vendor')">客商业务档案</a><a class="ri" onclick="sp('acct')">客商核算档案</a></div>
+<div class="rc">
+<div class="tr"><div class="ti on" id="tag-corp" onclick="sp('corp')">法人公司 ×</div></div>
+<div class="rb">
+
+<!-- ==================== 法人公司 ==================== -->
+<div class="pg on" id="pg-corp">
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">公司核算编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">公司名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">客商核算编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">企业税号</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">所属账簿</label><div style="flex:1"><select class="sel"><option>请选择</option><option>DDMC_SOB_KA_SR</option><option>DDMC_SOB_KM_USD</option><option>DDMC_SOB_MY_MYR</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">核算本位币</label><div style="flex:1"><select class="sel"><option>请选择</option><option>SGD</option><option>MYR</option><option>SAR</option><option>AED</option><option>AUD</option><option>USD</option><option>JPY</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">法人公司</div></div><div><button class="bt bp bs" onclick="sd('d-corp-add')">新增</button></div></div>
+  <div class="ts"><table><thead><tr><th>公司名称</th><th>企业税号</th><th>核算本位币</th><th>公司状态</th><th>开业时间</th><th>客商核算编码</th><th>所属账簿</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>MUTTHUMASAL-ARBIA For logistics (OnePartner)<br><small class="su">6001</small></td><td>1010927457</td><td>SAR</td><td><span class="sb2 s1">开业</span></td><td>2025-03-15</td><td><span class="dl">ACC-6001</span></td><td>DDMC_SOB_KA_SR</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>SUNSHINE LINE FOODSTUFF TRADING L.L.C<br><small class="su">6002</small></td><td>2050012345</td><td>AED</td><td><span class="sb2 s1">开业</span></td><td>2025-04-20</td><td><span class="dl">ACC-6002</span></td><td>DDMC_SOB_UAE_AED</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>EAT BETTER VEGETABLES &amp; FRUITS TRADING LLC<br><small class="su">6003</small></td><td>3080045678</td><td>AED</td><td><span class="sb2 s1">开业</span></td><td>2025-05-10</td><td><span class="dl">ACC-6003</span></td><td>DDMC_SOB_UAE_AED</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Company one kilometer deep agricultural technology<br><small class="su">6004</small></td><td>7050967939</td><td>SAR</td><td><span class="sb2 s1">开业</span></td><td>2025-07-30</td><td><span class="dl">ACC-6004</span></td><td>DDMC_SOB_KA_SR</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td>SI-343779</td><td>SGD</td><td><span class="sb2 s1">开业</span></td><td>2024-12-24</td><td><span class="dl">ACC-9051</span></td><td>DDMC_SOB_KM_USD</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Feel Green PTY LTD<br><small class="su">9063</small></td><td>AUD-00123</td><td>AUD</td><td><span class="sb2 s1">开业</span></td><td>2025-08-01</td><td><span class="dl">ACC-9063</span></td><td>DDMC_SOB_AU_AUD</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>FOODMAX SDN. BHD.<br><small class="su">9064</small></td><td>MYR-00456</td><td>MYR</td><td><span class="sb2 s1">开业</span></td><td>2025-06-01</td><td><span class="dl">ACC-9064</span></td><td>DDMC_SOB_MY_MYR</td><td><button class="bl" onclick="sd('d-corp-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 7 条</span><select><option>10 条/页</option><option>20 条/页</option><option>50 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 法人公司（沿用，小改动）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-del">移除</span>弹框去掉「纳税类型」「公司类型」字段（海外各国税制不同，不适用统一分类）</li>
+  <li><span class="tag t-del">移除</span>列表去掉「租户」列（法人公司与租户无绑定关系，一个公司可被多个站点使用）</li>
+  <li><span class="tag t-new">新增</span>弹框新增「客商核算档案」字段</li>
+  <li><span class="tag t-new">新增</span>搜索条件新增「核算本位币」筛选</li>
+  <li><span class="tag t-chg">修复</span>公司名称允许包含空格，不做 trim 处理</li>
+  <li><span class="tag t-chg">数据</span>存量公司名称空格修复（对照上游数据源刷一轮）</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">字段说明</p><ul>
+  <li><b>法人公司名称</b>（必填）：允许空格，支持多语言</li>
+  <li><b>法人公司编码</b>（必填）：全局唯一，创建后不可修改</li>
+  <li><b>企业税号</b>（必填）：不可重复</li>
+  <li><b>核算本位币</b>（必填）：SGD/MYR/SAR/AED/AUD/USD 等</li>
+  <li><b>客商核算档案</b>（选填）：关联客商核算档案，用于标记关联方</li>
+  <li><b>EBS 核算编码</b>（选填）：若存在内部往来业务需填写，用于往来记账</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-13：法人公司名称、编码、税号不可重复</li>
+  <li>BR-14：法人公司与租户无绑定关系，一个公司可被多个站点使用</li>
+  <li>BR-15：公司名称允许包含空格，不做 trim 处理</li>
+</ul></div>
+</div>
+
+<!-- 法人公司-新增弹框 -->
+<div class="vm" id="d-corp-add"><div class="dg" style="width:60%"><div class="dh"><span class="dt">新增</span><button class="dc" onclick="hd('d-corp-add')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>法人公司名称</label><input class="inp" placeholder="请输入"></div><div class="dx"><label><span class="rq">*</span>法人公司编码</label><input class="inp" placeholder="请输入"></div><div class="dx"><label><span class="rq">*</span>企业税号</label><input class="inp" placeholder="请输入"></div></div>
+  <div class="dr"><div class="dx"><label>公司状态</label><select class="sel"><option>开业</option><option>注销</option></select></div><div class="dx"><label><span class="rq">*</span>开业时间</label><input class="inp" type="date"></div><div class="dx"><label>注销时间</label><input class="inp" type="date"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>核算本位币</label><select class="sel"><option>请选择</option><option>SGD</option><option>MYR</option><option>SAR</option><option>AED</option><option>AUD</option></select></div><div class="dx"><label>EBS核算编码</label><input class="inp" placeholder="请输入"></div><div class="dx"><label>所属账簿</label><select class="sel"><option>请选择</option></select></div></div>
+  <div class="dr"><div class="dx"><label>客商核算档案</label><select class="sel"><option>请选择</option></select></div><div class="dx"><label>是否测试</label><select class="sel"><option>请选择</option><option>是</option><option>否</option></select></div><div class="dx"></div></div>
+  <div style="color:#F96500;font-size:12px">若该公司存在内部往来业务，请填写EBS核算编码，用于往来记账</div>
+</div><div class="df"><button class="bt" onclick="hd('d-corp-add')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 法人公司-编辑弹框 -->
+<div class="vm" id="d-corp-edit"><div class="dg" style="width:60%"><div class="dh"><span class="dt">编辑</span><button class="dc" onclick="hd('d-corp-edit')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>法人公司名称</label><input class="inp" value="Dingdong (Cayman) Limited"></div><div class="dx"><label><span class="rq">*</span>法人公司编码</label><input class="inp" value="9051" disabled style="background:#f5f7fa"></div><div class="dx"><label><span class="rq">*</span>企业税号</label><input class="inp" value="SI-343779"></div></div>
+  <div class="dr"><div class="dx"><label>公司状态</label><select class="sel"><option selected>开业</option><option>注销</option></select></div><div class="dx"><label><span class="rq">*</span>开业时间</label><input class="inp" type="date" value="2024-12-24"></div><div class="dx"><label>注销时间</label><input class="inp" type="date"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>核算本位币</label><select class="sel"><option>SGD</option></select></div><div class="dx"><label>EBS核算编码</label><input class="inp" value="500008"></div><div class="dx"><label>所属账簿</label><select class="sel"><option>DDMC_SOB_KM_USD</option></select></div></div>
+  <div class="dr"><div class="dx"><label>客商核算档案</label><select class="sel"><option>ACC-9051</option></select></div><div class="dx"><label>是否测试</label><select class="sel"><option>否</option><option>是</option></select></div><div class="dx"></div></div>
+</div><div class="df"><button class="bt" onclick="hd('d-corp-edit')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 法人公司-日志抽屉 -->
+<div class="dw-ov" id="d-corp-log"><div class="dw"><div class="dw-h"><span class="dt">操作日志</span><button class="dc" onclick="hd('d-corp-log')">×</button></div><div class="dw-b">
+  <table><thead><tr><th>操作人</th><th>操作时间</th><th>操作类型</th><th>变更内容</th></tr></thead>
+  <tbody>
+    <tr><td>宋润芃</td><td>2026-04-12 14:30:22</td><td>编辑</td><td>公司名称：Dingdong(Cayman)Limited → Dingdong (Cayman) Limited</td></tr>
+    <tr><td>SYSTEM</td><td>2024-12-24 03:00:00</td><td>新增</td><td>新增法人公司：Dingdong(Cayman)Limited</td></tr>
+  </tbody></table>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-corp-log')">关闭</button></div></div></div>
+
+<!-- ==================== 仓库档案 ==================== -->
+<div class="pg" id="pg-wh">
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">租户</label><div style="flex:1"><select class="sel"><option>请选择</option><option>XM_GLOBAL_SGD</option><option>XM_GLOBAL_MYR</option><option>XM_GLOBAL_KSA</option><option>XM_GLOBAL_UAE</option><option>XM_GLOBAL_AUD</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">所属公司</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">仓库编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">仓库名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">部门</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">入账公司</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">状态</label><div style="flex:1"><select class="sel"><option>请选择</option><option>生效</option><option>失效</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">仓库状态</label><div style="flex:1"><select class="sel"><option>请选择</option><option>废弃</option><option>启用</option><option>待改造</option><option>待启用</option><option>启用审批中</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">测试标识</label><div style="flex:1"><select class="sel"><option>请选择</option><option>是</option><option>否</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">区域</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">仓库父子类型</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">仓库档案</div></div><div><button class="bt bs">导出</button><button class="bt bp bs" onclick="sd('d-wh-add')">新增</button></div></div>
+  <div class="ts"><table><thead><tr><th>租户</th><th>仓库名称</th><th>仓库父类型</th><th>仓库子类型</th><th>业务ID</th><th>仓库全称</th><th>仓库状态</th><th>部门</th><th>成本中心</th><th>区域</th><th>所属公司</th><th>入账公司</th><th>测试标识</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>XM_GLOBAL_SGD</td><td>SG Main Warehouse<br><small class="su">SG-WH-001</small></td><td>大仓</td><td>常温大仓</td><td>B-SG001</td><td>新加坡-大仓-SG Main Warehouse</td><td><span class="sb2 s1">启用</span></td><td>SG_Foodmax BU<br><small class="su">D001</small></td><td>ME570101</td><td>Central</td><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">生效</span></td><td><button class="bl" onclick="sd('d-wh-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>XM_GLOBAL_SGD</td><td>SG Cold Storage<br><small class="su">SG-WH-002</small></td><td>大仓</td><td>冷藏大仓</td><td>B-SG002</td><td>新加坡-大仓-SG Cold Storage</td><td><span class="sb2 s1">启用</span></td><td>SG_Foodmax BU<br><small class="su">D001</small></td><td>ME570101</td><td>Central</td><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">生效</span></td><td><button class="bl" onclick="sd('d-wh-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>XM_GLOBAL_KSA</td><td>KSA Riyadh Warehouse<br><small class="su">KSA-WH-001</small></td><td>大仓</td><td>常温大仓</td><td>B-KSA001</td><td>沙特-大仓-KSA Riyadh Warehouse</td><td><span class="sb2 s1">启用</span></td><td>KSA BU<br><small class="su">D010</small></td><td>ME580101</td><td>Riyadh</td><td>MUTTHUMASAL-ARBIA<br><small class="su">6001</small></td><td>MUTTHUMASAL-ARBIA<br><small class="su">6001</small></td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">生效</span></td><td><button class="bl" onclick="sd('d-wh-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>XM_GLOBAL_SGD</td><td>SG Virtual Adjustment<br><small class="su">SG-VW-001</small></td><td>其他</td><td>虚拟仓</td><td>—</td><td>新加坡-虚拟仓-SG Virtual Adjustment</td><td><span class="sb2 s1">启用</span></td><td>—</td><td>—</td><td>—</td><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td>Dingdong (Cayman) Limited<br><small class="su">9051</small></td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">生效</span></td><td><button class="bl" onclick="sd('d-wh-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 4 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 仓库档案（重构）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-new">新增</span>接入实体仓库（从 WMS 推送），与虚拟仓在同一档案中管理</li>
+  <li><span class="tag t-del">移除</span>去掉字段：国家、省份、城市、仓库类型（storeType）、供应链 ID、C 端 ID</li>
+  <li><span class="tag t-chg">变更</span>仓库大类/小类替代原仓库类型：<b>保留父子类型结构</b>便于扩展，但海外具体类型值需根据业务重新定义（不完全沿用国内大仓/前仓/城市仓/城市奥莱等）</li>
+  <li><span class="tag t-chg">变更</span>虚拟仓新增简化：仅需填写租户 + 公司 + 仓库名称</li>
+  <li><span class="tag t-chg">数据</span>废弃租户相关仓库数据清理</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">交互说明</p><ul>
+  <li><b>新增按钮</b>：仅允许新增虚拟仓，弹框只有租户、公司、仓库名称三个字段</li>
+  <li><b>编辑按钮</b>：打开编辑弹框，租户/仓库编码/仓库名称为只读，可编辑所属公司、入账公司、部门、成本中心等</li>
+  <li><b>实体仓库</b>：不提供手动新增入口，只能从 WMS 推送接入</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-05：FMS 仅允许手动新增虚拟仓，新增表单：租户 + 公司 + 仓库名称</li>
+  <li>BR-06：实体仓库只能从 WMS 推送接入，不允许手动新增</li>
+  <li>BR-07：虚拟仓和实体仓在同一档案中管理，通过仓库大类/小类区分</li>
+  <li>BR-08：仓库大类/小类保留父子结构，全局通用字典，不按租户区分；海外具体类型值待定义</li>
+  <li>BR-09：非虚拟仓的 HR 部门由上游系统推送，FMS 不允许修改</li>
+</ul></div>
+</div>
+
+<!-- 仓库-新增虚拟仓 -->
+<div class="vm" id="d-wh-add"><div class="dg" style="width:420px"><div class="dh"><span class="dt">新增虚拟仓</span><button class="dc" onclick="hd('d-wh-add')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>租户</label><select class="sel"><option>请选择</option><option>XM_GLOBAL_SGD</option><option>XM_GLOBAL_MYR</option><option>XM_GLOBAL_KSA</option><option>XM_GLOBAL_UAE</option><option>XM_GLOBAL_AUD</option></select></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>公司</label><select class="sel"><option>请选择</option><option>Dingdong (Cayman) Limited</option><option>FOODMAX SDN. BHD.</option></select></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>仓库名称</label><input class="inp" placeholder="请输入仓库名称"></div>
+</div><div class="df"><button class="bt" onclick="hd('d-wh-add')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 仓库-编辑 -->
+<div class="vm" id="d-wh-edit"><div class="dg" style="width:60%"><div class="dh"><span class="dt">编辑</span><button class="dc" onclick="hd('d-wh-edit')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label>租户</label><input class="inp" value="XM_GLOBAL_SGD" disabled style="background:#f5f7fa"></div><div class="dx"><label>仓库编码</label><input class="inp" value="SG-WH-001" disabled style="background:#f5f7fa"></div><div class="dx"><label>仓库名称</label><input class="inp" value="SG Main Warehouse" disabled style="background:#f5f7fa"></div></div>
+  <div class="dr"><div class="dx"><label>所属公司</label><select class="sel"><option>Dingdong (Cayman) Limited</option></select></div><div class="dx"><label><span class="rq">*</span>入账公司</label><select class="sel"><option>Dingdong (Cayman) Limited</option></select></div><div class="dx"><label>部门</label><select class="sel"><option>SG_Foodmax BU</option></select></div></div>
+  <div class="dr"><div class="dx"><label>成本中心</label><select class="sel"><option>ME570101</option></select></div><div class="dx"><label>是否对外开放</label><select class="sel"><option>否</option><option>是</option></select></div><div class="dx"></div></div>
+</div><div class="df"><button class="bt" onclick="hd('d-wh-edit')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- ==================== 商品/货品档案 ==================== -->
+<div class="pg" id="pg-product">
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">渠道来源</label><div style="flex:1"><select class="sel"><option>全部</option><option>OMS</option><option>PMS</option><option>SRM</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">租户</label><div style="flex:1"><select class="sel"><option>全部</option><option>XM_GLOBAL_SGD</option><option>XM_GLOBAL_MYR</option><option>XM_GLOBAL_KSA</option><option>XM_GLOBAL_UAE</option><option>XM_GLOBAL_AUD</option><option>（空）集团综采</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">商品段</label><div style="flex:1"><select class="sel"><option>请选择</option><option>冷鲜肉类</option><option>蔬菜类</option><option>水果类</option><option>调味品类</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">税率</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>已生效</option><option>已废弃</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">商品/货品档案</div></div><div><button class="bt bs" onclick="sd('d-prod-seg')">关联商品段</button><button class="bt bs" onclick="sd('d-prod-tax')">关联税务</button><button class="bt bs">导出</button></div></div>
+  <div class="ts"><table><thead><tr><th>渠道来源</th><th>类型</th><th>租户</th><th>商品名称</th><th>一级分类</th><th>二级分类</th><th>三级分类</th><th>四级分类</th><th>五级分类</th><th>商品段</th><th>税率(%)</th><th>税务分类</th><th>单位</th><th>是否测试</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td><span class="sb2 s3">商品中心</span></td><td><span class="sb2 s3">商品</span></td><td>XM_GLOBAL_SGD</td><td>Fresh Chicken Breast 500g<br><small class="su">SKU-100001</small></td><td>Food</td><td>Meat</td><td>Poultry</td><td>Chicken</td><td>Breast</td><td>冷鲜肉类</td><td>9</td><td>肉类及制品</td><td>包</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td><span class="sb2 s3">商品中心</span></td><td><span class="sb2 s3">商品</span></td><td>XM_GLOBAL_SGD</td><td>Fresh Salmon Fillet 300g<br><small class="su">SKU-100002</small></td><td>Food</td><td>Seafood</td><td>Fish</td><td>Salmon</td><td>—</td><td>水产类</td><td>0</td><td>水产品</td><td>盒</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td><span class="sb2 s3">商品中心</span></td><td><span class="sb2 s3">商品</span></td><td>XM_GLOBAL_MYR</td><td>Kangkung 250g<br><small class="su">SKU-200001</small></td><td>Food</td><td>Vegetables</td><td>Leafy</td><td>—</td><td>—</td><td>蔬菜类</td><td>0</td><td>蔬菜</td><td>把</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td><span class="sb2 s4">PMS</span></td><td><span class="sb2 s4">货品</span></td><td>XM_GLOBAL_SGD</td><td>Frozen Chicken Breast 10kg<br><small class="su">GOODS-200001</small></td><td>食品</td><td>肉禽</td><td>禽类</td><td>鸡肉</td><td>—</td><td>冷鲜肉类</td><td>9</td><td>肉类及制品</td><td>箱</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td><span class="sb2 s4">PMS</span></td><td><span class="sb2 s4">货品</span></td><td>XM_GLOBAL_KSA</td><td>Fresh Tomato 5kg<br><small class="su">GOODS-200002</small></td><td>食品</td><td>蔬菜</td><td>茄果</td><td>番茄</td><td>—</td><td>蔬菜类</td><td>0</td><td>蔬菜</td><td>箱</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td><span class="sb2 s6">SRM</span></td><td><span class="sb2 s4">货品</span></td><td><span class="sb2 s5">集团综采</span></td><td>Cooking Oil 5L<br><small class="su">GOODS-300001</small></td><td>食品</td><td>油脂</td><td>食用油</td><td>—</td><td>—</td><td>调味品类</td><td>9</td><td>食用油脂</td><td>桶</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td><span class="sb2 s6">SRM</span></td><td><span class="sb2 s4">货品</span></td><td><span class="sb2 s5">集团综采</span></td><td>Soy Sauce 1.8L<br><small class="su">GOODS-300002</small></td><td>食品</td><td>调味品</td><td>酱油</td><td>—</td><td>—</td><td>调味品类</td><td>9</td><td>调味品</td><td>瓶</td><td><span class="sb2 s5">否</span></td><td><span class="sb2 s1">已生效</span></td><td><button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 7 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 商品/货品档案（新接入）</div>
+<p style="margin:8px 0 4px;font-weight:600;">页面说明</p><ul>
+  <li>整个页面为 V1.0 新增，数据由上游系统推送，不支持手动新增</li>
+  <li>商品和货品在同一张表管理，通过「渠道来源」列区分：商品中心 = 商品，PMS/SRM = 货品</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">字段说明</p><ul>
+  <li><b>渠道来源</b>：商品中心（商品）、PMS（货品，按站点）、SRM（货品，集团级综采无租户）</li>
+  <li><b>分类</b>：商品使用前端分类，货品使用采购分类</li>
+  <li><b>商品段</b>：财务核算分类，货品基于采购分类自动映射，商品的映射方式待确认</li>
+  <li><b>单位</b>：商品显示销售单位，货品显示采购单位</li>
+  <li><b>租户</b>：SRM 来源的货品租户为空（显示「集团综采」）</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">工具栏操作</p><ul>
+  <li><b>关联商品段</b>：选中行后点击，批量关联商品段（核算分类）</li>
+  <li><b>关联税务</b>：选中行后点击，批量关联税务分类和税率</li>
+  <li><b>导出</b>：导出当前筛选结果</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-09：商品从商品中心推送，按站点隔离</li>
+  <li>BR-10：货品从 PMS 推送，按站点隔离；来源 SRM 的货品无租户（集团级综采）</li>
+  <li>BR-11：商品和货品在同一张表管理，通过来源系统区分</li>
+  <li>BR-12：货品基于采购分类映射财务核算分类（商品段）</li>
+  <li>商品与货品的关系为 货品:商品 = 1:N（一对多），但该关系不在主数据范畴内管理</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">商货品使用场景差异（2026-04-15 会议结论）</p><ul>
+  <li><b>采购 / 供应商结算</b>：取<b>货品 (item)</b> — 采购合同、入库单、应付结算</li>
+  <li><b>仓储 / 库存管理</b>：取<b>货品 (item)</b> — 仓内作业、库存数量、移库调拨</li>
+  <li><b>前端销售 / 商城展示</b>：取<b>商品 (SKU)</b> — 订单下单记录商品</li>
+  <li><b>收入 / 应收核算</b>：取<b>商品 (SKU)</b> — 按 SKU 售价计算收入</li>
+  <li><b>出库执行</b>：订单下单的 SKU 按对应关系转换为相应数量 item 通知仓库出库</li>
+  <li><b>成本 / 毛利</b>：按 item 出库成本核算，毛利 = 商品售价 − 货品出库成本</li>
+</ul></div>
+</div>
+
+<!-- 商品-关联商品段 -->
+<div class="vm" id="d-prod-seg"><div class="dg" style="width:420px"><div class="dh"><span class="dt">关联商品段</span><button class="dc" onclick="hd('d-prod-seg')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">当前编码</label><input class="inp" value="SKU-100001" disabled style="background:#f5f7fa"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>商品段</label><select class="sel"><option>冷鲜肉类</option><option>蔬菜类</option><option>水果类</option><option>水产类</option><option>调味品类</option><option>粮油类</option></select></div>
+</div><div class="df"><button class="bt" onclick="hd('d-prod-seg')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 商品-关联税务 -->
+<div class="vm" id="d-prod-tax"><div class="dg" style="width:420px"><div class="dh"><span class="dt">关联税务分类</span><button class="dc" onclick="hd('d-prod-tax')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">当前编码</label><input class="inp" value="SKU-100001" disabled style="background:#f5f7fa"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>税务分类</label><select class="sel"><option>肉类及制品</option><option>水产品</option><option>蔬菜</option><option>食用油脂</option><option>调味品</option></select></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>税率(%)</label><input class="inp" value="9"></div>
+</div><div class="df"><button class="bt" onclick="hd('d-prod-tax')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- ==================== 部门档案 ==================== -->
+<div class="pg" id="pg-dept">
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">部门编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">部门名称</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">更新时间</label><div style="flex:1"><input class="inp" type="date"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">生效状态</label><div style="flex:1"><select class="sel"><option>请选择</option><option>在用</option><option>作废</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心名称</label><div style="flex:1"><select class="sel"><option>请选择</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">成本关联状态</label><div style="flex:1"><select class="sel"><option>请选择</option><option>未关联</option><option>已关联</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">部门档案</div></div><div><button class="bt bs">导出</button></div></div>
+  <div class="ts"><table><thead><tr><th>部门编码</th><th>部门名称</th><th>部门层级</th><th>成本中心名称</th><th>成本关联状态</th><th>生效状态</th><th>操作人/时间</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>D001</td><td>SG_Foodmax BU - SG_Foodmax BU - Warehouse</td><td>3</td><td>SG_Foodmax BU-Warehouse<br><small class="su">ME570101</small></td><td><span class="sb2 s1">已关联</span></td><td><span class="sb2 s1">已生效</span></td><td>SYSTEM<br><small class="su">2026-04-12 09:00</small></td><td><button class="bl" onclick="sd('d-dept-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>D002</td><td>支持部 - 支持部 - Finance</td><td>3</td><td>支持部-Finance<br><small class="su">ME700101</small></td><td><span class="sb2 s1">已关联</span></td><td><span class="sb2 s1">已生效</span></td><td>SYSTEM<br><small class="su">2026-04-12 09:00</small></td><td><button class="bl" onclick="sd('d-dept-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>D003</td><td>公司级项目组 - Sales Team</td><td>3</td><td>—</td><td><span class="sb2 s2">未关联</span></td><td><span class="sb2 s1">已生效</span></td><td>SYSTEM<br><small class="su">2025-09-15 09:00</small></td><td><button class="bl" onclick="sd('d-dept-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>D004</td><td>ICT - Intelligent Cooking Technology</td><td>3</td><td>—</td><td><span class="sb2 s2">未关联</span></td><td><span class="sb2 s1">已生效</span></td><td>SYSTEM<br><small class="su">2025-01-26 13:27</small></td><td><button class="bl" onclick="sd('d-dept-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 4 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 部门档案（沿用，小改）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-del">移除</span>列表去掉「工资成本中心名称」「工资成本关联状态」两列</li>
+  <li><span class="tag t-del">移除</span>搜索条件去掉「工资成本关联状态」「工资成本编码」「工资成本名称」三个筛选</li>
+  <li><span class="tag t-del">移除</span>编辑弹框去掉「薪酬成本中心」字段，只保留「成本中心」</li>
+  <li><span class="tag t-chg">数据</span>清除老公司的历史部门数据</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">交互说明</p><ul>
+  <li><b>编辑弹框</b>：上半部分（部门编码、名称、层级、上级部门）为只读信息，下半部分仅「成本中心」可编辑（必填，树形选择）</li>
+  <li><b>数据来源</b>：部门数据从 HRMS 同步，FMS 不做新增/删除，仅做成本中心关联</li>
+</ul></div>
+</div>
+
+<!-- 部门-编辑 -->
+<div class="vm" id="d-dept-edit"><div class="dg" style="width:60%"><div class="dh"><span class="dt">编辑</span><button class="dc" onclick="hd('d-dept-edit')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label>部门编码</label><input class="inp" value="D001" disabled style="background:#f5f7fa"></div><div class="dx"><label>部门名称</label><input class="inp" value="SG_Foodmax BU - Warehouse" disabled style="background:#f5f7fa"></div><div class="dx"><label>部门层级</label><input class="inp" value="3" disabled style="background:#f5f7fa"></div></div>
+  <div class="dr"><div class="dx"><label>上级部门编码</label><input class="inp" value="D000-1" disabled style="background:#f5f7fa"></div><div class="dx"><label>上级部门名称</label><input class="inp" value="SG_Foodmax BU" disabled style="background:#f5f7fa"></div><div class="dx"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>成本中心</label><select class="sel"><option>ME570101 - SG_Foodmax BU-Warehouse</option><option>ME600301 - Sales Team</option><option>ME700101 - Finance</option></select></div><div class="dx"></div><div class="dx"></div></div>
+</div><div class="df"><button class="bt" onclick="hd('d-dept-edit')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- ==================== 成本中心 ==================== -->
+<div class="pg" id="pg-cc">
+<div class="sf"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心级次</label><div style="flex:1"><select class="sel"><option>全部</option><option>1</option><option>2</option><option>3</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">生效状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>生效</option><option>失效</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">成本中心</div></div><div><button class="bt bs" onclick="sd('d-kw-config')">关键词映射配置</button><button class="bt bs">导出</button></div></div>
+  <div class="ts"><table><thead><tr><th>成本中心名称</th><th>成本中心级次</th><th>上级成本中心</th><th>上上级成本中心</th><th>成本中心分类</th><th>费用分类</th><th>匹配方式</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>SG_Foodmax BU - Warehouse Ops<br><small class="su">ME570101</small></td><td>三级</td><td>SG_Foodmax BU<br><small class="su">ME5701</small></td><td>SG<br><small class="su">ME57</small></td><td>—</td><td><span class="sb2 s1">履约</span></td><td><small class="su">关键词: warehouse</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Sales Team<br><small class="su">ME600301</small></td><td>三级</td><td>公司级项目组<br><small class="su">ME6003</small></td><td>项目组<br><small class="su">ME60</small></td><td>—</td><td><span class="sb2 s3">销售</span></td><td><small class="su">关键词: sales</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Finance Admin<br><small class="su">ME700101</small></td><td>三级</td><td>支持部<br><small class="su">ME7001</small></td><td>支持<br><small class="su">ME70</small></td><td>—</td><td><span class="sb2 s5">管理</span></td><td><small class="su">关键词: finance</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>ICT - Operations<br><small class="su">ME660101</small></td><td>三级</td><td>ICT<br><small class="su">ME6601</small></td><td>技术<br><small class="su">ME66</small></td><td>—</td><td><span class="sb2 s4">待确认</span></td><td><small style="color:#E12121">未匹配到关键词</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>BD Team<br><small class="su">ME600302</small></td><td>三级</td><td>公司级项目组<br><small class="su">ME6003</small></td><td>项目组<br><small class="su">ME60</small></td><td>—</td><td><span class="sb2 s3">销售</span></td><td><small class="su">关键词: BD</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>R&D Engineering<br><small class="su">ME660102</small></td><td>三级</td><td>ICT<br><small class="su">ME6601</small></td><td>技术<br><small class="su">ME66</small></td><td>—</td><td><span class="sb2 s6">研发</span></td><td><small class="su">关键词: R&D</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 484 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">2</span><span class="pb">...</span><span class="pb">49</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 成本中心（沿用，优化）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-new">新增</span>列表新增「费用分类」「匹配方式」列</li>
+  <li><span class="tag t-new">新增</span>三级成本中心生成时，按部门名称（英文）关键词自动匹配费用分类</li>
+  <li><span class="tag t-new">新增</span>匹配不上的标记为「待确认」，由财务人工编辑</li>
+  <li><span class="tag t-new">新增</span>工具栏「关键词映射配置」按钮，点击弹出抽屉管理关键词规则</li>
+  <li><span class="tag t-chg">数据</span>263 条空白分类记录跑一轮自动匹配</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">费用分类定义</p><ul>
+  <li><b>履约</b>：关键词示例 — warehouse, delivery, logistics, fulfillment</li>
+  <li><b>销售</b>：关键词示例 — sales, BD, business development</li>
+  <li><b>管理</b>：关键词示例 — finance, HR, admin, legal, office</li>
+  <li><b>研发</b>：关键词示例 — tech, engineering, dev, R&D, IT</li>
+  <li><b>待确认</b>：未匹配到任何关键词，需财务人工处理</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">关键词映射配置（抽屉）</p><ul>
+  <li>点击工具栏「关键词映射配置」按钮打开抽屉</li>
+  <li>支持新增、编辑、删除关键词规则</li>
+  <li>每条规则：一个英文关键词 → 一个费用分类（履约/销售/管理/研发）</li>
+  <li>系统在三级成本中心自动生成时，按部门名称匹配这些关键词</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-16：成本中心基于部门数据三级架构生成，沿用叮咚随动规则</li>
+  <li>BR-17：三级成本中心生成时，按部门名称关键词自动匹配费用分类</li>
+  <li>BR-18：关键词匹配不上的三级成本中心标记为「待确认」，由财务人工处理</li>
+  <li>BR-19：关键词→分类映射规则由财务在成本中心页面内的抽屉中维护</li>
+</ul></div>
+</div>
+
+<!-- 成本中心-编辑 -->
+<div class="vm" id="d-cc-edit"><div class="dg" style="width:420px"><div class="dh"><span class="dt">编辑费用分类</span><button class="dc" onclick="hd('d-cc-edit')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">成本中心</label><input class="inp" value="ME570101 - SG_Foodmax BU - Warehouse Ops" disabled style="background:#f5f7fa"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>费用分类</label><select class="sel"><option selected>履约</option><option>销售</option><option>管理</option><option>研发</option></select></div>
+</div><div class="df"><button class="bt" onclick="hd('d-cc-edit')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 关键词映射配置-抽屉 -->
+<div class="dw-ov" id="d-kw-config"><div class="dw"><div class="dw-h"><span class="dt">关键词 → 费用分类 映射配置</span><button class="dc" onclick="hd('d-kw-config')">×</button></div><div class="dw-b" style="padding:0 16px 16px">
+  <div class="ta" style="margin-top:12px"><div></div><div><button class="bt bp bs" onclick="sd('d-kw-add')">新增规则</button></div></div>
+  <table><thead><tr><th>关键词</th><th>费用分类</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ck">warehouse</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">delivery</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">logistics</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">fulfillment</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">sales</span></td><td><span class="sb2 s3">销售</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">BD</span></td><td><span class="sb2 s3">销售</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">business development</span></td><td><span class="sb2 s3">销售</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">finance</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">HR</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">admin</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">legal</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">tech</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">engineering</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">dev</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">R&amp;D</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+  </tbody></table>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-kw-config')">关闭</button></div></div></div>
+
+<!-- 关键词-新增/编辑 -->
+<div class="vm" id="d-kw-add"><div class="dg" style="width:420px"><div class="dh"><span class="dt">新增关键词规则</span><button class="dc" onclick="hd('d-kw-add')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>关键词</label><input class="inp" placeholder="输入英文关键词"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>费用分类</label><select class="sel"><option>请选择</option><option>履约</option><option>销售</option><option>管理</option><option>研发</option></select></div>
+</div><div class="df"><button class="bt" onclick="hd('d-kw-add')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 删除确认 -->
+<div class="vm" id="d-confirm"><div class="cf-box"><div class="cf-msg"><span class="cf-icon">⚠</span>确定要删除该关键词规则吗？</div><div class="cf-btns"><button class="bt" onclick="hd('d-confirm')">取消</button><button class="bt bp" onclick="hd('d-confirm')">确定</button></div></div></div>
+
+<!-- ==================== 客商业务档案 ==================== -->
+<div class="pg" id="pg-vendor">
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">客商名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">客商业务编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">EBS编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">来源系统</label><div style="flex:1"><select class="sel"><option>全部</option><option>PMS</option><option>TMS</option><option>CRM</option><option>SRM</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">单位类型</label><div style="flex:1"><select class="sel"><option>全部</option><option>A-企业法人</option><option>B-个体经营者</option><option>C-自然人</option><option>D-内部员工</option><option>E-虚拟/归集类</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">对应唯一码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>生效中</option><option>已失效</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">测试标识</label><div style="flex:1"><select class="sel"><option>全部</option><option>是</option><option>否</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">客商业务档案</div></div><div><button class="bt bs">导出</button></div></div>
+  <div class="ts"><table><thead><tr><th>客商名称</th><th>客商类型</th><th>单位类型</th><th>唯一码类型</th><th>对应唯一码</th><th>税务类型</th><th>农业生产者</th><th>测试标识</th><th>对应EBS编码</th><th>同步方式</th><th>来源系统</th><th>租户</th><th>业务状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>Al Safi Fresh Foods LLC<br><small class="su">VD-001</small></td><td>供应商</td><td>A-企业法人</td><td>工商注册号</td><td>CR-123456789</td><td>—</td><td>—</td><td><span class="sb2 s5">否</span></td><td>EBS-V001</td><td>数据同步</td><td>PMS</td><td>XM_GLOBAL_KSA</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl">编辑</button> <button class="bl" onclick="sd('d-vendor-detail')">详情</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Ahmad bin Ali<br><small class="su">VD-002</small></td><td>供应商</td><td>C-自然人</td><td>护照号</td><td>P-987654321</td><td>—</td><td>—</td><td><span class="sb2 s5">否</span></td><td>—</td><td>数据同步</td><td>TMS</td><td>XM_GLOBAL_UAE</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl">编辑</button> <button class="bl" onclick="sd('d-vendor-detail')">详情</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Global Spice Trading Pte Ltd<br><small class="su">VD-003</small></td><td>供应商</td><td>A-企业法人</td><td>工商注册号</td><td>UEN-201812345Z</td><td>—</td><td>—</td><td><span class="sb2 s5">否</span></td><td>EBS-V003</td><td>数据同步</td><td>PMS</td><td>XM_GLOBAL_SGD</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl">编辑</button> <button class="bl" onclick="sd('d-vendor-detail')">详情</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Marina Bay Restaurant Pte Ltd<br><small class="su">CU-001</small></td><td>客户</td><td>A-企业法人</td><td>工商注册号</td><td>UEN-202012345A</td><td>—</td><td>—</td><td><span class="sb2 s5">否</span></td><td>—</td><td>数据同步</td><td>CRM</td><td>XM_GLOBAL_SGD</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl">编辑</button> <button class="bl" onclick="sd('d-vendor-detail')">详情</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Sushi House KL Sdn Bhd<br><small class="su">CU-002</small></td><td>客户</td><td>A-企业法人</td><td>工商注册号</td><td>MY-20201234</td><td>—</td><td>—</td><td><span class="sb2 s5">否</span></td><td>—</td><td>数据同步</td><td>CRM</td><td>XM_GLOBAL_MYR</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl">编辑</button> <button class="bl" onclick="sd('d-vendor-detail')">详情</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 5 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 客商业务档案（供应商沿用调配置 + 客户新接入）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-chg">变更</span>客商单位类型从 A~F 六类调整为 A~E 五类（原 E 境外企业 + F 归集/虚拟类 合并为 E）</li>
+  <li><span class="tag t-new">新增</span>客户数据从 CRM 推送接入（之前仅有供应商）</li>
+  <li><span class="tag t-chg">数据</span>存量供应商客商类型 A~F → A~E 重映射，上下游配合刷数据</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">客商类型定义（A~E）</p><ul>
+  <li><b>A - 企业法人</b>：当地工商注册号，唯一码来源为当地商业登记号</li>
+  <li><b>B - 个体经营者</b>：当地营业登记号</li>
+  <li><b>C - 自然人</b>：身份证号/护照号</li>
+  <li><b>D - 内部员工</b>：员工工号，HRMS 同步</li>
+  <li><b>E - 虚拟/归集类</b>：按名称判重（原国内 E 境外企业 + F 归集虚拟 合并）</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">交互说明</p><ul>
+  <li><b>编辑</b>：打开编辑页面，可修改结算条件等财务信息</li>
+  <li><b>详情</b>：打开抽屉，展示基本信息、银行信息、发票抬头等</li>
+  <li><b>日志</b>：查看操作日志</li>
+  <li>数据由上游系统推送，不支持手动新增客商</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-01：FMS 只做唯一码唯一性判重，不校验格式（格式校验由上游系统负责）</li>
+  <li>BR-02：上游推送业务档案后，FMS 自动创建核算档案，按唯一码跨站点归并（集团级）</li>
+  <li>BR-03：核算编码全局唯一</li>
+  <li>BR-04：客户数据从 CRM 推送到 FMS，按站点隔离，核算档案生成规则同 BR-02</li>
+</ul></div>
+</div>
+
+<!-- 客商-详情抽屉 -->
+<div class="dw-ov" id="d-vendor-detail"><div class="dw"><div class="dw-h"><span class="dt">客商业务档案详情</span><button class="dc" onclick="hd('d-vendor-detail')">×</button></div><div class="dw-b">
+  <div class="det-sec"><div class="det-t">基本信息</div><div class="det-grid">
+    <div class="det-item"><span class="det-l">FMS ID</span><span class="det-v">10001</span></div>
+    <div class="det-item"><span class="det-l">客商业务编码</span><span class="det-v">VD-001</span></div>
+    <div class="det-item"><span class="det-l">客商名称</span><span class="det-v">Al Safi Fresh Foods LLC</span></div>
+    <div class="det-item"><span class="det-l">客商类型</span><span class="det-v">供应商</span></div>
+    <div class="det-item"><span class="det-l">单位类型</span><span class="det-v">A-企业法人</span></div>
+    <div class="det-item"><span class="det-l">唯一码类型</span><span class="det-v">工商注册号</span></div>
+    <div class="det-item"><span class="det-l">对应唯一码</span><span class="det-v">CR-123456789</span></div>
+    <div class="det-item"><span class="det-l">来源系统</span><span class="det-v">PMS</span></div>
+    <div class="det-item"><span class="det-l">租户</span><span class="det-v">XM_GLOBAL_KSA</span></div>
+    <div class="det-item"><span class="det-l">同步方式</span><span class="det-v">数据同步</span></div>
+    <div class="det-item"><span class="det-l">测试标识</span><span class="det-v">否</span></div>
+    <div class="det-item"><span class="det-l">业务状态</span><span class="det-v"><span class="sb2 s1">生效中</span></span></div>
+  </div></div>
+  <div class="det-sec"><div class="det-t">银行信息</div>
+    <table><thead><tr><th>银行账号</th><th>户名</th><th>银行类别</th><th>开户支行</th><th>状态</th></tr></thead>
+    <tbody><tr><td>SA12 3456 7890 1234 5678</td><td>Al Safi Fresh Foods LLC</td><td>商业银行</td><td>Al Rajhi Bank - Riyadh</td><td><span class="sb2 s1">生效</span></td></tr></tbody></table>
+  </div>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-vendor-detail')">关闭</button></div></div></div>
+
+<!-- ==================== 客商核算档案 ==================== -->
+<div class="pg" id="pg-acct">
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">客商名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">EBS编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">客商类型</label><div style="flex:1"><select class="sel"><option>全部</option><option>供应商</option><option>客户</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">单位类型</label><div style="flex:1"><select class="sel"><option>全部</option><option>A-企业法人</option><option>B-个体经营者</option><option>C-自然人</option><option>D-内部员工</option><option>E-虚拟/归集类</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">对应唯一码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>生效中</option><option>已失效</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">客商核算档案</div></div><div><button class="bt bs">导出</button><button class="bt bp bs">新增</button><button class="bt bs">改名</button><button class="bt bs" onclick="sd('d-acct-rel')">关联方修正</button></div></div>
+  <div class="ts"><table><thead><tr><th>客商名称</th><th>EBS编码</th><th>客商类型</th><th>单位类型</th><th>唯一码类型</th><th>对应唯一码</th><th>曾用名</th><th>更新时间</th><th>是否为关联方</th><th>同步方式</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>Dingdong (Cayman) Limited<br><small class="su">1001</small></td><td>500008</td><td>供应商</td><td>A-企业法人</td><td>工商注册号</td><td>SI-343779</td><td>—</td><td>2026-04-10</td><td><span class="sb2 s4">是（自动）</span></td><td>数据同步</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl" onclick="sd('d-acct-detail')">详情</button> <button class="bl">停用</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Al Safi Fresh Foods LLC<br><small class="su">1002</small></td><td>EBS-V001</td><td>供应商</td><td>A-企业法人</td><td>工商注册号</td><td>CR-123456789</td><td>—</td><td>2026-04-08</td><td><span class="sb2 s5">否</span></td><td>数据同步</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl" onclick="sd('d-acct-detail')">详情</button> <button class="bl">停用</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Marina Bay Restaurant Pte Ltd<br><small class="su">1003</small></td><td>—</td><td>客户</td><td>A-企业法人</td><td>工商注册号</td><td>UEN-202012345A</td><td>—</td><td>2026-04-12</td><td><span class="sb2 s5">否</span></td><td>数据同步</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl" onclick="sd('d-acct-detail')">详情</button> <button class="bl">停用</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Global Spice Trading Pte Ltd<br><small class="su">1004</small></td><td>EBS-V003</td><td>供应商</td><td>A-企业法人</td><td>工商注册号</td><td>UEN-201812345Z</td><td>—</td><td>2026-04-06</td><td><span class="sb2 s5">否</span></td><td>数据同步</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl" onclick="sd('d-acct-detail')">详情</button> <button class="bl">停用</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Sushi House KL Sdn Bhd<br><small class="su">1005</small></td><td>—</td><td>客户</td><td>A-企业法人</td><td>工商注册号</td><td>MY-20201234</td><td>—</td><td>2026-04-12</td><td><span class="sb2 s5">否</span></td><td>数据同步</td><td><span class="sb2 s1">生效中</span></td><td><button class="bl" onclick="sd('d-acct-detail')">详情</button> <button class="bl">停用</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 5 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 客商核算档案</div>
+<p style="margin:8px 0 4px;font-weight:600;">页面说明</p><ul>
+  <li>核算档案是供应商/客户业务档案的财务视图，由系统自动创建，不支持手动新增业务数据</li>
+  <li>同一客商在不同站点的业务档案，按唯一码归并为一条核算档案（集团级）</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-new">新增</span>关联方自动标记：客商核算档案被法人公司主数据引用时，系统自动刷新为关联方</li>
+  <li><span class="tag t-new">新增</span>关联方手动更改：财务可手动标记或取消关联方</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">工具栏操作</p><ul>
+  <li><b>导出</b>：导出当前筛选结果</li>
+  <li><b>新增</b>：手动新增核算档案（不通过上游推送时使用）</li>
+  <li><b>改名</b>：选中行后修改客商名称</li>
+  <li><b>关联方修正</b>：选中行后批量修改关联方标记</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">行内操作</p><ul>
+  <li><b>详情</b>：打开抽屉，展示核算信息 + 关联的所有业务档案列表</li>
+  <li><b>停用/启用</b>：切换核算档案状态</li>
+  <li><b>日志</b>：查看操作日志</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-20：上游推送业务档案后，FMS 自动创建核算档案</li>
+  <li>BR-21：核算档案按唯一码跨站点归并，核算编码集团级全局唯一</li>
+  <li>BR-22：客商核算档案被法人公司主数据引用时，系统自动刷新为关联方</li>
+  <li>BR-23：关联方标记支持财务手动更改（标记或取消）</li>
+</ul></div>
+</div>
+
+<!-- 核算档案-详情抽屉 -->
+<div class="dw-ov" id="d-acct-detail"><div class="dw"><div class="dw-h"><span class="dt">客商核算档案详情</span><button class="dc" onclick="hd('d-acct-detail')">×</button></div><div class="dw-b">
+  <div class="det-sec"><div class="det-t">核算信息</div><div class="det-grid">
+    <div class="det-item"><span class="det-l">FMS ID</span><span class="det-v">1001</span></div>
+    <div class="det-item"><span class="det-l">EBS编码</span><span class="det-v">500008</span></div>
+    <div class="det-item"><span class="det-l">客商名称</span><span class="det-v">Dingdong (Cayman) Limited</span></div>
+    <div class="det-item"><span class="det-l">客商类型</span><span class="det-v">供应商</span></div>
+    <div class="det-item"><span class="det-l">单位类型</span><span class="det-v">A-企业法人</span></div>
+    <div class="det-item"><span class="det-l">对应唯一码</span><span class="det-v">SI-343779</span></div>
+    <div class="det-item"><span class="det-l">是否为关联方</span><span class="det-v"><span class="sb2 s4">是（自动）</span></span></div>
+    <div class="det-item"><span class="det-l">同步方式</span><span class="det-v">数据同步</span></div>
+    <div class="det-item"><span class="det-l">状态</span><span class="det-v"><span class="sb2 s1">生效中</span></span></div>
+  </div></div>
+  <div class="det-sec"><div class="det-t">关联业务档案</div>
+    <table><thead><tr><th>客商业务编码</th><th>客商名称</th><th>来源系统</th><th>租户</th><th>状态</th></tr></thead>
+    <tbody>
+      <tr><td>VD-010</td><td>Dingdong (Cayman) Limited</td><td>PMS</td><td>XM_GLOBAL_SGD</td><td><span class="sb2 s1">生效中</span></td></tr>
+      <tr><td>VD-011</td><td>Dingdong (Cayman) Limited</td><td>PMS</td><td>XM_GLOBAL_KSA</td><td><span class="sb2 s1">生效中</span></td></tr>
+      <tr><td>VD-012</td><td>Dingdong (Cayman) Limited</td><td>TMS</td><td>XM_GLOBAL_SGD</td><td><span class="sb2 s1">生效中</span></td></tr>
+    </tbody></table>
+  </div>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-acct-detail')">关闭</button></div></div></div>
+
+<!-- 核算档案-编辑关联方 -->
+<div class="vm" id="d-acct-rel"><div class="dg" style="width:420px"><div class="dh"><span class="dt">编辑关联方</span><button class="dc" onclick="hd('d-acct-rel')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">客商名称</label><input class="inp" value="Dingdong (Cayman) Limited" disabled style="background:#f5f7fa"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>是否为关联方</label><select class="sel"><option selected>是</option><option>否</option></select></div>
+</div><div class="df"><button class="bt" onclick="hd('d-acct-rel')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- ==================== 沿用页面 ==================== -->
+<div class="pg" id="pg-bank"><div class="ep"><p>银行账户档案</p><p>保持现状，不做改动</p></div></div>
+<div class="pg" id="pg-emp"><div class="ep"><p>员工档案</p><p>保持现状，从 HRMS 同步，集团共用，不做改动</p></div></div>
+<div class="pg" id="pg-cur"><div class="ep"><p>币种信息</p><p>保持现状，不做改动</p></div></div>
+<div class="pg" id="pg-fx"><div class="ep"><p>汇率信息</p><p>保持现状，不做改动</p></div></div>
+
+</div></div></div>
+
+<script>
+var N={corp:'法人公司',product:'商品/货品档案',dept:'部门档案',cc:'成本中心',wh:'仓库档案',vendor:'客商业务档案',acct:'客商核算档案',bank:'银行账户档案',emp:'员工档案',cur:'币种信息',fx:'汇率信息',kw:'关键词映射配置'};
+function sp(id){
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+  document.querySelectorAll('.ri').forEach(function(s){s.classList.remove('on')});
+  var pg=document.getElementById('pg-'+id);if(pg)pg.classList.add('on');
+  document.querySelectorAll('.ri').forEach(function(s){if(s.getAttribute('onclick')&&s.getAttribute('onclick').indexOf("'"+id+"'")!==-1)s.classList.add('on')});
+  document.querySelectorAll('.ti').forEach(function(t){t.classList.remove('on')});
+  var ex=document.getElementById('tag-'+id);
+  if(ex){ex.classList.add('on')}else{var tag=document.createElement('div');tag.className='ti on';tag.id='tag-'+id;tag.onclick=function(){sp(id)};tag.innerHTML=(N[id]||id)+' ×';document.querySelector('.tr').appendChild(tag)}
+}
+function tf(b){var f=b.closest('.sf');if(f.classList.contains('cl')){f.classList.remove('cl');b.textContent='收起 ▴'}else{f.classList.add('cl');b.textContent='展开 ▾'}}
+function sd(id){document.getElementById(id).classList.add('show')}
+function hd(id){document.getElementById(id).classList.remove('show')}
+document.querySelectorAll('.vm').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+document.querySelectorAll('.dw-ov').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+</script>
+</body>
+</html>

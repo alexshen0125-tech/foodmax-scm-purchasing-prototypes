@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磐石 Aegis · 业务调整单接入与结算展现（CLJS-20 原型）</title>
+<!--
+  对应 PRD：【CLJS】20_业务调整单接入与结算展现_prd.md v1.0
+  基线：2026-09-15 实读 aegis-te 现网三处页面（收入单据列表+详情抽屉 / 结算单列表 / 结算单详情概览+罚款单 Tab）
+  本原型只画本期改动：① 收入单据 → 收支单据（四类 + 方向） ② 结算单列表加「业务调整」列 ③ 结算单详情概览③改「其他收支」+ 新增「业务调整单」Tab
+-->
+<style>
+:root{
+  --ink:#141b2e;--sub:#64708a;--faint:#8a94a8;--line:#e6e9f0;--line-soft:#eff1f6;
+  --bg:#f3f5f9;--primary:#2563eb;--primary-soft:#eaf2ff;--brand:#e11d48;--brand-soft:#fdeef2;--brand-line:#f7cdd8;
+  --success:#16835b;--success-soft:#e7f7ef;--warn:#b76a08;--warn-soft:#fff4df;--danger:#c8312c;--danger-soft:#fff0ef;
+  --purple:#6d3ac3;--purple-soft:#f2ecff;--sidebar-w:228px;--topbar-h:58px;
+  --shadow:0 1px 3px rgba(20,27,46,.06),0 1px 2px rgba(20,27,46,.04);--shadow-lg:0 18px 46px rgba(20,27,46,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Inter,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}
+.topbar{height:var(--topbar-h);position:fixed;inset:0 0 auto 0;z-index:40;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:12px}
+.logo{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#2f6fe4,#1b47a8);font-weight:800}
+.brand-name{font-size:15.5px;font-weight:800}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px;color:var(--sub);font-size:12.5px}
+.site{padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.avatar{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;background:#eef2ff;color:#3949ab;font-weight:800}
+.layout{display:flex;padding-top:var(--topbar-h)}
+.sidebar{position:fixed;left:0;top:var(--topbar-h);bottom:0;width:var(--sidebar-w);padding:14px 12px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;z-index:30}
+.nav-group{padding:4px 0 8px}.nav-group+.nav-group{border-top:1px solid var(--line-soft);margin-top:4px;padding-top:8px}
+.nav-title{padding:6px 12px;font-size:10.5px;letter-spacing:1.2px;color:#a2abbd;font-weight:800}
+.nav-item{display:flex;align-items:center;gap:10px;margin:1px 0;padding:9px 12px;border-radius:9px;font-size:13.5px;color:#3d4658;cursor:pointer;position:relative}
+.nav-item:hover{background:#f4f6fb}
+.nav-item.active{color:var(--primary);font-weight:700;background:linear-gradient(90deg,var(--primary-soft),#fff);box-shadow:inset 0 0 0 1px #cfe0ff}
+.nav-item.active:before{content:"";position:absolute;left:0;top:50%;width:3px;height:18px;transform:translateY(-50%);background:var(--primary);border-radius:0 3px 3px 0}
+.nav-item .ic{width:20px;text-align:center}
+.nav-item .new{margin-left:auto;padding:1px 6px;border-radius:8px;background:var(--success-soft);color:var(--success);font-size:10px;font-weight:800}
+.main{margin-left:var(--sidebar-w);width:calc(100% - var(--sidebar-w));min-height:calc(100vh - var(--topbar-h));padding:22px 26px 44px}
+.page{display:none}.page.active{display:block}
+.crumb{font-size:12px;color:var(--faint);margin-bottom:7px}
+.page-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.page-head h1{font-size:20px;line-height:1.3;margin:0;font-weight:800}
+.page-head .desc{font-size:12.5px;color:var(--sub);margin-top:5px}
+.page-head .site-badge{margin-left:auto;color:var(--primary);background:var(--primary-soft);border:1px solid #cfe0ff;border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:650}
+.chg{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--success-soft);color:var(--success);font-size:10.5px;font-weight:800;vertical-align:middle}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+.panel-hd{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line-soft);font-weight:750;font-size:14px}
+.panel-hd .sub{font-weight:400;color:var(--sub);font-size:12px}
+.filter{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;padding:15px 18px;background:linear-gradient(180deg,#fafbfd,#f7f9fc);border-bottom:1px solid var(--line-soft)}
+.filter-item{display:flex;flex-direction:column;gap:5px;min-width:150px}.filter-item.wide{min-width:215px}
+.filter-item label{font-size:11.5px;color:var(--sub);font-weight:600}
+.ipt,.sel{height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);outline:none;font-size:12.5px}
+.ipt:focus,.sel:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.acts{display:flex;gap:8px;margin-left:auto;margin-top:21px}
+.btn{height:34px;padding:0 14px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:650;cursor:pointer}
+.btn:hover{border-color:#bec8d8;box-shadow:var(--shadow)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.link{border:0;background:transparent;color:var(--primary);height:auto;padding:0;box-shadow:none;cursor:pointer}
+.table-wrap{overflow:auto}
+table.data{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+th,td{padding:10px 13px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
+thead th{position:sticky;top:0;background:#f6f8fb;color:var(--sub);font-weight:700;z-index:1}
+thead tr.grp th{background:#eef2f8;text-align:center;font-size:11.5px;letter-spacing:.3px}
+tbody tr:hover{background:#f7f9fc}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.8px}
+.subline{font-size:10.8px;color:var(--faint);margin-top:2px}
+.pos{color:var(--success);font-weight:750}.neg{color:var(--danger);font-weight:750}.zero{color:var(--faint)}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:650;white-space:nowrap}
+.t-supply{background:#eaf2ff;color:#2858a5}.t-repl{background:var(--purple-soft);color:var(--purple)}
+.t-fine{background:var(--danger-soft);color:var(--danger)}.t-adj{background:#fff1e6;color:#b45309}
+.d-s2p{background:var(--danger-soft);color:var(--danger)}.d-p2s{background:var(--success-soft);color:var(--success)}
+.s-pending{background:var(--warn-soft);color:var(--warn)}.s-settled{background:var(--success-soft);color:var(--success)}
+.s-none{background:#f0f2f6;color:var(--sub)}
+.hl{outline:2px solid #ffd08a;outline-offset:-2px;background:#fffaf2 !important}
+.pagination{display:flex;align-items:center;padding:12px 18px;color:var(--sub);font-size:12px}
+.pagination .pages{margin-left:auto;display:flex;gap:5px}
+.page-btn{width:30px;height:30px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.page-btn.active{border-color:var(--primary);color:var(--primary)}
+.tabs{display:flex;gap:26px;padding:0 18px;border-bottom:1px solid var(--line-soft);overflow-x:auto}
+.tab{border:0;border-bottom:2px solid transparent;background:transparent;padding:12px 1px 10px;color:var(--sub);cursor:pointer;font-weight:650;font-size:13px;white-space:nowrap}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.concl{display:flex;align-items:baseline;gap:14px;padding:16px 20px;background:#f2f7ff;border-bottom:1px solid var(--line-soft)}
+.concl .k{font-size:12.5px;color:var(--sub)}
+.concl .v{font-size:30px;font-weight:850;font-variant-numeric:tabular-nums}
+.concl .note{font-size:11.5px;color:var(--faint)}
+.concl .ok{margin-left:auto;font-size:11.5px;color:var(--success);font-weight:700}
+.seg{padding:16px 20px;border-bottom:1px solid var(--line-soft)}
+.seg h4{margin:0 0 10px;font-size:13px;font-weight:750;color:#2c3444;display:flex;align-items:center;gap:8px}
+.seg h4 .dir{font-weight:400;color:var(--faint);font-size:11.5px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;border-bottom:1px dashed var(--line-soft)}
+.row:last-child{border-bottom:0}
+.row .sign{width:14px;color:var(--sub);font-weight:700;text-align:center}
+.row .label{flex:1}
+.row .cnt{font-size:11px;color:var(--primary);cursor:pointer}
+.row .amt{font-variant-numeric:tabular-nums;font-weight:700}
+.seg .sum{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-weight:750}
+.seg .sum .v{font-size:17px}
+.note-bar{padding:12px 20px;font-size:11.8px;color:var(--sub);background:#fafbfd}
+.mask{position:fixed;inset:0;background:rgba(18,24,38,.42);opacity:0;visibility:hidden;transition:.2s;z-index:80}
+.mask.open{opacity:1;visibility:visible}
+.drawer{position:fixed;right:0;top:0;width:min(760px,96vw);height:100vh;background:#fff;transform:translateX(100%);transition:.24s;z-index:81;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:15px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.drawer-head h2{font-size:16.5px;margin:0}
+.drawer-head .close{margin-left:auto;border:0;background:none;font-size:22px;cursor:pointer;color:var(--sub)}
+.drawer-body{padding:18px 22px;overflow:auto}
+.drawer h3{display:flex;align-items:center;gap:8px;font-size:14px;margin:20px 0 10px}
+.drawer h3:first-child{margin-top:0}
+.drawer h3:before{content:"";width:3px;height:15px;border-radius:2px;background:var(--primary)}
+.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+.kv th,.kv td{border:1px solid var(--line);padding:9px 11px}
+.kv th{width:132px;background:#fafbfc;color:var(--sub);font-weight:600}
+.amount-box{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:6px}
+.amount-item{padding:14px 16px}.amount-item+.amount-item{border-left:1px solid var(--line)}
+.amount-item .k{font-size:11.5px;color:var(--sub)}.amount-item .v{font-size:18px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.empty{padding:46px 20px;text-align:center;color:var(--sub)}.empty b{display:block;color:var(--ink);font-size:14px;margin-bottom:4px}
+.toast-wrap{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:120}
+.toast{padding:10px 15px;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 10px 26px rgba(20,27,46,.16);font-size:12.5px}
+.foot{text-align:center;color:var(--faint);font-size:11.5px;padding:16px}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;width:100%;padding:16px}.amount-box{grid-template-columns:1fr}.amount-item+.amount-item{border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">FM</div><div class="brand-name">磐石 Aegis · 清结算平台</div>
+  <div class="top-right"><span class="site">新加坡站点 · SGD</span><span>简体中文</span><span class="avatar">沈</span><span>沈亮</span></div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">订单与分账</div>
+      <div class="nav-item"><span class="ic">📥</span>订单接入</div>
+      <div class="nav-item"><span class="ic">🧮</span>分账明细</div>
+    </div>
+    <div class="nav-group"><div class="nav-title">平台收入</div>
+      <div class="nav-item active" data-page="income"><span class="ic">▦</span>收支单据<span class="new">改</span></div>
+      <div class="nav-item"><span class="ic">▤</span>销售开票</div>
+    </div>
+    <div class="nav-group"><div class="nav-title">清分与结算</div>
+      <div class="nav-item" data-page="bills"><span class="ic">💰</span>结算单<span class="new">改</span></div>
+      <div class="nav-item"><span class="ic">🧾</span>佣金开票</div>
+      <div class="nav-item"><span class="ic">🕐</span>付款单</div>
+    </div>
+    <div class="nav-group"><div class="nav-title">其他</div>
+      <div class="nav-item"><span class="ic">🏦</span>出款管理</div>
+      <div class="nav-item"><span class="ic">📊</span>对账与台账</div>
+      <div class="nav-item"><span class="ic">🏪</span>主数据</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ========== 页面 1：收支单据（原「收入单据」） ========== -->
+    <section class="page active" id="page-income">
+      <div class="crumb">平台收入 / 收支单据</div>
+      <div class="page-head">
+        <div>
+          <h1>收支单据<span class="chg">改：收入 → 收支</span></h1>
+          <div class="desc">承接耗材采购、自营补货、店铺罚款与<b>业务调整</b>四类源单；接入即形成收支，按类型一页查看</div>
+        </div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="filter">
+          <div class="filter-item"><label>类型</label>
+            <select class="sel" id="f-type">
+              <option value="">所有</option><option value="SUPPLY">耗材采购</option>
+              <option value="REPL">自营补货</option><option value="FINE">店铺罚款</option>
+              <option value="ADJ">业务调整</option>
+            </select></div>
+          <div class="filter-item"><label>方向 <span class="chg">新</span></label>
+            <select class="sel" id="f-dir">
+              <option value="">全部</option><option value="S2P">店铺 → 平台</option><option value="P2S">平台 → 店铺</option>
+            </select></div>
+          <div class="filter-item wide"><label>单号 / 上游源单号</label><input class="ipt" id="f-kw" placeholder="如 ADJ-SG-20260915-001"></div>
+          <div class="filter-item"><label>店铺</label>
+            <select class="sel" id="f-shop"><option value="">全部店铺</option><option value="SH20260713476005">Foodmax测试店铺</option><option value="SH20260715476017">小沈小卖部</option></select></div>
+          <div class="filter-item"><label>结算状态</label>
+            <select class="sel" id="f-st"><option value="">全部状态</option><option value="PENDING">待结算</option><option value="SETTLED">已结算</option></select></div>
+          <div class="acts"><button class="btn primary" id="f-go">查 询</button><button class="btn" id="f-reset">重 置</button><button class="btn" id="f-export">导 出</button></div>
+        </div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr>
+            <th>平台收支单号</th><th>类型</th><th>上游源单号</th><th>主关联单号</th><th>店铺</th><th>入库仓库</th>
+            <th>归期时间</th><th class="num">未税金额</th><th class="num">GST</th><th class="num">含税金额</th>
+            <th>收入方向</th><th>结算状态</th><th>开票状态</th><th>结算单号</th><th>接入时间</th><th>操作</th>
+          </tr></thead>
+          <tbody id="income-rows"></tbody>
+        </table></div>
+        <div class="pagination"><span id="income-total">共 0 条</span><div class="pages"><button class="page-btn">‹</button><button class="page-btn active">1</button><button class="page-btn">›</button></div></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · CLJS-20 原型 —— 黄底行为本期新增的「业务调整」数据</div>
+    </section>
+
+    <!-- ========== 页面 2：结算单列表 ========== -->
+    <section class="page" id="page-bills">
+      <div class="crumb">清分与结算 / 结算单</div>
+      <div class="page-head">
+        <div><h1>结算单<span class="chg">改：加「业务调整」列</span></h1><div class="desc">这个周期该给谁多少。结算单可以为负 —— 那就是账实。</div></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="table-wrap"><table class="data">
+          <thead>
+            <tr class="grp">
+              <th colspan="5" style="text-align:left">　</th>
+              <th colspan="5">订单侧与平台分成</th>
+              <th colspan="5">其他收入结算</th>
+              <th colspan="3">汇总值</th>
+              <th colspan="2">　</th>
+            </tr>
+            <tr>
+              <th>结算单号</th><th>店铺</th><th>店铺类型</th><th>结算周期</th><th class="num">订单数</th>
+              <th class="num">应付商户 S$</th><th class="num">平台抽佣(含税) S$</th><th class="num">平台补贴</th><th class="num">物流应付</th><th class="num">平台收入(净)</th>
+              <th class="num">耗材采购收入 S$</th><th class="num">自营补货收入 S$</th><th class="num">店铺罚款 S$</th>
+              <th class="num" title="正数表示平台付给店铺">业务调整 S$ <span class="chg">新</span></th><th class="num">其他收入合计 S$</th>
+              <th class="num">结算单总额(含税) S$</th><th class="num">店铺汇总金额 S$</th><th class="num">平台汇总金额 S$</th>
+              <th>结算单状态</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="bill-rows"></tbody>
+        </table></div>
+        <div class="pagination"><span>共 3 条</span><div class="pages"><button class="page-btn">‹</button><button class="page-btn active">1</button><button class="page-btn">›</button></div></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · CLJS-20 原型</div>
+    </section>
+
+    <!-- ========== 页面 3：结算单详情 ========== -->
+    <section class="page" id="page-bill">
+      <div class="crumb"><span class="btn link" data-page="bills">结算单</span> › 结算单详情</div>
+      <div class="page-head">
+        <div><h1 id="bill-no">ST20260915-SH20260713476005</h1><div class="desc">Foodmax测试店铺 · 三方店 · DAILY 20260915 · 2 单</div></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="tabs" id="bill-tabs">
+          <button class="tab active" data-tab="ov">概览</button>
+          <button class="tab" data-tab="x">订单明细（订单级）</button>
+          <button class="tab" data-tab="x">订单+商品明细（商品行级）</button>
+          <button class="tab" data-tab="x">应付明细</button>
+          <button class="tab" data-tab="x">平台耗材收入</button>
+          <button class="tab" data-tab="x">自营补货收入</button>
+          <button class="tab" data-tab="x">店铺罚款单</button>
+          <button class="tab" data-tab="adj">业务调整单 <span class="chg">新</span></button>
+          <button class="tab" data-tab="x">未纳入订单</button>
+        </div>
+
+        <!-- 概览 -->
+        <div id="tab-ov">
+          <div class="concl">
+            <span class="k">本单结论</span><span class="k">结算净额</span>
+            <span class="v" id="ov-net">S$273.83</span>
+            <span class="note">真正打给店铺的钱（付款单店铺腿取此数）</span>
+            <span class="ok">恒等式通过</span>
+          </div>
+          <div class="seg">
+            <h4>① 订单侧（正逆向订单）<span class="dir">纳入本单的分账明细</span></h4>
+            <div class="row"><span class="sign">+</span><span class="label">订单实付合计</span><span class="amt">239.80</span></div>
+            <div class="row"><span class="sign">+</span><span class="label">平台补贴合计 <span style="color:var(--faint);font-size:11px">平台出资</span></span><span class="amt">0.00</span></div>
+            <div class="row"><span class="sign">−</span><span class="label">物流应付合计</span><span class="amt zero">0.00</span></div>
+            <div class="sum"><span>小计 · 结算单总额（含税）</span><span class="v">S$239.80 <span class="ok" style="font-size:11px">✓ 恒等式通过</span></span></div>
+          </div>
+          <div class="seg">
+            <h4>② 平台分成</h4>
+            <div class="row"><span class="sign">−</span><span class="label">平台抽佣（含税）<div class="subline">未税 33.00 · GST 2.97 · 综合费率 15.00%</div></span><span class="amt">35.97</span></div>
+            <div class="sum"><span>小计 · 应付店铺</span><span class="v">S$203.83 <span class="ok" style="font-size:11px">✓ 恒等式通过</span></span></div>
+          </div>
+          <div class="seg" style="background:#fffaf2">
+            <h4>③ 其他收支 <span class="chg">改：原「平台收入减项」</span><span class="dir">店铺 → 平台 / 平台 → 店铺</span></h4>
+            <div class="row"><span class="sign">−</span><span class="label">耗材采购收入 <span class="cnt">4 张 →</span><div class="subline">未税 8.46 · GST 0.75</div></span><span class="amt">9.21</span></div>
+            <div class="row"><span class="sign">−</span><span class="label">自营补货收入 <span class="cnt">3 张 →</span><div class="subline">未税 32.00 · GST 2.88</div></span><span class="amt">34.88</span></div>
+            <div class="row"><span class="sign">−</span><span class="label">店铺罚款 <span class="pill s-none">不开票</span> <span class="cnt">1 张 →</span></span><span class="amt">40.00</span></div>
+            <div class="row"><span class="sign" style="color:var(--danger)">−</span><span class="label"><b>业务调整（扣）</b> <span class="pill s-none">不开票</span> <span class="cnt" data-jump="adj">1 张 →</span><div class="subline">负向：向店铺扣回</div></span><span class="amt neg">78.50</span></div>
+            <div class="row"><span class="sign" style="color:var(--success)">+</span><span class="label"><b>业务调整（补）</b> <span class="pill s-none">不开票</span> <span class="cnt" data-jump="adj">2 张 →</span><div class="subline">正向：平台付给店铺</div></span><span class="amt pos">232.59</span></div>
+            <div class="sum"><span>合计 · 结算净额</span><span class="v">S$273.83 <span class="ok" style="font-size:11px">✓ 恒等式通过</span></span></div>
+          </div>
+          <div class="note-bar">
+            四类其他收支均以上游快照为准，结算单不重新计算业务金额；店铺罚款与业务调整不创建开票任务。业务调整不区分未税与 GST。
+            业务调整净额 ＝ 正向 232.59 − 负向 78.50 ＝ <b>+S$154.09</b>；结算净额 ＝ 应付店铺 203.83 − 9.21 − 34.88 − 40.00 + 154.09 ＝ <b>S$273.83</b>。
+          </div>
+        </div>
+
+        <!-- 业务调整单 Tab -->
+        <div id="tab-adj" style="display:none">
+          <div class="note-bar" style="background:#fff;border-bottom:1px solid var(--line-soft)">
+            业务调整单按上游原单展示，不合单、不拆单、不重新计算金额，也不创建开票任务。正向为平台付给店铺，负向为向店铺扣回。
+          </div>
+          <div class="filter" style="padding:12px 18px">
+            <div class="filter-item wide"><label>调整单号</label><input class="ipt" id="adj-kw" placeholder="搜索单号"></div>
+            <div class="acts" style="margin-top:21px"><button class="btn primary" id="adj-go">查 询</button></div>
+          </div>
+          <div class="table-wrap"><table class="data">
+            <thead><tr><th>调整单号</th><th>调整类型</th><th>关联业务单号</th><th>生效时间</th><th class="num">金额</th><th class="num">未税金额</th><th>收入方向</th><th>发票</th><th>结算状态</th></tr></thead>
+            <tbody id="adj-rows"></tbody>
+          </table></div>
+          <div class="pagination"><span id="adj-total">共 3 行</span></div>
+        </div>
+
+        <!-- 其他 Tab 占位 -->
+        <div id="tab-x" style="display:none">
+          <div class="empty"><b>本原型不重画该页签</b>结构与现网一致，本期无改动。</div>
+        </div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · CLJS-20 原型</div>
+    </section>
+  </main>
+</div>
+
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head"><h2 id="dr-title">平台收支详情</h2><button class="close" id="dr-close">×</button></div>
+  <div class="drawer-body" id="dr-body"></div>
+</aside>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+/* ============ 演示数据（与 PRD AC 对齐） ============ */
+const TYPE = {
+  SUPPLY:{label:'耗材采购', cls:'t-supply'}, REPL:{label:'自营补货', cls:'t-repl'},
+  FINE:{label:'店铺罚款', cls:'t-fine'},     ADJ:{label:'业务调整', cls:'t-adj'}
+};
+const money = n => 'S$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const signed = n => (n>0?'+':'-') + money(n);
+
+const INCOME = [
+  {no:'PI2026091500003', type:'ADJ', src:'ADJ-SG-20260915-002', rel:'AS-26091501', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'', at:'2026-09-15 10:22:31', excl:186.00, gst:0, incl:186.00, dir:'P2S', st:'SETTLED', inv:'不开票',
+   bill:'ST20260915-SH20260713476005', ing:'2026-09-15 10:22:35',
+   adjType:{code:'ADJ-COMP', cn:'系统错账补款', en:'System Error Comp.'}, merchant:'M2026071400002'},
+  {no:'PI2026091500002', type:'ADJ', src:'ADJ-SG-20260915-001', rel:'QC-26091502', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'', at:'2026-09-15 09:40:12', excl:78.50, gst:0, incl:78.50, dir:'S2P', st:'SETTLED', inv:'不开票',
+   bill:'ST20260915-SH20260713476005', ing:'2026-09-15 09:40:18',
+   adjType:{code:'ADJ-QC', cn:'质量问题扣款', en:'Quality Deduction'}, merchant:'M2026071400002'},
+  {no:'PI2026091500001', type:'ADJ', src:'ADJ-SG-20260915-003', rel:'', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'', at:'2026-09-15 08:05:00', excl:46.59, gst:0, incl:46.59, dir:'P2S', st:'SETTLED', inv:'不开票',
+   bill:'ST20260915-SH20260713476005', ing:'2026-09-15 08:05:06',
+   adjType:{code:'ADJ-PROMO', cn:'平台活动补贴', en:'Campaign Subsidy'}, merchant:'M2026071400002'},
+  {no:'PI2026091400006', type:'ADJ', src:'ADJ-SG-20260914-007', rel:'SH20260914012', shop:'小沈小卖部', shopCode:'SH20260715476017',
+   wh:'', at:'2026-09-14 16:12:44', excl:300.00, gst:0, incl:300.00, dir:'S2P', st:'PENDING', inv:'不开票',
+   bill:'', ing:'2026-09-14 16:12:50',
+   adjType:{code:'ADJ-DELAY', cn:'逾期送货违约金', en:'Late Delivery Penalty'}, merchant:'M2026071500003'},
+  {no:'PI2026091000001', type:'REPL', src:'RPL-20260910-001', rel:'DL260910020002', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'新加坡测试仓', at:'2026-09-10 11:30:24', excl:10.00, gst:0.90, incl:10.90, dir:'S2P', st:'SETTLED', inv:'已开票',
+   bill:'ST20260910-SH20260713476005', ing:'2026-09-10 13:10:59', merchant:'M2026071400002'},
+  {no:'PI2026090300004', type:'SUPPLY', src:'HC260902000003', rel:'HCSH260902000003', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'新加坡测试仓', at:'2026-09-03 14:52:56', excl:1.69, gst:0.15, incl:1.84, dir:'S2P', st:'SETTLED', inv:'已开票',
+   bill:'ST20260907-SH20260713476005', ing:'2026-09-03 14:53:00', merchant:'M2026071400002'},
+  {no:'PI2026090700009', type:'FINE', src:'FNDL260824110002', rel:'DL260824110002', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'Singapore-TEST001', at:'2026-09-07 02:10:00', excl:40.00, gst:0, incl:40.00, dir:'S2P', st:'SETTLED', inv:'不开票',
+   bill:'ST20260907-SH20260713476005', ing:'2026-09-07 02:10:05', merchant:'M2026071400002'}
+];
+
+const BILLS = [
+  {no:'ST20260915-SH20260713476005', shop:'Foodmax测试店铺', kind:'三方店', cycle:'DAILY 20260915', orders:2,
+   payable:203.83, commission:35.97, subsidy:0, logistics:0, net:35.97,
+   supply:9.21, repl:34.88, fine:40.00, adjust:154.09, total:239.80, st:'待对账'},
+  {no:'ST20260914-SH20260715476017', shop:'小沈小卖部', kind:'三方店', cycle:'DAILY 20260914', orders:1,
+   payable:120.00, commission:18.00, subsidy:0, logistics:0, net:18.00,
+   supply:0, repl:0, fine:0, adjust:0, total:138.00, st:'待对账'},
+  {no:'ST20260907-SH20260713476005', shop:'Foodmax测试店铺', kind:'三方店', cycle:'DAILY 20260907', orders:2,
+   payable:203.83, commission:35.97, subsidy:0, logistics:0, net:35.97,
+   supply:9.21, repl:34.88, fine:40.00, adjust:0, total:239.80, st:'待对账'}
+];
+
+/* ============ 渲染 ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg){const w=$('#toast-wrap');const d=document.createElement('div');d.className='toast';d.textContent=msg;w.appendChild(d);setTimeout(()=>d.remove(),2200);}
+
+function dirPill(dir){
+  return dir==='P2S' ? '<span class="pill d-p2s">平台 → 店铺</span>' : '<span class="pill d-s2p">店铺 → 平台</span>';
+}
+function incomeRows(){
+  const kw=$('#f-kw').value.trim().toLowerCase(), type=$('#f-type').value, dir=$('#f-dir').value,
+        shop=$('#f-shop').value, st=$('#f-st').value;
+  const rows = INCOME.filter(r =>
+    (!type||r.type===type) && (!dir||r.dir===dir) && (!shop||r.shopCode===shop) && (!st||r.st===st) &&
+    (!kw || r.no.toLowerCase().includes(kw) || r.src.toLowerCase().includes(kw)));
+  $('#income-rows').innerHTML = rows.map(r=>{
+    const adj = r.type==='ADJ';
+    const amt = adj ? `<span class="${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.incl:-r.incl)}</span>` : money(r.incl);
+    const excl = adj ? `<span class="${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.excl:-r.excl)}</span>` : money(r.excl);
+    return `<tr class="${adj?'hl':''}">
+      <td class="mono">${r.no}</td>
+      <td><span class="pill ${TYPE[r.type].cls}">${TYPE[r.type].label}</span>${adj?`<div class="subline">${esc(r.adjType.cn)}</div>`:''}</td>
+      <td class="mono">${r.src}</td><td class="mono">${r.rel||'—'}</td>
+      <td>${esc(r.shop)}<div class="subline mono">${r.shopCode}</div></td>
+      <td>${r.wh||'—'}</td><td>${r.at}</td>
+      <td class="num">${excl}</td><td class="num">${money(r.gst)}</td><td class="num">${amt}</td>
+      <td>${dirPill(r.dir)}</td>
+      <td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td>
+      <td><span class="pill ${r.inv==='不开票'?'s-none':'s-settled'}">${r.inv}</span></td>
+      <td class="mono">${r.bill||'—'}</td><td>${r.ing}</td>
+      <td><button class="btn link" data-view="${r.no}">查看</button></td>
+    </tr>`;}).join('') || `<tr><td colspan="16"><div class="empty"><b>没有符合筛选条件的单据</b>换个条件试试</div></td></tr>`;
+  $('#income-total').textContent = `共 ${rows.length} 条`;
+}
+
+function billRows(){
+  $('#bill-rows').innerHTML = BILLS.map(b=>{
+    const other = b.supply + b.repl + b.fine - b.adjust;
+    const shopTotal = b.payable - b.supply - b.repl - b.fine + b.adjust;
+    const adjCell = b.adjust===0 ? `<span class="zero">${money(0)}</span>`
+                   : `<span class="${b.adjust>0?'pos':'neg'}">${signed(b.adjust)}</span>`;
+    return `<tr>
+      <td class="mono"><button class="btn link" data-bill="${b.no}">${b.no}</button></td>
+      <td>${esc(b.shop)}</td><td>${b.kind}</td><td>${b.cycle}</td><td class="num">${b.orders}</td>
+      <td class="num">＋${b.payable.toFixed(2)}</td><td class="num">＋${b.commission.toFixed(2)}</td>
+      <td class="num">${money(b.subsidy)}</td><td class="num">${money(b.logistics)}</td><td class="num">${money(b.net)}</td>
+      <td class="num">${money(b.supply)}</td><td class="num">${money(b.repl)}</td><td class="num">${money(b.fine)}</td>
+      <td class="num ${b.adjust!==0?'hl':''}">${adjCell}</td><td class="num">${money(other)}</td>
+      <td class="num">${money(b.total)}</td><td class="num">${money(shopTotal)}</td><td class="num">${money(b.commission)}</td>
+      <td><span class="pill s-pending">${b.st}</span></td>
+      <td><button class="btn link" data-bill="${b.no}">详情</button></td>
+    </tr>`;}).join('');
+}
+
+function adjRows(){
+  const kw=$('#adj-kw').value.trim().toLowerCase();
+  const rows = INCOME.filter(r=>r.type==='ADJ' && r.bill==='ST20260915-SH20260713476005' && (!kw||r.src.toLowerCase().includes(kw)));
+  $('#adj-rows').innerHTML = rows.map(r=>`<tr>
+      <td class="mono">${r.src}</td>
+      <td>${esc(r.adjType.cn)}<div class="subline mono">${r.adjType.code}</div></td>
+      <td class="mono">${r.rel||'—'}</td><td>${r.at}</td>
+      <td class="num ${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.incl:-r.incl)}</td>
+      <td class="num ${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.excl:-r.excl)}</td>
+      <td>${dirPill(r.dir)}</td><td><span class="pill s-none">不开票</span></td>
+      <td><span class="pill s-settled">已结算</span></td>
+    </tr>`).join('') || `<tr><td colspan="9"><div class="empty"><b>本结算单无业务调整</b>该结算单周期内没有接入业务调整单</div></td></tr>`;
+  $('#adj-total').textContent = `共 ${rows.length} 行`;
+}
+
+/* ============ 详情抽屉 ============ */
+function openDrawer(no){
+  const r = INCOME.find(x=>x.no===no); if(!r) return;
+  const adj = r.type==='ADJ', s = r.dir==='P2S' ? 1 : -1;
+  $('#dr-title').textContent = adj ? '平台收支详情 · 业务调整' : '平台收入详情';
+  $('#dr-body').innerHTML = `
+    <div class="amount-box">
+      <div class="amount-item"><div class="k">含税金额</div><div class="v ${adj?(s>0?'pos':'neg'):''}">${adj?signed(s*r.incl):money(r.incl)}</div></div>
+      <div class="amount-item"><div class="k">未税金额</div><div class="v">${adj?signed(s*r.excl):money(r.excl)}</div></div>
+      <div class="amount-item"><div class="k">GST</div><div class="v">${money(r.gst)}</div></div>
+    </div>
+    ${adj?'<div class="note-bar" style="padding:10px 0">业务调整不区分未税与 GST（GST 恒为 0），不创建开票任务。</div>':''}
+    <h3>基本信息</h3>
+    <table class="kv">
+      <tr><th>平台收支单号</th><td class="mono">${r.no}</td><th>类型</th><td><span class="pill ${TYPE[r.type].cls}">${TYPE[r.type].label}</span></td></tr>
+      ${adj?`<tr><th>调整类型</th><td>${esc(r.adjType.cn)} <span class="mono" style="color:var(--sub)">${r.adjType.code}</span></td><th>调整方向</th><td>${dirPill(r.dir)}</td></tr>`:''}
+      <tr><th>上游源单号</th><td class="mono">${r.src}</td><th>主关联单号</th><td class="mono">${r.rel||'—'}</td></tr>
+      <tr><th>店铺</th><td>${esc(r.shop)}<div class="subline mono">${r.shopCode}</div></td><th>商户编码</th><td class="mono">${r.merchant}</td></tr>
+      ${adj?'':`<tr><th>入库仓库</th><td>${r.wh}</td><th>—</th><td>—</td></tr>`}
+      <tr><th>归期时间</th><td>${r.at}</td><th>接入时间</th><td>${r.ing}</td></tr>
+      <tr><th>结算状态</th><td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td><th>结算单号</th><td class="mono">${r.bill||'—'}</td></tr>
+    </table>
+    <h3>结算与开票</h3>
+    <table class="kv">
+      <tr><th>发票状态</th><td>${adj?'<span class="pill s-none">不开票</span>':'<span class="pill s-settled">已开票</span>'}</td><th>发票号</th><td class="mono">${adj?'—':'SUP-INV-2026-0910-001'}</td></tr>
+      <tr><th>发票类型</th><td>${adj?'—':'销售发票'}</td><th>开票时间</th><td>${adj?'—':r.ing}</td></tr>
+    </table>
+    <h3>出账前自检</h3>
+    <table class="kv"><tr><th>自查状态</th><td colspan="3">未回查（该结算单已生成，暂无出账要求）</td></tr></table>
+    ${adj?'':`<h3>商品行</h3>
+    <table class="kv"><tr><th>行号</th><th>商品编码</th><th>商品名称</th><th>金额</th></tr>
+      <tr><td>1</td><td class="mono">SKU260803140001</td><td>三方 bcrs 测试 0803 1瓶/瓶</td><td>${money(r.incl)}</td></tr></table>`}
+    ${adj?'<h3>说明</h3><div class="note-bar" style="padding:10px 0">调整说明与附件留在运营平台侧，不随报文输出，此处不展示。</div>':''}
+  `;
+  $('#mask').classList.add('open'); $('#drawer').classList.add('open');
+}
+function closeDrawer(){ $('#mask').classList.remove('open'); $('#drawer').classList.remove('open'); }
+
+/* ============ 交互 ============ */
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='page-'+id));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.page===id || (id==='bill'&&n.dataset.page==='bills')));
+  window.scrollTo(0,0);
+}
+function showTab(t){
+  document.querySelectorAll('#bill-tabs .tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===t && b.textContent.trim()!==''));
+  $('#tab-ov').style.display = t==='ov'?'block':'none';
+  $('#tab-adj').style.display = t==='adj'?'block':'none';
+  $('#tab-x').style.display = (t!=='ov'&&t!=='adj')?'block':'none';
+  if(t==='adj') adjRows();
+}
+document.addEventListener('click', e=>{
+  const nav = e.target.closest('.nav-item[data-page]');
+  if(nav){ showPage(nav.dataset.page); if(nav.dataset.page==='bills') billRows(); return; }
+  const crumb = e.target.closest('[data-page]:not(.nav-item)');
+  if(crumb){ showPage(crumb.dataset.page); if(crumb.dataset.page==='bills') billRows(); return; }
+  const bill = e.target.closest('[data-bill]');
+  if(bill){ showPage('bill'); showTab('ov'); return; }
+  const view = e.target.closest('[data-view]');
+  if(view){ openDrawer(view.dataset.view); return; }
+  const jump = e.target.closest('[data-jump]');
+  if(jump){ showTab('adj'); document.querySelectorAll('#bill-tabs .tab').forEach(b=>b.classList.toggle('active', b.dataset.tab==='adj')); return; }
+  const tab = e.target.closest('#bill-tabs .tab');
+  if(tab){ document.querySelectorAll('#bill-tabs .tab').forEach(b=>b.classList.remove('active')); tab.classList.add('active'); showTab(tab.dataset.tab); return; }
+  if(e.target.id==='dr-close' || e.target.id==='mask') closeDrawer();
+});
+$('#f-go').onclick = ()=>{ incomeRows(); toast('已按条件查询'); };
+$('#f-reset').onclick = ()=>{ ['f-kw','f-type','f-dir','f-shop','f-st'].forEach(id=>$('#'+id).value=''); incomeRows(); toast('筛选条件已重置'); };
+$('#f-export').onclick = ()=> toast('导出含调整类型、方向与带符号金额（原型不生成文件）');
+$('#adj-go').onclick = ()=> adjRows();
+
+incomeRows(); billRows();
+</script>
+</body>
+</html>

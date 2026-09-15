@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磐石 Aegis · 后台原型（全站）</title>
+<style>
+  /* ============================================================
+     磐石 Aegis 全站原型 · 设计令牌（像素级对齐 aegis-admin 真实代码）
+     来源：AntdProvider token + PageHeader/SiteBadge/StatusTag/FilterBar/format.ts
+     ============================================================ */
+  :root{
+    --brand:#3b6cd8;           /* colorPrimary */
+    --brand-hover:#5a83e0;
+    --chain-blue:#1677ff;      /* 计算链高亮（page.tsx 内联） */
+    --success:#2c8a5c; --error:#c8312c; --warning:#d97706;
+    --text:#1a1d24;            /* colorText */
+    --text-sub:#5b6470;        /* colorTextSecondary */
+    --text-muted:rgba(0,0,0,.45);
+    --bg-layout:#f5f7fa;
+    --bg-container:#fff;
+    --border:#e3e6ea;
+    --border-2:#eef0f3;
+    --filter-bg:#fafbfc;       /* Table.headerBg / FilterBar 底 */
+    --reverse-row:#fff7ed;     /* 逆向行浅橙 */
+    --menu-sel-bg:#eef3fd; --menu-sel-fg:#3b6cd8;
+    /* 分组表头三色（page.tsx GROUP_*_STYLE） */
+    --grp-order:#e6f4ff; --grp-merchant:#f6ffed; --grp-warehouse:#fffbe6;
+    /* 状态药丸（StatusTag TONES） */
+    --s-green-bg:#d1fae5; --s-green-fg:#065f46;
+    --s-blue-bg:#dbeafe;  --s-blue-fg:#1e40af;
+    --s-orange-bg:#ffedd5;--s-orange-fg:#9a3412;
+    --s-red-bg:#fee2e2;   --s-red-fg:#991b1b;
+    --s-gray-bg:#eef0f3;  --s-gray-fg:#4b5563;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",Inter,"Helvetica Neue",Arial,sans-serif;
+    color:var(--text);background:var(--bg-layout);font-size:14px;line-height:1.5715;-webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== Layout 骨架 ===== */
+  .app{display:flex;min-height:100vh;}
+  .sider{width:220px;background:var(--bg-container);border-right:1px solid var(--border-2);position:fixed;left:0;top:0;bottom:0;height:100vh;overflow-y:auto;z-index:50;}
+  .brand{height:56px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border-2);gap:10px;}
+  .brand .logo{font-size:20px;color:var(--brand);}
+  .brand .name{font-weight:700;font-size:15px;white-space:nowrap;}
+  .main{margin-left:220px;flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{position:sticky;top:0;z-index:40;height:56px;background:var(--bg-container);border-bottom:1px solid var(--border-2);display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+  .topbar .fold{border:none;background:none;font-size:16px;color:var(--text);cursor:pointer;}
+  .topbar .right{display:flex;align-items:center;gap:12px;font-size:13px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;}
+  .tag-role{background:var(--s-blue-bg);color:var(--s-blue-fg);border:1px solid #91caff;border-radius:4px;padding:0 8px;font-size:12px;line-height:20px;}
+  .content{padding:24px;flex:1;background:var(--bg-layout);}
+  .foot{text-align:center;height:48px;line-height:24px;padding:12px 24px;color:var(--text-sub);font-size:12px;background:var(--bg-layout);}
+
+  /* ===== 菜单 ===== */
+  .menu{margin-top:8px;padding-bottom:24px;}
+  .menu .grp-title{font-size:12px;color:var(--text-sub);padding:8px 24px 4px;}
+  .menu a.mi{display:flex;align-items:center;gap:10px;height:40px;padding:0 24px;color:var(--text);text-decoration:none;font-size:14px;cursor:pointer;border-right:3px solid transparent;}
+  .menu a.mi:hover{background:#f5f7fa;}
+  .menu a.mi.active{background:var(--menu-sel-bg);color:var(--menu-sel-fg);border-right-color:var(--brand);font-weight:500;}
+  .menu a.mi .ic{width:16px;text-align:center;font-size:15px;flex:none;}
+
+  /* ===== PageHeader ===== */
+  .crumb{font-size:12px;color:var(--text-sub);margin-bottom:6px;}
+  .page-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .page-head h1{font-size:19px;font-weight:800;color:var(--text);line-height:1.3;margin:0;}
+  .page-head .subtitle{font-size:12.5px;color:var(--text-sub);}
+  .site-badge{margin-left:auto;display:inline-block;font-size:11.5px;color:#e11d48;background:#fdeef1;border:1px solid #f8c9d5;border-radius:999px;padding:2px 10px;white-space:nowrap;}
+
+  /* ===== Card / Panel ===== */
+  .card{background:var(--bg-container);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+  .card-pad{padding:16px;}
+  .card-title{font-size:15px;font-weight:600;padding:14px 16px;border-bottom:1px solid var(--border-2);}
+
+  /* ===== FilterBar ===== */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:14px 16px;background:var(--filter-bg);border-bottom:1px solid var(--border-2);}
+  .filter-field{display:flex;flex-direction:column;gap:4px;min-width:150px;}
+  .filter-field > span{font-size:11.5px;color:var(--text-sub);}
+  .filter-actions{display:flex;gap:8px;margin-left:auto;align-items:flex-end;}
+
+  /* ===== 控件 ===== */
+  .ipt,.sel{height:32px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;padding:4px 11px;font-size:14px;color:var(--text);outline:none;line-height:1.5;}
+  .ipt::placeholder{color:#bfbfbf;}
+  .sel{appearance:none;padding-right:28px;cursor:pointer;color:var(--text);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23999' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center;}
+  .rangepick{height:32px;display:inline-flex;align-items:center;gap:8px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;padding:4px 11px;color:#bfbfbf;min-width:230px;cursor:pointer;font-size:14px;}
+  .rangepick .sep{color:#d9d9d9;}
+  .ipt:focus,.sel:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(59,108,216,.1);}
+
+  /* ===== 按钮 ===== */
+  .btn{height:32px;padding:4px 15px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid #d9d9d9;background:#fff;color:var(--text);transition:.2s;line-height:1.5;white-space:nowrap;}
+  .btn:hover{color:var(--brand);border-color:var(--brand);}
+  .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .btn-primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);color:#fff;}
+  .btn-danger{color:var(--error);border-color:#ffccc7;}
+  .btn-danger:hover{color:#fff;background:var(--error);border-color:var(--error);}
+  .btn-link{border:none;background:none;color:var(--brand);padding:0 4px;height:auto;}
+  .btn-link:hover{color:var(--brand-hover);}
+  .btn-link.danger{color:var(--error);}
+  .btn-sm{height:26px;padding:2px 10px;font-size:13px;}
+  .btn:disabled{color:rgba(0,0,0,.25);border-color:#d9d9d9;background:#f5f5f5;cursor:not-allowed;}
+
+  /* ===== Table ===== */
+  .tbl-wrap{overflow-x:auto;}
+  table.tbl{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap;}
+  table.tbl th,table.tbl td{padding:12px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
+  table.tbl thead th{background:var(--filter-bg);color:var(--text-sub);font-weight:600;font-size:13px;}
+  table.tbl tbody tr:hover{background:#f0f3f9;}
+  table.tbl tbody tr.reverse{background:var(--reverse-row);}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  th.center,td.center{text-align:center;}
+  .grp-order{background:var(--grp-order);padding:2px 10px;border-radius:4px;}
+  .grp-merchant{background:var(--grp-merchant);padding:2px 10px;border-radius:4px;}
+  .grp-warehouse{background:var(--grp-warehouse);padding:2px 10px;border-radius:4px;}
+  code.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.06);border-radius:3px;padding:1px 5px;font-size:12.5px;}
+  .strong{font-weight:700;} .blue{color:var(--chain-blue);} .muted{color:var(--text-sub);}
+
+  /* ===== 状态药丸 ===== */
+  .status{display:inline-block;padding:1px 8px;border-radius:3px;font-size:11.5px;font-weight:600;white-space:nowrap;line-height:1.6;}
+  .s-green{background:var(--s-green-bg);color:var(--s-green-fg);}
+  .s-blue{background:var(--s-blue-bg);color:var(--s-blue-fg);}
+  .s-orange{background:var(--s-orange-bg);color:var(--s-orange-fg);}
+  .s-red{background:var(--s-red-bg);color:var(--s-red-fg);}
+  .s-gray{background:var(--s-gray-bg);color:var(--s-gray-fg);}
+
+  /* ===== 分页 ===== */
+  .pagination{display:flex;align-items:center;gap:8px;padding:12px 16px;justify-content:flex-end;}
+  .pagination .total{margin-right:auto;color:var(--text-sub);font-size:14px;}
+  .pg{min-width:32px;height:32px;padding:0 6px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;cursor:pointer;color:var(--text);font-size:14px;}
+  .pg:hover{border-color:var(--brand);color:var(--brand);}
+  .pg.active{border-color:var(--brand);color:var(--brand);}
+  .pg:disabled{color:rgba(0,0,0,.25);cursor:not-allowed;}
+
+  /* ===== Alert ===== */
+  .alert{margin-top:16px;display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.6;}
+  .alert .ic{flex:none;margin-top:2px;}
+  .alert-info{background:#e6f4ff;border:1px solid #91caff;} .alert-info .ic{color:var(--brand);}
+  .alert-success{background:#f6ffed;border:1px solid #b7eb8f;} .alert-success .ic{color:var(--success);}
+  .alert-warn{background:#fffbe6;border:1px solid #ffe58f;} .alert-warn .ic{color:var(--warning);}
+  .alert-error{background:#fff2f0;border:1px solid #ffccc7;} .alert-error .ic{color:var(--error);}
+
+  /* ===== Descriptions ===== */
+  .desc{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;font-size:14px;}
+  .desc th,.desc td{border:1px solid var(--border);padding:10px 16px;text-align:left;vertical-align:top;}
+  .desc th{background:#fafafa;color:var(--text);font-weight:400;width:130px;white-space:nowrap;}
+
+  /* ===== 计算链 ===== */
+  .chain{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px;border:1px solid var(--border-2);border-radius:4px;margin-bottom:16px;}
+  .chain .op{font-size:15px;}
+  .node{text-align:center;min-width:120px;}
+  .node .lbl{font-size:12px;color:var(--text-muted);}
+  .node .val{font-size:15px;font-weight:700;}
+  .node.hl .val{color:var(--chain-blue);}
+  .node .ok{color:var(--success);}
+
+  /* ===== Drawer ===== */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:.3s;z-index:900;}
+  .mask.open{opacity:1;visibility:visible;}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:960px;max-width:96vw;background:#fff;box-shadow:-6px 0 16px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s;z-index:901;display:flex;flex-direction:column;}
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{display:flex;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border-2);}
+  .drawer-head h2{margin:0;font-size:16px;font-weight:600;}
+  .drawer-close{margin-left:auto;border:none;background:none;font-size:18px;color:var(--text-sub);cursor:pointer;line-height:1;}
+  .drawer-body{padding:24px;overflow-y:auto;flex:1;}
+  .drawer-body h3{font-size:16px;font-weight:600;margin:0 0 12px;} .drawer-body h3.sec{margin-top:24px;}
+  table.lines{border-collapse:collapse;width:100%;font-size:13px;}
+  table.lines th,table.lines td{border-bottom:1px solid var(--border-2);padding:8px 10px;text-align:left;white-space:nowrap;}
+  table.lines thead th{background:var(--filter-bg);color:var(--text-sub);font-weight:600;}
+
+  /* ===== 统计卡（dashboard 等） ===== */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:16px;}
+  .stat{background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px;}
+  .stat .t{font-size:13px;color:var(--text-sub);margin-bottom:8px;}
+  .stat .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat .d{font-size:12px;color:var(--text-sub);margin-top:6px;}
+
+  /* ===== 表单（编辑抽屉/弹窗内） ===== */
+  .form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .form-row label{font-size:13px;color:var(--text);} .form-row label .req{color:var(--error);}
+  .empty{padding:60px;text-align:center;color:var(--text-sub);}
+  .tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .tabs .tab{padding:10px 0;cursor:pointer;color:var(--text-sub);border-bottom:2px solid transparent;font-size:14px;}
+  .tabs .tab.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:500;}
+
+  /* 页面切换 */
+  .page-view{display:none;} .page-view.active{display:block;}
+
+  /* ===== Toast 轻提示 ===== */
+  #toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+  .toast{background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.12);padding:9px 16px;font-size:14px;display:flex;align-items:center;gap:8px;animation:toastIn .2s ease;max-width:560px;}
+  .toast .ti{flex:none;font-size:15px;color:var(--brand);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+  /* ===== 确认框 ===== */
+  #confirm-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1001;display:none;align-items:center;justify-content:center;}
+  #confirm-mask.open{display:flex;}
+  .confirm-box{background:#fff;border-radius:8px;width:416px;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.16);overflow:hidden;}
+  .confirm-box .cb-head{display:flex;align-items:flex-start;gap:12px;padding:20px 24px 8px;}
+  .confirm-box .cb-ic{font-size:20px;color:var(--warning);flex:none;line-height:1.4;}
+  .confirm-box .cb-title{font-size:16px;font-weight:600;}
+  .confirm-box .cb-msg{padding:4px 24px 20px 56px;font-size:14px;color:var(--text-sub);line-height:1.6;}
+  .confirm-box .cb-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 24px 20px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sider">
+    <div class="brand"><span class="logo">▨</span><span class="name">磐石 Aegis</span></div>
+    <nav class="menu">
+      <div class="grp-title">业务流水</div>
+      <a class="mi active"><span class="ic">▨</span>分账明细</a>
+    </nav>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="fold">☰</button>
+      <div class="right">
+        <span class="muted">中文</span>
+        <span class="avatar">👤</span>
+        <span>管理员</span>
+        <span class="tag-role">ADMIN</span>
+        <span class="muted" style="cursor:pointer;">⎋ 登出</span>
+      </div>
+    </div>
+    <div class="content" id="content"><section class="page-view active" id="pv-allocation-detail">
+  <div class="crumb">业务流水 / 分账明细</div>
+  <div class="page-head"><h1>分账明细</h1><span class="subtitle">清结算平台三方分账的事实源：订单实付 = 应付商户 + 物流应付 + 平台抽佣(含税)</span><span class="site-badge">当前 site：新加坡</span></div>
+
+  <div class="card">
+    <div class="filter-bar">
+      <div class="filter-field"><span class="rangepick">履约完成日期：2026-07-01 ~ 2026-07-24</span></div>
+      <div class="filter-field"><input class="ipt" placeholder="PO-… / SO-…" style="width:200px"></div>
+      <div class="filter-field"><label>商户</label>
+        <select class="sel" style="width:220px">
+          <option>全部</option>
+          <option>M0001 新鲜岛水产</option>
+          <option>M0002 绿田蔬果</option>
+          <option>M0003 恒丰肉禽蛋</option>
+          <option>M0004 南洋标品</option>
+        </select>
+      </div>
+      <div class="filter-field"><label>订单类型</label>
+        <select class="sel" style="width:160px"><option>全部</option><option>正向(销售)</option><option>逆向(退款)</option></select>
+      </div>
+      <div class="filter-field"><label>结算状态</label>
+        <select class="sel" style="width:160px"><option>全部</option><option>未结算</option><option>已结算</option></select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" onclick="toast('原型演示：此操作在真实系统中执行，此处不联动')">查询</button>
+        <button class="btn" onclick="toast('原型演示：已重置筛选条件')">重置</button>
+        <button class="btn" onclick="toast('原型演示：导出当前筛选结果（此处不真导出）')">导出</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th rowspan="2">主订单号</th>
+            <th rowspan="2">子订单号</th>
+            <th rowspan="2">订单类型</th>
+            <th rowspan="2">商户</th>
+            <th rowspan="2" class="center">数据预检</th>
+            <th colspan="3" class="center grp-order">订单信息</th>
+            <th colspan="3" class="center grp-merchant">商家信息</th>
+            <th colspan="2" class="center grp-warehouse">仓配信息</th>
+            <th rowspan="2">结算状态</th>
+            <th rowspan="2">结算单号</th>
+            <th rowspan="2" class="num">平台收入(净)</th>
+            <th rowspan="2" class="center">操作</th>
+          </tr>
+          <tr>
+            <th class="num grp-order">订单实付(含税)</th>
+            <th class="num grp-order">运费</th>
+            <th class="num grp-order">BCRS 押金</th>
+            <th class="num grp-merchant">平台抽佣(含税)</th>
+            <th class="num grp-merchant">平台补贴</th>
+            <th class="num grp-merchant">应付商户</th>
+            <th class="num grp-warehouse">物流补贴</th>
+            <th class="num grp-warehouse">物流应付</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono">PO-20260703-0012</code></td>
+            <td><code class="mono">SO-20260703-0012-1</code></td>
+            <td><span class="status s-blue">正向(销售)</span></td>
+            <td>M0001 新鲜岛水产</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">S$1,280.00</td>
+            <td class="num">S$60.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$97.60</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$1,142.40</span></td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$60.00</span></td>
+            <td>未结算</td>
+            <td>—</td>
+            <td class="num"><span class="strong">S$97.60</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260703-0012</td><th>子订单号</th><td>SO-20260703-0012-1</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-blue&quot;>正向(销售)</span></td><th>商户</th><td>M0001 新鲜岛水产</td></tr><tr><th>订单实付(含税)</th><td>S$1,280.00</td><th>运费</th><td>S$60.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>未结算</td></tr><tr><th>结算单号</th><td>—</td><th>应付商户</th><td class=&quot;blue strong&quot;>S$1,142.40</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$60.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>S$97.60</td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>S$1,220.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$60.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$1,280.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$1,280.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>S$1,142.40</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$60.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>S$97.60 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-SF-0101</td><td>冰鲜三文鱼 1kg</td><td>29 水产</td><td>S$720.00</td><td>8.0000%</td><td>S$57.60</td><td>S$662.40</td></tr><tr><td>SKU-SF-0207</td><td>活波士顿龙虾 500g</td><td>29 水产</td><td>S$500.00</td><td>8.0000%</td><td>S$40.00</td><td>S$460.00</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr>
+            <td><code class="mono">PO-20260705-0033</code></td>
+            <td><code class="mono">SO-20260705-0033-1</code></td>
+            <td><span class="status s-blue">正向(销售)</span></td>
+            <td>M0002 绿田蔬果</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">S$486.00</td>
+            <td class="num">S$40.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$26.76</td>
+            <td class="num">S$10.00</td>
+            <td class="num"><span class="strong">S$429.24</span></td>
+            <td class="num">S$8.00</td>
+            <td class="num"><span class="strong">S$32.00</span></td>
+            <td>已结算</td>
+            <td><code class="mono">BILL-M0002-202607-01</code></td>
+            <td class="num"><span class="strong">S$16.76</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260705-0033</td><th>子订单号</th><td>SO-20260705-0033-1</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-blue&quot;>正向(销售)</span></td><th>商户</th><td>M0002 绿田蔬果</td></tr><tr><th>订单实付(含税)</th><td>S$486.00</td><th>运费</th><td>S$40.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>已结算</td></tr><tr><th>结算单号</th><td>BILL-M0002-202607-01</td><th>应付商户</th><td class=&quot;blue strong&quot;>S$429.24</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$32.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>S$26.76</td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>S$446.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$40.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$486.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$486.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>S$429.24</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$32.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>S$26.76 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-VG-0301</td><td>本地小白菜 500g</td><td>12 蔬菜</td><td>S$246.00</td><td>6.0000%</td><td>S$14.76</td><td>S$231.24</td></tr><tr><td>SKU-FR-0402</td><td>金枕榴莲 1盒</td><td>20 水果</td><td>S$200.00</td><td>6.0000%</td><td>S$12.00</td><td>S$188.00</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr>
+            <td><code class="mono">PO-20260708-0051</code></td>
+            <td><code class="mono">SO-20260708-0051-1</code></td>
+            <td><span class="status s-blue">正向(销售)</span></td>
+            <td>M0003 恒丰肉禽蛋</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">S$920.00</td>
+            <td class="num">S$50.00</td>
+            <td class="num">S$20.00</td>
+            <td class="num">S$78.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$807.00</span></td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$50.00</span></td>
+            <td>未结算</td>
+            <td>—</td>
+            <td class="num"><span class="strong">S$78.00</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260708-0051</td><th>子订单号</th><td>SO-20260708-0051-1</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-blue&quot;>正向(销售)</span></td><th>商户</th><td>M0003 恒丰肉禽蛋</td></tr><tr><th>订单实付(含税)</th><td>S$920.00</td><th>运费</th><td>S$50.00</td></tr><tr><th>BCRS 押金</th><td>S$20.00</td><th>结算状态</th><td>未结算</td></tr><tr><th>结算单号</th><td>—</td><th>应付商户</th><td class=&quot;blue strong&quot;>S$807.00</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$50.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>S$78.00</td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>S$850.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$50.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$20.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$920.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$920.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>S$807.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$50.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>S$78.00 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-MP-0501</td><td>冰鲜鸡全腿 1kg</td><td>19 肉禽蛋</td><td>S$600.00</td><td>9.0000%</td><td>S$54.00</td><td>S$546.00</td></tr><tr><td>SKU-MP-0512</td><td>土鸡蛋 30枚</td><td>19 肉禽蛋</td><td>S$300.00</td><td>8.0000%</td><td>S$24.00</td><td>S$276.00</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr class="reverse">
+            <td><code class="mono">PO-20260705-0033</code></td>
+            <td><code class="mono">SO-20260705-0033-1R</code></td>
+            <td><span class="status s-orange">逆向(退款)</span></td>
+            <td>M0002 绿田蔬果</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">-S$200.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">-S$12.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">-S$188.00</span></td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$0.00</span></td>
+            <td>未结算</td>
+            <td>—</td>
+            <td class="num"><span class="strong">-S$12.00</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260705-0033</td><th>子订单号</th><td>SO-20260705-0033-1R</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-orange&quot;>逆向(退款)</span></td><th>商户</th><td>M0002 绿田蔬果</td></tr><tr><th>订单实付(含税)</th><td>-S$200.00</td><th>运费</th><td>S$0.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>未结算</td></tr><tr><th>结算单号</th><td>—</td><th>应付商户</th><td class=&quot;blue strong&quot;>-S$188.00</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$0.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>-S$12.00</td></tr><tr><th>红冲</th><td colspan=&quot;3&quot;><span class=&quot;status s-red&quot;>红冲</span> 冲销原分账 <code>SO-20260705-0033-1</code></td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>-S$200.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>-S$200.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>-S$200.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>-S$188.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>-S$12.00 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-FR-0402</td><td>金枕榴莲 1盒</td><td>20 水果</td><td>-S$200.00</td><td>6.0000%</td><td>-S$12.00</td><td>-S$188.00</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr>
+            <td><code class="mono">PO-20260710-0064</code></td>
+            <td><code class="mono">SO-20260710-0064-1</code></td>
+            <td><span class="status s-blue">正向(销售)</span></td>
+            <td>M0004 南洋标品</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">S$342.00</td>
+            <td class="num">S$30.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$15.60</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$296.40</span></td>
+            <td class="num">S$12.00</td>
+            <td class="num"><span class="strong">S$18.00</span></td>
+            <td>已结算</td>
+            <td><code class="mono">BILL-M0004-202607-01</code></td>
+            <td class="num"><span class="strong">S$15.60</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260710-0064</td><th>子订单号</th><td>SO-20260710-0064-1</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-blue&quot;>正向(销售)</span></td><th>商户</th><td>M0004 南洋标品</td></tr><tr><th>订单实付(含税)</th><td>S$342.00</td><th>运费</th><td>S$30.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>已结算</td></tr><tr><th>结算单号</th><td>BILL-M0004-202607-01</td><th>应付商户</th><td class=&quot;blue strong&quot;>S$296.40</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$18.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>S$15.60</td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>S$312.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$30.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$342.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$342.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>S$296.40</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$18.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>S$15.60 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-SP-0701</td><td>泰国香米 5kg</td><td>11 标品</td><td>S$312.00</td><td>5.0000%</td><td>S$15.60</td><td>S$296.40</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr>
+            <td><code class="mono">PO-20260712-0078</code></td>
+            <td><code class="mono">SO-20260712-0078-1</code></td>
+            <td><span class="status s-blue">正向(销售)</span></td>
+            <td>M0001 新鲜岛水产</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">S$2,150.00</td>
+            <td class="num">S$80.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$165.60</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$1,904.40</span></td>
+            <td class="num">S$30.00</td>
+            <td class="num"><span class="strong">S$50.00</span></td>
+            <td>未结算</td>
+            <td>—</td>
+            <td class="num"><span class="strong">S$165.60</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260712-0078</td><th>子订单号</th><td>SO-20260712-0078-1</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-blue&quot;>正向(销售)</span></td><th>商户</th><td>M0001 新鲜岛水产</td></tr><tr><th>订单实付(含税)</th><td>S$2,150.00</td><th>运费</th><td>S$80.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>未结算</td></tr><tr><th>结算单号</th><td>—</td><th>应付商户</th><td class=&quot;blue strong&quot;>S$1,904.40</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$50.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>S$165.60</td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>S$2,070.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$80.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$2,150.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$2,150.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>S$1,904.40</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$50.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>S$165.60 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-SF-0101</td><td>冰鲜三文鱼 1kg</td><td>29 水产</td><td>S$1,440.00</td><td>8.0000%</td><td>S$115.20</td><td>S$1,324.80</td></tr><tr><td>SKU-SF-0233</td><td>鲜活青蟹 800g</td><td>29 水产</td><td>S$630.00</td><td>8.0000%</td><td>S$50.40</td><td>S$579.60</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr class="reverse">
+            <td><code class="mono">PO-20260708-0051</code></td>
+            <td><code class="mono">SO-20260708-0051-1R</code></td>
+            <td><span class="status s-orange">逆向(退款)</span></td>
+            <td>M0003 恒丰肉禽蛋</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">-S$300.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">-S$24.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">-S$276.00</span></td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$0.00</span></td>
+            <td>未结算</td>
+            <td>—</td>
+            <td class="num"><span class="strong">-S$24.00</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260708-0051</td><th>子订单号</th><td>SO-20260708-0051-1R</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-orange&quot;>逆向(退款)</span></td><th>商户</th><td>M0003 恒丰肉禽蛋</td></tr><tr><th>订单实付(含税)</th><td>-S$300.00</td><th>运费</th><td>S$0.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>未结算</td></tr><tr><th>结算单号</th><td>—</td><th>应付商户</th><td class=&quot;blue strong&quot;>-S$276.00</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$0.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>-S$24.00</td></tr><tr><th>负数腿</th><td><span class=&quot;status s-red&quot;>挂账不出款</span></td><th>红冲</th><td><span class=&quot;status s-red&quot;>红冲</span> 冲销原分账 <code>SO-20260708-0051-1</code></td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>-S$300.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>-S$300.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>-S$300.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>-S$276.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>-S$24.00 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-MP-0512</td><td>土鸡蛋 30枚</td><td>19 肉禽蛋</td><td>-S$300.00</td><td>8.0000%</td><td>-S$24.00</td><td>-S$276.00</td></tr></table>')">明细</button></td>
+          </tr>
+
+          <tr>
+            <td><code class="mono">PO-20260715-0092</code></td>
+            <td><code class="mono">SO-20260715-0092-1</code></td>
+            <td><span class="status s-blue">正向(销售)</span></td>
+            <td>M0002 绿田蔬果</td>
+            <td class="center"><span class="status s-green">通过</span></td>
+            <td class="num">S$668.00</td>
+            <td class="num">S$45.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$37.38</td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$585.62</span></td>
+            <td class="num">S$0.00</td>
+            <td class="num"><span class="strong">S$45.00</span></td>
+            <td>未结算</td>
+            <td>—</td>
+            <td class="num"><span class="strong">S$37.38</span></td>
+            <td class="center"><button class="btn-link" onclick="openDrawer('分账明细详情', '<h3>订单头</h3><table class=&quot;desc&quot;><tr><th>主订单号</th><td>PO-20260715-0092</td><th>子订单号</th><td>SO-20260715-0092-1</td></tr><tr><th>订单类型</th><td><span class=&quot;status s-blue&quot;>正向(销售)</span></td><th>商户</th><td>M0002 绿田蔬果</td></tr><tr><th>订单实付(含税)</th><td>S$668.00</td><th>运费</th><td>S$45.00</td></tr><tr><th>BCRS 押金</th><td>S$0.00</td><th>结算状态</th><td>未结算</td></tr><tr><th>结算单号</th><td>—</td><th>应付商户</th><td class=&quot;blue strong&quot;>S$585.62</td></tr><tr><th>物流应付</th><td class=&quot;blue strong&quot;>S$45.00</td><th>平台抽佣(含税)</th><td class=&quot;blue strong&quot;>S$37.38</td></tr></table><h3>① 头行构成</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>商品行合计</span><span class=&quot;val&quot;>S$623.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>运费</span><span class=&quot;val&quot;>S$45.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>BCRS 押金</span><span class=&quot;val&quot;>S$0.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$668.00</span></span></div><h3>② 三方分账</h3><div class=&quot;chain&quot;><span class=&quot;node&quot;><span class=&quot;lbl&quot;>订单实付(含税)</span><span class=&quot;val hl&quot;>S$668.00</span></span><span class=&quot;op&quot;>=</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>应付商户</span><span class=&quot;val&quot;>S$585.62</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>物流应付</span><span class=&quot;val&quot;>S$45.00</span></span><span class=&quot;op&quot;>+</span><span class=&quot;node&quot;><span class=&quot;lbl&quot;>平台抽佣(含税)</span><span class=&quot;val hl ok&quot;>S$37.38 ✓</span></span></div><h3>商品明细行 · 各腿拆分</h3><table class=&quot;lines&quot;><tr><th>商品编码</th><th>商品名称</th><th>货品分类</th><th>实付金额</th><th>费率</th><th>平台抽佣(含税)</th><th>应付商户</th></tr><tr><td>SKU-VG-0318</td><td>有机番茄 1kg</td><td>12 蔬菜</td><td>S$360.00</td><td>6.0000%</td><td>S$21.60</td><td>S$338.40</td></tr><tr><td>SKU-FR-0421</td><td>猫山王榴莲肉 500g</td><td>20 水果</td><td>S$263.00</td><td>6.0000%</td><td>S$15.78</td><td>S$247.22</td></tr></table>')">明细</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <span class="total">共 8 单（正向 6 · 逆向 2）</span>
+      <span class="pg">‹</span><span class="pg active">1</span><span class="pg">2</span><span class="pg">3</span><span class="pg">›</span>
+    </div>
+  </div>
+
+  <div class="alert alert-info"><span class="ic">i</span><div>三方分账：订单实付 = 应付商户 + 物流应付 + 平台抽佣(含税)。平台抽佣(含税) = 计佣基数(商品含税) × 费率（抽佣本身即含 GST，不再 ×1.09）；物流应付 = 运费 − 物流补贴；应付商户 = 订单实付 − 平台抽佣(含税) − 物流应付。行级不含运费/BCRS，订单级应付商户 = 行合计 + BCRS 透传；BCRS 与 GST 透传给商户，运费归物流。逆向：支持行级部分冲销——按退货的具体商品行反向生成分账（各腿取负值），非整单按比例反冲；三方等式在逆向行同样必须成立。负数腿：物流应付或应付商户为负时该腿不出款，挂账累计，待后续正向单冲抵后再结算，避免向收款方倒付。</div></div>
+</section></div>
+    <div class="foot">© 2026 磐石 Aegis 资金清结算与合规系统 — 分账明细（三期·变更001 原型）</div>
+  </div>
+</div>
+<div id="toast-wrap"></div>
+<div id="confirm-mask" onclick="if(event.target===this)closeConfirm()">
+  <div class="confirm-box">
+    <div class="cb-head"><span class="cb-ic">⚠</span><span class="cb-title" id="cbTitle">确认操作</span></div>
+    <div class="cb-msg" id="cbMsg"></div>
+    <div class="cb-foot"><button class="btn" onclick="closeConfirm()">取消</button><button class="btn btn-primary" id="cbOk" onclick="cbConfirm()">确认</button></div>
+  </div>
+</div>
+
+<!-- 通用抽屉（各页复用） -->
+<div class="mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head"><h2 id="drawerTitle">详情</h2><button class="drawer-close" onclick="closeDrawer()">✕</button></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+<script>
+/* ===== 金额格式化（对齐 format.ts centsToSgd） ===== */
+function sgd(cents){const v=cents/100;const abs=Math.abs(v).toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2});return (v<0?'-S$':'S$')+abs;}
+/* ===== 抽屉 ===== */
+function openDrawer(title,html){document.getElementById('drawerTitle').textContent=title;document.getElementById('drawerBody').innerHTML=html;document.getElementById('mask').classList.add('open');document.getElementById('drawer').classList.add('open');}
+function closeDrawer(){document.getElementById('mask').classList.remove('open');document.getElementById('drawer').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeConfirm();}});
+/* ===== Toast 轻提示 ===== */
+function toast(msg){const w=document.getElementById('toast-wrap');const el=document.createElement('div');el.className='toast';el.innerHTML='<span class="ti">ⓘ</span><span>'+msg+'</span>';w.appendChild(el);setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);},2200);}
+/* ===== 确认框 ===== */
+function confirmBox(title,msg,okText){document.getElementById('cbTitle').textContent=title;document.getElementById('cbMsg').textContent=msg;document.getElementById('cbOk').textContent=okText||'确认';document.getElementById('confirm-mask').classList.add('open');window.__cbOkText=okText||'确认';}
+function closeConfirm(){document.getElementById('confirm-mask').classList.remove('open');}
+function cbConfirm(){closeConfirm();toast('原型演示：已'+(window.__cbOkText||'确认')+'（真实系统中执行，此处不联动）');}
+/* ===== 页面切换 ===== */
+function goPage(key){
+  document.querySelectorAll('.page-view').forEach(p=>p.classList.toggle('active',p.id==='pv-'+key));
+  document.querySelectorAll('.menu a.mi').forEach(a=>a.classList.toggle('active',a.dataset.key===key));
+  closeDrawer();
+  document.getElementById('content').scrollTop=0;window.scrollTo(0,0);
+  if(location.hash!=='#'+key)location.hash=key;
+}
+window.addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(k&&document.getElementById('pv-'+k))goPage(k);});
+window.addEventListener('DOMContentLoaded',()=>{const k=location.hash.slice(1);goPage(document.getElementById('pv-'+k)?k:'allocation-detail');});
+/* PAGE_SCRIPTS_INJECT */
+</script>
+</body>
+</html>

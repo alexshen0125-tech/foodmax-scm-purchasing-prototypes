@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>收款确认 - Food Max</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #303133; font-size: 13px; }
+
+  .header { background: #fff; padding: 14px 20px; border-bottom: 1px solid #ebeef5; }
+  .header h1 { font-size: 16px; font-weight: 600; }
+  .header .breadcrumb { color: #909399; font-size: 12px; margin-top: 4px; }
+
+  /* 筛选区 */
+  .filter { background: #fff; padding: 16px 20px 8px; margin: 12px; border-radius: 4px; border: 1px solid #ebeef5; }
+  .filter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 20px; }
+  .filter-item { display: flex; align-items: center; }
+  .filter-item label { color: #606266; width: 96px; text-align: right; flex-shrink: 0; padding-right: 10px; font-size: 13px; }
+  .filter-item input, .filter-item select { flex: 1; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 3px; font-size: 12px; min-width: 0; height: 32px; background: #fff; }
+  .filter-item input:focus, .filter-item select:focus { border-color: #409eff; outline: none; }
+  .filter-item .range { display: flex; gap: 4px; align-items: center; flex: 1; }
+  .filter-item .range input { width: 100%; }
+  .filter-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 0 4px; margin-top: 8px; }
+  .btn { padding: 7px 15px; border-radius: 3px; border: 1px solid #dcdfe6; cursor: pointer; font-size: 12px; background: #fff; color: #606266; height: 32px; }
+  .btn-primary { background: #409eff; color: #fff; border-color: #409eff; }
+  .btn-text { color: #409eff; background: none; border: none; padding: 0 6px; cursor: pointer; font-size: 12px; }
+  .btn-text.danger { color: #f56c6c; }
+
+  /* 表格区 */
+  .table-container { background: #fff; margin: 12px; border-radius: 4px; border: 1px solid #ebeef5; }
+  .table-top-area { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px 20px 10px; border-bottom: 1px solid #f5f5f5; flex-wrap: wrap; gap: 12px; }
+  .table-title { font-size: 15px; font-weight: 600; color: #303133; margin-bottom: 8px; }
+  .amount-summary { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 12px; color: #606266; }
+  .amount-summary span { white-space: nowrap; }
+  .amount-summary .num { color: #f56c6c; font-weight: 600; }
+  .top-actions { display: flex; gap: 8px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; min-width: 3105px; border-collapse: collapse; font-size: 12px; }
+  thead th { background: #f5f7fa; padding: 10px 12px; text-align: left; color: #606266; font-weight: 500; border-bottom: 1px solid #ebeef5; white-space: nowrap; }
+  thead th.num { text-align: right; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid #ebeef5; white-space: nowrap; vertical-align: top; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  tbody tr:hover { background: #ecf5ff; }
+  .num { text-align: right; font-family: Menlo, Consolas, monospace; }
+  .sub-text { color: #909399; font-size: 11px; margin-top: 2px; }
+  .status-tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .status-pending { background: #fdf6ec; color: #e6a23c; }
+  .status-done { background: #f0f9eb; color: #67c23a; }
+  .status-rejected { background: #fef0f0; color: #f56c6c; }
+  .status-partial { background: #ecf5ff; color: #409eff; }
+  .thumb { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; border: 1px solid #ebeef5; }
+  .reason-cell { max-width: 160px; overflow: hidden; text-overflow: ellipsis; color: #606266; }
+
+  .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 12px 20px; color: #606266; font-size: 12px; border-top: 1px solid #f5f5f5; }
+  .pagination button { padding: 4px 10px; border: 1px solid #dcdfe6; background: #fff; border-radius: 3px; cursor: pointer; font-size: 12px; }
+  .pagination .active { background: #409eff; color: #fff; border-color: #409eff; }
+
+  /* 弹框 */
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 99; }
+  .modal-mask.show { display: flex; }
+  .modal { background: #fff; width: 500px; border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid #ebeef5; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; color: #303133; }
+  .modal-close { font-size: 20px; color: #909399; cursor: pointer; background: none; border: none; }
+  .modal-body { padding: 24px 28px; }
+  .info-row { display: flex; padding: 7px 0; font-size: 14px; }
+  .info-row .label { width: 130px; color: #606266; }
+  .info-row .value { color: #303133; font-weight: 500; }
+
+  .reason-block { margin-top: 18px; padding-top: 4px; }
+  .reason-label { color: #606266; margin-bottom: 8px; font-size: 14px; }
+  .reason-label .required { color: #f56c6c; margin-right: 4px; }
+  .reason-wrap { position: relative; }
+  .reason-wrap textarea { width: 100%; height: 88px; padding: 8px 10px; border: 1px solid #dcdfe6; border-radius: 3px; font-size: 13px; resize: none; font-family: inherit; outline: none; color: #303133; }
+  .reason-wrap textarea:focus { border-color: #409eff; }
+  .reason-counter { position: absolute; right: 10px; bottom: 6px; font-size: 12px; color: #c0c4cc; }
+  .reason-counter.over { color: #f56c6c; }
+  .reason-error { color: #f56c6c; font-size: 12px; margin-top: 6px; display: none; }
+  .reason-error.show { display: block; }
+
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #ebeef5; }
+
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 10px 20px; border-radius: 4px; font-size: 13px; z-index: 999; display: none; }
+  .toast.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>收款确认</h1>
+  <div class="breadcrumb">财务 / 收款管理 / 收款确认</div>
+</div>
+
+<!-- 筛选区（保留原线上全部字段） -->
+<div class="filter">
+  <div class="filter-grid">
+    <div class="filter-item"><label>销售收款日期</label>
+      <div class="range"><input type="date"><span>~</span><input type="date"></div>
+    </div>
+    <div class="filter-item"><label>销售</label>
+      <select><option>全部</option><option>Evan Er</option><option>李伟</option><option>王芳</option></select>
+    </div>
+    <div class="filter-item"><label>财务收款人</label><input type="text" placeholder="请输入财务收款人"></div>
+    <div class="filter-item"><label>财务确认状态</label>
+      <select><option>未确认</option><option>已确认</option><option>已驳回</option><option>部分确认</option></select>
+    </div>
+
+    <div class="filter-item"><label>财务确认日期</label>
+      <div class="range"><input type="date"><span>~</span><input type="date"></div>
+    </div>
+    <div class="filter-item"><label>收款单号</label><input type="text" placeholder="请输入收款单号"></div>
+    <div class="filter-item"><label>结算单号</label><input type="text" placeholder="请输入结算单号"></div>
+    <div class="filter-item"><label>收款方式</label>
+      <select><option>请选择收款方式</option><option>现金</option><option>银行转账</option><option>线上收款</option></select>
+    </div>
+
+    <div class="filter-item"><label>门店ID</label><input type="number" placeholder="请输入门店ID"></div>
+    <div class="filter-item"><label>门店编码</label><input type="text" placeholder="请输入门店编码"></div>
+    <div class="filter-item"><label>门店名称</label><input type="text" placeholder="请输入门店名查找"></div>
+    <div class="filter-item"><label>收款来源</label>
+      <select><option>请选择收款来源</option><option>APP</option><option>CRM</option></select>
+    </div>
+  </div>
+  <div class="filter-actions">
+    <button class="btn btn-primary">查询</button>
+    <button class="btn">重置</button>
+  </div>
+</div>
+
+<!-- 表格区 -->
+<div class="table-container">
+  <div class="table-top-area">
+    <div>
+      <div class="table-title">收款确认</div>
+      <div class="amount-summary">
+        <span>销售实收金额合计：<span class="num">45,466.11</span></span>
+        <span>销售收款金额合计：<span class="num">45,463.11</span></span>
+        <span>销售抹零金额合计：<span class="num">3</span></span>
+        <span>财务实收金额合计：<span class="num">0</span></span>
+        <span>财务抹零金额合计：<span class="num">0</span></span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn" disabled style="opacity:0.5;cursor:not-allowed">批量确认</button>
+      <button class="btn">导出</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:55px"><input type="checkbox"></th>
+          <th>收款单号</th>
+          <th>门店名称</th>
+          <th>销售</th>
+          <th>收款方式</th>
+          <th>结算单号</th>
+          <th>客户名称</th>
+          <th>销售收款时间</th>
+          <th class="num">销售收款金额</th>
+          <th class="num">销售抹零金额</th>
+          <th class="num">销售实收金额</th>
+          <th class="num">财务抹零金额</th>
+          <th class="num">财务实收金额</th>
+          <th>收款来源</th>
+          <th>收款备注</th>
+          <th>凭据查看</th>
+          <th>财务确认状态</th>
+          <th>财务确认时间</th>
+          <th>财务操作人</th>
+          <th>驳回原因</th>
+          <th>驳回人</th>
+          <th>驳回时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr data-no="RCT26041000007797">
+          <td><input type="checkbox"></td>
+          <td>RCT26041000007797</td>
+          <td>Mr Duck<div class="sub-text">编码：sh000006692</div><div class="sub-text">ID: 6692</div></td>
+          <td>Evan Er</td>
+          <td>银行转账</td>
+          <td>FMQS26041000008009</td>
+          <td>-</td>
+          <td>2026-04-10 14:32:30</td>
+          <td class="num">186.72</td>
+          <td class="num">0</td>
+          <td class="num">186.72</td>
+          <td class="num">0</td>
+          <td class="num">0</td>
+          <td>CRM</td>
+          <td></td>
+          <td><div class="thumb" style="background:#e8f3ff;display:flex;align-items:center;justify-content:center;color:#409eff;font-size:10px">凭据</div></td>
+          <td><span class="status-tag status-pending">未确认</span></td>
+          <td></td>
+          <td></td>
+          <td class="reason-cell">-</td>
+          <td>-</td>
+          <td>-</td>
+          <td><button class="btn-text danger" onclick="openModal('RCT26041000007797',{s1:186.72,s2:0,s3:186.72,f1:0,f2:0})">驳回收款</button></td>
+        </tr>
+        <tr data-no="RCT26041000007664">
+          <td><input type="checkbox"></td>
+          <td>RCT26041000007664</td>
+          <td>牛车水椰浆饭<div class="sub-text">编码：sh000008769</div><div class="sub-text">ID: 8769</div></td>
+          <td>李伟</td>
+          <td>现金</td>
+          <td>FMQS26041000007891</td>
+          <td>-</td>
+          <td>2026-04-10 13:12:08</td>
+          <td class="num">328.50</td>
+          <td class="num">0.50</td>
+          <td class="num">328.00</td>
+          <td class="num">0</td>
+          <td class="num">0</td>
+          <td>APP</td>
+          <td>现场收取</td>
+          <td><div class="thumb" style="background:#e8f3ff;display:flex;align-items:center;justify-content:center;color:#409eff;font-size:10px">凭据</div></td>
+          <td><span class="status-tag status-pending">未确认</span></td>
+          <td></td>
+          <td></td>
+          <td class="reason-cell">-</td>
+          <td>-</td>
+          <td>-</td>
+          <td><button class="btn-text danger" onclick="openModal('RCT26041000007664',{s1:328.50,s2:0.50,s3:328.00,f1:0,f2:0})">驳回收款</button></td>
+        </tr>
+        <tr data-no="RCT26041000007553">
+          <td><input type="checkbox"></td>
+          <td>RCT26041000007553</td>
+          <td>南洋小馆<div class="sub-text">编码：sh000004521</div><div class="sub-text">ID: 4521</div></td>
+          <td>王芳</td>
+          <td>线上收款</td>
+          <td>FMQS26041000007782</td>
+          <td>南洋餐饮集团</td>
+          <td>2026-04-10 11:05:44</td>
+          <td class="num">1,280.00</td>
+          <td class="num">0</td>
+          <td class="num">1,280.00</td>
+          <td class="num">0</td>
+          <td class="num">1,280.00</td>
+          <td>CRM</td>
+          <td></td>
+          <td><div class="thumb" style="background:#e8f3ff;display:flex;align-items:center;justify-content:center;color:#409eff;font-size:10px">凭据</div></td>
+          <td><span class="status-tag status-done">已确认</span></td>
+          <td>2026-04-10 11:20:15</td>
+          <td>财务-赵敏</td>
+          <td class="reason-cell">-</td>
+          <td>-</td>
+          <td>-</td>
+          <td></td>
+        </tr>
+        <tr data-no="RCT26041000007421">
+          <td><input type="checkbox"></td>
+          <td>RCT26041000007421</td>
+          <td>椰风海岸餐厅<div class="sub-text">编码：sh000003210</div><div class="sub-text">ID: 3210</div></td>
+          <td>Evan Er</td>
+          <td>银行转账</td>
+          <td>FMQS26041000007650</td>
+          <td>-</td>
+          <td>2026-04-10 09:45:12</td>
+          <td class="num">89.50</td>
+          <td class="num">0.50</td>
+          <td class="num">89.00</td>
+          <td class="num">0</td>
+          <td class="num">0</td>
+          <td>CRM</td>
+          <td></td>
+          <td><div class="thumb" style="background:#e8f3ff;display:flex;align-items:center;justify-content:center;color:#409eff;font-size:10px">凭据</div></td>
+          <td><span class="status-tag status-rejected">已驳回</span></td>
+          <td>-</td>
+          <td>-</td>
+          <td class="reason-cell" title="收款凭证缺失，请补充银行转账截图后重新提交">收款凭证缺失，请补充银行...</td>
+          <td>财务-赵敏</td>
+          <td>2026-04-10 10:05:33</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span>共 4 条</span>
+    <button>‹</button>
+    <button class="active">1</button>
+    <button>›</button>
+    <select><option>10 条/页</option><option>20 条/页</option><option>50 条/页</option></select>
+  </div>
+</div>
+
+<!-- 驳回收款弹框 -->
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>驳回收款</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-row"><div class="label">销售收款金额：</div><div class="value" id="s1">149.05</div></div>
+      <div class="info-row"><div class="label">销售抹零金额：</div><div class="value" id="s2">0</div></div>
+      <div class="info-row"><div class="label">销售实收金额：</div><div class="value" id="s3">149.05</div></div>
+      <div class="info-row"><div class="label">财务抹零金额：</div><div class="value" id="f1">0</div></div>
+      <div class="info-row"><div class="label">财务实收金额：</div><div class="value" id="f2">0</div></div>
+
+      <div class="reason-block">
+        <div class="reason-label">驳回原因：</div>
+        <div class="reason-wrap">
+          <textarea id="reason" maxlength="200" placeholder="请输入驳回原因（选填，最多200字）" oninput="onReasonInput()"></textarea>
+          <div class="reason-counter" id="counter">0/200</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitReject()">确 定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentOrder = null;
+
+function openModal(orderNo, data) {
+  currentOrder = orderNo;
+  document.getElementById('s1').textContent = data.s1.toFixed(2);
+  document.getElementById('s2').textContent = data.s2.toFixed(2);
+  document.getElementById('s3').textContent = data.s3.toFixed(2);
+  document.getElementById('f1').textContent = data.f1.toFixed(2);
+  document.getElementById('f2').textContent = data.f2.toFixed(2);
+  document.getElementById('reason').value = '';
+  document.getElementById('counter').textContent = '0/200';
+  document.getElementById('counter').classList.remove('over');
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+function onReasonInput() {
+  const val = document.getElementById('reason').value;
+  const counter = document.getElementById('counter');
+  counter.textContent = val.length + '/200';
+  counter.classList.toggle('over', val.length >= 200);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function submitReject() {
+  const reason = document.getElementById('reason').value.trim();
+  const tr = document.querySelector('tr[data-no="' + currentOrder + '"]');
+  if (tr) {
+    const cells = tr.querySelectorAll('td');
+    // 财务确认状态(index 16)
+    cells[16].innerHTML = '<span class="status-tag status-rejected">已驳回</span>';
+    // 财务确认时间(index 17) 保持 '-'
+    cells[17].textContent = '-';
+    // 财务操作人(index 18) 保持 '-'
+    cells[18].textContent = '-';
+    // 驳回原因(index 19) — 选填，空时显示 '-'
+    if (reason) {
+      cells[19].textContent = reason.length > 14 ? reason.slice(0, 14) + '...' : reason;
+      cells[19].title = reason;
+    } else {
+      cells[19].textContent = '-';
+      cells[19].removeAttribute('title');
+    }
+    // 驳回人(index 20)
+    cells[20].textContent = '当前用户';
+    // 驳回时间(index 21)
+    cells[21].textContent = new Date().toLocaleString('zh-CN', { hour12: false });
+    // 操作列(index 22) 清空
+    cells[22].innerHTML = '';
+  }
+  closeModal();
+  showToast('驳回成功');
+}
+</script>
+
+</body>
+</html>

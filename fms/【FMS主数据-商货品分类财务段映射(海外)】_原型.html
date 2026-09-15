@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【FMS主数据-商货品分类商品段映射(海外)】原型</title>
+<style>
+:root{--p:#009919;--p9:#ebf9ec;--p8:#d6f3d9;--bg:#f2f2f2;--border:#dcdfe6;--text:#333;--text2:#606266;--text3:#909399;--th-bg:#f4f4f4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:PingFang SC,Helvetica Neue,Helvetica,Hiragino Sans GB,Microsoft YaHei,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{text-decoration:none;color:inherit}
+.hd{display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 20px 0 32px;background:var(--p);position:fixed;top:0;left:0;right:0;z-index:100}
+.hd span{color:#fff}
+.hd-t{flex-shrink:0;display:flex;align-items:center;gap:14px}
+.hd-t .st{color:#fff;font-size:16px;font-weight:600}
+.ui{flex-shrink:0;display:flex;align-items:center;gap:16px;color:#fff;font-size:13px}
+.hd a{color:#fff;text-decoration:none;font-size:13px}
+.hd a:hover{opacity:.8}
+/* Site bar */
+.sb-bar{background:#fff;padding:10px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #eee}
+.sb-bar .lb{font-size:13px;color:var(--text2)}
+.sb-bar .sel{width:200px;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;height:32px;background:#fff;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.bc{font-size:13px;color:var(--text3);margin-left:auto}
+.bc b{color:var(--text2)}
+/* Tabs */
+.tabs{background:#fff;padding:0 16px;display:flex;gap:8px;border-bottom:1px solid #eee}
+.tabs .tab{padding:12px 18px;font-size:14px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs .tab.on{color:var(--p);font-weight:600;border-bottom-color:var(--p)}
+/* Stats */
+.stats{display:flex;gap:10px;padding:10px;background:transparent}
+.stat{flex:1;background:#fff;border-radius:4px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.stat .lab{font-size:13px;color:var(--text3)}
+.stat .val{font-size:22px;font-weight:600;color:var(--text)}
+.stat .val.g{color:var(--p)}
+.stat .val.o{color:#F96500}
+.stat .val.b{color:#0091FF}
+/* Form */
+.sf{padding:12px;margin-bottom:10px;background:#fff}
+.sr{display:flex;flex-wrap:wrap;margin:0 -10px}
+.sc{padding:0 10px}
+.sc4{width:25%;flex:0 0 25%}
+.fi{display:flex;align-items:center;margin-bottom:4px}
+.fl{font-size:13px;color:var(--text);white-space:nowrap;min-width:80px;text-align:right;padding-right:8px}
+.inp{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none;background:#fff;height:32px}
+.inp:focus{border-color:var(--p)}
+.sel{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:#fff;outline:none;height:32px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.sb{display:flex;align-items:center;gap:8px}
+/* Buttons */
+.bt{padding:8px 15px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--text2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.bt:hover{border-color:var(--p);color:var(--p)}
+.bp{background:var(--p);color:#fff;border-color:var(--p)}
+.bp:hover{opacity:.85;color:#fff}
+.bs{padding:5px 11px;font-size:13px}
+.bl{background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;padding:0 2px}
+.bl:hover{opacity:.7}
+.bd{background:none;border:none;color:#E12121;cursor:pointer;font-size:13px;padding:0 2px}
+.bl.dis{color:#bbb;cursor:not-allowed}
+.bl.dis:hover{opacity:1}
+/* Table */
+.tl{background:#fff;padding:8px 12px;overflow:auto}
+.ta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;height:32px}
+.ta>div{display:flex;align-items:center;gap:8px}
+.tt{font-size:16px;color:var(--text);font-weight:600;margin-right:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--th-bg)}
+th{padding:10px 12px;text-align:left;font-weight:500;color:var(--text);border-bottom:1px solid #e8e8e8;white-space:nowrap;font-size:13px}
+td{padding:3px 12px;border-bottom:1px solid #f0f0f0;color:var(--text);height:40px}
+tr:hover td{background:var(--p9)}
+tr.warn td{background:#FFF7F6}
+tr.warn:hover td{background:#FFEBE8}
+.ts{overflow-x:auto}
+small.su{font-size:12px;color:#999}
+/* Status */
+.sb2{height:24px;line-height:24px;padding:0 6px;font-size:12px;border-radius:2px;text-align:center;width:max-content;display:inline-block}
+.s1{border:1px solid #81D89B;background:#F0F9EB;color:#2FB157}
+.s2{background:#FFEDEA;border:1px solid #F78D94;color:#E12121}
+.s3{background:#ECF7FF;border:1px solid #73C2FF;color:#0091FF}
+.s4{background:#FEF6EC;border:1px solid #FCA971;color:#F96500}
+.s5{border:1px solid #DDD;background:#FCFCFC;color:#999}
+/* Pagination */
+.pn{padding:14px 0 0;display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.pn select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px}
+.pb{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;background:#fff;color:var(--text2)}
+.pb.on{background:var(--p);color:#fff;border-color:var(--p)}
+/* Dialog */
+.vm{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:center}
+.vm.show{display:flex}
+.dg{background:#fff;border-radius:4px;max-height:85vh;overflow-y:auto}
+.dh{padding:16px 20px;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center}
+.dh .dt{font-size:16px;font-weight:600;color:var(--text)}
+.dc{cursor:pointer;font-size:18px;color:var(--text3);border:none;background:none}
+.db{padding:20px}
+.df{padding:12px 20px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;gap:8px}
+.dx{margin-bottom:16px}
+.dx label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.dx label .rq{color:#f56c6c;margin-right:4px}
+.dx .inp,.dx .sel{width:100%}
+.dx .hint{font-size:12px;color:var(--text3);margin-top:4px}
+/* Drawer */
+.dw-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:150}
+.dw-ov.show{display:block}
+.dw{position:fixed;top:0;right:0;width:60%;height:100vh;background:#fff;box-shadow:-4px 0 12px rgba(0,0,0,.1);z-index:151;display:flex;flex-direction:column}
+.dw-h{height:48px;line-height:48px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.dw-h .dt{font-weight:600;font-size:16px}
+.dw-b{flex:1;overflow-y:auto;border:10px solid var(--bg);border-bottom:1px solid var(--bg);padding:16px}
+.dw-f{padding:10px 14px;box-shadow:0px -2px 15px rgba(0,0,0,.1);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+/* Segment picker */
+.sg-list{max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:4px}
+.sg-item{padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.sg-item:hover{background:var(--p9)}
+.sg-item.on{background:var(--p9);color:var(--p);font-weight:600}
+.sg-item .code{color:var(--text3);font-size:12px;margin-right:8px}
+.sg-item.dep{color:#bbb;cursor:not-allowed}
+.sg-item.dep:hover{background:transparent}
+/* Confirm */
+.cf-box{background:#fff;border-radius:4px;width:420px;padding:24px}
+.cf-msg{font-size:15px;margin-bottom:20px;line-height:1.6}
+.cf-msg .ic{color:#F96500;margin-right:8px}
+.cf-btns{display:flex;justify-content:flex-end;gap:8px}
+/* Feature notes */
+.fn{margin-top:12px;background:#FFFDF2;border:1px solid #FCA971;border-radius:4px;padding:12px 16px;font-size:13px;color:#333}
+.fn-t{font-weight:600;font-size:14px;margin-bottom:8px;color:#F96500}
+.fn ul{padding-left:20px;margin:0}
+.fn li{margin-bottom:4px;line-height:1.6}
+body{padding-top:54px}
+.main{padding:10px}
+.warn-tag{color:#E12121;font-size:12px;margin-left:6px}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div class="hd-t"><span class="st">财务中台国际 — 商货品分类商品段映射（海外） · AI 自动赋值</span></div>
+  <div class="ui"><a href="【FMS主数据】原型入口.html">← 返回原型入口</a></div>
+</div>
+
+<div class="main">
+
+<!-- Breadcrumb -->
+<div class="sb-bar">
+  <span class="bc" style="margin-left:0">系统设置 / 基础数据 / 基础档案 / <b>商货品分类商品段映射（海外）</b></span>
+</div>
+
+<!-- Filter -->
+<div class="sf"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">SITE</label><div style="flex:1"><select class="sel"><option selected>全部 SITE</option><option>XM_GLOBAL_SGD（新加坡）</option><option>XM_GLOBAL_MYR（马来西亚）</option><option>XM_GLOBAL_KSA（沙特）</option><option>XM_GLOBAL_UAE（阿联酋）</option><option>XM_GLOBAL_AUD（澳大利亚）</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">分类类型</label><div style="flex:1"><select class="sel"><option selected>全部</option><option>商品分类</option><option>货品分类</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">分类名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">分类编码</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">分类级次</label><div style="flex:1"><select class="sel"><option>全部</option><option>1 级</option><option>2 级</option><option>3 级</option><option>4 级</option><option>5 级</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">上级分类</label><div style="flex:1"><input class="inp" placeholder="名称 / 编码"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">是否末级</label><div style="flex:1"><select class="sel"><option>全部</option><option>是</option><option>否</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">绑定状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>已绑定</option><option>未绑定</option><option>无需绑定</option></select></div></div></div>
+  <div class="sc sc4"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button></div></div>
+</div></div>
+
+<!-- Table -->
+<div class="tl">
+  <div class="ta">
+    <div><div class="tt">分类列表</div><span style="color:var(--text3);font-size:12px">数据由业务系统同步推送，本页不支持手动新增；分类类型 / SITE 通过上方筛选切换</span></div>
+    <div>
+      <span id="ckTip" style="font-size:12px;color:var(--text3);margin-right:4px">已选 <b id="ckN" style="color:var(--p)">0</b> 条</span>
+      <button class="bt bp bs" onclick="batchBind()">绑定/变更商品段</button>
+      <button class="bt bs">导出</button>
+    </div>
+  </div>
+  <div class="ts"><table>
+    <thead><tr>
+      <th style="width:36px"><input type="checkbox" onclick="toggleAll(this)"></th>
+      <th>SITE</th>
+      <th style="width:200px">分类名称<br><small class="su">编码</small></th>
+      <th>分类级次</th>
+      <th>分类类型</th>
+      <th>1 级分类<br><small class="su">编码</small></th>
+      <th>2 级分类<br><small class="su">编码</small></th>
+      <th>3 级分类<br><small class="su">编码</small></th>
+      <th>4 级分类<br><small class="su">编码</small></th>
+      <th>5 级分类<br><small class="su">编码</small></th>
+      <th>是否末级</th>
+      <th>已绑商品段</th>
+      <th>状态</th>
+      <th style="width:260px">操作</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td><input type="checkbox" class="rowck" disabled></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>1</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>否</td>
+        <td>—</td>
+        <td><span class="sb2 s5">无需绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck" disabled></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>水产<br><small class="su">CAT-FRESH-SEA</small></td>
+        <td>2</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>水产<br><small class="su">CAT-FRESH-SEA</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>否</td>
+        <td>—</td>
+        <td><span class="sb2 s5">无需绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck" disabled></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>三文鱼<br><small class="su">CAT-FRESH-SEA-SALMON</small></td>
+        <td>3</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>水产<br><small class="su">CAT-FRESH-SEA</small></td>
+        <td>三文鱼<br><small class="su">CAT-FRESH-SEA-SALMON</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>否</td>
+        <td>—</td>
+        <td><span class="sb2 s5">无需绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck"></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>Fresh Salmon Fillet 200g<br><small class="su">CAT-FRESH-SEA-SALMON-200</small></td>
+        <td>4</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>水产<br><small class="su">CAT-FRESH-SEA</small></td>
+        <td>三文鱼<br><small class="su">CAT-FRESH-SEA-SALMON</small></td>
+        <td>Fresh Salmon Fillet 200g<br><small class="su">CAT-FRESH-SEA-SALMON-200</small></td>
+        <td>—</td>
+        <td>是</td>
+        <td>29 - 水产 <span class="sb2 s3" style="margin-left:6px">AI</span></td>
+        <td><span class="sb2 s1">已绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck"></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>Kangkung<br><small class="su">CAT-FRESH-VEG-KANG</small></td>
+        <td>3</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>蔬菜<br><small class="su">CAT-FRESH-VEG</small></td>
+        <td>Kangkung<br><small class="su">CAT-FRESH-VEG-KANG</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>是</td>
+        <td>12 - 蔬菜 <span class="sb2 s3" style="margin-left:6px">AI</span></td>
+        <td><span class="sb2 s1">已绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck"></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>Fresh Chicken Breast<br><small class="su">CAT-FRESH-MEAT-CHIK</small></td>
+        <td>3</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>肉禽蛋<br><small class="su">CAT-FRESH-MEAT</small></td>
+        <td>Fresh Chicken Breast<br><small class="su">CAT-FRESH-MEAT-CHIK</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>是</td>
+        <td>19 - 肉禽蛋 <span class="sb2 s5" style="margin-left:6px">手动</span></td>
+        <td><span class="sb2 s1">已绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck"></td>
+        <td>XM_GLOBAL_SGD</td>
+        <td>Mango<br><small class="su">CAT-FRESH-FRT-MANGO</small></td>
+        <td>3</td>
+        <td>商品分类</td>
+        <td>生鲜<br><small class="su">CAT-FRESH</small></td>
+        <td>水果<br><small class="su">CAT-FRESH-FRT</small></td>
+        <td>Mango<br><small class="su">CAT-FRESH-FRT-MANGO</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>是</td>
+        <td>20 - 水果 <span class="sb2 s3" style="margin-left:6px">AI</span></td>
+        <td><span class="sb2 s1">已绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck"></td>
+        <td>XM_GLOBAL_MYR</td>
+        <td>Bottled Water 500ml<br><small class="su">CAT-STD-BEV-WATER</small></td>
+        <td>3</td>
+        <td>商品分类</td>
+        <td>标品<br><small class="su">CAT-STD</small></td>
+        <td>饮料<br><small class="su">CAT-STD-BEV</small></td>
+        <td>Bottled Water 500ml<br><small class="su">CAT-STD-BEV-WATER</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>是</td>
+        <td>11 - 标品 <span class="sb2 s5" style="margin-left:6px">手动</span></td>
+        <td><span class="sb2 s1">已绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+      <tr>
+        <td><input type="checkbox" class="rowck"></td>
+        <td>XM_GLOBAL_KSA</td>
+        <td>Unknown Item Mix Box<br><small class="su">—</small></td>
+        <td>2</td>
+        <td>商品分类</td>
+        <td>未分类<br><small class="su">CAT-OTHER</small></td>
+        <td>Unknown Item Mix Box<br><small class="su">—</small></td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>是</td>
+        <td><span style="color:var(--text3)">未绑定</span> <span class="sb2 s2" style="margin-left:6px">AI 未识别</span></td>
+        <td><span class="sb2 s4">未绑定</span></td>
+        <td><button class="bl" onclick="sd('d-log')">日志</button></td>
+      </tr>
+    </tbody>
+  </table></div>
+  <div class="pn"><span>共 42 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">2</span><span class="pb">3</span><span class="pb">4</span><span class="pb">5</span><span class="pb">›</span></div>
+</div>
+
+<!-- Function notes -->
+<div class="fn"><div class="fn-t">功能点说明 — 商货品分类商品段映射（海外）</div>
+
+<p style="margin:8px 0 4px;font-weight:600;">为什么做这个</p><ul>
+  <li>海外商品 / 货品分类量大、命名英文化（数千条），<b>手动逐条挂商品段不可行</b>；本页用 AI 自动赋值减轻业务工作量</li>
+  <li>分类档案<b>由上游业务系统单向同步</b>，FMS 不再重复维护，避免双口径</li>
+  <li>仅向海外财务、海外运营、超管开放；国内角色不展示菜单</li>
+  <li>按 SITE × 类型（商品 / 货品）维护映射；同一 SITE 下商品分类、货品分类是两套独立档案</li>
+  <li>商品段数据<b>打通现有商品段接口</b>，本页只引用、不维护；<b>人工可绑全量生效段</b>，AI 自动赋值仅在 5 个优先段内尝试：<b>29 水产 / 20 水果 / 19 肉禽蛋 / 12 蔬菜 / 11 标品</b>，其余段需人工选</li>
+</ul>
+
+<p style="margin:8px 0 4px;font-weight:600;">页面结构</p><ul>
+  <li><b>筛选区</b>：SITE（默认"全部 SITE"，进入页即看到所有有权 SITE 数据） / 分类类型（商品 / 货品） / 分类名称 / 编码 / 分类级次（1–5） / 上级分类 / 是否末级 / 绑定状态（已绑 / 未绑 / 无需绑定）</li>
+  <li><b>列表列</b>：多选 / SITE / 分类名称+编码 / 分类级次 / 分类类型 / 1–5 级分类链路 / 是否末级 / 已绑商品段（含来源标记） / 状态 / 操作（仅"日志"）</li>
+  <li><b>分类层级</b>：支持 1–5 级，分类自身级次 = N 时，1～N 级列填祖先链 + 自身，N+1～5 级列填 "—"</li>
+  <li><b>本页不支持手动新增 / 编辑 / 删除分类</b>；分类源数据归上游</li>
+</ul>
+
+<p style="margin:8px 0 4px;font-weight:600;">核心交互</p><ul>
+  <li><b>AI 自动赋值（仅首次 + 仅末级）</b>：上游同步进来一条<b>末级</b>分类时，系统异步调 AI 基于「1–4 级分类名称 + 编码 + SITE + 类型」综合语义判断，命中优先池后自动绑定，单元格标记 <b>AI</b></li>
+  <li><b>非末级分类</b>（自身仍有下级）：商品段列显示 "—"，状态 = <b>无需绑定</b>，多选框置灰，不参与统计</li>
+  <li><b>上游后续变更不重赋值</b>：分类信息被上游修改（改名 / 改编码 / 改层级 / 改上级），商品段绑定<b>保持不变</b>；唯一例外是末级↔非末级互转（见异常态）</li>
+  <li><b>绑定/变更商品段（批量）</b>：列表勾选 ≥ 1 条末级 → 点顶部「绑定/变更商品段」→ 选段确认；支持跨 SITE / 跨类型混合勾选，逐条落库；未勾选时点击会拦截提示</li>
+  <li><b>来源标记</b>：单元格只显示<b>最后一次写入来源</b>——<b>AI</b> 或 <b>手动</b>；未绑定且 AI 未命中时显示 <b>AI 未识别</b>。日志保留完整变更轨迹</li>
+  <li><b>行操作只剩"日志"</b>：编辑 / 删除 / 解绑由"上游维护 + 批量变更"覆盖</li>
+</ul>
+
+<p style="margin:8px 0 4px;font-weight:600;">每周告警</p><ul>
+  <li>每周一 09:00（Asia/Singapore）扫描全量末级未绑分类总数 N</li>
+  <li>N &gt; 0 时向飞书群 <code>oc_48f43beee86de75552e2d9d4e8dd9c04</code> 推文本：<b>「【FMS · 商货品分类商品段映射】当前有 N 条末级商货品分类未绑定商品段，请及时处理：&lt;页面链接&gt;」</b>；N = 0 不发</li>
+  <li>飞书接口失败 → 重试 3 次仍失败 → 错误日志 + 邮件告警财务 IT，不阻塞业务</li>
+</ul>
+
+<p style="margin:8px 0 4px;font-weight:600;">异常态</p><ul>
+  <li>AI 失败 / 超时 → 商品段留空 + 标记「AI 未识别」，不阻断上游同步，等人工补绑</li>
+  <li>商品段在独立档案侧被废弃 → 本页不展示废弃标记；批量变更弹窗下拉自动过滤掉</li>
+  <li>上游推送字段缺失（如缺级次） → 入库失败 + 异常队列，不调 AI，告警财务 IT</li>
+  <li>末级 → 非末级（新增了子分类） → 原绑定<b>自动解除</b>，状态变「无需绑定」，写日志</li>
+  <li>非末级 → 末级（删除了所有子分类） → 该分类首次成为末级，触发一次 AI 赋值</li>
+  <li>财务核算时分类未绑 → 财务模块兜底归"未分类"科目</li>
+</ul>
+
+<p style="margin:8px 0 4px;font-weight:600;">关键业务规则</p><ul>
+  <li><b>BR-01～04</b>：分类按 SITE 隔离；商品 / 货品独立；分类源数据由上游推送，本页不维护；推送字段含 SITE / 类型 / 名称 / 编码 / 级次 / 上级编码</li>
+  <li><b>BR-05</b>：商品段只引用、不维护；下拉展示<b>全部生效段</b>，人工可绑任一段</li>
+  <li><b>BR-06</b>：一条分类映射一个商品段</li>
+  <li><b>BR-07</b>：商品段废弃在独立档案侧处理，本页不展示废弃态</li>
+  <li><b>BR-08</b>：仅末级参与绑定；非末级 = 无需绑定，不可勾选，不计入未绑统计</li>
+  <li><b>BR-09</b>：批量变更需勾选 ≥ 1 条末级；支持跨 SITE / 跨类型混合</li>
+  <li><b>BR-10</b>：AI 仅在<b>末级首次同步</b>时触发；输入 = 全部祖先链 + 自身（≤ 5 级）+ SITE + 类型</li>
+  <li><b>BR-10.2</b>：AI 仅在 5 个优先段内匹配（29 / 20 / 19 / 12 / 11），多命中按编码顺序取首个</li>
+  <li><b>BR-10.3</b>：未命中优先池 → 留空 + 标「AI 未识别」</li>
+  <li><b>BR-11</b>：上游后续修改分类信息<b>不重赋值</b>；末级↔非末级互转时按 11.1 / 11.2 例外处理</li>
+  <li><b>BR-14</b>：单元格展示"最后一次写入来源"（AI / 手动）；日志保留完整轨迹</li>
+  <li><b>BR-A1～A4</b>：每周一 09:00 SGT 飞书群告警未绑数</li>
+</ul>
+
+</div>
+
+<!-- 进入页预选 SITE + 分类类型 -->
+<div class="vm" id="d-entry"><div class="dg" style="width:480px">
+  <div class="dh"><span class="dt">进入页面 — 请先选择</span><button class="dc" onclick="hd('d-entry')">×</button></div>
+  <div class="db">
+    <div class="dx"><label><span class="rq">*</span>SITE</label>
+      <select class="sel" id="entrySite">
+        <option>XM_GLOBAL_SGD（新加坡）</option>
+        <option>XM_GLOBAL_MYR（马来西亚）</option>
+        <option>XM_GLOBAL_KSA（沙特）</option>
+        <option>XM_GLOBAL_UAE（阿联酋）</option>
+        <option>XM_GLOBAL_AUD（澳大利亚）</option>
+      </select>
+      <div class="hint">不同 SITE 维护各自的分类档案，相互隔离</div>
+    </div>
+    <div class="dx"><label><span class="rq">*</span>分类类型</label>
+      <select class="sel" id="entryType">
+        <option>商品分类</option>
+        <option>货品分类</option>
+      </select>
+      <div class="hint">商品分类 / 货品分类是两套独立档案</div>
+    </div>
+  </div>
+  <div class="df"><button class="bt bp" onclick="confirmEntry()">进入</button></div>
+</div></div>
+
+<!-- 新增分类（含 AI 建议商品段） -->
+<div class="vm" id="d-add"><div class="dg" style="width:540px">
+  <div class="dh"><span class="dt">新增分类</span><button class="dc" onclick="hd('d-add')">×</button></div>
+  <div class="db">
+    <div class="dx"><label><span class="rq">*</span>分类名称</label><input class="inp" id="aiName" placeholder="请输入分类名称，长度 ≤ 64" value="Fresh Salmon Fillet"></div>
+    <div class="dx"><label>分类编码</label><input class="inp" placeholder="可选，长度 ≤ 32"><div class="hint">同 SITE 同类型内不可重复</div></div>
+    <div class="dx"><label>SITE</label><input class="inp" value="XM_GLOBAL_SGD（新加坡）" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label>分类类型</label><input class="inp" value="商品分类" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label><span class="rq">*</span>分类级次</label>
+      <select class="sel" id="aiLvl" onchange="onLvlChange()">
+        <option value="1">1 级（顶层）</option>
+        <option value="2">2 级</option>
+        <option value="3" selected>3 级</option>
+        <option value="4">4 级（叶子）</option>
+      </select>
+      <div class="hint">仅叶子节点可绑商品段；上层为聚合层级</div>
+    </div>
+    <div class="dx" id="parentBox"><label><span class="rq">*</span>上级分类</label>
+      <select class="sel"><option>水产（CAT-FRESH-SEA） · 2 级</option><option>蔬菜（CAT-FRESH-VEG） · 2 级</option><option>肉禽蛋（CAT-FRESH-MEAT） · 2 级</option><option>水果（CAT-FRESH-FRT） · 2 级</option><option>饮料（CAT-STD-BEV） · 2 级</option></select>
+      <div class="hint">只能选择"比当前级次少 1 级"的分类</div>
+    </div>
+    <div class="dx" id="grandBox"><label>上上级分类</label>
+      <input class="inp" value="生鲜（CAT-FRESH）" disabled style="background:#f5f7fa">
+      <div class="hint">系统根据上级分类自动带出，不可编辑</div>
+    </div>
+    <div class="dx">
+      <label><span class="rq">*</span>商品段 <span style="color:var(--text3);font-weight:normal">（AI 已预填，可改）</span></label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="sel" id="aiSeg" style="flex:1">
+          <option value="29" selected>29 - 水产</option>
+          <option value="20">20 - 水果</option>
+          <option value="19">19 - 肉禽蛋</option>
+          <option value="12">12 - 蔬菜</option>
+          <option value="11">11 - 标品</option>
+        </select>
+        <button class="bt bs" type="button">🔄 换一个</button>
+      </div>
+      <div class="hint" style="color:var(--p);margin-top:6px">🤖 AI 建议：<b>29 - 水产</b>（基于「Fresh Salmon Fillet」命中关键词 salmon / fish / fillet）</div>
+    </div>
+  </div>
+  <div class="df"><button class="bt" onclick="hd('d-add')">取消</button><button class="bt bp">保存</button></div>
+</div></div>
+
+<!-- 编辑分类 -->
+<div class="vm" id="d-edit"><div class="dg" style="width:480px">
+  <div class="dh"><span class="dt">编辑分类</span><button class="dc" onclick="hd('d-edit')">×</button></div>
+  <div class="db">
+    <div class="dx"><label><span class="rq">*</span>分类名称</label><input class="inp" value="鲜肉"></div>
+    <div class="dx"><label>分类编码</label><input class="inp" value="CAT-FRESH-MEAT-FRESH"></div>
+    <div class="dx"><label>SITE</label><input class="inp" value="XM_GLOBAL_SGD（新加坡）" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label>分类类型</label><input class="inp" value="商品分类" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label>分类级次</label><input class="inp" value="3 级" disabled style="background:#f5f7fa"><div class="hint">级次不可修改；如需调整请新建再迁移</div></div>
+    <div class="dx"><label>上级分类</label><input class="inp" value="肉禽蛋（CAT-FRESH-MEAT）" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label>上上级分类</label><input class="inp" value="生鲜（CAT-FRESH）" disabled style="background:#f5f7fa"></div>
+  </div>
+  <div class="df"><button class="bt" onclick="hd('d-edit')">取消</button><button class="bt bp">保存</button></div>
+</div></div>
+
+<!-- 绑定/修改绑定 商品段 -->
+<div class="vm" id="d-bind"><div class="dg" style="width:520px">
+  <div class="dh"><span class="dt">绑定商品段</span><button class="dc" onclick="hd('d-bind')">×</button></div>
+  <div class="db">
+    <div class="dx"><label>当前分类</label><input class="inp" value="Fresh Chicken Breast（CAT-CHIK）" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label>当前已绑商品段</label><input class="inp" value="19 - 肉禽蛋" disabled style="background:#f5f7fa"></div>
+    <div class="dx"><label><span class="rq">*</span>选择商品段</label>
+      <input class="inp" placeholder="按编码 / 名称搜索…" style="margin-bottom:8px">
+      <div class="sg-list">
+        <div class="sg-item on"><span><span class="code">19</span>肉禽蛋 <span class="sb2 s3" style="margin-left:6px">优先池</span></span><span style="color:var(--p)">✓</span></div>
+        <div class="sg-item"><span><span class="code">29</span>水产 <span class="sb2 s3" style="margin-left:6px">优先池</span></span></div>
+        <div class="sg-item"><span><span class="code">20</span>水果 <span class="sb2 s3" style="margin-left:6px">优先池</span></span></div>
+        <div class="sg-item"><span><span class="code">12</span>蔬菜 <span class="sb2 s3" style="margin-left:6px">优先池</span></span></div>
+        <div class="sg-item"><span><span class="code">11</span>标品 <span class="sb2 s3" style="margin-left:6px">优先池</span></span></div>
+        <div class="sg-item"><span><span class="code">31</span>冻品</span></div>
+        <div class="sg-item"><span><span class="code">32</span>调味品</span></div>
+        <div class="sg-item"><span><span class="code">33</span>日用品</span></div>
+        <div class="sg-item"><span><span class="code">34</span>包装材料</span></div>
+        <div class="sg-item"><span><span class="code">35</span>清洁用品</span></div>
+      </div>
+      <div class="hint">数据来源：现有商品段接口；展示当前生效的<b>全部商品段</b>，已废弃段不出现。标「优先池」的 5 个是 AI 自动赋值的匹配范围，其余可人工绑定。</div>
+    </div>
+  </div>
+  <div class="df"><button class="bt" onclick="hd('d-bind')">取消</button><button class="bt bp">确认</button></div>
+</div></div>
+
+<!-- 解绑确认 -->
+<div class="vm" id="d-unbind"><div class="cf-box">
+  <div class="cf-msg"><span class="ic">⚠️</span>解绑后，分类「鲜肉」将回到"未绑定"状态。财务核算时该分类下的商品将归到"未分类"科目。是否继续？</div>
+  <div class="cf-btns"><button class="bt" onclick="hd('d-unbind')">取消</button><button class="bt bp">确认解绑</button></div>
+</div></div>
+
+<!-- 删除确认 -->
+<div class="vm" id="d-del"><div class="cf-box">
+  <div class="cf-msg"><span class="ic">⚠️</span>确认删除分类「水产」？删除后不可恢复。</div>
+  <div class="cf-btns"><button class="bt" onclick="hd('d-del')">取消</button><button class="bt bp" style="background:#E12121;border-color:#E12121">确认删除</button></div>
+</div></div>
+
+<!-- 操作日志 -->
+<div class="dw-ov" id="d-log"><div class="dw">
+  <div class="dw-h"><span class="dt">操作日志 — 鲜肉（CAT-MEAT）</span><button class="dc" onclick="hd('d-log')">×</button></div>
+  <div class="dw-b">
+    <table>
+      <thead><tr><th style="width:140px">操作时间</th><th style="width:120px">操作人</th><th style="width:120px">操作类型</th><th>变更内容</th></tr></thead>
+      <tbody>
+        <tr><td>2026-05-13 14:22</td><td>Sarah Lim</td><td><span class="sb2 s3">修改绑定</span></td><td>商品段：ACC01 - 食品成本 → <b>ACC03 - 肉类成本</b></td></tr>
+        <tr><td>2026-05-01 09:48</td><td>Sarah Lim</td><td><span class="sb2 s1">绑定商品段</span></td><td>绑定 ACC01 - 食品成本</td></tr>
+        <tr><td>2026-04-28 11:20</td><td>Sarah Lim</td><td><span class="sb2 s3">编辑</span></td><td>分类名称：肉类 → <b>鲜肉</b></td></tr>
+        <tr><td>2026-04-28 10:05</td><td>Sarah Lim</td><td><span class="sb2 s1">新增</span></td><td>新增分类「肉类」（CAT-MEAT）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="dw-f"><button class="bt" onclick="hd('d-log')">关闭</button></div>
+</div></div>
+
+</div>
+<script>
+function sd(id){var el=document.getElementById(id);if(el)el.classList.add('show')}
+function hd(id){var el=document.getElementById(id);if(el)el.classList.remove('show')}
+function switchTab(el,key){
+  document.querySelectorAll('.tabs .tab').forEach(function(t){t.classList.remove('on')});
+  el.classList.add('on');
+  document.querySelector('.tt').textContent = (key==='goods')?'商品分类':'货品分类';
+}
+function toggleAll(el){document.querySelectorAll('.rowck').forEach(function(c){c.checked=el.checked});refreshCkN()}
+function refreshCkN(){document.getElementById('ckN').textContent=document.querySelectorAll('.rowck:checked').length}
+function batchBind(){var n=document.querySelectorAll('.rowck:checked').length;if(!n){alert('请先勾选要变更的分类');return}sd('d-bind')}
+function confirmEntry(){
+  var s=document.getElementById('entrySite').value;
+  var t=document.getElementById('entryType').value;
+  document.getElementById('curSite').textContent=s;
+  document.getElementById('curType').textContent=t;
+  document.querySelector('.tt').textContent=t;
+  hd('d-entry');
+}
+function onLvlChange(){
+  var lv=document.getElementById('aiLvl').value;
+  document.getElementById('parentBox').style.display=(lv==='1')?'none':'';
+  document.getElementById('grandBox').style.display=(lv==='3')?'':'none';
+}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.vm').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+  document.querySelectorAll('.dw-ov').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+  document.querySelectorAll('.rowck').forEach(function(c){c.addEventListener('change',refreshCkN)});
+  document.querySelectorAll('.sg-item').forEach(function(it){it.addEventListener('click',function(){if(this.classList.contains('dep'))return;this.parentNode.querySelectorAll('.sg-item').forEach(function(x){x.classList.remove('on');x.querySelector('span:last-child').textContent=''});this.classList.add('on');var mark=document.createElement('span');mark.textContent='✓';mark.style.color='var(--p)';this.appendChild(mark);});});
+});
+</script>
+</body>
+</html>

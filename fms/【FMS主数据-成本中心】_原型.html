@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【FMS主数据-成本中心】原型</title>
+<style>
+:root{--p:#009919;--p9:#ebf9ec;--p8:#d6f3d9;--bg:#f2f2f2;--border:#dcdfe6;--text:#333;--text2:#606266;--text3:#909399;--th-bg:#f4f4f4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:PingFang SC,Helvetica Neue,Helvetica,Hiragino Sans GB,Microsoft YaHei,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{text-decoration:none;color:inherit}
+/* Header */
+.hd{display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 20px 0 32px;background:var(--p);position:fixed;top:0;left:0;right:0;z-index:100}
+.hd span{color:#fff}
+.hd-t{flex-shrink:0;display:flex;align-items:center;gap:14px}
+.hd-t .st{color:#fff;font-size:16px;font-weight:600}
+.ui{flex-shrink:0;display:flex;align-items:center;gap:16px;color:#fff;font-size:13px}
+/* Form */
+.sf{padding:12px;margin-bottom:10px;background:#fff}
+.sr{display:flex;flex-wrap:wrap;margin:0 -10px}
+.sc{padding:0 10px}
+.sc4{width:16.666%;flex:0 0 16.666%}
+.sc6{width:25%;flex:0 0 25%}
+.fi{display:flex;align-items:center;margin-bottom:4px}
+.fl{font-size:13px;color:var(--text);white-space:nowrap;min-width:90px;text-align:right;padding-right:8px}
+.inp{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none;background:#fff;height:32px}
+.inp:focus{border-color:var(--p)}
+.sel{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:#fff;outline:none;height:32px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.sb{display:flex;align-items:center;gap:8px}
+.sf.cl .sc4:nth-child(n+4){display:none}
+/* Buttons */
+.bt{padding:8px 15px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--text2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.bt:hover{border-color:var(--p);color:var(--p)}
+.bp{background:var(--p);color:#fff;border-color:var(--p)}
+.bp:hover{opacity:.85;color:#fff}
+.bs{padding:5px 11px;font-size:13px}
+.bl{background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;padding:0 2px}
+.bl:hover{opacity:.7}
+.bd{background:none;border:none;color:#E12121;cursor:pointer;font-size:13px;padding:0 2px}
+/* Table */
+.tl{background:#fff;padding:8px 12px;overflow:auto}
+.ta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;height:32px}
+.ta>div{display:flex;align-items:center;gap:8px}
+.tt{font-size:16px;color:var(--text);font-weight:600;margin-right:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--th-bg)}
+th{padding:10px 12px;text-align:left;font-weight:500;color:var(--text);border-bottom:1px solid #e8e8e8;white-space:nowrap;font-size:13px}
+td{padding:3px 12px;border-bottom:1px solid #f0f0f0;color:var(--text);height:40px}
+tr:hover td{background:var(--p9)}
+.dl{cursor:pointer;color:var(--p)}
+.dl:hover{opacity:.7}
+.ts{overflow-x:auto}
+small.su{font-size:12px;color:#999}
+/* Status */
+.sb2{height:24px;line-height:24px;padding:0 6px;font-size:12px;border-radius:2px;text-align:center;width:max-content;display:inline-block}
+.s1{border:1px solid #81D89B;background:#F0F9EB;color:#2FB157}
+.s2{background:#FFEDEA;border:1px solid #F78D94;color:#E12121}
+.s3{background:#ECF7FF;border:1px solid #73C2FF;color:#0091FF}
+.s4{background:#FEF6EC;border:1px solid #FCA971;color:#F96500}
+.s5{border:1px solid #DDD;background:#FCFCFC;color:#999}
+.s6{border:1px solid #B680EB;background:#F6EDFF;color:#751FCC}
+/* Pagination */
+.pn{padding:14px 0 0;display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.pn select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px}
+.pb{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;background:#fff;color:var(--text2)}
+.pb.on{background:var(--p);color:#fff;border-color:var(--p)}
+/* Dialog */
+.vm{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:center}
+.vm.show{display:flex}
+.dg{background:#fff;border-radius:4px;max-height:85vh;overflow-y:auto}
+.dh{padding:16px 20px;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center}
+.dh .dt{font-size:16px;font-weight:600;color:var(--text)}
+.dc{cursor:pointer;font-size:18px;color:var(--text3);border:none;background:none}
+.db{padding:20px}
+.df{padding:12px 20px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;gap:8px}
+.dr{display:flex;gap:16px;margin-bottom:16px}
+.dx{flex:1}
+.dx label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.dx label .rq{color:#f56c6c;margin-right:4px}
+.dx .inp,.dx .sel{width:100%}
+/* Drawer */
+.dw-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:150}
+.dw-ov.show{display:block}
+.dw{position:fixed;top:0;right:0;width:75%;height:100vh;background:#fff;box-shadow:-4px 0 12px rgba(0,0,0,.1);z-index:151;display:flex;flex-direction:column}
+.dw-h{height:48px;line-height:48px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.dw-h .dt{font-weight:600;font-size:16px}
+.dw-b{flex:1;overflow-y:auto;border:10px solid var(--bg);border-bottom:1px solid var(--bg);padding:16px}
+.dw-f{padding:10px 14px;box-shadow:0px -2px 15px rgba(0,0,0,.1);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+/* Detail */
+.det-sec{margin-bottom:20px}
+.det-t{font-size:15px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e8e8e8}
+.det-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.det-item{display:flex;align-items:center;height:40px;padding:0 12px}
+.det-l{font-size:13px;color:#999;min-width:100px}
+.det-v{font-size:13px;color:var(--text)}
+/* Config chip */
+.ck{background:#F0F9EB;padding:2px 10px;border-radius:12px;font-size:12px;color:#2FB157;border:1px solid #81D89B}
+/* Feature notes */
+.fn{margin-top:12px;background:#FFFDF2;border:1px solid #FCA971;border-radius:4px;padding:12px 16px;font-size:13px;color:#333}
+.fn-t{font-weight:600;font-size:14px;margin-bottom:8px;color:#F96500}
+.fn ul{padding-left:20px;margin:0}
+.fn li{margin-bottom:4px;line-height:1.6}
+.fn .tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;margin-right:4px}
+.fn .t-new{background:#ECF7FF;color:#0091FF}
+.fn .t-chg{background:#FEF6EC;color:#F96500}
+.fn .t-del{background:#FFEDEA;color:#E12121}
+.fn .t-keep{background:#F0F9EB;color:#2FB157}
+/* Confirm */
+.cf-box{background:#fff;border-radius:4px;width:420px;padding:24px}
+.cf-icon{font-size:24px;color:#F96500;margin-right:12px}
+.cf-msg{font-size:16px;margin-bottom:20px;display:flex;align-items:center}
+.cf-btns{display:flex;justify-content:flex-end;gap:8px}
+/* Index page */
+.ix-wrap{padding:32px;max-width:1200px;margin:0 auto}
+.ix-h{font-size:22px;font-weight:600;margin-bottom:8px;color:var(--text)}
+.ix-d{font-size:13px;color:var(--text3);margin-bottom:24px}
+.ix-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ix-card{background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:18px 20px;cursor:pointer;transition:all .2s;display:block}
+.ix-card:hover{border-color:var(--p);box-shadow:0 4px 12px rgba(0,153,25,.12);transform:translateY(-2px)}
+.ix-card .ix-t{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.ix-card .ix-tag{font-size:11px;padding:1px 6px;border-radius:2px;font-weight:400}
+.ix-card .ix-d2{font-size:12px;color:var(--text3);line-height:1.6;min-height:40px}
+.ix-section{font-size:13px;font-weight:600;color:var(--text2);margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
+</style>
+<style>body{padding-top:54px}.main{padding:10px}.hd a{color:#fff;text-decoration:none;font-size:13px}.hd a:hover{opacity:.8}</style>
+</head>
+<body>
+<div class="hd">
+  <div class="hd-t"><span class="st">财务中台国际 — 成本中心</span></div>
+  <div class="ui"><a href="【FMS主数据】原型入口.html">← 返回原型入口</a></div>
+</div>
+<div class="main">
+
+<div class="sf"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">成本中心级次</label><div style="flex:1"><select class="sel"><option>全部</option><option>1</option><option>2</option><option>3</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">生效状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>生效</option><option>失效</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button></div></div>
+</div></div>
+<div class="tl">
+  <div class="ta"><div><div class="tt">成本中心</div></div><div><button class="bt bs" onclick="sd('d-kw-config')">关键词映射配置</button><button class="bt bs">导出</button></div></div>
+  <div class="ts"><table><thead><tr><th>成本中心名称</th><th>成本中心级次</th><th>上级成本中心</th><th>上上级成本中心</th><th>成本中心分类</th><th>费用分类</th><th>匹配方式</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>SG_Foodmax BU - Warehouse Ops<br><small class="su">ME570101</small></td><td>三级</td><td>SG_Foodmax BU<br><small class="su">ME5701</small></td><td>SG<br><small class="su">ME57</small></td><td>—</td><td><span class="sb2 s1">履约</span></td><td><small class="su">关键词: warehouse</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Sales Team<br><small class="su">ME600301</small></td><td>三级</td><td>公司级项目组<br><small class="su">ME6003</small></td><td>项目组<br><small class="su">ME60</small></td><td>—</td><td><span class="sb2 s3">销售</span></td><td><small class="su">关键词: sales</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>Finance Admin<br><small class="su">ME700101</small></td><td>三级</td><td>支持部<br><small class="su">ME7001</small></td><td>支持<br><small class="su">ME70</small></td><td>—</td><td><span class="sb2 s5">管理</span></td><td><small class="su">关键词: finance</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>ICT - Operations<br><small class="su">ME660101</small></td><td>三级</td><td>ICT<br><small class="su">ME6601</small></td><td>技术<br><small class="su">ME66</small></td><td>—</td><td><span class="sb2 s4">待确认</span></td><td><small style="color:#E12121">未匹配到关键词</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>BD Team<br><small class="su">ME600302</small></td><td>三级</td><td>公司级项目组<br><small class="su">ME6003</small></td><td>项目组<br><small class="su">ME60</small></td><td>—</td><td><span class="sb2 s3">销售</span></td><td><small class="su">关键词: BD</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+    <tr><td>R&amp;D Engineering<br><small class="su">ME660102</small></td><td>三级</td><td>ICT<br><small class="su">ME6601</small></td><td>技术<br><small class="su">ME66</small></td><td>—</td><td><span class="sb2 s6">研发</span></td><td><small class="su">关键词: R&amp;D</small></td><td><span class="sb2 s1">在用</span></td><td><button class="bl" onclick="sd('d-cc-edit')">编辑</button> <button class="bl" onclick="sd('d-corp-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 484 条</span><select><option>10 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">2</span><span class="pb">...</span><span class="pb">49</span><span class="pb">›</span></div>
+</div>
+<div class="fn"><div class="fn-t">功能点说明 — 成本中心（沿用，优化）</div>
+<p style="margin:8px 0 4px;font-weight:600;">V1.0 改动项</p><ul>
+  <li><span class="tag t-new">新增</span>列表新增「费用分类」「匹配方式」列</li>
+  <li><span class="tag t-new">新增</span>三级成本中心生成时，按部门名称（英文）关键词自动匹配费用分类</li>
+  <li><span class="tag t-new">新增</span>匹配不上的标记为「待确认」，由财务人工编辑</li>
+  <li><span class="tag t-new">新增</span>工具栏「关键词映射配置」按钮，点击弹出抽屉管理关键词规则</li>
+  <li><span class="tag t-chg">数据</span>263 条空白分类记录跑一轮自动匹配</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">费用分类定义</p><ul>
+  <li><b>履约</b>：关键词示例 — warehouse, delivery, logistics, fulfillment</li>
+  <li><b>销售</b>：关键词示例 — sales, BD, business development</li>
+  <li><b>管理</b>：关键词示例 — finance, HR, admin, legal, office</li>
+  <li><b>研发</b>：关键词示例 — tech, engineering, dev, R&D, IT</li>
+  <li><b>待确认</b>：未匹配到任何关键词，需财务人工处理</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">关键词映射配置（抽屉）</p><ul>
+  <li>点击工具栏「关键词映射配置」按钮打开抽屉</li>
+  <li>支持新增、编辑、删除关键词规则</li>
+  <li>每条规则：一个英文关键词 → 一个费用分类（履约/销售/管理/研发）</li>
+  <li>系统在三级成本中心自动生成时，按部门名称匹配这些关键词</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-16：成本中心基于部门数据三级架构生成，沿用叮咚随动规则</li>
+  <li>BR-17：三级成本中心生成时，按部门名称关键词自动匹配费用分类</li>
+  <li>BR-18：关键词匹配不上的三级成本中心标记为「待确认」，由财务人工处理</li>
+  <li>BR-19：关键词→分类映射规则由财务在成本中心页面内的抽屉中维护</li>
+</ul></div>
+
+<!-- 成本中心-编辑 -->
+<div class="vm" id="d-cc-edit"><div class="dg" style="width:420px"><div class="dh"><span class="dt">编辑费用分类</span><button class="dc" onclick="hd('d-cc-edit')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px">成本中心</label><input class="inp" value="ME570101 - SG_Foodmax BU - Warehouse Ops" disabled style="background:#f5f7fa"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>费用分类</label><select class="sel"><option selected>履约</option><option>销售</option><option>管理</option><option>研发</option></select></div>
+</div><div class="df"><button class="bt" onclick="hd('d-cc-edit')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 关键词映射配置-抽屉 -->
+<div class="dw-ov" id="d-kw-config"><div class="dw"><div class="dw-h"><span class="dt">关键词 → 费用分类 映射配置</span><button class="dc" onclick="hd('d-kw-config')">×</button></div><div class="dw-b" style="padding:0 16px 16px">
+  <div class="ta" style="margin-top:12px"><div></div><div><button class="bt bp bs" onclick="sd('d-kw-add')">新增规则</button></div></div>
+  <table><thead><tr><th>关键词</th><th>费用分类</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ck">warehouse</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">delivery</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">logistics</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">fulfillment</span></td><td><span class="sb2 s1">履约</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">sales</span></td><td><span class="sb2 s3">销售</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">BD</span></td><td><span class="sb2 s3">销售</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">business development</span></td><td><span class="sb2 s3">销售</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">finance</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">HR</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">admin</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">legal</span></td><td><span class="sb2 s5">管理</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">tech</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">engineering</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">dev</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+    <tr><td><span class="ck">R&amp;D</span></td><td><span class="sb2 s6">研发</span></td><td>宋润芃</td><td>2026-04-12</td><td><button class="bl" onclick="sd('d-kw-add')">编辑</button> <button class="bd" onclick="sd('d-confirm')">删除</button></td></tr>
+  </tbody></table>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-kw-config')">关闭</button></div></div></div>
+
+<!-- 关键词-新增/编辑 -->
+<div class="vm" id="d-kw-add"><div class="dg" style="width:420px"><div class="dh"><span class="dt">新增关键词规则</span><button class="dc" onclick="hd('d-kw-add')">×</button></div><div class="db">
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>关键词</label><input class="inp" placeholder="输入英文关键词"></div>
+  <div style="margin-bottom:16px"><label style="display:block;font-size:13px;color:var(--text2);margin-bottom:6px"><span class="rq">*</span>费用分类</label><select class="sel"><option>请选择</option><option>履约</option><option>销售</option><option>管理</option><option>研发</option></select></div>
+</div><div class="df"><button class="bt" onclick="hd('d-kw-add')">取消</button><button class="bt bp">确认</button></div></div></div>
+
+<!-- 删除确认 -->
+<div class="vm" id="d-confirm"><div class="cf-box"><div class="cf-msg"><span class="cf-icon">⚠</span>确定要删除该关键词规则吗？</div><div class="cf-btns"><button class="bt" onclick="hd('d-confirm')">取消</button><button class="bt bp" onclick="hd('d-confirm')">确定</button></div></div></div>
+
+<!-- 共享日志 -->
+<div class="dw-ov" id="d-corp-log"><div class="dw"><div class="dw-h"><span class="dt">操作日志</span><button class="dc" onclick="hd('d-corp-log')">×</button></div><div class="dw-b">
+  <table><thead><tr><th>操作人</th><th>操作时间</th><th>操作类型</th><th>变更内容</th></tr></thead>
+  <tbody><tr><td>SYSTEM</td><td>2026-04-12 09:00</td><td>自动匹配</td><td>关键词 warehouse 命中 → 费用分类: 履约</td></tr></tbody></table>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-corp-log')">关闭</button></div></div></div>
+
+</div>
+<script>
+function sd(id){var el=document.getElementById(id);if(el)el.classList.add('show')}
+function hd(id){var el=document.getElementById(id);if(el)el.classList.remove('show')}
+function tf(b){var f=b.closest('.sf');if(f.classList.contains('cl')){f.classList.remove('cl');b.textContent='收起 ▴'}else{f.classList.add('cl');b.textContent='展开 ▾'}}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.vm').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+  document.querySelectorAll('.dw-ov').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+});
+</script>
+</body>
+</html>

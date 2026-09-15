@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>付款单 - 银企弹框 - 手续费承担方 - 原型设计</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f2f5; color: #303133; font-size: 13px; padding: 24px; }
+
+  .page-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .page-sub { color: #909399; font-size: 12px; margin-bottom: 20px; }
+
+  /* 说明区 */
+  .note { padding: 12px 16px; background: #ecf5ff; border: 1px solid #d9ecff; border-radius: 4px; color: #409eff; font-size: 12px; line-height: 1.8; margin-bottom: 20px; }
+  .note b { color: #303133; }
+  .note ul { margin: 4px 0 0 18px; }
+
+  /* 切换演示 */
+  .demo-switcher { padding: 12px 16px; background: #fff; border-radius: 4px; border: 1px solid #ebeef5; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .demo-switcher b { font-size: 13px; }
+  .sw-btn { padding: 6px 14px; border: 1px solid #dcdfe6; background: #fff; color: #606266; border-radius: 3px; cursor: pointer; font-size: 12px; }
+  .sw-btn.active { background: #409eff; color: #fff; border-color: #409eff; }
+  .demo-switcher .tip { color: #909399; font-size: 12px; margin-left: auto; }
+
+  /* 弹框（静态展示） */
+  .modal-wrap { display: flex; justify-content: center; padding: 20px 0 32px; }
+  .modal { background: #fff; width: 626px; border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 1px solid #ebeef5; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid #ebeef5; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; color: #303133; }
+  .modal-close { font-size: 20px; color: #909399; cursor: pointer; background: none; border: none; }
+
+  .modal-body { padding: 24px 28px 8px; }
+  .form-item { display: flex; align-items: flex-start; margin-bottom: 18px; }
+  .form-item .label { width: 120px; flex-shrink: 0; color: #606266; text-align: right; padding: 8px 12px 0 0; font-size: 14px; line-height: 1; }
+  .form-item .label .required { color: #f56c6c; margin-right: 4px; }
+  .form-item .ctrl { flex: 1; }
+  .form-item input[type="text"], .form-item select, .form-item textarea { width: 100%; padding: 6px 11px; border: 1px solid #dcdfe6; border-radius: 3px; font-size: 13px; height: 32px; background: #fff; outline: none; font-family: inherit; color: #303133; }
+  .form-item textarea { height: 72px; padding-top: 8px; resize: none; }
+  .form-item input:focus, .form-item select:focus, .form-item textarea:focus { border-color: #409eff; }
+  .form-item input[disabled] { background: #f5f7fa; color: #606266; cursor: not-allowed; }
+  .form-item .static-text { padding: 7px 0 0; font-size: 13px; color: #303133; line-height: 1; }
+  .form-item .help-text { font-size: 12px; color: #909399; margin-top: 4px; }
+  .form-item .err-text { font-size: 12px; color: #f56c6c; margin-top: 4px; display: none; }
+  .form-item.has-error .err-text { display: block; }
+  .form-item.has-error input, .form-item.has-error select { border-color: #f56c6c; }
+
+  .radio-group { display: flex; gap: 24px; padding-top: 6px; }
+  .radio-item { display: flex; align-items: center; cursor: pointer; font-size: 13px; color: #606266; }
+  .radio-item input { margin-right: 6px; accent-color: #409eff; }
+
+  /* 新增字段高亮 */
+  .form-item.new-field { background: #fff8e1; border-radius: 4px; padding: 8px 4px 8px 0; margin-left: -4px; margin-right: -4px; }
+  .form-item.new-field .label::after { content: "新增"; display: inline-block; background: #e6a23c; color: #fff; font-size: 10px; padding: 0 4px; border-radius: 2px; margin-left: 6px; line-height: 14px; vertical-align: middle; }
+
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #ebeef5; }
+  .btn { padding: 7px 15px; border-radius: 3px; border: 1px solid #dcdfe6; cursor: pointer; font-size: 12px; background: #fff; color: #606266; height: 32px; }
+  .btn-primary { background: #409eff; color: #fff; border-color: #409eff; }
+
+  .toast { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 10px 20px; border-radius: 4px; font-size: 13px; z-index: 999; display: none; }
+  .toast.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="page-title">付款单 · 银企弹框 — 新增"手续费承担方"字段</div>
+<div class="page-sub">资金 / 付款池 / 付款单 — 银企付款弹框改动说明</div>
+
+<div class="note">
+  <b>改动说明</b>
+  <ul>
+    <li>改动位置：付款单列表页点击"银企"按钮后弹出的付款弹框。</li>
+    <li>触发条件：当<b>付款银行 = UOVB</b> 时，弹框中新增展示"<b>手续费承担方</b>"字段；其他银行不展示。</li>
+    <li>选项：<b>双方承担</b> / <b>我方承担</b> / <b>对方承担</b>（单选，必填）。</li>
+    <li><b>默认值：双方承担</b>（字段显示时即预选"双方承担"）。</li>
+    <li>切换付款银行时，该字段按条件显示/隐藏；隐藏后再次显示时重置为默认值"双方承担"。</li>
+    <li><b>推送至 UOB 银行</b>：当付款银行=UOVB 时，点击"确认"后，需将"<b>手续费承担方</b>"和"<b>用途</b>"两个字段一并推送至 UOB 银行接口。</li>
+  </ul>
+</div>
+
+<!-- 切换演示 -->
+<div class="demo-switcher">
+  <b>状态切换：</b>
+  <button class="sw-btn active" onclick="setBank('ADCB', this)">付款银行=ADCB（隐藏承担方）</button>
+  <button class="sw-btn" onclick="setBank('UOVB', this)">付款银行=UOVB（显示承担方）</button>
+  <span class="tip">点击按钮查看同一弹框在不同付款银行下的差异</span>
+</div>
+
+<!-- 弹框 -->
+<div class="modal-wrap">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>银企</h3>
+      <button class="modal-close">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-item">
+        <div class="label">法人公司：</div>
+        <div class="ctrl">
+          <input type="text" value="SUNSHINE LINE FOODSTUFF TRADING LLC" disabled>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <div class="label">付款银行：</div>
+        <div class="ctrl">
+          <select id="bank" onchange="onBankChange(this.value)">
+            <option value="ADCB">ADCB</option>
+            <option value="UOVB">UOVB</option>
+            <option value="EBIL">EBIL</option>
+            <option value="SABB">SABB</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <div class="label"><span class="required">*</span>付款账号：</div>
+        <div class="ctrl">
+          <select>
+            <option>AE57003001420135292000</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-item">
+        <div class="label">付款金额：</div>
+        <div class="ctrl">
+          <div class="static-text">5,190.00</div>
+        </div>
+      </div>
+
+      <!-- 手续费承担方（新增，条件显示） -->
+      <div class="form-item new-field" id="item-charge-bearer" style="display:none">
+        <div class="label"><span class="required">*</span>手续费承担方：</div>
+        <div class="ctrl">
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="chargeBearer" value="SHA" checked onchange="clearErr()">
+              双方承担
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="chargeBearer" value="OUR" onchange="clearErr()">
+              我方承担
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="chargeBearer" value="BEN" onchange="clearErr()">
+              对方承担
+            </label>
+          </div>
+          <div class="help-text">仅在付款银行为 UOVB 时显示，提交时必填。</div>
+          <div class="err-text">请选择手续费承担方</div>
+        </div>
+      </div>
+
+      <div class="form-item" id="item-remark">
+        <div class="label"><span class="required">*</span>用途：</div>
+        <div class="ctrl">
+          <textarea>FK260409285421227GXWLF</textarea>
+          <div class="help-text" id="remark-hint" style="display:none">付款银行为 UOVB 时，用途将随手续费承担方一并推送至 UOB 银行。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn">取消</button>
+      <button class="btn btn-primary" onclick="submitForm()">确认</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const bankSel = document.getElementById('bank');
+  const itemBearer = document.getElementById('item-charge-bearer');
+  const radios = document.getElementsByName('chargeBearer');
+
+  function setBank(bank, btn) {
+    document.querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    bankSel.value = bank;
+    onBankChange(bank);
+  }
+
+  function onBankChange(bank) {
+    const remarkHint = document.getElementById('remark-hint');
+    if (bank === 'UOVB') {
+      itemBearer.style.display = 'flex';
+      for (const r of radios) r.checked = (r.value === 'SHA');
+      remarkHint.style.display = 'block';
+    } else {
+      itemBearer.style.display = 'none';
+      for (const r of radios) r.checked = false;
+      remarkHint.style.display = 'none';
+    }
+    clearErr();
+  }
+
+  function clearErr() { itemBearer.classList.remove('has-error'); }
+
+  function submitForm() {
+    if (bankSel.value === 'UOVB') {
+      let selected = '';
+      for (const r of radios) if (r.checked) selected = r.value;
+      if (!selected) {
+        itemBearer.classList.add('has-error');
+        showToast('请选择手续费承担方');
+        return;
+      }
+      const remarkVal = document.querySelector('#item-remark textarea').value;
+      showToast('提交成功，推送至 UOB：chargeBearer=' + selected + '，remark=' + remarkVal);
+    } else {
+      showToast('提交成功（非 UOVB，不推送至 UOB）');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1600);
+  }
+</script>
+
+</body>
+</html>

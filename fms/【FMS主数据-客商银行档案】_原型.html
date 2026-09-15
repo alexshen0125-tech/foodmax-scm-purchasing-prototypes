@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【FMS主数据-客商银行档案】原型</title>
+<style>
+:root{--p:#009919;--p9:#ebf9ec;--p8:#d6f3d9;--bg:#f2f2f2;--border:#dcdfe6;--text:#333;--text2:#606266;--text3:#909399;--th-bg:#f4f4f4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:PingFang SC,Helvetica Neue,Helvetica,Hiragino Sans GB,Microsoft YaHei,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{text-decoration:none;color:inherit}
+/* Header */
+.hd{display:flex;align-items:center;justify-content:space-between;height:54px;padding:0 20px 0 32px;background:var(--p);position:fixed;top:0;left:0;right:0;z-index:100}
+.hd span{color:#fff}
+.hd-t{flex-shrink:0;display:flex;align-items:center;gap:14px}
+.hd-t .st{color:#fff;font-size:16px;font-weight:600}
+.ui{flex-shrink:0;display:flex;align-items:center;gap:16px;color:#fff;font-size:13px}
+/* Form */
+.sf{padding:12px;margin-bottom:10px;background:#fff}
+.sr{display:flex;flex-wrap:wrap;margin:0 -10px}
+.sc{padding:0 10px}
+.sc4{width:16.666%;flex:0 0 16.666%}
+.sc6{width:25%;flex:0 0 25%}
+.fi{display:flex;align-items:center;margin-bottom:4px}
+.fl{font-size:13px;color:var(--text);white-space:nowrap;min-width:90px;text-align:right;padding-right:8px}
+.inp{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;outline:none;background:#fff;height:32px}
+.inp:focus{border-color:var(--p)}
+.sel{width:100%;padding:6px 11px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:#fff;outline:none;height:32px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23999' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.sb{display:flex;align-items:center;gap:8px}
+.sf.cl .sc4:nth-child(n+4){display:none}
+/* Buttons */
+.bt{padding:8px 15px;border-radius:4px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--text2);display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.bt:hover{border-color:var(--p);color:var(--p)}
+.bp{background:var(--p);color:#fff;border-color:var(--p)}
+.bp:hover{opacity:.85;color:#fff}
+.bs{padding:5px 11px;font-size:13px}
+.bl{background:none;border:none;color:var(--p);cursor:pointer;font-size:13px;padding:0 2px}
+.bl:hover{opacity:.7}
+.bd{background:none;border:none;color:#E12121;cursor:pointer;font-size:13px;padding:0 2px}
+/* Table */
+.tl{background:#fff;padding:8px 12px;overflow:auto}
+.ta{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;height:32px}
+.ta>div{display:flex;align-items:center;gap:8px}
+.tt{font-size:16px;color:var(--text);font-weight:600;margin-right:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--th-bg)}
+th{padding:10px 12px;text-align:left;font-weight:500;color:var(--text);border-bottom:1px solid #e8e8e8;white-space:nowrap;font-size:13px}
+td{padding:3px 12px;border-bottom:1px solid #f0f0f0;color:var(--text);height:40px}
+tr:hover td{background:var(--p9)}
+.dl{cursor:pointer;color:var(--p)}
+.dl:hover{opacity:.7}
+.ts{overflow-x:auto}
+small.su{font-size:12px;color:#999}
+/* Status */
+.sb2{height:24px;line-height:24px;padding:0 6px;font-size:12px;border-radius:2px;text-align:center;width:max-content;display:inline-block}
+.s1{border:1px solid #81D89B;background:#F0F9EB;color:#2FB157}
+.s2{background:#FFEDEA;border:1px solid #F78D94;color:#E12121}
+.s3{background:#ECF7FF;border:1px solid #73C2FF;color:#0091FF}
+.s4{background:#FEF6EC;border:1px solid #FCA971;color:#F96500}
+.s5{border:1px solid #DDD;background:#FCFCFC;color:#999}
+.s6{border:1px solid #B680EB;background:#F6EDFF;color:#751FCC}
+/* Pagination */
+.pn{padding:14px 0 0;display:flex;justify-content:flex-end;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.pn select{padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px}
+.pb{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;background:#fff;color:var(--text2)}
+.pb.on{background:var(--p);color:#fff;border-color:var(--p)}
+/* Dialog */
+.vm{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:200;justify-content:center;align-items:center}
+.vm.show{display:flex}
+.dg{background:#fff;border-radius:4px;max-height:85vh;overflow-y:auto}
+.dh{padding:16px 20px;border-bottom:1px solid #e8e8e8;display:flex;justify-content:space-between;align-items:center}
+.dh .dt{font-size:16px;font-weight:600;color:var(--text)}
+.dc{cursor:pointer;font-size:18px;color:var(--text3);border:none;background:none}
+.db{padding:20px}
+.df{padding:12px 20px;border-top:1px solid #e8e8e8;display:flex;justify-content:flex-end;gap:8px}
+.dr{display:flex;gap:16px;margin-bottom:16px}
+.dx{flex:1}
+.dx label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px}
+.dx label .rq{color:#f56c6c;margin-right:4px}
+.dx .inp,.dx .sel{width:100%}
+/* Drawer */
+.dw-ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.3);z-index:150}
+.dw-ov.show{display:block}
+.dw{position:fixed;top:0;right:0;width:75%;height:100vh;background:#fff;box-shadow:-4px 0 12px rgba(0,0,0,.1);z-index:151;display:flex;flex-direction:column}
+.dw-h{height:48px;line-height:48px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8e8e8;flex-shrink:0}
+.dw-h .dt{font-weight:600;font-size:16px}
+.dw-b{flex:1;overflow-y:auto;border:10px solid var(--bg);border-bottom:1px solid var(--bg);padding:16px}
+.dw-f{padding:10px 14px;box-shadow:0px -2px 15px rgba(0,0,0,.1);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+/* Detail */
+.det-sec{margin-bottom:20px}
+.det-t{font-size:15px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e8e8e8}
+.det-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.det-item{display:flex;align-items:center;height:40px;padding:0 12px}
+.det-l{font-size:13px;color:#999;min-width:100px}
+.det-v{font-size:13px;color:var(--text)}
+/* Config chip */
+.ck{background:#F0F9EB;padding:2px 10px;border-radius:12px;font-size:12px;color:#2FB157;border:1px solid #81D89B}
+/* Feature notes */
+.fn{margin-top:12px;background:#FFFDF2;border:1px solid #FCA971;border-radius:4px;padding:12px 16px;font-size:13px;color:#333}
+.fn-t{font-weight:600;font-size:14px;margin-bottom:8px;color:#F96500}
+.fn ul{padding-left:20px;margin:0}
+.fn li{margin-bottom:4px;line-height:1.6}
+.fn .tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;margin-right:4px}
+.fn .t-new{background:#ECF7FF;color:#0091FF}
+.fn .t-chg{background:#FEF6EC;color:#F96500}
+.fn .t-del{background:#FFEDEA;color:#E12121}
+.fn .t-keep{background:#F0F9EB;color:#2FB157}
+/* Confirm */
+.cf-box{background:#fff;border-radius:4px;width:420px;padding:24px}
+.cf-icon{font-size:24px;color:#F96500;margin-right:12px}
+.cf-msg{font-size:16px;margin-bottom:20px;display:flex;align-items:center}
+.cf-btns{display:flex;justify-content:flex-end;gap:8px}
+/* Index page */
+.ix-wrap{padding:32px;max-width:1200px;margin:0 auto}
+.ix-h{font-size:22px;font-weight:600;margin-bottom:8px;color:var(--text)}
+.ix-d{font-size:13px;color:var(--text3);margin-bottom:24px}
+.ix-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.ix-card{background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:18px 20px;cursor:pointer;transition:all .2s;display:block}
+.ix-card:hover{border-color:var(--p);box-shadow:0 4px 12px rgba(0,153,25,.12);transform:translateY(-2px)}
+.ix-card .ix-t{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
+.ix-card .ix-tag{font-size:11px;padding:1px 6px;border-radius:2px;font-weight:400}
+.ix-card .ix-d2{font-size:12px;color:var(--text3);line-height:1.6;min-height:40px}
+.ix-section{font-size:13px;font-weight:600;color:var(--text2);margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #e8e8e8}
+</style>
+<style>body{padding-top:54px}.main{padding:10px}.hd a{color:#fff;text-decoration:none;font-size:13px}.hd a:hover{opacity:.8}</style>
+</head>
+<body>
+<div class="hd">
+  <div class="hd-t"><span class="st">财务中台国际 — 客商银行档案</span></div>
+  <div class="ui"><a href="【FMS主数据】原型入口.html">← 返回原型入口</a></div>
+</div>
+<div class="main">
+
+<div class="sf cl"><div class="sr">
+  <div class="sc sc4"><div class="fi"><label class="fl">客商名称</label><div style="flex:1"><input class="inp" placeholder="请输入"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">客商业务编码</label><div style="flex:1"><input class="inp" placeholder="如 VD-001"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">客商方向</label><div style="flex:1"><select class="sel"><option>全部</option><option>供应商</option><option>客户</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">银行账号</label><div style="flex:1"><input class="inp" placeholder="支持模糊搜索"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">币种</label><div style="flex:1"><select class="sel"><option>全部</option><option>SAR</option><option>AED</option><option>SGD</option><option>MYR</option><option>AUD</option><option>USD</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">开户行</label><div style="flex:1"><input class="inp" placeholder="如 DBS"></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">来源系统</label><div style="flex:1"><select class="sel"><option>全部</option><option>PMS</option><option>TMS</option><option>CRM</option><option>FMS 手工</option></select></div></div></div>
+  <div class="sc sc4"><div class="fi"><label class="fl">状态</label><div style="flex:1"><select class="sel"><option>全部</option><option>启用</option><option>停用</option></select></div></div></div>
+  <div class="sc sc6"><div class="sb"><button class="bt bp bs">查询</button><button class="bt bs">重置</button><button class="bl" onclick="tf(this)">展开 ▾</button></div></div>
+</div></div>
+
+<div class="tl">
+  <div class="ta"><div><div class="tt">客商银行档案</div><span class="sb2 s3" style="margin-left:8px">V1.0 新增 — 客商结算账户</span></div><div><button class="bt bs">导出</button><button class="bt bp bs" onclick="sd('d-cvbk-add')">手工补录账户</button></div></div>
+  <div class="ts"><table><thead><tr><th>客商名称</th><th>方向</th><th>银行账号</th><th>户名</th><th>开户支行</th><th>联行号</th><th>币种</th><th>来源</th><th>更新时间</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>Al Safi Fresh Foods LLC<br><small class="su">VD-001</small></td><td><span class="sb2 s4">供应商</span></td><td>SA12 3456 7890 1234 5678</td><td>Al Safi Fresh Foods LLC</td><td>Al Rajhi Bank - Riyadh</td><td>RJHISARI</td><td>SAR</td><td>PMS</td><td>2026-04-08</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Al Safi Fresh Foods LLC<br><small class="su">VD-001</small></td><td><span class="sb2 s4">供应商</span></td><td>SA45 6789 0123 4567 8901</td><td>Al Safi Fresh Foods LLC</td><td>Saudi National Bank - Riyadh</td><td>NCBKSAJE</td><td>SAR</td><td>PMS</td><td>2026-04-08</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Ahmad bin Ali<br><small class="su">VD-002</small></td><td><span class="sb2 s4">供应商</span></td><td>AE45 0010 0987 6543 2100</td><td>Ahmad bin Ali</td><td>Emirates Islamic - Dubai</td><td>EIBLAEAD</td><td>AED</td><td>TMS</td><td>2026-04-12</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Global Spice Trading Pte Ltd<br><small class="su">VD-003</small></td><td><span class="sb2 s4">供应商</span></td><td>0123-456789-001</td><td>Global Spice Trading Pte Ltd</td><td>OCBC Singapore</td><td>OCBCSGSG</td><td>SGD</td><td>PMS</td><td>2026-04-06</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Global Spice Trading Pte Ltd<br><small class="su">VD-003</small></td><td><span class="sb2 s4">供应商</span></td><td>0123-456789-002</td><td>Global Spice Trading Pte Ltd</td><td>OCBC Singapore</td><td>OCBCSGSG</td><td>USD</td><td>PMS</td><td>2026-04-06</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Fresh Logistics LLC<br><small class="su">VD-004</small></td><td><span class="sb2 s4">供应商</span></td><td>AE33 0260 0099 8877 6655 4</td><td>Fresh Logistics LLC</td><td>Mashreq Bank - Dubai</td><td>BOMLAEAD</td><td>AED</td><td>TMS</td><td>2026-04-10</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>KSA Premium Suppliers Co.<br><small class="su">VD-005</small></td><td><span class="sb2 s4">供应商</span></td><td>SA88 5544 3322 1100 9988 7</td><td>KSA Premium Suppliers</td><td>Riyad Bank - Jeddah</td><td>RIBLSARI</td><td>SAR</td><td>PMS</td><td>2026-04-15</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Marina Bay Restaurant Pte Ltd<br><small class="su">CU-001</small></td><td><span class="sb2 s3">客户</span></td><td>5678-901234-001</td><td>Marina Bay Restaurant Pte Ltd</td><td>UOB Singapore</td><td>UOVBSGSG</td><td>SGD</td><td>CRM</td><td>2026-04-12</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Sushi House KL Sdn Bhd<br><small class="su">CU-002</small></td><td><span class="sb2 s3">客户</span></td><td>5614-2233-1122-9988</td><td>Sushi House KL Sdn Bhd</td><td>CIMB Bank Malaysia</td><td>CIBBMYKL</td><td>MYR</td><td>CRM</td><td>2026-04-12</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Hilton Riyadh Catering<br><small class="su">CU-003</small></td><td><span class="sb2 s3">客户</span></td><td>SA98 1234 5678 9012 3456</td><td>Hilton Riyadh Catering</td><td>Saudi National Bank - Riyadh</td><td>NCBKSAJE</td><td>SAR</td><td>FMS 手工</td><td>2026-04-22</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Burj Al Arab Hotel F&amp;B<br><small class="su">CU-004</small></td><td><span class="sb2 s3">客户</span></td><td>AE76 0030 0011 4455 7788 9</td><td>Burj Al Arab Hotel</td><td>HSBC UAE - Dubai</td><td>HSBCAEAD</td><td>AED</td><td>CRM</td><td>2026-04-18</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Sydney Fine Dining Group<br><small class="su">CU-005</small></td><td><span class="sb2 s3">客户</span></td><td>062-200-99887766</td><td>Sydney Fine Dining Group Pty Ltd</td><td>CommBank Sydney</td><td>CTBAAU2S</td><td>AUD</td><td>CRM</td><td>2026-04-20</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Penang Food Court SDN BHD<br><small class="su">CU-006</small></td><td><span class="sb2 s3">客户</span></td><td>1144-5566-7788-9900</td><td>Penang Food Court SDN BHD</td><td>Maybank - Penang</td><td>MBBEMYKL</td><td>MYR</td><td>CRM</td><td>2026-04-23</td><td><span class="sb2 s1">启用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Al Safi Fresh Foods LLC<br><small class="su">VD-001</small></td><td><span class="sb2 s4">供应商</span></td><td>SA99 0000 1111 2222 3333 4</td><td>Al Safi Fresh Foods LLC (旧)</td><td>Al Rajhi Bank - Riyadh</td><td>RJHISARI</td><td>SAR</td><td>PMS</td><td>2025-12-10</td><td><span class="sb2 s5">停用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+    <tr><td>Old Vendor LLC（已停用）<br><small class="su">VD-088</small></td><td><span class="sb2 s4">供应商</span></td><td>AE11 2222 3333 4444 5555 6</td><td>Old Vendor LLC</td><td>Emirates NBD - Dubai</td><td>EBILAEAD</td><td>AED</td><td>PMS</td><td>2025-08-15</td><td><span class="sb2 s5">停用</span></td><td><button class="bl" onclick="sd('d-cvbk-detail')">详情</button> <button class="bl" onclick="sd('d-cvbk-log')">日志</button></td></tr>
+  </tbody></table></div>
+  <div class="pn"><span>共 286 条</span><select><option>15 条/页</option><option>30 条/页</option></select><span class="pb">‹</span><span class="pb on">1</span><span class="pb">2</span><span class="pb">...</span><span class="pb">20</span><span class="pb">›</span></div>
+</div>
+
+<div class="fn"><div class="fn-t">功能点说明 — 客商银行档案（V1.0 新增）</div>
+<p style="margin:8px 0 4px;font-weight:600;">归属与口径</p><ul>
+  <li>归属对象：<b>供应商 / 客户（客商）</b>，用于结算（应付/应收）账户</li>
+  <li>2026-04-15 会议明确：与「法人公司银行档案」分开管理（BR-21b）</li>
+  <li>数据来源：上游系统随客商推送 / FMS 手工补录</li>
+  <li>隔离维度：集团共用</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">字段说明</p><ul>
+  <li><b>客商</b>（必填）：账户归属客商，关联客商业务档案</li>
+  <li><b>方向</b>：供应商账户（用于付款）/ 客户账户（用于收款）</li>
+  <li><b>银行账号</b>（必填）：同一客商下账号唯一</li>
+  <li><b>联行号</b>（必填）：跨行结算需要</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">交互说明</p><ul>
+  <li><b>同一客商多账户</b>：列表显示多行（如 Al Safi 有 2 个 SAR 账户、Global Spice 同时有 SGD 和 USD 账户）</li>
+  <li><b>账号去重</b>：上游再次推送相同账号会更新已有记录而不新增</li>
+  <li><b>手工补录</b>：上游缺失场景下可手工录入</li>
+  <li><b>停用账户</b>：客商主体若停用，旗下账户保留历史，状态置为「停用」</li>
+</ul>
+<p style="margin:8px 0 4px;font-weight:600;">业务规则</p><ul>
+  <li>BR-21a：客商银行档案随客商推送一并接入，账号级别去重</li>
+  <li>BR-21b：客商银行档案与法人公司银行档案分开维护，互不干扰</li>
+</ul></div>
+
+<!-- 手工补录 -->
+<div class="vm" id="d-cvbk-add"><div class="dg" style="width:600px"><div class="dh"><span class="dt">手工补录客商银行账户</span><button class="dc" onclick="hd('d-cvbk-add')">×</button></div><div class="db">
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>客商</label><select class="sel"><option>请选择（搜索客商业务编码或名称）</option><option>VD-001 Al Safi Fresh Foods LLC</option><option>VD-002 Ahmad bin Ali</option><option>VD-003 Global Spice Trading Pte Ltd</option><option>CU-001 Marina Bay Restaurant Pte Ltd</option><option>CU-002 Sushi House KL Sdn Bhd</option><option>CU-003 Hilton Riyadh Catering</option></select></div><div class="dx"><label><span class="rq">*</span>币种</label><select class="sel"><option>SAR</option><option>AED</option><option>SGD</option><option>MYR</option><option>AUD</option><option>USD</option></select></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>银行账号</label><input class="inp" placeholder="请输入"></div><div class="dx"><label><span class="rq">*</span>户名</label><input class="inp" placeholder="请输入"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>开户支行</label><input class="inp" placeholder="请输入"></div><div class="dx"><label><span class="rq">*</span>联行号</label><input class="inp" placeholder="如 SWIFT/BIC"></div></div>
+  <div class="dr"><div class="dx"><label><span class="rq">*</span>银行类别</label><select class="sel"><option>商业银行</option><option>外资银行</option><option>本地银行</option><option>伊斯兰银行</option></select></div><div class="dx"><label>备注</label><input class="inp"></div></div>
+  <div style="color:#F96500;font-size:12px;margin-top:8px">⚠ 推送过的账户由上游统一维护；手工补录仅适用于上游缺失场景</div>
+</div><div class="df"><button class="bt" onclick="hd('d-cvbk-add')">取消</button><button class="bt bp">提交</button></div></div></div>
+
+<!-- 详情抽屉 -->
+<div class="dw-ov" id="d-cvbk-detail"><div class="dw"><div class="dw-h"><span class="dt">客商银行账户详情</span><button class="dc" onclick="hd('d-cvbk-detail')">×</button></div><div class="dw-b">
+  <div class="det-sec"><div class="det-t">基本信息</div><div class="det-grid">
+    <div class="det-item"><span class="det-l">客商</span><span class="det-v">Al Safi Fresh Foods LLC (VD-001)</span></div>
+    <div class="det-item"><span class="det-l">方向</span><span class="det-v">供应商</span></div>
+    <div class="det-item"><span class="det-l">银行账号</span><span class="det-v">SA12 3456 7890 1234 5678</span></div>
+    <div class="det-item"><span class="det-l">户名</span><span class="det-v">Al Safi Fresh Foods LLC</span></div>
+    <div class="det-item"><span class="det-l">开户支行</span><span class="det-v">Al Rajhi Bank - Riyadh Main Branch</span></div>
+    <div class="det-item"><span class="det-l">联行号</span><span class="det-v">RJHISARI</span></div>
+    <div class="det-item"><span class="det-l">银行类别</span><span class="det-v">伊斯兰银行</span></div>
+    <div class="det-item"><span class="det-l">币种</span><span class="det-v">SAR</span></div>
+    <div class="det-item"><span class="det-l">来源系统</span><span class="det-v">PMS</span></div>
+    <div class="det-item"><span class="det-l">最近更新</span><span class="det-v">2026-04-08 03:00</span></div>
+    <div class="det-item"><span class="det-l">状态</span><span class="det-v"><span class="sb2 s1">启用</span></span></div>
+    <div class="det-item"><span class="det-l">是否默认</span><span class="det-v">是（首选付款账户）</span></div>
+  </div></div>
+  <div class="det-sec"><div class="det-t">同客商其他账户</div>
+    <table><thead><tr><th>账号</th><th>币种</th><th>开户支行</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>
+      <tr><td>SA45 6789 0123 4567 8901</td><td>SAR</td><td>Saudi National Bank - Riyadh</td><td><span class="sb2 s1">启用</span></td><td><button class="bl">查看</button></td></tr>
+      <tr><td>SA99 0000 1111 2222 3333 4</td><td>SAR</td><td>Al Rajhi Bank - Riyadh</td><td><span class="sb2 s5">停用</span></td><td><button class="bl">查看</button></td></tr>
+    </tbody></table>
+  </div>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-cvbk-detail')">关闭</button></div></div></div>
+
+<!-- 日志 -->
+<div class="dw-ov" id="d-cvbk-log"><div class="dw"><div class="dw-h"><span class="dt">客商银行账户日志</span><button class="dc" onclick="hd('d-cvbk-log')">×</button></div><div class="dw-b">
+  <table><thead><tr><th>来源</th><th>时间</th><th>操作</th><th>变更</th></tr></thead>
+  <tbody>
+    <tr><td>PMS</td><td>2026-04-08 03:00</td><td>同步</td><td>开户支行更新：Al Rajhi Bank - Branch A → Al Rajhi Bank - Riyadh Main Branch</td></tr>
+    <tr><td>PMS</td><td>2025-09-15 03:00</td><td>新增</td><td>随客商 VD-001 推送一并新增账户</td></tr>
+  </tbody></table>
+</div><div class="dw-f"><button class="bt" onclick="hd('d-cvbk-log')">关闭</button></div></div></div>
+
+</div>
+<script>
+function sd(id){var el=document.getElementById(id);if(el)el.classList.add('show')}
+function hd(id){var el=document.getElementById(id);if(el)el.classList.remove('show')}
+function tf(b){var f=b.closest('.sf');if(f.classList.contains('cl')){f.classList.remove('cl');b.textContent='收起 ▴'}else{f.classList.add('cl');b.textContent='展开 ▾'}}
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.vm').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+  document.querySelectorAll('.dw-ov').forEach(function(o){o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show')})});
+});
+</script>
+</body>
+</html>

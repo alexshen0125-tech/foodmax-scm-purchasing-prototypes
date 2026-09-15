@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【FMS】物料凭证 · 原型 V1.13</title>
+<style>
+/* ===== Reset & Base（FMS 2.0 token）===== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"PingFang SC","Helvetica Neue",Helvetica,"Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;background:#f2f2f2;color:#333;font-size:13px;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit;outline:none}
+
+/* ===== 顶栏 ===== */
+.topbar{background:#0e5e38;color:#fff;height:44px;padding:0 20px;display:flex;align-items:center;gap:12px;position:fixed;top:0;left:0;right:0;z-index:200}
+.topbar .t{font-size:14px;font-weight:600}
+.topbar .v{font-size:11px;color:#c9cdd4}
+
+/* ===== 左侧菜单 ===== */
+.sidebar{position:fixed;top:44px;left:0;bottom:0;width:176px;background:#fff;border-right:1px solid #e5e6eb;z-index:150;padding-top:10px}
+.menu-group{font-size:11px;color:#999;padding:8px 16px 4px}
+.menu-item{display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;font-size:13px;color:#333;cursor:pointer;border-right:2px solid transparent}
+.menu-item:hover{background:#f7f8fa}
+.menu-item.active{background:#ebf9ec;color:#0d6e3f;font-weight:600;border-right-color:#0d6e3f}
+.menu-item .dot{width:6px;height:6px;border-radius:50%;background:#c9cdd4}
+.menu-item.active .dot{background:#0d6e3f}
+
+.main{margin:54px 12px 30px 188px}
+
+/* ===== 面包屑 ===== */
+.crumb{font-size:12px;color:#999;margin:0 0 8px 2px}
+.crumb b{color:#333;font-weight:500}
+
+/* ===== 筛选区 DDForm（标签在上，6 列栅格，对齐存量系统风格）===== */
+.dd-form{background:#fff;border-radius:4px;padding:14px 16px 12px;margin-bottom:10px;position:relative}
+
+/* ===== 日期范围选择器（快捷项 + 双月历）===== */
+.dp{position:absolute;z-index:60;background:#fff;border:1px solid #e5e6eb;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.14);display:flex}
+.dp-sc{width:92px;border-right:1px solid #f2f3f5;padding:8px 0}
+.dp-sc div{padding:7px 16px;font-size:12.5px;color:#333;cursor:pointer;white-space:nowrap}
+.dp-sc div:hover{color:#0d6e3f;background:#f7f8fa}
+.dp-m{padding:10px 14px}
+.dp-m+.dp-m{border-left:1px solid #f2f3f5}
+.dp-hd{display:flex;align-items:center;justify-content:center;gap:14px;font-size:13.5px;font-weight:600;color:#1d2129;padding:2px 4px 8px}
+.dp-hd .nav{color:#c9cdd4;font-size:12px;cursor:pointer;user-select:none;font-weight:400}
+.dp-grid{display:grid;grid-template-columns:repeat(7,32px)}
+.dp-grid .wd{font-size:12px;color:#4e5969;text-align:center;height:28px;line-height:28px}
+.dp-d{height:30px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#333;cursor:pointer}
+.dp-d span{width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%}
+.dp-d.out span,.dp-d.dis span{color:#c9cdd4}
+.dp-d.inr{background:#ebf9ec}
+.dp-d.st span,.dp-d.en span{background:#0e5e38;color:#fff;font-weight:600}
+
+/* ===== 下拉选择面板（枚举单选 / 名称模糊搜索）===== */
+.sel{position:absolute;z-index:70;background:#fff;border:1px solid #e5e6eb;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.14)}
+.sel .sel-search{padding:8px 10px;border-bottom:1px solid #f2f3f5}
+.sel .sel-search input{width:100%;height:28px;border:1px solid #e5e6eb;border-radius:4px;padding:0 8px;font-size:12.5px;color:#333}
+.sel .sel-search input::placeholder{color:#c9cdd4}
+.sel .sel-search input:focus{border-color:#0d6e3f}
+.sel .opt-list{max-height:238px;overflow-y:auto;padding:5px 0}
+.sel .opt{display:flex;align-items:center;gap:10px;padding:0 12px;height:34px;font-size:13px;color:#333;cursor:pointer;white-space:nowrap}
+.sel .opt:hover{background:#f7f8fa}
+.sel .opt.on{color:#0d6e3f;font-weight:600}
+.sel .opt.on::after{content:'✓';margin-left:auto;font-size:12px}
+.sel .opt .code{color:#999;font-size:11.5px;font-weight:400}
+.sel .empty{padding:10px 12px;color:#999;font-size:12px}
+.form-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px 14px}
+.form-item{min-width:0}
+.form-item label{display:block;color:#333;font-size:12.5px;margin-bottom:5px;line-height:1.2}
+.form-item label .req{color:#f56c6c;margin-right:2px}
+.ctrl{height:32px;border:1px solid #e5e6eb;border-radius:4px;background:#fff;padding:0 8px;display:flex;align-items:center;color:#c9cdd4;font-size:13px;min-width:0}
+.ctrl.filled{color:#333}
+.ctrl .caret{margin-left:auto;color:#c9cdd4;font-size:10px;transition:transform .2s}
+.ctrl[data-sel]{cursor:pointer;user-select:none}
+.ctrl[data-sel]:hover,.ctrl.date:hover{border-color:#c9cdd4;cursor:pointer}
+.ctrl.open{border-color:#0d6e3f}
+.ctrl.open .caret{transform:rotate(180deg);color:#0d6e3f}
+.ctrl .val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+input.ctrl{width:100%;display:block;color:#333}
+input.ctrl::placeholder{color:#c9cdd4}
+input.ctrl:focus{border-color:#0d6e3f}
+.ctrl .clear-no{margin-left:auto;font-size:10px;color:#c9cdd4}
+.ctrl.date{font-size:12px}
+.ctrl.date .sep{color:#999;padding:0 6px}
+.search-btn{display:flex;align-items:flex-end;gap:8px;padding-bottom:1px}
+.btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid #e5e6eb;background:#fff;color:#333;font-size:13px;display:inline-flex;align-items:center;gap:4px}
+.btn:hover{border-color:#0d6e3f;color:#0d6e3f}
+.btn-primary{background:#0d6e3f;border-color:#0d6e3f;color:#fff}
+.btn-primary:hover{opacity:.85;color:#fff}
+.btn-text{border:none;background:none;color:#0d6e3f;padding:0 4px}
+.btn-text:hover{opacity:.8}
+
+/* ===== 表格卡片 ===== */
+.table-list{background:#fff;border-radius:4px;padding:12px}
+.table-action{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.table-action .left{display:flex;align-items:baseline;gap:18px}
+.table-title{font-size:15px;font-weight:600;color:#1d2129}
+.sum-item{font-size:12.5px;color:#4e5969}
+.sum-item b{color:#0d6e3f;font-size:14px;font-variant-numeric:tabular-nums;margin-left:2px}
+
+/* ===== DDTable ===== */
+.tbl-wrap{overflow-x:auto;border:1px solid #e5e6eb;border-radius:4px}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+th,td{border-bottom:1px solid #e5e6eb;border-right:1px solid #f2f3f5;padding:7px 10px;font-size:12.5px;white-space:nowrap;background:#fff;text-align:left;vertical-align:middle}
+th{background:#fafafa;color:#333;font-weight:600;position:sticky;top:0;z-index:3}
+tbody tr:hover td{background:#ebf9ec}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td .sub{display:block;font-size:11px;color:#999;line-height:1.3}
+.link{color:#0d6e3f;cursor:pointer;font-weight:500}
+.link:hover{text-decoration:underline}
+.neg{color:#f56c6c}
+.sticky-l{position:sticky;left:0;z-index:2;box-shadow:4px 0 6px -4px rgba(0,0,0,.08)}
+.sticky-r{position:sticky;right:0;z-index:2;background:#f4f4f4!important;box-shadow:-4px 0 6px -4px rgba(0,0,0,.08)}
+th.sticky-l,th.sticky-r{z-index:4}
+
+/* tag（凭证状态）*/
+.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:3px;font-size:11.5px;border:1px solid transparent;white-space:nowrap}
+.tag-warning{background:#fdf6ec;color:#e6a23c;border-color:#faecd8}
+.tag-primary{background:#ebf9ec;color:#0d6e3f;border-color:#cfe8d8}
+.tag-success{background:#0d6e3f;color:#fff}
+.tag-danger{background:#fef0f0;color:#f56c6c;border-color:#fde2e2}
+.tag-info{background:#f4f4f5;color:#909399;border-color:#e9e9eb}
+
+/* ===== DDPagination ===== */
+.dd-pagination{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:12px 4px 2px;color:#4e5969;font-size:12.5px}
+.pg-btn{min-width:28px;height:28px;border:1px solid #e5e6eb;border-radius:4px;background:#fff;display:inline-flex;align-items:center;justify-content:center;color:#333;font-size:12px}
+.pg-btn.cur{background:#0d6e3f;color:#fff;border-color:#0d6e3f}
+
+/* ===== 详情页 ===== */
+.info-detail{background:#fff;border-radius:4px;padding:12px 24px;margin-bottom:10px}
+.info-hd{display:flex;align-items:center;gap:10px}
+.info-hd h4{font-size:15px;color:#1d2129}
+.info-hd .back{margin-left:auto}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0 24px;margin-top:8px}
+.info-grid .cell{padding:6px 0;font-size:12.5px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.info-grid .cell span{color:#999;margin-right:2px}
+.info-grid .sec{grid-column:1 / -1;font-size:11px;font-weight:700;color:#4e5969;padding:8px 0 2px;border-bottom:1px dashed #e5e6eb;margin-bottom:2px}
+.info-grid .sec::before{content:'';display:inline-block;width:3px;height:11px;background:#0d6e3f;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* ===== 原型说明页 ===== */
+.doc{background:#fff;border-radius:4px;padding:20px 28px;font-size:13px;line-height:1.9;color:#333}
+.doc h2{font-size:16px;color:#1d2129;margin:18px 0 8px;padding-left:9px;border-left:3px solid #0d6e3f}
+.doc h2:first-child{margin-top:0}
+.doc table{width:100%;min-width:0;margin:6px 0 10px;border:1px solid #e5e6eb;border-radius:4px}
+.doc th,.doc td{white-space:normal;position:static}
+.doc li{margin-left:20px}
+.doc .muted{color:#999;font-size:12px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <span class="t">FOODMAX FMS · 物料凭证</span>
+  <span class="v">原型 V1.13 ｜ 配套 PRD V1.13 ｜ 演示数据基于 2026-04 新加坡采购入库底稿构造</span>
+</div>
+
+<!-- 左侧菜单 -->
+<div class="sidebar">
+  <div class="menu-group">库存核算</div>
+  <div class="menu-item active" id="mProto" onclick="showView('proto')"><span class="dot"></span>物料凭证（原型）</div>
+  <div class="menu-item" id="mDocs" onclick="showView('docs')"><span class="dot"></span>原型说明</div>
+</div>
+
+<div class="main">
+
+<!-- ====================== 原型：列表页 ====================== -->
+<div id="viewList">
+  <div class="crumb">库存核算 / <b>物料凭证</b></div>
+
+  <div class="dd-form">
+    <div class="form-grid">
+      <div class="form-item" style="grid-column:span 2"><label><span class="req">*</span>入账日期</label><div class="ctrl date filled" onclick="toggleDp(this,event)">📅 2026-05-05<span class="sep">－</span>2026-06-04<span class="clear-no">不可清空</span></div></div>
+      <div class="form-item"><label>物料凭证编码</label><input class="ctrl" value="PV202605300009" placeholder="完整编码，精准查询"></div>
+      <div class="form-item"><label>凭证编码</label><input class="ctrl" placeholder="完整编码，精准查询"></div>
+
+      <div class="form-item more"><label>凭证状态</label><div class="ctrl" data-sel="voucherStatus" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>单据状态</label><div class="ctrl" data-sel="docStatus" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>单据类型</label><div class="ctrl" data-sel="docType" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>关联单号-采购单号</label><input class="ctrl" value="PO-XMSG-2026-05-0136" placeholder="完整单号，精准查询"></div>
+      <div class="form-item more"><label>关联单号-出入库单号</label><input class="ctrl" placeholder="完整单号，精准查询"></div>
+      <div class="form-item more"><label>SITE</label><div class="ctrl" data-sel="site" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>法人公司</label><div class="ctrl" data-sel="company" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>仓库</label><div class="ctrl" data-sel="wh" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>供应商</label><div class="ctrl" data-sel="supplier" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>客商EBS编码</label><input class="ctrl" placeholder="完整编码，精准查询"></div>
+      <div class="form-item more"><label>是否为关联方</label><div class="ctrl" data-sel="related" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+      <div class="form-item more"><label>原币币种</label><div class="ctrl" data-sel="currency" onclick="toggleSel(this,event)"><span class="val"></span><span class="caret">▾</span></div></div>
+
+      <div class="search-btn" style="grid-column:span 2">
+        <button class="btn btn-primary">查 询</button>
+        <button class="btn" onclick="resetForm()">重 置</button>
+        <button class="btn-text" id="toggleBtn" onclick="toggleMore()">收起 ⌃</button>
+      </div>
+    </div>
+
+    <!-- 日期范围选择器（点击日期框弹出） -->
+    <div class="dp hide" id="dp">
+      <div class="dp-sc">
+        <div onclick="closeDp()">前一周</div>
+        <div onclick="closeDp()">前一月</div>
+        <div onclick="closeDp()">前三月</div>
+        <div onclick="closeDp()">前六月</div>
+      </div>
+      <div class="dp-m">
+        <div class="dp-hd"><span class="nav">«</span><span class="nav">‹</span><span>2026 年 5 月</span><span class="nav" style="opacity:.3">›</span><span class="nav" style="opacity:.3">»</span></div>
+        <div class="dp-grid" id="dpM1"></div>
+      </div>
+      <div class="dp-m">
+        <div class="dp-hd"><span class="nav" style="opacity:.3">«</span><span class="nav" style="opacity:.3">‹</span><span>2026 年 6 月</span><span class="nav">›</span><span class="nav">»</span></div>
+        <div class="dp-grid" id="dpM2"></div>
+      </div>
+    </div>
+
+    <!-- 下拉选择面板（点击枚举/名称类筛选框弹出） -->
+    <div class="sel hide" id="selDd"></div>
+  </div>
+
+  <div class="table-list">
+    <div class="table-action">
+      <div class="left" style="flex-wrap:wrap;gap:6px 14px">
+        <div class="table-title">物料凭证</div>
+        <span class="sum-item">原币含税合计：<b>2,284,987.11</b></span>
+        <span class="sum-item">原币未税合计：<b>2,096,318.45</b></span>
+        <span class="sum-item">原币税额合计：<b>188,668.66</b></span>
+        <span class="sum-item">本币含税合计：<b>2,240,878.24</b></span>
+        <span class="sum-item">本币未税合计：<b>2,055,851.60</b></span>
+        <span class="sum-item">本币税额合计：<b>185,026.64</b></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn">导 出</button>
+        <button class="btn">导出明细</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap" style="max-height:430px;overflow-y:auto">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-l">物料凭证编码</th>
+            <th>SITE</th>
+            <th>法人公司</th>
+            <th>单据类型</th>
+            <th>关联单号-采购单号</th>
+            <th>关联单号-出入库单号</th>
+            <th>入账日期</th>
+            <th>仓库名称</th>
+            <th>供应商名称</th>
+            <th>是否为关联方</th>
+            <th>原币币种</th>
+            <th>本币币种</th>
+            <th class="num">汇率</th>
+            <th class="num">原币含税</th>
+            <th class="num">原币未税</th>
+            <th class="num">原币税额</th>
+            <th class="num">本币含税</th>
+            <th class="num">本币未税</th>
+            <th class="num">本币税额</th>
+            <th>单据状态</th>
+            <th>凭证编码</th>
+            <th>凭证状态</th>
+            <th class="sticky-r">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202605280001</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-05-0118</td>
+            <td>GRN-SG-20260528-0066</td>
+            <td>2026-05-28</td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>Evershine fruits and vegetables<span class="sub">S000102</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num">4,829.35</td><td class="num">4,430.60</td><td class="num">398.75</td>
+            <td class="num">4,829.35</td><td class="num">4,430.60</td><td class="num">398.75</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260528000312</td>
+            <td><span class="tag tag-success">记账成功</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202605280014</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-05-0121</td>
+            <td>GRN-SG-20260528-0071</td>
+            <td>2026-05-28</td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>Wilmar Distribution Pte. Ltd.<span class="sub">S000095</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num">216,917.05</td><td class="num">199,006.47</td><td class="num">17,910.58</td>
+            <td class="num">216,917.05</td><td class="num">199,006.47</td><td class="num">17,910.58</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260528000318</td>
+            <td><span class="tag tag-success">记账成功</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202605290006</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购退货单<span class="sub">PO_RTN</span></td>
+            <td>PO-XMSG-2026-05-0097</td>
+            <td>RTN-SG-20260529-0012</td>
+            <td>2026-05-29</td>
+            <td>新加坡冷链仓<span class="sub">WH-SG-02</span></td>
+            <td>HOCK LEONG TECK KEE PTE LTD<span class="sub">S000088</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num neg">-2,842.07</td><td class="num neg">-2,607.40</td><td class="num neg">-234.67</td>
+            <td class="num neg">-2,842.07</td><td class="num neg">-2,607.40</td><td class="num neg">-234.67</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260529000142</td>
+            <td><span class="tag tag-success">记账成功</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202605300009</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-05-0136</td>
+            <td>GRN-SG-20260530-0091</td>
+            <td>2026-05-30</td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>Hattah (Shanghai) Supply Chain<span class="sub">S000218</span></td>
+            <td><b>是</b></td><td>USD</td><td>SGD</td><td class="num">1.3500</td>
+            <td class="num">14,126.40</td><td class="num">12,960.00</td><td class="num">1,166.40</td>
+            <td class="num">19,070.64</td><td class="num">17,496.00</td><td class="num">1,574.64</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260530000476</td>
+            <td><span class="tag tag-primary">已推送</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202605310003</span></td>
+            <td>XM_GLOBAL_MY</td>
+            <td>XM GLOBAL SDN. BHD.<span class="sub">9066</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMMY-2026-05-0058</td>
+            <td>GRN-MY-20260531-0027</td>
+            <td>2026-05-31</td>
+            <td>马来西亚中央仓<span class="sub">WH-MY-01</span></td>
+            <td>MALAYSIA DAIRY INDUSTRIES PTE LTD<span class="sub">S000121</span></td>
+            <td>否</td><td>MYR</td><td>MYR</td><td class="num">1.0000</td>
+            <td class="num">43,000.00</td><td class="num">43,000.00</td><td class="num">0.00</td>
+            <td class="num">43,000.00</td><td class="num">43,000.00</td><td class="num">0.00</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260531000201</td>
+            <td><span class="tag tag-primary">已推送</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202606010012</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-06-0003</td>
+            <td>GRN-SG-20260601-0008</td>
+            <td>2026-06-01</td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>FRESH 1 PTE LTD<span class="sub">S000076</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num">74,814.13</td><td class="num">68,636.82</td><td class="num">6,177.31</td>
+            <td class="num">74,814.13</td><td class="num">68,636.82</td><td class="num">6,177.31</td>
+            <td><span class="tag tag-warning">要素不齐</span></td>
+            <td>-</td>
+            <td><span class="tag tag-warning">未推送</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202606020005</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-06-0011</td>
+            <td>GRN-SG-20260602-0019</td>
+            <td>2026-06-02</td>
+            <td>新加坡冷链仓<span class="sub">WH-SG-02</span></td>
+            <td>Top Choice Food (S) Pte Ltd<span class="sub">S000067</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num">46,796.85</td><td class="num">42,932.89</td><td class="num">3,863.96</td>
+            <td class="num">46,796.85</td><td class="num">42,932.89</td><td class="num">3,863.96</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260602000087</td>
+            <td><span class="tag tag-danger">推送失败</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202606020008</span></td>
+            <td>XM_GLOBAL_MY</td>
+            <td>XM GLOBAL SDN. BHD.<span class="sub">9066</span></td>
+            <td>采购退货单<span class="sub">PO_RTN</span></td>
+            <td>PO-XMMY-2026-05-0044</td>
+            <td>RTN-MY-20260602-0003</td>
+            <td>2026-06-02</td>
+            <td>马来西亚中央仓<span class="sub">WH-MY-01</span></td>
+            <td>GPO Marketing Sdn Bhd<span class="sub">S000133</span></td>
+            <td>否</td><td>MYR</td><td>MYR</td><td class="num">1.0000</td>
+            <td class="num neg">-1,860.00</td><td class="num neg">-1,860.00</td><td class="num">0.00</td>
+            <td class="num neg">-1,860.00</td><td class="num neg">-1,860.00</td><td class="num">0.00</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>-</td>
+            <td><span class="tag tag-info">无需推送</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202606030002</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-06-0019</td>
+            <td>GRN-SG-20260603-0031</td>
+            <td>2026-06-03</td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>WA YU PTE LTD<span class="sub">S000054</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num">38,124.61</td><td class="num">34,976.71</td><td class="num">3,147.90</td>
+            <td class="num">38,124.61</td><td class="num">34,976.71</td><td class="num">3,147.90</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>FMSV20260603000114</td>
+            <td><span class="tag tag-danger">记账失败</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+          <tr>
+            <td class="sticky-l"><span class="link" onclick="showDetail()">PV202606030015</span></td>
+            <td>XM_GLOBAL_SG</td>
+            <td>XM GLOBAL PTE. LTD.<span class="sub">9065</span></td>
+            <td>采购入库单<span class="sub">PO_IN</span></td>
+            <td>PO-XMSG-2026-06-0024</td>
+            <td>GRN-SG-20260603-0042</td>
+            <td>2026-06-03</td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>SENG HONG COMPANY (PRIVATE) LTD<span class="sub">S000079</span></td>
+            <td>否</td><td>SGD</td><td>SGD</td><td class="num">1.0000</td>
+            <td class="num">42,553.41</td><td class="num">39,039.83</td><td class="num">3,513.58</td>
+            <td class="num">42,553.41</td><td class="num">39,039.83</td><td class="num">3,513.58</td>
+            <td><span class="tag tag-primary">要素齐全</span></td>
+            <td>-</td>
+            <td><span class="tag tag-warning">未推送</span></td>
+            <td class="sticky-r"><span class="link" onclick="showDetail()">详情</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dd-pagination">
+      共 1,286 条
+      <span class="pg-btn">‹</span><span class="pg-btn cur">1</span><span class="pg-btn">2</span><span class="pg-btn">3</span><span class="pg-btn">…</span><span class="pg-btn">86</span><span class="pg-btn">›</span>
+      <span>15 条/页</span> <span>跳至 <span class="pg-btn" style="min-width:40px">1</span> 页</span>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== 原型：详情页 ====================== -->
+<div id="viewDetail" class="hide">
+  <div class="crumb">库存核算 / <span class="link" onclick="showList()">物料凭证</span> / <b>凭证详情</b></div>
+
+  <div class="info-detail">
+    <div class="info-hd">
+      <h4>物料凭证编码：PV202605300009</h4>
+      <span class="tag tag-primary">已推送</span>
+      <span class="tag tag-primary">要素齐全</span>
+      <button class="btn-text" id="infoToggle" onclick="toggleInfo()">收起 ▲</button>
+      <button class="btn back" onclick="showList()">← 返回列表</button>
+    </div>
+    <div class="info-grid" id="infoGrid">
+      <div class="sec">单据信息</div>
+      <div class="cell"><span>单据类型：</span>采购入库单</div>
+      <div class="cell"><span>关联单号-采购单号：</span>PO-XMSG-2026-05-0136</div>
+      <div class="cell"><span>关联单号-出入库单号：</span>GRN-SG-20260530-0091</div>
+      <div class="cell"><span>凭证编码：</span>FMSV20260530000476</div>
+
+      <div class="sec">归属与日期</div>
+      <div class="cell"><span>SITE：</span>XM_GLOBAL_SG</div>
+      <div class="cell"><span>法人公司：</span>XM GLOBAL PTE. LTD.（9065）</div>
+      <div class="cell"><span>入账日期：</span>2026-05-30</div>
+      <div class="cell"></div>
+
+      <div class="sec">币种与金额合计（本单据行汇总）</div>
+      <div class="cell"><span>原币币种：</span>USD</div>
+      <div class="cell"><span>本币币种：</span>SGD</div>
+      <div class="cell"><span>汇率：</span>1.3500</div>
+      <div class="cell"></div>
+      <div class="cell"><span>原币含税合计：</span>14,126.40</div>
+      <div class="cell"><span>原币未税合计：</span>12,960.00</div>
+      <div class="cell"><span>原币税额合计：</span>1,166.40</div>
+      <div class="cell"></div>
+      <div class="cell"><span>本币含税合计：</span>19,070.64</div>
+      <div class="cell"><span>本币未税合计：</span>17,496.00</div>
+      <div class="cell"><span>本币税额合计：</span>1,574.64</div>
+
+      <div class="sec">供应商</div>
+      <div class="cell"><span>供应商名称：</span>Hattah (Shanghai) Supply Chain</div>
+      <div class="cell"><span>供应商业务编码：</span>S000218</div>
+      <div class="cell"><span>客商EBS编码：</span>623945</div>
+      <div class="cell"><span>是否为关联方：</span><b>是</b></div>
+
+      <div class="sec">仓库</div>
+      <div class="cell"><span>仓库名称：</span>新加坡中央仓</div>
+      <div class="cell"><span>仓库业务编码：</span>WH-SG-01</div>
+      <div class="cell"><span>仓库EBS编码：</span>L1001</div>
+      <div class="cell"></div>
+    </div>
+  </div>
+
+  <div class="table-list">
+    <div class="table-action">
+      <div class="left">
+        <div class="table-title">货品明细</div>
+        <span class="sum-tip" style="font-size:11px;color:#999">导出请回列表页（导出/导出明细），详情页不设导出</span>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sticky-l">货品编码</th>
+            <th>货品名称</th>
+            <th>商品段</th>
+            <th>仓库</th>
+            <th>成本中心</th>
+            <th class="num">采购单价(原币)</th>
+            <th class="num">数量</th>
+            <th class="num">税率</th>
+            <th class="num">原币含税</th>
+            <th class="num">原币未税</th>
+            <th class="num">原币税额</th>
+            <th class="num">本币含税</th>
+            <th class="num">本币未税</th>
+            <th class="num">本币税额</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sticky-l">SKU100021</td>
+            <td>冷冻鸡胸肉 2kg</td>
+            <td>肉禽蛋<span class="sub">19</span></td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>新加坡中央仓成本中心<span class="sub">CC1001</span></td>
+            <td class="num">14.00</td><td class="num">500</td><td class="num">9%</td>
+            <td class="num">7,630.00</td><td class="num">7,000.00</td><td class="num">630.00</td>
+            <td class="num">10,300.50</td><td class="num">9,450.00</td><td class="num">850.50</td>
+          </tr>
+          <tr>
+            <td class="sticky-l">SKU100087</td>
+            <td>冷冻虾仁 1kg</td>
+            <td>水产<span class="sub">29</span></td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>新加坡中央仓成本中心<span class="sub">CC1001</span></td>
+            <td class="num">12.80</td><td class="num">250</td><td class="num">9%</td>
+            <td class="num">3,488.00</td><td class="num">3,200.00</td><td class="num">288.00</td>
+            <td class="num">4,708.80</td><td class="num">4,320.00</td><td class="num">388.80</td>
+          </tr>
+          <tr>
+            <td class="sticky-l">SKU100134</td>
+            <td>冷冻玉米粒 1kg</td>
+            <td>标品<span class="sub">11</span></td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>新加坡中央仓成本中心<span class="sub">CC1001</span></td>
+            <td class="num">5.50</td><td class="num">320</td><td class="num">9%</td>
+            <td class="num">1,918.40</td><td class="num">1,760.00</td><td class="num">158.40</td>
+            <td class="num">2,589.84</td><td class="num">2,376.00</td><td class="num">213.84</td>
+          </tr>
+          <tr>
+            <td class="sticky-l">SKU100156</td>
+            <td>冷冻青豆 1kg</td>
+            <td>标品<span class="sub">11</span></td>
+            <td>新加坡中央仓<span class="sub">WH-SG-01</span></td>
+            <td>新加坡中央仓成本中心<span class="sub">CC1001</span></td>
+            <td class="num">5.00</td><td class="num">200</td><td class="num">9%</td>
+            <td class="num">1,090.00</td><td class="num">1,000.00</td><td class="num">90.00</td>
+            <td class="num">1,471.50</td><td class="num">1,350.00</td><td class="num">121.50</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dd-pagination">
+      共 4 条
+      <span class="pg-btn">‹</span><span class="pg-btn cur">1</span><span class="pg-btn">›</span>
+      <span>15 条/页</span>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== 原型说明页 ====================== -->
+<div id="viewDocs" class="hide">
+  <div class="crumb">库存核算 / <b>原型说明</b></div>
+  <div class="doc">
+    <h2>0. 页面定位</h2>
+    <p>菜单路径：<b>库存核算 → 物料凭证</b>。页面只读：仅查询、详情、导出。物料凭证由上游采购域推送后系统自动生成；<b>会计凭证由 FMS 会计平台统一生成</b>（铁律），本页面通过"凭证编码 + 凭证状态"回显结果。演示数据基于 2026-04《小满新加坡采购入库底稿SGD》构造。</p>
+
+    <h2>1. 列表页 — 筛选区（15 项，标签在上 · 6 列栅格）</h2>
+    <ul>
+      <li>布局对齐存量系统：<b>标签在输入框上方</b>，每行 6 列；日期范围控件占 2 列；查询/重置/收起按钮跟在末位字段后。</li>
+      <li>排序分组：<b>时间最前</b>（入账日期）→ <b>凭证类放一起</b>（物料凭证编码、凭证编码、凭证状态、单据状态）→ <b>单据类放一起</b>（单据类型、关联单号-采购单号、关联单号-出入库单号）→ 主体类（SITE、法人公司、仓库、供应商、客商EBS编码、是否为关联方）→ 原币币种。</li>
+      <li>入账日期必填，默认"上月今日 ~ 今天"，<b>不可清空</b>（查询性能兜底）。</li>
+      <li><b>点击日期框弹出范围选择器</b>：左侧快捷项（前一周/前一月/前三月/前六月）+ 双月历联排；起止日深绿圆形标记、区间浅绿底；未来日期置灰禁选（原型里可点击体验）。</li>
+      <li>默认收起时显示：入账日期、物料凭证编码、凭证编码 + 按钮；点"展开"显示全部 12 项。</li>
+      <li><b>查询规则（三类）</b>：① 编码类输入框（物料凭证编码、凭证编码、采购单号、出入库单号、客商EBS编码）＝<b>完整编码精准查询</b>（等值匹配）；② 名称类远程搜索（法人公司、仓库、供应商）＝<b>名称或编码模糊查询</b>；③ 枚举类下拉（凭证状态、单据状态、单据类型、SITE、是否为关联方、原币币种）＝<b>单选</b>。三类控件原型中均可点击体验：枚举类点击下拉单选（选"全部"清除）、名称类下拉带模糊搜索框、编码类可直接输入。</li>
+      <li>回车触发查询；重置恢复默认值并自动查询。原型中已填入演示值（PV202605300009、采购入库单、已推送、XM_GLOBAL_SG、Hattah、是、USD），对应详情页那张凭证。</li>
+    </ul>
+
+    <h2>2. 列表页 — 合计区（6 项）与列表（22 列 + 操作）</h2>
+    <ul>
+      <li>表头合计 6 项：<b>原币含税合计、原币未税合计、原币税额合计、本币含税合计、本币未税合计、本币税额合计</b>——为当前筛选条件命中的<b>全部页</b>凭证金额汇总。</li>
+      <li>本币合计为记账本位币口径；原币合计为各币种原值直加，多币种混查时仅作参考（按原币币种筛选后口径准确）。</li>
+      <li>每行（每张单据）展示自己的 6 项金额：原币含税/未税/税额 + 本币含税/未税/税额（=该单据行明细汇总）；退货/负数红色。</li>
+      <li>物料凭证编码为链接、固定左侧；操作列固定右侧；点编码或"详情"进详情页。</li>
+      <li>仓库名称、供应商名称、法人公司双行展示：第一行名称，第二行编码（小号灰字）；单据类型同样名称+编码双行。</li>
+      <li><b>单据状态</b>标签：要素齐全（浅绿）/ 要素不齐（橙，缺核算档案被卡推送，定时重试补齐）。</li>
+      <li>凭证编码：会计平台生成后回填，未生成显示"-"。</li>
+      <li>右上两个导出按钮：<b>导出</b>（头数据）与<b>导出明细</b>（头+行平铺），规则见第 8 节——<b>导出仅此两种</b>；表格高度与筛选区展开状态联动。</li>
+    </ul>
+
+    <h2>3. 凭证状态（6 档，会计平台统一枚举·铁律）与颜色</h2>
+    <table>
+      <tr><th>凭证状态</th><th>标签颜色</th><th>含义</th></tr>
+      <tr><td>无需推送</td><td>灰（info）</td><td>该凭证无需推送 EBS 记账（终态）</td></tr>
+      <tr><td>未推送</td><td>橙（warning）</td><td>凭证已落库：①刚落库待自动推送 ②核算要素缺失被卡推送（补档后自动重试）</td></tr>
+      <tr><td>已推送</td><td>浅绿（primary）</td><td>已自动推送会计平台/EBS，等待记账结果</td></tr>
+      <tr><td>推送失败</td><td>红（danger）</td><td>推送动作<b>技术性失败</b>（接口异常/超时），系统自动重试</td></tr>
+      <tr><td>记账失败</td><td>红（danger）</td><td><b>会计平台/EBS 驳回数据</b>（任一环节）或记账失败，修复后重新推送</td></tr>
+      <tr><td>记账成功</td><td>深绿（success）</td><td>EBS 记账完成（终态，回填凭证编码）</td></tr>
+    </table>
+    <p class="muted">推送为系统自动：落库且要素齐全即推送，无人工提交动作。状态流转：未推送 → 已推送 → 记账成功；记账失败修复后重推、推送失败自动重试；无需推送为独立终态。枚举码值与会计平台保持同一套。</p>
+
+    <h2>4. 详情页 — 凭证头（26 字段，分五组排列）</h2>
+    <ul>
+      <li>标题行：<b>物料凭证编码 + 凭证状态标签 + 单据状态标签</b> + 收起/展开 + 返回列表。</li>
+      <li>五组分区排列：<b>① 单据信息</b>（单据类型、关联单号-采购单号、关联单号-出入库单号、凭证编码）→ <b>② 归属与日期</b>（SITE、法人公司、入账日期）→ <b>③ 币种与金额合计</b>（原币币种、本币币种、汇率、原币含税/未税/税额合计 + 本币含税/未税/税额合计，=本单据行明细汇总）→ <b>④ 供应商</b>（供应商名称、供应商业务编码、客商EBS编码、是否为关联方）→ <b>⑤ 仓库</b>（仓库名称、仓库业务编码、仓库EBS编码）。</li>
+      <li>入账日期 = 上游完成日期，是凭证入账的会计日期。</li>
+      <li>汇率由上游随单提供，FMS 不自算；本币金额 = 原币金额 × 汇率。<b>本币币种 = 记账主体的本位币，不固定是 SGD</b>，按凭证归属法人公司的主体主数据回显；原币=本币时汇率为 1.0000（如马来西亚主体的 MYR 交易）。</li>
+      <li>头部 6 项金额合计必须等于行明细加总（接收时按"头行相等"校验，见第 6 节）。</li>
+      <li>是否为关联方="是"时加粗展示（关联方交易是财务审计关注点）。</li>
+    </ul>
+
+    <h2>5. 详情页 — 货品明细（14 列）</h2>
+    <ul>
+      <li>列排序：货品（编码、名称）→ <b>商品段（名称+编码双行）→ 仓库（名称+编码双行）→ 成本中心（名称+编码双行）</b> → 采购单价(原币)、数量、税率 → <b>原币含税、原币未税、原币税额</b> → <b>本币含税、本币未税、本币税额</b>。</li>
+      <li>商品段 = 商品核算段（如 11 标品 / 19 肉禽蛋 / 29 水产），是会计平台借方拆行的依据。</li>
+      <li>退货单各金额为负数（红色展示）。</li>
+    </ul>
+
+    <h2>6. 接口接入校验规范（分 A/B 两级）</h2>
+    <p><b>A 类 · 上游契约校验</b>——消息本身的问题，任一不过<b>整单拒收+告警</b>，不产生凭证，上游修复后重推：</p>
+    <table>
+      <tr><th style="width:130px">校验项</th><th>规则</th></tr>
+      <tr><td>必填校验</td><td>原币币种、汇率、本币金额、货品编码、数量、关联单号两件套、仓库/供应商业务编码必填</td></tr>
+      <tr><td>头行相等</td><td>消息头的 原币/本币 含税、未税、税额 合计 = 行对应金额加总（通过后头金额落库展示）</td></tr>
+      <tr><td>行内勾稽</td><td>含税 = 未税 + 税额；未税 = 数量 × 采购单价；税额 = 未税 × 税率</td></tr>
+      <tr><td>本币勾稽</td><td>本币金额 = 原币金额 × 汇率（三件套逐项核对）；容差建议 ±0.01</td></tr>
+      <tr><td>方向校验</td><td>采购退货单的数量与各金额必须为负，与单据类型一致</td></tr>
+      <tr><td>幂等/事务</td><td>唯一键 = 出入库单号 + 单据类型，重复视为更新；头+行同一事务落库</td></tr>
+    </table>
+    <p><b>B 类 · FMS 映射补全</b>——FMS 侧档案问题，<b>先落库留痕，不拒收、不要上游重推</b>：</p>
+    <table>
+      <tr><th style="width:130px">缺失类型</th><th>缺失项</th><th>处理</th></tr>
+      <tr><td>核算类（卡推送）</td><td>商品段、仓库EBS编码、客商EBS编码、成本中心、关联方标识</td><td>落库后<b>单据状态置"要素不齐"</b>、凭证状态停"未推送"、不提交会计平台；按报警规则告警（P2 聚合，列缺失档案清单）；<b>定时重试补齐，补齐后置"要素齐全"并自动推送 + 可手动重试</b></td></tr>
+      <tr><td>展示类（不阻断）</td><td>商品名称、仓库名称、供应商名称</td><td>照常落库推送，名称显示"-"，补档后自动刷新</td></tr>
+    </table>
+    <p class="muted">推送规则：落库且核算要素齐全即<b>自动推送</b>会计平台入账（无人工提交）；会计平台<b>驳回数据→置"记账失败"</b>，推送技术性失败→"推送失败"（自动重试）。<br>
+    报警规则（详见 PRD 7.3）：P1 实时＝A类拒收、会计平台驳回；P2 聚合＝要素不齐（按缺失档案项聚合）、推送重试超限；P3 每日汇总＝滞留超 3 天清单；同一原因 24h 降噪，补齐/重推成功自动解除。</p>
+
+    <h2>7. 与会计平台的分工（铁律）</h2>
+    <ul>
+      <li><b>所有单据的会计凭证一律由 FMS 会计平台生成，业务单据自己不生成凭证。</b></li>
+      <li>物料凭证提供素材：货品编码（平台按商品主数据取核算段）、客商EBS编码、仓库EBS编码、本币金额、汇率。</li>
+      <li>生成结果通过头部的<b>凭证编码</b>回填关联，进度看<b>凭证状态</b>；查分录到会计平台。</li>
+    </ul>
+
+    <h2>8. 导出（只有两种，均在列表页）</h2>
+    <table>
+      <tr><th style="width:160px">入口</th><th>范围与格式</th></tr>
+      <tr><td>列表"导出"</td><td>当前筛选命中的全部<b>头数据</b>（按列表 22 列口径，每凭证一行，含 6 项金额）</td></tr>
+      <tr><td>列表"导出明细"</td><td>当前筛选命中的全部<b>头+行平铺数据</b>（头字段在前、行字段在后）；一张凭证多行明细时，<b>头字段只在第一行明细展示，其余行留空</b></td></tr>
+    </table>
+    <p class="muted">详情页不设导出（导单张凭证：回列表按物料凭证编码筛选后导出明细）。均为异步任务，提交成功后跳转下载中心取文件。</p>
+
+    <h2>9. 字段字典 — 凭证头（26 个，含数据来源；筛选/列表同名字段含义一致）</h2>
+    <table>
+      <tr><th style="width:140px">字段</th><th>含义</th><th style="width:185px">枚举 / 格式</th><th style="width:235px">数据来源（如何取值）</th></tr>
+      <tr><td>物料凭证编码</td><td>物料凭证唯一编码</td><td>PV + 年月日 + 流水，如 PV202605300009</td><td>FMS 接收落库时系统生成</td></tr>
+      <tr><td>SITE</td><td>业务站点维度</td><td>如 XM_GLOBAL_SG</td><td>上游推送站点编码</td></tr>
+      <tr><td>法人公司</td><td>记账法人主体（名称+编码），<b>决定本位币</b></td><td>如 XM GLOBAL PTE. LTD.（9065）</td><td>上游推送编码，名称按主体主数据回显</td></tr>
+      <tr><td>单据状态</td><td>财务要素是否齐全</td><td>枚举：要素齐全（浅绿）／要素不齐（橙）</td><td>FMS 落库时自动判定（商品段/仓库EBS/客商EBS/成本中心/关联方标识是否齐）；定时重试补齐，补齐后自动更新并推送</td></tr>
+      <tr><td>单据类型</td><td>凭证对应的业务单据大类</td><td>枚举：采购入库单（PO_IN）／采购退货单（PO_RTN）</td><td>上游推送的单据类型映射</td></tr>
+      <tr><td>关联单号-采购单号</td><td>该笔入库/退货对应的采购单号</td><td>如 PO-XMSG-2026-05-0136</td><td>上游推送，取自采购单</td></tr>
+      <tr><td>关联单号-出入库单号</td><td>对应的入库单/退货出库单号</td><td>如 GRN-SG-20260530-0091</td><td>上游推送，取自入库单/退货出库单</td></tr>
+      <tr><td>入账日期</td><td>上游完成日期，凭证入账的会计日期；列表默认按它查询近一月</td><td>YYYY-MM-DD；筛选必填、不可清空</td><td>上游推送，取入库/退货<b>完成</b>时间</td></tr>
+      <tr><td>原币币种</td><td>交易发生的原币币种；筛选条件用它（单选）</td><td>USD／MYR／SGD…以币种字典为准</td><td>上游推送，取自采购单币种</td></tr>
+      <tr><td>本币币种</td><td>记账本位币币种，<b>=法人公司本位币，不固定 SGD</b></td><td>如 SGD（新加坡主体）／MYR（马来西亚主体）</td><td>按法人公司编码查主体主数据的本位币，FMS 回显（非上游推送）</td></tr>
+      <tr><td>汇率</td><td>原币→本币折算汇率</td><td>4 位小数，如 1.3500；原币=本币时为 1.0000</td><td>上游随单提供（汇率口径以上游契约为准，Q-01），FMS 不自算</td></tr>
+      <tr><td>仓库名称</td><td>发生出入库的仓库</td><td>如 新加坡中央仓</td><td>上游推送仓库业务编码，名称按仓库主数据回显</td></tr>
+      <tr><td>仓库业务编码</td><td>仓库在业务系统的编码</td><td>如 WH-SG-01</td><td>上游推送，取自出入库单</td></tr>
+      <tr><td>仓库EBS编码</td><td>仓库在 EBS 的核算编码，会计平台取数素材</td><td>如 L1001</td><td>按仓库业务编码查 FMS 仓库主数据映射</td></tr>
+      <tr><td>供应商名称</td><td>供应商全称</td><td>如 Hattah (Shanghai) Supply Chain</td><td>上游推送供应商业务编码，名称按供应商主数据回显</td></tr>
+      <tr><td>供应商业务编码</td><td>供应商在业务系统的编码</td><td>如 S000218</td><td>上游推送，取自采购单</td></tr>
+      <tr><td>客商EBS编码</td><td>供应商在 EBS 的往来编码，会计平台挂账依据</td><td>如 623945、ME1018285</td><td>按供应商业务编码查客商核算档案</td></tr>
+      <tr><td>是否为关联方</td><td>供应商是否为集团关联方（关联交易需单独核算与披露）</td><td>枚举：是／否；"是"加粗展示</td><td><b>从客商核算档案获取</b>（按供应商业务编码查关联方标识，不由上游推送）</td></tr>
+      <tr><td>凭证编码</td><td>会计平台生成的会计凭证编码；凭它到会计平台查分录</td><td>如 FMSV20260530000476；未生成显示"-"</td><td>会计平台生成凭证后回调回填</td></tr>
+      <tr><td>凭证状态</td><td>凭证推送 EBS 与记账的进度（6 档，会计平台统一枚举·铁律）</td><td>枚举与颜色见第 3 节</td><td>会计平台推送/记账回调更新</td></tr>
+      <tr><td>原币含税合计</td><td>本单据原币含税金额合计</td><td>千分位两位小数，下同</td><td>上游推送头金额；FMS 按"头行相等"校验后存储（=行明细加总）</td></tr>
+      <tr><td>原币未税合计</td><td>本单据原币未税金额合计</td><td></td><td>同上</td></tr>
+      <tr><td>原币税额合计</td><td>本单据原币税额合计</td><td></td><td>同上</td></tr>
+      <tr><td>本币含税合计</td><td>本单据本币含税金额合计</td><td></td><td>同上</td></tr>
+      <tr><td>本币未税合计</td><td>本单据本币未税金额合计</td><td></td><td>同上</td></tr>
+      <tr><td>本币税额合计</td><td>本单据本币税额合计</td><td></td><td>同上</td></tr>
+    </table>
+
+    <h2>10. 字段字典 — 货品明细（17 个，含数据来源）</h2>
+    <table>
+      <tr><th style="width:140px">字段</th><th>含义</th><th style="width:185px">格式</th><th style="width:235px">数据来源（如何取值）</th></tr>
+      <tr><td>货品编码</td><td>货品（SKU）唯一编码</td><td>如 SKU100021</td><td>上游推送，取自出入库单行</td></tr>
+      <tr><td>货品名称</td><td>货品名称</td><td>如 冷冻鸡胸肉 2kg</td><td>按货品编码查商品主数据回显</td></tr>
+      <tr><td>商品段编码</td><td>商品核算段编码，会计平台借方拆行依据</td><td>如 11／19／29</td><td>按货品编码查商品主数据的核算段映射（Q-04）</td></tr>
+      <tr><td>商品段名称</td><td>商品核算段名称</td><td>如 标品／肉禽蛋／水产</td><td>同上</td></tr>
+      <tr><td>仓库编码</td><td>该行货品的出入库仓库业务编码</td><td>如 WH-SG-01</td><td>上游推送，取自出入库单行（一单一仓时与头一致）</td></tr>
+      <tr><td>仓库名称</td><td>该行货品的出入库仓库名称</td><td>如 新加坡中央仓</td><td>按仓库编码查仓库主数据回显</td></tr>
+      <tr><td>成本中心编码</td><td>该行成本归集的成本中心（EBS 核算段）</td><td>如 CC1001</td><td>按仓库/主体查 FMS 主数据映射（口径 Q-04）</td></tr>
+      <tr><td>成本中心名称</td><td>成本中心名称</td><td>如 新加坡中央仓成本中心</td><td>同上</td></tr>
+      <tr><td>采购单价(原币)</td><td>采购单上的未税单价</td><td>两位小数</td><td>上游推送，取自采购单行</td></tr>
+      <tr><td>数量</td><td>本次入库/退货数量；退货为负</td><td>千分位</td><td>上游推送，取实收/实退数量</td></tr>
+      <tr><td>原币含税</td><td>原币含税金额 = 原币未税 + 原币税额</td><td>千分位两位小数，下同</td><td>上游计算推送，FMS 按规范校验（见第 6 节）</td></tr>
+      <tr><td>原币未税</td><td>原币未税金额 = 数量 × 采购单价</td><td></td><td>同上</td></tr>
+      <tr><td>原币税额</td><td>原币税额 = 原币未税 × 税率</td><td></td><td>同上</td></tr>
+      <tr><td>本币含税</td><td>原币含税 × 汇率</td><td></td><td>上游折算推送，FMS 校验本币勾稽</td></tr>
+      <tr><td>本币未税</td><td>原币未税 × 汇率</td><td></td><td>同上</td></tr>
+      <tr><td>本币税额</td><td>原币税额 × 汇率</td><td></td><td>同上</td></tr>
+      <tr><td>税率</td><td>该货品的税率（如 GST）</td><td>如 9%</td><td>上游推送，取自采购单行税率</td></tr>
+    </table>
+
+    <h2>11. 版本</h2>
+    <p class="muted">原型 V1.13（2026-06-05）：按业务评审意见——<b>删除"业务制单日期"</b>（筛选/列表/详情/字段字典全链路）；<b>币种拆分为"原币币种"与"本币币种"</b>（列表、详情、字段字典两列并列），<b>筛选条件为原币币种</b>（枚举单选）；本币币种=法人公司本位币（主体主数据回显，非上游推送）；同步修正马来西亚主体演示数据（本位币 MYR、汇率 1.0000、本币=原币）。<br>
+    原型 V1.12（2026-06-05）：筛选区控件全部可交互——<b>枚举类下拉可点选单选</b>（含"全部"清除项，凭证状态严格 6 枚举）、<b>名称类（法人公司/仓库/供应商）下拉带模糊搜索框</b>（名称或编码筛选）、<b>编码类输入框可直接输入</b>；<b>重置按钮生效</b>（清空全部条件，入账日期保留默认近一月）。<br>
+    原型 V1.11（2026-06-04）：筛选区填入演示值；查询规则定稿——<b>编码类精准查询、名称类（法人公司/仓库/供应商）名称或编码模糊查询、枚举类单选</b>。<br>
+    V1.10：新增 <b>SITE、法人公司</b>（筛选/列表/详情头，本币=法人公司本位币）与<b>单据状态</b>（要素齐全/要素不齐，卡推送+定时重试补齐）；导出收敛为两种（头数据/头+行平铺），<b>详情页不设导出</b>；报警规则三级定稿（见第 6 节与 PRD 7.3）。配套 PRD 新增附录 D 字段级接口文档。<br>
+    V1.9：主数据缺失处理定稿——校验分 A/B 两级（上游问题拒收；FMS 档案缺失落库停"未推送"+补档自动重试）；<b>要素齐全自动推送</b>；<b>会计平台驳回→"记账失败"</b>，"推送失败"仅技术性失败。<br>
+    V1.8：日期筛选框点击弹出<b>快捷项+双月历范围选择器</b>（可交互）；筛选条件重排——凭证类（物料凭证编码/凭证编码/凭证状态）放一起、两个关联单号放一起。<br>
+    V1.7：凭证头/列表增加<b>单据级 6 项金额合计</b>（原币/本币 × 含税/未税/税额，=行明细汇总，头行相等校验）；货品明细新增<b>商品段、仓库、成本中心</b>（名称+编码）；列表页增加"<b>导出明细</b>"按钮（头+行平铺），原"导出"改为头数据导出。<br>
+    V1.6：筛选改"标签在上"6 列栅格、时间最前；合计区 6 项；接口接入校验规范；本币不固定 SGD；字典补数据来源。V1.5：字段清单定稿。V1.4：凭证状态 6 枚举。配套 PRD V1.7。</p>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+function showView(v){
+  document.getElementById('mProto').classList.toggle('active', v==='proto');
+  document.getElementById('mDocs').classList.toggle('active', v==='docs');
+  document.getElementById('viewDocs').classList.toggle('hide', v!=='docs');
+  if(v==='docs'){
+    document.getElementById('viewList').classList.add('hide');
+    document.getElementById('viewDetail').classList.add('hide');
+  }else{
+    showList();
+  }
+  window.scrollTo(0,0);
+}
+function showList(){
+  document.getElementById('viewDocs').classList.add('hide');
+  document.getElementById('viewDetail').classList.add('hide');
+  document.getElementById('viewList').classList.remove('hide');
+  document.getElementById('mProto').classList.add('active');
+  document.getElementById('mDocs').classList.remove('active');
+  window.scrollTo(0,0);
+}
+function showDetail(){
+  document.getElementById('viewDocs').classList.add('hide');
+  document.getElementById('viewList').classList.add('hide');
+  document.getElementById('viewDetail').classList.remove('hide');
+  window.scrollTo(0,0);
+}
+var moreShown = true;
+function toggleMore(){
+  moreShown = !moreShown;
+  document.querySelectorAll('.form-item.more').forEach(function(el){ el.classList.toggle('hide', !moreShown); });
+  document.getElementById('toggleBtn').textContent = moreShown ? '收起 ⌃' : '展开 ⌄';
+}
+var infoShown = true;
+function toggleInfo(){
+  infoShown = !infoShown;
+  document.getElementById('infoGrid').classList.toggle('hide', !infoShown);
+  document.getElementById('infoToggle').textContent = infoShown ? '收起 ▲' : '展开 ▼';
+}
+
+/* ===== 日期范围选择器：渲染 2026-05 / 2026-06 双月历，选中 05-05 ~ 06-04，未来禁用 ===== */
+(function(){
+  var wd = ['一','二','三','四','五','六','日'];
+  function cells(o){
+    var html = wd.map(function(w){ return '<div class="wd">'+w+'</div>'; }).join('');
+    (o.lead||[]).forEach(function(d){ html += '<div class="dp-d out"><span>'+d+'</span></div>'; });
+    for(var d=1; d<=o.dim; d++){
+      var cls = 'dp-d';
+      if(o.st===d) cls += ' st';
+      else if(o.en===d) cls += ' en';
+      else if(o.inFrom && d>=o.inFrom && d<=o.inTo) cls += ' inr';
+      if(o.disFrom && d>=o.disFrom) cls = 'dp-d dis';
+      html += '<div class="'+cls+'"><span>'+d+'</span></div>';
+    }
+    (o.pad||[]).forEach(function(d){ html += '<div class="dp-d out"><span>'+d+'</span></div>'; });
+    return html;
+  }
+  document.getElementById('dpM1').innerHTML = cells({lead:[27,28,29,30], dim:31, st:5, inFrom:6, inTo:31});
+  document.getElementById('dpM2').innerHTML = cells({dim:30, en:4, inFrom:1, inTo:3, disFrom:5, pad:[1,2,3,4,5]});
+})();
+var dpEl = document.getElementById('dp');
+function toggleDp(el, ev){
+  ev.stopPropagation();
+  closeSel();
+  var form = el.closest('.dd-form');
+  var fr = form.getBoundingClientRect(), er = el.getBoundingClientRect();
+  dpEl.style.left = (er.left - fr.left) + 'px';
+  dpEl.style.top = (er.bottom - fr.top + 4) + 'px';
+  dpEl.classList.toggle('hide');
+}
+function closeDp(){ dpEl.classList.add('hide'); }
+
+/* ===== 下拉选择器：枚举类单选 + 名称类（法人公司/仓库/供应商）模糊搜索 ===== */
+var SELS = {
+  voucherStatus:{ph:'请选择（单选）', val:'已推送', opts:[['无需推送'],['未推送'],['已推送'],['推送失败'],['记账失败'],['记账成功']]},
+  docStatus:{ph:'请选择（单选）', val:'', opts:[['要素齐全'],['要素不齐']]},
+  docType:{ph:'请选择（单选）', val:'采购入库单', opts:[['采购入库单','PO_IN'],['采购退货单','PO_RTN']]},
+  site:{ph:'请选择（单选）', val:'XM_GLOBAL_SG', opts:[['XM_GLOBAL_SG'],['XM_GLOBAL_MY']]},
+  company:{ph:'名称/编码，模糊搜索', val:'', search:true, opts:[['XM GLOBAL PTE. LTD.','9065'],['XM GLOBAL SDN. BHD.','9066']]},
+  wh:{ph:'名称/业务编码，模糊搜索', val:'', search:true, opts:[['新加坡中央仓','WH-SG-01'],['新加坡冷链仓','WH-SG-02'],['马来西亚中央仓','WH-MY-01']]},
+  supplier:{ph:'名称/编码，模糊搜索', val:'Hattah (Shanghai) Supply Chain', search:true, opts:[
+    ['Evershine fruits and vegetables','S000102'],['Wilmar Distribution Pte. Ltd.','S000095'],
+    ['HOCK LEONG TECK KEE PTE LTD','S000088'],['Hattah (Shanghai) Supply Chain','S000218'],
+    ['MALAYSIA DAIRY INDUSTRIES PTE LTD','S000121'],['FRESH 1 PTE LTD','S000076'],
+    ['Top Choice Food (S) Pte Ltd','S000067'],['GPO Marketing Sdn Bhd','S000133'],
+    ['WA YU PTE LTD','S000054'],['SENG HONG COMPANY (PRIVATE) LTD','S000079']]},
+  related:{ph:'请选择（单选）', val:'是', opts:[['是'],['否']]},
+  currency:{ph:'请选择（单选）', val:'USD', opts:[['SGD'],['USD'],['MYR']]}
+};
+var selEl = document.getElementById('selDd'), selKey = null;
+
+function syncCtrl(key){
+  var s = SELS[key], c = document.querySelector('[data-sel="'+key+'"]');
+  c.querySelector('.val').textContent = s.val || s.ph;
+  c.classList.toggle('filled', !!s.val);
+}
+Object.keys(SELS).forEach(syncCtrl);
+
+function selListHtml(key, kw){
+  var s = SELS[key], k = (kw||'').toLowerCase();
+  var items = s.opts.filter(function(o){
+    return !k || o[0].toLowerCase().indexOf(k)>-1 || (o[1]||'').toLowerCase().indexOf(k)>-1;
+  }).map(function(o){
+    return '<div class="opt'+(s.val===o[0]?' on':'')+'" onclick="pickSel(\''+key+'\',\''+o[0].replace(/'/g,'\\\'')+'\')">'+o[0]+(o[1]?'<span class="code">'+o[1]+'</span>':'')+'</div>';
+  }).join('');
+  var all = '<div class="opt'+(s.val?'':' on')+'" onclick="pickSel(\''+key+'\',\'\')">全部</div>';
+  return all + (items || '<div class="empty">无匹配项</div>');
+}
+function toggleSel(el, ev){
+  ev.stopPropagation();
+  closeDp();
+  var key = el.getAttribute('data-sel');
+  if(!selEl.classList.contains('hide') && selKey===key){ closeSel(); return; }
+  closeSel();
+  selKey = key;
+  var s = SELS[key];
+  var form = el.closest('.dd-form');
+  var fr = form.getBoundingClientRect(), er = el.getBoundingClientRect();
+  selEl.style.left = (er.left - fr.left) + 'px';
+  selEl.style.top = (er.bottom - fr.top + 4) + 'px';
+  selEl.style.minWidth = er.width + 'px';
+  selEl.innerHTML = (s.search ? '<div class="sel-search"><input placeholder="输入名称或编码筛选" oninput="filterSel(this.value)" onclick="event.stopPropagation()"></div>' : '')
+    + '<div class="opt-list" id="selList">'+selListHtml(key,'')+'</div>';
+  selEl.classList.remove('hide');
+  el.classList.add('open');
+  if(s.search){ selEl.querySelector('input').focus(); }
+}
+function filterSel(v){ document.getElementById('selList').innerHTML = selListHtml(selKey, v); }
+function pickSel(key, val){ SELS[key].val = val; syncCtrl(key); closeSel(); }
+function closeSel(){
+  selEl.classList.add('hide'); selKey = null;
+  document.querySelectorAll('.ctrl.open').forEach(function(c){ c.classList.remove('open'); });
+}
+/* 重置：恢复默认值（清空全部条件，入账日期保留默认近一月，不可清空） */
+function resetForm(){
+  document.querySelectorAll('.dd-form input.ctrl').forEach(function(i){ i.value=''; });
+  Object.keys(SELS).forEach(function(k){ SELS[k].val=''; syncCtrl(k); });
+  closeSel(); closeDp();
+}
+document.addEventListener('click', function(e){
+  if(dpEl && !dpEl.contains(e.target)) closeDp();
+  if(selEl && !selEl.contains(e.target)) closeSel();
+});
+</script>
+</body>
+</html>

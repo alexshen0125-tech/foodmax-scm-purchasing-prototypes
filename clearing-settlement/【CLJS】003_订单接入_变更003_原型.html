@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磐石 Aegis · 订单接入（三期·变更003 原型）</title>
+<style>
+  :root{
+    --brand:#3b6cd8;--brand-hover:#5a83e0;--success:#2c8a5c;--error:#c8312c;--warning:#d97706;
+    --text:#1a1d24;--text-sub:#5b6470;--bg:#f5f7fa;--panel:#fff;--border:#e3e6ea;--border-2:#eef0f3;
+    --filter:#fafbfc;--reverse:#fff7ed;--blue-bg:#dbeafe;--green-bg:#d1fae5;--red-bg:#fee2e2;--orange-bg:#ffedd5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  button,input,select,textarea{font:inherit}
+  button{cursor:pointer}
+  .app{min-height:100vh}
+  .sider{position:fixed;inset:0 auto 0 0;width:220px;background:#172033;color:#fff;z-index:30}
+  .brand{height:56px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid rgba(255,255,255,.09);font-weight:700}
+  .logo{display:grid;place-items:center;width:26px;height:26px;border-radius:6px;background:var(--brand)}
+  .menu-title{padding:22px 20px 8px;color:#8f9aaf;font-size:12px}
+  .menu-item{display:flex;align-items:center;gap:10px;margin:0 10px;padding:10px 12px;border-radius:6px;background:rgba(83,128,232,.2);color:#fff}
+  .main{margin-left:220px;min-width:0}
+  .topbar{position:sticky;top:0;z-index:25;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#fff;border-bottom:1px solid var(--border)}
+  .top-right{display:flex;align-items:center;gap:12px;color:var(--text-sub)}
+  .content{padding:20px 24px 32px}
+  .crumb{margin-bottom:8px;color:var(--text-sub);font-size:13px}
+  .page-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .page-head h1{margin:0;font-size:22px}
+  .subtitle{color:var(--text-sub);font-size:12.5px}
+  .site-badge{margin-left:auto;padding:2px 10px;border:1px solid #f8c9d5;border-radius:999px;background:#fdeef1;color:#e11d48;font-size:11.5px}
+  .tabs{display:flex;gap:24px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+  .tab{padding:10px 0;border:0;border-bottom:2px solid transparent;background:none;color:var(--text-sub)}
+  .tab.active{border-bottom-color:var(--brand);color:var(--brand);font-weight:600}
+  .card{margin-bottom:16px;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--panel)}
+  .filter-grid{display:grid;grid-template-columns:repeat(6,minmax(155px,1fr));gap:12px;padding:14px 16px;background:var(--filter)}
+  .field{display:flex;min-width:0;flex-direction:column;gap:4px}
+  .field label{min-height:20px;color:var(--text-sub);font-size:12px}
+  .field input,.field select,.field textarea{width:100%;min-width:0;border:1px solid #d9d9d9;border-radius:6px;background:#fff;color:var(--text);outline:none}
+  .field input,.field select{height:32px;padding:4px 10px}
+  .field textarea{height:54px;padding:6px 10px;resize:none;line-height:20px}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(59,108,216,.1)}
+  .filter-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
+  .btn{height:32px;padding:4px 14px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;color:var(--text)}
+  .btn:hover{border-color:var(--brand);color:var(--brand)}
+  .btn-primary{border-color:var(--brand);background:var(--brand);color:#fff}
+  .btn-primary:hover{border-color:var(--brand-hover);background:var(--brand-hover);color:#fff}
+  .btn-danger{border-color:#ffccc7;color:var(--error)}
+  .btn:disabled{border-color:#ddd;background:#f5f5f5;color:#aaa;cursor:not-allowed}
+  .stats{display:flex;min-height:64px;align-items:center;gap:34px;padding:10px 16px;overflow-x:auto;border-top:1px solid var(--border-2)}
+  .stats>strong,.stat{flex:none}
+  .stat{display:grid;gap:1px;min-width:78px}
+  .stat b{color:var(--text-sub);font-size:12px;font-weight:400}
+  .stat i{font-size:15px;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+  .stat.ok i{color:var(--success)}.stat.bad i{color:var(--error)}
+  .table-wrap{max-width:100%;overflow:auto}
+  table{border-collapse:separate;border-spacing:0;width:100%}
+  .order-table{min-width:3150px;white-space:nowrap}
+  th,td{padding:10px 11px;border-bottom:1px solid var(--border);background:#fff;text-align:left;vertical-align:middle}
+  thead th{position:sticky;top:0;z-index:4;background:var(--filter);color:var(--text-sub);font-size:12.5px;font-weight:600}
+  thead tr:nth-child(2) th{top:39px}
+  th.group{text-align:center;border-bottom:1px solid var(--border)}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  th.center,td.center{text-align:center}
+  tbody tr:hover td{background:#f6f8fd}
+  tbody tr.reverse td{background:var(--reverse)}
+  .sticky-main{position:sticky!important;left:0;z-index:6!important;min-width:180px;max-width:180px}
+  .sticky-sub{position:sticky!important;left:180px;z-index:6!important;min-width:205px;max-width:205px;box-shadow:4px 0 6px rgba(16,24,40,.05)}
+  tbody .sticky-main,tbody .sticky-sub{z-index:2!important}
+  .sticky-action{position:sticky!important;right:0;z-index:6!important;min-width:150px;background:#fff!important;box-shadow:-4px 0 6px rgba(16,24,40,.05)}
+  tbody .sticky-action{z-index:2!important}
+  .entity{min-width:155px;white-space:normal;line-height:1.35}
+  .entity .sub{margin-top:2px;color:var(--text-sub);font-size:11.5px}
+  code{padding:1px 5px;border:1px solid rgba(0,0,0,.06);border-radius:3px;background:rgba(0,0,0,.04);font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .status{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11.5px;font-weight:600}
+  .s-green{background:var(--green-bg);color:#065f46}.s-blue{background:var(--blue-bg);color:#1e40af}.s-red{background:var(--red-bg);color:#991b1b}.s-orange{background:var(--orange-bg);color:#9a3412}.s-gray{background:#eef0f3;color:#4b5563}
+  .muted{color:var(--text-sub)}
+  .reason{max-width:300px;white-space:normal;color:var(--error);font-size:12px}
+  details summary{cursor:pointer}
+  details ul{margin:6px 0 0;padding-left:18px}
+  .link{height:auto;padding:0 4px;border:0;background:none;color:var(--brand)}
+  .link:hover{color:var(--brand-hover)}
+  .formula-title{display:inline-flex;align-items:center;justify-content:flex-end;gap:5px}
+  .formula-help{display:inline-grid;width:17px;height:17px;place-items:center;padding:0;border:1px solid #8aa4dc;border-radius:50%;background:#fff;color:var(--brand);font-size:11px;font-weight:700}
+  .formula-help:focus-visible{outline:2px solid rgba(51,102,204,.3);outline-offset:2px}
+  .tooltip{position:fixed;z-index:1200;max-width:440px;padding:9px 12px;border-radius:6px;background:#202b46;color:#fff;box-shadow:0 8px 24px rgba(16,24,40,.24);font-size:12px;line-height:1.6;pointer-events:none}
+  .tooltip[hidden]{display:none}
+  .pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px}
+  .pagination .total{margin-right:auto;color:var(--text-sub)}
+  .page{display:grid;min-width:32px;height:32px;place-items:center;border:1px solid #d9d9d9;border-radius:6px;background:#fff}
+  .page.active{border-color:var(--brand);color:var(--brand)}
+  .foot{padding:14px 24px;color:#8a93a3;text-align:center;font-size:12px}
+  .mask{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:.2s}
+  .mask.open{opacity:1;visibility:visible}
+  .drawer{position:fixed;inset:0 0 0 auto;z-index:801;display:flex;width:1380px;max-width:98vw;flex-direction:column;background:#fff;box-shadow:-6px 0 16px rgba(0,0,0,.12);transform:translateX(100%);transition:.25s}
+  .drawer.open{transform:translateX(0)}
+  .drawer-head{display:flex;align-items:center;padding:15px 20px;border-bottom:1px solid var(--border)}
+  .drawer-head h2{margin:0;font-size:16px}.drawer-head button{margin-left:auto;border:0;background:none;font-size:20px}
+  .drawer-body{min-height:0;flex:1;padding:16px 20px;overflow:auto}
+  .drawer-body.product-primary{display:flex;flex-direction:column;gap:12px;overflow:hidden}
+  .section-title{margin:4px 0 10px;font-size:15px}
+  .detail-summary{display:grid;flex:none;grid-template-columns:repeat(6,minmax(150px,1fr));gap:8px}
+  .detail-summary .info{padding:7px 10px;background:#fafbfc}
+  .detail-main{display:flex;min-height:0;flex:1;flex-direction:column}
+  .detail-main-head{display:flex;flex:none;align-items:center;justify-content:space-between;margin:0 0 8px}
+  .detail-main-head .section-title{margin:0}
+  .detail-main .table-wrap{min-height:0;flex:1;overflow:auto;border:1px solid var(--border);border-radius:6px}
+  .info-grid{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:8px;margin-bottom:16px}
+  .info{padding:9px 11px;border:1px solid var(--border-2);border-radius:6px;background:#fafbfc}
+  .info .label{color:var(--text-sub);font-size:11.5px}.info .value{margin-top:2px;font-weight:600;overflow-wrap:anywhere}
+  .amount-grid{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:8px;margin-bottom:16px}
+  .amount{padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:#fff}
+  .amount .label{color:var(--text-sub);font-size:11.5px}.amount .value{margin-top:3px;text-align:right;font-size:15px;font-weight:700}
+  .boundary{margin-bottom:12px;padding:9px 12px;border-left:3px solid var(--brand);background:#f3f6ff;color:var(--text-sub);font-size:12.5px}
+  .checks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
+  .check{padding:9px 10px;border:1px solid #b7ebc6;border-radius:6px;background:#f6ffed}
+  .check.fail{border-color:#ffccc7;background:#fff2f0}
+  .check-head{display:flex;gap:8px;font-size:12.5px;font-weight:700}.check-head span:last-child{margin-left:auto;color:var(--success)}.check.fail .check-head span:last-child{color:var(--error)}
+  .check-value{margin-top:4px;overflow:hidden;color:var(--text-sub);font-size:11.5px;text-overflow:ellipsis;white-space:nowrap}
+  .detail-table{min-width:2100px;font-size:12.5px;white-space:nowrap}
+  .detail-table tfoot td{position:sticky;bottom:0;background:#f3f6ff;font-weight:700}
+  .system-total{color:var(--brand)}
+  .modal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45)}
+  .modal.open{display:flex}
+  .modal-box{width:720px;max-width:92vw;overflow:hidden;border-radius:8px;background:#fff;box-shadow:0 12px 34px rgba(0,0,0,.2)}
+  .modal-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .modal-head h3{margin:0;font-size:16px}.modal-head button{margin-left:auto;border:0;background:none;font-size:19px}
+  .modal-body{padding:16px 20px}.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}
+  .diff-table th,.diff-table td{padding:9px 10px}
+  .toast-wrap{position:fixed;top:16px;left:50%;z-index:1400;display:grid;gap:8px;transform:translateX(-50%);pointer-events:none}
+  .toast{padding:9px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.13)}
+  @media(max-width:1400px){.filter-grid{grid-template-columns:repeat(4,minmax(150px,1fr))}.checks{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-summary{grid-template-columns:repeat(3,minmax(150px,1fr))}}
+  @media(max-width:900px){.sider{display:none}.main{margin-left:0}.filter-grid{grid-template-columns:repeat(2,minmax(145px,1fr))}.info-grid,.amount-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}.detail-summary{grid-template-columns:repeat(2,minmax(140px,1fr))}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sider">
+    <div class="brand"><span class="logo">▨</span><span>磐石 Aegis</span></div>
+    <div class="menu-title">业务流水</div>
+    <div class="menu-item">▧ 订单接入</div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><span>☰</span><div class="top-right"><span>中文</span><span>👤 管理员</span><span class="status s-gray">ADMIN</span></div></header>
+    <div class="content">
+      <div class="crumb">业务流水 / 订单接入</div>
+      <div class="page-head"><h1>订单接入</h1><span class="subtitle">上游订单业务快照与 Aegis 独立预检结果</span><span class="site-badge">当前 site：新加坡</span></div>
+      <div class="tabs"><button class="tab active" type="button">子订单</button><button class="tab" id="main-order-tab" type="button">主订单</button></div>
+
+      <section class="card">
+        <div class="filter-grid" id="filter-form">
+          <div class="field"><label for="filter-start">完成时间（开始日，含）</label><input id="filter-start" type="date" value="2026-07-01"></div>
+          <div class="field"><label for="filter-end">完成时间（结束日，次日零点排他）</label><input id="filter-end" type="date" value="2026-07-31"></div>
+          <div class="field"><label for="filter-main-orders">主订单号（批量，最多 200 个）</label><textarea id="filter-main-orders" placeholder="换行或空格分隔，精确匹配"></textarea></div>
+          <div class="field"><label for="filter-sub-orders">子订单号（批量，最多 200 个）</label><textarea id="filter-sub-orders" placeholder="换行或空格分隔，精确匹配"></textarea></div>
+          <div class="field"><label for="filter-order-type">订单类型</label><select id="filter-order-type"><option value="">全部</option><option>正向</option><option>逆向</option></select></div>
+          <div class="field"><label for="filter-merchant">商户</label><select id="filter-merchant"></select></div>
+          <div class="field"><label for="filter-shop">店铺</label><select id="filter-shop"></select></div>
+          <div class="field"><label for="filter-buyer-store">门店</label><select id="filter-buyer-store"></select></div>
+          <div class="field"><label for="filter-customer">客户</label><select id="filter-customer"></select></div>
+          <div class="field"><label for="filter-warehouse">仓库</label><select id="filter-warehouse"></select></div>
+          <div class="field"><label for="filter-pay-type">支付方式</label><select id="filter-pay-type"><option value="">全部</option><option>现结</option><option>账期</option><option>货到付款</option></select></div>
+          <div class="field"><label for="filter-payment-no">支付单号</label><input id="filter-payment-no" placeholder="去除首尾空格后精确匹配"></div>
+          <div class="field"><label for="filter-precheck">数据预检</label><select id="filter-precheck"><option value="">全部</option><option>通过</option><option>不通过</option></select></div>
+          <div class="field"><label for="filter-liability">退款责任方</label><select id="filter-liability"><option value="">全部</option><option>商家责任</option><option>平台责任</option></select></div>
+          <div class="filter-actions">
+            <button class="btn btn-primary" id="query" type="button">查询</button>
+            <button class="btn" id="reset" type="button">重置</button>
+            <button class="btn btn-danger" id="recheck" type="button">重新预检</button>
+            <button class="btn" id="export" type="button">导出</button>
+          </div>
+        </div>
+        <div class="stats" id="stats">
+          <strong>接入统计</strong>
+          <span class="stat"><b>子单数</b><i data-stat="count">0</i></span>
+          <span class="stat"><b>正向 · 逆向</b><i data-stat="directions">0 · 0</i></span>
+          <span class="stat ok"><b>预检通过</b><i data-stat="passed">0</i></span>
+          <span class="stat bad"><b>预检不通过</b><i data-stat="failed">0</i></span>
+          <span class="stat"><b>订单实付合计</b><i data-stat="paid">S$0.00</i></span>
+          <span class="stat"><b>运费合计</b><i data-stat="freight">S$0.00</i></span>
+          <span class="stat"><b>BCRS 合计</b><i data-stat="bcrs">S$0.00</i></span>
+        </div>
+        <div class="table-wrap">
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th rowspan="2" class="sticky-main">主订单号</th><th rowspan="2" class="sticky-sub">子订单号</th><th rowspan="2">订单类型</th><th rowspan="2">退款责任方</th><th rowspan="2">完成时间</th>
+                <th colspan="2" class="group">订单销售方</th><th colspan="2" class="group">订单购买方</th>
+                <th rowspan="2">仓库</th><th rowspan="2">支付方式</th><th rowspan="2">支付单号</th><th rowspan="2" class="num">商品含税总价</th>
+                <th colspan="3" class="group">优惠金额</th><th rowspan="2" class="num">多退少补金额</th><th rowspan="2" class="num">已取消金额</th><th rowspan="2" class="num">运费</th><th rowspan="2" class="num">BCRS 押金总额</th>
+                <th rowspan="2" class="num"><span class="formula-title">客户实付金额<button class="formula-help" type="button" data-tooltip="商品含税总价 − 优惠总金额 + 多退少补金额 − 已取消金额 + 运费 + BCRS = 客户实付金额" aria-label="商品含税总价 − 优惠总金额 + 多退少补金额 − 已取消金额 + 运费 + BCRS = 客户实付金额">?</button></span></th>
+                <th rowspan="2" class="center">数据预检</th><th rowspan="2">预检不通过原因</th><th rowspan="2" class="center sticky-action">操作</th>
+              </tr>
+              <tr><th>店铺</th><th>商户</th><th>门店</th><th>客户</th><th class="num">优惠总金额</th><th class="num">平台补贴</th><th class="num">店铺补贴</th></tr>
+            </thead>
+            <tbody id="order-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination"><span class="total" id="total">共 0 条</span><span class="page">‹</span><span class="page active">1</span><span class="page">›</span></div>
+      </section>
+    </div>
+    <div class="foot">© 2026 磐石 Aegis 资金清结算与合规系统 — 订单接入（三期·变更003 原型）</div>
+  </main>
+</div>
+
+<div class="mask" id="drawer-mask"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-head"><h2>订单接入详情</h2><button id="close-drawer" type="button" aria-label="关闭">×</button></div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+
+<div class="modal" id="repull-modal" aria-hidden="true">
+  <div class="modal-box">
+    <div class="modal-head"><h3>重新拉取预览</h3><button id="close-repull" type="button" aria-label="关闭">×</button></div>
+    <div class="modal-body" id="repull-body"></div>
+    <div class="modal-foot"><button class="btn" id="cancel-repull" type="button">取消</button><button class="btn btn-primary" id="confirm-repull" type="button">确认重新拉取</button></div>
+  </div>
+</div>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+/* DATA_START */
+const ORDERS = [
+  {
+    mainOrderNo:'PO-20260724-0012',subOrderNo:'SO-20260724-0012-1',merchantChildOrderNo:'MSO-20260724-90012',orderType:'正向',liability:null,completedAt:'2026-07-24 09:42',
+    shopCode:'SH0001',shopName:'Famous JB101',merchantCode:'M0001',merchantName:'星辰生鲜供应',buyerStoreCode:'BS11038-01',buyerStoreName:'Orchard Central Outlet',customerId:'C11038',customerName:'J*** L**',warehouseCode:'WH-SG-001',warehouseName:'Singapore Central Warehouse',
+    payType:'现结',paymentNo:'PAY-20260724-0012',settlementStatus:'未结算',precheck:'通过',precheckReasons:[],
+    head:{productLineCount:2,productGrossAmount:100,discountTotal:10,platformSubsidy:6,shopSubsidy:4,adjustmentAmount:2,cancelledAmount:1,freight:5,bcrs:0.2,customerPaidAmount:96.2},
+    products:[
+      {sku:'SKU-SALMON-01',productName:'冰鲜三文鱼 1kg',categoryCode:'SEA-01',categoryName:'水产',unit:'package',purchaseQuantity:1,actualOutboundQuantity:1,unitPrice:58,originalAmount:60,discountAmount:6,platformSubsidy:4,shopSubsidy:2,adjustmentAmount:0,cancelledAmount:0,productPaidAmount:54,bcrsAmount:0.1},
+      {sku:'SKU-LOBSTER-02',productName:'活波士顿龙虾',categoryCode:'SEA-02',categoryName:'水产',unit:'KG',purchaseQuantity:1,actualOutboundQuantity:1,unitPrice:38,originalAmount:40,discountAmount:4,platformSubsidy:2,shopSubsidy:2,adjustmentAmount:2,cancelledAmount:1,productPaidAmount:37,bcrsAmount:0.1}
+    ],
+    repullPreview:[{field:'支付单号',oldValue:'PAY-20260724-0012',newValue:'PAY-20260724-0012-R2'},{field:'实际出库数量 / SKU-LOBSTER-02',oldValue:'1',newValue:'1.025'}]
+  },
+  {
+    mainOrderNo:'PO-20260724-0009',subOrderNo:'SO-20260724-0009-1',merchantChildOrderNo:'MSO-20260724-90009',orderType:'正向',liability:null,completedAt:'2026-07-24 08:15',
+    shopCode:'SH0002',shopName:'Downtown Seafood Hub',merchantCode:'M0002',merchantName:'海鲜直采仓',buyerStoreCode:'BS11042-01',buyerStoreName:'Marina Bay Outlet',customerId:'C11042',customerName:'M******* T**',warehouseCode:'WH-SG-002',warehouseName:'Singapore East Warehouse',
+    payType:'账期',paymentNo:null,settlementStatus:'已结算',precheck:'通过',precheckReasons:[],
+    head:{productLineCount:1,productGrossAmount:50,discountTotal:5,platformSubsidy:3,shopSubsidy:2,adjustmentAmount:0,cancelledAmount:0,freight:3,bcrs:0,customerPaidAmount:48},
+    products:[{sku:'SKU-OYSTER-01',productName:'鲜活生蚝 6只装',categoryCode:'SEA-03',categoryName:'水产',unit:'Box',purchaseQuantity:1,actualOutboundQuantity:1,unitPrice:48,originalAmount:50,discountAmount:5,platformSubsidy:3,shopSubsidy:2,adjustmentAmount:0,cancelledAmount:0,productPaidAmount:45,bcrsAmount:0}],
+    repullPreview:[]
+  },
+  {
+    mainOrderNo:'PO-20260723-0041',subOrderNo:'SO-20260723-0041-R1',merchantChildOrderNo:'MSO-20260723-94001-R1',orderType:'逆向',liability:'商家责任',completedAt:'2026-07-23 20:08',
+    shopCode:'SH0003',shopName:'Greenfield Market',merchantCode:'M0003',merchantName:'绿野果蔬',buyerStoreCode:'BS11057-01',buyerStoreName:'Jurong West Outlet',customerId:'C11057',customerName:'D***** W***',warehouseCode:'WH-SG-003',warehouseName:'Singapore West Warehouse',
+    payType:'货到付款',paymentNo:'PAY-REFUND-20260723-0041',settlementStatus:'未结算',precheck:'通过',precheckReasons:[],
+    head:{productLineCount:1,productGrossAmount:-30,discountTotal:-3,platformSubsidy:-2,shopSubsidy:-1,adjustmentAmount:0,cancelledAmount:0,freight:0,bcrs:0,customerPaidAmount:-27},
+    products:[{sku:'SKU-GRAPE-01',productName:'进口红提 2kg（退货）',categoryCode:'FRUIT-01',categoryName:'水果',unit:'Box',purchaseQuantity:1,actualOutboundQuantity:0,unitPrice:-29,originalAmount:-30,discountAmount:-3,platformSubsidy:-2,shopSubsidy:-1,adjustmentAmount:0,cancelledAmount:0,productPaidAmount:-27,bcrsAmount:0}],
+    repullPreview:[{field:'退款责任方',oldValue:'商家责任',newValue:'平台责任'}]
+  },
+  {
+    mainOrderNo:'PO-20260723-0033',subOrderNo:'SO-20260723-0033-1',merchantChildOrderNo:'MSO-20260723-93033',orderType:'正向',liability:null,completedAt:'2026-07-23 16:31',
+    shopCode:'SH0004',shopName:'Prime Meat Hub',merchantCode:'M0004',merchantName:'优选肉禽',buyerStoreCode:'BS11061-01',buyerStoreName:'Tampines Outlet',customerId:'C11061',customerName:'S**** L**',warehouseCode:'WH-SG-004',warehouseName:'Singapore North Warehouse',
+    payType:'现结',paymentNo:'PAY-20260723-0033',settlementStatus:'未结算',precheck:'不通过',precheckReasons:['客户实付金额头行不一致，差额 -S$1.00','上游订单头客户实付金额未通过公式校验'],
+    head:{productLineCount:1,productGrossAmount:80,discountTotal:8,platformSubsidy:5,shopSubsidy:3,adjustmentAmount:0,cancelledAmount:0,freight:4,bcrs:0,customerPaidAmount:75},
+    products:[{sku:'SKU-CHICKEN-01',productName:'冰鲜鸡腿 2kg',categoryCode:'MEAT-01',categoryName:'肉禽蛋',unit:'Bag',purchaseQuantity:1,actualOutboundQuantity:1,unitPrice:77,originalAmount:80,discountAmount:8,platformSubsidy:5,shopSubsidy:3,adjustmentAmount:0,cancelledAmount:0,productPaidAmount:72,bcrsAmount:0}],
+    repullPreview:[{field:'客户实付金额',oldValue:'S$75.00',newValue:'S$76.00'}]
+  }
+];
+/* DATA_END */
+
+/* PURE_START */
+function isMissing(value){return value===null||value===undefined||value==='';}
+function roundMoney(value){return Math.round((Number(value)+Number.EPSILON)*100)/100;}
+function formatMoney(value){
+  if(isMissing(value))return '—';
+  const number=Number(value);
+  if(!Number.isFinite(number))return '—';
+  const abs=Math.abs(number).toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (number<0?'-S$':'S$')+abs;
+}
+function parseBatch(value){
+  const items=[...new Set(String(value||'').trim().split(/\s+/).filter(Boolean))];
+  if(items.length>200)throw new Error('单个批量订单号筛选最多支持 200 个，系统不会截断');
+  return items;
+}
+function calculateValidation(order){
+  const sum=field=>roundMoney(order.products.reduce((total,line)=>total+Number(line[field]||0),0));
+  const computed={
+    productLineCount:order.products.length,
+    productGrossAmount:sum('originalAmount'),discountTotal:sum('discountAmount'),platformSubsidy:sum('platformSubsidy'),shopSubsidy:sum('shopSubsidy'),
+    adjustmentAmount:sum('adjustmentAmount'),cancelledAmount:sum('cancelledAmount'),productPaidAmount:sum('productPaidAmount'),bcrs:sum('bcrsAmount')
+  };
+  computed.customerPaidAmount=roundMoney(computed.productPaidAmount+Number(order.head.freight)+computed.bcrs);
+  const moneyPass=(left,right)=>roundMoney(left)===roundMoney(right);
+  const checks=[
+    {name:'商品行数',source:order.head.productLineCount,system:computed.productLineCount,pass:order.head.productLineCount===computed.productLineCount},
+    {name:'商品含税总价',source:order.head.productGrossAmount,system:computed.productGrossAmount,pass:moneyPass(order.head.productGrossAmount,computed.productGrossAmount)},
+    {name:'优惠总金额',source:order.head.discountTotal,system:computed.discountTotal,pass:moneyPass(order.head.discountTotal,computed.discountTotal)},
+    {name:'平台补贴',source:order.head.platformSubsidy,system:computed.platformSubsidy,pass:moneyPass(order.head.platformSubsidy,computed.platformSubsidy)},
+    {name:'店铺补贴',source:order.head.shopSubsidy,system:computed.shopSubsidy,pass:moneyPass(order.head.shopSubsidy,computed.shopSubsidy)},
+    {name:'优惠组成',source:order.head.discountTotal,system:roundMoney(order.head.platformSubsidy+order.head.shopSubsidy),pass:moneyPass(order.head.discountTotal,order.head.platformSubsidy+order.head.shopSubsidy)},
+    {name:'多退少补金额',source:order.head.adjustmentAmount,system:computed.adjustmentAmount,pass:moneyPass(order.head.adjustmentAmount,computed.adjustmentAmount)},
+    {name:'已取消金额',source:order.head.cancelledAmount,system:computed.cancelledAmount,pass:moneyPass(order.head.cancelledAmount,computed.cancelledAmount)},
+    {name:'BCRS',source:order.head.bcrs,system:computed.bcrs,pass:moneyPass(order.head.bcrs,computed.bcrs)},
+    {name:'客户实付金额',source:order.head.customerPaidAmount,system:computed.customerPaidAmount,pass:moneyPass(order.head.customerPaidAmount,computed.customerPaidAmount)},
+    {name:'订单头公式',source:order.head.customerPaidAmount,system:roundMoney(order.head.productGrossAmount-order.head.discountTotal+order.head.adjustmentAmount-order.head.cancelledAmount+order.head.freight+order.head.bcrs),pass:moneyPass(order.head.customerPaidAmount,order.head.productGrossAmount-order.head.discountTotal+order.head.adjustmentAmount-order.head.cancelledAmount+order.head.freight+order.head.bcrs)},
+    {name:'商品行公式',source:'逐行原值',system:'逐行校验',pass:order.products.every(line=>moneyPass(line.productPaidAmount,line.originalAmount-line.discountAmount+line.adjustmentAmount-line.cancelledAmount))}
+  ];
+  return {computed,checks,passed:checks.every(check=>check.pass)};
+}
+/* PURE_END */
+
+const CUSTOMER_PAID_FORMULA='商品含税总价 − 优惠总金额 + 多退少补金额 − 已取消金额 + 运费 + BCRS = 客户实付金额';
+const UNIT_PRICE_FORMULA='来源：订单中心；口径：原价单价 − 店铺补贴的单位金额';
+const PRODUCT_PAID_FORMULA='商品原总价 − 优惠金额 + 多退少补金额 − 已取消金额 = 商品实付金额；优惠金额包含平台补贴与店铺补贴';
+const $=selector=>document.querySelector(selector);
+const byId=id=>document.getElementById(id);
+function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+function displayText(value){return isMissing(value)?'—':escapeHtml(value);}
+function entityHtml(name,code){
+  if(isMissing(name)&&isMissing(code))return '<span class="muted">—</span>';
+  return '<div class="entity"><div>'+displayText(name)+'</div><div class="sub">'+displayText(code)+'</div></div>';
+}
+function statusHtml(value,tone){return '<span class="status '+tone+'">'+escapeHtml(value)+'</span>';}
+function precheckReasons(order,validation){
+  const validationReasons=validation.checks.filter(check=>!check.pass).map(check=>check.name+'不一致：上游 '+(typeof check.source==='number'?formatMoney(check.source):check.source)+'，系统校验 '+(typeof check.system==='number'?formatMoney(check.system):check.system));
+  return [...new Set([...(order.precheckReasons||[]),...validationReasons])];
+}
+function effectivePrecheck(order,validation){return order.precheck==='不通过'||!validation.passed?'不通过':'通过';}
+function reasonHtml(reasons){
+  if(!reasons.length)return '<span class="muted">—</span>';
+  if(reasons.length===1)return '<div class="reason">'+escapeHtml(reasons[0])+'</div>';
+  return '<details class="reason"><summary>'+escapeHtml(reasons[0])+'（展开全部 '+reasons.length+' 条）</summary><ul>'+reasons.map(reason=>'<li>'+escapeHtml(reason)+'</li>').join('')+'</ul></details>';
+}
+function renderRows(orders){
+  byId('order-body').innerHTML=orders.map(order=>{
+    const validation=calculateValidation(order);
+    const state=effectivePrecheck(order,validation);
+    const reasons=precheckReasons(order,validation);
+    const reverse=order.orderType==='逆向';
+    const repullDisabled=order.settlementStatus==='已结算';
+    return '<tr class="'+(reverse?'reverse':'')+'">'+
+      '<td class="sticky-main"><code>'+escapeHtml(order.mainOrderNo)+'</code></td><td class="sticky-sub"><code>'+escapeHtml(order.subOrderNo)+'</code></td>'+
+      '<td>'+statusHtml(order.orderType,reverse?'s-orange':'s-blue')+'</td><td>'+(order.liability?statusHtml(order.liability,'s-blue'):'<span class="muted">—</span>')+'</td><td>'+escapeHtml(order.completedAt)+'</td>'+
+      '<td>'+entityHtml(order.shopName,order.shopCode)+'</td><td>'+entityHtml(order.merchantName,order.merchantCode)+'</td><td>'+entityHtml(order.buyerStoreName,order.buyerStoreCode)+'</td><td>'+entityHtml(order.customerName,order.customerId)+'</td>'+
+      '<td>'+entityHtml(order.warehouseName,order.warehouseCode)+'</td><td>'+statusHtml(order.payType,'s-blue')+'</td><td><code>'+displayText(order.paymentNo)+'</code></td>'+
+      '<td class="num">'+formatMoney(order.head.productGrossAmount)+'</td><td class="num">'+formatMoney(order.head.discountTotal)+'</td><td class="num">'+formatMoney(order.head.platformSubsidy)+'</td><td class="num">'+formatMoney(order.head.shopSubsidy)+'</td>'+
+      '<td class="num">'+formatMoney(order.head.adjustmentAmount)+'</td><td class="num">'+formatMoney(order.head.cancelledAmount)+'</td><td class="num">'+formatMoney(order.head.freight)+'</td><td class="num">'+formatMoney(order.head.bcrs)+'</td><td class="num"><strong>'+formatMoney(order.head.customerPaidAmount)+'</strong></td>'+
+      '<td class="center">'+statusHtml(state,state==='通过'?'s-green':'s-red')+'</td><td>'+reasonHtml(reasons)+'</td>'+
+      '<td class="center sticky-action"><button class="link" type="button" data-detail="'+escapeHtml(order.subOrderNo)+'">明细</button><button class="link" type="button" data-repull="'+escapeHtml(order.subOrderNo)+'" '+(repullDisabled?'disabled title="已结算订单不可重新拉取"':'')+'>重新拉取</button></td></tr>';
+  }).join('');
+  updateStats(orders);
+  byId('total').textContent='共 '+orders.length+' 条（原型数据）';
+}
+function updateStats(orders){
+  const sum=selector=>roundMoney(orders.reduce((total,order)=>total+Number(selector(order)||0),0));
+  const states=orders.map(order=>effectivePrecheck(order,calculateValidation(order)));
+  byId('stats').querySelector('[data-stat="count"]').textContent=orders.length;
+  byId('stats').querySelector('[data-stat="directions"]').textContent=orders.filter(order=>order.orderType==='正向').length+' · '+orders.filter(order=>order.orderType==='逆向').length;
+  byId('stats').querySelector('[data-stat="passed"]').textContent=states.filter(state=>state==='通过').length;
+  byId('stats').querySelector('[data-stat="failed"]').textContent=states.filter(state=>state==='不通过').length;
+  byId('stats').querySelector('[data-stat="paid"]').textContent=formatMoney(sum(order=>order.head.customerPaidAmount));
+  byId('stats').querySelector('[data-stat="freight"]').textContent=formatMoney(sum(order=>order.head.freight));
+  byId('stats').querySelector('[data-stat="bcrs"]').textContent=formatMoney(sum(order=>order.head.bcrs));
+}
+function fillSelect(id,items){
+  const element=byId(id);
+  element.innerHTML='<option value="">全部</option>'+items.map(item=>'<option value="'+escapeHtml(item.value)+'">'+escapeHtml(item.label)+'</option>').join('');
+}
+function uniqueOptions(valueKey,nameKey){
+  const seen=new Set();
+  return ORDERS.reduce((items,order)=>{if(!seen.has(order[valueKey])){seen.add(order[valueKey]);items.push({value:order[valueKey],label:order[nameKey]+' '+order[valueKey]});}return items;},[]);
+}
+function applyFilters(showToast){
+  try{
+    const mainSet=new Set(parseBatch(byId('filter-main-orders').value));
+    const subSet=new Set(parseBatch(byId('filter-sub-orders').value));
+    const exact=id=>byId(id).value.trim();
+    const start=exact('filter-start');
+    const end=exact('filter-end');
+    const paymentNo=exact('filter-payment-no');
+    const visible=ORDERS.filter(order=>{
+      const date=order.completedAt.slice(0,10);
+      return (!mainSet.size||mainSet.has(order.mainOrderNo))&&(!subSet.size||subSet.has(order.subOrderNo))&&
+        (!start||date>=start)&&(!end||date<=end)&&
+        (!exact('filter-order-type')||order.orderType===exact('filter-order-type'))&&(!exact('filter-merchant')||order.merchantCode===exact('filter-merchant'))&&
+        (!exact('filter-shop')||order.shopCode===exact('filter-shop'))&&(!exact('filter-buyer-store')||order.buyerStoreCode===exact('filter-buyer-store'))&&
+        (!exact('filter-customer')||order.customerId===exact('filter-customer'))&&(!exact('filter-warehouse')||order.warehouseCode===exact('filter-warehouse'))&&
+        (!exact('filter-pay-type')||order.payType===exact('filter-pay-type'))&&(!paymentNo||order.paymentNo===paymentNo)&&
+        (!exact('filter-precheck')||effectivePrecheck(order,calculateValidation(order))===exact('filter-precheck'))&&(!exact('filter-liability')||order.liability===exact('filter-liability'));
+    });
+    renderRows(visible);
+    if(showToast)toast('已精确筛选出 '+visible.length+' 条模拟订单');
+  }catch(error){toast(error.message);}
+}
+function infoCard(label,value){return '<div class="info"><div class="label">'+escapeHtml(label)+'</div><div class="value">'+value+'</div></div>';}
+function openDetail(subOrderNo){
+  const order=ORDERS.find(item=>item.subOrderNo===subOrderNo);
+  if(!order)return;
+  const validation=calculateValidation(order);
+  const state=effectivePrecheck(order,validation);
+  const headInfo=[
+    ['主订单号','<code>'+escapeHtml(order.mainOrderNo)+'</code>'],['子订单号','<code>'+escapeHtml(order.subOrderNo)+'</code>'],['商家子单号','<code>'+escapeHtml(order.merchantChildOrderNo)+'</code>'],['订单类型',statusHtml(order.orderType,order.orderType==='逆向'?'s-orange':'s-blue')],
+    ['完成时间',escapeHtml(order.completedAt)],['数据预检',statusHtml(state,state==='通过'?'s-green':'s-red')]
+  ];
+  const rows=order.products.map(line=>'<tr><td><code>'+escapeHtml(line.sku)+'</code></td><td>'+escapeHtml(line.productName)+'</td><td>'+entityHtml(line.categoryName,line.categoryCode)+'</td><td>'+escapeHtml(line.unit)+'</td><td class="num">'+line.purchaseQuantity+'</td><td class="num">'+(isMissing(line.actualOutboundQuantity)?'—':line.actualOutboundQuantity)+'</td><td class="num">'+formatMoney(line.unitPrice)+'</td><td class="num">'+formatMoney(line.originalAmount)+'</td><td class="num">'+formatMoney(line.discountAmount)+'</td><td class="num">'+formatMoney(line.platformSubsidy)+'</td><td class="num">'+formatMoney(line.shopSubsidy)+'</td><td class="num">'+formatMoney(line.adjustmentAmount)+'</td><td class="num">'+formatMoney(line.cancelledAmount)+'</td><td class="num"><strong>'+formatMoney(line.productPaidAmount)+'</strong></td><td class="num">'+formatMoney(line.bcrsAmount)+'</td></tr>').join('');
+  const total=validation.computed;
+  const drawerBody=byId('drawer-body');
+  drawerBody.classList.add('product-primary');
+  drawerBody.innerHTML=
+    '<div class="detail-summary">'+headInfo.map(item=>infoCard(item[0],item[1])).join('')+'</div>'+
+    '<section class="detail-main"><div class="detail-main-head"><h3 class="section-title">商品明细行</h3><span class="muted">共 '+order.products.length+' 行</span></div><div class="table-wrap"><table class="detail-table"><thead><tr><th rowspan="2">SKU</th><th rowspan="2">商品名称</th><th rowspan="2">分类</th><th rowspan="2">规格单位</th><th rowspan="2" class="num">购买数量</th><th rowspan="2" class="num">实际出库数量</th><th colspan="9" class="group">金额信息</th></tr><tr><th class="num"><span class="formula-title">单价<button class="formula-help" type="button" data-tooltip="'+UNIT_PRICE_FORMULA+'" aria-label="'+UNIT_PRICE_FORMULA+'">?</button></span></th><th class="num">商品原总价</th><th class="num">优惠金额</th><th class="num">平台补贴</th><th class="num">店铺补贴</th><th class="num">多退少补金额</th><th class="num">已取消金额</th><th class="num"><span class="formula-title">商品实付金额<button class="formula-help" type="button" data-tooltip="'+PRODUCT_PAID_FORMULA+'" aria-label="'+PRODUCT_PAID_FORMULA+'">?</button></span></th><th class="num">BCRS 金额</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="7" class="system-total">系统校验合计（Aegis 计算，不作为业务金额落库）</td><td class="num">'+formatMoney(total.productGrossAmount)+'</td><td class="num">'+formatMoney(total.discountTotal)+'</td><td class="num">'+formatMoney(total.platformSubsidy)+'</td><td class="num">'+formatMoney(total.shopSubsidy)+'</td><td class="num">'+formatMoney(total.adjustmentAmount)+'</td><td class="num">'+formatMoney(total.cancelledAmount)+'</td><td class="num">'+formatMoney(total.productPaidAmount)+'</td><td class="num">'+formatMoney(total.bcrs)+'</td></tr></tfoot></table></div></section>';
+  byId('drawer-mask').classList.add('open');byId('drawer').classList.add('open');byId('drawer').setAttribute('aria-hidden','false');
+}
+function closeDrawer(){byId('drawer-mask').classList.remove('open');byId('drawer').classList.remove('open');byId('drawer').setAttribute('aria-hidden','true');}
+function openRepullPreview(subOrderNo){
+  const order=ORDERS.find(item=>item.subOrderNo===subOrderNo);
+  if(!order)return;
+  if(order.settlementStatus==='已结算'){toast('已结算订单不可重新拉取');return;}
+  const rows=order.repullPreview.length?order.repullPreview.map(item=>'<tr><td>'+escapeHtml(item.field)+'</td><td>'+displayText(item.oldValue)+'</td><td>'+displayText(item.newValue)+'</td></tr>').join(''):'<tr><td colspan="3" class="muted">上游最新快照与当前值无差异</td></tr>';
+  byId('repull-body').innerHTML='<p>仅获取并预览上游最新订单快照；确认后覆盖未结算订单并重新执行预检，不在 Aegis 生成或重算业务金额。</p><table class="diff-table"><thead><tr><th>字段</th><th>当前上游快照</th><th>最新上游快照</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  byId('repull-modal').dataset.order=subOrderNo;byId('repull-modal').classList.add('open');byId('repull-modal').setAttribute('aria-hidden','false');
+}
+function closeRepull(){byId('repull-modal').classList.remove('open');byId('repull-modal').setAttribute('aria-hidden','true');}
+function toast(message){const element=document.createElement('div');element.className='toast';element.textContent=message;byId('toast-wrap').appendChild(element);setTimeout(()=>element.remove(),2400);}
+function showTooltip(target){const tooltip=byId('tooltip');tooltip.textContent=target.dataset.tooltip;tooltip.hidden=false;const rect=target.getBoundingClientRect();const width=tooltip.getBoundingClientRect().width;tooltip.style.left=Math.max(12,Math.min(rect.right-width,window.innerWidth-width-12))+'px';tooltip.style.top=Math.max(12,rect.top-tooltip.offsetHeight-8)+'px';}
+function hideTooltip(){byId('tooltip').hidden=true;}
+function initialize(){
+  fillSelect('filter-merchant',uniqueOptions('merchantCode','merchantName'));fillSelect('filter-shop',uniqueOptions('shopCode','shopName'));fillSelect('filter-buyer-store',uniqueOptions('buyerStoreCode','buyerStoreName'));fillSelect('filter-customer',uniqueOptions('customerId','customerName'));fillSelect('filter-warehouse',uniqueOptions('warehouseCode','warehouseName'));
+  renderRows(ORDERS);
+  byId('query').addEventListener('click',()=>applyFilters(true));
+  byId('reset').addEventListener('click',()=>{byId('filter-form').querySelectorAll('select').forEach(item=>item.value='');byId('filter-form').querySelectorAll('textarea').forEach(item=>item.value='');byId('filter-payment-no').value='';byId('filter-start').value='2026-07-01';byId('filter-end').value='2026-07-31';applyFilters(false);toast('已重置筛选条件');});
+  byId('recheck').addEventListener('click',()=>toast('原型演示：已基于上游原值重新执行预检'));
+  byId('export').addEventListener('click',()=>toast('原型演示：导出当前精确筛选结果，保留双 Sheet 与既有上限'));
+  byId('main-order-tab').addEventListener('click',()=>toast('主订单视图沿用当前实现，本变更不调整'));
+  byId('order-body').addEventListener('click',event=>{const detail=event.target.closest('[data-detail]');const repull=event.target.closest('[data-repull]');if(detail)openDetail(detail.dataset.detail);if(repull&&!repull.disabled)openRepullPreview(repull.dataset.repull);});
+  byId('close-drawer').addEventListener('click',closeDrawer);byId('drawer-mask').addEventListener('click',closeDrawer);
+  byId('close-repull').addEventListener('click',closeRepull);byId('cancel-repull').addEventListener('click',closeRepull);byId('confirm-repull').addEventListener('click',()=>{closeRepull();toast('原型演示：已获取最新上游快照并重新执行预检');});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeDrawer();closeRepull();}});
+  document.addEventListener('pointerover',event=>{const target=event.target.closest('.formula-help');if(target)showTooltip(target);});
+  document.addEventListener('pointerout',event=>{if(event.target.closest('.formula-help'))hideTooltip();});
+  document.addEventListener('focusin',event=>{const target=event.target.closest('.formula-help');if(target)showTooltip(target);});
+  document.addEventListener('focusout',event=>{if(event.target.closest('.formula-help'))hideTooltip();});
+}
+initialize();
+</script>
+</body>
+</html>

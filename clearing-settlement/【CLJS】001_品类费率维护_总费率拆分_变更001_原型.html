@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品类费率维护 · 总费率拆分（三期原型）— 磐石 Aegis</title>
+<style>
+  /* ============================================================
+     磐石 Aegis · 品类费率维护（三期：总费率拆分）
+     设计令牌像素级对齐《磐石Aegis-全站原型.html》
+     ============================================================ */
+  :root{
+    --brand:#3b6cd8; --brand-hover:#5a83e0; --chain-blue:#1677ff;
+    --success:#2c8a5c; --error:#c8312c; --warning:#d97706;
+    --text:#1a1d24; --text-sub:#5b6470; --text-muted:rgba(0,0,0,.45);
+    --bg-layout:#f5f7fa; --bg-container:#fff;
+    --border:#e3e6ea; --border-2:#eef0f3;
+    --filter-bg:#fafbfc; --reverse-row:#fff7ed;
+    --menu-sel-bg:#eef3fd; --menu-sel-fg:#3b6cd8;
+    --grp-order:#e6f4ff; --grp-merchant:#f6ffed; --grp-warehouse:#fffbe6; --grp-fee:#f9f0ff;
+    --s-green-bg:#d1fae5; --s-green-fg:#065f46;
+    --s-blue-bg:#dbeafe;  --s-blue-fg:#1e40af;
+    --s-orange-bg:#ffedd5;--s-orange-fg:#9a3412;
+    --s-red-bg:#fee2e2;   --s-red-fg:#991b1b;
+    --s-gray-bg:#eef0f3;  --s-gray-fg:#4b5563;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",Inter,"Helvetica Neue",Arial,sans-serif;
+    color:var(--text);background:var(--bg-layout);font-size:14px;line-height:1.5715;-webkit-font-smoothing:antialiased;}
+
+  /* Layout */
+  .app{display:flex;min-height:100vh;}
+  .sider{width:220px;background:var(--bg-container);border-right:1px solid var(--border-2);position:fixed;left:0;top:0;bottom:0;height:100vh;overflow-y:auto;z-index:50;}
+  .brand{height:56px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border-2);gap:10px;}
+  .brand .logo{font-size:20px;color:var(--brand);}
+  .brand .name{font-weight:700;font-size:15px;white-space:nowrap;}
+  .main{margin-left:220px;flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{position:sticky;top:0;z-index:40;height:56px;background:var(--bg-container);border-bottom:1px solid var(--border-2);display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+  .topbar .fold{border:none;background:none;font-size:16px;color:var(--text);cursor:pointer;}
+  .topbar .right{display:flex;align-items:center;gap:12px;font-size:13px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;}
+  .tag-role{background:var(--s-blue-bg);color:var(--s-blue-fg);border:1px solid #91caff;border-radius:4px;padding:0 8px;font-size:12px;line-height:20px;}
+  .content{padding:24px;flex:1;background:var(--bg-layout);}
+  .foot{text-align:center;height:48px;line-height:24px;padding:12px 24px;color:var(--text-sub);font-size:12px;background:var(--bg-layout);}
+
+  /* Menu */
+  .menu{margin-top:8px;padding-bottom:24px;}
+  .menu .grp-title{font-size:12px;color:var(--text-sub);padding:8px 24px 4px;}
+  .menu a.mi{display:flex;align-items:center;gap:10px;height:40px;padding:0 24px;color:var(--text);text-decoration:none;font-size:14px;cursor:pointer;border-right:3px solid transparent;}
+  .menu a.mi:hover{background:#f5f7fa;}
+  .menu a.mi.active{background:var(--menu-sel-bg);color:var(--menu-sel-fg);border-right-color:var(--brand);font-weight:500;}
+  .menu a.mi .ic{width:16px;text-align:center;font-size:15px;flex:none;}
+
+  /* PageHeader */
+  .crumb{font-size:12px;color:var(--text-sub);margin-bottom:6px;}
+  .page-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .page-head h1{font-size:19px;font-weight:800;color:var(--text);line-height:1.3;margin:0;}
+  .page-head .subtitle{font-size:12.5px;color:var(--text-sub);}
+  .site-badge{margin-left:auto;display:inline-block;font-size:11.5px;color:#e11d48;background:#fdeef1;border:1px solid #f8c9d5;border-radius:999px;padding:2px 10px;white-space:nowrap;}
+
+  /* Card */
+  .card{background:var(--bg-container);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+  .card-pad{padding:16px;}
+
+  /* FilterBar */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:14px 16px;background:var(--filter-bg);border-bottom:1px solid var(--border-2);}
+  .filter-field{display:flex;flex-direction:column;gap:4px;min-width:150px;}
+  .filter-field label{font-size:11.5px;color:var(--text-sub);}
+  .filter-actions{display:flex;gap:8px;margin-left:auto;align-items:flex-end;}
+
+  /* Controls */
+  .ipt,.sel{height:32px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;padding:4px 11px;font-size:14px;color:var(--text);outline:none;line-height:1.5;}
+  .ipt::placeholder{color:#bfbfbf;}
+  .sel{appearance:none;padding-right:28px;cursor:pointer;color:var(--text);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23999' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center;}
+  .ipt:focus,.sel:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(59,108,216,.1);}
+
+  /* Buttons */
+  .btn{height:32px;padding:4px 15px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid #d9d9d9;background:#fff;color:var(--text);transition:.2s;line-height:1.5;white-space:nowrap;}
+  .btn:hover{color:var(--brand);border-color:var(--brand);}
+  .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .btn-primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);color:#fff;}
+  .btn-link{border:none;background:none;color:var(--brand);padding:0 4px;height:auto;cursor:pointer;font-size:14px;}
+  .btn-link:hover{color:var(--brand-hover);}
+  .btn-sm{height:26px;padding:2px 10px;font-size:13px;}
+
+  /* Table */
+  .tbl-wrap{overflow-x:auto;}
+  table.tbl{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap;}
+  table.tbl th,table.tbl td{padding:12px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
+  table.tbl thead th{background:var(--filter-bg);color:var(--text-sub);font-weight:600;font-size:13px;}
+  table.tbl tbody tr:hover{background:#f0f3f9;}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  th.center,td.center{text-align:center;}
+  /* 分组表头 */
+  th.grp-total{background:#eef3fd;}
+  th.grp-fee{background:var(--grp-fee);}
+  td.col-total{font-weight:700;}
+  td.col-fee{color:var(--text-sub);}
+  .sub-th{font-weight:600;font-size:12.5px;}
+  code.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.06);border-radius:3px;padding:1px 5px;font-size:12.5px;}
+  .muted{color:var(--text-sub);}
+  .plus{color:var(--text-muted);font-weight:400;padding:0 2px;}
+
+  /* Status */
+  .status{display:inline-block;padding:1px 8px;border-radius:3px;font-size:11.5px;font-weight:600;white-space:nowrap;line-height:1.6;}
+  .s-green{background:var(--s-green-bg);color:var(--s-green-fg);}
+  .s-orange{background:var(--s-orange-bg);color:var(--s-orange-fg);}
+  .s-red{background:var(--s-red-bg);color:var(--s-red-fg);}
+  .s-gray{background:var(--s-gray-bg);color:var(--s-gray-fg);}
+
+  /* Pagination */
+  .pagination{display:flex;align-items:center;gap:8px;padding:12px 16px;justify-content:flex-end;}
+  .pagination .total{margin-right:auto;color:var(--text-sub);font-size:14px;}
+  .pg{min-width:32px;height:32px;padding:0 6px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;cursor:pointer;color:var(--text);font-size:14px;}
+  .pg.active{border-color:var(--brand);color:var(--brand);}
+
+  /* Alert */
+  .alert{margin-top:16px;display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.6;}
+  .alert .ic{flex:none;margin-top:2px;}
+  .alert-info{background:#e6f4ff;border:1px solid #91caff;} .alert-info .ic{color:var(--brand);}
+  .alert-warn{background:#fffbe6;border:1px solid #ffe58f;} .alert-warn .ic{color:var(--warning);}
+
+  /* Drawer */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:.3s;z-index:900;}
+  .mask.open{opacity:1;visibility:visible;}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:720px;max-width:96vw;background:#fff;box-shadow:-6px 0 16px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s;z-index:901;display:flex;flex-direction:column;}
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{display:flex;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border-2);}
+  .drawer-head h2{margin:0;font-size:16px;font-weight:600;}
+  .drawer-head .sub{font-size:12px;color:var(--text-sub);margin-left:10px;}
+  .drawer-close{margin-left:auto;border:none;background:none;font-size:18px;color:var(--text-sub);cursor:pointer;line-height:1;}
+  .drawer-body{padding:24px;overflow-y:auto;flex:1;}
+  .drawer-body h3{font-size:15px;font-weight:600;margin:0 0 12px;}
+  .drawer-body h3.sec{margin-top:24px;}
+  table.lines{border-collapse:collapse;width:100%;font-size:13px;}
+  table.lines th,table.lines td{border-bottom:1px solid var(--border-2);padding:8px 10px;text-align:left;white-space:nowrap;}
+  table.lines thead th{background:var(--filter-bg);color:var(--text-sub);font-weight:600;}
+  .empty{padding:48px;text-align:center;color:var(--text-sub);}
+  .chg-badge{display:inline-block;font-size:11px;padding:0 6px;border-radius:3px;margin-right:6px;font-weight:600;}
+  .chg-total{background:#eef3fd;color:var(--brand);}
+  .chg-bank{background:#fff7ed;color:#9a3412;}
+  .chg-logi{background:#f0fdf4;color:#065f46;}
+  .chg-serv{background:#f9f0ff;color:#7c3aed;}
+  .arrow{color:var(--text-muted);}
+  .newval{font-weight:600;color:var(--chain-blue);}
+
+  /* 费率构成小卡（抽屉内） */
+  .fee-compose{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 16px;border:1px solid var(--border-2);border-radius:8px;background:#fafbfc;margin-bottom:16px;}
+  .fee-compose .node{text-align:center;min-width:96px;}
+  .fee-compose .node .lbl{font-size:11.5px;color:var(--text-muted);}
+  .fee-compose .node .val{font-size:15px;font-weight:700;}
+  .fee-compose .node.total .val{color:var(--chain-blue);}
+  .fee-compose .op{font-size:15px;color:var(--text-muted);}
+  .ok{color:var(--success);font-weight:600;}
+
+  .page-view{display:none;} .page-view.active{display:block;}
+
+  /* Toast */
+  #toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+  .toast{background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.12);padding:9px 16px;font-size:14px;display:flex;align-items:center;gap:8px;animation:toastIn .2s ease;}
+  .toast .ti{flex:none;font-size:15px;color:var(--success);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div id="toast-wrap"></div>
+
+<div class="app">
+  <!-- 侧边栏 -->
+  <aside class="sider">
+    <div class="brand"><span class="logo">▨</span><span class="name">磐石 Aegis</span></div>
+    <nav class="menu">
+      <div class="grp-title">清算主数据</div>
+      <a class="mi active"><span class="ic">％</span>品类费率维护</a>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="fold">☰</button>
+      <div class="right">
+        <span class="tag-role">运营</span>
+        <span>宋润芃</span>
+        <span class="avatar">宋</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="page-view active" id="pv-category-rate">
+        <div class="crumb">清算主数据 / 品类费率维护</div>
+        <div class="page-head">
+          <h1>品类费率维护</h1>
+          <span class="subtitle">商户 × 货品分类 抽佣费率，由上游商户中心传输；三期起「总费率」拆为 银行通道费 + 平台物流费 + 平台服务费，保留 4 位小数，变更留日志</span>
+          <span class="site-badge">当前 site：新加坡</span>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar">
+            <div class="filter-field">
+              <label>商户编码</label>
+              <input class="ipt" style="width:220px" placeholder="商户编码/名称，如 M0001 / FoodMax" />
+            </div>
+            <div class="filter-field">
+              <label>货品分类编码</label>
+              <input class="ipt" style="width:220px" placeholder="货品分类编码/名称，如 CAT-MEAT / 肉禽" />
+            </div>
+            <div class="filter-field">
+              <label>状态</label>
+              <select class="sel" style="width:140px">
+                <option>全部</option>
+                <option>生效中</option>
+              </select>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-primary" onclick="toast('已按当前条件查询（原型演示）')">查询</button>
+              <button class="btn" onclick="doExport()">导出</button>
+            </div>
+          </div>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th rowspan="2">商户编码</th>
+                  <th rowspan="2">商户名称</th>
+                  <th rowspan="2">货品分类编码</th>
+                  <th rowspan="2">货品分类名称</th>
+                  <th class="center grp-total" rowspan="2">总费率</th>
+                  <th class="center grp-fee" colspan="3">费率明细（三项之和 = 总费率）</th>
+                  <th rowspan="2">生效日期</th>
+                  <th rowspan="2">状态</th>
+                  <th rowspan="2">操作</th>
+                </tr>
+                <tr>
+                  <th class="center grp-fee sub-th">银行通道费</th>
+                  <th class="center grp-fee sub-th">平台物流费</th>
+                  <th class="center grp-fee sub-th">平台服务费</th>
+                </tr>
+              </thead>
+              <tbody id="rateBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="total">共 <span id="rowCount">9</span> 条</span>
+            <span class="pg active">1</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="foot">© 2026 磐石 Aegis 资金清结算与合规系统 — 品类费率维护（三期·总费率拆分原型）</div>
+  </div>
+</div>
+
+<!-- 变更日志抽屉 -->
+<div class="mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h2 id="drawerTitle">费率变更日志</h2>
+    <span class="sub" id="drawerSub"></span>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<script>
+/* ===================== 数据 ===================== */
+/* 每行：总费率 = 银行通道费 + 平台物流费 + 平台服务费（单位 %，4 位小数） */
+const RATES = [
+  {mc:'M0001', mn:'FoodMax 水产旗舰', cc:'CAT-SEAFOOD', cn:'水产',   bank:0.6000, logi:2.4000, serv:3.5000, eff:'2026-07-01'},
+  {mc:'M0001', mn:'FoodMax 水产旗舰', cc:'CAT-FRUIT',   cn:'水果',   bank:0.5000, logi:1.5000, serv:3.0000, eff:'2026-07-01'},
+  {mc:'M0002', mn:'鲜农汇供应',       cc:'CAT-MEAT',    cn:'肉禽蛋', bank:0.7000, logi:2.5000, serv:4.0000, eff:'2026-06-15'},
+  {mc:'M0002', mn:'鲜农汇供应',       cc:'CAT-VEG',     cn:'蔬菜',   bank:0.5000, logi:1.0000, serv:3.0000, eff:'2026-06-15'},
+  {mc:'M0003', mn:'南洋标品仓',       cc:'CAT-STAPLE',  cn:'标品',   bank:0.4000, logi:0.9000, serv:2.5000, eff:'2026-07-10'},
+  {mc:'M0003', mn:'南洋标品仓',       cc:'CAT-SEAFOOD', cn:'水产',   bank:0.6000, logi:2.4000, serv:3.5000, eff:'2026-07-10'},
+  {mc:'M0004', mn:'狮城生鲜集散',     cc:'CAT-FRUIT',   cn:'水果',   bank:0.5000, logi:1.7500, serv:3.0000, eff:'2026-07-18'},
+  {mc:'M0004', mn:'狮城生鲜集散',     cc:'CAT-MEAT',    cn:'肉禽蛋', bank:0.7000, logi:2.3000, serv:4.0000, eff:'2026-07-18'},
+  {mc:'M0004', mn:'狮城生鲜集散',     cc:'CAT-VEG',     cn:'蔬菜',   bank:0.5000, logi:1.3000, serv:3.0000, eff:'2026-07-18'},
+];
+
+/* 变更日志（按 商户+分类 归集；含任一明细项/总费率的历史变动，倒序）
+   自洽约定：每组最后一条为「初始」，最上一条的 total_to = 该行当前总费率 */
+const CHANGE_LOG = {
+  // 当前 0.60/2.40/3.50 → 6.5000%
+  'M0001|CAT-SEAFOOD':[
+    {t:'2026-07-01 09:00:00', field:'平台物流费', from:'2.2000%', to:'2.4000%', total_from:'6.3000%', total_to:'6.5000%', src:'上游商户中心'},
+    {t:'2026-05-08 10:15:00', field:'初始',       from:'—',       to:'6.3000%（银行 0.6000 + 物流 2.2000 + 服务 3.5000）', total_from:'—', total_to:'6.3000%', src:'上游商户中心'},
+  ],
+  // 当前 0.50/1.50/3.00 → 5.0000%
+  'M0001|CAT-FRUIT':[
+    {t:'2026-07-01 09:00:00', field:'初始', from:'—', to:'5.0000%（银行 0.5000 + 物流 1.5000 + 服务 3.0000）', total_from:'—', total_to:'5.0000%', src:'上游商户中心'},
+  ],
+  // 当前 0.70/2.50/4.00 → 7.2000%
+  'M0002|CAT-MEAT':[
+    {t:'2026-06-15 09:40:07', field:'平台服务费', from:'3.8000%', to:'4.0000%', total_from:'7.0000%', total_to:'7.2000%', src:'上游商户中心'},
+    {t:'2026-05-01 10:00:00', field:'初始',       from:'—',       to:'7.0000%（银行 0.7000 + 物流 2.5000 + 服务 3.8000）', total_from:'—', total_to:'7.0000%', src:'上游商户中心'},
+  ],
+  // 当前 0.50/1.00/3.00 → 4.5000%
+  'M0002|CAT-VEG':[
+    {t:'2026-06-15 09:40:07', field:'银行通道费', from:'0.4000%', to:'0.5000%', total_from:'4.4000%', total_to:'4.5000%', src:'上游商户中心'},
+    {t:'2026-04-20 09:00:00', field:'初始',       from:'—',       to:'4.4000%（银行 0.4000 + 物流 1.0000 + 服务 3.0000）', total_from:'—', total_to:'4.4000%', src:'上游商户中心'},
+  ],
+  // 当前 0.40/0.90/2.50 → 3.8000%
+  'M0003|CAT-STAPLE':[
+    {t:'2026-07-10 11:20:30', field:'平台服务费', from:'2.6000%', to:'2.5000%', total_from:'3.9000%', total_to:'3.8000%', src:'上游商户中心'},
+    {t:'2026-06-01 09:00:00', field:'平台物流费', from:'1.0000%', to:'0.9000%', total_from:'4.0000%', total_to:'3.9000%', src:'上游商户中心'},
+    {t:'2026-04-15 09:00:00', field:'初始',       from:'—',       to:'4.0000%（银行 0.4000 + 物流 1.0000 + 服务 2.6000）', total_from:'—', total_to:'4.0000%', src:'上游商户中心'},
+  ],
+  // 当前 0.60/2.40/3.50 → 6.5000%
+  'M0003|CAT-SEAFOOD':[
+    {t:'2026-07-10 11:20:30', field:'初始', from:'—', to:'6.5000%（银行 0.6000 + 物流 2.4000 + 服务 3.5000）', total_from:'—', total_to:'6.5000%', src:'上游商户中心'},
+  ],
+  // 当前 0.50/1.75/3.00 → 5.2500%
+  'M0004|CAT-FRUIT':[
+    {t:'2026-07-18 14:05:20', field:'平台物流费', from:'1.5000%', to:'1.7500%', total_from:'5.0000%', total_to:'5.2500%', src:'上游商户中心'},
+    {t:'2026-05-30 09:00:00', field:'初始',       from:'—',       to:'5.0000%（银行 0.5000 + 物流 1.5000 + 服务 3.0000）', total_from:'—', total_to:'5.0000%', src:'上游商户中心'},
+  ],
+  // 当前 0.70/2.30/4.00 → 7.0000%
+  'M0004|CAT-MEAT':[
+    {t:'2026-07-18 14:05:20', field:'平台物流费', from:'2.5000%', to:'2.3000%', total_from:'7.2000%', total_to:'7.0000%', src:'上游商户中心'},
+    {t:'2026-06-20 08:30:00', field:'银行通道费', from:'0.6000%', to:'0.7000%', total_from:'7.1000%', total_to:'7.2000%', src:'上游商户中心'},
+    {t:'2026-05-10 09:00:00', field:'初始',       from:'—',       to:'7.1000%（银行 0.6000 + 物流 2.5000 + 服务 4.0000）', total_from:'—', total_to:'7.1000%', src:'上游商户中心'},
+  ],
+  // 当前 0.50/1.30/3.00 → 4.8000%
+  'M0004|CAT-VEG':[
+    {t:'2026-07-18 14:05:20', field:'平台服务费', from:'2.8000%', to:'3.0000%', total_from:'4.6000%', total_to:'4.8000%', src:'上游商户中心'},
+    {t:'2026-05-12 09:00:00', field:'初始',       from:'—',       to:'4.6000%（银行 0.5000 + 物流 1.3000 + 服务 2.8000）', total_from:'—', total_to:'4.6000%', src:'上游商户中心'},
+  ],
+};
+
+/* ===================== 渲染 ===================== */
+function pct(v){return v.toFixed(4)+'%';}
+function total(r){return r.bank + r.logi + r.serv;}
+
+function renderTable(){
+  const body = document.getElementById('rateBody');
+  body.innerHTML = RATES.map(r=>{
+    const key = r.mc+'|'+r.cc;
+    const has = CHANGE_LOG[key] && CHANGE_LOG[key].length;
+    return `<tr>
+      <td><code class="mono">${r.mc}</code></td>
+      <td>${r.mn}</td>
+      <td>${r.cc}</td>
+      <td>${r.cn}</td>
+      <td class="num col-total">${pct(total(r))}</td>
+      <td class="num col-fee">${pct(r.bank)}</td>
+      <td class="num col-fee">${pct(r.logi)}</td>
+      <td class="num col-fee">${pct(r.serv)}</td>
+      <td>${r.eff}</td>
+      <td><span class="status s-green">生效中</span></td>
+      <td><button class="btn-link btn-sm" onclick="openChangeLog('${r.mc}','${r.cc}')">变更日志</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rowCount').textContent = RATES.length;
+}
+
+/* ===================== 变更日志抽屉 ===================== */
+function openChangeLog(mc, cc){
+  const key = mc+'|'+cc;
+  const row = RATES.find(r=>r.mc===mc && r.cc===cc);
+  const logs = CHANGE_LOG[key] || [];
+  document.getElementById('drawerTitle').textContent = '费率变更日志';
+  document.getElementById('drawerSub').textContent = `${mc} · ${cc}${row ? (' · ' + row.cn) : ''}`;
+
+  const compose = row ? `
+    <div class="fee-compose">
+      <div class="node total"><div class="lbl">总费率</div><div class="val">${pct(total(row))}</div></div>
+      <span class="op">=</span>
+      <div class="node"><div class="lbl">银行通道费</div><div class="val">${pct(row.bank)}</div></div>
+      <span class="op">+</span>
+      <div class="node"><div class="lbl">平台物流费</div><div class="val">${pct(row.logi)}</div></div>
+      <span class="op">+</span>
+      <div class="node"><div class="lbl">平台服务费</div><div class="val">${pct(row.serv)}</div></div>
+      <span class="ok" style="margin-left:8px">✓ 三项之和 = 总费率</span>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-8px 0 16px">抽佣按上述三项分别计算（各保留 2 位小数）再加总，三项均归平台抽佣。</div>` : '';
+
+  const badge = (f)=>{
+    if(f==='总费率') return '<span class="chg-badge chg-total">总费率</span>';
+    if(f==='银行通道费') return '<span class="chg-badge chg-bank">银行通道费</span>';
+    if(f==='平台物流费') return '<span class="chg-badge chg-logi">平台物流费</span>';
+    if(f==='平台服务费') return '<span class="chg-badge chg-serv">平台服务费</span>';
+    return '<span class="chg-badge chg-total">'+f+'</span>';
+  };
+
+  const table = logs.length ? `
+    <h3 class="sec">变更记录 <span class="muted" style="font-weight:400;font-size:12px">（倒序，含任一明细项变动 → 总费率联动）</span></h3>
+    <table class="lines">
+      <thead><tr><th>变更时间</th><th>变更项</th><th>该项：原 → 新</th><th>总费率：原 → 新</th><th>来源</th></tr></thead>
+      <tbody>
+        ${logs.map(l=>`<tr>
+          <td>${l.t}</td>
+          <td>${badge(l.field)}</td>
+          <td>${l.from} <span class="arrow">→</span> <span class="newval">${l.to}</span></td>
+          <td>${l.total_from} <span class="arrow">→</span> <span class="newval">${l.total_to}</span></td>
+          <td>${l.src}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<div class="empty">暂无变更记录</div>';
+
+  document.getElementById('drawerBody').innerHTML = compose + table;
+  document.getElementById('mask').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer(){
+  document.getElementById('mask').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+/* ===================== 导出 Excel（.xls，Excel 原生可开，补齐 4 列） ===================== */
+function doExport(){
+  // 费率列表头带（%）标识，单元格内只放纯数字（4 位小数、不带 % 号），
+  //   避免 Excel 把带 % 文本当百分比重新格式化而吃掉尾零；% 含义靠表头说明。
+  const header = ['商户编码','商户名称','货品分类编码','货品分类名称','总费率（%）','银行通道费（%）','平台物流费（%）','平台服务费（%）','生效日期','状态'];
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const th = header.map(h=>`<th style="background:#3b6cd8;color:#fff;border:1px solid #ccc;padding:6px 10px;font-weight:600">${esc(h)}</th>`).join('');
+  const p4 = v => v.toFixed(4);          // 费率保留 4 位小数纯数字（与页面显示位数一致）
+  const trs = RATES.map(r=>{
+    const cells = [r.mc, r.mn, r.cc, r.cn, p4(total(r)), p4(r.bank), p4(r.logi), p4(r.serv), r.eff, '生效中'];
+    return '<tr>'+cells.map((c,i)=>{
+      const isRate = (i>=4 && i<=7);
+      const align = isRate ? 'right' : 'left';
+      // 费率→数字格式强制 4 位小数(0.0000)；其余→文本(@)
+      const fmt = isRate ? `0.0000` : `\\@`;
+      return `<td style="border:1px solid #ccc;padding:5px 10px;text-align:${align};mso-number-format:'${fmt}'">${esc(c)}</td>`;
+    }).join('')+'</tr>';
+  }).join('');
+  // Excel 识别的 HTML 工作簿（含 XML 头，指定 sheet 名）
+  const table = `<table border="1">
+    <thead><tr>${th}</tr></thead>
+    <tbody>${trs}</tbody>
+  </table>`;
+  const html =
+    `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8">
+    <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
+      <x:Name>品类费率维护</x:Name>
+      <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
+    </x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+    <style>td,th{font-family:'Microsoft YaHei',sans-serif;font-size:11pt}</style>
+    </head><body>${table}</body></html>`;
+  const blob = new Blob(['﻿'+html], {type:'application/vnd.ms-excel;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '品类费率维护_总费率拆分.xls';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('已导出 Excel（含总费率 + 3 项明细，4 位小数）');
+}
+
+/* ===================== Toast ===================== */
+function toast(msg){
+  const w = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span class="ti">✓</span><span>${msg}</span>`;
+  w.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='.3s'; setTimeout(()=>el.remove(),300); }, 2200);
+}
+
+renderTable();
+</script>
+</body>
+</html>

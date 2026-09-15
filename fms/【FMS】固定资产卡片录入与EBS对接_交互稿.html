@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资产数据对接 · FMS 原型</title>
+<style>
+  :root{
+    --primary:#409eff;--primary-light:#ecf5ff;--success:#67c23a;--warning:#e6a23c;
+    --danger:#f56c6c;--info:#909399;--border:#dcdfe6;--border-light:#e4e7ed;
+    --text:#303133;--text-reg:#606266;--text-sec:#909399;--bg:#f0f2f5;
+    --fill:#2563eb;--dict:#7c3aed;--md:#0891b2;--calc:#ea7600;--const:#6b7280;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  .layout{display:flex;min-height:100vh}
+  .aside{width:208px;background:#2f3a4b;flex:none;display:flex;flex-direction:column}
+  .aside .logo{height:56px;display:flex;align-items:center;gap:9px;padding:0 18px;color:#fff;font-weight:700;font-size:15px;border-bottom:1px solid rgba(255,255,255,.08);flex:none}
+  .aside .logo .sq{width:22px;height:22px;border-radius:5px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+  .aside .menu{padding:10px 0}
+  .aside .mi{padding:12px 20px;font-size:14px;color:#c3cad6;cursor:pointer;display:flex;align-items:center;gap:9px;border-left:3px solid transparent}
+  .aside .mi:hover{background:rgba(255,255,255,.06);color:#fff}
+  .aside .mi.on{color:#fff;background:rgba(64,158,255,.16);border-left-color:var(--primary);font-weight:600}
+  .content{flex:1;display:flex;flex-direction:column;min-width:0;background:#f2f3f5}
+  .topbar{height:56px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--border-lighter,#ebeef5);flex:none}
+  .crumb{font-size:15px;color:var(--text-sec)}.crumb b{color:var(--text);font-weight:600}
+  .user{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-reg)}
+  .user .avatar{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .main{flex:1;padding:16px;overflow:auto}
+  .page{display:none}.page.active{display:block}
+  .vtabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border-light)}
+  .vtab{padding:9px 20px;font-size:14px;color:var(--text-reg);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .vtab:hover{color:var(--primary)}
+  .vtab.on{color:var(--primary);font-weight:600;border-bottom-color:var(--primary)}
+  .card{background:#fff;border-radius:4px;padding:16px 16px 0;box-shadow:0 1px 4px rgba(0,21,41,.04);margin-bottom:14px}
+  .ptitle{font-size:16px;font-weight:600;margin-bottom:14px}
+  .search{display:flex;flex-wrap:wrap;gap:14px 18px}
+  .field{display:flex;align-items:center}.field label{color:var(--text-reg);font-size:13px;width:88px;text-align:right;margin-right:8px;flex:none}
+  .ipt,.sel{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 11px;width:100%;color:var(--text);font-size:13px;background:#fff;outline:none}
+  .ipt:focus,.sel:focus{border-color:var(--primary)}
+  .sel{appearance:none;cursor:pointer;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c0c4cc' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 10px center}
+  .search .ipt,.search .sel{width:180px}
+  .search .multi{align-items:flex-start}.search .multi label{padding-top:8px}
+  .ta{height:auto;min-height:58px;padding:7px 11px;resize:vertical;line-height:1.4;font-family:inherit}.search .multi .ta{width:220px}
+  .sum-row td{background:#fafcff;border-top:2px solid #e4e7ed;padding:9px 12px}
+  .search-actions{display:flex;align-items:center;gap:10px;padding-bottom:16px;margin-left:auto}
+  .btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text-reg);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.2s;white-space:nowrap}
+  .btn:hover{color:var(--primary);border-color:#c6e2ff;background:var(--primary-light)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.primary:hover{background:#66b1ff;color:#fff}
+  .btn.success{background:var(--success);border-color:var(--success);color:#fff}.btn.success:hover{opacity:.88}
+  .btn.text{border:none;background:none;color:var(--primary);padding:0 5px;height:auto;font-size:12px}.btn.text.danger{color:var(--danger)}.btn.text.muted{color:var(--text-sec);cursor:not-allowed}
+  .btn.sm{height:28px;padding:0 10px;font-size:12px}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .stat{display:flex;gap:22px;font-size:13px;color:var(--text-reg)}.stat .v{color:var(--primary);font-weight:600;margin-left:4px}.stat .v.dang{color:var(--danger)}
+  .toolbar-right{display:flex;gap:10px}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border-light);border-radius:4px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  thead th{background:#fafafa;color:var(--text);font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border-light);white-space:nowrap}
+  tbody td{padding:8px 12px;border-bottom:1px solid var(--border-light);color:var(--text-reg);white-space:nowrap}
+  tbody tr:hover{background:#f5f7fa}tbody tr.err{background:#fef0f0}
+  .tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:12px;line-height:20px;border:1px solid}
+  .tag.info{color:var(--info);background:#f4f4f5;border-color:#e9e9eb}.tag.blue{color:var(--primary);background:var(--primary-light);border-color:#d9ecff}
+  .tag.green{color:var(--success);background:#f0f9eb;border-color:#e1f3d8}.tag.orange{color:var(--warning);background:#fdf6ec;border-color:#faecd8}.tag.red{color:var(--danger);background:#fef0f0;border-color:#fde2e2}
+  .mono{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px}
+  .pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 4px;color:var(--text-reg);font-size:13px}
+  .pager .pg{min-width:30px;height:30px;border-radius:4px;border:1px solid var(--border);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0 6px}.pager .pg.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .opcol{position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.12)}
+  thead .opcol{background:#fafafa}
+  /* 弹窗 */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:50}.mask.show{display:block}
+  .dialog{position:absolute;top:4vh;left:50%;transform:translateX(-50%);background:#fff;border-radius:6px;width:940px;max-width:94vw;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+  .dlg-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border-light)}
+  .dlg-hd h3{font-size:16px;font-weight:600}.dlg-hd .x{cursor:pointer;color:var(--text-sec);font-size:22px;border:none;background:none;line-height:1}
+  .dlg-bd{padding:16px 20px;max-height:80vh;overflow:auto}
+  .dlg-ft{padding:12px 20px;border-top:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center}
+  .copy-tip{background:#fdf6ec;border:1px solid #faecd8;color:#b88230;border-radius:4px;padding:8px 12px;font-size:12px;margin-bottom:14px;display:none;align-items:center;gap:8px}.copy-tip.show{display:flex}
+  .seg{margin-bottom:18px}
+  .seg-title{font-size:14px;font-weight:600;color:var(--text);padding-left:9px;border-left:3px solid var(--primary);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+  .seg-title small{font-weight:400;color:var(--text-sec);font-size:12px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px 18px}
+  .fitem{display:flex;flex-direction:column;gap:5px}.fitem label{font-size:13px;color:var(--text-reg)}.fitem label .req{color:var(--danger);margin-right:3px}
+  .src-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:5px;vertical-align:middle}
+  .readonly{background:#f5f7fa;color:var(--text-sec);border-style:dashed}
+  .seg.auto{background:#fafcff;border:1px dashed #d9ecff;border-radius:6px;padding:14px}
+  .code-area{display:flex;gap:14px;align-items:flex-start}
+  .code-area textarea{flex:1;min-height:70px;border:1px solid var(--border);border-radius:4px;padding:8px 11px;font-size:13px;font-family:"SF Mono",Menlo,monospace;outline:none;resize:vertical}
+  .code-area textarea:focus{border-color:var(--primary)}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .ass-card{border:1px solid var(--border-light);border-radius:8px;padding:12px 14px;background:#fbfdff}
+  .ass-card.err{border-color:#fbc4c4;background:#fef6f6}
+  .ac-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .ac-top .no{font-size:11px;color:#fff;background:var(--primary);border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .ac-top input{flex:1;height:30px;border:1px solid var(--border);border-radius:4px;padding:0 9px;font-family:"SF Mono",Menlo,monospace;font-size:13px;font-weight:600;color:#0b6b5e;outline:none}
+  .ac-top .del{border:none;background:none;color:var(--danger);cursor:pointer;font-size:15px;flex:none}
+  .ac-sum{font-size:12px;color:var(--text-sec);line-height:1.7}.ac-sum b{color:var(--text-reg);font-weight:500}
+  .ac-badge{display:inline-block;font-size:11px;padding:0 7px;border-radius:10px;line-height:18px;margin-top:8px}
+  .ac-badge.ok{color:var(--primary);background:var(--primary-light)}.ac-badge.err{color:var(--danger);background:#fef0f0}
+  .ac-override{font-size:12px;color:var(--primary);cursor:pointer;margin-top:8px;display:inline-block}
+  .auto-note{margin-top:6px;background:#fff8f0;border:1px dashed #fadcb8;border-radius:6px;padding:12px 14px;font-size:13px;color:var(--text-reg)}.auto-note b{color:var(--calc)}
+  .kv{display:flex;flex-direction:column;gap:2px}.kv span{color:var(--text-sec);font-size:12px}.kv b{color:var(--text);font-weight:500;font-size:13px}
+  .diff-after{color:#67c23a;font-weight:600}.snap-box{background:#fafcff;border:1px solid #eef2f7;border-radius:6px;padding:14px;margin-bottom:16px}
+  .c2{display:flex;flex-direction:column;line-height:1.25}.c2 b{font-weight:500;color:var(--text-reg)}.c2 span{font-size:11px;color:var(--text-sec);font-family:"SF Mono",Menlo,monospace}
+  .op-line{font-size:13.5px;color:var(--text-reg);margin-bottom:14px;line-height:1.9;background:#fffdf5;border:1px dashed #f0d9a8;border-radius:6px;padding:11px 14px}.op-line b{color:var(--text)}.who{color:var(--primary)}
+  .op-head{display:grid;grid-template-columns:repeat(3,1fr);gap:13px 18px;background:#f4f9ff;border:1px solid #d9ecff;border-radius:8px;padding:14px 16px;margin-bottom:14px}
+  .op-head .oi{display:flex;flex-direction:column;gap:3px}.op-head .oi span{font-size:12px;color:var(--text-sec)}.op-head .oi b{font-size:14px;color:var(--text);font-weight:500}
+  .pd-reason{font-size:13px;color:var(--danger);background:#fef0f0;border:1px solid #fde2e2;border-radius:6px;padding:9px 14px;margin-bottom:14px}
+  /* 对应关系页 */
+  .src-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--text-reg);margin:2px 0 14px}.src-legend span{display:inline-flex;align-items:center;gap:6px}
+  .rel-table{width:100%;font-size:12.5px;margin-bottom:18px;border-collapse:collapse}
+  .rel-table th{background:#fafafa;padding:8px 10px;text-align:left;border:1px solid var(--border-light);font-weight:600}
+  .rel-table td{padding:7px 10px;border:1px solid var(--border-light);color:var(--text-reg);vertical-align:top}
+  .rel-table .k{font-family:"SF Mono",Menlo,monospace;font-size:11.5px;color:#0b6b5e}
+  .rel-sec{font-size:14px;font-weight:600;margin:6px 0 10px;padding-left:9px;border-left:3px solid var(--primary)}
+  .pill{display:inline-block;padding:0 7px;border-radius:10px;font-size:11px;color:#fff;line-height:18px}
+  .pill.fill{background:var(--fill)}.pill.dict{background:var(--dict)}.pill.md{background:var(--md)}.pill.calc{background:var(--calc)}.pill.const{background:var(--const)}
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="aside">
+      <div class="logo"><span class="sq">▣</span> FMS 财务管理</div>
+      <div class="menu">
+        <div class="mi on" id="mi1" onclick="goPage(1)">📋 固定资产台账</div>
+        <div class="mi" id="mi2" onclick="goPage(2)">↗ 资产推送对接</div>
+        <div class="mi" id="mi3" onclick="goPage(3)">📑 字段对应关系</div>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <div class="crumb">综合费用 / <b id="crumbCur">固定资产台账</b></div>
+        <div class="user">宋润芃 <span class="avatar">芃</span></div>
+      </header>
+
+      <div class="main">
+      <!-- ===== 页面1：资产数据对接 ===== -->
+      <div class="page active" id="page1">
+        <div id="assetView">
+        <div class="card">
+          <div class="search">
+            <div class="field"><label>启用日期</label><input class="ipt" placeholder="开始 ~ 结束" value="2026-05-01 ~ 05-31"></div>
+            <div class="field"><label>最近变更日期</label><input class="ipt" placeholder="开始 ~ 结束"></div>
+            <div class="field"><label>法人公司</label><select class="sel"><option>全部</option><option>2030 上海叮咚</option></select></div>
+            <div class="field"><label>资产大类</label><select class="sel"><option>全部</option><option>固定资产</option><option>长期待摊费用</option><option>无形资产</option></select></div>
+            <div class="field"><label>资产小类</label><select class="sel"><option>全部</option><option>电子设备</option><option>运输设备</option><option>办公设备</option><option>低值易耗品</option></select></div>
+            <div class="field"><label>资产状态</label><select class="sel"><option>全部</option><option>在用/在摊</option><option>闲置</option><option>已报废</option></select></div>
+            <div class="field"><label>资产来源</label><select class="sel"><option>全部</option><option>自购</option><option>租入</option><option>调拨</option></select></div>
+            <div class="field"><label>使用部门</label><input class="ipt" placeholder="请输入"></div>
+            <div class="field"><label>FMS部门名称</label><input class="ipt" placeholder="请输入"></div>
+            <div class="field"><label>仓库名称</label><input class="ipt" placeholder="请输入"></div>
+            <div class="field"><label>资产描述</label><input class="ipt" placeholder="请输入"></div>
+            <div class="field multi"><label>资产编码</label><textarea class="ipt ta" placeholder="多个编码精准查询，每行一个"></textarea></div>
+            <div class="field multi"><label>EBS资产编码</label><textarea class="ipt ta" placeholder="多个编码精准查询，每行一个"></textarea></div>
+            <div class="search-actions"><button class="btn primary">🔍 查询</button><button class="btn">重置</button></div>
+          </div>
+        </div>
+
+        <div class="card" style="padding-bottom:8px">
+          <div class="toolbar">
+            <div style="display:flex;align-items:baseline;gap:16px">
+              <div class="ptitle" style="margin:0">固定资产台账</div>
+              <span style="font-size:13px;color:var(--text-reg)">本页金额合计 <b style="color:var(--primary);font-size:15px">¥4,697.85</b></span>
+            </div>
+            <div class="toolbar-right">
+              <button class="btn success" onclick="openNew()">＋ 新建（新增资产）</button>
+              <button class="btn" onclick="openChange()">✎ 变更（变更/转移/报废）</button>
+              <button class="btn" onclick="openCopy()">⧉ 复制选中</button>
+              <button class="btn">⬇ 导出</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table style="min-width:2300px">
+              <thead><tr>
+                <th><input type="checkbox"></th>
+                <th>EBS资产编码</th>
+                <th>资产编码</th><th>资产描述</th><th>资产大类</th><th>资产小类</th><th>法人公司</th>
+                <th>资产账簿</th><th>启用日期</th><th>数量</th><th>单位</th><th>金额</th>
+                <th>费用账户</th><th>使用部门</th><th>FMS部门</th><th>仓库</th><th>地点描述</th>
+                <th>资产来源</th><th>资产状态</th><th>折旧年限(月)</th><th>残值率</th><th>父资产</th>
+                <th>制造商/供应商</th><th>序列号</th><th>型号</th>
+                <th class="opcol">操作</th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td><input type="checkbox"></td>
+                  <td class="mono">FA00012901</td>
+                  <td class="mono">KEXP202605001</td><td>华为MateViewSE显示器</td>
+                  <td><div class="c2"><b>低值易耗品</b><span>40</span></div></td>
+                  <td><div class="c2"><b>电子设备</b><span>4011</span></div></td>
+                  <td><div class="c2"><b>2030 上海叮咚</b><span>2030</span></div></td>
+                  <td>DDMC_FA_2030</td><td>2026-05-10</td><td>1</td><td>个</td><td>700.00</td>
+                  <td class="mono">2030.…6602…0.31010001…</td>
+                  <td><div class="c2"><b>效能中心-行政部</b><span>D0012</span></div></td>
+                  <td><div class="c2"><b>行政部</b><span>1023</span></div></td>
+                  <td><div class="c2"><b>上海仓</b><span>SH01</span></div></td>
+                  <td>上海市</td>
+                  <td>自购</td><td>在用/在摊</td><td>36</td><td>5%</td><td>—</td>
+                  <td><div class="c2"><b>上海圆迈贸易</b><span>V200318</span></div></td><td>—</td><td>—</td>
+                  <td class="opcol"><button class="btn text" onclick="openM('detailDlg')">明细</button></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox"></td>
+                  <td class="mono">FA00012938</td>
+                  <td class="mono">KEXP202605002</td><td>华为MateViewSE显示器</td>
+                  <td><div class="c2"><b>低值易耗品</b><span>40</span></div></td>
+                  <td><div class="c2"><b>电子设备</b><span>4011</span></div></td>
+                  <td><div class="c2"><b>2030 上海叮咚</b><span>2030</span></div></td>
+                  <td>DDMC_FA_2030</td><td>2026-05-10</td><td>1</td><td>个</td><td>595.00</td>
+                  <td class="mono">2030.…6602…0.31010001…</td>
+                  <td><div class="c2"><b>效能中心-行政部</b><span>D0012</span></div></td>
+                  <td><div class="c2"><b>行政部</b><span>1023</span></div></td>
+                  <td><div class="c2"><b>上海仓</b><span>SH01</span></div></td>
+                  <td>上海市</td>
+                  <td>自购</td><td>已报废</td><td>36</td><td>5%</td><td>—</td>
+                  <td><div class="c2"><b>上海圆迈贸易</b><span>V200318</span></div></td><td>—</td><td>—</td>
+                  <td class="opcol"><button class="btn text" onclick="openM('detailDlg')">明细</button></td>
+                </tr>
+                <tr>
+                  <td><input type="checkbox"></td>
+                  <td>—</td>
+                  <td class="mono">KEXP202605006</td><td>树莓派5开发板</td>
+                  <td><div class="c2"><b>低值易耗品</b><span>40</span></div></td>
+                  <td><div class="c2"><b>电子设备</b><span>4011</span></div></td>
+                  <td><div class="c2"><b>2030 上海叮咚</b><span>2030</span></div></td>
+                  <td>DDMC_FA_2030</td><td>2026-05-31</td><td>1</td><td>个</td><td>2,522.85</td>
+                  <td class="mono">2030.…6602…0.31010001…</td>
+                  <td><div class="c2"><b>效能中心-行政部</b><span>D0012</span></div></td>
+                  <td><div class="c2"><b>行政部</b><span>1023</span></div></td>
+                  <td><div class="c2"><b>上海仓</b><span>SH01</span></div></td>
+                  <td>上海市</td>
+                  <td>自购</td><td>在用/在摊</td><td>36</td><td>5%</td><td>—</td>
+                  <td><div class="c2"><b>深圳亚博智能</b><span>V200455</span></div></td><td>—</td><td>—</td>
+                  <td class="opcol"><button class="btn text" onclick="openM('detailDlg')">明细</button></td>
+                </tr>
+                <tr class="err">
+                  <td><input type="checkbox"></td>
+                  <td>—</td>
+                  <td class="mono">KEXP202605007</td><td>传感器套件</td>
+                  <td><div class="c2"><b>低值易耗品</b><span>40</span></div></td>
+                  <td><div class="c2"><b>电子设备</b><span>4011</span></div></td>
+                  <td><div class="c2"><b>2030 上海叮咚</b><span>2030</span></div></td>
+                  <td>DDMC_FA_2030</td><td>2026-05-31</td><td>1</td><td>个</td><td>880.00</td>
+                  <td style="color:var(--danger)">该仓库无核算编码</td>
+                  <td><div class="c2"><b>效能中心-行政部</b><span>D0012</span></div></td>
+                  <td><div class="c2"><b>行政部</b><span>1023</span></div></td>
+                  <td><div class="c2"><b>未知仓</b><span style="color:var(--danger)">无编码</span></div></td>
+                  <td>上海市</td>
+                  <td>自购</td><td>在用/在摊</td><td>36</td><td>5%</td><td>—</td>
+                  <td><div class="c2"><b>深圳亚博智能</b><span>V200455</span></div></td><td>—</td><td>—</td>
+                  <td class="opcol"><button class="btn text" onclick="openM('detailDlg')">明细</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pager"><span>共 7 条</span><span class="pg">‹</span><span class="pg active">1</span><span class="pg">›</span>
+            <select class="sel" style="width:110px;height:30px"><option>20 条/页</option></select></div>
+        </div>
+        </div><!-- /assetView -->
+      </div><!-- /page1 台账 -->
+
+      <!-- ===== 资产推送对接（独立菜单·单据流水） ===== -->
+      <div class="page" id="pushPage">
+          <div class="card">
+            <div class="search">
+              <div class="field"><label>变更时间</label><input class="ipt" placeholder="开始 ~ 结束"></div>
+              <div class="field"><label>操作时间</label><input class="ipt" placeholder="开始 ~ 结束"></div>
+              <div class="field"><label>推送状态</label><select class="sel"><option>全部</option><option>待推送</option><option>推送成功</option><option>推送失败</option><option>数据异常</option></select></div>
+              <div class="field"><label>动作</label><select class="sel"><option>全部</option><option>领用</option><option>变更</option><option>转移</option><option>报废</option></select></div>
+              <div class="field"><label>EBS单据类型</label><select class="sel"><option>全部</option><option>新增</option><option>调整</option><option>报废</option><option>转移</option></select></div>
+              <div class="field"><label>法人公司</label><select class="sel"><option>全部</option><option>2030 上海叮咚</option></select></div>
+              <div class="field"><label>操作人</label><input class="ipt" placeholder="请输入"></div>
+              <div class="field"><label>资产描述</label><input class="ipt" placeholder="请输入"></div>
+              <div class="field multi"><label>资产编码</label><textarea class="ipt ta" placeholder="多个编码精准查询，每行一个"></textarea></div>
+              <div class="field multi"><label>EBS资产编码</label><textarea class="ipt ta" placeholder="多个编码精准查询，每行一个"></textarea></div>
+              <div class="search-actions"><button class="btn primary">🔍 查询</button><button class="btn">重置</button></div>
+            </div>
+          </div>
+          <div class="card" style="padding-bottom:8px">
+            <div class="toolbar">
+              <div class="ptitle" style="margin:0">资产推送对接 <span style="font-size:12px;color:#909399;font-weight:400">每条＝一次资产动作 · 失败/待推送置顶</span></div>
+              <div class="toolbar-right"><button class="btn">↑ 批量重新推送</button><button class="btn">⟳ 处理异常</button><button class="btn">⬇ 导出</button></div>
+            </div>
+            <div class="table-wrap">
+              <table style="min-width:1320px">
+                <thead><tr><th><input type="checkbox"></th><th>变更时间</th><th>资产编码</th><th>资产描述</th><th>动作</th><th>EBS单据类型</th><th>推送状态</th><th>失败原因</th><th>EBS资产编码</th><th>操作人</th><th>操作时间</th><th class="opcol">操作</th></tr></thead>
+                <tbody>
+                  <tr class="err"><td><input type="checkbox"></td><td>2026-05-31</td><td class="mono">KEXP202605001</td><td>华为显示器</td><td>变更</td><td>调整</td><td><span class="tag red">推送失败</span></td><td style="color:var(--danger)">EBS：分类未初始化</td><td>—</td><td>张敏</td><td>2026-05-31 14:22</td><td class="opcol"><button class="btn text" onclick="openPushDetail('p1')">详情</button></td></tr>
+                  <tr><td><input type="checkbox"></td><td>2026-05-31</td><td class="mono">KEXP202605006</td><td>树莓派5开发板</td><td>领用</td><td>新增</td><td><span class="tag blue">待推送</span></td><td>—</td><td>—</td><td>张敏</td><td>2026-05-31 14:25</td><td class="opcol"><button class="btn text" onclick="openPushDetail('p2')">详情</button></td></tr>
+                  <tr class="err"><td><input type="checkbox"></td><td>2026-05-31</td><td class="mono">KEXP202605007</td><td>传感器套件</td><td>领用</td><td>—</td><td><span class="tag orange">数据异常</span></td><td style="color:var(--danger)">该仓库无核算编码</td><td>—</td><td>张敏</td><td>2026-05-31 14:26</td><td class="opcol"><button class="btn text" onclick="openPushDetail('p3')">详情</button></td></tr>
+                  <tr><td><input type="checkbox"></td><td>2026-05-20</td><td class="mono">KEXP202605001</td><td>华为显示器</td><td>变更</td><td>调整</td><td><span class="tag green">推送成功</span></td><td>—</td><td class="mono">FA00012901</td><td>李雷</td><td>2026-05-20 10:05</td><td class="opcol"><button class="btn text" onclick="openPushDetail('p4')">详情</button></td></tr>
+                  <tr><td><input type="checkbox"></td><td>2026-05-10</td><td class="mono">KEXP202605001</td><td>华为显示器</td><td>领用</td><td>新增</td><td><span class="tag green">推送成功</span></td><td>—</td><td class="mono">FA00012901</td><td>李雷</td><td>2026-05-10 09:30</td><td class="opcol"><button class="btn text" onclick="openPushDetail('p5')">详情</button></td></tr>
+                  <tr><td><input type="checkbox"></td><td>2026-05-31</td><td class="mono">KEXP202605002</td><td>华为显示器</td><td>报废</td><td>报废</td><td><span class="tag green">推送成功</span></td><td>—</td><td class="mono">FA00012938</td><td>王芳</td><td>2026-05-31 16:40</td><td class="opcol"><button class="btn text" onclick="openPushDetail('p6')">详情</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pager"><span>共 6 条动作记录</span><span class="pg">‹</span><span class="pg active">1</span><span class="pg">›</span></div>
+          </div>
+      </div><!-- /pushPage -->
+
+      <!-- ===== 页面3：字段对应关系（独立菜单页） ===== -->
+      <div class="page" id="page2">
+        <div class="ptitle">字段对应关系 · 页面 → fa_asset → EBS</div>
+        <div class="card" style="padding:18px 20px">
+          <div class="src-legend">
+            <span><span class="pill fill">手填</span> 用户录入</span><span><span class="pill dict">字典</span> 数据字典</span><span><span class="pill md">主数据</span> 接口下拉</span><span><span class="pill calc">自动</span> 系统算</span><span><span class="pill const">常量</span> 固定值</span>
+          </div>
+          <div class="rel-sec">A · 业务录入（通用信息 + 资产编码）</div>
+          <table class="rel-table"><thead><tr><th>页面字段</th><th>怎么获取</th><th>fa_asset 列</th><th>EBS 字段</th></tr></thead><tbody>
+            <tr><td>资产编码</td><td><span class="pill fill">手填</span> 卡片·唯一校验</td><td class="k">asset_code</td><td class="k">SOURCE_ID·TAG_NUMBER</td></tr>
+            <tr><td>资产描述</td><td><span class="pill fill">手填</span></td><td class="k">description</td><td class="k">DESCRIPTION</td></tr>
+            <tr><td>资产大类</td><td><span class="pill md">主数据</span> sysSetAssetGetRootCategory</td><td class="k">root_category_code</td><td class="k">ASSET_CATEGORY_CODE</td></tr>
+            <tr><td>资产小类</td><td><span class="pill md">主数据</span> 随大类联动</td><td class="k">sub_category_code</td><td class="k">大类.小类</td></tr>
+            <tr><td>数量</td><td><span class="pill const">常量</span> 固定 1（每张卡片＝1 条资产，不录入）</td><td class="k">quantity</td><td class="k">FIXED_ASSETS_UNITS</td></tr>
+            <tr><td>单位</td><td><span class="pill const">常量</span> 固定「个」(setUnit 10)</td><td class="k">unit</td><td class="k">并入 ASSET_KEY</td></tr>
+            <tr><td>资产原值/金额(不含税)</td><td><span class="pill fill">手填</span> 本批共用默认，可逐卡覆盖</td><td class="k">fixed_assets_cost</td><td class="k">FIXED_ASSETS_COST</td></tr>
+            <tr><td>调整金额</td><td><span class="pill fill">手填</span> 金额调整时</td><td class="k">change_amount</td><td>调整单据用</td></tr>
+            <tr><td>法人公司</td><td><span class="pill md">主数据</span> /md/corporation/pageFuzzy</td><td class="k">md_corporation_business_code</td><td class="k">定 BOOK_TYPE_CODE</td></tr>
+            <tr><td>仓库</td><td><span class="pill md">主数据</span> /md/store/queryStoreFuzzy</td><td class="k">store_business_id</td><td class="k">仓库段</td></tr>
+            <tr><td>使用部门(HR)</td><td><span class="pill md">主数据</span> /md/hrDept/getDeptPageByName</td><td class="k">use_hr_dept_id</td><td class="k">USER_DEPT_CODE</td></tr>
+            <tr><td>启用日期</td><td><span class="pill fill">手填</span></td><td class="k">date_placed_in_service</td><td class="k">DATE_PLACED_IN_SERVICE</td></tr>
+            <tr><td>变更日期</td><td><span class="pill fill">手填</span> 默认当天</td><td class="k">change_time</td><td>内部(幂等/排序)</td></tr>
+            <tr><td>资产来源</td><td><span class="pill dict">字典</span> asset_source</td><td class="k">asset_source</td><td class="k">并入 ASSET_KEY</td></tr>
+            <tr><td>资产状态</td><td><span class="pill dict">字典</span> asset_status</td><td class="k">asset_status</td><td class="k">并入 ASSET_KEY</td></tr>
+            <tr><td>折旧年限(使用寿命)</td><td><span class="pill fill">手填</span> 费用类必填&gt;0</td><td class="k">life_in_months</td><td class="k">LIFE_IN_MONTHS</td></tr>
+            <tr><td>父资产</td><td><span class="pill fill">手填</span> 选填</td><td class="k">parent_asset_code</td><td class="k">PARENT_ASSET_ID</td></tr>
+            <tr><td>制造商/供应商</td><td><span class="pill fill">手填</span></td><td class="k">vendor_name</td><td class="k">VENDOR_NAME</td></tr>
+            <tr><td>序列号</td><td><span class="pill fill">手填</span></td><td class="k">serial_no</td><td class="k">SERIAL_NUMBER</td></tr>
+            <tr><td>型号</td><td><span class="pill fill">手填</span></td><td class="k">model_no</td><td class="k">MODEL_NUMBER</td></tr>
+            <tr><td>地点描述</td><td><span class="pill fill">手填</span> 空则默认仓库名</td><td class="k">location_name</td><td class="k">LOCATION_NAME</td></tr>
+            <tr><td>报废类型</td><td><span class="pill dict">字典</span> 报废单据必填</td><td class="k">retirement_type_code</td><td>报废单据用</td></tr>
+            <tr><td>特殊类型</td><td><span class="pill fill">选择</span> 非特殊/电动车/费用</td><td class="k">special_type</td><td>影响校验</td></tr>
+          </tbody></table>
+
+          <div class="rel-sec" style="border-color:var(--calc)">B · 系统自动生成（⚙️ 不录入）</div>
+          <table class="rel-table"><thead><tr><th>字段</th><th>怎么算</th><th>fa_asset 列</th><th>EBS 字段</th></tr></thead><tbody>
+            <tr><td>费用账户</td><td><span class="pill calc">自动</span> 公司段.部门段.科目段.0.仓库段…</td><td class="k">expense_code_combination</td><td class="k">EXPENSE_CODE_COMBINATION</td></tr>
+            <tr><td>使用部门编码</td><td><span class="pill calc">自动</span> 取费用账户部门段</td><td>—</td><td class="k">USER_DEPT_CODE</td></tr>
+            <tr><td>FMS部门</td><td><span class="pill calc">自动</span> 由 HR部门映射</td><td class="k">md_dept_name</td><td>—</td></tr>
+            <tr><td>资产账簿</td><td><span class="pill calc">自动</span> 由法人公司查 FaBook</td><td class="k">book_code</td><td class="k">BOOK_TYPE_CODE</td></tr>
+            <tr><td>EBS单据类型</td><td><span class="pill calc">自动</span> calcEbsDocumentType（新建→新增）</td><td class="k">ebs_document_type</td><td>决定调用接口</td></tr>
+            <tr><td>每批流水号</td><td><span class="pill calc">自动</span> idService 生成</td><td class="k">group_id</td><td class="k">GROUP_ID</td></tr>
+            <tr><td>数据状态</td><td><span class="pill calc">自动</span> 能算费用账户→待推送，否则异常</td><td class="k">push_status</td><td>内部</td></tr>
+            <tr><td>残值率</td><td><span class="pill calc">自动</span> 资产分类带出</td><td>—</td><td class="k">PERCENT_SALVAGE_VALUE</td></tr>
+            <tr><td>资产关键字</td><td><span class="pill calc">自动</span> 来源.状态.单位 拼接</td><td>—</td><td class="k">ASSET_KEY</td></tr>
+            <tr><td>操作人</td><td><span class="pill calc">自动</span> 录入/推送时记录当前登录人</td><td class="k">operator_id / operator_name</td><td>审计·内部</td></tr>
+            <tr><td>操作时间</td><td><span class="pill calc">自动</span> 记录创建时间（区别于业务「变更日期」）</td><td class="k">create_time</td><td>审计·内部</td></tr>
+          </tbody></table>
+
+          <div class="rel-sec" style="border-color:var(--const)">C · 常量 & 回写</div>
+          <table class="rel-table"><thead><tr><th>项</th><th>值/来源</th><th>EBS 字段</th></tr></thead><tbody>
+            <tr><td>资产类型</td><td><span class="pill const">常量</span> CAPITALIZED</td><td class="k">ASSET_TYPE</td></tr>
+            <tr><td>折旧方法</td><td><span class="pill const">常量</span> STL</td><td class="k">DEPRN_METHOD_CODE</td></tr>
+            <tr><td>残值类型</td><td><span class="pill const">常量</span> PCT</td><td class="k">SALVAGE_TYPE</td></tr>
+            <tr><td>来源系统</td><td><span class="pill const">常量</span> 财务中台</td><td class="k">SOURCE_SYSTEM_CODE</td></tr>
+            <tr><td>EBS资产编码</td><td><span class="pill calc">回写</span> 推送成功返回</td><td class="k">ebs_asset_number ← ASSET_NUMBER</td></tr>
+          </tbody></table>
+
+          <div class="rel-sec" style="border-color:#7c3aed">D · 前端字典编码 ↔ 后端枚举 对照（FA_* 字典）</div>
+          <table class="rel-table"><thead><tr><th>前端字典编码</th><th>名称</th><th>后端枚举 / fa_asset 列</th><th>枚举值（code = 含义）</th></tr></thead><tbody>
+            <tr><td class="k">FA_PUSH_STATUS</td><td>资产数据状态</td><td>FaPushStatusType / push_status</td><td>-1 数据异常　0 无需推送　1 待推送　2 推送成功　3 推送失败　4 推送中　5 已推送　6 推送结果异常</td></tr>
+            <tr><td class="k">FA_EBS_DOCUMENT_TYPE</td><td>资产ebs单据类型</td><td>FaEBSDocumentType / ebs_document_type</td><td>0 无　1 新增　2 报废　3 调整　4 转移　5 调拨</td></tr>
+            <tr><td class="k">FA_DOCUMENT_TYPE</td><td>资产单据类型</td><td>FaBusinessDocumentType / document_type</td><td>1 领用　2 退库　5 变更　7 报废　11 转移　12 处置　14 跨主体调拨</td></tr>
+          </tbody></table>
+          <div style="font-size:12px;color:var(--text-sec);margin:-6px 0 16px">⚠️ FA_* 三个字典是前端展示/筛选用；后端入库校验另用小写 type（asset_source / asset_status / asset_unit / asset_retirement_type）。录入接口「单据类型」入参走 FaBusinessDocumentTypeV2（领用1/调整2/转移3/报废4/报废-员工赔偿5），由 Controller 映射成上面的 document_type。</div>
+
+          <div class="rel-sec" style="border-color:var(--md)">E · 后端校验字典（asset_*）应配的值</div>
+          <table class="rel-table"><thead><tr><th>字典 type</th><th>名称</th><th>应配的值（code = 含义）</th><th>依据</th></tr></thead><tbody>
+            <tr><td class="k">asset_status</td><td>资产状态(校验)</td><td><b>10</b> = 使用中类（含遗失/损坏）　<b>12</b> = 闲置　<b>14</b> = 已报废/已处置</td><td>FaBizStatus.fmsCode 去重</td></tr>
+            <tr><td class="k">asset_retirement_type</td><td>报废类型</td><td><b>13</b> = 正常报废　<b>10</b> = 公司间调拨　<b>14</b> = 非正常报废</td><td>FaBizRetirementType.fmsCode</td></tr>
+            <tr><td class="k">asset_source</td><td>资产来源</td><td>已知 <b>16</b> = 租入　<b>14</b> = 调拨；其余（自购等）以字典为准</td><td>代码常量 + 字典</td></tr>
+            <tr><td class="k">asset_unit</td><td>单位</td><td><b>10</b> = 个（录入接口已固定传 10）</td><td>代码固定 setUnit("10")</td></tr>
+          </tbody></table>
+          <div style="font-size:12px;color:var(--text-sec);margin:-6px 0 16px">注：asset_status / asset_retirement_type 存的是「映射后的 fmsCode」（10/12/14、13），<b>不是</b> FaBizStatus 的业务值 1/2/3/4/6/8，别配错。asset_source 完整值需在字典里确认。</div>
+
+          <div class="auto-note" style="background:#f4f9ff;border-color:#d9ecff"><b style="color:var(--primary)">数据流：</b>页面填 A → 提交 → 后端算 B 入库 fa_asset（待推送）→ 列表点推送时组装 A+B+C 成 AddPObjectItem → POST /fa_asset_import/proc_main/ → EBS 回 ASSET_NUMBER 回写。</div>
+        </div>
+      </div>
+      </div><!-- /.main -->
+    </div><!-- /.content -->
+  </div><!-- /.layout -->
+
+  <!-- ===== 新建 / 复制（表单 + 卡片） ===== -->
+  <div class="mask" id="newDlg">
+    <div class="dialog">
+      <div class="dlg-hd"><h3 id="dlgTitle">新建资产</h3><button class="x" onclick="closeM('newDlg')">×</button></div>
+      <div class="dlg-bd">
+        <div class="copy-tip" id="copyTip">📄 已基于历史数据 <b style="margin:0 4px">KEXP202605002</b> 复制带入下方信息，请修改/补充资产编码后保存。</div>
+        <div class="seg">
+          <div class="seg-title">资产动作（单据类型）<small>决定本次是新增/退库/变更/报废/转移… EBS单据类型由系统按动作自动判定</small></div>
+          <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+            <select class="sel" id="g_doc" style="width:200px" onchange="onDoc()">
+              <option value="1">领用（新增资产）</option>
+              <option value="5">变更</option>
+              <option value="11">转移</option>
+              <option value="7">报废</option>
+            </select>
+            <span id="docHint" style="font-size:12px;color:var(--text-sec)">→ EBS单据类型：新增；按需填写下方对应字段。</span>
+          </div>
+        </div>
+        <div class="seg">
+          <div class="seg-title">资产通用信息 <small>这一批资产共用，只填一次</small></div>
+          <div class="grid">
+            <div class="fitem"><label><span class="req">*</span>资产描述<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" id="g_desc" placeholder="如：华为MateViewSE显示器"></div>
+            <div class="fitem"><label><span class="req">*</span>资产原值/金额(不含税)<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" id="g_cost" value="10000" oninput="syncCost()" placeholder="0.00"><div style="font-size:11px;color:var(--text-sec);margin-top:2px">本批共用，每张卡片默认取这里；个别不同可在卡片上单独改</div></div>
+            <div class="fitem"><label><span class="req">*</span>资产大类<i class="src-dot" style="background:var(--dict)"></i></label><select class="sel" id="g_root" onchange="onRoot()"></select></div>
+            <div class="fitem"><label><span class="req">*</span>资产小类<i class="src-dot" style="background:var(--dict)"></i></label><select class="sel" id="g_sub" onchange="onSub()"></select></div>
+            <div class="fitem"><label><span class="req">*</span>单位<i class="src-dot" style="background:var(--dict)"></i></label><input class="ipt readonly" value="个" readonly><div style="font-size:11px;color:var(--text-sec);margin-top:2px">固定「个」（接口固定传10）</div></div>
+            <div class="fitem"><label><span class="req">*</span>法人公司<i class="src-dot" style="background:var(--md)"></i></label><select class="sel" id="g_corp"><option>2030 上海叮咚</option></select></div>
+            <div class="fitem"><label><span class="req">*</span>仓库<i class="src-dot" style="background:var(--md)"></i></label><select class="sel" id="g_store"><option>上海仓</option></select></div>
+            <div class="fitem"><label>使用部门(HR)<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>效能中心-行政部</option></select></div>
+            <div class="fitem"><label><span class="req">*</span>启用日期<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" type="date" value="2026-05-31"></div>
+            <div class="fitem"><label>变更日期<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" type="date" value="2026-05-31"></div>
+            <div class="fitem"><label><span class="req">*</span>资产来源<i class="src-dot" style="background:var(--dict)"></i></label><select class="sel"><option>自购</option><option>租入</option><option>调拨</option></select><div style="font-size:11px;color:var(--text-sec);margin-top:2px">字典 asset_source</div></div>
+            <div class="fitem"><label>折旧年限/使用寿命(月)<i class="src-dot" style="background:var(--dict)"></i></label><input class="ipt" id="g_life" value="36"><div style="font-size:11px;color:var(--text-sec);margin-top:2px">分类字典带出，可覆盖</div></div>
+            <div class="fitem"><label>折旧方法<i class="src-dot" style="background:var(--dict)"></i></label><input class="ipt readonly" id="g_deprn" value="STL（直线法）" readonly></div>
+            <div class="fitem"><label>残值类型<i class="src-dot" style="background:var(--dict)"></i></label><input class="ipt readonly" id="g_salvtype" value="PCT（百分比）" readonly></div>
+            <div class="fitem"><label>残值率<i class="src-dot" style="background:var(--dict)"></i></label><input class="ipt readonly" id="g_salvrate" value="0%" readonly></div>
+            <div class="fitem"><label>特殊类型<i class="src-dot" style="background:var(--fill)"></i></label><select class="sel"><option>非特殊</option><option>费用</option><option>电动车</option></select></div>
+            <div class="fitem"><label>父资产<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>无</option><option>选择已有资产(可搜索)</option></select></div>
+            <div class="fitem"><label>制造商/供应商<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>请选择(可搜索)</option><option>上海圆迈贸易</option><option>深圳亚博智能</option></select><div style="font-size:11px;color:var(--text-sec);margin-top:2px">来自客商核算档案</div></div>
+            <div class="fitem"><label>序列号<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" placeholder="选填"></div>
+            <div class="fitem"><label>型号<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" placeholder="选填"></div>
+            <div class="fitem"><label>地点描述<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" placeholder="空则默认仓库名"></div>
+          </div>
+        </div>
+        <!-- 动作专属字段（按所选资产动作显示） -->
+        <div class="seg" id="seg_retire" style="display:none">
+          <div class="seg-title" style="border-color:var(--danger)">报废 / 处置信息</div>
+          <div class="grid">
+            <div class="fitem"><label><span class="req">*</span>报废类型<i class="src-dot" style="background:var(--dict)"></i></label><select class="sel"><option>正常报废</option><option>出售处置</option><option>毁损</option><option>盘亏</option></select></div>
+            <div class="fitem"><label><span class="req">*</span>报废日期<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" type="date" value="2026-05-31"></div>
+          </div>
+        </div>
+        <div class="seg" id="seg_adjust" style="display:none">
+          <div class="seg-title" style="border-color:var(--warning)">金额调整信息</div>
+          <div class="grid">
+            <div class="fitem"><label><span class="req">*</span>调整金额<i class="src-dot" style="background:var(--fill)"></i></label><input class="ipt" placeholder="正数增 / 负数减"></div>
+          </div>
+        </div>
+        <div class="seg" id="seg_transfer" style="display:none">
+          <div class="seg-title" style="border-color:var(--primary)">转移 / 变更信息（变更后）</div>
+          <div class="grid">
+            <div class="fitem"><label>新使用部门(HR)<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>效能中心-财务部</option></select></div>
+            <div class="fitem"><label>新仓库<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>北京仓</option></select></div>
+          </div>
+        </div>
+        <div class="seg" id="seg_across" style="display:none">
+          <div class="seg-title" style="border-color:#8b5cf6">跨主体调拨信息</div>
+          <div class="grid">
+            <div class="fitem"><label><span class="req">*</span>调出法人公司<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>2030 上海叮咚</option></select></div>
+            <div class="fitem"><label>调出资产账簿<i class="src-dot" style="background:var(--calc)"></i></label><input class="ipt readonly" value="DDMC_FA_2030（自动带出）" readonly></div>
+            <div class="fitem"><label><span class="req">*</span>调入法人公司<i class="src-dot" style="background:var(--md)"></i></label><select class="sel"><option>2031 北京叮咚</option></select></div>
+            <div class="fitem"><label>调入资产账簿<i class="src-dot" style="background:var(--calc)"></i></label><input class="ipt readonly" value="DDMC_FA_2031（自动带出）" readonly></div>
+          </div>
+        </div>
+        <div class="seg">
+          <div class="seg-title">资产编码 <small>每行一个编码＝一张资产卡片；原值默认取上方「资产原值」，个别不同可在卡片上单独改</small></div>
+          <div class="code-area">
+            <textarea id="codeInput" placeholder="每行一个资产编码，例如：&#10;KEXP202605008&#10;KEXP202605009&#10;KEXP202605010">KEXP202605008
+KEXP202605009
+KEXP202605010</textarea>
+            <button class="btn primary" onclick="genCards()">生成卡片 →</button>
+          </div>
+        </div>
+        <div class="seg">
+          <div class="seg-title">资产卡片（<span id="cardCount">3</span> 张）<small>每张＝一条资产；编码可改，原值默认取上方、可单独覆盖</small></div>
+          <div class="cards" id="cards"></div>
+        </div>
+        <div class="seg auto">
+          <div class="seg-title" style="border-color:var(--calc)">系统自动生成（提交后由后端计算，无需录入）</div>
+          <div class="grid">
+            <div class="fitem"><label>费用账户</label><input class="ipt readonly" value="公司.部门.科目.0.仓库.0…" readonly></div>
+            <div class="fitem"><label>FMS部门</label><input class="ipt readonly" value="由HR部门映射" readonly></div>
+            <div class="fitem"><label>资产账簿</label><input class="ipt readonly" value="DDMC_FA_2030（由公司带出）" readonly></div>
+            <div class="fitem"><label>EBS单据类型</label><input class="ipt readonly" id="a_ebsdoc" value="新增" readonly></div>
+            <div class="fitem"><label>每批流水号 / 数据状态</label><input class="ipt readonly" value="自动生成 → 待推送" readonly></div>
+          </div>
+        </div>
+      </div>
+      <div class="dlg-ft">
+        <span style="font-size:12px;color:var(--text-sec)" id="ftInfo">共 3 张卡片 · 单据类型：领用(新增)</span>
+        <div style="display:flex;gap:10px"><button class="btn" onclick="closeM('newDlg')">取消</button><button class="btn primary" onclick="confirmSave()">校验并保存</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 推送明细（版本链）弹窗 -->
+  <div class="mask" id="detailDlg">
+    <div class="dialog" style="width:820px">
+      <div class="dlg-hd"><h3>KEXP202605001 · 推送明细（版本链）</h3><button class="x" onclick="closeM('detailDlg')">×</button></div>
+      <div class="dlg-bd">
+        <div style="font-size:12px;color:var(--text-sec);margin-bottom:12px">一条资产编码经历多次动作＝多条记录；这里按时间展开看该资产每次动作的推送结果。每条动作的「资产信息 + 本次变动」可在「资产推送对接」页点详情查看。</div>
+        <table class="rel-table"><thead><tr><th>变更时间</th><th>动作</th><th>EBS单据类型</th><th>金额</th><th>推送状态</th><th>失败原因</th><th>EBS资产编码</th></tr></thead><tbody>
+          <tr><td>2026-05-10</td><td>领用</td><td>新增</td><td>595.00</td><td><span class="tag green">推送成功</span></td><td>—</td><td class="mono">FA00012901</td></tr>
+          <tr><td>2026-05-20</td><td>变更</td><td>调整</td><td>+85.00</td><td><span class="tag green">推送成功</span></td><td>—</td><td class="mono">FA00012901</td></tr>
+          <tr style="background:#fef0f0"><td>2026-05-31</td><td>变更</td><td>调整</td><td>+20.00</td><td><span class="tag red">推送失败</span></td><td>EBS：分类未初始化</td><td>—</td></tr>
+        </tbody></table>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-sec)">如需重新推送 / 处理异常，请前往「资产推送对接」页操作。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 推送动作·详情（资产信息 + 本次变动） -->
+  <div class="mask" id="pushDetailDlg">
+    <div class="dialog" style="width:880px">
+      <div class="dlg-hd"><h3 id="pdTitle">动作详情</h3><button class="x" onclick="closeM('pushDetailDlg')">×</button></div>
+      <div class="dlg-bd">
+        <div class="op-line" id="pdLine"></div>
+        <div class="op-head" id="pdHead"></div>
+        <div class="pd-reason" id="pdReason" style="display:none"></div>
+        <div class="seg-title" id="pdDiffTitle" style="font-size:14px;border-color:var(--warning)">本次修改（变更前 → 变更后）</div>
+        <table class="rel-table"><thead><tr><th style="width:220px">要素</th><th>变更前</th><th>变更后</th></tr></thead><tbody id="pdDiff"></tbody></table>
+        <div class="seg-title" style="font-size:14px;margin-top:18px">资产信息 <small>本次动作时点的完整要素快照（背景参考）</small></div>
+        <div class="snap-box"><div class="grid" id="pdAsset" style="gap:11px 18px"></div></div>
+      </div>
+      <div class="dlg-ft">
+        <span style="font-size:12px;color:var(--text-sec)">说明：每条动作都存一份完整资产要素 + 本次变动，便于追溯「同一资产、不同时间」的每次变化。</span>
+        <button class="btn" onclick="closeM('pushDetailDlg')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  function openM(id){document.getElementById(id).classList.add('show')}
+  function closeM(id){document.getElementById(id).classList.remove('show')}
+  document.querySelectorAll('.mask').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeM(m.id)}));
+  function goPage(n){
+    document.getElementById('page1').classList.toggle('active',n===1);
+    document.getElementById('pushPage').classList.toggle('active',n===2);
+    document.getElementById('page2').classList.toggle('active',n===3);
+    document.getElementById('mi1').classList.toggle('on',n===1);
+    document.getElementById('mi2').classList.toggle('on',n===2);
+    document.getElementById('mi3').classList.toggle('on',n===3);
+    document.getElementById('crumbCur').textContent = n===1?'固定资产台账':(n===2?'资产推送对接':'字段对应关系');
+  }
+  const CAT={
+    '固定资产(10)':[['运输设备(14)',48],['仓储设备(13)',60],['生产设备(12)',60],['办公设备(11)',36],['房屋建筑物(10)',240]],
+    '长期待摊费用(40)':[['装修费(10)',36],['服务费(11)',12],['宽带电话费(15)',12],['招聘费(13)',36],['广告费(14)',12],['低值易耗品(14)',36]],
+    '无形资产(30)':[['著作权(14)',36],['商标(13)',36],['专利技术(12)',36],['软件使用权(11)',36],['土地使用权(10)',600]],
+  };
+  const DOC={'1':'新增','5':'调整/转移（按历史比对判定）','11':'转移','7':'报废'};
+  function onDoc(){
+    const v=document.getElementById('g_doc').value, t=DOC[v]||'';
+    document.getElementById('docHint').textContent=`→ EBS单据类型：${t}（预估，提交后按历史比对判定）`;
+    const e=document.getElementById('a_ebsdoc'); if(e) e.value=t;
+    const show=(id,on)=>{const el=document.getElementById(id);if(el)el.style.display=on?'block':'none';};
+    show('seg_retire', v==='7');
+    show('seg_adjust', v==='5');
+    show('seg_transfer', v==='5'||v==='11');
+    show('seg_across', false);
+  }
+  function onRoot(){
+    const arr=CAT[document.getElementById('g_root').value]||[];
+    document.getElementById('g_sub').innerHTML=arr.map(o=>`<option data-life="${o[1]}">${o[0]}</option>`).join('');
+    onSub();
+  }
+  function onSub(){
+    const opt=document.getElementById('g_sub').selectedOptions[0];
+    document.getElementById('g_life').value=opt?opt.dataset.life:'';
+    document.getElementById('g_deprn').value='STL（直线法）';
+    document.getElementById('g_salvtype').value='PCT（百分比）';
+    document.getElementById('g_salvrate').value='0%';
+    genCards();
+  }
+  function initCat(){
+    document.getElementById('g_root').innerHTML=Object.keys(CAT).map(k=>`<option>${k}</option>`).join('');
+    onRoot();
+  }
+  function summary(){
+    const d=document.getElementById('g_desc').value||'(资产描述)';
+    const corp=document.getElementById('g_corp').value, store=document.getElementById('g_store').value;
+    const root=(document.getElementById('g_root')||{}).value||'', sub=(document.getElementById('g_sub')||{}).value||'';
+    return `<b>${d}</b> · ${root} / ${sub} · ${corp} · ${store}`;
+  }
+  function genCards(){
+    const lines=document.getElementById('codeInput').value.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const shared=(document.getElementById('g_cost')||{}).value||'';
+    const box=document.getElementById('cards'); box.innerHTML='';
+    lines.forEach((line,i)=>{
+      const parts=line.split(/[,\t ]+/); const code=parts[0]||''; const cost=parts[1]||shared;
+      const edited=parts[1]?'1':'';
+      const bad=/010$/.test(code);
+      const el=document.createElement('div'); el.className='ass-card'+(bad?' err':'');
+      el.innerHTML=`<div class="ac-top"><span class="no">${i+1}</span><input value="${code}">
+        <button class="del" onclick="this.closest('.ass-card').remove();refreshCount()">✕</button></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:12px;color:#606266;white-space:nowrap">资产原值<span style="color:#f56c6c">*</span></span><input class="ipt cost" data-edited="${edited}" oninput="this.dataset.edited='1';refreshCount()" style="height:28px;font-size:12px;flex:1" value="${cost}" placeholder="默认取上方原值"></div>
+        <div class="ac-sum">${summary()}</div>
+        ${bad?'<span class="ac-badge err">数据异常 · 该仓库无核算编码 · 不入库</span>':'<span class="ac-badge ok">待保存 → 待推送</span>'}`;
+      box.appendChild(el);
+    });
+    refreshCount();
+  }
+  function syncCost(){
+    const shared=(document.getElementById('g_cost')||{}).value||'';
+    document.querySelectorAll('#cards .cost').forEach(i=>{ if(!i.dataset.edited){ i.value=shared; } });
+    refreshCount();
+  }
+  function confirmSave(){
+    const n=document.querySelectorAll('#cards .ass-card').length;
+    const bad=document.querySelectorAll('#cards .ass-card.err').length;
+    let sum=0; document.querySelectorAll('#cards .cost').forEach(i=>sum+=parseFloat(i.value)||0);
+    if(n===0){ alert('请先生成至少一张资产卡片'); return; }
+    let msg=`本次将新增 ${n} 个资产卡片（每行编码＝一条资产）\n原值合计 ¥${sum.toLocaleString()}`;
+    if(bad>0){ msg+=`\n\n⚠ 其中 ${bad} 条数据异常（如该仓库无核算编码），将不入库，需修正后重填`; }
+    msg+='\n\n确认提交？';
+    if(confirm(msg)){ closeM('newDlg'); }
+  }
+  const ASSET={
+    'KEXP202605001':{desc:'华为MateViewSE显示器',root:'低值易耗品',sub:'电子设备',corp:'2030 上海叮咚',book:'DDMC_FA_2030',start:'2026-05-10',unit:'个',useDept:'效能中心-行政部',fmsDept:'行政部',store:'上海仓',source:'自购',life:'36',salv:'5%',vendor:'上海圆迈贸易'},
+    'KEXP202605006':{desc:'树莓派5开发板',root:'低值易耗品',sub:'电子设备',corp:'2030 上海叮咚',book:'DDMC_FA_2030',start:'2026-05-31',unit:'个',useDept:'效能中心-行政部',fmsDept:'行政部',store:'上海仓',source:'自购',life:'36',salv:'5%',vendor:'深圳亚博智能'},
+    'KEXP202605007':{desc:'传感器套件',root:'低值易耗品',sub:'电子设备',corp:'2030 上海叮咚',book:'DDMC_FA_2030',start:'2026-05-31',unit:'个',useDept:'效能中心-行政部',fmsDept:'行政部',store:'未知仓',source:'自购',life:'36',salv:'5%',vendor:'深圳亚博智能'},
+    'KEXP202605002':{desc:'华为MateViewSE显示器',root:'低值易耗品',sub:'电子设备',corp:'2030 上海叮咚',book:'DDMC_FA_2030',start:'2026-05-10',unit:'个',useDept:'效能中心-行政部',fmsDept:'行政部',store:'上海仓',source:'自购',life:'36',salv:'5%',vendor:'上海圆迈贸易'},
+  };
+  const PUSH={
+    p1:{code:'KEXP202605001',time:'2026-05-31',op:'张敏',opTime:'2026-05-31 14:22',act:'变更',ebs:'调整',status:'fail',reason:'EBS：分类未初始化',ebsno:'—',diff:[['资产原值/金额','680.00','700.00','+20.00']]},
+    p2:{code:'KEXP202605006',time:'2026-05-31',op:'张敏',opTime:'2026-05-31 14:25',act:'领用',ebs:'新增',status:'wait',reason:'—',ebsno:'—',isNew:true,diff:[['资产原值/金额','—','2,522.85',''],['资产状态','—','在用/在摊','']]},
+    p3:{code:'KEXP202605007',time:'2026-05-31',op:'张敏',opTime:'2026-05-31 14:26',act:'领用',ebs:'—',status:'err',reason:'该仓库无核算编码',ebsno:'—',isNew:true,diff:[['资产原值/金额','—','880.00',''],['费用账户','—','算不出（需先补仓库核算编码）','']]},
+    p4:{code:'KEXP202605001',time:'2026-05-20',op:'李雷',opTime:'2026-05-20 10:05',act:'变更',ebs:'调整',status:'ok',reason:'—',ebsno:'FA00012901',diff:[['资产原值/金额','595.00','680.00','+85.00']]},
+    p5:{code:'KEXP202605001',time:'2026-05-10',op:'李雷',opTime:'2026-05-10 09:30',act:'领用',ebs:'新增',status:'ok',reason:'—',ebsno:'FA00012901',isNew:true,diff:[['资产原值/金额','—','595.00',''],['资产状态','—','在用/在摊','']]},
+    p6:{code:'KEXP202605002',time:'2026-05-31',op:'王芳',opTime:'2026-05-31 16:40',act:'报废',ebs:'报废',status:'ok',reason:'—',ebsno:'FA00012938',diff:[['资产状态','在用/在摊','已报废',''],['报废类型','—','正常报废',''],['报废日期','—','2026-05-31','']]},
+  };
+  function openPushDetail(key){
+    const p=PUSH[key]; if(!p) return; const a=ASSET[p.code]||{};
+    const stag={ok:'<span class="tag green">推送成功</span>',fail:'<span class="tag red">推送失败</span>',wait:'<span class="tag blue">待推送</span>',err:'<span class="tag orange">数据异常</span>'}[p.status]||'';
+    document.getElementById('pdTitle').textContent=p.code+' · 动作详情';
+    const cnt=p.diff.length;
+    document.getElementById('pdLine').innerHTML=
+      `<b class="who">${p.op||'—'}</b> 于 <b>${p.opTime||'—'}</b>，对资产 <b class="mono">${p.code}</b> 执行了 <b>【${p.act}${p.ebs!=='—'?' · EBS '+p.ebs:''}】</b>，共修改 <b style="color:var(--warning)">${cnt}</b> 个要素。`;
+    const oi=(k,v)=>`<div class="oi"><span>${k}</span><b>${v}</b></div>`;
+    document.getElementById('pdHead').innerHTML=
+      oi('操作人',`<span class="who">${p.op||'—'}</span>`)+oi('操作时间',p.opTime||'—')+
+      oi('动作',p.act+(p.ebs!=='—'?'（EBS：'+p.ebs+'）':''))+oi('变更日期(业务)',p.time)+
+      `<div class="oi"><span>推送状态</span><div>${stag}</div></div>`+oi('EBS资产编码',p.ebsno!=='—'?`<span class="mono">${p.ebsno}</span>`:'—');
+    const rn=document.getElementById('pdReason'), hasR=(p.reason && p.reason!=='—');
+    rn.style.display=hasR?'block':'none'; rn.innerHTML=hasR?`⚠ 失败 / 异常原因：${p.reason}`:'';
+    document.getElementById('pdDiffTitle').textContent=p.isNew?`本次修改（新建资产 · 共 ${cnt} 项，从无到有）`:`本次修改（变更前 → 变更后 · 共 ${cnt} 项）`;
+    document.getElementById('pdDiff').innerHTML=p.diff.map(d=>{
+      let after=d[2]; if(d[3]) after+=` <span class="diff-after">（${d[3]}）</span>`;
+      return `<tr><td>${d[0]}</td><td>${d[1]}</td><td><b>${after}</b></td></tr>`;
+    }).join('');
+    const kv=(k,v)=>`<div class="kv"><span>${k}</span><b>${v||'—'}</b></div>`;
+    document.getElementById('pdAsset').innerHTML=
+      kv('资产编码',`<span class="mono">${p.code}</span>`)+kv('资产描述',a.desc)+kv('资产大类',a.root)+
+      kv('资产小类',a.sub)+kv('法人公司',a.corp)+kv('资产账簿',a.book)+
+      kv('启用日期',a.start)+kv('单位',a.unit)+kv('使用部门',a.useDept)+
+      kv('FMS部门',a.fmsDept)+kv('仓库',a.store)+kv('资产来源',a.source)+
+      kv('折旧年限(月)',a.life)+kv('残值率',a.salv)+kv('制造商/供应商',a.vendor);
+    openM('pushDetailDlg');
+  }
+  function refreshCount(){
+    const n=document.querySelectorAll('#cards .ass-card').length;
+    document.getElementById('cardCount').textContent=n;
+    let sum=0; document.querySelectorAll('#cards .cost').forEach(i=>sum+=parseFloat(i.value)||0);
+    document.getElementById('ftInfo').textContent=`共 ${n} 张卡片 · 原值合计 ¥${sum.toLocaleString()}`;
+  }
+  function openNew(){
+    document.getElementById('dlgTitle').textContent='新建资产';
+    document.getElementById('copyTip').classList.remove('show');
+    document.getElementById('g_desc').value='';
+    var d=document.getElementById('g_doc'); if(d){ d.value='1'; onDoc(); }
+    document.getElementById('codeInput').value='';document.getElementById('cards').innerHTML='';refreshCount();
+    openM('newDlg');
+  }
+  function openCopy(){
+    document.getElementById('dlgTitle').textContent='新建资产（基于历史复制）';
+    document.getElementById('copyTip').classList.add('show');
+    document.getElementById('g_desc').value='华为MateViewSE显示器';
+    var d=document.getElementById('g_doc'); if(d){ d.value='1'; onDoc(); }
+    document.getElementById('codeInput').value='KEXP202605002';genCards();openM('newDlg');
+  }
+  function openChange(){
+    document.getElementById('dlgTitle').textContent='资产变更（变更 / 转移 / 报废，除新增）';
+    document.getElementById('copyTip').classList.remove('show');
+    var d=document.getElementById('g_doc'); if(d){ d.value='5'; onDoc(); }
+    openM('newDlg');
+  }
+  initCat();onDoc();
+</script>
+</body>
+</html>

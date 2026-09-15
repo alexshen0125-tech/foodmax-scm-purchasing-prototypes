@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>收款确认 · 优化版 V1（四栏紧凑）</title>
+<style>
+/* ===== Reset & Base ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#eef1f6;color:#1f2937;font-size:13px;line-height:1.5;padding:16px;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;outline:none}
+
+/* ===== Modal Shell ===== */
+.modal-dialog{width:1320px;max-width:calc(100vw - 32px);margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.05),0 20px 60px rgba(15,23,42,.14);overflow:hidden}
+.modal-hd{padding:14px 22px;border-bottom:1px solid #eef1f5;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,#ffffff 0%,#fafbfc 100%)}
+.modal-hd-title{font-size:16px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:10px}
+.modal-hd-title::before{content:'';width:3px;height:16px;background:#185FA5;border-radius:2px}
+.modal-hd-close{width:32px;height:32px;border:none;background:none;font-size:20px;color:#9ca3af;cursor:pointer;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.modal-hd-close:hover{background:#f3f4f6;color:#111}
+.modal-bd{padding:14px 20px 16px}
+.modal-ft{padding:12px 22px;border-top:1px solid #eef1f5;display:flex;justify-content:flex-end;gap:10px;background:#fafbfc}
+
+/* ===== Section 通用 ===== */
+.section{border:1px solid #e8ecf1;border-radius:11px;background:#fff;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+.section-hd{padding:10px 14px;background:linear-gradient(180deg,#fcfdfe 0%,#f6f8fb 100%);border-bottom:1px solid #eef1f5;display:flex;align-items:center;justify-content:space-between;font-size:12.5px;font-weight:600;color:#1f2937;flex-shrink:0;min-height:42px}
+.section-hd .title{display:flex;align-items:center;gap:8px}
+.section-hd .sub{font-size:11px;color:#9ca3af;font-weight:400}
+.section-hd .extra{display:flex;align-items:center;gap:8px;font-weight:400;font-size:11.5px;color:#6b7280}
+
+/* ===== 图标徽章 ===== */
+.ic{width:20px;height:20px;border-radius:6px;background:#E6F1FB;color:#185FA5;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.ic.purple{background:#F3E8FA;color:#6D28A8}
+.ic.green{background:#E7F4D7;color:#3B6D11}
+.ic svg{width:12px;height:12px}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 16px;font-size:13px;border-radius:7px;border:1px solid #dfe3e8;background:#fff;color:#374151;transition:all .15s;white-space:nowrap;font-weight:500}
+.btn:hover{border-color:#185FA5;color:#185FA5;background:#fafcff}
+.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5;box-shadow:0 1px 2px rgba(24,95,165,.2)}
+.btn-primary:hover{background:#1268b7;border-color:#1268b7;color:#fff}
+.btn-sm{height:28px;padding:0 12px;font-size:12px;border-radius:6px}
+.btn-lg{height:36px;padding:0 24px;font-size:14px;font-weight:600;border-radius:8px}
+
+/* ===== Tags ===== */
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;line-height:1}
+.tag-blue{background:#E6F1FB;color:#185FA5}
+.tag-green{background:#EAF3DE;color:#3B6D11}
+.tag-amber{background:#FAEEDA;color:#854F0B}
+.tag-grey{background:#f0f0f0;color:#888}
+.tag-purple{background:#F3E8FA;color:#6D28A8}
+.tag-sm{height:16px;font-size:10px;padding:0 5px;border-radius:3px}
+
+.checkbox{width:14px;height:14px;accent-color:#185FA5;cursor:pointer}
+
+/* ===== 顶部四栏 ===== */
+.top-grid{display:grid;grid-template-columns:300px 195px 1fr 250px;gap:12px;align-items:stretch;margin-bottom:12px}
+
+/* ===== 左 1：收款信息 ===== */
+.col-info .section-bd{padding:4px 14px 12px;flex:1;display:flex;flex-direction:column}
+.info-stack{display:flex;flex-direction:column}
+.info-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;gap:12px;border-bottom:1px solid #f3f5f8}
+.info-row:last-child{border-bottom:none}
+.info-row .label{font-size:11px;color:#9ca3af;flex-shrink:0;letter-spacing:.2px}
+.info-row .value{font-size:12.5px;color:#111827;font-weight:500;text-align:right;word-break:break-all}
+.info-row .value.mono{font-family:"SF Mono","Courier New",monospace;font-size:11.5px}
+
+.info-sales-block{margin:8px -14px 10px;padding:10px 14px;background:linear-gradient(180deg,#fbfdff 0%,#f1f7fd 100%);border-top:1px solid #e6eef6;border-bottom:1px solid #e6eef6;display:flex;justify-content:space-between;align-items:baseline}
+.info-sales-block .label{font-size:11.5px;color:#4b5563;font-weight:500}
+.info-sales-block .value{font-size:16px;color:#0f172a;font-weight:700;font-variant-numeric:tabular-nums}
+
+.confirm-summary{margin:auto -14px -12px -14px;padding:14px 16px;background:linear-gradient(180deg,#EEF6FF 0%,#DEECFA 100%);border-top:1px solid #c5dcf0;display:flex;flex-direction:column;gap:10px}
+.cs-item{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.cs-item .cs-lbl{font-size:11.5px;color:#3a4858;font-weight:500;flex-shrink:0}
+.cs-item .cs-val{font-size:16px;font-weight:700;color:#0C447C;font-variant-numeric:tabular-nums}
+.cs-item .cs-val.amber{color:#854F0B}
+.cs-item .cs-val.red{color:#A32D2D}
+.cs-item .cs-val.grey{color:#888}
+.cs-desc{font-size:10.5px;color:#5a6b7d;line-height:1.4;margin-top:-4px}
+.cs-divider{height:1px;background:rgba(24,95,165,.18)}
+
+/* ===== 左 2：截图列表 ===== */
+.col-thumbs .section-bd{padding:10px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.thumb-item{padding:10px;border:1px solid #e8ecf1;border-radius:10px;cursor:pointer;display:flex;gap:10px;transition:all .18s;background:#fff;position:relative}
+.thumb-item:hover{border-color:#c5dcf0;background:#fafcff;transform:translateY(-1px);box-shadow:0 2px 8px rgba(15,23,42,.04)}
+.thumb-item.active{border-color:#185FA5;background:linear-gradient(180deg,#f3f8fd 0%,#ebf4fc 100%);box-shadow:0 0 0 2px rgba(24,95,165,.12),0 2px 8px rgba(24,95,165,.08)}
+.thumb-item.active::before{content:'';position:absolute;top:-1px;bottom:-1px;left:-1px;width:3px;background:#185FA5;border-radius:10px 0 0 10px}
+.thumb-img{width:44px;aspect-ratio:9/16;flex-shrink:0;border-radius:5px;background:linear-gradient(135deg,#E6F1FB 0%,#c5dcf0 100%);border:1px solid #c5dcf0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.thumb-img.pending{background:linear-gradient(135deg,#FAEEDA 0%,#f5d5a0 100%);border-color:#e8bb6d}
+.thumb-img svg{width:90%;height:auto}
+.thumb-meta{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.thumb-name{font-size:12px;font-weight:600;color:#111827;line-height:1.35;word-break:break-all}
+.thumb-ai{font-size:11px;color:#6b7280;line-height:1.3}
+.thumb-claim{font-size:11px;font-weight:600;line-height:1.3}
+.thumb-claim.done{color:#185FA5}
+.thumb-claim.pending{color:#b8b8b8}
+.thumb-item .tag{align-self:flex-start;margin-top:2px}
+
+/* ===== 右 1：大图预览 ===== */
+.col-preview .section-bd{padding:20px 16px;flex:1;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center top,#fbfcfe 0%,#eef2f7 100%);position:relative}
+.preview-frame{width:auto;max-width:290px;max-height:500px;aspect-ratio:9/16;background:#ffffff;border-radius:16px;box-shadow:0 0 0 1px rgba(15,23,42,.05),0 2px 4px rgba(15,23,42,.04),0 12px 28px rgba(15,23,42,.08);overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;transition:transform .2s}
+.preview-frame:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(15,23,42,.06),0 4px 8px rgba(15,23,42,.06),0 16px 36px rgba(15,23,42,.1)}
+.preview-frame svg{max-width:100%;max-height:100%;display:block}
+.preview-tools{display:flex;gap:4px}
+.preview-tool{width:28px;height:28px;border:1px solid #e1e5eb;border-radius:6px;background:#fff;display:flex;align-items:center;justify-content:center;color:#6b7280;cursor:pointer;font-size:13px;transition:all .15s}
+.preview-tool:hover{border-color:#185FA5;color:#185FA5;background:#fafcff}
+
+/* ===== 右 2：AI 识别 ===== */
+.col-ai .section-bd{padding:14px;flex:1;display:flex;flex-direction:column;gap:12px}
+.ai-field{display:flex;flex-direction:column;gap:4px}
+.ai-field-header{display:flex;align-items:center;gap:6px}
+.ai-badge{display:inline-flex;align-items:center;justify-content:center;padding:0 5px;height:15px;background:linear-gradient(135deg,#F3E8FA 0%,#E0CFF5 100%);color:#6D28A8;font-size:9.5px;font-weight:700;letter-spacing:.4px;border-radius:3px;line-height:1;border:1px solid rgba(109,40,168,.18)}
+.ai-field-label{font-size:11px;color:#6b7280;font-weight:500}
+.ai-field-value{font-size:14px;color:#111827;font-weight:600;word-break:break-all;line-height:1.35}
+.ai-field-value.mono{font-family:"SF Mono","Courier New",monospace;font-size:12px}
+.ai-field-value.empty{color:#c9cdd3;font-weight:400}
+.ai-row-inline{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ai-label{font-size:11px;color:#9ca3af;letter-spacing:.2px}
+.ai-divider{height:1px;background:#eef1f5}
+.ai-divider.push{margin-top:auto}
+.ai-retry-btn{margin-top:8px;padding:7px 12px;border:1px solid #52C41A;border-radius:7px;background:#fff;color:#389E0D;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:all .15s;width:100%}
+.ai-retry-btn:hover{background:#f6ffed;border-color:#389E0D;color:#237804}
+.ai-retry-btn svg{width:12px;height:12px}
+
+/* ===== 预览浮动工具 ===== */
+.preview-float-tools{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:2}
+.float-tool{width:32px;height:32px;border:none;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;font-weight:700;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:all .15s}
+.float-tool:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.float-tool.purple{background:linear-gradient(135deg,#A855F7 0%,#7C3AED 100%)}
+.float-tool.orange{background:linear-gradient(135deg,#FB923C 0%,#F97316 100%)}
+.float-tool svg{width:14px;height:14px}
+
+/* ===== 必填星号 ===== */
+.required{color:#D4534B;margin-right:2px}
+
+/* ===== FMS 区 ===== */
+.skip-fms-label{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#4b5563;cursor:pointer;user-select:none}
+.fms-filter{padding:12px 14px;background:linear-gradient(180deg,#fafcff 0%,#f4f8fc 100%);border-bottom:1px solid #eef1f5;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.fms-filter .filter-item{display:flex;flex-direction:column;gap:5px}
+.fms-filter .filter-label{font-size:11px;color:#6b7280;display:flex;align-items:center;gap:3px}
+.fms-filter .filter-readonly,.fms-filter .filter-input{height:30px;border:1px solid #dfe3e8;border-radius:6px;padding:0 10px;font-size:12.5px;color:#111;background:#fff;display:flex;align-items:center;min-width:130px}
+.fms-filter .filter-readonly b{font-weight:700}
+.fms-filter .filter-readonly .prefix{font-size:10.5px;color:#9ca3af;margin-right:5px}
+.fms-filter .filter-input{padding-right:10px}
+.fms-filter .filter-input::placeholder{color:#c9cdd3}
+.fms-filter .filter-input:focus{border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.08)}
+
+.fms-table{width:100%;border-collapse:collapse}
+.fms-table th{padding:10px 12px;font-size:10.5px;color:#6b7280;font-weight:600;text-align:left;background:#fafbfc;border-bottom:1px solid #eef1f5;white-space:nowrap;letter-spacing:.3px}
+.fms-table td{padding:11px 12px;font-size:11.5px;border-bottom:1px solid #f3f4f6;vertical-align:middle;color:#111}
+.fms-table tr:hover td{background:#fafcff}
+.fms-table tr.recommended td{background:#f7faff}
+.fms-table .col-mono{font-family:"SF Mono","Courier New",monospace;font-size:11px;color:#4b5563}
+.fms-table .cell-stack{display:flex;flex-direction:column;gap:3px}
+.fms-table .cell-sub{font-size:10.5px;color:#9ca3af}
+.fms-table .col-money{font-weight:600;font-variant-numeric:tabular-nums}
+.fms-table .col-claimable{color:#5B2D8E;font-weight:600;font-variant-numeric:tabular-nums}
+.fms-table .claim-input-wrap{display:inline-flex;align-items:center;gap:3px;padding:2px 0;border-bottom:2px solid #185FA5}
+.fms-table .claim-input-wrap.disabled{border-bottom-color:#e5e7eb}
+.fms-table .claim-input-wrap .prefix{font-size:10.5px;color:#9ca3af}
+.fms-table .claim-input{width:72px;border:none;background:transparent;font-size:12px;font-weight:700;color:#185FA5;text-align:right;font-variant-numeric:tabular-nums;padding:0}
+.fms-table .claim-input:disabled{color:#c9cdd3;cursor:not-allowed}
+
+.fms-subtotal{padding:10px 14px;background:linear-gradient(180deg,#f2f8ff 0%,#e9f2fc 100%);border-top:1px solid #d0e8f8;display:flex;align-items:center;gap:12px;font-size:11.5px;color:#4b5563}
+.fms-subtotal-value{font-size:14px;font-weight:700;color:#0C447C;font-variant-numeric:tabular-nums}
+.fms-subtotal-vs{color:#9ca3af}
+
+/* ===== Tooltip ===== */
+.tip{position:relative;display:inline-flex;align-items:center;cursor:help}
+.tip-icon{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#E6F1FB;color:#185FA5;font-size:9px;font-weight:700;margin-left:3px;flex-shrink:0;line-height:1;font-family:Arial,sans-serif}
+.tip-icon:hover{background:#185FA5;color:#fff}
+.tip-icon.v3{background:#E8D8F5;color:#5B2D8E}
+.tip-icon.v3:hover{background:#5B2D8E;color:#fff}
+.tip-box{display:none;position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 10px);background:#1A2640;color:#F0F4FF;font-size:11.5px;line-height:1.55;padding:9px 12px;border-radius:7px;width:220px;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:50;text-align:left;font-weight:400;pointer-events:none}
+.tip-box::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1A2640}
+.tip:hover .tip-box{display:block}
+.tip-box .tip-title{font-weight:700;color:#fff;margin-bottom:3px;font-size:12px}
+.tip-box .tip-rule{color:#A0B4D4;font-size:10.5px;margin-top:5px;padding-top:5px;border-top:1px solid #2E4060;line-height:1.5}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#c9cdd3;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#9ca3af}
+</style>
+</head>
+<body>
+
+<div class="modal-dialog">
+
+  <!-- ===== 头部 ===== -->
+  <div class="modal-hd">
+    <span class="modal-hd-title">收款确认</span>
+    <button class="modal-hd-close">&times;</button>
+  </div>
+
+  <div class="modal-bd">
+
+    <!-- ===== 顶部四栏 ===== -->
+    <div class="top-grid">
+
+      <!-- 栏 1：收款信息 -->
+      <div class="section col-info">
+        <div class="section-hd">
+          <span class="title">
+            <span class="ic"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2a1 1 0 011-1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2zm7 0v3h3l-3-3zM5 8h6v1H5V8zm0 3h6v1H5v-1z"/></svg></span>
+            收款信息
+          </span>
+        </div>
+        <div class="section-bd">
+          <div class="info-stack">
+            <div class="info-row"><span class="label">收款单号</span><span class="value mono">SK-20260401-0042</span></div>
+            <div class="info-row"><span class="label">结算单号</span><span class="value mono">JS-20260401-0088</span></div>
+            <div class="info-row"><span class="label">结算账户</span><span class="value">验证完整的测试流程数据</span></div>
+            <div class="info-row"><span class="label">客户名称</span><span class="value">Warisan Food</span></div>
+            <div class="info-row"><span class="label">收款方式</span><span class="value">银行转账</span></div>
+            <div class="info-row"><span class="label">收款日期</span><span class="value">2026-04-01</span></div>
+          </div>
+          <div class="info-sales-block">
+            <span class="label">销售实收金额</span>
+            <span class="value">SGD 1,560.00</span>
+          </div>
+          <div class="confirm-summary">
+            <div class="cs-item">
+              <span class="cs-lbl">财务确认金额</span>
+              <span class="cs-val">SGD 1,280.00</span>
+            </div>
+            <div class="cs-desc">= 各截图认领金额之和，只读</div>
+            <div class="cs-divider"></div>
+            <div class="cs-item">
+              <span class="cs-lbl">财务抹零金额</span>
+              <span class="cs-val amber">SGD -280.00</span>
+            </div>
+            <div class="cs-desc">= 财务确认 − 销售实收，只读</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 栏 2：截图列表 -->
+      <div class="section col-thumbs">
+        <div class="section-hd">
+          <span class="title">
+            <span class="ic"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3zm1 0v8l3-3 2 2 3-3 2 2V3H3zm3 3a1 1 0 100-2 1 1 0 000 2z"/></svg></span>
+            截图列表
+          </span>
+          <span class="tag tag-blue tag-sm">2 张</span>
+        </div>
+        <div class="section-bd">
+          <div class="thumb-item active">
+            <div class="thumb-img">
+              <svg viewBox="0 0 90 160" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="84" height="154" rx="6" fill="#ffffff" stroke="#185FA5" stroke-width=".5" opacity=".9"/>
+                <rect x="3" y="3" width="84" height="18" rx="6" fill="#0C447C"/>
+                <rect x="3" y="9" width="84" height="12" fill="#0C447C"/>
+                <text x="45" y="16" text-anchor="middle" font-size="7" fill="#fff" font-weight="700" font-family="Arial">转账成功</text>
+                <circle cx="45" cy="44" r="10" fill="#EAF3DE"/>
+                <path d="M40 44 L44 48 L51 40" stroke="#3B6D11" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <text x="45" y="72" text-anchor="middle" font-size="11" font-weight="800" fill="#111" font-family="Arial">1,280.00</text>
+                <rect x="10" y="82" width="70" height="50" rx="4" fill="#f3f5f8"/>
+                <rect x="14" y="88" width="22" height="2" rx="1" fill="#9ca3af"/>
+                <rect x="50" y="88" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="14" y="96" width="22" height="2" rx="1" fill="#9ca3af"/>
+                <rect x="50" y="96" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="14" y="104" width="22" height="2" rx="1" fill="#9ca3af"/>
+                <rect x="50" y="104" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="14" y="112" width="22" height="2" rx="1" fill="#9ca3af"/>
+                <rect x="50" y="112" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="14" y="120" width="22" height="2" rx="1" fill="#9ca3af"/>
+                <rect x="50" y="120" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="10" y="140" width="70" height="12" rx="6" fill="#185FA5"/>
+              </svg>
+            </div>
+            <div class="thumb-meta">
+              <div class="thumb-name">receipt_1.jpg</div>
+              <div class="thumb-ai">AI: SGD 1,280.00</div>
+              <div class="thumb-claim done">认领: SGD 1,280.00</div>
+              <span class="tag tag-green tag-sm">已处理</span>
+            </div>
+          </div>
+          <div class="thumb-item">
+            <div class="thumb-img pending">
+              <svg viewBox="0 0 90 160" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3" y="3" width="84" height="154" rx="6" fill="#ffffff" opacity=".92"/>
+                <rect x="3" y="3" width="84" height="18" rx="6" fill="#854F0B"/>
+                <rect x="3" y="9" width="84" height="12" fill="#854F0B"/>
+                <text x="45" y="16" text-anchor="middle" font-size="7" fill="#fff" font-weight="700" font-family="Arial">转账成功</text>
+                <circle cx="45" cy="44" r="10" fill="#FAEEDA"/>
+                <path d="M40 44 L44 48 L51 40" stroke="#854F0B" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <text x="45" y="72" text-anchor="middle" font-size="11" font-weight="800" fill="#111" font-family="Arial">280.00</text>
+                <rect x="10" y="82" width="70" height="50" rx="4" fill="#faf5ec"/>
+                <rect x="14" y="92" width="22" height="2" rx="1" fill="#c8a56b"/>
+                <rect x="50" y="92" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="14" y="104" width="22" height="2" rx="1" fill="#c8a56b"/>
+                <rect x="50" y="104" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="14" y="116" width="22" height="2" rx="1" fill="#c8a56b"/>
+                <rect x="50" y="116" width="26" height="2" rx="1" fill="#111"/>
+                <rect x="10" y="140" width="70" height="12" rx="6" fill="#BA7517"/>
+              </svg>
+            </div>
+            <div class="thumb-meta">
+              <div class="thumb-name">receipt_2.jpg</div>
+              <div class="thumb-ai">AI: SGD 280.00</div>
+              <div class="thumb-claim pending">认领: —</div>
+              <span class="tag tag-amber tag-sm">待处理</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 栏 3：大图预览 -->
+      <div class="section col-preview">
+        <div class="section-hd">
+          <span class="title">
+            <span class="ic"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M7 2a5 5 0 103.9 8.1l3 3a1 1 0 001.4-1.4l-3-3A5 5 0 007 2zm0 2a3 3 0 110 6 3 3 0 010-6z"/></svg></span>
+            大图预览
+            <span class="sub">receipt_1.jpg · 1/2</span>
+          </span>
+          <div class="preview-tools">
+            <button class="preview-tool" title="缩小">−</button>
+            <button class="preview-tool" title="放大">+</button>
+            <button class="preview-tool" title="旋转">⟳</button>
+            <button class="preview-tool" title="新窗口打开">↗</button>
+          </div>
+        </div>
+        <div class="section-bd">
+          <div class="preview-float-tools">
+            <button class="float-tool purple" title="AI 助手">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.5 4L14 6.5 9.5 8 8 12 6.5 8 2 6.5 6.5 5 8 1zm5 8l.7 1.8L16 11.5l-2.3.7L13 14l-.7-1.8L10 11.5l2.3-.7L13 9z"/></svg>
+            </button>
+            <button class="float-tool orange" title="翻译">
+              <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 3h5v1H5.8c.3 1.2.9 2.3 1.6 3.3-.7.9-1.5 1.7-2.5 2.3l.5.9c1-.6 1.9-1.4 2.7-2.3.7.9 1.6 1.6 2.6 2.2l.5-.9c-1-.5-1.8-1.3-2.5-2.1.9-1 1.5-2.3 1.8-3.4H12V3H7V2H6v1H3zm7.5 5h1l2.5 6h-1l-.6-1.5h-2.8L8.5 14h-1l3-6zm.5 1.4L9.9 11.5h2.2L11 9.4z"/></svg>
+            </button>
+          </div>
+          <div class="preview-frame">
+            <svg viewBox="0 0 360 640" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+              <defs>
+                <linearGradient id="posbRed" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#C8102E"/><stop offset="1" stop-color="#ED1C24"/>
+                </linearGradient>
+                <linearGradient id="successGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#6BCB3F"/><stop offset="1" stop-color="#52C41A"/>
+                </linearGradient>
+              </defs>
+
+              <!-- 白色底 -->
+              <rect width="360" height="640" fill="#ffffff"/>
+
+              <!-- iOS 状态栏 -->
+              <rect width="360" height="44" fill="#ffffff"/>
+              <text x="24" y="28" font-size="14" fill="#111" font-weight="600" font-family="-apple-system,SF Pro,Arial">10:32</text>
+              <rect x="268" y="20" width="3" height="8" rx=".5" fill="#111"/>
+              <rect x="274" y="17" width="3" height="11" rx=".5" fill="#111"/>
+              <rect x="280" y="14" width="3" height="14" rx=".5" fill="#111"/>
+              <rect x="286" y="11" width="3" height="17" rx=".5" fill="#111"/>
+              <text x="298" y="27" font-size="12" fill="#111" font-family="-apple-system,SF Pro,Arial" font-weight="500">4G</text>
+              <rect x="316" y="13" width="26" height="13" rx="3.5" fill="none" stroke="#111" stroke-width="1"/>
+              <rect x="344" y="16" width="2" height="7" rx="1" fill="#111"/>
+              <rect x="318" y="15" width="10" height="9" rx="1.5" fill="#111"/>
+              <text x="340" y="24" text-anchor="end" font-size="8" fill="#fff" font-family="Arial" font-weight="700">41</text>
+
+              <!-- POSB 红色顶栏 -->
+              <rect x="0" y="44" width="360" height="52" fill="url(#posbRed)"/>
+              <path d="M18 70L28 64L28 76Z" fill="#ffffff"/>
+              <text x="180" y="75" text-anchor="middle" font-size="16" font-weight="700" fill="#fff" font-family="-apple-system,SF Pro,Arial">Transfer Successful</text>
+
+              <!-- POSB 品牌 -->
+              <g transform="translate(24, 116)">
+                <rect width="56" height="22" rx="3" fill="#ED1C24"/>
+                <text x="28" y="16" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" font-family="Arial" letter-spacing="0.5">POSB</text>
+              </g>
+              <text x="88" y="132" font-size="12" fill="#6b7280" font-family="-apple-system,SF Pro,Arial">digibank</text>
+              <text x="336" y="132" text-anchor="end" font-size="11" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial">01 Apr 2026</text>
+
+              <!-- 成功图标 -->
+              <circle cx="180" cy="196" r="42" fill="#E8F7E5"/>
+              <circle cx="180" cy="196" r="32" fill="url(#successGrad)"/>
+              <path d="M164 198 L176 210 L198 185" stroke="#fff" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- 金额 -->
+              <text x="180" y="264" text-anchor="middle" font-size="12" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial" letter-spacing=".5">AMOUNT (SGD)</text>
+              <text x="180" y="302" text-anchor="middle" font-size="32" font-weight="800" fill="#111" font-family="-apple-system,SF Pro,Arial">1,280.00</text>
+
+              <!-- 明细卡片 -->
+              <rect x="20" y="326" width="320" height="220" rx="12" fill="#fafbfc" stroke="#eef1f5"/>
+
+              <!-- Row 1: To -->
+              <text x="36" y="352" font-size="10.5" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial" letter-spacing=".3">TO</text>
+              <text x="36" y="372" font-size="13" font-weight="600" fill="#111" font-family="-apple-system,SF Pro,Arial">Warisan Food Sdn Bhd</text>
+              <text x="324" y="372" text-anchor="end" font-size="11" fill="#6b7280" font-family="-apple-system,SF Pro,Arial">****8821</text>
+              <line x1="36" y1="390" x2="324" y2="390" stroke="#eef1f5"/>
+
+              <!-- Row 2: From -->
+              <text x="36" y="412" font-size="10.5" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial" letter-spacing=".3">FROM</text>
+              <text x="36" y="432" font-size="13" font-weight="600" fill="#111" font-family="-apple-system,SF Pro,Arial">POSB Everyday Savings</text>
+              <text x="324" y="432" text-anchor="end" font-size="11" fill="#6b7280" font-family="-apple-system,SF Pro,Arial">****3302</text>
+              <line x1="36" y1="450" x2="324" y2="450" stroke="#eef1f5"/>
+
+              <!-- Row 3: Reference -->
+              <text x="36" y="472" font-size="10.5" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial" letter-spacing=".3">REFERENCE NUMBER</text>
+              <text x="36" y="490" font-size="12" font-weight="600" fill="#111" font-family="SF Mono,Courier New">FMS-20260401-3821</text>
+              <line x1="36" y1="508" x2="324" y2="508" stroke="#eef1f5"/>
+
+              <!-- Row 4: Date -->
+              <text x="36" y="530" font-size="10.5" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial" letter-spacing=".3">DATE &amp; TIME</text>
+              <text x="324" y="530" text-anchor="end" font-size="12" fill="#111" font-weight="500" font-family="-apple-system,SF Pro,Arial">01 Apr 2026, 14:32</text>
+
+              <!-- 备注 -->
+              <text x="36" y="570" font-size="10.5" fill="#9ca3af" font-family="-apple-system,SF Pro,Arial" letter-spacing=".3">REMARKS</text>
+              <text x="36" y="588" font-size="12" fill="#111" font-family="-apple-system,SF Pro,Arial">货款结算 · 4月账期款</text>
+
+              <!-- 底部按钮 -->
+              <rect x="20" y="604" width="152" height="38" rx="19" fill="#fff" stroke="#ED1C24" stroke-width="1.4"/>
+              <text x="96" y="628" text-anchor="middle" font-size="13" font-weight="600" fill="#ED1C24" font-family="-apple-system,SF Pro,Arial">Share</text>
+              <rect x="188" y="604" width="152" height="38" rx="19" fill="#ED1C24"/>
+              <text x="264" y="628" text-anchor="middle" font-size="13" font-weight="600" fill="#fff" font-family="-apple-system,SF Pro,Arial">Done</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- 栏 4：AI 识别结果 -->
+      <div class="section col-ai">
+        <div class="section-hd">
+          <span class="title">
+            <span class="ic purple"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.5 4L14 6.5 9.5 8 8 12 6.5 8 2 6.5 6.5 5 8 1zm5 8l.7 1.8L16 11.5l-2.3.7L13 14l-.7-1.8L10 11.5l2.3-.7L13 9z"/></svg></span>
+            AI 识别结果
+          </span>
+          <span class="extra"><span class="tag tag-purple tag-sm">只跑一次</span></span>
+        </div>
+        <div class="section-bd">
+          <div class="ai-field">
+            <div class="ai-field-header">
+              <span class="ai-badge">AI</span>
+              <span class="ai-field-label">金额</span>
+            </div>
+            <div class="ai-field-value">SGD 1,280.00</div>
+          </div>
+          <div class="ai-field">
+            <div class="ai-field-header">
+              <span class="ai-badge">AI</span>
+              <span class="ai-field-label">时间</span>
+            </div>
+            <div class="ai-field-value">2026-04-01 14:32</div>
+          </div>
+          <div class="ai-field">
+            <div class="ai-field-header">
+              <span class="ai-badge">AI</span>
+              <span class="ai-field-label">付款人</span>
+            </div>
+            <div class="ai-field-value">Warisan Food Sdn Bhd</div>
+          </div>
+          <div class="ai-field">
+            <div class="ai-field-header">
+              <span class="ai-badge">AI</span>
+              <span class="ai-field-label">流水号</span>
+            </div>
+            <div class="ai-field-value mono">FMS-20260401-3821</div>
+          </div>
+          <div class="ai-divider push"></div>
+          <div class="ai-row-inline">
+            <span class="ai-label">处理状态</span>
+            <span class="tag tag-green tag-sm">已处理</span>
+          </div>
+          <button class="ai-retry-btn">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3V1L4 4l4 3V5c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4H2.5c0 3.03 2.47 5.5 5.5 5.5s5.5-2.47 5.5-5.5S11.03 3 8 3z"/></svg>
+            重新识别
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== FMS 流水匹配 Section ===== -->
+    <div class="section">
+      <div class="section-hd">
+        <span class="title">
+          <span class="ic"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 3a3.5 3.5 0 000 7h1a.5.5 0 000-1h-1a2.5 2.5 0 010-5h1a.5.5 0 000-1h-1zM8.5 6a.5.5 0 000 1h1a2.5 2.5 0 010 5h-1a.5.5 0 000 1h1a3.5 3.5 0 000-7h-1zM5 7a1 1 0 100 2h6a1 1 0 100-2H5z"/></svg></span>
+          FMS 流水匹配
+          <span class="sub">receipt_1.jpg</span>
+        </span>
+        <div class="extra">
+          <span>查询到 2 条</span>
+          <label class="skip-fms-label"><input type="checkbox" class="checkbox"> 本张截图不关联FMS</label>
+        </div>
+      </div>
+
+      <div class="fms-filter">
+        <div class="filter-item">
+          <div class="filter-label"><span class="required">*</span>金额（精确）</div>
+          <div class="filter-readonly"><span class="prefix">SGD</span><b>1,280.00</b></div>
+        </div>
+        <div class="filter-item">
+          <div class="filter-label"><span class="required">*</span>交易日期</div>
+          <div class="filter-readonly" style="min-width:110px"><b>2026-04-01</b></div>
+        </div>
+        <div class="filter-item">
+          <div class="filter-label">
+            流水号
+            <span class="tip"><span class="tip-icon v3">ℹ</span>
+              <span class="tip-box">
+                <div class="tip-title">流水号</div>
+                默认填入 AI 识别的流水号，精确匹配。可手动修改或清空。
+                <div class="tip-rule">V3.1 · 默认 AI 识别值</div>
+              </span>
+            </span>
+          </div>
+          <div class="filter-readonly"><b>FMS-20260401-3821</b></div>
+        </div>
+        <div class="filter-item">
+          <div class="filter-label">
+            付款人
+            <span class="tip"><span class="tip-icon v3">ℹ</span>
+              <span class="tip-box">
+                <div class="tip-title">付款人（可选）</div>
+                按汇款方名称筛选 FMS 流水，不填时不影响查询。
+                <div class="tip-rule">V3.0 新增 · 模糊匹配</div>
+              </span>
+            </span>
+          </div>
+          <input type="text" class="filter-input" placeholder="可选" style="min-width:140px">
+        </div>
+        <button class="btn btn-primary btn-sm" style="height:30px">搜索</button>
+      </div>
+
+      <table class="fms-table">
+        <thead>
+          <tr>
+            <th style="width:36px"></th>
+            <th>流水号</th>
+            <th>付款人</th>
+            <th>收款账号</th>
+            <th>付款账号</th>
+            <th>摘要</th>
+            <th style="text-align:right">交易金额</th>
+            <th style="text-align:right">可认领金额</th>
+            <th style="text-align:right">认领金额</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="recommended">
+            <td><input type="checkbox" class="checkbox" checked></td>
+            <td>
+              <div class="cell-stack">
+                <span style="font-weight:600">FMS-20260401-3821</span>
+                <span class="tag tag-blue tag-sm" style="width:fit-content">推荐</span>
+              </div>
+            </td>
+            <td>Warisan Food Sdn Bhd</td>
+            <td class="col-mono">7793128821</td>
+            <td class="col-mono">6221883302</td>
+            <td>
+              <div class="cell-stack">
+                <span>货款结算</span>
+                <span class="cell-sub">4月账期款</span>
+              </div>
+            </td>
+            <td class="col-money" style="text-align:right">SGD 1,280.00</td>
+            <td class="col-claimable" style="text-align:right">SGD 1,280.00</td>
+            <td style="text-align:right">
+              <span class="claim-input-wrap"><span class="prefix">SGD</span><input type="text" class="claim-input" value="1,280.00"></span>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="checkbox"></td>
+            <td>FMS-20260330-2917</td>
+            <td>Warisan Food Sdn Bhd</td>
+            <td class="col-mono">7793128821</td>
+            <td class="col-mono">6221883302</td>
+            <td>
+              <div class="cell-stack">
+                <span>货款结算</span>
+                <span class="cell-sub">3月账期款</span>
+              </div>
+            </td>
+            <td class="col-money" style="text-align:right">SGD 1,280.00</td>
+            <td class="col-claimable" style="text-align:right">SGD 1,280.00</td>
+            <td style="text-align:right">
+              <span class="claim-input-wrap disabled"><span class="prefix">SGD</span><input type="text" class="claim-input" value="" placeholder="—" disabled></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="fms-subtotal">
+        <span>receipt_1.jpg 认领小计：</span>
+        <span class="fms-subtotal-value">SGD 1,280.00</span>
+        <span class="fms-subtotal-vs">/ AI识别 SGD 1,280.00</span>
+        <span class="tag tag-green tag-sm">金额一致</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== 底部 ===== -->
+  <div class="modal-ft">
+    <button class="btn">取消</button>
+    <button class="btn btn-primary btn-lg">确认收款</button>
+  </div>
+
+</div>
+
+</body>
+</html>

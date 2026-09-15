@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磐石 Aegis · 后台原型（全站）</title>
+<style>
+  /* ============================================================
+     磐石 Aegis 全站原型 · 设计令牌（像素级对齐 aegis-admin 真实代码）
+     来源：AntdProvider token + PageHeader/SiteBadge/StatusTag/FilterBar/format.ts
+     ============================================================ */
+  :root{
+    --brand:#3b6cd8;           /* colorPrimary */
+    --brand-hover:#5a83e0;
+    --chain-blue:#1677ff;      /* 计算链高亮（page.tsx 内联） */
+    --success:#2c8a5c; --error:#c8312c; --warning:#d97706;
+    --text:#1a1d24;            /* colorText */
+    --text-sub:#5b6470;        /* colorTextSecondary */
+    --text-muted:rgba(0,0,0,.45);
+    --bg-layout:#f5f7fa;
+    --bg-container:#fff;
+    --border:#e3e6ea;
+    --border-2:#eef0f3;
+    --filter-bg:#fafbfc;       /* Table.headerBg / FilterBar 底 */
+    --reverse-row:#fff7ed;     /* 逆向行浅橙 */
+    --menu-sel-bg:#eef3fd; --menu-sel-fg:#3b6cd8;
+    /* 分组表头三色（page.tsx GROUP_*_STYLE） */
+    --grp-order:#e6f4ff; --grp-merchant:#f6ffed; --grp-warehouse:#fffbe6;
+    /* 状态药丸（StatusTag TONES） */
+    --s-green-bg:#d1fae5; --s-green-fg:#065f46;
+    --s-blue-bg:#dbeafe;  --s-blue-fg:#1e40af;
+    --s-orange-bg:#ffedd5;--s-orange-fg:#9a3412;
+    --s-red-bg:#fee2e2;   --s-red-fg:#991b1b;
+    --s-gray-bg:#eef0f3;  --s-gray-fg:#4b5563;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",Inter,"Helvetica Neue",Arial,sans-serif;
+    color:var(--text);background:var(--bg-layout);font-size:14px;line-height:1.5715;-webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== Layout 骨架 ===== */
+  .app{display:flex;min-height:100vh;}
+  .sider{width:220px;background:var(--bg-container);border-right:1px solid var(--border-2);position:fixed;left:0;top:0;bottom:0;height:100vh;overflow-y:auto;z-index:50;}
+  .brand{height:56px;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border-2);gap:10px;}
+  .brand .logo{font-size:20px;color:var(--brand);}
+  .brand .name{font-weight:700;font-size:15px;white-space:nowrap;}
+  .main{margin-left:220px;flex:1;min-width:0;display:flex;flex-direction:column;}
+  .topbar{position:sticky;top:0;z-index:40;height:56px;background:var(--bg-container);border-bottom:1px solid var(--border-2);display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+  .topbar .fold{border:none;background:none;font-size:16px;color:var(--text);cursor:pointer;}
+  .topbar .right{display:flex;align-items:center;gap:12px;font-size:13px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;}
+  .tag-role{background:var(--s-blue-bg);color:var(--s-blue-fg);border:1px solid #91caff;border-radius:4px;padding:0 8px;font-size:12px;line-height:20px;}
+  .content{padding:24px;flex:1;background:var(--bg-layout);}
+  .foot{text-align:center;height:48px;line-height:24px;padding:12px 24px;color:var(--text-sub);font-size:12px;background:var(--bg-layout);}
+
+  /* ===== 菜单 ===== */
+  .menu{margin-top:8px;padding-bottom:24px;}
+  .menu .grp-title{font-size:12px;color:var(--text-sub);padding:8px 24px 4px;}
+  .menu a.mi{display:flex;align-items:center;gap:10px;height:40px;padding:0 24px;color:var(--text);text-decoration:none;font-size:14px;cursor:pointer;border-right:3px solid transparent;}
+  .menu a.mi:hover{background:#f5f7fa;}
+  .menu a.mi.active{background:var(--menu-sel-bg);color:var(--menu-sel-fg);border-right-color:var(--brand);font-weight:500;}
+  .menu a.mi .ic{width:16px;text-align:center;font-size:15px;flex:none;}
+
+  /* ===== PageHeader ===== */
+  .crumb{font-size:12px;color:var(--text-sub);margin-bottom:6px;}
+  .page-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .page-head h1{font-size:19px;font-weight:800;color:var(--text);line-height:1.3;margin:0;}
+  .page-head .subtitle{font-size:12.5px;color:var(--text-sub);}
+  .site-badge{margin-left:auto;display:inline-block;font-size:11.5px;color:#e11d48;background:#fdeef1;border:1px solid #f8c9d5;border-radius:999px;padding:2px 10px;white-space:nowrap;}
+
+  /* ===== Card / Panel ===== */
+  .card{background:var(--bg-container);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;}
+  .card-pad{padding:16px;}
+  .card-title{font-size:15px;font-weight:600;padding:14px 16px;border-bottom:1px solid var(--border-2);}
+
+  /* ===== FilterBar ===== */
+  .filter-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:14px 16px;background:var(--filter-bg);border-bottom:1px solid var(--border-2);}
+  .filter-field{display:flex;flex-direction:column;gap:4px;min-width:150px;}
+  .filter-field > span{font-size:11.5px;color:var(--text-sub);}
+  .filter-actions{display:flex;gap:8px;margin-left:auto;align-items:flex-end;}
+
+  /* ===== 控件 ===== */
+  .ipt,.sel{height:32px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;padding:4px 11px;font-size:14px;color:var(--text);outline:none;line-height:1.5;}
+  .ipt::placeholder{color:#bfbfbf;}
+  .sel{appearance:none;padding-right:28px;cursor:pointer;color:var(--text);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23999' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 9px center;}
+  .rangepick{height:32px;display:inline-flex;align-items:center;gap:8px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;padding:4px 11px;color:#bfbfbf;min-width:230px;cursor:pointer;font-size:14px;}
+  .rangepick .sep{color:#d9d9d9;}
+  .ipt:focus,.sel:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(59,108,216,.1);}
+
+  /* ===== 按钮 ===== */
+  .btn{height:32px;padding:4px 15px;border-radius:6px;font-size:14px;cursor:pointer;border:1px solid #d9d9d9;background:#fff;color:var(--text);transition:.2s;line-height:1.5;white-space:nowrap;}
+  .btn:hover{color:var(--brand);border-color:var(--brand);}
+  .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff;}
+  .btn-primary:hover{background:var(--brand-hover);border-color:var(--brand-hover);color:#fff;}
+  .btn-danger{color:var(--error);border-color:#ffccc7;}
+  .btn-danger:hover{color:#fff;background:var(--error);border-color:var(--error);}
+  .btn-link{border:none;background:none;color:var(--brand);padding:0 4px;height:auto;}
+  .btn-link:hover{color:var(--brand-hover);}
+  .btn-link.danger{color:var(--error);}
+  .btn-sm{height:26px;padding:2px 10px;font-size:13px;}
+  .btn:disabled{color:rgba(0,0,0,.25);border-color:#d9d9d9;background:#f5f5f5;cursor:not-allowed;}
+
+  /* ===== Table ===== */
+  .tbl-wrap{overflow-x:auto;}
+  table.tbl{border-collapse:collapse;width:100%;font-size:14px;white-space:nowrap;}
+  table.tbl th,table.tbl td{padding:12px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
+  table.tbl thead th{background:var(--filter-bg);color:var(--text-sub);font-weight:600;font-size:13px;}
+  table.tbl tbody tr:hover{background:#f0f3f9;}
+  table.tbl tbody tr.reverse{background:var(--reverse-row);}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
+  th.center,td.center{text-align:center;}
+  .grp-order{background:var(--grp-order);padding:2px 10px;border-radius:4px;}
+  .grp-merchant{background:var(--grp-merchant);padding:2px 10px;border-radius:4px;}
+  .grp-warehouse{background:var(--grp-warehouse);padding:2px 10px;border-radius:4px;}
+  code.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.06);border-radius:3px;padding:1px 5px;font-size:12.5px;}
+  .strong{font-weight:700;} .blue{color:var(--chain-blue);} .muted{color:var(--text-sub);}
+
+  /* ===== 状态药丸 ===== */
+  .status{display:inline-block;padding:1px 8px;border-radius:3px;font-size:11.5px;font-weight:600;white-space:nowrap;line-height:1.6;}
+  .s-green{background:var(--s-green-bg);color:var(--s-green-fg);}
+  .s-blue{background:var(--s-blue-bg);color:var(--s-blue-fg);}
+  .s-orange{background:var(--s-orange-bg);color:var(--s-orange-fg);}
+  .s-red{background:var(--s-red-bg);color:var(--s-red-fg);}
+  .s-gray{background:var(--s-gray-bg);color:var(--s-gray-fg);}
+
+  /* ===== 分页 ===== */
+  .pagination{display:flex;align-items:center;gap:8px;padding:12px 16px;justify-content:flex-end;}
+  .pagination .total{margin-right:auto;color:var(--text-sub);font-size:14px;}
+  .pg{min-width:32px;height:32px;padding:0 6px;border:1px solid #d9d9d9;border-radius:6px;background:#fff;cursor:pointer;color:var(--text);font-size:14px;}
+  .pg:hover{border-color:var(--brand);color:var(--brand);}
+  .pg.active{border-color:var(--brand);color:var(--brand);}
+  .pg:disabled{color:rgba(0,0,0,.25);cursor:not-allowed;}
+
+  /* ===== Alert ===== */
+  .alert{margin-top:16px;display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.6;}
+  .alert .ic{flex:none;margin-top:2px;}
+  .alert-info{background:#e6f4ff;border:1px solid #91caff;} .alert-info .ic{color:var(--brand);}
+  .alert-success{background:#f6ffed;border:1px solid #b7eb8f;} .alert-success .ic{color:var(--success);}
+  .alert-warn{background:#fffbe6;border:1px solid #ffe58f;} .alert-warn .ic{color:var(--warning);}
+  .alert-error{background:#fff2f0;border:1px solid #ffccc7;} .alert-error .ic{color:var(--error);}
+
+  /* ===== Descriptions ===== */
+  .desc{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;font-size:14px;}
+  .desc th,.desc td{border:1px solid var(--border);padding:10px 16px;text-align:left;vertical-align:top;}
+  .desc th{background:#fafafa;color:var(--text);font-weight:400;width:130px;white-space:nowrap;}
+
+  /* ===== 计算链 ===== */
+  .chain{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px;border:1px solid var(--border-2);border-radius:4px;margin-bottom:16px;}
+  .chain .op{font-size:15px;}
+  .node{text-align:center;min-width:120px;}
+  .node .lbl{font-size:12px;color:var(--text-muted);}
+  .node .val{font-size:15px;font-weight:700;}
+  .node.hl .val{color:var(--chain-blue);}
+  .node .ok{color:var(--success);}
+
+  /* ===== Drawer ===== */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;visibility:hidden;transition:.3s;z-index:900;}
+  .mask.open{opacity:1;visibility:visible;}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:960px;max-width:96vw;background:#fff;box-shadow:-6px 0 16px rgba(0,0,0,.08);transform:translateX(100%);transition:transform .3s;z-index:901;display:flex;flex-direction:column;}
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{display:flex;align-items:center;padding:16px 24px;border-bottom:1px solid var(--border-2);}
+  .drawer-head h2{margin:0;font-size:16px;font-weight:600;}
+  .drawer-close{margin-left:auto;border:none;background:none;font-size:18px;color:var(--text-sub);cursor:pointer;line-height:1;}
+  .drawer-body{padding:24px;overflow-y:auto;flex:1;}
+  .drawer-body h3{font-size:16px;font-weight:600;margin:0 0 12px;} .drawer-body h3.sec{margin-top:24px;}
+  table.lines{border-collapse:collapse;width:100%;font-size:13px;}
+  table.lines th,table.lines td{border-bottom:1px solid var(--border-2);padding:8px 10px;text-align:left;white-space:nowrap;}
+  table.lines thead th{background:var(--filter-bg);color:var(--text-sub);font-weight:600;}
+
+  /* ===== 统计卡（dashboard 等） ===== */
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:16px;}
+  .stat{background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px;}
+  .stat .t{font-size:13px;color:var(--text-sub);margin-bottom:8px;}
+  .stat .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .stat .d{font-size:12px;color:var(--text-sub);margin-top:6px;}
+
+  /* ===== 表单（编辑抽屉/弹窗内） ===== */
+  .form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+  .form-row label{font-size:13px;color:var(--text);} .form-row label .req{color:var(--error);}
+  .empty{padding:60px;text-align:center;color:var(--text-sub);}
+  .tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .tabs .tab{padding:10px 0;cursor:pointer;color:var(--text-sub);border-bottom:2px solid transparent;font-size:14px;}
+  .tabs .tab.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:500;}
+
+  /* 页面切换 */
+  .page-view{display:none;} .page-view.active{display:block;}
+
+  /* ===== Toast 轻提示 ===== */
+  #toast-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+  .toast{background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.12);padding:9px 16px;font-size:14px;display:flex;align-items:center;gap:8px;animation:toastIn .2s ease;max-width:560px;}
+  .toast .ti{flex:none;font-size:15px;color:var(--brand);}
+  @keyframes toastIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+  /* ===== 确认框 ===== */
+  #confirm-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1001;display:none;align-items:center;justify-content:center;}
+  #confirm-mask.open{display:flex;}
+  .confirm-box{background:#fff;border-radius:8px;width:416px;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.16);overflow:hidden;}
+  .confirm-box .cb-head{display:flex;align-items:flex-start;gap:12px;padding:20px 24px 8px;}
+  .confirm-box .cb-ic{font-size:20px;color:var(--warning);flex:none;line-height:1.4;}
+  .confirm-box .cb-title{font-size:16px;font-weight:600;}
+  .confirm-box .cb-msg{padding:4px 24px 20px 56px;font-size:14px;color:var(--text-sub);line-height:1.6;}
+  .confirm-box .cb-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 24px 20px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sider">
+    <div class="brand"><span class="logo">▨</span><span class="name">磐石 Aegis</span></div>
+    <nav class="menu">
+      <div class="grp-title">清分与结算</div>
+      <a class="mi active"><span class="ic">▩</span>结算单</a>
+    </nav>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="fold">☰</button>
+      <div class="right">
+        <span class="muted">中文</span>
+        <span class="avatar">👤</span>
+        <span>管理员</span>
+        <span class="tag-role">ADMIN</span>
+        <span class="muted" style="cursor:pointer;">⎋ 登出</span>
+      </div>
+    </div>
+    <div class="content" id="content"><section class="page-view active" id="pv-settlement-bills">
+  <div class="crumb">清分与结算 / 结算单</div>
+  <div class="page-head">
+    <h1>结算单</h1>
+    <span class="subtitle">按周期 BY 商户 汇总清分明细：应清算给供应商货款 + 平台抽佣（平台抽佣需开票）</span>
+    <span class="site-badge">当前 site：新加坡</span>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="t">待对账</div><div class="v">3</div><div class="d">待对账 / 对账中结算单</div></div>
+    <div class="stat"><div class="t">待付款</div><div class="v">2</div><div class="d">已推进至待付款</div></div>
+    <div class="stat"><div class="t">应付供应商合计</div><div class="v blue">S$68,940.00</div><div class="d">Σ 应清算给供应商货款</div></div>
+    <div class="stat"><div class="t">平台抽佣合计</div><div class="v blue">S$7,286.40</div><div class="d">Σ 平台抽佣(含税)</div></div>
+    <div class="stat"><div class="t">汇总总额合计</div><div class="v blue">S$76,226.40</div><div class="d">全量聚合·不随分页失真</div></div>
+    <div class="stat"><div class="t">平台补贴合计</div><div class="v">S$2,140.00</div><div class="d">Σ 平台补贴</div></div>
+    <div class="stat"><div class="t">物流应付合计</div><div class="v">S$5,320.00</div><div class="d">Σ 物流应付</div></div>
+    <div class="stat"><div class="t">平台收入净合计</div><div class="v blue">S$5,146.40</div><div class="d">抽佣 − 补贴（净）</div></div>
+  </div>
+
+  <div class="alert alert-info"><span class="ic">i</span><div>结算单 = BY 商户按周期聚合清分明细。恒等：汇总总额(含税) = 应清算给供应商 + 平台抽佣(含税)；应清算给供应商 = Σ应付商户（货款净额）= 汇总总额 − 抽佣(含税)。平台抽佣(含税) = 计佣基数(商品含税) × 费率（抽佣本身即含 GST，不再 ×1.09）。平台就抽佣部分向商户开具佣金税票：价税合计 = 平台抽佣(含税)，佣金不含税 = 抽佣 ÷ 1.09，GST = 差额。</div></div>
+
+  <div class="card">
+    <div class="filter-bar">
+      <div class="filter-field">
+        <label>商户编码</label>
+        <select class="sel" style="width:220px">
+          <option>商户编码，如 M001</option>
+          <option>M0001 鲜沐水产贸易</option>
+          <option>M0002 丰盈果蔬供应</option>
+          <option>M0003 恒昌肉禽蛋批发</option>
+          <option>M0004 益康标品仓储</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>结算单状态</label>
+        <select class="sel" style="width:180px">
+          <option>全部状态</option>
+          <option>待对账</option>
+          <option>对账中</option>
+          <option>待付款</option>
+          <option>已付款</option>
+          <option>申诉中</option>
+          <option>已作废</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label>周期窗口</label>
+        <input class="ipt" style="width:180px" placeholder="周期窗口，如 2026-W27" />
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" onclick="toast('原型演示：此操作在真实系统中执行，此处不联动')">查询</button>
+        <button class="btn" onclick="toast('原型演示：导出当前筛选结果（此处不真导出）')">导出</button>
+        <button class="btn btn-primary" onclick="confirmBox('确认生成本周期结算单？','此操作将执行「生成本周期结算单」（原型不真执行）','确认')">＋ 生成本周期结算单</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>结算单号</th>
+            <th>商户编码</th>
+            <th>结算周期</th>
+            <th>周期窗口</th>
+            <th class="center">订单数</th>
+            <th class="num">应付商户</th>
+            <th class="num">平台抽佣(含税)</th>
+            <th class="num">平台补贴</th>
+            <th class="num">物流应付</th>
+            <th class="num">平台收入(净)</th>
+            <th>抽佣发票</th>
+            <th class="num">结算单总额(含税)</th>
+            <th>结算单状态</th>
+            <th>付款状态</th>
+            <th class="center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code class="mono">SB-2026W27-M0001</code></td>
+            <td>M0001</td>
+            <td>周结</td>
+            <td>2026-W27</td>
+            <td class="center">142</td>
+            <td class="num strong">S$12,480.00</td>
+            <td class="num">S$1,320.00</td>
+            <td class="num">S$360.00</td>
+            <td class="num">S$980.00</td>
+            <td class="num strong">S$960.00</td>
+            <td><span class="status s-green">已开票</span></td>
+            <td class="num strong">S$13,800.00</td>
+            <td><span class="status s-orange">待对账</span></td>
+            <td><span class="status s-gray">待付款</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0001').innerHTML)">查看</a>
+              <a class="btn-link" onclick="confirmBox('确认对账推进？','此操作将执行「对账推进」（原型不真执行）','对账推进')">对账推进</a>
+              <a class="btn-link btn-danger" onclick="confirmBox('确认作废？','此操作将执行「作废」（原型不真执行）','作废')">作废</a>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">SB-2026W27-M0002</code></td>
+            <td>M0002</td>
+            <td>周结</td>
+            <td>2026-W27</td>
+            <td class="center">98</td>
+            <td class="num strong">S$9,240.00</td>
+            <td class="num">S$960.00</td>
+            <td class="num">S$280.00</td>
+            <td class="num">S$720.00</td>
+            <td class="num strong">S$680.00</td>
+            <td><span class="status s-gray">待开票</span></td>
+            <td class="num strong">S$10,200.00</td>
+            <td><span class="status s-blue">对账中</span></td>
+            <td><span class="status s-gray">待付款</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0002').innerHTML)">查看</a>
+              <a class="btn-link" onclick="confirmBox('确认对账推进？','此操作将执行「对账推进」（原型不真执行）','对账推进')">对账推进</a>
+              <a class="btn-link btn-danger" onclick="confirmBox('确认作废？','此操作将执行「作废」（原型不真执行）','作废')">作废</a>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">SB-2026W27-M0003</code></td>
+            <td>M0003</td>
+            <td>周结</td>
+            <td>2026-W27</td>
+            <td class="center">176</td>
+            <td class="num strong">S$18,720.00</td>
+            <td class="num">S$2,080.00</td>
+            <td class="num">S$520.00</td>
+            <td class="num">S$1,340.00</td>
+            <td class="num strong">S$1,560.00</td>
+            <td><span class="status s-green">已开票</span></td>
+            <td class="num strong">S$20,800.00</td>
+            <td><span class="status s-blue">待付款</span></td>
+            <td><span class="status s-gray">待付款</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0003').innerHTML)">查看</a>
+              <a class="btn-link btn-danger" onclick="confirmBox('确认作废？','此操作将执行「作废」（原型不真执行）','作废')">作废</a>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">SB-2026W27-M0004</code></td>
+            <td>M0004</td>
+            <td>周结</td>
+            <td>2026-W27</td>
+            <td class="center">64</td>
+            <td class="num strong">S$8,320.00</td>
+            <td class="num">S$726.40</td>
+            <td class="num">S$180.00</td>
+            <td class="num">S$560.00</td>
+            <td class="num strong">S$546.40</td>
+            <td><span class="status s-green">已开票</span></td>
+            <td class="num strong">S$9,046.40</td>
+            <td><span class="status s-blue">待付款</span></td>
+            <td><span class="status s-blue">付款中</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0004').innerHTML)">查看</a>
+              <a class="btn-link btn-danger" onclick="confirmBox('确认作废？','此操作将执行「作废」（原型不真执行）','作废')">作废</a>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">SB-2026W26-M0001</code></td>
+            <td>M0001</td>
+            <td>周结</td>
+            <td>2026-W26</td>
+            <td class="center">138</td>
+            <td class="num strong">S$11,900.00</td>
+            <td class="num">S$1,260.00</td>
+            <td class="num">S$320.00</td>
+            <td class="num">S$860.00</td>
+            <td class="num strong">S$940.00</td>
+            <td><span class="status s-green">已开票</span></td>
+            <td class="num strong">S$13,160.00</td>
+            <td><span class="status s-green">已付款</span></td>
+            <td><span class="status s-green">已成功</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0001W26').innerHTML)">查看</a>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">SB-2026W26-M0003</code></td>
+            <td>M0003</td>
+            <td>周结</td>
+            <td>2026-W26</td>
+            <td class="center">160</td>
+            <td class="num strong">S$16,050.00</td>
+            <td class="num">S$1,750.00</td>
+            <td class="num">S$440.00</td>
+            <td class="num">S$1,180.00</td>
+            <td class="num strong">S$1,310.00</td>
+            <td><span class="status s-green">已开票</span></td>
+            <td class="num strong">S$17,800.00</td>
+            <td><span class="status s-red">申诉中</span></td>
+            <td><span class="muted">—</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0003W26').innerHTML)">查看</a>
+              <a class="btn-link btn-danger" onclick="confirmBox('确认作废？','此操作将执行「作废」（原型不真执行）','作废')">作废</a>
+            </td>
+          </tr>
+          <tr class="reverse">
+            <td><code class="mono">SB-2026W26-M0002</code></td>
+            <td>M0002</td>
+            <td>周结</td>
+            <td>2026-W26</td>
+            <td class="center">72</td>
+            <td class="num strong">-S$680.00</td>
+            <td class="num">-S$72.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num">S$0.00</td>
+            <td class="num strong">-S$72.00</td>
+            <td><span class="status s-gray">待开票</span></td>
+            <td class="num strong">-S$752.00</td>
+            <td><span class="status s-orange">待对账</span></td>
+            <td><span class="status s-gray">待付款</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0002W26').innerHTML)">查看</a>
+              <a class="btn-link" onclick="confirmBox('确认对账推进？','此操作将执行「对账推进」（原型不真执行）','对账推进')">对账推进</a>
+              <a class="btn-link btn-danger" onclick="confirmBox('确认作废？','此操作将执行「作废」（原型不真执行）','作废')">作废</a>
+            </td>
+          </tr>
+          <tr>
+            <td><code class="mono">SB-2026W25-M0004</code></td>
+            <td>M0004</td>
+            <td>周结</td>
+            <td>2026-W25</td>
+            <td class="center">58</td>
+            <td class="num strong">S$7,410.00</td>
+            <td class="num">S$780.00</td>
+            <td class="num">S$150.00</td>
+            <td class="num">S$480.00</td>
+            <td class="num strong">S$630.00</td>
+            <td><span class="status s-green">已开票</span></td>
+            <td class="num strong">S$8,190.00</td>
+            <td><span class="status s-gray">已作废</span></td>
+            <td><span class="status s-gray">待付款</span></td>
+            <td class="center op">
+              <a class="btn-link" onclick="openDrawer('查看', document.getElementById('sb-detail-M0004W25').innerHTML)">查看</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination">
+      <span class="total">共 8 条</span>
+      <span class="pg">‹</span>
+      <span class="pg active">1</span>
+      <span class="pg">›</span>
+    </div>
+  </div>
+
+  <div class="alert alert-warn"><span class="ic">!</span><div>申诉/差错：商户对结算单有异议时提申诉，运营创建差错工单核对清分明细，调整后重新生成结算单。</div></div>
+
+  <div class="alert alert-info"><span class="ic">i</span><div><span class="strong">状态说明</span>：结算单状态：待对账 → 对账中 → 待付款 → 已付款（申诉中锁定不可推进，作废后重算）。商户清分/平台清分状态：清分明细按腿(商户结算/仓配/平台)分别跟踪；平台腿须先开票再出款。抽佣发票状态：待开票 / 已开票（仅正向发票）。付款状态：待付款 → 付款中 → 已成功 / 失败。</div></div>
+
+  <div id="sb-detail-M0001" style="display:none">
+    <h3>结算单 SB-2026W27-M0001 · M0001 鲜沐水产贸易</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W27-M0001</td><th>商户编码</th><td>M0001</td></tr>
+      <tr><th>结算周期</th><td>周结</td><th>周期窗口</th><td>2026-W27</td></tr>
+      <tr><th>订单数</th><td>142</td><th>计佣基数(含税)</th><td>S$15,882.00</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$1,320.00</td><th>应付商户</th><td class="strong">S$12,480.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$13,800.00</td><th>BCRS 押金合计</th><td>S$240.00</td></tr>
+      <tr><th>平台补贴合计</th><td>S$360.00</td><th>物流应付合计</th><td>S$980.00</td></tr>
+      <tr><th>平台收入(净)</th><td class="strong">S$960.00</td><th>结算单状态</th><td><span class="status s-orange">待对账</span></td></tr>
+      <tr><th>付款状态</th><td><span class="status s-gray">待付款</span></td><th>开票状态</th><td><span class="status s-green">已开票</span></td></tr>
+      <tr><th>收款账户名</th><td>Xianmu Seafood Trading Pte Ltd</td><th>收款账号</th><td class="mono">****3821</td></tr>
+      <tr><th>收款银行</th><td>DBS Bank</td><th>SWIFT / 联行号</th><td class="mono">DBSSSGSG</td></tr>
+      <tr><th>收款币种</th><td>SGD</td><th>币种</th><td>SGD</td></tr>
+      <tr><th>站点</th><td>新加坡</td><th>申诉截止时间</th><td>2026-07-06 18:00</td></tr>
+      <tr><th>创建时间</th><td>2026-07-04 09:12</td><th></th><td></td></tr>
+    </table>
+
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">S$12,480.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">S$1,320.00</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">S$13,800.00 ✓</div></div>
+    </div>
+
+    <h3>订单明细（订单级）</h3>
+    <div class="muted">本结算单聚合的每张订单一行（含正向/逆向）</div>
+    <div class="tabs"><div class="tab active">订单明细（订单级）</div><div class="tab">订单+商品明细（商品行级）</div></div>
+    <table class="lines">
+      <thead>
+        <tr>
+          <th>订单号</th><th>单据类型</th><th>创建时间</th><th class="num">订单实付</th><th class="num">运费</th><th class="num">BCRS押金</th>
+          <th class="num grp-merchant">平台抽佣(含税)</th><th class="num grp-merchant">平台补贴</th><th class="num grp-merchant">应清算给供应商</th>
+          <th class="num grp-warehouse">物流补贴</th><th class="num grp-warehouse">物流应付</th>
+          <th class="num">平台收入(净)</th><th>结算状态</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">SO-20260703-00142</td><td><span class="status s-blue">正向</span></td><td>2026-07-03 14:20</td>
+          <td class="num">S$980.00</td><td class="num">S$18.00</td><td class="num">S$4.00</td>
+          <td class="num">S$96.00</td><td class="num">S$20.00</td><td class="num strong">S$862.00</td>
+          <td class="num">S$8.00</td><td class="num strong">S$76.00</td>
+          <td class="num strong">S$76.00</td><td><span class="status s-green">已结算</span></td>
+        </tr>
+        <tr>
+          <td class="mono">SO-20260702-00138</td><td><span class="status s-blue">正向</span></td><td>2026-07-02 10:05</td>
+          <td class="num">S$1,240.00</td><td class="num">S$22.00</td><td class="num">S$6.00</td>
+          <td class="num">S$120.00</td><td class="num">S$30.00</td><td class="num strong">S$1,090.00</td>
+          <td class="num">S$10.00</td><td class="num strong">S$92.00</td>
+          <td class="num strong">S$90.00</td><td><span class="status s-gray">未结算</span></td>
+        </tr>
+        <tr class="reverse">
+          <td class="mono">SO-R-20260702-00051</td><td><span class="status s-orange">逆向</span></td><td>2026-07-02 16:40</td>
+          <td class="num">-S$180.00</td><td class="num">S$0.00</td><td class="num">-S$2.00</td>
+          <td class="num">-S$18.00</td><td class="num">S$0.00</td><td class="num strong">-S$160.00</td>
+          <td class="num">S$0.00</td><td class="num strong">S$0.00</td>
+          <td class="num strong">-S$18.00</td><td><span class="status s-green">已结算</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>清分支付明细</h3>
+    <div class="muted">各部分清分 · 含支付结果返回</div>
+    <table class="lines">
+      <thead><tr><th>清分类型</th><th class="num">金额</th><th>收款方</th><th>清分状态</th><th>支付状态</th><th>支付流水 / 结果</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="status s-blue">商户结算清分（应付供应商货款）</span></td><td class="num">S$12,480.00</td>
+          <td>Xianmu Seafood · DBS Bank ****3821</td><td><span class="status s-gray">待清分</span></td><td><span class="status s-gray">待支付</span></td><td class="muted">—</td>
+        </tr>
+        <tr>
+          <td><span class="status s-orange">仓配清分（仓储配送费）</span></td><td class="num">S$980.00</td>
+          <td>Aegis Logistics · OCBC ****7742</td><td><span class="status s-gray">待清分</span></td><td><span class="status s-gray">待支付</span></td><td class="muted">—</td>
+        </tr>
+        <tr>
+          <td><span class="status s-gray">平台清分（平台抽佣·含税）</span></td><td class="num">S$1,320.00</td>
+          <td>Aegis Platform · UOB ****1180</td><td><span class="status s-gray">待清分</span></td><td><span class="status s-orange">待开票</span></td><td>开票后出款/划转</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="alert alert-info"><span class="ic">i</span><div>每部分清分对应一张清分支付单，支付后回写支付结果（成功流水号 / 失败原因）。</div></div>
+  </div>
+
+  <div id="sb-detail-M0002" style="display:none">
+    <h3>结算单 SB-2026W27-M0002 · M0002 丰盈果蔬供应</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W27-M0002</td><th>商户编码</th><td>M0002</td></tr>
+      <tr><th>订单数</th><td>98</td><th>周期窗口</th><td>2026-W27</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$960.00</td><th>应付商户</th><td class="strong">S$9,240.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$10,200.00</td><th>平台收入(净)</th><td class="strong">S$680.00</td></tr>
+      <tr><th>结算单状态</th><td><span class="status s-blue">对账中</span></td><th>开票状态</th><td><span class="status s-gray">待开票</span></td></tr>
+    </table>
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">S$9,240.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">S$960.00</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">S$10,200.00 ✓</div></div>
+    </div>
+  </div>
+
+  <div id="sb-detail-M0003" style="display:none">
+    <h3>结算单 SB-2026W27-M0003 · M0003 恒昌肉禽蛋批发</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W27-M0003</td><th>商户编码</th><td>M0003</td></tr>
+      <tr><th>订单数</th><td>176</td><th>周期窗口</th><td>2026-W27</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$2,080.00</td><th>应付商户</th><td class="strong">S$18,720.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$20,800.00</td><th>平台收入(净)</th><td class="strong">S$1,560.00</td></tr>
+      <tr><th>结算单状态</th><td><span class="status s-blue">待付款</span></td><th>开票状态</th><td><span class="status s-green">已开票</span></td></tr>
+    </table>
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">S$18,720.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">S$2,080.00</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">S$20,800.00 ✓</div></div>
+    </div>
+  </div>
+
+  <div id="sb-detail-M0004" style="display:none">
+    <h3>结算单 SB-2026W27-M0004 · M0004 益康标品仓储</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W27-M0004</td><th>商户编码</th><td>M0004</td></tr>
+      <tr><th>订单数</th><td>64</td><th>周期窗口</th><td>2026-W27</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$726.40</td><th>应付商户</th><td class="strong">S$8,320.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$9,046.40</td><th>平台收入(净)</th><td class="strong">S$546.40</td></tr>
+      <tr><th>结算单状态</th><td><span class="status s-blue">待付款</span></td><th>付款状态</th><td><span class="status s-blue">付款中</span></td></tr>
+    </table>
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">S$8,320.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">S$726.40</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">S$9,046.40 ✓</div></div>
+    </div>
+  </div>
+
+  <div id="sb-detail-M0001W26" style="display:none">
+    <h3>结算单 SB-2026W26-M0001 · M0001 鲜沐水产贸易（已付款）</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W26-M0001</td><th>周期窗口</th><td>2026-W26</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$1,260.00</td><th>应付商户</th><td class="strong">S$11,900.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$13,160.00</td><th>结算单状态</th><td><span class="status s-green">已付款</span></td></tr>
+      <tr><th>付款状态</th><td><span class="status s-green">已成功</span></td><th>开票状态</th><td><span class="status s-green">已开票</span></td></tr>
+    </table>
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">S$11,900.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">S$1,260.00</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">S$13,160.00 ✓</div></div>
+    </div>
+  </div>
+
+  <div id="sb-detail-M0003W26" style="display:none">
+    <h3>结算单 SB-2026W26-M0003 · M0003 恒昌肉禽蛋批发（申诉中）</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W26-M0003</td><th>周期窗口</th><td>2026-W26</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$1,750.00</td><th>应付商户</th><td class="strong">S$16,050.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$17,800.00</td><th>结算单状态</th><td><span class="status s-red">申诉中</span></td></tr>
+      <tr><th>付款状态</th><td class="muted">—（申诉锁定）</td><th>申诉截止时间</th><td>2026-06-29 18:00</td></tr>
+    </table>
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">S$16,050.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">S$1,750.00</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">S$17,800.00 ✓</div></div>
+    </div>
+  </div>
+
+  <div id="sb-detail-M0002W26" style="display:none">
+    <h3>结算单 SB-2026W26-M0002 · M0002 丰盈果蔬供应（逆向红冲）</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W26-M0002</td><th>周期窗口</th><td>2026-W26</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>-S$72.00</td><th>应付商户</th><td class="strong">-S$680.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">-S$752.00</td><th>结算单状态</th><td><span class="status s-orange">待对账</span></td></tr>
+    </table>
+    <h3>结算单构成</h3>
+    <div class="chain">
+      <div class="node"><div class="lbl">应付商户</div><div class="val">-S$680.00</div></div>
+      <div class="op">+</div>
+      <div class="node"><div class="lbl">平台抽佣(含税)</div><div class="val">-S$72.00</div></div>
+      <div class="op">=</div>
+      <div class="node"><div class="lbl">结算单总额(含税)</div><div class="val hl ok">-S$752.00 ✓</div></div>
+    </div>
+  </div>
+
+  <div id="sb-detail-M0004W25" style="display:none">
+    <h3>结算单 SB-2026W25-M0004 · M0004 益康标品仓储（已作废）</h3>
+    <table class="desc">
+      <tr><th>结算单号</th><td class="mono">SB-2026W25-M0004</td><th>周期窗口</th><td>2026-W25</td></tr>
+      <tr><th>平台抽佣(含税)</th><td>S$780.00</td><th>应付商户</th><td class="strong">S$7,410.00</td></tr>
+      <tr><th>结算单总额(含税)</th><td class="strong">S$8,190.00</td><th>结算单状态</th><td><span class="status s-gray">已作废</span></td></tr>
+    </table>
+    <div class="alert alert-warn"><span class="ic">!</span><div>作废原因：清分明细核对存在差错，已作废重新生成为 SB-2026W25-M0004-R1。</div></div>
+  </div>
+</section></div>
+    <div class="foot">© 2026 磐石 Aegis 资金清结算与合规系统 — 结算单（三期·变更001 原型）</div>
+  </div>
+</div>
+<div id="toast-wrap"></div>
+<div id="confirm-mask" onclick="if(event.target===this)closeConfirm()">
+  <div class="confirm-box">
+    <div class="cb-head"><span class="cb-ic">⚠</span><span class="cb-title" id="cbTitle">确认操作</span></div>
+    <div class="cb-msg" id="cbMsg"></div>
+    <div class="cb-foot"><button class="btn" onclick="closeConfirm()">取消</button><button class="btn btn-primary" id="cbOk" onclick="cbConfirm()">确认</button></div>
+  </div>
+</div>
+
+<!-- 通用抽屉（各页复用） -->
+<div class="mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head"><h2 id="drawerTitle">详情</h2><button class="drawer-close" onclick="closeDrawer()">✕</button></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+<script>
+/* ===== 金额格式化（对齐 format.ts centsToSgd） ===== */
+function sgd(cents){const v=cents/100;const abs=Math.abs(v).toLocaleString('en-SG',{minimumFractionDigits:2,maximumFractionDigits:2});return (v<0?'-S$':'S$')+abs;}
+/* ===== 抽屉 ===== */
+function openDrawer(title,html){document.getElementById('drawerTitle').textContent=title;document.getElementById('drawerBody').innerHTML=html;document.getElementById('mask').classList.add('open');document.getElementById('drawer').classList.add('open');}
+function closeDrawer(){document.getElementById('mask').classList.remove('open');document.getElementById('drawer').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeConfirm();}});
+/* ===== Toast 轻提示 ===== */
+function toast(msg){const w=document.getElementById('toast-wrap');const el=document.createElement('div');el.className='toast';el.innerHTML='<span class="ti">ⓘ</span><span>'+msg+'</span>';w.appendChild(el);setTimeout(()=>{el.style.transition='opacity .3s';el.style.opacity='0';setTimeout(()=>el.remove(),300);},2200);}
+/* ===== 确认框 ===== */
+function confirmBox(title,msg,okText){document.getElementById('cbTitle').textContent=title;document.getElementById('cbMsg').textContent=msg;document.getElementById('cbOk').textContent=okText||'确认';document.getElementById('confirm-mask').classList.add('open');window.__cbOkText=okText||'确认';}
+function closeConfirm(){document.getElementById('confirm-mask').classList.remove('open');}
+function cbConfirm(){closeConfirm();toast('原型演示：已'+(window.__cbOkText||'确认')+'（真实系统中执行，此处不联动）');}
+/* ===== 页面切换 ===== */
+function goPage(key){
+  document.querySelectorAll('.page-view').forEach(p=>p.classList.toggle('active',p.id==='pv-'+key));
+  document.querySelectorAll('.menu a.mi').forEach(a=>a.classList.toggle('active',a.dataset.key===key));
+  closeDrawer();
+  document.getElementById('content').scrollTop=0;window.scrollTo(0,0);
+  if(location.hash!=='#'+key)location.hash=key;
+}
+window.addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(k&&document.getElementById('pv-'+k))goPage(k);});
+window.addEventListener('DOMContentLoaded',()=>{const k=location.hash.slice(1);goPage(document.getElementById('pv-'+k)?k:'settlement-bills');});
+/* PAGE_SCRIPTS_INJECT */
+</script>
+</body>
+</html>
