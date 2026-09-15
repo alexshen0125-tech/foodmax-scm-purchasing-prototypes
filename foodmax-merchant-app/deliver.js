@@ -473,18 +473,53 @@ function stationPopup(ware,kind){
 /* ============ 退货取回 → 退货单（2026-07-21 会议定稿：商家只读；确认由仓库操作；到货后72h未提平台处置） ============ */
 // 退货单：三方退货到平台仓不入库仅暂存。状态 待仓库入库→待提货(仓库确认到货,72h倒计时)→已提货/逾期未提。
 // 商家端只读展示状态+提货码+剩余时限，无状态确认/预约/新建权限（三方退款须基于已判责售后工单，禁止商家自建）
+// items：retQty=审核通过退款数量（退回数量）；pickQty=仓库确认提货完成时回写的实际出库数量（取回数量），提货前为 null
+// 口径与 PC scm_商家管理系统_全流程_交互原型.html 的 retQtySum/pickQtyVal 一致（scm_退货单退回与取回数量_prd BR-01~04）
 const RETURN=[
- {no:'TKD2026063008266685',ware:'裕廊DC',cnt:1,st:'待提货',order:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',deadline:'2026-07-23 21:00'},
- {no:'TKD2026062908267496',ware:'兀兰DC',cnt:1,st:'待仓库入库',order:'2026-07-21 07:12',code:'897256',arrive:'',deadline:''},
- {no:'TKD2026062908314280',ware:'盛港DC',cnt:1,st:'待提货',order:'2026-07-20 06:04',code:'715187',arrive:'2026-07-20 14:00',deadline:'2026-07-23 14:00'},
- {no:'TKD2026062708201337',ware:'大巴窑DC',cnt:2,st:'已提货',order:'2026-07-18 14:20',code:'330218',arrive:'2026-07-18 18:00',deadline:'2026-07-21 18:00'},
+ {no:'TKD2026063008266685',ware:'裕廊DC',st:'待提货',order:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',deadline:'2026-07-23 21:00',pickup:'',
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,pickQty:null}]},
+ {no:'TKD2026062908267496',ware:'兀兰DC',st:'待仓库入库',order:'2026-07-21 07:12',code:'897256',arrive:'',deadline:'',pickup:'',
+  items:[{name:'娃娃菜',sku:'SKU8812',spec:'15kg/件',unit:'件',retQty:1,pickQty:null}]},
+ {no:'TKD2026062908314280',ware:'盛港DC',st:'待提货',order:'2026-07-20 06:04',code:'715187',arrive:'2026-07-20 14:00',deadline:'2026-07-23 14:00',pickup:'',
+  items:[{name:'上海青',sku:'SKU8806',spec:'1kg/件',unit:'件',retQty:4,pickQty:2}]},
+ {no:'TKD2026062708201337',ware:'大巴窑DC',st:'已提货',order:'2026-07-18 14:20',code:'330218',arrive:'2026-07-18 18:00',deadline:'2026-07-21 18:00',pickup:'2026-07-19 09:40',
+  items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1}]},
+ {no:'TKD2026062508198820',ware:'裕廊DC',st:'逾期未提',order:'2026-07-15 10:02',code:'118904',arrive:'2026-07-16 18:00',deadline:'2026-07-19 18:00',pickup:'',
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:null}]},
 ];
+const retSum=g=>g.items.reduce((s,x)=>s+x.retQty,0);
+// 取回数量 = 各 SKU WMS 累计出库数量（可分次取）；SKU 无出库记录 = null，退货单进入 已提货/逾期未提 时补 0；
+// 单 SKU null 显示「—」；合计全 null 显示「—」、否则 null 按 0 计。纯展示不标色（与 PC 同口径）
+const pickOf=(g,x)=>(x.pickQty==null&&(g.st==='已提货'||g.st==='逾期未提'))?0:x.pickQty;
+function pickVal(g,x){
+  const vals=(x?[x]:g.items).map(i=>pickOf(g,i));
+  return vals.every(v=>v==null)?null:vals.reduce((s,v)=>s+(v||0),0);
+}
+function pickHtml(g,x){const v=pickVal(g,x);return v==null?'<span style="color:var(--sub)">—</span>':`${v}`;}
 function returnCard(g){
-  return `<div class="dl-rcard">
-    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st" data-no="${g.no}">${g.st}</span></div>
-    <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span><span class="cnt">共${g.cnt}件</span></div>
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`剩 ${cdSpan(arriveDueMs(g.arrive,72))} 提货（逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?'已提货':g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
+  return `<div class="dl-rcard" data-rno="${g.no}" style="cursor:pointer">
+    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st">${g.st}</span></div>
+    <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
+    <div class="dl-kbox" style="margin-top:10px;padding:10px 0"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div></div>
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`剩 ${cdSpan(arriveDueMs(g.arrive,72))} 提货（逾期平台处置）`:g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?`已于 ${g.pickup} 提货`:g.st==='逾期未提'?'已逾期·平台处置':'—'}</span></div>
   </div>`;
+}
+// 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
+function openReturnDetail(no){
+  const g=RETURN.find(x=>x.no===no); if(!g)return;
+  const kv=(k,v)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,.05)"><span style="color:var(--sub);flex-shrink:0">${k}</span><span style="text-align:right;font-weight:500;word-break:break-all">${v||'—'}</span></div>`;
+  const sec=t=>`<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">${t}</div>`;
+  const box=i=>`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">${i}</div>`;
+  pushPage({title:'退货单详情',navbar:true,body:`
+    <div class="dl-kbox" style="margin:12px 16px 0;background:#fff;box-shadow:var(--sh-sm)"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div></div>
+    ${sec('单据信息')}
+    ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('状态',g.st)+kv('存放仓库',g.ware)+kv('到仓时间',g.arrive)+kv('提货时间',g.pickup)+kv('提货截止',g.deadline))}
+    ${sec('退货明细')}
+    ${box(g.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+      <b style="font-size:14px">${x.name}</b><div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>退回数量 ${x.retQty}</span><span>取回数量 ${pickHtml(g,x)}</span></div>
+    </div>`).join(''))}
+    <div style="height:8px"></div>`});
 }
 /* ============ 仓库退回（错货）—— 2026-08-12 纪要：不新增单据与单号，
    沿用原送货单标记，仓库台账+多角度照片+专属虚拟库位，商家线下取回。
@@ -495,13 +530,16 @@ function returnCard(g){
    （当日不可卖、次日优先抵扣，BR-16d）。本台账只保留「送错」一种类型。 ============ */
 window.FM.DB.whReturns = window.FM.DB.whReturns || [
   {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
-   type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedAt:'',
+   type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedQty:null,pickedAt:'',
    note:'与本单小棠菜串货，实物为上海青'},
+  {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8871',name:'菜心',spec:'1kg/件',unit:'件',
+   type:'送错',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'已取回',pickedQty:3,pickedAt:'2026-06-29 09:30',
+   note:'应送清单无此 SKU，实物为菜心'},
   {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8806',name:'芥兰',spec:'1kg/件',unit:'件',
-   type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedAt:'',
+   type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedQty:null,pickedAt:'',
    note:'应送清单无此 SKU，实物为芥兰'},
   {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8812',name:'咸鸭蛋',spec:'30枚/盘',unit:'盘',
-   type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedAt:'2026-05-20 10:15',
+   type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedQty:2,pickedAt:'2026-05-20 10:15',
    note:'与本单鲜鸡蛋串货'},
 ];
 const WHR=()=>window.FM.DB.whReturns||[];
@@ -513,7 +551,9 @@ function whrGroups(){
     const list=map[no].slice().sort((a,b)=>(a.type==='送错'?0:1)-(b.type==='送错'?0:1));
     const wait=list.filter(x=>x.status==='待取回').length;
     return {no,list,warehouse:list[0].warehouse,slot:[...new Set(list.map(x=>x.slot))].join(' / '),
-      at:list.map(x=>x.registeredAt).sort()[0],qty:list.reduce((a,x)=>a+x.qty,0),wait,
+      at:list.map(x=>x.registeredAt).sort()[0],qty:list.reduce((a,x)=>a+x.qty,0),
+      // 取回数量 = Σ 已取回项 pickedQty；整单未取 → null（「—」）
+      pickedQty:wait===list.length?null:list.filter(x=>x.status==='已取回').reduce((a,x)=>a+(x.pickedQty||0),0),wait,
       status:wait===0?'已取回':(wait===list.length?'待取回':'部分取回')};
   }).sort((a,b)=>b.at.localeCompare(a.at));
 }
@@ -538,7 +578,7 @@ function whrCard(g){
     <div class="dl-meta"><span class="k">类型合计</span><span class="vv">${whrSum(g.list)}</span></div>
     <div class="dl-meta"><span class="k">存放</span><span class="vv">${g.warehouse} · ${g.slot}</span></div>
     <div class="dl-meta"><span class="k">登记</span><span class="vv">${g.at}</span></div>
-    <div class="dl-kbox"><div class="k"><div class="l">总数量</div><div class="v">${g.qty}</div></div><div class="k"><div class="l">SKU 数</div><div class="v">${g.list.length}</div></div><div class="k"><div class="l">待取回</div><div class="v" ${g.wait?'style="color:var(--red)"':''}>${g.wait}</div></div></div>
+    <div class="dl-kbox"><div class="k"><div class="l">退回数量</div><div class="v">${g.qty}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${g.pickedQty==null?'<span style="color:var(--sub)">—</span>':g.pickedQty}</div></div></div>
     <div class="dl-acts"><div class="a key" data-a="whrdetail">详情</div><div class="a" data-a="whrdeliv">送货单</div></div>
   </div>`;
 }
@@ -558,7 +598,9 @@ function openWhrDetail(no){
       kv('存放仓库',g.warehouse)+
       kv('虚拟库位',`<span style="font-family:monospace">${g.slot}</span>`)+
       kv('首次登记时间',g.at)+
-      kv('退回商品',`${g.list.length} 个 SKU · 合计 ${g.qty}`)+
+      kv('退回商品',`${g.list.length} 个 SKU`)+
+      kv('退回数量',`${g.qty}`)+
+      kv('取回数量',g.pickedQty==null?'—':`${g.pickedQty}`)+
       kv('退回单号','无（沿用原送货单标记，不另生成单号）')
     )}
     ${sec('退回商品明细 · 逐 SKU')}
@@ -567,7 +609,7 @@ function openWhrDetail(no){
       <div style="font-size:11.5px;color:var(--sub);margin-top:3px">${r.skuCode} · ${r.spec}</div>
       ${r.note?`<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${r.note}</div>`:''}
       <div style="display:flex;gap:16px;margin-top:8px;font-size:12.5px;color:#46604F;flex-wrap:wrap">
-        <span>数量 <b>${r.qty}</b> ${r.unit}</span><span>库位 <span style="font-family:monospace">${r.slot}</span></span><span>登记 ${r.registeredAt}</span>${r.pickedAt?`<span>取回 ${r.pickedAt}</span>`:''}
+        <span>退回 <b>${r.qty}</b> ${r.unit}</span><span>取回 ${r.status==='已取回'?`<b>${r.pickedQty}</b> ${r.unit}`:'<b style="color:var(--sub)">—</b>'}</span><span>库位 <span style="font-family:monospace">${r.slot}</span></span><span>登记 ${r.registeredAt}</span>${r.pickedAt?`<span>取回时间 ${r.pickedAt}</span>`:''}
       </div>
       <div class="whr-ph" data-sku="${r.skuCode}" style="margin-top:8px;color:var(--emerald);font-weight:700;font-size:12.5px;min-height:32px;display:flex;align-items:center;cursor:pointer">📷 ${r.photos} 张实物照片</div>
     </div>`).join(''))}
@@ -633,7 +675,7 @@ function openReturn(){
           const data=t==='all'?RETURN:RETURN.filter(g=>g.st===t);
           if(!data.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('refund')}</div><h4>暂无${t==='all'?'':t}退货单</h4><p>退货退款售后单判责后会在此展示到仓提货进度</p></div>`;return;}
           list.innerHTML=data.map(returnCard).join('');
-          list.querySelectorAll('[data-no]').forEach(e=>e.onclick=()=>toast('退货单 '+e.dataset.no));
+          list.querySelectorAll('[data-rno]').forEach(e=>e.onclick=()=>openReturnDetail(e.dataset.rno));
         },420);
       };
       draw('all');

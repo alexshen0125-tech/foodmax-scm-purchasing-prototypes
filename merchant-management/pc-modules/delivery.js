@@ -382,13 +382,16 @@
   // 行标识 = 送货单号 × SKU（无独立单号）
   DB.whReturns = DB.whReturns || [
     {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
-     type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedAt:'',
+     type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedQty:null,pickedAt:'',
      note:'与本单小棠菜串货，实物为上海青'},
+    {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8871',name:'菜心',spec:'1kg/件',unit:'件',
+     type:'送错',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'已取回',pickedQty:3,pickedAt:'2026-06-29 09:30',
+     note:'应送清单无此 SKU，实物为菜心'},
     {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8806',name:'芥兰',spec:'1kg/件',unit:'件',
-     type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedAt:'',
+     type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedQty:null,pickedAt:'',
      note:'应送清单无此 SKU，实物为芥兰'},
     {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8812',name:'咸鸭蛋',spec:'30枚/盘',unit:'盘',
-     type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedAt:'2026-05-20 10:15',
+     type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedQty:2,pickedAt:'2026-05-20 10:15',
      note:'与本单鲜鸡蛋串货'},
   ];
   window.whrOfDelivery=function(id){return (DB.whReturns||[]).filter(r=>r.deliveryNo==id);};
@@ -416,6 +419,8 @@
           at:list.map(x=>x.registeredAt).sort()[0],
           photos:list.reduce((a,x)=>a+x.photos,0),
           qty:list.reduce((a,x)=>a+x.qty,0),
+          // 取回数量 = Σ 已取回项 pickedQty（仓库交接时按项回写）；整单一项未取 → null 显示「—」
+          pickedQty:wait==list.length?null:list.filter(x=>x.status=='已取回').reduce((a,x)=>a+(x.pickedQty||0),0),
           wait,status:wait==0?'已取回':(wait==list.length?'待取回':'部分取回')};})
       .sort((a,b)=>b.at.localeCompare(a.at));
   }
@@ -428,6 +433,8 @@
     if(g.status=='部分取回')return `<span class="tag t-y"><span class="dot"></span>部分取回</span><div style="font-size:11px;color:var(--ts);margin-top:2px">待取回 ${g.wait}/${g.list.length} 项</div>`;
     return `<span class="tag t-b"><span class="dot"></span>待取回</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.list.length} 项</div>`;
   }
+  // 取回数量单元格：null=灰「—」；纯展示不标色（scm_退货单退回与取回数量_prd BR-06）
+  function whrPickCell(v){return v==null?'<span style="color:var(--tt)">—</span>':`<span style="font-variant-numeric:tabular-nums">${v}</span>`;}
   window.deliv_whReturnContent=function(){
     const gs=whrGroups();
     if(!gs.length) return `<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无待退回商品</div><div class="e-s">送货到仓被清点出<b>送错</b>（应送清单外的 SKU）时，仓库登记台账后在此生成取货通知。<br>多送同一 SKU 不在这里——仓库照收，计入你的在仓寄存库存。</div></div>`;
@@ -439,12 +446,13 @@
     </div></div>
     <div class="card"><div class="card-hd"><h3>仓库退回</h3><span class="sub">待取回 ${waitDoc} 单 · 共 ${gs.length} 单 / ${(DB.whReturns||[]).length} 项 · 按送货单合并</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">总数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>状态</th><th>操作</th></tr></thead><tbody>
       ${gs.map(g=>`<tr>
         <td class="mono" style="white-space:nowrap">${g.no}</td>
         <td style="white-space:nowrap">${g.list.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.list.length} 个 SKU</div></td>
         <td style="white-space:nowrap">${g.list.some(x=>x.type=='送错')?`<span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>送错</span> `:''}<div style="font-size:11px;color:var(--ts);margin-top:2px">${whrSumText(g.list)}</div></td>
-        <td style="text-align:right"><b>${g.qty}</b></td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${g.qty}</td>
+        <td style="text-align:right">${whrPickCell(g.pickedQty)}</td>
         <td style="white-space:nowrap">${g.warehouse}<div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${g.slot}</div></td>
         <td style="font-size:12px;color:var(--ts);white-space:nowrap">${g.at}</td>
         <td style="white-space:nowrap">${whrGrpStTag(g)}</td>
@@ -470,18 +478,21 @@
         ${kv('存放仓库',g.warehouse)}
         ${kv('虚拟库位',`<span class="mono">${g.slot}</span>`)}
         ${kv('首次登记时间',g.at)}
-        ${kv('退回商品',`${g.list.length} 个 SKU · 合计 ${g.qty}`)}
+        ${kv('退回商品',`${g.list.length} 个 SKU`)}
+        ${kv('退回数量',`${g.qty}`)}
+        ${kv('取回数量',g.pickedQty==null?'—':`${g.pickedQty}`)}
         ${kv('退回单号','无（沿用原送货单标记，不另生成单号）')}
       </div>
 
       ${sec('退回商品明细')}
       <div style="overflow-x:auto;margin-bottom:14px"><table>
-        <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">数量</th><th>库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
+        <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th>库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
         ${g.list.map(r=>`<tr>
           <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.skuCode} · ${r.spec}</div>${r.note?`<div style="font-size:11px;color:var(--ts);margin-top:3px;white-space:normal;max-width:220px">${r.note}</div>`:''}</td>
           <td><span class="tag ${r.type=='送错'?'t-r':'t-y'}" style="font-size:10.5px"><span class="dot"></span>${r.type}</span></td>
-          <td style="text-align:right"><b>${r.qty}</b> ${r.unit}</td>
-          <td class="mono" style="font-size:12px">${r.slot}</td>
+          <td style="text-align:right;white-space:nowrap"><span style="font-variant-numeric:tabular-nums">${r.qty}</span> ${r.unit}</td>
+          <td style="text-align:right;white-space:nowrap">${r.status=='已取回'?whrPickCell(r.pickedQty)+' '+r.unit:whrPickCell(null)}</td>
+          <td class="mono" style="font-size:12px;white-space:nowrap">${r.slot}</td>
           <td style="font-size:12px;color:var(--ts);white-space:nowrap">${r.registeredAt}</td>
           <td><button class="btn btn-link btn-sm" onclick="whr_photos('${r.deliveryNo}','${r.skuCode}')">📷 ${r.photos} 张</button></td>
           <td style="white-space:nowrap">${r.status=='已取回'?`<span class="tag t-g"><span class="dot"></span>已取回</span>${r.pickedAt?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${r.pickedAt}</div>`:''}`:'<span class="tag t-b"><span class="dot"></span>待取回</span>'}</td>
