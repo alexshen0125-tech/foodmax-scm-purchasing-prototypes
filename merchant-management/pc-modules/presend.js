@@ -53,6 +53,7 @@
 
   // 供「备货参考」取最终预送量（按 商品名 + 仓库 匹配）
   window.presendQty=function(name,wh){
+    if(typeof presendOn=='function'&&!presendOn())return 0;   // 未开通预送模式的商家：无预送量（BR-03）
     if(!DB.presend)ensurePresend();
     const r=DB.presend.find(x=>x.name==name&&x.wh==wh);
     return r?finalQty(r):0;
@@ -60,6 +61,7 @@
   // 供「备货参考」「打印标签」扣减在仓剩余（BR-15/BR-15b）：
   // 今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余（下限 0），四处必须同一算式
   window.presendLeft=function(name,wh){
+    if(typeof presendOn=='function'&&!presendOn())return 0;   // 未开通预送模式的商家：无在仓寄存
     if(!DB.presendStock)ensurePresend();
     const r=(DB.presendStock||[]).find(x=>x.name==name&&x.wh==wh&&!x.returning);
     return r?r.left:0;
@@ -202,6 +204,7 @@
     ensurePresend();
     if(DB.psAudit)return;
     DB.psAuditTab='doc';DB.psAuditF={day:AUD_DAYS[0]};
+    const psOn=(typeof presendOn=='function')&&presendOn();   // 未开通 → 预送量恒 0，只盘订单量的送收（BR-03）
     const whs=[...new Set(DB.presend.map(r=>r.wh))];
     const docs=[];let seq=0;
     AUD_DAYS.slice().reverse().forEach(d=>{
@@ -211,7 +214,7 @@
         const lines=rows.map(r=>{
           const sd=r.sku+wh+d;
           const orderQty=Math.max(1,Math.round(r.orderQty*(0.7+hnum(sd+'o',70)/100)));
-          const psQty=Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100)));
+          const psQty=psOn?Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100))):0;
           const planned=orderQty+psQty;
           const h=hnum(sd+'rc',10);                       // 约 2/10 短收、2/10 多收、其余足额
           const received=h<2?Math.max(orderQty,planned-(1+hnum(sd+'sd',5)))
@@ -290,7 +293,8 @@
     const r=skuRows().find(x=>x.sku+'|'+x.wh==key);if(!r)return;
     const st=(DB.presendStock||[]).find(x=>x.sku==r.sku&&x.wh==r.wh);
     const ps=DB.presend.find(x=>x.sku==r.sku&&x.wh==r.wh);
-    const left=st?st.left:0,todayOrder=r.days[0]?r.days[0].orderQty:0,todayPs=ps?finalQty(ps):0;
+    const psOn=(typeof presendOn=='function')&&presendOn();
+    const left=psOn&&st?st.left:0,todayOrder=r.days[0]?r.days[0].orderQty:0,todayPs=(psOn&&ps)?finalQty(ps):0;
     const todayShould=Math.max(0,todayOrder+todayPs-left);
     drawer(`<div class="drawer-hd"><div><h3>${r.name} <span class="mono" style="font-size:12.5px;color:var(--ts)">${r.sku}</span></h3>
       <div style="margin-top:4px"><span class="sub" style="font-size:12px">${r.wh} · ${r.spec} · 近 ${r.days.length} 天</span></div></div>
@@ -354,7 +358,9 @@
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">${icon('📊')}</span><div>
       <b>送货盘点</b>：盘每天<b>送了多少、仓库收了多少、差多少</b>。两个维度看同一批数据——
       <b>按送货单</b>看某天某仓这一单的收货结果，<b>按 SKU</b> 看某个品逐日的送货明细。
-      应送 = 订单量 + 预送量；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。</div></div>
+      ${(typeof presendOn=='function'&&presendOn())
+        ?'应送 = 订单量 + 预送量 − 在仓剩余；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。'
+        :'应送 = 订单量；<b>短收</b>按实收计；<b>多收</b>仓库照收不设上限，已入在仓寄存，次日优先抵扣。'}</div></div>
 
     <div class="card" style="margin-bottom:14px">
       <div class="card-hd"><h3>送收对账</h3><span class="sub">${tab=='doc'?(f.day||'全部日期'):'近 '+AUD_DAYS.length+' 天累计'}${f.wh?' · '+f.wh:''}</span></div>

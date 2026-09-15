@@ -165,7 +165,10 @@ function openStockDetail(s){
 window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.presendstock=()=>{ensure();pushPage({title:'在仓预送库存',body:'<div id="psw"></div>',mount:p=>drawStock(p.querySelector('#psw'))});};
 // 供「打印标签」取最终预送量（按 商品名 + 仓库 匹配）
-window.PS_QTY=(name,wh)=>{ensure();const r=ROWS.find(x=>x.name===name&&x.wh===wh);return r?finalQty(r):0;};
+const psOn=()=>window.FM.PRESEND_ON===true;   // 未开通预送模式的商家：无预送量、无在仓寄存（BR-03）
+window.PS_QTY=(name,wh)=>{if(!psOn())return 0;ensure();const r=ROWS.find(x=>x.name===name&&x.wh===wh);return r?finalQty(r):0;};
+// 供「打印标签」扣减在仓剩余（BR-15/BR-15b）：今日应送 = 订单量 + 预送量 − 在仓剩余（下限 0）
+window.PS_LEFT=(name,wh)=>{if(!psOn())return 0;ensure();const r=(STOCK||[]).find(x=>x.name===name&&x.wh===wh&&!x.returning);return r?r.left:0;};
 
 /* ---------- 送货盘点（两个维度：按送货单 / 按 SKU）----------
    2026-09-15 沈亮拍板：原「送货复盘」改为「送货盘点」，不再按送多/送少分桶，
@@ -184,7 +187,7 @@ function ensureAudit(){
       const lines=rs.map(r=>{
         const sd=r.sku+wh+d;
         const orderQty=Math.max(1,Math.round(r.orderQty*(0.7+hnum(sd+'o',70)/100)));
-        const psQty=Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100)));
+        const psQty=psOn()?Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100))):0;
         const planned=orderQty+psQty;
         const h=hnum(sd+'rc',10);                       // 约 2/10 短收、2/10 多收、其余足额
         const received=h<2?Math.max(orderQty,planned-(1+hnum(sd+'sd',5)))
@@ -251,7 +254,7 @@ function drawAudit(box){
   const scope=ATAB==='doc'?docs.flatMap(d=>d.lines):skus;
   const sp=asum(scope,x=>x.planned),sr=asum(scope,x=>x.received),ss=asum(scope,x=>x.short),so=asum(scope,x=>x.over);
   box.innerHTML=`
-    <div class="ps-note" style="margin-top:12px">盘每天<b>送了多少、仓库收了多少、差多少</b>。<b>按送货单</b>看某天某仓这一单的收货结果，<b>按 SKU</b> 看某个品逐日的送货明细。<br>应送 = 订单量 + 预送量；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。</div>
+    <div class="ps-note" style="margin-top:12px">盘每天<b>送了多少、仓库收了多少、差多少</b>。<b>按送货单</b>看某天某仓这一单的收货结果，<b>按 SKU</b> 看某个品逐日的送货明细。<br>${psOn()?'应送 = 订单量 + 预送量 − 在仓剩余；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。':'应送 = 订单量；<b>短收</b>按实收计；<b>多收</b>仓库照收不设上限，已入在仓寄存，次日优先抵扣。'}</div>
     <div class="ps-sec" style="margin-bottom:8px">送收对账 · ${ATAB==='doc'?(ADAY||'全部日期'):'近 '+AUD_DAYS.length+' 天累计'}</div>
     <div class="ps-kbox" style="margin:0 16px">
       <div class="k"><div class="v">${sp}</div><div class="l">应送合计</div></div>
@@ -304,7 +307,7 @@ function openSkuDetail(r){
   if(!r)return;
   const st=(STOCK||[]).find(x=>x.sku===r.sku&&x.wh===r.wh);
   const ps=ROWS.find(x=>x.sku===r.sku&&x.wh===r.wh);
-  const left=st?st.left:0,todayOrder=r.days[0]?r.days[0].orderQty:0,todayPs=ps?finalQty(ps):0;
+  const left=(psOn()&&st)?st.left:0,todayOrder=r.days[0]?r.days[0].orderQty:0,todayPs=(psOn()&&ps)?finalQty(ps):0;
   const todayShould=Math.max(0,todayOrder+todayPs-left);
   pushPage({title:r.name,body:`
     <div class="ps-note" style="margin-top:12px">${r.sku} · ${r.wh} · 近 ${r.days.length} 天</div>

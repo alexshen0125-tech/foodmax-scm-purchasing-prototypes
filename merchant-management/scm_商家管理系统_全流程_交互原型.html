@@ -658,6 +658,9 @@ const DB = {
   merchant:{
     name:'绿鲜源蔬果（新加坡）', code:'M2026-0815', contact:'陈志强', phone:'+65 9123 4567',
     channel:'平台商家',            // 供应商渠道：自营供应商 | 平台商家
+    // 预送模式（提前送货与预测预送）：运营平台按商家逐个配置，默认关闭。
+    // 关闭的商家完全没有预送逻辑——无预送量、无在仓寄存、无相关菜单，备货与打标只按订单量（BR-03）
+    presendMode:true,              // 演示店铺已开通；运营端「店铺管理 › 预送模式」可切换
     onboard:'scm_pending',         // scm_pending(入驻审核中)|task|task_review|task_rejected|active
     taskReject:'',
     vendorCreated:false,           // 供应商入驻建档后置 true
@@ -1234,14 +1237,14 @@ const NAV={
     {id:'m-order',ic:'📋',t:'订单管理',p1:1,badge:()=>DB.orders.filter(o=>o.status=='pending'||o.status=='packed').length},
     {id:'m-pick-group',ic:'📦',t:'备货管理',p1:1,children:[
       {id:'m-pick-ref',ic:'📊',t:'备货参考'},
-      {id:'m-presend-recon',ic:'📊',t:'送货盘点'},
+      {id:'m-presend-recon',ic:'📊',t:'送货盘点'},   // 未开通预送模式的商家也能用：只盘订单量的送收对账
       {id:'m-pick-weigh',ic:'⚖️',t:'称重录入',badge:()=>typeof weighPending=='function'?weighPending():0},
       {id:'m-pick-label',ic:'🏷️',t:'打印标签',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
     ]},
     {id:'m-stock-group',ic:'📦',t:'库存管理',p1:1,children:[
       {id:'m-stock',ic:'📋',t:'库存列表',badge:()=>typeof invOutCount=='function'?invOutCount():0,by:'y'},
       {id:'m-stock-transit',ic:'🚚',t:'在途库存',badge:()=>typeof invTransitCount=='function'?invTransitCount():0},
-      {id:'m-stock-presend',ic:'🏬',t:'在仓预送库存'},
+      {id:'m-stock-presend',ic:'🏬',t:'在仓预送库存',when:()=>presendOn()},
     ]},
     {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
     {id:'m-mkt-group',ic:'📣',t:'营销活动',p1:1,children:[
@@ -1403,6 +1406,8 @@ function switchRole(){const next=ROLE_ORDER[(ROLE_ORDER.indexOf(DB.role)+1)%ROLE
 document.getElementById('sb-switch-btn').onclick=switchRole;
 function nav(p){DB.page=p;render();window.scrollTo(0,0);}
 function navToggle(id){DB.navOpen=DB.navOpen||{};const g=NAV[DB.role].find(n=>n.id==id);if(!g||!g.children)return;const childActive=g.children.some(k=>k.id==DB.page);const cur=(DB.navOpen[id]!==undefined)?DB.navOpen[id]:childActive;DB.navOpen[id]=!cur;render();}
+// 预送模式是否对当前商家开通（BR-03）：关闭 → 预送量恒为 0、相关菜单与列全部不出现
+window.presendOn=function(){return DB.merchant&&DB.merchant.presendMode===true;};
 function navLeaf(r,id){for(const n of NAV[r]){if(n.id==id&&!n.children)return n;if(n.children){const k=n.children.find(c=>c.id==id);if(k)return k;}}return null;}
 
 function render(){
@@ -1416,14 +1421,17 @@ function render(){
   // nav（支持二级子菜单：含 children 的为一级分组，可展开/折叠）
   DB.navOpen=DB.navOpen||{};
   let nh='';NAV[r].forEach(n=>{
+    if(n.when&&!n.when())return;            // 按商家配置隐藏（如未开通预送模式）
     if(n.sec){nh+=`<div class="nav-sec">${n.sec}</div>`;return;}
     if(n.children){
-      const childActive=n.children.some(k=>k.id==DB.page);
+      const kids=n.children.filter(k=>!k.when||k.when());
+      if(!kids.length)return;
+      const childActive=kids.some(k=>k.id==DB.page);
       const open=(DB.navOpen[n.id]!==undefined)?DB.navOpen[n.id]:childActive;
-      const sumB=n.children.reduce((a,k)=>a+(k.badge?k.badge():0),0);
+      const sumB=kids.reduce((a,k)=>a+(k.badge?k.badge():0),0);
       const right=`<span style="margin-left:auto;display:flex;align-items:center;gap:6px">${(!open&&sumB)?`<span class="nav-badge" style="margin-left:0">${sumB}</span>`:''}<span class="nav-caret">${open?'▾':'▸'}</span></span>`;
       nh+=`<div class="nav-i nav-grp ${childActive?'grp-on':''}" onclick="navToggle('${n.id}')"><span class="nav-ic">${icon(n.ic)}</span>${n.t}${n.p1?'<span class="nav-p1">一期</span>':''}${right}</div>`;
-      if(open)n.children.forEach(k=>{
+      if(open)kids.forEach(k=>{
         let kb='';if(k.badge){const c=k.badge();if(c>0)kb=`<span class="nav-badge ${k.by||''}">${c}</span>`;}
         nh+=`<div class="nav-i nav-sub ${DB.page==k.id?'active':''}" onclick="nav('${k.id}')"><span class="nav-ic">${icon(k.ic)}</span>${k.t}${k.p1?'<span class="nav-p1">一期</span>':''}${kb}</div>`;
       });
@@ -4407,6 +4415,30 @@ function act_rejectEntry(){toast('已作废 / 退回，需采购员重新修改�
 
 /* ---------- 店铺运营平台：店铺管理（待审核店铺 + 店铺列表；商家端自助入驻来源，审核通过写入SCM供应商主数据） ---------- */
 function pShops(t){DB.shopTab=t;nav('p-shops');}
+/* 预送模式配置（BR-03）：运营平台按商家逐个开通，未开通的商家完全没有预送逻辑。
+   开通后商家端才出现预送量、在仓预送库存与相关口径；关闭后存量在仓货继续按 BR-15 抵扣至清零（BR-20）。*/
+function act_shopPresend(mcode){
+  const mine=mcode==DB.merchant.code, on=mine&&DB.merchant.presendMode;
+  modal(`<div class="mc-hd"><h3>预送模式 · ${shopNameOf(mcode)}</h3><p>提前送货与预测预送 · 按商家逐个开通 · ${mcode}</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="ib ib-b"><span class="i">📈</span><div>开通后，该商家在 <b>${(DB.presendCfg&&DB.presendCfg.t0)||'16:00'}</b> 由系统按 <b>min(算法预测量, 可售库存)</b> 定稿当日预送量，随 <b>${(DB.presendCfg&&DB.presendCfg.t)||'18:00'}</b> 那趟车一起送；商家端出现<b>预送量 / 在仓预送库存</b>及相关口径。<br><b>未开通的商家完全没有预送逻辑</b>：备货与打标只按订单量，不出现预送相关菜单与字段。</div></div>
+    <div class="ib ib-y" style="margin-top:10px"><span class="i">⚠️</span><div>开通前需确认三项准入：① 商家<b>截单时间晚于到仓送货时点</b>；② 供货模式为<b>自售</b>；③ 商品属<b>低损耗常保品类</b>（生鲜水果暂不纳入）。可代管商品数由大仓核定。</div></div>
+    ${mine?`<div class="fr" style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+      <label class="fl" style="margin:0">预送模式</label>
+      <label class="chip-ck ${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="act_shopPresendSet(this.checked)">${on?'已开通':'未开通'}</label>
+    </div>
+    <div style="font-size:12px;color:var(--ts);margin-top:8px">关闭后<b>次日起</b>回归普通模式；已在仓的存量货继续按「次日抵扣」消化至清零，不强制退回。</div>`
+    :'<div class="ib ib-gr" style="margin-top:14px"><span class="i">ℹ️</span>演示原型仅支持配置当前登录商家，其他店铺为只读展示。</div>'}
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
+}
+function act_shopPresendSet(on){
+  DB.merchant.presendMode=!!on;
+  if(!on&&['m-stock-presend'].includes(DB.page))DB.page='m-pick-ref';
+  closeModal();render();
+  toast(on?'已为该商家开通预送模式，次日起生效':'已关闭预送模式，次日起回归普通模式；在仓存量继续抵扣至清零','ok');
+}
+
 PAGES['p-shops']=()=>{
   const t=DB.shopTab=='list'?'list':'pending';
   const pend=(DB.merchant.onboard=='task_review'?1:0)+1;
@@ -4469,13 +4501,15 @@ function shopAllTab(){
       <td>${tag('opstatus',r.op)}</td>
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
+      <td>${(r.mine&&DB.merchant.presendMode)?'<span class="tag t-g"><span class="dot"></span>已开通</span>':'<span class="tag t-gr">未开通</span>'}</td>
       <td><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
-        <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button></td></tr>`;};
+        <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button>
+        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button></td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>操作</th></tr></thead>
+    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>预送模式</th><th>操作</th></tr></thead>
     <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="12"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
 }

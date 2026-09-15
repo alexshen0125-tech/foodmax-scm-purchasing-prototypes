@@ -96,9 +96,13 @@ function rows(){
       if(!agg[key])agg[key]={key,wh:o.warehouse,sku:l.sku,name:l.name,unit:l.unit,cat:m.cat,spec:m.spec,refund:m.refund,qty:0};
       agg[key].qty+=l.qty;});
   });
-  // 应送货 = 订单量 + 预送量（预送量标签形态与订单货一致：按 SKU 一件一张、不含订单/客户信息）
+  // 应送货 = 订单量 + 预送量 − 在仓剩余（BR-15b 统一算式，与备货参考/送货盘点/在仓预送库存同口径）
+  // 预送量标签形态与订单货一致：按 SKU 一件一张、不含订单/客户信息
   const out=Object.values(agg);
-  out.forEach(r=>{r.ordQty=r.qty;r.psQty=(typeof PS_QTY==='function')?PS_QTY(r.name,r.wh):0;r.qty=r.ordQty+r.psQty;});
+  out.forEach(r=>{r.ordQty=r.qty;
+    r.psQty=(typeof PS_QTY==='function')?PS_QTY(r.name,r.wh):0;
+    r.leftQty=(typeof PS_LEFT==='function')?PS_LEFT(r.name,r.wh):0;   // 昨日留仓+多收，今日优先消耗
+    r.qty=Math.max(0,r.ordQty+r.psQty-r.leftQty);});
   return out;
 }
 
@@ -115,7 +119,7 @@ function renderPrint(box){
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
   const df=dateField(state.date,ds,d=>{state.date=d;renderPrint(box);});
   box.innerHTML=`
-    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。</div>
+    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br><b>应送货 = 订单量 + 预送量 − 在仓剩余</b>：昨天留仓的、以及你昨天多送被仓库照收的货今日优先消耗，已在应送货里扣掉，<b>不要重复打标重复送</b>。':''}</div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
@@ -129,7 +133,7 @@ function renderPrint(box){
         return `<div class="lb-row" data-key="${r.key}">
         <div class="top"><span class="nm">${r.name}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
-        <div class="meta">订单 ${r.ordQty}${r.psQty?` · <b style="color:var(--amber)">预送 ${r.psQty}</b>`:''}</div>
+        <div class="meta">订单 ${r.ordQty}${r.psQty?` · <b style="color:var(--amber)">预送 ${r.psQty}</b>`:''}${r.leftQty?` · <b style="color:var(--emerald-2)">抵扣在仓 −${r.leftQty}</b>`:''}</div>
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span></div>
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
@@ -383,7 +387,8 @@ function preReprint(id,box){
 function rowOf(key){const [wh,sku]=key.split('|');const m=metaOf(sku);let qty=0,name='',unit='件';
   pend().forEach(o=>{if(o.warehouse!==wh)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;qty+=(+l.qty||0);name=l.name;unit=l.unit;});});
   const ps=(typeof PS_QTY==='function')?PS_QTY(name,wh):0;
-  return {key,wh,sku,name,unit,ordQty:qty,psQty:ps,qty:qty+ps,cat:m.cat,spec:m.spec,refund:m.refund};}
+  const lf=(typeof PS_LEFT==='function')?PS_LEFT(name,wh):0;
+  return {key,wh,sku,name,unit,ordQty:qty,psQty:ps,leftQty:lf,qty:Math.max(0,qty+ps-lf),cat:m.cat,spec:m.spec,refund:m.refund};}
 const printer=()=>{window.FM.DB.printer=window.FM.DB.printer||{connected:false,name:''};return window.FM.DB.printer;};
 function connectPrinter(then){window.FM.sheet([
   {label:'FoodMax 标签机 · TSC-A1（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='TSC-A1';window.FM.toast('已连接 TSC-A1 标签机','ok');then&&then();}},

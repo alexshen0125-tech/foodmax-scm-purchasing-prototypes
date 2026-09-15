@@ -207,7 +207,7 @@ const TILES=[
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
 ];
 // 备货(备货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
-const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'presendstock',l:'在仓预送',ic:'box'},{k:'presendrecon',l:'送货盘点',ic:'chart'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
+const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'presendstock',l:'在仓预送',ic:'box',when:()=>PRESEND_ON},{k:'presendrecon',l:'送货盘点',ic:'chart'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
 const READY=new Set(['goods']);
 
 /* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
@@ -255,6 +255,10 @@ function fmtRemain(ms){let s=Math.floor((ms-Date.now())/1000);if(!ms||isNaN(s))r
 function cdSpan(ms){return `<b data-cd="${ms}">${fmtRemain(ms)}</b>`;}
 function arriveDueMs(str,hrs){if(!str)return 0;const t=Date.parse(str.replace(' ','T'));return isNaN(t)?0:t+hrs*3600000;}
 if(!window._cdTick)window._cdTick=setInterval(()=>{document.querySelectorAll('[data-cd]').forEach(el=>{el.textContent=fmtRemain(+el.dataset.cd);});},1000);
+// 预送模式（提前送货与预测预送）：由运营平台「店铺管理 › 预送模式」按商家逐个开通（BR-03）。
+// 未开通的商家完全没有预送逻辑——无预送量、无在仓寄存、相关入口不出现，备货与打标只按订单量。
+// 演示店铺已开通；与 PC 原型 DB.merchant.presendMode 同一开关。
+const PRESEND_ON=true;
 const DB={
   orders:[
     {id:'#SG20260701001',client:'海底捞（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,platSub:8.00,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
@@ -307,7 +311,7 @@ function cancelOrder(id){const o=DB.orders.find(x=>x.id===id);if(!o||o.status!==
   if(pk){pk.orderIds=pk.orderIds.filter(x=>x!==id);if(!pk.orderIds.length)pk.status='已作废';}
   o.pickId='';return pk;}
 window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel,
-  DB,ordMask,ordIncome,ordCommission,ordPickup,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
+  PRESEND_ON,DB,ordMask,ordIncome,ordCommission,ordPickup,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
 
 function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
   const r=READY.has(k);
@@ -342,7 +346,7 @@ window.homeCustom=()=>{const r=HD_RANGE;const m=document.createElement('div');m.
 function renderHome(){
   const hd=homeDash();
   const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${t.badge?`<span class="bdg ${t.amber?'amber':''}">${t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
-  const deliver=DELIVER.map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${d.badge?`<span class="bdg">${d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
+  const deliver=DELIVER.filter(d=>!d.when||d.when()).map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${d.badge?`<span class="bdg">${d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
   document.getElementById('v-home').innerHTML=`<div class="stagger">
     <div class="hm-top"><div class="hm-logo">${svg('leaf')}</div>
       <div class="hm-store"><div class="nm">鲜丰食材 · Fresh Harvest Pte Ltd</div><div class="sub"><span class="dot"></span>正常营业 · Food Max 优选商家</div></div>
