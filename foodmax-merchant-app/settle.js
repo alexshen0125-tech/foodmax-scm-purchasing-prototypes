@@ -1,15 +1,14 @@
 /* Food Max 商家端 v2 · 对账结算模块（商家视角）
    PC 对齐(2026-07)：完全按 PC 商家管理系统「对账结算」口径重构——
-   月度结算单 · 绿鲜源蔬果 · 应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣(服务佣金) − 物流抽佣(物流佣金)
+   结算单（周期由商家结算方式决定，不固定按月）· 绿鲜源蔬果
    列表字段/状态/详情构成/清分进度 与 PC 一致。
-   v1.4：结算单生成后=待商家认可，商家在列表卡片点「认可账单」(二次确认·不可逆)才推财务打款并自动开服务费票；
+   v2.0：结算单生成后=待商家认可，商家在列表卡片点「认可账单」(二次确认·不可逆)才推财务打款并自动开服务费票；
    无超时自动认可；认可入口只在列表，详情页只读。进度节点去掉「开票」。历史单 已结清(只读)。金额 S$。 */
 (function(){
 const {pushPage,popPage,toast,sheet,svg,skel,confirmDialog}=window.FM;
 
 const css=document.createElement('style');
 css.textContent=`
-.se-intro{margin:0 16px 12px;background:var(--mint-soft);color:var(--emerald-d);font-size:12.5px;font-weight:600;padding:11px 14px;border-radius:12px;line-height:1.5;}
 .se-topbar{display:flex;align-items:center;padding:0 18px 8px;font-size:12.5px;color:var(--sub);}
 .se-list{padding:0 16px 24px;}
 .se-bill{background:#fff;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--sh-sm);cursor:pointer;}
@@ -75,6 +74,14 @@ css.textContent=`
 .se-legend b{color:#27433A;}
 .se-pend{background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 13px;border-radius:14px;margin-bottom:12px;}
 .se-bill .se-ok{width:100%;margin-top:12px;}
+.se-cfm{text-align:left;}
+.se-cfm-no{font-size:12.5px;color:var(--sub);font-weight:600;margin-bottom:8px;}
+.se-cfm-r{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-top:1px solid var(--line);}
+.se-cfm-r:first-of-type{border-top:none;}
+.se-cfm-r.net{border-top:1.5px solid var(--line);font-weight:700;color:var(--emerald-2);font-size:15px;padding-top:8px;}
+.se-cfm-ul{margin:10px 0 0;padding-left:18px;font-size:12px;color:var(--sub);line-height:1.6;}
+.se-cfm-ul li{margin-bottom:4px;}
+.se-cfm-ul li.warn{color:var(--red);}
 `;
 document.head.appendChild(css);
 
@@ -105,17 +112,31 @@ const statusChip=b=>{
 function askConfirmBill(after){
   const b=CUR;
   if(b.status!='generated'){toast('本单已认可，无需重复操作');return;}
+  const rows=[['汇总总额（GMV）',b.gross],['逆向扣减（售后判商家责）',-(b.reverse||0)],
+    [(b.feeSvc||0)>0?'平台抽佣 · 服务佣金':'平台抽佣 · 服务佣金（免佣期）',-(b.feeSvc||0)],
+    [(b.feeLogi||0)>0?'物流抽佣 · 物流佣金':'物流抽佣 · 物流佣金（免佣期）',-(b.feeLogi||0)]]
+    .concat((b.repl||0)>0?[['平台补采扣款（含税）',-b.repl]]:[])
+    .concat((b.fine||0)>0?[['缺货罚款',-b.fine]]:[])
+    .concat((b.fill||0)>0?[['售后补货扣款（含税）',-b.fill]]:[]);
+  const tbl=rows.map(r=>`<div class="se-cfm-r"><span>${r[0]}</span><b style="${r[1]<0?'color:var(--red)':''}">${r[1]<0?'-':''}${money(Math.abs(r[1]))}</b></div>`).join('');
   confirmDialog({title:'认可账单',okText:'确认认可',
-    body:`<div style="text-align:left;line-height:1.6">
-      <div><b>${b.no}</b> · ${b.range}</div>
-      <div style="margin:6px 0 8px">应清算给供应商 <b style="color:var(--emerald-2)">${money(b.net)}</b></div>
-      <div style="font-size:12px;color:var(--sub)">认可即视为对账无误，账单将<b>推送平台财务</b>进入<b>打款</b>流程${b.feeSvc>0?`，并就本期服务佣金 ${money(b.feeSvc)} <b>自动开具服务费发票</b>（GST 9%）`:'（本期免佣，不开服务费发票）'}；<b>认可后不可撤回</b>。如有异议请先线下联系平台运营 / 客服。</div>
+    body:`<div class="se-cfm">
+      <div class="se-cfm-no">${b.no} · ${b.range}</div>
+      ${tbl}
+      <div class="se-cfm-r net"><span>应清算给供应商</span><b>${money(b.net)}</b></div>
+      <ul class="se-cfm-ul">
+        <li>认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款</li>
+        <li>${b.feeSvc>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「我的 → 发票管理 → 服务费发票」查看下载）`:'本期处免佣期，服务佣金为 0，不开具服务费发票'}</li>
+        <li class="warn"><b>认可后不可撤回</b>；有异议请先线下联系平台运营 / 客服，先不要认可</li>
+      </ul>
     </div>`,
     onOk:()=>{
       const n=new Date(),z=x=>String(x).padStart(2,'0');
       b.status='confirmed';
       b.confirmAt=`${n.getFullYear()}-${z(n.getMonth()+1)}-${z(n.getDate())} ${z(n.getHours())}:${z(n.getMinutes())}`;
       b.confirmBy='陈店主（商家 App）';
+      const due=new Date(n.getTime()+30*864e5);   // 预计到账 = 认可日 + 结算账期（月结 30 天）
+      b.expectedPayDate=`${due.getFullYear()}-${z(due.getMonth()+1)}-${z(due.getDate())}`;
       toast(b.feeSvc>0?'已认可，账单已推送财务；服务费发票已自动开具':'已认可，账单已推送财务');
       after&&after();
     }});
@@ -124,7 +145,6 @@ function askConfirmBill(after){
 // ── 1. 结算单列表 ─────────────────────────────────
 function openSettle(){
   pushPage({title:'对账结算',body:`
-    <div class="se-intro">每月生成一张<b>结算单</b>。<b>应清算给供应商</b>=汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣，即你的到手货款。核对无误后点<b>认可账单</b>，平台才会打款并开具服务费发票。金额 S$。</div>
     <div class="se-topbar"><span id="se-cnt"></span></div>
     <div class="se-list" id="sl"></div>`,
     mount:(p)=>{
@@ -139,7 +159,7 @@ function openSettle(){
             <div class="rng">${b.range}</div>
             <div class="big disp"><span class="c">S$</span>${money(b.net).slice(2)}</div>
             <div class="glbl">应清算给供应商（到手货款）</div>
-            <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:'待打款'}<span class="ar">›</span></div>
+            <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:(b.status=='confirmed'&&b.expectedPayDate?'预计 '+b.expectedPayDate+' 前到账':'待认可')}<span class="ar">›</span></div>
             ${b.status=='generated'?`<button class="btn primary se-ok" data-ok="1">认可账单</button>`:''}
           </div>
         </div>`).join('');
@@ -208,11 +228,12 @@ function openDetail(b){
         <div class="lt"><span class="nm">平台抽佣（服务费）</span><span class="am" style="color:var(--amber)">${money(b.feeSvc)}</span></div>
         <div class="payee">抽佣入平台 · 你<b>认可账单后</b>平台<b>自动开具</b>服务费发票（佣金税票 GST 9%）给你，无需申请、可查看/下载</div>
         <div class="sts">${svcTag}</div>
+        ${b.feeSvc>0&&b.status!='generated'?`<div class="payee" id="se-inv-lk" style="cursor:pointer;color:var(--emerald-2);font-weight:600">查看服务费发票 ›</div>`:''}
       </div>
     </div>
 
     ${isCur&&b.status=='generated'?`<div class="se-card"><div class="se-tip">本单<b>待你认可</b>。核对无误后回<b>结算单列表</b>点「认可账单」——认可后账单推送平台财务打款${b.feeSvc>0?'，并自动开具服务费发票':''}，<b>不可撤回</b>；如有异议请<b>线下联系平台运营 / 客服</b>核查，先不要认可。<br>本页仅供核对，认可入口只在列表。</div></div>`:''}
-    ${isCur&&b.status=='confirmed'?`<div class="se-card"><div class="se-idn" style="background:var(--mint-soft);color:var(--emerald-2)">✅ 你已于 ${b.confirmAt||'—'} 认可本期账单，已推送财务打款${b.feeSvc>0?'；服务费发票已自动开具':''}</div></div>`:''}
+    ${isCur&&b.status=='confirmed'?`<div class="se-card"><div class="se-idn" style="background:var(--mint-soft);color:var(--emerald-2)">✅ 你已于 ${b.confirmAt||'—'} 认可本期账单，已推送财务，预计 ${b.expectedPayDate||'—'} 前到账${b.feeSvc>0?'；服务费发票已自动开具':''}</div></div>`:''}
     ${b.status=='paid'?`<div class="se-card"><div class="se-idn" style="background:var(--mint-soft);color:var(--emerald-2)">💰 本期已结清，货款 ${money(b.net)} 已到账</div></div>`:''}
 
     <div class="se-card">
@@ -228,6 +249,8 @@ function openDetail(b){
       const close=p.querySelector('#se-close');if(close)close.onclick=popPage;
       const lk=p.querySelector('#se-repl-lk');
       if(lk)lk.onclick=()=>{window.FM_MOD&&window.FM_MOD.replen?window.FM_MOD.replen():toast('平台补采模块加载中');};
+      const lk3=p.querySelector('#se-inv-lk');
+      if(lk3)lk3.onclick=()=>{window.FM_MOD&&window.FM_MOD.invoice?window.FM_MOD.invoice():toast('发票模块加载中');};
       const lk2=p.querySelector('#se-fill-lk');
       if(lk2)lk2.onclick=()=>{window.FM_MOD&&window.FM_MOD.replen?window.FM_MOD.replen():toast('平台补采模块加载中');};
     }});

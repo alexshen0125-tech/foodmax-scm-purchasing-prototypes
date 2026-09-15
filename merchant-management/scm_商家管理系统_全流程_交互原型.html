@@ -840,7 +840,7 @@ const S = {
   onboard:{scm_pending:['入驻审核中','t-b'],task:['待完成开店任务','t-y'],task_review:['开店任务审核中','t-b'],task_rejected:['开店任务被驳回','t-r'],active:['营业中','t-g']},
   product:{draft:['草稿','t-gr'],reviewing:['待审核','t-y'],onsale:['在售','t-g'],offsale:['已下架','t-gr'],rejected:['审核驳回','t-r'],forced_off:['强制下架','t-r']},
   order:{pending:['待发货','t-b'],packed:['已贴标','t-pp'],shipped:['备货中','t-y'],received:['已收货','t-g'],done:['已完成','t-gr'],canceled:['已取消','t-r']},
-  bill:{none:['未生成','t-gr'],generated:['待认可','t-y'],disputed:['争议核查中','t-r'],adjusted:['已调整待确认','t-y'],confirmed:['待付款','t-b']},
+  bill:{none:['未生成','t-gr'],generated:['待认可','t-y'],confirmed:['待付款','t-b'],voided:['已作废','t-gr']},  // v1.2 起异议走线下，已去 disputed/adjusted
   invoice:{none:['待平台开票','t-y'],uploaded:['开票中','t-b'],verified:['已开票','t-g'],rejected:['开票异常','t-r']},
   /* 平台代开税票状态（运营平台·发票查询）：issued 已开具 / credited 已冲抵（存在对应 Credit Note）/ failed 生成失败（可重出） */
   taxinv:{issued:['已开具','t-g'],credited:['已冲抵','t-y'],failed:['生成失败','t-r']},
@@ -1260,7 +1260,7 @@ const NAV={
     // PAGES 实现保留在 pc-modules/biz.js·price.js·analysis.js，恢复时把 NAV 条目加回即可
     {sec:'财务'},
     {id:'m-recon',ic:'🧮',t:'对账单',p1:1},
-    {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>(DB.bill.status=='generated'||DB.bill.status=='adjusted')?1:0,by:'y'},
+    {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>DB.bill.status=='generated'?1:0,by:'y'},
     {id:'m-replenish',ic:'🔁',t:'平台补采',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.status=='pending').length:0,by:'y'},
     {id:'m-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.fineNo&&r.status=='pending').length:0,by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1},
@@ -3501,18 +3501,19 @@ PAGES['m-settle']=()=>{
   return `${flowTip(`每次结算生成一张<b>结算单</b>（结算周期由商家结算方式决定，不固定按月）。点<b>详情</b>查看构成、清分与到账；核对无误后点<b>认可账单</b>，账单即推送平台财务<b>打款</b>并自动开具<b>服务费发票</b>。可勾选一张或多张结算单<b>导出</b>对账明细。`)}
   ${cur.status=='generated'?`<div class="ib ib-y" style="margin-bottom:10px"><span class="i">📝</span>本期账单 <b>${cur.no}</b>（${cur.range}）待你核对认可，应清算 <b>${money(cur.net)}</b>。<b>认可后平台才会打款并开具服务费发票</b>；如有异议请先<b>线下联系平台运营 / 客服</b>核查，不要认可。</div>`:''}
   <div class="row" style="justify-content:flex-end;margin-bottom:10px"><button class="btn btn-p" onclick="act_exportBills()">⬇️ 导出${DB.billSel.length?` (${DB.billSel.length})`:''}</button></div>
-  <div class="card"><div class="card-hd"><h3>结算单列表</h3><span class="sub">共 ${rows.length} 张 · 点详情查看</span></div>
-  ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 应清算合计 <b style="color:var(--gd)">${money(selSum)}</b></span><button class="btn btn-p btn-sm" onclick="act_exportBills()">⬇️ 导出所选</button><button class="btn btn-link" style="margin-left:auto" onclick="DB.billSel=[];render()">取消选择</button></div>`:''}
+  <div class="card"><div class="card-hd"><h3>结算单列表</h3><span class="sub">共 ${rows.length} 张 · 点详情查看</span>
+  <button class="btn btn-o btn-sm" ${selRows.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} title="勾选后可导出所选；未勾选请用右上角「导出」导出全部" onclick="act_exportBills()">⬇️ 导出所选${selRows.length?`（${selRows.length}）`:''}</button></div>
+  ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 应清算合计 <b style="color:var(--gd)">${money(selSum)}</b></span><button class="btn btn-link" style="margin-left:auto" onclick="DB.billSel=[];render()">取消选择</button></div>`:''}
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选" ${allSel?'checked':''} onclick="selAllBills()"></th><th>结算单号</th><th>结算区间</th><th>状态</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选（仅用于导出；认可需逐单进行）" ${allSel?'checked':''} onclick="selAllBills()"></th><th>结算单号</th><th>结算区间</th><th>状态</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
     ${rows.map(x=>`<tr>
       <td><input type="checkbox" class="skuchk" ${DB.billSel.includes(x.no)?'checked':''} onclick="toggleBillSel('${x.no}')"></td>
       <td class="mono">${x.no}</td>
       <td>${x.range}</td>
       <td>${x===cur?tag('bill',x.status):'<span class="tag t-g"><span class="dot"></span>已结清</span>'}</td>
       <td style="color:var(--gd);font-weight:600">${money(x.net)}</td>
-      <td style="color:var(--ts);font-size:12px">${x===cur?'—':(x.payTime||'已到账')}</td>
-      <td style="white-space:nowrap">${x===cur&&x.status=='generated'?`<button class="btn btn-p btn-sm" onclick="act_confirmBillAsk()">认可账单</button> `:''}<button class="btn btn-o btn-sm" onclick="act_billDetail('${x===cur?'':x.period}')">详情</button></td>
+      <td style="color:var(--ts);font-size:12px">${x!==cur?(x.payTime||'已到账'):(x.status=='confirmed'&&x.expectedPayDate?`预计 ${x.expectedPayDate} 前到账`:'—')}</td>
+      <td style="white-space:nowrap">${x===cur&&x.status=='generated'?`<button class="btn btn-p btn-sm" onclick="act_confirmBillAsk('${x.no}')">认可账单</button> `:''}<button class="btn btn-o btn-sm" onclick="act_billDetail('${x===cur?'':x.period}')">详情</button></td>
     </tr>`).join('')}
     </tbody></table></div></div></div>`;
 };
@@ -5588,7 +5589,7 @@ function act_billDetail(key){
   const sel=(key&&DB.billsHistory.find(x=>x.period==key))||cur;
   const isCur=sel===cur;
   // 进度节点（v1.4）：商家认可是必经一步——未认可停在第 1 节点，认可后才进平台开票付款
-  const steps=['平台生成','商家认可','平台开票付款','打款完成'];
+  const steps=['平台生成','商家认可','校验付款','打款完成'];   // 与 App settle.js STEPS 保持一致
   const idx=!isCur?4:(DB.payment=='paid'?4:(sel.status=='generated'?1:2));
   const payoutTag=(!isCur||DB.payment=='paid')?'<span class="tag t-g"><span class="dot"></span>已清分 · 已到账</span>':DB.payment=='none'?'<span class="tag t-y"><span class="dot"></span>已清分 · 待打款</span>':'<span class="tag t-b"><span class="dot"></span>已清分 · 付款中</span>';
   const ft=`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`;
@@ -5611,7 +5612,7 @@ function act_billDetail(key){
     ${(sel.repl||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🔁</span><div>本期含<b>平台补采扣款 ${money(sel.repl)}</b>（${sel.replCnt} 单，按<b>自营商品原定价</b>计，<b>不加价</b>）${(sel.fine||0)>0?` 与 <b>缺货罚款 ${money(sel.fine)}</b>（${sel.fineCnt} 单，缺口件数 × ${money(DB.replCfg?DB.replCfg.finePerUnit:40)}/件）`:''}——均因你送货到仓少货产生，<b>两者相互独立、无关联</b>：补采只在自营有货补齐时产生，罚款只要清点出缺口就计。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-replenish')">查看平台补采单 →</button><button class="btn btn-link" onclick="closeDrawer();nav('m-fine')">查看罚款单 →</button></div></div>`:''}
     ${isCur&&(sel.supply||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🖨️</span><div>本期含耗材采购扣款 <b>${money(sel.supply)}</b>（已交付 ${sel.supplyCnt} 单，按含税金额扣）；当期应清算不足以覆盖时，差额结转下期继续扣。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-supply-order')">查看耗材订单 →</button></div></div>`:''}
     ${isCur&&sel.status=='generated'?`<div class="ib ib-y"><span class="i">📝</span>本单<b>待你认可</b>。核对无误后回<b>结算单列表</b>点「<b>认可账单</b>」——认可后账单推送平台财务打款${sel.feeSvc>0?'，并自动开具服务费发票':''}，<b>不可撤回</b>；如有异议请<b>线下联系平台运营 / 客服</b>核查，先不要认可。<br><span style="color:var(--ts);font-size:12px">本抽屉仅供核对，认可入口只在列表行。</span></div>`:''}
-    ${isCur&&sel.status=='confirmed'?`<div class="ib ib-g"><span class="i">✅</span>你已于 <b>${sel.confirmAt||'—'}</b> 认可本期账单${sel.confirmBy?`（${sel.confirmBy}）`:''}，已推送平台财务：打款流程进行中${sel.feeSvc>0?'，服务费发票已自动开具（发票管理 → 服务费发票）':'（本期免佣，无服务费发票）'}。</div>`:''}
+    ${isCur&&sel.status=='confirmed'?`<div class="ib ib-g"><span class="i">✅</span>你已于 <b>${sel.confirmAt||'—'}</b> 认可本期账单${sel.confirmBy?`（${sel.confirmBy}）`:''}，已推送平台财务：打款流程进行中，<b>预计 ${sel.expectedPayDate||'—'} 前到账</b> ${DB.merchant&&DB.merchant.bank?DB.merchant.bank:'DBS ****8821'}。${sel.feeSvc>0?`服务费发票已自动开具。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();DB.invTab='svc';nav('m-invoice')">查看服务费发票 →</button>`:'本期免佣，无服务费发票。'}</div>`:''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
       ${sel.items.map(it=>`<tr><td>${it[0]}</td><td>${it[1]}</td><td style="${it[2]<0?'color:var(--r)':''}">${it[2]<0?'-':''}${money(Math.abs(it[2]))}</td></tr>`).join('')}
@@ -5628,27 +5629,45 @@ function act_billDetail(key){
 }
 /* 认可账单（BR-03b）：入口只在结算单列表行，详情抽屉不放；二次确认·不可逆。
    认可后并行两条线：① 推平台财务走打款 ② 就本期服务佣金自动开服务费发票（feeSvc=0 的期不开票）。*/
-function act_confirmBillAsk(){
-  const b=DB.bill;
+function act_confirmBillAsk(no){
+  const b=(no&&[DB.bill,...DB.billsHistory].find(x=>x.no==no))||DB.bill;
   if(b.status!='generated'){toast('本单已认可或已作废，无需重复操作','info');return;}
-  modal(`<div class="mc-hd"><h3>认可账单</h3><p>认可后推送财务，不可撤回</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  const ded=[['汇总总额（GMV）',b.gross],['逆向扣减（售后判商家责）',-(b.reverse||0)],
+    [(b.feeSvc||0)>0?'平台抽佣 · 服务佣金':'平台抽佣 · 服务佣金（免佣期）',-(b.feeSvc||0)],
+    [(b.feeLogi||0)>0?'物流抽佣 · 物流佣金':'物流抽佣 · 物流佣金（免佣期）',-(b.feeLogi||0)]]
+    .concat((b.supply||0)>0?[['耗材采购扣款（含税）',-b.supply]]:[])
+    .concat((b.repl||0)>0?[['平台补采扣款（含税）',-b.repl]]:[])
+    .concat((b.fine||0)>0?[['缺货罚款',-b.fine]]:[])
+    .concat((b.fill||0)>0?[['售后补货扣款（含税）',-b.fill]]:[]);
+  modal(`<div class="mc-hd"><h3>认可账单</h3><p>${b.no} · ${b.range}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="kv" style="margin-bottom:12px">
-      <div><div class="k">结算单号</div><div class="v mono" style="font-size:14px">${b.no}</div></div>
-      <div><div class="k">结算区间</div><div class="v" style="font-size:14px">${b.range}</div></div>
-      <div><div class="k">应清算给供应商</div><div class="v" style="color:var(--g);font-size:18px">${money(b.net)}</div></div>
-    </div>
-    <div class="ib ib-y"><span class="i">⚠️</span>认可即视为对账无误。本期账单将<b>推送平台财务</b>，进入<b>打款</b>流程${b.feeSvc>0?`，并就本期服务佣金 ${money(b.feeSvc)} <b>自动开具服务费发票</b>（GST 9%，可在「发票管理 → 服务费发票」查看下载）`:'（本期处免佣期，服务佣金为 0，不开服务费发票）'}；<b>认可后不可撤回</b>。如有异议，请先<b>线下联系平台运营 / 客服</b>核查。</div>
+    <table style="margin:0 0 12px"><tbody>
+      ${ded.map(r=>`<tr><td>${r[0]}</td><td style="text-align:right;${r[1]<0?'color:var(--r)':''}">${r[1]<0?'-':''}${money(Math.abs(r[1]))}</td></tr>`).join('')}
+      <tr style="font-weight:700;background:var(--gl)"><td>应清算给供应商</td><td style="text-align:right;color:var(--gd);font-size:15px">${money(b.net)}</td></tr>
+    </tbody></table>
+    <div style="margin:0 0 12px"><button class="btn btn-link" style="padding-left:0" onclick="closeModal();act_billDetail('')">查看逐笔明细 →</button></div>
+    <div class="ib ib-y"><span class="i">⚠️</span>
+      认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款流程。<br>
+      ${(b.feeSvc||0)>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「发票管理 → 服务费发票」查看下载）。<br>`:'本期处免佣期，服务佣金为 0，不开具服务费发票。<br>'}
+      <b style="color:var(--r)">认可后不可撤回</b>；如有异议请先线下联系平台运营 / 客服，先不要认可。</div>
   </div>
-  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="closeModal();act_confirmBill()">确认认可</button></div>`);
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="cfm-ok" onclick="act_confirmBillSubmit('${b.no}')">确认认可</button></div>`);
 }
-function act_confirmBill(){
-  const b=DB.bill;
+// 提交态：置 loading 防重复点击（认可不可逆，重复提交代价最高）
+function act_confirmBillSubmit(no){
+  const btn=document.getElementById('cfm-ok');
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.textContent='认可中…';btn.style.opacity='.6';}
+  setTimeout(()=>{closeModal();act_confirmBill(no);},300);
+}
+function act_confirmBill(no){
+  const b=(no&&[DB.bill,...DB.billsHistory].find(x=>x.no==no))||DB.bill;
   if(b.status!='generated')return;
   const now=new Date(),p=n=>String(n).padStart(2,'0');
   b.status='confirmed';
   b.confirmAt=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   b.confirmBy='陈店主（商家 PC）';
+  const due=new Date(now.getTime()+30*864e5);   // 预计到账 = 认可日 + 结算账期(月结 30 天)
+  b.expectedPayDate=`${due.getFullYear()}-${p(due.getMonth()+1)}-${p(due.getDate())}`;
   // 认可事件 → 服务费发票自动开具（1 结算单 ↔ 1 张，feeSvc=0 不开）
   if(b.feeSvc>0&&!DB.svcInvoices.some(s=>s.billNo==b.no)){
     const gst=+(b.feeSvc*0.09).toFixed(2);
@@ -5821,7 +5840,8 @@ function act_clearExitBlocks(){
   DB.products.forEach(p=>{if(p.status=='onsale'||p.status=='reviewing')p.status='offsale';});
   DB.orders.forEach(o=>{if(o.status=='pending'||o.status=='packed'||o.status=='shipped'||o.status=='received')o.status='done';});
   DB.afterSales.forEach(a=>{if(a.status!='closed'){a.status='closed';if(!a.liable){a.liable='买家';a.refundType='驳回·买家承担';}a.returnStatus='';}});
-  if(DB.bill.status=='generated'){act_confirmBill();}else if(DB.bill.status!='none'&&DB.bill.status!='confirmed'){DB.bill.status='confirmed';}
+  // 不代商家认可：generated → confirmed 的唯一触发者是商家本人点「认可账单」(BR-03b)
+  if(DB.bill.status=='generated'){toast('本期结算单待商家认可，请先在「结算单」列表认可后再闭店','err');return;}
   DB.invoices.forEach(iv=>iv.status='verified');
   if(DB.merchant.vioScore>=6){DB.merchant.vioScore=0;DB.rectify='passed';}
   render();toast('已模拟结清全部阻塞项','ok');
@@ -5877,7 +5897,7 @@ goHome();
 <script src="pc-modules/supply.js?v=20260831a"></script>
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
-<script src="pc-modules/message.js?v=20260908a"></script>
+<script src="pc-modules/message.js?v=20260915a"></script>
 <script src="pc-modules/presend.js?v=20260831b"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
