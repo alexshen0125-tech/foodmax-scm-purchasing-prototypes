@@ -4,7 +4,7 @@
       口径 = 一个开票主体一张发票；商家只看到【自己那一张】。客户名称与账单地址【不脱敏】——这是商家自己的销项凭证，
       IRAS 要求载明受供方名称与地址，脱敏版不构成有效税务发票、商家无法据此申报(2026-09-04 沈亮定)。
       票面【不出现全单金额】：只写「第X张/共Y张」，防止商家反推同单其他开票主体的合计。
-   ② 服务费发票(平台开具)：平台在与商家结算完成后【自动开具】佣金税票(GST 9%)并推送，商家仅【查看/下载】，无需申请。
+   ② 服务费发票(平台开具)：商家【认可账单后】平台【自动开具】佣金税票(GST 9%)并推送，商家仅【查看/下载】，无需申请。(v1.4)
    ③ 补采发票(平台开具)：平台就【自营现货补货商家到仓少送的缺口】向商家开销售发票(GST 9%)，结算完成后自动开具推送，商家仅【查看/下载】。
    交互形态可与 PC 不同(App 分段+卡片+推页预览)，但业务规则/字段/状态/模式与 PC 一致。 */
 (function(){
@@ -220,7 +220,7 @@ function previewSvc(s){
       <div class="r"><span>GST 9%</span><span>${money(s.gst)}</span></div>
       <div class="r big"><span>价税合计 Total</span><span>${money(s.total)}</span></div>
     </div>
-    <div class="note">服务费发票由平台在与商家结算完成后自动开具并推送，就平台服务佣金开给商家；商家仅查看/下载，无需申请。</div>
+    <div class="note">服务费发票由平台在商家认可账单后自动开具并推送，就平台服务佣金开给商家；商家仅查看/下载，无需申请。</div>
   </div>`,s.no);
 }
 
@@ -275,7 +275,7 @@ function render(page){
     head=`<div class="iv-tip cust">客户销售发票由<b>平台代你开具</b>（按订单，GST 9%），你<b>无需开具或上传</b>；此处仅展示<b>已开具</b>的发票，供预览与下载。</div>
       <div class="iv-stat"><span>${custOrders().length} 个订单 · 正向 <b>${CUST.filter(c=>c.type!='cn').length}</b> 张 · 冲抵 <b>${CUST.filter(c=>c.type=='cn').length}</b> 张 · 金额为你在该订单下的口径，正逆向进详情看</span></div>`;
   }else if(st.seg==='svc'){
-    head=`<div class="iv-tip fm">服务费发票由平台在与你<b>结算完成后自动开具</b>并推送（就平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
+    head=`<div class="iv-tip fm">服务费发票由平台在你<b>认可账单后自动开具</b>并推送（就该期平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${SVC.length}</b> 张</span></div>`;
   }else{
     head=`<div class="iv-tip fm">补采发票由平台在与你<b>结算完成后自动开具</b>并推送——平台就<b>自营现货替你补齐的缺口数量</b>按自营商品原定价向你开销售发票（GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
@@ -290,7 +290,7 @@ function render(page){
        listEl.innerHTML=ords.length?ords.map(custCard).join(''):empty('暂无已开具发票','平台按订单代你开具客户销售发票后，将显示在此供预览与下载');}
       bindCards(listEl,'cust');
     }else if(st.seg==='svc'){
-      listEl.innerHTML=SVC.length?SVC.map(svcCard).join(''):empty('暂无服务费发票','平台与你结算完成后会开具服务费发票并显示在此');
+      listEl.innerHTML=SVC.length?SVC.map(svcCard).join(''):empty('暂无服务费发票','你认可账单后，平台会开具服务费发票并显示在此');
       bindCards(listEl,'svc');
     }else{
       listEl.innerHTML=RPL.length?RPL.map(rplCard).join(''):empty('暂无平台补采发票','产生平台补采且结算完成后，平台会开具补货销售发票并显示在此');
