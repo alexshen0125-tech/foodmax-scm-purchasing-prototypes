@@ -104,6 +104,8 @@ css.textContent=`
 .rc-tab{flex:0 0 auto;padding:0 14px;min-height:40px;line-height:40px;font-size:12.5px;font-weight:700;color:var(--sub);background:var(--muted);border-radius:12px;white-space:nowrap;}
 .rc-tab.on{background:var(--mint-soft);color:var(--emerald-2);}
 .rc-row{background:#fff;margin:0 16px 10px;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);}
+.rc-pill{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:600;vertical-align:1px;color:var(--sub);background:#F1F3F0;}
+.rc-pill.on{color:#1D4ED8;background:#E4EDFF;}
 .rc-row .t{font-size:13.5px;font-weight:700;color:#27433A;}
 .rc-row .s{font-size:11.5px;color:var(--sub);margin-top:3px;}
 .rc-row .kvs{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
@@ -152,8 +154,9 @@ const RECON=[
           {id:'AS20260701007',order:'#SG20260701004',sku:'SKU8804',qty:2,type:'仅退款',judge:'商家责任 · 少发',at:'2026-07-01 16:05'}],
    repl:[{id:'RPL-20260701-001',sub:'SUB-20260701-01',sku:'SKU8801',should:20,recv:18,gap:2,qty:2,taxPrice:4.14,rate:30,at:'2026-07-01 07:12',status:'已结算'}],
    supply:[{hs:'HS20260701001',po:'SPO20260701001',code:'XC-LBL-001',name:'热敏标签纸 40×30',cat:'标签耗材',unit:'卷',qty:5,price:8.00,at:'2026-07-01 09:40',status:'已交付'}],
-   adjust:[{no:'ADJ-SG-20260701-002',type:'平台活动补贴',code:'ADJ-PROMO',dir:1,amt:120.00,biz:'',at:'2026-07-01 18:30'},
-           {no:'ADJ-SG-20260701-001',type:'质量问题扣款',code:'ADJ-QC',dir:-1,amt:64.00,biz:'QC-26070101',at:'2026-07-01 09:12'}]},
+   adjust:[{no:'ADJ-SG-20260701-002',type:'平台活动补贴',code:'ADJ-PROMO',dir:1,amt:120.00,biz:'',at:'2026-07-01 18:30',ded:'ACCOUNT',ex:120.00,gst:0},
+           {no:'ADJ-SG-20260701-003',type:'佣金差额调整',code:'ADJ-COMMFIX',dir:-1,amt:300.00,biz:'',at:'2026-07-01 14:05',ded:'INVOICE',inv:'SVC-INV-2026-000123',ex:275.23,gst:24.77},
+           {no:'ADJ-SG-20260701-001',type:'质量问题扣款',code:'ADJ-QC',dir:-1,amt:64.00,biz:'QC-26070101',at:'2026-07-01 09:12',ded:'ACCOUNT',ex:64.00,gst:0}]},
 
   {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',
    lines:[
@@ -262,7 +265,7 @@ const RC2_EX={
   rpl:['平台补采','<p>货送到仓清点少货时，由平台自营现货补足缺口，这部分视同你向平台采购，按<b>自营商品原定价</b>计价，不加价，含 GST 9%。</p><p>平台会为补采<b>单独开一张销售发票</b>，结算单付款后自动开具，可在「发票管理」查看。</p>'],
   sup:['耗材订单','<p>你在耗材商城下的单，按送货单「已交付」回写当日计费，支付方式固定为结算抵扣，你没有单独付款动作。</p><p>耗材同样<b>单独开票</b>，与服务费发票互不顶替。</p>'],
   fine:['缺货罚款','<div class="fml">缺货罚款 = 缺口件数 × S$40/件</div><p>只要清点出缺口就计罚，与是否由自营补采<b>无关</b>，两者是各自独立的单据。</p><p>罚款不是商品交易，<b>不开发票</b>。明细见「财务 › 罚款单」。</p>'],
-  adj:['业务调整','<p>平台与你线下确认后创建的补款或扣款单据，一单一行，不拆行。<b>正向</b>是平台补给你（如活动补贴、错账补回），<b>负向</b>是从结算里扣回（如质量问题扣款、逾期违约金）。</p><p>业务调整<b>不开发票</b>、不区分未税与 GST，不参与佣金、不计 GMV。对金额有异议请联系对接运营，本页只读。</p>'],
+  adj:['业务调整','<p>平台与你线下确认后创建的补款或扣款单据，一单一行，不拆行。<b>正向</b>是平台补给你（如活动补贴、错账补回），<b>负向</b>是从结算里扣回（如质量问题扣款、逾期违约金）。</p><p>每笔调整分两种：<b>账扣</b>不开发票、无 GST，直接在结算中加减；<b>票扣</b>会调整对应的服务费 / 补货 / 耗材发票票面——负向对原票开红字、正向补开增额票，GST 随票走，行内会标出被调整的发票号。</p><p>业务调整不参与佣金、不计 GMV。对金额有异议请联系对接运营，本页只读。</p>'],
   net:['预计实付（本期到账）','<div class="fml">预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款 ± 业务调整净额</div><p>另行结算三项不并入结算合计，在结算单<b>付款环节单独抵扣</b>，同一笔不会重复扣，也不会回写对账单金额。</p>'],
   ledger:['货款算式怎么看','<p>四个科目都分<b>正向</b>与<b>逆向</b>：正向是正常成交产生的，逆向是商家责任售后退款按「退货件数 ÷ 该 SKU 实发件数」的比例冲回的。正向 + 逆向 = 净额。</p><p>逆向对你的钱有两个方向：<br><span class="tk">实付金额、平台补贴 = 从你账上扣回</span>（货款退还客户、平台收回补贴）<br><span class="bk">平台服务费、商家补贴 = 退还给你</span>（平台少收佣金、让利不用你承担）</p><p>逐笔逆向记录见对账单详情的「售后明细」页签。</p>'],
   sep:['另行结算怎么抵扣','<p>平台补采、耗材订单、缺货罚款三项<b>不计入结算合计（货款）</b>，而是在结算单付款时从货款里单独抵扣，同一笔不会重复扣。</p><div class="fml">预计实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款</div><p><b>开票</b>：平台补采、耗材订单由平台各自单独向你开具销售发票，结算单付款后自动开，在「发票管理」查看，与服务费发票互不顶替；缺货罚款不是商品交易，不开发票。</p>'],
@@ -449,14 +452,15 @@ function openReconDetail(no,tab){
         <div><div class="k">补货金额（含税）</div><div class="v">${NEG(rplAmt(r))}</div></div>
       </div></div>`;}).join('')+`<div class="rc-note">补货金额（含税）= ROUND(含税售价 × 补货数量 ×(1+加价率), 2)，总额法一次算出。缺口由平台自营现货全额补足，客户订单无感。本项独立结算，不并入当日结算。</div>`
     :`<div class="rc-empty">当日无自营补货<br>收货清点无少货，或缺口未由自营补足</div>`;
-  const adjRows=adj.length?adj.map(a=>`<div class="rc-row">
-      <div class="t">${a.type} <span style="font-weight:400;color:var(--sub);font-size:12px">${a.code}</span></div>
-      <div class="s">${a.no}${a.biz?` · 关联 ${a.biz}`:''} · ${a.at}</div>
+  const adjRows=adj.length?adj.map(a=>{const iv=a.ded=='INVOICE';return `<div class="rc-row">
+      <div class="t">${a.type} <span style="font-weight:400;color:var(--sub);font-size:12px">${a.code}</span> <span class="rc-pill ${iv?'on':''}">${iv?'票扣':'账扣'}</span></div>
+      <div class="s">${a.no}${iv?` · 原票 ${a.inv}`:(a.biz?` · 关联 ${a.biz}`:'')} · ${a.at}</div>
       <div class="kvs">
         <div><div class="k">方向</div><div class="v">${a.dir>0?'平台 → 店铺':'店铺 → 平台'}</div></div>
-        <div><div class="k">发票</div><div class="v">不开票</div></div>
+        <div><div class="k">GST</div><div class="v">${iv?S(a.gst):'—'}</div></div>
+        <div><div class="k">发票</div><div class="v">${iv?(a.dir>0?'补开增额票':'原票开红字'):'不开票'}</div></div>
         <div class="em"><div class="k">金额（含税）</div><div class="v">${a.dir>0?S(a.amt):NEG(a.amt)}</div></div>
-      </div></div>`).join('')+`<div class="rc-row"><div class="kvs">
+      </div></div>`;}).join('')+`<div class="rc-row"><div class="kvs">
         <div><div class="k">补商家合计</div><div class="v">${S(dAdjAdd(d))}</div></div>
         <div><div class="k">扣商家合计</div><div class="v">${NEG(dAdjDed(d))}</div></div>
         <div class="em"><div class="k">净额</div><div class="v">${dAdj(d)>=0?S(dAdj(d)):NEG(Math.abs(dAdj(d)))}</div></div>

@@ -3329,6 +3329,10 @@ function rcAdj(d){
 }
 function rcAdjSign(r){ return (typeof adjTypeOf=='function'?adjTypeOf(r.adjustTypeCode).dir:'DEDUCTION')=='ADDITION'?1:-1; }
 function rcAdjNet(d){ return +rcAdj(d).reduce((a,r)=>a+rcAdjSign(r)*r.amount,0).toFixed(2); }
+// 账扣未税 = 含税、GST = 0；票扣取单据上按原票税率拆出的真值
+function rcAdjEx(r){ return r.deductionType=='INVOICE' ? (r.amountExclTax||0) : r.amount; }
+function rcAdjNetEx(d){ return +rcAdj(d).reduce((a,r)=>a+rcAdjSign(r)*rcAdjEx(r),0).toFixed(2); }
+function rcAdjGst(d){ return +rcAdj(d).reduce((a,r)=>a+(r.gstAmount||0),0).toFixed(2); }
 const rcExpSel=()=>DB.rcExpSheets||RC_SHEETS.map(x=>x.k);
 const rcExpRows=(ds,keys)=>RC_SHEETS.filter(x=>keys.includes(x.k)).reduce((a,x)=>a+ds.reduce((b,d)=>b+x.f(d),0),0);
 function toggleReconSel(no){const k=DB.rcSel.indexOf(no);if(k<0)DB.rcSel.push(no);else DB.rcSel.splice(k,1);render();}
@@ -3462,18 +3466,23 @@ function act_reconDetail(no){
         <td><span class="tag t-b"><span class="dot"></span>${r.status}</span></td></tr>`;}).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="9">合计（另行结算）</td><td style="text-align:right">${rcNeg(sum(rpl,rplNet))}</td><td style="text-align:right">${rcNeg(dRpl(d))}</td><td></td></tr>
       </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">补采金额（含税）= ROUND(自营商品原定价 × 补采数量, 2)，<b>不加价</b>；缺货罚款 = 缺口件数 × 罚款标准（S$${DB.replCfg?DB.replCfg.finePerUnit:40}/件），与货值无关、不开发票。缺口由平台自营现货全额补足，客户订单无感。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">📦</div><div class="e-t">当日无平台补采</div><div class="e-s">收货清点无少货，或缺口未由自营补足。</div></div>`)
-    :tab=='adjust'?(adj.length?`<div style="overflow-x:auto"><table><thead><tr><th>调整单号</th><th>调整类型</th><th>方向</th><th>关联业务单号</th><th>生效时间</th>${TH('金额','含税')}<th>发票</th><th>状态</th></tr></thead><tbody>
-      ${adj.map(r=>{const sg=rcAdjSign(r);return `<tr><td class="mono">${r.adjustNo}</td>
+    :tab=='adjust'?(adj.length?`<div style="overflow-x:auto"><table><thead><tr><th>调整单号</th><th>调整类型</th><th>抵扣方式</th><th>方向</th><th>关联业务单号 / 原发票号</th><th>生效时间</th>${TH('金额','未税')}${TH('GST')}${TH('金额','含税')}<th>发票</th><th>状态</th></tr></thead><tbody>
+      ${adj.map(r=>{const sg=rcAdjSign(r),iv=r.deductionType=='INVOICE';return `<tr><td class="mono">${r.adjustNo}</td>
         <td>${r.adjustTypeName}<div style="font-size:11px;color:var(--ts)">${r.adjustTypeCode}</div></td>
+        <td>${iv?`<span class="tag t-b" style="font-size:10.5px">票扣</span>`:`<span class="tag t-gr" style="font-size:10.5px">账扣</span>`}</td>
         <td>${sg>0?'<span class="tag t-g"><span class="dot"></span>平台 → 店铺</span>':'<span class="tag t-r"><span class="dot"></span>店铺 → 平台</span>'}</td>
-        <td class="mono">${r.bizNo||'—'}</td>
+        <td class="mono">${iv?(r.originalInvoiceNo||'—'):(r.bizNo||'—')}</td>
         <td style="font-size:12px;color:var(--ts)">${r.effectiveTime}</td>
+        <td style="text-align:right;color:var(--ts)">${sg>0?'+'+money(rcAdjEx(r)):rcNeg(rcAdjEx(r))}</td>
+        <td style="text-align:right;color:var(--ts)">${iv?money(r.gstAmount||0):'—'}</td>
         <td style="text-align:right;font-weight:700;color:${sg>0?'var(--g)':'var(--r)'}">${sg>0?'+'+money(r.amount):rcNeg(r.amount)}</td>
-        <td><span class="tag t-gr" style="font-size:10.5px">不开票</span></td>
+        <td>${iv?`<span class="tag t-y" style="font-size:10.5px">${sg>0?'补开增额票':'原票开红字'}</span>`:`<span class="tag t-gr" style="font-size:10.5px">不开票</span>`}</td>
         <td><span class="tag t-b"><span class="dot"></span>已结算</span></td></tr>`;}).join('')}
-      <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计（另行结算）· 补 ${money(adj.filter(r=>rcAdjSign(r)>0).reduce((a,r)=>a+r.amount,0))} ／ 扣 ${money(adj.filter(r=>rcAdjSign(r)<0).reduce((a,r)=>a+r.amount,0))}</td>
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="6">合计（另行结算）· 补 ${money(adj.filter(r=>rcAdjSign(r)>0).reduce((a,r)=>a+r.amount,0))} ／ 扣 ${money(adj.filter(r=>rcAdjSign(r)<0).reduce((a,r)=>a+r.amount,0))}</td>
+        <td style="text-align:right;color:var(--ts)">${rcAdjNetEx(d)>=0?'+'+money(rcAdjNetEx(d)):rcNeg(Math.abs(rcAdjNetEx(d)))}</td>
+        <td style="text-align:right;color:var(--ts)">${money(rcAdjGst(d))}</td>
         <td style="text-align:right;color:${rcAdjNet(d)>=0?'var(--g)':'var(--r)'}">${rcAdjNet(d)>=0?'+'+money(rcAdjNet(d)):rcNeg(Math.abs(rcAdjNet(d)))}</td><td colspan="2"></td></tr>
-      </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">业务调整由平台运营按线下确认结果创建，一单一行、不拆行；<b>正向为平台补给你、负向为从结算中扣回</b>，均<b>不开发票</b>、不区分未税与 GST，不参与佣金、不计 GMV。对金额有异议请联系对接运营，本页只读。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">💰</div><div class="e-t">当日无业务调整</div><div class="e-s">平台没有对你发起补款或扣款。</div></div>`)
+      </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">业务调整由平台运营按线下确认结果创建，一单一行、不拆行；<b>正向为平台补给你、负向为从结算中扣回</b>，不参与佣金、不计 GMV。<br><b>账扣</b>不开发票、无 GST，直接在结算中加减；<b>票扣</b>会调整对应的服务费 / 补货 / 耗材发票票面——负向对原票开红字、正向补开增额票，GST 随票走。对金额有异议请联系对接运营，本页只读。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">💰</div><div class="e-t">当日无业务调整</div><div class="e-s">平台没有对你发起补款或扣款。</div></div>`)
     :(sup.length?`<div style="overflow-x:auto"><table><thead><tr><th>耗材送货单</th><th>采购单号</th><th>耗材编码</th><th>耗材名称</th><th>类目</th>${TH('数量')}${TH('未税单价')}${TH('含税单价')}${TH('金额','未税')}${TH('金额','含税')}<th>交付时间</th><th>状态</th></tr></thead><tbody>
       ${sup.map(s=>`<tr><td class="mono">${s.hs}</td><td class="mono">${s.po}</td><td class="mono">${s.code}</td><td><b>${s.name}</b></td><td>${s.cat}</td>
         <td style="text-align:right">${s.qty}${s.unit}</td>
@@ -3487,7 +3496,7 @@ function act_reconDetail(no){
       </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">耗材按送货单「已交付」回写时间落期计费，支付方式固定为结算抵扣，商家无支付动作；不参与佣金、不计 GMV。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">🏷️</div><div class="e-t">当日无耗材订单</div><div class="e-s">耗材订单按交付回写日计入对账单。</div></div>`)}
     <div style="font-size:11.5px;color:var(--ts);margin-top:10px">数据源：<b>财务结算单明细汇总</b>，商家端不自行取数计算。金额 = 客户实付 = 实发金额含税 − 商家补贴 − 平台补贴；平台服务费 =（客户实付 + 平台补贴）× 平台服务费率；当日结算 = 客户实付 + 平台补贴 − 平台服务费 − 售后扣款（商家补贴不重复扣）。原：商家收入 = 实发金额含税 − 商家补贴 − 平台服务费；当日结算（货款）= 商家收入 − 售后扣款。全为标品按整件对账，实发件数取仓库签收入库件数。平台补采与耗材订单<b>各自独立结算</b>，按其在结算单明细的计入日落到当天对账单，仅展示不并入当日结算，付款时轧差：实付 = 货款应结 − 平台补采 − 耗材。</div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="toast('已导出本单对账明细（7 个 Sheet，含业务调整明细）','ok')">⬇️ 导出本单</button><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="toast('已导出本单对账明细（7 个 Sheet，业务调整明细 18 列）','ok')">⬇️ 导出本单</button><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 }
 
 /* ---------- 商家端：结算单（闭环D 商家侧） ---------- */
@@ -5925,6 +5934,6 @@ goHome();
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
-<script src="pc-modules/adjust.js?v=20260914f"></script>
+<script src="pc-modules/adjust.js?v=20260915a"></script>
 </body>
 </html>
