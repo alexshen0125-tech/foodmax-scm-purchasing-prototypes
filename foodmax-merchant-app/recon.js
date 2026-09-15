@@ -5,7 +5,8 @@
      平台服务费 =（客户实付 + 平台补贴）× 平台服务费率（抽佣基数=商家优惠后金额）
      当日结算   = 客户实付 + 平台补贴 − 平台服务费 − 售后扣款（商家补贴已在实付中扣除，不重复扣）
    自营补货、耗材订单按其在结算单明细的计入日落到当天对账单，各自独立结算、不并入当日结算，付款层轧差。
-   五个页签：SKU 维度 / 订单维度 / 售后明细 / 自营补货 / 耗材订单。金额 S$。 */
+   六个页签：SKU 维度 / 订单维度 / 售后明细 / 自营补货 / 耗材订单 / 业务调整。金额 S$。
+   业务调整＝平台对商家的补款或扣款（运营平台建单、清结算接入），正向为平台补给商家、负向为从结算扣回，不开票。 */
 (function(){
 const {pushPage,popPage,toast,svg,skel}=window.FM;
 const css=document.createElement('style');
@@ -150,7 +151,9 @@ const RECON=[
    after:[{id:'AS20260701003',order:'#SG20260701001',sku:'SKU8801',qty:1,type:'仅退款',judge:'商家责任 · 叶片腐烂',at:'2026-07-01 15:20'},
           {id:'AS20260701007',order:'#SG20260701004',sku:'SKU8804',qty:2,type:'仅退款',judge:'商家责任 · 少发',at:'2026-07-01 16:05'}],
    repl:[{id:'RPL-20260701-001',sub:'SUB-20260701-01',sku:'SKU8801',should:20,recv:18,gap:2,qty:2,taxPrice:4.14,rate:30,at:'2026-07-01 07:12',status:'已结算'}],
-   supply:[{hs:'HS20260701001',po:'SPO20260701001',code:'XC-LBL-001',name:'热敏标签纸 40×30',cat:'标签耗材',unit:'卷',qty:5,price:8.00,at:'2026-07-01 09:40',status:'已交付'}]},
+   supply:[{hs:'HS20260701001',po:'SPO20260701001',code:'XC-LBL-001',name:'热敏标签纸 40×30',cat:'标签耗材',unit:'卷',qty:5,price:8.00,at:'2026-07-01 09:40',status:'已交付'}],
+   adjust:[{no:'ADJ-SG-20260701-002',type:'平台活动补贴',code:'ADJ-PROMO',dir:1,amt:120.00,biz:'',at:'2026-07-01 18:30'},
+           {no:'ADJ-SG-20260701-001',type:'质量问题扣款',code:'ADJ-QC',dir:-1,amt:64.00,biz:'QC-26070101',at:'2026-07-01 09:12'}]},
 
   {date:'2026-06-30',no:'SH20260630001',wh:'裕廊DC',
    lines:[
@@ -197,17 +200,20 @@ const dRevSub=d=>sum(d.after||[],x=>aftPart(d,x).sub), dRevPlat=d=>sum(d.after||
 const dRevPaid=d=>sum(d.after||[],x=>aftPart(d,x).paid), dRevFee=d=>sum(d.after||[],x=>aftPart(d,x).fee);
 const dRevInc=d=>sum(d.after||[],x=>aftPart(d,x).inc);
 const dSettle=d=>dInc(d)-dRevInc(d);   // 当日结算（货款）= 正向商家收入 − 售后扣款（逆向应付商家）
-const dNet=d=>dSettle(d)-dRpl(d)-dSup(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 耗材订单（罚款未接入按 0），同汇总卡「预计实付」
+const dNet=d=>dSettle(d)-dRpl(d)-dSup(d)+dAdj(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 耗材订单 ± 业务调整净额（罚款未接入按 0），同汇总卡「预计实付」
 const rplAmt=r=>Math.round(r.taxPrice*r.qty*(1+r.rate/100)*100)/100;
 const rplNet=r=>Math.round(rplAmt(r)/(1+GST/100)*100)/100;
 const dRpl=d=>sum(d.repl||[],rplAmt);
 const supN=s=>s.qty*s.price, supG=s=>s.qty*s.price*(1+GST/100);
 const dSup=d=>sum(d.supply||[],supG);
+const dAdj=d=>sum(d.adjust||[],a=>a.dir*a.amt);          // 业务调整净额：正向补商家为正、负向扣商家为负
+const dAdjAdd=d=>sum((d.adjust||[]).filter(a=>a.dir>0),a=>a.amt);
+const dAdjDed=d=>sum((d.adjust||[]).filter(a=>a.dir<0),a=>a.amt);
 const ordersOf=d=>[...new Set(d.lines.flatMap(l=>l.byOrder.map(o=>o[0])))];
 
 /* ---------- 多选批量导出（与 PC「财务 › 对账单」同口径，改一端记得同步另一端） ----------
    导出结构对齐《商家端对账单与结算单统一导出模板》(飞书 wiki AwbawWyD9i2s6jkFrF5cYBPwnid)：
-   6 张平表，每张前置「结算单号/结算周期/结算状态」，Sheet1-4 另前置「送货单号/送货日期/入库仓库」；
+   7 张平表，每张前置「结算单号/结算周期/结算状态」，Sheet1-4 另前置「送货单号/送货日期/入库仓库」；
    正逆向分表、表内不做减法；逆向只收商家责任且金额负向展示；补货与耗材独立结算，只挂结算单号。
    多选后一次导出一个 Excel 文件、多 Sheet；> 5000 行走异步，完成后站内信推送下载链接。 */
 const EXP_ASYNC=5000;
@@ -218,6 +224,7 @@ const EXP_SHEETS=[
   {k:'ordR',n:'订单级商品明细【逆向】',  g:'售后单号 + SKU编码（仅商家责任）', f:d=>(d.after||[]).length},
   {k:'rpl', n:'自营补货商品明细',       g:'补采单号 + 商品编码 + 子单号',     f:d=>(d.repl||[]).length},
   {k:'sup', n:'耗材采购商品明细',       g:'耗材送货单号 + 耗材编码',          f:d=>(d.supply||[]).length},
+  {k:'adj', n:'业务调整明细',           g:'调整单号（一单一行）',             f:d=>(d.adjust||[]).length},
 ];
 let RC_SEL=[];                                  // 已勾选的送货单号
 let RC_EXP=EXP_SHEETS.map(x=>x.k);              // 勾选的 Sheet，默认全选
@@ -255,7 +262,8 @@ const RC2_EX={
   rpl:['平台补采','<p>货送到仓清点少货时，由平台自营现货补足缺口，这部分视同你向平台采购，按<b>自营商品原定价</b>计价，不加价，含 GST 9%。</p><p>平台会为补采<b>单独开一张销售发票</b>，结算单付款后自动开具，可在「发票管理」查看。</p>'],
   sup:['耗材订单','<p>你在耗材商城下的单，按送货单「已交付」回写当日计费，支付方式固定为结算抵扣，你没有单独付款动作。</p><p>耗材同样<b>单独开票</b>，与服务费发票互不顶替。</p>'],
   fine:['缺货罚款','<div class="fml">缺货罚款 = 缺口件数 × S$40/件</div><p>只要清点出缺口就计罚，与是否由自营补采<b>无关</b>，两者是各自独立的单据。</p><p>罚款不是商品交易，<b>不开发票</b>。明细见「财务 › 罚款单」。</p>'],
-  net:['预计实付（本期到账）','<div class="fml">预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款</div><p>另行结算三项不并入结算合计，在结算单<b>付款环节单独抵扣</b>，同一笔不会重复扣，也不会回写对账单金额。</p>'],
+  adj:['业务调整','<p>平台与你线下确认后创建的补款或扣款单据，一单一行，不拆行。<b>正向</b>是平台补给你（如活动补贴、错账补回），<b>负向</b>是从结算里扣回（如质量问题扣款、逾期违约金）。</p><p>业务调整<b>不开发票</b>、不区分未税与 GST，不参与佣金、不计 GMV。对金额有异议请联系对接运营，本页只读。</p>'],
+  net:['预计实付（本期到账）','<div class="fml">预计实付 = 结算合计（货款）− 平台补采 − 耗材订单 − 缺货罚款 ± 业务调整净额</div><p>另行结算三项不并入结算合计，在结算单<b>付款环节单独抵扣</b>，同一笔不会重复扣，也不会回写对账单金额。</p>'],
   ledger:['货款算式怎么看','<p>四个科目都分<b>正向</b>与<b>逆向</b>：正向是正常成交产生的，逆向是商家责任售后退款按「退货件数 ÷ 该 SKU 实发件数」的比例冲回的。正向 + 逆向 = 净额。</p><p>逆向对你的钱有两个方向：<br><span class="tk">实付金额、平台补贴 = 从你账上扣回</span>（货款退还客户、平台收回补贴）<br><span class="bk">平台服务费、商家补贴 = 退还给你</span>（平台少收佣金、让利不用你承担）</p><p>逐笔逆向记录见对账单详情的「售后明细」页签。</p>'],
   sep:['另行结算怎么抵扣','<p>平台补采、耗材订单、缺货罚款三项<b>不计入结算合计（货款）</b>，而是在结算单付款时从货款里单独抵扣，同一笔不会重复扣。</p><div class="fml">预计实付 = 结算合计 − 平台补采 − 耗材订单 − 缺货罚款</div><p><b>开票</b>：平台补采、耗材订单由平台各自单独向你开具销售发票，结算单付款后自动开，在「发票管理」查看，与服务费发票互不顶替；缺货罚款不是商品交易，不开发票。</p>'],
   cycle:['结算周期与预计实付','<p>结算周期默认<b>周一至周日</b>，每个周期出一张结算单，对账单只按周期查看。</p><p>周期结束后，这里的「预计实付」就是该周结算单的实付净额。周期进行中时它是截至今天的累计值。</p>'],
@@ -305,6 +313,7 @@ function openRecon(){
       <div class="rc2-b">
         ${rc2Row({k:'rpl',op:'−',name:'平台补采',amt:T(dRpl),neg:true,sub:'到仓少货由自营补足',tag:'单独开票',tagCls:'inv'})}
         ${rc2Row({k:'sup',op:'−',name:'耗材订单',amt:T(dSup),neg:true,sub:'送货单「已交付」当日计费',tag:'单独开票',tagCls:'inv'})}
+        ${T(dAdj)?rc2Row({k:'adj',op:T(dAdj)>0?'＋':'−',name:'业务调整',amt:()=>Math.abs(T(dAdj)),neg:T(dAdj)<0,sub:'平台补款 / 扣款，线下确认后创建',tag:'不开票',tagCls:'inv'}):''}
         ${rc2Row({k:'fine',op:'−',name:'缺货罚款',amt:null,sub:'缺口件数 × S$40/件',tag:'不开发票',tagCls:'noinv'})}
         ${rc2Row({k:'net',op:'=',name:'预计实付（本期到账）',amt:net,tot:true,sub:`${S(T(dSettle))} − ${S(sep)} = ${S(net)}`})}
       </div>
@@ -386,7 +395,7 @@ function openReconExport(rows){
 function openReconDetail(no,tab){
   const d=RECON.find(x=>x.no==no);if(!d)return;
   tab=tab||'sku';
-  const aft=d.after||[],rpl=d.repl||[],sup=d.supply||[];
+  const aft=d.after||[],rpl=d.repl||[],sup=d.supply||[],adj=d.adjust||[];
   const skuRows=d.lines.map(l=>`<div class="rc-row">
       <div class="t">${l.name} <span style="font-weight:400;color:var(--sub);font-size:12px">${l.spec}</span></div>
       <div class="s">${l.sku} · 未税 ${S(l.price)}/${l.unit} · 含税 ${S(l.price*mul(l))}/${l.unit} · 税率 ${tax(l)}% · 服务费率 ${(l.rate||0).toFixed(1)}%</div>
@@ -440,6 +449,18 @@ function openReconDetail(no,tab){
         <div><div class="k">补货金额（含税）</div><div class="v">${NEG(rplAmt(r))}</div></div>
       </div></div>`;}).join('')+`<div class="rc-note">补货金额（含税）= ROUND(含税售价 × 补货数量 ×(1+加价率), 2)，总额法一次算出。缺口由平台自营现货全额补足，客户订单无感。本项独立结算，不并入当日结算。</div>`
     :`<div class="rc-empty">当日无自营补货<br>收货清点无少货，或缺口未由自营补足</div>`;
+  const adjRows=adj.length?adj.map(a=>`<div class="rc-row">
+      <div class="t">${a.type} <span style="font-weight:400;color:var(--sub);font-size:12px">${a.code}</span></div>
+      <div class="s">${a.no}${a.biz?` · 关联 ${a.biz}`:''} · ${a.at}</div>
+      <div class="kvs">
+        <div><div class="k">方向</div><div class="v">${a.dir>0?'平台 → 店铺':'店铺 → 平台'}</div></div>
+        <div><div class="k">发票</div><div class="v">不开票</div></div>
+        <div class="em"><div class="k">金额（含税）</div><div class="v">${a.dir>0?S(a.amt):NEG(a.amt)}</div></div>
+      </div></div>`).join('')+`<div class="rc-row"><div class="kvs">
+        <div><div class="k">补商家合计</div><div class="v">${S(dAdjAdd(d))}</div></div>
+        <div><div class="k">扣商家合计</div><div class="v">${NEG(dAdjDed(d))}</div></div>
+        <div class="em"><div class="k">净额</div><div class="v">${dAdj(d)>=0?S(dAdj(d)):NEG(Math.abs(dAdj(d)))}</div></div>
+      </div></div>`:`<div class="rc-empty">当日无业务调整<br><span>平台没有对你发起补款或扣款。</span></div>`;
   const supRows=sup.length?sup.map(s=>`<div class="rc-row">
       <div class="t">${s.name} <span style="font-weight:400;color:var(--sub);font-size:12px">${s.qty}${s.unit} · ${s.cat}</span></div>
       <div class="s">${s.hs} · 采购单 ${s.po} · ${s.code}</div>
@@ -473,8 +494,9 @@ function openReconDetail(no,tab){
       <div class="rc-tab ${tab=='after'?'on':''}" data-t="after">售后${aft.length?` ${aft.length}`:''}</div>
       <div class="rc-tab ${tab=='repl'?'on':''}" data-t="repl">自营补货${rpl.length?` ${rpl.length}`:''}</div>
       <div class="rc-tab ${tab=='supply'?'on':''}" data-t="supply">耗材${sup.length?` ${sup.length}`:''}</div>
+      <div class="rc-tab ${tab=='adjust'?'on':''}" data-t="adjust">业务调整${adj.length?` ${adj.length}`:''}</div>
     </div>
-    ${tab=='sku'?skuRows:tab=='order'?ordRows:tab=='after'?aftRows:tab=='repl'?rplRows:supRows}
+    ${tab=='sku'?skuRows:tab=='order'?ordRows:tab=='after'?aftRows:tab=='repl'?rplRows:tab=='adjust'?adjRows:supRows}
     <div class="rc-note">数据源：财务结算单明细汇总，商家端不自行取数计算。金额 = 客户实付 = 实发金额含税 − 商家补贴 − 平台补贴；平台服务费 =（客户实付 + 平台补贴）× 平台服务费率；当日结算（货款）= 客户实付 + 平台补贴 − 平台服务费 − 售后扣款，商家补贴不重复扣。全为标品按整件对账，实发件数取仓库签收入库件数。</div>`,
     mount:(p)=>{p.querySelectorAll('.rc-tab').forEach(t=>t.onclick=()=>{if(t.dataset.t==tab)return;popPage();openReconDetail(no,t.dataset.t);});}});
 }

@@ -57,6 +57,13 @@
     const r=DB.presend.find(x=>x.name==name&&x.wh==wh);
     return r?finalQty(r):0;
   };
+  // 供「备货参考」「打印标签」扣减在仓剩余（BR-15/BR-15b）：
+  // 今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余（下限 0），四处必须同一算式
+  window.presendLeft=function(name,wh){
+    if(!DB.presendStock)ensurePresend();
+    const r=(DB.presendStock||[]).find(x=>x.name==name&&x.wh==wh&&!x.returning);
+    return r?r.left:0;
+  };
 
   function cfg(){return DB.presendCfg;}
   // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
@@ -92,9 +99,15 @@
     keys.forEach(k=>{const[sku,wh]=k.split('|');const r=DB.presendStock.find(x=>x.sku==sku&&x.wh==wh);if(r)r.returning=true;});
     DB.presendStockSel=[];render();toast(`已提交 ${keys.length} 条退回申请，等待仓库安排`,'ok');
   };
+  // 次日应送量（BR-15b 统一算式）：次日订单需求 + 次日预送量 − 在仓剩余，下限 0
+  function nextShouldOf(r){
+    const ps=DB.presend.find(x=>x.sku==r.sku&&x.wh==r.wh);
+    return Math.max(0,r.nextNeed+(ps?finalQty(ps):0)-r.left);
+  }
   window.psStockDrawer=function(key){
     const[sku,wh]=key.split('|');const r=DB.presendStock.find(x=>x.sku==sku&&x.wh==wh);if(!r)return;
-    const need=Math.max(0,r.nextNeed-r.left);
+    const ps=DB.presend.find(x=>x.sku==r.sku&&x.wh==r.wh),nextPs=ps?finalQty(ps):0;
+    const need=nextShouldOf(r);
     drawer(`<div class="drawer-hd"><div><h3>${r.name} <span class="mono" style="font-size:12.5px;color:var(--ts)">${r.sku}</span></h3>
       <div style="margin-top:4px"><span class="sub" style="font-size:12px">${r.wh} · ${r.spec}</span></div></div>
       <span class="x" onclick="closeDrawer()">×</span></div>
@@ -112,7 +125,8 @@
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">次日抵扣</h4>
       <table class="subtbl"><tbody>
         <tr><td style="width:42%;color:var(--ts)">次日订单需求</td><td>${r.nextNeed} ${r.unit}</td></tr>
-        <tr><td style="color:var(--ts)">减去在仓剩余</td><td>− ${r.left} ${r.unit}</td></tr>
+        <tr><td style="color:var(--ts)">次日预送量（算法定稿）</td><td>+ ${nextPs} ${r.unit}</td></tr>
+        <tr><td style="color:var(--ts)">减去在仓剩余${r.over?`（含多收 ${r.over}）`:''}</td><td>− ${r.left} ${r.unit}</td></tr>
         <tr><td style="color:var(--ts)"><b>次日应送量</b></td><td><b style="color:var(--g)">${need}</b> ${r.unit}${need==0?' <span style="color:var(--ts);font-size:12px">（在仓货已够，次日免送）</span>':''}</td></tr>
       </tbody></table>
     </div>
@@ -126,7 +140,7 @@
     const allOn=able.length&&able.every(r=>sel.includes(r.sku+'|'+r.wh));
     const expCnt=DB.presendStock.filter(r=>r.shelfLeft<=2).length;
     const body=rows.length?rows.map(r=>{
-      const key=r.sku+'|'+r.wh,need=Math.max(0,r.nextNeed-r.left);
+      const key=r.sku+'|'+r.wh,need=nextShouldOf(r);
       return `<tr>
         <td><input type="checkbox" ${r.returning?'disabled':''} ${sel.includes(key)?'checked':''} onclick="event.stopPropagation();psStockCheck('${key}',this.checked)"></td>
         <td onclick="psStockDrawer('${key}')" style="cursor:pointer"><b style="font-weight:600">${r.name}</b>

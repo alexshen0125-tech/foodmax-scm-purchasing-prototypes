@@ -41,6 +41,17 @@ window.adjTypeOf = tOf;
 
 /* ================= 调整单 adjust_order（演示数据） ================= */
 DB.adjOrders = DB.adjOrders || [
+  // 挂在 2026-07-01 对账单那天（绿鲜源蔬果旗舰店），供商家端「对账单 › 业务调整」页签与导出 Sheet7 演示
+  {adjustNo:'ADJ-SG-20260701-002', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
+   adjustTypeCode:'ADJ-PROMO', adjustTypeName:'平台活动补贴', amount:120.00, currency:'SGD',
+   bizNo:'', remark:'7/1 生鲜节平台让利补贴，线下已与商家确认', effectiveTime:'2026-07-01 18:30', createdBy:'陈敏',
+   sourceType:'MANUAL', status:'effective', voidReason:'',
+   pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 18:35', pushedBy:'陈敏'},
+  {adjustNo:'ADJ-SG-20260701-001', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
+   adjustTypeCode:'ADJ-QC', adjustTypeName:'质量问题扣款', amount:64.00, currency:'SGD',
+   bizNo:'QC-26070101', remark:'7/1 到仓抽检两箱叶菜不合格，按货值扣款', effectiveTime:'2026-07-01 09:12', createdBy:'陈敏',
+   sourceType:'MANUAL', status:'effective', voidReason:'',
+   pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 09:20', pushedBy:'陈敏'},
   {adjustNo:'ADJ-SG-20260914-003', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
    adjustTypeCode:'ADJ-FREIGHT', adjustTypeName:'物流费用补贴', amount:420.00, currency:'SGD',
    bizNo:'', remark:'8 月冷链车加班费补贴', effectiveTime:'2026-09-14 09:20', createdBy:'林凯',
