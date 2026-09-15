@@ -3,71 +3,115 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>清分与结算 · 交互原型集</title>
+<title>磐石 Aegis · 清分与结算交互原型</title>
 <style>
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{display:flex;flex-direction:column;background:#f9fafb;color:#111827;
+  body{display:flex;flex-direction:column;background:#f3f5f9;color:#141b2e;
        font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
-  .top{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:12px 20px;background:#fff;border-bottom:1px solid #e5e7eb}
-  .top .back{font-size:13px;color:#2563eb;text-decoration:none;white-space:nowrap}
-  .top h1{margin:0;font-size:16px;font-weight:700;white-space:nowrap}
-  .top .cur{font-size:13px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .top .right{margin-left:auto;display:flex;gap:10px;align-items:center}
-  .top a.open{font-size:12.5px;color:#2563eb;text-decoration:none;border:1px solid #dbe3ef;border-radius:6px;padding:5px 10px;white-space:nowrap}
-  .top a.open:hover{border-color:#2563eb}
+  .topbar{flex:0 0 auto;display:flex;align-items:center;gap:12px;height:56px;padding:0 18px;background:#fff;border-bottom:1px solid #e6e9f0}
+  .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px;background:linear-gradient(135deg,#2f6fe4,#1b47a8)}
+  .brand{font-size:15px;font-weight:800;white-space:nowrap}
+  .cur{font-size:13px;color:#64708a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .btn{font-size:12.5px;color:#2563eb;text-decoration:none;border:1px solid #dbe3ef;border-radius:6px;padding:5px 10px;white-space:nowrap;background:#fff;cursor:pointer}
+  .btn:hover{border-color:#2563eb}
   .body{flex:1 1 auto;display:flex;min-height:0}
-  .side{flex:0 0 268px;overflow-y:auto;background:#fff;border-right:1px solid #e5e7eb;padding:12px}
-  .nav-title{padding:10px 10px 6px;font-size:11px;letter-spacing:1px;color:#9ca3af;font-weight:800}
-  .nav-item{display:block;padding:10px 12px;margin:2px 0;border-radius:9px;text-decoration:none;color:#374151;border:1px solid transparent}
-  .nav-item:hover{background:#f3f6fb}
-  .nav-item.active{background:#eaf2ff;border-color:#c7dbff}
-  .nav-item .nm{font-size:13.5px;font-weight:650}
-  .nav-item.active .nm{color:#1d4ed8}
-  .nav-item .ds{display:block;margin-top:3px;font-size:11.5px;color:#9ca3af;line-height:1.45}
-  .nav-item .badge{margin-left:6px;font-size:10.5px;font-weight:800;color:#15803d;background:#dcfce7;border-radius:999px;padding:1px 7px;vertical-align:1px}
-  .frame{flex:1 1 auto;min-width:0;background:#fff}
+  .side{flex:0 0 228px;overflow-y:auto;background:#fff;border-right:1px solid #e6e9f0;padding:12px 10px}
+  .nav-group{padding:10px 12px 5px;font-size:10.5px;letter-spacing:1.1px;color:#a2abbd;font-weight:800}
+  .nav-item{display:flex;align-items:center;gap:9px;margin:1px 0;padding:9px 12px;border-radius:9px;font-size:13.5px;color:#3d4658;text-decoration:none;position:relative}
+  .nav-item:hover{background:#f4f6fb}
+  .nav-item .ic{width:18px;text-align:center;font-size:13px;color:#8a94a8}
+  .nav-item .tx{flex:1 1 auto}
+  .nav-item .badge{font-size:10px;font-weight:800;color:#15803d;background:#dcfce7;border-radius:999px;padding:1px 6px}
+  .nav-item.active{color:#2563eb;font-weight:700;background:linear-gradient(90deg,#eaf2ff,#fff);box-shadow:inset 0 0 0 1px #cfe0ff}
+  .nav-item.active .ic{color:#2563eb}
+  .nav-item.active:before{content:"";position:absolute;left:0;top:50%;width:3px;height:18px;transform:translateY(-50%);background:#2563eb;border-radius:0 3px 3px 0}
+  .nav-item.disabled{color:#b6bdcb;cursor:default}
+  .nav-item.disabled:hover{background:transparent}
+  .vbar{flex:0 0 auto;display:none;align-items:center;gap:8px;padding:9px 18px;background:#fbfcfe;border-bottom:1px solid #eef1f6;font-size:12.5px}
+  .vbar .lb{color:#8a94a8}
+  .vbar button{border:1px solid #dbe3ef;background:#fff;border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer;color:#3d4658}
+  .vbar button.on{border-color:#2563eb;color:#2563eb;background:#eaf2ff;font-weight:700}
+  .stage{flex:1 1 auto;display:flex;flex-direction:column;min-width:0}
+  .frame{flex:1 1 auto;min-height:0;background:#fff}
   iframe{width:100%;height:100%;border:0;display:block}
-  @media(max-width:860px){.body{flex-direction:column}.side{flex:0 0 auto;max-height:200px;border-right:0;border-bottom:1px solid #e5e7eb}}
+  .hint{margin:auto;text-align:center;color:#8a94a8;font-size:13px;padding:40px}
+  @media(max-width:860px){.body{flex-direction:column}.side{flex:0 0 auto;max-height:190px;border-right:0;border-bottom:1px solid #e6e9f0}}
 </style>
 </head>
 <body>
-<div class="top">
-  <a class="back" href="../index.html">← 全部原型</a>
-  <h1>清分与结算</h1>
+<div class="topbar">
+  <div class="logo">FM</div><div class="brand">磐石 Aegis</div>
   <span class="cur" id="cur"></span>
-  <span class="right"><a class="open" id="open" target="_blank" rel="noopener">在新标签打开 ↗</a></span>
+  <span class="right">
+    <a class="btn" id="open" target="_blank" rel="noopener">在新标签打开 ↗</a>
+    <a class="btn" href="../index.html">全部原型</a>
+  </span>
 </div>
 <div class="body">
   <nav class="side">
-    <div class="nav-title">本期新增</div>
-    <a class="nav-item" href="#cljs20" data-key="cljs20"><span class="nm">业务调整单接入与结算展现</span><span class="badge">最新</span><span class="ds">CLJS-20 · 收支单据 / 结算单列表 / 结算单详情</span></a>
-    <div class="nav-title">平台全景</div>
-    <a class="nav-item" href="#platform" data-key="platform"><span class="nm">清结算平台 · 全流程</span><span class="ds">订单接入 → 分账 → 结算 → 清分支付</span></a>
-    <a class="nav-item" href="#income" data-key="income"><span class="nm">平台收入与平台开票</span><span class="ds">耗材采购 / 自营补货 / 店铺罚款 / 开票</span></a>
-    <div class="nav-title">三期变更</div>
-    <a class="nav-item" href="#rate" data-key="rate"><span class="nm">品类费率维护 · 总费率拆分</span><span class="ds">变更 001</span></a>
-    <a class="nav-item" href="#order" data-key="order"><span class="nm">订单接入</span><span class="ds">变更 003</span></a>
-    <a class="nav-item" href="#split" data-key="split"><span class="nm">分账明细</span><span class="ds">变更 001</span></a>
-    <a class="nav-item" href="#bill" data-key="bill"><span class="nm">结算单</span><span class="ds">变更 001</span></a>
+      <a class="nav-item disabled" href="javascript:void(0)" data-key="dash" title="本期无原型"><span class="ic">▦</span><span class="tx">仪表盘</span></a>
+      <div class="nav-group">订单与分账</div>
+      <a class="nav-item" href="#ingest" data-key="ingest"><span class="ic">📥</span><span class="tx">订单接入</span></a>
+      <a class="nav-item" href="#split" data-key="split"><span class="ic">🧮</span><span class="tx">分账明细</span></a>
+      <div class="nav-group">平台收入</div>
+      <a class="nav-item" href="#income" data-key="income"><span class="ic">🏦</span><span class="tx">收入单据</span><span class="badge">本期改</span></a>
+      <a class="nav-item" href="#saleinv" data-key="saleinv"><span class="ic">📄</span><span class="tx">销售开票</span></a>
+      <div class="nav-group">清分与结算</div>
+      <a class="nav-item" href="#bill" data-key="bill"><span class="ic">📋</span><span class="tx">结算单</span><span class="badge">本期改</span></a>
+      <a class="nav-item" href="#cominv" data-key="cominv"><span class="ic">✅</span><span class="tx">佣金开票</span></a>
+      <a class="nav-item" href="#pay" data-key="pay"><span class="ic">💳</span><span class="tx">付款单</span></a>
+      <a class="nav-item collapsed disabled" title="本期无原型"><span class="ic">▸</span><span class="tx">出款管理</span></a>
+      <a class="nav-item collapsed disabled" title="本期无原型"><span class="ic">▸</span><span class="tx">渠道资金</span></a>
+      <a class="nav-item collapsed disabled" title="本期无原型"><span class="ic">▸</span><span class="tx">垫资管理</span></a>
+      <a class="nav-item collapsed disabled" title="本期无原型"><span class="ic">▸</span><span class="tx">对账与台账</span></a>
+      <div class="nav-group">主数据</div>
+      <a class="nav-item" href="#rate" data-key="rate"><span class="ic">💹</span><span class="tx">品类费率维护</span></a>
+      <a class="nav-item collapsed disabled" title="本期无原型"><span class="ic">▸</span><span class="tx">合规审计</span></a>
+      <a class="nav-item collapsed disabled" title="本期无原型"><span class="ic">▸</span><span class="tx">系统设置</span></a>
   </nav>
-  <div class="frame"><iframe id="fr" title="原型预览"></iframe></div>
+  <div class="stage">
+    <div class="vbar" id="vbar"><span class="lb">版本</span></div>
+    <div class="frame" id="frame"><div class="hint">左侧菜单按测试环境 aegis-te 还原；灰色项本期没有原型。</div></div>
+  </div>
 </div>
 <script>
-const META = {"cljs20": {"src": "%E3%80%90CLJS%E3%80%9120_%E4%B8%9A%E5%8A%A1%E8%B0%83%E6%95%B4%E5%8D%95%E6%8E%A5%E5%85%A5%E4%B8%8E%E7%BB%93%E7%AE%97%E5%B1%95%E7%8E%B0_%E5%8E%9F%E5%9E%8B.html", "name": "业务调整单接入与结算展现", "desc": "CLJS-20 · 收支单据 / 结算单列表 / 结算单详情"}, "platform": {"src": "%E3%80%90CLJS%E3%80%91FoodMax%E6%B8%85%E7%BB%93%E7%AE%97%E5%B9%B3%E5%8F%B0_%E5%8E%9F%E5%9E%8B%E8%AE%BE%E8%AE%A1.html", "name": "清结算平台 · 全流程", "desc": "订单接入 → 分账 → 结算 → 清分支付"}, "income": {"src": "%E3%80%90CLJS%E3%80%91006_%E5%B9%B3%E5%8F%B0%E6%94%B6%E5%85%A5%E5%8F%8A%E5%B9%B3%E5%8F%B0%E5%BC%80%E7%A5%A8_%E5%8E%9F%E5%9E%8B.html", "name": "平台收入与平台开票", "desc": "耗材采购 / 自营补货 / 店铺罚款 / 开票"}, "rate": {"src": "%E3%80%90CLJS%E3%80%91001_%E5%93%81%E7%B1%BB%E8%B4%B9%E7%8E%87%E7%BB%B4%E6%8A%A4_%E6%80%BB%E8%B4%B9%E7%8E%87%E6%8B%86%E5%88%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html", "name": "品类费率维护 · 总费率拆分", "desc": "变更 001"}, "order": {"src": "%E3%80%90CLJS%E3%80%91003_%E8%AE%A2%E5%8D%95%E6%8E%A5%E5%85%A5_%E5%8F%98%E6%9B%B4003_%E5%8E%9F%E5%9E%8B.html", "name": "订单接入", "desc": "变更 003"}, "split": {"src": "%E3%80%90CLJS%E3%80%91004_%E5%88%86%E8%B4%A6%E6%98%8E%E7%BB%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html", "name": "分账明细", "desc": "变更 001"}, "bill": {"src": "%E3%80%90CLJS%E3%80%91005_%E7%BB%93%E7%AE%97%E5%8D%95_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html", "name": "结算单", "desc": "变更 001"}};
+const META = {"ingest": {"label": "订单接入", "variants": [{"label": "三期变更 003", "src": "%E3%80%90CLJS%E3%80%91003_%E8%AE%A2%E5%8D%95%E6%8E%A5%E5%85%A5_%E5%8F%98%E6%9B%B4003_%E5%8E%9F%E5%9E%8B.html"}]}, "split": {"label": "分账明细", "variants": [{"label": "三期变更 001", "src": "%E3%80%90CLJS%E3%80%91004_%E5%88%86%E8%B4%A6%E6%98%8E%E7%BB%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html"}]}, "income": {"label": "收入单据", "variants": [{"label": "本期 · 收支单据（CLJS-20）", "src": "%E3%80%90CLJS%E3%80%9120_%E4%B8%9A%E5%8A%A1%E8%B0%83%E6%95%B4%E5%8D%95%E6%8E%A5%E5%85%A5%E4%B8%8E%E7%BB%93%E7%AE%97%E5%B1%95%E7%8E%B0_%E5%8E%9F%E5%9E%8B.html"}, {"label": "现状 · 平台收入（006）", "src": "%E3%80%90CLJS%E3%80%91006_%E5%B9%B3%E5%8F%B0%E6%94%B6%E5%85%A5%E5%8F%8A%E5%B9%B3%E5%8F%B0%E5%BC%80%E7%A5%A8_%E5%8E%9F%E5%9E%8B.html"}]}, "saleinv": {"label": "销售开票", "variants": [{"label": "平台开票（006）", "src": "%E3%80%90CLJS%E3%80%91006_%E5%B9%B3%E5%8F%B0%E6%94%B6%E5%85%A5%E5%8F%8A%E5%B9%B3%E5%8F%B0%E5%BC%80%E7%A5%A8_%E5%8E%9F%E5%9E%8B.html"}]}, "bill": {"label": "结算单", "variants": [{"label": "本期 · 列表与详情（CLJS-20）", "src": "%E3%80%90CLJS%E3%80%9120_%E4%B8%9A%E5%8A%A1%E8%B0%83%E6%95%B4%E5%8D%95%E6%8E%A5%E5%85%A5%E4%B8%8E%E7%BB%93%E7%AE%97%E5%B1%95%E7%8E%B0_%E5%8E%9F%E5%9E%8B.html"}, {"label": "三期变更 001", "src": "%E3%80%90CLJS%E3%80%91005_%E7%BB%93%E7%AE%97%E5%8D%95_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html"}, {"label": "平台全流程版", "src": "%E3%80%90CLJS%E3%80%91FoodMax%E6%B8%85%E7%BB%93%E7%AE%97%E5%B9%B3%E5%8F%B0_%E5%8E%9F%E5%9E%8B%E8%AE%BE%E8%AE%A1.html"}]}, "cominv": {"label": "佣金开票", "variants": [{"label": "平台全流程版 · 开票管理", "src": "%E3%80%90CLJS%E3%80%91FoodMax%E6%B8%85%E7%BB%93%E7%AE%97%E5%B9%B3%E5%8F%B0_%E5%8E%9F%E5%9E%8B%E8%AE%BE%E8%AE%A1.html"}]}, "pay": {"label": "付款单", "variants": [{"label": "平台全流程版 · 清分支付", "src": "%E3%80%90CLJS%E3%80%91FoodMax%E6%B8%85%E7%BB%93%E7%AE%97%E5%B9%B3%E5%8F%B0_%E5%8E%9F%E5%9E%8B%E8%AE%BE%E8%AE%A1.html"}]}, "rate": {"label": "品类费率维护", "variants": [{"label": "总费率拆分（三期变更 001）", "src": "%E3%80%90CLJS%E3%80%91001_%E5%93%81%E7%B1%BB%E8%B4%B9%E7%8E%87%E7%BB%B4%E6%8A%A4_%E6%80%BB%E8%B4%B9%E7%8E%87%E6%8B%86%E5%88%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html"}]}};
 const KEYS = Object.keys(META);
-function show(key){
-  if(!META[key]) key = KEYS[0];
-  const m = META[key];
-  document.getElementById('fr').src = m.src;
-  document.getElementById('cur').textContent = '／ ' + m.name + ' · ' + m.desc;
-  document.getElementById('open').href = m.src;
+let curKey = null;
+
+function render(key, vi){
+  const m = META[key]; if(!m) return;
+  curKey = key;
+  const v = m.variants[vi] || m.variants[0];
+  document.getElementById('frame').innerHTML =
+    '<iframe title="原型预览" src="' + v.src + '"></iframe>';
+  document.getElementById('cur').textContent = '／ ' + m.label + ' · ' + v.label;
+  document.getElementById('open').href = v.src;
   document.querySelectorAll('.nav-item').forEach(a =>
     a.classList.toggle('active', a.dataset.key === key));
-  if(location.hash.slice(1) !== key) history.replaceState(null, '', '#' + key);
+  const bar = document.getElementById('vbar');
+  if(m.variants.length > 1){
+    bar.style.display = 'flex';
+    bar.innerHTML = '<span class="lb">版本</span>' + m.variants.map((x,i)=>
+      '<button class="' + (x===v?'on':'') + '" data-vi="' + i + '">' + x.label + '</button>').join('');
+  } else { bar.style.display = 'none'; bar.innerHTML = ''; }
+  const want = '#' + key + (vi ? '/' + vi : '');
+  if(location.hash !== want) history.replaceState(null, '', want);
 }
-window.addEventListener('hashchange', () => show(location.hash.slice(1)));
-show(location.hash.slice(1));
+function fromHash(){
+  const [k, v] = location.hash.slice(1).split('/');
+  render(META[k] ? k : KEYS[0], parseInt(v || '0', 10) || 0);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#vbar button');
+  if(b){ render(curKey, parseInt(b.dataset.vi, 10)); return; }
+  const a = e.target.closest('.nav-item');
+  if(a && !a.classList.contains('disabled')) render(a.dataset.key, 0);
+});
+window.addEventListener('hashchange', fromHash);
+fromHash();
 </script>
 </body>
 </html>
