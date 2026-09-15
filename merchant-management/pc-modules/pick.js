@@ -58,7 +58,7 @@
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送；<b>合计应送 = 订单量 + 预送量</b>，明细与确认在「预送确认」菜单。</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送；<b>合计应送 = 订单量 + 预送量</b>。预送量由系统按 <b>min(算法预测量, 你的可售库存)</b> 于 16:00 直接定稿，<b>无需你确认</b>；想多备直接多送，仓库照收（多送的当天不参与售卖，次日抵扣）。</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -220,7 +220,7 @@
     const optSel=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
     ${!DB.labelPaper?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">🖨️</span><b>尚未设置打印机纸张</b>，需先选择标签纸张大小后才能打印标签。<button class="btn btn-link btn-sm" onclick="label_paperModal()">去设置 →</button></div>`:''}
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。<br><b>应送货 = 订单量 + 预送量</b>：预送量于 16:00 定稿（见「预送确认」），标签形态与订单货完全一致（按 SKU 一件一张、不含订单/客户信息），到仓后由 WMS <b>先满足订单、余量入你的在仓预送库存</b>。<b>建议 16:00 预送量定稿后再打印</b>，提前打印需在定稿后补打预送部分。</div>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。<br><b>应送货 = 订单量 + 预送量</b>：预送量由系统于 16:00 按 min(算法预测量, 可售库存) 直接定稿、无需确认，标签形态与订单货完全一致（按 SKU 一件一张、不含订单/客户信息），到仓后由 WMS <b>先满足订单、余量入你的在仓预送库存</b>。<b>建议 16:00 预送量定稿后再打印</b>，提前打印需在定稿后补打预送部分。</div>
     ${blocked?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span><b>${blocked} 个商品因未完成称重被拦截，无法打印标签。</b>多退少补（按重量定价）商品必须先录实发净重——打印首张标签即自动生成送货单，届时重量已无法再改。<button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重录入 →</button></div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">

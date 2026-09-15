@@ -1,13 +1,16 @@
-/* Food Max 商家端 v2 · 预送确认 + 在仓预送库存（提前送货与预测预送）
-   ① 预送确认 FM_MOD.presend：算法下发「预送量」与可售库存比对——不超则直接执行；
-      超出需商家确认，确认=按预测量送、拒绝/超时=按可售库存送。二态，不支持改数量（BR-07b）。
-   ② 在仓预送库存 FM_MOD.presendstock：当日没卖完留仓的货，顺延抵扣次日应送量（BR-15）。
-   口径见《scm_提前送货与预测预送_功能框架》v0.3，与 PC 端 pc-modules/presend.js 数字同源。
+/* Food Max 商家端 v2 · 在仓预送库存 + 送货盘点（提前送货与预测预送）
+   ① 在仓预送库存 FM_MOD.presendstock：当日没卖完留仓的货 + 多收入账，顺延抵扣次日应送量（BR-15/BR-16c）。
+   ② 送货盘点 FM_MOD.presendrecon：按送货单 / 按 SKU 两个维度盘每天送了多少、仓库收了多少。
+
+   ⚠️ 2026-09-15 沈亮拍板：**「预送确认」页已删除**。预送量由系统直接定稿，
+      最终预送量 = min(算法预测量, 可售库存)（BR-06），商家零动作——想多备直接多送，
+      仓库照收不设上限（BR-16c），多送的当日不可卖、次日抵扣（BR-16d）。
+
+   口径见《scm_提前送货与预测预送_功能框架》v0.7，与 PC 端 pc-modules/presend.js 数字同源。
    评审修复内建：骨架屏/空态/破坏性动作确认/44px；前缀 ps-。 */
 (function(){
 const {pushPage,popPage,toast,confirmDialog,svg,skel}=window.FM;
-const CFG={tp:'15:00',t0:'16:00',t:'18:00',cutoff:'22:00'};
-const DEADLINE=Date.now()+42*60*1000+15*1000;   // 演示：确认窗口剩余 42:15
+const CFG={t0:'16:00',t:'18:00',cutoff:'22:00'};
 
 const css=document.createElement('style');
 css.textContent=`
@@ -75,11 +78,8 @@ function ensure(){
     const fcst=Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',80)/100)));
     const avail=Math.max(3,Math.round(fcst*(0.45+hnum(a.name+a.wh+'a',60)/100))); // 可售库存 = 预测量的 45%–105%
     const hist=[0,1,2,3].map(k=>Math.max(0,fcst-6+hnum(a.name+a.wh+'h'+k,13)));
-    return Object.assign({},a,{fcst,avail,hist,status:fcst<=avail?'auto':'wait',decidedAt:''});
+    return Object.assign({},a,{fcst,avail,hist});
   });
-  const waits=ROWS.filter(r=>r.status==='wait');
-  if(waits[0]){waits[0].status='confirmed';waits[0].decidedAt='15:12';}
-  if(waits[1]){waits[1].status='capped';waits[1].decidedAt='15:00 超时';}
   STOCK=ROWS.filter((r,i)=>i%2===0).slice(0,7).map(r=>{
     const sent=r.fcst,sold=Math.max(0,sent-2-hnum(r.sku+r.wh+'s',12));
     const over=hnum(r.sku+r.wh+'ov',10)<4?(2+hnum(r.sku+'ovq',6)):0;   // 多收入账（BR-16c：当日不可卖，直接留仓）
@@ -88,113 +88,8 @@ function ensure(){
       nextNeed:5+hnum(r.sku+r.wh+'n',30),returning:false};
   });
 }
-function finalQty(r){return r.status==='confirmed'||r.status==='auto'?r.fcst:Math.min(r.fcst,r.avail);}
-const ST={wait:'待确认',confirmed:'已确认',capped:'按库存执行',auto:'无需确认'};
-
-/* ---------- 预送确认 ---------- */
-let TAB='wait';
-function card(r){
-  const gap=r.fcst-r.avail,isW=r.status==='wait';
-  return `<div class="ps-card" data-key="${r.sku}|${r.wh}">
-    <div class="ps-ch"><div><div class="nm">${r.name}</div><div class="sku">${r.sku}</div></div>
-      <span class="ps-st ${r.status}">${ST[r.status]}</span></div>
-    <div class="ps-tags"><span class="ps-tag">${r.wh}</span><span class="ps-tag">今日订单 ${r.orderQty} ${r.unit}</span>${r.decidedAt?`<span class="ps-tag">${r.decidedAt}</span>`:''}</div>
-    <div class="ps-kbox">
-      <div class="k"><div class="v">${r.fcst}</div><div class="l">算法预测量</div></div>
-      <div class="k"><div class="v">${r.avail}</div><div class="l">可售库存</div></div>
-      <div class="k"><div class="v hl">${finalQty(r)}</div><div class="l">最终预送量</div></div>
-    </div>
-    ${gap>0?`<div class="ps-gapline">预测比你的可售库存多 <b>${gap} ${r.unit}</b>。${isW?`${CFG.t0} 前未确认，将按可售库存 ${r.avail} ${r.unit} 送货。`:r.status==='confirmed'?'你已确认按预测量送货。':`已按可售库存 ${r.avail} ${r.unit} 执行。`}</div>`:''}
-    <div class="ps-acts">${isW
-      ? `<div class="b o" data-act="reject">拒绝</div><div class="b p" data-act="confirm">确认按 ${r.fcst} 送</div>`
-      : `<div class="b link" data-act="detail">查看预测依据 ›</div>`}</div>
-  </div>`;
-}
-function rowsOf(){return TAB==='all'?ROWS:ROWS.filter(r=>r.status===TAB);}
-function renderList(box){
-  const list=box.querySelector('#psl');
-  list.innerHTML=skel(3);
-  setTimeout(()=>{
-    const rs=rowsOf();
-    if(!rs.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('trend')}</div><h4>该状态下暂无预送记录</h4><p>切换上方状态页签查看其他 SKU</p></div>`;return;}
-    list.innerHTML=rs.map(card).join('');
-    list.querySelectorAll('.ps-card').forEach(c=>{
-      const r=ROWS.find(x=>x.sku+'|'+x.wh===c.dataset.key);
-      c.querySelectorAll('[data-act]').forEach(b=>b.onclick=e=>{
-        e.stopPropagation();
-        const a=b.dataset.act;
-        if(a==='confirm')decide([r],true,box);
-        else if(a==='reject')askReject(r,box);
-        else openDetail(r);
-      });
-      c.onclick=()=>openDetail(r);
-    });
-  },420);
-}
-function decide(rs,ok,box){
-  rs.forEach(r=>{if(r.status==='wait'){r.status=ok?'confirmed':'capped';r.decidedAt=ok?'刚刚':'刚刚 已拒绝';}});
-  toast(ok?`已确认 ${rs.length} 条，按预测量送货`:`已拒绝 ${rs.length} 条，按可售库存送货`);
-  redraw(box);
-}
-function askReject(r,box){
-  confirmDialog({title:'确认拒绝预送？',danger:1,okText:'确认拒绝',
-    body:`拒绝后「${r.name}」（${r.wh}）今日预送量按可售库存 ${r.avail} ${r.unit} 执行，少送的 ${r.fcst-r.avail} ${r.unit} 当日卖完即售罄，不再补送。`,
-    onOk:()=>decide([r],false,box)});
-}
-function redraw(box){draw(box);}
-function draw(box){
-  const waitN=ROWS.filter(r=>r.status==='wait').length;
-  const cnt=k=>k==='all'?ROWS.length:ROWS.filter(r=>r.status===k).length;
-  box.innerHTML=`
-    <div class="ps-bar">
-      <div><div class="l">确认截止</div><div class="v">${CFG.t0}</div></div>
-      <div><div class="l">剩余时间</div><div class="v cd" data-cd="${DEADLINE}">—</div></div>
-      <div><div class="l">到仓送货</div><div class="v">${CFG.t}</div></div>
-      <div><div class="l">当日截单</div><div class="v">${CFG.cutoff}</div></div>
-    </div>
-    <div class="ps-note">你的截单晚于到仓送货时点，<b>${CFG.t0}–${CFG.cutoff}</b> 还会来单。系统预测这段时间还能卖多少作为<b>预送量</b>，随 ${CFG.t} 那趟车一起送。
-      预测量不超过可售库存直接执行；超过时需你确认，<b>${CFG.t0} 前未确认按可售库存送</b>。预送量也是当日可售上限，卖完即售罄；没卖完的留仓抵次日。</div>
-    <div class="ps-tabs">${[['wait','待确认'],['confirmed','已确认'],['capped','按库存执行'],['auto','无需确认'],['all','全部']]
-      .map(([k,t])=>`<div class="ps-tab ${TAB===k?'on':''}" data-t="${k}">${t} ${cnt(k)}</div>`).join('')}</div>
-    <div class="ps-list" id="psl"></div>
-    ${waitN?`<div class="ps-foot"><div class="b" id="psAll">全部确认（${waitN} 条）</div></div>`:''}`;
-  box.querySelectorAll('.ps-tab').forEach(t=>t.onclick=()=>{TAB=t.dataset.t;draw(box);});
-  const all=box.querySelector('#psAll');
-  if(all)all.onclick=()=>{
-    const rs=ROWS.filter(r=>r.status==='wait');
-    confirmDialog({title:`全部确认 ${rs.length} 条？`,okText:'确认',
-      body:'这些 SKU 今日按算法预测量备货送货，你需要保证货能补足；未送足的部分不计缺货罚款，但当日会提前售罄。',
-      onOk:()=>decide(rs,true,box)});
-  };
-  renderList(box);
-}
-function openDetail(r){
-  const avg=Math.round(r.hist.reduce((a,b)=>a+b,0)/r.hist.length),wk=['上周','两周前','三周前','四周前'];
-  const gap=r.fcst-r.avail;
-  pushPage({title:r.name,body:`
-    <div class="ps-sec">今日预送</div>
-    <div class="ps-tbl">
-      <div class="ps-row"><span class="k">算法预测量（${CFG.t0}–${CFG.cutoff} 还能卖）</span><span class="v">${r.fcst} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">你的可售库存</span><span class="v">${r.avail} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">缺口</span><span class="v ${gap>0?'warn':''}">${gap>0?gap+' '+r.unit:'无'}</span></div>
-      <div class="ps-row"><span class="k">今日订单量（已确认，另计）</span><span class="v">${r.orderQty} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">最终预送量</span><span class="v hl">${finalQty(r)} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">今日应送合计</span><span class="v">${r.orderQty+finalQty(r)} ${r.unit}</span></div>
-    </div>
-    <div class="ps-sec">预测依据 · 近 4 周同星期几 ${CFG.t0}–${CFG.cutoff} 成交</div>
-    <div class="ps-tbl">
-      ${r.hist.map((h,i)=>`<div class="ps-row"><span class="k">${wk[i]}</span><span class="v">${h} ${r.unit}</span></div>`).join('')}
-      <div class="ps-row"><span class="k">4 周均值</span><span class="v">${avg} ${r.unit}</span></div>
-    </div>
-    <div class="ps-sec">时间安排</div>
-    <div class="ps-tbl">
-      <div class="ps-row"><span class="k">确认截止</span><span class="v">${CFG.t0} 超时按可售库存</span></div>
-      <div class="ps-row"><span class="k">到仓送货</span><span class="v">${CFG.t} 前送达 ${r.wh}</span></div>
-      <div class="ps-row"><span class="k">当日截单</span><span class="v">${CFG.cutoff} 卖完即售罄</span></div>
-      <div class="ps-row"><span class="k">未售完</span><span class="v">留仓抵扣次日应送</span></div>
-    </div>
-    <div style="height:16px"></div>`});
-}
+// BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
+function finalQty(r){return Math.min(r.fcst,r.avail);}
 
 /* ---------- 在仓预送库存 ---------- */
 let STAB='all';
@@ -268,118 +163,168 @@ function openStockDetail(s){
 
 /* ---------- 注册 ---------- */
 window.FM_MOD=window.FM_MOD||{};
-window.FM_MOD.presend=()=>{ensure();pushPage({title:'预送确认',body:'<div id="psw"></div>',mount:p=>draw(p.querySelector('#psw'))});};
 window.FM_MOD.presendstock=()=>{ensure();pushPage({title:'在仓预送库存',body:'<div id="psw"></div>',mount:p=>drawStock(p.querySelector('#psw'))});};
-window.PS_PENDING=()=>{ensure();return ROWS.filter(r=>r.status==='wait').length;};
 // 供「打印标签」取最终预送量（按 商品名 + 仓库 匹配）
 window.PS_QTY=(name,wh)=>{ensure();const r=ROWS.find(x=>x.name===name&&x.wh===wh);return r?finalQty(r):0;};
 
-/* ---------- 送货复盘（日结：昨天送多/送少 → 今天送多少） ---------- */
-let RECON=null,RTAB='all';
-const RDATE='2026-08-30';
-function ensureRecon(){
+/* ---------- 送货盘点（两个维度：按送货单 / 按 SKU）----------
+   2026-09-15 沈亮拍板：原「送货复盘」改为「送货盘点」，不再按送多/送少分桶，
+   改成两个维度看同一批数据——① 按送货单：每天每仓一张单，盘这一单送了什么、收了多少；
+   ② 按 SKU：一个品逐日的送货明细。与 PC pc-modules/presend.js 同算法同数字。 */
+const AUD_DAYS=['2026-08-30','2026-08-29','2026-08-28','2026-08-27','2026-08-26','2026-08-25','2026-08-24'];
+let AUD=null,ATAB='doc',ADAY=AUD_DAYS[0];
+function ensureAudit(){
   ensure();
-  if(RECON)return;
-  RECON=ROWS.map(r=>{
-    const ps=finalQty(r),planned=r.orderQty+ps;
-    // 约 1/5 少送、约 1/5 多送（BR-16 按实收计；BR-16c 多收不设上限）
-    const h5=hnum(r.sku+r.wh+'ss',10);
-    const received=h5<2?Math.max(r.orderQty,planned-(2+hnum(r.sku+'sd',5)))
-                  :h5<4?planned+(2+hnum(r.sku+'od',6))
-                  :planned;
-    const realAfter=Math.round(ps*(0.55+hnum(r.sku+r.wh+'ra',80)/100));
-    const demand=r.orderQty+realAfter;
-    // 当日可卖上限 = 定稿应送（BR-16d 多收不进当日配额）；少送时按实收下调
-    const sellable=Math.min(received,planned);
-    const sold=Math.min(sellable,demand),leftover=received-sold,missed=Math.max(0,demand-sellable);
-    let soldOutAt='';
-    if(missed>0){const avail=Math.max(1,sellable-r.orderQty),h=16+Math.min(5.9,avail/Math.max(1,realAfter)*6);
-      soldOutAt=String(Math.floor(h)).padStart(2,'0')+':'+String(Math.round(h%1*60/10)*10%60).padStart(2,'0');}
-    const nextOrderNeed=Math.max(2,Math.round(r.orderQty*(0.7+hnum(r.sku+r.wh+'no',70)/100)));
-    const nextFcst=Math.max(2,Math.round(ps*(0.7+hnum(r.sku+r.wh+'nf',70)/100)));
-    return {sku:r.sku,name:r.name,unit:r.unit,wh:r.wh,orderQty:r.orderQty,psQty:ps,planned,received,
-      shortSend:Math.max(0,planned-received),      // 短收：实收 < 应送
-      overSend:Math.max(0,received-planned),        // 多收：实收 > 应送，照收入寄存（BR-16c）
-      demand,sold,leftover,missed,soldOutAt,nextOrderNeed,nextFcst,
-      nextShould:Math.max(0,nextOrderNeed+nextFcst-leftover),
-      result:missed>0?'short':(leftover>0?'over':'fit')};
+  if(AUD)return;
+  const whs=[...new Set(ROWS.map(r=>r.wh))],docs=[];let seq=0;
+  AUD_DAYS.slice().reverse().forEach(d=>{
+    whs.forEach(wh=>{
+      const rs=ROWS.filter(r=>r.wh===wh);
+      if(!rs.length)return;
+      const lines=rs.map(r=>{
+        const sd=r.sku+wh+d;
+        const orderQty=Math.max(1,Math.round(r.orderQty*(0.7+hnum(sd+'o',70)/100)));
+        const psQty=Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100)));
+        const planned=orderQty+psQty;
+        const h=hnum(sd+'rc',10);                       // 约 2/10 短收、2/10 多收、其余足额
+        const received=h<2?Math.max(orderQty,planned-(1+hnum(sd+'sd',5)))
+                      :h<4?planned+(2+hnum(sd+'od',6))
+                      :planned;
+        return {sku:r.sku,name:r.name,unit:r.unit,orderQty,psQty,planned,received,
+                short:Math.max(0,planned-received),over:Math.max(0,received-planned)};
+      });
+      docs.push({no:'SH'+d.replace(/-/g,'')+String(++seq).padStart(3,'0'),date:d,wh,lines});
+    });
   });
+  AUD={docs};
 }
-const RST={over:['送多了','wait'],short:['送少了','capped'],fit:['刚好','confirmed']};
-function reconCard(r){
-  const[label,cls]=RST[r.result];
-  return `<div class="ps-card" data-key="${r.sku}|${r.wh}">
-    <div class="ps-ch"><div><div class="nm">${r.name}</div><div class="sku">${r.sku}</div></div>
-      <span class="ps-st ${r.result==='short'?'wait':r.result==='over'?'capped':'confirmed'}">${label}</span></div>
-    <div class="ps-tags"><span class="ps-tag">${r.wh}</span><span class="ps-tag">应送 ${r.planned}（订单 ${r.orderQty} · 预送 ${r.psQty}）</span>${r.shortSend>0?`<span class="ps-tag">短收 ${r.shortSend}</span>`:''}${r.overSend>0?`<span class="ps-tag" style="background:var(--amber-soft);color:#8A5A12">多收 +${r.overSend}</span>`:''}</div>
+const asum=(a,f)=>a.reduce((x,y)=>x+f(y),0);
+const dTot=d=>({planned:asum(d.lines,l=>l.planned),received:asum(d.lines,l=>l.received),
+  short:asum(d.lines,l=>l.short),over:asum(d.lines,l=>l.over)});
+function aDocs(){return AUD.docs.filter(d=>!ADAY||d.date===ADAY).sort((a,b)=>b.date.localeCompare(a.date)||a.wh.localeCompare(b.wh));}
+function aSkus(){
+  const map={};
+  AUD.docs.forEach(d=>d.lines.forEach(l=>{
+    const k=l.sku+'|'+d.wh;
+    if(!map[k])map[k]={sku:l.sku,name:l.name,unit:l.unit,wh:d.wh,days:[]};
+    map[k].days.push(Object.assign({date:d.date,no:d.no},l));
+  }));
+  return Object.values(map).map(r=>Object.assign({},r,{
+    planned:asum(r.days,x=>x.planned),received:asum(r.days,x=>x.received),
+    short:asum(r.days,x=>x.short),over:asum(r.days,x=>x.over),
+    days:r.days.slice().sort((a,b)=>b.date.localeCompare(a.date))
+  })).sort((a,b)=>b.planned-a.planned);
+}
+function diffChip(short,over){
+  if(short)return `<span class="ps-tag" style="background:var(--red-soft);color:var(--red)">短收 −${short}</span>`;
+  if(over)return `<span class="ps-tag" style="background:var(--amber-soft);color:#8A5A12">多收 +${over}</span>`;
+  return '<span class="ps-tag" style="background:var(--mint-soft);color:var(--emerald-2)">足额收货</span>';
+}
+function docCard(d){
+  const t=dTot(d);
+  return `<div class="ps-card" data-no="${d.no}">
+    <div class="ps-ch"><div><div class="nm">${d.wh}</div><div class="sku">${d.no}</div></div>
+      <span class="ps-st ${t.short?'wait':t.over?'capped':'confirmed'}">${t.short?'有短收':t.over?'有多收':'足额'}</span></div>
+    <div class="ps-tags"><span class="ps-tag">${d.date}</span><span class="ps-tag">${d.lines.length} 个 SKU</span>${diffChip(t.short,t.over)}</div>
     <div class="ps-kbox">
-      <div class="k"><div class="v">${r.received}</div><div class="l">仓库实收</div></div>
-      <div class="k"><div class="v">${r.sold}</div><div class="l">卖出</div></div>
-      <div class="k"><div class="v ${r.result==='short'?'gap':''}">${r.result==='short'?r.missed:r.leftover}</div><div class="l">${r.result==='short'?'没接住':'卖剩留仓'}</div></div>
+      <div class="k"><div class="v">${t.planned}</div><div class="l">应送</div></div>
+      <div class="k"><div class="v hl">${t.received}</div><div class="l">仓库实收</div></div>
+      <div class="k"><div class="v ${t.short?'gap':''}" style="${t.over?'color:var(--amber)':''}">${t.short?'−'+t.short:(t.over?'+'+t.over:0)}</div><div class="l">差异</div></div>
     </div>
-    <div class="ps-gapline" style="${r.result==='short'?'':'background:var(--muted);color:#46604F'}">
-      ${r.result==='short'
-        ? `<b>${r.soldOutAt} 售罄</b>，少接了 ${r.missed} ${r.unit} 的单。`
-        : r.result==='over'
-        ? `多送的 <b>${r.leftover} ${r.unit}</b> 留在仓里，已自动抵扣今日应送量。`
-        : '既没压货也没断货。'}
-      今日应送 <b>${r.nextShould} ${r.unit}</b>${r.nextShould===0?'（今日免送）':''}
-      ${r.overSend>0?`<br>多送的 <b>${r.overSend} ${r.unit}</b> 仓库已照收入寄存，<b>当天不参与售卖</b>，已在今日应送里抵扣。`:''}
-    </div>
-    <div class="ps-acts"><div class="b link" data-act="detail">看是怎么算的 ›</div></div>
+    <div class="ps-acts"><div class="b link" data-act="detail">看逐 SKU 明细 ›</div></div>
   </div>`;
 }
-function drawRecon(box){
-  const cnt=k=>k==='all'?RECON.length:RECON.filter(r=>r.result===k).length;
+function skuCard(r){
+  return `<div class="ps-card" data-key="${r.sku}|${r.wh}">
+    <div class="ps-ch"><div><div class="nm">${r.name}</div><div class="sku">${r.sku}</div></div></div>
+    <div class="ps-tags"><span class="ps-tag">${r.wh}</span><span class="ps-tag">近 ${r.days.length} 天</span>${diffChip(r.short,r.over)}</div>
+    <div class="ps-kbox">
+      <div class="k"><div class="v">${r.planned}</div><div class="l">累计应送</div></div>
+      <div class="k"><div class="v hl">${r.received}</div><div class="l">累计实收</div></div>
+      <div class="k"><div class="v ${r.short?'gap':''}" style="${r.over&&!r.short?'color:var(--amber)':''}">${r.short?'−'+r.short:(r.over?'+'+r.over:0)}</div><div class="l">差异</div></div>
+    </div>
+    <div class="ps-acts"><div class="b link" data-act="detail">看每日送货明细 ›</div></div>
+  </div>`;
+}
+function drawAudit(box){
+  const docs=aDocs(),skus=aSkus();
+  const scope=ATAB==='doc'?docs.flatMap(d=>d.lines):skus;
+  const sp=asum(scope,x=>x.planned),sr=asum(scope,x=>x.received),ss=asum(scope,x=>x.short),so=asum(scope,x=>x.over);
   box.innerHTML=`
-    <div class="ps-note" style="margin-top:12px">一页看完 <b>${RDATE}</b> 这批货的<b>送收</b>与<b>卖出</b>：送了多少、仓库收了多少、卖了多少、剩多少，以及<b>今天该送多少</b>。<br><b>今日应送 = 今日订单需求 + 今日预送量 − 在仓剩余</b>。</div>
-    ${(()=>{const T=f=>RECON.reduce((a,r)=>a+f(r),0);
-      const sp=T(r=>r.planned),sr=T(r=>r.received),ss=T(r=>r.shortSend),so=T(r=>r.overSend);
-      return `<div class="ps-sec" style="margin-bottom:8px">送收对账 · ${RDATE}</div>
-      <div class="ps-kbox" style="margin:0 16px">
-        <div class="k"><div class="v">${sp}</div><div class="l">应送合计</div></div>
-        <div class="k"><div class="v">${sr}</div><div class="l">仓库实收</div></div>
-        <div class="k"><div class="v ${ss?'gap':''}">${ss?'−'+ss:0}</div><div class="l">短收</div></div>
-        <div class="k"><div class="v" style="${so?'color:var(--amber)':''}">${so?'+'+so:0}</div><div class="l">多收</div></div>
-      </div>
-      <div class="ps-note" style="margin-top:10px">应送 = 订单量 + 预送量。<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存库存，<b>当天不参与售卖</b>、不结算，次日优先抵扣应送量。</div>`;})()}
-    <div class="ps-tabs">${[['all','全部'],['over','送多了'],['short','送少了'],['fit','刚好']]
-      .map(([k,t])=>`<div class="ps-tab ${RTAB===k?'on':''}" data-t="${k}">${t} ${cnt(k)}</div>`).join('')}</div>
+    <div class="ps-note" style="margin-top:12px">盘每天<b>送了多少、仓库收了多少、差多少</b>。<b>按送货单</b>看某天某仓这一单的收货结果，<b>按 SKU</b> 看某个品逐日的送货明细。<br>应送 = 订单量 + 预送量；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。</div>
+    <div class="ps-sec" style="margin-bottom:8px">送收对账 · ${ATAB==='doc'?(ADAY||'全部日期'):'近 '+AUD_DAYS.length+' 天累计'}</div>
+    <div class="ps-kbox" style="margin:0 16px">
+      <div class="k"><div class="v">${sp}</div><div class="l">应送合计</div></div>
+      <div class="k"><div class="v">${sr}</div><div class="l">仓库实收</div></div>
+      <div class="k"><div class="v ${ss?'gap':''}">${ss?'−'+ss:0}</div><div class="l">短收</div></div>
+      <div class="k"><div class="v" style="${so?'color:var(--amber)':''}">${so?'+'+so:0}</div><div class="l">多收</div></div>
+    </div>
+    <div class="ps-tabs">
+      <div class="ps-tab ${ATAB==='doc'?'on':''}" data-t="doc">按送货单 ${docs.length}</div>
+      <div class="ps-tab ${ATAB==='sku'?'on':''}" data-t="sku">按 SKU ${skus.length}</div>
+    </div>
+    ${ATAB==='doc'?`<div class="ps-tabs" style="padding-top:2px">${AUD_DAYS.map(d=>`<div class="ps-tab ${ADAY===d?'on':''}" data-d="${d}">${d.slice(5)}</div>`).join('')}</div>`:''}
     <div class="ps-list" id="psl"></div>`;
-  box.querySelectorAll('.ps-tab').forEach(t=>t.onclick=()=>{RTAB=t.dataset.t;drawRecon(box);});
+  box.querySelectorAll('.ps-tab[data-t]').forEach(t=>t.onclick=()=>{ATAB=t.dataset.t;drawAudit(box);});
+  box.querySelectorAll('.ps-tab[data-d]').forEach(t=>t.onclick=()=>{ADAY=t.dataset.d;drawAudit(box);});
   const list=box.querySelector('#psl');
   list.innerHTML=skel(3);
   setTimeout(()=>{
-    const rs=RTAB==='all'?RECON:RECON.filter(r=>r.result===RTAB);
-    if(!rs.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('chart')}</div><h4>该结果下暂无复盘记录</h4><p>切换上方页签查看</p></div>`;return;}
-    list.innerHTML=rs.map(reconCard).join('');
-    list.querySelectorAll('.ps-card').forEach(c=>{
-      const r=RECON.find(x=>x.sku+'|'+x.wh===c.dataset.key);
-      c.onclick=()=>openReconDetail(r);
-    });
+    if(ATAB==='doc'){
+      if(!docs.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('box')}</div><h4>该日无送货单</h4><p>换个送货日看看</p></div>`;return;}
+      list.innerHTML=docs.map(docCard).join('');
+      list.querySelectorAll('.ps-card').forEach(c=>{c.onclick=()=>openDocDetail(AUD.docs.find(d=>d.no===c.dataset.no));});
+    }else{
+      if(!skus.length){list.innerHTML=`<div class="empty"><div class="ei">${svg('chart')}</div><h4>暂无送货记录</h4><p>送货到仓后在这里逐日盘点</p></div>`;return;}
+      list.innerHTML=skus.map(skuCard).join('');
+      list.querySelectorAll('.ps-card').forEach(c=>{c.onclick=()=>openSkuDetail(skus.find(r=>r.sku+'|'+r.wh===c.dataset.key));});
+    }
   },420);
 }
-function openReconDetail(r){
-  pushPage({title:r.name,body:`
-    <div class="ps-sec">${RDATE} 这批货去哪了</div>
+function openDocDetail(d){
+  if(!d)return;const t=dTot(d);
+  pushPage({title:d.no,body:`
+    <div class="ps-note" style="margin-top:12px">${d.date} · ${d.wh} · ${d.lines.length} 个 SKU</div>
+    <div class="ps-sec">本单合计</div>
     <div class="ps-tbl">
-      <div class="ps-row"><span class="k">应送（订单 ${r.orderQty} + 预送 ${r.psQty}）</span><span class="v">${r.planned} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">仓库实收</span><span class="v ${r.shortSend>0?'warn':''}">${r.received} ${r.unit}${r.shortSend>0?`（短收 ${r.shortSend}）`:''}${r.overSend>0?`（多收 +${r.overSend}）`:''}</span></div>
-      ${r.overSend>0?`<div class="ps-row"><span class="k">其中多收（当日不可卖）</span><span class="v">${r.overSend} ${r.unit} · 已入寄存</span></div>`:''}
-      <div class="ps-row"><span class="k">当日真实需求</span><span class="v">${r.demand} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">实际卖出</span><span class="v hl">${r.sold} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">卖剩留仓</span><span class="v">${r.leftover} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">没接住的需求</span><span class="v ${r.missed>0?'warn':''}">${r.missed} ${r.unit}${r.missed>0?`（${r.soldOutAt} 售罄）`:''}</span></div>
+      <div class="ps-row"><span class="k">应送（订单 + 预送）</span><span class="v">${t.planned}</span></div>
+      <div class="ps-row"><span class="k">仓库实收</span><span class="v hl">${t.received}</span></div>
+      <div class="ps-row"><span class="k">短收</span><span class="v ${t.short?'warn':''}">${t.short?'−'+t.short:'0'}</span></div>
+      <div class="ps-row"><span class="k">多收</span><span class="v">${t.over?'+'+t.over+' · 已入寄存':'0'}</span></div>
     </div>
-    <div class="ps-sec">今天该送多少</div>
+    <div class="ps-sec">逐 SKU 明细</div>
     <div class="ps-tbl">
-      <div class="ps-row"><span class="k">今日订单需求</span><span class="v">${r.nextOrderNeed} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">今日预送量（算法）</span><span class="v">+ ${r.nextFcst} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">减去在仓剩余</span><span class="v">− ${r.leftover} ${r.unit}</span></div>
-      <div class="ps-row"><span class="k">今日应送</span><span class="v hl">${r.nextShould} ${r.unit}${r.nextShould===0?'（今日免送）':''}</span></div>
+      ${d.lines.map(l=>`<div class="ps-row"><span class="k" style="flex:1;text-align:left">
+        <b style="color:var(--ink)">${l.name}</b><br><span style="font-size:11.5px">订单 ${l.orderQty} · 预送 ${l.psQty}</span></span>
+        <span class="v">${l.received} / ${l.planned}<br><span style="font-size:11.5px;font-weight:600;color:${l.short?'var(--red)':(l.over?'var(--amber)':'var(--sub)')}">${l.short?'短收 −'+l.short:(l.over?'多收 +'+l.over:'足额')}</span></span></div>`).join('')}
     </div>
     <div style="height:16px"></div>`});
 }
-window.FM_MOD.presendrecon=()=>{ensureRecon();pushPage({title:'送货复盘',body:'<div id="psw"></div>',mount:p=>drawRecon(p.querySelector('#psw'))});};
+function openSkuDetail(r){
+  if(!r)return;
+  const st=(STOCK||[]).find(x=>x.sku===r.sku&&x.wh===r.wh);
+  const ps=ROWS.find(x=>x.sku===r.sku&&x.wh===r.wh);
+  const left=st?st.left:0,todayOrder=r.days[0]?r.days[0].orderQty:0,todayPs=ps?finalQty(ps):0;
+  const todayShould=Math.max(0,todayOrder+todayPs-left);
+  pushPage({title:r.name,body:`
+    <div class="ps-note" style="margin-top:12px">${r.sku} · ${r.wh} · 近 ${r.days.length} 天</div>
+    <div class="ps-sec">每日送货明细</div>
+    <div class="ps-tbl">
+      ${r.days.map(x=>`<div class="ps-row"><span class="k" style="flex:1;text-align:left">
+        <b style="color:var(--ink)">${x.date}</b><br><span style="font-size:11.5px">${x.no} · 订单 ${x.orderQty} · 预送 ${x.psQty}</span></span>
+        <span class="v">${x.received} / ${x.planned}<br><span style="font-size:11.5px;font-weight:600;color:${x.short?'var(--red)':(x.over?'var(--amber)':'var(--sub)')}">${x.short?'短收 −'+x.short:(x.over?'多收 +'+x.over:'足额')}</span></span></div>`).join('')}
+      <div class="ps-row" style="background:var(--muted)"><span class="k">合计</span>
+        <span class="v">${r.received} / ${r.planned}${r.short?` · <span style="color:var(--red)">短收 −${r.short}</span>`:''}${r.over?` · <span style="color:var(--amber)">多收 +${r.over}</span>`:''}</span></div>
+    </div>
+    <div class="ps-sec">今天该送多少</div>
+    <div class="ps-tbl">
+      <div class="ps-row"><span class="k">今日订单需求</span><span class="v">${todayOrder} ${r.unit}</span></div>
+      <div class="ps-row"><span class="k">今日预送量（算法定稿）</span><span class="v">+ ${todayPs} ${r.unit}</span></div>
+      <div class="ps-row"><span class="k">减去在仓剩余${st&&st.over?`（含多收 ${st.over}）`:''}</span><span class="v">− ${left} ${r.unit}</span></div>
+      <div class="ps-row"><span class="k">今日应送</span><span class="v hl">${todayShould} ${r.unit}${todayShould===0?'（今日免送）':''}</span></div>
+    </div>
+    <div style="height:16px"></div>`});
+}
+window.FM_MOD.presendrecon=()=>{ensureAudit();pushPage({title:'送货盘点',body:'<div id="psw"></div>',mount:p=>drawAudit(p.querySelector('#psw'))});};
 
 })();
