@@ -277,7 +277,7 @@ tbody tr:hover{background:#f7f9fc}
             <div class="sum"><span>合计 · 结算净额</span><span class="v">S$273.83 <span class="ok" style="font-size:11px">✓ 恒等式通过</span></span></div>
           </div>
           <div class="note-bar">
-            四类其他收支均以上游快照为准，结算单不重新计算业务金额；店铺罚款与业务调整不创建开票任务。业务调整不区分未税与 GST。
+            四类其他收支均以上游快照为准，结算单不重新计算业务金额；店铺罚款与业务调整不创建开票任务。业务调整为<b>账扣</b>：不区分未税与 GST，且不调整任何已开发票的票面金额。
             业务调整净额 ＝ 正向 232.59 − 负向 78.50 ＝ <b>+S$154.09</b>；结算净额 ＝ 应付店铺 203.83 − 9.21 − 34.88 − 40.00 + 154.09 ＝ <b>S$273.83</b>。
           </div>
         </div>
@@ -285,7 +285,7 @@ tbody tr:hover{background:#f7f9fc}
         <!-- 业务调整单 Tab -->
         <div id="tab-adj" style="display:none">
           <div class="note-bar" style="background:#fff;border-bottom:1px solid var(--line-soft)">
-            业务调整单按上游原单展示，不合单、不拆单、不重新计算金额，也不创建开票任务。正向为平台付给店铺，负向为向店铺扣回。
+            业务调整单按上游原单展示，不合单、不拆单、不重新计算金额，也不创建开票任务。正向为平台付给店铺，负向为向店铺扣回。<b>抵扣方式恒为账扣</b>——不动任何发票票面；货款 / 佣金金额错误须走原票冲抵或重新开票，不由本表承接。
           </div>
           <div class="filter" style="padding:12px 18px">
             <div class="filter-item wide"><label>调整单号</label><input class="ipt" id="adj-kw" placeholder="搜索单号"></div>

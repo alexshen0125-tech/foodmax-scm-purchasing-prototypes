@@ -276,6 +276,7 @@ window.adj_newAsk=function(keep, mode, src){
     </div>
     <div class="fr"><label class="fl"><b>*</b>调整说明 <span id="an-rk-cnt" style="float:right;font-weight:400;color:var(--tt)">0/500</span></label><textarea id="an-remark" rows="3" oninput="adj_rkCount()">${esc(d.rk)}</textarea><div id="an-rk-err" class="fl-h" style="color:var(--r)"></div></div>
     <div class="fr"><label class="fl">附件</label><div class="up" onclick="toast('原型不做真实上传','info')"><div class="uic">📎</div><div class="ut">点击上传</div><div class="us">jpg / png / pdf，单个 ≤ 10MB，最多 5 个</div></div></div>
+    <div style="font-size:11.5px;color:var(--ts);line-height:1.7;padding:10px 0 2px;border-top:1px dashed var(--bd2)">业务调整为<b>账扣</b>，不开发票、不产生 GST。<b style="color:var(--r)">货款 / 佣金金额算错请走原单冲抵或重新开票，不要建调整单。</b></div>
   </div>
   <div class="mc-ft">
     <button class="btn btn-link" onclick="closeModal()">取消</button>
