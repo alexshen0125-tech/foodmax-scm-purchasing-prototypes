@@ -3,68 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>清分与结算 Clearing &amp; Settlement · 交互原型</title>
+<title>清分与结算 · 交互原型集</title>
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #f9fafb; color: #111827; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
-  .header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 22px 24px; }
-  .header .back { font-size: 13px; color: #2563eb; text-decoration: none; }
-  .header h1 { margin: 8px 0 4px; font-size: 22px; }
-  .header p { margin: 0; color: #6b7280; font-size: 13px; }
-  .container { max-width: 1080px; margin: 0 auto; padding: 24px; }
-  .card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-  .card { display: block; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px 18px; text-decoration: none; color: inherit; transition: .15s; }
-  .card:hover { border-color: #2563eb; box-shadow: 0 6px 18px rgba(37,99,235,.10); transform: translateY(-1px); }
-  .card .name { font-weight: 650; font-size: 15px; }
-  .card .desc { margin-top: 5px; font-size: 12.5px; color: #6b7280; }
-  .card .tag { display: inline-block; margin-top: 8px; font-size: 12px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 4px; }
-  .card .tag.hot { color: #15803d; background: #dcfce7; }
-  .footer { text-align: center; padding: 24px; color: #9ca3af; font-size: 12px; }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{display:flex;flex-direction:column;background:#f9fafb;color:#111827;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  .top{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:12px 20px;background:#fff;border-bottom:1px solid #e5e7eb}
+  .top .back{font-size:13px;color:#2563eb;text-decoration:none;white-space:nowrap}
+  .top h1{margin:0;font-size:16px;font-weight:700;white-space:nowrap}
+  .top .cur{font-size:13px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .top .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .top a.open{font-size:12.5px;color:#2563eb;text-decoration:none;border:1px solid #dbe3ef;border-radius:6px;padding:5px 10px;white-space:nowrap}
+  .top a.open:hover{border-color:#2563eb}
+  .body{flex:1 1 auto;display:flex;min-height:0}
+  .side{flex:0 0 268px;overflow-y:auto;background:#fff;border-right:1px solid #e5e7eb;padding:12px}
+  .nav-title{padding:10px 10px 6px;font-size:11px;letter-spacing:1px;color:#9ca3af;font-weight:800}
+  .nav-item{display:block;padding:10px 12px;margin:2px 0;border-radius:9px;text-decoration:none;color:#374151;border:1px solid transparent}
+  .nav-item:hover{background:#f3f6fb}
+  .nav-item.active{background:#eaf2ff;border-color:#c7dbff}
+  .nav-item .nm{font-size:13.5px;font-weight:650}
+  .nav-item.active .nm{color:#1d4ed8}
+  .nav-item .ds{display:block;margin-top:3px;font-size:11.5px;color:#9ca3af;line-height:1.45}
+  .nav-item .badge{margin-left:6px;font-size:10.5px;font-weight:800;color:#15803d;background:#dcfce7;border-radius:999px;padding:1px 7px;vertical-align:1px}
+  .frame{flex:1 1 auto;min-width:0;background:#fff}
+  iframe{width:100%;height:100%;border:0;display:block}
+  @media(max-width:860px){.body{flex-direction:column}.side{flex:0 0 auto;max-height:200px;border-right:0;border-bottom:1px solid #e5e7eb}}
 </style>
 </head>
 <body>
-<div class="header">
-  <a class="back" href="../index.html">← 返回全部原型</a>
-  <h1>清分与结算 Clearing &amp; Settlement</h1>
-  <p>磐石 Aegis 清结算平台 · 共 7 个</p>
+<div class="top">
+  <a class="back" href="../index.html">← 全部原型</a>
+  <h1>清分与结算</h1>
+  <span class="cur" id="cur"></span>
+  <span class="right"><a class="open" id="open" target="_blank" rel="noopener">在新标签打开 ↗</a></span>
 </div>
-<div class="container">
-  <div class="card-list">
-      <a class="card" href="%E3%80%90CLJS%E3%80%9120_%E4%B8%9A%E5%8A%A1%E8%B0%83%E6%95%B4%E5%8D%95%E6%8E%A5%E5%85%A5%E4%B8%8E%E7%BB%93%E7%AE%97%E5%B1%95%E7%8E%B0_%E5%8E%9F%E5%9E%8B.html">
-        <div class="name">业务调整单接入与结算展现（CLJS-20）</div>
-        <div class="desc">收支单据 · 结算单列表 · 结算单详情</div>
-        <div class="tag hot">最新</div>
-      </a>
-      <a class="card" href="%E3%80%90CLJS%E3%80%91FoodMax%E6%B8%85%E7%BB%93%E7%AE%97%E5%B9%B3%E5%8F%B0_%E5%8E%9F%E5%9E%8B%E8%AE%BE%E8%AE%A1.html">
-        <div class="name">清结算平台 · 全流程原型设计</div>
-        <div class="desc">订单接入 → 分账 → 结算 → 清分支付 全链路</div>
-      </a>
-      <a class="card" href="%E3%80%90CLJS%E3%80%91006_%E5%B9%B3%E5%8F%B0%E6%94%B6%E5%85%A5%E5%8F%8A%E5%B9%B3%E5%8F%B0%E5%BC%80%E7%A5%A8_%E5%8E%9F%E5%9E%8B.html">
-        <div class="name">平台收入与平台开票</div>
-        <div class="desc">耗材采购收入 / 自营补货收入 / 店铺罚款单 / 平台开票</div>
-      </a>
-      <a class="card" href="%E3%80%90CLJS%E3%80%91001_%E5%93%81%E7%B1%BB%E8%B4%B9%E7%8E%87%E7%BB%B4%E6%8A%A4_%E6%80%BB%E8%B4%B9%E7%8E%87%E6%8B%86%E5%88%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html">
-        <div class="name">品类费率维护 · 总费率拆分</div>
-        <div class="desc">三期变更 001</div>
-        <div class="tag">三期</div>
-      </a>
-      <a class="card" href="%E3%80%90CLJS%E3%80%91003_%E8%AE%A2%E5%8D%95%E6%8E%A5%E5%85%A5_%E5%8F%98%E6%9B%B4003_%E5%8E%9F%E5%9E%8B.html">
-        <div class="name">订单接入</div>
-        <div class="desc">三期变更 003</div>
-        <div class="tag">三期</div>
-      </a>
-      <a class="card" href="%E3%80%90CLJS%E3%80%91004_%E5%88%86%E8%B4%A6%E6%98%8E%E7%BB%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html">
-        <div class="name">分账明细</div>
-        <div class="desc">三期变更 001</div>
-        <div class="tag">三期</div>
-      </a>
-      <a class="card" href="%E3%80%90CLJS%E3%80%91005_%E7%BB%93%E7%AE%97%E5%8D%95_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html">
-        <div class="name">结算单</div>
-        <div class="desc">三期变更 001</div>
-        <div class="tag">三期</div>
-      </a>
-  </div>
+<div class="body">
+  <nav class="side">
+    <div class="nav-title">本期新增</div>
+    <a class="nav-item" href="#cljs20" data-key="cljs20"><span class="nm">业务调整单接入与结算展现</span><span class="badge">最新</span><span class="ds">CLJS-20 · 收支单据 / 结算单列表 / 结算单详情</span></a>
+    <div class="nav-title">平台全景</div>
+    <a class="nav-item" href="#platform" data-key="platform"><span class="nm">清结算平台 · 全流程</span><span class="ds">订单接入 → 分账 → 结算 → 清分支付</span></a>
+    <a class="nav-item" href="#income" data-key="income"><span class="nm">平台收入与平台开票</span><span class="ds">耗材采购 / 自营补货 / 店铺罚款 / 开票</span></a>
+    <div class="nav-title">三期变更</div>
+    <a class="nav-item" href="#rate" data-key="rate"><span class="nm">品类费率维护 · 总费率拆分</span><span class="ds">变更 001</span></a>
+    <a class="nav-item" href="#order" data-key="order"><span class="nm">订单接入</span><span class="ds">变更 003</span></a>
+    <a class="nav-item" href="#split" data-key="split"><span class="nm">分账明细</span><span class="ds">变更 001</span></a>
+    <a class="nav-item" href="#bill" data-key="bill"><span class="nm">结算单</span><span class="ds">变更 001</span></a>
+  </nav>
+  <div class="frame"><iframe id="fr" title="原型预览"></iframe></div>
 </div>
-<div class="footer">Food Max · 点击卡片直接预览原型</div>
+<script>
+const META = {"cljs20": {"src": "%E3%80%90CLJS%E3%80%9120_%E4%B8%9A%E5%8A%A1%E8%B0%83%E6%95%B4%E5%8D%95%E6%8E%A5%E5%85%A5%E4%B8%8E%E7%BB%93%E7%AE%97%E5%B1%95%E7%8E%B0_%E5%8E%9F%E5%9E%8B.html", "name": "业务调整单接入与结算展现", "desc": "CLJS-20 · 收支单据 / 结算单列表 / 结算单详情"}, "platform": {"src": "%E3%80%90CLJS%E3%80%91FoodMax%E6%B8%85%E7%BB%93%E7%AE%97%E5%B9%B3%E5%8F%B0_%E5%8E%9F%E5%9E%8B%E8%AE%BE%E8%AE%A1.html", "name": "清结算平台 · 全流程", "desc": "订单接入 → 分账 → 结算 → 清分支付"}, "income": {"src": "%E3%80%90CLJS%E3%80%91006_%E5%B9%B3%E5%8F%B0%E6%94%B6%E5%85%A5%E5%8F%8A%E5%B9%B3%E5%8F%B0%E5%BC%80%E7%A5%A8_%E5%8E%9F%E5%9E%8B.html", "name": "平台收入与平台开票", "desc": "耗材采购 / 自营补货 / 店铺罚款 / 开票"}, "rate": {"src": "%E3%80%90CLJS%E3%80%91001_%E5%93%81%E7%B1%BB%E8%B4%B9%E7%8E%87%E7%BB%B4%E6%8A%A4_%E6%80%BB%E8%B4%B9%E7%8E%87%E6%8B%86%E5%88%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html", "name": "品类费率维护 · 总费率拆分", "desc": "变更 001"}, "order": {"src": "%E3%80%90CLJS%E3%80%91003_%E8%AE%A2%E5%8D%95%E6%8E%A5%E5%85%A5_%E5%8F%98%E6%9B%B4003_%E5%8E%9F%E5%9E%8B.html", "name": "订单接入", "desc": "变更 003"}, "split": {"src": "%E3%80%90CLJS%E3%80%91004_%E5%88%86%E8%B4%A6%E6%98%8E%E7%BB%86_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html", "name": "分账明细", "desc": "变更 001"}, "bill": {"src": "%E3%80%90CLJS%E3%80%91005_%E7%BB%93%E7%AE%97%E5%8D%95_%E5%8F%98%E6%9B%B4001_%E5%8E%9F%E5%9E%8B.html", "name": "结算单", "desc": "变更 001"}};
+const KEYS = Object.keys(META);
+function show(key){
+  if(!META[key]) key = KEYS[0];
+  const m = META[key];
+  document.getElementById('fr').src = m.src;
+  document.getElementById('cur').textContent = '／ ' + m.name + ' · ' + m.desc;
+  document.getElementById('open').href = m.src;
+  document.querySelectorAll('.nav-item').forEach(a =>
+    a.classList.toggle('active', a.dataset.key === key));
+  if(location.hash.slice(1) !== key) history.replaceState(null, '', '#' + key);
+}
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+show(location.hash.slice(1));
+</script>
 </body>
 </html>
