@@ -690,4 +690,6 @@ window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.signin=openSignin;
 window.FM_MOD.progress=openProgress;
 window.FM_MOD.return=openReturn;
+// 金刚区「退货单」磁贴角标 = 客户退货待提货单数 + 仓库退回待取回项数（与 PC 侧栏角标同源同口径）
+window.FM_MOD.returnBadge=()=>RETURN.filter(g=>g.st==='待提货').length+(window.FM.DB.whReturns||[]).filter(r=>r.status==='待取回').length;
 })();

@@ -197,6 +197,8 @@ const TILES=[
   {k:'stock',l:'库存管理',ic:'layers',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'order',l:'订单管理',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
   {k:'after',l:'售后管理',ic:'refund',bg:'#FEE2E2',st:'var(--red)',dot:1},
+  // 退货单独立入口（2026-09-16 沈亮）：原先只能从「售后管理」页内卡片进，与 PC 侧栏「合规 › 退货单」入口深度不一致
+  {k:'return',l:'退货单',ic:'box',bg:'#FEE2E2',st:'var(--red)',badge:()=>window.FM_MOD&&FM_MOD.returnBadge?FM_MOD.returnBadge():''},
   {k:'invoice',l:'发票管理',ic:'invoice',bg:'#D1FAE5',st:'var(--emerald-2)',badge:'3'},
   {k:'recon',l:'对账单',ic:'receipt',bg:'#FEF3C7',st:'#B45309'},
   {k:'settle',l:'结算单',ic:'wallet',bg:'#FEF3C7',st:'#B45309',badge:'1'},
@@ -345,7 +347,7 @@ window.homeCustom=()=>{const r=HD_RANGE;const m=document.createElement('div');m.
     if(!f||!t||Date.parse(f)>Date.parse(t)){toast('请选择有效日期区间');return;}HD_RANGE={from:f,to:t};HD_PERIOD='custom';close();renderHome();};};
 function renderHome(){
   const hd=homeDash();
-  const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${t.badge?`<span class="bdg ${t.amber?'amber':''}">${t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
+  const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${(typeof t.badge==='function'?t.badge():t.badge)?`<span class="bdg ${t.amber?'amber':''}">${typeof t.badge==='function'?t.badge():t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
   const deliver=DELIVER.filter(d=>!d.when||d.when()).map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${d.badge?`<span class="bdg">${d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
   document.getElementById('v-home').innerHTML=`<div class="stagger">
     <div class="hm-top"><div class="hm-logo">${svg('leaf')}</div>
@@ -411,12 +413,14 @@ renderHome();
 <script src="settle.js?v=20260915a"></script>
 <script src="replen.js?v=20260831a"></script>
 <script src="biz.js"></script>
-<script src="deliver.js?v=20260915a"></script>
+<script src="deliver.js?v=20260916a"></script>
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260903b"></script>
 <script src="supply.js"></script>
 <script src="presend.js?v=20260831b"></script>
 <script src="promo.js?v=20260908g"></script>
 <script src="enroll.js?v=20260908a"></script>
+<!-- 模块脚本加载完后重渲工作台：金刚区角标（如「退货单」待提货/待取回）取自各模块数据，首渲时模块尚未就绪 -->
+<script>if(typeof renderHome==='function')renderHome();</script>
 </body>
 </html>
