@@ -520,6 +520,15 @@
     const list=preList();
     const normals=cart.filter(x=>!x.weigh&&x.qty>=1);
     const total=normals.reduce((a,x)=>a+x.qty,0);
+    const sub=DB.preSub=='record'?'record':'label';   // 按商品打印 二级 tab：预打标签 / 预打记录
+    const subTab=(k,t)=>`<div onclick="DB.preSub='${k}';render()" style="cursor:pointer;padding:5px 14px;border-radius:999px;font-size:13px;${sub==k?'background:var(--gl);color:var(--g);font-weight:600':'color:var(--ts)'}">${t}</div>`;
+    const ledgerCard=`
+    <div class="card"><div class="card-hd"><h3>预贴标签台账</h3>
+      <span class="sub" id="pre-ledger-cnt">共 ${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张；到仓扫码后由 WMS 逻辑匹配到当日送货单</span></div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+      <thead><tr><th>标签号</th><th>商品编码</th><th>商品名称</th><th>规格</th><th>计价方式</th><th style="text-align:right">本袋净重</th><th style="text-align:right">张数</th><th style="text-align:right">已补打</th><th>打印时间</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="pre-ledger">${list.map(preLedgerRow).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">还没有预贴标签</div><div class="e-s">在「预打标签」选商品打印后，这里会留下台账，仓库补打也照这份台账查。</div></div></td></tr>`}
+      </tbody></table></div></div></div>`;
 
     const cartBody=cart.map(x=>`<tr ${cur&&cur.sku==x.sku?'style="background:var(--gl)"':''}>
       <td class="mono">${x.sku}</td>
@@ -548,6 +557,8 @@
           <span class="btn btn-link" onclick="label_paperModal()">🖨️ 打印机设置 · ${DB.labelPaper?`<b style="color:var(--gd)">${DB.labelPaper}</b>`:'<b style="color:var(--r)">未设置纸张</b>'}</span>
         </div>
       </div>
+      <div style="display:flex;gap:6px;padding:10px 16px 0">${subTab('label','预打标签')}${subTab('record',`预打记录${list.length?` · ${list.length}`:''}`)}</div>
+      ${sub=='record'?'<div style="height:10px"></div>':`
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
         <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">扫码 / 输编码加入清单</div>
           <input id="pre-scan" placeholder="扫码枪扫一个加一个，或手输编码后回车" style="min-width:300px"
@@ -559,9 +570,9 @@
             <option value="">选择商品加入清单…</option>
             ${skus.map(x=>`<option value="${x.sku}">${x.name}（${x.sku}）· ${x.spec}${x.weigh?' · 多退少补':''}</option>`).join('')}
           </select></div>
-      </div>
+      </div>`}
     </div></div>
-
+    ${sub=='record'?ledgerCard:`
     <div class="card" style="margin-bottom:14px"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
         <h3 style="margin-right:6px">待打印清单</h3>
@@ -593,14 +604,7 @@
           <tbody id="pre-batch">${batch.map(b=>{const d=+(b.w-cur.specQty).toFixed(2);
             return `<tr><td class="mono">${b.id}</td><td style="text-align:right"><b>${b.w.toFixed(2)}</b> <span style="color:var(--ts)">${b.wUnit}</span></td><td style="text-align:right;color:${d>=0?'var(--gd)':'var(--y)'}">${d>=0?'+':''}${d.toFixed(2)}</td><td style="color:var(--ts)">${b.time}</td></tr>`;}).join('')}</tbody>
         </table></div>
-      </div></div>`:''}
-
-    <div class="card"><div class="card-hd"><h3>预贴标签台账</h3>
-      <span class="sub" id="pre-ledger-cnt">共 ${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张；到仓扫码后由 WMS 逻辑匹配到当日送货单</span></div>
-    <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>标签号</th><th>商品编码</th><th>商品名称</th><th>规格</th><th>计价方式</th><th style="text-align:right">本袋净重</th><th style="text-align:right">张数</th><th style="text-align:right">已补打</th><th>打印时间</th><th>状态</th><th>操作</th></tr></thead>
-      <tbody id="pre-ledger">${list.map(preLedgerRow).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">还没有预贴标签</div><div class="e-s">上方选商品后打印，这里会留下台账，仓库补打也照这份台账查。</div></div></td></tr>`}
-      </tbody></table></div></div></div>`;
+      </div></div>`:''}`}`;
   }
 
   // 菜单①：备货参考（快驴式决策表，纯查看）

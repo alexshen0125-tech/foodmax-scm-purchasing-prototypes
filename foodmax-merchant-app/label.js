@@ -45,6 +45,9 @@ css.textContent=`
 .lb-sum .k .v{font-size:22px;font-weight:600;font-family:'Lora',serif;}
 .lb-sum .k .v.g{color:var(--emerald-2);}.lb-sum .k .v.r{color:var(--red);}
 .lb-sum .k .l{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.lb-seg{display:flex;gap:6px;margin:12px 16px 0;padding:3px;background:var(--muted);border-radius:12px;}
+.lb-seg span{flex:1;text-align:center;padding:8px 0;border-radius:10px;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;}
+.lb-seg span.on{background:#fff;color:var(--emerald-2);box-shadow:var(--sh-sm);}
 .lb-sec{font-size:14.5px;font-weight:700;margin:17px 16px 8px;display:flex;align-items:center;gap:8px;}
 .lb-sec .hint{margin-left:auto;font-size:12px;font-weight:600;color:var(--sub);}
 .lb-tbl{background:#fff;border-radius:16px;margin:0 16px;box-shadow:var(--sh-sm);overflow:hidden;}
@@ -193,7 +196,19 @@ function renderPre(box){
   const normals=cart.filter(x=>!x.weigh&&x.qty>=1);
   const total=normals.reduce((a,x)=>a+x.qty,0);
 
-  box.innerHTML=`
+  const sub=state.preSub==='record'?'record':'label';   // 按商品打印 二级 tab：预打标签 / 预打记录
+  const seg=`<div class="lb-seg"><span data-sub="label" class="${sub==='label'?'on':''}">预打标签</span><span data-sub="record" class="${sub==='record'?'on':''}">预打记录${list.length?` · ${list.length}`:''}</span></div>`;
+  if(sub==='record'){
+    box.innerHTML=`${seg}
+    <div class="lb-sec">预贴标签台账<span class="hint" id="pre-ledger-cnt">${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张</span></div>
+    <div class="lb-tbl" id="pre-ledger">${list.map(preLedgerRow).join('')||`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>还没有预贴标签</h4><p>在「预打标签」选商品打印后，这里会留下台账</p></div>`}</div>
+    <div style="height:12px"></div>`;
+    box.querySelectorAll('[data-sub]').forEach(el=>el.onclick=()=>{state.preSub=el.dataset.sub;renderPre(box);});
+    box.querySelectorAll('[data-pre]').forEach(el=>el.onclick=()=>preReprint(el.dataset.pre,box));
+    return;
+  }
+
+  box.innerHTML=`${seg}
     <div class="lb-note">📦 预贴标签<b>不绑送货单 / 备货单</b>，提前分装时先打先贴；不计入备货单打印进度，到仓由 WMS 扫码后按数量逻辑匹配到当日送货单。</div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">扫码 / 编码</span>
@@ -231,11 +246,10 @@ function renderPre(box){
         <button class="btn ghost" id="pre-done-btn" style="display:${batch.length?'':'none'};flex:0 0 40%">称完了</button></div>
       <div class="lb-tbl" id="pre-batch" style="margin-top:10px">${batch.map(b=>preBatchRow(b,cur)).join('')}</div>`:''}
 
-    <div class="lb-sec">预贴标签台账<span class="hint" id="pre-ledger-cnt">${list.length} 条 · ${list.reduce((a,x)=>a+x.qty,0)} 张</span></div>
-    <div class="lb-tbl" id="pre-ledger">${list.map(preLedgerRow).join('')||`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>还没有预贴标签</h4><p>选商品打印后，这里会留下台账</p></div>`}</div>
     <div style="height:12px"></div>`;
 
   // —— 绑定 ——
+  box.querySelectorAll('[data-sub]').forEach(el=>el.onclick=()=>{state.preSub=el.dataset.sub;renderPre(box);});
   const sc=box.querySelector('#pre-scan');
   if(sc){sc.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();preScanAdd(box);}};}
   const pick=box.querySelector('#pre-pick');
