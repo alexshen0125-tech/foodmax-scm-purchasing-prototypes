@@ -17,6 +17,9 @@
    | 在途       | 无（不入仓）                     | 有（寄售入库单）                   |
    | 可改       | ✅ 改库存 + 改库存模式            | ❌ 全字段只读                     |
 
+   2026-09-17 增：库存列表按「最近变动时间」区间筛选（不限 / 近7天 / 近30天 / 自定义），
+     最近变动时间 = 该「商品 × 仓库」最后一笔库存流水时间，同步新增同名表格列。
+
    本期不做：批次/效期临期预警、低库存档（safety_inventory 已停写清零）、差异申诉、供货单开单。
    依赖主文件全局：DB / money / toast / modal / closeModal / drawer / closeDrawer / render
 ============================================================ */
@@ -39,6 +42,18 @@
   const DISPUTE=['loss','damage','adj'];
   const IN_ST={'待入库':'t-y','入库中':'t-b','入库完成':'t-g','已取消':'t-gr'};
   const SMODE={daily:'每日恢复',finite:'售完即止'};
+
+  /* ---------- 演示当日（真实环境取系统当天） ----------
+     演示数据的流水锚在 2026-08-11，若用真实 new Date() 则「近7天」永远筛不出行。
+     与 labelreprint.js 的 TODAY 同一处理方式。 */
+  const TODAY='2026-08-11';
+  const p2=n=>String(n).padStart(2,'0');
+  const dayStr=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+  const shiftDay=(base,n)=>{const d=new Date(base+'T00:00:00');d.setDate(d.getDate()+n);return dayStr(d);};
+  /* 近 N 天 = 含今天在内的 N 个自然日（近7天 = 今天往前数 7 天，不是 7×24h） */
+  const rangeOf=n=>({from:shiftDay(TODAY,-(n-1)),to:TODAY});
+  const daysAgo=ymd=>Math.round((new Date(TODAY+'T00:00:00')-new Date(ymd+'T00:00:00'))/86400000);
+  const agoTxt=t=>{const n=daysAgo(t.slice(0,10));return n<=0?'今天':n==1?'昨天':n+' 天前';};
 
   /* ---------- 演示数据 ---------- */
   function invSeed(){
@@ -83,14 +98,16 @@
       {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-11 07:55',type:'in',    qty:200,after:240,doc:'GH-JS-20260810-0017'},
       {item:'SPU-JS-8804',wh:'兀兰DC',time:'2026-08-09 12:10',type:'gain',  qty:3,  after:40, doc:'PD-20260809-0004'},
       {item:'SPU-JS-8804',wh:'盛港DC',time:'2026-08-10 10:33',type:'out',   qty:22, after:96, doc:'CK-JS-20260810-0026'},
-      {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-08-11 08:41',type:'out',   qty:6,  after:18, doc:'CK-JS-20260811-0040'},
-      {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-08-07 09:00',type:'adj',   qty:-2, after:24, doc:'TZ-20260807-0001'},
+      /* 泰国龙眼：近 7 天无变动、近 30 天内有——用于演示两档时间区间筛出不同结果 */
+      {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-07-20 08:41',type:'out',   qty:6,  after:18, doc:'CK-JS-20260720-0040'},
+      {item:'SPU-JS-8805',wh:'裕廊DC',time:'2026-07-16 09:00',type:'adj',   qty:-2, after:24, doc:'TZ-20260716-0001'},
       /* 自售：无入仓/盘点，只有销售出库、客户退货、商家改库存 */
       {item:'SPU-ZS-6601',wh:SELF_WH,time:'2026-08-11 11:20',type:'out',  qty:14, after:120,doc:'CK-20260811-0091'},
       {item:'SPU-ZS-6601',wh:SELF_WH,time:'2026-08-11 08:00',type:'edit', qty:60, after:134,doc:'商家手动调整'},
       {item:'SPU-ZS-6601',wh:SELF_WH,time:'2026-08-10 15:02',type:'ret',  qty:2,  after:74, doc:'TH-20260810-0011'},
       {item:'SPU-ZS-6603',wh:SELF_WH,time:'2026-08-11 09:40',type:'out',  qty:6,  after:240,doc:'CK-20260811-0088'},
-      {item:'SPU-ZS-6602',wh:SELF_WH,time:'2026-08-10 18:30',type:'out',  qty:20, after:0,  doc:'CK-20260810-0074'},
+      /* 鲜鸡蛋：已售完即止、近 30 天都无变动（呆滞）——时间区间筛选下应被排除 */
+      {item:'SPU-ZS-6602',wh:SELF_WH,time:'2026-06-28 18:30',type:'out',  qty:20, after:0,  doc:'CK-20260628-0074'},
     ];
     DB.invInbound=[
       {no:'R2026081200055',supply:'GH-JS-20260811-0021',wh:'裕廊DC',status:'待入库',create:'2026-08-11 18:20',
@@ -117,18 +134,40 @@
      自售：每 SKU 独立库存，单位=件
      寄售：同商品各 SKU 共享货品库存池 → 在库/已占用/在途为**货品单位**且同商品同仓各行相同，
            可售库存按 convertRatio 折成件（BR-04），故必须打「共享」标，否则会被读成各自有货 */
+  /* 最近变动时间 = 该「商品 × 仓库」最后一笔库存流水的时间。
+     流水本就是货品级（寄售同商品同仓各规格共用同一批货、共用同一批流水），
+     故同商品同仓各 SKU 行的最近变动时间相同——与「共享」标是同一件事。 */
+  function lastMoveMap(){
+    const m={};
+    (DB.invFlow||[]).forEach(f=>{const key=f.item+'|'+f.wh;if(!m[key]||m[key]<f.time)m[key]=f.time;});
+    return m;
+  }
+  /* 时间区间命中：无变动记录的行视为不命中（"该区间内有过变动"为假），
+     不设区间时全部命中。只比日期不比时分，止日含当天（≤ 到日 23:59:59）。 */
+  function inRange(t){
+    const f=DB.invFrom||'',to=DB.invTo||'';
+    if(!f&&!to)return true;
+    if(!t)return false;
+    const d=t.slice(0,10);
+    return (!f||d>=f)&&(!to||d<=to);
+  }
+
   function rows(){
     const kw=(DB.invKw||'').trim().toLowerCase(),md=DB.invMode||'';   // 无仓库筛选：一行 = 1 SKU × 1 仓，仓库已是列
-    const out=[];
+    const lm=lastMoveMap(),out=[];
     DB.invItems.forEach(it=>{
       if(md&&it.mode!=md)return;
       const hit=k=>!kw||it.name.toLowerCase().includes(kw)||it.item.toLowerCase().includes(kw)||k.skuId.toLowerCase().includes(kw);
       if(isSelf(it)){
+        const mv=lm[it.item+'|'+SELF_WH]||'';
+        if(!inRange(mv))return;
         it.skus.forEach(k=>{if(!hit(k))return;
-          out.push({it,k,wh:SELF_WH,self:true,unit:'件',qtyUnit:'件',
+          out.push({it,k,wh:SELF_WH,self:true,unit:'件',qtyUnit:'件',lastMove:mv,
             stock:k.stock,locked:k.locked,transit:0,sellable:left(k.stock,k.locked),shared:false});});
       }else{
         it.stocks.forEach(s=>{
+          const mv=lm[it.item+'|'+s.wh]||'';
+          if(!inRange(mv))return;
           const il=left(s.wms,s.locked);
           it.skus.forEach(k=>{if(!hit(k))return;
             /* 全部换算成本规格的「件」。注意：已占用必须由 在库件 − 可售件 反推，
@@ -136,7 +175,7 @@
                三个数会在屏幕上对不上（BR-04b）。 */
             const stockPc=Math.floor(s.wms/k.ratio);
             const sellable=Math.floor(il/k.ratio);
-            out.push({it,k,wh:s.wh,self:false,unit:'件',raw:s.wms,rawUnit:it.unit,
+            out.push({it,k,wh:s.wh,self:false,unit:'件',raw:s.wms,rawUnit:it.unit,lastMove:mv,
               stock:stockPc,locked:stockPc-sellable,transit:Math.floor(s.transit/k.ratio),
               sellable,shared:it.skus.length>1});});
         });
@@ -349,7 +388,7 @@
     <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
   };
 
-  /* 当前筛选（关键词 + 供货模式）+ Tab 命中的全部行。页面渲染与导出共用同一份，
+  /* 当前筛选（关键词 + 供货模式 + 最近变动时间区间）+ Tab 命中的全部行。页面渲染与导出共用同一份，
      防止「页面看到 3 行、导出却是 18 行」这类口径漂移。 */
   function invFiltered(){
     let list=rows();const q=DB.invQuick||'';
@@ -361,12 +400,34 @@
   /* ---------- 筛选 ---------- */
   window.inv_mode=function(v){DB.invMode=v;render();};
   window.inv_search=function(){DB.invKw=(document.getElementById('inv-kw')||{}).value||'';render();};
-  window.inv_reset=function(){DB.invKw='';DB.invMode='';DB.invQuick='';render();};   // 只清筛选，Tab 也归「全部」
+  window.inv_reset=function(){DB.invKw='';DB.invMode='';DB.invQuick='';DB.invFrom='';DB.invTo='';render();};   // 只清筛选，Tab 也归「全部」
+
+  /* ---------- 最近变动时间：快捷档 + 自定义区间 ----------
+     ① 默认「不限」：库存列表的主用途是看当前有多少货，默认套时间会直接藏掉库存（自检 5）。
+     ② 快捷档点了即生效，不用再点查询（自检 7：1 步）；起止日期由系统按档位算好填进输入框，
+        不让商家自己数日子（自检 3/4/6）。
+     ③ 手动改日期 = 自定义档，同样即时生效，与「供货模式」下拉一致。 */
+  window.inv_range=function(n){
+    if(!n){DB.invFrom='';DB.invTo='';}
+    else{const r=rangeOf(+n);DB.invFrom=r.from;DB.invTo=r.to;}
+    render();
+  };
+  window.invRangeKey=function(){
+    const f=DB.invFrom||'',t=DB.invTo||'';
+    if(!f&&!t)return '';
+    for(const n of [7,30]){const r=rangeOf(n);if(f==r.from&&t==r.to)return String(n);}
+    return 'custom';
+  };
+  window.inv_date=function(){
+    const f=(document.getElementById('inv-from')||{}).value||'',t=(document.getElementById('inv-to')||{}).value||'';
+    if(f&&t&&f>t){toast('开始时间不能晚于结束时间','err');render();return;}   // 输入框已设 min/max 兜底，这里防手输
+    DB.invFrom=f;DB.invTo=t;render();
+  };
   window.inv_quick=function(v){DB.invQuick=v;render();};   // Tab：全部 / 已缺货 / 有在途（互斥，非 toggle）
 
   /* ---------- 导出（跟随当前筛选，所见即所得） ----------
-     口径：导出行 = 当前「关键词 + 供货模式 + Tab」命中的全部行，**忽略分页**（不是只导本页）。
-     列 = 表格 12 个数据列 + SPU 编码 + 仓库编码，顺序与页面一致；数量列为折算后件数，表头带「(件)」。
+     口径：导出行 = 当前「关键词 + 供货模式 + 最近变动时间区间 + Tab」命中的全部行，**忽略分页**（不是只导本页）。
+     列 = 表格 13 个数据列（含最近变动时间）+ SPU 编码 + 仓库编码，顺序与页面一致；数量列为折算后件数，表头带「(件)」。
      同步直下 xlsx（与商品/订单/备货参考/称重导出同款），无异步、无消息通知。
      INV_EXPORT_MAX：一次导出行数上限 = min(商定上限, 后端候选集上限)；超出在计数阶段即拒、不生成文件，
      提示须给出可执行出路（按供货模式分开导出），不许只说「缩小筛选范围」。具体数值待研发确认（Q-10）。 */
@@ -397,6 +458,9 @@
   PAGES['m-stock']=()=>{
     invSeed();
     DB.invKw=DB.invKw||'';DB.invMode=DB.invMode||'';DB.invQuick=DB.invQuick||'';
+    DB.invFrom=DB.invFrom||'';DB.invTo=DB.invTo||'';
+    const rk=invRangeKey();
+    const rbtn=(v,t)=>`<button class="btn btn-sm ${rk==v?'btn-p':'btn-o'}" onclick="inv_range('${v}')">${t}</button>`;
     const list=invFiltered();
     const q=DB.invQuick;
     const base=rows(),cAll=base.length,cOut=base.filter(r=>r.sellable<=0).length,cTr=base.filter(r=>r.transit>0).length;
@@ -418,6 +482,9 @@
         <td style="text-align:right">${r.transit?`<span style="color:var(--b)">${r.transit} 件</span>`:'<span style="color:var(--tt)">—</span>'}</td>
         <td>${self?`<span class="tag ${k.stockMode=='daily'?'t-g':'t-y'}" style="font-size:10.5px">${SMODE[k.stockMode]}</span>`:'<span class="tag t-gr" style="font-size:10.5px">仓库实物</span>'}</td>
         <td>${r.sellable<=0?'<span class="tag t-r"><span class="dot"></span>缺货</span>':'<span class="tag t-g"><span class="dot"></span>正常</span>'}</td>
+        <td style="white-space:nowrap">${r.lastMove
+          ?`<span style="font-size:12.5px;color:var(--ts)">${r.lastMove}</span><div style="font-size:11px;color:var(--tt)">${agoTxt(r.lastMove)}</div>`
+          :'<span style="color:var(--tt)">无变动记录</span>'}</td>
         <td>${self?`<button class="btn btn-o btn-sm" onclick="inv_edit('${it.item}','${k.skuId}')">改库存</button> `:''}<button class="btn btn-link" onclick="inv_detail('${it.item}')">明细</button> <button class="btn btn-link" onclick="inv_flow('${it.item}')">流水</button></td>
       </tr>`;}).join('');
 
@@ -427,6 +494,16 @@
         <div class="fr"><label class="fl">商品名称 / 编码</label><input id="inv-kw" value="${DB.invKw}" placeholder="输入商品名或编码" onkeydown="if(event.key=='Enter')inv_search()"></div>
         <div class="fr"><label class="fl">供货模式</label><select onchange="inv_mode(this.value)"><option value="">全部</option><option value="self" ${DB.invMode=='self'?'selected':''}>自售</option><option value="consign" ${DB.invMode=='consign'?'selected':''}>寄售</option></select></div>
       </div>
+      <div class="fr">
+        <label class="fl">最近变动时间</label>
+        <div class="row" style="gap:8px;align-items:center">
+          ${rbtn('','不限')}${rbtn('7','近7天')}${rbtn('30','近30天')}
+          <input type="date" id="inv-from" value="${DB.invFrom}" max="${DB.invTo||TODAY}" onchange="inv_date()" style="width:154px;flex:none">
+          <span style="color:var(--tt)">~</span>
+          <input type="date" id="inv-to" value="${DB.invTo}" min="${DB.invFrom||''}" max="${TODAY}" onchange="inv_date()" style="width:154px;flex:none">
+          ${rk=='custom'?'<span style="font-size:12px;color:var(--ts)">自定义区间</span>':''}
+        </div>
+      </div>
       <div class="row" style="gap:8px;margin-top:4px"><button class="btn btn-p" onclick="inv_search()">查询</button><button class="btn btn-o" onclick="inv_reset()">重置</button></div>
     </div></div>
 
@@ -434,10 +511,10 @@
       <div class="row" style="gap:8px"><button class="btn btn-o btn-sm" onclick="inv_export(this)">${invExportLabel()}</button></div>
     </div>
     <div class="card-bd">
-      <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度；<b>数量列一律按本行规格折算成「件」</b>（不足 1 件不计）。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>——鼠标悬停可看该仓实物总量，卖掉任一规格，其他规格件数会同步下降。</div>
+      <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度；<b>数量列一律按本行规格折算成「件」</b>（不足 1 件不计）。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>——鼠标悬停可看该仓实物总量，卖掉任一规格，其他规格件数会同步下降。<b>最近变动时间</b>=该商品在本仓最后一笔库存流水的时间（出库、入仓、退货、盘点、改库存均计），<b>按时间区间筛选 = 只看该区间内有过库存变动的行</b>，可用来找动销或呆滞商品；<b>共用同一批货的规格，最近变动时间也相同</b>。</div>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">${DB.invMode=='self'?'库存总数':DB.invMode=='consign'?'在仓实物':'库存/在仓'}</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>操作</th></tr></thead>
-        <tbody>${body||`<tr><td colspan="13"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invMode||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invMode||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
+        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">${DB.invMode=='self'?'库存总数':DB.invMode=='consign'?'在仓实物':'库存/在仓'}</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>最近变动时间</th><th>操作</th></tr></thead>
+        <tbody>${body||`<tr><td colspan="14"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invMode||q||DB.invFrom||DB.invTo?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invMode||q||DB.invFrom||DB.invTo?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
       </table></div>
     </div></div>`;
   };

@@ -3001,23 +3001,22 @@ PAGES['m-order']=()=>{
   </div>
   <div class="tabs">${ORD_TABS.map(t=>`<div class="tab ${ordTab==t[0]?'active':''}" onclick="ordTab='${t[0]}';render()">${t[1]}${ordTabCount(t[0])?`<span class="tb" style="background:var(--ts)">${ordTabCount(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span><div><b>多退少补金额</b>（按重量定价商品）= Σ<b>(实发净重 − 应发净重) × 单价</b>，<b>+</b>为多发补款客户、<b>−</b>为少发退款客户；<b>平台佣金变更</b> = 多退少补金额 × 该行品类佣金率（服务+物流），补款佣金增、退款佣金减。<b>结算后预计收入 = 预估收入 + 多退少补金额 − 佣金变更</b>。货到仓库 WMS 重新分拣分配后按各订单实际分配重量结算（收货/完成即定稿）。</div></div>
-  <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>订单号</th><th>客户</th><th>商品明细</th><th>配送时间</th><th>配送仓库</th><th>订单金额</th><th title="BCRS 饮料容器押金 = 平台固定 S$0.10 × 容器数 × 件数（三因子）；过手项，不计 GST/佣金/预计收入，随货透传客户下单/订单/发票">BCRS押金</th><th>商家补贴</th><th>平台服务费<span style="font-weight:400">(预估)</span></th><th title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th>预计收入<span style="font-weight:400">(预估)</span></th><th>状态</th><th>操作</th></tr></thead><tbody>
+  <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · <b>实付金额 = 订单金额 − 商家补贴</b>（客户实际支付）· 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>订单号</th><th>客户名称</th><th>送达时间</th><th>仓库</th><th>状态</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额（商家让利已在客户实付中扣除，不重复扣）">实付金额</th><th style="text-align:right">平台服务费<span style="font-weight:400">(预估)</span></th><th style="text-align:right" title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th style="text-align:right">预计收入<span style="font-weight:400">(预估)</span></th><th>操作</th></tr></thead><tbody>
     ${list.map((o)=>{const i=DB.orders.indexOf(o);return `<tr>
-      <td class="mono">${o.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">${o.orderTime||''}</div></td>
+      <td class="mono">${o.id}</td>
       <td>${ord_mask(o.client)}</td>
-      <td style="max-width:230px;white-space:normal">${(o.lines||[]).map(l=>`<div>${l.name} <span style="color:var(--ts)">${l.qty}${l.unit} · ${money(l.price)}/${l.unit}</span>${l.promo?` <span class="tag t-r" style="font-size:10px" title="商家特价 ${l.promo.act} · 原价 ${money(l.promo.orig)} · 让利由商家承担">特价</span>`:''}</div>`).join('')}<div style="font-size:11.5px;color:var(--ts);margin-top:2px">共 ${(o.lines||[]).length} 件商品</div></td>
-      <td>${o.deliver||'—'}<div style="font-size:11.5px;color:var(--ts)">${o.deliverWindow||''}</div></td>
+      <td>${o.deliver?o.deliver+(o.deliverWindow?' '+o.deliverWindow.split('~')[0]:''):'—'}</td>
       <td>${o.warehouse||'—'}</td>
-      <td><b>${money(o.amt)}</b></td>
-      <td>${ordBcrs(o)>0?`<b class="tag t-b" style="font-size:12px" title="过手项·不计 GST/佣金/预计收入">${money(ordBcrs(o))}</b>`:'<span style="color:var(--tt)">—</span>'}</td>
-      <td style="color:var(--r)">-${money(ord_disc(o))}</td>
-      <td style="color:var(--r)">-${money(ord_fee(o))}</td>
-      <td>${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${f>0?'+':''}${money(f)}</div>`;})()}</td>
-      <td><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ordTag(o)}${o.status=='pending'?'<div style="font-size:11px;color:var(--ts);margin-top:2px">待分拣贴标</div>':o.status=='packed'?'<div style="font-size:11px;color:var(--pp);margin-top:2px">已贴标·待交接</div>':''}</td>
+      <td style="text-align:right"><b>${money(o.amt)}</b></td>
+      <td style="text-align:right;color:var(--r)">${ord_disc(o)>0?'-':''}${money(ord_disc(o))}</td>
+      <td style="text-align:right"><b>${money(ord_paid(o))}</b></td>
+      <td style="text-align:right;color:var(--r)">${ord_fee(o)>0?'-':''}${money(ord_fee(o))}</td>
+      <td style="text-align:right">${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${f>0?'+':''}${money(f)}</div>`;})()}</td>
+      <td style="text-align:right"><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ord_ops(o,i)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
@@ -3074,7 +3073,8 @@ function ord_feePct(o){return o.amt?ord_fee(o)/o.amt:0;}            // 综合费
 function ord_disc(o){return o.discount||0;}                         // 商家补贴（合作商优惠·商家出，扣减项）
 function ord_promoSave(o){return (o.lines||[]).reduce((n,l)=>n+(l.promo?((+l.promo.orig)-(+l.price))*(+l.qty):0),0);}   // 商家特价让利 =Σ(原价−活动价)×件数：商家 100% 承担，已体现在活动价成交额里，不再扣减、不进平台优惠
 function ord_platSub(o){return o.platSub||0;}                       // 平台补贴（平台出·增项，计入商家预计收入）
-function ord_income(o){return o.amt-ord_disc(o)+ord_platSub(o)-ord_fee(o);}  // 预计收入 = 订单金额 − 商家补贴 + 平台补贴 − 佣金
+function ord_paid(o){return o.amt-ord_disc(o);}                     // 实付金额 = 订单金额 − 商家补贴（客户实际支付；商家让利已在客户实付中扣除。平台补贴由平台出、不从客户实付里扣）
+function ord_income(o){return ord_paid(o)+ord_platSub(o)-ord_fee(o);}  // 预计收入 = 实付金额 + 平台补贴 − 佣金（等价于 订单金额 − 商家补贴 + 平台补贴 − 佣金）
 // BCRS 饮料容器押金：行押金=件数×行容器数×押金单价；过手项——不计 GST、不计佣金基数、不进预计收入
 function lineBcrs(l){return (+l.qty||0)*(+l.bcrsContainers||0)*BCRS_UNIT_PRICE;}   // 行押金=件数×该售卖规格单位容器数×0.10
 function ordBcrs(o){return (o.lines||[]).reduce((s,l)=>s+lineBcrs(l),0);}
@@ -5918,7 +5918,7 @@ window.__resetDemo=()=>window.location.reload();
 goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
-<script src="pc-modules/stock.js?v=20260909b"></script>
+<script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20260910d"></script>
 <script src="pc-modules/weigh.js?v=20260817d"></script>
 <script src="pc-modules/delivery.js?v=20260915a"></script>
