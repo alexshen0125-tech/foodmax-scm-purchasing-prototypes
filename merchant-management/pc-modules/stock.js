@@ -17,8 +17,15 @@
    | 在途       | 无（不入仓）                     | 有（寄售入库单）                   |
    | 可改       | ✅ 改库存 + 改库存模式            | ❌ 全字段只读                     |
 
-   2026-09-17 增：库存列表按「最近变动时间」区间筛选（不限 / 近7天 / 近30天 / 自定义），
+   2026-09-17 增：库存列表按「最近变动时间」区间筛选（全部 / 近7日 / 近30日 / 自定义），
      最近变动时间 = 该「商品 × 仓库」最后一笔库存流水时间，同步新增同名表格列。
+     筛选形态对齐线上 merchant-app（main）唯一的列表页时间筛选先例——商品列表：
+       · 控件   `features/product/components/ProductFilter.tsx` 的 dateRange()：两个日期框 + 中缀「~」，label 在上、宽 144px
+       · 草稿   同文件 draft/onSearch/handleReset：改控件只落草稿，点「查询」才生效，「重置」清空草稿并重查
+       · 边界   `features/product/lib/dateRange.ts` dayStart/dayEnd：起 00:00:00、止 23:59:59，空值不传字段
+       · 参数   `features/product/lib/listReq.ts` buildProductListReq：每次从头重建请求（不 merge），清空即真清空；
+                导出 `lib/exportProducts.ts` 直接复用同一份 SpuListReq、忽略分页 —— 与本页导出口径一致
+     快捷档「近7日/近30日」文案沿用线上 i18n `analysis.range.LAST_7_DAYS/LAST_30_DAYS`。
 
    本期不做：批次/效期临期预警、低库存档（safety_inventory 已停写清零）、差异申诉、供货单开单。
    依赖主文件全局：DB / money / toast / modal / closeModal / drawer / closeDrawer / render
@@ -142,10 +149,13 @@
     (DB.invFlow||[]).forEach(f=>{const key=f.item+'|'+f.wh;if(!m[key]||m[key]<f.time)m[key]=f.time;});
     return m;
   }
-  /* 时间区间命中：无变动记录的行视为不命中（"该区间内有过变动"为假），
-     不设区间时全部命中。只比日期不比时分，止日含当天（≤ 到日 23:59:59）。 */
+  /* 时间区间命中：无变动记录的行视为不命中（"该区间内有过变动"为假），不设区间时全部命中。
+     边界口径照线上 merchant-app `features/product/lib/dateRange.ts`：
+       选中日期展宽成当天 DATETIME 边界 —— 起 = `yyyy-MM-dd 00:00:00`、止 = `yyyy-MM-dd 23:59:59`（含首含尾）；
+       任一端为空 → 该参数按 undefined 处理、**不传该字段**（不传空串），单边开区间。
+     原型只比日期串，与上述展宽等价。 */
   function inRange(t){
-    const f=DB.invFrom||'',to=DB.invTo||'';
+    const f=DB.invQ.moveStart||'',to=DB.invQ.moveEnd||'';
     if(!f&&!to)return true;
     if(!t)return false;
     const d=t.slice(0,10);
@@ -153,7 +163,7 @@
   }
 
   function rows(){
-    const kw=(DB.invKw||'').trim().toLowerCase(),md=DB.invMode||'';   // 无仓库筛选：一行 = 1 SKU × 1 仓，仓库已是列
+    const q=DB.invQ,kw=(q.kw||'').trim().toLowerCase(),md=q.mode||'';   // 无仓库筛选：一行 = 1 SKU × 1 仓，仓库已是列
     const lm=lastMoveMap(),out=[];
     DB.invItems.forEach(it=>{
       if(md&&it.mode!=md)return;
@@ -398,35 +408,48 @@
   }
 
   /* ---------- 筛选 ---------- */
-  window.inv_mode=function(v){DB.invMode=v;render();};
-  window.inv_search=function(){DB.invKw=(document.getElementById('inv-kw')||{}).value||'';render();};
-  window.inv_reset=function(){DB.invKw='';DB.invMode='';DB.invQuick='';DB.invFrom='';DB.invTo='';render();};   // 只清筛选，Tab 也归「全部」
-
-  /* ---------- 最近变动时间：快捷档 + 自定义区间 ----------
-     ① 默认「不限」：库存列表的主用途是看当前有多少货，默认套时间会直接藏掉库存（自检 5）。
-     ② 快捷档点了即生效，不用再点查询（自检 7：1 步）；起止日期由系统按档位算好填进输入框，
-        不让商家自己数日子（自检 3/4/6）。
-     ③ 手动改日期 = 自定义档，同样即时生效，与「供货模式」下拉一致。 */
-  window.inv_range=function(n){
-    if(!n){DB.invFrom='';DB.invTo='';}
-    else{const r=rangeOf(+n);DB.invFrom=r.from;DB.invTo=r.to;}
+  /* 草稿 invDraft（界面上选了什么）与已生效条件 invQ（列表/导出实际按什么筛）分开，
+     照线上 merchant-app `features/product/components/ProductFilter.tsx`：
+       改控件只落草稿 → 点「查询」才 onSearch(draft) 生效；「重置」= setDraft({}) + onReset()。
+     列表渲染、Tab 计数、导出一律只认 invQ，界面选了没点查询不算数。
+     字段名对齐线上 `xxxTimeStart / xxxTimeEnd`（值为 yyyy-MM-dd），便于直接落接口清单。 */
+  const emptyFilter=()=>({kw:'',mode:'',moveStart:'',moveEnd:''});
+  window.inv_d=function(f,v){DB.invDraft[f]=v;};        // 只写草稿、不重渲：重渲会打断正在输入的关键词
+  window.inv_search=function(){
+    const d=DB.invDraft;
+    d.kw=(document.getElementById('inv-kw')||{}).value||'';
+    /* 线上 DatePicker（components/ui/date-picker.tsx = Popover + DayPicker）**不支持 min/max 或禁用日期**，
+       起>止 拦不住，只能在提交时显式校验——别写「把非法日期置灰」这种研发做不到的方案。 */
+    if(d.moveStart&&d.moveEnd&&d.moveStart>d.moveEnd){toast('最近变动时间：开始日期不能晚于结束日期','err');return;}
+    DB.invQ={kw:d.kw,mode:d.mode,moveStart:d.moveStart,moveEnd:d.moveEnd};
     render();
   };
+  window.inv_reset=function(){DB.invDraft=emptyFilter();DB.invQ=emptyFilter();DB.invQuick='';render();};   // 只清筛选，Tab 也归「全部」
+
+  /* ---------- 最近变动时间快捷档 ----------
+     ① 默认「全部」：库存列表的主用途是看当前有多少货，默认套时间会直接藏掉库存（自检 5）。
+     ② 快捷档只是把起止日期按档位算好回填进两个日期框（自检 3/4/6：不让商家自己数日子），
+        **不是一个独立的接口参数**——线上列表页筛选只有起止两个日期字段，
+        rangeType 枚举（TODAY/YESTERDAY/LAST_7_DAYS/LAST_30_DAYS）只存在于工作台与经营分析的看板切换器，
+        两者不混用，避免给后端凭空加一个只有库存列表才有的参数。
+     ③ 回填后仍需点「查询」生效，与关键词、供货模式同一节奏。 */
+  window.inv_range=function(n){
+    const d=DB.invDraft;
+    if(!n){d.moveStart='';d.moveEnd='';}
+    else{const r=rangeOf(+n);d.moveStart=r.from;d.moveEnd=r.to;}
+    render();                                            // 回填日期框 + 更新档位高亮
+  };
   window.invRangeKey=function(){
-    const f=DB.invFrom||'',t=DB.invTo||'';
+    const f=DB.invDraft.moveStart||'',t=DB.invDraft.moveEnd||'';
     if(!f&&!t)return '';
     for(const n of [7,30]){const r=rangeOf(n);if(f==r.from&&t==r.to)return String(n);}
     return 'custom';
   };
-  window.inv_date=function(){
-    const f=(document.getElementById('inv-from')||{}).value||'',t=(document.getElementById('inv-to')||{}).value||'';
-    if(f&&t&&f>t){toast('开始时间不能晚于结束时间','err');render();return;}   // 输入框已设 min/max 兜底，这里防手输
-    DB.invFrom=f;DB.invTo=t;render();
-  };
   window.inv_quick=function(v){DB.invQuick=v;render();};   // Tab：全部 / 已缺货 / 有在途（互斥，非 toggle）
 
   /* ---------- 导出（跟随当前筛选，所见即所得） ----------
-     口径：导出行 = 当前「关键词 + 供货模式 + 最近变动时间区间 + Tab」命中的全部行，**忽略分页**（不是只导本页）。
+     口径：导出行 = 当前**已生效**（点过查询）的「关键词 + 供货模式 + 最近变动时间区间 + Tab」命中的全部行，
+     **忽略分页**（不是只导本页）；与线上 exportProducts(filter: SpuListReq) 复用同一份筛选条件同款。
      列 = 表格 13 个数据列（含最近变动时间）+ SPU 编码 + 仓库编码，顺序与页面一致；数量列为折算后件数，表头带「(件)」。
      同步直下 xlsx（与商品/订单/备货参考/称重导出同款），无异步、无消息通知。
      INV_EXPORT_MAX：一次导出行数上限 = min(商定上限, 后端候选集上限)；超出在计数阶段即拒、不生成文件，
@@ -457,8 +480,9 @@
   /* ---------- 页面 1：库存列表（自售 + 寄售通用） ---------- */
   PAGES['m-stock']=()=>{
     invSeed();
-    DB.invKw=DB.invKw||'';DB.invMode=DB.invMode||'';DB.invQuick=DB.invQuick||'';
-    DB.invFrom=DB.invFrom||'';DB.invTo=DB.invTo||'';
+    DB.invQuick=DB.invQuick||'';
+    DB.invDraft=DB.invDraft||emptyFilter();DB.invQ=DB.invQ||emptyFilter();
+    const d=DB.invDraft,qf=DB.invQ,filtered=!!(qf.kw||qf.mode||qf.moveStart||qf.moveEnd);
     const rk=invRangeKey();
     const rbtn=(v,t)=>`<button class="btn btn-sm ${rk==v?'btn-p':'btn-o'}" onclick="inv_range('${v}')">${t}</button>`;
     const list=invFiltered();
@@ -491,16 +515,16 @@
     return `
     <div class="card"><div class="card-bd">
       <div class="fg2">
-        <div class="fr"><label class="fl">商品名称 / 编码</label><input id="inv-kw" value="${DB.invKw}" placeholder="输入商品名或编码" onkeydown="if(event.key=='Enter')inv_search()"></div>
-        <div class="fr"><label class="fl">供货模式</label><select onchange="inv_mode(this.value)"><option value="">全部</option><option value="self" ${DB.invMode=='self'?'selected':''}>自售</option><option value="consign" ${DB.invMode=='consign'?'selected':''}>寄售</option></select></div>
+        <div class="fr"><label class="fl">商品名称 / 编码</label><input id="inv-kw" value="${d.kw}" placeholder="输入商品名或编码" oninput="inv_d('kw',this.value)" onkeydown="if(event.key=='Enter')inv_search()"></div>
+        <div class="fr"><label class="fl">供货模式</label><select onchange="inv_d('mode',this.value)"><option value="">全部</option><option value="self" ${d.mode=='self'?'selected':''}>自售</option><option value="consign" ${d.mode=='consign'?'selected':''}>寄售</option></select></div>
       </div>
       <div class="fr">
         <label class="fl">最近变动时间</label>
         <div class="row" style="gap:8px;align-items:center">
-          ${rbtn('','不限')}${rbtn('7','近7天')}${rbtn('30','近30天')}
-          <input type="date" id="inv-from" value="${DB.invFrom}" max="${DB.invTo||TODAY}" onchange="inv_date()" style="width:154px;flex:none">
+          ${rbtn('','全部')}${rbtn('7','近7日')}${rbtn('30','近30日')}
+          <input type="date" id="inv-from" value="${d.moveStart}" onchange="inv_d('moveStart',this.value);render()" style="width:144px;flex:none">
           <span style="color:var(--tt)">~</span>
-          <input type="date" id="inv-to" value="${DB.invTo}" min="${DB.invFrom||''}" max="${TODAY}" onchange="inv_date()" style="width:154px;flex:none">
+          <input type="date" id="inv-to" value="${d.moveEnd}" onchange="inv_d('moveEnd',this.value);render()" style="width:144px;flex:none">
           ${rk=='custom'?'<span style="font-size:12px;color:var(--ts)">自定义区间</span>':''}
         </div>
       </div>
@@ -513,8 +537,8 @@
     <div class="card-bd">
       <div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📦</span><b>每行 = 1 个规格（SKU）</b>，与商品列表同粒度；<b>数量列一律按本行规格折算成「件」</b>（不足 1 件不计）。<b>自售</b>库存由你自己维护、可直接「改库存」；<b>寄售</b>库存由仓库实物决定、<b>不可手工修改</b>。带<b>共享</b>标的行表示该商品各规格<b>共用同一批货</b>——鼠标悬停可看该仓实物总量，卖掉任一规格，其他规格件数会同步下降。<b>最近变动时间</b>=该商品在本仓最后一笔库存流水的时间（出库、入仓、退货、盘点、改库存均计），<b>按时间区间筛选 = 只看该区间内有过库存变动的行</b>，可用来找动销或呆滞商品；<b>共用同一批货的规格，最近变动时间也相同</b>。</div>
       <div style="overflow-x:auto"><table>
-        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">${DB.invMode=='self'?'库存总数':DB.invMode=='consign'?'在仓实物':'库存/在仓'}</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>最近变动时间</th><th>操作</th></tr></thead>
-        <tbody>${body||`<tr><td colspan="14"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${DB.invKw||DB.invMode||q||DB.invFrom||DB.invTo?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${DB.invKw||DB.invMode||q||DB.invFrom||DB.invTo?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
+        <thead><tr><th>商品</th><th>SKU 编码</th><th>规格</th><th>供货模式</th><th>品类</th><th>仓库</th><th style="text-align:right">可售库存</th><th style="text-align:right">${qf.mode=='self'?'库存总数':qf.mode=='consign'?'在仓实物':'库存/在仓'}</th><th style="text-align:right">已占用</th><th style="text-align:right">在途</th><th>库存模式</th><th>状态</th><th>最近变动时间</th><th>操作</th></tr></thead>
+        <tbody>${body||`<tr><td colspan="14"><div class="empty"><div class="e-ic">📦</div><div class="e-t">${filtered||q?'当前筛选下没有库存':'暂无库存'}</div><div class="e-s">${filtered||q?'调整筛选条件或点「重置」查看全部':'上架商品后，库存会在这里显示'}</div></div></td></tr>`}</tbody>
       </table></div>
     </div></div>`;
   };
