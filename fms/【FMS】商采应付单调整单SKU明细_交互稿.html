@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>商采应付单详情 · 票扣调整单 SKU 明细</title>
+<style>
+  :root{--green:#1a9b2c;--green-d:#15821f;--green-bg:#eef8ef;--line:#ebeef5;--text:#303133;--sub:#909399;--bg:#f2f3f5;--warn-bg:#fdf6ec;--warn:#e6a23c;--red:#f56c6c;--red-bg:#fef0f0}
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
+  .top{height:54px;background:var(--green);color:#fff;display:flex;align-items:center;padding:0 24px;gap:34px}
+  .top b{font-size:22px;font-style:italic;letter-spacing:.5px}
+  .top span{font-size:15px;font-weight:600;opacity:.95}
+  .top .on{background:rgba(255,255,255,.15);padding:17px 14px}
+  .wrap{display:flex;min-height:calc(100vh - 54px)}
+  .side1{width:84px;background:#f5f6f7;border-right:1px solid var(--line)}
+  .side1 div{padding:22px 0;text-align:center;color:#606266}
+  .side1 .on{background:#fff;color:var(--green)}
+  .side2{width:140px;background:#fff;border-right:1px solid var(--line);padding-top:10px}
+  .side2 div{padding:14px 20px;color:#303133}
+  .side2 .grp{font-weight:600}
+  .main{flex:1;min-width:0}
+  .card{background:#fff;padding:20px 20px 16px}
+  .head{display:flex;align-items:center;gap:8px}
+  .head h1{font-size:20px;margin:0 8px 0 0}
+  .tag{display:inline-block;font-size:12px;line-height:20px;padding:0 6px;border:1px solid #d9ecff;border-radius:3px}
+  .t-g{color:#1a9b2c;background:#f0f9eb;border-color:#c2e7b0}.t-i{color:#909399;background:#f4f4f5;border-color:#e9e9eb}.t-o{color:#e6a23c;background:#fdf6ec;border-color:#f5dab1}.t-r{color:#f56c6c;background:#fef0f0;border-color:#fbc4c4}
+  .sum{display:flex;gap:6px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .sum .it{padding:8px 12px;min-width:92px}.sum .it.on{background:var(--green-bg)}
+  .sum .l{color:#606266}.sum .v{font-size:17px;font-weight:600;margin-top:4px}.sum .on .v{color:var(--green)}
+  .gap{height:10px;background:var(--bg)}
+  .tabs{display:flex;gap:40px;border-bottom:2px solid var(--line);padding:0 4px}
+  .tabs div{padding:12px 0;font-size:14px;color:#303133;cursor:default}
+  .tabs .on{color:var(--green);border-bottom:2px solid var(--green);margin-bottom:-2px}
+  .search{display:flex;gap:12px;margin:16px 0}
+  input{height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 10px;font-size:13px;width:200px;outline:none}
+  input:focus{border-color:var(--green)}
+  .btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid #dcdfe6;background:#fff;cursor:pointer;font-size:13px;color:#606266}
+  .btn:hover{color:var(--green);border-color:#a3d9ab}
+  .btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+  .btn.sm{height:28px;padding:0 12px}
+  .btn:disabled{color:#c0c4cc;border-color:#ebeef5;cursor:not-allowed;background:#fff}
+  .link{color:var(--green);cursor:pointer;background:none;border:0;font-size:13px;padding:0}
+  .tbl-wrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1180px}
+  th{background:#f5f7fa;color:#606266;font-weight:600;text-align:left;padding:11px 10px;white-space:nowrap}
+  td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+  .r{text-align:right}
+  .minor{color:var(--sub);font-size:12px}
+  .exp{width:40px;text-align:center;padding:0}
+  .arrow{border:0;background:none;font-size:15px;display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;cursor:pointer;border-radius:3px;color:#606266;transition:transform .15s}
+  .arrow:hover{background:#f0f2f5}
+  .arrow.open{transform:rotate(90deg);color:var(--green)}
+  .mini{font-size:11px;line-height:16px;padding:0 4px;margin-left:6px;color:#606266;background:#f4f4f5;border:1px solid #e9e9eb;border-radius:2px;vertical-align:1px}
+  .bizlink{color:var(--green);cursor:pointer}
+  tr.expanded>td{background:#fafcfa}
+  tr.panel>td{padding:0;background:#fafcfa;border-bottom:1px solid #dfe6df}
+  .pnwrap{position:sticky;left:0;padding-left:40px}
+  .pn{margin:4px 16px 16px 0;background:#fff;border:1px solid #e4e7ed;border-radius:4px}
+  .pn-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .pn-h .meta{display:flex;gap:18px;color:#606266}.pn-h .meta b{color:var(--text)}
+  .pn-h .act{display:flex;gap:10px;align-items:center}
+  .pn-h input{width:170px;height:28px}
+  .warn{margin:10px 14px 0;padding:8px 12px;background:var(--warn-bg);color:#b88230;border-radius:4px;border:1px solid #faecd8}
+  .inner{overflow-x:auto;margin:10px 14px 0;border:1px solid var(--line);position:relative}
+  .mask{position:absolute;inset:0;background:rgba(255,255,255,.65);display:flex;align-items:center;justify-content:center;z-index:5;color:var(--sub)}
+  .chk{margin:10px 14px 0;padding:10px 14px;background:#f7faf7;border:1px solid #e1ece1;border-radius:4px;display:flex;flex-wrap:wrap;gap:6px 26px;align-items:baseline}
+  .chk .k{color:#606266}.chk .v{font-weight:600;font-size:14px;margin-left:6px}.chk .diff{color:#e6a23c}.chk .ok{color:#1a9b2c}
+  .chk.f{background:#fffbef;border-color:#f5e6c0;font-size:12px}.chk.f .v{font-size:13px}
+  .sk{padding:16px 14px}.sk i{display:block;height:14px;background:linear-gradient(90deg,#f0f2f5,#e6e8eb,#f0f2f5);border-radius:3px;margin:10px 0}
+  .sw{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-left:12px;color:#606266}.sw input{width:auto;height:auto}
+  .clr{position:sticky;left:0;display:block;text-align:center;padding:30px 0;color:var(--sub)}
+  .inner table{min-width:1400px}
+  .inner th{padding:9px 10px;font-size:12px}
+  .inner td{padding:8px 10px;font-size:12px}
+  .inner .fx1,.inner .fx2,.inner .fx3{position:sticky;background:#fff;z-index:1}
+  .inner th.fx1,.inner th.fx2,.inner th.fx3{background:#f5f7fa;z-index:3}
+  .inner .fx1{left:0;min-width:70px}.inner .fx2{left:70px;min-width:90px}.inner .fx3{left:160px;min-width:190px;box-shadow:2px 0 3px -2px rgba(0,0,0,.15)}
+  .st{font-size:11px;padding:0 5px;border-radius:2px;line-height:18px;display:inline-block}
+  .st1{color:#1a9b2c;background:#f0f9eb}.st0{color:#909399;background:#f4f4f5}.st2{color:var(--red);background:var(--red-bg)}
+  .memo{color:var(--red);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;display:block}
+  .pager{display:flex;justify-content:flex-end;align-items:center;gap:6px;padding:10px 14px}
+  .pg{min-width:26px;height:26px;border-radius:3px;background:#f4f4f5;border:0;cursor:pointer;font-size:12px;color:#606266}
+  .pg.on{background:var(--green);color:#fff}.pg:disabled{opacity:.4;cursor:not-allowed}
+  .empty,.err,.loading{padding:36px 0;text-align:center;color:var(--sub)}
+  .err{color:var(--red)}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #cfe9d3;border-top-color:var(--green);border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .foot{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:18px 0 4px;color:#606266}
+  .toast a{color:#1a9b2c;margin-left:10px}
+  .toast.e{background:#fef0f0;color:#f56c6c;border-color:#fbc4c4}
+  .toast{position:fixed;top:70px;z-index:30!important;left:50%;transform:translateX(-50%);background:#f0f9eb;color:#1a9b2c;border:1px solid #c2e7b0;padding:8px 18px;border-radius:4px;display:none;z-index:9}
+  .drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}
+  .drawer-mask.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:80vw;min-width:960px;max-width:1400px;background:#fff;z-index:21;transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;box-shadow:-6px 0 24px rgba(0,0,0,.12)}
+  .drawer.on{transform:none}
+  .drawer-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line)}
+  .drawer-hd h2{margin:0;font-size:16px}.drawer-hd h2 small{font-weight:400;color:var(--sub);margin-left:10px;font-size:13px}
+  .drawer-hd .nav{display:flex;align-items:center;gap:10px;color:#606266}
+  .x{border:0;background:none;font-size:20px;color:#909399;cursor:pointer;margin-left:10px}
+  .drawer-bd{flex:1;overflow:auto;padding:0 6px 16px}
+  .info{display:flex;gap:24px;padding:14px 14px 0;color:#606266}.info b{color:var(--text)}
+  .tools{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px 0;flex-wrap:wrap}
+  .tools .l,.tools .r2{display:flex;gap:10px;align-items:center}
+  .tools input[type=search]{width:190px;height:28px}
+  .sw.dis{opacity:.45;pointer-events:none}
+  tr.cur>td{background:#eef8ef!important}
+  .bizlink{color:var(--green);cursor:pointer;text-decoration:none}.bizlink:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="top"><b>Foodmax</b><span>财务中台国际</span><span>应收管理</span><span class="on">应付管理</span><span>资金管理</span><span>存货核算</span><span>综合费用</span><span>会计平台</span></div>
+<div class="wrap">
+  <div class="side1"><div>采购业务</div><div class="on">采购应付</div><div>采购付款</div><div>采购收款</div><div>往来核销</div></div>
+  <div class="side2"><div class="grp">商采应付</div><div>商采应付单</div><div>商采入账表</div><div class="grp">综采应付</div></div>
+  <div class="main">
+    <div class="card">
+      <div class="head">
+        <h1>应付单号：AP20260918000012</h1>
+        <span class="tag t-g">已审批</span><span class="tag t-i">未冻结</span><span class="tag t-i">未付款</span><span class="tag t-i">未核销</span><span class="tag t-i">未推送</span>
+      </div>
+      <div class="sum">
+        <div class="it on"><div class="l">结算金额</div><div class="v">8,402.35</div></div>
+        <div class="it"><div class="l">账扣罚款金额</div><div class="v">0.00</div></div>
+        <div class="it"><div class="l">冲预付金额</div><div class="v">0.00</div></div>
+        <div class="it on"><div class="l">应付金额</div><div class="v">8,402.35</div></div>
+        <div class="it"><div class="l">发票抵扣金额</div><div class="v">295.60</div></div>
+        <div class="it"><div class="l">应开票金额</div><div class="v">8,402.35</div></div>
+        <div class="it"><div class="l">实收票金额</div><div class="v">0.00</div></div>
+      </div>
+    </div>
+    <div class="gap"></div>
+    <div class="card">
+      <div class="tabs"><div class="on">采购明细</div><div>发票明细</div><div>开票差异</div><div>预付核销</div><div>账扣明细</div><div>付款明细</div></div>
+      <div class="search">
+        <input id="qBiz" placeholder="单据编号"><input id="qStore" placeholder="仓库ID">
+        <button class="btn pri" onclick="parentQuery()">⌕ 查询</button><button class="btn" onclick="parentReset()">重置</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>单据类型编号</th><th>采购分类</th><th>仓库</th><th>调整类型</th><th>预付单ID</th><th class="r">计划金额</th><th class="r">结算金额</th><th class="r">已预付金额</th><th class="r">应付金额</th><th>创建日期</th><th>完成日期</th></tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+      <div class="foot">共 <span id="cnt"></span> 条 <button class="pg" disabled>‹</button><button class="pg on">1</button><button class="pg" disabled>›</button></div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="drawer-mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dwTitle"></div>
+
+
+<script>
+const fmt = n => n == null ? '-' : (n < 0 ? '-' : '') + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2 = n => Math.round(n*100)/100;
+const PAGE = 10;
+const ADJ_TYPE = {3:'促销补差',6:'损耗折扣',10:'物流配送津贴'}; // 应付单侧 17 项枚举的子集
+
+// ---- 父表：采购明细（getPurchaseList）----
+const rows = [
+  {rowId:'r1',type:'采购单',bizNo:'28225',cls:'蛋类/加工',store:'新加坡-B端仓',cat:null,plan:4210.50,set:4210.50,prepaid:0,pay:4210.50,c:'2026-09-15',f:'2026-09-17'},
+  {rowId:'r2',type:'采购单',bizNo:'28231',cls:'蔬菜/叶菜',store:'新加坡-B端仓',cat:null,plan:4640.00,set:4603.85,prepaid:0,pay:4603.85,c:'2026-09-15',f:'2026-09-17'},
+  {rowId:'r3',type:'退货单',bizNo:'R5102',cls:'蔬菜/叶菜',store:'新加坡-B端仓',cat:null,plan:-116.40,set:-116.40,prepaid:0,pay:-116.40,c:'2026-09-16',f:'2026-09-16'},
+  {rowId:'r4',type:'调整单',bizNo:'ADJ20260916001',cls:'蛋类/加工',store:'新加坡-B端仓',cat:3,plan:-238.40,set:-238.40,prepaid:0,pay:-238.40,c:'2026-09-16',f:'2026-09-17',
+    deductionType:1,adjustId:'ADJ20260916001',billSource:1,ticketNo:'TD20260916000031'},
+  {rowId:'r5',type:'调整单',bizNo:'ADJ20260917004',cls:'蔬菜/叶菜',store:'新加坡-B端仓',cat:6,plan:-57.20,set:-57.20,prepaid:0,pay:-57.20,c:'2026-09-17',f:'2026-09-17',
+    deductionType:1,adjustId:'ADJ20260917004',billSource:1,ticketNo:'TD20260917000008',failFirst:true},
+  {rowId:'r6',type:'调整单',bizNo:'ADJ20260917009',cls:'蔬菜/叶菜',store:'新加坡-B端仓',cat:10,plan:0,set:0,prepaid:0,pay:0,c:'2026-09-17',f:'2026-09-17',
+    deductionType:1,adjustId:'ADJ20260917009',billSource:1,ticketNo:'TD20260917000011'},
+];
+
+// ---- 票扣单明细（模拟 scm/adjust/getDetails）----
+const SKUS=[['1001203','Fresh Eggs 30pcs (Grade A)','蛋品'],['1001217','Liquid Egg White 1kg','蛋制品'],['1001342','Salted Duck Egg 6pcs','蛋制品'],
+  ['1001388','Quail Eggs 24pcs','蛋品'],['1001402','Century Egg 4pcs','蛋制品'],['1001455','Organic Brown Eggs 10pcs','蛋品']];
+function gen(n,target,abn){ // abn: {idx:status}
+  const pos=['28225','28190','28172','28144'],list=[];let seed=7;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+  for(let i=0;i<n;i++){const s=SKUS[i%6],st=abn[i]??1,ret=(i===17);
+    list.push({sourceType:ret?'2':'1',bizNo:ret?'R5088':pos[i%4],productName:s[1],productId:s[0],storeEbsCode:'SG01-B',sourceTime:`2026-09-1${i%7+1}`,
+      invoiceType:2,taxRate:0.09,skuFmsName:st===2?'':s[2],raw:-(4+rnd()*16),auditStatus:st,
+      memo:st===2?'核算分类缺失：SKU 未维护 FMS 核算分类，无法计算不含税金额':''});}
+  const ok=list.filter(r=>r.auditStatus===1),cur=ok.reduce((a,r)=>a+r.raw,0);
+  ok.forEach(r=>r.modifyTotalAmount=r2(r.raw*target/cur));
+  const d=r2(target-ok.reduce((a,r)=>a+r.modifyTotalAmount,0));ok[ok.length-1].modifyTotalAmount=r2(ok[ok.length-1].modifyTotalAmount+d);
+  list.forEach(r=>{if(r.auditStatus!==1){r.modifyTotalAmount=r.modifyAmountWithoutTax=r.modifyTax=r.costAmount=null;return;}
+    r.modifyAmountWithoutTax=r2(r.modifyTotalAmount/1.09);r.modifyTax=r2(r.modifyTotalAmount-r.modifyAmountWithoutTax);r.costAmount=r.modifyAmountWithoutTax;});
+  return list;}
+const DB={ADJ20260916001:gen(23,-221.15,{5:2,14:2,20:0}),ADJ20260917004:gen(6,-57.20,{}),ADJ20260917009:[]};
+const agg=l=>({count:l.length,totalAmount:r2(l.reduce((a,r)=>a+(r.modifyTotalAmount??0),0)),totalAmountWithoutTax:r2(l.reduce((a,r)=>a+(r.modifyAmountWithoutTax??0),0)),
+  totalTax:r2(l.reduce((a,r)=>a+(r.modifyTax??0),0)),costAmount:r2(l.reduce((a,r)=>a+(r.costAmount??0),0))});
+const failedOnce={};
+function getDetails({adjustId,bizNo,page,onlyAbnormal},failFirst){
+  const delay=300+Math.random()*500;
+  return new Promise((res,rej)=>setTimeout(()=>{
+    if(failFirst&&!failedOnce[adjustId]){failedOnce[adjustId]=1;return rej(new Error('500'));}
+    const all=DB[adjustId]||[];let f=bizNo?all.filter(r=>r.bizNo===bizNo):all; if(onlyAbnormal) f=f.filter(r=>r.auditStatus!==1);
+    const S=agg(all);
+    res({records:f.slice((page-1)*PAGE,page*PAGE),total:f.length,
+      summary:{totalCount:S.count,totalAmount:S.totalAmount,totalAmountWithoutTax:S.totalAmountWithoutTax,totalTax:S.totalTax,costAmount:S.costAmount,abnormalCount:all.filter(r=>r.auditStatus!==1).length},
+      filterSummary:bizNo?agg(f):null});
+  },delay));
+}
+
+// ---- 状态 ----
+let dw=null;              // 当前抽屉 {rowId,page,bizNo,onlyAbnormal,state,data,seq,busy}
+const cache=new Map();    // BR-06
+let epoch=0;
+const canOpen=r=>r.deductionType===1&&!!r.adjustId&&r.billSource!=null; // BR-01
+const key=(r,o)=>`${r.billSource}|${r.adjustId}|${o.page}|${o.bizNo}|${o.onlyAbnormal}`;
+let visible=[];
+
+function render(){
+  const q=document.getElementById('qBiz').value.trim(),qs=document.getElementById('qStore').value.trim();
+  visible=rows.filter(r=>(!q||r.bizNo.includes(q))&&(!qs||'SG01-B'.includes(qs)));
+  document.getElementById('cnt').textContent=visible.length;
+  document.getElementById('tb').innerHTML=visible.map(r=>{
+    const ok=canOpen(r);
+    return `<tr class="${dw&&dw.rowId===r.rowId?'cur':''}">
+      <td>${r.type}${ok?'<span class="mini">票扣</span>':''}<br>${ok?`<a class="minor bizlink" href="javascript:void(0)" onclick="openDrawer('${r.rowId}')">${r.bizNo}</a>`:`<span class="minor">${r.bizNo}</span>`}</td>
+      <td>${r.cls}</td><td>${r.store}</td><td>${r.cat?ADJ_TYPE[r.cat]:''}</td><td></td>
+      <td class="r">${fmt(r.plan)}</td><td class="r">${fmt(r.set)}</td><td class="r">${fmt(r.prepaid)}</td><td class="r">${fmt(r.pay)}</td>
+      <td>${r.c}</td><td>${r.f}</td></tr>`;}).join('');
+  renderDrawer();
+}
+const openable=()=>visible.filter(canOpen);   // BR-10
+
+function renderDrawer(){
+  const el=document.getElementById('drawer'),mk=document.getElementById('mask');
+  if(!dw){el.classList.remove('on');mk.classList.remove('on');return;}
+  el.classList.add('on');mk.classList.add('on');
+  const r=rows.find(x=>x.rowId===dw.rowId),list=openable(),n=list.findIndex(x=>x.rowId===r.rowId)+1,N=list.length;
+  el.innerHTML=`<div class="drawer-hd"><h2 id="dwTitle">票扣调整单 SKU 明细<small>${r.adjustId}</small></h2>
+    <div class="nav">${N>1?`<button class="btn sm" ${n<=1?'disabled':''} onclick="step(-1)">‹ 上一张</button><span>${n} / ${N}</span><button class="btn sm" ${n>=N?'disabled':''} onclick="step(1)">下一张 ›</button>`:''}
+    <button class="x" aria-label="关闭" onclick="closeDrawer()">×</button></div></div>
+    <div class="drawer-bd">${body(r,dw)}</div>`;
+}
+function info(r,o){const d=o.data;return `<div class="info"><span>票扣单号 <b>${r.ticketNo}</b></span><span>调整类型 <b>${ADJ_TYPE[r.cat]}</b></span><span>共 <b>${d?d.summary.totalCount:'…'}</b> 条 SKU</span></div>`;}
+const jumpLink=r=>`<button class="link" onclick="jump('${r.rowId}')">查看票扣单详情 ↗</button>`;
+function checkBar(r,d){
+  const S=d.summary,diff=r2(S.totalAmount-r.set),F=d.filterSummary;
+  return `<div class="chk"><span><span class="k">本行结算金额</span><span class="v">${fmt(r.set)}</span></span>
+    <span><span class="k">SKU 含税合计</span><span class="v">${fmt(S.totalAmount)}</span></span>
+    <span><span class="k">差额</span><span class="v ${diff?'diff':'ok'}">${fmt(diff)}</span></span>
+    <span><span class="k">不含税</span><span class="v">${fmt(S.totalAmountWithoutTax)}</span></span>
+    <span><span class="k">税额</span><span class="v">${fmt(S.totalTax)}</span></span>
+    <span><span class="k">成本</span><span class="v">${fmt(S.costAmount)}</span></span></div>
+    ${F&&F.count?`<div class="chk f"><span class="k">筛选结果 ${F.count} 条</span><span><span class="k">含税</span><span class="v">${fmt(F.totalAmount)}</span></span><span><span class="k">不含税</span><span class="v">${fmt(F.totalAmountWithoutTax)}</span></span><span><span class="k">税额</span><span class="v">${fmt(F.totalTax)}</span></span></div>`:''}`;
+}
+function body(r,o){
+  if(o.state==='loading') return `${info(r,o)}<div class="sk"><i style="width:60%"></i><i></i><i></i><i></i><i style="width:80%"></i></div>`;
+  if(o.state==='error') return `${info(r,o)}<div class="tools"><span></span><div class="r2">${jumpLink(r)}</div></div><div class="err">明细加载失败 &nbsp;<button class="btn sm" onclick="load()">重试</button></div>`;
+  const d=o.data,S=d.summary;
+  if(S.totalCount===0) return `${info(r,o)}${checkBar(r,d)}<div class="tools"><span></span><div class="r2">${jumpLink(r)}</div></div><div class="empty">该调整单暂无 SKU 明细</div>`;
+  const pages=Math.max(1,Math.ceil(d.total/PAGE));
+  const trs=d.records.map(x=>`<tr>
+    <td class="fx1">${x.sourceType==='1'?'采购单':'退货单'}</td><td class="fx2">${x.bizNo}</td>
+    <td class="fx3">${x.productName}<br><span class="minor">${x.productId}</span></td>
+    <td class="r">${fmt(x.modifyTotalAmount)}</td><td class="r">${fmt(x.modifyAmountWithoutTax)}</td><td class="r">${fmt(x.modifyTax)}</td>
+    <td><span class="st st${x.auditStatus}">${['未计算','成功','失败'][x.auditStatus]}</span></td>
+    <td>${x.memo?`<span class="memo" title="${x.memo}">${x.memo}</span>`:''}</td>
+    <td>${x.storeEbsCode}</td><td>${x.sourceTime}</td><td>${x.invoiceType===1?'普票':'专票'}</td><td class="r">${(x.taxRate*100).toFixed(0)}%</td><td>${x.skuFmsName||'-'}</td></tr>`).join('');
+  return `${info(r,o)}${checkBar(r,d)}
+    ${S.abnormalCount>0?`<div class="warn">⚠ 有 ${S.abnormalCount} 条明细未计算或计算失败，SKU 合计不完整，差额可能由此产生 <button class="link" style="margin-left:10px" onclick="jump('${r.rowId}')">去票扣单详情处理 ↗</button></div>`:''}
+    <div class="tools"><div class="l"><input id="fBiz" type="search" placeholder="单据编号" value="${o.bizNo}" onkeydown="if(event.key==='Enter')filter()" oninput="if(!this.value&&dw.bizNo)filter()">
+        <button class="btn sm pri" onclick="filter()">查询</button>
+        <label class="sw ${S.abnormalCount?'':'dis'}"><input type="checkbox" ${o.onlyAbnormal?'checked':''} onchange="setAbn(this.checked)">只看异常</label></div>
+      <div class="r2"><button class="btn sm" onclick="exportDetail()">导出明细</button>${jumpLink(r)}</div></div>
+    ${!d.records.length?`<div class="empty">没有匹配「${o.bizNo||'异常'}」的明细 &nbsp;<button class="link" onclick="clearFilter()">清除筛选</button></div>`:
+    `<div class="inner">${o.busy?'<div class="mask"><span class="spin"></span>加载中…</div>':''}<table>
+      <thead><tr><th class="fx1">单据类型</th><th class="fx2">单据编号</th><th class="fx3">商品名称/编号</th><th class="r">含税金额</th><th class="r">不含税金额</th><th class="r">税额</th><th>计算状态</th><th>异常原因</th><th>仓库核算编码</th><th>完成时间</th><th>建议发票类型</th><th class="r">税率</th><th>核算分类</th></tr></thead>
+      <tbody>${trs}</tbody></table></div>`}
+    ${d.total>PAGE?`<div class="pager"><span class="minor">共 ${d.total} 条</span>
+      <button class="pg" ${o.page<=1?'disabled':''} onclick="go(${o.page-1})">‹</button>
+      ${Array.from({length:pages},(_,i)=>`<button class="pg ${i+1===o.page?'on':''}" onclick="go(${i+1})">${i+1}</button>`).join('')}
+      <button class="pg" ${o.page>=pages?'disabled':''} onclick="go(${o.page+1})">›</button></div>`:''}`;
+}
+
+// BR-06：只采纳最新请求；关闭/切换即作废在途请求
+async function load(prev){
+  const o=dw,r=rows.find(x=>x.rowId===o.rowId),k=key(r,o);
+  if(cache.has(k)){o.data=cache.get(k);o.state='ok';o.busy=false;return renderDrawer();}
+  const seq=++o.seq,ep=epoch;
+  if(o.data&&o.state==='ok') o.busy=true; else o.state='loading';
+  renderDrawer();
+  const stale=()=>ep!==epoch||dw!==o||seq!==o.seq;
+  try{const d=await getDetails({adjustId:r.adjustId,billSource:r.billSource,bizNo:o.bizNo,page:o.page,onlyAbnormal:o.onlyAbnormal},r.failFirst);
+    if(stale())return; cache.set(k,d);o.data=d;o.state='ok';o.busy=false;}
+  catch(e){ if(stale())return; if(o.data&&o.state==='ok'&&prev){Object.assign(o,prev);o.busy=false;toast('加载失败，请重试',true);} else o.state='error'; }
+  renderDrawer();
+}
+const snap=o=>({page:o.page,bizNo:o.bizNo,onlyAbnormal:o.onlyAbnormal});
+function openDrawer(id){epoch++;dw={rowId:id,page:1,bizNo:'',onlyAbnormal:false,state:'loading',seq:0};render();load();}
+function closeDrawer(){epoch++;dw=null;render();}
+function step(d){const l=openable(),i=l.findIndex(x=>x.rowId===dw.rowId)+d;if(l[i])openDrawer(l[i].rowId);}
+function go(p){const pv=snap(dw);dw.page=p;load(pv);}
+function filter(){const pv=snap(dw);dw.bizNo=document.getElementById('fBiz').value.trim();dw.page=1;load(pv);}   // BR-09
+function clearFilter(){const pv=snap(dw);dw.bizNo='';dw.onlyAbnormal=false;dw.page=1;load(pv);}
+function setAbn(v){const pv=snap(dw);dw.onlyAbnormal=v;dw.page=1;load(pv);}
+function parentQuery(){cache.clear();render();}
+function parentReset(){document.getElementById('qBiz').value='';document.getElementById('qStore').value='';cache.clear();render();}
+let tt;function toast(html,err){const e=document.getElementById('toast');e.innerHTML=html;e.className='toast'+(err?' e':'');e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',3000);}
+function exportDetail(){toast('导出成功<a href="javascript:void(0)" onclick="toast(\'新标签页打开：下载中心\')">去下载中心 ↗</a>');}
+function jump(id){const r=rows.find(x=>x.rowId===id);toast(`新标签页打开：/payable/purchase/ticket-deduction/detail?adjustId=${r.adjustId}&billSource=${r.billSource}`);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dw)closeDrawer();});
+render();
+</script>
+</body>
+</html>
