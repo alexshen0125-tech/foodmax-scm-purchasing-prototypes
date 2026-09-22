@@ -47,7 +47,7 @@
   /* 逐日链式演算（送货盘点 / 在仓预送库存 / 备货参考 / 打印标签 的唯一数据源）
      每天每仓一张送货单，一个 SKU 在一天里走完整条账：
        期初在仓 → 应送(BR-15b 已扣期初) → 实收(可短收/多收) → 卖出(受配额封顶) → 期末在仓
-     账必须平：期末在仓 = 期初在仓 + 实收 − 卖出 */
+     账必须平：期末在仓 = 期初在仓 + 实收 − 仓库实出（在仓是实物，以仓库实际出库为准；实出 < 卖出 = 仓库少发） */
   const AUD_DAYS=['2026-08-30','2026-08-29','2026-08-28','2026-08-27','2026-08-26','2026-08-25','2026-08-24'];
   function buildAudit(){
     const psOn=(typeof presendOn=='function')&&presendOn();
@@ -71,10 +71,11 @@
           const stock=open+received;                                           // 当天仓里能动的货
           const demand=orderQty+Math.round(psQty*(0.35+hnum(sd+'ra',70)/100)); // 当日真实需求
           const sold=Math.min(stock,demand,quota);
-          const close=stock-sold;                                              // 期末在仓
+          const outQty=hnum(sd+'ot',10)<1?Math.max(0,sold-(1+hnum(sd+'os',2))):sold; // 仓库实际出库（约 1/10 少发）
+          const close=stock-outQty;                                            // 期末在仓（按实出扣）
           carry[key]=close;
           return {sku:r.sku,name:r.name,unit:r.unit,spec:r.spec,orderQty,psQty,
-                  open,planned,received,sold,close,
+                  open,planned,received,sold,out:outQty,close,
                   short:Math.max(0,planned-received),over:Math.max(0,received-planned)};
         });
         docs.push({no:'SH'+d.replace(/-/g,'')+String(++seq).padStart(3,'0'),date:d,wh,lines});
@@ -91,7 +92,7 @@
       if(l.close<=0)return;          // 已清零的不进在仓列表
       const hold=1+hnum(l.sku+'d',3);
       rows.push({sku:l.sku,name:l.name,unit:l.unit,spec:l.spec,wh:d.wh,inDate:AUD_DAYS[0],
-        open:l.open,sent:l.planned,recv:l.received,sold:l.sold,over:l.over,left:l.close,
+        open:l.open,sent:l.planned,recv:l.received,sold:l.sold,out:l.out,over:l.over,left:l.close,
         hold,shelfLeft:hold+1+hnum(l.sku+'e',5),
         nextNeed:Math.max(2,Math.round(l.orderQty*(0.7+hnum(l.sku+d.wh+'no',70)/100))),returning:false});
     }));
@@ -166,9 +167,9 @@
         <tr><td style="width:42%;color:var(--ts)">入仓日期</td><td>${r.inDate}</td></tr>
         <tr><td style="color:var(--ts)">期初在仓（前一日结转）</td><td>${r.open} ${r.unit}</td></tr>
         <tr><td style="color:var(--ts)">当日应送 / 实收</td><td>${r.sent} / ${r.recv} ${r.unit}</td></tr>
-        <tr><td style="color:var(--ts)">当日已售</td><td>${r.sold} ${r.unit}</td></tr>
+        <tr><td style="color:var(--ts)">当日已售 / 仓库实出</td><td>${r.sold} / ${r.out} ${r.unit}</td></tr>
         <tr><td style="color:var(--ts)">当日多收（送多照收）</td><td>${r.over?`<span style="color:var(--gold)">+${r.over}</span> ${r.unit}`:'<span style="color:var(--tt)">—</span>'}</td></tr>
-        <tr><td style="color:var(--ts)"><b>在仓剩余</b></td><td><b>${r.left}</b> ${r.unit} <span style="font-size:12px;color:var(--ts)">= 期初 ${r.open} + 实收 ${r.recv} − 已售 ${r.sold}${r.over?'（实收含多收 '+r.over+'）':''}，与「送货盘点」期末在仓同一个数</span></td></tr>
+        <tr><td style="color:var(--ts)"><b>在仓剩余</b></td><td><b>${r.left}</b> ${r.unit} <span style="font-size:12px;color:var(--ts)">= 期初 ${r.open} + 实收 ${r.recv} − 仓库实出 ${r.out}${r.over?'（实收含多收 '+r.over+'）':''}，与「送货盘点」期末在仓同一个数</span></td></tr>
         <tr><td style="color:var(--ts)">已留仓</td><td>${r.hold} 天</td></tr>
         <tr><td style="color:var(--ts)">剩余保质期</td><td>${r.shelfLeft<=2?`<span style="color:var(--r)">${r.shelfLeft} 天</span>`:`${r.shelfLeft} 天`}</td></tr>
       </tbody></table>
@@ -251,7 +252,7 @@
   window.ensurePsAudit=function(){ensurePresend();};   // 数据在 ensurePresend 里由 buildAudit 一次建好
   const sum=(arr,f)=>arr.reduce((a,x)=>a+f(x),0);
   function docTotals(d){return {open:sum(d.lines,l=>l.open),planned:sum(d.lines,l=>l.planned),
-    received:sum(d.lines,l=>l.received),sold:sum(d.lines,l=>l.sold),close:sum(d.lines,l=>l.close),
+    received:sum(d.lines,l=>l.received),sold:sum(d.lines,l=>l.sold),out:sum(d.lines,l=>l.out),close:sum(d.lines,l=>l.close),
     short:sum(d.lines,l=>l.short),over:sum(d.lines,l=>l.over)};}
   function docTag(t){
     if(t.short)return '<span class="tag t-r"><span class="dot"></span>有短收</span>';
@@ -273,7 +274,7 @@
       const days=r.days.slice().sort((a,b)=>b.date.localeCompare(a.date));
       return {...r,days,
         planned:sum(days,x=>x.planned),received:sum(days,x=>x.received),
-        sold:sum(days,x=>x.sold),short:sum(days,x=>x.short),over:sum(days,x=>x.over),
+        sold:sum(days,x=>x.sold),out:sum(days,x=>x.out),short:sum(days,x=>x.short),over:sum(days,x=>x.over),
         left:days[0]?days[0].close:0};     // 当前在仓 = 最近一天的期末在仓
     });
     if(f.kw)rows=rows.filter(r=>r.name.includes(f.kw)||r.sku.includes(f.kw));
@@ -311,15 +312,18 @@
         <tr><td style="color:var(--ts)">短收</td><td>${t.short?`<span style="color:var(--r)">−${t.short}</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>
         <tr><td style="color:var(--ts)">多收</td><td>${t.over?`<span style="color:var(--gold)">+${t.over}</span> <span style="font-size:12px;color:var(--ts)">已入在仓寄存，当日不参与售卖</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>
         <tr><td style="color:var(--ts)">当日卖出</td><td>${t.sold}</td></tr>
-        <tr><td style="color:var(--ts)"><b>期末在仓</b></td><td><b style="color:${t.close?'var(--gold)':'var(--ts)'}">${t.close}</b> <span style="font-size:12px;color:var(--ts)">= 期初 ${t.open} + 实收 ${t.received} − 卖出 ${t.sold}，明日优先消耗</span></td></tr>
+        <tr><td style="color:var(--ts)">仓库实出</td><td>${t.out}${t.out!==t.sold?` <span style="font-size:12px;color:var(--r)">比卖出少发 ${t.sold-t.out}，未出库的货仍在仓</span>`:''}</td></tr>
+        <tr><td style="color:var(--ts)"><b>期末在仓</b></td><td><b style="color:${t.close?'var(--gold)':'var(--ts)'}">${t.close}</b> <span style="font-size:12px;color:var(--ts)">= 期初 ${t.open} + 实收 ${t.received} − 仓库实出 ${t.out}，明日优先消耗</span></td></tr>
       </tbody></table>
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">逐 SKU 明细</h4>
-      <table><thead><tr><th>商品</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
+      <table><thead><tr><th>商品</th><th>送货类型</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
         ${d.lines.map(l=>`<tr><td><b>${l.name}</b><div style="font-size:11px;color:var(--ts)">订单 ${l.orderQty}${l.psQty?` · <span style="color:var(--gold)">预送 ${l.psQty}</span>`:''}${l.open?` · <span style="color:var(--g)">抵扣在仓 −${l.open}</span>`:''}</div></td>
+          <td>${l.psQty?'<span class="tag t-y">预测送货</span>':'<span class="tag t-g">实际送货</span>'}</td>
           <td style="text-align:right;color:var(--ts)">${l.open||'—'}</td>
           <td style="text-align:right">${l.planned}</td><td style="text-align:right">${l.received}</td>
           <td style="text-align:right">${l.short?`<span style="color:var(--r)">−${l.short}</span>`:(l.over?`<span style="color:var(--gold)">+${l.over}</span>`:'<span style="color:var(--tt)">0</span>')}</td>
           <td style="text-align:right;color:var(--ts)">${l.sold}</td>
+          <td style="text-align:right">${l.out!==l.sold?`<b style="color:var(--r)">${l.out}</b><div style="font-size:11px;color:var(--r)">少发 ${l.sold-l.out}</div>`:`<span style="color:var(--ts)">${l.out}</span>`}</td>
           <td style="text-align:right"><b style="color:${l.close?'var(--gold)':'var(--ts)'}">${l.close}</b></td></tr>`).join('')}
       </tbody></table>
     </div>
@@ -339,18 +343,20 @@
       <span class="x" onclick="closeDrawer()">×</span></div>
     <div class="drawer-bd">
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">每日送货明细</h4>
-      <table style="margin-bottom:22px"><thead><tr><th>送货日</th><th>送货单</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
+      <table style="margin-bottom:22px"><thead><tr><th>送货日</th><th>送货单</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
         ${r.days.map(x=>`<tr><td>${x.date}</td><td class="mono" style="font-size:12px">${x.no}</td>
           <td style="text-align:right;color:var(--ts)">${x.open||'—'}</td>
           <td style="text-align:right">${x.planned}<div style="font-size:11px;color:var(--ts)">订单 ${x.orderQty}${x.psQty?` · 预送 ${x.psQty}`:''}${x.open?` · <span style="color:var(--g)">−${x.open}</span>`:''}</div></td>
           <td style="text-align:right">${x.received}</td>
           <td style="text-align:right">${x.short?`<span style="color:var(--r)">−${x.short}</span>`:(x.over?`<span style="color:var(--gold)">+${x.over}</span>`:'<span style="color:var(--tt)">0</span>')}</td>
           <td style="text-align:right;color:var(--ts)">${x.sold}</td>
+          <td style="text-align:right">${x.out!==x.sold?`<b style="color:var(--r)">${x.out}</b><div style="font-size:11px;color:var(--r)">少发 ${x.sold-x.out}</div>`:`<span style="color:var(--ts)">${x.out}</span>`}</td>
           <td style="text-align:right"><b style="color:${x.close?'var(--gold)':'var(--ts)'}">${x.close}</b></td></tr>`).join('')}
         <tr style="background:#F7FBF8"><td colspan="3" style="font-weight:600">合计</td>
           <td style="text-align:right;font-weight:600">${r.planned}</td><td style="text-align:right;font-weight:600">${r.received}</td>
           <td style="text-align:right;font-weight:600">${r.short?`<span style="color:var(--r)">−${r.short}</span>`:''}${r.over?`<span style="color:var(--gold)"> +${r.over}</span>`:''}${(!r.short&&!r.over)?'0':''}</td>
           <td style="text-align:right;font-weight:600">${r.sold}</td>
+          <td style="text-align:right;font-weight:600;${r.out!==r.sold?'color:var(--r)':''}">${r.out}</td>
           <td style="text-align:right;font-weight:600;color:${r.left?'var(--gold)':''}">${r.left}</td></tr>
       </tbody></table>
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">今天该送多少</h4>
@@ -386,10 +392,11 @@
       <td style="text-align:right">${t.short?`<span style="color:var(--r)">−${t.short}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right">${t.over?`<span style="color:var(--gold)">+${t.over}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right;color:var(--ts)">${t.sold}</td>
+      <td style="text-align:right">${t.out!==t.sold?`<b style="color:var(--r)">${t.out}</b><div style="font-size:11px;color:var(--r)">少发 ${t.sold-t.out}</div>`:`<span style="color:var(--ts)">${t.out}</span>`}</td>
       <td style="text-align:right"><b style="color:${t.close?'var(--gold)':'var(--ts)'}">${t.close}</b></td>
       <td>${docTag(t)}</td>
       <td><button class="btn btn-sm btn-link" onclick="event.stopPropagation();paDocDrawer('${d.no}')">明细</button></td></tr>`;}).join('')
-      : `<tr><td colspan="13"><div class="empty"><div class="e-ic">${icon('🚚')}</div><div class="e-t">该日无送货单</div><div class="e-s">换个送货日或仓库再看看</div></div></td></tr>`;
+      : `<tr><td colspan="14"><div class="empty"><div class="e-ic">${icon('🚚')}</div><div class="e-t">该日无送货单</div><div class="e-s">换个送货日或仓库再看看</div></div></td></tr>`;
 
     const skuBody=sRows.length?sRows.map(r=>{const key=r.sku+'|'+r.wh,ts=todayShouldOf(r);
       return `<tr onclick="paSkuDrawer('${key}')" style="cursor:pointer">
@@ -409,8 +416,8 @@
       <b>送货盘点</b>：盘每天<b>送了多少、仓库收了多少、差多少</b>。两个维度看同一批数据——
       <b>按送货单</b>看某天某仓这一单的收货结果，<b>按 SKU</b> 看某个品逐日的送货明细。
       ${(typeof presendOn=='function'&&presendOn())
-        ?'一天的账这样走：<b>期初在仓 → 应送（订单 + 预送 − 期初在仓）→ 仓库实收 → 卖出 → 期末在仓</b>，账必平：<b>期末在仓 = 期初在仓 + 实收 − 卖出</b>。期末在仓就是明天的期初，<b>明天的应送先把它扣掉</b>，不用重复送。<br><b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，当天不参与售卖，直接进在仓剩余。'
-        :'一天的账这样走：<b>期初在仓 → 应送 → 仓库实收 → 卖出 → 期末在仓</b>，账必平：期末在仓 = 期初在仓 + 实收 − 卖出。<b>短收</b>按实收计；<b>多收</b>仓库照收不设上限，直接进在仓剩余，次日优先抵扣。'}</div></div>
+        ?'一天的账这样走：<b>期初在仓 → 应送（订单 + 预送 − 期初在仓）→ 仓库实收 → 卖出 → 仓库实出 → 期末在仓</b>，账必平：<b>期末在仓 = 期初在仓 + 实收 − 仓库实出</b>（实出少于卖出 = 仓库少发，货仍在仓）。期末在仓就是明天的期初，<b>明天的应送先把它扣掉</b>，不用重复送。<br><b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，当天不参与售卖，直接进在仓剩余。'
+        :'一天的账这样走：<b>期初在仓 → 应送 → 仓库实收 → 卖出 → 仓库实出 → 期末在仓</b>，账必平：期末在仓 = 期初在仓 + 实收 − 仓库实出。<b>短收</b>按实收计；<b>多收</b>仓库照收不设上限，直接进在仓剩余，次日优先抵扣。'}</div></div>
 
     <div class="card" style="margin-bottom:14px">
       <div class="card-hd"><h3>送收对账</h3><span class="sub">${tab=='doc'?(f.day||'全部日期'):'近 '+AUD_DAYS.length+' 天累计'}${f.wh?' · '+f.wh:''}</span></div>
@@ -450,7 +457,7 @@
       <thead><tr><th>送货日</th><th>送货单号</th><th>入库仓库</th><th>SKU 数</th>
         <th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">仓库实收</th>
         <th style="text-align:right">短收</th><th style="text-align:right">多收</th>
-        <th style="text-align:right">卖出</th><th style="text-align:right">期末在仓</th><th>结果</th><th style="width:90px">操作</th>
+        <th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th><th>结果</th><th style="width:90px">操作</th>
       </tr></thead><tbody>${docBody}</tbody></table>`
     :`<table>
       <thead><tr><th>商品</th><th>规格</th><th>入库仓库</th><th>送货天数</th>
