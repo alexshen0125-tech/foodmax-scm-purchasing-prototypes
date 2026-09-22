@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>平台资金中心</title>
+<style>
+:root{--pri:#1677ff;--bd:#f0f0f0;--bd2:#d9d9d9;--tx:#1f1f1f;--tx2:#595959;--tx3:#8c8c8c;--bg:#f5f5f5;--err:#ff4d4f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.5715 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--tx);background:var(--bg)}
+.layout{display:flex;height:100vh}
+.side{width:208px;background:#001529;color:rgba(255,255,255,.65);overflow:auto;flex-shrink:0}
+.logo{height:56px;display:flex;align-items:center;padding:0 20px;color:#fff;font-size:15px;font-weight:600;border-bottom:1px solid rgba(255,255,255,.08)}
+.grp{padding:14px 20px 4px;font-size:12px;color:rgba(255,255,255,.45)}
+.mi{padding:0 16px 0 32px;height:36px;line-height:36px;cursor:pointer;position:relative}
+.mi:hover{color:#fff}.mi.on{background:var(--pri);color:#fff}
+.mi .badge{position:absolute;right:14px;top:9px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.hd{height:56px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--bd);flex-shrink:0}
+.crumb{color:var(--tx3)}.crumb b{color:var(--tx);font-weight:500}
+.hd-r{display:flex;align-items:center;gap:16px}
+.content{flex:1;overflow:auto;padding:16px 24px 48px}
+.card{background:#fff;border-radius:8px;padding:16px 20px;margin-bottom:16px}
+.card-t{font-size:14px;font-weight:600;margin-bottom:12px}
+.filters{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.fi label{color:var(--tx2);margin-right:8px}
+.ipt{height:32px;border:1px solid var(--bd2);border-radius:6px;padding:0 10px;font:inherit;min-width:160px;background:#fff;color:var(--tx)}
+textarea.ipt{height:72px;padding:6px 10px;width:100%;resize:vertical}
+.btn{height:32px;padding:0 15px;border-radius:6px;border:1px solid var(--bd2);background:#fff;cursor:pointer;font:inherit;color:var(--tx);white-space:nowrap}
+.btn:hover{color:var(--pri);border-color:var(--pri)}
+.btn.p{background:var(--pri);border-color:var(--pri);color:#fff}.btn.p:hover{opacity:.88;color:#fff}
+.btn.d{color:var(--err);border-color:var(--err)}
+.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+.link{color:var(--pri);cursor:pointer;margin-right:12px;white-space:nowrap}
+.link.d{color:var(--err)}
+.toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.toolbar .sp{flex:1}
+.tbl-wrap{overflow:auto;border:1px solid var(--bd);border-radius:8px}
+table.t{width:100%;border-collapse:collapse;white-space:nowrap}
+.t th{background:#fafafa;font-weight:500;text-align:left;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.t td{padding:9px 12px;border-bottom:1px solid var(--bd);background:#fff}
+.t tr:last-child td{border-bottom:none}
+.t tr:hover td{background:#fafafa}
+.t .num{text-align:right;font-variant-numeric:tabular-nums}
+.t .op{position:sticky;right:0;box-shadow:-4px 0 6px -4px rgba(0,0,0,.08)}
+.t th.op{background:#fafafa}
+.t tr.total td{background:#fafafa;font-weight:600}
+.empty{padding:36px;text-align:center;color:var(--tx3)}
+.tag{display:inline-block;padding:0 7px;line-height:20px;border-radius:4px;font-size:12px;border:1px solid;white-space:nowrap}
+.tag.blue{color:#0958d9;background:#e6f4ff;border-color:#91caff}.tag.green{color:#389e0d;background:#f6ffed;border-color:#b7eb8f}.tag.orange{color:#d46b08;background:#fff7e6;border-color:#ffd591}.tag.red{color:#cf1322;background:#fff1f0;border-color:#ffa39e}.tag.gray{color:#595959;background:#fafafa;border-color:#d9d9d9}.tag.purple{color:#531dab;background:#f9f0ff;border-color:#d3adf7}
+.pos{color:#389e0d}.neg{color:#cf1322}
+.tabs{display:flex;gap:28px;border-bottom:1px solid var(--bd);margin-bottom:12px}
+.tab{padding:8px 0;cursor:pointer;color:var(--tx2)}.tab.on{color:var(--pri);border-bottom:2px solid var(--pri);margin-bottom:-1px}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:780px;max-width:96vw;background:#fff;z-index:101;display:none;flex-direction:column;box-shadow:-6px 0 16px rgba(0,0,0,.08)}
+.dr-h{height:56px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);font-size:15px;font-weight:600;flex-shrink:0}
+.dr-b{flex:1;overflow:auto;padding:20px 24px}
+.dr-f{padding:12px 24px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.dr-f:empty{display:none}
+.x{cursor:pointer;color:var(--tx3);font-size:18px;font-weight:400}
+.mask2{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:102;display:none}
+.modal{position:fixed;top:8vh;left:50%;transform:translateX(-50%);width:640px;max-width:94vw;background:#fff;border-radius:8px;z-index:103;display:none;flex-direction:column;max-height:84vh}
+.desc{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.desc>div{display:grid;grid-template-columns:120px 1fr;border-bottom:1px solid var(--bd)}
+.desc dt{background:#fafafa;padding:8px 12px;color:var(--tx2)}.desc dd{padding:8px 12px;word-break:break-all}
+.sec{font-weight:600;margin:20px 0 10px}
+.sec:first-child{margin-top:0}
+.fr{margin-bottom:14px}.fr>label{display:block;margin-bottom:6px;color:var(--tx2)}.fr .req:before{content:"* ";color:var(--err)}
+.fr .ipt{width:100%}
+.fr .val{padding:5px 0}
+.chain{padding-left:8px}
+.chain .node{position:relative;padding:0 0 14px 20px;border-left:2px solid var(--bd2)}
+.chain .node:last-child{border-left-color:transparent}
+.chain .node:before{content:"";position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid var(--pri)}
+.chain .node.cur:before{background:var(--pri)}
+.chain .nt{color:var(--tx3);font-size:12px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.14);padding:9px 16px;border-radius:8px;z-index:300;display:none;max-width:70vw}
+.dd{position:relative}
+.dd-menu{position:absolute;right:0;top:38px;background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.14);border-radius:8px;padding:4px;display:none;z-index:60;min-width:290px}
+.dd-menu div{padding:7px 12px;border-radius:4px;cursor:pointer}
+.dd-menu div:hover{background:#f5f5f5}
+.dd-menu .dt{color:var(--tx3);font-size:12px;cursor:default;padding:6px 12px 2px}
+.dd-menu .dt:hover{background:none}
+.badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--err);color:#fff;font-size:12px;line-height:18px;text-align:center}
+.muted{color:var(--tx3)}
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.todo{display:grid;grid-template-columns:1fr auto;padding:9px 0;border-bottom:1px solid var(--bd);cursor:pointer}
+.todo:last-child{border-bottom:none}
+.todo:hover{color:var(--pri)}
+.chk{width:14px;height:14px;vertical-align:middle;cursor:pointer}
+.radio{margin-right:18px;cursor:pointer}
+.radio input{margin-right:6px;vertical-align:middle}
+.check-line{margin-top:10px}
+.eq{background:#fafafa;border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin-top:8px;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="side" id="side"></div>
+  <div class="main">
+    <div class="hd">
+      <div class="crumb" id="crumb"></div>
+      <div class="hd-r">
+        <div class="dd"><button class="btn" onclick="toggleDD(event)">模拟外部事件 ▾</button><div class="dd-menu" id="ddm"></div></div>
+        <span class="muted" id="clock"></span>
+        <span>资金专员 · 沈亮</span>
+      </div>
+    </div>
+    <div class="content" id="ct"></div>
+  </div>
+</div>
+<div class="mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer"><div class="dr-h"><span id="drT"></span><span class="x" onclick="closeDrawer()">✕</span></div><div class="dr-b" id="drB"></div><div class="dr-f" id="drF"></div></div>
+<div class="mask2" id="mask2"></div>
+<div class="modal" id="modal"><div class="dr-h"><span id="mdT"></span><span class="x" onclick="closeModal()">✕</span></div><div class="dr-b" id="mdB"></div><div class="dr-f" id="mdF"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ================= 工具 ================= */
+const r2=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+function fmt(n){n=r2(n);return (n<0?'-':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}
+const sn=n=>{n=r2(n);return `<span class="${n>0?'pos':n<0?'neg':''}">${n>0?'+':''}${fmt(n)}</span>`};
+const tag=(t,c='gray')=>`<span class="tag ${c}">${t}</span>`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=id=>document.getElementById(id);
+const rid=(p,n=10)=>p+Array.from({length:n},()=>'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*32)]).join('');
+let NOW=new Date('2026-09-22T14:00:00');
+const setNow=s=>{NOW=new Date(s)};
+const tick=(m=2)=>{NOW=new Date(NOW.getTime()+m*60000+Math.floor(Math.random()*50)*1000)};
+function ts(d=NOW){const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
+const toD=s=>new Date(s.replace(' ','T'));
+function addDays(s,n){const d=toD(s);d.setDate(d.getDate()+n);return ts(d)}
+function addWorkDays(s,n){const d=toD(s);while(n>0){d.setDate(d.getDate()+1);if(d.getDay()!==0&&d.getDay()!==6)n--}return ts(d)}
+const seqs={};
+function nextNo(p){seqs[p]=(seqs[p]||0)+1;return p+ts().slice(2,10).replace(/-/g,'')+String(seqs[p]).padStart(4,'0')}
+const USER='沈亮';
+
+/* ================= 数据 ================= */
+const S={flows:[],orders:[],customers:[],merchants:[],trs:[],ads:[],rfs:[],ers:[],alerts:[],claims:[],adj:[],syncLogs:[],recons:[],f:{},sel:{},tab:{},lastSync:'2026-09-21 00:00:00',water:{low:1000,target:5000},refundFee:0.13,commRate:0.15,
+  rules:[{no:'R01',name:'线上收单按订单号自动认领',scope:'交易类型=收单',cond:'系统单据编号 = 销售订单号',act:'自动认领并核销订单',on:true},
+         {no:'R02',name:'账期入金按户名+金额唯一匹配',scope:'交易类型=入金',cond:'对方户名命中客户付款户名，且金额 = 该客户某一笔未付账期订单金额（唯一）',act:'自动认领、核销、生成账期打款转清分调拨单',on:true},
+         {no:'R03',name:'账期入金按户名+未付合计匹配',scope:'交易类型=入金',cond:'对方户名命中客户付款户名，且金额 = 该客户全部未付账期订单合计',act:'自动认领、核销、生成账期打款转清分调拨单',on:true}]};
+const BK={ONL:'线上支付桶',TERM:'账期打款桶',ADV:'平台垫资桶',UNC:'待分类'};
+const BKDESC={ONL:'商家待结算（线上支付）',TERM:'商家待结算（账期打款）',ADV:'平台自有',UNC:'待归类'};
+const BIG={Payin:'收单',Transfer:'划转',Conversion:'换汇',Payout:'付款',Deposit:'入金',Adjustment:'调整',Card:'卡交易',Purchase:'采购',Fee:'费用',Charge:'扣费',Yield:'收益'};
+const TXDEF=[['Payment','收单','Payin','收入',1,'线上收款'],['Refund','退款','Payin','支出',1,'线上退款'],['Refund Reversal','退款退回','Payin','收入',1,'退款冲回'],['Refund Failure','退款失败','Payin','收入',1,'退款冲回'],
+['Payment Reserve Hold','准备金冻结','Payin','支出',1,'受限资金'],['Payment Reserve Release','准备金释放','Payin','收入',1,'受限资金'],['Dispute','拒付扣款','Payin','支出',1,'拒付'],['Dispute Reversal','拒付撤销','Payin','收入',1,'拒付'],['Dispute Lost','拒付败诉','Payin','支出',1,'拒付'],
+['Transfer','账户间划转','Transfer','按方向',1,'内部调拨'],['Conversion Sell','换汇卖出','Conversion','支出',1,'换汇'],['Conversion Buy','换汇买入','Conversion','收入',1,'换汇'],['Conversion Reversal','换汇撤销','Conversion','按方向',1,'换汇'],
+['Payout','付款','Payout','支出',1,'提现付款'],['Payout Failure','付款失败','Payout','收入',1,'付款冲回'],['Payout Reversal','付款退回','Payout','收入',1,'付款冲回'],['Deposit','入金','Deposit','收入',1,'账期回款'],['DD Credit','直接借记入账','Deposit','收入',1,'—'],['DD Debit','直接借记扣款','Deposit','支出',1,'—'],
+['DC Credit','DC 入账（待确认）','Adjustment','收入',0,'—'],['DC Debit','DC 扣款（待确认）','Adjustment','支出',0,'—'],['Issuing Authorisation Hold','发卡授权冻结','Card','支出',0,'不涉及'],['Issuing Authorisation Release','发卡授权释放','Card','收入',0,'不涉及'],['Issuing Capture','发卡请款','Card','支出',0,'不涉及'],['Issuing Refund','发卡退款','Card','收入',0,'不涉及'],['Purchase','采购','Purchase','支出',0,'不涉及']];
+S.txmap=TXDEF.map(([en,cn,big,dir,on,biz])=>({en,cn,big,dir,on:!!on,biz}));
+S.accounts=[
+ {code:'PA',name:'平台账户',awx:'payment account',id:'acct_pa_8Hk2Qm4T',kind:'平台主账户',cur:'SGD',st:'启用'},
+ {code:'HA',name:'清分账户',awx:'holding account',id:'acct_ha_3Nx7Lp9W',kind:'监管账户',cur:'SGD',st:'启用'},
+ {code:'CA',name:'平台佣金账户',awx:'connected account',id:'acct_ca_5Rt9Vw2K',kind:'平台子账户',cur:'SGD',st:'启用'},
+ {code:'FA',name:'手续费垫资账户',awx:'connected account',id:'acct_fa_2Pd6Ks8M',kind:'平台子账户',cur:'SGD',st:'启用'},
+ {code:'M1',name:'商家账户-Fresh Greens Trading',awx:'connected account',id:'acct_m1_7Qe4Hn3B',kind:'商家子账户',cur:'SGD',st:'启用'},
+ {code:'M2',name:'商家账户-Ocean Catch Seafood',awx:'connected account',id:'acct_m2_9Wd2Jc6R',kind:'商家子账户',cur:'SGD',st:'启用'},
+ {code:'M3',name:'商家账户-Prime Meat Supply',awx:'connected account',id:'acct_m3_4Lf8Tz5N',kind:'商家子账户',cur:'SGD',st:'启用'}];
+S.accounts.forEach(a=>a.entity='FOOD MAX PTE. LTD.');
+S.open={PA:0,CA:12800,FA:400,M1:5200,M2:3100,M3:2480};
+S.openB={ONL:3107,TERM:1800,ADV:0,UNC:0};
+const TRT={'账期打款转清分':{from:'PA',to:'HA',toB:'TERM'},'手续费垫资账户补资':{from:'CA',to:'FA'},'垫资提回':{from:'HA',fromB:'ADV',to:'CA'}};
+const FEE={PayNow:0.02,'卡':0.028,'支付宝':0.022,'微信':0.022};
+
+/* ================= 查找 ================= */
+const acc=c=>S.accounts.find(a=>a.code===c);
+const accName=c=>acc(c)?acc(c).name:c;
+const txm=en=>S.txmap.find(t=>t.en===en);
+const txcn=en=>txm(en)?txm(en).cn:en;
+const fl=id=>S.flows.find(f=>f.id===id);
+const ord=no=>S.orders.find(o=>o.no===no);
+const trOf=no=>S.trs.find(x=>x.no===no);
+const adOf=no=>S.ads.find(x=>x.no===no);
+const rfOf=no=>S.rfs.find(x=>x.no===no);
+const erOf=no=>S.ers.find(x=>x.no===no);
+const clOf=no=>S.claims.find(x=>x.no===no);
+const flowsOfReq=no=>S.flows.filter(f=>f.req===no);
+
+/* ================= 余额 ================= */
+const inLedger=f=>f.synced&&f.review==='正常'&&f.status==='Settled';
+const openOf=a=>a==='HA'?Object.values(S.openB).reduce((s,x)=>s+x,0):(S.open[a]||0);
+const awxBal=a=>r2(openOf(a)+S.flows.filter(f=>f.acc===a&&f.status==='Settled').reduce((s,f)=>s+f.net,0));
+const ledBal=a=>r2(openOf(a)+S.flows.filter(f=>f.acc===a&&inLedger(f)).reduce((s,f)=>s+f.net,0));
+function bucketBal(b,at){const ok=t=>!at||t<=at;return r2(S.openB[b]+S.flows.filter(f=>f.acc==='HA'&&inLedger(f)&&f.bucket===b&&ok(f.settled)).reduce((s,f)=>s+f.net,0)+S.adj.filter(j=>ok(j.time)).reduce((s,j)=>s+(j.to===b?j.amt:0)-(j.from===b?j.amt:0),0))}
+const advReserved=()=>r2(S.ads.filter(a=>a.state==='已垫入'&&a.inBucket).reduce((s,a)=>s+a.amt,0));
+const advFree=()=>r2(bucketBal('ADV')-advReserved());
+
+/* ================= 流水 ================= */
+function mkFlow(o){
+  const f=Object.assign({id:rid('ftx_',12),cur:'SGD',fee:0,status:'Settled',created:ts(),settled:'',orderNo:'',pi:'',pat:'',req:'',ref:'',method:'',cp:'',batch:'',synced:false,syncAt:'',bucket:null,hint:null,link:null,claim:'无需认领',review:'正常',note:'',src:'',srcEnt:'',err:''},o);
+  if(f.net===undefined)f.net=r2(f.gross-f.fee);
+  if(f.status==='Settled'&&!f.settled)f.settled=ts();
+  if(f.settled)f.batch='bat_'+f.settled.slice(0,10).replace(/-/g,'')+'_S01';
+  S.flows.push(f);return f;
+}
+function xfer(from,to,amt,req,o={}){
+  const tid=rid('tfr_',10);
+  mkFlow({acc:from,type:'Transfer',gross:-amt,net:-amt,req,pi:o.pi||'',orderNo:o.orderNo||'',src:tid,srcEnt:'Transfer',hint:o.fromB||null,cp:accName(to),status:o.status||'Settled',ref:o.ref||''});
+  mkFlow({acc:to,type:'Transfer',gross:amt,net:amt,req,pi:o.pi||'',orderNo:o.orderNo||'',src:tid,srcEnt:'Transfer',hint:o.toB||null,cp:accName(from),status:o.status||'Settled',ref:o.ref||''});
+}
+function validate(f){
+  const m=txm(f.type);
+  if(!m||!m.on){f.review='暂存复核';f.note='交易类型未映射或未开启入账';return}
+  if(r2(f.gross-f.fee)!==r2(f.net)){f.review='暂存复核';f.note=`金额不平：${fmt(f.gross)} − ${fmt(f.fee)} ≠ ${fmt(f.net)}`}
+}
+function post(f){
+  const r=f.req||'';
+  if(f.acc==='HA')f.bucket=f.hint||null;
+  if(r.startsWith('TR')&&trOf(r)){f.link={k:'资金调拨单',no:r};onTRFlow(trOf(r),f)}
+  else if(r.startsWith('AD')&&adOf(r)){f.link={k:'垫资单',no:r};if(f.acc==='HA')adOf(r).inBucket=true}
+  else if(r.startsWith('RF')&&rfOf(r)){f.link={k:'退款资金单',no:r}}
+  else if(r.startsWith('JS')){f.link={k:'结算单（外部）',no:r}}
+  else if(f.type==='Payment'){const o=ord(f.orderNo);if(o&&S.rules[0].on){f.link={k:'销售订单',no:o.no};f.claim='已认领';f.claimBy='R01 线上收单按订单号'}}
+  else if(f.type==='Transfer'&&f.pi){const o=S.orders.find(x=>x.pi===f.pi);if(o){f.link={k:'销售订单',no:o.no};if(f.acc==='HA')f.bucket='ONL'}}
+  else if(f.type==='Deposit'){f.claim='待认领';autoClaim(f)}
+  if(f.acc==='HA'&&!f.bucket)f.bucket='UNC';
+}
+function onTRFlow(t,f){
+  const fs=flowsOfReq(t.no);
+  if(fs.every(x=>x.synced)){
+    const out=fs.find(x=>x.net<0),inn=fs.find(x=>x.net>0);
+    t.check=(out&&inn&&r2(-out.net)===r2(t.amt)&&r2(inn.net)===r2(t.amt))?'已核对':'金额不符';
+    t.log.push([ts(),'SYSTEM','流水核对',t.check]);
+  }
+  if(t.type==='账期打款转清分'&&f.acc==='HA')returnAdvances(t);
+}
+function returnAdvances(t){
+  const c=clOf(t.basis);if(!c)return;
+  c.orders.map(ord).filter(o=>o.adv&&o.advState==='未归还').forEach(o=>{
+    S.adj.push({no:nextNo('BJ'),time:ts(),from:'TERM',to:'ADV',amt:o.amount,reason:`垫资订单 ${o.no} 回款归还`,doc:o.adv});
+    o.advState='已归还';
+    const a=adOf(o.adv);a.log.push([ts(),'SYSTEM','订单归还',`${o.no} 回款经 ${t.no} 进入清分账户，${fmt(o.amount)} 从账期打款桶调整至平台垫资桶`]);
+    updateAD(a);
+  });
+}
+function updateAD(a){
+  if(!['已垫出','部分归还'].includes(a.state))return;
+  const n=a.orders.filter(no=>ord(no).advState==='已归还').length;
+  const ns=n===a.orders.length?'已归还':n>0?'部分归还':a.state;
+  if(ns!==a.state){a.state=ns;a.log.push([ts(),'SYSTEM','状态变更',ns])}
+}
+function autoClaim(f){
+  const c=S.customers.find(c=>c.payers.some(p=>p.toUpperCase()===(f.cp||'').toUpperCase()));
+  if(!c){f.claimHint='付款户名未匹配到客户';return}
+  const un=S.orders.filter(o=>o.cust===c.name&&o.kind==='账期'&&!o.paid);
+  const hit=un.filter(o=>r2(o.amount)===r2(f.net));
+  if(hit.length===1&&S.rules[1].on)return doClaim(f,[hit[0].no],'R02 户名+金额唯一匹配',false);
+  if(un.length&&r2(un.reduce((s,o)=>s+o.amount,0))===r2(f.net)&&S.rules[2].on)return doClaim(f,un.map(o=>o.no),'R03 户名+未付合计匹配',false);
+  f.claimHint=hit.length>1?'命中多笔同额订单':'金额未匹配到未付订单';
+}
+function doClaim(f,nos,by,remember){
+  const no=nextNo('CL');const os=nos.map(ord);
+  const sum=r2(os.reduce((s,o)=>s+o.amount,0)),diff=r2(f.net-sum);
+  os.forEach(o=>{o.paid=true;o.verify='已核销';o.payTime=f.settled;o.claimNo=no});
+  f.claim='已认领';f.link={k:'认领单',no};f.claimBy=by;f.claimHint='';
+  if(remember&&os[0]){const c=S.customers.find(c=>c.name===os[0].cust);if(c&&!c.payers.some(p=>p.toUpperCase()===f.cp.toUpperCase()))c.payers.push(f.cp)}
+  const t=newTR('账期打款转清分',f.net,`认领单 ${no}：流水 ${f.id} 回款 ${fmt(f.net)} 转入清分账户`,no,'SYSTEM');
+  S.claims.push({no,flow:f.id,cust:os[0]?os[0].cust:'',orders:nos,amt:f.net,sum,diff,by,time:ts(),tr:t.no,rebate:diff!==0?'账期回扣待处理':'—'});
+  if(diff!==0)addAlert('回款金额与订单不符',`${no}：回款 ${fmt(f.net)}，订单合计 ${fmt(sum)}，差额 ${fmt(diff)} 记账期回扣待处理`,'claim','中');
+}
+
+/* ================= 单据 ================= */
+function newTR(type,amt,reason,basis,by=USER){
+  const d=TRT[type];
+  const t={no:nextNo('TR'),type,from:d.from,to:d.to,fromB:d.fromB||'',toB:d.toB||'',amt:r2(amt),reason,basis:basis||'',state:'待审批',check:'—',creator:by,created:ts(),fail:'',log:[[ts(),by,'创建',`${type} ${fmt(amt)}`]]};
+  S.trs.unshift(t);return t;
+}
+function execTR(t){
+  if(!['待执行','执行失败'].includes(t.state))return false;
+  if(t.fromB&&bucketBal(t.fromB)<t.amt){t.state='执行失败';t.fail=`${BK[t.fromB]}余额 ${fmt(bucketBal(t.fromB))} 不足`;t.log.push([ts(),USER,'执行失败',t.fail]);return false}
+  if(awxBal(t.from)<t.amt){t.state='执行失败';t.fail=`${accName(t.from)}可用余额 ${fmt(awxBal(t.from))} 不足`;t.log.push([ts(),USER,'执行失败',t.fail]);return false}
+  const real=r2(t.amt-NEXT_SHORT);NEXT_SHORT=0;
+  xfer(t.from,t.to,real,t.no,{fromB:t.fromB,toB:t.toB});
+  t.state='已完成';t.check='待核对';t.fail='';t.done=ts();
+  t.log.push([ts(),USER,'执行','已调 Airwallex 转账接口，回执成功（请求号='+t.no+'）']);
+  if(t.type==='垫资提回'){const a=S.ads.find(a=>a.tr===t.no);if(a){a.state='已提回';a.log.push([ts(),'SYSTEM','已提回',`${t.no} 执行完成`])}}
+  if(t.type==='手续费垫资账户补资')setTimeout(()=>{tryAllRF();refresh()},0);
+  return true;
+}
+function execAD(a){
+  if(a.state!=='待执行')return false;
+  if(a.src==='佣金账户转入'){
+    if(awxBal('CA')<a.amt){a.fail=`平台佣金账户余额 ${fmt(awxBal('CA'))} 不足`;a.log.push([ts(),USER,'执行失败',a.fail]);return false}
+    xfer('CA','HA',a.amt,a.no,{toB:'ADV'});
+  }else{
+    if(advFree()<a.amt){a.fail=`平台垫资桶可用 ${fmt(advFree())} 不足`;a.log.push([ts(),USER,'执行失败',a.fail]);return false}
+    a.inBucket=true;
+  }
+  a.state='已垫入';a.fail='';a.log.push([ts(),USER,'执行',a.src==='佣金账户转入'?'佣金账户 → 清分账户·平台垫资桶':'占用平台垫资桶留存余额，无资金划转']);
+  return true;
+}
+function createRF(o,amt){
+  const pay=S.flows.find(f=>f.type==='Payment'&&f.orderNo===o.no);
+  const leg1=r2(o.net*amt/o.amount),fee=S.refundFee,leg2=r2(amt-leg1+fee);
+  const r={no:nextNo('RF'),refundNo:rid('RFD',8).toUpperCase(),order:o.no,cust:o.cust,pi:o.pi,payFlow:pay.id,payAmt:o.amount,payFee:o.fee,payNet:o.net,amt:r2(amt),rfee:fee,leg1,leg2,state:'待执行',block:'',created:ts(),log:[[ts(),'SYSTEM','创建',`售后退款成功，退款 ${fmt(amt)}`]]};
+  S.rfs.unshift(r);tryRF(r);return r;
+}
+function tryRF(r){
+  if(r.state==='已完成')return;
+  const pay=fl(r.payFlow),o=ord(r.order);
+  if(pay.status!=='Settled'){r.state='待结算挂起';r.block='原收单流水未结算';return}
+  if(awxBal('FA')<r.leg2){
+    if(r.state!=='待补资'){r.log.push([ts(),'SYSTEM','挂起',`手续费垫资账户余额 ${fmt(awxBal('FA'))} < 需补 ${fmt(r.leg2)}`]);addAlert('退款资金单待补资',`${r.no} 需手续费垫资 ${fmt(r.leg2)}，手续费垫资账户余额 ${fmt(awxBal('FA'))}`,'rf','高')}
+    r.state='待补资';r.block='手续费垫资账户余额不足';checkWater();return}
+  if(awxBal('HA')<r.leg1){r.state='待执行';r.block='清分账户余额不足';return}
+  xfer('HA','PA',r.leg1,r.no,{fromB:'ONL',orderNo:o.no});
+  xfer('FA','PA',r.leg2,r.no,{orderNo:o.no});
+  mkFlow({acc:'PA',type:'Refund',gross:-r.amt,fee:r.rfee,req:r.no,orderNo:o.no,pi:o.pi,method:o.method,cp:o.cust,srcEnt:'Refund',src:rid('rfd_',10)});
+  r.state='已完成';r.block='';r.done=ts();
+  o.refunded=r2((o.refunded||0)+r.amt);o.refundLeg1=r2((o.refundLeg1||0)+r.leg1);
+  r.log.push([ts(),'SYSTEM','执行','① 清分账户→平台账户 '+fmt(r.leg1)+'；② 手续费垫资账户→平台账户 '+fmt(r.leg2)+'；③ 原路退款 '+fmt(r.amt)]);
+  S.alerts.filter(x=>x.type==='退款资金单待补资'&&x.state==='未处理'&&x.msg.startsWith(r.no)).forEach(x=>{x.state='已处理';x.by='SYSTEM：已自动执行'});
+  checkWater();
+}
+const tryAllRF=()=>S.rfs.filter(r=>r.state!=='已完成').forEach(tryRF);
+function newER(type,obj,amt,desc){
+  if(S.ers.some(e=>e.type===type&&e.obj===obj&&e.state==='待处理'))return null;
+  const e={no:nextNo('ER'),type,obj,amt:r2(amt),desc,created:ts(),deadline:addWorkDays(ts(),3),state:'待处理',way:'',closeNote:'',closed:'',recheck:''};
+  S.ers.unshift(e);return e;
+}
+function addAlert(type,msg,page,level='中'){S.alerts.unshift({no:nextNo('AL'),type,msg,page,level,time:ts(),state:'未处理',by:''})}
+function checkWater(){
+  const b=awxBal('FA'),open=S.alerts.find(x=>x.type==='手续费垫资账户低于水位'&&x.state==='未处理');
+  if(b<S.water.low&&!open)addAlert('手续费垫资账户低于水位',`当前余额 ${fmt(b)}，低水位 ${fmt(S.water.low)}，目标额 ${fmt(S.water.target)}`,'water-fill','高');
+  if(b>=S.water.low&&open){open.state='已处理';open.by='SYSTEM：水位已恢复'}
+}
+
+/* ================= 同步 ================= */
+function doSync(mode='手动',silent){
+  tick(1);
+  const from=addDays(S.lastSync,-3),to=ts();
+  let pulled=0,newc=0,dup=0,pend=0,rev=0;
+  S.flows.filter(f=>f.created>=from&&f.created<=to).forEach(f=>{
+    pulled++;
+    if(f.synced){dup++;return}
+    if(f.status==='Pending'){pend++;return}
+    f.synced=true;f.syncAt=ts();newc++;
+    validate(f);
+    if(f.review!=='正常'){rev++;return}
+    post(f);
+  });
+  S.lastSync=to;
+  S.syncLogs.unshift({no:nextNo('SY'),time:to,mode,from,to,pulled,newc,dup,pend,rev,res:'成功'});
+  checkWater();
+  if(!silent)toast(`同步完成：拉取 ${pulled} 条，新入库 ${newc - rev} 条，暂存复核 ${rev} 条，待结算跳过 ${pend} 条`);
+}
+
+/* ================= 对账 ================= */
+function reconRows(){
+  return S.accounts.filter(a=>a.st==='启用').map(a=>{const o=openOf(a.code),e=ledBal(a.code),w=awxBal(a.code);return {acc:a.code,open:o,net:r2(e-o),end:e,awx:w,diff:r2(w-e),uns:S.flows.filter(f=>f.acc===a.code&&f.status==='Settled'&&!(f.synced&&f.review==='正常')).length}});
+}
+function runRecon(silent,date){
+  tick(1);
+  const rows=reconRows(),bad=rows.filter(r=>r.diff!==0);
+  const rec={no:nextNo('RC'),date:date||ts().slice(0,10),time:ts(),rows,res:bad.length?'不平':'平',by:silent?'SYSTEM':USER};
+  S.recons.unshift(rec);
+  bad.forEach(r=>newER('余额不平',r.acc,r.diff,`${accName(r.acc)}：Airwallex 余额 ${fmt(r.awx)}，账面 ${fmt(r.end)}，差额 ${fmt(r.diff)}（未入账流水 ${r.uns} 条）`));
+  S.ers.filter(e=>e.type==='余额不平'&&e.state==='待处理').forEach(e=>{const r=rows.find(x=>x.acc===e.obj);e.recheck=r&&r.diff===0?'复对已平':'复对仍不平'});
+  if(bad.length)addAlert('余额对账不平',`${rec.no}：${bad.map(r=>accName(r.acc)).join('、')} 不平`,'recon','高');
+  if(!silent)toast(bad.length?`对账完成：${bad.length} 个账户不平，已生成差错单`:'对账完成：全部账户已平');
+  return rec;
+}
+function loopChecks(){
+  const out=[];
+  S.orders.filter(o=>o.kind==='线上').forEach(o=>{
+    const pay=S.flows.find(f=>f.type==='Payment'&&f.orderNo===o.no),outF=S.flows.find(f=>f.acc==='PA'&&f.type==='Transfer'&&f.pi===o.pi&&!f.req),inF=S.flows.find(f=>f.acc==='HA'&&f.type==='Transfer'&&f.pi===o.pi&&!f.req);
+    let res,act='—';
+    if(!pay||pay.status!=='Settled')res='待结算';else if(!outF||!inF)res='缺划转';else{act=fmt(inF.net);res=r2(inF.net)===r2(pay.net)&&r2(-outF.net)===r2(pay.net)?'一致':'不一致'}
+    out.push({key:'LP-'+o.no,kind:'收单→自动划转',doc:o.no,open:`openOrder('${o.no}')`,item:'收单净额 = 划入清分账户金额',exp:pay?fmt(pay.net):'—',act,res});
+  });
+  S.rfs.filter(r=>r.state==='已完成').forEach(r=>{
+    const fs=flowsOfReq(r.no),l1=fs.find(f=>f.acc==='HA'),l2=fs.find(f=>f.acc==='FA'),l3=fs.find(f=>f.type==='Refund');
+    const v=r2(-l1.net-l2.net+l3.gross-l3.fee);
+    out.push({key:'LP-'+r.no,kind:'退款三腿',doc:r.no,open:`openRF('${r.no}')`,item:'① + ② − 退款金额 − 退款手续费 = 0',exp:'0.00',act:fmt(v),res:v===0?'一致':'不一致'});
+  });
+  S.ads.forEach(a=>{const s=r2(a.orders.reduce((x,n)=>x+ord(n).amount,0));out.push({key:'LP-'+a.no,kind:'垫资单',doc:a.no,open:`openAD('${a.no}')`,item:'垫资金额 = Σ订单金额',exp:fmt(a.amt),act:fmt(s),res:s===a.amt?'一致':'不一致'})});
+  S.trs.filter(t=>t.state==='已完成').forEach(t=>{const fs=flowsOfReq(t.no),o=fs.find(f=>f.net<0);const v=o?r2(-o.net):0;out.push({key:'LP-'+t.no,kind:'调拨单',doc:t.no,open:`openTR('${t.no}')`,item:'调拨金额 = 实际划转金额',exp:fmt(t.amt),act:fmt(v),res:v===t.amt?'一致':'不一致'})});
+  return out;
+}
+
+/* ================= 初始数据 ================= */
+function addOrder(o){S.orders.push(Object.assign({method:'',fee:0,net:0,pi:'',paid:false,verify:'未核销',payTime:'',claimNo:'',adv:'',advState:'',refunded:0,refundLeg1:0,payout:'未结算',payoutNo:''},o));}
+function onlinePay(cust,merchant,amount,method,pending){
+  const no=nextNo('SO'),fee=r2(amount*FEE[method]),net=r2(amount-fee),pi=rid('int_',12),pat=rid('att_',12);
+  addOrder({no,cust,kind:'线上',method,amount,merchant,fee,net,pi,paid:true,verify:'—',payTime:ts(),created:ts()});
+  const st=pending?'Pending':'Settled';
+  mkFlow({acc:'PA',type:'Payment',gross:amount,fee,orderNo:no,pi,pat,method,cp:cust,srcEnt:'Payment Attempt',src:pat,status:st});
+  xfer('PA','HA',net,'',{pi,orderNo:no,toB:'ONL',status:st});
+  return no;
+}
+function seed(){
+  S.customers=[{name:'Ah Hock Kitchen',kind:'线上',payers:[]},{name:'Rasa Cafe',kind:'线上',payers:[]},{name:'Golden Wok Restaurant',kind:'账期',payers:['GOLDEN WOK RESTAURANT PTE LTD']},{name:'Sunny Bistro',kind:'账期',payers:['SUNNY BISTRO PTE LTD','TAN MEI HUA']},{name:'Mei Ling Eatery',kind:'账期',payers:['MEI LING EATERY']}];
+  S.merchants=[{code:'M1',name:'Fresh Greens Trading'},{code:'M2',name:'Ocean Catch Seafood'},{code:'M3',name:'Prime Meat Supply'}];
+  addOrder({no:'SO2609080005',cust:'Mei Ling Eatery',kind:'账期',amount:300,merchant:'M1',created:'2026-09-08 11:05:00',paid:true,verify:'已核销',payTime:'2026-09-19 10:20:00'});
+  addOrder({no:'SO2609100002',cust:'Sunny Bistro',kind:'账期',amount:430,merchant:'M2',created:'2026-09-10 09:40:00',adv:'AD2609150001',advState:'未归还',payout:'已结算',payoutNo:'JS2609170001'});
+  addOrder({no:'SO2609150011',cust:'Golden Wok Restaurant',kind:'账期',amount:1200,merchant:'M2',created:'2026-09-15 09:20:00'});
+  addOrder({no:'SO2609160007',cust:'Golden Wok Restaurant',kind:'账期',amount:800,merchant:'M1',created:'2026-09-16 14:12:00'});
+  addOrder({no:'SO2609170003',cust:'Sunny Bistro',kind:'账期',amount:560,merchant:'M3',created:'2026-09-17 16:30:00'});
+  S.ads.push({no:'AD2609150001',period:'2026-09-08 ~ 2026-09-14',orders:['SO2609100002'],amt:430,src:'佣金账户转入',state:'已垫出',inBucket:true,creator:USER,created:'2026-09-15 10:02:00',tr:'',fail:'',log:[['2026-09-15 10:02:00',USER,'创建','垫资 430.00'],['2026-09-15 10:30:00','资金主管','审批通过',''],['2026-09-15 10:31:00',USER,'执行','佣金账户 → 清分账户·平台垫资桶'],['2026-09-17 12:00:00','SYSTEM','状态变更','已垫出（结算单 JS2609170001）']]});
+  setNow('2026-09-21T10:02:11');onlinePay('Ah Hock Kitchen','M1',100,'PayNow');
+  setNow('2026-09-21T13:40:25');onlinePay('Rasa Cafe','M3',250,'卡');
+  setNow('2026-09-21T15:30:00');const t=newTR('手续费垫资账户补资',605,'水位预警：当前 400.00 低于 1,000.00，按佣金账户当日可调额度补资 605.00','');
+  t.state='待执行';t.log.push(['2026-09-21 15:36:00','资金主管','审批通过','']);setNow('2026-09-21T15:40:00');execTR(t);
+  setNow('2026-09-22T09:12:40');mkFlow({acc:'PA',type:'Deposit',gross:2000,cp:'GOLDEN WOK REST',ref:'SEP INV GW',method:'银行转账',srcEnt:'Deposit',src:rid('dep_',10)});
+  setNow('2026-09-22T09:30:00');doSync('定时',true);
+  setNow('2026-09-22T09:31:00');runRecon(true,'2026-09-21');
+  setNow('2026-09-22T14:00:00');
+}
+
+/* ================= 模拟外部事件 ================= */
+const SIM=[
+ ['dt','线上支付'],['simPay("PayNow")','客户线上支付（PayNow，即时结算）'],['simPay("支付宝")','客户线上支付（支付宝，T+1 待结算）'],['simSettle()','Airwallex 完成待结算流水结算'],
+ ['dt','账期与售后'],['simTerm()','账期客户银行转账到账'],['simRefund()','客户发起退款（售后退款成功）'],
+ ['dt','外部系统'],['simPayout()','清结算系统周三结算打款'],
+ ['dt','异常'],['simManual()','有人在 Airwallex 后台手工转账（无单号）'],['simBad()','Airwallex 推送一条金额不平流水'],['simShort()','下一笔调拨实际划转少 0.50']];
+let NEXT_SHORT=0;
+function toggleDD(e){e.stopPropagation();const m=$('ddm');m.style.display=m.style.display==='block'?'none':'block'}
+document.addEventListener('click',()=>{$('ddm').style.display='none'});
+function simPay(method){
+  const on=S.customers.filter(c=>c.kind==='线上');
+  openModal('客户线上支付（'+method+'）',`
+   ${fr('客户',`<select class="ipt" id="m_c">${on.map(c=>`<option>${c.name}</option>`).join('')}</select>`)}
+   ${fr('商家',`<select class="ipt" id="m_m">${S.merchants.map(m=>`<option value="${m.code}">${m.name}</option>`).join('')}</select>`)}
+   ${fr('支付金额（SGD）',`<input class="ipt" id="m_a" value="120.00">`)}
+   <div class="muted">手续费率 ${(FEE[method]*100).toFixed(1)}%${method==='支付宝'?'，T+1 结算，流水先为待结算':''}</div>`,'确认支付',()=>{
+    const a=r2(parseFloat($('m_a').value));if(!(a>0))return toast('请输入金额')||false;
+    tick(2);const no=onlinePay($('m_c').value,$('m_m').value,a,method,method==='支付宝');
+    toast(`订单 ${no} 支付成功，Airwallex 已生成收单与自动划转流水（待同步）`);
+  });
+}
+function simSettle(){const p=S.flows.filter(f=>f.status==='Pending');if(!p.length)return toast('没有待结算流水');tick(5);p.forEach(f=>{f.status='Settled';f.settled=ts();f.batch='bat_'+ts().slice(0,10).replace(/-/g,'')+'_S02'});tryAllRF();toast(`${p.length} 条流水已结算`);refresh()}
+function simTerm(){
+  openModal('账期客户银行转账到账',`
+   ${fr('付款户名',`<input class="ipt" id="m_p" value="SUNNY BISTRO PTE LTD">`)}
+   ${fr('金额（SGD）',`<input class="ipt" id="m_a" value="990.00">`)}
+   ${fr('附言',`<input class="ipt" id="m_r" value="PAYMENT SEP">`)}`,'确认到账',()=>{
+    const a=r2(parseFloat($('m_a').value));if(!(a>0))return toast('请输入金额')||false;
+    tick(3);mkFlow({acc:'PA',type:'Deposit',gross:a,cp:$('m_p').value.trim(),ref:$('m_r').value,method:'银行转账',srcEnt:'Deposit',src:rid('dep_',10)});
+    toast('Airwallex 已生成入金流水（待同步）');
+  });
+}
+function simRefund(){
+  const os=S.orders.filter(o=>o.kind==='线上'&&o.refunded<o.amount);
+  if(!os.length)return toast('没有可退款的线上订单');
+  openModal('客户发起退款（售后退款成功）',`
+   ${fr('订单',`<select class="ipt" id="m_o" onchange="$('m_a').value=(ord(this.value).amount-ord(this.value).refunded).toFixed(2)">${os.map(o=>`<option value="${o.no}">${o.no} · ${o.cust} · ${fmt(o.amount)}${o.refunded?' · 已退 '+fmt(o.refunded):''}</option>`).join('')}</select>`)}
+   ${fr('退款金额（SGD）',`<input class="ipt" id="m_a" value="${(os[0].amount-os[0].refunded).toFixed(2)}">`)}`,'确认退款',()=>{
+    const o=ord($('m_o').value),a=r2(parseFloat($('m_a').value));
+    if(!(a>0)||a>r2(o.amount-o.refunded))return toast('退款金额须大于 0 且不超过可退金额')||false;
+    tick(2);const r=createRF(o,a);toast(`已生成退款资金单 ${r.no}：${r.state}`);
+  });
+}
+function payoutPlan(){
+  const bal={ONL:bucketBal('ONL'),TERM:bucketBal('TERM'),ADV:bucketBal('ADV')};
+  return S.orders.filter(o=>o.payout!=='已结算').map(o=>{
+    const base=o.kind==='线上'?r2(o.net-o.refundLeg1):o.amount;
+    const merchantAmt=r2((o.amount-o.refunded)*(1-S.commRate)),comm=r2(base-merchantAmt);
+    let src='',why='';
+    if(o.kind==='线上'&&o.refunded>=o.amount)why='已全额退款';
+    else if(o.kind==='线上'&&!S.flows.some(f=>f.acc==='HA'&&f.pi===o.pi&&inLedger(f)))why='资金未划入清分账户';
+    else if(o.kind==='线上')src='ONL';
+    else if(o.adv&&adOf(o.adv).state==='已垫入'&&adOf(o.adv).inBucket)src='ADV';
+    else if(o.adv&&adOf(o.adv).state==='已垫入')why='垫资资金未入清分账户';
+    else if(o.paid)src='TERM';
+    else why='客户未付款且未垫资';
+    if(src&&bal[src]<base){why=BK[src]+'余额不足';src=''}
+    if(src)bal[src]=r2(bal[src]-base);
+    return {o,base,merchantAmt,comm,src,why};
+  });
+}
+function simPayout(){
+  const p=payoutPlan();
+  if(!p.length)return toast('没有待结算订单');
+  openModal('清结算系统周三结算打款',`<div class="muted" style="margin-bottom:10px">结算周期 2026-09-15 ~ 2026-09-21，按订单来源从清分账户对应桶出款</div>
+   ${tbl([{t:'订单号',k:x=>x.o.no},{t:'类型',k:x=>x.o.kind},{t:'商家',k:x=>acc(x.o.merchant).name.replace('商家账户-','')},{t:'清分金额',num:1,k:x=>fmt(x.base)},{t:'商家货款',num:1,k:x=>fmt(x.merchantAmt)},{t:'平台佣金',num:1,k:x=>fmt(x.comm)},{t:'出款桶',k:x=>x.src?BK[x.src]:'—'},{t:'结果',k:x=>x.src?tag('本期打款','green'):tag('挂起：'+x.why,'orange')}],p)}`,'确认打款',()=>{
+    const ok=p.filter(x=>x.src);if(!ok.length){toast('本期无可打款订单');return}
+    tick(3);const js='JS'+ts().slice(2,10).replace(/-/g,'')+String(900+(seqs.JS=(seqs.JS||0)+1));
+    const g={},c={};
+    ok.forEach(x=>{const k=x.o.merchant+'|'+x.src;g[k]=r2((g[k]||0)+x.merchantAmt);c[x.src]=r2((c[x.src]||0)+x.comm);x.o.payout='已结算';x.o.payoutNo=js;
+      if(x.src==='ADV'){const a=adOf(x.o.adv);if(a.state==='已垫入'){a.state='已垫出';a.log.push([ts(),'SYSTEM','状态变更',`已垫出（结算单 ${js}）`])}}});
+    Object.entries(g).forEach(([k,v])=>{const [m,b]=k.split('|');if(v>0)xfer('HA',m,v,js,{fromB:b})});
+    Object.entries(c).forEach(([b,v])=>{if(v>0)xfer('HA','CA',v,js,{fromB:b})});
+    S.ads.forEach(updateAD);
+    p.filter(x=>!x.src).forEach(x=>x.o.payout='挂起');
+    toast(`结算单 ${js} 已打款 ${ok.length} 笔订单，Airwallex 流水待同步`);
+  },'760px');
+}
+function simManual(){tick(4);xfer('CA','HA',500,'',{});toast('Airwallex 后台发生一笔 佣金账户→清分账户 500.00 的无单号转账');refresh()}
+function simBad(){tick(2);mkFlow({acc:'PA',type:'Payment',gross:50,fee:1.1,net:48.5,orderNo:'SO2609229999',pi:rid('int_',12),method:'卡',cp:'UNKNOWN',srcEnt:'Payment Attempt',src:rid('att_',12)});toast('Airwallex 推送了一条金额不平的收单流水（待同步）');refresh()}
+function simShort(){NEXT_SHORT=0.5;toast('下一笔资金调拨执行时，Airwallex 实际划转金额将少 0.50')}
+
+/* ================= UI 基础 ================= */
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3200);return false}
+let DR=null;
+function openDrawer(fn){DR=fn;$('mask').style.display='block';$('drawer').style.display='flex';paintDrawer()}
+function paintDrawer(){if(!DR)return;const r=DR();if(!r){closeDrawer();return}$('drT').innerHTML=r.t;$('drB').innerHTML=r.b;$('drF').innerHTML=r.f||''}
+function closeDrawer(){DR=null;$('mask').style.display='none';$('drawer').style.display='none'}
+let MD=null;
+function openModal(t,b,ok,fn,w){MD=fn;$('mdT').innerHTML=t;$('mdB').innerHTML=b;$('modal').style.width=w||'640px';$('mdF').innerHTML=`<button class="btn" onclick="closeModal()">取消</button><button class="btn p" onclick="okModal()">${ok}</button>`;$('mask2').style.display='block';$('modal').style.display='flex'}
+function okModal(){if(MD&&MD()===false)return;closeModal();refresh()}
+function closeModal(){MD=null;$('mask2').style.display='none';$('modal').style.display='none'}
+const fr=(l,h,req)=>`<div class="fr"><label class="${req?'req':''}">${l}</label>${h}</div>`;
+const dl=items=>`<div class="desc">${items.map(([k,v])=>`<div><dt>${k}</dt><dd>${v===''||v==null?'—':v}</dd></div>`).join('')}</div>`;
+function tbl(cols,rows,o={}){
+  if(!rows.length)return `<div class="tbl-wrap"><div class="empty">暂无数据</div></div>`;
+  const sel=o.sel,ss=sel?(S.sel[sel.p]=S.sel[sel.p]||[]):null;
+  const selectable=r=>!sel.can||sel.can(r);
+  const ids=sel?rows.filter(selectable).map(sel.id):[];
+  const allOn=sel&&ids.length&&ids.every(i=>ss.includes(i));
+  let h=`<div class="tbl-wrap"><table class="t"><thead><tr>${sel?`<th style="width:36px"><input type="checkbox" class="chk" ${allOn?'checked':''} ${ids.length?'':'disabled'} onchange='selAll("${sel.p}",${JSON.stringify(ids)},this.checked)'></th>`:''}${cols.map(c=>`<th class="${c.num?'num':''}">${c.t}</th>`).join('')}${o.op?'<th class="op">操作</th>':''}</tr></thead><tbody>`;
+  rows.forEach(r=>{h+=`<tr class="${o.rowCls?o.rowCls(r):''}">${sel?`<td>${selectable(r)?`<input type="checkbox" class="chk" ${ss.includes(sel.id(r))?'checked':''} onchange="selOne('${sel.p}','${sel.id(r)}',this.checked)">`:''}</td>`:''}${cols.map(c=>`<td class="${c.num?'num':''}">${c.k(r)??'—'}</td>`).join('')}${o.op?`<td class="op">${o.op(r)}</td>`:''}</tr>`});
+  return h+'</tbody></table></div>';
+}
+function selOne(p,id,on){const s=S.sel[p]=S.sel[p]||[];const i=s.indexOf(id);if(on&&i<0)s.push(id);if(!on&&i>=0)s.splice(i,1);refresh()}
+function selAll(p,ids,on){S.sel[p]=on?ids.slice():[];refresh()}
+const tabs=(p,list)=>{const cur=S.tab[p]||list[0][0];return `<div class="tabs">${list.map(([k,l,n])=>`<div class="tab ${cur===k?'on':''}" onclick="S.tab['${p}']='${k}';S.sel['${p}']=[];refresh()">${l}${n!=null?` (${n})`:''}</div>`).join('')}</div>`};
+const curTab=(p,d)=>S.tab[p]||d;
+const setF=(p,k,v)=>{(S.f[p]=S.f[p]||{})[k]=v;refresh()};
+const gf=(p,k)=>(S.f[p]||{})[k]||'';
+const card=(t,b)=>`<div class="card">${t?`<div class="card-t">${t}</div>`:''}${b}</div>`;
+const stTag=s=>{const m={'待审批':'orange','待执行':'blue','已完成':'green','执行失败':'red','已驳回':'gray','已垫入':'blue','已垫出':'purple','部分归还':'orange','已归还':'green','已提回':'gray','已留存':'gray','提回中':'blue','待结算挂起':'orange','待补资':'red','待处理':'orange','已结案':'green','未处理':'red','已处理':'gray','已核对':'green','待核对':'orange','金额不符':'red','平':'green','不平':'red','一致':'green','不一致':'red','待结算':'orange','缺划转':'red','已认领':'green','待认领':'orange','已挂单':'green','未挂单':'red','已入账':'green','暂存复核':'orange','已转差错':'red','成功':'green'};return tag(s,m[s]||'gray')};
+const linkTxt=f=>f.link?`<span class="link" onclick="openDoc('${f.link.k}','${f.link.no}')">${f.link.k} ${f.link.no}</span>`:'—';
+function openDoc(k,no){if(k==='资金调拨单')openTR(no);else if(k==='垫资单')openAD(no);else if(k==='退款资金单')openRF(no);else if(k==='销售订单')openOrder(no);else if(k==='认领单')openClaim(no);else toast(k+' '+no+' 由清结算系统维护')}
+const flowLink=id=>`<span class="link" onclick="openFlow('${id}')">${id}</span>`;
+const linkState=f=>f.link?'已挂单':f.claim==='待认领'?'待认领':'未挂单';
+
+/* ================= 菜单 ================= */
+const MENU=[['概览',[['overview','资金总览']]],['流水中心',[['flows','交易流水'],['review','暂存复核'],['synclog','同步记录']]],['资金单据',[['tr','资金调拨单'],['ad','垫资单'],['rf','退款资金单']]],['清分账户',[['bucket','分桶余额'],['bucketlog','分桶明细'],['monthly','月结时点报表']]],['对账中心',[['recon','余额对账'],['unlinked','挂单对账'],['loop','单单闭环'],['err','差错处理']]],['认领核销',[['claim','待认领流水'],['rules','认领规则'],['orders','订单资金状态']]],['预警与凭证',[['alerts','预警中心'],['voucher','凭证规则']]],['基础配置',[['accts','账户档案'],['txmap','交易类型映射'],['water','水位配置']]]];
+let PAGE='overview';
+function badgeOf(p){const n={review:S.flows.filter(f=>f.synced&&f.review==='暂存复核').length,claim:S.flows.filter(f=>inLedger(f)&&f.claim==='待认领').length,tr:S.trs.filter(t=>['待审批','待执行','执行失败'].includes(t.state)).length,ad:S.ads.filter(a=>['待审批','待执行','已归还'].includes(a.state)).length,rf:S.rfs.filter(r=>r.state!=='已完成').length,err:S.ers.filter(e=>e.state==='待处理').length,alerts:S.alerts.filter(a=>a.state==='未处理').length,unlinked:unlinkedRows().filter(f=>!f.err).length}[p];return n?`<span class="badge">${n}</span>`:''}
+function go(p){PAGE=p;closeDrawer();$('ct').scrollTop=0;refresh()}
+function refresh(){
+  $('side').innerHTML='<div class="logo">平台资金中心</div>'+MENU.map(([g,items])=>`<div class="grp">${g}</div>`+items.map(([k,l])=>`<div class="mi ${PAGE===k?'on':''}" onclick="go('${k}')">${l}${badgeOf(k)}</div>`).join('')).join('');
+  const g=MENU.find(([,it])=>it.some(([k])=>k===PAGE));
+  $('crumb').innerHTML=`${g[0]} / <b>${g[1].find(([k])=>k===PAGE)[1]}</b>`;
+  $('clock').textContent='系统时间 '+ts().slice(0,16);
+  $('ddm').innerHTML=SIM.map(([f,l])=>f==='dt'?`<div class="dt">${l}</div>`:`<div onclick='${f}'>${l}</div>`).join('');
+  $('ct').innerHTML=PAGES[PAGE]();
+  paintDrawer();
+}
+
+/* ================= 页面 ================= */
+const PAGES={};
+PAGES.overview=()=>{
+  const rows=reconRows();
+  const todo=[['暂存复核待处理','review',S.flows.filter(f=>f.synced&&f.review==='暂存复核').length],['待认领流水','claim',S.flows.filter(f=>inLedger(f)&&f.claim==='待认领').length],['调拨单待审批 / 待执行 / 失败','tr',S.trs.filter(t=>['待审批','待执行','执行失败'].includes(t.state)).length],['垫资单待处理','ad',S.ads.filter(a=>['待审批','待执行','已归还'].includes(a.state)).length],['退款资金单未完成','rf',S.rfs.filter(r=>r.state!=='已完成').length],['未挂单流水','unlinked',unlinkedRows().filter(f=>!f.err).length],['差错待处理','err',S.ers.filter(e=>e.state==='待处理').length],['未处理预警','alerts',S.alerts.filter(a=>a.state==='未处理').length]];
+  const bk=['ONL','TERM','ADV','UNC'];
+  return card('账户余额',tbl([{t:'账户',k:r=>accName(r.acc)},{t:'Airwallex 账户',k:r=>acc(r.acc).awx},{t:'Airwallex 余额',num:1,k:r=>fmt(r.awx)},{t:'账面余额',num:1,k:r=>fmt(r.end)},{t:'差额',num:1,k:r=>r.diff?`<span class="neg">${fmt(r.diff)}</span>`:'0.00'},{t:'未入账流水',num:1,k:r=>r.uns||'0'}],rows))+
+  `<div class="grid2">${card('清分账户分桶',tbl([{t:'桶',k:b=>BK[b]},{t:'归属',k:b=>BKDESC[b]},{t:'账面余额',num:1,k:b=>fmt(bucketBal(b))}],bk)+`<div class="eq">四桶合计 ${fmt(bk.reduce((s,b)=>s+bucketBal(b),0))} ｜ Airwallex 清分账户余额 ${fmt(awxBal('HA'))}</div>`)}
+  ${card('待办',todo.map(([l,p,n])=>`<div class="todo" onclick="go('${p}')"><span>${l}</span><span>${n?`<span class="badge">${n}</span>`:'<span class="muted">0</span>'}</span></div>`).join(''))}</div>`;
+};
+PAGES.flows=()=>{
+  const t=curTab('flows','in');
+  let rows=t==='in'?S.flows.filter(inLedger):S.flows.filter(f=>!f.synced);
+  const a=gf('flows','acc'),ty=gf('flows','type'),ls=gf('flows','ls'),kw=gf('flows','kw').trim().toLowerCase();
+  if(a)rows=rows.filter(f=>f.acc===a);if(ty)rows=rows.filter(f=>f.type===ty);if(ls&&t==='in')rows=rows.filter(f=>linkState(f)===ls);
+  if(kw)rows=rows.filter(f=>[f.id,f.orderNo,f.pi,f.req,f.cp,f.batch].some(x=>(x||'').toLowerCase().includes(kw)));
+  rows=rows.slice().sort((x,y)=>(y.settled||y.created).localeCompare(x.settled||x.created));
+  const uns=S.flows.filter(f=>!f.synced).length;
+  return card('',`<div class="filters">
+    <span class="fi"><label>账户</label><select class="ipt" onchange="setF('flows','acc',this.value)"><option value="">全部</option>${S.accounts.map(x=>`<option value="${x.code}" ${a===x.code?'selected':''}>${x.name}</option>`).join('')}</select></span>
+    <span class="fi"><label>交易类型</label><select class="ipt" onchange="setF('flows','type',this.value)"><option value="">全部</option>${S.txmap.filter(x=>x.on).map(x=>`<option value="${x.en}" ${ty===x.en?'selected':''}>${x.cn}</option>`).join('')}</select></span>
+    ${t==='in'?`<span class="fi"><label>挂单状态</label><select class="ipt" onchange="setF('flows','ls',this.value)"><option value="">全部</option>${['已挂单','待认领','未挂单'].map(x=>`<option ${ls===x?'selected':''}>${x}</option>`).join('')}</select></span>`:''}
+    <span class="fi"><label>关键字</label><input class="ipt" style="width:260px" placeholder="流水号 / 订单号 / 支付单号 / 请求号 / 户名" value="${esc(gf('flows','kw'))}" onchange="setF('flows','kw',this.value)"></span></div>`)+
+  card('',tabs('flows',[['in','已入账'],['awx','Airwallex 侧未同步',uns]])+`<div class="toolbar"><button class="btn p" onclick="doSync();refresh()">立即同步</button><button class="btn" onclick="toast('已导出 '+${rows.length}+' 条')">导出</button><span class="muted">上次同步 ${S.lastSync}　定时每 30 分钟</span></div>`+
+  tbl([{t:'流水号',k:f=>flowLink(f.id)},{t:'账户',k:f=>accName(f.acc)},{t:'交易大类',k:f=>BIG[txm(f.type)?.big]||'—'},{t:'交易类型',k:f=>txcn(f.type)},{t:'收支方向',k:f=>f.net>=0?'收入':'支出'},{t:'结算前金额',num:1,k:f=>fmt(f.gross)},{t:'交易手续费',num:1,k:f=>fmt(f.fee)},{t:'净额',num:1,k:f=>sn(f.net)},{t:'币种',k:f=>f.cur},{t:'结算状态',k:f=>f.status==='Settled'?'已结算':'待结算'},{t:'结算时间',k:f=>f.settled||'—'},{t:'系统单据编号',k:f=>f.orderNo||'—'},{t:'支付单号',k:f=>f.pi||'—'},{t:'企业流水号（请求号）',k:f=>f.req||'—'},{t:'对方户名',k:f=>esc(f.cp)||'—'},{t:'结算批次号',k:f=>f.batch||'—'},{t:'清分桶',k:f=>f.bucket?BK[f.bucket]:'—'},{t:'挂单状态',k:f=>t==='in'?stTag(linkState(f)):'—'},{t:'关联单据',k:linkTxt}],rows,{op:f=>`<span class="link" onclick="openFlow('${f.id}')">详情</span>`}));
+};
+PAGES.review=()=>{
+  const t=curTab('review','todo');
+  const rows=S.flows.filter(f=>f.synced&&(t==='todo'?f.review==='暂存复核':!!f.reviewed));
+  return card('',tabs('review',[['todo','待复核',S.flows.filter(f=>f.synced&&f.review==='暂存复核').length],['done','已处理']])+
+  tbl([{t:'流水号',k:f=>flowLink(f.id)},{t:'账户',k:f=>accName(f.acc)},{t:'交易类型',k:f=>txcn(f.type)},{t:'结算前金额',num:1,k:f=>fmt(f.gross)},{t:'交易手续费',num:1,k:f=>fmt(f.fee)},{t:'净额',num:1,k:f=>fmt(f.net)},{t:'差额',num:1,k:f=>fmt(r2(f.gross-f.fee-f.net))},{t:'复核原因',k:f=>esc(f.note)},{t:'同步时间',k:f=>f.syncAt},...(t==='done'?[{t:'处理结果',k:f=>stTag(f.review==='正常'?'已入账':'已转差错')},{t:'处理说明',k:f=>esc(f.reviewed.note)},{t:'处理人',k:f=>f.reviewed.by},{t:'处理时间',k:f=>f.reviewed.time}]:[])],rows,t==='todo'?{op:f=>`<span class="link" onclick="reviewOk('${f.id}')">确认入库</span><span class="link d" onclick="reviewErr('${f.id}')">转差错</span>`}:{}));
+};
+function reviewOk(id){const f=fl(id);openModal('确认入库',`${dl([['流水号',f.id],['复核原因',esc(f.note)]])}${fr('确认说明',`<textarea class="ipt" id="m_n" placeholder="说明为何可按 Airwallex 原值入账"></textarea>`,1)}`,'确认入库',()=>{const n=$('m_n').value.trim();if(!n)return toast('请填写确认说明');tick(1);f.review='正常';f.reviewed={note:n,by:USER,time:ts()};post(f);toast('已入账')})}
+function reviewErr(id){const f=fl(id);tick(1);const e=newER('金额不平',f.id,r2(f.gross-f.fee-f.net),`流水 ${f.id}：${f.note}`);f.review='已转差错';f.err=e?e.no:'';f.reviewed={note:'转差错 '+(e?e.no:''),by:USER,time:ts()};toast('已生成差错单 '+(e?e.no:''));refresh()}
+PAGES.synclog=()=>card('',`<div class="toolbar"><button class="btn p" onclick="doSync();refresh()">立即同步</button><span class="muted">定时每 30 分钟</span></div>`+
+  tbl([{t:'同步批次',k:x=>x.no},{t:'方式',k:x=>x.mode},{t:'开始时间',k:x=>x.time},{t:'拉取窗口起',k:x=>x.from},{t:'拉取窗口止',k:x=>x.to},{t:'拉取条数',num:1,k:x=>x.pulled},{t:'新入库',num:1,k:x=>x.newc-x.rev},{t:'重复跳过',num:1,k:x=>x.dup},{t:'待结算跳过',num:1,k:x=>x.pend},{t:'暂存复核',num:1,k:x=>x.rev},{t:'结果',k:x=>stTag(x.res)}],S.syncLogs));
+
+PAGES.tr=()=>{
+  const t=curTab('tr','all'),st=['待审批','待执行','已完成','执行失败','已驳回'];
+  const rows=S.trs.filter(x=>t==='all'||x.state===t);const sel=(S.sel.tr||[]).filter(no=>trOf(no)&&trOf(no).state==='待审批');S.sel.tr=sel;
+  return card('',tabs('tr',[['all','全部',S.trs.length],...st.map(s=>[s,s,S.trs.filter(x=>x.state===s).length])])+
+  `<div class="toolbar"><button class="btn p" onclick="newTRModal()">新建调拨单</button><button class="btn" ${sel.length?'':'disabled'} onclick="batchApprove()">批量审批${sel.length?`（${sel.length}）`:''}</button></div>`+
+  tbl([{t:'调拨单号',k:x=>`<span class="link" onclick="openTR('${x.no}')">${x.no}</span>`},{t:'调拨类型',k:x=>x.type},{t:'转出账户',k:x=>accName(x.from)},{t:'转出桶',k:x=>x.fromB?BK[x.fromB]:'—'},{t:'转入账户',k:x=>accName(x.to)},{t:'转入桶',k:x=>x.toB?BK[x.toB]:'—'},{t:'金额',num:1,k:x=>fmt(x.amt)},{t:'业务依据',k:x=>esc(x.reason)},{t:'状态',k:x=>stTag(x.state)},{t:'流水核对',k:x=>x.check==='—'?'—':stTag(x.check)},{t:'失败原因',k:x=>esc(x.fail)||'—'},{t:'创建人',k:x=>x.creator},{t:'创建时间',k:x=>x.created}],rows,{sel:{p:'tr',id:x=>x.no,can:x=>x.state==='待审批'},op:trOps}));
+};
+const trOps=x=>(x.state==='待审批'?`<span class="link" onclick="trApprove('${x.no}')">审批通过</span><span class="link d" onclick="trReject('${x.no}')">驳回</span>`:x.state==='待执行'?`<span class="link" onclick="trExec('${x.no}')">执行</span>`:x.state==='执行失败'?`<span class="link" onclick="trExec('${x.no}')">重试</span>`:'')+`<span class="link" onclick="openTR('${x.no}')">详情</span>`;
+function trApprove(no){const t=trOf(no);tick(1);t.state='待执行';t.log.push([ts(),'资金主管','审批通过','']);toast(no+' 审批通过');refresh()}
+function batchApprove(){const s=S.sel.tr||[];tick(1);s.forEach(no=>{const t=trOf(no);t.state='待执行';t.log.push([ts(),'资金主管','审批通过','批量'])});toast(`已审批 ${s.length} 张`);S.sel.tr=[];refresh()}
+function trReject(no){openModal('驳回调拨单',fr('驳回原因',`<textarea class="ipt" id="m_n"></textarea>`,1),'确认驳回',()=>{const n=$('m_n').value.trim();if(!n)return toast('请填写驳回原因');const t=trOf(no);tick(1);t.state='已驳回';t.log.push([ts(),'资金主管','驳回',n]);const a=S.ads.find(a=>a.tr===no);if(a){a.state='已归还';a.tr='';a.log.push([ts(),'SYSTEM','提回被驳回','回到已归还'])}toast('已驳回')})}
+function trExec(no){const t=trOf(no);tick(1);const ok=execTR(t);toast(ok?`${no} 执行成功，Airwallex 流水待同步核对`:`${no} 执行失败：${t.fail}`);refresh()}
+let NTR={};
+function newTRModal(type){
+  NTR={type:type||'手续费垫资账户补资'};
+  openModal('新建资金调拨单',ntrBody(),'提交审批',()=>{
+    const d=TRT[NTR.type];let amt=r2(parseFloat($('m_a').value)),reason=$('m_r').value.trim(),basis='';
+    if(NTR.type==='账期打款转清分'){basis=$('m_b').value;if(!basis)return toast('请选择认领单')}
+    if(NTR.type==='垫资提回'){basis=$('m_b').value;if(!basis)return toast('请选择垫资单')}
+    if(!(amt>0))return toast('请输入金额');if(!reason)return toast('请填写业务依据');
+    tick(1);const t=newTR(NTR.type,amt,reason,basis);
+    if(NTR.type==='垫资提回'){const a=adOf(basis);a.state='提回中';a.tr=t.no;a.log.push([ts(),USER,'发起提回',t.no])}
+    if(NTR.type==='账期打款转清分')clOf(basis).tr=t.no;
+    toast('已提交 '+t.no);
+  });
+}
+function ntrBody(){
+  const d=TRT[NTR.type];let extra='',amt='',reason='';
+  if(NTR.type==='手续费垫资账户补资'){amt=Math.max(0,r2(S.water.target-awxBal('FA'))).toFixed(2);reason=`补足手续费垫资账户至目标额 ${fmt(S.water.target)}（当前 ${fmt(awxBal('FA'))}）`}
+  if(NTR.type==='账期打款转清分'){const cs=S.claims.filter(c=>!trOf(c.tr)||trOf(c.tr).state==='已驳回');extra=fr('认领单',`<select class="ipt" id="m_b" onchange="const c=clOf(this.value);$('m_a').value=c?c.amt.toFixed(2):''"><option value="">请选择</option>${cs.map(c=>`<option value="${c.no}">${c.no} · ${c.cust} · ${fmt(c.amt)}</option>`).join('')}</select>`,1);reason='账期回款转入清分账户'}
+  if(NTR.type==='垫资提回'){const as=S.ads.filter(a=>a.state==='已归还');extra=fr('垫资单',`<select class="ipt" id="m_b" onchange="const a=adOf(this.value);$('m_a').value=a?a.amt.toFixed(2):''"><option value="">请选择（仅已归还）</option>${as.map(a=>`<option value="${a.no}">${a.no} · ${fmt(a.amt)}</option>`).join('')}</select>`,1);reason='垫资订单已全部回款，垫资资金提回佣金账户'}
+  return fr('调拨类型',`<select class="ipt" onchange="NTR.type=this.value;$('mdB').innerHTML=ntrBody()">${Object.keys(TRT).map(k=>`<option ${k===NTR.type?'selected':''}>${k}</option>`).join('')}</select>`,1)+
+   `<div class="desc">${[['转出账户',accName(d.from)+(d.fromB?' · '+BK[d.fromB]:'')],['转出可用',fmt(d.fromB?bucketBal(d.fromB):awxBal(d.from))],['转入账户',accName(d.to)+(d.toB?' · '+BK[d.toB]:'')],['转入当前',fmt(d.toB?bucketBal(d.toB):awxBal(d.to))]].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</div>`+
+   extra+fr('金额（SGD）',`<input class="ipt" id="m_a" value="${amt}" ${NTR.type!=='手续费垫资账户补资'?'readonly':''}>`,1)+fr('业务依据',`<textarea class="ipt" id="m_r">${reason}</textarea>`,1);
+}
+PAGES.ad=()=>{
+  const t=curTab('ad','all'),st=['待审批','待执行','已垫入','已垫出','部分归还','已归还','提回中','已提回','已留存','已驳回'];
+  const rows=S.ads.filter(x=>t==='all'||x.state===t);
+  return card('',tabs('ad',[['all','全部',S.ads.length],...st.filter(s=>S.ads.some(x=>x.state===s)||['待审批','已归还'].includes(s)).map(s=>[s,s,S.ads.filter(x=>x.state===s).length])])+
+  `<div class="toolbar"><button class="btn p" onclick="newADModal()">新建垫资单</button><span class="muted">平台垫资桶可用 ${fmt(advFree())}　平台佣金账户余额 ${fmt(awxBal('CA'))}</span></div>`+
+  tbl([{t:'垫资单号',k:x=>`<span class="link" onclick="openAD('${x.no}')">${x.no}</span>`},{t:'结算周期',k:x=>x.period},{t:'订单数',num:1,k:x=>x.orders.length},{t:'垫资金额',num:1,k:x=>fmt(x.amt)},{t:'资金来源',k:x=>x.src},{t:'状态',k:x=>stTag(x.state)},{t:'已归还金额',num:1,k:x=>fmt(adRet(x))},{t:'未归还金额',num:1,k:x=>fmt(r2(x.amt-adRet(x)))},{t:'提回调拨单',k:x=>x.tr?`<span class="link" onclick="openTR('${x.tr}')">${x.tr}</span>`:'—'},{t:'创建人',k:x=>x.creator},{t:'创建时间',k:x=>x.created}],rows,{op:adOps}));
+};
+const adRet=a=>r2(a.orders.map(ord).filter(o=>o.advState==='已归还').reduce((s,o)=>s+o.amount,0));
+const adOps=x=>(x.state==='待审批'?`<span class="link" onclick="adApprove('${x.no}')">审批通过</span><span class="link d" onclick="adReject('${x.no}')">驳回</span>`:x.state==='待执行'?`<span class="link" onclick="adExec('${x.no}')">执行</span>`:x.state==='已归还'?`<span class="link" onclick="adBack('${x.no}')">提回</span><span class="link" onclick="adKeep('${x.no}')">留存</span>`:'')+`<span class="link" onclick="openAD('${x.no}')">详情</span>`;
+function adApprove(no){const a=adOf(no);tick(1);a.state='待执行';a.log.push([ts(),'资金主管','审批通过','']);toast(no+' 审批通过');refresh()}
+function adReject(no){openModal('驳回垫资单',fr('驳回原因',`<textarea class="ipt" id="m_n"></textarea>`,1),'确认驳回',()=>{const n=$('m_n').value.trim();if(!n)return toast('请填写驳回原因');const a=adOf(no);tick(1);a.state='已驳回';a.orders.forEach(o=>{ord(o).adv='';ord(o).advState=''});a.log.push([ts(),'资金主管','驳回',n+'；订单占用已释放']);toast('已驳回，订单占用已释放')})}
+function adExec(no){const a=adOf(no);tick(1);const ok=execAD(a);toast(ok?`${no} 已垫入`:`执行失败：${a.fail}`);refresh()}
+function adBack(no){NTR={type:'垫资提回'};openModal('发起垫资提回',ntrBody(),'提交审批',()=>{const b=$('m_b').value;if(!b)return toast('请选择垫资单');tick(1);const a=adOf(b);const t=newTR('垫资提回',a.amt,$('m_r').value.trim()||'垫资提回',b);a.state='提回中';a.tr=t.no;a.log.push([ts(),USER,'发起提回',t.no]);toast('已生成调拨单 '+t.no)});setTimeout(()=>{$('m_b').value=no;$('m_a').value=adOf(no).amt.toFixed(2)},0)}
+function adKeep(no){openModal('留存垫资资金',`<div>垫资 ${fmt(adOf(no).amt)} 将继续留在清分账户·平台垫资桶，下次新建垫资单可选「垫资桶留存余额」直接占用，无需再从佣金账户划转。</div>`,'确认留存',()=>{const a=adOf(no);tick(1);a.state='已留存';a.log.push([ts(),USER,'留存','资金留在平台垫资桶，抵下期垫资']);toast('已留存')})}
+let NAD={};
+function adCands(){return S.orders.filter(o=>o.kind==='账期'&&!o.paid&&!o.adv&&o.payout!=='已结算')}
+function newADModal(){
+  NAD={sel:adCands().map(o=>o.no),src:'佣金账户转入'};
+  openModal('新建垫资单',nadBody(),'提交审批',()=>{
+    if(!NAD.sel.length)return toast('请选择订单');
+    const amt=r2(NAD.sel.reduce((s,n)=>s+ord(n).amount,0));
+    if(NAD.src==='垫资桶留存余额'&&advFree()<amt)return toast('平台垫资桶可用余额不足');
+    tick(1);const a={no:nextNo('AD'),period:'2026-09-15 ~ 2026-09-21',orders:NAD.sel.slice(),amt,src:NAD.src,state:'待审批',inBucket:false,creator:USER,created:ts(),tr:'',fail:'',log:[[ts(),USER,'创建',`垫资 ${fmt(amt)}，${NAD.sel.length} 笔订单`]]};
+    a.orders.forEach(n=>{ord(n).adv=a.no;ord(n).advState='未归还'});S.ads.unshift(a);toast('已提交 '+a.no);
+  },'820px');
+}
+function nadBody(){
+  const cs=adCands(),amt=r2(NAD.sel.reduce((s,n)=>s+ord(n).amount,0));
+  return `<div class="muted" style="margin-bottom:10px">结算周期 2026-09-15 ~ 2026-09-21 内，账期客户未付款、未被其他垫资单占用的订单</div>`+
+  (cs.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th style="width:36px"><input type="checkbox" class="chk" ${NAD.sel.length===cs.length?'checked':''} onchange="NAD.sel=this.checked?adCands().map(o=>o.no):[];$('mdB').innerHTML=nadBody()"></th><th>订单号</th><th>客户</th><th>商家</th><th>下单时间</th><th class="num">订单金额</th></tr></thead><tbody>${cs.map(o=>`<tr><td><input type="checkbox" class="chk" ${NAD.sel.includes(o.no)?'checked':''} onchange="const i=NAD.sel.indexOf('${o.no}');if(this.checked&&i<0)NAD.sel.push('${o.no}');if(!this.checked&&i>=0)NAD.sel.splice(i,1);$('mdB').innerHTML=nadBody()"></td><td>${o.no}</td><td>${o.cust}</td><td>${accName(o.merchant).replace('商家账户-','')}</td><td>${o.created}</td><td class="num">${fmt(o.amount)}</td></tr>`).join('')}</tbody></table></div>`:`<div class="tbl-wrap"><div class="empty">没有需要垫资的订单</div></div>`)+
+  `<div class="eq">垫资金额 = Σ订单金额 = <b>${fmt(amt)}</b>（${NAD.sel.length} 笔）</div>`+
+  `<div class="fr" style="margin-top:14px"><label class="req">资金来源</label><label class="radio"><input type="radio" name="src" ${NAD.src==='佣金账户转入'?'checked':''} onchange="NAD.src='佣金账户转入';$('mdB').innerHTML=nadBody()">平台佣金账户转入（余额 ${fmt(awxBal('CA'))}）</label><label class="radio"><input type="radio" name="src" ${NAD.src==='垫资桶留存余额'?'checked':''} ${advFree()>=amt&&amt>0?'':'disabled'} onchange="NAD.src='垫资桶留存余额';$('mdB').innerHTML=nadBody()">平台垫资桶留存余额（可用 ${fmt(advFree())}）</label></div>`;
+}
+PAGES.rf=()=>{
+  const t=curTab('rf','all'),st=['待结算挂起','待补资','待执行','已完成'];
+  const rows=S.rfs.filter(x=>t==='all'||x.state===t);
+  return card('',tabs('rf',[['all','全部',S.rfs.length],...st.map(s=>[s,s,S.rfs.filter(x=>x.state===s).length])])+
+  tbl([{t:'退款资金单号',k:x=>`<span class="link" onclick="openRF('${x.no}')">${x.no}</span>`},{t:'退款单号',k:x=>x.refundNo},{t:'订单号',k:x=>`<span class="link" onclick="openOrder('${x.order}')">${x.order}</span>`},{t:'原支付单号',k:x=>x.pi},{t:'原支付金额',num:1,k:x=>fmt(x.payAmt)},{t:'原收单净额',num:1,k:x=>fmt(x.payNet)},{t:'退款金额',num:1,k:x=>fmt(x.amt)},{t:'退款手续费',num:1,k:x=>fmt(x.rfee)},{t:'① 清分账户转回',num:1,k:x=>fmt(x.leg1)},{t:'② 手续费垫资',num:1,k:x=>fmt(x.leg2)},{t:'状态',k:x=>stTag(x.state)},{t:'挂起原因',k:x=>x.block||'—'},{t:'创建时间',k:x=>x.created}],rows,{op:x=>(x.state!=='已完成'?`<span class="link" onclick="rfRetry('${x.no}')">重试</span>`:'')+`<span class="link" onclick="openRF('${x.no}')">详情</span>`}));
+};
+function rfRetry(no){const r=rfOf(no);tick(1);tryRF(r);toast(r.state==='已完成'?no+' 已执行':`${no} 仍挂起：${r.block}`);refresh()}
+PAGES.bucket=()=>{
+  const bk=['ONL','TERM','ADV','UNC'],sum=r2(bk.reduce((s,b)=>s+bucketBal(b),0)),aw=awxBal('HA');
+  const uns=S.flows.filter(f=>f.acc==='HA'&&f.status==='Settled'&&!(f.synced&&f.review==='正常')).length;
+  return card('清分账户四桶',tbl([{t:'桶',k:b=>b==='SUM'?'合计':BK[b]},{t:'归属',k:b=>b==='SUM'?'':BKDESC[b]},{t:'进账来源',k:b=>({ONL:'平台账户自动划转、Checkout 结算',TERM:'调拨单·账期打款转清分',ADV:'垫资单、垫资订单回款归还',UNC:'无单号转入',SUM:''}[b])},{t:'账面余额',num:1,k:b=>fmt(b==='SUM'?sum:bucketBal(b))},{t:'操作',k:b=>b==='SUM'?'':`<span class="link" onclick="S.tab.bucketlog='${b}';go('bucketlog')">明细</span>`}],[...bk,'SUM'],{rowCls:b=>b==='SUM'?'total':''})+
+  `<div class="eq">四桶合计 ${fmt(sum)} − Airwallex 清分账户余额 ${fmt(aw)} = 差额 <b class="${sum!==aw?'neg':''}">${fmt(r2(sum-aw))}</b>${uns?`（Airwallex 侧 ${uns} 条流水未入账）`:''}</div>`)+
+  card('平台垫资桶',tbl([{t:'项目',k:x=>x[0]},{t:'金额',num:1,k:x=>fmt(x[1])}],[['平台垫资桶余额',bucketBal('ADV')],['其中：已垫入待打款（占用）',advReserved()],['其中：可用（留存 / 已归还未提回）',advFree()]]));
+};
+PAGES.bucketlog=()=>{
+  const t=curTab('bucketlog','all');
+  let rows=S.flows.filter(f=>f.acc==='HA'&&inLedger(f)).map(f=>({time:f.settled,b:f.bucket,amt:f.net,src:txcn(f.type),doc:f.link?`${f.link.k} ${f.link.no}`:'—',flow:f.id,f,kind:'流水'}));
+  S.adj.forEach(j=>{rows.push({time:j.time,b:j.from,amt:-j.amt,src:'分桶调整',doc:j.no+'：'+j.reason,flow:'',kind:'调整'});rows.push({time:j.time,b:j.to,amt:j.amt,src:'分桶调整',doc:j.no+'：'+j.reason,flow:'',kind:'调整'})});
+  if(t!=='all')rows=rows.filter(r=>r.b===t);rows.sort((x,y)=>y.time.localeCompare(x.time));
+  return card('',tabs('bucketlog',[['all','全部'],...Object.keys(BK).map(b=>[b,BK[b]])])+
+  tbl([{t:'时间',k:r=>r.time},{t:'桶',k:r=>BK[r.b]},{t:'类型',k:r=>r.kind},{t:'金额',num:1,k:r=>sn(r.amt)},{t:'来源',k:r=>r.src},{t:'关联',k:r=>esc(r.doc)},{t:'流水号',k:r=>r.flow?flowLink(r.flow):'—'}],rows,{op:r=>r.b==='UNC'&&r.kind==='流水'&&r.amt>0&&!r.f.classified?`<span class="link" onclick="classify('${r.flow}')">归类</span>`:''}));
+};
+function classify(id,erNo){const f=fl(id);openModal('待分类资金归类',`${dl([['流水号',f.id],['金额',fmt(f.net)],['对方',esc(f.cp)],['请求号',f.req||'无']])}${fr('归入桶',`<select class="ipt" id="m_b">${['ONL','TERM','ADV'].map(b=>`<option value="${b}">${BK[b]}</option>`).join('')}</select>`,1)}${fr('归类依据',`<textarea class="ipt" id="m_n" placeholder="例：核实为佣金账户误操作转入，属平台自有资金"></textarea>`,1)}`,'确认归类',()=>{const n=$('m_n').value.trim();if(!n)return toast('请填写归类依据');tick(1);S.adj.push({no:nextNo('BJ'),time:ts(),from:'UNC',to:$('m_b').value,amt:f.net,reason:n,doc:f.id});f.classified=true;if(erNo){const e=erOf(erNo);e.state='已结案';e.way='已归类待分类资金';e.closeNote=n;e.closed=ts()}toast('已归类')})}
+PAGES.monthly=()=>{
+  const at=gf('monthly','at')||ts().slice(0,16).replace(' ','T');const t=at.replace('T',' ')+':59';
+  const b={ONL:bucketBal('ONL',t),TERM:bucketBal('TERM',t),ADV:bucketBal('ADV',t),UNC:bucketBal('UNC',t)};
+  const total=r2(b.ONL+b.TERM+b.ADV+b.UNC);
+  const awx=r2(openOf('HA')+S.flows.filter(f=>f.acc==='HA'&&f.status==='Settled'&&f.settled<=t).reduce((s,f)=>s+f.net,0));
+  const pendAdv=r2(S.ads.filter(a=>['已垫出','部分归还'].includes(a.state)).reduce((s,a)=>s+a.orders.map(ord).filter(o=>o.advState==='未归还').reduce((x,o)=>x+o.amount,0),0));
+  return card('',`<div class="filters"><span class="fi"><label>时点</label><input type="datetime-local" class="ipt" value="${at}" onchange="setF('monthly','at',this.value)"></span><button class="btn" onclick="toast('已导出月结时点报表')">导出</button></div>`)+
+  card('清分账户资金构成（截至 '+t.slice(0,16)+'）',tbl([{t:'资金性质',k:r=>r[0]},{t:'构成',k:r=>r[1]},{t:'金额',num:1,k:r=>fmt(r[2])}],[['平台自有','平台垫资桶',b.ADV],['商家待结算','线上支付桶 + 账期打款桶',r2(b.ONL+b.TERM)],['待归类','待分类桶',b.UNC],['合计','',total],['Airwallex 清分账户余额','',awx],['差额','',r2(total-awx)]],{rowCls:r=>['合计','差额'].includes(r[0])?'total':''}))+
+  card('表外：待核销垫资',tbl([{t:'项目',k:r=>r[0]},{t:'说明',k:r=>r[1]},{t:'金额',num:1,k:r=>fmt(r[2])}],[['待核销垫资（其他应收）','已垫出、客户尚未回款的订单金额，钱已结给商家，不在清分账户余额内',pendAdv]]));
+};
+PAGES.recon=()=>{
+  const last=S.recons[0];
+  return card('',`<div class="toolbar"><button class="btn p" onclick="runRecon();refresh()">执行对账</button><span class="muted">每日 00:30（SGT）自动执行</span></div>`)+
+  (last?card(`最近一次：${last.no}　${last.time}　${stTag(last.res)}`,reconTbl(last.rows)):'')+
+  card('对账记录',tbl([{t:'对账批次',k:x=>`<span class="link" onclick="openRecon('${x.no}')">${x.no}</span>`},{t:'对账日期',k:x=>x.date},{t:'执行时间',k:x=>x.time},{t:'执行人',k:x=>x.by},{t:'不平账户数',num:1,k:x=>x.rows.filter(r=>r.diff!==0).length},{t:'结果',k:x=>stTag(x.res)}],S.recons));
+};
+const reconTbl=rows=>tbl([{t:'账户',k:r=>accName(r.acc)},{t:'期初',num:1,k:r=>fmt(r.open)},{t:'已入账净额',num:1,k:r=>sn(r.net)},{t:'账面期末',num:1,k:r=>fmt(r.end)},{t:'Airwallex 余额',num:1,k:r=>fmt(r.awx)},{t:'差额',num:1,k:r=>r.diff?`<span class="neg">${fmt(r.diff)}</span>`:'0.00'},{t:'未入账流水',num:1,k:r=>r.uns},{t:'结果',k:r=>stTag(r.diff?'不平':'平')}],rows);
+function unlinkedRows(){return S.flows.filter(f=>inLedger(f)&&!f.link&&f.claim!=='待认领')}
+PAGES.unlinked=()=>{
+  const t=curTab('unlinked','todo');const all=unlinkedRows();
+  const rows=all.filter(f=>t==='todo'?!f.err:!!f.err);S.sel.unlinked=(S.sel.unlinked||[]).filter(id=>rows.some(f=>f.id===id));const n=S.sel.unlinked.length;
+  return card('',tabs('unlinked',[['todo','待处理',all.filter(f=>!f.err).length],['err','已转差错',all.filter(f=>f.err).length]])+
+  (t==='todo'?`<div class="toolbar"><button class="btn" ${n?'':'disabled'} onclick="batchToErr()">批量转差错${n?`（${n}）`:''}</button></div>`:'')+
+  tbl([{t:'流水号',k:f=>flowLink(f.id)},{t:'账户',k:f=>accName(f.acc)},{t:'交易类型',k:f=>txcn(f.type)},{t:'净额',num:1,k:f=>sn(f.net)},{t:'请求号',k:f=>f.req||'—'},{t:'对方户名',k:f=>esc(f.cp)},{t:'结算时间',k:f=>f.settled},{t:'判定',k:f=>f.type==='Transfer'&&!f.req?tag('无单转账','red'):tag('未挂单','orange')},{t:'差错单',k:f=>f.err?`<span class="link" onclick="openER('${f.err}')">${f.err}</span>`:'—'}],rows,t==='todo'?{sel:{p:'unlinked',id:f=>f.id},op:f=>`<span class="link" onclick="manualLink('${f.id}')">手工挂单</span><span class="link d" onclick="toErr('${f.id}')">转差错</span>`}:{}));
+};
+function toErrOne(f){const ty=f.type==='Transfer'&&!f.req?'无单转账':'未挂单';const e=newER(ty,f.id,f.net,`${accName(f.acc)} ${txcn(f.type)} ${fmt(f.net)}，请求号${f.req||'为空'}，对方 ${f.cp}`);if(e)f.err=e.no;return e}
+function toErr(id){tick(1);const e=toErrOne(fl(id));toast('已生成差错单 '+(e?e.no:''));refresh()}
+function batchToErr(){tick(1);const s=S.sel.unlinked||[];s.forEach(id=>toErrOne(fl(id)));S.sel.unlinked=[];toast(`已生成 ${s.length} 张差错单`);refresh()}
+function manualLink(id,erNo){
+  const f=fl(id);const docs=[...S.trs.map(x=>['资金调拨单',x.no,x.type+' '+fmt(x.amt)]),...S.ads.map(x=>['垫资单',x.no,fmt(x.amt)]),...S.rfs.map(x=>['退款资金单',x.no,fmt(x.amt)]),...S.orders.map(x=>['销售订单',x.no,x.cust+' '+fmt(x.amount)])];
+  openModal('手工挂单',`${dl([['流水号',f.id],['账户',accName(f.acc)],['交易类型',txcn(f.type)],['净额',fmt(f.net)]])}${fr('挂到单据',`<select class="ipt" id="m_d">${docs.map(d=>`<option value="${d[0]}|${d[1]}">${d[0]} · ${d[1]} · ${d[2]}</option>`).join('')}</select>`,1)}${fr('挂单说明',`<textarea class="ipt" id="m_n"></textarea>`,1)}`,'确认挂单',()=>{const n=$('m_n').value.trim();if(!n)return toast('请填写挂单说明');const [k,no]=$('m_d').value.split('|');tick(1);f.link={k,no};f.linkNote=n;if(erNo){const e=erOf(erNo);e.state='已结案';e.way='已补挂单据';e.closeNote=n;e.closed=ts()}toast('已挂单')});
+}
+PAGES.loop=()=>{
+  const all=loopChecks(),r=gf('loop','res');const rows=r?all.filter(x=>x.res===r):all;
+  return card('',`<div class="filters"><span class="fi"><label>结果</label><select class="ipt" onchange="setF('loop','res',this.value)"><option value="">全部</option>${['一致','不一致','待结算','缺划转'].map(x=>`<option ${r===x?'selected':''}>${x}</option>`).join('')}</select></span></div>`)+
+  card('',tbl([{t:'校验对象',k:x=>x.kind},{t:'单据号',k:x=>`<span class="link" onclick="${x.open}">${x.doc}</span>`},{t:'校验项',k:x=>x.item},{t:'期望',num:1,k:x=>x.exp},{t:'实际',num:1,k:x=>x.act},{t:'结果',k:x=>stTag(x.res)},{t:'差错单',k:x=>{const e=S.ers.find(e=>e.obj===x.key);return e?`<span class="link" onclick="openER('${e.no}')">${e.no}</span>`:'—'}}],rows,{op:x=>['不一致','缺划转'].includes(x.res)&&!S.ers.some(e=>e.obj===x.key)?`<span class="link d" onclick="loopErr('${x.key}')">转差错</span>`:''}));
+};
+function loopErr(key){const x=loopChecks().find(c=>c.key===key);tick(1);const e=newER('闭环不平',key,0,`${x.kind} ${x.doc}：${x.item}，期望 ${x.exp}，实际 ${x.act}`);toast('已生成差错单 '+e.no);refresh()}
+PAGES.err=()=>{
+  const t=curTab('err','待处理');const rows=S.ers.filter(e=>e.state===t);
+  return card('',tabs('err',[['待处理','待处理',S.ers.filter(e=>e.state==='待处理').length],['已结案','已结案']])+
+  tbl([{t:'差错单号',k:e=>`<span class="link" onclick="openER('${e.no}')">${e.no}</span>`},{t:'差错类型',k:e=>e.type},{t:'关联对象',k:e=>errObj(e)},{t:'金额 / 差额',num:1,k:e=>fmt(e.amt)},{t:'描述',k:e=>esc(e.desc)},{t:'创建时间',k:e=>e.created},{t:'结案时限',k:e=>e.deadline.slice(0,10)},{t:'时效',k:e=>e.state==='待处理'&&ts()>e.deadline?tag('已超期','red'):tag('正常','gray')},...(t==='已结案'?[{t:'处理方式',k:e=>e.way},{t:'结案时间',k:e=>e.closed}]:[{t:'复对',k:e=>e.recheck?stTag(e.recheck==='复对已平'?'平':'不平'):'—'}])],rows,{op:e=>`<span class="link" onclick="openER('${e.no}')">${e.state==='待处理'?'处理':'详情'}</span>`}));
+};
+const errObj=e=>fl(e.obj)?flowLink(e.obj):acc(e.obj)?accName(e.obj):e.obj.startsWith('LP-')?e.obj.slice(3):e.obj;
+PAGES.claim=()=>{
+  const t=curTab('claim','todo');
+  if(t==='todo'){const rows=S.flows.filter(f=>inLedger(f)&&f.claim==='待认领');
+    return card('',tabs('claim',[['todo','待认领',rows.length],['done','已认领',S.claims.length]])+tbl([{t:'流水号',k:f=>flowLink(f.id)},{t:'入账时间',k:f=>f.settled},{t:'对方户名',k:f=>esc(f.cp)},{t:'金额',num:1,k:f=>fmt(f.net)},{t:'附言',k:f=>esc(f.ref)||'—'},{t:'未自动认领原因',k:f=>f.claimHint||'—'}],rows,{op:f=>`<span class="link" onclick="claimModal('${f.id}')">认领</span>`}))}
+  return card('',tabs('claim',[['todo','待认领',S.flows.filter(f=>inLedger(f)&&f.claim==='待认领').length],['done','已认领',S.claims.length]])+tbl([{t:'认领单号',k:c=>`<span class="link" onclick="openClaim('${c.no}')">${c.no}</span>`},{t:'流水号',k:c=>flowLink(c.flow)},{t:'客户',k:c=>c.cust},{t:'回款金额',num:1,k:c=>fmt(c.amt)},{t:'核销订单数',num:1,k:c=>c.orders.length},{t:'订单合计',num:1,k:c=>fmt(c.sum)},{t:'差额',num:1,k:c=>fmt(c.diff)},{t:'差额处理',k:c=>c.rebate},{t:'认领方式',k:c=>c.by},{t:'转清分调拨单',k:c=>`<span class="link" onclick="openTR('${c.tr}')">${c.tr}</span>`},{t:'认领时间',k:c=>c.time}],S.claims.slice().reverse()));
+};
+let NCL={};
+function claimModal(id){const f=fl(id);NCL={f:id,cust:S.customers.filter(c=>c.kind==='账期')[0].name,sel:[],rem:true};openModal('认领入金流水',clBody(),'确认认领',()=>{if(!NCL.sel.length)return toast('请选择要核销的订单');tick(1);doClaim(f,NCL.sel,'手工认领（'+USER+'）',NCL.rem);toast('已认领并核销，已生成账期打款转清分调拨单（待审批）')},'760px')}
+function clBody(){
+  const f=fl(NCL.f),os=S.orders.filter(o=>o.cust===NCL.cust&&o.kind==='账期'&&!o.paid),sum=r2(NCL.sel.reduce((s,n)=>s+ord(n).amount,0)),diff=r2(f.net-sum);
+  return dl([['流水号',f.id],['对方户名',esc(f.cp)],['金额',fmt(f.net)],['附言',esc(f.ref)]])+
+  fr('客户',`<select class="ipt" onchange="NCL.cust=this.value;NCL.sel=[];$('mdB').innerHTML=clBody()">${S.customers.filter(c=>c.kind==='账期').map(c=>`<option ${c.name===NCL.cust?'selected':''}>${c.name}</option>`).join('')}</select>`,1)+
+  (os.length?`<div class="tbl-wrap"><table class="t"><thead><tr><th style="width:36px"></th><th>订单号</th><th>下单时间</th><th>垫资单</th><th class="num">订单金额</th></tr></thead><tbody>${os.map(o=>`<tr><td><input type="checkbox" class="chk" ${NCL.sel.includes(o.no)?'checked':''} onchange="const i=NCL.sel.indexOf('${o.no}');if(this.checked&&i<0)NCL.sel.push('${o.no}');if(!this.checked&&i>=0)NCL.sel.splice(i,1);$('mdB').innerHTML=clBody()"></td><td>${o.no}</td><td>${o.created}</td><td>${o.adv||'—'}</td><td class="num">${fmt(o.amount)}</td></tr>`).join('')}</tbody></table></div>`:`<div class="tbl-wrap"><div class="empty">该客户没有未付账期订单</div></div>`)+
+  `<div class="eq">回款 ${fmt(f.net)} − 订单合计 ${fmt(sum)} = 差额 <b class="${diff?'neg':''}">${fmt(diff)}</b>${diff?'（差额记账期回扣待处理）':''}</div>`+
+  `<label class="radio check-line" style="display:block"><input type="checkbox" class="chk" ${NCL.rem?'checked':''} onchange="NCL.rem=this.checked"> 记住付款户名「${esc(f.cp)}」属于该客户，下次自动认领</label>`;
+}
+PAGES.rules=()=>card('',tbl([{t:'规则编号',k:r=>r.no},{t:'规则名称',k:r=>r.name},{t:'适用流水',k:r=>r.scope},{t:'匹配条件',k:r=>r.cond},{t:'命中动作',k:r=>r.act},{t:'状态',k:r=>r.on?tag('启用','green'):tag('停用','gray')}],S.rules,{op:r=>`<span class="link" onclick="S.rules.find(x=>x.no==='${r.no}').on=${!r.on};toast('已${r.on?'停用':'启用'}');refresh()">${r.on?'停用':'启用'}</span>`}))+
+  card('客户付款户名',tbl([{t:'客户',k:c=>c.name},{t:'客户类型',k:c=>c.kind},{t:'付款户名',k:c=>c.payers.length?c.payers.map(p=>tag(esc(p),'blue')).join(' '):'—'}],S.customers.filter(c=>c.kind==='账期')));
+PAGES.orders=()=>{
+  const k=gf('orders','kind');const rows=S.orders.filter(o=>!k||o.kind===k).slice().sort((a,b)=>b.created.localeCompare(a.created));
+  return card('',`<div class="filters"><span class="fi"><label>订单类型</label><select class="ipt" onchange="setF('orders','kind',this.value)"><option value="">全部</option><option ${k==='线上'?'selected':''}>线上</option><option ${k==='账期'?'selected':''}>账期</option></select></span></div>`)+
+  card('',tbl([{t:'订单号',k:o=>`<span class="link" onclick="openOrder('${o.no}')">${o.no}</span>`},{t:'客户',k:o=>o.cust},{t:'订单类型',k:o=>o.kind},{t:'支付方式',k:o=>o.method||'银行转账'},{t:'商家',k:o=>accName(o.merchant).replace('商家账户-','')},{t:'订单金额',num:1,k:o=>fmt(o.amount)},{t:'收单手续费',num:1,k:o=>o.kind==='线上'?fmt(o.fee):'—'},{t:'收单净额',num:1,k:o=>o.kind==='线上'?fmt(o.net):'—'},{t:'付款状态',k:o=>o.paid?tag('已付款','green'):tag('未付款','orange')},{t:'核销状态',k:o=>o.verify==='—'?'—':stTag(o.verify==='已核销'?'已认领':'待认领').replace('已认领','已核销').replace('待认领','未核销')},{t:'认领单',k:o=>o.claimNo?`<span class="link" onclick="openClaim('${o.claimNo}')">${o.claimNo}</span>`:'—'},{t:'垫资单',k:o=>o.adv?`<span class="link" onclick="openAD('${o.adv}')">${o.adv}</span>`:'—'},{t:'垫资归还',k:o=>o.advState||'—'},{t:'已退款',num:1,k:o=>o.refunded?fmt(o.refunded):'—'},{t:'商家结算',k:o=>o.payout==='已结算'?tag('已结算','green'):o.payout==='挂起'?tag('挂起','orange'):tag('未结算','gray')},{t:'结算单',k:o=>o.payoutNo||'—'}],rows));
+};
+PAGES.alerts=()=>{
+  const t=curTab('alerts','未处理');const rows=S.alerts.filter(a=>a.state===t);
+  return card('',tabs('alerts',[['未处理','未处理',S.alerts.filter(a=>a.state==='未处理').length],['已处理','已处理']])+
+  tbl([{t:'预警编号',k:a=>a.no},{t:'预警类型',k:a=>a.type},{t:'级别',k:a=>a.level==='高'?tag('高','red'):tag('中','orange')},{t:'内容',k:a=>esc(a.msg)},{t:'触发时间',k:a=>a.time},...(t==='已处理'?[{t:'处理',k:a=>a.by}]:[])],rows,t==='未处理'?{op:a=>`<span class="link" onclick="alertGo('${a.no}')">去处理</span><span class="link" onclick="alertDone('${a.no}')">标记已处理</span>`}:{}));
+};
+function alertGo(no){const a=S.alerts.find(x=>x.no===no);if(a.page==='water-fill')return fillFA();go(a.page)}
+function alertDone(no){const a=S.alerts.find(x=>x.no===no);a.state='已处理';a.by=USER+'：手工标记';refresh()}
+function fillFA(){
+  const ex=S.trs.find(t=>t.type==='手续费垫资账户补资'&&['待审批','待执行','执行失败'].includes(t.state));
+  if(ex){toast('已有未完成的补资调拨单 '+ex.no);return go('tr')}
+  tick(1);const amt=r2(S.water.target-awxBal('FA'));const t=newTR('手续费垫资账户补资',amt,`水位预警：当前 ${fmt(awxBal('FA'))} 低于 ${fmt(S.water.low)}，补足至 ${fmt(S.water.target)}`,'');
+  toast(`已生成补资调拨单 ${t.no}（${fmt(amt)}），待审批`);S.tab.tr='all';go('tr');
+}
+const VR=[['收单','平台账户',[['借','其他货币资金-Airwallex-平台账户','净额'],['借','财务费用-支付手续费','交易手续费'],['贷','预收账款-客户','结算前金额']]],
+ ['自动划转','平台账户 → 清分账户',[['借','其他货币资金-Airwallex-清分账户','金额'],['贷','其他货币资金-Airwallex-平台账户','金额']]],
+ ['入金（认领后）','平台账户',[['借','其他货币资金-Airwallex-平台账户','净额'],['贷','应收账款-客户','净额']]],
+ ['退款','平台账户',[['借','预收账款-客户','退款金额'],['借','财务费用-支付手续费','退款手续费'],['贷','其他货币资金-Airwallex-平台账户','净额绝对值']]],
+ ['手续费垫资（退款三腿②）','手续费垫资账户 → 平台账户',[['借','其他货币资金-Airwallex-平台账户','金额'],['贷','其他货币资金-Airwallex-手续费垫资账户','金额']]],
+ ['垫资','佣金账户 → 清分账户',[['借','其他应收款-清分垫资（按客商）','金额'],['贷','其他货币资金-Airwallex-佣金账户','金额']]],
+ ['垫资提回','清分账户 → 佣金账户',[['借','其他货币资金-Airwallex-佣金账户','金额'],['贷','其他应收款-清分垫资（按客商）','金额']]],
+ ['其他内部调拨','账户 → 账户',[['借','其他货币资金-Airwallex-转入账户','金额'],['贷','其他货币资金-Airwallex-转出账户','金额']]]];
+PAGES.voucher=()=>card('',tbl([{t:'业务场景',k:r=>r[0]},{t:'账户',k:r=>r[1]},{t:'借贷',k:r=>r[2].map(l=>l[0]).join('<br>')},{t:'科目',k:r=>r[2].map(l=>l[1]).join('<br>')},{t:'取数',k:r=>r[2].map(l=>l[2]).join('<br>')},{t:'状态',k:()=>tag('草案·待财务确认','orange')}],VR));
+PAGES.accts=()=>card('',tbl([{t:'账户编码',k:a=>a.code},{t:'账户名称',k:a=>a.name},{t:'Airwallex 账户类型',k:a=>a.awx},{t:'Airwallex 账户 ID',k:a=>a.id},{t:'账户性质',k:a=>a.kind},{t:'币种',k:a=>a.cur},{t:'法人主体',k:a=>a.entity},{t:'银行大类',k:()=>'Airwallex'},{t:'状态',k:a=>a.st==='启用'?tag('启用','green'):tag('停用','gray')}],S.accounts,{op:a=>`<span class="link" onclick="acc('${a.code}').st='${a.st==='启用'?'停用':'启用'}';refresh()">${a.st==='启用'?'停用':'启用'}</span>`}));
+PAGES.txmap=()=>card('',tbl([{t:'英文',k:t=>t.en},{t:'中文名',k:t=>t.cn},{t:'交易大类',k:t=>BIG[t.big]},{t:'收支方向',k:t=>t.dir},{t:'业务事项',k:t=>t.biz},{t:'是否入账',k:t=>t.on?tag('入账','green'):tag('不入账','gray')}],S.txmap,{op:t=>`<span class="link" onclick="txm('${t.en}').on=${!t.on};refresh()">${t.on?'关闭入账':'开启入账'}</span>`}));
+PAGES.water=()=>card('手续费垫资账户水位',`<div style="max-width:520px">${dl([['当前余额',fmt(awxBal('FA'))],['状态',awxBal('FA')<S.water.low?tag('低于水位','red'):tag('正常','green')]])}
+  ${fr('低水位（SGD）',`<input class="ipt" id="w_l" value="${S.water.low.toFixed(2)}">`,1)}${fr('目标额（SGD）',`<input class="ipt" id="w_t" value="${S.water.target.toFixed(2)}">`,1)}
+  <div class="muted" style="margin-bottom:12px">余额低于低水位时预警，一键生成补资调拨单，金额 = 目标额 − 当前余额，从平台佣金账户转入</div>
+  <button class="btn p" onclick="saveWater()">保存</button></div>`);
+function saveWater(){const l=r2(parseFloat($('w_l').value)),t=r2(parseFloat($('w_t').value));if(!(l>0)||!(t>l))return toast('目标额须大于低水位');S.water={low:l,target:t};checkWater();toast('已保存');refresh()}
+
+/* ================= 抽屉 ================= */
+function openFlow(id){openDrawer(()=>{const f=fl(id);const m=txm(f.type);
+  const b=`<div class="sec">流水信息</div>${dl([['流水号（Transaction Id）',f.id],['账户',accName(f.acc)],['交易大类',BIG[m?.big]||'—'],['交易类型',txcn(f.type)+'（'+f.type+'）'],['结算前金额',fmt(f.gross)],['交易手续费',fmt(f.fee)],['净额',sn(f.net)],['币种',f.cur],['结算状态',f.status==='Settled'?'已结算':'待结算'],['结算批次号',f.batch],['创建时间',f.created],['结算时间',f.settled],['系统单据编号',f.orderNo],['支付单号',f.pi],['支付尝试号',f.pat],['企业流水号（请求号）',f.req],['来源类型',f.srcEnt],['来源单号',f.src],['支付方式',f.method],['对方户名',esc(f.cp)],['备注（Reference）',esc(f.ref)],['清分桶',f.bucket?BK[f.bucket]:''],['入账状态',f.synced?stTag(f.review==='正常'?'已入账':f.review):'未同步'],['同步时间',f.syncAt]])}
+  ${f.claimBy?`<div class="muted">认领方式：${f.claimBy}</div>`:''}
+  <div class="sec">关联链</div>${chainHtml(chainFor(f))}
+  <div class="sec">凭证预览 ${tag('草案','orange')}</div>${voucherHtml(f)}`;
+  return {t:'流水详情',b}})}
+function chainFor(f){
+  const n=[],N=(title,sub,on,cur)=>n.push({title,sub,on,cur});
+  const fN=(x,t)=>N(t,`${x.id} · ${fmt(x.net)}${x.synced?'':' · 未同步'}`,`openFlow('${x.id}')`,x.id===f.id);
+  const L=f.link;
+  const o=(f.pi&&S.orders.find(x=>x.pi===f.pi))||ord(f.orderNo);
+  if(o&&(!L||L.k==='销售订单')){
+    N('销售订单 '+o.no,`${o.cust} · ${fmt(o.amount)}`,`openOrder('${o.no}')`);
+    const pay=S.flows.find(x=>x.type==='Payment'&&x.orderNo===o.no),out=S.flows.find(x=>x.acc==='PA'&&x.type==='Transfer'&&x.pi===o.pi&&!x.req),inn=S.flows.find(x=>x.acc==='HA'&&x.type==='Transfer'&&x.pi===o.pi&&!x.req);
+    if(pay)fN(pay,'收单（平台账户）');if(out)fN(out,'自动划转·转出（平台账户）');if(inn)fN(inn,'自动划转·转入（清分账户·线上支付桶）');
+    if(o.payoutNo)N('结算单（外部） '+o.payoutNo,'清结算系统结算打款','');
+    S.rfs.filter(r=>r.order===o.no).forEach(r=>N('退款资金单 '+r.no,`退款 ${fmt(r.amt)} · ${r.state}`,`openRF('${r.no}')`));
+  }else if(L&&L.k==='资金调拨单'){const t=trOf(L.no);if(t.basis)N('业务依据 '+t.basis,t.reason,t.basis.startsWith('CL')?`openClaim('${t.basis}')`:t.basis.startsWith('AD')?`openAD('${t.basis}')`:'');else N('业务依据',t.reason,'');N('资金调拨单 '+t.no,`${t.type} · ${fmt(t.amt)} · ${t.state}`,`openTR('${t.no}')`);flowsOfReq(t.no).forEach(x=>fN(x,`${x.net<0?'转出':'转入'}（${accName(x.acc)}${x.bucket?' · '+BK[x.bucket]:''}）`))}
+  else if(L&&L.k==='垫资单'){const a=adOf(L.no);N('垫资单 '+a.no,`${a.orders.length} 笔订单 · ${fmt(a.amt)} · ${a.state}`,`openAD('${a.no}')`);a.orders.forEach(no=>N('订单 '+no,`${ord(no).cust} · ${fmt(ord(no).amount)} · 归还：${ord(no).advState}`,`openOrder('${no}')`));flowsOfReq(a.no).forEach(x=>fN(x,`${x.net<0?'转出':'转入'}（${accName(x.acc)}）`))}
+  else if(L&&L.k==='退款资金单'){const r=rfOf(L.no);N('销售订单 '+r.order,r.cust,`openOrder('${r.order}')`);fN(fl(r.payFlow),'原收单');N('退款资金单 '+r.no,`退款 ${fmt(r.amt)} · ${r.state}`,`openRF('${r.no}')`);flowsOfReq(r.no).forEach(x=>fN(x,x.type==='Refund'?'③ 原路退款（平台账户）':x.acc==='HA'?'① 清分账户转出':x.acc==='FA'?'② 手续费垫资账户转出':'平台账户转入'))}
+  else if(L&&L.k==='认领单'){const c=clOf(L.no);fN(f,'入金（平台账户）');N('认领单 '+c.no,`${c.by} · 差额 ${fmt(c.diff)}`,`openClaim('${c.no}')`);c.orders.forEach(no=>N('核销订单 '+no,`${fmt(ord(no).amount)}${ord(no).adv?' · 垫资单 '+ord(no).adv:''}`,`openOrder('${no}')`));const t=trOf(c.tr);if(t){N('调拨单 '+t.no,`账期打款转清分 · ${t.state}`,`openTR('${t.no}')`);flowsOfReq(t.no).forEach(x=>fN(x,`${x.net<0?'转出':'转入'}（${accName(x.acc)}）`))}}
+  else if(L&&L.k.startsWith('结算单')){N('结算单（外部） '+L.no,'清结算系统发起','');flowsOfReq(L.no).filter(x=>x.acc==='HA').forEach(x=>fN(x,`清分账户转出 → ${x.cp}（${BK[x.bucket]||'—'}）`));if(f.acc!=='HA')fN(f,'转入（'+accName(f.acc)+'）')}
+  else{fN(f,'本流水');N(f.claim==='待认领'?'待认领':'未挂单',f.claim==='待认领'?'到「待认领流水」认领':'到「挂单对账」处理',f.claim==='待认领'?`go('claim')`:`go('unlinked')`)}
+  return n;
+}
+const chainHtml=n=>`<div class="chain">${n.map(x=>`<div class="node ${x.cur?'cur':''}"><div>${x.on?`<span class="link" onclick="${x.on}">${esc(x.title)}</span>`:esc(x.title)}${x.cur?' '+tag('当前','blue'):''}</div><div class="nt">${esc(x.sub)}</div></div>`).join('')}</div>`;
+function voucherHtml(f){
+  if(!inLedger(f))return '<div class="muted">未入账流水不生成凭证</div>';
+  const A=a=>'其他货币资金-Airwallex-'+accName(a).replace('商家账户-','商家账户:');let L=[];
+  if(f.type==='Payment')L=[['借',A(f.acc),f.net],['借','财务费用-支付手续费',f.fee],['贷','预收账款-'+f.cp,f.gross]];
+  else if(f.type==='Refund')L=[['借','预收账款-'+f.cp,-f.gross],['借','财务费用-支付手续费',f.fee],['贷',A(f.acc),-f.net]];
+  else if(f.type==='Deposit')L=[['借',A(f.acc),f.net],['贷',f.claim==='已认领'?'应收账款-'+(clOf(f.link.no)?.cust||''):'待认领款项',f.net]];
+  else if(f.type==='Transfer'){if(f.net>0)return '<div class="muted">划转凭证由转出方流水生成</div>';const p=S.flows.find(x=>x.src===f.src&&x.id!==f.id);const to=p?p.acc:'';const amt=-f.net;
+    if(f.link&&f.link.k==='垫资单')L=[['借','其他应收款-清分垫资',amt],['贷',A(f.acc),amt]];
+    else if(f.link&&f.link.k==='资金调拨单'&&trOf(f.link.no).type==='垫资提回')L=[['借',A(to),amt],['贷','其他应收款-清分垫资',amt]];
+    else L=[['借',A(to),amt],['贷',A(f.acc),amt]];}
+  L=L.filter(l=>r2(l[2])!==0);
+  return tbl([{t:'借贷',k:l=>l[0]},{t:'科目',k:l=>esc(l[1])},{t:'金额',num:1,k:l=>fmt(l[2])}],L);
+}
+const logTbl=log=>tbl([{t:'时间',k:l=>l[0]},{t:'操作人',k:l=>l[1]},{t:'动作',k:l=>l[2]},{t:'说明',k:l=>esc(l[3])||'—'}],log.slice().reverse());
+const flowTbl=fs=>tbl([{t:'流水号',k:x=>flowLink(x.id)},{t:'账户',k:x=>accName(x.acc)},{t:'交易类型',k:x=>txcn(x.type)},{t:'净额',num:1,k:x=>sn(x.net)},{t:'清分桶',k:x=>x.bucket?BK[x.bucket]:'—'},{t:'入账状态',k:x=>x.synced?stTag(x.review==='正常'?'已入账':x.review):tag('未同步','gray')}],fs);
+function openTR(no){openDrawer(()=>{const t=trOf(no);return {t:'资金调拨单 '+no,b:`${dl([['调拨单号',t.no],['状态',stTag(t.state)],['调拨类型',t.type],['金额',fmt(t.amt)],['转出账户',accName(t.from)+(t.fromB?' · '+BK[t.fromB]:'')],['转入账户',accName(t.to)+(t.toB?' · '+BK[t.toB]:'')],['业务依据',esc(t.reason)],['依据单据',t.basis],['Airwallex 请求号',t.state==='已完成'?t.no:''],['流水核对',t.check==='—'?'':stTag(t.check)],['失败原因',esc(t.fail)],['创建人',t.creator],['创建时间',t.created],['完成时间',t.done||'']])}<div class="sec">关联流水</div>${flowTbl(flowsOfReq(no))}<div class="sec">操作日志</div>${logTbl(t.log)}`,f:trOps(t).replace(/<span class="link( d)?" onclick="([^"]+)">([^<]+)<\/span>/g,(m,d,on,l)=>l==='详情'?'':`<button class="btn ${d?'d':'p'}" onclick="${on}">${l}</button>`)}})}
+function openAD(no){openDrawer(()=>{const a=adOf(no);return {t:'垫资单 '+no,b:`${dl([['垫资单号',a.no],['状态',stTag(a.state)],['结算周期',a.period],['垫资金额',fmt(a.amt)],['资金来源',a.src],['已归还 / 未归还',fmt(adRet(a))+' / '+fmt(r2(a.amt-adRet(a)))],['提回调拨单',a.tr],['失败原因',esc(a.fail)],['创建人',a.creator],['创建时间',a.created]])}<div class="sec">垫资订单</div>${tbl([{t:'订单号',k:n=>`<span class="link" onclick="openOrder('${n}')">${n}</span>`},{t:'客户',k:n=>ord(n).cust},{t:'订单金额',num:1,k:n=>fmt(ord(n).amount)},{t:'付款状态',k:n=>ord(n).paid?tag('已付款','green'):tag('未付款','orange')},{t:'认领单',k:n=>ord(n).claimNo||'—'},{t:'商家结算',k:n=>ord(n).payout},{t:'归还状态',k:n=>ord(n).advState==='已归还'?tag('已归还','green'):tag('未归还','orange')}],a.orders)}<div class="eq">垫资金额 ${fmt(a.amt)} = Σ订单金额 ${fmt(r2(a.orders.reduce((s,n)=>s+ord(n).amount,0)))}</div><div class="sec">关联流水</div>${flowTbl(flowsOfReq(no))}<div class="sec">操作日志</div>${logTbl(a.log)}`,f:adOps(a).replace(/<span class="link( d)?" onclick="([^"]+)">([^<]+)<\/span>/g,(m,d,on,l)=>l==='详情'?'':`<button class="btn ${d?'d':'p'}" onclick="${on}">${l}</button>`)}})}
+function openRF(no){openDrawer(()=>{const r=rfOf(no);const fs=flowsOfReq(no);const l1=fs.find(x=>x.acc==='HA'),l2=fs.find(x=>x.acc==='FA'),l3=fs.find(x=>x.type==='Refund');
+  const legs=[['①','清分账户 → 平台账户','原收单净额 × 退款金额 ÷ 原支付金额',r.leg1,l1],['②','手续费垫资账户 → 平台账户','退款金额 − ① + 退款手续费',r.leg2,l2],['③','平台账户 → 客户（原路）','退款金额，Airwallex 另扣退款手续费',r.amt,l3]];
+  return {t:'退款资金单 '+no,b:`${dl([['退款资金单号',r.no],['状态',stTag(r.state)],['退款单号',r.refundNo],['订单号',r.order],['客户',r.cust],['原支付单号',r.pi],['原支付金额',fmt(r.payAmt)],['原收单手续费',fmt(r.payFee)],['原收单净额',fmt(r.payNet)],['退款金额',fmt(r.amt)],['退款手续费',fmt(r.rfee)],['挂起原因',r.block]])}
+  <div class="sec">三腿资金</div>${tbl([{t:'腿',k:x=>x[0]},{t:'资金路径',k:x=>x[1]},{t:'计算',k:x=>x[2]},{t:'应划金额',num:1,k:x=>fmt(x[3])},{t:'流水',k:x=>x[4]?flowLink(x[4].id):'—'},{t:'入账',k:x=>x[4]?(x[4].synced?stTag('已入账'):tag('未同步','gray')):'—'}],legs)}
+  <div class="eq">闭环校验：① ${fmt(r.leg1)} + ② ${fmt(r.leg2)} − 退款 ${fmt(r.amt)} − 退款手续费 ${fmt(r.rfee)} = <b>${fmt(r2(r.leg1+r.leg2-r.amt-r.rfee))}</b></div>
+  <div class="sec">操作日志</div>${logTbl(r.log)}`,f:r.state!=='已完成'?`<button class="btn p" onclick="rfRetry('${no}')">重试</button>`:''}})}
+function openER(no){openDrawer(()=>{const e=erOf(no);const f=fl(e.obj);
+  let form='';
+  if(e.state==='待处理'){
+    const ways=e.type==='余额不平'?['已补同步复对','已线下调整','无需处理']:e.type==='无单转账'?['已归类待分类资金','已补挂单据','已线下调整']:e.type==='未挂单'?['已补挂单据','已线下调整','无需处理']:['已线下调整','无需处理'];
+    const quick=e.type==='无单转账'&&f&&f.acc==='HA'&&!f.classified?`<button class="btn" onclick="classify('${f.id}','${no}')">归类到桶并结案</button>`:(e.type==='未挂单'||e.type==='无单转账')&&f&&!f.link?`<button class="btn" onclick="manualLink('${f.id}','${no}')">手工挂单并结案</button>`:'';
+    form=`<div class="sec">处理</div>${quick?`<div style="margin-bottom:12px">${quick}</div>`:''}${fr('处理方式',`<select class="ipt" id="e_w">${ways.map(w=>`<option>${w}</option>`).join('')}</select>`,1)}${fr('结案说明',`<textarea class="ipt" id="e_n"></textarea>`,1)}`;
+  }
+  return {t:'差错单 '+no,b:`${dl([['差错单号',e.no],['状态',stTag(e.state)],['差错类型',e.type],['关联对象',errObj(e)],['金额 / 差额',fmt(e.amt)],['结案时限',e.deadline],['描述',esc(e.desc)],['复对',e.recheck],['处理方式',e.way],['结案说明',esc(e.closeNote)],['结案时间',e.closed]])}${f?`<div class="sec">关联流水</div>${flowTbl([f])}`:''}${form}`,f:e.state==='待处理'?`<button class="btn p" onclick="closeER('${no}')">结案</button>`:''}})}
+function closeER(no){const n=$('e_n').value.trim();if(!n)return toast('请填写结案说明');const e=erOf(no);tick(1);e.state='已结案';e.way=$('e_w').value;e.closeNote=n;e.closed=ts();toast('已结案');refresh()}
+function openRecon(no){openDrawer(()=>{const r=S.recons.find(x=>x.no===no);return {t:'对账批次 '+no,b:dl([['对账日期',r.date],['执行时间',r.time],['执行人',r.by],['结果',stTag(r.res)]])+reconTbl(r.rows)}})}
+function openClaim(no){openDrawer(()=>{const c=clOf(no);return {t:'认领单 '+no,b:`${dl([['认领单号',c.no],['流水号',flowLink(c.flow)],['客户',c.cust],['回款金额',fmt(c.amt)],['订单合计',fmt(c.sum)],['差额',fmt(c.diff)],['差额处理',c.rebate],['认领方式',c.by],['认领时间',c.time],['转清分调拨单',`<span class="link" onclick="openTR('${c.tr}')">${c.tr}</span> ${stTag(trOf(c.tr).state)}`]])}<div class="sec">核销订单</div>${tbl([{t:'订单号',k:n=>`<span class="link" onclick="openOrder('${n}')">${n}</span>`},{t:'订单金额',num:1,k:n=>fmt(ord(n).amount)},{t:'垫资单',k:n=>ord(n).adv||'—'},{t:'垫资归还',k:n=>ord(n).advState||'—'}],c.orders)}`}})}
+function openOrder(no){openDrawer(()=>{const o=ord(no);const fs=S.flows.filter(f=>f.orderNo===no||(o.pi&&f.pi===o.pi)||(o.claimNo&&f.link&&f.link.no===o.claimNo));
+  return {t:'订单资金 '+no,b:`${dl([['订单号',o.no],['客户',o.cust],['订单类型',o.kind],['支付方式',o.method||'银行转账'],['商家',accName(o.merchant)],['订单金额',fmt(o.amount)],['收单手续费',o.kind==='线上'?fmt(o.fee):''],['收单净额',o.kind==='线上'?fmt(o.net):''],['支付单号',o.pi],['付款状态',o.paid?'已付款':'未付款'],['认领单',o.claimNo],['垫资单',o.adv],['垫资归还',o.advState],['已退款',o.refunded?fmt(o.refunded):''],['商家结算',o.payout],['结算单',o.payoutNo]])}<div class="sec">资金流水</div>${flowTbl(fs)}`}})}
+
+seed();refresh();
+</script>
+</body>
+</html>
