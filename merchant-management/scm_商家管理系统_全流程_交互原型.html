@@ -661,6 +661,7 @@ const DB = {
     // 预送模式（提前送货与预测预送）：运营平台按商家逐个配置，默认关闭。
     // 关闭的商家完全没有预送逻辑——无预送量、无在仓寄存、无相关菜单，备货与打标只按订单量（BR-03）
     presendMode:true,              // 演示店铺已开通；运营端「店铺管理 › 预送模式」可切换
+    presendSkuLimit:20,            // 预送 SKU 种类上限（BR-22）：运营平台按商家配置，默认 20，整数 1–50，次日生效
     onboard:'scm_pending',         // scm_pending(入驻审核中)|task|task_review|task_rejected|active
     taskReject:'',
     vendorCreated:false,           // 供应商入驻建档后置 true
@@ -4456,10 +4457,27 @@ function act_shopPresend(mcode){
       <label class="fl" style="margin:0">预送模式</label>
       <label class="chip-ck ${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="act_shopPresendSet(this.checked)">${on?'已开通':'未开通'}</label>
     </div>
+    ${on?`<div class="fr" style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+      <label class="fl" style="margin:0">预送 SKU 种类上限 <span style="color:var(--r)">*</span></label>
+      <div style="display:flex;align-items:center;gap:8px"><input id="psLimit" type="number" min="1" max="50" step="1" value="${DB.merchant.presendSkuLimit||20}" style="width:90px;text-align:right"> 种
+        <button class="btn btn-p btn-sm" onclick="act_shopPresendLimit()">保存</button></div>
+    </div>
+    <div style="font-size:12px;color:var(--ts);margin-top:6px">每天最多给该商家 <b>${DB.merchant.presendSkuLimit||20}</b> 种 SKU 算预送量，按当日预送定稿量从高到低取前 N 种，其余 SKU 当日不预送、只送订单量。默认 20 种，可填 1–50 的整数，修改次日生效。</div>`:''}
     <div style="font-size:12px;color:var(--ts);margin-top:8px">关闭后<b>次日起</b>回归普通模式；已在仓的存量货继续按「次日抵扣」消化至清零，不强制退回。</div>`
     :'<div class="ib ib-gr" style="margin-top:14px"><span class="i">ℹ️</span>演示原型仅支持配置当前登录商家，其他店铺为只读展示。</div>'}
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
+}
+// BR-22：预送 SKU 种类上限，整数 1–50，保存后次日生效
+function act_shopPresendLimit(){
+  const v=document.getElementById('psLimit').value.trim(),n=Number(v);
+  if(!v){toast('请填写预送 SKU 种类上限','err');return;}
+  if(!Number.isInteger(n)||n<1||n>50){toast('请输入 1–50 的整数','err');return;}
+  if(n===DB.merchant.presendSkuLimit){closeModal();return;}
+  DB.merchant.presendSkuLimit=n;
+  DB.presend=null;                 // 重新演算预送量 / 送货盘点 / 在仓库存
+  closeModal();render();
+  toast(`已将预送 SKU 种类上限改为 ${n} 种，次日起生效`,'ok');
 }
 function act_shopPresendSet(on){
   DB.merchant.presendMode=!!on;
@@ -4530,7 +4548,7 @@ function shopAllTab(){
       <td>${tag('opstatus',r.op)}</td>
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
-      <td>${(r.mine&&DB.merchant.presendMode)?'<span class="tag t-g"><span class="dot"></span>已开通</span>':'<span class="tag t-gr">未开通</span>'}</td>
+      <td>${(r.mine&&DB.merchant.presendMode)?`<span class="tag t-g"><span class="dot"></span>已开通</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">上限 ${DB.merchant.presendSkuLimit||20} 种</div>`:'<span class="tag t-gr">未开通</span>'}</td>
       <td><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
@@ -5919,7 +5937,7 @@ goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260917a"></script>
-<script src="pc-modules/pick.js?v=20260922b"></script>
+<script src="pc-modules/pick.js?v=20260922c"></script>
 <script src="pc-modules/weigh.js?v=20260817d"></script>
 <script src="pc-modules/delivery.js?v=20260922b"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
@@ -5930,7 +5948,7 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260915a"></script>
-<script src="pc-modules/presend.js?v=20260922b"></script>
+<script src="pc-modules/presend.js?v=20260922c"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

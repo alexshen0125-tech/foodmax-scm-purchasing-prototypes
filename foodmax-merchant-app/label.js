@@ -122,7 +122,7 @@ function renderPrint(box){
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
   const df=dateField(state.date,ds,d=>{state.date=d;renderPrint(box);});
   box.innerHTML=`
-    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br><b>应送货 = 订单量 + 预送量</b>，<b>预送量 = 定稿量 − 在仓剩余</b>（下限 0）：昨天留仓的、以及你昨天多送被仓库照收的货先抵扣今天的预送量（订单量照送），已在应送货里扣掉，<b>不要重复打标重复送</b>。':''}</div>
+    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送货 = 订单量 + 预送量</b>，<b>预送量 = 定稿量 − 在仓剩余</b>（下限 0）：昨天留仓的、以及你昨天多送被仓库照收的货先抵扣今天的预送量（订单量照送），已在应送货里扣掉，<b>不要重复打标重复送</b>。':''}</div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>

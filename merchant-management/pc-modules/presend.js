@@ -39,6 +39,12 @@
       return {sku:a.sku,name:a.name,unit:a.unit,spec,cat:(p&&p.cat)||'—',wh:a.wh,
         fcst,avail,orderQty:a.orderQty,hist};
     });
+    // BR-22：预送 SKU 种类上限——按 SKU 聚合，按预送定稿量从高到低取前 N 种进入预送池，其余当日预送量 = 0
+    const lim=(DB.merchant&&DB.merchant.presendSkuLimit)||20,skuQ={};
+    rows.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
+    const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]).slice(0,lim));
+    rows.forEach(r=>{r.inPool=pool.has(r.sku);});
+    DB.presendPool={limit:lim,total:Object.keys(skuQ).length,used:pool.size};
     DB.presend=rows;
     buildAudit();        // 逐日链式演算 → DB.psAudit（送货盘点数据源）
     buildStock();        // 由链式结果的期末在仓派生「在仓预送库存」，与盘点同源
@@ -126,7 +132,7 @@
   function psSplit(gross,left){const ded=Math.min(gross,left);return {ded,net:gross-ded};}
   function cfg(){return DB.presendCfg;}
   // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
-  function finalQty(r){return Math.min(r.fcst,r.avail);}
+  function finalQty(r){return r.inPool===false?0:Math.min(r.fcst,r.avail);}   // 超出种类上限（BR-22）不预送
 
   /* ---------- 在仓预送库存 ---------- */
   function stockRows(){

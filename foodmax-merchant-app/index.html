@@ -266,6 +266,7 @@ if(!window._cdTick)window._cdTick=setInterval(()=>{document.querySelectorAll('[d
 // 未开通的商家完全没有预送逻辑——无预送量、无在仓寄存、相关入口不出现，备货与打标只按订单量。
 // 演示店铺已开通；与 PC 原型 DB.merchant.presendMode 同一开关。
 const PRESEND_ON=true;
+const PRESEND_SKU_LIMIT=20;   // 预送 SKU 种类上限（BR-22）：运营平台按商家配置，默认 20，与 PC 同口径
 const DB={
   orders:[
     {id:'#SG20260701001',client:'海底捞（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,platSub:8.00,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',spec:'1kg/件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
@@ -318,7 +319,7 @@ function cancelOrder(id){const o=DB.orders.find(x=>x.id===id);if(!o||o.status!==
   if(pk){pk.orderIds=pk.orderIds.filter(x=>x!==id);if(!pk.orderIds.length)pk.status='已作废';}
   o.pickId='';return pk;}
 window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel,
-  PRESEND_ON,DB,ordMask,ordIncome,ordPaid,ordFee,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
+  PRESEND_ON,PRESEND_SKU_LIMIT,DB,ordMask,ordIncome,ordPaid,ordFee,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
 
 function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
   const r=READY.has(k);
@@ -405,7 +406,7 @@ renderHome();
 <script src="stock.js?v=20260811k"></script>
 <script src="order.js"></script>
 <script src="pick.js"></script>
-<script src="label.js?v=20260922b"></script>
+<script src="label.js?v=20260922c"></script>
 <script src="weigh.js"></script>
 <script src="after.js?v=20260907"></script>
 <script src="invoice.js?v=20260915a"></script>
@@ -422,7 +423,7 @@ renderHome();
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260903b"></script>
 <script src="supply.js"></script>
-<script src="presend.js?v=20260922b"></script>
+<script src="presend.js?v=20260922c"></script>
 <script src="promo.js?v=20260908g"></script>
 <script src="enroll.js?v=20260908a"></script>
 <!-- 模块脚本加载完后重渲工作台：金刚区角标（如「退货单」待提货/待取回）取自各模块数据，首渲时模块尚未就绪 -->

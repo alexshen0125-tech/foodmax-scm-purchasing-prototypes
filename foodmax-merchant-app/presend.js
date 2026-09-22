@@ -80,6 +80,11 @@ function ensure(){
     const hist=[0,1,2,3].map(k=>Math.max(0,fcst-6+hnum(a.name+a.wh+'h'+k,13)));
     return Object.assign({},a,{fcst,avail,hist});
   });
+  // BR-22：预送 SKU 种类上限——按预送定稿量从高到低取前 N 种进入预送池，其余当日预送量 = 0（与 PC 同算法）
+  const lim=window.FM.PRESEND_SKU_LIMIT||20,skuQ={};
+  ROWS.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
+  const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]).slice(0,lim));
+  ROWS.forEach(r=>{r.inPool=pool.has(r.sku);});
   buildAudit();     // 逐日链式演算（送货盘点数据源）
   buildStock();     // 由链式期末在仓派生「在仓预送库存」，与盘点同源
 }
@@ -133,7 +138,7 @@ function buildStock(){
   }));
 }
 // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
-function finalQty(r){return Math.min(r.fcst,r.avail);}
+function finalQty(r){return r.inPool===false?0:Math.min(r.fcst,r.avail);}   // 超出种类上限（BR-22）不预送
 // BR-15b（2026-09-22 拍板）：在仓只抵扣预送，不抵扣订单——预送量（净）= max(0, 定稿量 − 在仓剩余)
 function psSplit(gross,left){const ded=Math.min(gross,left);return {ded,net:gross-ded};}
 
