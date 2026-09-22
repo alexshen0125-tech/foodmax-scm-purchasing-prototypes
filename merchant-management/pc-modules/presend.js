@@ -42,7 +42,7 @@
     // BR-22：预送 SKU 种类上限——按 SKU 聚合，按预送定稿量从高到低取前 N 种进入预送池，其余当日预送量 = 0
     const lim=(DB.merchant&&DB.merchant.presendSkuLimit)||20,skuQ={};
     rows.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
-    const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]).slice(0,lim));
+    const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));
     rows.forEach(r=>{r.inPool=pool.has(r.sku);});
     DB.presendPool={limit:lim,total:Object.keys(skuQ).length,used:pool.size};
     DB.presend=rows;

@@ -4487,6 +4487,61 @@ function act_shopPresendLimit(mcode){
   closeModal();render();
   toast(`已将预送 SKU 种类上限改为 ${n} 种，次日起生效`,'ok');
 }
+/* 预送 SKU 清单（BR-22）：按 SKU 汇总当日预送定稿量，从高到低排名，前 N 种（N = 种类上限）入池，其余超出上限、当日不预送。
+   当前登录商家取商家端同源数据（DB.presend），其他店铺为演示样例。 */
+const PS_DEMO_SKUS={
+  'M2026-0820':[['BK-1001','高筋面粉','25kg/袋'],['BK-1002','低筋面粉','25kg/袋'],['BK-1003','无盐黄油','5kg/箱'],['BK-1004','奶油奶酪','2kg/盒'],['BK-1005','细砂糖','25kg/袋'],['BK-1006','糖粉','10kg/袋'],['BK-1007','动物淡奶油','1L*12/箱'],['BK-1008','即发干酵母','500g*20/箱'],['BK-1009','可可粉','5kg/袋'],['BK-1010','杏仁粉','5kg/袋'],['BK-1011','泡打粉','1kg*10/箱'],['BK-1012','黑巧克力币','5kg/袋']],
+  'M2026-0805':[['CF-2001','椰浆','400ml*24/箱'],['CF-2002','椰奶','1L*12/箱'],['CF-2003','椰子油','5L/桶'],['CF-2004','椰糖','1kg*10/箱'],['CF-2005','椰蓉','1kg*10/箱'],['CF-2006','咖喱酱','1kg*12/箱'],['CF-2007','参巴酱','1kg*12/箱'],['CF-2008','鱼露','700ml*12/箱'],['CF-2009','罗望子酱','500g*20/箱'],['CF-2010','叻沙酱','1kg*12/箱']],
+};
+function psHash(s,m){let h=11;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h%m;}
+function psSkuListOf(mcode){
+  const lim=psCfgOf(mcode).limit,map={};
+  if(mcode==DB.merchant.code){
+    if(typeof ensurePresend=='function')ensurePresend();
+    (DB.presend||[]).forEach(r=>{
+      const m=map[r.sku]||(map[r.sku]={sku:r.sku,name:r.name,spec:r.spec,whs:[],fcst:0,avail:0});
+      m.whs.push(r.wh);m.fcst+=r.fcst;m.avail+=r.avail;
+    });
+  }else{
+    (PS_DEMO_SKUS[mcode]||[]).forEach(([sku,name,spec])=>{
+      const fcst=4+psHash(mcode+sku+'f',30),avail=Math.max(2,Math.round(fcst*(0.5+psHash(mcode+sku+'a',60)/100)));
+      map[sku]={sku,name,spec,whs:[['大巴窑DC','盛港DC','兀兰DC'][psHash(sku,3)]],fcst,avail};
+    });
+  }
+  const rows=Object.values(map).map(r=>Object.assign(r,{final:Math.min(r.fcst,r.avail)}))
+    .sort((a,b)=>b.final-a.final||a.sku.localeCompare(b.sku));
+  rows.forEach((r,i)=>{r.rank=i+1;r.inPool=i<lim;});
+  return rows;
+}
+window.act_shopPsSkus=function(mcode,tab){
+  const c=psCfgOf(mcode),all=psSkuListOf(mcode),t=tab||'all';
+  const inN=all.filter(r=>r.inPool).length,outN=all.length-inN;
+  const rows=t=='in'?all.filter(r=>r.inPool):t=='out'?all.filter(r=>!r.inPool):all;
+  drawer(`<div class="drawer-hd"><div><h3>预送 SKU 清单</h3>
+      <div style="margin-top:4px"><span class="sub" style="font-size:12px">${shopNameOf(mcode)} · ${mcode} · 种类上限 ${c.limit} 种</span></div></div>
+      <span class="x" onclick="closeDrawer()">×</span></div>
+    <div class="drawer-bd">
+      <div class="tabs" style="margin-bottom:12px">
+        <div class="tab ${t=='all'?'active':''}" onclick="act_shopPsSkus('${mcode}','all')">全部 (${all.length})</div>
+        <div class="tab ${t=='in'?'active':''}" onclick="act_shopPsSkus('${mcode}','in')">预送中 (${inN})</div>
+        <div class="tab ${t=='out'?'active':''}" onclick="act_shopPsSkus('${mcode}','out')">超出上限 (${outN})</div>
+      </div>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th style="width:52px">排名</th><th>SKU 编码</th><th>商品名称</th><th>规格</th><th>入库仓库</th>
+          <th style="text-align:right">算法预测量</th><th style="text-align:right">可售库存</th><th style="text-align:right">预送定稿量</th><th>状态</th></tr></thead>
+        <tbody>${rows.length?rows.map(r=>`<tr>
+          <td>${r.rank}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td style="color:var(--ts)">${r.spec}</td>
+          <td>${r.whs.join('、')}</td>
+          <td style="text-align:right">${r.fcst}</td><td style="text-align:right">${r.avail}</td>
+          <td style="text-align:right">${r.inPool?`<b>${r.final}</b>`:`<span style="color:var(--tt)">0</span>`}</td>
+          <td>${r.inPool?'<span class="tag t-g"><span class="dot"></span>预送中</span>':'<span class="tag t-gr">超出上限</span>'}</td></tr>`).join('')
+          :`<tr><td colspan="9"><div class="empty"><div class="e-t">${t=='out'?'没有超出上限的 SKU':'暂无预送 SKU'}</div><div class="e-s">${t=='out'?`该商家 SKU 数未超过上限 ${c.limit} 种`:'该商家当日还没有待发货订单，算法未产出预测量'}</div></div></td></tr>`}</tbody>
+      </table></div>
+      <div style="font-size:12px;color:var(--ts);margin-top:10px">预送定稿量 = min(算法预测量, 可售库存)，多仓合计；按定稿量从高到低排名，前 ${c.limit} 种预送中，其余当日只送订单量。</div>
+    </div>
+    <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
+      <button class="btn btn-p" onclick="closeDrawer();act_shopPresend('${mcode}')">修改种类上限</button></div>`);
+};
 function act_shopPresendSet(mcode,on){
   psCfgSet(mcode,'on',!!on);
   if(mcode==DB.merchant.code&&!on&&['m-stock-presend'].includes(DB.page))DB.page='m-pick-ref';
@@ -4563,7 +4618,7 @@ function shopAllTab(){
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
         <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button>
-        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button></td></tr>`;};
+        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button>${psCfgOf(r.mcode).on?`<button class="btn btn-link" onclick="act_shopPsSkus('${r.mcode}')">预送SKU</button>`:''}</td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>预送模式</th><th>操作</th></tr></thead>
@@ -5958,7 +6013,7 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260915a"></script>
-<script src="pc-modules/presend.js?v=20260922c"></script>
+<script src="pc-modules/presend.js?v=20260922d"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

@@ -83,7 +83,7 @@ function ensure(){
   // BR-22：预送 SKU 种类上限——按预送定稿量从高到低取前 N 种进入预送池，其余当日预送量 = 0（与 PC 同算法）
   const lim=window.FM.PRESEND_SKU_LIMIT||20,skuQ={};
   ROWS.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
-  const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]).slice(0,lim));
+  const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));
   ROWS.forEach(r=>{r.inPool=pool.has(r.sku);});
   buildAudit();     // 逐日链式演算（送货盘点数据源）
   buildStock();     // 由链式期末在仓派生「在仓预送库存」，与盘点同源
