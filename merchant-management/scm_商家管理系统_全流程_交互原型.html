@@ -4472,7 +4472,7 @@ function act_shopPresend(mcode){
       <div style="display:flex;align-items:center;gap:8px"><input id="psLimit" type="number" min="1" max="50" step="1" value="${c.limit}" style="width:90px;text-align:right"> 种
         <button class="btn btn-p btn-sm" onclick="act_shopPresendLimit('${mcode}')">保存</button></div>
     </div>
-    <div style="font-size:12px;color:var(--ts);margin-top:6px">每天最多给该商家 <b>${c.limit}</b> 种 SKU 算预送量，按当日预送定稿量从高到低取前 N 种，其余 SKU 当日不预送、只送订单量。默认 20 种，可填 1–50 的整数，修改次日生效。</div>`:''}
+    <div style="font-size:12px;color:var(--ts);margin-top:6px">只有算法给出预送量的 SKU 才进预送池（只有订单的 SKU 不占名额）；超过 <b>${c.limit}</b> 种时按当日预送定稿量从高到低截取前 N 种，被截取的当日只送订单量。默认 20 种，可填 1–50 的整数，修改次日生效。</div>`:''}
     <div style="font-size:12px;color:var(--ts);margin-top:8px">关闭后<b>次日起</b>回归普通模式；已在仓的存量货继续按「次日抵扣」消化至清零，不强制退回。</div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
@@ -4487,7 +4487,8 @@ function act_shopPresendLimit(mcode){
   closeModal();render();
   toast(`已将预送 SKU 种类上限改为 ${n} 种，次日起生效`,'ok');
 }
-/* 预送 SKU 清单（BR-22）：按 SKU 汇总当日预送定稿量，从高到低排名，前 N 种（N = 种类上限）入池，其余超出上限、当日不预送。
+/* 预送 SKU 清单（BR-22）：只列算法给出预送量（定稿量 > 0）的 SKU，非预送 SKU 不进池、不占名额；
+   按定稿量从高到低排名，超过种类上限 N 时直接截取前 N 种，其余标「已截取」、当日不预送。
    当前登录商家取商家端同源数据（DB.presend），其他店铺为演示样例。 */
 const PS_DEMO_SKUS={
   'M2026-0820':[['BK-1001','高筋面粉','25kg/袋'],['BK-1002','低筋面粉','25kg/袋'],['BK-1003','无盐黄油','5kg/箱'],['BK-1004','奶油奶酪','2kg/盒'],['BK-1005','细砂糖','25kg/袋'],['BK-1006','糖粉','10kg/袋'],['BK-1007','动物淡奶油','1L*12/箱'],['BK-1008','即发干酵母','500g*20/箱'],['BK-1009','可可粉','5kg/袋'],['BK-1010','杏仁粉','5kg/袋'],['BK-1011','泡打粉','1kg*10/箱'],['BK-1012','黑巧克力币','5kg/袋']],
@@ -4499,16 +4500,17 @@ function psSkuListOf(mcode){
   if(mcode==DB.merchant.code){
     if(typeof ensurePresend=='function')ensurePresend();
     (DB.presend||[]).forEach(r=>{
-      const m=map[r.sku]||(map[r.sku]={sku:r.sku,name:r.name,spec:r.spec,whs:[],fcst:0,avail:0});
-      m.whs.push(r.wh);m.fcst+=r.fcst;m.avail+=r.avail;
+      const m=map[r.sku]||(map[r.sku]={sku:r.sku,name:r.name,spec:r.spec,whs:[],fcst:0,avail:0,final:0});
+      m.whs.push(r.wh);m.fcst+=r.fcst;m.avail+=r.avail;m.final+=Math.min(r.fcst,r.avail);   // 与商家端取池同口径：逐仓取小再合计
     });
   }else{
     (PS_DEMO_SKUS[mcode]||[]).forEach(([sku,name,spec])=>{
-      const fcst=4+psHash(mcode+sku+'f',30),avail=Math.max(2,Math.round(fcst*(0.5+psHash(mcode+sku+'a',60)/100)));
-      map[sku]={sku,name,spec,whs:[['大巴窑DC','盛港DC','兀兰DC'][psHash(sku,3)]],fcst,avail};
+      const fcst=psHash(mcode+sku+'np',10)<2?0:4+psHash(mcode+sku+'f',30),avail=Math.max(2,Math.round(fcst*(0.5+psHash(mcode+sku+'a',60)/100)));
+      map[sku]={sku,name,spec,whs:[['大巴窑DC','盛港DC','兀兰DC'][psHash(sku,3)]],fcst,avail,final:Math.min(fcst,avail)};
     });
   }
-  const rows=Object.values(map).map(r=>Object.assign(r,{final:Math.min(r.fcst,r.avail)}))
+  const rows=Object.values(map)
+    .filter(r=>r.final>0)             // 非预送 SKU 不算在池子里
     .sort((a,b)=>b.final-a.final||a.sku.localeCompare(b.sku));
   rows.forEach((r,i)=>{r.rank=i+1;r.inPool=i<lim;});
   return rows;
@@ -4524,7 +4526,7 @@ window.act_shopPsSkus=function(mcode,tab){
       <div class="tabs" style="margin-bottom:12px">
         <div class="tab ${t=='all'?'active':''}" onclick="act_shopPsSkus('${mcode}','all')">全部 (${all.length})</div>
         <div class="tab ${t=='in'?'active':''}" onclick="act_shopPsSkus('${mcode}','in')">预送中 (${inN})</div>
-        <div class="tab ${t=='out'?'active':''}" onclick="act_shopPsSkus('${mcode}','out')">超出上限 (${outN})</div>
+        <div class="tab ${t=='out'?'active':''}" onclick="act_shopPsSkus('${mcode}','out')">已截取 (${outN})</div>
       </div>
       <div style="overflow-x:auto"><table>
         <thead><tr><th style="width:52px">排名</th><th>SKU 编码</th><th>商品名称</th><th>规格</th><th>入库仓库</th>
@@ -4534,10 +4536,10 @@ window.act_shopPsSkus=function(mcode,tab){
           <td>${r.whs.join('、')}</td>
           <td style="text-align:right">${r.fcst}</td><td style="text-align:right">${r.avail}</td>
           <td style="text-align:right">${r.inPool?`<b>${r.final}</b>`:`<span style="color:var(--tt)">0</span>`}</td>
-          <td>${r.inPool?'<span class="tag t-g"><span class="dot"></span>预送中</span>':'<span class="tag t-gr">超出上限</span>'}</td></tr>`).join('')
-          :`<tr><td colspan="9"><div class="empty"><div class="e-t">${t=='out'?'没有超出上限的 SKU':'暂无预送 SKU'}</div><div class="e-s">${t=='out'?`该商家 SKU 数未超过上限 ${c.limit} 种`:'该商家当日还没有待发货订单，算法未产出预测量'}</div></div></td></tr>`}</tbody>
+          <td>${r.inPool?'<span class="tag t-g"><span class="dot"></span>预送中</span>':'<span class="tag t-gr">已截取</span>'}</td></tr>`).join('')
+          :`<tr><td colspan="9"><div class="empty"><div class="e-t">${t=='out'?'没有被截取的 SKU':'暂无预送 SKU'}</div><div class="e-s">${t=='out'?`预送 SKU 未超过上限 ${c.limit} 种`:'算法当日未给该商家任何 SKU 产出预送量'}</div></div></td></tr>`}</tbody>
       </table></div>
-      <div style="font-size:12px;color:var(--ts);margin-top:10px">预送定稿量 = min(算法预测量, 可售库存)，多仓合计；按定稿量从高到低排名，前 ${c.limit} 种预送中，其余当日只送订单量。</div>
+      <div style="font-size:12px;color:var(--ts);margin-top:10px">只列算法给出预送量的 SKU，只有订单的 SKU 不进池、不占名额。预送定稿量 = 各仓 min(算法预测量, 可售库存) 合计；超过上限 ${c.limit} 种时按定稿量从高到低截取前 ${c.limit} 种，被截取的当日只送订单量。</div>
     </div>
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
       <button class="btn btn-p" onclick="closeDrawer();act_shopPresend('${mcode}')">修改种类上限</button></div>`);
@@ -6002,7 +6004,7 @@ goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260917a"></script>
-<script src="pc-modules/pick.js?v=20260922c"></script>
+<script src="pc-modules/pick.js?v=20260922e"></script>
 <script src="pc-modules/weigh.js?v=20260817d"></script>
 <script src="pc-modules/delivery.js?v=20260922b"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
@@ -6013,7 +6015,7 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260915a"></script>
-<script src="pc-modules/presend.js?v=20260922d"></script>
+<script src="pc-modules/presend.js?v=20260922e"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

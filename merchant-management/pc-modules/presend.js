@@ -33,18 +33,19 @@
       const sk=p&&p.skus&&p.skus[0];
       const spec=sk?`${sk.qty}${p.unit}/件`:a.unit;
       // 算法预测量 = T0 前订单量的 40%–120%（同量级，剩余时段还能卖多少）
-      const fcst=Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',80)/100)));
+      const fcst=hnum(a.sku+'np',10)<3?0:Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',80)/100))); // 约 3/10 SKU 算法不出预测（非预送品），不进预送池
       const avail=Math.max(3,Math.round(fcst*(0.45+hnum(a.name+a.wh+'a',60)/100))); // 可售库存 = 预测量的 45%–105%
       const hist=[0,1,2,3].map(k=>Math.max(0,fcst-6+hnum(a.name+a.wh+'h'+k,13)));
       return {sku:a.sku,name:a.name,unit:a.unit,spec,cat:(p&&p.cat)||'—',wh:a.wh,
         fcst,avail,orderQty:a.orderQty,hist};
     });
-    // BR-22：预送 SKU 种类上限——按 SKU 聚合，按预送定稿量从高到低取前 N 种进入预送池，其余当日预送量 = 0
+    // BR-22：预送 SKU 种类上限——只有算法给出预送量的 SKU 才进池；超过 N 种时按定稿量从高到低截取前 N 种，被截取的当日预送量 = 0
     const lim=(DB.merchant&&DB.merchant.presendSkuLimit)||20,skuQ={};
     rows.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
-    const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));
+    const cand=Object.keys(skuQ).filter(k=>skuQ[k]>0);   // BR-22：只有定稿量 > 0 的 SKU 才进池，非预送 SKU 不占名额
+    const pool=new Set(cand.sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));   // 超过上限直接截取前 N 种
     rows.forEach(r=>{r.inPool=pool.has(r.sku);});
-    DB.presendPool={limit:lim,total:Object.keys(skuQ).length,used:pool.size};
+    DB.presendPool={limit:lim,total:cand.length,used:pool.size};
     DB.presend=rows;
     buildAudit();        // 逐日链式演算 → DB.psAudit（送货盘点数据源）
     buildStock();        // 由链式结果的期末在仓派生「在仓预送库存」，与盘点同源

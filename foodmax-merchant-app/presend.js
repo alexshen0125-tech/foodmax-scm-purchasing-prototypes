@@ -75,15 +75,16 @@ function ensure(){
     });
   });
   ROWS=Object.values(agg).map(a=>{
-    const fcst=Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',80)/100)));
+    const fcst=hnum(a.sku+'np',10)<3?0:Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',80)/100))); // 约 3/10 SKU 算法不出预测（非预送品），不进预送池
     const avail=Math.max(3,Math.round(fcst*(0.45+hnum(a.name+a.wh+'a',60)/100))); // 可售库存 = 预测量的 45%–105%
     const hist=[0,1,2,3].map(k=>Math.max(0,fcst-6+hnum(a.name+a.wh+'h'+k,13)));
     return Object.assign({},a,{fcst,avail,hist});
   });
-  // BR-22：预送 SKU 种类上限——按预送定稿量从高到低取前 N 种进入预送池，其余当日预送量 = 0（与 PC 同算法）
+  // BR-22：预送 SKU 种类上限——只有算法给出预送量的 SKU 才进池；超过 N 种时按定稿量从高到低截取前 N 种（与 PC 同算法）
   const lim=window.FM.PRESEND_SKU_LIMIT||20,skuQ={};
   ROWS.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
-  const pool=new Set(Object.keys(skuQ).sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));
+  const cand=Object.keys(skuQ).filter(k=>skuQ[k]>0);   // BR-22：只有定稿量 > 0 的 SKU 才进池，非预送 SKU 不占名额
+  const pool=new Set(cand.sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));   // 超过上限直接截取前 N 种
   ROWS.forEach(r=>{r.inPool=pool.has(r.sku);});
   buildAudit();     // 逐日链式演算（送货盘点数据源）
   buildStock();     // 由链式期末在仓派生「在仓预送库存」，与盘点同源
