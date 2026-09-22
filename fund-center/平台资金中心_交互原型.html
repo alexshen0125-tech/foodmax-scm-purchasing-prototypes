@@ -525,7 +525,7 @@ const flowLink=id=>`<span class="link" onclick="openFlow('${id}')">${id}</span>`
 const linkState=f=>f.link?'已挂单':f.claim==='待认领'?'待认领':'未挂单';
 
 /* ================= 菜单 ================= */
-const MENU=[['概览',[['overview','资金总览']]],['流水中心',[['flows','交易流水'],['review','暂存复核'],['synclog','同步记录']]],['资金单据',[['tr','资金调拨单'],['ad','垫资单'],['rf','退款资金单']]],['清分账户',[['bucket','分桶余额'],['bucketlog','分桶明细'],['monthly','月结时点报表']]],['对账中心',[['recon','余额对账'],['unlinked','挂单对账'],['loop','单单闭环'],['err','差错处理']]],['认领核销',[['claim','待认领流水'],['rules','认领规则'],['orders','订单资金状态']]],['预警与凭证',[['alerts','预警中心'],['voucher','凭证规则']]],['基础配置',[['accts','账户档案'],['txmap','交易类型映射'],['water','水位配置']]]];
+const MENU=[['概览',[['overview','资金总览']]],['流水中心',[['acctflow','账户流水'],['flows','交易流水'],['review','暂存复核'],['synclog','同步记录']]],['资金单据',[['tr','资金调拨单'],['ad','垫资单'],['rf','退款资金单']]],['清分账户',[['bucket','分桶余额'],['bucketlog','分桶明细'],['monthly','月结时点报表']]],['对账中心',[['recon','余额对账'],['unlinked','挂单对账'],['loop','单单闭环'],['err','差错处理']]],['认领核销',[['claim','待认领流水'],['rules','认领规则'],['orders','订单资金状态']]],['预警与凭证',[['alerts','预警中心'],['voucher','凭证规则']]],['基础配置',[['accts','账户档案'],['txmap','交易类型映射'],['water','水位配置']]]];
 let PAGE='overview';
 function badgeOf(p){const n={review:S.flows.filter(f=>f.synced&&f.review==='暂存复核').length,claim:S.flows.filter(f=>inLedger(f)&&f.claim==='待认领').length,tr:S.trs.filter(t=>['待审批','待执行','执行失败'].includes(t.state)).length,ad:S.ads.filter(a=>['待审批','待执行','已归还'].includes(a.state)).length,rf:S.rfs.filter(r=>r.state!=='已完成').length,err:S.ers.filter(e=>e.state==='待处理').length,alerts:S.alerts.filter(a=>a.state==='未处理').length,unlinked:unlinkedRows().filter(f=>!f.err).length}[p];return n?`<span class="badge">${n}</span>`:''}
 function go(p){PAGE=p;closeDrawer();$('ct').scrollTop=0;refresh()}
@@ -545,9 +545,41 @@ PAGES.overview=()=>{
   const rows=reconRows();
   const todo=[['暂存复核待处理','review',S.flows.filter(f=>f.synced&&f.review==='暂存复核').length],['待认领流水','claim',S.flows.filter(f=>inLedger(f)&&f.claim==='待认领').length],['调拨单待审批 / 待执行 / 失败','tr',S.trs.filter(t=>['待审批','待执行','执行失败'].includes(t.state)).length],['垫资单待处理','ad',S.ads.filter(a=>['待审批','待执行','已归还'].includes(a.state)).length],['退款资金单未完成','rf',S.rfs.filter(r=>r.state!=='已完成').length],['未挂单流水','unlinked',unlinkedRows().filter(f=>!f.err).length],['差错待处理','err',S.ers.filter(e=>e.state==='待处理').length],['未处理预警','alerts',S.alerts.filter(a=>a.state==='未处理').length]];
   const bk=['ONL','TERM','ADV','UNC'];
-  return card('账户余额',tbl([{t:'账户',k:r=>accName(r.acc)},{t:'Airwallex 账户',k:r=>acc(r.acc).awx},{t:'Airwallex 余额',num:1,k:r=>fmt(r.awx)},{t:'账面余额',num:1,k:r=>fmt(r.end)},{t:'差额',num:1,k:r=>r.diff?`<span class="neg">${fmt(r.diff)}</span>`:'0.00'},{t:'未入账流水',num:1,k:r=>r.uns||'0'}],rows))+
+  return card('账户余额',tbl([{t:'账户',k:r=>accName(r.acc)},{t:'Airwallex 账户',k:r=>acc(r.acc).awx},{t:'Airwallex 余额',num:1,k:r=>fmt(r.awx)},{t:'账面余额',num:1,k:r=>fmt(r.end)},{t:'差额',num:1,k:r=>r.diff?`<span class="neg">${fmt(r.diff)}</span>`:'0.00'},{t:'未入账流水',num:1,k:r=>r.uns||'0'}],rows,{op:r=>`<span class="link" onclick="S.tab.acctflow='${r.acc}';go('acctflow')">账户流水</span>`}))+
   `<div class="grid2">${card('清分账户分桶',tbl([{t:'桶',k:b=>BK[b]},{t:'归属',k:b=>BKDESC[b]},{t:'账面余额',num:1,k:b=>fmt(bucketBal(b))}],bk)+`<div class="eq">四桶合计 ${fmt(bk.reduce((s,b)=>s+bucketBal(b),0))} ｜ Airwallex 清分账户余额 ${fmt(awxBal('HA'))}</div>`)}
   ${card('待办',todo.map(([l,p,n])=>`<div class="todo" onclick="go('${p}')"><span>${l}</span><span>${n?`<span class="badge">${n}</span>`:'<span class="muted">0</span>'}</span></div>`).join(''))}</div>`;
+};
+
+function flowDesc(f){
+  const L=f.link;
+  if(f.type==='Payment')return `订单 ${f.orderNo} 线上收单（${f.method}）`;
+  if(f.type==='Refund')return `订单 ${f.orderNo} 原路退款`;
+  if(f.type==='Deposit')return f.claim==='已认领'?`账期回款，${L.no} 认领核销`:`账期回款，待认领`;
+  if(f.type==='Transfer'){
+    const dir=f.net<0?'转出至':'转入自';
+    if(f.pi&&!f.req)return `订单 ${f.orderNo} 收单自动划转（${dir}${f.cp}）`;
+    if(L&&L.k==='资金调拨单')return `${trOf(L.no).type}（${dir}${f.cp}）`;
+    if(L&&L.k==='垫资单')return `清分垫资 ${L.no}（${dir}${f.cp}）`;
+    if(L&&L.k==='退款资金单'){const r=rfOf(L.no);return (f.acc==='HA'?'① 退款转回实到金额':f.acc==='FA'?'② 退款手续费垫资':'退款资金转入')+`（订单 ${r.order}）`}
+    if(L&&L.k.startsWith('结算单'))return `结算打款 ${L.no}（${dir}${f.cp}）`;
+    return `无单号划转（${dir}${f.cp}）`;
+  }
+  return txcn(f.type);
+}
+PAGES.acctflow=()=>{
+  const accs=S.accounts.filter(a=>a.st==='启用'),code=curTab('acctflow','PA'),a=acc(code);
+  const ty=gf('acctflow','type');
+  const all=S.flows.filter(f=>f.acc===code&&inLedger(f)).sort((x,y)=>x.settled.localeCompare(y.settled));
+  let bal=openOf(code);const rows=all.map(f=>{bal=r2(bal+f.net);return {f,bal}});
+  const shown=(ty?rows.filter(r=>r.f.type===ty):rows).slice().reverse();
+  const inc=r2(all.filter(f=>f.net>0).reduce((s,f)=>s+f.net,0)),out=r2(all.filter(f=>f.net<0).reduce((s,f)=>s-f.net,0)),fee=r2(all.reduce((s,f)=>s+f.fee,0));
+  const uns=S.flows.filter(f=>f.acc===code&&f.status==='Settled'&&!(f.synced&&f.review==='正常')).length;
+  const g={};all.forEach(f=>{const k=f.type+'|'+(f.net>=0?'收入':'支出');const x=g[k]=g[k]||{type:f.type,dir:f.net>=0?'收入':'支出',n:0,amt:0,fee:0};x.n++;x.amt=r2(x.amt+Math.abs(f.net));x.fee=r2(x.fee+f.fee)});
+  return card('',tabs('acctflow',accs.map(x=>[x.code,x.name.replace('商家账户-','商家:')])))+
+  card(a.name+'　'+a.awx+'　'+a.id,dl([['期初余额（2026-09-21 00:00）',fmt(openOf(code))],['本期收入',fmt(inc)],['本期支出',fmt(out)],['本期交易手续费',fmt(fee)],['账面期末余额',fmt(ledBal(code))],['Airwallex 余额',fmt(awxBal(code))+(uns?`　${tag('未入账 '+uns+' 条','orange')}`:'')]])+`<div class="eq">期初 ${fmt(openOf(code))} + 收入 ${fmt(inc)} − 支出 ${fmt(out)} = 账面期末 <b>${fmt(ledBal(code))}</b></div>`)+
+  card('按交易类型汇总',tbl([{t:'交易类型',k:x=>txcn(x.type)},{t:'收支方向',k:x=>x.dir},{t:'笔数',num:1,k:x=>x.n},{t:'金额（净额）',num:1,k:x=>fmt(x.amt)},{t:'交易手续费',num:1,k:x=>fmt(x.fee)}],Object.values(g)))+
+  card('流水明细',`<div class="toolbar"><span class="fi"><label class="muted">交易类型</label> <select class="ipt" onchange="setF('acctflow','type',this.value)"><option value="">全部</option>${[...new Set(all.map(f=>f.type))].map(t=>`<option value="${t}" ${ty===t?'selected':''}>${txcn(t)}</option>`).join('')}</select></span><span class="sp"></span><button class="btn" onclick="toast('已导出 ${esc(a.name)} 账户流水')">导出</button></div>`+
+  tbl([{t:'结算时间',k:r=>r.f.settled},{t:'流水号',k:r=>flowLink(r.f.id)},{t:'交易类型',k:r=>txcn(r.f.type)},{t:'摘要',k:r=>esc(flowDesc(r.f))},{t:'对方',k:r=>esc(r.f.cp)},{t:'收入',num:1,k:r=>r.f.net>0?`<span class="pos">${fmt(r.f.net)}</span>`:''},{t:'支出',num:1,k:r=>r.f.net<0?`<span class="neg">${fmt(-r.f.net)}</span>`:''},{t:'交易手续费',num:1,k:r=>r.f.fee?fmt(r.f.fee):''},{t:'余额',num:1,k:r=>fmt(r.bal)},...(code==='HA'?[{t:'清分桶',k:r=>BK[r.f.bucket]||'—'}]:[]),{t:'关联单据',k:r=>linkTxt(r.f)}],shown,{op:r=>`<span class="link" onclick="openFlow('${r.f.id}')">详情</span>`}));
 };
 PAGES.flows=()=>{
   const t=curTab('flows','in');
@@ -766,7 +798,7 @@ function saveWater(){const l=r2(parseFloat($('w_l').value)),t=r2(parseFloat($('w
 
 /* ================= 抽屉 ================= */
 function openFlow(id){openDrawer(()=>{const f=fl(id);const m=txm(f.type);
-  const b=`<div class="sec">流水信息</div>${dl([['流水号（Transaction Id）',f.id],['账户',accName(f.acc)],['交易大类',BIG[m?.big]||'—'],['交易类型',txcn(f.type)+'（'+f.type+'）'],['结算前金额',fmt(f.gross)],['交易手续费',fmt(f.fee)],['净额',sn(f.net)],['币种',f.cur],['结算状态',f.status==='Settled'?'已结算':'待结算'],['结算批次号',f.batch],['创建时间',f.created],['结算时间',f.settled],['系统单据编号',f.orderNo],['支付单号',f.pi],['支付尝试号',f.pat],['企业流水号（请求号）',f.req],['来源类型',f.srcEnt],['来源单号',f.src],['支付方式',f.method],['对方户名',esc(f.cp)],['备注（Reference）',esc(f.ref)],['清分桶',f.bucket?BK[f.bucket]:''],['入账状态',f.synced?stTag(f.review==='正常'?'已入账':f.review):'未同步'],['同步时间',f.syncAt]])}
+  const b=`<div class="sec">流水信息</div>${dl([['流水号（Transaction Id）',f.id],['账户',accName(f.acc)],['交易大类',BIG[m?.big]||'—'],['交易类型',txcn(f.type)+'（'+f.type+'）'],['结算前金额',fmt(f.gross)],['交易手续费',fmt(f.fee)],['净额',sn(f.net)],['币种',f.cur],['结算状态',f.status==='Settled'?'已结算':'待结算'],['结算批次号',f.batch],['创建时间',f.created],['结算时间',f.settled],['系统单据编号',f.orderNo],['支付单号',f.pi],['支付尝试号',f.pat],['企业流水号（请求号）',f.req],['来源类型',f.srcEnt],['来源单号',f.src],['支付方式',f.method],['对方户名',esc(f.cp)],['备注（Reference）',esc(f.ref)],['摘要',esc(flowDesc(f))],['清分桶',f.bucket?BK[f.bucket]:''],['入账状态',f.synced?stTag(f.review==='正常'?'已入账':f.review):'未同步'],['同步时间',f.syncAt]])}
   ${f.claimBy?`<div class="muted">认领方式：${f.claimBy}</div>`:''}
   <div class="sec">关联链</div>${chainHtml(chainFor(f))}
   <div class="sec">凭证预览 ${tag('草案','orange')}</div>${voucherHtml(f)}`;
