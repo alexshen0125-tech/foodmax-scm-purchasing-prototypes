@@ -686,6 +686,8 @@ const DB = {
     // 收款账户与结算方式：入驻（招商准入）时已提交，开店任务直接沿用、不重复填写
     bankAcct:'DBS Bank · 绿鲜源蔬果 Green Fresh Produce Pte Ltd · SGD 账户尾号 6621',
     settle:'月结 30 天（T+30）· 银行转账 · SGD',
+    // 店铺级 HALAL 经营（2026-09-23）：是否有 HALAL 商品 + 证书（证书编号 + 附件，进「经营资质」类型 HALAL证书）
+    halal:'是', halalCertNo:'MUIS-HC-2026-01842', halalFiles:['MUIS_HALAL_Certificate.pdf'],
   },
   // 资质
   quals:[
@@ -703,10 +705,10 @@ const DB = {
     {id:'SPU8822',name:'空心菜',cat:'新鲜蔬菜',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'绿鲜源',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,mainImgs:['空心菜主图'],detailImgs:[],status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8830',refund:1,qty:1,price:7.00,stock:70,safe:20,sellUnit:'kg'}]},
     {id:'SPU8815',name:'土豆',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'马铃薯',origin:'中国山东',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8820',refund:0,qty:1,price:3.20,stock:300,safe:40,sellUnit:'kg'}]},
     {id:'SPU8816',name:'白菜',cat:'新鲜蔬菜',unit:'kg',saleType:'售卖品',alias:'',origin:'马来西亚',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'低',reject:'',note:'',skus:[{skuId:'SKU8821',refund:0,qty:1,price:3.50,stock:0,safe:30,off:true,recycled:true,sellUnit:'kg'}]},
-    {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',refund:1,qty:1,price:58.00,stock:26,safe:10,sellUnit:'kg'}]},
-    {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,mainImgs:['鸡胸肉主图'],status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',refund:0,qty:1,price:13.50,stock:0,safe:20,sellUnit:'kg'}]},
+    {id:'SPU8817',name:'冰鲜三文鱼',cat:'海鲜水产',halal:0,unit:'kg',stdType:'非标品',saleType:'售卖品',alias:'',origin:'挪威',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:true,status:'onsale',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8822',refund:1,qty:1,price:58.00,stock:26,safe:10,sellUnit:'kg'}]},
+    {id:'SPU8818',name:'鸡胸肉',cat:'肉禽蛋品',halal:1,unit:'kg',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,mainImgs:['鸡胸肉主图'],status:'reviewing',risk:'中',reject:'',note:'',skus:[{skuId:'SKU8823',refund:0,qty:1,price:13.50,stock:0,safe:20,sellUnit:'kg'}]},
     {id:'SPU8819',name:'生蚝',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'法国',brand:'',desc:'',showExp:'展示生产日期+保质期',img:true,detail:false,status:'reviewing',risk:'高',reject:'',note:'',skus:[{skuId:'SKU8824',refund:0,qty:1,price:0,stock:0,safe:10,sellUnit:'kg'}]},
-    {id:'SPU8820',name:'椰子水',cat:'饮料',unit:'瓶',stdType:'标品',netQty:'330',netUnit:'ml',netPackType:'瓶',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,containedPackCount:1,price:2.50,stock:200,safe:30,packUnit:'',stockMode:'finite',sellUnit:'瓶'},{skuId:'SKU8826',qty:24,containedPackCount:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite',sellUnit:'瓶'}]},
+    {id:'SPU8820',name:'椰子水',cat:'饮料',halal:1,unit:'瓶',stdType:'标品',netQty:'330',netUnit:'ml',netPackType:'瓶',saleType:'售卖品',alias:'',origin:'泰国',brand:'',desc:'NFC 椰子水，330ml PET 瓶',showExp:'展示生产日期+保质期',img:true,detail:false,status:'onsale',risk:'低',reject:'',note:'',bcrs:true,bcrsUnitContainers:1,skus:[{skuId:'SKU8825',qty:1,containedPackCount:1,price:2.50,stock:200,safe:30,packUnit:'',stockMode:'finite',sellUnit:'瓶'},{skuId:'SKU8826',qty:24,containedPackCount:24,price:55.00,stock:40,safe:5,packUnit:'箱',stockMode:'finite',sellUnit:'瓶'}]},
     {id:'SPU8821',name:'龙虾',cat:'海鲜水产',unit:'kg',saleType:'售卖品',alias:'',origin:'澳大利亚',brand:'',desc:'鲜活波士顿龙虾',showExp:'展示生产日期+保质期',img:true,detail:false,status:'rejected',risk:'高',reject:'',note:'',auditOpinions:[{f:'name',label:'商品名称',op:'名称过于笼统，需标注品种（如「波士顿龙虾」）与是否鲜活/冰鲜'},{f:'origin',label:'产地',op:'填写产地与上传的进口报关资料不一致，请核对后填写真实产地'},{f:'img',label:'商品主图',op:'主图含文字水印且非纯白底，不符合平台主图规范，请更换白底实拍图'}],skus:[{skuId:'SKU8827',refund:1,qty:1,price:88.00,stock:12,safe:5,sellUnit:'kg'}]},
     {id:'SPU8823',name:'即食凉拌海带丝',cat:'海鲜水产',unit:'包',stdType:'标品',netQty:'200',netUnit:'g',netPackType:'袋',saleType:'售卖品',alias:'',origin:'中国山东',brand:'',desc:'开袋即食凉拌海带丝',showExp:'展示生产日期+保质期',img:true,detail:false,status:'forced_off',risk:'高',reject:'品控抽检菌落总数超标（GB 标准 3 倍），已强制下架，整改后重新提报（需品控二次复核）。',note:'',skus:[{skuId:'SKU8829',refund:0,qty:1,containedPackCount:1,price:6.80,stock:0,safe:10,off:true,sellUnit:'袋'}]},
   ],
@@ -861,7 +863,7 @@ function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><s
 /* ===== 商家商品模块 · 三层审核漏斗（深度版） ===== */
 const ASSUME={Q1:'假设：品类指导价已存在，价格正常区间=指导价×[0.5,2.0]',Q2:'假设：低风险商品本期开启自动通过（抽审 10%）',Q5:'假设：审核通过商品落「商家商品表」，与货品中心打通本期留接口位',Q6:'假设：高风险品类=冻品/进口/即食/农残抽检叶菜，强制传质检报告',Q7:'假设：图片违禁词识别复用 ad_compliance（qwen-vl）'};
 // 后台类目（含税率/风险/指导价 + 是否支持 BCRS）；bcrs=true 的类目，商家建品时才可选「是否支持 BCRS」
-const CATS={'新鲜蔬菜':{tax:0,baseRisk:'低',guide:6.0},'肉禽蛋品':{tax:0.09,baseRisk:'中',guide:14.0},'海鲜水产':{tax:0.09,baseRisk:'高',guide:25.0},'调味品':{tax:0.09,baseRisk:'低',guide:18.0},'饮料':{tax:0.09,baseRisk:'低',guide:5.0,bcrs:true}};
+const CATS={'新鲜蔬菜':{tax:0,baseRisk:'低',guide:6.0},'肉禽蛋品':{tax:0.09,baseRisk:'中',guide:14.0,halal:true},'海鲜水产':{tax:0.09,baseRisk:'高',guide:25.0,halal:true},'调味品':{tax:0.09,baseRisk:'低',guide:18.0,halal:true},'饮料':{tax:0.09,baseRisk:'低',guide:5.0,bcrs:true,halal:true}};
 const BCRS_UNIT_PRICE=0.10;   // 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST）——商家只填「每 1 <单位> 容器数」
 /* BCRS 的「一份」是哪一件：与售卖规格单位同源——自售标品＝最小包装单位（瓶/罐/袋…）、寄售＝库存单位；
    都没有时回落「份」。这样「每 1 瓶容器数」「每 1 瓶押金 S$0.10」读起来就是商家包装上的那一件。 */
@@ -1644,7 +1646,7 @@ PAGES['m-shop']=()=>{
   const t=DB.shopTab||'profile';
   const qn=DB.quals.filter(q=>q.status=='expiring'||q.status=='expired').length;
   // 编辑入口放 Tab 行右侧（与线上 ShopInfoPage 一致）：只读态给「编辑」，编辑态不给（操作条在表单底部）
-  const canEdit=DB.merchant.onboard=='active';
+  const canEdit=DB.merchant.onboard=='active'&&!DB.shopChange; // 资料变更审核中不可再次编辑（线上 progressStatus=2 只读同口径）
   const editBtn=(t=='profile'&&canEdit&&!DB.shopEditing)?`<button class="btn btn-o btn-sm" style="margin-left:auto;margin-bottom:6px" onclick="DB.shopEditing=true;render()">编辑</button>`:'';
   const bar=`<div class="tabs" style="margin-bottom:14px;align-items:flex-end">
     <div class="tab ${t=='profile'?'active':''}" onclick="DB.shopTab='profile';DB.shopEditing=false;render()">店铺资料</div>
@@ -1683,7 +1685,9 @@ function shopProfileView(){
   if(DB.shopEditing) return shopProfileEdit();
   const m=DB.merchant,s=DB.shop;
   const badge=m.onboard=='active'?'<span class="tag t-g"><span class="dot"></span>营业中</span>':'<span class="tag t-y"><span class="dot"></span>审核中</span>';
-  return `<div class="shopform">
+  const chg=DB.shopChange?`<div class="ib ib-y"><span class="i">⏳</span><div><b>资料变更审核中</b>（提交于 ${DB.shopChangeAt}）<br>下方为当前生效资料，运营审核通过后替换为新资料；审核期间不可再次编辑。</div></div>`
+    :(DB.shopChangeReject?`<div class="ib ib-r"><span class="i">⛔</span><div><b>资料变更被驳回</b>：${DB.shopChangeReject}<br>当前仍按原资料生效，可点「编辑」修改后重新提交。</div></div>`:'');
+  return `<div class="shopform">${chg}
     <div class="card"><div class="card-bd">
       ${secT('店铺形象')}
       <div class="shop-hero">
@@ -1712,6 +1716,8 @@ function shopProfileView(){
       </div>
       <div class="rd-grid" style="grid-template-columns:1fr">${rdRow('经营地址',s.addr)}</div>
     </div></div>
+
+    ${halalCardView(s)}
 
     <div class="card"><div class="card-bd">
       ${secT('开票与结算')}
@@ -1770,6 +1776,8 @@ function shopProfileEdit(mode){
       </div>
       <div class="fr" style="margin-bottom:0"><label class="fl"><i class="rq">*</i>经营地址</label><input id="es-addr" value="${s.addr}"></div>
     </div></div>
+
+    ${halalCardEdit(s)}
 
     <div class="card"><div class="card-bd">
       ${secT('开票与结算')}
@@ -1832,8 +1840,8 @@ const TR=(function(){
 // 编辑改为页内切换（与线上一致：Tab 行右侧「编辑」→ 表单就地变可编辑 → 底部 取消/提交），不再弹窗
 function act_editShop(){DB.shopTab='profile';DB.shopEditing=true;nav('m-shop');}
 // 读表单回写 DB.shop：店铺资料编辑与开店任务提交共用
-function readShopForm(){
-  const s=DB.shop,g=id=>document.getElementById(id)||{};
+function readShopForm(target){
+  const s=target||DB.shop,g=id=>document.getElementById(id)||{};
   s.name=g('es-name').value||s.name;
   s.abbr=abbrCut(g('es-abbr').value||'',SHOP_ABBR_MAX)||s.abbr; // 必填，兜底再截一次（防粘贴绕过 oninput）
   s.type=g('es-type').value||s.type;
@@ -1848,14 +1856,82 @@ function readShopForm(){
   s.payDay=g('es-payday').value||s.payDay;
   const cks=[...document.querySelectorAll('.shopform input[data-cat]:checked')].map(e=>e.dataset.cat);
   if(cks.length)s.cats=cks;
+  const hv=(document.querySelector('input[name=es-halal]:checked')||{}).value;
+  if(hv){s.halal=hv;if(hv=='是'){s.halalCertNo=(g('es-halal-no').value||'').trim();s.halalFiles=[...HALAL_EDIT.files];}else{s.halalCertNo='';s.halalFiles=[];}}
 }
 // 必填校验：为空则停在当前编辑页、标红并聚焦，不提交、不退出编辑态（与线上 zod 校验回显同口径）
 function checkShopForm(){
   const el=document.getElementById('es-abbr');
   if(el&&!el.value.trim()){el.style.borderColor='var(--r)';el.focus();toast('请填写店铺简称','err');return false;}
+  return halalFormCheck();
+}
+// 编辑店铺资料＝提交变更审核（与开店同一审核流）：审核通过前按原资料生效，通过后整体替换
+function doEditShop(){if(!checkShopForm())return;const c=JSON.parse(JSON.stringify(DB.shop));readShopForm(c);DB.shopChange=c;DB.shopChangeAt='2026-09-23 10:30';DB.shopChangeReject='';DB.shopEditing=false;render();toast('已提交，运营审核通过后生效','ok');}
+
+/* ===== 店铺级 HALAL 经营（2026-09-23）=====
+   ① 开店 / 编辑店铺资料时选「是否有 HALAL 商品」；选「是」须填 HALAL 证书编号 + 上传证书附件，随开店/变更审核一并审
+   ② 建品「是否HALAL」门控：先看店铺（已审核生效值 halal=='是'）→ 再看后台类目是否挂载 halal 字段；两者都满足才出现，且必填
+   ③ 店铺 是→否：店铺下存在 是否HALAL=HALAL 的商品（除已删除外任意状态）则不允许修改，提示先把这些商品改为非HALAL
+   ④ 证书有效期到期处理本期不做（证书只记编号 + 附件） */
+let HALAL_EDIT={files:[]};
+function shopHalalProducts(){return DB.products.filter(p=>p.halal===1&&p.status!='deleted');}
+function halalGate(cat){return DB.shop.halal=='是'&&!!(CATS[cat]&&CATS[cat].halal);}
+function halalFileChips(files,editable){
+  return files.map((f,i)=>`<span class="tag t-gr" style="font-size:12px;padding:5px 10px;gap:6px">📄 ${f}${editable?`<a href="javascript:halalDelFile(${i})" style="color:var(--r);margin-left:4px">×</a>`:`<a href="javascript:toast('预览 ${f}','info')" style="margin-left:4px">查看</a>`}</span>`).join('');
+}
+function halalCardView(s){
+  const on=s.halal=='是';
+  return `<div class="card"><div class="card-bd">
+      ${secT('HALAL 经营')}
+      <div class="rd-grid">
+        ${rdRow('是否有 HALAL 商品',on?'<span class="tag t-g"><span class="dot"></span>是</span>':'否')}
+        ${on?rdRow('HALAL 证书编号',`<span class="mono">${s.halalCertNo||'—'}</span>`):''}
+      </div>
+      ${on?`<div class="rd-grid" style="grid-template-columns:1fr">${rdRow('HALAL 证书',`<div class="row" style="gap:8px;flex-wrap:wrap">${halalFileChips(s.halalFiles||[],false)||'—'}</div>`)}</div>`:''}
+    </div></div>`;
+}
+function halalCardEdit(s){
+  HALAL_EDIT={files:[...(s.halalFiles||[])]};
+  const on=s.halal=='是';
+  return `<div class="card"><div class="card-bd">
+      ${secT('HALAL 经营')}
+      <div class="fr"><label class="fl"><i class="rq">*</i>是否有 HALAL 商品</label>
+        <div class="row" style="gap:14px">${['否','是'].map(v=>`<label class="chip-ck ${(on?'是':'否')==v?'on':''}"><input type="radio" name="es-halal" value="${v}" ${(on?'是':'否')==v?'checked':''} onchange="halalPick('${v}')">${v}</label>`).join('')}</div>
+        <div class="fl-h">选「是」后，建品时类目支持 HALAL 的商品需逐个选择「是否HALAL」；选「否」则建品不出现该项。</div>
+        <div id="halal-err"></div>
+      </div>
+      <div id="halal-cert" style="display:${on?'block':'none'}">
+        <div class="fr"><label class="fl"><i class="rq">*</i>HALAL 证书编号</label><input id="es-halal-no" value="${s.halalCertNo||''}" placeholder="请输入证书上的编号" style="max-width:420px"></div>
+        <div class="fr" style="margin-bottom:0"><label class="fl"><i class="rq">*</i>HALAL 证书</label>
+          <div class="row" id="halal-files" style="gap:8px;flex-wrap:wrap;align-items:center">${halalFileChips(HALAL_EDIT.files,true)}<button type="button" class="btn btn-o btn-sm" onclick="halalAddFile()">＋ 上传证书</button></div>
+          <div class="fl-h">支持 jpg / png / pdf，单个 ≤10MB，最多 5 个。</div>
+        </div>
+      </div>
+    </div></div>`;
+}
+function halalRedrawFiles(){const b=document.getElementById('halal-files');if(b)b.innerHTML=halalFileChips(HALAL_EDIT.files,true)+`<button type="button" class="btn btn-o btn-sm" onclick="halalAddFile()">＋ 上传证书</button>`;}
+function halalAddFile(){if(HALAL_EDIT.files.length>=5){toast('最多上传 5 个证书文件','err');return;}HALAL_EDIT.files.push(`HALAL证书_${HALAL_EDIT.files.length+1}.pdf`);halalRedrawFiles();}
+function halalDelFile(i){HALAL_EDIT.files.splice(i,1);halalRedrawFiles();}
+function halalSetRadio(v){document.querySelectorAll('input[name=es-halal]').forEach(r=>{r.checked=r.value==v;r.parentElement.classList.toggle('on',r.value==v);});}
+// 是→否 拦截：以「当前生效」为是、且店铺下仍有 HALAL 商品为准；拦截后单选回到「是」
+function halalBlockMsg(list){
+  return `<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span><div><b>店铺下还有 ${list.length} 个 HALAL 商品，不能改为「否」。</b><br>${list.slice(0,5).map(p=>`${p.name}（${p.id}）`).join('、')}${list.length>5?` 等 ${list.length} 个`:''}<br>请先在商品管理中将这些商品的「是否HALAL」改为非HALAL，再修改店铺设置。 <a href="javascript:DB.shopEditing=false;nav('m-product')">去商品管理 →</a></div></div>`;
+}
+function halalPick(v){
+  const err=document.getElementById('halal-err');if(err)err.innerHTML='';
+  if(v=='否'&&DB.shop.halal=='是'){const list=shopHalalProducts();if(list.length){halalSetRadio('是');if(err)err.innerHTML=halalBlockMsg(list);return;}}
+  halalSetRadio(v);
+  const c=document.getElementById('halal-cert');if(c)c.style.display=v=='是'?'block':'none';
+}
+function halalFormCheck(){
+  const v=(document.querySelector('input[name=es-halal]:checked')||{}).value;
+  if(v=='否'&&DB.shop.halal=='是'&&shopHalalProducts().length){halalPick('否');toast('店铺下还有 HALAL 商品，不能改为「否」','err');return false;}
+  if(v!='是')return true;
+  const no=document.getElementById('es-halal-no');
+  if(no&&!no.value.trim()){no.style.borderColor='var(--r)';no.focus();toast('请填写 HALAL 证书编号','err');return false;}
+  if(!HALAL_EDIT.files.length){toast('请上传 HALAL 证书','err');return false;}
   return true;
 }
-function doEditShop(){if(!checkShopForm())return;readShopForm();DB.shopEditing=false;render();toast('店铺信息已保存','ok');}
 
 /* ---------- 商家端：营业管理（每日营业时间：start–end 可配，截止时间＝当日截单时间；截单后统一停止接单） ---------- */
 PAGES['m-biz-hours']=()=>{
@@ -1942,8 +2018,9 @@ PAGES['m-qual']=()=>{
   const exp=DB.quals.filter(q=>q.status=='expiring'||q.status=='expired');
   return `${exp.length?flowTip(`检测到 <b>${exp.length}</b> 项资质即将到期/已过期。证件到期当日系统将<b>自动下架</b>关联商品，请尽快上传新证。`):''}
   ${exp.length?`<div class="ib ib-y"><span class="i">⚠️</span>「${exp[0].name}」有效期至 <b>${exp[0].expire}</b>（剩约 23 天）。到期前 60/30 天系统会推送提醒；到期当日未续证将自动下架相关商品。</div>`:''}
-  <div class="card"><div class="card-hd"><h3>资质证照</h3><span class="sub">共 ${DB.quals.length} 项</span></div><div class="card-bd flush"><table>
+  <div class="card"><div class="card-hd"><h3>资质证照</h3><span class="sub">共 ${DB.quals.length+(DB.shop.halal=='是'?1:0)} 项</span></div><div class="card-bd flush"><table>
     <thead><tr><th>材料</th><th>证号</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    ${DB.shop.halal=='是'?`<tr><td><b>HALAL证书</b></td><td class="mono">${DB.shop.halalCertNo||'—'}</td><td>—</td><td><span class="tag t-g"><span class="dot"></span>有效</span></td><td><button class="btn btn-o btn-sm" onclick="toast('已查看证照','info')">查看</button></td></tr>`:''}
     ${DB.quals.map((q,i)=>{
       const st=q.status=='valid'?'<span class="tag t-g"><span class="dot"></span>有效</span>':q.status=='expiring'?'<span class="tag t-y"><span class="dot"></span>即将到期</span>':'<span class="tag t-r"><span class="dot"></span>已过期</span>';
       return `<tr><td><b>${q.name}</b></td><td class="mono">${q.no}</td><td>${q.expire}</td><td>${st}</td><td>${q.status!='valid'?`<button class="btn btn-p btn-sm" onclick="act_renewQual(${i})">上传新证</button>`:`<button class="btn btn-o btn-sm" onclick="toast('已查看证照','info')">查看</button>`}</td></tr>`;
@@ -2096,6 +2173,7 @@ function act_spuDetail(i){
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
       ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：取申报的单件净含量，不乘售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
       ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量计量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit))+dl('最小包装单位',unitTxtCode('标品','spec',p.netPackType))+(p.consign?dl('库存单位换算',stockPackTxt(p)||'—'):''):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
+      ${dl('是否HALAL',p.halal===1?'<span class="tag t-g" style="font-size:10.5px">HALAL</span>':p.halal===0?'非HALAL':'未设置')}
       ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 ${bcrsUnitName(p)} ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
       ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
       ${dl('商品别名(EN)',p.aliasEn||'—')}
@@ -2364,6 +2442,8 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
         <div class="ib ib-b" style="margin-top:8px"><span class="i">ℹ️</span><div id="bcrs-tip">${bcrsTipHtml(bcrsUnitName(p))}</div></div>
       </div>
     </div>
+    <div class="fr" id="halal-block" style="display:none"><label class="fl"><b>*</b>是否HALAL</label>${radio('f-halal',p.halal===1?'HALAL':p.halal===0?'非HALAL':'',['非HALAL','HALAL'])}</div>
+    <div class="fr" id="halal-off" style="display:none;font-size:12px;color:var(--ts)">店铺未开通 HALAL 经营，本商品不设置是否HALAL。如需售卖 HALAL 商品，请先在<a href="javascript:closeDrawer();act_editShop()">店铺资料</a>中选择「有 HALAL 商品」并上传证书。</div>
     <div class="fg3"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div>
       <div class="fr"><label class="fl">售卖模式</label><select id="f-supply" ${supplyLock?'disabled style="background:#F3F4F6;color:var(--ts)"':'onchange="EDIT_SUPPLY=this.value;supplyToggle();renderSkuEditor()"'}><option value="自售" ${EDIT_SUPPLY=='自售'?'selected':''}>自售</option><option value="寄售" ${EDIT_SUPPLY=='寄售'?'selected':''}>寄售</option></select></div>
       <div class="fr"><label class="fl">产地</label><input id="f-origin" data-tr value="${p.origin||''}" placeholder="选填">${AO('origin')}</div></div>
@@ -2645,6 +2725,8 @@ function catUnitSync(init){
 function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS[cat];const box=document.getElementById('cat-hint');
   // BCRS 类目门控：仅支持 BCRS 的类目显示「是否支持 BCRS」；否则隐藏并重置为否
   const bb=document.getElementById('bcrs-block');if(bb){if(c&&c.bcrs){bb.style.display='';}else{bb.style.display='none';const r=document.querySelector('input[name=f-bcrs][value="否"]');if(r){r.checked=true;const row=r.closest('.row');if(row){row.querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));r.parentElement.classList.add('on');}}const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display='none';}}
+  // HALAL 门控：先看店铺（生效值）是否有 HALAL 商品 → 再看类目是否挂载 halal 字段
+  const hb=document.getElementById('halal-block'),ho=document.getElementById('halal-off'),catOn=!!(c&&c.halal),shopOn=DB.shop.halal=='是';if(hb)hb.style.display=(catOn&&shopOn)?'':'none';if(ho)ho.style.display=(catOn&&!shopOn)?'':'none';
   if(!box)return;let h='';if(c&&!CAT_SCOPE.includes(cat))h=`<div class="ib ib-r" style="margin:10px 0"><span class="i">⛔</span>经营许可证未覆盖「${cat}」类目，提交将被资质校验拦截。</div>`;else if(c&&c.baseRisk=='高')h=`<div class="ib ib-gr" style="margin:10px 0"><span class="i">ℹ️</span>「${cat}」为高风险类目，首次建档默认进人工审核。</div>`;box.innerHTML=h;}
 function bcrsToggle(){const e=document.querySelector('input[name=f-bcrs]:checked');const on=e&&e.value=='是';const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display=on?'':'none';if(on)bcrsPreview();}
 function bcrsPreview(){
@@ -2660,10 +2742,11 @@ function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{cons
   if(p.consign===undefined)p.consign=((g('f-supply')||{}).value||'自售')=='寄售';
   if(p.consign&&p.stdType=='标品'){p.stockUnitIsPack=gr('f-stockispack')||'是';p.stockPackQty=p.stockUnitIsPack=='否'?(parseInt((g('f-packqty')||{}).value,10)||0):1;}
   else{p.stockUnitIsPack='';p.stockPackQty=0;}   /* 最小售卖单位/规格备注已下线：unit 由净含量单位派生，仅供历史数据与下游兼容 */p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';p.consign=((g('f-supply')||{}).value||'自售')=='寄售';   // 售卖模式：寄售=true
+  { const hv=gr('f-halal'); p.halal=halalGate(p.cat)?(hv=='HALAL'?1:hv=='非HALAL'?0:null):(i<0?null:(p.halal??null)); }   /* HALAL：门控外不提交，新建落 null、编辑保留原值 */
   const bcrsOn=(gr('f-bcrs')=='是')&&!!(CATS[p.cat]&&CATS[p.cat].bcrs);p.bcrs=bcrsOn;p.bcrsUnitContainers=bcrsOn?(parseInt((g('f-bcrscnt')||{}).value,10)||0):0;   /* BCRS：仅支持类目+选是才存；每 1 份容器数(押金单价平台固定0.10) */ const prev=(i>=0&&DB.products[i].skus)||[],prevById=new Map(prev.map(x=>[x.skuId,x]));p.skus=EDIT_SKUS.map(s=>{const old=s.skuId?prevById.get(s.skuId):null,sellUnit=p.consign?(p.stockUnit||''):(p.stdType=='标品'&&p.netPackType?p.netPackType:(s.sellUnit||'')),qty=parseInt(s.qty,10)||0;   /* 自售标品：售卖规格单位恒等最小包装单位 */return{skuId:(old&&old.skuId)||s.skuId||('SKU'+(++SKU_SEQ)),qty,packUnit:s.packUnit||'',sellUnit,containedPackCount:p.stdType=='标品'?(qty*(stockPackRatio(p)||0)):null,   /* 派生：售卖规格数量 × 库存换算比例，不再手填 */refund:(['kg','g'].includes(sellUnit)&&s.refund?1:0),price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(old&&old.safe)||0,stockMode:s.stockMode||'finite',soldToday:(s.soldToday!=null?s.soldToday:(old&&old.soldToday))||0,createdAt:(old&&old.createdAt)||s.createdAt||ts(),updatedAt:ts()};});p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
 function upsert(i,p){if(i<0)DB.products.unshift(p);else DB.products[i]=p;}
 function showSchemaFailures(fails){toast(fails[0][1],'err');modalWide(`<div class="mc-hd"><h3>⛔ 发布校验未通过</h3><p>已拦截本次保存/提交，原表单保留</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">${fails.map((f,i)=>`<div class="ck no"><div class="cb">✕</div><div><b>${f[0]}</b><div style="font-size:12px;color:var(--ts);margin-top:3px">${f[1]}</div></div><span class="cx">${i+1}</span></div>`).join('')}</div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">返回修正</button></div>`);}
-function doSaveSpu(i,asDraft){const prev=i>=0?DB.products[i]:null;const approved=prev&&(prev.status=='onsale'||prev.status=='offsale');const p=collectSpu(i);if(asDraft){p.status='draft';upsert(i,p);closeModal();render();toast('已存草稿','info');return;}const fails=autoCheck(p);if(fails.length){showSchemaFailures(fails);return;}if(approved){p.status=prev.status;upsert(i,p);closeModal();render();toast('已保存，即时生效（已审核商品编辑无需重审）','ok');return;}
+function doSaveSpu(i,asDraft){const prev=i>=0?DB.products[i]:null;const approved=prev&&(prev.status=='onsale'||prev.status=='offsale');const p=collectSpu(i);if(!asDraft&&halalGate(p.cat)&&p.halal==null){toast('请选择是否HALAL','err');return;}if(asDraft){p.status='draft';upsert(i,p);closeModal();render();toast('已存草稿','info');return;}const fails=autoCheck(p);if(fails.length){showSchemaFailures(fails);return;}if(approved){p.status=prev.status;upsert(i,p);closeModal();render();toast('已保存，即时生效（已审核商品编辑无需重审）','ok');return;}
   if(prev&&prev.status=='forced_off'){p.status='reviewing';p.auditOpinions=[];p.reject='';upsert(i,p);closeModal();DB.mTab='review';render();toast('整改内容已重新提交平台审核；原SKU结构保持锁定','ok');return;}
   if(prev&&(prev.status=='reviewing'||prev.status=='rejected')){p.status='reviewing';p.auditOpinions=[];p.reject='';upsert(i,p);closeModal();render();DB.mTab='review';toast(prev.status=='rejected'?'已修改并重新提交，进入待审核':'已更新，重新提交平台审核','ok');return;}
   submitForAudit(p,i);}
@@ -4524,16 +4607,15 @@ window.act_shopPsSkus=function(mcode){
     <div class="drawer-bd">
       <div style="overflow-x:auto"><table>
         <thead><tr><th style="width:52px">排名</th><th>SKU 编码</th><th>商品名称</th><th>规格</th><th>入库仓库</th>
-          <th style="text-align:right">算法预测量</th><th style="text-align:right">期末库存</th><th style="text-align:right">预送定稿量</th><th>状态</th></tr></thead>
+          <th style="text-align:right">期末库存</th><th>状态</th></tr></thead>
         <tbody>${rows.length?rows.map(r=>`<tr>
           <td>${r.rank}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td style="color:var(--ts)">${r.spec}</td>
           <td>${r.whs.join('、')}</td>
-          <td style="text-align:right">${r.fcst}</td><td style="text-align:right">${r.avail}</td>
-          <td style="text-align:right">${r.inPool?`<b>${r.final}</b>`:`<span style="color:var(--tt)">0</span>`}</td>
+          <td style="text-align:right">${r.avail}</td>
           <td>${r.inPool?'<span class="tag t-g"><span class="dot"></span>预送中</span>':'<span class="tag t-gr">已截取</span>'}</td></tr>`).join('')
-          :`<tr><td colspan="9"><div class="empty"><div class="e-t">暂无预送 SKU</div><div class="e-s">算法当日未给该商家任何 SKU 产出预送量</div></div></td></tr>`}</tbody>
+          :`<tr><td colspan="7"><div class="empty"><div class="e-t">暂无预送 SKU</div><div class="e-s">算法当日未给该商家任何 SKU 产出预送量</div></div></td></tr>`}</tbody>
       </table></div>
-      <div style="font-size:12px;color:var(--ts);margin-top:10px">只列算法给出预送量的 SKU，只有订单的 SKU 不进池、不占名额。预送定稿量 = 各仓 min(算法预测量, 期末库存) 合计；超过上限 ${c.limit} 种时按定稿量从高到低截取前 ${c.limit} 种，被截取的当日只送订单量。</div>
+      <div style="font-size:12px;color:var(--ts);margin-top:10px">只列算法给出预送量的 SKU，只有订单的 SKU 不进池、不占名额；超过上限 ${c.limit} 种时按预送量从高到低截取前 ${c.limit} 种，被截取的当日只送订单量。</div>
     </div>
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
       <button class="btn btn-p" onclick="closeDrawer();act_shopPresend('${mcode}')">修改种类上限</button></div>`);
@@ -4549,7 +4631,7 @@ function act_shopPresendSet(mcode,on){
 
 PAGES['p-shops']=()=>{
   const t=DB.shopTab=='list'?'list':'pending';
-  const pend=(DB.merchant.onboard=='task_review'?1:0)+1;
+  const pend=(DB.merchant.onboard=='task_review'?1:0)+(DB.shopChange?1:0)+1;
   const tabs=`<div class="tabs">
     <div class="tab ${t=='pending'?'active':''}" onclick="pShops('pending')">开店任务审核<span class="tb">${pend}</span></div>
     <div class="tab ${t=='list'?'active':''}" onclick="pShops('list')">店铺列表</div>
@@ -4559,6 +4641,7 @@ PAGES['p-shops']=()=>{
 function shopPendingTab(){
   const m=DB.merchant;let rows='';
   if(m.onboard=='task_review') rows+=`<tr><td><b>${DB.shop.name||'（未命名店铺）'}</b></td><td class="mono">${m.code}</td><td>${DB.shop.cats.join('·')||'—'}</td><td>${m.contact}<div style="font-size:12px;color:var(--ts)">${m.phone}</div></td><td>2026-06-29</td><td><span class="tag t-y"><span class="dot"></span>待审核</span></td><td><button class="btn btn-p btn-sm" onclick="act_reviewTask()">审核</button></td></tr>`;
+  if(DB.shopChange) rows+=`<tr><td><b>${DB.shop.name}</b> <span class="tag t-b" style="font-size:10.5px">资料变更</span></td><td class="mono">${m.code}</td><td>${DB.shopChange.cats.join('·')}</td><td>${m.contact}<div style="font-size:12px;color:var(--ts)">${m.phone}</div></td><td>${DB.shopChangeAt}</td><td><span class="tag t-y"><span class="dot"></span>待审核</span></td><td><button class="btn btn-p btn-sm" onclick="act_reviewTask('change')">审核</button></td></tr>`;
   rows+=`<tr><td><b>海岛鲜蔬旗舰店</b></td><td class="mono">M2026-0831</td><td>蔬菜·根茎</td><td>吴敏<div style="font-size:12px;color:var(--ts)">+65 8123 9920</div></td><td>2026-06-28</td><td><span class="tag t-y"><span class="dot"></span>待审核</span></td><td><button class="btn btn-p btn-sm" onclick="toast('演示仅开放绿鲜源开店任务审核','info')">审核</button></td></tr>`;
   return `${flowTip(`平台商家（供应商入驻已建档开通账号）在商家端提交的<b>开店任务（店铺基础信息）</b>在此审核。通过 → 店铺正式营业；驳回 → 商家修改后重提。`)}
   <div class="card"><div class="card-hd"><h3>开店任务审核</h3><span class="sub">审核店铺基础信息</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
@@ -4737,16 +4820,53 @@ function shopAction(m){
   if(m.onboard=='task_review')return `<button class="btn btn-p btn-sm" onclick="act_reviewTask()">审核</button>`;
   if(m.onboard=='task_rejected')return `<span style="color:var(--r);font-size:12.5px">开店任务已驳回</span>`;
   if(m.onboard=='task')return `<span style="color:var(--ts);font-size:12.5px">待商家填写开店任务</span>`;
-  return `<button class="btn btn-link" onclick="act_merchant360()">查看</button>`;
+  return `<button class="btn btn-link" onclick="act_shopDetail()">查看</button>`;
 }
-function act_reviewTask(){
-  const m=DB.merchant,s=DB.shop;
-  modalWide(`<div class="mc-hd"><h3>开店任务审核 · ${s.name}</h3><p>平台商家店铺基础信息 · ${m.code} · 对应供应商 V2026-0815</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="ib ib-gr"><span class="i">ℹ️</span>企业资质与合同已在供应商入驻阶段核验通过，此处仅审核店铺基础信息是否合规、完整。</div>
+function act_reviewTask(kind){
+  const isChg=kind=='change',m=DB.merchant,s=isChg?DB.shopChange:DB.shop,o=DB.shop;
+  // 资料变更：列出与当前生效资料不同的字段，HALAL 相关单独标出
+  const F=[['name','店铺名称'],['abbr','店铺简称'],['type','店铺类型'],['cats','主营品类'],['intro','店铺简介'],['contact','联系人'],['service','客服电话'],['delivery','配送范围'],['addr','经营地址'],['uen','UEN'],['settleType','结算方式'],['payDay','最晚付款日'],['halal','是否有 HALAL 商品'],['halalCertNo','HALAL 证书编号'],['halalFiles','HALAL 证书']];
+  const fv=v=>Array.isArray(v)?(v.join('、')||'—'):(v||'—');
+  const diff=isChg?F.filter(([k])=>JSON.stringify(o[k]??'')!==JSON.stringify(s[k]??'')):[];
+  const hOn=s.halal=='是';
+  modalWide(`<div class="mc-hd"><h3>${isChg?'资料变更审核':'开店任务审核'} · ${s.name}</h3><p>平台商家店铺基础信息 · ${m.code} · 对应供应商 V2026-0815</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    ${isChg?`<h4 style="font-size:13.5px;margin-bottom:10px">变更内容（${diff.length} 项）</h4>
+    ${diff.length?`<table style="margin-bottom:16px"><thead><tr><th>字段</th><th>变更前</th><th>变更后</th></tr></thead><tbody>${diff.map(([k,l])=>`<tr><td><b>${l}</b></td><td style="color:var(--ts)">${fv(o[k])}</td><td style="color:var(--g);font-weight:600">${fv(s[k])}</td></tr>`).join('')}</tbody></table>`:'<div class="ib ib-gr"><span class="i">ℹ️</span>未检测到字段变化</div>'}`
+    :`<div class="ib ib-gr"><span class="i">ℹ️</span>企业资质与合同已在供应商入驻阶段核验通过，此处审核店铺基础信息与 HALAL 证书是否合规、完整。</div>`}
     <h4 style="font-size:13.5px;margin-bottom:10px">🏪 店铺基础信息</h4>
     <div class="kv" style="margin-bottom:10px"><div><div class="k">店铺名称</div><div class="v">${s.name}</div></div><div><div class="k">店铺简称</div><div class="v">${s.abbr||'—'}</div></div><div><div class="k">店铺类型</div><div class="v">${s.type}</div></div><div><div class="k">主营品类</div><div class="v">${s.cats.join(' · ')}</div></div><div><div class="k">客服电话</div><div class="v">${s.service}</div></div><div><div class="k">营业时间</div><div class="v">${s.hours}</div></div><div><div class="k">配送范围</div><div class="v">${s.delivery}</div></div></div>
     <div class="kv" style="margin-bottom:8px"><div style="grid-column:1/-1"><div class="k">店铺简介</div><div class="v" style="font-weight:400">${s.intro}</div></div><div style="grid-column:1/-1"><div class="k">经营地址</div><div class="v" style="font-weight:400">${s.addr}</div></div></div>
-  </div><div class="mc-ft"><button class="btn btn-d" onclick="act_rejectTask()">✕ 驳回</button><button class="btn btn-p" onclick="act_approveTask()">✓ 审核通过 · 准予营业</button></div>`);
+    <h4 style="font-size:13.5px;margin:14px 0 10px">HALAL 经营</h4>
+    <div class="kv"><div><div class="k">是否有 HALAL 商品</div><div class="v">${hOn?'<span class="tag t-g"><span class="dot"></span>是</span>':'否'}</div></div>
+      ${hOn?`<div><div class="k">HALAL 证书编号</div><div class="v mono">${s.halalCertNo||'—'}</div></div><div style="grid-column:1/-1"><div class="k">HALAL 证书</div><div class="v row" style="gap:8px;flex-wrap:wrap">${halalFileChips(s.halalFiles||[],false)}</div></div>`:''}</div>
+  </div><div class="mc-ft">${isChg
+    ?`<button class="btn btn-d" onclick="act_rejectShopChange()">✕ 驳回</button><button class="btn btn-p" onclick="act_approveShopChange()">✓ 审核通过 · 变更生效</button>`
+    :`<button class="btn btn-d" onclick="act_rejectTask()">✕ 驳回</button><button class="btn btn-p" onclick="act_approveTask()">✓ 审核通过 · 准予营业</button>`}</div>`);
+}
+// 资料变更审核通过：整体替换生效资料。是→否 在审核期间商家又建了 HALAL 商品 → 二次拦截，只能驳回
+function act_approveShopChange(){
+  const c=DB.shopChange;if(!c)return;
+  if(DB.shop.halal=='是'&&c.halal=='否'){const list=shopHalalProducts();if(list.length){toast(`店铺下现有 ${list.length} 个 HALAL 商品，不能改为「否」，请驳回`,'err');return;}}
+  Object.assign(DB.shop,c);DB.shopChange=null;DB.shopChangeReject='';closeModal();render();toast('资料变更审核通过，已生效','ok');
+}
+function act_rejectShopChange(){
+  modal(`<div class="mc-hd"><h3>驳回资料变更</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">驳回原因（回写商家端）</label><textarea id="sc-rej">HALAL 证书编号与附件不一致，请核对后重新上传。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="DB.shopChangeReject=document.getElementById('sc-rej').value;DB.shopChange=null;closeModal();render();toast('已驳回，原因已回写商家端','info')">确认驳回</button></div>`);
+}
+/* 运营端 · 店铺列表「查看」→ 店铺详情抽屉（对齐线上：店铺资料 / 收款结算 / 经营资质）；HALAL 证书进「经营资质」，证件类型=HALAL证书 */
+function act_shopDetail(){
+  const s=DB.shop,m=DB.merchant;
+  const rows=[...(s.halal=='是'?[{t:'HALAL证书',n:'HALAL证书',no:s.halalCertNo,exp:'—',st:'有效',files:s.halalFiles}]:[]),...DB.quals.map(q=>({t:q.name,n:q.name,no:q.no,exp:q.expire,st:q.status=='valid'?'有效':q.status=='expiring'?'即将到期':'已过期',files:[q.name+'.pdf']}))];
+  drawer(`<div class="drawer-hd"><h3>店铺详情 · ${s.name}</h3><span class="x" onclick="closeDrawer()">×</span></div><div class="drawer-bd">
+    <h4 style="font-size:14px;margin-bottom:10px">店铺资料</h4>
+    <dl class="dl" style="margin-bottom:18px"><dt>店铺名称</dt><dd>${s.name}</dd><dt>店铺简称</dt><dd>${s.abbr}</dd><dt>店铺类型</dt><dd>${s.type}</dd><dt>主营品类</dt><dd>${s.cats.join('、')}</dd><dt>联系人</dt><dd>${s.contact}</dd><dt>客服电话</dt><dd class="mono">${s.service}</dd><dt>UEN（开票用）</dt><dd class="mono">${s.uen}</dd><dt>配送范围</dt><dd>${s.delivery}</dd><dt>经营地址</dt><dd>${s.addr}</dd>
+      <dt>是否有 HALAL 商品</dt><dd>${s.halal=='是'?'<span class="tag t-g"><span class="dot"></span>是</span>':'否'}</dd></dl>
+    <h4 style="font-size:14px;margin-bottom:10px">收款结算</h4>
+    <dl class="dl" style="margin-bottom:18px"><dt>收款账户</dt><dd>${s.bankAcct}</dd><dt>结算方式</dt><dd>${s.settleType}</dd><dt>最晚付款日</dt><dd>${s.payDay}</dd></dl>
+    <h4 style="font-size:14px;margin-bottom:10px">经营资质</h4>
+    <table><thead><tr><th>证件类型</th><th>证照编号</th><th>有效期</th><th>状态</th><th>资质证明</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td><b>${r.t}</b></td><td class="mono">${r.no||'—'}</td><td>${r.exp}</td><td><span class="tag ${r.st=='有效'?'t-g':r.st=='即将到期'?'t-y':'t-r'}"><span class="dot"></span>${r.st}</span></td><td>${(r.files||[]).map(f=>`<a href="javascript:toast('预览 ${f}','info')">${f}</a>`).join('<br>')}</td></tr>`).join('')}
+    </tbody></table>
+  </div><div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 }
 
 /* ---------- 平台：商品审核（闭环B 平台侧 · 建档信息 SPU 整体审核：自动通过 / 人工审核） ---------- */
