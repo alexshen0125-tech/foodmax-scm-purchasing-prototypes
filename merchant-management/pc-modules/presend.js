@@ -39,13 +39,6 @@
       return {sku:a.sku,name:a.name,unit:a.unit,spec,cat:(p&&p.cat)||'—',wh:a.wh,
         fcst,avail,orderQty:a.orderQty,hist};
     });
-    // BR-22：预送 SKU 种类上限——只有算法给出预送量的 SKU 才进池；超过 N 种时按定稿量从高到低截取前 N 种，被截取的当日预送量 = 0
-    const lim=(DB.merchant&&DB.merchant.presendSkuLimit)||20,skuQ={};
-    rows.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
-    const cand=Object.keys(skuQ).filter(k=>skuQ[k]>0);   // BR-22：只有定稿量 > 0 的 SKU 才进池，非预送 SKU 不占名额
-    const pool=new Set(cand.sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));   // 超过上限直接截取前 N 种
-    rows.forEach(r=>{r.inPool=pool.has(r.sku);});
-    DB.presendPool={limit:lim,total:cand.length,used:pool.size};
     DB.presend=rows;
     buildAudit();        // 逐日链式演算 → DB.psAudit（送货盘点数据源）
     buildStock();        // 由链式结果的期末在仓派生「在仓预送库存」，与盘点同源
@@ -59,8 +52,28 @@
   function buildAudit(){
     const psOn=(typeof presendOn=='function')&&presendOn();
     const whs=[...new Set(DB.presend.map(r=>r.wh))];
-    const carry={},docs=[];let seq=0;
+    const lim=(DB.merchant&&DB.merchant.presendSkuLimit)||20;
+    const carry={},docs=[];let seq=0,pool=new Set(),poolLog=null;const poolDays=[];
     AUD_DAYS.slice().reverse().forEach(d=>{           // 由早到晚滚动，前一日期末即次日期初
+      /* BR-22 预送池（跨日滚动，非每日重排）：
+         ① 池内仍有期末在仓的 SKU 继续占位（不论今日算法给不给预送量）；
+         ② 期末在仓为 0 的出池，腾出名额；
+         ③ 算法今日给出预送量的 SKU：已在池内的照常预送；不在池内的按空余名额补入（按算法预送量从高到低），补不进的直接舍弃。 */
+      const gross={},grossBy={},openBy={};
+      whs.forEach(wh=>DB.presend.filter(r=>r.wh==wh).forEach(r=>{
+        const g=psOn?Math.max(0,Math.round(rawQty(r)*(0.7+hnum(r.sku+wh+d+'p',70)/100))):0;
+        grossBy[r.sku+'|'+wh]=g;
+        gross[r.sku]=(gross[r.sku]||0)+g;
+        openBy[r.sku]=(openBy[r.sku]||0)+(carry[r.sku+'|'+wh]||0);
+      }));
+      const keep=[...pool].filter(k=>(openBy[k]||0)>0);                        // ① 有期末在仓 → 继续占位
+      const free=Math.max(0,lim-keep.length);                                  // ② 库存为 0 的出池，腾出名额
+      const add=Object.keys(gross).filter(k=>gross[k]>0&&keep.indexOf(k)<0)    // ③ 新 SKU 按名额补入，超出舍弃
+        .sort((a,b)=>gross[b]-gross[a]||a.localeCompare(b)).slice(0,free);
+      const out=[...pool].filter(k=>keep.indexOf(k)<0);
+      pool=new Set(keep.concat(add));
+      poolLog={date:d,limit:lim,keep,add,out,dropped:Object.keys(gross).filter(k=>gross[k]>0&&!pool.has(k)),openBy:Object.assign({},openBy)};
+      poolDays.push(poolLog);
       whs.forEach(wh=>{
         const rs=DB.presend.filter(r=>r.wh==wh);
         if(!rs.length)return;
@@ -68,7 +81,7 @@
           const sd=r.sku+wh+d,key=r.sku+'|'+wh;
           const open=carry[key]||0;                                            // 期初在仓（昨日未售完 + 昨日多收）
           const orderQty=Math.max(1,Math.round(r.orderQty*(0.7+hnum(sd+'o',70)/100)));
-          const psQty=psOn?Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100))):0;
+          const psQty=pool.has(r.sku)?grossBy[key]:0;                          // 不在预送池 → 当日不预送（BR-22）
           const ded=Math.min(open,psQty),psNet=psQty-ded;                     // BR-15b：在仓只抵扣预送部分
           const planned=orderQty+psNet;                                        // 应送 = 订单量 + 预送量（净），订单量照送
           const h=hnum(sd+'rc',10);                                            // 约 2/10 短收、2/10 多收、其余足额
@@ -92,6 +105,9 @@
     DB.psAuditTab='doc';DB.psAuditF={day:AUD_DAYS[0]};
     DB.psAudit={days:AUD_DAYS,docs};
     DB.psLeft=carry;                 // 最新期末在仓（= 今天的在仓剩余），供四处统一取用
+    DB.psPool=pool;                  // 今日预送池（跨日滚动的结果），供 finalQty / 运营平台清单取用
+    DB.psPoolLog=poolLog;            // 今日入池/出池/舍弃明细
+    DB.psPoolDays=poolDays;          // 逐日池变动（自检用）
   }
   function buildStock(){
     const last=DB.psAudit.docs.filter(d=>d.date==AUD_DAYS[0]);
@@ -133,7 +149,8 @@
   function psSplit(gross,left){const ded=Math.min(gross,left);return {ded,net:gross-ded};}
   function cfg(){return DB.presendCfg;}
   // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
-  function finalQty(r){return r.inPool===false?0:Math.min(r.fcst,r.avail);}   // 超出种类上限（BR-22）不预送
+  function rawQty(r){return Math.min(r.fcst,r.avail);}                        // 算法预送量（未过池）
+  function finalQty(r){return (DB.psPool&&!DB.psPool.has(r.sku))?0:rawQty(r);} // 不在预送池（BR-22）→ 不预送
 
   /* ---------- 在仓预送库存 ---------- */
   function stockRows(){

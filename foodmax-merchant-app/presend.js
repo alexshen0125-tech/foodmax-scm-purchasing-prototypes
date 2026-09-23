@@ -63,7 +63,7 @@ document.head.appendChild(css);
 
 /* ---------- 数据（与 PC 端同源同算法：按待发货订单聚合 × 稳定伪随机） ---------- */
 function hnum(str,mod){let h=11;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))>>>0;return h%mod;}
-let ROWS=null,STOCK=null;
+let ROWS=null,STOCK=null,PSPOOL=null;
 function ensure(){
   if(ROWS)return;
   const DB=window.FM.DB,agg={};
@@ -80,12 +80,6 @@ function ensure(){
     const hist=[0,1,2,3].map(k=>Math.max(0,fcst-6+hnum(a.name+a.wh+'h'+k,13)));
     return Object.assign({},a,{fcst,avail,hist});
   });
-  // BR-22：预送 SKU 种类上限——只有算法给出预送量的 SKU 才进池；超过 N 种时按定稿量从高到低截取前 N 种（与 PC 同算法）
-  const lim=window.FM.PRESEND_SKU_LIMIT||20,skuQ={};
-  ROWS.forEach(r=>{skuQ[r.sku]=(skuQ[r.sku]||0)+Math.min(r.fcst,r.avail);});
-  const cand=Object.keys(skuQ).filter(k=>skuQ[k]>0);   // BR-22：只有定稿量 > 0 的 SKU 才进池，非预送 SKU 不占名额
-  const pool=new Set(cand.sort((a,b)=>skuQ[b]-skuQ[a]||a.localeCompare(b)).slice(0,lim));   // 超过上限直接截取前 N 种
-  ROWS.forEach(r=>{r.inPool=pool.has(r.sku);});
   buildAudit();     // 逐日链式演算（送货盘点数据源）
   buildStock();     // 由链式期末在仓派生「在仓预送库存」，与盘点同源
 }
@@ -97,8 +91,23 @@ const AUD_DAYS=['2026-08-30','2026-08-29','2026-08-28','2026-08-27','2026-08-26'
 let AUD=null;
 function buildAudit(){
   const on=window.FM.PRESEND_ON===true;
-  const whs=[...new Set(ROWS.map(r=>r.wh))],carry={},docs=[];let seq=0;
+  const lim=window.FM.PRESEND_SKU_LIMIT||20;
+  const whs=[...new Set(ROWS.map(r=>r.wh))],carry={},docs=[];let seq=0,pool=new Set();
   AUD_DAYS.slice().reverse().forEach(d=>{
+    /* BR-22 预送池（跨日滚动，与 PC 同算法）：有期末在仓的继续占位；库存为 0 的出池腾名额；
+       算法今日给出预送量的 SKU，已在池内的保留，不在池内的按空余名额补入，补不进的直接舍弃。 */
+    const gross={},grossBy={},openBy={};
+    whs.forEach(wh=>ROWS.filter(r=>r.wh===wh).forEach(r=>{
+      const g=on?Math.max(0,Math.round(rawQty(r)*(0.7+hnum(r.sku+wh+d+'p',70)/100))):0;
+      grossBy[r.sku+'|'+wh]=g;
+      gross[r.sku]=(gross[r.sku]||0)+g;
+      openBy[r.sku]=(openBy[r.sku]||0)+(carry[r.sku+'|'+wh]||0);
+    }));
+    const keep=[...pool].filter(k=>(openBy[k]||0)>0);
+    const free=Math.max(0,lim-keep.length);
+    const add=Object.keys(gross).filter(k=>gross[k]>0&&keep.indexOf(k)<0)
+      .sort((a,b)=>gross[b]-gross[a]||a.localeCompare(b)).slice(0,free);
+    pool=new Set(keep.concat(add));
     whs.forEach(wh=>{
       const rs=ROWS.filter(r=>r.wh===wh);
       if(!rs.length)return;
@@ -106,7 +115,7 @@ function buildAudit(){
         const sd=r.sku+wh+d,key=r.sku+'|'+wh;
         const open=carry[key]||0;
         const orderQty=Math.max(1,Math.round(r.orderQty*(0.7+hnum(sd+'o',70)/100)));
-        const psQty=on?Math.max(0,Math.round(finalQty(r)*(0.7+hnum(sd+'p',70)/100))):0;
+        const psQty=pool.has(r.sku)?grossBy[key]:0;                          // 不在预送池 → 当日不预送（BR-22）
         const ded=Math.min(open,psQty),psNet=psQty-ded;                     // BR-15b：在仓只抵扣预送部分
         const planned=orderQty+psNet;                                        // 应送 = 订单量 + 预送量（净），订单量照送
         const h=hnum(sd+'rc',10);
@@ -125,6 +134,7 @@ function buildAudit(){
       docs.push({no:'SH'+d.replace(/-/g,'')+String(++seq).padStart(3,'0'),date:d,wh,lines});
     });
   });
+  PSPOOL=pool;        // 今日预送池（跨日滚动的结果）
   AUD={docs};
 }
 function buildStock(){
@@ -139,7 +149,8 @@ function buildStock(){
   }));
 }
 // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
-function finalQty(r){return r.inPool===false?0:Math.min(r.fcst,r.avail);}   // 超出种类上限（BR-22）不预送
+function rawQty(r){return Math.min(r.fcst,r.avail);}                       // 算法预送量（未过池）
+function finalQty(r){return (PSPOOL&&!PSPOOL.has(r.sku))?0:rawQty(r);}      // 不在预送池（BR-22）→ 不预送
 // BR-15b（2026-09-22 拍板）：在仓只抵扣预送，不抵扣订单——预送量（净）= max(0, 定稿量 − 在仓剩余)
 function psSplit(gross,left){const ded=Math.min(gross,left);return {ded,net:gross-ded};}
 
