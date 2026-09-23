@@ -4703,11 +4703,11 @@ function shopAllTab(){
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
       <td>${psCfgOf(r.mcode).on?`<span class="tag t-g"><span class="dot"></span>已开通</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">上限 ${psCfgOf(r.mcode).limit} 种</div>`:'<span class="tag t-gr">未开通</span>'}</td>
-      <td><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
+      <td><div style="display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;align-items:center"><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
         <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button>
-        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button>${psCfgOf(r.mcode).on?`<button class="btn btn-link" onclick="act_shopPsSkus('${r.mcode}')">预送SKU</button>`:''}</td></tr>`;};
+        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button>${psCfgOf(r.mcode).on?`<button class="btn btn-link" onclick="act_shopPsSkus('${r.mcode}')">预送 SKU 清单</button>`:''}</div></td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>预送模式</th><th>操作</th></tr></thead>
