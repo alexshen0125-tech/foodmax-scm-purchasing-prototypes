@@ -75,8 +75,8 @@ function ensure(){
     });
   });
   ROWS=Object.values(agg).map(a=>{
-    const fcst=hnum(a.sku+'np',10)<3?0:Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',80)/100))); // 约 3/10 SKU 算法不出预测（非预送品），不进预送池
-    const avail=Math.max(3,Math.round(fcst*(0.45+hnum(a.name+a.wh+'a',60)/100))); // 可售库存 = 预测量的 45%–105%
+    const fcst=hnum(a.sku+'np',10)<3?0:Math.max(3,Math.round(a.orderQty*(0.4+hnum(a.name+a.wh+'f',140)/100))); // 约 3/10 SKU 算法不出预测（非预送品），不进预送池
+    const avail=Math.max(3,Math.round(fcst*(0.6+hnum(a.name+a.wh+'a',70)/100))); // 可售库存 = 预测量的 45%–105%
     const hist=[0,1,2,3].map(k=>Math.max(0,fcst-6+hnum(a.name+a.wh+'h'+k,13)));
     return Object.assign({},a,{fcst,avail,hist});
   });
