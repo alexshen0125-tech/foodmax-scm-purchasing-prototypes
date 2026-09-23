@@ -56,12 +56,12 @@
         const pn=typeof presendNet=='function'?presendNet(s.name,wh):{gross:0,left:0,ded:0,net:0};   // BR-15b：在仓只抵扣预送
         const should=q+pn.net;
         const psCols=psOn?`<td style="text-align:right">${pn.gross?`<span style="color:var(--gold)">${pn.gross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${pn.left?`<span style="color:var(--g)">${pn.left}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${should}</b> ${s.unit}${pn.gross&&!pn.net?'<div style="font-size:11px;color:var(--g)">在仓已够·免送预送货</div>':''}</td>`:'';
-        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${q+(psOn?pn.gross:0)} <span style="color:var(--ts)">${s.unit}</span></td>${psCols}</tr>`;
+        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${q} <span style="color:var(--ts)">${s.unit}</span></td>${psCols}</tr>`;
       }).join('');
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的可售库存)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br>「订单量（含预送）」= 订单量 + 算法定稿的预送量，是今天的**需求合计**；<b>今日应送</b>才是你今天实际要送的量：<b>今日应送 = 订单量 + max(0, 预送定稿量 − 在仓剩余)</b>——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>先抵扣今天的预送量</b>，这部分不用重复送；在仓只抵扣预送，<b>订单量照送</b>。`:''}</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的可售库存)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br>「订单量」只算订单需求，「预送量」是算法定稿的当日预送；<b>今日应送</b>才是你今天实际要送的量：<b>今日应送 = 订单量 + max(0, 预送定稿量 − 在仓剩余)</b>——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>先抵扣今天的预送量</b>，这部分不用重复送；在仓只抵扣预送，<b>订单量照送</b>。`:''}</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -79,7 +79,7 @@
     </div>
     <div class="card-bd" style="padding:8px 16px 0"><div class="ib ib-r" style="margin:0"><span class="i">⚠️</span>由于订单延退支付/取消，请以仓库展示销量停止为准。</div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">${psOn?'订单量（含预送）':'订单量'}</th>${psOn?'<th style="text-align:right">预送量</th><th style="text-align:right">在仓剩余</th><th style="text-align:right">今日应送</th>':''}</tr></thead>
+      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">订单量</th>${psOn?'<th style="text-align:right">预送量</th><th style="text-align:right">在仓剩余</th><th style="text-align:right">今日应送</th>':''}</tr></thead>
       <tbody>${body||`<tr><td colspan="${psOn?12:9}"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
   }
