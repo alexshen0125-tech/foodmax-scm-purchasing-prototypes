@@ -54,14 +54,14 @@
           <td rowspan="${rs}" style="vertical-align:top;font-size:12px;color:var(--ts)">${s.cat}</td>
           <td rowspan="${rs}" style="vertical-align:top;text-align:right"><b>${total}</b> ${s.unit}</td>`:'';
         const pn=typeof presendNet=='function'?presendNet(s.name,wh):{gross:0,left:0,ded:0,net:0};   // BR-15b：在仓只抵扣预送
-        const should=q+pn.net;
-        const psCols=psOn?`<td style="text-align:right">${pn.gross?`<span style="color:var(--gold)">${pn.gross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${pn.left?`<span style="color:var(--g)">${pn.left}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${should}</b> ${s.unit}${pn.gross&&!pn.net?'<div style="font-size:11px;color:var(--g)">在仓已够·免送预送货</div>':''}</td>`:'';
+        const should=Math.max(q,pn.net);   // 取大：预送量是全天总量、已含订单量，不相加
+        const psCols=psOn?`<td style="text-align:right">${pn.gross?`<span style="color:var(--gold)">${pn.gross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${pn.left?`<span style="color:var(--g)">${pn.left}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${should}</b> ${s.unit}${pn.gross&&pn.net<=q?'<div style="font-size:11px;color:var(--g)">预送已被在仓抵完·按订单量送</div>':''}</td>`:'';
         return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${q} <span style="color:var(--ts)">${s.unit}</span></td>${psCols}</tr>`;
       }).join('');
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的可售库存)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br>「订单量」只算订单需求，「预送量」是算法定稿的当日预送；<b>今日应送</b>才是你今天实际要送的量：<b>今日应送 = 订单量 + max(0, 预送定稿量 − 在仓剩余)</b>——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>先抵扣今天的预送量</b>，这部分不用重复送；在仓只抵扣预送，<b>订单量照送</b>。`:''}</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的可售库存)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br><b>「预送量」是算法预测的当日全天销量、已经包含订单量</b>，两者<b>不相加</b>。<b>今日应送 = max(订单量, 预送量 − 在仓剩余)</b>：昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>先抵扣预送量</b>，这部分不用重复送；扣完若低于订单量，按<b>订单量</b>送（订单货必须按单履约）。`:''}</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -148,8 +148,8 @@
         if(st!='na'){agg[key].wgNeed++;if(st=='wait')agg[key].wgWait++;else agg[key].wgReal+=(typeof weighRealOf=='function'&&weighRealOf(o,l))||0;}
       });
     });
-    // 应送货 = max(订单量, 预送量)（2026-09-23 拍板）：截单时间到后，订单量 ≥ 预送量按订单量打，
-    //   订单量 < 预送量按预送量打（预送量已扣在仓剩余：预送量 = max(0, 定稿量 − 在仓剩余)）
+    // 应送货 = max(订单量, 预送量−在仓剩余)（2026-09-23 拍板）：预送量是算法预测的全天销量、已含订单量，
+    //   两者取大不相加；扣完在仓后低于订单量的，按订单量打（订单货按单履约）
     // 预送量无订单载体，标签形态与订单货一致：按 SKU 一件一张、不含订单/客户信息
     const rows=Object.values(agg);
     rows.forEach(r=>{
@@ -232,7 +232,7 @@
     const optSel=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
     ${!DB.labelPaper?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">🖨️</span><b>尚未设置打印机纸张</b>，需先选择标签纸张大小后才能打印标签。<button class="btn btn-link btn-sm" onclick="label_paperModal()">去设置 →</button></div>`:''}
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。${lbPsOn?`<br><b>应送货 = max(订单量, 预送量)</b>——截单时间到后，<b>订单量 ≥ 预送量按订单量打，订单量 < 预送量按预送量打</b>，两者不相加。<b>预送量 = max(0, 定稿量 − 在仓剩余)</b>：定稿量由系统于 16:00 按 min(算法预测量, 可售库存) 直接定稿、无需确认；昨天留仓的与你昨天多送被照收的货<b>先抵扣今天的预送量</b>，已在应送货里扣掉，<b>不要重复打标重复送</b>。标签形态与订单货完全一致（按 SKU 一件一张、不含订单/客户信息），到仓后由 WMS <b>先满足订单、余量入你的在仓预送库存</b>。<b>建议 16:00 预送量定稿后再打印</b>，提前打印需在定稿后补打预送部分。`:''}</div>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。${lbPsOn?`<br><b>应送货 = max(订单量, 预送量 − 在仓剩余)</b>——<b>预送量是算法预测的当日全天销量、已经包含订单量</b>，两者取大<b>不相加</b>；扣完在仓后低于订单量的按订单量打。定稿量由系统于 16:00 按 min(算法预测量, 可售库存) 直接定稿、无需确认；昨天留仓的与你昨天多送被照收的货<b>先抵扣今天的预送量</b>，已在应送货里扣掉，<b>不要重复打标重复送</b>。标签形态与订单货完全一致（按 SKU 一件一张、不含订单/客户信息），到仓后由 WMS <b>先满足订单、余量入你的在仓预送库存</b>。<b>建议 16:00 预送量定稿后再打印</b>，提前打印需在定稿后补打预送部分。`:''}</div>
     ${blocked?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span><b>${blocked} 个商品因未完成称重被拦截，无法打印标签。</b>多退少补（按重量定价）商品必须先录实发净重——打印首张标签即自动生成送货单，届时重量已无法再改。<button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重录入 →</button></div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">
