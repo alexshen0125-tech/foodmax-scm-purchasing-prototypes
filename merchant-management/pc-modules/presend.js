@@ -213,7 +213,7 @@
         <tr><td style="width:42%;color:var(--ts)">次日订单需求</td><td>${r.nextNeed} ${r.unit}</td></tr>
         <tr><td style="color:var(--ts)">次日需求（订单 / 预送 取大）</td><td>${nsp.need} ${r.unit} <span style="font-size:12px;color:var(--ts)">= max(订单 ${r.nextNeed}, 预送 ${nextPs})</span></td></tr>
         <tr><td style="color:var(--ts)">减去在仓剩余</td><td>− ${nsp.ded} ${r.unit}${r.left>nsp.ded?` <span style="font-size:12px;color:var(--ts)">（在仓 ${r.left}，超出需求的 ${r.left-nsp.ded} 继续留仓）</span>`:''}</td></tr>
-        <tr><td style="color:var(--ts)"><b>次日应送量</b></td><td><b style="color:var(--g)">${need}</b> ${r.unit} <span style="font-size:12px;color:var(--ts)">= max(0, 需求 ${nsp.need} − 在仓 ${nsp.ded})</span>${nsp.net==0&&nextPs>0?' <span style="color:var(--ts);font-size:12px">（在仓货已够，次日免送预送货）</span>':''}</td></tr>
+        <tr><td style="color:var(--ts)"><b>次日应送量</b></td><td><b style="color:var(--g)">${need}</b> ${r.unit} <span style="font-size:12px;color:var(--ts)">= max(0, 需求 ${nsp.need} − 在仓 ${nsp.ded})</span>${nsp.net==0&&nextPs>0?' <span style="color:var(--ts);font-size:12px">（在仓已够 · 次日免送）</span>':''}</td></tr>
       </tbody></table>
     </div>
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
@@ -352,8 +352,8 @@
       </tbody></table>
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">逐 SKU 明细</h4>
       <table><thead><tr><th>商品</th><th>送货类型</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
-        ${d.lines.map(l=>`<tr><td><b>${l.name}</b><div style="font-size:11px;color:var(--ts)">订单 ${l.orderQty}${l.psQty?` · <span style="color:var(--gold)">预送 ${l.psNet}</span>${l.ded?`<span style="color:var(--g)">（预测 ${l.psQty} − 在仓 ${l.ded}）</span>`:''}`:''}</div></td>
-          <td>${l.psNet?'<span class="tag t-y">预测送货</span>':'<span class="tag t-g">实际送货</span>'}</td>
+        ${d.lines.map(l=>`<tr><td><b>${l.name}</b><div style="font-size:11px;color:var(--ts)">订单 ${l.orderQty}${l.psQty?` · <span style="color:var(--gold)">预送 ${l.psQty}</span>`:''} · 取大 ${l.need}${l.ded?` · <span style="color:var(--g)">抵扣在仓 −${l.ded}</span>`:''}</div></td>
+          <td>${l.psQty?'<span class="tag t-y">预测送货</span>':'<span class="tag t-g">实际送货</span>'}</td>
           <td style="text-align:right;color:var(--ts)">${l.open||'—'}</td>
           <td style="text-align:right">${l.planned}</td><td style="text-align:right">${l.received}</td>
           <td style="text-align:right">${l.short?`<span style="color:var(--r)">−${l.short}</span>`:(l.over?`<span style="color:var(--gold)">+${l.over}</span>`:'<span style="color:var(--tt)">0</span>')}</td>
@@ -381,7 +381,7 @@
       <table style="margin-bottom:22px"><thead><tr><th>送货日</th><th>送货单</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
         ${r.days.map(x=>`<tr><td>${x.date}</td><td class="mono" style="font-size:12px">${x.no}</td>
           <td style="text-align:right;color:var(--ts)">${x.open||'—'}</td>
-          <td style="text-align:right">${x.planned}<div style="font-size:11px;color:var(--ts)">订单 ${x.orderQty}${x.psQty?` · 预送 ${x.psNet}${x.ded?`<span style="color:var(--g)">（${x.psQty} − 在仓 ${x.ded}）</span>`:''}`:''}</div></td>
+          <td style="text-align:right">${x.planned}<div style="font-size:11px;color:var(--ts)">订单 ${x.orderQty}${x.psQty?` · 预送 ${x.psQty}`:''} · 取大 ${x.need}${x.ded?` · <span style="color:var(--g)">抵扣在仓 −${x.ded}</span>`:''}</div></td>
           <td style="text-align:right">${x.received}</td>
           <td style="text-align:right">${x.short?`<span style="color:var(--r)">−${x.short}</span>`:(x.over?`<span style="color:var(--gold)">+${x.over}</span>`:'<span style="color:var(--tt)">0</span>')}</td>
           <td style="text-align:right;color:var(--ts)">${x.sold}</td>
@@ -457,7 +457,7 @@
     <div class="card" style="margin-bottom:14px">
       <div class="card-hd"><h3>送收对账</h3><span class="sub">${tab=='doc'?(f.day||'全部日期'):'近 '+AUD_DAYS.length+' 天累计'}${f.wh?' · '+f.wh:''}</span></div>
       <div class="card-bd"><div class="row" style="gap:26px;flex-wrap:wrap;align-items:flex-start">
-        ${kpi('应送合计',sp,'','订单量 + 预送量（已扣在仓）')}
+        ${kpi('应送合计',sp,'','取大(订单量, 预送量) 后已扣在仓剩余')}
         ${kpi('仓库实收',sr,'','收货清点回写')}
         ${kpi('短收',ss?'−'+ss:'0',ss?'var(--r)':'','没送足，当日配额同步下调')}
         ${kpi('多收',so?'+'+so:'0',so?'var(--gold)':'','已入在仓寄存，次日优先抵扣')}

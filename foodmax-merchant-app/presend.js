@@ -153,7 +153,7 @@ function buildStock(){
 // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
 function rawQty(r){return Math.min(r.fcst,r.avail);}                       // 算法预送量（未过池）
 function finalQty(r){return (PSPOOL&&!PSPOOL.has(r.sku))?0:rawQty(r);}      // 不在预送池（BR-22）→ 不预送
-// BR-15b（2026-09-22 拍板）：在仓只抵扣预送，不抵扣订单——预送量（净）= max(0, 定稿量 − 在仓剩余)
+// BR-15b（2026-09-23 拍板）：需求 = max(订单量, 预送量)，应送 = max(0, 需求 − 在仓剩余)——预送量含订单量，取大不相加
 function shouldOf(order,ps,left){const need=Math.max(order,ps);return {need,ded:Math.min(left,need),should:Math.max(0,need-left)};}
 
 /* ---------- 在仓预送库存 ---------- */
@@ -180,7 +180,7 @@ function stockCard(s){
 function drawStock(box){
   const expN=STOCK.filter(s=>s.shelfLeft<=2).length;
   box.innerHTML=`
-    <div class="ps-note" style="margin-top:12px">当日预送到仓、截单后没卖完的货留在仓里，<b>先抵扣次日预送量</b>——次日预送量 = 定稿量 − 在仓剩余，订单量照送，预送够了就不用再送预送货。你<b>多送</b>的部分仓库照收，也直接进这里（当天不参与售卖）。货权归你，<b>滞销与临期由你处理</b>、可申请退回；保管期间的<b>损坏与丢失由平台承担</b>。</div>
+    <div class="ps-note" style="margin-top:12px">当日预送到仓、截单后没卖完的货留在仓里，<b>次日的订单量与预送量一起先扣它</b>——次日应送量 = max(0, max(次日订单量, 次日预送量) − 在仓剩余)，扣完就是次日免送。你<b>多送</b>的部分仓库照收，也直接进这里（当天不参与售卖）。货权归你，<b>滞销与临期由你处理</b>、可申请退回；保管期间的<b>损坏与丢失由平台承担</b>。</div>
     <div class="ps-tabs">
       <div class="ps-tab ${STAB==='all'?'on':''}" data-t="all">全部 ${STOCK.length}</div>
       <div class="ps-tab ${STAB==='exp'?'on':''}" data-t="exp">临期 ≤2天 ${expN}</div>
@@ -313,7 +313,7 @@ function drawAudit(box){
   const sp=asum(scope,x=>x.planned),sr=asum(scope,x=>x.received),ss=asum(scope,x=>x.short),so=asum(scope,x=>x.over);
   const sl=ATAB==='doc'?asum(docs.flatMap(d=>d.lines),x=>x.close):asum(skus,x=>x.left);
   box.innerHTML=`
-    <div class="ps-note" style="margin-top:12px">盘每天<b>送了多少、仓库收了多少、卖了多少、还剩多少</b>。<b>按送货单</b>看某天某仓这一单的结果，<b>按 SKU</b> 看某个品逐日的明细。<br>一天的账：<b>期初在仓 → 应送（<b>max(0, max(订单量,预送量) − 期初在仓)</b>，预送量含订单量不相加）→ 实收 → 卖出 → 仓库实出 → 期末在仓</b>，账必平（期末在仓 = 期初 + 实收 − 仓库实出，实出少于卖出 = 仓库少发）；期末在仓就是明天的期初，<b>明天的应送先扣它</b>。<br>${psOn()?'应送 = 订单量 + 预送量 − 在仓剩余；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。':'应送 = 订单量；<b>短收</b>按实收计；<b>多收</b>仓库照收不设上限，已入在仓寄存，次日优先抵扣。'}</div>
+    <div class="ps-note" style="margin-top:12px">盘每天<b>送了多少、仓库收了多少、卖了多少、还剩多少</b>。<b>按送货单</b>看某天某仓这一单的结果，<b>按 SKU</b> 看某个品逐日的明细。<br>一天的账：<b>期初在仓 → 应送（<b>max(0, max(订单量,预送量) − 期初在仓)</b>，预送量含订单量不相加）→ 实收 → 卖出 → 仓库实出 → 期末在仓</b>，账必平（期末在仓 = 期初 + 实收 − 仓库实出，实出少于卖出 = 仓库少发）；期末在仓就是明天的期初，<b>明天的应送先扣它</b>。<br>${psOn()?'应送 = max(0, max(订单量, 预送量) − 在仓剩余)，预送量是全天预测总量、已含订单量，取大不相加；<b>短收</b>按实收计、当日配额同步下调；<b>多收</b>仓库照收不设上限，已入在仓寄存，当天不参与售卖、次日优先抵扣。':'应送 = 订单量；<b>短收</b>按实收计；<b>多收</b>仓库照收不设上限，已入在仓寄存，次日优先抵扣。'}</div>
     <div class="ps-sec" style="margin-bottom:8px">送收对账 · ${ATAB==='doc'?(ADAY||'全部日期'):'近 '+AUD_DAYS.length+' 天累计'}</div>
     <div class="ps-kbox" style="margin:0 16px">
       <div class="k"><div class="v">${sp}</div><div class="l">应送合计</div></div>
@@ -363,7 +363,7 @@ function openDocDetail(d){
     <div class="ps-sec">逐 SKU 明细</div>
     <div class="ps-tbl">
       ${d.lines.map(l=>`<div class="ps-row"><span class="k" style="flex:1;text-align:left">
-        <b style="color:var(--ink)">${l.name}</b> ${l.psNet?'<span class="ps-tag" style="background:var(--amber-soft);color:#8A5A12">预测送货</span>':'<span class="ps-tag" style="background:var(--mint-soft);color:var(--emerald-2)">实际送货</span>'}<br><span style="font-size:11.5px">订单 ${l.orderQty}${l.psQty?' · 预送 '+l.psNet+(l.ded?'（预测 '+l.psQty+' − 在仓 '+l.ded+'）':''):''}</span></span>
+        <b style="color:var(--ink)">${l.name}</b> ${l.psQty?'<span class="ps-tag" style="background:var(--amber-soft);color:#8A5A12">预测送货</span>':'<span class="ps-tag" style="background:var(--mint-soft);color:var(--emerald-2)">实际送货</span>'}<br><span style="font-size:11.5px">订单 ${l.orderQty}${l.psQty?' · 预送 '+l.psQty:''} · 取大 ${l.need}${l.ded?' · 抵扣在仓 −'+l.ded:''}</span></span>
         <span class="v">${l.received} / ${l.planned}<br><span style="font-size:11.5px;font-weight:600;color:${l.short?'var(--red)':(l.over?'var(--amber)':'var(--sub)')}">${l.short?'短收 −'+l.short:(l.over?'多收 +'+l.over:'足额')}</span><br><span style="font-size:11.5px;font-weight:400;color:${l.out!==l.sold?'var(--red)':'var(--sub)'}">卖出 ${l.sold} · 实出 ${l.out}${l.out!==l.sold?' · 少发 '+(l.sold-l.out):''} · 剩 ${l.close}</span></span></div>`).join('')}
     </div>
     <div style="height:16px"></div>`});
@@ -378,7 +378,7 @@ function openSkuDetail(r){
     <div class="ps-sec">每日送货明细</div>
     <div class="ps-tbl">
       ${r.days.map(x=>`<div class="ps-row"><span class="k" style="flex:1;text-align:left">
-        <b style="color:var(--ink)">${x.date}</b><br><span style="font-size:11.5px">${x.no} · 订单 ${x.orderQty}${x.psQty?' · 预送 '+x.psNet+(x.ded?'（'+x.psQty+' − 在仓 '+x.ded+'）':''):''}</span></span>
+        <b style="color:var(--ink)">${x.date}</b><br><span style="font-size:11.5px">${x.no} · 订单 ${x.orderQty}${x.psQty?' · 预送 '+x.psQty:''} · 取大 ${x.need}${x.ded?' · 抵扣在仓 −'+x.ded:''}</span></span>
         <span class="v">${x.received} / ${x.planned}<br><span style="font-size:11.5px;font-weight:600;color:${x.short?'var(--red)':(x.over?'var(--amber)':'var(--sub)')}">${x.short?'短收 −'+x.short:(x.over?'多收 +'+x.over:'足额')}</span><br><span style="font-size:11.5px;font-weight:400;color:var(--sub)">卖出 ${x.sold} · 实出 ${x.out}${x.out!==x.sold?' · <span style="color:var(--red)">少发 '+(x.sold-x.out)+'</span>':''} · 剩 ${x.close}</span></span></div>`).join('')}
       <div class="ps-row" style="background:var(--muted)"><span class="k">合计</span>
         <span class="v">${r.received} / ${r.planned}${r.short?` · <span style="color:var(--red)">短收 −${r.short}</span>`:''}${r.over?` · <span style="color:var(--amber)">多收 +${r.over}</span>`:''}<br><span style="font-size:11.5px;font-weight:400;color:var(--sub)">卖出 ${r.sold} · 实出 ${r.out} · 当前在仓 ${r.left}</span></span></div>
