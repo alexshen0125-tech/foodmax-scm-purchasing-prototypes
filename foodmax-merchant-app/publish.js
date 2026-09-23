@@ -64,10 +64,10 @@ const PBTR=(function(){
 // bcrs:true 的类目，建品时才出现「是否支持 BCRS」(与 PC CATS['饮料'].bcrs 同源)
 const CATS=[
   {n:'新鲜蔬菜',tax:0, guide:6},
-  {n:'肉禽蛋品',tax:9, guide:14},
-  {n:'海鲜水产',tax:9, guide:25},
-  {n:'调味品',  tax:9, guide:18},
-  {n:'饮料',    tax:9, guide:5, bcrs:true},
+  {n:'肉禽蛋品',tax:9, guide:14, halal:true},
+  {n:'海鲜水产',tax:9, guide:25, halal:true},
+  {n:'调味品',  tax:9, guide:18, halal:true},
+  {n:'饮料',    tax:9, guide:5, bcrs:true, halal:true},   // halal:true=类目挂载 halal 字段（与 PC CATS 同源）
 ];
 // 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖(与 PC CAT_SCOPE 一致)
 const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料']);
@@ -459,6 +459,7 @@ function openForm(prefill){
     stockUnitIsPack:'是', stockPackQty:'',  // 寄售标品：库存单位是否就是最小包装单位；否则填 1 个库存单位装几个最小包装
     measure: prefill?prefill.measure:'',   // 【兼容】旧「最小售卖单位」，已被 stdType + 规格级 specUnit 取代
     netQty:'', netUnit:'', netPackType:'', measureNote:'',  // netQty/netUnit = 标品的「单件净含量」，非标品不填；netPackType=最小包装单位(单品/单包)
+    halal:'',                              // 是否HALAL：门控=店铺生效值 STORE_HALAL.on==='是' 且 cat.halal；门控内必填(非HALAL/HALAL)，门控外不提交
     bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每 1 <最小包装单位/库存单位> 容器数(整数)，押金单价平台固定 0.10
     sellType:'售卖品',                      // 销售类型固定，不可改
     supplyMode:'自售',                      // 售卖模式(dev supplyMode 1=自售/2=寄售)：默认自售，保存后不可修改；寄售→SKU库存只读
@@ -493,6 +494,8 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-packunit-row" style="display:none;cursor:default"><div class="lab">包装单位</div><div class="val"><span class="vtxt" id="pb-packunit-v" style="color:var(--sub)">🔒 ${f.netPackType||'—'}</span></div></div>
         <div class="pb-hint" id="pb-packqty-hint" style="display:none;padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>
+        <div class="pb-cell" id="pb-halal-row" style="display:none"><div class="lab"><span class="rq">*</span>是否HALAL</div><div class="val"><span class="vtxt" id="pb-halal-v">${f.halal||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
+        <div class="pb-bcrs-tip" id="pb-halal-off" style="display:none">店铺未开通 HALAL 经营，本商品不设置是否HALAL。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」选择「有 HALAL 商品」并上传证书。</div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每 1 <b id="pb-bcrs-unit">${bcrsUnitName(f)}</b> 容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
         <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">${bcrsTipHtml(bcrsUnitName(f))}</div>
@@ -763,6 +766,7 @@ function runChecks(f){
   if(!f.cat)                    fails.push(['必填','缺少「后台类目」']);
   if(!String(f.tax).trim())     fails.push(['必填','缺少「税率」']);
   if(!STD_TYPES.includes(f.stdType)) fails.push(['必填','缺少「商品类型」']);
+  if(halalGateApp(f)&&!f.halal)  fails.push(['必填','缺少「是否HALAL」']);
   /* 标品：净含量是包装申报的固定值，必填；非标品无此字段 */
   if(f.stdType==='标品'){
     if(!(parseFloat(f.netQty)>0)) fails.push(['净含量','「单件净含量」必填——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推']);
@@ -816,6 +820,14 @@ function renderErrors(p,fails){
   box.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+/* ---- HALAL 门控：先看店铺（生效值）→ 再看类目是否挂载 halal；门控外清空不提交 ---- */
+function halalGateApp(f){const h=window.FM_HALAL;return !!h&&h.on==='是'&&!!(f.cat&&f.cat.halal);}
+function halalToggle(p,f){
+  const row=p.querySelector('#pb-halal-row'),off=p.querySelector('#pb-halal-off');if(!row)return;
+  const on=halalGateApp(f),catOn=!!(f.cat&&f.cat.halal);
+  if(!on){f.halal='';const v=p.querySelector('#pb-halal-v');if(v)v.innerHTML='<span class=ph>请选择</span>';}
+  row.style.display=on?'':'none';off.style.display=(catOn&&!on)?'':'none';
+}
 /* ---- BCRS 类目门控：仅 cat.bcrs=true 的类目显示；切到不支持的类目则隐藏并重置为「否」 ---- */
 function bcrsToggle(p,f){
   const rowB=p.querySelector('#pb-bcrs-row'),rowD=p.querySelector('#pb-bcrsdep-row'),tip=p.querySelector('#pb-bcrs-tip');
@@ -848,7 +860,7 @@ function bindForm(p,f){
   p.querySelector('#pb-brand').oninput=e=>{f.brand=e.target.value;};
   p.querySelector('#pb-desc').oninput=e=>{f.desc=e.target.value;};
   // 后台类目(选中后自动带出默认税率，手填可改；联动 BCRS 类目门控)
-  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}catUnitSyncApp(p,f);bcrsToggle(p,f);paint(p,f);});   // 单位可选值随类目字段模板联动(BR-09)
+  p.querySelector('#pb-cat-row').onclick=()=>pbCatPicker(f.cat,c=>{f.cat=c;setPH(p.querySelector('#pb-cat-v'),c.n,1);if(!String(f.tax).trim()){f.tax=String(c.tax);p.querySelector('#pb-tax').value=c.tax;}catUnitSyncApp(p,f);halalToggle(p,f);bcrsToggle(p,f);paint(p,f);});   // 单位可选值随类目字段模板联动(BR-09)
   // BCRS：是否支持(仅 bcrs 类目可见) + 押金单价
   p.querySelector('#pb-bcrs-row').onclick=()=>pbGridPicker('是否支持 BCRS',['否','是'],f.bcrs,v=>{
     f.bcrs=v;setPH(p.querySelector('#pb-bcrs-v'),v,1);
@@ -856,6 +868,8 @@ function bindForm(p,f){
     bcrsToggle(p,f);paint(p,f);});
   p.querySelector('#pb-bcrscnt').oninput=e=>{f.bcrsUnitContainers=e.target.value;paint(p,f);};
   bcrsToggle(p,f);
+  p.querySelector('#pb-halal-row').onclick=()=>pbGridPicker('是否HALAL',['非HALAL','HALAL'],f.halal,v=>{f.halal=v;setPH(p.querySelector('#pb-halal-v'),v,1);paint(p,f);});
+  halalToggle(p,f);
   // 最小售卖单位(变更后 SKU 售卖规格单位联动只读)
   p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
     f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);stdToggle(p,f);renderSpecs(p,f);bcrsToggle(p,f);paint(p,f);});   // 换模式即换 BCRS 单位来源（最小包装单位 ↔ 库存单位）
@@ -919,4 +933,5 @@ function bindForm(p,f){
 
 /* ========== 注册入口(供商品列表「发布商品」按钮调用) ========== */
 window.FM_PUBLISH=entry;
+window.FM_PUBLISH_FORM=openForm;   // 直达建品表单（录屏/自测用）
 })();
