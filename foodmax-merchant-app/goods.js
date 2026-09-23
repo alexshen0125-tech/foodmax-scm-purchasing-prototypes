@@ -163,10 +163,10 @@ const PRODUCTS=[
   {ic:'🟡',n:'萝卜丸子',cat:'肉禽蛋品',sales:0,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00',
    skus:[{spec:'2.5kg/袋',price:12.00,stock:4,off:true,recycled:true,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00'}]},
   // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 售卖规格数量 × 押金单价
-  {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',cat:'饮料',halal:1,bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
+  {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',code:'SPU8820',cat:'饮料',halal:1,bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
    skus:[{spec:'1瓶',qty:1,price:2.50,stock:200,off:false,stockMode:'finite',soldToday:18,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00'},{spec:'24瓶/箱',qty:24,price:55.00,stock:40,off:false,stockMode:'finite',createdAt:'2026-07-10 10:20',updatedAt:'2026-07-18 09:40'}]},
   // ↓ 审核态样例(对齐 PC SPU8818/8821/8823)：待审核 / 审核拒绝(字段级意见) / 强制下架(原因)
-  {ic:'🍗',n:'鲜丰 · 鸡胸肉',cat:'肉禽蛋品',halal:1,status:'reviewing',sales:0,createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10',
+  {ic:'🍗',n:'鲜丰 · 鸡胸肉',code:'SPU8818',cat:'肉禽蛋品',halal:1,status:'reviewing',sales:0,createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10',
    skus:[{spec:'1kg/袋',price:13.50,stock:0,off:false,stockMode:'finite',createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10'}]},
   {ic:'🦞',n:'龙虾',cat:'海鲜水产',status:'rejected',sales:0,createdAt:'2026-07-28 14:05',updatedAt:'2026-07-30 10:22',
    auditOpinions:[
@@ -328,6 +328,7 @@ function renderList(container,inTab){
         <div class="gd-pill" data-t="recycle">回收站<span class="c" id="c-recycle"></span></div>
       </div>
     </div>
+    ${(window.FM_GOODS_FILTER||{}).halal===1?`<div class="gd-sub" style="padding-bottom:0"><span id="hf-chip" style="background:var(--gl,#E7F2E9);color:var(--g,#0E7A52);border-radius:14px;padding:3px 10px;font-size:12px;font-weight:600">仅看 HALAL 商品 ✕</span></div>`:''}
     <div class="gd-sub"><span id="sort">上架时间 · 由近及远</span><span class="mng" id="mng">管理</span></div>
     <div class="gd-list" id="l"></div>`;
   const list=container.querySelector('#l');
@@ -337,7 +338,10 @@ function renderList(container,inTab){
 
   /* 扁平化：以 SKU 为单位。归桶优先级 = 回收站标记 > SPU 审核状态 > 上下架推导（BR-AUD-01/02）：
      三个审核态商品独占自己的桶，不出现在销售中/未上架 */
+  const HF=(window.FM_GOODS_FILTER||{}).halal===1;   // 店铺 HALAL 是→否 拦截跳转带入的过滤（不露出筛选控件）
+  const hfc=container.querySelector('#hf-chip');if(hfc)hfc.onclick=()=>{window.FM_GOODS_FILTER=null;renderList(container,inTab);};
   const flatSkus=(tab)=>{const arr=[];PRODUCTS.forEach((g,gi)=>(g.skus||[]).forEach((s,si)=>{
+    if(HF&&g.halal!==1)return;
     const rec=!!s.recycled;
     if(tab==='recycle'){if(rec)arr.push({g,s,gi,si});return;}
     if(rec)return;
