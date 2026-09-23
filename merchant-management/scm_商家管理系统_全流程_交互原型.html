@@ -1687,8 +1687,7 @@ function shopProfileView(){
   const badge=m.onboard=='active'?'<span class="tag t-g"><span class="dot"></span>营业中</span>':'<span class="tag t-y"><span class="dot"></span>审核中</span>';
   const chg=DB.shopChange?`<div class="ib ib-y"><span class="i">⏳</span><div><b>资料变更审核中</b>（提交于 ${DB.shopChangeAt}）<br>下方为当前生效资料，运营审核通过后替换为新资料；审核期间不可再次编辑。</div></div>`
     :(DB.shopChangeReject?`<div class="ib ib-r"><span class="i">⛔</span><div><b>资料变更被驳回</b>：${DB.shopChangeReject}<br>当前仍按原资料生效，可点「编辑」修改后重新提交。</div></div>`:'');
-  const certPend=s.halalCertPending?`<div class="ib ib-r"><span class="i">📄</span><div><b>店铺已开通 HALAL 经营，请补传 HALAL 证书</b><br>补证前经营资质中不显示 HALAL证书；提交任何店铺资料修改时须补齐证书或改为「否」。</div></div>`:'';
-  return `<div class="shopform">${chg}${certPend}
+  return `<div class="shopform">${chg}
     <div class="card"><div class="card-bd">
       ${secT('店铺形象')}
       <div class="shop-hero">
@@ -2027,7 +2026,7 @@ PAGES['m-qual']=()=>{
   ${exp.length?`<div class="ib ib-y"><span class="i">⚠️</span>「${exp[0].name}」有效期至 <b>${exp[0].expire}</b>（剩约 23 天）。到期前 60/30 天系统会推送提醒；到期当日未续证将自动下架相关商品。</div>`:''}
   <div class="card"><div class="card-hd"><h3>资质证照</h3><span class="sub">共 ${DB.quals.length+(DB.shop.halal=='是'?1:0)} 项</span></div><div class="card-bd flush"><table>
     <thead><tr><th>材料</th><th>证号</th><th>有效期</th><th>状态</th><th>操作</th></tr></thead><tbody>
-    ${DB.shop.halal=='是'&&!DB.shop.halalCertPending?`<tr><td><b>HALAL证书</b></td><td class="mono">${DB.shop.halalCertNo||'—'}</td><td>—</td><td><span class="tag t-g"><span class="dot"></span>有效</span></td><td><button class="btn btn-o btn-sm" onclick="toast('已查看证照','info')">查看</button></td></tr>`:''}
+    ${DB.shop.halal=='是'?`<tr><td><b>HALAL证书</b></td><td class="mono">${DB.shop.halalCertNo||'—'}</td><td>—</td><td><span class="tag t-g"><span class="dot"></span>有效</span></td><td><button class="btn btn-o btn-sm" onclick="toast('已查看证照','info')">查看</button></td></tr>`:''}
     ${DB.quals.map((q,i)=>{
       const st=q.status=='valid'?'<span class="tag t-g"><span class="dot"></span>有效</span>':q.status=='expiring'?'<span class="tag t-y"><span class="dot"></span>即将到期</span>':'<span class="tag t-r"><span class="dot"></span>已过期</span>';
       return `<tr><td><b>${q.name}</b></td><td class="mono">${q.no}</td><td>${q.expire}</td><td>${st}</td><td>${q.status!='valid'?`<button class="btn btn-p btn-sm" onclick="act_renewQual(${i})">上传新证</button>`:`<button class="btn btn-o btn-sm" onclick="toast('已查看证照','info')">查看</button>`}</td></tr>`;
@@ -2451,7 +2450,7 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
       </div>
     </div>
     <div class="fr" id="halal-block" style="display:none"><label class="fl"><b>*</b>是否HALAL</label>${radio('f-halal',p.halal===1?'HALAL':p.halal===0?'非HALAL':'',['非HALAL','HALAL'])}</div>
-    <div class="fr" id="halal-off" style="display:none;font-size:12px;color:var(--ts)">${DB.shopChange&&DB.shopChange.halal=='是'&&DB.shop.halal!='是'?'店铺 HALAL 经营审核中，通过后可设置是否HALAL；本商品暂按非HALAL 保存。':`店铺未开通 HALAL 经营，本商品按非HALAL 保存。如需售卖 HALAL 商品，请先在<a href="javascript:halalGoShop()">店铺资料</a>中开通。`}</div>
+    <div class="fr" id="halal-off" style="display:none;font-size:12px;color:var(--ts)">${DB.shopChange&&DB.shopChange.halal=='是'&&DB.shop.halal!='是'?'店铺 HALAL 经营审核中，通过后可设置是否HALAL。':`店铺未开通 HALAL 经营，本商品不设置是否HALAL。如需售卖 HALAL 商品，请先在<a href="javascript:halalGoShop()">店铺资料</a>中开通。`}</div>
     <div class="fg3"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div>
       <div class="fr"><label class="fl">售卖模式</label><select id="f-supply" ${supplyLock?'disabled style="background:#F3F4F6;color:var(--ts)"':'onchange="EDIT_SUPPLY=this.value;supplyToggle();renderSkuEditor()"'}><option value="自售" ${EDIT_SUPPLY=='自售'?'selected':''}>自售</option><option value="寄售" ${EDIT_SUPPLY=='寄售'?'selected':''}>寄售</option></select></div>
       <div class="fr"><label class="fl">产地</label><input id="f-origin" data-tr value="${p.origin||''}" placeholder="选填">${AO('origin')}</div></div>
@@ -2750,7 +2749,7 @@ function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{cons
   if(p.consign===undefined)p.consign=((g('f-supply')||{}).value||'自售')=='寄售';
   if(p.consign&&p.stdType=='标品'){p.stockUnitIsPack=gr('f-stockispack')||'是';p.stockPackQty=p.stockUnitIsPack=='否'?(parseInt((g('f-packqty')||{}).value,10)||0):1;}
   else{p.stockUnitIsPack='';p.stockPackQty=0;}   /* 最小售卖单位/规格备注已下线：unit 由净含量单位派生，仅供历史数据与下游兼容 */p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';p.consign=((g('f-supply')||{}).value||'自售')=='寄售';   // 售卖模式：寄售=true
-  { const hv=gr('f-halal'),catOn=!!(CATS[p.cat]&&CATS[p.cat].halal); p.halal=halalGate(p.cat)?(hv=='HALAL'?1:hv=='非HALAL'?0:null):(catOn?0:(i<0?null:(p.halal??null))); }   /* HALAL(BR-12/13)：门控内取选择；店铺否+类目挂载 → 服务端写 0；类目未挂载 → 新建 null、编辑保留原值 */
+  { const hv=gr('f-halal'); p.halal=halalGate(p.cat)?(hv=='HALAL'?1:hv=='非HALAL'?0:null):(i<0?null:(p.halal??null)); }   /* HALAL(BR-12/13)：门控内取选择；门控外（店铺否 或 类目未挂载）不提交 → 新建 null、编辑保留原值 */
   const bcrsOn=(gr('f-bcrs')=='是')&&!!(CATS[p.cat]&&CATS[p.cat].bcrs);p.bcrs=bcrsOn;p.bcrsUnitContainers=bcrsOn?(parseInt((g('f-bcrscnt')||{}).value,10)||0):0;   /* BCRS：仅支持类目+选是才存；每 1 份容器数(押金单价平台固定0.10) */ const prev=(i>=0&&DB.products[i].skus)||[],prevById=new Map(prev.map(x=>[x.skuId,x]));p.skus=EDIT_SKUS.map(s=>{const old=s.skuId?prevById.get(s.skuId):null,sellUnit=p.consign?(p.stockUnit||''):(p.stdType=='标品'&&p.netPackType?p.netPackType:(s.sellUnit||'')),qty=parseInt(s.qty,10)||0;   /* 自售标品：售卖规格单位恒等最小包装单位 */return{skuId:(old&&old.skuId)||s.skuId||('SKU'+(++SKU_SEQ)),qty,packUnit:s.packUnit||'',sellUnit,containedPackCount:p.stdType=='标品'?(qty*(stockPackRatio(p)||0)):null,   /* 派生：售卖规格数量 × 库存换算比例，不再手填 */refund:(['kg','g'].includes(sellUnit)&&s.refund?1:0),price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(old&&old.safe)||0,stockMode:s.stockMode||'finite',soldToday:(s.soldToday!=null?s.soldToday:(old&&old.soldToday))||0,createdAt:(old&&old.createdAt)||s.createdAt||ts(),updatedAt:ts()};});p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
 function upsert(i,p){if(i<0)DB.products.unshift(p);else DB.products[i]=p;}
 function showSchemaFailures(fails){toast(fails[0][1],'err');modalWide(`<div class="mc-hd"><h3>⛔ 发布校验未通过</h3><p>已拦截本次保存/提交，原表单保留</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">${fails.map((f,i)=>`<div class="ck no"><div class="cb">✕</div><div><b>${f[0]}</b><div style="font-size:12px;color:var(--ts);margin-top:3px">${f[1]}</div></div><span class="cx">${i+1}</span></div>`).join('')}</div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">返回修正</button></div>`);}
@@ -4865,7 +4864,7 @@ function act_reviewTask(kind){
 function act_approveShopChange(){
   const c=DB.shopChange;if(!c)return;
   if(DB.shop.halal=='是'&&c.halal=='否'){const list=shopHalalProducts();if(list.length){toast(`店铺下现有 ${list.length} 个 HALAL 商品，不能改为「否」，请驳回`,'err');return;}}
-  Object.assign(DB.shop,c);DB.shop.halalCertPending=false;DB.shopChange=null;DB.shopChangeReject='';closeDrawer();render();toast('资料变更审核通过，已生效','ok');
+  Object.assign(DB.shop,c);DB.shopChange=null;DB.shopChangeReject='';closeDrawer();render();toast('资料变更审核通过，已生效','ok');
 }
 function act_rejectShopChange(){
   modal(`<div class="mc-hd"><h3>驳回资料变更</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">驳回原因（回写商家端）</label><textarea id="sc-rej" placeholder="请填写驳回原因，将回写商家端"></textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="const r=document.getElementById('sc-rej').value.trim();if(!r){toast('请填写驳回原因','err');return;}DB.shopChangeReject=r;DB.shopChange=null;closeModal();closeDrawer();render();toast('已驳回，原因已回写商家端','info')">确认驳回</button></div>`);
@@ -4873,7 +4872,7 @@ function act_rejectShopChange(){
 /* 运营端 · 店铺列表「查看」→ 店铺详情抽屉（对齐线上：店铺资料 / 收款结算 / 经营资质）；HALAL 证书进「经营资质」，证件类型=HALAL证书 */
 function act_shopDetail(){
   const s=DB.shop,m=DB.merchant;
-  const rows=[...(s.halal=='是'&&!s.halalCertPending?[{t:'商品证照',n:'HALAL证书',no:s.halalCertNo,exp:'—',st:'有效',files:s.halalFiles}]:[]),...DB.quals.map(q=>({t:'基本证照',n:q.name,no:q.no,exp:q.expire,st:q.status=='valid'?'有效':q.status=='expiring'?'即将到期':'已过期',files:[q.name+'.pdf']}))];
+  const rows=[...(s.halal=='是'?[{t:'商品证照',n:'HALAL证书',no:s.halalCertNo,exp:'—',st:'有效',files:s.halalFiles}]:[]),...DB.quals.map(q=>({t:'基本证照',n:q.name,no:q.no,exp:q.expire,st:q.status=='valid'?'有效':q.status=='expiring'?'即将到期':'已过期',files:[q.name+'.pdf']}))];
   drawer(`<div class="drawer-hd"><h3>店铺详情 · ${s.name}</h3><span class="x" onclick="closeDrawer()">×</span></div><div class="drawer-bd">
     <h4 style="font-size:14px;margin-bottom:10px">店铺资料</h4>
     <dl class="dl" style="margin-bottom:18px"><dt>店铺名称</dt><dd>${s.name}</dd><dt>店铺简称</dt><dd>${s.abbr}</dd><dt>店铺类型</dt><dd>${s.type}</dd><dt>主营品类</dt><dd>${s.cats.join('、')}</dd><dt>联系人</dt><dd>${s.contact}</dd><dt>客服电话</dt><dd class="mono">${s.service}</dd><dt>UEN（开票用）</dt><dd class="mono">${s.uen}</dd><dt>配送范围</dt><dd>${s.delivery}</dd><dt>经营地址</dt><dd>${s.addr}</dd>
@@ -6136,7 +6135,7 @@ goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260917a"></script>
-<script src="pc-modules/pick.js?v=20260923d"></script>
+<script src="pc-modules/pick.js?v=20260923e"></script>
 <script src="pc-modules/weigh.js?v=20260817d"></script>
 <script src="pc-modules/delivery.js?v=20260922b"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
@@ -6147,7 +6146,7 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260915a"></script>
-<script src="pc-modules/presend.js?v=20260923a"></script>
+<script src="pc-modules/presend.js?v=20260923f"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

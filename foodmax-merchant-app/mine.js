@@ -210,7 +210,6 @@ function openStore(){
       const banner=(bg,fg,html)=>p.querySelector('.mn-list').insertAdjacentHTML('beforebegin',`<div style="margin:12px 14px 0;padding:10px 12px;border-radius:12px;background:${bg};color:${fg};font-size:12.5px;line-height:1.6">${html}</div>`);
       if(STORE_HALAL_PENDING)banner('#FFF7E6','#8A5A12','<b>资料变更审核中</b>：下方为当前生效资料，审核期间只读。');
       else if(STORE_HALAL_REJECT)banner('#FCEDEB','#A33A31',`<b>资料变更被驳回</b>：${STORE_HALAL_REJECT}<br>当前仍按原资料生效，可修改后重新提交。`);
-      if(STORE_HALAL.certPending&&!STORE_HALAL_PENDING)banner('#FCEDEB','#A33A31','<b>店铺已开通 HALAL 经营，请补传 HALAL 证书</b>');
       // HALAL 经营：单选 + 证书
       const hl={on:STORE_HALAL.on,files:[...STORE_HALAL.files]};
       const seg=()=>p.querySelectorAll('.st-hl-opt').forEach(o=>{const on=o.dataset.v===hl.on;o.style.background=on?'var(--gl,#E7F2E9)':'#fff';o.style.borderColor=on?'var(--g,#0E7A52)':'var(--line,#E3EADF)';o.style.color=on?'var(--g,#0E7A52)':'inherit';});
@@ -354,7 +353,7 @@ function openQual(){
       <div class="qr"><span class="qk">有效期类型</span><span class="qv">有截止日期</span></div>
       <div class="qr"><span class="qk">到期日</span><span class="qv">2030-03-23</span></div>
     </div>
-    ${STORE_HALAL.on==='是'&&!STORE_HALAL.certPending?`<div class="mn-qz">
+    ${STORE_HALAL.on==='是'?`<div class="mn-qz">
       <div class="qt">HALAL证书</div>
       ${STORE_HALAL.files.map(f=>`<div class="qimg">📄 ${f}</div>`).join('')}
       <div class="qr"><span class="qk">证书编号</span><span class="qv">${STORE_HALAL.certNo}</span></div>
@@ -483,5 +482,5 @@ window.FM_MOD.mineInline=mineInline;
 window.FM_MOD.openStore=openStore;
 window.FM_MOD.halalPending=()=>STORE_HALAL_PENDING;
 // 演示：模拟运营审核结果（通过→替换生效值；驳回→回写原因）
-window.FM_MOD.halalAudit=(ok,reason)=>{if(!STORE_HALAL_PENDING)return;if(ok){Object.assign(STORE_HALAL,STORE_HALAL_PENDING,{certPending:false});STORE_HALAL_REJECT='';}else STORE_HALAL_REJECT=reason||'资料不符，请修改后重新提交';STORE_HALAL_PENDING=null;};
+window.FM_MOD.halalAudit=(ok,reason)=>{if(!STORE_HALAL_PENDING)return;if(ok){Object.assign(STORE_HALAL,STORE_HALAL_PENDING);STORE_HALAL_REJECT='';}else STORE_HALAL_REJECT=reason||'资料不符，请修改后重新提交';STORE_HALAL_PENDING=null;};
 })();
