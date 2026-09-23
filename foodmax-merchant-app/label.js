@@ -99,13 +99,14 @@ function rows(){
       if(!agg[key])agg[key]={key,wh:o.warehouse,sku:l.sku,name:l.name,unit:l.unit,cat:m.cat,spec:m.spec,refund:m.refund,qty:0};
       agg[key].qty+=l.qty;});
   });
-  // 应送货 = max(订单量, 预送量 − 在仓剩余)：预送量是全天预测总量、已含订单量，取大不相加（与备货参考/送货盘点/在仓预送库存同口径）
+  // 应送货 = max(0, max(订单量, 预送量) − 在仓剩余)：预送量是全天预测总量、已含订单量，取大不相加（四处同口径）
   // 预送量标签形态与订单货一致：按 SKU 一件一张、不含订单/客户信息
   const out=Object.values(agg);
   out.forEach(r=>{r.ordQty=r.qty;
     const g=(typeof PS_QTY==='function')?PS_QTY(r.name,r.wh):0,lf=(typeof PS_LEFT==='function')?PS_LEFT(r.name,r.wh):0;
-    r.psGross=g;r.leftQty=Math.min(g,lf);r.psQty=g-r.leftQty;   // 在仓只抵扣预送
-    r.qty=Math.max(r.ordQty,r.psQty);});   // 取大：预送量含订单量，不相加
+    const need=Math.max(r.ordQty,g);
+    r.psGross=g;r.needQty=need;r.leftQty=Math.min(lf,need);
+    r.qty=Math.max(0,need-lf);});          // max(0, max(订单量,预送量) − 在仓剩余)
   return out;
 }
 
@@ -122,7 +123,7 @@ function renderPrint(box){
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
   const df=dateField(state.date,ds,d=>{state.date=d;renderPrint(box);});
   box.innerHTML=`
-    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送货 = max(订单量, 预送量 − 在仓剩余)</b>：预送量是算法预测的全天销量、<b>已含订单量</b>，取大不相加；昨天留仓的、以及你昨天多送被仓库照收的货先抵扣预送量，扣完低于订单量时按订单量打，<b>不要重复打标重复送</b>。':''}</div>
+    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送货 = max(0, max(订单量, 预送量) − 在仓剩余)</b>：预送量是算法预测的全天销量、<b>已含订单量</b>，取大不相加，再减去在仓剩余（昨天留仓的与你昨天多送被照收的货今日优先消耗），<b>不要重复打标重复送</b>。':''}</div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
@@ -136,7 +137,7 @@ function renderPrint(box){
         return `<div class="lb-row" data-key="${r.key}">
         <div class="top"><span class="nm">${r.name}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
-        <div class="meta">订单 ${r.ordQty}${r.psGross?` · <b style="color:var(--amber)">预送 ${r.psQty}</b>${r.leftQty?`<b style="color:var(--emerald-2)">（预测 ${r.psGross} − 在仓 ${r.leftQty}）</b>`:''}`:''}</div>
+        <div class="meta">订单 ${r.ordQty}${r.psGross?` · <b style="color:var(--amber)">预送 ${r.psGross}</b> · 取大 ${r.needQty}`:''}${r.leftQty?` · <b style="color:var(--emerald-2)">抵扣在仓 −${r.leftQty}</b>`:''}</div>
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span></div>
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
@@ -401,8 +402,8 @@ function preReprint(id,box){
 function rowOf(key){const [wh,sku]=key.split('|');const m=metaOf(sku);let qty=0,name='',unit='件';
   pend().forEach(o=>{if(o.warehouse!==wh)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;qty+=(+l.qty||0);name=l.name;unit=l.unit;});});
   const g=(typeof PS_QTY==='function')?PS_QTY(name,wh):0;
-  const lf=Math.min(g,(typeof PS_LEFT==='function')?PS_LEFT(name,wh):0);   // 在仓只抵扣预送（BR-15b）
-  return {key,wh,sku,name,unit,ordQty:qty,psGross:g,psQty:g-lf,leftQty:lf,qty:Math.max(qty,g-lf),cat:m.cat,spec:m.spec,refund:m.refund};}
+  const need=Math.max(qty,g),lf=Math.min(need,(typeof PS_LEFT==='function')?PS_LEFT(name,wh):0);   // BR-15b：取大后扣在仓
+  return {key,wh,sku,name,unit,ordQty:qty,psGross:g,needQty:need,leftQty:lf,qty:Math.max(0,need-lf),cat:m.cat,spec:m.spec,refund:m.refund};}
 const printer=()=>{window.FM.DB.printer=window.FM.DB.printer||{connected:false,name:''};return window.FM.DB.printer;};
 function connectPrinter(then){window.FM.sheet([
   {label:'FoodMax 标签机 · TSC-A1（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='TSC-A1';window.FM.toast('已连接 TSC-A1 标签机','ok');then&&then();}},
