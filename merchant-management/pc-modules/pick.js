@@ -55,8 +55,8 @@
           <td rowspan="${rs}" style="vertical-align:top;text-align:right"><b>${total}</b> ${s.unit}</td>`:'';
         const pn=typeof presendNet=='function'?presendNet(s.name,wh):{gross:0,left:0,ded:0,net:0};   // BR-15b：在仓只抵扣预送
         const should=q+pn.net;
-        const psCols=psOn?`<td style="text-align:right">${pn.left?`<span style="color:var(--g)">${pn.left}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${should}</b> ${s.unit}${pn.gross&&!pn.net?'<div style="font-size:11px;color:var(--g)">在仓已够·免送预送货</div>':''}</td>`:'';
-        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${psOn?`${q+pn.gross} <span style="color:var(--ts)">${s.unit}</span>${pn.gross?`<div style="font-size:11px;color:var(--ts)">订单 ${q} · <span style="color:var(--gold)">预送 +${pn.gross}</span></div>`:''}`:`${q} <span style="color:var(--ts)">${s.unit}</span>`}</td>${psCols}</tr>`;
+        const psCols=psOn?`<td style="text-align:right">${pn.gross?`<span style="color:var(--gold)">${pn.gross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${pn.left?`<span style="color:var(--g)">${pn.left}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${should}</b> ${s.unit}${pn.gross&&!pn.net?'<div style="font-size:11px;color:var(--g)">在仓已够·免送预送货</div>':''}</td>`:'';
+        return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${q+(psOn?pn.gross:0)} <span style="color:var(--ts)">${s.unit}</span></td>${psCols}</tr>`;
       }).join('');
     }).join('');
 
@@ -79,8 +79,8 @@
     </div>
     <div class="card-bd" style="padding:8px 16px 0"><div class="ib ib-r" style="margin:0"><span class="i">⚠️</span>由于订单延退支付/取消，请以仓库展示销量停止为准。</div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">${psOn?'订单量（含预送）':'订单量'}</th>${psOn?'<th style="text-align:right">在仓剩余</th><th style="text-align:right">今日应送</th>':''}</tr></thead>
-      <tbody>${body||`<tr><td colspan="${psOn?11:9}"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
+      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">${psOn?'订单量（含预送）':'订单量'}</th>${psOn?'<th style="text-align:right">预送量</th><th style="text-align:right">在仓剩余</th><th style="text-align:right">今日应送</th>':''}</tr></thead>
+      <tbody>${body||`<tr><td colspan="${psOn?12:9}"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
   }
 
