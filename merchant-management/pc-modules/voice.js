@@ -37,9 +37,18 @@ const TPL={
   final:  {id:'ORDER_PAYMENT_DONE', sc:'待支付补播',        when:'截单时的待支付单全部支付或超时关闭', cond:'截单时有过待支付订单',
            zh:'待支付订单已处理完毕，请开始备货。',
            en:'All pending payments are done. Please start preparing.'},
+  cancel: {id:'ORDER_CANCELLED_CHECK', sc:'追加 · 有取消单',   when:'紧接截单播报 / 待支付补播之后', cond:'本批次有已支付后取消的订单',
+           zh:'今日有订单已取消，请核对备货数量，避免多备。',
+           en:'Some orders were cancelled today. Please check your quantities to avoid over-preparing.'},
+  label:  {id:'LABEL_UNPRINTED',    sc:'追加 · 未打标签',   when:'紧接截单播报 / 待支付补播之后', cond:'本批次有订单标签未打印',
+           zh:'还有订单标签没有打印，请尽快打印。',
+           en:'Some order labels have not been printed yet. Please print them soon.'},
 };
+/* 截单时刻的播放队列：主播报（cut / cutWait / cutZero 三选一）→ 有取消单则追加 cancel → 有未打标签则追加 label；
+   待支付补播同理：final → cancel? → label?（cancel 只追加截单后新增的取消）。每段之间停顿 0.6s */
 /* 播报卡上的数量（文字，不进语音）：演示数 */
-const CARD_NUM={tick:'本次新增 3 笔 · 今日累计 12 笔',cut:'今日共 14 笔',cutWait:'已支付 12 笔 · 待支付 2 笔',cutZero:'今日 0 笔',final:'截单后新增支付 2 笔 · 今日最终 14 笔'};
+const CARD_NUM={tick:'本次新增 3 笔 · 今日累计 12 笔',cut:'今日共 14 笔',cutWait:'已支付 12 笔 · 待支付 2 笔',cutZero:'今日 0 笔',final:'截单后新增支付 2 笔 · 今日最终 14 笔',cancel:'已取消 2 笔（已支付后取消）',label:'未打标签 5 笔'};
+const CARD_GO={label:['去打印标签','m-pick-label'],cancel:['去看备货参考','m-pick-ref']};
 
 function todayCfg(){const b=DB.bizCfg;const i=bizTodayIdx();return {w:b.week[i],d:b.week[i].d};}
 /* 今日播报时间点：营业开始后、截单前的频率点 + 截单点 */
@@ -59,25 +68,32 @@ function pickVoice(lang){try{const vs=speechSynthesis.getVoices();
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();}catch(e){}
 
 /* ── 播放：浏览器 TTS + 右下角播报卡 ─────────────────────────────── */
-window.voicePlay=function(key,lang){
-  ensureVoice();const t=TPL[key];lang=lang||DB.voice.lang;
-  const txt=lang=='en'?t.en:t.zh;
-  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=lang=='en'?'en-GB':'zh-CN';const vc=pickVoice(lang);if(vc)u.voice=vc;u.rate=1;speechSynthesis.speak(u);}}catch(e){}
-  voiceCard(key,txt,lang);
+/* keys：单段 'tick'，或截单组合 'cutWait,cancel,label'（逗号分隔，按序播放） */
+window.voicePlay=function(keys,lang){
+  ensureVoice();lang=lang||DB.voice.lang;const ks=keys.split(',');
+  try{if(window.speechSynthesis){speechSynthesis.cancel();const vc=pickVoice(lang);
+    ks.forEach((k,i)=>{const t=TPL[k];
+      if(i){const gap=new SpeechSynthesisUtterance(' ');gap.volume=0;gap.rate=.6;speechSynthesis.speak(gap);}   // 段间停顿
+      const u=new SpeechSynthesisUtterance(lang=='en'?t.en:t.zh);u.lang=lang=='en'?'en-GB':'zh-CN';if(vc)u.voice=vc;u.rate=1;speechSynthesis.speak(u);});}}catch(e){}
+  voiceCard(ks,lang);
 };
-function voiceCard(key,txt,lang){
+function voiceCard(ks,lang){
   let c=document.getElementById('voicecard');
   if(!c){c=document.createElement('div');c.id='voicecard';document.body.appendChild(c);}
   const now=new Date(),hm=pad(now.getHours())+':'+pad(now.getMinutes());
-  const isCut=key!='tick';
-  c.setAttribute('style','position:fixed;right:24px;bottom:24px;z-index:900;width:340px;background:#fff;border:1px solid var(--bd);border-radius:14px;box-shadow:0 12px 32px rgba(18,39,29,.16);animation:pop .18s ease-out;overflow:hidden');
+  const isCut=ks[0]!='tick';
+  const lines=ks.map((k,i)=>{const t=TPL[k];const warn=k=='cancel'||k=='label';
+    return `<div style="padding:${i?'10px':'14px'} 16px 0;${i?'border-top:1px dashed var(--bd2);margin-top:10px;':''}">
+      <div style="font-size:14px;line-height:1.6;color:${warn?'var(--r)':'var(--tp)'}">${warn?'⚠️ ':''}${lang=='en'?t.en:t.zh}</div>
+      <div style="display:flex;align-items:center;margin-top:3px;font-size:12.5px;color:var(--ts)">${CARD_NUM[k]}
+        ${CARD_GO[k]?`<a href="javascript:voiceCardClose();nav('${CARD_GO[k][1]}')" style="margin-left:auto">${CARD_GO[k][0]} →</a>`:''}</div></div>`;}).join('');
+  c.setAttribute('style','position:fixed;right:24px;bottom:24px;z-index:900;width:360px;background:#fff;border:1px solid var(--bd);border-radius:14px;box-shadow:0 12px 32px rgba(18,39,29,.16);animation:pop .18s ease-out;overflow:hidden');
   c.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:${isCut?'var(--goldl)':'var(--gl)'};color:${isCut?'var(--gold)':'var(--gd)'};font-weight:700;font-size:13.5px">
-      <span style="font-size:16px">🔊</span>${TPL[key].sc}<span style="margin-left:auto;font-weight:500;font-size:12.5px">${hm}</span>
+      <span style="font-size:16px">🔊</span>${TPL[ks[0]].sc}<span style="margin-left:auto;font-weight:500;font-size:12.5px">${hm}</span>
       <span style="cursor:pointer;font-size:18px;line-height:1;margin-left:6px;color:var(--ts)" onclick="voiceCardClose()">×</span></div>
-    <div style="padding:14px 16px 4px;font-size:14px;line-height:1.65;color:var(--tp)">${txt}</div>
-    <div style="padding:0 16px 12px;font-size:12.5px;color:var(--ts)">${CARD_NUM[key]}</div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;padding:0 16px 14px">
-      <button class="btn btn-o btn-sm" onclick="voicePlay('${key}','${lang}')">再听一遍</button>
+    ${lines}
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 16px">
+      <button class="btn btn-o btn-sm" onclick="voicePlay('${ks.join(',')}','${lang}')">再听一遍</button>
       <button class="btn btn-p btn-sm" onclick="voiceCardClose();nav('m-order')">查看订单</button></div>`;
   clearTimeout(window._vcT);
   if(!isCut)window._vcT=setTimeout(voiceCardClose,15000);   // 定时播报 15s 自动收起；截单类需手动关
@@ -137,7 +153,8 @@ PAGES['m-message-pref']=()=>{
         <div class="fr"><div class="fl">播报语言</div><div class="ro-field">跟随后台语言 · 当前 <b style="margin-left:4px">中文</b></div></div>
       </div>
     </div>
-    <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">固定语音，每种情况一段；截单播报每天必播，截单时仍有待支付订单，等支付结果出来后再补播一次</span></div>
+    <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">固定语音，每种情况一段；截单播报每天必播，有取消单 / 未打标签时在其后追加播报</span>
+      <button class="btn btn-o btn-sm" style="margin-left:auto" onclick="voicePlay('cutWait,cancel,label','zh')">▶ 试听截单组合播报</button></div>
     <div class="card-bd flush" style="${dis}"><div style="overflow-x:auto"><table style="min-width:980px">
       <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报语音（按后台语言播报其一）</th><th style="width:150px">试听</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
