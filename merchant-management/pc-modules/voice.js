@@ -23,19 +23,19 @@ const pad=n=>(''+n).padStart(2,'0');
 const TPL={
   tick:   {sc:'定时播报',      when:'营业时段内按频率触发，距上次播报有新单', cond:'距上次播报有新订单',
            zh:'您有 {N} 笔新订单，今日累计 {M} 笔。',
-           en:'You have {N} new orders. {M} orders today so far.'},
+           en:"You've got {N} new orders. That's {M} orders so far today."},
   cut:    {sc:'截单播报',      when:'到达当日截单时间', cond:'今日有订单，且无待支付',
            zh:'今日已截单，共 {M} 笔订单，请开始备货。',
-           en:'Orders are closed for today. {M} orders in total. Please start preparing.'},
+           en:'Orders are now closed for today. You have {M} orders in total. Time to start preparing.'},
   cutWait:{sc:'截单播报 · 有待支付', when:'到达当日截单时间', cond:'截单时仍有订单待客户支付',
            zh:'今日已截单，已支付 {M} 笔，另有 {P} 笔等待客户支付，请稍等，支付结果出来后会再次提醒。',
-           en:'Orders are closed for today. {M} paid, {P} awaiting payment. Please wait, we will remind you again.'},
+           en:"Orders are now closed for today. {M} orders are paid, and {P} are still waiting for payment. Please hold on, we'll let you know once they're done."},
   cutZero:{sc:'截单播报 · 无订单', when:'到达当日截单时间', cond:'今日无订单，也无待支付',
            zh:'今日已截单，今日暂无订单。',
-           en:'Orders are closed for today. No orders today.'},
+           en:'Orders are now closed for today. There are no orders today.'},
   final:  {sc:'待支付补播',    when:'截单时的待支付单全部支付或超时关闭', cond:'截单时有过待支付订单',
            zh:'待支付订单已处理完毕，新增支付 {X} 笔，今日最终 {M} 笔订单，请开始备货。',
-           en:'Pending payments are settled. {X} more paid. {M} orders in total today. Please start preparing.'},
+           en:"All pending payments are done. {X} more orders were paid, bringing today's total to {M}. Time to start preparing."},
 };
 /* 试听用示例数：与今日订单演示数一致 */
 const SAMPLE={tick:{N:3,M:12},cut:{M:14},cutWait:{M:12,P:2},cutZero:{},final:{X:2,M:14}};
@@ -51,11 +51,18 @@ function todaySlots(){
   return out;
 }
 
+/* 选音色：浏览器按 lang 兜底会挑到系统老式合成音（生硬），这里按自然度优先级显式指定 */
+const VOICE_PREF={en:['Google UK English Female','Google US English','Samantha','Daniel','Karen','Moira'],zh:['Google 普通话（中国大陆）','Tingting','婷婷']};
+function pickVoice(lang){try{const vs=speechSynthesis.getVoices();
+  for(const n of VOICE_PREF[lang]){const v=vs.find(x=>x.name===n);if(v)return v;}
+  return vs.find(x=>x.lang.indexOf(lang=='en'?'en':'zh')===0&&!x.localService)||null;}catch(e){return null;}}
+try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();}catch(e){}
+
 /* ── 播放：浏览器 TTS + 右下角播报卡 ─────────────────────────────── */
 window.voicePlay=function(key,lang){
   ensureVoice();const t=TPL[key];const v=SAMPLE[key]||{};lang=lang||DB.voice.lang;
   const zh=fill(t.zh,v),en=fill(t.en,v),txt=lang=='en'?en:zh;
-  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=lang=='en'?'en-SG':'zh-CN';u.rate=1;speechSynthesis.speak(u);}}catch(e){}
+  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=lang=='en'?'en-GB':'zh-CN';const vc=pickVoice(lang);if(vc)u.voice=vc;u.rate=1;speechSynthesis.speak(u);}}catch(e){}
   voiceCard(key,txt,lang);
 };
 function voiceCard(key,txt,lang){
