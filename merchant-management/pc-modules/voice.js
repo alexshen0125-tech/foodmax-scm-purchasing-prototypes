@@ -52,13 +52,13 @@ function todaySlots(){
 }
 
 /* ── 播放：浏览器 TTS + 右下角播报卡 ─────────────────────────────── */
-window.voicePlay=function(key){
-  ensureVoice();const t=TPL[key];const v=SAMPLE[key]||{};
-  const zh=fill(t.zh,v),en=fill(t.en,v),txt=DB.voice.lang=='en'?en:zh;
-  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=DB.voice.lang=='en'?'en-SG':'zh-CN';u.rate=1;speechSynthesis.speak(u);}}catch(e){}
-  voiceCard(key,txt);
+window.voicePlay=function(key,lang){
+  ensureVoice();const t=TPL[key];const v=SAMPLE[key]||{};lang=lang||DB.voice.lang;
+  const zh=fill(t.zh,v),en=fill(t.en,v),txt=lang=='en'?en:zh;
+  try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=lang=='en'?'en-SG':'zh-CN';u.rate=1;speechSynthesis.speak(u);}}catch(e){}
+  voiceCard(key,txt,lang);
 };
-function voiceCard(key,txt){
+function voiceCard(key,txt,lang){
   let c=document.getElementById('voicecard');
   if(!c){c=document.createElement('div');c.id='voicecard';document.body.appendChild(c);}
   const now=new Date(),hm=pad(now.getHours())+':'+pad(now.getMinutes());
@@ -69,7 +69,7 @@ function voiceCard(key,txt){
       <span style="cursor:pointer;font-size:18px;line-height:1;margin-left:6px;color:var(--ts)" onclick="voiceCardClose()">×</span></div>
     <div style="padding:14px 16px;font-size:14px;line-height:1.65;color:var(--tp)">${txt}</div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:0 16px 14px">
-      <button class="btn btn-o btn-sm" onclick="voicePlay('${key}')">再听一遍</button>
+      <button class="btn btn-o btn-sm" onclick="voicePlay('${key}','${lang}')">再听一遍</button>
       <button class="btn btn-p btn-sm" onclick="voiceCardClose();nav('m-order')">查看订单</button></div>`;
   clearTimeout(window._vcT);
   if(!isCut)window._vcT=setTimeout(voiceCardClose,15000);   // 定时播报 15s 自动收起；截单类需手动关
@@ -113,8 +113,8 @@ PAGES['m-message-pref']=()=>{
       <td class="nw" style="font-weight:600">${t.sc}</td>
       <td style="font-size:12.5px">${t.when}</td>
       <td style="font-size:12.5px">${t.cond}</td>
-      <td style="font-size:13px">「${fill(DB.voice.lang=='en'?t.en:t.zh,SAMPLE[k]||{})}」</td>
-      <td><button class="btn btn-o btn-sm" onclick="voicePlay('${k}')">▶ 试听</button></td></tr>`;}).join('');
+      <td style="font-size:13px">「${fill(t.zh,SAMPLE[k]||{})}」<div class="sub" style="font-size:12px;margin-top:3px">${fill(t.en,SAMPLE[k]||{})}</div></td>
+      <td class="nw"><button class="btn btn-o btn-sm" onclick="voicePlay('${k}','zh')">▶ 中文</button> <button class="btn btn-o btn-sm" onclick="voicePlay('${k}','en')">▶ EN</button></td></tr>`;}).join('');
 
   const card=`<div class="card" style="margin-bottom:18px">
     <div class="card-hd"><h3>新订单语音播报</h3><span class="sub">仅 PC 后台 · 需保持后台页面打开</span>
@@ -132,7 +132,7 @@ PAGES['m-message-pref']=()=>{
     </div>
     <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">截单播报每天必播；截单时仍有待支付订单，等支付结果出来后再补播一次</span></div>
     <div class="card-bd flush" style="${dis}"><div style="overflow-x:auto"><table style="min-width:980px">
-      <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报示例</th><th style="width:90px">操作</th></tr></thead>
+      <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报示例（按后台语言播报其一）</th><th style="width:150px">试听</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
   </div>`;
   return card+_pref();
