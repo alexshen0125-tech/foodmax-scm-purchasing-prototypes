@@ -1,12 +1,12 @@
 /* 商家 PC 后台 · 新订单语音播报（2026-09-24 沈亮拍板口径）
-   只做 PC；挂在「消息设置」页（首张卡）+ 顶栏播报状态。
+   只做 PC；挂在「消息设置」页（整页）+ 顶栏播报状态。
    口径：
    - 计单：已支付子单，按支付成功时间计入本截单批次；取消的不计入今日累计
    - 定时播报：营业时段内按频率在整点/半点触发（30min / 1h 默认 / 2h），区间内无新单不播
    - 截单播报：到当日截单时间必播（0 单也播）；与定时点重合只播截单这一条
    - 截单时仍有待支付单 → 截单播报里提示「再等等」；待支付全部有结果（支付/超时关闭）后补播一次
    - 休息日整天不播；语言跟随后台当前语言；默认开启
-   PAGES: 复用 m-message-pref（前置一张卡）；topRight 包一层加播报状态 */
+   PAGES: m-message-pref（整页只有本卡）；topRight 包一层加播报状态 */
 (function(){
 
 const FREQ=[
@@ -105,8 +105,7 @@ topRight=function(){
   return i<0?h+v:h.slice(0,i)+v+h.slice(i);
 };
 
-/* ── 消息设置页：前置「新订单语音播报」卡 ───────────────────────── */
-const _pref=PAGES['m-message-pref'];
+/* ── 消息设置页：只含「新订单语音播报」卡 ───────────────────────── */
 PAGES['m-message-pref']=()=>{
   ensureVoice();const V=DB.voice,{w,d}=todayCfg(),slots=todaySlots();
   const dis=V.on?'':'opacity:.5;pointer-events:none';
@@ -123,7 +122,7 @@ PAGES['m-message-pref']=()=>{
       <td style="font-size:13px">「${fill(t.zh,SAMPLE[k]||{})}」<div class="sub" style="font-size:12px;margin-top:3px">${fill(t.en,SAMPLE[k]||{})}</div></td>
       <td class="nw"><button class="btn btn-o btn-sm" onclick="voicePlay('${k}','zh')">▶ 中文</button> <button class="btn btn-o btn-sm" onclick="voicePlay('${k}','en')">▶ EN</button></td></tr>`;}).join('');
 
-  const card=`<div class="card" style="margin-bottom:18px">
+  const card=`<div class="card">
     <div class="card-hd"><h3>新订单语音播报</h3><span class="sub">仅 PC 后台 · 需保持后台页面打开</span>
       <label style="margin-left:auto;display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
         <input type="checkbox" ${V.on?'checked':''} onchange="voiceOn(this)">${V.on?'已开启':'已关闭'}</label></div>
@@ -142,7 +141,7 @@ PAGES['m-message-pref']=()=>{
       <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报示例（按后台语言播报其一）</th><th style="width:150px">试听</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
   </div>`;
-  return card+_pref();
+  return card;
 };
 
 })();

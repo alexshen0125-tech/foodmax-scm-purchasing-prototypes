@@ -125,8 +125,6 @@ function ensureMsgs(){
   if(DB.msgKw===undefined)DB.msgKw='';
   if(DB.msgLv===undefined)DB.msgLv='';
   if(DB.msgUnreadOnly===undefined)DB.msgUnreadOnly=false;
-  if(!DB.msgPref)DB.msgPref={FULFILLMENT:{push:1,mail:0},DISPUTE:{push:1,mail:0},CATALOG:{push:1,mail:0},
-    FINANCE:{push:1,mail:1},COMPLIANCE:{push:1,mail:1},MARKETING:{push:1,mail:0},ANNOUNCEMENT:{push:0,mail:0},quiet:1};
 }
 /* 侧栏与顶栏未读角标同源 */
 /* 报名结果通知（由 enroll.js 终审结果触发）：事件 ENROLL_APPROVED / ENROLL_REJECTED，L2 待办，站内信 + App Push */
@@ -193,7 +191,7 @@ window.msgOpen=id=>{
     <div class="ib ${m.lv==='L1'?'ib-r':m.lv==='L2'?'ib-y':'ib-gr'}"><span class="i">${m.lv==='L1'?'⚠️':m.lv==='L2'?'📌':'ℹ️'}</span>${m.b}</div>
     <div class="card"><div class="card-hd"><h3>消息属性</h3></div><div class="card-bd flush"><table class="subtbl">
       <tr><th style="width:130px">事件码</th><td class="mono">${m.ev}</td></tr>
-      <tr><th>强度</th><td>${LV[m.lv][0]} · ${m.lv==='L1'?'不可关闭，豁免静默时段':'可在消息设置中关闭 Push'}</td></tr>
+      <tr><th>强度</th><td>${LV[m.lv][0]}</td></tr>
       <tr><th>剩余时效</th><td>${cdCell(m.dl)}</td></tr>
       ${rel}
     </table></div></div>
@@ -207,8 +205,6 @@ window.msgOpen=id=>{
 function tagPlainOk(s){return `<span class="tag t-g"><span class="dot"></span>${s}</span>`;}
 function lvTag(lv){return `<span class="tag ${LV[lv][1]}"><span class="dot"></span>${LV[lv][0]}</span>`;}
 
-window.msgPrefSet=(cat,ch,el)=>{DB.msgPref[cat][ch]=el.checked?1:0;toast((el.checked?'已开启 ':'已关闭 ')+catName(cat)+' 的'+(ch==='push'?'App Push':'邮件'),'ok');};
-window.msgPrefQuiet=el=>{DB.msgPref.quiet=el.checked?1:0;toast(el.checked?'已开启静默时段':'已关闭静默时段','ok');};
 
 /* ── 页面：消息列表 ────────────────────────────────────────────────── */
 PAGES['m-message']=()=>{
@@ -281,45 +277,7 @@ PAGES['m-message']=()=>{
   </div>`;
 };
 
-/* ── 页面：消息设置 ────────────────────────────────────────────────── */
-PAGES['m-message-pref']=()=>{
-  ensureMsgs();
-  const rows=CATS.filter(c=>c.k!=='ALL').map(c=>{
-    const p=DB.msgPref[c.k];
-    return `<tr>
-      <td style="font-weight:600">${c.n}</td>
-      <td><span class="tag t-gr"><span class="dot"></span>始终接收</span></td>
-      <td><label style="cursor:pointer"><input type="checkbox" ${p.push?'checked':''} onchange="msgPrefSet('${c.k}','push',this)"> 接收</label></td>
-      <td><label style="cursor:pointer"><input type="checkbox" ${p.mail?'checked':''} onchange="msgPrefSet('${c.k}','mail',this)"> 接收</label></td>
-    </tr>`;}).join('');
-
-  return `<div class="ib ib-r"><span class="i">⚠️</span><b>L1 必达消息不可关闭。</b>会掉钱、会停业、有硬时效倒计时的 23 类消息（打款失败 / 判责申诉 / 提货倒计时 / 整改告急等）强制通过站内信 + Push 送达，并<b>豁免静默时段</b>；其中 6 类额外走 WhatsApp。此处设置只对 L2 待办 / L3 告知 / L4 公告生效。</div>
-
-  <div class="card">
-    <div class="card-hd"><h3>按分类接收</h3><span class="sub">站内信全档全量保留，关闭只影响 Push 与邮件提醒</span></div>
-    <div class="card-bd flush"><table>
-      <thead><tr><th style="width:180px">分类</th><th style="width:150px">站内信</th><th style="width:150px">App Push</th><th style="width:150px">邮件</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>
-  </div>
-
-  <div class="card" style="margin-top:18px">
-    <div class="card-hd"><h3>免打扰</h3><span class="sub">时区 Asia/Singapore</span></div>
-    <div class="card-bd">
-      <div class="fr"><div class="fl">静默时段</div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" ${DB.msgPref.quiet?'checked':''} onchange="msgPrefQuiet(this)">
-          <span>22:00 – 08:00 不推送</span></label>
-        <div class="sub" style="margin-top:8px;font-size:12.5px">静默时段内的 L2 / L3 / L4 消息顺延至次日 08:00 合并推送（堆积超 50 条只推摘要）；<b>L1 必达不受影响</b>，凌晨备货与送货是常态。</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:18px">
-    <div class="card-hd"><h3>接收人</h3></div>
-    <div class="card-bd">
-      <div class="ib ib-b"><span class="i">ℹ️</span>本期为<b>全店铺账号广播</b>：同店铺下的每个账号各收到一条独立消息，已读互不影响。按职能路由收件人（财务类只发财务账号）在后续版本提供。</div>
-    </div>
-  </div>`;
-};
+/* 消息设置页（m-message-pref）由 voice.js 定义：只含「新订单语音播报」。
+   原 按分类接收 / 免打扰 / 接收人 三块已按 2026-09-24 沈亮要求移除。 */
 
 })();
