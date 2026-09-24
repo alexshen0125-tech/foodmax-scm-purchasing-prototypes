@@ -19,27 +19,27 @@ function ensureVoice(){
 }
 const pad=n=>(''+n).padStart(2,'0');
 
-/* 播报话术（中 / 英）；{N}本次新增 {M}今日累计已支付 {P}待支付 {X}截单后新增支付 */
+/* 播报音频：固定录音，每种场景一段（中 / 英各一个文件），不含数量；数量只在右下角播报卡上以文字显示
+   id 即音频文件名前缀：<id>_zh.mp3 / <id>_en.mp3 */
 const TPL={
-  tick:   {sc:'定时播报',      when:'营业时段内按频率触发，距上次播报有新单', cond:'距上次播报有新订单',
-           zh:'您有 {N} 笔新订单，今日累计 {M} 笔。',
-           en:"You've got {N} new orders. That's {M} orders so far today."},
-  cut:    {sc:'截单播报',      when:'到达当日截单时间', cond:'今日有订单，且无待支付',
-           zh:'今日已截单，共 {M} 笔订单，请开始备货。',
-           en:'Orders are now closed for today. You have {M} orders in total. Time to start preparing.'},
-  cutWait:{sc:'截单播报 · 有待支付', when:'到达当日截单时间', cond:'截单时仍有订单待客户支付',
-           zh:'今日已截单，已支付 {M} 笔，另有 {P} 笔等待客户支付，请稍等，支付结果出来后会再次提醒。',
-           en:"Orders are now closed for today. {M} orders are paid, and {P} are still waiting for payment. Please hold on, we'll let you know once they're done."},
-  cutZero:{sc:'截单播报 · 无订单', when:'到达当日截单时间', cond:'今日无订单，也无待支付',
+  tick:   {id:'ORDER_NEW',          sc:'定时播报',          when:'营业时段内按频率触发', cond:'距上次播报有新订单（无新单不播）',
+           zh:'您有新订单，请及时查看。',
+           en:'You have new orders. Please check them.'},
+  cut:    {id:'ORDER_CUTOFF',       sc:'截单播报',          when:'到达当日截单时间', cond:'今日有订单，且无待支付',
+           zh:'今日已截单，请开始备货。',
+           en:'Orders are now closed for today. Please start preparing.'},
+  cutWait:{id:'ORDER_CUTOFF_WAIT',  sc:'截单播报 · 有待支付', when:'到达当日截单时间', cond:'截单时仍有订单待客户支付',
+           zh:'今日已截单，还有订单等待客户支付，请稍等。',
+           en:'Orders are now closed for today. Some orders are still waiting for payment. Please hold on.'},
+  cutZero:{id:'ORDER_CUTOFF_NONE',  sc:'截单播报 · 无订单', when:'到达当日截单时间', cond:'今日无订单，也无待支付',
            zh:'今日已截单，今日暂无订单。',
            en:'Orders are now closed for today. There are no orders today.'},
-  final:  {sc:'待支付补播',    when:'截单时的待支付单全部支付或超时关闭', cond:'截单时有过待支付订单',
-           zh:'待支付订单已处理完毕，新增支付 {X} 笔，今日最终 {M} 笔订单，请开始备货。',
-           en:"All pending payments are done. {X} more orders were paid, bringing today's total to {M}. Time to start preparing."},
+  final:  {id:'ORDER_PAYMENT_DONE', sc:'待支付补播',        when:'截单时的待支付单全部支付或超时关闭', cond:'截单时有过待支付订单',
+           zh:'待支付订单已处理完毕，请开始备货。',
+           en:'All pending payments are done. Please start preparing.'},
 };
-/* 试听用示例数：与今日订单演示数一致 */
-const SAMPLE={tick:{N:3,M:12},cut:{M:14},cutWait:{M:12,P:2},cutZero:{},final:{X:2,M:14}};
-function fill(s,v){return s.replace(/\{(\w)\}/g,(_,k)=>v[k]!=null?v[k]:'');}
+/* 播报卡上的数量（文字，不进语音）：演示数 */
+const CARD_NUM={tick:'本次新增 3 笔 · 今日累计 12 笔',cut:'今日共 14 笔',cutWait:'已支付 12 笔 · 待支付 2 笔',cutZero:'今日 0 笔',final:'截单后新增支付 2 笔 · 今日最终 14 笔'};
 
 function todayCfg(){const b=DB.bizCfg;const i=bizTodayIdx();return {w:b.week[i],d:b.week[i].d};}
 /* 今日播报时间点：营业开始后、截单前的频率点 + 截单点 */
@@ -60,8 +60,8 @@ try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthe
 
 /* ── 播放：浏览器 TTS + 右下角播报卡 ─────────────────────────────── */
 window.voicePlay=function(key,lang){
-  ensureVoice();const t=TPL[key];const v=SAMPLE[key]||{};lang=lang||DB.voice.lang;
-  const zh=fill(t.zh,v),en=fill(t.en,v),txt=lang=='en'?en:zh;
+  ensureVoice();const t=TPL[key];lang=lang||DB.voice.lang;
+  const txt=lang=='en'?t.en:t.zh;
   try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang=lang=='en'?'en-GB':'zh-CN';const vc=pickVoice(lang);if(vc)u.voice=vc;u.rate=1;speechSynthesis.speak(u);}}catch(e){}
   voiceCard(key,txt,lang);
 };
@@ -74,7 +74,8 @@ function voiceCard(key,txt,lang){
   c.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:12px 16px;background:${isCut?'var(--goldl)':'var(--gl)'};color:${isCut?'var(--gold)':'var(--gd)'};font-weight:700;font-size:13.5px">
       <span style="font-size:16px">🔊</span>${TPL[key].sc}<span style="margin-left:auto;font-weight:500;font-size:12.5px">${hm}</span>
       <span style="cursor:pointer;font-size:18px;line-height:1;margin-left:6px;color:var(--ts)" onclick="voiceCardClose()">×</span></div>
-    <div style="padding:14px 16px;font-size:14px;line-height:1.65;color:var(--tp)">${txt}</div>
+    <div style="padding:14px 16px 4px;font-size:14px;line-height:1.65;color:var(--tp)">${txt}</div>
+    <div style="padding:0 16px 12px;font-size:12.5px;color:var(--ts)">${CARD_NUM[key]}</div>
     <div style="display:flex;justify-content:flex-end;gap:8px;padding:0 16px 14px">
       <button class="btn btn-o btn-sm" onclick="voicePlay('${key}','${lang}')">再听一遍</button>
       <button class="btn btn-p btn-sm" onclick="voiceCardClose();nav('m-order')">查看订单</button></div>`;
@@ -119,7 +120,7 @@ PAGES['m-message-pref']=()=>{
       <td class="nw" style="font-weight:600">${t.sc}</td>
       <td style="font-size:12.5px">${t.when}</td>
       <td style="font-size:12.5px">${t.cond}</td>
-      <td style="font-size:13px">「${fill(t.zh,SAMPLE[k]||{})}」<div class="sub" style="font-size:12px;margin-top:3px">${fill(t.en,SAMPLE[k]||{})}</div></td>
+      <td style="font-size:13px">「${t.zh}」<div class="sub" style="font-size:12px;margin-top:3px">${t.en}</div></td>
       <td class="nw"><button class="btn btn-o btn-sm" onclick="voicePlay('${k}','zh')">▶ 中文</button> <button class="btn btn-o btn-sm" onclick="voicePlay('${k}','en')">▶ EN</button></td></tr>`;}).join('');
 
   const card=`<div class="card">
@@ -136,9 +137,9 @@ PAGES['m-message-pref']=()=>{
         <div class="fr"><div class="fl">播报语言</div><div class="ro-field">跟随后台语言 · 当前 <b style="margin-left:4px">中文</b></div></div>
       </div>
     </div>
-    <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">截单播报每天必播；截单时仍有待支付订单，等支付结果出来后再补播一次</span></div>
+    <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">固定语音，每种情况一段；截单播报每天必播，截单时仍有待支付订单，等支付结果出来后再补播一次</span></div>
     <div class="card-bd flush" style="${dis}"><div style="overflow-x:auto"><table style="min-width:980px">
-      <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报示例（按后台语言播报其一）</th><th style="width:150px">试听</th></tr></thead>
+      <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报语音（按后台语言播报其一）</th><th style="width:150px">试听</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
   </div>`;
   return card;
