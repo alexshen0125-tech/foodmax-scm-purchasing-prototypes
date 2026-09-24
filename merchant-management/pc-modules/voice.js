@@ -25,29 +25,29 @@ const TPL={
   tick:   {id:'ORDER_NEW',          sc:'定时播报',          when:'营业时段内按频率触发', cond:'距上次播报有新订单（无新单不播）',
            zh:'您有新订单，请及时查看。',
            en:'You have new orders. Please check them.'},
-  cut:    {id:'ORDER_CUTOFF',       sc:'截单播报',          when:'到达当日截单时间', cond:'今日有订单，且无待支付',
-           zh:'今日已截单，请开始备货。',
-           en:'Orders are now closed for today. Please start preparing.'},
-  cutWait:{id:'ORDER_CUTOFF_WAIT',  sc:'截单播报 · 有待支付', when:'到达当日截单时间', cond:'截单时仍有订单待客户支付',
-           zh:'今日已截单，还有订单等待客户支付，请稍等。',
-           en:'Orders are now closed for today. Some orders are still waiting for payment. Please hold on.'},
-  cutZero:{id:'ORDER_CUTOFF_NONE',  sc:'截单播报 · 无订单', when:'到达当日截单时间', cond:'今日无订单，也无待支付',
-           zh:'今日已截单，今日暂无订单。',
-           en:'Orders are now closed for today. There are no orders today.'},
-  final:  {id:'ORDER_PAYMENT_DONE', sc:'待支付补播',        when:'截单时的待支付单全部支付或超时关闭', cond:'截单时有过待支付订单',
+  cut:    {id:'BIZ_END',          sc:'结束营业播报',        when:'到达当日营业结束时间', cond:'今日有订单，且无待支付',
+           zh:'今日已结束营业，请开始备货。',
+           en:'Business hours have ended for today. Please start preparing.'},
+  cutWait:{id:'BIZ_END_WAIT',     sc:'结束营业播报 · 有待支付', when:'到达当日营业结束时间', cond:'结束营业时仍有订单待客户支付',
+           zh:'今日已结束营业，还有订单等待客户支付，请稍等。',
+           en:'Business hours have ended for today. Some orders are still waiting for payment. Please hold on.'},
+  cutZero:{id:'BIZ_END_NONE',     sc:'结束营业播报 · 无订单', when:'到达当日营业结束时间', cond:'今日无订单，也无待支付',
+           zh:'今日已结束营业，今日暂无订单。',
+           en:'Business hours have ended for today. There are no orders today.'},
+  final:  {id:'ORDER_PAYMENT_DONE', sc:'待支付补播',        when:'结束营业时的待支付单全部支付或超时关闭', cond:'结束营业时有过待支付订单',
            zh:'待支付订单已处理完毕，请开始备货。',
            en:'All pending payments are done. Please start preparing.'},
-  cancel: {id:'ORDER_CANCELLED_CHECK', sc:'追加 · 有取消单',   when:'紧接截单播报 / 待支付补播之后', cond:'本批次有已支付后取消的订单',
+  cancel: {id:'ORDER_CANCELLED_CHECK', sc:'追加 · 有取消单',   when:'紧接结束营业播报 / 待支付补播之后', cond:'本批次有已支付后取消的订单',
            zh:'今日有订单已取消，请核对备货数量，避免多备。',
            en:'Some orders were cancelled today. Please check your quantities to avoid over-preparing.'},
-  label:  {id:'LABEL_UNPRINTED',    sc:'追加 · 未打标签',   when:'紧接截单播报 / 待支付补播之后', cond:'本批次有订单标签未打印',
+  label:  {id:'LABEL_UNPRINTED',    sc:'追加 · 未打标签',   when:'紧接结束营业播报 / 待支付补播之后', cond:'本批次有订单标签未打印',
            zh:'还有订单标签没有打印，请尽快打印。',
            en:'Some order labels have not been printed yet. Please print them soon.'},
 };
 /* 截单时刻的播放队列：主播报（cut / cutWait / cutZero 三选一）→ 有取消单则追加 cancel → 有未打标签则追加 label；
    待支付补播同理：final → cancel? → label?（cancel 只追加截单后新增的取消）。每段之间停顿 0.6s */
 /* 播报卡上的数量（文字，不进语音）：演示数 */
-const CARD_NUM={tick:'本次新增 3 笔 · 今日累计 12 笔',cut:'今日共 14 笔',cutWait:'已支付 12 笔 · 待支付 2 笔',cutZero:'今日 0 笔',final:'截单后新增支付 2 笔 · 今日最终 14 笔',cancel:'已取消 2 笔（已支付后取消）',label:'未打标签 5 笔'};
+const CARD_NUM={tick:'本次新增 3 笔 · 今日累计 12 笔',cut:'今日共 14 笔',cutWait:'已支付 12 笔 · 待支付 2 笔',cutZero:'今日 0 笔',final:'结束营业后新增支付 2 笔 · 今日最终 14 笔',cancel:'已取消 2 笔（已支付后取消）',label:'未打标签 5 笔'};
 const CARD_GO={label:['去打印标签','m-pick-label'],cancel:['去看备货参考','m-pick-ref']};
 
 function todayCfg(){const b=DB.bizCfg;const i=bizTodayIdx();return {w:b.week[i],d:b.week[i].d};}
@@ -117,7 +117,7 @@ topRight=function(){
   let v;
   if(!DB.voice.on)v=`<span class="tb-bell" title="新订单语音播报已关闭" onclick="nav('m-message-pref')" style="cursor:pointer;width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:17px;opacity:.45">🔇</span>`;
   else if(!DB.voice.unlocked)v=`<span class="pill warn" style="cursor:pointer" onclick="voiceUnlock()" title="浏览器需点击一次页面才允许播放声音">🔇 点击启用语音播报</span>`;
-  else v=`<span class="tb-bell" title="${w.on?'新订单语音播报已开启 · 今日截单 '+w.end:'今日休息，不播报'}" onclick="nav('m-message-pref')" style="cursor:pointer;width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:17px">🔊</span>`;
+  else v=`<span class="tb-bell" title="${w.on?'新订单语音播报已开启 · 今日 '+w.end+' 结束营业':'今日休息，不播报'}" onclick="nav('m-message-pref')" style="cursor:pointer;width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:17px">🔊</span>`;
   const i=h.indexOf('<span class="tb-bell"');
   return i<0?h+v:h.slice(0,i)+v+h.slice(i);
 };
@@ -129,7 +129,7 @@ PAGES['m-message-pref']=()=>{
   const freq=FREQ.map(f=>`<label style="display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid ${V.freq==f.k?'var(--g)':'var(--bd)'};background:${V.freq==f.k?'var(--gl)':'#fff'};border-radius:10px;cursor:pointer">
       <input type="radio" name="vfreq" ${V.freq==f.k?'checked':''} onchange="voiceFreq(${f.k})"><span><b style="font-weight:600">${f.n}</b>${f.k==60?' <span class="sub" style="font-size:12px">（默认）</span>':''}<div class="sub" style="font-size:12px">${f.s}</div></span></label>`).join('');
   const today=w.on
-    ?`<div>今日（${d}）营业 <b class="mono">${w.start} – ${w.end}</b>，截单播报 <b class="mono">${w.end}</b></div>
+    ?`<div>今日（${d}）营业 <b class="mono">${w.start} – ${w.end}</b>，结束营业播报 <b class="mono">${w.end}</b></div>
       <div class="sub" style="margin-top:6px;font-size:12.5px">定时播报点：${slots.length?slots.map(s=>`<span class="mono">${s}</span>`).join('、'):'无（营业时段短于播报间隔）'}</div>`
     :`<div>今日（${d}）<b>休息</b>，整天不播报</div>`;
   const rows=Object.keys(TPL).map(k=>{const t=TPL[k];return `<tr>
@@ -149,12 +149,12 @@ PAGES['m-message-pref']=()=>{
         <div class="sub" style="margin-top:8px;font-size:12.5px">两个播报点之间的新订单合并成一条播报；这段时间没有新订单则不播。</div></div>
       <div class="fg2">
         <div class="fr"><div class="fl">今日播报</div><div class="ro-field" style="display:block">${today}
-          <a href="javascript:nav('m-biz-hours')" style="font-size:12px;display:inline-block;margin-top:6px">截单时间在营业管理设置 →</a></div></div>
+          <a href="javascript:nav('m-biz-hours')" style="font-size:12px;display:inline-block;margin-top:6px">营业时间在营业管理设置 →</a></div></div>
         <div class="fr"><div class="fl">播报语言</div><div class="ro-field">跟随后台语言 · 当前 <b style="margin-left:4px">中文</b></div></div>
       </div>
     </div>
-    <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">固定语音，每种情况一段；截单播报每天必播，有取消单 / 未打标签时在其后追加播报</span>
-      <button class="btn btn-o btn-sm" style="margin-left:auto" onclick="voicePlay('cutWait,cancel,label','zh')">▶ 试听截单组合播报</button></div>
+    <div class="card-hd" style="border-top:1px solid var(--bd2)"><h3 style="font-size:14px">播报内容</h3><span class="sub">固定语音，每种情况一段；结束营业播报每天必播，有取消单 / 未打标签时在其后追加播报</span>
+      <button class="btn btn-o btn-sm" style="margin-left:auto" onclick="voicePlay('cutWait,cancel,label','zh')">▶ 试听结束营业组合播报</button></div>
     <div class="card-bd flush" style="${dis}"><div style="overflow-x:auto"><table style="min-width:980px">
       <thead><tr><th style="width:170px">场景</th><th style="width:220px">触发时机</th><th style="width:200px">条件</th><th>播报语音（按后台语言播报其一）</th><th style="width:150px">试听</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>
