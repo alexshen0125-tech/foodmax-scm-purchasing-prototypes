@@ -676,7 +676,7 @@ const flowLink=id=>`<span class="link" onclick="openFlow('${id}')">${id}</span>`
 const linkState=f=>f.link?'已挂单':f.claim==='待认领'?'待认领':'未挂单';
 
 /* ================= 菜单 ================= */
-const MENU=[['边界与总览',[['scope','范围与边界'],['aegis','aegis 现有页面'],['overview','资金总览']]],
+const MENU=[['边界与总览',[['scope','范围与边界'],['aegis','aegis 现有页面'],['overview','资金总览'],['fundov','资金总览（多渠道）· 改造稿']]],
 ['渠道资金',[['batch','结算批次'],['split','分账明细'],['bucket','Holding 资金构成'],['bucketlog','资金构成明细'],['monthly','月结时点报表'],['water','手续费备付账户']]],
 ['流水与认领',[['flows','渠道流水接入'],['acctflow','账户流水'],['review','暂存复核'],['claim','待认领流水'],['rules','认领规则'],['tr','资金调拨单'],['orders','订单资金状态']]],
 ['对账',[['loop','批次与单据勾稽'],['recon','账户余额勾稽'],['steady','PA 稳态与桶和'],['unlinked','未挂单流水'],['err','差错处理']]],
@@ -684,7 +684,7 @@ const MENU=[['边界与总览',[['scope','范围与边界'],['aegis','aegis 现�
 ['FMS 协同',[['push','流水推送 FMS'],['voucher','凭证规则']]],
 ['aegis 只读镜像',[['ad','垫资单']]],
 ['配置',[['accts','账户档案'],['txmap','交易类型映射'],['synclog','同步记录']]]];
-const NEWP=['steady','negpay','batch','split','bucket','bucketlog','monthly','water','flows','acctflow','review','claim','rules','tr','orders','loop','recon','unlinked','err','rf','push','voucher'];
+const NEWP=['fundov','steady','negpay','batch','split','bucket','bucketlog','monthly','water','flows','acctflow','review','claim','rules','tr','orders','loop','recon','unlinked','err','rf','push','voucher'];
 
 let PAGE='overview';
 function badgeOf(p){const n={review:S.flows.filter(f=>f.synced&&f.review==='暂存复核').length,claim:S.flows.filter(f=>inLedger(f)&&f.claim==='待认领').length,tr:S.trs.filter(t=>['待审批','待执行','执行失败'].includes(t.state)).length,ad:S.ads.filter(a=>['待审批','待执行','已归还'].includes(a.state)).length,rf:S.rfs.filter(r=>!['已完成','已回滚'].includes(r.state)).length,negpay:S.negs.filter(n=>['待抵扣','部分抵扣'].includes(n.state)).length,steady:steadyRows().filter(r=>r.warn&&r.amt).length,err:S.ers.filter(e=>e.state==='待处理').length,alerts:S.alerts.filter(a=>a.state==='未处理').length,unlinked:unlinkedRows().filter(f=>!f.err).length}[p];return n?`<span class="badge">${n}</span>`:''}
@@ -982,6 +982,35 @@ function steadyRows(){
   const fs=S.flows.filter(f=>f.acc==='PA'&&inLedger(f)),sum=k=>r2(fs.filter(f=>cat(f)===k).reduce((x,f)=>x+f.net,0));
   return [{k:'B',n:'已入金未转清分的账期回款',amt:sum('B'),warn:0,go:'claim'},{k:'C',n:'在途退款资金（补差已到、退款未结算）',amt:sum('C'),warn:0,go:'rf'},{k:'A',n:'收单未分账 / 分账残差',amt:sum('A'),warn:1,go:'tr',fix:1},{k:'D',n:'拒付 / 追回未补位',amt:sum('D'),warn:1,go:'tr'},{k:'E',n:'未解释余额（无单转账等）',amt:sum('E'),warn:1,go:'unlinked'}];
 }
+PAGES.fundov=()=>{
+  const pl=payoutPlan().concat(payoutPlan('已出单')).filter(x=>['ONL','TERM'].includes(x.src)),sm=k=>r2(pl.reduce((s,x)=>s+x[k],0));
+  const pay=r2(sm('m')+sm('wh')),com=sm('com'),sub=sm('sub'),resid=r2(bucketBal('ONL')+bucketBal('TERM')-(pay+com-sub));
+  const haAwx=awxBal('HA'),ext=[['− 待补入平台补贴',-sub,'',''],['+ 平台垫资',bucketBal('ADV'),'ad',''],['+ 佣金留存',bucketBal('COM'),'bucketlog','COM'],['+ 未匹配回款 / 期初',resid,'bucketlog','TERM'],['+ 待分类',bucketBal('UNC'),'unlinked','']];
+  const book=r2(pay+com+ext.reduce((x,e)=>x+e[1],0)),diff=r2(haAwx-book);
+  const unsHA=S.flows.filter(f=>f.acc==='HA'&&f.status==='Settled'&&!(f.synced&&f.review==='正常')),unsAmt=r2(unsHA.reduce((x,f)=>x+f.net,0));
+  const st=(d,warn)=>d?tag('存在差异 '+fmt(d),'red'):warn?tag('有预警项 '+warn,'orange'):tag('平','green');
+  const row=(l,v,o={})=>`<tr class="${o.cls||''}"><td style="width:50%;${o.ind?'padding-left:32px':''}">${l}${o.badge||''}</td><td class="num">${o.raw?v:fmt(v)}</td><td class="op">${o.go?`<span class="link" onclick="${o.go}">${o.gl||'明细'}</span>`:''}</td></tr>`;
+  const box=(h,rows)=>`<div class="tbl-wrap"><table class="t"><tbody>${rows.join('')}</tbody></table></div>`;
+  const ms=S.accounts.filter(a=>a.kind==='商家子账户'),mb=r2(ms.reduce((x,a)=>x+awxBal(a.code),0)),ml=r2(ms.reduce((x,a)=>x+ledBal(a.code),0));
+  const sr=steadyRows(),warnN=sr.filter(r=>r.warn&&r.amt).length,paAwx=awxBal('PA'),paBook=r2(sr.reduce((x,r)=>x+r.amt,0));
+  const caAwx=awxBal('CA'),caBook=ledBal('CA'),caHold=r2(S.trs.filter(t=>t.from==='CA'&&['待审批','待执行'].includes(t.state)).reduce((x,t)=>x+t.amt,0));
+  const faAwx=awxBal('FA'),faBook=ledBal('FA'),faLow=faAwx<S.water.low;
+  const sec=(t,f,badge,body)=>`<div style="margin:18px 0 8px;display:flex;align-items:center;gap:10px"><b>${t}</b><span class="muted">${f}</span><span style="margin-left:auto">${badge}</span></div>${body}`;
+  return card('',`<div class="eq">改造稿：对应 aegis <b>/fund-overview-channels</b>，改法见 <b>02_aegis页面改造清单 §1</b>（G1~G6）。蓝色「新增」为本次改造增加的内容；原有两条式子保留、仍不合并。</div><div class="muted">当前站点：新加坡　币种：SGD　数据截至 ${ts().slice(0,16)} SGT ${tag('G4','blue')}</div>`)+
+  card('Airwallex',
+   sec('归集侧（Holding）','Holding 余额 = 待分拨应付 + 待分拨抽佣净额 ＋ 台账外项目',st(diff),box('',[
+     row('Holding 余额（渠道）',haAwx,{go:"S.tab.acctflow='HA';go('acctflow')",gl:'查看 Holding 账户'}),
+     row('待分拨应付（店铺 + 仓配）',pay,{ind:1,go:"go('orders')"}),row('待分拨抽佣净额',com,{ind:1,go:"go('orders')"}),
+     row('台账外项目 '+tag('新增 G1','blue'),'',{raw:1,cls:'total'}),
+     ...ext.map(e=>row(e[0],e[1],{ind:1,go:e[2]?(e[3]?`S.tab.bucketlog='${e[3]}';go('${e[2]}')`:`go('${e[2]}')`):''})),
+     row('账面合计',book,{cls:'total'}),row('差异',diff,{cls:'total'}),
+     ...(diff?[row('差异拆解 '+tag('新增 G2','blue'),'',{raw:1,cls:'total'}),row(`Airwallex 侧未入账流水 ${unsHA.length} 条`,unsAmt,{ind:1,go:"S.tab.flows='awx';go('flows')"}),row('其他（需到渠道对账定位）',r2(diff-unsAmt),{ind:1})]:[])]))+
+   sec('子账户侧（Seller CA）','各店铺子账户余额合计 = 已分拨未出款',st(r2(mb-ml)),box('',[row('子账户余额合计',mb),row('已分拨未出款',ml),row('差异',r2(mb-ml),{cls:'total'})]))+
+   sec('平台账户（PA）'+tag('新增 G3','blue'),'余额 = 账期回款在途 + 退款在途 + 准备金冻结；其余为异常',st(r2(paAwx-paBook),warnN),box('',[row('平台账户余额（渠道）',paAwx),...sr.map(r=>row(r.n+(r.warn&&r.amt?' '+tag('预警','red'):''),r.amt,{ind:1,go:r.amt?`go('${r.go}')`:''})),row('差异',r2(paAwx-paBook),{cls:'total'})]))+
+   sec('佣金账户（CA）'+tag('新增 G3','blue'),'Airwallex 余额 = 账面余额',st(r2(caAwx-caBook)),box('',[row('佣金账户余额（渠道）',caAwx),row('账面余额',caBook),row('差异',r2(caAwx-caBook),{cls:'total'}),row('可用 = 余额 − 已审批未执行占用',r2(caAwx-caHold),{ind:1})]))+
+   sec('手续费备付账户（FA）'+tag('新增 G3','blue'),'Airwallex 余额 = 账面余额',st(r2(faAwx-faBook),faLow?1:0),box('',[row('备付账户余额（渠道）',faAwx),row('账面余额',faBook),row('差异',r2(faAwx-faBook),{cls:'total'}),row(`水位：低水位 ${fmt(S.water.low)} / 目标额 ${fmt(S.water.target)}`+(faLow?' '+tag('低于水位','red'):''),'',{raw:1,ind:1,go:faLow?'fillFA()':"go('water')",gl:faLow?'一键补资':'水位配置'})])))+
+  card('',`<div class="eq">结构说明：Airwallex 多一层 Holding 归集，归集侧与子账户侧刻意不合并；本次新增平台账户、佣金账户、备付账户三条，同样各自独立，避免互相掩盖缺口。</div>`);
+};
 PAGES.steady=()=>{
   const rows=steadyRows(),tot=r2(rows.reduce((x,r)=>x+r.amt,0)),bk=r2(BKS.reduce((x,b)=>x+bucketBal(b),0)),ha=ledBal('HA');
   return card('PA 稳态校验',`<div class="muted" style="margin-bottom:10px">平台账户是过路账户，稳态余额 ≈ 0。允许的非零余额只有账期回款在途、退款在途、准备金冻结；其余非零即预警（方案 21 §5.1）</div>`+
