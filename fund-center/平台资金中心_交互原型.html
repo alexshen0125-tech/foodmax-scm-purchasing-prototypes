@@ -987,7 +987,14 @@ PAGES.steady=()=>{
   return card('PA 稳态校验',`<div class="muted" style="margin-bottom:10px">平台账户是过路账户，稳态余额 ≈ 0。允许的非零余额只有账期回款在途、退款在途、准备金冻结；其余非零即预警（方案 21 §5.1）</div>`+
    tbl([{t:'余额构成',k:r=>r.n},{t:'金额',num:1,k:r=>sn(r.amt)},{t:'判定',k:r=>!r.amt?tag('0','gray'):r.warn?tag('预警','red'):tag('允许在途','blue')}],rows,{op:r=>r.amt&&r.fix&&r.amt>0?`<span class="link" onclick="fixResid(${r.amt})">生成补划调拨单</span>`:r.amt?`<span class="link" onclick="go('${r.go}')">去处理</span>`:''})+
    `<div class="eq">构成合计 ${fmt(tot)} ＝ 平台账户账面余额 ${fmt(ledBal('PA'))}</div>`)+
-  card('Holding 桶和校验',`<div class="eq">五桶之和 ${fmt(bk)} − Holding 账面余额 ${fmt(ha)} = <b class="${r2(bk-ha)?'neg':''}">${fmt(r2(bk-ha))}</b>　｜　Airwallex Holding 余额 ${fmt(awxBal('HA'))}</div>`);
+  card('Holding 桶和校验',`<div class="eq">五桶之和 ${fmt(bk)} − Holding 账面余额 ${fmt(ha)} = <b class="${r2(bk-ha)?'neg':''}">${fmt(r2(bk-ha))}</b>　｜　Airwallex Holding 余额 ${fmt(awxBal('HA'))}</div>`)+
+  (()=>{const pl=payoutPlan().concat(payoutPlan('已出单')).filter(x=>['ONL','TERM'].includes(x.src)),sm=k=>r2(pl.reduce((s,x)=>s+x[k],0)),pay=r2(sm('m')+sm('wh')),com=sm('com'),sub=sm('sub'),resid=r2(bucketBal('ONL')+bucketBal('TERM')-(pay+com-sub)),aw=awxBal('HA'),base=r2(pay+com),ext=r2(base-sub+bucketBal('ADV')+bucketBal('COM')+resid+bucketBal('UNC'));
+   const ms=S.accounts.filter(a=>a.kind==='商家子账户'),mb=r2(ms.reduce((x,a)=>x+awxBal(a.code),0)),ml=r2(ms.reduce((x,a)=>x+ledBal(a.code),0));
+   return card('与 aegis「资金总览（多渠道）」恒等式对照 '+tag('方案 21 §7.1','blue'),`<div class="muted" style="margin-bottom:10px">aegis 归集侧只认应付对象（待分拨应付 + 待分拨抽佣净额），Holding 里的垫资、佣金留存、未匹配回款、无单转入都会落成差异。建议把分桶增量项并入该式。</div>`+
+   tbl([{t:'项',k:r=>r[0]},{t:'来源',k:r=>r[1]},{t:'金额',num:1,k:r=>fmt(r[2])}],[
+    ['待分拨应付（店铺 + 仓配）','aegis 台账',pay],['待分拨抽佣净额','aegis 台账',com],['aegis 账面合计','',base],['aegis 差异 = Holding 余额 − 账面','aegis 现状',r2(aw-base)],
+    ['− 待补入平台补贴','资金中心增量',-sub],['+ 平台垫资桶','资金中心增量',bucketBal('ADV')],['+ 佣金留存桶','资金中心增量',bucketBal('COM')],['+ 未匹配回款 / 期初','资金中心增量',resid],['+ 待分类','资金中心增量',bucketBal('UNC')],['扩展后账面合计','',ext],['扩展后差异','',r2(aw-ext)]],{rowCls:r=>['aegis 账面合计','扩展后账面合计','扩展后差异','aegis 差异 = Holding 余额 − 账面'].includes(r[0])?'total':''})+
+   `<div class="eq">子账户侧（aegis 已有，复用）：各店铺子账户余额合计 ${fmt(mb)} = 已分拨未出款 ${fmt(ml)}　差异 <b class="${r2(mb-ml)?'neg':''}">${fmt(r2(mb-ml))}</b></div>`)})();
 };
 function fixResid(a){const ex=S.trs.find(t=>t.type==='分账残差补划'&&['待审批','待执行','执行失败'].includes(t.state));if(ex){toast('已有未完成的补划调拨单 '+ex.no);return go('tr')}tick(1);const sps=S.splits.filter(x=>x.resid&&!x.residTR);const t=newTR('分账残差补划',a,`平台账户收单分账残差 ${fmt(a)}（分账额按估算手续费），补划至线上支付桶`,sps.map(x=>x.order).join('、'));sps.forEach(x=>x.residTR=t.no);toast('已生成 '+t.no);S.tab.tr='all';go('tr')}
 PAGES.negpay=()=>{
