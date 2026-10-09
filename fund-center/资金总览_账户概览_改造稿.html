@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>资金总览（多渠道）· 改造稿</title>
+<style>
+:root{--pri:#1677ff;--bd:#f0f0f0;--bd2:#d9d9d9;--tx:#1f1f1f;--tx2:#595959;--tx3:#8c8c8c;--bg:#f5f5f5;--ok:#52c41a;--warn:#fa8c16;--err:#ff4d4f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.5715 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--tx);background:var(--bg)}
+.layout{display:flex;min-height:100vh}
+.side{width:208px;background:#fff;border-right:1px solid var(--bd);flex-shrink:0;padding-bottom:20px}
+.logo{height:56px;display:flex;align-items:center;padding:0 20px;font-weight:600;font-size:15px;border-bottom:1px solid var(--bd)}
+.grp{padding:14px 20px 6px;color:var(--tx3);font-size:12px}
+.mi{padding:9px 20px 9px 36px;color:var(--tx2);cursor:default}
+.mi.on{color:var(--pri);background:#e6f4ff;border-right:3px solid var(--pri)}
+.main{flex:1;min-width:0}
+.hd{height:56px;background:#fff;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:12px}
+.hd .sp{flex:1}
+.content{padding:20px 24px 40px}
+.crumb{color:var(--tx3);font-size:12px}
+.title{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+.title h1{font-size:20px;font-weight:600}
+.title .sp{flex:1}
+.btn{height:30px;padding:0 14px;border:1px solid var(--bd2);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--tx)}
+.btn:hover{color:var(--pri);border-color:var(--pri)}
+.btn.p{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.p:hover{opacity:.88;color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.ipt{height:30px;border:1px solid var(--bd2);border-radius:6px;padding:0 10px;font-size:13px;background:#fff}
+.muted{color:var(--tx3)}
+.tag{display:inline-block;padding:0 7px;line-height:20px;border-radius:4px;font-size:12px;border:1px solid}
+.tag.green{color:#389e0d;background:#f6ffed;border-color:#b7eb8f}
+.tag.orange{color:#d46b08;background:#fff7e6;border-color:#ffd591}
+.tag.red{color:#cf1322;background:#fff1f0;border-color:#ffa39e}
+.tag.gray{color:var(--tx2);background:#fafafa;border-color:var(--bd2)}
+.tag.blue{color:#0958d9;background:#e6f4ff;border-color:#91caff}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:#fff;border-radius:8px;border:1px solid var(--bd)}
+.card-h{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.card-h b{font-size:15px}
+.card-h .sp{flex:1}
+.acct{font-family:Menlo,monospace;font-size:12px;color:var(--tx3)}
+.bal{padding:14px 18px 6px}
+.bal .k{color:var(--tx3);font-size:12px}
+.bal .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+table.t{width:100%;border-collapse:collapse}
+table.t td,table.t th{padding:9px 18px;border-top:1px solid var(--bd);text-align:left;font-variant-numeric:tabular-nums}
+table.t th{background:#fafafa;color:var(--tx2);font-weight:500;font-size:12px}
+table.t td.num,table.t th.num{text-align:right}
+tr.type{cursor:pointer}
+tr.type:hover td{background:#f5faff}
+tr.sum td{font-weight:600;background:#fafafa}
+tr.diff td{font-weight:600}
+.neg{color:var(--err)}
+.sub{font-size:12px;color:var(--tx3);margin-top:2px}
+.bar{height:6px;background:#f0f0f0;border-radius:3px;margin-top:6px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.bar .mk{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--tx2)}
+.adv{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.adv>div{padding:16px 18px;border-right:1px solid var(--bd)}
+.adv>div:last-child{border-right:0}
+.adv .v{font-size:22px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
+.link{color:var(--pri);cursor:pointer}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:760px;max-width:100vw;background:#fff;z-index:11;display:none;flex-direction:column;box-shadow:-6px 0 16px rgba(0,0,0,.08)}
+.dr-h{height:56px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--bd);font-size:16px;font-weight:600}
+.dr-h .x{margin-left:auto;cursor:pointer;color:var(--tx3);font-weight:400}
+.dr-b{flex:1;overflow:auto;padding:16px 24px}
+.dr-f{padding:12px 24px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.desc{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--bd);border-radius:6px;margin-bottom:16px}
+.desc>div{padding:10px 14px;border-right:1px solid var(--bd)}
+.desc>div:last-child{border-right:0}
+.desc dt{color:var(--tx3);font-size:12px}
+.desc dd{font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.modal{position:fixed;left:50%;top:12%;transform:translateX(-50%);width:520px;max-width:calc(100vw - 32px);background:#fff;border-radius:8px;z-index:13;display:none;flex-direction:column;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.mask2{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:12}
+.fr{margin-bottom:14px}
+.fr label{display:block;margin-bottom:6px;color:var(--tx2)}
+.fr label.req:before{content:"* ";color:var(--err)}
+.radio{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd2);border-radius:6px;margin-bottom:6px;cursor:pointer}
+.radio.on{border-color:var(--pri);background:#f5faff}
+.radio .sp{flex:1}
+.err{color:var(--err);font-size:12px;margin-top:4px;min-height:18px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.12);padding:9px 16px;border-radius:8px;z-index:20;display:none}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--bd);margin-bottom:12px}
+.tab{padding:8px 0;cursor:pointer;color:var(--tx2)}
+.tab.on{color:var(--pri);border-bottom:2px solid var(--pri)}
+@media (max-width:1280px){.grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="side">
+    <div class="logo">磐石 Aegis</div>
+    <div class="grp">出款管理</div><div class="mi">付款单出款</div><div class="mi">平台账户提现</div>
+    <div class="grp">渠道资金</div><div class="mi on">资金总览（多渠道）</div><div class="mi">渠道账户</div><div class="mi">财务交易流水</div><div class="mi">退款挂账</div>
+    <div class="grp">垫资管理</div><div class="mi">垫资单</div><div class="mi">垫资回收</div>
+  </div>
+  <div class="main">
+    <div class="hd"><span class="sp"></span><span class="muted">简体中文</span><span>沈亮</span></div>
+    <div class="content" id="ct"></div>
+  </div>
+</div>
+<div class="mask" id="mask" onclick="closeDr()"></div>
+<div class="drawer" id="dr"><div class="dr-h"><span id="drT"></span><span class="x" onclick="closeDr()">✕</span></div><div class="dr-b" id="drB"></div></div>
+<div class="mask2" id="mask2"></div>
+<div class="modal" id="md"><div class="dr-h"><span id="mdT"></span><span class="x" onclick="closeMd()">✕</span></div><div class="dr-b" id="mdB"></div><div class="dr-f" id="mdF"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const r2=n=>Math.round((+n+Number.EPSILON)*100)/100;
+const fmt=n=>(n<0?'-':'')+'S$'+Math.abs(r2(n)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const tag=(t,c)=>`<span class="tag ${c}">${t}</span>`;
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2800)};
+let NOW='2026-10-09 10:30';
+
+/* ===== 数据：每类钱 = 明细流水之和 ===== */
+const F=(time,what,doc,amt)=>({time,what,doc,amt});
+const D={
+ PA:{name:'平台主账户',id:'acct_0RHg48kzPymEbUQiQeKvmA',awx:9784.40,types:{
+  FEE:{name:'手续费备用金',flows:[
+    F('2026-10-01 09:12','佣金账户转钱来补备用金','TR2610010001',1500),
+    F('2026-10-03 14:20','退款时补上当初被扣的收单手续费','RF2610030002',-3.36),
+    F('2026-10-03 14:20','退款时 Airwallex 收的退款手续费','RF2610030002',-0.13),
+    F('2026-10-05 23:00','Airwallex 扣的其他费用','Airwallex 账单 2026-09',-250),
+    F('2026-10-08 16:40','退款时补上当初被扣的收单手续费','RF2610080005',-2.00),
+    F('2026-10-08 16:40','退款时 Airwallex 收的退款手续费','RF2610080005',-0.13),
+    F('2026-10-09 09:30','退款时补上当初被扣的收单手续费','RF2610090001',-2.00),
+    F('2026-10-09 09:30','退款时 Airwallex 收的退款手续费','RF2610090001',-0.13),
+    F('2026-09-30 23:59','期初余额','—',-5.85)]},
+  TERM:{name:'账期还款金额',flows:[
+    F('2026-10-06 11:05','账期客户打款进来（Golden Wok Restaurant）','CL2610060001',4200),
+    F('2026-10-06 15:30','人工把这笔钱转到 Holding','TR2610060003',-4200),
+    F('2026-10-07 10:12','账期客户打款进来（Sunny Bistro）','CL2610070002',2650),
+    F('2026-10-08 09:48','账期客户打款进来（Mei Ling Eatery）','CL2610080001',5800),
+    F('2026-10-08 14:00','人工把这笔钱转到 Holding','TR2610080002',-2650),
+    F('2026-10-09 08:55','账期客户打款进来（Rasa Cafe）','CL2610090001',2650)]},
+  ONL:{name:'线上收单金额',flows:[
+    F('2026-10-09 09:10','客户线上付款到账（已扣手续费）','int_8kq2m4tz',196.00),
+    F('2026-10-09 09:25','Holding 把退款要用的钱转回来','RF2610090001',98.00),
+    F('2026-10-09 09:30','退款给客户','RF2610090001',-98.00)]}}},
+ HA:{name:'Holding 清分账户',id:'acct_cAKGrQy_ONCE-1Ia7h8S-Q',awx:34292.21,types:{
+  ONL:{name:'线上收单金额',flows:[
+    F('2026-09-30 23:59','期初余额','—',18620.30),
+    F('2026-10-07 23:00','平台主账户转来的线上付款（结算批次 bat_20261007_S01）','int_ ×42',6840.00),
+    F('2026-10-08 23:00','平台主账户转来的线上付款（结算批次 bat_20261008_S01）','int_ ×31',4955.00),
+    F('2026-10-08 12:00','结算时把货款打给商家','JS2610050003',-8250.00),
+    F('2026-10-08 12:00','结算时佣金转到佣金账户','JS2610050003',-1456.00),
+    F('2026-10-08 12:00','佣金账户补进来的平台补贴','JS2610050003',120.00),
+    F('2026-10-09 09:25','把退款要用的钱转回平台主账户','RF2610090001',-98.00),
+    F('2026-10-08 16:35','把退款要用的钱转回平台主账户','RF2610080005',-98.00),
+    F('2026-10-03 14:15','把退款要用的钱转回平台主账户','RF2610030002',-164.64),
+    F('2026-10-09 10:05','垫资收回 → 佣金账户','TR2610090002',-908.36)]},
+  TERM:{name:'账期还款金额',flows:[
+    F('2026-09-30 23:59','期初余额','—',6320.00),
+    F('2026-10-06 15:30','平台主账户人工转来的账期回款','TR2610060003',4200.00),
+    F('2026-10-08 14:00','平台主账户人工转来的账期回款','TR2610080002',2650.00),
+    F('2026-10-08 12:00','结算时把货款打给商家','JS2610050003',-2380.00),
+    F('2026-10-08 12:00','结算时佣金转到佣金账户','JS2610050003',-420.00),
+    F('2026-10-09 10:05','垫资收回 → 佣金账户','TR2610090002',-550.00)]},
+  ADV:{name:'平台垫资金额',flows:[
+    F('2026-10-01 10:30','清分垫资：账期客户还没付钱，佣金账户先垫进来','AD2610010001',3800.00),
+    F('2026-10-08 11:40','清分垫资：账期客户还没付钱，佣金账户先垫进来','AD2610080001',2400.00),
+    F('2026-10-08 12:00','用垫的钱把货款打给商家','JS2610050003',-2380.00),
+    F('2026-10-08 12:00','结算时佣金转到佣金账户','JS2610050003',-420.00),
+    F('2026-10-09 10:05','垫资收回 → 佣金账户','TR2610090002',-488.09)]}}},
+ CA:{name:'佣金账户',id:'acct_（待开立）',awx:12480.00,types:{
+  COM:{name:'佣金金额',flows:[
+    F('2026-09-30 23:59','期初余额','—',13579.55),
+    F('2026-10-08 12:00','结算时佣金转进来','JS2610050003',1876.00),
+    F('2026-10-09 10:05','Holding 把垫资收回来','TR2610090002',1946.45),
+    F('2026-10-01 09:12','给平台主账户补备用金','TR2610010001',-1500.00),
+    F('2026-10-01 10:30','垫钱给 Holding（清分垫资）','AD2610010001',-3800.00),
+    F('2026-10-08 11:40','垫钱给 Holding（清分垫资）','AD2610080001',-2400.00),
+    F('2026-10-08 12:00','给 Holding 补平台补贴','JS2610050003',-120.00)]}}}
+};
+/* 示例数据：只调期初，使各类之和 = Airwallex 余额 */
+(function(){
+  const sum=fs=>r2(fs.reduce((s,f)=>s+f.amt,0));
+  const fix=(acc,key,target)=>{const fs=D[acc].types[key].flows,op=fs.find(f=>f.what==='期初余额');op.amt=r2(op.amt+target-sum(fs))};
+  fix('PA','FEE',1235.20);fix('HA','ONL',19490.30);fix('HA','TERM',9820.00);fix('CA','COM',12480.00);
+  ['PA','HA','CA'].forEach(a=>D[a].awx=r2(Object.values(D[a].types).reduce((s,t)=>s+sum(t.flows),0)));
+})();
+const W={low:1000,target:5000};
+const ADV={list:[
+  {no:'AD2610010001',type:'清分垫资',amt:3800,time:'2026-10-01 10:30',ref:'JS2609280002 · 账期未付 6 笔'},
+  {no:'AD2610080001',type:'清分垫资',amt:2400,time:'2026-10-08 11:40',ref:'JS2610050003 · 账期未付 4 笔'}],
+ back:[{no:'TR2610090002',time:'2026-10-09 10:05',parts:[['ONL',908.36],['TERM',550.00],['ADV',488.09]]}]};
+const STORES=[['SH20260713476005','acct_RDKEILLXOb6jQriCE8DO8Q',0],['SH20260716476017','acct_fImHMCOtNVyfinyAHxSK5A',0],['SH2026081200001','acct_GtDEwVKOMpeH4hlrN3qWJw',189.80],['SH2026082800001','acct_RQS9k-qcOP-2NCRzivM6mg',0],['ZZQA0722M1','acct_hZ-SSedOPYexc7P4MohhzQ',654.95],['ZZQA0722S1','acct_hZ-SSedOPYexc7P4MohhzQ',654.95],['ZZQA0722S2','acct_hZ-SSedOPYexc7P4MohhzQ',654.95],['ZZQA0722S3','acct_hZ-SSedOPYexc7P4MohhzQ',654.95]];
+
+const tSum=(a,k)=>r2(D[a].types[k].flows.reduce((s,f)=>s+f.amt,0));
+const book=a=>r2(Object.keys(D[a].types).reduce((s,k)=>s+tSum(a,k),0));
+const advIn=()=>r2(ADV.list.reduce((s,x)=>s+x.amt,0));
+const advBack=()=>r2(ADV.back.reduce((s,x)=>s+x.parts.reduce((y,p)=>y+p[1],0),0));
+const advCap=()=>r2(advIn()-advBack());
+
+/* ===== 渲染 ===== */
+function typeExtra(a,k){
+  const v=tSum(a,k);
+  if(a==='PA'&&k==='FEE'){const pct=Math.min(100,v/W.target*100),low=v<W.low;return `<div class="bar"><i style="width:${pct}%;background:${low?'var(--err)':'var(--ok)'}"></i><span class="mk" style="left:${W.low/W.target*100}%"></span></div><div class="sub">低水位 ${fmt(W.low)} · 目标额 ${fmt(W.target)} ${low?tag('低于水位','red'):''}</div>`}
+  if(a==='PA'&&k==='TERM'){return v?`<div class="sub">未转 Holding ${D.PA.types.TERM.flows.filter(f=>f.amt>0&&!isMoved(f)).length} 笔 · 最长挂 ${agingDays()} 天 ${agingDays()>1?tag('超 1 个工作日','orange'):''}</div>`:''}
+  if(a==='PA'&&k==='ONL'){return `<div class="sub">${v?'等结算批次转入 Holding':'—'}</div>`}
+  return '';
+}
+function isMoved(f){return f.doc==='CL2610060001'||f.doc==='CL2610070002'}
+function agingDays(){return 1}
+function acctCard(a){
+  const d=D[a],bk=book(a),diff=r2(d.awx-bk);
+  const st=diff?tag('差额 '+fmt(diff),'red'):tag('平','green');
+  return `<div class="card"><div class="card-h"><b>${d.name}</b>${st}<span class="sp"></span><span class="acct">${d.id}</span></div>
+   <div class="bal"><div class="k">Airwallex 余额</div><div class="v">${fmt(d.awx)}</div></div>
+   <table class="t"><thead><tr><th>资金类型</th><th class="num">余额</th></tr></thead><tbody>
+   ${Object.keys(d.types).map(k=>`<tr class="type" onclick="openType('${a}','${k}')"><td>${d.types[k].name}${typeExtra(a,k)}</td><td class="num">${fmt(tSum(a,k))}<div class="sub"><span class="link">明细</span></div></td></tr>`).join('')}
+   <tr class="sum"><td>账面合计</td><td class="num">${fmt(bk)}</td></tr>
+   <tr class="diff"><td>差额（Airwallex 余额 − 账面合计）</td><td class="num ${diff?'neg':''}">${fmt(diff)}</td></tr>
+   </tbody></table></div>`;
+}
+function render(){
+  const uniq={};STORES.forEach(s=>uniq[s[1]]=s[2]);
+  const stSum=r2(Object.values(uniq).reduce((x,y)=>x+y,0)),rowSum=r2(STORES.reduce((x,s)=>x+s[2],0));
+  $('ct').innerHTML=`<div class="crumb">渠道资金 / 资金总览（多渠道）</div>
+  <div class="title"><h1>资金总览（多渠道）</h1>${tag('当前站点：新加坡','gray')}<span class="sp"></span>
+   <select class="ipt"><option>新加坡元（SGD）</option></select><span class="muted">数据截至 ${NOW} SGT</span><button class="btn" onclick="refreshAll()">刷新余额</button></div>
+  <div class="grid">${['PA','HA','CA'].map(acctCard).join('')}</div>
+  <div class="row2">
+   <div class="card"><div class="card-h"><b>垫资汇总</b><span class="muted">清分垫资 + 退款垫资，按总数控制</span><span class="sp"></span><span class="link" onclick="openAdv()">垫资明细</span><button class="btn p" ${advCap()>0?'':'disabled'} onclick="openBack()">垫资收回</button></div>
+    <div class="adv"><div><div class="muted">累计垫资</div><div class="v">${fmt(advIn())}</div></div><div><div class="muted">累计已收回</div><div class="v">${fmt(advBack())}</div></div><div><div class="muted">可收回上限</div><div class="v" style="color:var(--pri)">${fmt(advCap())}</div></div></div></div>
+   <div class="card"><div class="card-h"><b>店铺子账户</b>${tag('平','green')}<span class="sp"></span><span class="link" onclick="openStores()">明细</span></div>
+    <table class="t"><tbody><tr><td>子账户余额合计（按账号去重）</td><td class="num">${fmt(stSum)}</td></tr><tr><td>已结算未提现</td><td class="num">${fmt(stSum)}</td></tr><tr class="diff"><td>差额</td><td class="num">${fmt(0)}</td></tr></tbody></table>
+    <div class="sub" style="padding:0 18px 12px">${STORES.length} 个店铺 · ${Object.keys(uniq).length} 个独立账号</div></div>
+  </div>`;
+}
+/* ===== 抽屉：资金类型明细 ===== */
+let DR=null;
+function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';paint()}
+function paint(){if(!DR)return;const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
+function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
+function flowTbl(fs,withBal){
+  let bal=0;const rows=fs.slice().sort((x,y)=>x.time.localeCompare(y.time)).map(f=>{bal=r2(bal+f.amt);return {...f,bal}});
+  return `<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>发生了什么</th><th>单据</th><th class="num">入</th><th class="num">出</th>${withBal?'<th class="num">余额</th>':''}</tr></thead><tbody>${rows.reverse().map(f=>`<tr><td>${f.time}</td><td>${f.what}</td><td>${/^(TR|RF|AD|JS|CL)/.test(f.doc)?`<span class="link" onclick="toast('打开单据 ${f.doc}')">${f.doc}</span>`:f.doc}</td><td class="num">${f.amt>0?fmt(f.amt):''}</td><td class="num">${f.amt<0?fmt(-f.amt):''}</td>${withBal?`<td class="num">${fmt(f.bal)}</td>`:''}</tr>`).join('')}</tbody></table>`;
+}
+let TF='';
+function openType(a,k){TF='';openDr(()=>{const t=D[a].types[k],fs=t.flows,inn=r2(fs.filter(f=>f.amt>0&&f.what!=='期初余额').reduce((s,f)=>s+f.amt,0)),out=r2(-fs.filter(f=>f.amt<0).reduce((s,f)=>s+f.amt,0)),op=r2(fs.filter(f=>f.what==='期初余额').reduce((s,f)=>s+f.amt,0));
+  const kinds=[...new Set(fs.map(f=>f.what.replace(/（.*?）/g,'')))];const shown=TF?fs.filter(f=>f.what.replace(/（.*?）/g,'')===TF):fs;
+  return {t:`${D[a].name} · ${t.name}`,b:`<div class="desc"><div><dt>期初（10-01）</dt><dd>${fmt(op)}</dd></div><div><dt>本期入 / 出</dt><dd>${fmt(inn)} / ${fmt(out)}</dd></div><div><dt>当前余额</dt><dd>${fmt(tSum(a,k))}</dd></div></div>
+   <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center"><span class="muted">发生了什么</span><select class="ipt" onchange="TF=this.value;paint()"><option value="">全部</option>${kinds.map(x=>`<option ${TF===x?'selected':''}>${x}</option>`).join('')}</select><span class="sp" style="flex:1"></span><button class="btn" onclick="toast('已导出')">导出</button></div>
+   ${flowTbl(shown,!TF)}`}})}
+function openAdv(){openDr(()=>({t:'垫资明细',b:`<div class="desc"><div><dt>累计垫资</dt><dd>${fmt(advIn())}</dd></div><div><dt>累计已收回</dt><dd>${fmt(advBack())}</dd></div><div><dt>可收回上限</dt><dd>${fmt(advCap())}</dd></div></div>
+  <div class="tabs"><div class="tab on">垫进来（垫资单）</div></div>
+  <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>垫资单</th><th>垫资类型</th><th>垫资时间</th><th>关联</th><th class="num">金额</th></tr></thead><tbody>${ADV.list.map(x=>`<tr><td><span class="link">${x.no}</span></td><td>${x.type}</td><td>${x.time}</td><td>${x.ref}</td><td class="num">${fmt(x.amt)}</td></tr>`).join('')}</tbody></table>
+  <div class="tabs" style="margin-top:20px"><div class="tab on">收回（资金调拨单 · 垫资收回）</div></div>
+  <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>调拨单</th><th>时间</th><th>从哪类转出</th><th class="num">金额</th></tr></thead><tbody>${ADV.back.map(x=>`<tr><td><span class="link">${x.no}</span></td><td>${x.time}</td><td>${x.parts.map(p=>D.HA.types[p[0]].name+' '+fmt(p[1])).join('<br>')}</td><td class="num">${fmt(x.parts.reduce((s,p)=>s+p[1],0))}</td></tr>`).join('')}</tbody></table>`}))}
+function openStores(){openDr(()=>{const g={};STORES.forEach(s=>(g[s[1]]=g[s[1]]||{bal:s[2],shops:[]}).shops.push(s[0]));
+ return {t:'店铺子账户',b:`<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>Airwallex 账号</th><th>店铺</th><th class="num">余额</th></tr></thead><tbody>${Object.entries(g).map(([id,x])=>`<tr><td class="acct">${id}</td><td>${x.shops.join('<br>')}${x.shops.length>1?' '+tag('共用账号','orange'):''}</td><td class="num">${fmt(x.bal)}</td></tr>`).join('')}</tbody></table>`}})}
+/* ===== 垫资收回 ===== */
+let BK={};
+function openBack(){BK={from:'ONL',amt:''};$('mdT').textContent='垫资收回';paintBack();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitBack()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
+function paintBack(){
+  const cap=advCap(),opts=['ONL','TERM','ADV'];
+  $('mdB').innerHTML=`<div class="desc" style="grid-template-columns:1fr 1fr"><div><dt>可收回上限</dt><dd>${fmt(cap)}</dd></div><div><dt>转入</dt><dd style="font-size:14px">佣金账户</dd></div></div>
+  <div class="fr"><label class="req">从 Holding 哪类钱转出</label>${opts.map(k=>`<div class="radio ${BK.from===k?'on':''}" onclick="BK.from='${k}';BK.amt=$('b_a').value;paintBack()"><input type="radio" ${BK.from===k?'checked':''}><span>${D.HA.types[k].name}</span><span class="sp"></span><span class="muted">余额 ${fmt(tSum('HA',k))}</span></div>`).join('')}</div>
+  <div class="fr"><label class="req">收回金额（SGD）</label><input class="ipt" id="b_a" style="width:100%" value="${BK.amt}" placeholder="最多 ${fmt(Math.min(cap,tSum('HA',BK.from)))}" oninput="BK.amt=this.value;chkBack()"><div class="err" id="b_e"></div></div>
+  <div class="fr"><label>备注</label><input class="ipt" style="width:100%" placeholder="选填"></div>`;chkBack();
+}
+function chkBack(){const a=parseFloat(BK.amt),cap=advCap(),bal=tSum('HA',BK.from);let e='';
+  if(BK.amt!==''&&!(a>0))e='请输入大于 0 的金额';else if(a>cap)e=`超过可收回上限 ${fmt(cap)}（累计垫资 ${fmt(advIn())} − 已收回 ${fmt(advBack())}）`;else if(a>bal)e=`${D.HA.types[BK.from].name}余额 ${fmt(bal)} 不足`;
+  $('b_e').textContent=e;return !e&&a>0}
+function submitBack(){if(!chkBack()){if(!$('b_e').textContent)$('b_e').textContent='请输入收回金额';return}
+  const a=r2(parseFloat(BK.amt)),no='TR26100900'+String(10+ADV.back.length);
+  ADV.back.push({no,time:NOW,parts:[[BK.from,a]]});
+  D.HA.types[BK.from].flows.push(F(NOW,'垫资收回 → 佣金账户',no,-a));D.HA.awx=r2(D.HA.awx-a);
+  D.CA.types.COM.flows.push(F(NOW,'Holding 把垫资收回来',no,a));D.CA.awx=r2(D.CA.awx+a);
+  closeMd();render();toast(`已生成资金调拨单 ${no}（垫资收回 ${fmt(a)}），待审批`)}
+function closeMd(){$('mask2').style.display='none';$('md').style.display='none'}
+function refreshAll(){NOW='2026-10-09 '+new Date().toTimeString().slice(0,5);render();toast('已刷新 Airwallex 余额')}
+render();
+</script>
+</body>
+</html>
