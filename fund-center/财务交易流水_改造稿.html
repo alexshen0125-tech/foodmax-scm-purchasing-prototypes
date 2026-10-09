@@ -196,6 +196,15 @@ add('CA','COM','2026-10-01 09:12','给平台主账户补备用金','平台主账
 add('CA','COM','2026-10-01 10:30','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610010001',-3800,0,'TRF');
 add('CA','COM','2026-10-08 11:40','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610080001',-2400,0,'TRF');
 add('CA','COM','2026-10-08 12:00','给 Holding 补平台补贴','Holding 清分账户','JS2610050003',-120,0,'TRF');
+/* 商家子账户（按 Airwallex 账号，共用账号的店铺合并） */
+const MA=[
+ {id:'acct_RDKEILLXOb6jQriCE8DO8Q',shops:['SH20260713476005'],open:0,fl:[]},
+ {id:'acct_fImHMCOtNVyfinyAHxSK5A',shops:['SH20260716476017'],open:0,fl:[['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050003',2380,'TRF'],['2026-10-08 18:20','商家提现到银行卡','商家银行卡 DBS ****2231','WD2610080003',-2380,'PO']]},
+ {id:'acct_GtDEwVKOMpeH4hlrN3qWJw',shops:['SH2026081200001'],open:0,fl:[['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050003',8250,'TRF'],['2026-10-08 20:05','商家提现到银行卡','商家银行卡 OCBC ****8810','WD2610080004',-8060.20,'PO']]},
+ {id:'acct_RQS9k-qcOP-2NCRzivM6mg',shops:['SH2026082800001'],open:0,fl:[]},
+ {id:'acct_hZ-SSedOPYexc7P4MohhzQ',shops:['ZZQA0722M1','ZZQA0722S1','ZZQA0722S2','ZZQA0722S3'],open:1254.95,fl:[['2026-09-28 10:15','商家提现到银行卡','商家银行卡 UOB ****0457','WD2609280002',-600,'PO'],['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050003',2380,'TRF'],['2026-10-08 19:40','商家提现到银行卡','商家银行卡 UOB ****0457','WD2610080005',-2380,'PO']]}];
+AW.PO=['付款','Payout'];DOCT.WD='提现单';
+let MODE='PL',MI=4;
 const docType=d=>{const k=Object.keys(DOCT).find(p=>d.startsWith(p));return k?DOCT[k]:''};
 const daysAgo=t=>Math.floor((new Date(TODAY+'T23:59')-new Date(t.replace(' ','T')))/864e5);
 const stale=r=>r.st==='待结算'&&daysAgo(r.time)>=2;
@@ -209,12 +218,14 @@ function summary(){
   const rs=Object.keys(ts).map(row),T=k=>r2(rs.reduce((s,r)=>s+r[k],0));
   return {rs,tot:{op:T('op'),inn:T('inn'),out:T('out'),fee:T('fee'),end:T('end')},pendN:pend.length,pendAmt:r2(pend.reduce((s,r)=>s+r.amt,0)),staleN:pend.filter(stale).length};
 }
-function render(){
+function render(){if(MODE==='MC')return renderM();renderP()}
+const TABS=()=>`<div class="tabs" style="margin-bottom:16px">${[['PL','平台账户'],['MC','商家账户']].map(([k,l])=>`<div class="tab ${MODE===k?'on':''}" onclick="MODE='${k}';render()">${l}</div>`).join('')}</div>`;
+function renderP(){
   const s=summary(),rs=rows(),whats=[...new Set(base().map(r=>r.what))];
   const showBal=!Q.ft&&!Q.what&&!Q.st&&!Q.kw;
   let bal={};if(showBal){let run=r2(Object.values(OPEN[Q.acc]).reduce((a,b)=>a+b,0));base().filter(r=>r.st==='已结算').sort((a,b)=>a.time.localeCompare(b.time)).forEach(r=>{run=r2(run+r.amt);bal[r.id]=run})}
   $('ct').innerHTML=`<div class="crumb">渠道资金 / 财务交易流水</div>
-  <div class="title"><h1>财务交易流水</h1><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
+  <div class="title"><h1>财务交易流水</h1><span class="sp"></span><span class="site">当前 site：新加坡</span></div>${TABS()}
   <div class="flt" style="border-radius:8px;margin-bottom:16px"><div class="fi"><label>账户</label><select class="ipt" style="width:220px" onchange="Q={acc:this.value,ft:'',what:'',st:'',kw:''};render()">${Object.keys(ACC).map(k=>`<option value="${k}" ${Q.acc===k?'selected':''}>${ACC[k]}</option>`).join('')}</select></div>
    <div class="fi"><label>结算时间</label><div style="display:flex;gap:6px;align-items:center"><input class="ipt" style="width:120px" value="2026-10-01"><span class="muted">→</span><input class="ipt" style="width:120px" value="2026-10-09"></div></div></div>
   <div class="sumtbl"><table><thead><tr><th>资金类型（只算已结算）</th><th>期初</th><th>收入</th><th>支出</th><th>其中手续费</th><th>期末</th></tr></thead><tbody>
@@ -234,6 +245,21 @@ function render(){
    <td>${r.order?`<span class="link" onclick="toast('打开销售订单 ${r.order}')">${r.order}</span>`:'—'}</td><td>${AW[r.aw][0]}<div class="mono">${AW[r.aw][1]}</div></td><td class="mono">${r.id}</td><td class="mono">${r.bat||'—'}</td>
    <td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}${stale(r)?`<div class="muted" style="font-size:12px">创建于 ${r.time.slice(5,10)}，超 2 天</div>`:''}</td></tr>`).join('')||'<tr><td colspan="14" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
   </tbody></table><div class="pg">共 ${rs.length} 条</div></div>`;
+}
+let MQ={kw:''};
+function renderM(){
+  const a=MA[MI],inn=r2(a.fl.filter(f=>f[4]>0).reduce((s,f)=>s+f[4],0)),out=r2(-a.fl.filter(f=>f[4]<0).reduce((s,f)=>s+f[4],0)),end=r2(a.open+inn-out);
+  let run=a.open;const rows=a.fl.slice().sort((x,y)=>x[0].localeCompare(y[0])).map(f=>{run=r2(run+f[4]);return [...f,run]}).filter(f=>!MQ.kw||[f[3]].some(x=>x.toLowerCase().includes(MQ.kw.toLowerCase()))).reverse();
+  $('ct').innerHTML=`<div class="crumb">渠道资金 / 财务交易流水</div>
+  <div class="title"><h1>财务交易流水</h1><span class="sp"></span><span class="site">当前 site：新加坡</span></div>${TABS()}
+  <div class="flt" style="border-radius:8px;margin-bottom:16px"><div class="fi"><label>商家子账户</label><select class="ipt" style="width:360px" onchange="MI=+this.value;render()">${MA.map((x,i)=>`<option value="${i}" ${MI===i?'selected':''}>${x.shops.join(' / ')}${x.shops.length>1?'（共用账号）':''}</option>`).join('')}</select></div>
+   <div class="fi"><label>Account ID</label><div class="mono" style="line-height:30px">${a.id}</div></div>
+   <div class="fi"><label>结算时间</label><div style="display:flex;gap:6px;align-items:center"><input class="ipt" style="width:120px" value="2026-09-24"><span class="muted">→</span><input class="ipt" style="width:120px" value="2026-10-09"></div></div></div>
+  <div class="sumtbl"><table><thead><tr><th>账户</th><th>期初</th><th>收入</th><th>支出</th><th>期末</th></tr></thead><tbody><tr class="tot"><td>${a.shops.join(' / ')}</td><td>${fmt(a.open)}</td><td style="color:#389e0d">${fmt(inn)}</td><td style="color:var(--err)">${fmt(out)}</td><td>${fmt(end)}</td></tr></tbody></table></div>
+  <div class="flt"><div class="fi"><label>单据号</label><input class="ipt" style="width:240px" placeholder="结算单号 / 提现单号" value="${MQ.kw}" onchange="MQ.kw=this.value;render()"></div><button class="btn" onclick="MQ={kw:''};render()">重 置</button><span class="sp"></span><button class="btn" onclick="toast('已从 Airwallex 同步最新流水')">手动同步</button><button class="btn" onclick="toast('已导出')">导出</button></div>
+  <div class="tw"><table class="l"><thead><tr><th>结算时间</th><th>交易类型</th><th>单据</th><th>对方账户</th><th class="num">收入</th><th class="num">支出</th><th class="num">余额</th><th>Airwallex 交易类型</th><th>状态</th></tr></thead><tbody>
+  ${rows.map(f=>`<tr><td>${f[0]}</td><td>${f[1]}</td><td><div class="muted" style="font-size:12px">${docType(f[3])}</div><span class="link" onclick="${f[3].startsWith('JS')?`openDoc('${f[3]}')`:`toast('打开提现单 ${f[3]}')`}">${f[3]}</span></td><td>${f[2]}</td><td class="num" style="color:#389e0d">${f[4]>0?fmt(f[4]):''}</td><td class="num" style="color:var(--err)">${f[4]<0?fmt(-f[4]):''}</td><td class="num">${fmt(f[6])}</td><td>${AW[f[5]][0]}<div class="mono">${AW[f[5]][1]}</div></td><td>${tag('已结算','green')}</td></tr>`).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--tx3);padding:40px">暂无流水</td></tr>'}
+  </tbody></table><div class="pg">共 ${rows.length} 条</div></div>`;
 }
 let DR=null;
 function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
