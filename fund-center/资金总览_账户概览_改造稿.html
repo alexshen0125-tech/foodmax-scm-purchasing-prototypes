@@ -96,7 +96,7 @@ tr.diff td{font-weight:600}
     <div class="logo">磐石 Aegis</div>
     <div class="grp">出款管理</div><div class="mi">付款单出款</div><div class="mi">平台账户提现</div>
     <div class="grp">渠道资金</div><div class="mi on">资金总览（多渠道）</div><a class="mi" style="display:block;text-decoration:none" href="渠道账户_改造稿.html">渠道账户</a><a class="mi" style="display:block;text-decoration:none" href="财务交易流水_改造稿.html">财务交易流水</a><a class="mi" style="display:block;text-decoration:none" href="退款挂账_改造稿.html">退款挂账</a>
-    <div class="grp">垫资管理</div><div class="mi">垫资单</div><div class="mi">垫资回收</div>
+    <div class="grp">垫资管理</div><a class="mi" style="display:block;text-decoration:none" href="垫资管理_改造稿.html">垫资管理</a>
   </div>
   <div class="main">
     <div class="hd"><span class="sp"></span><span class="muted">简体中文</span><span>沈亮</span></div>
@@ -147,7 +147,6 @@ const D={
     F('2026-10-08 23:00','平台主账户转来的线上付款（结算批次 bat_20261008_S01）','int_ ×31',4955.00),
     F('2026-10-08 12:00','结算时把货款打给商家','JS2610050003',-8250.00),
     F('2026-10-08 12:00','结算时佣金转到佣金账户','JS2610050003',-1456.00),
-    F('2026-10-08 12:00','佣金账户补进来的平台补贴','JS2610050003',120.00),
     F('2026-10-09 09:25','把退款要用的钱转回平台主账户','RF2610090001',-98.00),
     F('2026-10-08 16:35','把退款要用的钱转回平台主账户','RF2610080005',-98.00),
     F('2026-10-03 14:15','把退款要用的钱转回平台主账户','RF2610030002',-164.64),
@@ -168,12 +167,11 @@ const D={
  CA:{name:'佣金账户',id:'acct_（待开立）',awx:12480.00,types:{
   COM:{name:'佣金金额',flows:[
     F('2026-09-30 23:59','期初余额','—',13579.55),
-    F('2026-10-08 12:00','结算时佣金转进来','JS2610050003',1876.00),
+    F('2026-10-08 12:00','结算时佣金转进来','JS2610050003',2296.00),
     F('2026-10-09 10:05','Holding 把垫资收回来','TR2610090002',1946.45),
     F('2026-10-01 09:12','给平台主账户补备用金','TR2610010001',-1242.95),
     F('2026-10-01 10:30','垫钱给 Holding（清分垫资）','AD2610010001',-3800.00),
-    F('2026-10-08 11:40','垫钱给 Holding（清分垫资）','AD2610080001',-2400.00),
-    F('2026-10-08 12:00','给 Holding 补平台补贴','JS2610050003',-120.00)]}}}
+    F('2026-10-08 11:40','垫钱给 Holding（清分垫资）','AD2610080001',-2400.00)]}}}
 };
 /* 示例数据：只调期初，使各类之和 = Airwallex 余额 */
 (function(){

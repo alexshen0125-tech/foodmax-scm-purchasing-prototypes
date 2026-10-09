@@ -121,7 +121,7 @@ table.l tr.stale td{background:#fffbe6}
     <div class="logo">磐石 Aegis</div>
     <div class="grp">出款管理</div><div class="mi">付款单出款</div><div class="mi">平台账户提现</div>
     <div class="grp">渠道资金</div><a class="mi" style="display:block;text-decoration:none" href="资金总览_账户概览_改造稿.html">资金总览（多渠道）</a><a class="mi" style="display:block;text-decoration:none" href="渠道账户_改造稿.html">渠道账户</a><div class="mi on">财务交易流水</div><a class="mi" style="display:block;text-decoration:none" href="退款挂账_改造稿.html">退款挂账</a>
-    <div class="grp">垫资管理</div><div class="mi">垫资单</div><div class="mi">垫资回收</div>
+    <div class="grp">垫资管理</div><a class="mi" style="display:block;text-decoration:none" href="垫资管理_改造稿.html">垫资管理</a>
   </div>
   <div class="main">
     <div class="hd"><span class="sp"></span><span class="muted">简体中文</span><span>沈亮</span></div>
@@ -140,7 +140,7 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const TODAY='2026-10-09';
 const ACC={PA:'平台主账户',HA:'Holding 清分账户',CA:'佣金账户'};
 const TYPES={PA:{FEE:'手续费备用金',TERM:'账期还款金额',ONL:'线上收单金额'},HA:{ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'},CA:{COM:'佣金金额'}};
-const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18550.30,TERM:6320,ADV:0},CA:{COM:15800.50}};
+const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18670.30,TERM:6320,ADV:0},CA:{COM:15680.50}};
 const DOCT={TR:'资金调拨单',RF:'退款资金单',AD:'垫资单',JS:'结算单',CL:'认领单',int:'支付单'};
 const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],DEP:['入金','Deposit'],FEE:['费用','Fee']};
 let seq=0;const rid=()=>'ftx_'+(++seq).toString(36).padStart(4,'0')+'Kq'+((seq*7919)%9973).toString(36);
@@ -179,7 +179,6 @@ add('PA','ONL','2026-10-09 09:10','付款到账后自动转到 Holding','Holding
 const orders=[['SO2610070101','int_a1x9',2380],['SO2610070102','int_b2k4',2650],['SO2610070103','int_c3m8',1810]];
 orders.forEach(([so,pi,a])=>add('HA','ONL','2026-10-07 23:00','平台主账户转来的线上付款','平台主账户',pi,a,0,'SPLIT',so,'bat_20261007_SGD_1'));
 [['SO2610080201','int_d4p2',2475],['SO2610080202','int_e5q7',2382],['SO2610080207','int_8kq2m4tz',98]].forEach(([so,pi,a])=>add('HA','ONL','2026-10-08 23:00','平台主账户转来的线上付款','平台主账户',pi,a,0,'SPLIT',so,'bat_20261008_SGD_1'));
-add('HA','ONL','2026-10-08 12:00','佣金账户补进来的平台补贴','佣金账户','JS2610050003',120,0,'TRF');
 add('HA','ONL','2026-10-08 12:00','结算时把货款打给商家','店铺 SH2026081200001','JS2610050003',-8250,0,'TRF');
 add('HA','ONL','2026-10-08 12:00','结算时佣金转到佣金账户','佣金账户','JS2610050003',-1456,0,'TRF');
 add('HA','ONL','2026-10-03 14:15','把退款要用的钱转回平台主账户','平台主账户','RF2610030002',-164.64,0,'REV','SO2609280112');
@@ -203,7 +202,6 @@ add('CA','COM','2026-10-09 10:05','Holding 把垫资收回来','Holding 清分�
 add('CA','COM','2026-10-01 09:12','给平台主账户补备用金','平台主账户','TR2610010001',-1242.95,0,'TRF');
 add('CA','COM','2026-10-01 10:30','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610010001',-3800,0,'TRF');
 add('CA','COM','2026-10-08 11:40','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610080001',-2400,0,'TRF');
-add('CA','COM','2026-10-08 12:00','给 Holding 补平台补贴','Holding 清分账户','JS2610050003',-120,0,'TRF');
 /* 结算单按商家出：一个商家一张 */
 const JSM={ONL:['JS2610050003','Prime Meat Supply'],TERM:['JS2610050004','ZZ QA 测试商家'],ADV:['JS2610050005','Ocean Catch Seafood']};
 R.forEach(r=>{if(r.acc==='HA'&&r.doc==='JS2610050003'){const [js,m]=JSM[r.ft];r.doc=js;r.mer=m;if(r.what.includes('货款'))r.cp='商家 '+m+'（'+r.cp.replace('店铺 ','')+'）'}});
@@ -237,7 +235,7 @@ function disp(list){
       else if(r.what.includes('退款手续费'))x.fee=r2(x.fee-r.amt);else x.amt=r2(x.amt+r.amt);
       if(r.what==='退款给客户'){x.cp=r.cp;x.time=r.time}}
     else if(r.doc.startsWith('JS')){const k='J|'+r.acc+'|'+r.doc;
-      if(!g[k]){g[k]={...r,id:'js_'+r.doc+'_'+r.acc,what:r.acc==='HA'?'结算出款：'+(r.mer||'商家'):'结算：佣金转入'+(r.mer?'（'+r.mer+'）':''),cp:r.acc==='HA'?(r.mer||'商家')+' / 佣金账户':'Holding 清分账户',amt:0,inn:0,out:0,fee:0,total:0,parts:[],tx:[]};out.push(g[k])}
+      if(!g[k]){g[k]={...r,id:'js_'+r.doc+'_'+r.acc,what:r.acc==='HA'?'结算出款：'+(r.mer||'商家'):'结算时佣金转进来'+(r.mer?'（'+r.mer+'）':''),cp:r.acc==='HA'?(r.mer||'商家')+' / 佣金账户':'Holding 清分账户',amt:0,inn:0,out:0,fee:0,total:0,parts:[],tx:[]};out.push(g[k])}
       const x=g[k];x.parts.push({ft:r.ft,what:r.what,amt:r.amt,cp:r.cp});x.tx.push({id:r.id,aw:r.aw,amt:r.amt});x.total=r2(x.total+r.amt);if(r.amt>0)x.inn=r2(x.inn+r.amt);else x.out=r2(x.out-r.amt);x.amt=-x.out;x.js=true}
     else if(r.aw==='SPLIT'){const k='B|'+r.acc+'|'+r.bat+'|'+r.st;
       if(!g[k]){g[k]={...r,id:'bt_'+r.bat+'_'+r.acc,what:r.acc==='PA'?'按结算批次自动转到 Holding':'平台主账户按结算批次转来的线上付款',doc:r.bat,amt:0,total:0,inn:0,out:0,items:[]};out.push(g[k])}
