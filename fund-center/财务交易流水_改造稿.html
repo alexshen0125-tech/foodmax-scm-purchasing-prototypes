@@ -170,7 +170,7 @@ add('PA','ONL','2026-10-08 16:35','Holding 把退款要用的钱转回来','Hold
 add('PA','ONL','2026-10-08 16:40','退款给客户','客户 Mei Ling Eatery','RF2610080005',-98,0,'REF','SO2610060031');
 add('PA','ONL','2026-10-09 09:25','Holding 把退款要用的钱转回来','Holding 清分账户','RF2610090001',98,0,'REV','SO2610080207');
 add('PA','ONL','2026-10-09 09:30','退款给客户','客户 Ah Hock Kitchen','RF2610090001',-98,0,'REF','SO2610080207');
-add('PA','ONL','2026-10-09 09:10','客户线上付款到账','客户 Rasa Cafe','int_3pd7w2nb',196,4,'PAY','SO2610090014','bat_20261009_SGD_1');
+add('PA','ONL','2026-10-09 09:10','客户线上付款到账','客户 Rasa Cafe','int_3pd7w2nb',196,4,'PAY','SO2610090014','bat_20261009_SGD_1','待结算');
 add('PA','ONL','2026-10-09 09:10','付款到账后自动转到 Holding','Holding 清分账户','int_3pd7w2nb',-196,0,'SPLIT','SO2610090014','bat_20261009_SGD_1','待结算');
 [['2026-10-07 23:00','bat_20261007_SGD_1',[['SO2610070101','int_a1x9',2380,'Golden Wok Restaurant'],['SO2610070102','int_b2k4',2650,'Sunny Bistro'],['SO2610070103','int_c3m8',1810,'Rasa Cafe']]],
  ['2026-10-08 23:00','bat_20261008_SGD_1',[['SO2610080201','int_d4p2',2475,'Mei Ling Eatery'],['SO2610080202','int_e5q7',2382,'Golden Wok Restaurant']]]].forEach(([t,bat,os])=>os.forEach(([so,pi,net,c])=>{const fee=r2(net*0.02);
@@ -216,6 +216,7 @@ AW.PO=['付款','Payout'];DOCT.WD='提现单';
 let MODE='PL',MI=4;
 const docType=d=>{if(d.startsWith('bat_'))return '结算批次';const k=Object.keys(DOCT).find(p=>d.startsWith(p));return k?DOCT[k]:''};
 const daysAgo=t=>Math.floor((new Date(TODAY+'T23:59')-new Date(t.replace(' ','T')))/864e5);
+const due=r=>{const m=r.bat&&r.bat.match(/bat_(\d{4})(\d{2})(\d{2})/);return m?`${m[2]}-${m[3]} 23:00`:''};
 const stale=r=>r.st==='待结算'&&daysAgo(r.time)>=2;
 
 let Q={acc:'HA',ft:'',what:'',st:'',kw:''};
@@ -269,7 +270,7 @@ function renderP(){
    <div class="fi"><label>单据号 / 订单编号 / 渠道交易号 / 批次号</label><input class="ipt" style="width:280px" placeholder="请输入" value="${Q.kw}" onchange="Q.kw=this.value;render()"></div>
    <button class="btn" onclick="Q={acc:Q.acc,ft:'',what:'',st:'',kw:''};render()">重 置</button><span class="sp"></span><button class="btn" onclick="toast('已从 Airwallex 同步最新流水')">手动同步</button><button class="btn" onclick="toast('已导出')">导出</button></div>
   <div class="tw"><table class="l"><thead><tr><th>结算时间</th><th>交易类型</th><th>单据</th><th>对方账户</th><th class="num">收入</th><th class="num">支出</th><th class="num">手续费</th>${showBal?'<th class="num">余额</th>':''}<th>订单编号</th><th>Airwallex 交易类型</th><th>渠道交易号</th><th>结算批次号</th><th>状态</th><th>操作</th></tr></thead><tbody>
-  ${rs.map(r=>`<tr class="${stale(r)?'stale':''}"><td>${r.st==='已结算'?r.time:'<span class="muted">—</span>'}</td><td>${r.what}</td>
+  ${rs.map(r=>`<tr class="${stale(r)?'stale':''}"><td>${r.st==='已结算'?r.time:`<span class="muted">${due(r)?'预计 '+due(r):'—'}</span>`}</td><td>${r.what}</td>
    <td>${docType(r.doc)?`<div class="muted" style="font-size:12px">${docType(r.doc)}</div><span class="link" onclick="${r.items?`openFlow('${r.id}')`:`openDoc('${r.doc}')`}">${r.doc}</span>`:`<span class="muted">${r.doc}</span>`}</td>
    <td>${r.cp}</td><td class="num" style="color:#389e0d">${r.inn>0?fmt(r.inn):''}</td><td class="num" style="color:var(--err)">${r.out>0?fmt(r.out):''}</td><td class="num">${r.fee?fmt(r.fee):''}</td>${showBal?`<td class="num">${r.st==='已结算'?fmt(bal[r.id]):'<span class="muted">—</span>'}</td>`:''}
    <td>${r.items?`<span class="link" onclick="openFlow('${r.id}')">${r.order}</span>`:r.order?`<span class="link" onclick="toast('打开销售订单 ${r.order}')">${r.order}</span>`:'—'}</td><td>${r.tx?r.tx.map(t=>`<div>${AW[t.aw][0]}</div>`).join(''):`${AW[r.aw][0]}<div class="mono">${AW[r.aw][1]}</div>`}</td><td class="mono">${r.tx?r.tx.map(t=>`<div>${t.id}</div>`).join(''):r.id}</td><td class="mono">${r.bat||'—'}</td>
