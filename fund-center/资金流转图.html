@@ -45,7 +45,7 @@ tr.r.on td{background:#e6f4ff}
   <div class="sub">2026-10-09 口径 · 点击编号或表格行高亮对应流转，再点一次取消</div>
   <div class="card">
     <div class="legend"><span><i style="background:#52c41a"></i>收款</span><span><i style="background:#1677ff"></i>结算</span><span><i style="background:#fa8c16"></i>退款 / 手续费</span><span><i style="background:#722ed1"></i>平台资金调拨</span><span><i style="background:#8c8c8c"></i>提现</span><span style="color:var(--tx3)">虚线 = 回收 / 提现</span></div>
-    <svg id="g" viewBox="0 0 1260 700">
+    <svg id="g" viewBox="0 0 1260 760">
       <defs></defs>
     </svg>
   </div>
@@ -65,26 +65,27 @@ const N={
  C1:{x:20,y:105,w:140,h:52,t:'线上客户',c:'ext'},C2:{x:20,y:330,w:140,h:52,t:'账期客户',c:'ext'},AW:{x:20,y:560,w:140,h:52,t:'Airwallex（手续费）',c:'ext2'},
  PA1:{x:290,y:100,w:190,h:62,t:'线上收单金额'},PA2:{x:290,y:325,w:190,h:62,t:'账期还款金额'},PA3:{x:290,y:555,w:190,h:62,t:'手续费备用金'},
  HA1:{x:640,y:100,w:190,h:62,t:'线上收单金额'},HA2:{x:640,y:325,w:190,h:62,t:'账期还款金额'},HA3:{x:640,y:555,w:190,h:62,t:'平台垫资金额'},
- M:{x:1010,y:100,w:200,h:62,t:'店铺子账户（商家）'},CA:{x:1010,y:400,w:200,h:62,t:'佣金账户 CA'},
- MB:{x:1010,y:10,w:200,h:40,t:'商家银行卡',c:'ext2'},CB:{x:1010,y:640,w:200,h:40,t:'公司银行账户',c:'ext2'}};
+ M:{x:1010,y:100,w:200,h:62,t:'店铺子账户（商家）'},CA:{x:1010,y:545,w:200,h:82,t:'佣金账户 CA'},
+ MB:{x:1010,y:10,w:200,h:40,t:'商家银行卡',c:'ext2'},CB:{x:1010,y:700,w:200,h:40,t:'公司银行账户',c:'ext2'}};
 const R=k=>N[k].x+N[k].w,L=k=>N[k].x,Y=(k,f=.5)=>N[k].y+N[k].h*f,X=(k,f=.5)=>N[k].x+N[k].w*f,T=k=>N[k].y,B=k=>N[k].y+N[k].h;
-/* 边：id, 颜色, 是否虚线, path, 编号位置, 标签, 标签位置 */
+/* 边：id, 颜色, 虚线, path, 编号位置, 标签, 标签位置 */
+const V5=880,V6=920,V11=960;
 const E=[
  ['1',C.in,0,`M${R('C1')},${Y('C1',.35)} H${L('PA1')}`,[225,Y('C1',.35)],'线上付款',[178,Y('C1',.35)-10]],
- ['8',C.rf,0,`M${L('PA1')},${Y('PA1',.75)} H${R('C1')}`,[225,Y('PA1',.75)],'退款给客户',[176,Y('PA1',.75)+18]],
- ['2',C.in,0,`M${R('PA1')},${Y('PA1',.3)} H${L('HA1')}`,[560,Y('PA1',.3)],'按结算批次自动转',[505,Y('PA1',.3)-10]],
- ['7',C.rf,0,`M${L('HA1')},${Y('HA1',.75)} H${R('PA1')}`,[560,Y('HA1',.75)],'退款的钱转回',[518,Y('HA1',.75)+18]],
- ['3',C.in,0,`M${R('C2')},${Y('C2')} H${L('PA2')}`,[225,Y('C2')],'打款',[205,Y('C2')-10]],
- ['4',C.adv,0,`M${R('PA2')},${Y('PA2')} H${L('HA2')}`,[560,Y('PA2')],'人工转',[540,Y('PA2')-10]],
- ['9',C.rf,0,`M${L('PA3')},${Y('PA3',.5)} H${R('AW')}`,[225,Y('PA3',.5)],'退款手续费 / 补差额',[170,Y('PA3',.5)-10]],
- ['5',C.st,0,`M${R('HA1')},${Y('HA1',.3)} H${L('M')} M${R('HA2')},${Y('HA2',.25)} H900 V${Y('HA1',.3)} M${R('HA3')},${Y('HA3',.25)} H915 V${Y('HA1',.3)}`,[960,Y('HA1',.3)],'货款',[955,Y('HA1',.3)-12]],
- ['6',C.st,0,`M${R('HA1')},${Y('HA1',.7)} H945 V${Y('CA',.3)} H${L('CA')} M${R('HA2')},${Y('HA2',.6)} H945 M${R('HA3')},${Y('HA3',.5)} H945 V${Y('CA',.3)}`,[975,Y('CA',.3)],'佣金',[963,Y('CA',.3)-12]],
- ['10',C.adv,0,`M${X('CA',.3)},${B('CA')} V${Y('HA3',.3)} H${R('HA3')}`,[905,Y('HA3',.3)],'垫资',[875,Y('HA3',.3)-10]],
- ['11',C.adv,1,`M${R('HA3')},${Y('HA3',.75)} H${X('CA',.6)} V${B('CA')} M${R('HA2')},${Y('HA2',.9)} H870 V${Y('HA3',.75)} M${R('HA1')},${Y('HA1',.95)} H858 V${Y('HA3',.75)}`,[905,Y('HA3',.75)],'垫资收回',[870,Y('HA3',.75)+20]],
- ['12',C.adv,0,`M${X('CA',.75)},${B('CA')} V665 H${X('PA3',.35)} V${B('PA3')}`,[600,665],'补备用金',[575,657]],
- ['13',C.adv,1,`M${X('PA3',.65)},${B('PA3')} V650 H${X('CA',.9)} V${B('CA')}`,[600,650],'备用金回收',[640,642]],
- ['14',C.wd,1,`M${X('M')},${T('M')} V${B('MB')}`,[X('M')+18,75],'商家提现',[X('M')+34,79]],
- ['15',C.wd,1,`M${X('CA',.5)},${B('CA')} V${T('CB')}`,[X('CA',.5)+18,600],'佣金提现（本期不做）',[X('CA',.5)+34,604]]];
+ ['8',C.rf,0,`M${L('PA1')},${Y('PA1',.75)} H${R('C1')}`,[225,Y('PA1',.75)],'退款给客户',[176,Y('PA1',.75)+20]],
+ ['2',C.in,0,`M${R('PA1')},${Y('PA1',.3)} H${L('HA1')}`,[560,Y('PA1',.3)],'按结算批次自动转',[560,Y('PA1',.3)-14]],
+ ['7',C.rf,0,`M${L('HA1')},${Y('HA1',.75)} H${R('PA1')}`,[560,Y('HA1',.75)],'退款的钱转回',[560,Y('HA1',.75)+22]],
+ ['3',C.in,0,`M${R('C2')},${Y('C2')} H${L('PA2')}`,[225,Y('C2')],'打款',[205,Y('C2')-12]],
+ ['4',C.adv,0,`M${R('PA2')},${Y('PA2')} H${L('HA2')}`,[560,Y('PA2')],'人工转',[560,Y('PA2')-14]],
+ ['9',C.rf,0,`M${L('PA3')},${Y('PA3')} H${R('AW')}`,[225,Y('PA3')],'退款手续费 / 补差额',[225,Y('PA3')-16]],
+ ['5',C.st,0,`M${R('HA1')},${Y('HA1',.3)} H${L('M')} M${R('HA2')},${Y('HA2',.2)} H${V5} V${Y('HA1',.3)} M${R('HA3')},${Y('HA3',.15)} H${V5} V${Y('HA2',.2)}`,[985,Y('HA1',.3)],'货款',[985,Y('HA1',.3)-14]],
+ ['6',C.st,0,`M${R('HA1')},${Y('HA1',.55)} H${V6} V${Y('CA',.35)} H${L('CA')} M${R('HA2')},${Y('HA2',.5)} H${V6} M${R('HA3')},${Y('HA3',.4)} H${V6}`,[985,Y('CA',.35)],'佣金',[985,Y('CA',.35)-14]],
+ ['10',C.adv,0,`M${L('CA')},${Y('CA',.6)} H${R('HA3')}`,[985,Y('CA',.6)],'垫资',[1000,Y('CA',.6)+4]],
+ ['11',C.adv,1,`M${R('HA1')},${Y('HA1',.9)} H${V11} V${Y('CA',.85)} H${L('CA')} M${R('HA2')},${Y('HA2',.85)} H${V11} M${R('HA3')},${Y('HA3',.85)} H${V11}`,[985,Y('CA',.85)],'垫资收回',[985,Y('CA',.85)+22]],
+ ['12',C.adv,0,`M${X('CA',.15)},${B('CA')} V670 H${X('PA3',.35)} V${B('PA3')}`,[560,670],'补备用金',[560,662-8]],
+ ['13',C.adv,1,`M${X('PA3',.65)},${B('PA3')} V650 H${X('CA',.3)} V${B('CA')}`,[700,650],'备用金回收',[700,642-6]],
+ ['14',C.wd,1,`M${X('M')},${T('M')} V${B('MB')}`,[X('M'),75],'商家提现',[X('M')+50,79]],
+ ['15',C.wd,1,`M${X('CA',.8)},${B('CA')} V${T('CB')}`,[X('CA',.8),665],'佣金提现（本期不做）',[X('CA',.8)-75,690]]];
 const ROWS={1:['线上客户 → 平台主账户 · 线上收单','客户线上付款到账（收入记实付，手续费记支出）','支付单','客户付款'],
  2:['平台主账户 · 线上收单 → Holding · 线上收单','按结算批次自动转到 Holding（多张支付单合一笔 = Σ 实付 − 手续费）','结算批次','Airwallex 自动'],
  3:['账期客户 → 平台主账户 · 账期还款','账期客户打款进来','认领单','客户转账'],
@@ -104,7 +105,7 @@ const g=document.getElementById('g'),ns='http://www.w3.org/2000/svg';
 const el=(t,a,txt)=>{const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;g.appendChild(e);return e};
 const defs=g.querySelector('defs');Object.entries(C).forEach(([k,c])=>{const m=document.createElementNS(ns,'marker');m.setAttribute('id','a'+k);m.setAttribute('viewBox','0 0 10 10');m.setAttribute('refX','9');m.setAttribute('refY','5');m.setAttribute('markerWidth','7');m.setAttribute('markerHeight','7');m.setAttribute('orient','auto-start-reverse');const p=document.createElementNS(ns,'path');p.setAttribute('d','M0,0 L10,5 L0,10 z');p.setAttribute('fill',c);m.appendChild(p);defs.appendChild(m)});
 /* 账户外框 */
-[['平台主账户 PA',270,60,230,580],['Holding 清分账户 HA',620,60,230,580]].forEach(([t,x,y,w,h])=>{el('rect',{x,y,width:w,height:h,rx:12,class:'acc'});el('text',{x:x+14,y:y+26,class:'acct'},t)});
+[['平台主账户 PA',270,60,230,575],['Holding 清分账户 HA',620,60,230,575]].forEach(([t,x,y,w,h])=>{el('rect',{x,y,width:w,height:h,rx:12,class:'acc'});el('text',{x:x+14,y:y+26,class:'acct'},t)});
 Object.entries(N).forEach(([k,n])=>{el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:n.c||'box'});el('text',{x:n.x+n.w/2,y:n.y+n.h/2,'text-anchor':'middle','dominant-baseline':'central',class:'boxt','font-weight':(k==='CA'||k==='M')?600:400},n.t)});
 const key=c=>Object.keys(C).find(k=>C[k]===c);
 E.forEach(([id,c,d,p,np,lb,lp])=>{el('path',{d:p,class:'e'+(d?' dash':''),stroke:c,'marker-end':`url(#a${key(c)})`,'data-id':id});el('text',{x:lp[0],y:lp[1],class:'lbl','data-id':id,'text-anchor':'middle'},lb);const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id',id);gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${c}"></circle><text x="${np[0]}" y="${np[1]}">${id}</text>`;gg.onclick=()=>pick(id);g.appendChild(gg)});
