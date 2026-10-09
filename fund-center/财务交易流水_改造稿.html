@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>财务交易流水 · 改造稿</title>
+<style>
+:root{--pri:#1677ff;--bd:#f0f0f0;--bd2:#d9d9d9;--tx:#1f1f1f;--tx2:#595959;--tx3:#8c8c8c;--bg:#f5f5f5;--ok:#52c41a;--warn:#fa8c16;--err:#ff4d4f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.5715 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--tx);background:var(--bg)}
+.layout{display:flex;min-height:100vh}
+.side{width:208px;background:#fff;border-right:1px solid var(--bd);flex-shrink:0;padding-bottom:20px}
+.logo{height:56px;display:flex;align-items:center;padding:0 20px;font-weight:600;font-size:15px;border-bottom:1px solid var(--bd)}
+.grp{padding:14px 20px 6px;color:var(--tx3);font-size:12px}
+.mi{padding:9px 20px 9px 36px;color:var(--tx2);cursor:default}
+.mi.on{color:var(--pri);background:#e6f4ff;border-right:3px solid var(--pri)}
+.main{flex:1;min-width:0}
+.hd{height:56px;background:#fff;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:12px}
+.hd .sp{flex:1}
+.content{padding:20px 24px 40px}
+.crumb{color:var(--tx3);font-size:12px}
+.title{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+.title h1{font-size:20px;font-weight:600}
+.title .sp{flex:1}
+.btn{height:30px;padding:0 14px;border:1px solid var(--bd2);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--tx)}
+.btn:hover{color:var(--pri);border-color:var(--pri)}
+.btn.p{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.p:hover{opacity:.88;color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.ipt{height:30px;border:1px solid var(--bd2);border-radius:6px;padding:0 10px;font-size:13px;background:#fff}
+.muted{color:var(--tx3)}
+.tag{display:inline-block;padding:0 7px;line-height:20px;border-radius:4px;font-size:12px;border:1px solid}
+.tag.green{color:#389e0d;background:#f6ffed;border-color:#b7eb8f}
+.tag.orange{color:#d46b08;background:#fff7e6;border-color:#ffd591}
+.tag.red{color:#cf1322;background:#fff1f0;border-color:#ffa39e}
+.tag.gray{color:var(--tx2);background:#fafafa;border-color:var(--bd2)}
+.tag.blue{color:#0958d9;background:#e6f4ff;border-color:#91caff}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:#fff;border-radius:8px;border:1px solid var(--bd)}
+.card-h{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.card-h b{font-size:15px}
+.card-h .sp{flex:1}
+.acct{font-family:Menlo,monospace;font-size:12px;color:var(--tx3)}
+.bal{padding:14px 18px 6px}
+.bal .k{color:var(--tx3);font-size:12px}
+.bal .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+table.t{width:100%;border-collapse:collapse}
+table.t td,table.t th{padding:9px 18px;border-top:1px solid var(--bd);text-align:left;font-variant-numeric:tabular-nums}
+table.t th{background:#fafafa;color:var(--tx2);font-weight:500;font-size:12px}
+table.t td.num,table.t th.num{text-align:right}
+tr.type{cursor:pointer}
+tr.type:hover td{background:#f5faff}
+tr.sum td{font-weight:600;background:#fafafa}
+tr.diff td{font-weight:600}
+.neg{color:var(--err)}
+.sub{font-size:12px;color:var(--tx3);margin-top:2px}
+.bar{height:6px;background:#f0f0f0;border-radius:3px;margin-top:6px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.bar .mk{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--tx2)}
+.adv{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.adv>div{padding:16px 18px;border-right:1px solid var(--bd)}
+.adv>div:last-child{border-right:0}
+.adv .v{font-size:22px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
+.link{color:var(--pri);cursor:pointer}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:760px;max-width:100vw;background:#fff;z-index:11;display:none;flex-direction:column;box-shadow:-6px 0 16px rgba(0,0,0,.08)}
+.dr-h{height:56px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--bd);font-size:16px;font-weight:600}
+.dr-h .x{margin-left:auto;cursor:pointer;color:var(--tx3);font-weight:400}
+.dr-b{flex:1;overflow:auto;padding:16px 24px}
+.dr-f{padding:12px 24px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.desc{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--bd);border-radius:6px;margin-bottom:16px}
+.desc>div{padding:10px 14px;border-right:1px solid var(--bd)}
+.desc>div:last-child{border-right:0}
+.desc dt{color:var(--tx3);font-size:12px}
+.desc dd{font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.modal{position:fixed;left:50%;top:12%;transform:translateX(-50%);width:520px;max-width:calc(100vw - 32px);background:#fff;border-radius:8px;z-index:13;display:none;flex-direction:column;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.mask2{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:12}
+.fr{margin-bottom:14px}
+.fr label{display:block;margin-bottom:6px;color:var(--tx2)}
+.fr label.req:before{content:"* ";color:var(--err)}
+.radio{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd2);border-radius:6px;margin-bottom:6px;cursor:pointer}
+.radio.on{border-color:var(--pri);background:#f5faff}
+.radio .sp{flex:1}
+.err{color:var(--err);font-size:12px;margin-top:4px;min-height:18px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.12);padding:9px 16px;border-radius:8px;z-index:20;display:none}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--bd);margin-bottom:12px}
+.tab{padding:8px 0;cursor:pointer;color:var(--tx2)}
+.tab.on{color:var(--pri);border-bottom:2px solid var(--pri)}
+@media (max-width:1280px){.grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<style>
+.ov{display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:#fff;border:1px solid var(--bd);border-left:3px solid #cf1322;border-radius:8px;padding:12px 18px;margin-bottom:16px}
+.ov b{font-weight:600;font-variant-numeric:tabular-nums}
+.ov .pos{color:#389e0d}.ov .neg{color:var(--err)}
+.flt{background:#fff;border:1px solid var(--bd);border-radius:8px 8px 0 0;padding:14px 18px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.flt .fi{display:flex;flex-direction:column;gap:6px}
+.flt .fi label{color:var(--tx3);font-size:12px}
+.flt .sp{flex:1}
+.tw{background:#fff;border:1px solid var(--bd);border-top:0;border-radius:0 0 8px 8px;overflow:auto}
+table.l{width:100%;border-collapse:collapse;white-space:nowrap}
+table.l th{background:#fafafa;color:var(--tx2);font-weight:500;text-align:left;padding:11px 12px;border-bottom:1px solid var(--bd)}
+table.l td{padding:10px 12px;border-bottom:1px solid var(--bd)}
+table.l .num{text-align:right;font-variant-numeric:tabular-nums}
+table.l tr.stale td{background:#fffbe6}
+.mono{font-family:Menlo,monospace;font-size:12px;color:var(--tx2)}
+.sumtbl{background:#fff;border:1px solid var(--bd);border-radius:8px;margin-bottom:16px;overflow:hidden}
+.sumtbl table{width:100%;border-collapse:collapse}
+.sumtbl th,.sumtbl td{padding:9px 16px;border-top:1px solid var(--bd);text-align:right;font-variant-numeric:tabular-nums}
+.sumtbl th{background:#fafafa;color:var(--tx2);font-weight:500;border-top:0}
+.sumtbl th:first-child,.sumtbl td:first-child{text-align:left}
+.sumtbl tr.tot td{font-weight:600;background:#fafafa}
+.pg{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:12px 18px;color:var(--tx3)}
+.site{color:#cf1322;border:1px solid #ffa39e;background:#fff1f0;border-radius:12px;padding:0 10px;font-size:12px;line-height:22px}
+</style>
+<div class="layout">
+  <div class="side">
+    <div class="logo">磐石 Aegis</div>
+    <div class="grp">出款管理</div><div class="mi">付款单出款</div><div class="mi">平台账户提现</div>
+    <div class="grp">渠道资金</div><a class="mi" style="display:block;text-decoration:none" href="资金总览_账户概览_改造稿.html">资金总览（多渠道）</a><a class="mi" style="display:block;text-decoration:none" href="渠道账户_改造稿.html">渠道账户</a><div class="mi on">财务交易流水</div><div class="mi">退款挂账</div>
+    <div class="grp">垫资管理</div><div class="mi">垫资单</div><div class="mi">垫资回收</div>
+  </div>
+  <div class="main">
+    <div class="hd"><span class="sp"></span><span class="muted">简体中文</span><span>沈亮</span></div>
+    <div class="content" id="ct"></div>
+  </div>
+</div>
+<div class="mask" id="mask" onclick="closeDr()"></div>
+<div class="drawer" id="dr"><div class="dr-h"><span id="drT"></span><span class="x" onclick="closeDr()">✕</span></div><div class="dr-b" id="drB"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const r2=n=>Math.round((+n+Number.EPSILON)*100)/100;
+const fmt=n=>(n<0?'-':'')+'S$'+Math.abs(r2(n)).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const tag=(t,c)=>`<span class="tag ${c}">${t}</span>`;
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)};
+const TODAY='2026-10-09';
+const ACC={PA:'平台主账户',HA:'Holding 清分账户',CA:'佣金账户'};
+const TYPES={PA:{FEE:'手续费备用金',TERM:'账期还款金额',ONL:'线上收单金额'},HA:{ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'},CA:{COM:'佣金金额'}};
+const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18550.30,TERM:6320,ADV:0},CA:{COM:16477.55}};
+const DOCT={TR:'资金调拨单',RF:'退款资金单',AD:'垫资单',JS:'结算单',CL:'认领单',int:'支付单'};
+const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],DEP:['入金','Deposit'],FEE:['费用','Fee']};
+let seq=0;const rid=()=>'ftx_'+(++seq).toString(36).padStart(4,'0')+'Kq'+((seq*7919)%9973).toString(36);
+/* acc,资金类型,时间,交易类型,对方,单据,金额,手续费,AW类型,订单号,批次,状态 */
+const R=[];
+const add=(acc,ft,time,what,cp,doc,amt,fee,aw,order,bat,st)=>R.push({id:rid(),acc,ft,time,what,cp,doc,amt:r2(amt),fee:fee||0,aw,order:order||'',bat:bat||'',st:st||'已结算'});
+// 平台主账户
+add('PA','FEE','2026-10-01 09:12','佣金账户转钱来补备用金','佣金账户','TR2610010001',1500,0,'TRF');
+add('PA','FEE','2026-10-03 14:20','退款时补上当初被扣的收单手续费','客户','RF2610030002',-3.36,0,'REF','SO2609280112');
+add('PA','FEE','2026-10-03 14:20','退款时 Airwallex 收的退款手续费','Airwallex','RF2610030002',-0.13,0,'REF','SO2609280112');
+add('PA','FEE','2026-10-05 23:00','Airwallex 扣的其他费用','Airwallex','Airwallex 账单 2026-09',-257.05,0,'FEE');
+add('PA','FEE','2026-10-08 16:40','退款时补上当初被扣的收单手续费','客户','RF2610080005',-2,0,'REF','SO2610060031');
+add('PA','FEE','2026-10-08 16:40','退款时 Airwallex 收的退款手续费','Airwallex','RF2610080005',-0.13,0,'REF','SO2610060031');
+add('PA','FEE','2026-10-09 09:30','退款时补上当初被扣的收单手续费','客户','RF2610090001',-2,0,'REF','SO2610080207');
+add('PA','FEE','2026-10-09 09:30','退款时 Airwallex 收的退款手续费','Airwallex','RF2610090001',-0.13,0,'REF','SO2610080207');
+add('PA','TERM','2026-10-06 11:05','账期客户打款进来','Golden Wok Restaurant','CL2610060001',4200,0,'DEP');
+add('PA','TERM','2026-10-06 15:30','人工把这笔钱转到 Holding','Holding 清分账户','TR2610060003',-4200,0,'TRF');
+add('PA','TERM','2026-10-07 10:12','账期客户打款进来','Sunny Bistro','CL2610070002',2650,0,'DEP');
+add('PA','TERM','2026-10-08 09:48','账期客户打款进来','Mei Ling Eatery','CL2610080001',5800,0,'DEP');
+add('PA','TERM','2026-10-08 14:00','人工把这笔钱转到 Holding','Holding 清分账户','TR2610080002',-2650,0,'TRF');
+add('PA','TERM','2026-10-09 08:55','账期客户打款进来','Rasa Cafe','CL2610090001',2650,0,'DEP');
+add('PA','ONL','2026-10-08 23:00','客户线上付款到账（已扣手续费）','客户 Ah Hock Kitchen','int_8kq2m4tz',100-2,2,'PAY','SO2610080207','bat_20261008_SGD_1');
+add('PA','ONL','2026-10-08 23:00','付款到账后自动转到 Holding','Holding 清分账户','int_8kq2m4tz',-98,0,'SPLIT','SO2610080207','bat_20261008_SGD_1');
+add('PA','ONL','2026-10-09 09:25','Holding 把退款要用的钱转回来','Holding 清分账户','RF2610090001',98,0,'REV','SO2610080207');
+add('PA','ONL','2026-10-09 09:30','退款给客户','客户 Ah Hock Kitchen','RF2610090001',-98,0,'REF','SO2610080207');
+add('PA','ONL','2026-10-09 09:10','客户线上付款到账（已扣手续费）','客户 Rasa Cafe','int_3pd7w2nb',196,4,'PAY','SO2610090014','bat_20261009_SGD_1');
+add('PA','ONL','2026-10-09 09:10','付款到账后自动转到 Holding','Holding 清分账户','int_3pd7w2nb',-196,0,'SPLIT','SO2610090014','bat_20261009_SGD_1','待结算');
+// Holding
+const orders=[['SO2610070101','int_a1x9',2380],['SO2610070102','int_b2k4',2650],['SO2610070103','int_c3m8',1810]];
+orders.forEach(([so,pi,a])=>add('HA','ONL','2026-10-07 23:00','平台主账户转来的线上付款','平台主账户',pi,a,0,'SPLIT',so,'bat_20261007_SGD_1'));
+[['SO2610080201','int_d4p2',2475],['SO2610080202','int_e5q7',2382],['SO2610080207','int_8kq2m4tz',98]].forEach(([so,pi,a])=>add('HA','ONL','2026-10-08 23:00','平台主账户转来的线上付款','平台主账户',pi,a,0,'SPLIT',so,'bat_20261008_SGD_1'));
+add('HA','ONL','2026-10-08 12:00','佣金账户补进来的平台补贴','佣金账户','JS2610050003',120,0,'TRF');
+add('HA','ONL','2026-10-08 12:00','结算时把货款打给商家','店铺 SH2026081200001','JS2610050003',-8250,0,'TRF');
+add('HA','ONL','2026-10-08 12:00','结算时佣金转到佣金账户','佣金账户','JS2610050003',-1456,0,'TRF');
+add('HA','ONL','2026-10-03 14:15','把退款要用的钱转回平台主账户','平台主账户','RF2610030002',-164.64,0,'REV','SO2609280112');
+add('HA','ONL','2026-10-08 16:35','把退款要用的钱转回平台主账户','平台主账户','RF2610080005',-98,0,'REV','SO2610060031');
+add('HA','ONL','2026-10-09 09:25','把退款要用的钱转回平台主账户','平台主账户','RF2610090001',-98,0,'REV','SO2610080207');
+add('HA','ONL','2026-10-06 23:00','平台主账户转来的线上付款','平台主账户','int_f6r1',412.50,0,'SPLIT','SO2610050088','bat_20261006_SGD_1','待结算');
+add('HA','TERM','2026-10-06 15:30','平台主账户人工转来的账期回款','平台主账户','TR2610060003',4200,0,'TRF');
+add('HA','TERM','2026-10-08 14:00','平台主账户人工转来的账期回款','平台主账户','TR2610080002',2650,0,'TRF');
+add('HA','TERM','2026-10-08 12:00','结算时把货款打给商家','店铺 ZZQA0722M1','JS2610050003',-2380,0,'TRF');
+add('HA','TERM','2026-10-08 12:00','结算时佣金转到佣金账户','佣金账户','JS2610050003',-420,0,'TRF');
+add('HA','ADV','2026-10-01 10:30','清分垫资：账期客户还没付钱，佣金账户先垫进来','佣金账户','AD2610010001',3800,0,'TRF');
+add('HA','ADV','2026-10-08 11:40','清分垫资：账期客户还没付钱，佣金账户先垫进来','佣金账户','AD2610080001',2400,0,'TRF');
+add('HA','ADV','2026-10-08 12:00','用垫的钱把货款打给商家','店铺 SH20260716476017','JS2610050003',-2380,0,'TRF');
+add('HA','ADV','2026-10-08 12:00','结算时佣金转到佣金账户','佣金账户','JS2610050003',-420,0,'TRF');
+add('HA','ADV','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户','TR2610090002',-488.09,0,'TRF');
+add('HA','TERM','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户','TR2610090002',-550,0,'TRF');
+add('HA','ONL','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户','TR2610090002',-908.36,0,'TRF');
+// 佣金账户
+add('CA','COM','2026-10-08 12:00','结算时佣金转进来','Holding 清分账户','JS2610050003',1876,0,'TRF');
+add('CA','COM','2026-10-09 10:05','Holding 把垫资收回来','Holding 清分账户','TR2610090002',1946.45,0,'TRF');
+add('CA','COM','2026-10-01 09:12','给平台主账户补备用金','平台主账户','TR2610010001',-1500,0,'TRF');
+add('CA','COM','2026-10-01 10:30','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610010001',-3800,0,'TRF');
+add('CA','COM','2026-10-08 11:40','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610080001',-2400,0,'TRF');
+add('CA','COM','2026-10-08 12:00','给 Holding 补平台补贴','Holding 清分账户','JS2610050003',-120,0,'TRF');
+const docType=d=>{const k=Object.keys(DOCT).find(p=>d.startsWith(p));return k?DOCT[k]:''};
+const daysAgo=t=>Math.floor((new Date(TODAY+'T23:59')-new Date(t.replace(' ','T')))/864e5);
+const stale=r=>r.st==='待结算'&&daysAgo(r.time)>=2;
+
+let Q={acc:'HA',ft:'',what:'',st:'',kw:''};
+function base(){return R.filter(r=>r.acc===Q.acc)}
+function rows(){return base().filter(r=>(!Q.ft||r.ft===Q.ft)&&(!Q.what||r.what===Q.what)&&(!Q.st||r.st===Q.st)&&(!Q.kw||[r.doc,r.order,r.id,r.bat].some(x=>x.toLowerCase().includes(Q.kw.toLowerCase())))).sort((a,b)=>b.time.localeCompare(a.time))}
+function summary(){
+  const ts=TYPES[Q.acc],b=base(),done=b.filter(r=>r.st==='已结算'),pend=b.filter(r=>r.st==='待结算');
+  const row=k=>{const fs=done.filter(r=>r.ft===k),inn=r2(fs.filter(r=>r.amt>0).reduce((s,r)=>s+r.amt,0)),out=r2(-fs.filter(r=>r.amt<0).reduce((s,r)=>s+r.amt,0)),fee=r2(fs.reduce((s,r)=>s+r.fee,0));return {k,name:ts[k],op:OPEN[Q.acc][k],inn,out,fee,end:r2(OPEN[Q.acc][k]+inn-out)}};
+  const rs=Object.keys(ts).map(row),T=k=>r2(rs.reduce((s,r)=>s+r[k],0));
+  return {rs,tot:{op:T('op'),inn:T('inn'),out:T('out'),fee:T('fee'),end:T('end')},pendN:pend.length,pendAmt:r2(pend.reduce((s,r)=>s+r.amt,0)),staleN:pend.filter(stale).length};
+}
+function render(){
+  const s=summary(),rs=rows(),whats=[...new Set(base().map(r=>r.what))];
+  const showBal=!Q.ft&&!Q.what&&!Q.st&&!Q.kw;
+  let bal={};if(showBal){let run=r2(Object.values(OPEN[Q.acc]).reduce((a,b)=>a+b,0));base().filter(r=>r.st==='已结算').sort((a,b)=>a.time.localeCompare(b.time)).forEach(r=>{run=r2(run+r.amt);bal[r.id]=run})}
+  $('ct').innerHTML=`<div class="crumb">渠道资金 / 财务交易流水</div>
+  <div class="title"><h1>财务交易流水</h1><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
+  <div class="flt" style="border-radius:8px;margin-bottom:16px"><div class="fi"><label>账户</label><select class="ipt" style="width:220px" onchange="Q={acc:this.value,ft:'',what:'',st:'',kw:''};render()">${Object.keys(ACC).map(k=>`<option value="${k}" ${Q.acc===k?'selected':''}>${ACC[k]}</option>`).join('')}</select></div>
+   <div class="fi"><label>结算时间</label><div style="display:flex;gap:6px;align-items:center"><input class="ipt" style="width:120px" value="2026-10-01"><span class="muted">→</span><input class="ipt" style="width:120px" value="2026-10-09"></div></div></div>
+  <div class="sumtbl"><table><thead><tr><th>资金类型（只算已结算）</th><th>期初</th><th>收入</th><th>支出</th><th>其中手续费</th><th>期末</th></tr></thead><tbody>
+   ${s.rs.map(r=>`<tr><td><span class="link" onclick="Q.ft='${r.k}';render()">${r.name}</span></td><td>${fmt(r.op)}</td><td style="color:#389e0d">${fmt(r.inn)}</td><td style="color:var(--err)">${fmt(r.out)}</td><td>${fmt(r.fee)}</td><td>${fmt(r.end)}</td></tr>`).join('')}
+   <tr class="tot"><td>合计</td><td>${fmt(s.tot.op)}</td><td>${fmt(s.tot.inn)}</td><td>${fmt(s.tot.out)}</td><td>${fmt(s.tot.fee)}</td><td>${fmt(s.tot.end)}</td></tr></tbody></table>
+   <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;gap:18px;align-items:center"><span>待结算 <b>${s.pendN}</b> 笔 · ${fmt(s.pendAmt)}</span>${s.staleN?`<span class="link" onclick="Q.st='待结算';render()">${tag('超 2 天未结算 '+s.staleN+' 笔','orange')}</span>`:''}</div></div>
+  <div class="flt">
+   <div class="fi"><label>资金类型</label><select class="ipt" style="width:150px" onchange="Q.ft=this.value;render()"><option value="">全部</option>${Object.entries(TYPES[Q.acc]).map(([k,v])=>`<option value="${k}" ${Q.ft===k?'selected':''}>${v}</option>`).join('')}</select></div>
+   <div class="fi"><label>交易类型</label><select class="ipt" style="width:260px" onchange="Q.what=this.value;render()"><option value="">全部</option>${whats.map(w=>`<option ${Q.what===w?'selected':''}>${w}</option>`).join('')}</select></div>
+   <div class="fi"><label>状态</label><select class="ipt" style="width:120px" onchange="Q.st=this.value;render()"><option value="">全部</option>${['已结算','待结算'].map(x=>`<option ${Q.st===x?'selected':''}>${x}</option>`).join('')}</select></div>
+   <div class="fi"><label>单据号 / 订单编号 / 渠道交易号 / 批次号</label><input class="ipt" style="width:280px" placeholder="请输入" value="${Q.kw}" onchange="Q.kw=this.value;render()"></div>
+   <button class="btn" onclick="Q={acc:Q.acc,ft:'',what:'',st:'',kw:''};render()">重 置</button><span class="sp"></span><button class="btn" onclick="toast('已从 Airwallex 同步最新流水')">手动同步</button><button class="btn" onclick="toast('已导出')">导出</button></div>
+  <div class="tw"><table class="l"><thead><tr><th>结算时间</th><th>资金类型</th><th>交易类型</th><th>单据</th><th>对方账户</th><th class="num">收入</th><th class="num">支出</th><th class="num">手续费</th>${showBal?'<th class="num">余额</th>':''}<th>订单编号</th><th>Airwallex 交易类型</th><th>渠道交易号</th><th>结算批次号</th><th>状态</th></tr></thead><tbody>
+  ${rs.map(r=>`<tr class="${stale(r)?'stale':''}"><td>${r.st==='已结算'?r.time:'<span class="muted">—</span>'}</td><td>${TYPES[r.acc][r.ft]}</td><td>${r.what}</td>
+   <td>${docType(r.doc)?`<div class="muted" style="font-size:12px">${docType(r.doc)}</div><span class="link" onclick="openDoc('${r.doc}')">${r.doc}</span>`:`<span class="muted">${r.doc}</span>`}</td>
+   <td>${r.cp}</td><td class="num" style="color:#389e0d">${r.amt>0?fmt(r.amt):''}</td><td class="num" style="color:var(--err)">${r.amt<0?fmt(-r.amt):''}</td><td class="num">${r.fee?fmt(r.fee):''}</td>${showBal?`<td class="num">${r.st==='已结算'?fmt(bal[r.id]):'<span class="muted">—</span>'}</td>`:''}
+   <td>${r.order?`<span class="link" onclick="toast('打开销售订单 ${r.order}')">${r.order}</span>`:'—'}</td><td>${AW[r.aw][0]}<div class="mono">${AW[r.aw][1]}</div></td><td class="mono">${r.id}</td><td class="mono">${r.bat||'—'}</td>
+   <td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}${stale(r)?`<div class="muted" style="font-size:12px">创建于 ${r.time.slice(5,10)}，超 2 天</div>`:''}</td></tr>`).join('')||'<tr><td colspan="14" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
+  </tbody></table><div class="pg">共 ${rs.length} 条</div></div>`;
+}
+let DR=null;
+function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
+function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
+function openDoc(doc){const fs=R.filter(r=>r.doc===doc).sort((a,b)=>a.time.localeCompare(b.time));
+  openDr(()=>({t:`${docType(doc)} ${doc}`,b:`<div class="muted" style="margin-bottom:10px">这张单据在三个账户里产生的全部流水</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>账户 · 资金类型</th><th>交易类型</th><th class="num">收入</th><th class="num">支出</th><th>状态</th></tr></thead><tbody>${fs.map(r=>`<tr><td>${r.time}</td><td>${ACC[r.acc]} · ${TYPES[r.acc][r.ft]}</td><td>${r.what}</td><td class="num">${r.amt>0?fmt(r.amt):''}</td><td class="num">${r.amt<0?fmt(-r.amt):''}</td><td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}</td></tr>`).join('')}</tbody></table>`}))}
+render();
+</script>
+</body>
+</html>
