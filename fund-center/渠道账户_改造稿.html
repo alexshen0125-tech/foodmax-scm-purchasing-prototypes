@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>渠道账户 · 改造稿</title>
+<style>
+:root{--pri:#1677ff;--bd:#f0f0f0;--bd2:#d9d9d9;--tx:#1f1f1f;--tx2:#595959;--tx3:#8c8c8c;--bg:#f5f5f5;--ok:#52c41a;--warn:#fa8c16;--err:#ff4d4f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.5715 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--tx);background:var(--bg)}
+.layout{display:flex;min-height:100vh}
+.side{width:208px;background:#fff;border-right:1px solid var(--bd);flex-shrink:0;padding-bottom:20px}
+.logo{height:56px;display:flex;align-items:center;padding:0 20px;font-weight:600;font-size:15px;border-bottom:1px solid var(--bd)}
+.grp{padding:14px 20px 6px;color:var(--tx3);font-size:12px}
+.mi{padding:9px 20px 9px 36px;color:var(--tx2);cursor:default}
+.mi.on{color:var(--pri);background:#e6f4ff;border-right:3px solid var(--pri)}
+.main{flex:1;min-width:0}
+.hd{height:56px;background:#fff;border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 24px;gap:12px}
+.hd .sp{flex:1}
+.content{padding:20px 24px 40px}
+.crumb{color:var(--tx3);font-size:12px}
+.title{display:flex;align-items:center;gap:12px;margin:4px 0 16px}
+.title h1{font-size:20px;font-weight:600}
+.title .sp{flex:1}
+.btn{height:30px;padding:0 14px;border:1px solid var(--bd2);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--tx)}
+.btn:hover{color:var(--pri);border-color:var(--pri)}
+.btn.p{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.p:hover{opacity:.88;color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.ipt{height:30px;border:1px solid var(--bd2);border-radius:6px;padding:0 10px;font-size:13px;background:#fff}
+.muted{color:var(--tx3)}
+.tag{display:inline-block;padding:0 7px;line-height:20px;border-radius:4px;font-size:12px;border:1px solid}
+.tag.green{color:#389e0d;background:#f6ffed;border-color:#b7eb8f}
+.tag.orange{color:#d46b08;background:#fff7e6;border-color:#ffd591}
+.tag.red{color:#cf1322;background:#fff1f0;border-color:#ffa39e}
+.tag.gray{color:var(--tx2);background:#fafafa;border-color:var(--bd2)}
+.tag.blue{color:#0958d9;background:#e6f4ff;border-color:#91caff}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:#fff;border-radius:8px;border:1px solid var(--bd)}
+.card-h{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--bd)}
+.card-h b{font-size:15px}
+.card-h .sp{flex:1}
+.acct{font-family:Menlo,monospace;font-size:12px;color:var(--tx3)}
+.bal{padding:14px 18px 6px}
+.bal .k{color:var(--tx3);font-size:12px}
+.bal .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+table.t{width:100%;border-collapse:collapse}
+table.t td,table.t th{padding:9px 18px;border-top:1px solid var(--bd);text-align:left;font-variant-numeric:tabular-nums}
+table.t th{background:#fafafa;color:var(--tx2);font-weight:500;font-size:12px}
+table.t td.num,table.t th.num{text-align:right}
+tr.type{cursor:pointer}
+tr.type:hover td{background:#f5faff}
+tr.sum td{font-weight:600;background:#fafafa}
+tr.diff td{font-weight:600}
+.neg{color:var(--err)}
+.sub{font-size:12px;color:var(--tx3);margin-top:2px}
+.bar{height:6px;background:#f0f0f0;border-radius:3px;margin-top:6px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.bar .mk{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--tx2)}
+.adv{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.adv>div{padding:16px 18px;border-right:1px solid var(--bd)}
+.adv>div:last-child{border-right:0}
+.adv .v{font-size:22px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
+.link{color:var(--pri);cursor:pointer}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:760px;max-width:100vw;background:#fff;z-index:11;display:none;flex-direction:column;box-shadow:-6px 0 16px rgba(0,0,0,.08)}
+.dr-h{height:56px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--bd);font-size:16px;font-weight:600}
+.dr-h .x{margin-left:auto;cursor:pointer;color:var(--tx3);font-weight:400}
+.dr-b{flex:1;overflow:auto;padding:16px 24px}
+.dr-f{padding:12px 24px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.desc{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--bd);border-radius:6px;margin-bottom:16px}
+.desc>div{padding:10px 14px;border-right:1px solid var(--bd)}
+.desc>div:last-child{border-right:0}
+.desc dt{color:var(--tx3);font-size:12px}
+.desc dd{font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.modal{position:fixed;left:50%;top:12%;transform:translateX(-50%);width:520px;max-width:calc(100vw - 32px);background:#fff;border-radius:8px;z-index:13;display:none;flex-direction:column;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.mask2{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:12}
+.fr{margin-bottom:14px}
+.fr label{display:block;margin-bottom:6px;color:var(--tx2)}
+.fr label.req:before{content:"* ";color:var(--err)}
+.radio{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd2);border-radius:6px;margin-bottom:6px;cursor:pointer}
+.radio.on{border-color:var(--pri);background:#f5faff}
+.radio .sp{flex:1}
+.err{color:var(--err);font-size:12px;margin-top:4px;min-height:18px}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff;box-shadow:0 6px 16px rgba(0,0,0,.12);padding:9px 16px;border-radius:8px;z-index:20;display:none}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--bd);margin-bottom:12px}
+.tab{padding:8px 0;cursor:pointer;color:var(--tx2)}
+.tab.on{color:var(--pri);border-bottom:2px solid var(--pri)}
+@media (max-width:1280px){.grid{grid-template-columns:1fr}.row2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<style>
+.ov{display:flex;align-items:center;gap:28px;background:#fff;border:1px solid var(--bd);border-left:3px solid #cf1322;border-radius:8px;padding:12px 18px;margin-bottom:16px}
+.ov b{font-weight:600}
+.flt{background:#fff;border:1px solid var(--bd);border-radius:8px 8px 0 0;padding:14px 18px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.flt .fi{display:flex;flex-direction:column;gap:6px}
+.flt .fi label{color:var(--tx3);font-size:12px}
+.flt .sp{flex:1}
+.tw{background:#fff;border:1px solid var(--bd);border-top:0;border-radius:0 0 8px 8px;overflow:auto}
+table.l{width:100%;border-collapse:collapse;white-space:nowrap}
+table.l th{background:#fafafa;color:var(--tx2);font-weight:500;text-align:left;padding:11px 12px;border-bottom:1px solid var(--bd)}
+table.l td{padding:12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+table.l td.num{text-align:right;font-variant-numeric:tabular-nums}
+.aid{font-family:Menlo,monospace;font-size:12px;background:#fafafa;border:1px solid var(--bd);border-radius:4px;padding:1px 6px;display:inline-block;max-width:190px;white-space:normal;word-break:break-all}
+.ck .s{font-size:12px;color:var(--tx3)}
+.op .link{margin-right:12px}
+.pg{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:12px 18px;color:var(--tx3)}
+.pg .cur{border:1px solid var(--pri);color:var(--pri);border-radius:4px;padding:0 8px}
+.site{color:#cf1322;border:1px solid #ffa39e;background:#fff1f0;border-radius:12px;padding:0 10px;font-size:12px;line-height:22px}
+</style>
+<div class="layout">
+  <div class="side">
+    <div class="logo">磐石 Aegis</div>
+    <div class="grp">出款管理</div><div class="mi">付款单出款</div><div class="mi">平台账户提现</div>
+    <div class="grp">渠道资金</div><a class="mi" style="display:block;text-decoration:none" href="资金总览_账户概览_改造稿.html">资金总览（多渠道）</a><div class="mi on">渠道账户</div><div class="mi">财务交易流水</div><div class="mi">退款挂账</div>
+    <div class="grp">垫资管理</div><div class="mi">垫资单</div><div class="mi">垫资回收</div>
+  </div>
+  <div class="main">
+    <div class="hd"><span class="sp"></span><span class="muted">简体中文</span><span>沈亮</span></div>
+    <div class="content" id="ct"></div>
+  </div>
+</div>
+<div class="mask" id="mask" onclick="closeDr()"></div>
+<div class="drawer" id="dr"><div class="dr-h"><span id="drT"></span><span class="x" onclick="closeDr()">✕</span></div><div class="dr-b" id="drB"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const $=id=>document.getElementById(id);
+const r2=n=>Math.round((+n+Number.EPSILON)*100)/100;
+const money=n=>'SGD '+r2(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const tag=(t,c)=>`<span class="tag ${c}">${t}</span>`;
+const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)};
+let SYNC='2026-10-09 02:30:01';
+const ROWS=[
+ {name:'SH20260713476005',id:'acct_RDKEILLXOb6jQriCE8DO8Q',bal:0,st:'已开通',ck:'2026-10-09 09:53:00',src:'商家中心同步',up:'2026-09-23 16:12:27'},
+ {name:'SH20260716476017',id:'acct_fImHMCOtNVyfinyAHxSK5A',bal:0,st:'已开通',ck:'2026-10-09 09:53:00',src:'商家中心同步',up:'2026-09-23 16:12:27'},
+ {name:'SH2026081200001',id:'acct_GtDEwVKOMpeH4hlrN3qWJw',bal:189.80,st:'已开通',ck:'2026-10-09 09:53:00',src:'商家中心同步',up:'2026-09-23 16:12:27'},
+ {name:'SH2026082800001',id:'acct_RQS9k-qcOP-2NCRzivM6mg',bal:0,st:'已开通',ck:'2026-10-09 09:53:00',src:'商家中心同步',up:'2026-09-23 16:12:28'},
+ {name:'ZZQA0722M1',id:'acct_hZ-SSedOPYexc7P4MohhzQ',bal:654.95,st:'已开通',ck:'2026-10-09 09:53:01',src:'商家中心同步',up:'2026-09-23 16:12:28'},
+ {name:'ZZQA0722S1',id:'acct_hZ-SSedOPYexc7P4MohhzQ',bal:654.95,st:'已开通',ck:'2026-10-09 09:53:01',src:'商家中心同步',up:'2026-09-23 16:12:28'},
+ {name:'ZZQA0722S2',id:'acct_hZ-SSedOPYexc7P4MohhzQ',bal:654.95,st:'已开通',ck:'2026-10-09 09:53:01',src:'商家中心同步',up:'2026-09-23 16:12:28'},
+ {name:'ZZQA0722S3',id:'acct_hZ-SSedOPYexc7P4MohhzQ',bal:654.95,st:'已开通',ck:'2026-10-09 09:53:01',src:'商家中心同步',up:'2026-09-23 16:12:28'}];
+const FLOW={
+ 'acct_GtDEwVKOMpeH4hlrN3qWJw':[['2026-10-08 12:00','结算款入账','JS2610050003',189.80]],
+ 'acct_hZ-SSedOPYexc7P4MohhzQ':[['2026-09-24 12:00','结算款入账','JS2609220001',1254.95],['2026-09-28 10:15','商家提现','WD2609280002',-600.00]]};
+let Q={st:'',bal:'',kw:''};
+function rows(){return ROWS.filter(r=>(!Q.st||r.st===Q.st)&&(!Q.bal||(Q.bal==='有'?r.bal>0:r.bal===0))&&(!Q.kw||[r.name,r.id].some(x=>x.toLowerCase().includes(Q.kw.toLowerCase()))))}
+function render(){
+  const rs=rows();
+  $('ct').innerHTML=`<div class="crumb">渠道资金 / 渠道账户</div>
+  <div class="title"><h1>渠道账户</h1><span class="muted">查看店铺与 Airwallex 账号的对应关系及渠道侧余额，供清分分拨前校验与对账使用。账号由商家团队 / 支付团队维护，我方只读。</span><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
+  <div class="ov"><b>账户概览</b><span>供应商子账户 <b>${ROWS.length}</b></span><span>持有币种 <b>1</b></span><span>最近同步 <b>${SYNC}</b></span></div>
+  <div class="flt">
+   <div class="fi"><label>开通状态</label><select class="ipt" style="width:140px" onchange="Q.st=this.value;render()"><option value="">全部</option>${['已开通','审核中','待补资料','已冻结'].map(x=>`<option ${Q.st===x?'selected':''}>${x}</option>`).join('')}</select></div>
+   <div class="fi"><label>币种</label><select class="ipt" style="width:140px"><option>全部币种</option><option>SGD</option></select></div>
+   <div class="fi"><label>有无余额</label><select class="ipt" style="width:140px" onchange="Q.bal=this.value;render()"><option value="">不限</option><option ${Q.bal==='有'?'selected':''}>有</option><option ${Q.bal==='无'?'selected':''}>无</option></select></div>
+   <div class="fi"><label>账户别名 / Account ID / 店铺编码</label><input class="ipt" style="width:240px" placeholder="请输入关键词" value="${Q.kw}" onchange="Q.kw=this.value;render()"></div>
+   <button class="btn" style="width:140px" onclick="Q={st:'',bal:'',kw:''};render()">重 置</button>
+   <span class="sp"></span><button class="btn p" onclick="refreshAll()">⟳ 全部刷新余额</button></div>
+  <div class="tw"><table class="l"><thead><tr><th>账户用途</th><th>账户名称</th><th>Account ID</th><th>余额（按币种）</th><th>开通状态</th><th>流水核对</th><th>来源</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
+  ${rs.map((r,i)=>`<tr><td>供应商子账户</td><td><span class="link" onclick="openDetail(${ROWS.indexOf(r)})">${r.name}</span></td><td><span class="aid">${r.id}</span></td>
+   <td><span class="muted" style="margin-right:40px">SGD</span><span style="font-variant-numeric:tabular-nums">${money(r.bal)}</span></td>
+   <td>${tag(r.st,r.st==='已开通'?'green':r.st==='已冻结'?'red':'orange')}</td>
+   <td class="ck">${tag('已核对','green')}<div class="s">已核对到 ${r.ck}</div><div class="s">正常</div></td>
+   <td class="muted">${r.src}</td><td>${r.up}</td>
+   <td class="op"><span class="link" onclick="openDetail(${ROWS.indexOf(r)})">详情</span><span class="link" onclick="openFlow(${ROWS.indexOf(r)})">看流水</span><span class="link" onclick="refreshOne(${ROWS.indexOf(r)})">刷新余额</span></td></tr>`).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
+  </tbody></table><div class="pg">共 ${rs.length} 条<span class="cur">1</span></div></div>`;
+}
+let DR=null;
+function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
+function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
+function openDetail(i){const r=ROWS[i];openDr(()=>({t:'子账户详情 · '+r.name,b:`<table class="t" style="border:1px solid var(--bd)"><tbody>
+ ${[['账户用途','供应商子账户'],['账户名称',r.name],['Account ID',`<span class="aid">${r.id}</span>`],['开通状态',tag(r.st,'green')],['余额',money(r.bal)],['流水核对','已核对到 '+r.ck+' · 正常'],['来源',r.src],['更新时间',r.up]].map(([k,v])=>`<tr><td class="muted" style="width:140px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>`}))}
+function openFlow(i){const r=ROWS[i],fs=FLOW[r.id]||[];openDr(()=>({t:'账户流水 · '+r.name,b:`<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>发生了什么</th><th>单据</th><th class="num">入</th><th class="num">出</th></tr></thead><tbody>${fs.length?fs.map(f=>`<tr><td>${f[0]}</td><td>${f[1]}</td><td><span class="link">${f[2]}</span></td><td class="num">${f[3]>0?money(f[3]):''}</td><td class="num">${f[3]<0?money(-f[3]):''}</td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:30px">暂无流水</td></tr>'}</tbody></table>`}))}
+function refreshOne(i){ROWS[i].up=now();render();toast('已刷新 '+ROWS[i].name+' 余额')}
+function refreshAll(){const t=now();ROWS.forEach(r=>r.up=t);SYNC=t;render();toast('已刷新全部余额')}
+function now(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `2026-10-09 ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
+render();
+</script>
+</body>
+</html>
