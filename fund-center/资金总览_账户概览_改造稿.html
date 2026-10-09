@@ -256,39 +256,32 @@ function openStores(){openDr(()=>{const g={};STORES.forEach(s=>(g[s[1]]=g[s[1]]|
  return {t:'店铺子账户',b:`<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>Airwallex 账号</th><th>店铺</th><th class="num">余额</th></tr></thead><tbody>${Object.entries(g).map(([id,x])=>`<tr><td class="acct">${id}</td><td>${x.shops.join('<br>')}${x.shops.length>1?' '+tag('共用账号','orange'):''}</td><td class="num">${fmt(x.bal)}</td></tr>`).join('')}</tbody></table>`}})}
 /* ===== 垫资收回 ===== */
 let BK={};
-const BKS=['ONL','TERM','ADV'];
-function openBack(){BK={sel:{},amt:{}};$('mdT').textContent='垫资收回';paintBack();$('mdF').innerHTML=`<span class="muted" style="margin-right:auto" id="b_sum"></span><button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitBack()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex';chkBack()}
+const ORDER=['ADV','TERM','ONL'];
+function alloc(a){const out=[];let left=r2(a);ORDER.forEach(k=>{const b=tSum('HA',k),x=r2(Math.min(left,Math.max(0,b)));out.push([k,x,b]);left=r2(left-x)});return {out,left}}
+function openBack(){BK={amt:''};$('mdT').textContent='垫资收回';paintBack();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitBack()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
 function paintBack(){
   const cap=advCap();
   $('mdB').innerHTML=`<div class="desc" style="grid-template-columns:1fr 1fr"><div><dt>可收回上限</dt><dd>${fmt(cap)}</dd></div><div><dt>转入</dt><dd style="font-size:14px">佣金账户</dd></div></div>
-  <div class="fr"><label class="req">从 Holding 哪几类钱转出（可多选）</label>
-  ${BKS.map(k=>`<div class="radio ${BK.sel[k]?'on':''}" style="cursor:default"><input type="checkbox" ${BK.sel[k]?'checked':''} onchange="BK.sel['${k}']=this.checked;if(!this.checked)BK.amt['${k}']='';paintBack();chkBack()"><span style="width:110px">${D.HA.types[k].name}</span><span class="muted" style="width:150px">余额 ${fmt(tSum('HA',k))}</span><input class="ipt" style="flex:1" placeholder="${BK.sel[k]?'转出金额':'勾选后填写'}" ${BK.sel[k]?'':'disabled'} value="${BK.amt[k]||''}" oninput="BK.amt['${k}']=this.value;chkBack()"></div><div class="err" id="b_e_${k}" style="margin:-4px 0 4px"></div>`).join('')}
-  <div class="err" id="b_e"></div></div>
-  <div class="fr"><label>备注</label><input class="ipt" style="width:100%" placeholder="选填"></div>`;
+  <div class="fr"><label class="req">收回金额（SGD）</label><input class="ipt" id="b_a" style="width:100%" value="${BK.amt}" placeholder="最多 ${fmt(cap)}" oninput="BK.amt=this.value;chkBack()"><div class="err" id="b_e"></div></div>
+  <div class="fr"><label>从 Holding 扣减（按 平台垫资 → 账期还款 → 线上收单 顺序自动扣）</label><div id="b_al"></div></div>
+  <div class="fr"><label>备注</label><input class="ipt" style="width:100%" placeholder="选填"></div>`;chkBack();
 }
 function chkBack(){
-  const cap=advCap();let ok=true,tot=0,any=false;
-  BKS.forEach(k=>{const el=$('b_e_'+k);let e='';
-    if(BK.sel[k]){const v=BK.amt[k];const a=parseFloat(v);
-      if(v===undefined||v===''){ok=false}
-      else if(!(a>0)){e='请输入大于 0 的金额';ok=false}
-      else if(a>tSum('HA',k)){e=`超过该类余额 ${fmt(tSum('HA',k))}`;ok=false}
-      else{tot=r2(tot+a);any=true}}
-    if(el)el.textContent=e});
-  let e='';
-  if(!BKS.some(k=>BK.sel[k])){e='';ok=false}
-  else if(tot>cap){e=`合计 ${fmt(tot)} 超过可收回上限 ${fmt(cap)}（累计垫资 ${fmt(advIn())} − 已收回 ${fmt(advBack())}）`;ok=false}
-  if($('b_e'))$('b_e').textContent=e;
-  if($('b_sum'))$('b_sum').innerHTML=`本次合计 <b style="color:${tot>cap?'var(--err)':'var(--tx)'}">${fmt(tot)}</b> / 上限 ${fmt(cap)}`;
-  return ok&&any;
+  const cap=advCap(),v=BK.amt,a=parseFloat(v),{out,left}=alloc(a>0?a:0);let e='';
+  if(v!==''&&!(a>0))e='请输入大于 0 的金额';
+  else if(a>cap)e=`超过可收回上限 ${fmt(cap)}（累计垫资 ${fmt(advIn())} − 已收回 ${fmt(advBack())}）`;
+  else if(left>0)e=`Holding 三类余额合计不足，还差 ${fmt(left)}`;
+  $('b_e').textContent=e;
+  $('b_al').innerHTML=`<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>顺序</th><th>资金类型</th><th class="num">当前余额</th><th class="num">本次扣减</th><th class="num">扣后余额</th></tr></thead><tbody>${out.map(([k,x,b],i)=>`<tr><td>${i+1}</td><td>${D.HA.types[k].name}</td><td class="num">${fmt(b)}</td><td class="num">${x?'<b>'+fmt(x)+'</b>':'—'}</td><td class="num">${fmt(r2(b-x))}</td></tr>`).join('')}<tr class="sum"><td></td><td>合计</td><td></td><td class="num">${fmt(r2(out.reduce((s,o)=>s+o[1],0)))}</td><td></td></tr></tbody></table>`;
+  return !e&&a>0;
 }
 function submitBack(){
-  if(!chkBack()){if(!BKS.some(k=>BK.sel[k]))$('b_e').textContent='请至少勾选一类并填写金额';else if(!$('b_e').textContent)$('b_e').textContent='请填写已勾选类型的转出金额';return}
-  const parts=BKS.filter(k=>BK.sel[k]).map(k=>[k,r2(parseFloat(BK.amt[k]))]),tot=r2(parts.reduce((s,p)=>s+p[1],0)),no='TR26100900'+String(10+ADV.back.length);
+  if(!chkBack()){if(!$('b_e').textContent)$('b_e').textContent='请输入收回金额';return}
+  const a=r2(parseFloat(BK.amt)),parts=alloc(a).out.filter(o=>o[1]>0).map(o=>[o[0],o[1]]),no='TR26100900'+String(10+ADV.back.length);
   ADV.back.push({no,time:NOW,parts});
-  parts.forEach(([k,a])=>D.HA.types[k].flows.push(F(NOW,'垫资收回 → 佣金账户',no,-a)));D.HA.awx=r2(D.HA.awx-tot);
-  D.CA.types.COM.flows.push(F(NOW,'Holding 把垫资收回来',no,tot));D.CA.awx=r2(D.CA.awx+tot);
-  closeMd();render();toast(`已生成资金调拨单 ${no}（垫资收回 ${fmt(tot)}，${parts.length} 类），待审批`)}
+  parts.forEach(([k,x])=>D.HA.types[k].flows.push(F(NOW,'垫资收回 → 佣金账户',no,-x)));D.HA.awx=r2(D.HA.awx-a);
+  D.CA.types.COM.flows.push(F(NOW,'Holding 把垫资收回来',no,a));D.CA.awx=r2(D.CA.awx+a);
+  closeMd();render();toast(`已生成资金调拨单 ${no}（垫资收回 ${fmt(a)}），待审批`)}
 function closeMd(){$('mask2').style.display='none';$('md').style.display='none'}
 function refreshAll(){NOW='2026-10-09 '+new Date().toTimeString().slice(0,5);render();toast('已刷新 Airwallex 余额')}
 render();
