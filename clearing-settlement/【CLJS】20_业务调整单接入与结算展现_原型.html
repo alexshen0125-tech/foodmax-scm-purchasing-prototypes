@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>磐石 Aegis · 业务调整单接入与结算展现（CLJS-20 原型）</title>
 <!--
-  对应 PRD：【CLJS】20_业务调整单接入与结算展现_prd.md v1.0
+  对应 PRD：【CLJS】20_业务调整单接入与结算展现_prd.md v1.3（§6.6 新页）
   基线：2026-09-15 实读 aegis-te 现网三处页面（收入单据列表+详情抽屉 / 结算单列表 / 结算单详情概览+罚款单 Tab）
-  本原型只画本期改动：① 收入单据 → 收支单据（四类 + 方向） ② 结算单列表加「业务调整」列 ③ 结算单详情概览③改「其他收支」+ 新增「业务调整单」Tab
+  本原型只画本期改动：① 收入单据 → 收支单据（四类 + 方向） ② 结算单列表加「业务调整」列 ③ 结算单详情概览③改「其他收支」+ 新增「业务调整单」Tab ④ 清分与结算 › 业务调整单（新页，只读）
 -->
 <style>
 :root{
@@ -73,7 +73,12 @@ tbody tr:hover{background:#f7f9fc}
 .t-fine{background:var(--danger-soft);color:var(--danger)}.t-adj{background:#fff1e6;color:#b45309}
 .d-s2p{background:var(--danger-soft);color:var(--danger)}.d-p2s{background:var(--success-soft);color:var(--success)}
 .s-pending{background:var(--warn-soft);color:var(--warn)}.s-settled{background:var(--success-soft);color:var(--success)}
-.s-none{background:#f0f2f6;color:var(--sub)}
+.s-none{background:#f0f2f6;color:var(--sub)}.s-fail{background:var(--danger-soft);color:var(--danger)}
+.k-acc{background:#f0f2f6;color:var(--sub)}
+#page-adjs table.data th:first-child,#page-adjs table.data td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 var(--line-soft)}
+#page-adjs table.data th:last-child,#page-adjs table.data td:last-child{position:sticky;right:0;background:#fff;z-index:2;box-shadow:-1px 0 0 var(--line-soft)}
+#page-adjs table.data thead th:first-child,#page-adjs table.data thead th:last-child{background:#f6f8fb;z-index:3}
+#page-adjs tfoot td{background:#f6f8fb;font-weight:750;border-top:1px solid var(--line)}.k-inv{background:#eaf2ff;color:#2858a5}
 .hl{outline:2px solid #ffd08a;outline-offset:-2px;background:#fffaf2 !important}
 .pagination{display:flex;align-items:center;padding:12px 18px;color:var(--sub);font-size:12px}
 .pagination .pages{margin-left:auto;display:flex;gap:5px}
@@ -140,6 +145,7 @@ tbody tr:hover{background:#f7f9fc}
     </div>
     <div class="nav-group"><div class="nav-title">清分与结算</div>
       <div class="nav-item" data-page="bills"><span class="ic">💰</span>结算单<span class="new">改</span></div>
+      <div class="nav-item" data-page="adjs"><span class="ic">⇄</span>业务调整单<span class="new">新</span></div>
       <div class="nav-item"><span class="ic">🧾</span>佣金开票</div>
       <div class="nav-item"><span class="ic">🕐</span>付款单</div>
     </div>
@@ -227,6 +233,45 @@ tbody tr:hover{background:#f7f9fc}
       <div class="foot">© 2026 磐石 Aegis · CLJS-20 原型</div>
     </section>
 
+    <!-- ========== 页面 4：业务调整单（新增 · 只读） ========== -->
+    <section class="page" id="page-adjs">
+      <div class="crumb">清分与结算 / 业务调整单</div>
+      <div class="page-head">
+        <div><h1>业务调整单<span class="chg">新</span></h1><div class="desc">运营平台推送过来的补钱 / 扣钱单据，按单查看接入后进了哪张结算单、开没开票。本页只读：建单、作废、纠正都在运营平台。</div></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="filter">
+          <div class="filter-item wide"><label>调整单号 / 关联业务单号 / 原发票号</label><input class="ipt" id="a-kw" placeholder="输入单号可跨日期查询"></div>
+          <div class="filter-item"><label>店铺</label>
+            <select class="sel" id="a-shop"><option value="">全部店铺</option><option value="SH20260713476005">Foodmax测试店铺</option><option value="SH20260715476017">小沈小卖部</option></select></div>
+          <div class="filter-item"><label>调整类型</label><select class="sel" id="a-type"><option value="">全部</option></select></div>
+          <div class="filter-item"><label>方向</label>
+            <select class="sel" id="a-dir"><option value="">全部</option><option value="S2P">店铺 → 平台（扣商家）</option><option value="P2S">平台 → 店铺（补商家）</option></select></div>
+          <div class="filter-item"><label>抵扣方式</label>
+            <select class="sel" id="a-ded"><option value="">全部</option><option value="ACCOUNT">账扣</option><option value="INVOICE">票扣</option></select></div>
+          <div class="filter-item"><label>结算状态</label>
+            <select class="sel" id="a-st"><option value="">全部</option><option value="PENDING">待结算</option><option value="SETTLED">已结算</option></select></div>
+          <div class="filter-item"><label>开票状态</label>
+            <select class="sel" id="a-inv"><option value="">全部</option><option value="不开票">不开票</option><option value="待开票">待开票</option><option value="已开票">已开票</option><option value="开票失败">开票失败</option></select></div>
+          <div class="filter-item"><label>生效时间</label>
+            <div style="display:flex;gap:6px;align-items:center"><input class="ipt" type="date" id="a-from" value="2026-08-17"><span style="color:var(--faint)">~</span><input class="ipt" type="date" id="a-to" value="2026-09-15"></div></div>
+          <div class="acts"><button class="btn primary" id="a-go">查 询</button><button class="btn" id="a-reset">重 置</button><button class="btn" id="a-export">导 出</button></div>
+        </div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr>
+            <th>调整单号</th><th>结算状态</th><th>结算单号</th><th>开票状态</th><th>店铺名称</th><th>店铺编码</th><th>调整类型</th><th>抵扣方式</th>
+            <th class="num">含税金额</th><th class="num">未税金额</th><th class="num">GST</th><th>收入方向</th>
+            <th>关联业务单号</th><th>原发票号</th><th>生效时间</th><th>接入时间</th><th>操作</th>
+          </tr></thead>
+          <tbody id="adjs-rows"></tbody>
+          <tfoot id="adjs-foot"></tfoot>
+        </table></div>
+        <div class="pagination"><span id="adjs-total">共 0 条</span><div class="pages"><button class="page-btn">‹</button><button class="page-btn active">1</button><button class="page-btn">›</button></div></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · CLJS-20 原型 —— 数据与「收支单据」类型 = 业务调整同源，本页只多出调整专属字段与筛选</div>
+    </section>
+
     <!-- ========== 页面 3：结算单详情 ========== -->
     <section class="page" id="page-bill">
       <div class="crumb"><span class="btn link" data-page="bills">结算单</span> › 结算单详情</div>
@@ -277,7 +322,7 @@ tbody tr:hover{background:#f7f9fc}
             <div class="sum"><span>合计 · 结算净额</span><span class="v">S$273.83 <span class="ok" style="font-size:11px">✓ 恒等式通过</span></span></div>
           </div>
           <div class="note-bar">
-            四类其他收支均以上游快照为准，结算单不重新计算业务金额；店铺罚款与业务调整不创建开票任务。业务调整为<b>账扣</b>：不区分未税与 GST，且不调整任何已开发票的票面金额。
+            四类其他收支均以上游快照为准，结算单不重新计算业务金额；店铺罚款不创建开票任务。业务调整按抵扣方式分流：<b>账扣</b>不区分未税与 GST、不开票；<b>票扣</b>按原票税率拆税并开票。
             业务调整净额 ＝ 正向 232.59 − 负向 78.50 ＝ <b>+S$154.09</b>；结算净额 ＝ 应付店铺 203.83 − 9.21 − 34.88 − 40.00 + 154.09 ＝ <b>S$273.83</b>。
           </div>
         </div>
@@ -285,14 +330,14 @@ tbody tr:hover{background:#f7f9fc}
         <!-- 业务调整单 Tab -->
         <div id="tab-adj" style="display:none">
           <div class="note-bar" style="background:#fff;border-bottom:1px solid var(--line-soft)">
-            业务调整单按上游原单展示，不合单、不拆单、不重新计算金额，也不创建开票任务。正向为平台付给店铺，负向为向店铺扣回。<b>抵扣方式恒为账扣</b>——不动任何发票票面；货款 / 佣金金额错误须走原票冲抵或重新开票，不由本表承接。
+            业务调整单按上游原单展示，不合单、不拆单、不重新计算金额。正向为平台付给店铺，负向为向店铺扣回。<b>账扣</b>不开票；<b>票扣</b>按原票税率拆税并开票。
           </div>
           <div class="filter" style="padding:12px 18px">
             <div class="filter-item wide"><label>调整单号</label><input class="ipt" id="adj-kw" placeholder="搜索单号"></div>
             <div class="acts" style="margin-top:21px"><button class="btn primary" id="adj-go">查 询</button></div>
           </div>
           <div class="table-wrap"><table class="data">
-            <thead><tr><th>调整单号</th><th>调整类型</th><th>关联业务单号</th><th>生效时间</th><th class="num">金额</th><th class="num">未税金额</th><th>收入方向</th><th>发票</th><th>结算状态</th></tr></thead>
+            <thead><tr><th>调整单号</th><th>调整类型</th><th>抵扣方式</th><th>关联业务单号</th><th>原发票号</th><th>生效时间</th><th class="num">金额</th><th class="num">未税金额</th><th class="num">GST</th><th>收入方向</th><th>开票状态</th><th>结算状态</th></tr></thead>
             <tbody id="adj-rows"></tbody>
           </table></div>
           <div class="pagination"><span id="adj-total">共 3 行</span></div>
@@ -328,19 +373,29 @@ const INCOME = [
   {no:'PI2026091500003', type:'ADJ', src:'ADJ-SG-20260915-002', rel:'AS-26091501', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
    wh:'', at:'2026-09-15 10:22:31', excl:186.00, gst:0, incl:186.00, dir:'P2S', st:'SETTLED', inv:'不开票',
    bill:'ST20260915-SH20260713476005', ing:'2026-09-15 10:22:35',
-   adjType:{code:'ADJ-COMP', cn:'系统错账补款', en:'System Error Comp.'}, merchant:'M2026071400002'},
+   adjType:{code:'ADJ-COMP', cn:'系统错账补款', en:'System Error Comp.'}, merchant:'M2026071400002', ded:'ACCOUNT'},
   {no:'PI2026091500002', type:'ADJ', src:'ADJ-SG-20260915-001', rel:'QC-26091502', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
    wh:'', at:'2026-09-15 09:40:12', excl:78.50, gst:0, incl:78.50, dir:'S2P', st:'SETTLED', inv:'不开票',
    bill:'ST20260915-SH20260713476005', ing:'2026-09-15 09:40:18',
-   adjType:{code:'ADJ-QC', cn:'质量问题扣款', en:'Quality Deduction'}, merchant:'M2026071400002'},
+   adjType:{code:'ADJ-QC', cn:'质量问题扣款', en:'Quality Deduction'}, merchant:'M2026071400002', ded:'ACCOUNT'},
   {no:'PI2026091500001', type:'ADJ', src:'ADJ-SG-20260915-003', rel:'', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
    wh:'', at:'2026-09-15 08:05:00', excl:46.59, gst:0, incl:46.59, dir:'P2S', st:'SETTLED', inv:'不开票',
    bill:'ST20260915-SH20260713476005', ing:'2026-09-15 08:05:06',
-   adjType:{code:'ADJ-PROMO', cn:'平台活动补贴', en:'Campaign Subsidy'}, merchant:'M2026071400002'},
-  {no:'PI2026091400006', type:'ADJ', src:'ADJ-SG-20260914-007', rel:'SH20260914012', shop:'小沈小卖部', shopCode:'SH20260715476017',
-   wh:'', at:'2026-09-14 16:12:44', excl:300.00, gst:0, incl:300.00, dir:'S2P', st:'PENDING', inv:'不开票',
-   bill:'', ing:'2026-09-14 16:12:50',
-   adjType:{code:'ADJ-DELAY', cn:'逾期送货违约金', en:'Late Delivery Penalty'}, merchant:'M2026071500003'},
+   adjType:{code:'ADJ-PROMO', cn:'平台活动补贴', en:'Campaign Subsidy'}, merchant:'M2026071400002', ded:'ACCOUNT'},
+  {no:'PI2026091500006', type:'ADJ', src:'ADJ-SG-20260915-007', rel:'SH20260915012', shop:'小沈小卖部', shopCode:'SH20260715476017',
+   wh:'', at:'2026-09-15 16:12:44', excl:300.00, gst:0, incl:300.00, dir:'S2P', st:'PENDING', inv:'不开票',
+   bill:'', ing:'2026-09-15 16:12:50',
+   adjType:{code:'ADJ-DELAY', cn:'逾期送货违约金', en:'Late Delivery Penalty'}, merchant:'M2026071500003', ded:'ACCOUNT'},
+  {no:'PI2026091500004', type:'ADJ', src:'ADJ-SG-20260915-004', rel:'', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+   wh:'', at:'2026-09-15 15:30:00', excl:275.23, gst:24.77, incl:300.00, dir:'S2P', st:'PENDING', inv:'已开票',
+   bill:'', ing:'2026-09-15 15:30:04', adjInv:'SVC-INV-2026-000131', invAt:'2026-09-15 15:31:10',
+   adjType:{code:'ADJ-SVC', cn:'服务费调整', en:'Service Fee Adjustment'}, merchant:'M2026071400002',
+   ded:'INVOICE', invCat:'SVC', origInv:'SVC-INV-2026-000123', taxRate:0.09},
+  {no:'PI2026091500005', type:'ADJ', src:'ADJ-SG-20260915-005', rel:'', shop:'小沈小卖部', shopCode:'SH20260715476017',
+   wh:'', at:'2026-09-15 11:05:20', excl:91.74, gst:8.26, incl:100.00, dir:'P2S', st:'PENDING', inv:'开票失败',
+   bill:'', ing:'2026-09-15 11:05:26',
+   adjType:{code:'ADJ-RPL', cn:'补货货款调整', en:'Replenishment Adjustment'}, merchant:'M2026071500003',
+   ded:'INVOICE', invCat:'RPL', origInv:'RPL-INV-2026-000088', taxRate:0.09},
   {no:'PI2026091000001', type:'REPL', src:'RPL-20260910-001', rel:'DL260910020002', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
    wh:'新加坡测试仓', at:'2026-09-10 11:30:24', excl:10.00, gst:0.90, incl:10.90, dir:'S2P', st:'SETTLED', inv:'已开票',
    bill:'ST20260910-SH20260713476005', ing:'2026-09-10 13:10:59', merchant:'M2026071400002'},
@@ -372,6 +427,14 @@ function toast(msg){const w=$('#toast-wrap');const d=document.createElement('div
 function dirPill(dir){
   return dir==='P2S' ? '<span class="pill d-p2s">平台 → 店铺</span>' : '<span class="pill d-s2p">店铺 → 平台</span>';
 }
+const INV_CAT = {SVC:'服务费票', RPL:'自营补货票', SUP:'耗材采购票'};
+function dedPill(r){
+  return r.ded==='INVOICE' ? `<span class="pill k-inv">票扣 · ${INV_CAT[r.invCat]}</span>` : '<span class="pill k-acc">账扣</span>';
+}
+function invPill(v){
+  const c = {'不开票':'s-none','待开票':'s-pending','已开票':'s-settled','开票失败':'s-fail'}[v] || 's-none';
+  return `<span class="pill ${c}">${v}</span>`;
+}
 function incomeRows(){
   const kw=$('#f-kw').value.trim().toLowerCase(), type=$('#f-type').value, dir=$('#f-dir').value,
         shop=$('#f-shop').value, st=$('#f-st').value;
@@ -391,11 +454,53 @@ function incomeRows(){
       <td class="num">${excl}</td><td class="num">${money(r.gst)}</td><td class="num">${amt}</td>
       <td>${dirPill(r.dir)}</td>
       <td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td>
-      <td><span class="pill ${r.inv==='不开票'?'s-none':'s-settled'}">${r.inv}</span></td>
+      <td>${invPill(r.inv)}</td>
       <td class="mono">${r.bill||'—'}</td><td>${r.ing}</td>
       <td><button class="btn link" data-view="${r.no}">查看</button></td>
     </tr>`;}).join('') || `<tr><td colspan="16"><div class="empty"><b>没有符合筛选条件的单据</b>换个条件试试</div></td></tr>`;
   $('#income-total').textContent = `共 ${rows.length} 条`;
+}
+
+function fillAdjTypes(){
+  const seen = {};
+  INCOME.filter(r=>r.type==='ADJ').forEach(r=>{ seen[r.adjType.code]=r.adjType.cn; });
+  $('#a-type').innerHTML = '<option value="">全部</option>' + Object.keys(seen).map(c=>`<option value="${c}">${esc(seen[c])}</option>`).join('');
+}
+function adjsRows(){
+  const kw=$('#a-kw').value.trim().toLowerCase(), shop=$('#a-shop').value, tp=$('#a-type').value, dir=$('#a-dir').value,
+        ded=$('#a-ded').value, st=$('#a-st').value, inv=$('#a-inv').value, from=$('#a-from').value, to=$('#a-to').value;
+  if(!kw){
+    if(!from||!to){ toast('未输入单号时，生效时间不能为空'); return; }
+    if((new Date(to)-new Date(from))/864e5 > 366){ toast('生效时间最多查询 366 天'); return; }
+  }
+  const all = INCOME.filter(r=>r.type==='ADJ');
+  const rows = all.filter(r =>
+    (!shop||r.shopCode===shop) && (!tp||r.adjType.code===tp) && (!dir||r.dir===dir) && (!ded||r.ded===ded) &&
+    (!st||r.st===st) && (!inv||r.inv===inv) &&
+    (kw ? (r.src.toLowerCase().startsWith(kw) || (r.rel||'').toLowerCase().startsWith(kw) || (r.origInv||'').toLowerCase().startsWith(kw))
+        : (r.at.slice(0,10)>=from && r.at.slice(0,10)<=to)))
+    .sort((a,b)=> b.at.localeCompare(a.at) || b.src.localeCompare(a.src));
+  const empty = !all.length ? '<b>暂无业务调整单</b>'
+    : `<b>没有符合筛选条件的业务调整单</b>${kw?'换个条件试试':`当前只查生效时间 ${from} ~ ${to}，可改日期或直接输入单号查`}`;
+  $('#adjs-rows').innerHTML = rows.map(r=>{
+    const s = r.dir==='P2S'?1:-1, cls = s>0?'pos':'neg';
+    return `<tr>
+      <td class="mono">${r.src}</td>
+      <td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td>
+      <td class="mono">${r.bill?`<button class="btn link" data-bill="${r.bill}">${r.bill}</button>`:'—'}</td>
+      <td>${invPill(r.inv)}</td>
+      <td>${esc(r.shop)}</td><td class="mono">${r.shopCode}</td>
+      <td>${esc(r.adjType.cn)}</td><td>${dedPill(r)}</td>
+      <td class="num ${cls}">${signed(s*r.incl)}</td><td class="num ${cls}">${signed(s*r.excl)}</td><td class="num">${money(r.gst)}</td>
+      <td>${dirPill(r.dir)}</td>
+      <td class="mono">${r.rel||'—'}</td><td class="mono">${r.origInv||'—'}</td><td>${r.at}</td><td>${r.ing}</td>
+      <td><button class="btn link" data-view="${r.no}">详情</button></td>
+    </tr>`;}).join('') || `<tr><td colspan="17"><div class="empty">${empty}</div></td></tr>`;
+  if(shop && rows.length){
+    const de = rows.filter(r=>r.dir==='S2P').reduce((a,r)=>a+r.incl,0), ad = rows.filter(r=>r.dir==='P2S').reduce((a,r)=>a+r.incl,0), net = ad-de;
+    $('#adjs-foot').innerHTML = `<tr><td>本店铺合计</td><td colspan="15">扣商家 <span class="neg">${de?signed(-de):money(0)}</span>　　补商家 <span class="pos">${ad?signed(ad):money(0)}</span>　　净额 <span class="${net>0?'pos':net<0?'neg':'zero'}">${net?signed(net):money(0)}</span>　　<span style="color:var(--sub);font-weight:400">按当前筛选的全部 ${rows.length} 条</span></td><td></td></tr>`;
+  } else $('#adjs-foot').innerHTML = '';
+  $('#adjs-total').textContent = `共 ${rows.length} 条`;
 }
 
 function billRows(){
@@ -422,13 +527,13 @@ function adjRows(){
   const rows = INCOME.filter(r=>r.type==='ADJ' && r.bill==='ST20260915-SH20260713476005' && (!kw||r.src.toLowerCase().includes(kw)));
   $('#adj-rows').innerHTML = rows.map(r=>`<tr>
       <td class="mono">${r.src}</td>
-      <td>${esc(r.adjType.cn)}<div class="subline mono">${r.adjType.code}</div></td>
-      <td class="mono">${r.rel||'—'}</td><td>${r.at}</td>
+      <td>${esc(r.adjType.cn)}</td><td>${dedPill(r)}</td>
+      <td class="mono">${r.rel||'—'}</td><td class="mono">${r.origInv||'—'}</td><td>${r.at}</td>
       <td class="num ${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.incl:-r.incl)}</td>
-      <td class="num ${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.excl:-r.excl)}</td>
-      <td>${dirPill(r.dir)}</td><td><span class="pill s-none">不开票</span></td>
+      <td class="num ${r.dir==='P2S'?'pos':'neg'}">${signed(r.dir==='P2S'?r.excl:-r.excl)}</td><td class="num">${money(r.gst)}</td>
+      <td>${dirPill(r.dir)}</td><td>${invPill(r.inv)}</td>
       <td><span class="pill s-settled">已结算</span></td>
-    </tr>`).join('') || `<tr><td colspan="9"><div class="empty"><b>本结算单无业务调整</b>该结算单周期内没有接入业务调整单</div></td></tr>`;
+    </tr>`).join('') || `<tr><td colspan="12"><div class="empty"><b>本结算单无业务调整</b>该结算单周期内没有接入业务调整单</div></td></tr>`;
   $('#adj-total').textContent = `共 ${rows.length} 行`;
 }
 
@@ -443,21 +548,24 @@ function openDrawer(no){
       <div class="amount-item"><div class="k">未税金额</div><div class="v">${adj?signed(s*r.excl):money(r.excl)}</div></div>
       <div class="amount-item"><div class="k">GST</div><div class="v">${money(r.gst)}</div></div>
     </div>
-    ${adj?'<div class="note-bar" style="padding:10px 0">业务调整不区分未税与 GST（GST 恒为 0），不创建开票任务。</div>':''}
+    ${adj?`<div class="note-bar" style="padding:10px 0">${r.ded==='INVOICE'?`票扣：未税与 GST 取上游报文，按原票税率 ${(r.taxRate*100).toFixed(0)}% 拆分，本侧不重算。`:'账扣：不区分未税与 GST（GST 恒为 0），不创建开票任务。'}</div>`:''}
     <h3>基本信息</h3>
     <table class="kv">
       <tr><th>平台收支单号</th><td class="mono">${r.no}</td><th>类型</th><td><span class="pill ${TYPE[r.type].cls}">${TYPE[r.type].label}</span></td></tr>
-      ${adj?`<tr><th>调整类型</th><td>${esc(r.adjType.cn)} <span class="mono" style="color:var(--sub)">${r.adjType.code}</span></td><th>调整方向</th><td>${dirPill(r.dir)}</td></tr>`:''}
+      ${adj?`<tr><th>调整类型</th><td>${esc(r.adjType.cn)} <span class="mono" style="color:var(--sub)">${r.adjType.code}</span></td><th>调整方向</th><td>${dirPill(r.dir)}</td></tr>
+      <tr><th>抵扣方式</th><td>${dedPill(r)}</td><th>币种</th><td>SGD</td></tr>`:''}
       <tr><th>上游源单号</th><td class="mono">${r.src}</td><th>主关联单号</th><td class="mono">${r.rel||'—'}</td></tr>
       <tr><th>店铺</th><td>${esc(r.shop)}<div class="subline mono">${r.shopCode}</div></td><th>商户编码</th><td class="mono">${r.merchant}</td></tr>
       ${adj?'':`<tr><th>入库仓库</th><td>${r.wh}</td><th>—</th><td>—</td></tr>`}
       <tr><th>归期时间</th><td>${r.at}</td><th>接入时间</th><td>${r.ing}</td></tr>
-      <tr><th>结算状态</th><td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td><th>结算单号</th><td class="mono">${r.bill||'—'}</td></tr>
+      <tr><th>结算状态</th><td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td><th>结算单号</th><td class="mono">${r.bill?`<button class="btn link" data-bill="${r.bill}">${r.bill}</button>`:'—'}</td></tr>
     </table>
     <h3>结算与开票</h3>
     <table class="kv">
-      <tr><th>发票状态</th><td>${adj?'<span class="pill s-none">不开票</span>':'<span class="pill s-settled">已开票</span>'}</td><th>发票号</th><td class="mono">${adj?'—':'SUP-INV-2026-0910-001'}</td></tr>
-      <tr><th>发票类型</th><td>${adj?'—':'销售发票'}</td><th>开票时间</th><td>${adj?'—':r.ing}</td></tr>
+      <tr><th>发票状态</th><td>${invPill(r.inv)}</td><th>发票号</th><td class="mono">${adj?(r.adjInv||'—'):'SUP-INV-2026-0910-001'}</td></tr>
+      <tr><th>发票类型</th><td>${adj?(r.ded==='INVOICE'?INV_CAT[r.invCat]:'—'):'销售发票'}</td><th>开票时间</th><td>${adj?(r.invAt||'—'):r.ing}</td></tr>
+      ${adj&&r.ded==='INVOICE'?`<tr><th>被调整原发票</th><td class="mono">${r.origInv}</td><th>原票税率</th><td>${(r.taxRate*100).toFixed(0)}%</td></tr>`:''}
+      ${r.inv==='开票失败'?'<tr><th>失败说明</th><td colspan="3" style="color:var(--danger)">开票任务创建失败，已进重试队列；不影响本单结算金额。</td></tr>':''}
     </table>
     <h3>出账前自检</h3>
     <table class="kv"><tr><th>自查状态</th><td colspan="3">未回查（该结算单已生成，暂无出账要求）</td></tr></table>
@@ -485,11 +593,11 @@ function showTab(t){
 }
 document.addEventListener('click', e=>{
   const nav = e.target.closest('.nav-item[data-page]');
-  if(nav){ showPage(nav.dataset.page); if(nav.dataset.page==='bills') billRows(); return; }
+  if(nav){ showPage(nav.dataset.page); if(nav.dataset.page==='bills') billRows(); if(nav.dataset.page==='adjs') adjsRows(); return; }
   const crumb = e.target.closest('[data-page]:not(.nav-item)');
   if(crumb){ showPage(crumb.dataset.page); if(crumb.dataset.page==='bills') billRows(); return; }
   const bill = e.target.closest('[data-bill]');
-  if(bill){ showPage('bill'); showTab('ov'); return; }
+  if(bill){ closeDrawer(); showPage('bill'); showTab('ov'); return; }
   const view = e.target.closest('[data-view]');
   if(view){ openDrawer(view.dataset.view); return; }
   const jump = e.target.closest('[data-jump]');
@@ -502,8 +610,11 @@ $('#f-go').onclick = ()=>{ incomeRows(); toast('已按条件查询'); };
 $('#f-reset').onclick = ()=>{ ['f-kw','f-type','f-dir','f-shop','f-st'].forEach(id=>$('#'+id).value=''); incomeRows(); toast('筛选条件已重置'); };
 $('#f-export').onclick = ()=> toast('导出含调整类型、方向与带符号金额（原型不生成文件）');
 $('#adj-go').onclick = ()=> adjRows();
+$('#a-go').onclick = ()=>{ adjsRows(); toast('已按条件查询'); };
+$('#a-reset').onclick = ()=>{ ['a-kw','a-shop','a-type','a-dir','a-ded','a-st','a-inv'].forEach(id=>$('#'+id).value=''); $('#a-from').value='2026-08-17'; $('#a-to').value='2026-09-15'; adjsRows(); toast('筛选条件已重置'); };
+$('#a-export').onclick = ()=> toast('按最近一次查询条件导出 xlsx（原型不生成文件）');
 
-incomeRows(); billRows();
+fillAdjTypes(); incomeRows(); billRows(); adjsRows();
 </script>
 </body>
 </html>
