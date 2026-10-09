@@ -71,7 +71,7 @@ DB.adjOrders = DB.adjOrders || [
   {adjustNo:'ADJ-SG-20260701-002', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
    adjustTypeCode:'ADJT-0006', adjustTypeName:'平台活动补贴', amount:120.00, currency:'SGD',
    deductionType:'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'', taxRate:null, amountExclTax:120.00, gstAmount:0.00,
-   bizNo:'', remark:'7/1 生鲜节平台让利补贴，线下已与商家确认', effectiveTime:'2026-07-01 18:30', createdBy:'陈敏',
+   bizNo:'PROMO-20260701', remark:'7/1 生鲜节平台让利补贴，线下已与商家确认', effectiveTime:'2026-07-01 18:30', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 18:35', pushedBy:'陈敏'},
   {adjustNo:'ADJ-SG-20260701-001', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
@@ -88,9 +88,16 @@ DB.adjOrders = DB.adjOrders || [
    bizNo:'', remark:'6 月服务费按旧费率多收，经财务复核冲减，已线下与商家确认', effectiveTime:'2026-07-01 14:05', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 14:10', pushedBy:'陈敏'},
+  // 下游拒收演示（CLJS-20 BR-10 retryable=false）
+  {adjustNo:'ADJ-SG-20260913-002', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
+   adjustTypeCode:'ADJT-0002', adjustTypeName:'逾期送货违约金', amount:150.00, currency:'SGD',
+   deductionType:'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'', taxRate:null, amountExclTax:150.00, gstAmount:0.00,
+   bizNo:'DL260912040003', remark:'9/12 送货超时 3 小时，按协议扣违约金', effectiveTime:'2026-09-13 10:05', createdBy:'林凯',
+   sourceType:'MANUAL', status:'effective', voidReason:'',
+   pushStatus:'PUSHED', syncStatus:'REJECTED', syncErrorText:'店铺在清结算侧不存在（SHOP_NOT_FOUND）', pushedAt:'2026-09-13 10:06', pushedBy:'林凯'},
   {adjustNo:'ADJ-SG-20260914-003', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
    adjustTypeCode:'ADJT-0007', adjustTypeName:'物流费用补贴', amount:420.00, currency:'SGD',
-   bizNo:'', remark:'8 月冷链车加班费补贴', effectiveTime:'2026-09-14 09:20', createdBy:'林凯',
+   bizNo:'LOG-202608-031', remark:'8 月冷链车加班费补贴', effectiveTime:'2026-09-14 09:20', createdBy:'林凯',
    sourceType:'MANUAL', status:'voided', voidReason:'金额录错，应为 240.00，已重新建单',
    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
   {adjustNo:'ADJ-SG-20260913-002', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
@@ -100,7 +107,7 @@ DB.adjOrders = DB.adjOrders || [
    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
   {adjustNo:'ADJ-SG-20260912-004', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
    adjustTypeCode:'ADJT-0006', adjustTypeName:'平台活动补贴', amount:1250.00, currency:'SGD',
-   bizNo:'', remark:'9 月中秋海鲜专场活动，平台承担的让利补贴，线下已与商家确认金额', effectiveTime:'2026-09-12 17:12', createdBy:'林凯',
+   bizNo:'PROMO-20260912', remark:'9 月中秋海鲜专场活动，平台承担的让利补贴，线下已与商家确认金额', effectiveTime:'2026-09-12 17:12', createdBy:'林凯',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
   {adjustNo:'ADJ-SG-20260910-004', shopCode:'SH2026070200005', merchantCode:'M2026-1103',
@@ -161,6 +168,7 @@ function displayStatus(r){
   if(r.status=='voided') return 'VOIDED';
   if(r.pushStatus!='PUSHED') return 'PENDING';
   if(r.syncStatus=='SUCCESS') return 'PUSHED';
+  if(r.syncStatus=='REJECTED') return 'PUSH_REJECTED';
   if(r.syncStatus=='FAILED') return 'PUSH_FAILED';
   return minutesSince(r.pushedAt)>=30 ? 'PUSH_FAILED' : 'PUSHED';
 }
@@ -172,10 +180,10 @@ const selectable = r => isManual(r) && r.pushStatus=='PENDING' && r.status=='eff
 const canVoid    = r => isManual(r) && r.pushStatus=='PENDING' && r.status=='effective';
 const canCorrect = r => isManual(r) && r.pushStatus=='PUSHED'  && r.status=='effective';
 
-const ST_LABEL = {PENDING:'待推送', PUSHED:'已推送', PUSH_FAILED:'同步重试中', VOIDED:'已作废', JUDGING:'判责中'};
+const ST_LABEL = {PENDING:'待推送', PUSHED:'已推送', PUSH_FAILED:'同步重试中', PUSH_REJECTED:'下游拒收', VOIDED:'已作废', JUDGING:'判责中'};
 function statusTag(r){
-  const d=displayStatus(r), cls={PENDING:'t-y',PUSHED:'t-g',PUSH_FAILED:'t-y',VOIDED:'t-gr',JUDGING:'t-gr'}[d];
-  const tip = d=='PUSH_FAILED' ? ` title="${esc(syncReason(r))}，系统自动重试，请勿重复建单"` : '';
+  const d=displayStatus(r), cls={PENDING:'t-y',PUSHED:'t-g',PUSH_FAILED:'t-y',PUSH_REJECTED:'t-r',VOIDED:'t-gr',JUDGING:'t-gr'}[d];
+  const tip = d=='PUSH_FAILED' ? ` title="${esc(syncReason(r))}，系统自动重试，请勿重复建单"` : d=='PUSH_REJECTED' ? ` title="${esc(r.syncErrorText)}"` : '';
   return `<span class="tag ${cls}"${tip}><span class="dot"></span>${ST_LABEL[d]}</span>`;
 }
 function dirTag(dir){ return dir=='ADDITION'
@@ -217,7 +225,7 @@ PAGES['p-adjust']=()=>{
     <div class="fg3">
       <div class="fr"><label class="fl">方向</label><select id="af-dir">${opt('',f.dir,'全部')}${opt('ADDITION',f.dir,'正向 · 补商家')}${opt('DEDUCTION',f.dir,'负向 · 扣商家')}</select></div>
       <div class="fr"><label class="fl">来源</label><select id="af-src">${opt('',f.src,'全部')}${opt('MANUAL',f.src,'人工建单')}${opt('SHORTAGE_FINE',f.src,'缺货罚款')}</select></div>
-      <div class="fr"><label class="fl">状态</label><select id="af-st">${opt('',f.st,'全部')}${['PENDING','PUSHED','PUSH_FAILED','VOIDED','JUDGING'].map(k=>opt(k,f.st,ST_LABEL[k])).join('')}</select></div>
+      <div class="fr"><label class="fl">状态</label><select id="af-st">${opt('',f.st,'全部')}${['PENDING','PUSHED','PUSH_FAILED','PUSH_REJECTED','VOIDED','JUDGING'].map(k=>opt(k,f.st,ST_LABEL[k])).join('')}</select></div>
     </div>
     <div class="fg3">
       <div class="fr"><label class="fl">生效时间 起</label><input id="af-from" type="date" value="${f.from}"></div>
@@ -286,7 +294,7 @@ window.adj_newAsk=function(keep, mode, src){
     const o = src ? adjOf(src) : null;
     DB.adjDraft = {mode:mode||'new', srcNo:src||'', sc:'', tc:'', amt:'', biz:'', rk:''};
     if(o && mode=='correct'){ DB.adjDraft.sc=o.shopCode; DB.adjDraft.biz=o.adjustNo; }
-    if(o && mode=='recreate'){ Object.assign(DB.adjDraft,{sc:o.shopCode,tc:o.adjustTypeCode,amt:o.amount.toFixed(2),biz:o.bizNo,rk:o.remark}); }
+    if(o && mode=='recreate'){ Object.assign(DB.adjDraft,{sc:o.shopCode,tc:o.adjustTypeCode,amt:o.amount.toFixed(2),biz:o.bizNo,rk:o.remark,invNo:o.originalInvoiceNo||''}); }
   }
   const d=DB.adjDraft, o=d.srcNo?adjOf(d.srcNo):null;
   const types=(DB.adjTypes||[]).filter(t=>t.on);
@@ -357,7 +365,7 @@ window.adj_typeChange=function(){
 // 候选票 = 该店铺下平台↔商家三类票（服务费 / 自营补货 / 耗材采购）+ 已开具；行内给票据类型、票面与可调整余额
 window.adj_fillInv=function(t){
   const sel=document.getElementById('an-inv'); if(!sel) return;
-  const sc=(document.getElementById('an-shop')||{}).value, keep=sel.value;
+  const sc=(document.getElementById('an-shop')||{}).value, keep=sel.value||(DB.adjDraft||{}).invNo||'';
   if(!sc){ sel.innerHTML='<option value="">请先选择店铺</option>'; sel.disabled=true; return; }
   sel.disabled=false;
   const list=(DB.adjInvoices||[]).filter(x=>x.shopCode==sc&&IC_NAME[x.ic]).sort((a,b)=>b.date.localeCompare(a.date));
@@ -425,12 +433,12 @@ function validateDraft(){
 window.adjValidateDraft = validateDraft;
 function dupInfo(sc,tc,amt){
   const from=dayStr(-6);
-  const hits=(DB.adjOrders||[]).filter(r=>r.status=='effective'&&r.shopCode==sc&&r.adjustTypeCode==tc&&r.amount==+amt&&r.effectiveTime.slice(0,10)>=from);
+  const hits=(DB.adjOrders||[]).filter(r=>r.status=='effective'&&r.syncStatus!='REJECTED'&&r.shopCode==sc&&r.adjustTypeCode==tc&&r.amount==+amt&&r.effectiveTime.slice(0,10)>=from);
   return {count:hits.length, retrying:hits.filter(r=>displayStatus(r)=='PUSH_FAILED').map(r=>r.adjustNo)};
 }
 window.adj_newSubmit=function(withPush){
   const {d,ok}=validateDraft(); if(!ok) return;
-  Object.assign(DB.adjDraft,{sc:d.sc,tc:d.tc,amt:d.amt,biz:d.biz,rk:d.rk});
+  Object.assign(DB.adjDraft,{sc:d.sc,tc:d.tc,amt:d.amt,biz:d.biz,rk:d.rk,invNo:d.invNo||''});
   const dup=dupInfo(d.sc,d.tc,d.amt);
   if(!withPush&&!dup.count){ adj_newDo(false); return; }
   adj_newConfirm(withPush,dup);
@@ -453,6 +461,11 @@ window.adj_newConfirm=function(withPush,dup){
       <tr><td style="color:var(--ts);width:120px">所属商家</td><td>${merchantName(mc)} <span class="mono" style="color:var(--ts)">${mc}</span></td></tr>
       <tr><td style="color:var(--ts)">调整类型</td><td>${t.cn} <span class="mono" style="color:var(--ts);font-size:12px">${t.code}</span></td></tr>
       <tr><td style="color:var(--ts)">方向</td><td>${dirTag(t.dir)}</td></tr>
+      ${t.ded=='INVOICE'?(()=>{const inv=adjInvOf(d.invNo), x=inv?adjSplitTax(+d.amt,inv.rate):null;
+        return `<tr><td style="color:var(--ts)">抵扣方式</td><td>票扣</td></tr>
+      <tr><td style="color:var(--ts)">被调整原发票</td><td class="mono">${esc(d.invNo)||'—'}${inv?` <span style="color:var(--ts);font-family:inherit">（${IC_NAME[inv.ic]}，票面 ${money(inv.incl)}）</span>`:''}</td></tr>
+      <tr><td style="color:var(--ts)">税额拆分</td><td>${x?`未税 ${money(x.ex)} ＋ GST ${money(x.gst)}（${(inv.rate*100).toFixed(0)}%）`:'—'}</td></tr>`;})()
+      :`<tr><td style="color:var(--ts)">抵扣方式</td><td>账扣</td></tr>`}
       <tr><td style="color:var(--ts)">关联业务单</td><td class="mono">${esc(d.biz)||'—'}</td></tr>
     </tbody></table></div>
   </div>
@@ -528,6 +541,7 @@ window.adj_detail=function(no){
 
     ${voided?'':sec('推送信息')+grid(kv('状态',statusTag(r))+kv('推送时间',r.pushedAt)+kv('推送人',r.pushedBy))
       +(ds=='PUSH_FAILED'?`<div class="ib ib-y" style="margin-top:12px"><span class="i">⏳</span>${esc(syncReason(r))}。系统自动重试，请勿重复建单。</div>`:'')
+      +(ds=='PUSH_REJECTED'?`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span>下游拒收：${esc(r.syncErrorText)}。本单不会入账，核对后请新建一张正确的调整单。</div>`:'')
       +(unconfirmed(r)?'<div style="font-size:12.5px;color:var(--ts);margin-top:8px">下游确认中</div>':'')}
 
     ${sec('操作记录')}

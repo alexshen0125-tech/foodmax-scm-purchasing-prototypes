@@ -198,7 +198,7 @@ tbody tr:hover{background:#f7f9fc}
     <section class="page active" id="page-adjs">
       <div class="crumb">清分与结算 / 业务调整单</div>
       <div class="page-head">
-        <div><h1>业务调整单<span class="chg">新</span></h1><div class="desc">运营平台推送过来的补钱 / 扣钱单据，按单查看接入后进了哪张结算单、开没开票。本页只读：建单、作废、纠正都在运营平台。</div></div>
+        <div><h1>业务调整单<span class="chg">新</span></h1><div class="desc">运营平台推送过来的补钱 / 扣钱单据，按单查看接入后进了哪张结算单。本页只读：建单、作废、纠正都在运营平台。</div></div>
         <span class="site-badge">当前 site：新加坡</span>
       </div>
       <div class="panel">
@@ -337,7 +337,7 @@ const INCOME = [
    wh:'', at:'2026-09-15 09:40:12', excl:78.50, gst:0, incl:78.50, dir:'S2P', st:'SETTLED', inv:'不开票',
    bill:'ST20260915-SH20260713476005', ing:'2026-09-15 09:40:18',
    adjType:{code:'ADJT-0003', cn:'质量问题扣款', en:'Quality Deduction'}, merchant:'M2026071400002', ded:'ACCOUNT'},
-  {no:'PI2026091500001', type:'ADJ', src:'ADJ-SG-20260915-003', rel:'', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
+  {no:'PI2026091500001', type:'ADJ', src:'ADJ-SG-20260915-003', rel:'PROMO-20260915', shop:'Foodmax测试店铺', shopCode:'SH20260713476005',
    wh:'', at:'2026-09-15 08:05:00', excl:46.59, gst:0, incl:46.59, dir:'P2S', st:'SETTLED', inv:'不开票',
    bill:'ST20260915-SH20260713476005', ing:'2026-09-15 08:05:06',
    adjType:{code:'ADJT-0006', cn:'平台活动补贴', en:'Campaign Subsidy'}, merchant:'M2026071400002', ded:'ACCOUNT'},
@@ -353,8 +353,8 @@ const INCOME = [
   {no:'PI2026091500005', type:'ADJ', src:'ADJ-SG-20260915-005', rel:'', shop:'小沈小卖部', shopCode:'SH20260715476017',
    wh:'', at:'2026-09-15 11:05:20', excl:91.74, gst:8.26, incl:100.00, dir:'P2S', st:'PENDING', inv:'开票失败',
    bill:'', ing:'2026-09-15 11:05:26',
-   adjType:{code:'ADJT-0011', cn:'补货货款调整', en:'Replenishment Adjustment'}, merchant:'M2026071500003',
-   ded:'INVOICE', invCat:'RPL', origInv:'RPL-INV-2026-000088', taxRate:0.09},
+   adjType:{code:'ADJT-0009', cn:'耗材金额调整', en:'Supplies Correction'}, merchant:'M2026071500003',
+   ded:'INVOICE', invCat:'SUP', origInv:'SUP-INV-2026-000088', taxRate:0.09},
 ];
 
 const BILLS = [
