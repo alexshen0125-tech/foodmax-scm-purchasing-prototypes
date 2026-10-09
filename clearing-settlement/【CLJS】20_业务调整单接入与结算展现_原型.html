@@ -203,7 +203,7 @@ tbody tr:hover{background:#f7f9fc}
       </div>
       <div class="panel">
         <div class="filter">
-          <div class="filter-item wide"><label>调整单号 / 关联业务单号 / 原发票号</label><input class="ipt" id="a-kw" placeholder="输入单号可跨日期查询"></div>
+          <div class="filter-item wide"><label>调整单号 / 关联业务单号</label><input class="ipt" id="a-kw" placeholder="输入单号可跨日期查询"></div>
           <div class="filter-item"><label>店铺</label>
             <select class="sel" id="a-shop"><option value="">全部店铺</option><option value="SH20260713476005">Foodmax测试店铺</option><option value="SH20260715476017">小沈小卖部</option></select></div>
           <div class="filter-item"><label>调整类型</label><select class="sel" id="a-type"><option value="">全部</option></select></div>
@@ -401,7 +401,7 @@ function adjsRows(){
   const rows = all.filter(r =>
     (!shop||r.shopCode===shop) && (!tp||r.adjType.code===tp) && (!dir||r.dir===dir) && (!ded||r.ded===ded) &&
     (!st||r.st===st) &&
-    (kw ? (r.src.toLowerCase().startsWith(kw) || (r.rel||'').toLowerCase().startsWith(kw) || (r.origInv||'').toLowerCase().startsWith(kw))
+    (kw ? (r.src.toLowerCase().startsWith(kw) || (r.rel||'').toLowerCase().startsWith(kw))
         : (r.at.slice(0,10)>=from && r.at.slice(0,10)<=to)))
     .sort((a,b)=> b.at.localeCompare(a.at) || b.src.localeCompare(a.src));
   const empty = !all.length ? '<b>暂无业务调整单</b>'
@@ -463,37 +463,21 @@ function adjRows(){
 /* ============ 详情抽屉 ============ */
 function openDrawer(no){
   const r = INCOME.find(x=>x.no===no); if(!r) return;
-  const adj = r.type==='ADJ', s = r.dir==='P2S' ? 1 : -1;
+  const s = r.dir==='P2S' ? 1 : -1;
   $('#dr-title').textContent = '业务调整单详情 · ' + r.src;
   $('#dr-body').innerHTML = `
-    <div class="amount-box">
-      <div class="amount-item"><div class="k">含税金额</div><div class="v ${adj?(s>0?'pos':'neg'):''}">${adj?signed(s*r.incl):money(r.incl)}</div></div>
-      <div class="amount-item"><div class="k">未税金额</div><div class="v">${adj?signed(s*r.excl):money(r.excl)}</div></div>
-      <div class="amount-item"><div class="k">GST</div><div class="v">${money(r.gst)}</div></div>
+    <div class="amount-box" style="grid-template-columns:1fr">
+      <div class="amount-item"><div class="k">调整金额</div><div class="v ${s>0?'pos':'neg'}">${signed(s*r.incl)}</div><div class="subline">${s>0?'平台付给店铺':'向店铺扣回'}</div></div>
     </div>
-    ${adj?`<div class="note-bar" style="padding:10px 0">${r.ded==='INVOICE'?`票扣：未税与 GST 取上游报文，按原票税率 ${(r.taxRate*100).toFixed(0)}% 拆分，本侧不重算。`:'账扣：不区分未税与 GST（GST 恒为 0），不创建开票任务。'}</div>`:''}
     <h3>基本信息</h3>
     <table class="kv">
-      
-      ${adj?`<tr><th>调整类型</th><td>${esc(r.adjType.cn)} <span class="mono" style="color:var(--sub)">${r.adjType.code}</span></td><th>调整方向</th><td>${dirPill(r.dir)}</td></tr>
-      <tr><th>抵扣方式</th><td>${dedPill(r)}</td><th>币种</th><td>SGD</td></tr>`:''}
       <tr><th>调整单号</th><td class="mono">${r.src}</td><th>关联业务单号</th><td class="mono">${r.rel||'—'}</td></tr>
+      <tr><th>调整类型</th><td>${esc(r.adjType.cn)} <span class="mono" style="color:var(--sub)">${r.adjType.code}</span></td><th>收入方向</th><td>${dirPill(r.dir)}</td></tr>
+      <tr><th>抵扣方式</th><td>${dedPill(r)}</td><th>币种</th><td>SGD</td></tr>
       <tr><th>店铺</th><td>${esc(r.shop)}<div class="subline mono">${r.shopCode}</div></td><th>商户编码</th><td class="mono">${r.merchant}</td></tr>
-      ${adj?'':`<tr><th>入库仓库</th><td>${r.wh}</td><th>—</th><td>—</td></tr>`}
       <tr><th>生效时间</th><td>${r.at}</td><th>接入时间</th><td>${r.ing}</td></tr>
       <tr><th>结算状态</th><td><span class="pill ${r.st==='SETTLED'?'s-settled':'s-pending'}">${r.st==='SETTLED'?'已结算':'待结算'}</span></td><th>结算单号</th><td class="mono">${r.bill?`<button class="btn link" data-bill="${r.bill}">${r.bill}</button>`:'—'}</td></tr>
     </table>
-    <h3>结算与开票</h3>
-    <table class="kv">
-      <tr><th>发票状态</th><td>${invPill(r.inv)}</td><th>发票号</th><td class="mono">${adj?(r.adjInv||'—'):'SUP-INV-2026-0910-001'}</td></tr>
-      <tr><th>发票类型</th><td>${adj?(r.ded==='INVOICE'?INV_CAT[r.invCat]:'—'):'销售发票'}</td><th>开票时间</th><td>${adj?(r.invAt||'—'):r.ing}</td></tr>
-      ${adj&&r.ded==='INVOICE'?`<tr><th>被调整原发票</th><td class="mono">${r.origInv}</td><th>原票税率</th><td>${(r.taxRate*100).toFixed(0)}%</td></tr>`:''}
-      ${r.inv==='开票失败'?'<tr><th>失败说明</th><td colspan="3" style="color:var(--danger)">开票任务创建失败，已进重试队列；不影响本单结算金额。</td></tr>':''}
-    </table>
-    ${adj?'':`<h3>商品行</h3>
-    <table class="kv"><tr><th>行号</th><th>商品编码</th><th>商品名称</th><th>金额</th></tr>
-      <tr><td>1</td><td class="mono">SKU260803140001</td><td>三方 bcrs 测试 0803 1瓶/瓶</td><td>${money(r.incl)}</td></tr></table>`}
-    ${adj?'<h3>说明</h3><div class="note-bar" style="padding:10px 0">调整说明与附件留在运营平台侧，不随报文输出，此处不展示。</div>':''}
   `;
   $('#mask').classList.add('open'); $('#drawer').classList.add('open');
 }
