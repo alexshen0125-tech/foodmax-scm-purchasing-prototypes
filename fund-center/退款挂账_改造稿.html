@@ -133,13 +133,13 @@ const tag=(t,c)=>`<span class="tag ${c}">${t}</span>`;
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)};
 /* 退款记录：已结给商家的 → 负应付挂账；还没结给商家的 → 下期结算单直接少算，不挂账 */
 const RF=[
- {rf:'RF2610090001',order:'SO2610080207',mer:'Fresh Greens Trading',shop:'SH20260713476005',time:'2026-10-09 09:30',refund:100,paid:true,js:'JS2610050003',neg:85,ded:[]},
- {rf:'RF2610080005',order:'SO2610060031',mer:'Prime Meat Supply',shop:'SH2026081200001',time:'2026-10-08 16:40',refund:100,paid:true,js:'JS2609280002',neg:85,ded:[['JS2610050003','2026-10-08 12:00',85]]},
- {rf:'RF2610030002',order:'SO2609280112',mer:'ZZ QA 测试商家',shop:'ZZQA0722M1',time:'2026-10-03 14:20',refund:168,paid:true,js:'JS2609280002',neg:142.80,ded:[['JS2610050003','2026-10-08 12:00',60]]},
- {rf:'RF2610020011',order:'SO2609300045',mer:'Ocean Catch Seafood',shop:'SH20260716476017',time:'2026-10-02 10:05',refund:56.40,paid:true,js:'JS2609280002',neg:47.94,ded:[]},
- {rf:'RF2610070003',order:'SO2610060112',mer:'ZZ QA 测试商家',shop:'ZZQA0722S1',time:'2026-10-07 15:12',refund:36.86,paid:false,js:'',neg:0,ded:[]},
- {rf:'RF2610070004',order:'SO2610060113',mer:'ZZ QA 测试商家',shop:'ZZQA0722S2',time:'2026-10-07 15:13',refund:36.21,paid:false,js:'',neg:0,ded:[]},
- {rf:'RF2610080009',order:'SO2610070201',mer:'Golden Harvest Produce',shop:'SH2026082800001',time:'2026-10-08 11:02',refund:120,paid:false,js:'',neg:0,ded:[]}];
+ {rf:'RF20261009-0001',order:'261008045600000207',mer:'Fresh Greens Trading',shop:'SH20260713476005',time:'2026-10-09 09:30',refund:100,paid:true,js:'ST2026W41-SH2026081200001-R1',neg:85,ded:[]},
+ {rf:'RF20261008-0005',order:'261006045600000031',mer:'Prime Meat Supply',shop:'SH2026081200001',time:'2026-10-08 16:40',refund:100,paid:true,js:'ST2026W40-SH2026081200001-R1',neg:85,ded:[['ST2026W41-SH2026081200001-R1','2026-10-08 12:00',85]]},
+ {rf:'RF20261003-0002',order:'260928045600000112',mer:'ZZ QA 测试商家',shop:'ZZQA0722M1',time:'2026-10-03 14:20',refund:168,paid:true,js:'ST2026W40-SH2026081200001-R1',neg:142.80,ded:[['ST2026W41-SH2026081200001-R1','2026-10-08 12:00',60]]},
+ {rf:'RF20261002-0011',order:'260930045600000045',mer:'Ocean Catch Seafood',shop:'SH20260716476017',time:'2026-10-02 10:05',refund:56.40,paid:true,js:'ST2026W40-SH2026081200001-R1',neg:47.94,ded:[]},
+ {rf:'RF20261007-0003',order:'261006045600000112',mer:'ZZ QA 测试商家',shop:'ZZQA0722S1',time:'2026-10-07 15:12',refund:36.86,paid:false,js:'',neg:0,ded:[]},
+ {rf:'RF20261007-0004',order:'261006045600000113',mer:'ZZ QA 测试商家',shop:'ZZQA0722S2',time:'2026-10-07 15:13',refund:36.21,paid:false,js:'',neg:0,ded:[]},
+ {rf:'RF20261008-0009',order:'261007045600000201',mer:'Golden Harvest Produce',shop:'SH2026082800001',time:'2026-10-08 11:02',refund:120,paid:false,js:'',neg:0,ded:[]}];
 const dsum=r=>r2(r.ded.reduce((s,d)=>s+d[2],0));
 const left=r=>r2(r.neg-dsum(r));
 const st=r=>!r.paid?'无需挂账':left(r)<=0?'已抵扣':dsum(r)>0?'部分抵扣':'待抵扣';

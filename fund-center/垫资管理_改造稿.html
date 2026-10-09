@@ -138,15 +138,15 @@ const HA={ONL:19490.30,TERM:9820.00,ADV:2911.91};let CA=12480.00;
 const HN={ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'};
 /* 已有垫资单：构成 = 补的是什么钱 */
 const ADS=[
- {no:'AD2610010001',time:'2026-10-01 10:30',by:'沈亮',st:'已转入',period:'2026-09-30 结算',parts:[
-   ['账期未付','SO2609220031','Golden Wok Restaurant（客户）→ Fresh Greens Trading',1850],['账期未付','SO2609230017','Sunny Bistro（客户）→ Ocean Catch Seafood',1450],['平台补贴','JS2609280002','Prime Meat Supply 结算单补贴',300],['退款缺口','RF2609290004','退款时 Holding 线上收单金额不足',200]]},
- {no:'AD2610080001',time:'2026-10-08 11:40',by:'沈亮',st:'已转入',period:'2026-10-08 结算',parts:[
-   ['账期未付','SO2610010044','Mei Ling Eatery（客户）→ Ocean Catch Seafood',2280],['平台补贴','JS2610050003','Prime Meat Supply 结算单补贴',120]]}];
-const BACKS=[{no:'TR2610090002',time:'2026-10-09 10:05',by:'沈亮',parts:[['ADV',488.09],['TERM',550],['ONL',908.36]]}];
+ {no:'AF20261001-0001',time:'2026-10-01 10:30',by:'沈亮',st:'已转入',period:'2026-09-30 结算',parts:[
+   ['账期未付','260922045600000031','Golden Wok Restaurant（客户）→ Fresh Greens Trading',1850],['账期未付','260923045600000017','Sunny Bistro（客户）→ Ocean Catch Seafood',1450],['平台补贴','ST2026W40-SH2026081200001-R1','Prime Meat Supply 结算单补贴',300],['退款缺口','RF20260929-0004','退款时 Holding 线上收单金额不足',200]]},
+ {no:'AF20261008-0001',time:'2026-10-08 11:40',by:'沈亮',st:'已转入',period:'2026-10-08 结算',parts:[
+   ['账期未付','261001045600000044','Mei Ling Eatery（客户）→ Ocean Catch Seafood',2280],['平台补贴','ST2026W41-SH2026081200001-R1','Prime Meat Supply 结算单补贴',120]]}];
+const BACKS=[{no:'TR20261009-0002',time:'2026-10-09 10:05',by:'沈亮',parts:[['ADV',488.09],['TERM',550],['ONL',908.36]]}];
 /* 本期（10-14 结算）缺口测算 */
 const GAP={period:'2026-10-14（周三）12:00 结算',items:[
- ['账期未付','SO2610090012','Rasa Cafe（客户）→ Prime Meat Supply',3120],['账期未付','SO2610090015','Golden Wok Restaurant（客户）→ ZZ QA 测试商家',2650.4],
- ['平台补贴','JS2610120001','Prime Meat Supply 结算单补贴',210],['平台补贴','JS2610120003','Ocean Catch Seafood 结算单补贴',95.5],['退款缺口','RF2610110002','退款时 Holding 线上收单金额不足',180]]};
+ ['账期未付','261009045600000012','Rasa Cafe（客户）→ Prime Meat Supply',3120],['账期未付','261009045600000015','Golden Wok Restaurant（客户）→ ZZ QA 测试商家',2650.4],
+ ['平台补贴','ST2026W42-SH2026081200001-R1','Prime Meat Supply 结算单补贴',210],['平台补贴','ST2026W42-SH20260716476017-R1','Ocean Catch Seafood 结算单补贴',95.5],['退款缺口','RF20261011-0002','退款时 Holding 线上收单金额不足',180]]};
 const sumP=ps=>r2(ps.reduce((s,p)=>s+p[3],0));
 const advIn=()=>r2(ADS.filter(a=>a.st==='已转入').reduce((s,a)=>s+sumP(a.parts),0));
 const advBack=()=>r2(BACKS.reduce((s,b)=>s+b.parts.reduce((x,p)=>x+p[1],0),0));
@@ -203,7 +203,7 @@ function chkBack(){const v=$('b_a').value,a=parseFloat(v),{out,left}=alloc(a>0?a
   if(v!==''&&!(a>0))e='请输入大于 0 的金额';else if(a>cap())e=`超过可收回上限 ${fmt(cap())}`;else if(left>0)e=`Holding 三类余额合计不足，还差 ${fmt(left)}`;$('b_e').textContent=e;
   $('b_al').innerHTML=`<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>顺序</th><th>资金类型</th><th class="num">当前余额</th><th class="num">本次扣减</th></tr></thead><tbody>${out.map(([k,x],i)=>`<tr><td>${i+1}</td><td>${HN[k]}</td><td class="num">${fmt(HA[k])}</td><td class="num">${x?'<b>'+fmt(x)+'</b>':'—'}</td></tr>`).join('')}</tbody></table>`;return !e&&a>0}
 function submitBack(){if(!chkBack()){if(!$('b_e').textContent)$('b_e').textContent='请输入收回金额';return}
-  const a=r2(parseFloat($('b_a').value)),parts=alloc(a).out.filter(o=>o[1]>0);parts.forEach(([k,x])=>HA[k]=r2(HA[k]-x));const no='TR26100900'+String(20+BACKS.length);
+  const a=r2(parseFloat($('b_a').value)),parts=alloc(a).out.filter(o=>o[1]>0);parts.forEach(([k,x])=>HA[k]=r2(HA[k]-x));const no='TR20261009-0000'+String(20+BACKS.length);
   BACKS.push({no,time:'2026-10-09 '+new Date().toTimeString().slice(0,5),by:'沈亮',parts});closeMd();render();toast(`已生成资金调拨单 ${no}（垫资收回 ${fmt(a)}），待审批`)}
 function closeMd(){$('mask2').style.display='none';$('md').style.display='none'}
 render();

@@ -142,14 +142,14 @@ const TYPES={
  FEEBACK:{name:'手续费备用金回收',from:['PA.FEE'],to:'CA.COM',basis:'备用金水位',hint:'手续费备用金超过需要时，收回佣金账户'},
  ADV:{name:'垫资',from:['CA.COM'],to:'HA.ADV',basis:'垫资单',hint:'Holding 钱不够时按总缺口垫进来，构成在垫资管理里列明'},
  BACK:{name:'垫资收回',from:['HA.ADV','HA.TERM','HA.ONL'],to:'CA.COM',basis:'可收回上限',hint:'按 平台垫资 → 账期还款 → 线上收单 顺序扣，累计 ≤ 累计垫资'}};
-const CLAIMS=[['CL2610080001','Mei Ling Eatery',5800],['CL2610090001','Rasa Cafe',2650]];
+const CLAIMS=[['CL20261008-0001','Mei Ling Eatery',5800],['CL20261009-0001','Rasa Cafe',2650]];
 let TRS=[
- {no:'TR2610010001',type:'FEE',amt:1242.95,parts:[['CA.COM',1242.95]],basis:'备用金低于水位（当时 −7.75），补至目标额',st:'已完成',by:'沈亮',time:'2026-10-01 09:10',att:[['TR2610010001-01','2026-10-01 09:12','SETTLED']]},
- {no:'TR2610060003',type:'TERM',amt:4200,parts:[['PA.TERM',4200]],basis:'认领单 CL2610060001 · Golden Wok Restaurant',st:'已完成',by:'沈亮',time:'2026-10-06 15:20',att:[['TR2610060003-01','2026-10-06 15:30','SETTLED']]},
- {no:'TR2610080002',type:'TERM',amt:2650,parts:[['PA.TERM',2650]],basis:'认领单 CL2610070002 · Sunny Bistro',st:'已完成',by:'沈亮',time:'2026-10-08 13:52',att:[['TR2610080002-01','2026-10-08 13:55','insufficient_fund'],['TR2610080002-02','2026-10-08 14:00','SETTLED']]},
- {no:'TR2610090002',type:'BACK',amt:1946.45,parts:[['HA.ADV',488.09],['HA.TERM',550],['HA.ONL',908.36]],basis:'垫资收回（可收回上限 6,200.00）',st:'已完成',by:'沈亮',time:'2026-10-09 10:00',att:[['TR2610090002-01','2026-10-09 10:05','SETTLED']]}];
+ {no:'TR20261001-0001',type:'FEE',amt:1242.95,parts:[['CA.COM',1242.95]],basis:'备用金低于水位（当时 −7.75），补至目标额',st:'已完成',by:'沈亮',time:'2026-10-01 09:10',att:[['TR20261001-0001-01','2026-10-01 09:12','SETTLED']]},
+ {no:'TR20261006-0003',type:'TERM',amt:4200,parts:[['PA.TERM',4200]],basis:'认领单 CL20261006-0001 · Golden Wok Restaurant',st:'已完成',by:'沈亮',time:'2026-10-06 15:20',att:[['TR20261006-0003-01','2026-10-06 15:30','SETTLED']]},
+ {no:'TR20261008-0002',type:'TERM',amt:2650,parts:[['PA.TERM',2650]],basis:'认领单 CL20261007-0002 · Sunny Bistro',st:'已完成',by:'沈亮',time:'2026-10-08 13:52',att:[['TR20261008-0002-01','2026-10-08 13:55','insufficient_fund'],['TR20261008-0002-02','2026-10-08 14:00','SETTLED']]},
+ {no:'TR20261009-0002',type:'BACK',amt:1946.45,parts:[['HA.ADV',488.09],['HA.TERM',550],['HA.ONL',908.36]],basis:'垫资收回（可收回上限 6,200.00）',st:'已完成',by:'沈亮',time:'2026-10-09 10:00',att:[['TR20261009-0002-01','2026-10-09 10:05','SETTLED']]}];
 const stC={待审批:'orange',待执行:'blue',已完成:'green',执行失败:'red',已驳回:'gray'};
-const advBack=()=>r2(ADV_BACK0+TRS.filter(t=>t.type==='BACK'&&t.st==='已完成'&&t.no!=='TR2610090002').reduce((s,t)=>s+t.amt,0));
+const advBack=()=>r2(ADV_BACK0+TRS.filter(t=>t.type==='BACK'&&t.st==='已完成'&&t.no!=='TR20261009-0002').reduce((s,t)=>s+t.amt,0));
 const advIn=()=>r2(ADV_IN+TRS.filter(t=>t.type==='ADV'&&t.st==='已完成').reduce((s,t)=>s+t.amt,0));
 const cap=()=>r2(advIn()-advBack());
 const used=new Set(TRS.filter(t=>t.type==='TERM').map(t=>t.basis.split(' ')[1]));
@@ -179,7 +179,7 @@ function paintNew(){
   if(N.type==='TERM'){const cs=CLAIMS.filter(c=>!used.has(c[0]));basis=`<div class="fr"><label class="req">认领单</label><select class="ipt" style="width:100%" onchange="N.claim=this.value;N.amt='';paintNew()"><option value="">请选择已认领、未转 Holding 的账期回款</option>${cs.map(c=>`<option value="${c[0]}" ${N.claim===c[0]?'selected':''}>${c[0]} · ${c[1]} · ${fmt(c[2])}</option>`).join('')}</select></div>`}
   if(N.type==='FEE')basis=`<div class="fr"><label>业务依据</label><div class="muted">手续费备用金当前 ${fmt(BAL['PA.FEE'])}，低水位 ${fmt(WATER.low)}，目标额 ${fmt(WATER.target)}；默认补足到目标额</div></div>`;
   if(N.type==='FEEBACK')basis=`<div class="fr"><label>业务依据</label><div class="muted">手续费备用金当前 ${fmt(BAL['PA.FEE'])}，目标额 ${fmt(WATER.target)}，低水位 ${fmt(WATER.low)}；默认收回超过目标额的部分</div></div>`;
-  if(N.type==='ADV')basis=`<div class="fr"><label class="req">关联垫资单</label><select class="ipt" style="width:100%"><option>AD2610090012 · 下一次结算缺口 6,255.90（账期未付 5,770.40 · 平台补贴 305.50 · 退款缺口 180.00）</option></select><div class="muted" style="font-size:12px;margin-top:4px">垫资构成在垫资管理里维护</div></div>`;
+  if(N.type==='ADV')basis=`<div class="fr"><label class="req">关联垫资单</label><select class="ipt" style="width:100%"><option>AF20261009-0012 · 下一次结算缺口 6,255.90（账期未付 5,770.40 · 平台补贴 305.50 · 退款缺口 180.00）</option></select><div class="muted" style="font-size:12px;margin-top:4px">垫资构成在垫资管理里维护</div></div>`;
   if(N.type==='BACK')basis=`<div class="fr"><label>可收回上限</label><div><b>${fmt(cap())}</b> <span class="muted">= 累计垫资 ${fmt(advIn())} − 累计已收回 ${fmt(advBack())}</span></div></div>`;
   const amt=N.amt!==''?N.amt:defAmt();
   $('mdB').innerHTML=`<div class="fr"><label class="req">划转类型</label><select class="ipt" style="width:100%" onchange="N={type:this.value,claim:'',amt:''};paintNew()">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${N.type===k?'selected':''}>${v.name}</option>`).join('')}</select><div class="muted" style="font-size:12px;margin-top:4px">${T.hint}</div></div>
@@ -202,8 +202,8 @@ function chkNew(){const T=TYPES[N.type],v=$('n_a').value,a=parseFloat(v);let e='
   return !e}
 function submitNew(){if(!chkNew())return;const a=r2(parseFloat($('n_a').value)),T=TYPES[N.type];
   const parts=N.type==='BACK'?alloc(a).out.filter(o=>o[1]>0):[[T.from[0],a]];
-  const basis=N.type==='TERM'?`认领单 ${N.claim} · ${CLAIMS.find(c=>c[0]===N.claim)[1]}`:N.type==='FEE'?`备用金 ${fmt(BAL['PA.FEE'])} 补至目标额 ${fmt(WATER.target)}`:N.type==='FEEBACK'?`备用金 ${fmt(BAL['PA.FEE'])}，收回 ${fmt(a)}`:N.type==='ADV'?'垫资单 AD2610090012':`垫资收回（可收回上限 ${fmt(cap())}）`;
-  const no='TR26100900'+String(30+TRS.length);TRS.push({no,type:N.type,amt:a,parts,basis,st:'待审批',by:'沈亮',time:'2026-10-09 '+new Date().toTimeString().slice(0,5),att:[]});if(N.type==='TERM')used.add(N.claim);
+  const basis=N.type==='TERM'?`认领单 ${N.claim} · ${CLAIMS.find(c=>c[0]===N.claim)[1]}`:N.type==='FEE'?`备用金 ${fmt(BAL['PA.FEE'])} 补至目标额 ${fmt(WATER.target)}`:N.type==='FEEBACK'?`备用金 ${fmt(BAL['PA.FEE'])}，收回 ${fmt(a)}`:N.type==='ADV'?'垫资单 AF20261009-0012':`垫资收回（可收回上限 ${fmt(cap())}）`;
+  const no='TR20261009-0000'+String(30+TRS.length);TRS.push({no,type:N.type,amt:a,parts,basis,st:'待审批',by:'沈亮',time:'2026-10-09 '+new Date().toTimeString().slice(0,5),att:[]});if(N.type==='TERM')used.add(N.claim);
   closeMd();render();toast(`已提交 ${no}，待审批`)}
 /* 审批 / 执行 */
 function act(no,a){const t=TRS.find(x=>x.no===no);

@@ -142,8 +142,8 @@ const ROWS=[
  {name:'ZZQA0722S2',id:'acct_hZ-SSedOPYexc7P4MohhzQ',bal:654.95,st:'已开通',ck:'2026-10-09 09:53:01',src:'商家中心同步',up:'2026-09-23 16:12:28'},
  {name:'ZZQA0722S3',id:'acct_hZ-SSedOPYexc7P4MohhzQ',bal:654.95,st:'已开通',ck:'2026-10-09 09:53:01',src:'商家中心同步',up:'2026-09-23 16:12:28'}];
 const FLOW={
- 'acct_GtDEwVKOMpeH4hlrN3qWJw':[['2026-10-08 12:00','结算款入账','JS2610050003',189.80]],
- 'acct_hZ-SSedOPYexc7P4MohhzQ':[['2026-09-24 12:00','结算款入账','JS2609220001',1254.95],['2026-09-28 10:15','商家提现','WD2609280002',-600.00]]};
+ 'acct_GtDEwVKOMpeH4hlrN3qWJw':[['2026-10-08 12:00','结算款入账','ST2026W41-SH2026081200001-R1',189.80]],
+ 'acct_hZ-SSedOPYexc7P4MohhzQ':[['2026-09-24 12:00','结算款入账','ST2026W39-ZZQA0722M1-R1',1254.95],['2026-09-28 10:15','商家提现','tr_OFQgsnvqzT9H3-4AT0sN1Q',-600.00]]};
 let Q={st:'',bal:'',kw:''};
 function rows(){return ROWS.filter(r=>(!Q.st||r.st===Q.st)&&(!Q.bal||(Q.bal==='有'?r.bal>0:r.bal===0))&&(!Q.kw||[r.name,r.id].some(x=>x.toLowerCase().includes(Q.kw.toLowerCase()))))}
 function render(){
