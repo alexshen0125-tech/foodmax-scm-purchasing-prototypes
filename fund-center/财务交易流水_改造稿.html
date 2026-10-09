@@ -318,8 +318,20 @@ function openFlow(id){const r=disp(base()).find(x=>x.id===id);const parts=r.part
    return `<div style="font-weight:600;margin-bottom:8px">本批次包含的支付单（${its.length} 笔）</div><table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><thead><tr><th>订单编号</th><th>支付单</th><th class="num">实付</th><th class="num">手续费</th><th class="num">转入 Holding</th></tr></thead><tbody>${its.map(i=>`<tr><td><span class="link">${i.order}</span></td><td class="mono">${i.pi}</td><td class="num">${fmt(i.gross)}</td><td class="num">${fmt(i.fee)}</td><td class="num">${fmt(i.net)}</td></tr>`).join('')}<tr><td style="font-weight:600">合计</td><td></td><td class="num" style="font-weight:600">${fmt(T('gross'))}</td><td class="num" style="font-weight:600">${fmt(T('fee'))}</td><td class="num" style="font-weight:600">${fmt(T('net'))}</td></tr></tbody></table><div class="muted" style="margin:-10px 0 18px">转入 Holding = 实付 − 手续费；合计 ${fmt(T('net'))} = 本笔划转金额</div>`})():''}
    <div style="font-weight:600;margin-bottom:8px">资金类型拆分</div>
    <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>资金类型</th><th>说明</th><th>对方</th><th class="num">收入</th><th class="num">支出</th></tr></thead><tbody>${parts.map(p=>`<tr><td>${TYPES[r.acc][p.ft]}</td><td>${p.what}</td><td>${p.cp||r.cp}</td><td class="num">${p.amt>0?fmt(p.amt):''}</td><td class="num">${p.amt<0?fmt(-p.amt):''}</td></tr>`).join('')}</tbody></table>`}))}
-function openDoc(doc){const fs=R.filter(r=>r.doc===doc).sort((a,b)=>a.time.localeCompare(b.time));
-  openDr(()=>({t:`${docType(doc)} ${doc}`,b:`<div class="muted" style="margin-bottom:10px">这张单据在三个账户里产生的全部流水</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>账户 · 资金类型</th><th>交易类型</th><th class="num">收入</th><th class="num">支出</th><th>状态</th></tr></thead><tbody>${fs.map(r=>`<tr><td>${r.time}</td><td>${ACC[r.acc]} · ${TYPES[r.acc][r.ft]}</td><td>${r.what}</td><td class="num">${r.amt>0?fmt(r.amt):''}</td><td class="num">${r.amt<0?fmt(-r.amt):''}</td><td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}</td></tr>`).join('')}</tbody></table>`}))}
+function openDoc(doc){
+  const fs=R.filter(r=>r.doc===doc).sort((a,b)=>a.time.localeCompare(b.time)),used=new Set(),moves=[];
+  const side=r=>`${ACC[r.acc]} · ${TYPES[r.acc][r.ft]}`,INT=['TRF','SPLIT','REV'];
+  /* 1. 一对一：同金额反向 */
+  fs.forEach(r=>{if(used.has(r.id)||r.amt>=0||!INT.includes(r.aw))return;const m=fs.find(x=>!used.has(x.id)&&x.acc!==r.acc&&INT.includes(x.aw)&&r2(x.amt)===r2(-r.amt));if(m){used.add(r.id);used.add(m.id);moves.push({time:r.time,from:side(r),to:side(m),what:r.what,amt:-r.amt,st:r.st})}});
+  /* 2. 多转一：几笔转出合计 = 一笔转入 */
+  fs.filter(x=>!used.has(x.id)&&x.amt>0&&INT.includes(x.aw)).forEach(inn=>{const outs=fs.filter(x=>!used.has(x.id)&&x.amt<0&&x.acc!==inn.acc&&INT.includes(x.aw));if(outs.length&&r2(outs.reduce((s,x)=>s-x.amt,0))===r2(inn.amt)){used.add(inn.id);outs.forEach(o=>{used.add(o.id);moves.push({time:o.time,from:side(o),to:side(inn),what:o.what,amt:-o.amt,st:o.st})})}});
+  /* 3. 对外：同一去向合并（如退款给客户 = 线上收单 + 备用金差额） */
+  const ext={};fs.filter(x=>!used.has(x.id)).forEach(r=>{const fee=r.what.includes('退款手续费');const k=(r.amt<0?'o':'i')+'|'+(fee?'Airwallex':(r.aw==='REF'?'客户':r.cp));(ext[k]=ext[k]||[]).push(r);used.add(r.id)});
+  Object.values(ext).forEach(g=>{const r=g[0],amt=r2(Math.abs(g.reduce((s,x)=>s+x.amt,0))),src=g.map(x=>`${side(x)}${g.length>1?' '+fmt(Math.abs(x.amt)):''}`).join('<br>+ ');
+    const cp=g.find(x=>x.what==='退款给客户')?.cp||r.cp,what=g.find(x=>x.what==='退款给客户')?'退款给客户（含备用金补的收单手续费）':r.what;
+    moves.push(r.amt<0?{time:r.time,from:src,to:cp,what,amt,st:r.st}:{time:r.time,from:cp,to:src,what,amt,st:r.st})});
+  moves.sort((a,b)=>a.time.localeCompare(b.time));
+  openDr(()=>({t:`${docType(doc)} ${doc}`,b:`<div class="muted" style="margin-bottom:10px">这张单据动了哪些钱：一笔一行，从哪到哪</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>从</th><th>到</th><th>交易类型</th><th class="num">金额</th><th>状态</th></tr></thead><tbody>${moves.map(m=>`<tr><td>${m.time}</td><td>${m.from}</td><td>${m.to}</td><td>${m.what}</td><td class="num">${fmt(m.amt)}</td><td>${m.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}</td></tr>`).join('')}</tbody></table>`}))}
 render();
 </script>
 </body>
