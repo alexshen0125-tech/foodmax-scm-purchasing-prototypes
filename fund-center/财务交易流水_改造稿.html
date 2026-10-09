@@ -140,7 +140,7 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const TODAY='2026-10-09';
 const ACC={PA:'平台主账户',HA:'Holding 清分账户',CA:'佣金账户'};
 const TYPES={PA:{FEE:'手续费备用金',TERM:'账期还款金额',ONL:'线上收单金额'},HA:{ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'},CA:{COM:'佣金金额'}};
-const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18550.30,TERM:6320,ADV:0},CA:{COM:16220.50}};
+const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18550.30,TERM:6320,ADV:0},CA:{COM:15800.50}};
 const DOCT={TR:'资金调拨单',RF:'退款资金单',AD:'垫资单',JS:'结算单',CL:'认领单',int:'支付单'};
 const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],DEP:['入金','Deposit'],FEE:['费用','Fee']};
 let seq=0;const rid=()=>'ftx_'+(++seq).toString(36).padStart(4,'0')+'Kq'+((seq*7919)%9973).toString(36);
@@ -198,19 +198,24 @@ add('HA','ADV','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户'
 add('HA','TERM','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户','TR2610090002',-550,0,'TRF');
 add('HA','ONL','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户','TR2610090002',-908.36,0,'TRF');
 // 佣金账户
-add('CA','COM','2026-10-08 12:00','结算时佣金转进来','Holding 清分账户','JS2610050003',1876,0,'TRF');
+add('CA','COM','2026-10-08 12:00','结算时佣金转进来','Holding 清分账户','JS2610050003',2296,0,'TRF');
 add('CA','COM','2026-10-09 10:05','Holding 把垫资收回来','Holding 清分账户','TR2610090002',1946.45,0,'TRF');
 add('CA','COM','2026-10-01 09:12','给平台主账户补备用金','平台主账户','TR2610010001',-1242.95,0,'TRF');
 add('CA','COM','2026-10-01 10:30','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610010001',-3800,0,'TRF');
 add('CA','COM','2026-10-08 11:40','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610080001',-2400,0,'TRF');
 add('CA','COM','2026-10-08 12:00','给 Holding 补平台补贴','Holding 清分账户','JS2610050003',-120,0,'TRF');
+/* 结算单按商家出：一个商家一张 */
+const JSM={ONL:['JS2610050003','Prime Meat Supply'],TERM:['JS2610050004','ZZ QA 测试商家'],ADV:['JS2610050005','Ocean Catch Seafood']};
+R.forEach(r=>{if(r.acc==='HA'&&r.doc==='JS2610050003'){const [js,m]=JSM[r.ft];r.doc=js;r.mer=m;if(r.what.includes('货款'))r.cp='商家 '+m+'（'+r.cp.replace('店铺 ','')+'）'}});
+(()=>{const i=R.findIndex(r=>r.acc==='CA'&&r.what==='结算时佣金转进来');const base=R[i];R.splice(i,1,...[['JS2610050003',1456],['JS2610050004',420],['JS2610050005',420]].map(([js,a],k)=>({...base,id:base.id+k,doc:js,amt:a})));
+  R.filter(r=>r.acc==='CA'&&r.doc.startsWith('JS')).forEach(r=>{const m=Object.values(JSM).find(x=>x[0]===r.doc);if(m)r.mer=m[1]});})();
 /* 商家子账户（按 Airwallex 账号，共用账号的店铺合并） */
 const MA=[
  {name:'Fresh Greens Trading',id:'acct_RDKEILLXOb6jQriCE8DO8Q',shops:['SH20260713476005'],open:0,fl:[]},
- {name:'Ocean Catch Seafood',id:'acct_fImHMCOtNVyfinyAHxSK5A',shops:['SH20260716476017'],open:0,fl:[['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050003',2380,'TRF'],['2026-10-08 18:20','商家提现到银行卡','商家银行卡 DBS ****2231','WD2610080003',-2380,'PO']]},
+ {name:'Ocean Catch Seafood',id:'acct_fImHMCOtNVyfinyAHxSK5A',shops:['SH20260716476017'],open:0,fl:[['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050005',2380,'TRF'],['2026-10-08 18:20','商家提现到银行卡','商家银行卡 DBS ****2231','WD2610080003',-2380,'PO']]},
  {name:'Prime Meat Supply',id:'acct_GtDEwVKOMpeH4hlrN3qWJw',shops:['SH2026081200001'],open:0,fl:[['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050003',8250,'TRF'],['2026-10-08 20:05','商家提现到银行卡','商家银行卡 OCBC ****8810','WD2610080004',-8060.20,'PO']]},
  {name:'Golden Harvest Produce',id:'acct_RQS9k-qcOP-2NCRzivM6mg',shops:['SH2026082800001'],open:0,fl:[]},
- {name:'ZZ QA 测试商家',id:'acct_hZ-SSedOPYexc7P4MohhzQ',shops:['ZZQA0722M1','ZZQA0722S1','ZZQA0722S2','ZZQA0722S3'],open:1254.95,fl:[['2026-09-28 10:15','商家提现到银行卡','商家银行卡 UOB ****0457','WD2609280002',-600,'PO'],['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050003',2380,'TRF'],['2026-10-08 19:40','商家提现到银行卡','商家银行卡 UOB ****0457','WD2610080005',-2380,'PO']]}];
+ {name:'ZZ QA 测试商家',id:'acct_hZ-SSedOPYexc7P4MohhzQ',shops:['ZZQA0722M1','ZZQA0722S1','ZZQA0722S2','ZZQA0722S3'],open:1254.95,fl:[['2026-09-28 10:15','商家提现到银行卡','商家银行卡 UOB ****0457','WD2609280002',-600,'PO'],['2026-10-08 12:00','结算款到账','Holding 清分账户','JS2610050004',2380,'TRF'],['2026-10-08 19:40','商家提现到银行卡','商家银行卡 UOB ****0457','WD2610080005',-2380,'PO']]}];
 AW.PO=['付款','Payout'];DOCT.WD='提现单';
 let MODE='PL',MI=4;
 const docType=d=>{if(d.startsWith('bat_'))return '结算批次';const k=Object.keys(DOCT).find(p=>d.startsWith(p));return k?DOCT[k]:''};
@@ -231,6 +236,9 @@ function disp(list){
       if(r.aw==='REV')x.inn=r2(x.inn+r.amt);
       else if(r.what.includes('退款手续费'))x.fee=r2(x.fee-r.amt);else x.amt=r2(x.amt+r.amt);
       if(r.what==='退款给客户'){x.cp=r.cp;x.time=r.time}}
+    else if(r.doc.startsWith('JS')){const k='J|'+r.acc+'|'+r.doc;
+      if(!g[k]){g[k]={...r,id:'js_'+r.doc+'_'+r.acc,what:r.acc==='HA'?'结算出款：'+(r.mer||'商家'):'结算：佣金转入'+(r.mer?'（'+r.mer+'）':''),cp:r.acc==='HA'?(r.mer||'商家')+' / 佣金账户':'Holding 清分账户',amt:0,inn:0,out:0,fee:0,total:0,parts:[],tx:[]};out.push(g[k])}
+      const x=g[k];x.parts.push({ft:r.ft,what:r.what,amt:r.amt,cp:r.cp});x.tx.push({id:r.id,aw:r.aw,amt:r.amt});x.total=r2(x.total+r.amt);if(r.amt>0)x.inn=r2(x.inn+r.amt);else x.out=r2(x.out-r.amt);x.amt=-x.out;x.js=true}
     else if(r.aw==='SPLIT'){const k='B|'+r.acc+'|'+r.bat+'|'+r.st;
       if(!g[k]){g[k]={...r,id:'bt_'+r.bat+'_'+r.acc,what:r.acc==='PA'?'按结算批次自动转到 Holding':'平台主账户按结算批次转来的线上付款',doc:r.bat,amt:0,total:0,inn:0,out:0,items:[]};out.push(g[k])}
       const x=g[k];x.items.push({order:r.order,pi:r.doc,amt:r.amt});x.amt=r2(x.amt+r.amt);x.total=x.amt;x.inn=x.amt>0?x.amt:0;x.out=x.amt<0?-x.amt:0;x.order=x.items.length+' 笔订单'}
@@ -272,7 +280,7 @@ function renderP(){
   ${rs.map(r=>`<tr class="${stale(r)?'stale':''}"><td>${r.time}</td><td>${r.what}</td>
    <td>${docType(r.doc)?`<div class="muted" style="font-size:12px">${docType(r.doc)}</div><span class="link" onclick="${r.items?`openFlow('${r.id}')`:`openDoc('${r.doc}')`}">${r.doc}</span>`:`<span class="muted">${r.doc}</span>`}</td>
    <td>${r.cp}</td><td class="num" style="color:#389e0d">${r.inn>0?fmt(r.inn):''}</td><td class="num" style="color:var(--err)">${r.out>0?fmt(r.out):''}</td><td class="num">${r.fee?fmt(r.fee):''}</td>${showBal?`<td class="num">${r.st==='已结算'?fmt(bal[r.id]):'<span class="muted">—</span>'}</td>`:''}
-   <td>${r.items?`<span class="link" onclick="openFlow('${r.id}')">${r.order}</span>`:r.order?`<span class="link" onclick="toast('打开销售订单 ${r.order}')">${r.order}</span>`:'—'}</td><td>${r.tx?r.tx.map(t=>`<div>${AW[t.aw][0]}</div>`).join(''):`${AW[r.aw][0]}<div class="mono">${AW[r.aw][1]}</div>`}</td><td class="mono">${r.tx?r.tx.map(t=>`<div>${t.id}</div>`).join(''):r.id}</td><td class="mono">${r.bat||'—'}</td>
+   <td>${r.items?`<span class="link" onclick="openFlow('${r.id}')">${r.order}</span>`:r.order?`<span class="link" onclick="toast('打开销售订单 ${r.order}')">${r.order}</span>`:'—'}</td><td>${r.js?`账户间划转 × ${r.tx.length}`:r.tx?r.tx.map(t=>`<div>${AW[t.aw][0]}</div>`).join(''):`${AW[r.aw][0]}<div class="mono">${AW[r.aw][1]}</div>`}</td><td class="mono">${r.js?`<span class="muted">${r.tx.length} 条，见详情</span>`:r.tx?r.tx.map(t=>`<div>${t.id}</div>`).join(''):r.id}</td><td class="mono">${r.bat||'—'}</td>
    <td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}${stale(r)?`<div class="muted" style="font-size:12px">创建于 ${r.time.slice(5,10)}，超 2 天</div>`:''}</td><td><span class="link" onclick="openFlow('${r.id}')">详情</span></td></tr>`).join('')||'<tr><td colspan="14" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
   </tbody></table><div class="pg">共 ${rs.length} 条</div></div>`;
 }
@@ -299,8 +307,8 @@ let DR=null;
 function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
 function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
 function openFlow(id){const r=disp(base()).find(x=>x.id===id);const parts=r.parts||(r.aw==='PAY'?[{ft:r.ft,what:'客户线上付款',amt:r2(r.amt+r.fee)},{ft:r.ft,what:'收单手续费（Airwallex 扣）',amt:-r.fee}]:[{ft:r.ft,what:r.what,amt:r.amt}]);
-  const raws=r.parts?base().filter(x=>x.doc===r.doc&&(x.aw==='REF'||x.aw==='REV')):[r];
-  const txs=r.tx?r.tx.map(t=>{const fs=raws.filter(x=>x.aw===t.aw),fee=r2(-fs.filter(x=>x.what.includes('退款手续费')).reduce((s,x)=>s+x.amt,0)),net=r2(fs.reduce((s,x)=>s+x.amt,0));return {id:t.id,aw:t.aw,gross:r2(net+fee),fee,net,time:fs[fs.length-1].time}}):[{id:r.id,aw:r.aw,gross:r2(r.amt+(r.aw==='PAY'?r.fee:0)),fee:r.fee||0,net:r.amt,time:r.time}];
+  const raws=r.parts&&!r.js?base().filter(x=>x.doc===r.doc&&(x.aw==='REF'||x.aw==='REV')):[r];
+  const txs=r.js?r.tx.map(t=>({id:t.id,aw:t.aw,gross:t.amt,fee:0,net:t.amt,time:r.time})):r.tx?r.tx.map(t=>{const fs=raws.filter(x=>x.aw===t.aw),fee=r2(-fs.filter(x=>x.what.includes('退款手续费')).reduce((s,x)=>s+x.amt,0)),net=r2(fs.reduce((s,x)=>s+x.amt,0));return {id:t.id,aw:t.aw,gross:r2(net+fee),fee,net,time:fs[fs.length-1].time}}):[{id:r.id,aw:r.aw,gross:r2(r.amt+(r.aw==='PAY'?r.fee:0)),fee:r.fee||0,net:r.amt,time:r.time}];
   openDr(()=>({t:'流水详情',b:`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[
    ['账户',ACC[r.acc]],['交易类型',r.what],['单据',docType(r.doc)?`${docType(r.doc)} <span class="link" onclick="openDoc('${r.doc}')">${r.doc}</span>`:r.doc],['对方账户',r.cp],
    ['收入',r.inn?fmt(r.inn):'—'],['支出',r.out?fmt(r.out):'—'],['其中手续费',r.fee?fmt(r.fee):'—'],['订单编号',r.order||'—'],['结算批次号',r.bat||'—'],['状态',r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')]].map(([k,v])=>`<tr><td class="muted" style="width:150px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
@@ -309,7 +317,7 @@ function openFlow(id){const r=disp(base()).find(x=>x.id===id);const parts=r.part
    ${r.items?(()=>{const its=r.items.map(i=>{const p=R.find(x=>x.aw==='PAY'&&x.doc===i.pi),net=Math.abs(i.amt),fee=p?p.fee:r2(net/0.98*0.02);return {...i,net,fee,gross:r2(net+fee)}}),T=k=>r2(its.reduce((s,i)=>s+i[k],0));
    return `<div style="font-weight:600;margin-bottom:8px">本批次包含的支付单（${its.length} 笔）</div><table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><thead><tr><th>订单编号</th><th>支付单</th><th class="num">实付</th><th class="num">手续费</th><th class="num">转入 Holding</th></tr></thead><tbody>${its.map(i=>`<tr><td><span class="link">${i.order}</span></td><td class="mono">${i.pi}</td><td class="num">${fmt(i.gross)}</td><td class="num">${fmt(i.fee)}</td><td class="num">${fmt(i.net)}</td></tr>`).join('')}<tr><td style="font-weight:600">合计</td><td></td><td class="num" style="font-weight:600">${fmt(T('gross'))}</td><td class="num" style="font-weight:600">${fmt(T('fee'))}</td><td class="num" style="font-weight:600">${fmt(T('net'))}</td></tr></tbody></table><div class="muted" style="margin:-10px 0 18px">转入 Holding = 实付 − 手续费；合计 ${fmt(T('net'))} = 本笔划转金额</div>`})():''}
    <div style="font-weight:600;margin-bottom:8px">资金类型拆分</div>
-   <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>资金类型</th><th>说明</th><th class="num">收入</th><th class="num">支出</th></tr></thead><tbody>${parts.map(p=>`<tr><td>${TYPES[r.acc][p.ft]}</td><td>${p.what}</td><td class="num">${p.amt>0?fmt(p.amt):''}</td><td class="num">${p.amt<0?fmt(-p.amt):''}</td></tr>`).join('')}</tbody></table>`}))}
+   <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>资金类型</th><th>说明</th><th>对方</th><th class="num">收入</th><th class="num">支出</th></tr></thead><tbody>${parts.map(p=>`<tr><td>${TYPES[r.acc][p.ft]}</td><td>${p.what}</td><td>${p.cp||r.cp}</td><td class="num">${p.amt>0?fmt(p.amt):''}</td><td class="num">${p.amt<0?fmt(-p.amt):''}</td></tr>`).join('')}</tbody></table>`}))}
 function openDoc(doc){const fs=R.filter(r=>r.doc===doc).sort((a,b)=>a.time.localeCompare(b.time));
   openDr(()=>({t:`${docType(doc)} ${doc}`,b:`<div class="muted" style="margin-bottom:10px">这张单据在三个账户里产生的全部流水</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>账户 · 资金类型</th><th>交易类型</th><th class="num">收入</th><th class="num">支出</th><th>状态</th></tr></thead><tbody>${fs.map(r=>`<tr><td>${r.time}</td><td>${ACC[r.acc]} · ${TYPES[r.acc][r.ft]}</td><td>${r.what}</td><td class="num">${r.amt>0?fmt(r.amt):''}</td><td class="num">${r.amt<0?fmt(-r.amt):''}</td><td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}</td></tr>`).join('')}</tbody></table>`}))}
 render();
