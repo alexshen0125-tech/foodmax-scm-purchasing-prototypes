@@ -140,7 +140,7 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const TODAY='2026-10-09';
 const ACC={PA:'平台主账户',HA:'Holding 清分账户',CA:'佣金账户'};
 const TYPES={PA:{FEE:'手续费备用金',TERM:'账期还款金额',ONL:'线上收单金额'},HA:{ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'},CA:{COM:'佣金金额'}};
-const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18550.30,TERM:6320,ADV:0},CA:{COM:16477.55}};
+const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18550.30,TERM:6320,ADV:0},CA:{COM:16220.50}};
 const DOCT={TR:'资金调拨单',RF:'退款资金单',AD:'垫资单',JS:'结算单',CL:'认领单',int:'支付单'};
 const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],DEP:['入金','Deposit'],FEE:['费用','Fee']};
 let seq=0;const rid=()=>'ftx_'+(++seq).toString(36).padStart(4,'0')+'Kq'+((seq*7919)%9973).toString(36);
@@ -148,10 +148,9 @@ let seq=0;const rid=()=>'ftx_'+(++seq).toString(36).padStart(4,'0')+'Kq'+((seq*7
 const R=[];
 const add=(acc,ft,time,what,cp,doc,amt,fee,aw,order,bat,st)=>R.push({id:rid(),acc,ft,time,what,cp,doc,amt:r2(amt),fee:fee||0,aw,order:order||'',bat:bat||'',st:st||'已结算'});
 // 平台主账户
-add('PA','FEE','2026-10-01 09:12','佣金账户转钱来补备用金','佣金账户','TR2610010001',1500,0,'TRF');
+add('PA','FEE','2026-10-01 09:12','佣金账户转钱来补备用金','佣金账户','TR2610010001',1242.95,0,'TRF');
 add('PA','FEE','2026-10-03 14:20','退款时补上当初被扣的收单手续费','客户','RF2610030002',-3.36,0,'REF','SO2609280112');
 add('PA','FEE','2026-10-03 14:20','退款时 Airwallex 收的退款手续费','Airwallex','RF2610030002',-0.13,0,'REF','SO2609280112');
-add('PA','FEE','2026-10-05 23:00','Airwallex 扣的其他费用','Airwallex','Airwallex 账单 2026-09',-257.05,0,'FEE');
 add('PA','FEE','2026-10-08 16:40','退款时补上当初被扣的收单手续费','客户','RF2610080005',-2,0,'REF','SO2610060031');
 add('PA','FEE','2026-10-08 16:40','退款时 Airwallex 收的退款手续费','Airwallex','RF2610080005',-0.13,0,'REF','SO2610060031');
 add('PA','FEE','2026-10-09 09:30','退款时补上当初被扣的收单手续费','客户','RF2610090001',-2,0,'REF','SO2610080207');
@@ -201,7 +200,7 @@ add('HA','ONL','2026-10-09 10:05','垫资收回 → 佣金账户','佣金账户'
 // 佣金账户
 add('CA','COM','2026-10-08 12:00','结算时佣金转进来','Holding 清分账户','JS2610050003',1876,0,'TRF');
 add('CA','COM','2026-10-09 10:05','Holding 把垫资收回来','Holding 清分账户','TR2610090002',1946.45,0,'TRF');
-add('CA','COM','2026-10-01 09:12','给平台主账户补备用金','平台主账户','TR2610010001',-1500,0,'TRF');
+add('CA','COM','2026-10-01 09:12','给平台主账户补备用金','平台主账户','TR2610010001',-1242.95,0,'TRF');
 add('CA','COM','2026-10-01 10:30','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610010001',-3800,0,'TRF');
 add('CA','COM','2026-10-08 11:40','垫钱给 Holding（清分垫资）','Holding 清分账户','AD2610080001',-2400,0,'TRF');
 add('CA','COM','2026-10-08 12:00','给 Holding 补平台补贴','Holding 清分账户','JS2610050003',-120,0,'TRF');
