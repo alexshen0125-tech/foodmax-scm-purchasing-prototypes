@@ -80,7 +80,7 @@ DB.adjOrders = DB.adjOrders || [
    bizNo:'QC-26070101', remark:'7/1 到仓抽检两箱叶菜不合格，按货值扣款', effectiveTime:'2026-07-01 09:12', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 09:20', pushedBy:'陈敏'},
-  // 票扣演示：6 月佣金多收，挂 SVC-INV-2026-000123 开红字冲减（含税 300.00 → 未税 275.23 + GST 24.77）
+  // 票扣演示：6 月佣金多收，挂 SVC-INV-2026-000123 票扣（含税 300.00 → 未税 275.23 + GST 24.77）
   {adjustNo:'ADJ-SG-20260701-003', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
    adjustTypeCode:'ADJT-0004', adjustTypeName:'佣金差额调整', amount:300.00, currency:'SGD',
    deductionType:'INVOICE', invoiceCategory:'SVC', originalInvoiceNo:'SVC-INV-2026-000123',
@@ -89,7 +89,7 @@ DB.adjOrders = DB.adjOrders || [
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 14:10', pushedBy:'陈敏'},
   // 下游拒收演示（CLJS-20 BR-10 retryable=false）
-  {adjustNo:'ADJ-SG-20260913-002', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
+  {adjustNo:'ADJ-SG-20260913-005', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
    adjustTypeCode:'ADJT-0002', adjustTypeName:'逾期送货违约金', amount:150.00, currency:'SGD',
    deductionType:'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'', taxRate:null, amountExclTax:150.00, gstAmount:0.00,
    bizNo:'DL260912040003', remark:'9/12 送货超时 3 小时，按协议扣违约金', effectiveTime:'2026-09-13 10:05', createdBy:'林凯',
@@ -250,7 +250,7 @@ PAGES['p-adjust']=()=>{
       <thead><tr>
         <th style="width:34px"><input type="checkbox" class="skuchk" title="全选当前页待推送" ${allSel?'checked':''} onclick="adj_selAll()"></th>
         <th>调整单号</th><th>店铺名称</th><th>店铺编码</th><th style="text-align:right">金额</th>
-        <th>调整类型</th><th>抵扣方式</th><th>来源</th><th>生效时间</th><th>状态</th><th>操作</th>
+        <th>调整类型</th><th>抵扣方式</th><th>来源</th><th>生效时间</th><th>状态</th><th style="position:sticky;right:0;background:linear-gradient(var(--bd2),var(--bd2)),#fff;box-shadow:-1px 0 0 var(--bd)">操作</th>
       </tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${selectable(r)?`<input type="checkbox" class="skuchk" ${DB.adjSel.includes(r.adjustNo)?'checked':''} onclick="adj_toggle('${r.adjustNo}')">`:''}</td>
@@ -263,7 +263,7 @@ PAGES['p-adjust']=()=>{
         <td style="white-space:nowrap">${srcLabel(r)}</td>
         <td style="white-space:nowrap;color:var(--ts)">${r.effectiveTime}</td>
         <td style="white-space:nowrap">${statusTag(r)}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button></td>
+        <td style="white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-1px 0 0 var(--bd)"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button>${canVoid(r)?`<button class="btn btn-o btn-sm" style="margin-left:6px;color:var(--r)" onclick="adj_voidAsk('${r.adjustNo}')">作废</button>`:''}</td>
       </tr>`).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts);text-align:right">共 ${rows.length} 条 · 每页 50 条</div>
@@ -358,7 +358,7 @@ window.adj_typeChange=function(){
   if(inv) adj_fillInv(t);
   const n=document.getElementById('an-note');
   if(n) n.innerHTML = !t ? '抵扣方式由调整类型决定，选择类型后显示。'
-    : inv ? `本类型为<b>票扣</b>：将按原票税率拆出 GST，并对所选发票开${t.dir=='ADDITION'?'增额票（补开，不动原票）':'红字冲减'}。<b style="color:var(--r)">推送后不可撤回。</b>`
+    : inv ? `本类型为<b>票扣</b>：将按原票税率拆出 GST，并关联所选原发票开票。<b style="color:var(--r)">推送后不可撤回。</b>`
           : '本类型为<b>账扣</b>：不开发票、不产生 GST，直接在结算中加减。';
   adj_amtInput();
 };
@@ -528,7 +528,6 @@ window.adj_detail=function(no){
     ${r.deductionType=='INVOICE'?`${sec('税额与开票')}
     ${grid(kv('未税金额',money(r.amountExclTax))+kv('GST 税额',money(r.gstAmount))
       +kv('税率',((r.taxRate||0)*100).toFixed(0)+'%（取自原票）')
-      +kv('开票动作',adjSign(r)>0?'补开增额票（不动原票）':'对原票开红字冲减')
       +kv('开票状态',r.pushStatus=='PUSHED'
         ?'<span class="tag t-y"><span class="dot"></span>待开票</span>'
         :'<span class="tag t-gr"><span class="dot"></span>未推送，尚未产生开票任务</span>'))}
@@ -673,7 +672,7 @@ window.adjt_edit=function(code){
       <div class="fr"><label class="fl">类型编码</label><input value="${isNew?'保存后自动生成':esc(t.code)}" ${ro}></div>
       <div class="fr"><label class="fl"><b>*</b>方向</label>${isNew?`<div style="display:flex;gap:8px">${card('DEDUCTION','负向 · 扣商家')}${card('ADDITION','正向 · 补商家')}</div><div id="at-dir-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}" ${ro}>`}</div>
     </div>
-    <div class="fr"><label class="fl"><b>*</b>抵扣方式</label>${isNew?`<div style="display:flex;gap:8px">${dcard('ACCOUNT','账扣','不开票，GST 恒 0，直接在结算中加减')}${dcard('INVOICE','票扣','挂原发票、按原票税率拆税，负向开红字 / 正向补开增额票')}</div><div id="at-ded-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.ded=='INVOICE'?'票扣':'账扣'}" ${ro}>`}</div>
+    <div class="fr"><label class="fl"><b>*</b>抵扣方式</label>${isNew?`<div style="display:flex;gap:8px">${dcard('ACCOUNT','账扣','不开票，GST 恒 0，直接在结算中加减')}${dcard('INVOICE','票扣','挂原发票、按原票税率拆税，关联原发票开票')}</div><div id="at-ded-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.ded=='INVOICE'?'票扣':'账扣'}" ${ro}>`}</div>
     <div class="fg2">
       <div class="fr"><label class="fl"><b>*</b>中文名称</label><input id="at-cn" value="${esc(t.cn)}"><div id="at-cn-err" class="fl-h" style="color:var(--r)"></div></div>
       <div class="fr"><label class="fl">英文名称</label><input id="at-en" value="${esc(t.en)}"></div>
@@ -701,7 +700,7 @@ window.adjt_save=function(code, confirmed){
     if(!code){
       DB.adjtDraft=v;
       modal(`<div class="mc-hd"><h3>确认保存</h3><button class="mc-x" onclick="adjt_edit('')">×</button></div>
-      <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>方向【${v.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}】、抵扣方式【${v.ded=='INVOICE'?'票扣':'账扣'}】保存后不可修改，类型编码由系统生成，确认保存？${v.ded=='INVOICE'?'<br><span style="font-size:12px">该类型建的单将按原票税率拆出 GST，并对原票开红字或补开增额票。</span>':''}</div></div>
+      <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>方向【${v.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}】、抵扣方式【${v.ded=='INVOICE'?'票扣':'账扣'}】保存后不可修改，类型编码由系统生成，确认保存？${v.ded=='INVOICE'?'<br><span style="font-size:12px">该类型建的单将按原票税率拆出 GST，并关联原发票开票。</span>':''}</div></div>
       <div class="mc-ft"><button class="btn btn-o" onclick="adjt_edit('')">返回修改</button><button class="btn btn-p" onclick="adjt_save('',true)">确认保存</button></div>`);
       return;
     }
