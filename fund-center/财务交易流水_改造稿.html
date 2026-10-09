@@ -261,12 +261,12 @@ function renderP(){
    <div class="fi"><label>状态</label><select class="ipt" style="width:120px" onchange="Q.st=this.value;render()"><option value="">全部</option>${['已结算','待结算'].map(x=>`<option ${Q.st===x?'selected':''}>${x}</option>`).join('')}</select></div>
    <div class="fi"><label>单据号 / 订单编号 / 渠道交易号 / 批次号</label><input class="ipt" style="width:280px" placeholder="请输入" value="${Q.kw}" onchange="Q.kw=this.value;render()"></div>
    <button class="btn" onclick="Q={acc:Q.acc,ft:'',what:'',st:'',kw:''};render()">重 置</button><span class="sp"></span><button class="btn" onclick="toast('已从 Airwallex 同步最新流水')">手动同步</button><button class="btn" onclick="toast('已导出')">导出</button></div>
-  <div class="tw"><table class="l"><thead><tr><th>结算时间</th><th>交易类型</th><th>单据</th><th>对方账户</th><th class="num">收入</th><th class="num">支出</th>${showBal?'<th class="num">余额</th>':''}<th>订单编号</th><th>Airwallex 交易类型</th><th>渠道交易号</th><th>结算批次号</th><th>状态</th><th>操作</th></tr></thead><tbody>
+  <div class="tw"><table class="l"><thead><tr><th>结算时间</th><th>交易类型</th><th>单据</th><th>对方账户</th><th class="num">收入</th><th class="num">支出</th><th class="num">手续费</th>${showBal?'<th class="num">余额</th>':''}<th>订单编号</th><th>Airwallex 交易类型</th><th>渠道交易号</th><th>结算批次号</th><th>状态</th><th>操作</th></tr></thead><tbody>
   ${rs.map(r=>`<tr class="${stale(r)?'stale':''}"><td>${r.st==='已结算'?r.time:'<span class="muted">—</span>'}</td><td>${r.what}</td>
    <td>${docType(r.doc)?`<div class="muted" style="font-size:12px">${docType(r.doc)}</div><span class="link" onclick="openDoc('${r.doc}')">${r.doc}</span>`:`<span class="muted">${r.doc}</span>`}</td>
-   <td>${r.cp}</td><td class="num" style="color:#389e0d">${r.inn>0?fmt(r.inn):''}</td><td class="num" style="color:var(--err)">${r.out>0?fmt(r.out)+(r.fee?`<div class="muted" style="font-size:12px">含手续费 ${fmt(r.fee)}</div>`:''):''}</td>${showBal?`<td class="num">${r.st==='已结算'?fmt(bal[r.id]):'<span class="muted">—</span>'}</td>`:''}
+   <td>${r.cp}</td><td class="num" style="color:#389e0d">${r.inn>0?fmt(r.inn):''}</td><td class="num" style="color:var(--err)">${r.out>0?fmt(r.out):''}</td><td class="num">${r.fee?fmt(r.fee):''}</td>${showBal?`<td class="num">${r.st==='已结算'?fmt(bal[r.id]):'<span class="muted">—</span>'}</td>`:''}
    <td>${r.order?`<span class="link" onclick="toast('打开销售订单 ${r.order}')">${r.order}</span>`:'—'}</td><td>${r.tx?r.tx.map(t=>`<div>${AW[t.aw][0]}</div>`).join(''):`${AW[r.aw][0]}<div class="mono">${AW[r.aw][1]}</div>`}</td><td class="mono">${r.tx?r.tx.map(t=>`<div>${t.id}</div>`).join(''):r.id}</td><td class="mono">${r.bat||'—'}</td>
-   <td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}${stale(r)?`<div class="muted" style="font-size:12px">创建于 ${r.time.slice(5,10)}，超 2 天</div>`:''}</td><td><span class="link" onclick="openFlow('${r.id}')">详情</span></td></tr>`).join('')||'<tr><td colspan="13" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
+   <td>${r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')}${stale(r)?`<div class="muted" style="font-size:12px">创建于 ${r.time.slice(5,10)}，超 2 天</div>`:''}</td><td><span class="link" onclick="openFlow('${r.id}')">详情</span></td></tr>`).join('')||'<tr><td colspan="14" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
   </tbody></table><div class="pg">共 ${rs.length} 条</div></div>`;
 }
 let MQ={kw:''};
@@ -291,14 +291,14 @@ function renderM(){
 let DR=null;
 function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
 function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
-function openFlow(id){const r=disp(base()).find(x=>x.id===id);const parts=r.parts||[{ft:r.ft,what:r.what,amt:r.amt}];
+function openFlow(id){const r=disp(base()).find(x=>x.id===id);const parts=r.parts||(r.aw==='PAY'?[{ft:r.ft,what:'客户线上付款',amt:r2(r.amt+r.fee)},{ft:r.ft,what:'收单手续费（Airwallex 扣）',amt:-r.fee}]:[{ft:r.ft,what:r.what,amt:r.amt}]);
   const raws=r.parts?base().filter(x=>x.doc===r.doc&&(x.aw==='REF'||x.aw==='REV')):[r];
-  const txs=r.tx?r.tx.map(t=>{const fs=raws.filter(x=>x.aw===t.aw);return {id:t.id,aw:t.aw,amt:r2(fs.reduce((s,x)=>s+x.amt,0)),time:fs[fs.length-1].time}}):[{id:r.id,aw:r.aw,amt:r.amt,time:r.time}];
+  const txs=r.tx?r.tx.map(t=>{const fs=raws.filter(x=>x.aw===t.aw),fee=r2(-fs.filter(x=>x.what.includes('退款手续费')).reduce((s,x)=>s+x.amt,0)),net=r2(fs.reduce((s,x)=>s+x.amt,0));return {id:t.id,aw:t.aw,gross:r2(net+fee),fee,net,time:fs[fs.length-1].time}}):[{id:r.id,aw:r.aw,gross:r2(r.amt+(r.aw==='PAY'?r.fee:0)),fee:r.fee||0,net:r.amt,time:r.time}];
   openDr(()=>({t:'流水详情',b:`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[
    ['账户',ACC[r.acc]],['交易类型',r.what],['单据',docType(r.doc)?`${docType(r.doc)} <span class="link" onclick="openDoc('${r.doc}')">${r.doc}</span>`:r.doc],['对方账户',r.cp],
    ['收入',r.inn?fmt(r.inn):'—'],['支出',r.out?fmt(r.out):'—'],['其中手续费',r.fee?fmt(r.fee):'—'],['订单编号',r.order||'—'],['结算批次号',r.bat||'—'],['状态',r.st==='已结算'?tag('已结算','green'):tag('待结算','orange')]].map(([k,v])=>`<tr><td class="muted" style="width:150px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
    <div style="font-weight:600;margin-bottom:8px">Airwallex 流水（${txs.length} 条）</div>
-   <table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><thead><tr><th>结算时间</th><th>Airwallex 交易类型</th><th>渠道交易号</th><th class="num">金额</th></tr></thead><tbody>${txs.map(t=>`<tr><td>${t.time}</td><td>${AW[t.aw][0]}<div class="mono">${AW[t.aw][1]}</div></td><td class="mono">${t.id}</td><td class="num">${t.amt>0?'+':''}${fmt(t.amt)}</td></tr>`).join('')}</tbody></table>
+   <table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><thead><tr><th>结算时间</th><th>Airwallex 交易类型</th><th>渠道交易号</th><th class="num">金额</th><th class="num">手续费</th><th class="num">净额</th></tr></thead><tbody>${txs.map(t=>`<tr><td>${t.time}</td><td>${AW[t.aw][0]}<div class="mono">${AW[t.aw][1]}</div></td><td class="mono">${t.id}</td><td class="num">${t.gross>0?'+':''}${fmt(t.gross)}</td><td class="num">${t.fee?fmt(t.fee):'—'}</td><td class="num">${t.net>0?'+':''}${fmt(t.net)}</td></tr>`).join('')}</tbody></table>
    <div style="font-weight:600;margin-bottom:8px">资金类型拆分</div>
    <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>资金类型</th><th>说明</th><th class="num">收入</th><th class="num">支出</th></tr></thead><tbody>${parts.map(p=>`<tr><td>${TYPES[r.acc][p.ft]}</td><td>${p.what}</td><td class="num">${p.amt>0?fmt(p.amt):''}</td><td class="num">${p.amt<0?fmt(-p.amt):''}</td></tr>`).join('')}</tbody></table>`}))}
 function openDoc(doc){const fs=R.filter(r=>r.doc===doc).sort((a,b)=>a.time.localeCompare(b.time));
