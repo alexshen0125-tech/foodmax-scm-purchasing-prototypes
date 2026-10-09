@@ -113,6 +113,7 @@ table.l tr.stale td{background:#fffbe6}
 .sumtbl th:first-child,.sumtbl td:first-child{text-align:left}
 .sumtbl tr.tot td{font-weight:600;background:#fafafa}
 .pg{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:12px 18px;color:var(--tx3)}
+.cb{position:relative}.cb-l{display:none;position:absolute;top:34px;left:0;width:420px;max-height:300px;overflow:auto;background:#fff;border:1px solid var(--bd2);border-radius:6px;box-shadow:0 6px 16px rgba(0,0,0,.12);z-index:5}.cb-o{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--bd)}.cb-o:hover{background:#f5faff}.cb-o.on{background:#e6f4ff}
 .site{color:#cf1322;border:1px solid #ffa39e;background:#fff1f0;border-radius:12px;padding:0 10px;font-size:12px;line-height:22px}
 </style>
 <div class="layout">
@@ -247,12 +248,17 @@ function renderP(){
   </tbody></table><div class="pg">共 ${rs.length} 条</div></div>`;
 }
 let MQ={kw:''};
+const maLabel=x=>x.shops.join(' / ')+(x.shops.length>1?'（共用账号）':'');
+function showList(q){q=(q||'').trim().toLowerCase();const hit=MA.map((x,i)=>[x,i]).filter(([x])=>!q||x.shops.some(sh=>sh.toLowerCase().includes(q))||x.id.toLowerCase().includes(q));
+  const hl=t=>q?t.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'ig'),m=>`<b style="color:var(--pri)">${m}</b>`):t;
+  const l=$('mql');l.style.display='block';l.innerHTML=hit.length?hit.map(([x,i])=>`<div class="cb-o ${i===MI?'on':''}" onmousedown="MI=${i};render()"><div>${hl(maLabel(x))}</div><div class="mono">${hl(x.id)}</div></div>`).join(''):'<div class="cb-o muted">无匹配的商家子账户</div>'}
+function hideList(){const l=$('mql');if(l)l.style.display='none';const i=$('mq');if(i)i.value=maLabel(MA[MI])}
 function renderM(){
   const a=MA[MI],inn=r2(a.fl.filter(f=>f[4]>0).reduce((s,f)=>s+f[4],0)),out=r2(-a.fl.filter(f=>f[4]<0).reduce((s,f)=>s+f[4],0)),end=r2(a.open+inn-out);
   let run=a.open;const rows=a.fl.slice().sort((x,y)=>x[0].localeCompare(y[0])).map(f=>{run=r2(run+f[4]);return [...f,run]}).filter(f=>!MQ.kw||[f[3]].some(x=>x.toLowerCase().includes(MQ.kw.toLowerCase()))).reverse();
   $('ct').innerHTML=`<div class="crumb">渠道资金 / 财务交易流水</div>
   <div class="title"><h1>财务交易流水</h1><span class="sp"></span><span class="site">当前 site：新加坡</span></div>${TABS()}
-  <div class="flt" style="border-radius:8px;margin-bottom:16px"><div class="fi"><label>商家子账户</label><select class="ipt" style="width:360px" onchange="MI=+this.value;render()">${MA.map((x,i)=>`<option value="${i}" ${MI===i?'selected':''}>${x.shops.join(' / ')}${x.shops.length>1?'（共用账号）':''}</option>`).join('')}</select></div>
+  <div class="flt" style="border-radius:8px;margin-bottom:16px"><div class="fi"><label>商家子账户</label><div class="cb"><input class="ipt" id="mq" style="width:360px" placeholder="输入店铺编码 / Account ID 搜索" value="${maLabel(a)}" onfocus="this.select();showList('')" oninput="showList(this.value)" onblur="setTimeout(hideList,150)"><div class="cb-l" id="mql"></div></div></div>
    <div class="fi"><label>Account ID</label><div class="mono" style="line-height:30px">${a.id}</div></div>
    <div class="fi"><label>结算时间</label><div style="display:flex;gap:6px;align-items:center"><input class="ipt" style="width:120px" value="2026-09-24"><span class="muted">→</span><input class="ipt" style="width:120px" value="2026-10-09"></div></div></div>
   <div class="sumtbl"><table><thead><tr><th>账户</th><th>期初</th><th>收入</th><th>支出</th><th>期末</th></tr></thead><tbody><tr class="tot"><td>${a.shops.join(' / ')}</td><td>${fmt(a.open)}</td><td style="color:#389e0d">${fmt(inn)}</td><td style="color:var(--err)">${fmt(out)}</td><td>${fmt(end)}</td></tr></tbody></table></div>
