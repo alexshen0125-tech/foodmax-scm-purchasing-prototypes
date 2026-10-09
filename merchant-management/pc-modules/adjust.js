@@ -27,21 +27,21 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 /* ================= 调整类型 ================= */
 // ded = 抵扣方式 ACCOUNT 账扣 / INVOICE 票扣（BR-14，配在类型模板上、建后不可改）
-// ic  = 票扣的关联票据类型 SVC 服务费票 / RPL 自营补货票 / SUP 耗材采购票；账扣为空
+// 类型编码系统生成 ADJT-{4 位流水}；人工类型一律必须挂单据（账扣填关联业务单号，票扣选原发票），不再按类型配置
 DB.adjTypes = DB.adjTypes || [
-  {code:'ADJ-FINE',    cn:'缺货罚款',       en:'Shortage Fine',         dir:'DEDUCTION', needBiz:1, on:1, sys:1, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-CLAIM',   cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', needBiz:1, on:1, sys:0, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-DELAY',   cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', needBiz:1, on:1, sys:0, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-QC',      cn:'质量问题扣款',   en:'Quality Deduction',     dir:'DEDUCTION', needBiz:1, on:1, sys:0, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-COMMFIX', cn:'佣金差额调整',   en:'Commission Correction', dir:'DEDUCTION', needBiz:1, on:1, sys:0, ded:'INVOICE', ic:'SVC'},
-  {code:'ADJ-RPLFIX',  cn:'补货金额调整',   en:'Replenish Correction',  dir:'DEDUCTION', needBiz:1, on:1, sys:0, ded:'INVOICE', ic:'RPL'},
-  {code:'ADJ-PROMO',   cn:'平台活动补贴',   en:'Campaign Subsidy',      dir:'ADDITION',  needBiz:0, on:1, sys:0, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-FREIGHT', cn:'物流费用补贴',   en:'Logistics Subsidy',     dir:'ADDITION',  needBiz:0, on:1, sys:0, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-COMP',    cn:'系统错账补款',   en:'System Error Comp.',    dir:'ADDITION',  needBiz:0, on:1, sys:0, ded:'ACCOUNT', ic:''},
-  {code:'ADJ-SUPFIX',  cn:'耗材金额调整',   en:'Supplies Correction',   dir:'ADDITION',  needBiz:1, on:1, sys:0, ded:'INVOICE', ic:'SUP'},
-  {code:'ADJ-DEPOSIT', cn:'保证金退还',     en:'Deposit Refund',        dir:'ADDITION',  needBiz:0, on:0, sys:0, ded:'ACCOUNT', ic:''},
+  {code:'ADJ-FINE',    cn:'缺货罚款',       en:'Shortage Fine',         dir:'DEDUCTION', on:1, sys:1, ded:'ACCOUNT'},
+  {code:'ADJT-0001', cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', on:1, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0002', cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', on:1, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0003', cn:'质量问题扣款',   en:'Quality Deduction',     dir:'DEDUCTION', on:1, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0004', cn:'佣金差额调整',   en:'Commission Correction', dir:'DEDUCTION', on:1, sys:0, ded:'INVOICE'},
+  {code:'ADJT-0005', cn:'补货金额调整',   en:'Replenish Correction',  dir:'DEDUCTION', on:1, sys:0, ded:'INVOICE'},
+  {code:'ADJT-0006', cn:'平台活动补贴',   en:'Campaign Subsidy',      dir:'ADDITION',  on:1, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0007', cn:'物流费用补贴',   en:'Logistics Subsidy',     dir:'ADDITION',  on:1, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0008', cn:'系统错账补款',   en:'System Error Comp.',    dir:'ADDITION',  on:1, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0009', cn:'耗材金额调整',   en:'Supplies Correction',   dir:'ADDITION',  on:1, sys:0, ded:'INVOICE'},
+  {code:'ADJT-0010', cn:'保证金退还',     en:'Deposit Refund',        dir:'ADDITION',  on:0, sys:0, ded:'ACCOUNT'},
 ];
-const tOf = c => (DB.adjTypes||[]).find(t=>t.code==c) || {code:c, cn:c, en:'', dir:'DEDUCTION', needBiz:0, on:0, ded:'ACCOUNT', ic:''};
+const tOf = c => (DB.adjTypes||[]).find(t=>t.code==c) || {code:c, cn:c, en:'', dir:'DEDUCTION', on:0, ded:'ACCOUNT'};
 window.adjTypeOf = tOf;
 
 /* ---------- 票扣：可调整发票（演示数据） ---------- */
@@ -63,59 +63,59 @@ window.adjSplitTax = function(amt, rate){
   return {incl, ex, gst:+(incl-ex).toFixed(2)};
 };
 window.adjDedTag = t => t.ded=='INVOICE'
-  ? `<span class="tag t-b" style="font-size:10.5px">票扣 · ${IC_NAME[t.ic]||''}</span>`
+  ? `<span class="tag t-b" style="font-size:10.5px">票扣</span>`
   : `<span class="tag t-gr" style="font-size:10.5px">账扣</span>`;
 
 /* ================= 调整单 adjust_order（演示数据） ================= */
 DB.adjOrders = DB.adjOrders || [
   // 挂在 2026-07-01 对账单那天（绿鲜源蔬果旗舰店），供商家端「对账单 › 业务调整」页签与导出 Sheet7 演示
   {adjustNo:'ADJ-SG-20260701-002', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
-   adjustTypeCode:'ADJ-PROMO', adjustTypeName:'平台活动补贴', amount:120.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0006', adjustTypeName:'平台活动补贴', amount:120.00, currency:'SGD',
    deductionType:'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'', taxRate:null, amountExclTax:120.00, gstAmount:0.00,
    bizNo:'', remark:'7/1 生鲜节平台让利补贴，线下已与商家确认', effectiveTime:'2026-07-01 18:30', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 18:35', pushedBy:'陈敏'},
   {adjustNo:'ADJ-SG-20260701-001', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
-   adjustTypeCode:'ADJ-QC', adjustTypeName:'质量问题扣款', amount:64.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0003', adjustTypeName:'质量问题扣款', amount:64.00, currency:'SGD',
    deductionType:'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'', taxRate:null, amountExclTax:64.00, gstAmount:0.00,
    bizNo:'QC-26070101', remark:'7/1 到仓抽检两箱叶菜不合格，按货值扣款', effectiveTime:'2026-07-01 09:12', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 09:20', pushedBy:'陈敏'},
   // 票扣演示：6 月佣金多收，挂 SVC-INV-2026-000123 开红字冲减（含税 300.00 → 未税 275.23 + GST 24.77）
   {adjustNo:'ADJ-SG-20260701-003', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
-   adjustTypeCode:'ADJ-COMMFIX', adjustTypeName:'佣金差额调整', amount:300.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0004', adjustTypeName:'佣金差额调整', amount:300.00, currency:'SGD',
    deductionType:'INVOICE', invoiceCategory:'SVC', originalInvoiceNo:'SVC-INV-2026-000123',
    taxRate:0.09, amountExclTax:275.23, gstAmount:24.77,
    bizNo:'', remark:'6 月服务费按旧费率多收，经财务复核冲减，已线下与商家确认', effectiveTime:'2026-07-01 14:05', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-07-01 14:10', pushedBy:'陈敏'},
   {adjustNo:'ADJ-SG-20260914-003', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
-   adjustTypeCode:'ADJ-FREIGHT', adjustTypeName:'物流费用补贴', amount:420.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0007', adjustTypeName:'物流费用补贴', amount:420.00, currency:'SGD',
    bizNo:'', remark:'8 月冷链车加班费补贴', effectiveTime:'2026-09-14 09:20', createdBy:'林凯',
    sourceType:'MANUAL', status:'voided', voidReason:'金额录错，应为 240.00，已重新建单',
    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
   {adjustNo:'ADJ-SG-20260913-002', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
-   adjustTypeCode:'ADJ-QC', adjustTypeName:'质量问题扣款', amount:78.50, currency:'SGD',
+   adjustTypeCode:'ADJT-0003', adjustTypeName:'质量问题扣款', amount:78.50, currency:'SGD',
    bizNo:'QC-26091302', remark:'到仓抽检不合格整批拒收，按货值扣款', effectiveTime:'2026-09-13 08:30', createdBy:'林凯',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
   {adjustNo:'ADJ-SG-20260912-004', shopCode:'SH2026070200004', merchantCode:'M2026-0902',
-   adjustTypeCode:'ADJ-PROMO', adjustTypeName:'平台活动补贴', amount:1250.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0006', adjustTypeName:'平台活动补贴', amount:1250.00, currency:'SGD',
    bizNo:'', remark:'9 月中秋海鲜专场活动，平台承担的让利补贴，线下已与商家确认金额', effectiveTime:'2026-09-12 17:12', createdBy:'林凯',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
   {adjustNo:'ADJ-SG-20260910-004', shopCode:'SH2026070200005', merchantCode:'M2026-1103',
-   adjustTypeCode:'ADJ-COMP', adjustTypeName:'系统错账补款', amount:300.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0008', adjustTypeName:'系统错账补款', amount:300.00, currency:'SGD',
    bizNo:'ADJ-SG-20260909-002', remark:'9/9 违约金误扣：核实为平台派车延误，非商家责任，补回 300.00（已与商家线下确认）', effectiveTime:'2026-09-10 09:05', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'FAILED', syncErrorText:'下游返回超时', pushedAt:'2026-09-10 09:30', pushedBy:'陈敏'},
   {adjustNo:'ADJ-SG-20260909-002', shopCode:'SH2026070200005', merchantCode:'M2026-1103',
-   adjustTypeCode:'ADJ-DELAY', adjustTypeName:'逾期送货违约金', amount:300.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0002', adjustTypeName:'逾期送货违约金', amount:300.00, currency:'SGD',
    bizNo:'SH20260909012', remark:'9/9 送货晚到 4 小时，影响 3 家门店备货，按合同约定计违约金', effectiveTime:'2026-09-09 15:40', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-09-09 16:02', pushedBy:'陈敏'},
   {adjustNo:'ADJ-SG-20260908-001', shopCode:'SH2026062000001', merchantCode:'M2026-0815',
-   adjustTypeCode:'ADJ-CLAIM', adjustTypeName:'售后判责赔付', amount:186.00, currency:'SGD',
+   adjustTypeCode:'ADJT-0001', adjustTypeName:'售后判责赔付', amount:186.00, currency:'SGD',
    bizNo:'AS-26090801', remark:'客户反馈菜心腐烂，判商家责任，按客户成交价赔付', effectiveTime:'2026-09-08 10:22', createdBy:'陈敏',
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-09-08 11:00', pushedBy:'陈敏'},
@@ -291,7 +291,7 @@ window.adj_newAsk=function(keep, mode, src){
   }
   const d=DB.adjDraft, o=d.srcNo?adjOf(d.srcNo):null;
   const types=(DB.adjTypes||[]).filter(t=>t.on&&!t.sys);
-  const dedLbl=t=>t.ded=='INVOICE'?`（票扣 · ${IC_NAME[t.ic]||''}）`:'（账扣）';
+  const dedLbl=t=>t.ded=='INVOICE'?'（票扣）':'（账扣）';
   const group=(dir,label)=>`<optgroup label="${label}">${types.filter(t=>t.dir==dir).map(t=>`<option value="${t.code}" ${d.tc==t.code?'selected':''}>${t.cn}${dedLbl(t)}</option>`).join('')}</optgroup>`;
   const lockShop = d.mode=='correct';
   const title = {new:'新建业务调整单', correct:'新建纠正单', recreate:'重新建单'}[d.mode];
@@ -342,7 +342,7 @@ window.adj_typeChange=function(){
   const code=(document.getElementById('an-type')||{}).value, t=code?tOf(code):null;
   const inv = !!(t&&t.ded=='INVOICE');
   const d=document.getElementById('an-dir'); if(d) d.innerHTML=t?(dirTag(t.dir)+' '+adjDedTag(t)):'—';
-  const l=document.getElementById('an-bizl'); if(l) l.innerHTML=(t&&t.needBiz?'<b>*</b>':'')+'关联业务单号'+(t&&!t.needBiz?'（选填）':'');
+  const l=document.getElementById('an-bizl'); if(l) l.innerHTML='<b>*</b>关联业务单号';
   // 账扣走业务单号文本，票扣换成发票下拉 + 税额拆分（BR-14）
   const bw=document.getElementById('an-bizwrap'), iw=document.getElementById('an-invwrap'), tw=document.getElementById('an-taxwrap');
   if(bw) bw.style.display = inv?'none':'';
@@ -355,16 +355,16 @@ window.adj_typeChange=function(){
           : '本类型为<b>账扣</b>：不开发票、不产生 GST，直接在结算中加减。';
   adj_amtInput();
 };
-// 候选票 = 该店铺 + 该票据类型 + 已开具；行内给票面与可调整余额
+// 候选票 = 该店铺下平台↔商家三类票（服务费 / 自营补货 / 耗材采购）+ 已开具；行内给票据类型、票面与可调整余额
 window.adj_fillInv=function(t){
   const sel=document.getElementById('an-inv'); if(!sel) return;
   const sc=(document.getElementById('an-shop')||{}).value, keep=sel.value;
   if(!sc){ sel.innerHTML='<option value="">请先选择店铺</option>'; sel.disabled=true; return; }
   sel.disabled=false;
-  const list=(DB.adjInvoices||[]).filter(x=>x.shopCode==sc&&x.ic==t.ic).sort((a,b)=>b.date.localeCompare(a.date));
+  const list=(DB.adjInvoices||[]).filter(x=>x.shopCode==sc&&IC_NAME[x.ic]).sort((a,b)=>b.date.localeCompare(a.date));
   sel.innerHTML='<option value="">请选择被调整的发票</option>'+list.map(x=>
-    `<option value="${x.no}" ${keep==x.no?'selected':''}>${x.no} · ${x.date} · 票面 ${money(x.incl)} · 可调 ${money(adjInvLeft(x))}</option>`).join('');
-  if(!list.length) sel.innerHTML='<option value="">该店铺暂无可调整的'+(IC_NAME[t.ic]||'')+'</option>';
+    `<option value="${x.no}" ${keep==x.no?'selected':''}>${IC_NAME[x.ic]} · ${x.no} · ${x.date} · 票面 ${money(x.incl)} · 可调 ${money(adjInvLeft(x))}</option>`).join('');
+  if(!list.length) sel.innerHTML='<option value="">该店铺暂无可调整的发票</option>';
 };
 window.adj_amtKey=function(e){ if(['-','e','E','+',','].includes(e.key)) e.preventDefault(); };
 window.adj_amtInput=function(){
@@ -411,13 +411,13 @@ function validateDraft(){
     d.invNo=g('an-inv');
     const inv=adjInvOf(d.invNo);
     if(!d.invNo||!inv) err.inv='请选择被调整的发票';
-    else if(inv.shopCode!=d.sc||inv.ic!=ty.ic) err.inv='该发票不属于所选店铺或票据类型不符，请重新选择';
+    else if(inv.shopCode!=d.sc||!IC_NAME[inv.ic]) err.inv='该发票不属于所选店铺或不可调整，请重新选择';
     else {
       const left=adjInvLeft(inv);
       if(ty.dir=='DEDUCTION'&&+d.amt>left) err.amt=`调整金额不能超过该发票可调整余额 ${money(left)}`;
-      d.rate=inv.rate; d.ic=ty.ic;
+      d.rate=inv.rate; d.ic=inv.ic;
     }
-  } else if(ty&&ty.needBiz&&!d.biz) err.biz='该调整类型必须填写关联业务单号';
+  } else if(ty&&!d.biz) err.biz='请填写关联业务单号';
   else if(d.biz&&!/^[A-Za-z0-9_-]{1,64}$/.test(d.biz)) err.biz='关联业务单号仅支持字母、数字、- 和 _，最多 64 位';
   if(!d.rk) err.rk='请填写调整说明'; else if([...d.rk].length>500) err.rk='调整说明不能超过 500 字';
   [['shop','an-shop-err'],['type','an-type-err'],['amt','an-amt-err'],['biz','an-biz-err'],['inv','an-inv-err'],['rk','an-rk-err']].forEach(([k,id])=>{const el=document.getElementById(id); if(el) el.textContent=err[k]||'';});
@@ -473,7 +473,7 @@ window.adj_newDo=function(withPush){
   const tax=isInv&&inv?adjSplitTax(amt, inv.rate):{ex:amt, gst:0};
   DB.adjOrders.unshift({adjustNo:no, shopCode:d.sc, merchantCode:(SHOPS[d.sc]||{}).merchant||'',
     adjustTypeCode:d.tc, adjustTypeName:t.cn, amount:amt, currency:'SGD',
-    deductionType:isInv?'INVOICE':'ACCOUNT', invoiceCategory:isInv?t.ic:'', originalInvoiceNo:isInv?d.invNo:'',
+    deductionType:isInv?'INVOICE':'ACCOUNT', invoiceCategory:isInv&&inv?inv.ic:'', originalInvoiceNo:isInv?d.invNo:'',
     taxRate:isInv&&inv?inv.rate:null, amountExclTax:tax.ex, gstAmount:tax.gst,
     invoiceStatus:isInv?'PENDING_INV':'NONE',
     bizNo:d.biz, remark:d.rk, effectiveTime:now, createdBy:'当前账号', sourceType:'MANUAL', status:'effective', voidReason:'',
@@ -635,14 +635,13 @@ PAGES['p-adjust-type']=()=>{
       <div class="row" style="margin-left:auto"><button class="btn btn-p btn-sm" onclick="DB.adjtDraft=null;adjt_edit('')">新增类型</button></div>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>类型编码</th><th>中文名称</th><th>英文名称</th><th>方向</th><th>抵扣方式</th><th>关联业务单号</th><th>来源</th><th style="text-align:right">已用单数</th><th>状态</th><th>操作</th></tr></thead>
+      <thead><tr><th>类型编码</th><th>中文名称</th><th>英文名称</th><th>方向</th><th>抵扣方式</th><th>来源</th><th style="text-align:right">已用单数</th><th>状态</th><th>操作</th></tr></thead>
       <tbody>${DB.adjTypes.map(t=>`<tr>
         <td class="mono" style="white-space:nowrap">${t.code}</td>
         <td>${esc(t.cn)}</td>
         <td style="color:var(--ts)">${esc(t.en)}</td>
         <td style="white-space:nowrap">${dirTag(t.dir)}</td>
         <td style="white-space:nowrap">${adjDedTag(t)}</td>
-        <td>${t.needBiz?'必填':'选填'}</td>
         <td>${t.sys?'系统生成':'人工建单'}</td>
         <td style="text-align:right">${t.sys?'—':used(t.code)}</td>
         <td>${t.on?'<span class="tag t-g"><span class="dot"></span>启用</span>':'<span class="tag t-gr"><span class="dot"></span>停用</span>'}</td>
@@ -652,39 +651,29 @@ PAGES['p-adjust-type']=()=>{
   </div>`;
 };
 window.adjt_edit=function(code){
-  const isNew=!code, t=isNew?(DB.adjtDraft||{code:'',cn:'',en:'',dir:'',needBiz:0}):tOf(code);
+  const isNew=!code, t=isNew?(DB.adjtDraft||{cn:'',en:'',dir:''}):tOf(code);
   const ro='readonly style="background:#F3F4F6;color:var(--ts)"';
   const card=(dir,label)=>`<div onclick="DB.adjtDraft=Object.assign(adjt_read(),{dir:'${dir}'});adjt_edit('')" style="flex:1;cursor:pointer;border:1.5px solid ${t.dir==dir?'var(--g)':'var(--bd)'};background:${t.dir==dir?'var(--gl)':'#fff'};border-radius:8px;padding:10px;text-align:center">${label}</div>`;
-  // 抵扣方式卡片：票扣会联动展开「关联票据类型」，并把关联业务单号锁成必填
-  const dcard=(d,label,sub)=>`<div onclick="DB.adjtDraft=Object.assign(adjt_read(),{ded:'${d}',ic:'${d}'=='INVOICE'?(adjt_read().ic||'SVC'):''});adjt_edit('')" style="flex:1;cursor:pointer;border:1.5px solid ${t.ded==d?'var(--g)':'var(--bd)'};background:${t.ded==d?'var(--gl)':'#fff'};border-radius:8px;padding:9px 10px;text-align:center">
+  const dcard=(d,label,sub)=>`<div onclick="DB.adjtDraft=Object.assign(adjt_read(),{ded:'${d}'});adjt_edit('')" style="flex:1;cursor:pointer;border:1.5px solid ${t.ded==d?'var(--g)':'var(--bd)'};background:${t.ded==d?'var(--gl)':'#fff'};border-radius:8px;padding:9px 10px;text-align:center">
     <div style="font-weight:600">${label}</div><div style="font-size:11px;color:var(--ts);margin-top:2px">${sub}</div></div>`;
-  const icOpt=(v)=>`<label style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;cursor:pointer"><input type="radio" name="at-ic" value="${v}" ${t.ic==v?'checked':''} onchange="DB.adjtDraft=Object.assign(adjt_read(),{ded:'INVOICE',ic:'${v}'})">${IC_NAME[v]}</label>`;
   modal(`<div class="mc-hd"><h3>${isNew?'新增调整类型':'编辑调整类型'}</h3><button class="mc-x" onclick="DB.adjtDraft=null;closeModal()">×</button></div>
   <div class="mc-bd">
     <div class="fg2">
-      <div class="fr"><label class="fl"><b>*</b>类型编码</label><input id="at-code" value="${esc(t.code)}" placeholder="如 ADJ-STORAGE" ${isNew?'':ro}><div id="at-code-err" class="fl-h" style="color:var(--r)"></div></div>
+      <div class="fr"><label class="fl">类型编码</label><input value="${isNew?'保存后自动生成':esc(t.code)}" ${ro}></div>
       <div class="fr"><label class="fl"><b>*</b>方向</label>${isNew?`<div style="display:flex;gap:8px">${card('DEDUCTION','负向 · 扣商家')}${card('ADDITION','正向 · 补商家')}</div><div id="at-dir-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}" ${ro}>`}</div>
     </div>
-    <div class="fr"><label class="fl"><b>*</b>抵扣方式</label>${isNew?`<div style="display:flex;gap:8px">${dcard('ACCOUNT','账扣','不开票，GST 恒 0，直接在结算中加减')}${dcard('INVOICE','票扣','挂原发票、按原票税率拆税，负向开红字 / 正向补开增额票')}</div><div id="at-ded-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.ded=='INVOICE'?'票扣 · '+(IC_NAME[t.ic]||''):'账扣'}" ${ro}>`}</div>
-    ${t.ded=='INVOICE'&&isNew?`<div class="fr"><label class="fl"><b>*</b>关联票据类型</label><div style="padding:6px 0">${icOpt('SVC')}${icOpt('RPL')}${icOpt('SUP')}</div>
-      <div class="fl-h" style="color:var(--ts)">平台代商家开给买家的销售发票（INV-SG-）双方是商家↔买家，不可被调整单票扣（BR-14）</div>
-      <div id="at-ic-err" class="fl-h" style="color:var(--r)"></div></div>`:''}
+    <div class="fr"><label class="fl"><b>*</b>抵扣方式</label>${isNew?`<div style="display:flex;gap:8px">${dcard('ACCOUNT','账扣','不开票，GST 恒 0，直接在结算中加减')}${dcard('INVOICE','票扣','挂原发票、按原票税率拆税，负向开红字 / 正向补开增额票')}</div><div id="at-ded-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.ded=='INVOICE'?'票扣':'账扣'}" ${ro}>`}</div>
     <div class="fg2">
       <div class="fr"><label class="fl"><b>*</b>中文名称</label><input id="at-cn" value="${esc(t.cn)}"><div id="at-cn-err" class="fl-h" style="color:var(--r)"></div></div>
       <div class="fr"><label class="fl">英文名称</label><input id="at-en" value="${esc(t.en)}"></div>
     </div>
-    <div class="fr"><label class="fl">关联业务单号</label>${t.ded=='INVOICE'
-      ?`<input value="必填" ${ro}><div class="fl-h" style="color:var(--ts)">票扣类型必须挂原发票，不可关闭</div>`
-      :`<select id="at-biz"><option value="0" ${t.needBiz?'':'selected'}>选填</option><option value="1" ${t.needBiz?'selected':''}>必填</option></select>`}</div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="DB.adjtDraft=null;closeModal()">取消</button><button class="btn btn-p" onclick="adjt_save('${code}')">保存</button></div>`);
 };
 window.adjt_read=function(){
   const g=id=>String((document.getElementById(id)||{}).value||'').trim();
   const d=DB.adjtDraft||{}, ded=d.ded||'';
-  return {code:g('at-code'), cn:g('at-cn'), en:g('at-en'),
-          needBiz: ded=='INVOICE' ? 1 : +g('at-biz'),
-          dir:d.dir||'', ded, ic:ded=='INVOICE'?(d.ic||'SVC'):''};
+  return {cn:g('at-cn'), en:g('at-en'), dir:d.dir||'', ded};
 };
 window.adjt_save=function(code, confirmed){
   const v = confirmed ? DB.adjtDraft : adjt_read();
@@ -692,11 +681,8 @@ window.adjt_save=function(code, confirmed){
   if(!confirmed){
     let bad=false;
     if(!code){
-      if(!/^[A-Z][A-Z0-9-]{1,31}$/.test(v.code)){set('at-code-err','类型编码须以大写字母开头，仅含大写字母、数字和 -，2–32 位');bad=true;}
-      else if(DB.adjTypes.some(t=>t.code==v.code)){set('at-code-err','类型编码已存在');bad=true;} else set('at-code-err','');
       if(!v.dir){set('at-dir-err','请选择方向');bad=true;} else set('at-dir-err','');
       if(!v.ded){set('at-ded-err','请选择抵扣方式');bad=true;} else set('at-ded-err','');
-      if(v.ded=='INVOICE'&&!v.ic){set('at-ic-err','请选择关联票据类型');bad=true;} else set('at-ic-err','');
     }
     if(!v.cn||[...v.cn].length>32){set('at-cn-err','请填写中文名称，最多 32 字');bad=true;}
     else if(DB.adjTypes.some(t=>t.cn==v.cn&&t.code!==code)){set('at-cn-err','中文名称已存在');bad=true;} else set('at-cn-err','');
@@ -704,14 +690,19 @@ window.adjt_save=function(code, confirmed){
     if(!code){
       DB.adjtDraft=v;
       modal(`<div class="mc-hd"><h3>确认保存</h3><button class="mc-x" onclick="adjt_edit('')">×</button></div>
-      <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>方向【${v.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}】、抵扣方式【${v.ded=='INVOICE'?'票扣 · '+(IC_NAME[v.ic]||''):'账扣'}】与类型编码【${esc(v.code)}】保存后不可修改，确认保存？${v.ded=='INVOICE'?'<br><span style="font-size:12px">该类型建的单将按原票税率拆出 GST，并对原票开红字或补开增额票。</span>':''}</div></div>
+      <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>方向【${v.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}】、抵扣方式【${v.ded=='INVOICE'?'票扣':'账扣'}】保存后不可修改，类型编码由系统生成，确认保存？${v.ded=='INVOICE'?'<br><span style="font-size:12px">该类型建的单将按原票税率拆出 GST，并对原票开红字或补开增额票。</span>':''}</div></div>
       <div class="mc-ft"><button class="btn btn-o" onclick="adjt_edit('')">返回修改</button><button class="btn btn-p" onclick="adjt_save('',true)">确认保存</button></div>`);
       return;
     }
   }
-  if(code){ const t=tOf(code); t.cn=v.cn; t.en=v.en; t.needBiz=v.needBiz; }
-  else DB.adjTypes.push({code:v.code, cn:v.cn, en:v.en, dir:v.dir, needBiz:v.needBiz, on:1, sys:0, ded:v.ded||'ACCOUNT', ic:v.ic||''});
-  DB.adjtDraft=null; closeModal(); render(); toast('调整类型已保存','ok');
+  let newCode='';
+  if(code){ const t=tOf(code); t.cn=v.cn; t.en=v.en; }
+  else {
+    const max=Math.max(0,...DB.adjTypes.map(t=>+((/^ADJT-(\d+)$/.exec(t.code)||[0,0])[1])));
+    newCode='ADJT-'+String(max+1).padStart(4,'0');
+    DB.adjTypes.push({code:newCode, cn:v.cn, en:v.en, dir:v.dir, on:1, sys:0, ded:v.ded||'ACCOUNT'});
+  }
+  DB.adjtDraft=null; closeModal(); render(); toast(newCode?`调整类型已保存，编码 ${newCode}`:'调整类型已保存','ok');
 };
 window.adjt_toggle=function(code){
   const t=tOf(code); if(t.sys) return;
