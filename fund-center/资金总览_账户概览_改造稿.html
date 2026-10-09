@@ -239,13 +239,13 @@ function paint(){if(!DR)return;const r=DR();$('drT').innerHTML=r.t;$('drB').inne
 function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
 function flowTbl(fs,withBal){
   let bal=0;const rows=fs.slice().sort((x,y)=>x.time.localeCompare(y.time)).map(f=>{bal=r2(bal+f.amt);return {...f,bal}});
-  return `<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>发生了什么</th><th>单据</th><th class="num">入</th><th class="num">出</th>${withBal?'<th class="num">余额</th>':''}</tr></thead><tbody>${rows.reverse().map(f=>`<tr><td>${f.time}</td><td>${f.what}</td><td>${/^(TR|RF|AD|JS|CL)/.test(f.doc)?`<span class="link" onclick="toast('打开单据 ${f.doc}')">${f.doc}</span>`:f.doc}</td><td class="num">${f.amt>0?fmt(f.amt):''}</td><td class="num">${f.amt<0?fmt(-f.amt):''}</td>${withBal?`<td class="num">${fmt(f.bal)}</td>`:''}</tr>`).join('')}</tbody></table>`;
+  return `<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>时间</th><th>交易类型</th><th>单据</th><th class="num">入</th><th class="num">出</th>${withBal?'<th class="num">余额</th>':''}</tr></thead><tbody>${rows.reverse().map(f=>`<tr><td>${f.time}</td><td>${f.what}</td><td>${/^(TR|RF|AD|JS|CL)/.test(f.doc)?`<span class="link" onclick="toast('打开单据 ${f.doc}')">${f.doc}</span>`:f.doc}</td><td class="num">${f.amt>0?fmt(f.amt):''}</td><td class="num">${f.amt<0?fmt(-f.amt):''}</td>${withBal?`<td class="num">${fmt(f.bal)}</td>`:''}</tr>`).join('')}</tbody></table>`;
 }
 let TF='';
 function openType(a,k){TF='';openDr(()=>{const t=D[a].types[k],fs=t.flows,inn=r2(fs.filter(f=>f.amt>0&&f.what!=='期初余额').reduce((s,f)=>s+f.amt,0)),out=r2(-fs.filter(f=>f.amt<0).reduce((s,f)=>s+f.amt,0)),op=r2(fs.filter(f=>f.what==='期初余额').reduce((s,f)=>s+f.amt,0));
   const kinds=[...new Set(fs.map(f=>f.what.replace(/（.*?）/g,'')))];const shown=TF?fs.filter(f=>f.what.replace(/（.*?）/g,'')===TF):fs;
   return {t:`${D[a].name} · ${t.name}`,b:`<div class="desc"><div><dt>期初（10-01）</dt><dd>${fmt(op)}</dd></div><div><dt>本期入 / 出</dt><dd>${fmt(inn)} / ${fmt(out)}</dd></div><div><dt>当前余额</dt><dd>${fmt(tSum(a,k))}</dd></div></div>
-   <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center"><span class="muted">发生了什么</span><select class="ipt" onchange="TF=this.value;paint()"><option value="">全部</option>${kinds.map(x=>`<option ${TF===x?'selected':''}>${x}</option>`).join('')}</select><span class="sp" style="flex:1"></span><button class="btn" onclick="toast('已导出')">导出</button></div>
+   <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center"><span class="muted">交易类型</span><select class="ipt" onchange="TF=this.value;paint()"><option value="">全部</option>${kinds.map(x=>`<option ${TF===x?'selected':''}>${x}</option>`).join('')}</select><span class="sp" style="flex:1"></span><button class="btn" onclick="toast('已导出')">导出</button></div>
    ${flowTbl(shown,!TF)}`}})}
 function openAdv(){openDr(()=>({t:'垫资明细',b:`<div class="desc"><div><dt>累计垫资</dt><dd>${fmt(advIn())}</dd></div><div><dt>累计已收回</dt><dd>${fmt(advBack())}</dd></div><div><dt>可收回上限</dt><dd>${fmt(advCap())}</dd></div></div>
   <div class="tabs"><div class="tab on">垫进来（垫资单）</div></div>
