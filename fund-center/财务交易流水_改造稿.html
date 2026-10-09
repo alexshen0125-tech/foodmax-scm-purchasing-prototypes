@@ -139,8 +139,8 @@ const tag=(t,c)=>`<span class="tag ${c}">${t}</span>`;
 const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)};
 const TODAY='2026-10-09';
 const ACC={PA:'平台主账户',HA:'Holding 清分账户',CA:'佣金账户'};
-const TYPES={PA:{FEE:'手续费备用金',TERM:'账期还款金额',ONL:'线上收单金额'},HA:{ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'},CA:{COM:'佣金金额'}};
-const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18670.30,TERM:6320,ADV:0},CA:{COM:15680.50}};
+const TYPES={PA:{FEE:'手续费备用金',TERM:'账期还款金额',ONL:'线上收单金额'},HA:{ONL:'线上收单金额',TERM:'账期还款金额',ADV:'平台垫资金额'},CA:{COM:'佣金金额',FEE:'拨给平台主账户的手续费备用金',ADV:'垫给 Holding 的垫资金额'}};
+const OPEN={PA:{FEE:0,TERM:0,ONL:0},HA:{ONL:18670.30,TERM:6320,ADV:0},CA:{COM:15680.50,FEE:0,ADV:0}};
 const DOCT={TR:'资金调拨单',RF:'退款资金单',AD:'垫资单',JS:'结算单',CL:'认领单',int:'支付单'};
 const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],DEP:['入金','Deposit'],FEE:['费用','Fee']};
 let seq=0;const rid=()=>'ftx_'+(++seq).toString(36).padStart(4,'0')+'Kq'+((seq*7919)%9973).toString(36);
@@ -207,6 +207,8 @@ const JSM={ONL:['JS2610050003','Prime Meat Supply'],TERM:['JS2610050004','ZZ QA 
 R.forEach(r=>{if(r.acc==='HA'&&r.doc==='JS2610050003'){const [js,m]=JSM[r.ft];r.doc=js;r.mer=m;if(r.what.includes('货款'))r.cp='商家 '+m+'（'+r.cp.replace('店铺 ','')+'）'}});
 (()=>{const i=R.findIndex(r=>r.acc==='CA'&&r.what==='结算时佣金转进来');const base=R[i];R.splice(i,1,...[['JS2610050003',1456],['JS2610050004',420],['JS2610050005',420]].map(([js,a],k)=>({...base,id:base.id+k,doc:js,amt:a})));
   R.filter(r=>r.acc==='CA'&&r.doc.startsWith('JS')).forEach(r=>{const m=Object.values(JSM).find(x=>x[0]===r.doc);if(m)r.mer=m[1]});})();
+/* 佣金账户按用途分类：补备用金 → 手续费备用金；垫资与收回 → 垫资金额 */
+R.forEach(r=>{if(r.acc!=='CA')return;if(r.what.includes('补备用金'))r.ft='FEE';else if(r.what.includes('垫'))r.ft='ADV'});
 /* 商家子账户（按 Airwallex 账号，共用账号的店铺合并） */
 const MA=[
  {name:'Fresh Greens Trading',id:'acct_RDKEILLXOb6jQriCE8DO8Q',shops:['SH20260713476005'],open:0,fl:[]},
@@ -267,6 +269,8 @@ function renderP(){
   <div class="sumtbl"><table><thead><tr><th>资金类型（只算已结算）</th><th>期初</th><th>收入</th><th>支出</th><th>其中手续费</th><th>期末</th></tr></thead><tbody>
    ${s.rs.map(r=>`<tr><td><span class="link" onclick="Q.ft='${r.k}';render()">${r.name}</span></td><td>${fmt(r.op)}</td><td style="color:#389e0d">${fmt(r.inn)}</td><td style="color:var(--err)">${fmt(r.out)}</td><td>${fmt(r.fee)}</td><td>${fmt(r.end)}</td></tr>`).join('')}
    <tr class="tot"><td>合计</td><td>${fmt(s.tot.op)}</td><td>${fmt(s.tot.inn)}</td><td>${fmt(s.tot.out)}</td><td>${fmt(s.tot.fee)}</td><td>${fmt(s.tot.end)}</td></tr></tbody></table>
+   ${Q.acc==='CA'?(()=>{const fee=r2(-s.rs.find(r=>r.k==='FEE').end),adv=r2(-s.rs.find(r=>r.k==='ADV').end),pa=r2(OPEN.PA.FEE+R.filter(r=>r.acc==='PA'&&r.ft==='FEE'&&r.st==='已结算').reduce((x,r)=>x+r.amt,0)),avail=s.tot.end;
+     return `<div style="padding:10px 16px;border-top:1px solid var(--bd)"><b>平台自有资金在哪</b>　可用佣金 <b>${fmt(avail)}</b>（佣金账户）<span class="muted"> · </span>手续费备用金 <b>${fmt(pa)}</b>（平台主账户，累计拨付 ${fmt(fee)}，已用 ${fmt(r2(fee-pa))}）<span class="muted"> · </span>垫资未收回 <b>${fmt(adv)}</b>（Holding）<span class="muted"> · </span>合计 <b>${fmt(r2(avail+pa+adv))}</b><div class="muted" style="font-size:12px;margin-top:4px">上表「手续费备用金」「垫资金额」期末为负数 = 已从佣金账户拨出、现在在别的账户里的平台资金</div></div>`})():''}
    <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;gap:18px;align-items:center"><span>待结算 <b>${s.pendN}</b> 笔 · ${fmt(s.pendAmt)}</span>${s.staleN?`<span class="link" onclick="Q.st='待结算';render()">${tag('超 2 天未结算 '+s.staleN+' 笔','orange')}</span>`:''}</div></div>
   <div class="flt">
    <div class="fi"><label>资金类型</label><select class="ipt" style="width:150px" onchange="Q.ft=this.value;render()"><option value="">全部</option>${Object.entries(TYPES[Q.acc]).map(([k,v])=>`<option value="${k}" ${Q.ft===k?'selected':''}>${v}</option>`).join('')}</select></div>

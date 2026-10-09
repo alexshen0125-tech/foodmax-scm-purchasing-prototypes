@@ -198,6 +198,7 @@ function typeExtra(a,k){
   const v=tSum(a,k);
   if(a==='PA'&&k==='FEE'){const pct=Math.min(100,v/W.target*100),low=v<W.low;return `<div class="bar"><i style="width:${pct}%;background:${low?'var(--err)':'var(--ok)'}"></i><span class="mk" style="left:${W.low/W.target*100}%"></span></div><div class="sub">低水位 ${fmt(W.low)} · 目标额 ${fmt(W.target)} ${low?tag('低于水位','red'):''}</div>`}
   if(a==='PA'&&k==='TERM'){return v?`<div class="sub">未转 Holding ${D.PA.types.TERM.flows.filter(f=>f.amt>0&&!isMoved(f)).length} 笔 · 最长挂 ${agingDays()} 天 ${agingDays()>1?tag('超 1 个工作日','orange'):''}</div>`:''}
+  if(a==='CA'&&k==='COM'){const fs=D.CA.types.COM.flows,fee=r2(-fs.filter(f=>f.what.includes('补备用金')).reduce((s,f)=>s+f.amt,0)),adv=r2(-fs.filter(f=>f.what.includes('垫')).reduce((s,f)=>s+f.amt,0)),pa=tSum('PA','FEE');return `<div class="sub">已拨给平台主账户的手续费备用金：现存 ${fmt(pa)}（累计拨付 ${fmt(fee)}）</div><div class="sub">已垫给 Holding 未收回：${fmt(adv)}</div><div class="sub">平台自有资金合计：<b>${fmt(r2(tSum('CA','COM')+pa+adv))}</b></div>`}
   if(a==='PA'&&k==='ONL'){return `<div class="sub">${v?'退款在途':'—'}</div>`}
   return '';
 }
@@ -222,7 +223,7 @@ function render(){
    <select class="ipt"><option>新加坡元（SGD）</option></select><span class="muted">数据截至 ${NOW} SGT</span><button class="btn" onclick="refreshAll()">刷新余额</button></div>
   <div class="grid">${['PA','HA','CA'].map(acctCard).join('')}</div>
   <div class="row2">
-   <div class="card"><div class="card-h"><b>垫资汇总</b><span class="muted">清分垫资 + 退款垫资，按总数控制</span><span class="sp"></span><span class="link" onclick="openAdv()">垫资明细</span><button class="btn p" ${advCap()>0?'':'disabled'} onclick="openBack()">垫资收回</button></div>
+   <div class="card"><div class="card-h"><b>垫资汇总</b><span class="muted">按 Holding 总缺口人工垫资，收回按总数控制</span><span class="sp"></span><span class="link" onclick="openAdv()">垫资明细</span><button class="btn p" ${advCap()>0?'':'disabled'} onclick="openBack()">垫资收回</button></div>
     <div class="adv"><div><div class="muted">累计垫资</div><div class="v">${fmt(advIn())}</div></div><div><div class="muted">累计已收回</div><div class="v">${fmt(advBack())}</div></div><div><div class="muted">可收回上限</div><div class="v" style="color:var(--pri)">${fmt(advCap())}</div></div></div></div>
    <div class="card"><div class="card-h"><b>店铺子账户</b>${tag('平','green')}<span class="sp"></span><span class="link" onclick="openStores()">明细</span></div>
     <table class="t"><tbody><tr><td>子账户余额合计（按账号去重）</td><td class="num">${fmt(stSum)}</td></tr><tr><td>已结算未提现</td><td class="num">${fmt(stSum)}</td></tr><tr class="diff"><td>差额</td><td class="num">${fmt(0)}</td></tr></tbody></table>
