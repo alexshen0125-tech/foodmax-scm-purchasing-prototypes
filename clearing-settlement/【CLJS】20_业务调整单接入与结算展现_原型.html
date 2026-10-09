@@ -221,7 +221,7 @@ tbody tr:hover{background:#f7f9fc}
           <thead><tr class="grp">
             <th>调整单号</th><th>结算状态</th><th>结算单号</th><th>店铺名称</th><th>店铺编码</th><th>调整类型</th><th>抵扣方式</th>
             <th class="num">调整金额</th>
-            <th>收入方向</th><th>关联业务单号</th><th>原发票号</th><th>生效时间</th><th>接入时间</th><th>操作</th>
+            <th>收入方向</th><th>关联业务单号</th><th>生效时间</th><th>接入时间</th><th>操作</th>
           </tr></thead>
           <tbody id="adjs-rows"></tbody>
           <tfoot id="adjs-foot"></tfoot>
@@ -416,12 +416,12 @@ function adjsRows(){
       <td>${esc(r.adjType.cn)}</td><td>${dedPill(r)}</td>
       <td class="num ${cls}">${signed(s*r.incl)}</td>
       <td>${dirPill(r.dir)}</td>
-      <td class="mono">${r.rel||'—'}</td><td class="mono">${r.origInv||'—'}</td><td>${r.at}</td><td>${r.ing}</td>
+      <td class="mono">${r.rel||'—'}</td><td>${r.at}</td><td>${r.ing}</td>
       <td><button class="btn link" data-view="${r.no}">详情</button></td>
-    </tr>`;}).join('') || `<tr><td colspan="14"><div class="empty">${empty}</div></td></tr>`;
+    </tr>`;}).join('') || `<tr><td colspan="13"><div class="empty">${empty}</div></td></tr>`;
   if(shop && rows.length){
     const de = rows.filter(r=>r.dir==='S2P').reduce((a,r)=>a+r.incl,0), ad = rows.filter(r=>r.dir==='P2S').reduce((a,r)=>a+r.incl,0), net = ad-de;
-    $('#adjs-foot').innerHTML = `<tr><td>本店铺合计</td><td colspan="12">扣商家 <span class="neg">${de?signed(-de):money(0)}</span>　　补商家 <span class="pos">${ad?signed(ad):money(0)}</span>　　净额 <span class="${net>0?'pos':net<0?'neg':'zero'}">${net?signed(net):money(0)}</span>　　<span style="color:var(--sub);font-weight:400">按当前筛选的全部 ${rows.length} 条</span></td><td></td></tr>`;
+    $('#adjs-foot').innerHTML = `<tr><td>本店铺合计</td><td colspan="11">扣商家 <span class="neg">${de?signed(-de):money(0)}</span>　　补商家 <span class="pos">${ad?signed(ad):money(0)}</span>　　净额 <span class="${net>0?'pos':net<0?'neg':'zero'}">${net?signed(net):money(0)}</span>　　<span style="color:var(--sub);font-weight:400">按当前筛选的全部 ${rows.length} 条</span></td><td></td></tr>`;
   } else $('#adjs-foot').innerHTML = '';
   $('#adjs-total').textContent = `共 ${rows.length} 条`;
 }
