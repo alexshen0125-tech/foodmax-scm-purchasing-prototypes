@@ -139,6 +139,7 @@ const WATER={low:1000,target:5000},ADV_IN=6200,ADV_BACK0=1946.45;
 const TYPES={
  TERM:{name:'账期回款转 Holding',from:['PA.TERM'],to:'HA.TERM',basis:'认领单',hint:'账期客户打款认领后，人工转到 Holding'},
  FEE:{name:'补手续费备用金',from:['CA.COM'],to:'PA.FEE',basis:'备用金水位',hint:'平台主账户手续费备用金低于水位时补足'},
+ FEEBACK:{name:'手续费备用金回收',from:['PA.FEE'],to:'CA.COM',basis:'备用金水位',hint:'手续费备用金超过需要时，收回佣金账户'},
  ADV:{name:'垫资',from:['CA.COM'],to:'HA.ADV',basis:'垫资单',hint:'Holding 钱不够时按总缺口垫进来，构成在垫资管理里列明'},
  BACK:{name:'垫资收回',from:['HA.ADV','HA.TERM','HA.ONL'],to:'CA.COM',basis:'可收回上限',hint:'按 平台垫资 → 账期还款 → 线上收单 顺序扣，累计 ≤ 累计垫资'}};
 const CLAIMS=[['CL2610080001','Mei Ling Eatery',5800],['CL2610090001','Rasa Cafe',2650]];
@@ -171,12 +172,13 @@ let N={};
 function openNew(){N={type:'TERM',claim:'',amt:''};$('mdT').textContent='新建资金划转';paintNew();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitNew()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
 const ORDER=['HA.ADV','HA.TERM','HA.ONL'];
 function alloc(a){const out=[];let left=r2(a);ORDER.forEach(k=>{const x=r2(Math.min(left,Math.max(0,BAL[k])));out.push([k,x]);left=r2(left-x)});return {out,left}}
-function defAmt(){const t=N.type;if(t==='FEE')return Math.max(0,r2(WATER.target-BAL['PA.FEE'])).toFixed(2);if(t==='TERM'){const c=CLAIMS.find(c=>c[0]===N.claim);return c?c[2].toFixed(2):''}return ''}
+function defAmt(){const t=N.type;if(t==='FEEBACK')return Math.max(0,r2(BAL['PA.FEE']-WATER.target)).toFixed(2)||'';if(t==='FEE')return Math.max(0,r2(WATER.target-BAL['PA.FEE'])).toFixed(2);if(t==='TERM'){const c=CLAIMS.find(c=>c[0]===N.claim);return c?c[2].toFixed(2):''}return ''}
 function paintNew(){
   const T=TYPES[N.type],fromBal=r2(T.from.reduce((s,k)=>s+BAL[k],0));
   let basis='';
   if(N.type==='TERM'){const cs=CLAIMS.filter(c=>!used.has(c[0]));basis=`<div class="fr"><label class="req">认领单</label><select class="ipt" style="width:100%" onchange="N.claim=this.value;N.amt='';paintNew()"><option value="">请选择已认领、未转 Holding 的账期回款</option>${cs.map(c=>`<option value="${c[0]}" ${N.claim===c[0]?'selected':''}>${c[0]} · ${c[1]} · ${fmt(c[2])}</option>`).join('')}</select></div>`}
   if(N.type==='FEE')basis=`<div class="fr"><label>业务依据</label><div class="muted">手续费备用金当前 ${fmt(BAL['PA.FEE'])}，低水位 ${fmt(WATER.low)}，目标额 ${fmt(WATER.target)}；默认补足到目标额</div></div>`;
+  if(N.type==='FEEBACK')basis=`<div class="fr"><label>业务依据</label><div class="muted">手续费备用金当前 ${fmt(BAL['PA.FEE'])}，目标额 ${fmt(WATER.target)}，低水位 ${fmt(WATER.low)}；默认收回超过目标额的部分</div></div>`;
   if(N.type==='ADV')basis=`<div class="fr"><label class="req">关联垫资单</label><select class="ipt" style="width:100%"><option>AD2610090012 · 下一次结算缺口 6,255.90（账期未付 5,770.40 · 平台补贴 305.50 · 退款缺口 180.00）</option></select><div class="muted" style="font-size:12px;margin-top:4px">垫资构成在垫资管理里维护</div></div>`;
   if(N.type==='BACK')basis=`<div class="fr"><label>可收回上限</label><div><b>${fmt(cap())}</b> <span class="muted">= 累计垫资 ${fmt(advIn())} − 累计已收回 ${fmt(advBack())}</span></div></div>`;
   const amt=N.amt!==''?N.amt:defAmt();
@@ -192,12 +194,15 @@ function chkNew(){const T=TYPES[N.type],v=$('n_a').value,a=parseFloat(v);let e='
   else if(v===''||!(a>0))e='请输入大于 0 的金额';
   else if(N.type==='BACK'){if(a>cap())e=`超过可收回上限 ${fmt(cap())}`;else if(alloc(a).left>0)e='Holding 三类余额合计不足'}
   else if(a>BAL[T.from[0]])e=`超过转出可用余额 ${fmt(BAL[T.from[0]])}`;
+  else if(N.type==='FEEBACK'&&r2(BAL['PA.FEE']-a)<WATER.low)e='';
+  if(!e&&N.type==='FEEBACK'&&a>0&&r2(BAL['PA.FEE']-a)<WATER.low)$('n_e').style.color='#d46b08';else $('n_e').style.color='';
+  if(!e&&N.type==='FEEBACK'&&a>0&&r2(BAL['PA.FEE']-a)<WATER.low){$('n_e').textContent=`提醒：收回后备用金 ${fmt(r2(BAL['PA.FEE']-a))} 低于低水位 ${fmt(WATER.low)}`;return true}
   $('n_e').textContent=e;
   if(N.type==='BACK'&&$('n_al')){const {out}=alloc(a>0?a:0);$('n_al').innerHTML=`<table class="t" style="border:1px solid var(--bd)"><thead><tr><th>顺序</th><th>资金类型</th><th class="num">当前余额</th><th class="num">本次扣减</th></tr></thead><tbody>${out.map(([k,x],i)=>`<tr><td>${i+1}</td><td>${NAME[k]}</td><td class="num">${fmt(BAL[k])}</td><td class="num">${x?'<b>'+fmt(x)+'</b>':'—'}</td></tr>`).join('')}</tbody></table>`}
   return !e}
 function submitNew(){if(!chkNew())return;const a=r2(parseFloat($('n_a').value)),T=TYPES[N.type];
   const parts=N.type==='BACK'?alloc(a).out.filter(o=>o[1]>0):[[T.from[0],a]];
-  const basis=N.type==='TERM'?`认领单 ${N.claim} · ${CLAIMS.find(c=>c[0]===N.claim)[1]}`:N.type==='FEE'?`备用金 ${fmt(BAL['PA.FEE'])} 补至目标额 ${fmt(WATER.target)}`:N.type==='ADV'?'垫资单 AD2610090012':`垫资收回（可收回上限 ${fmt(cap())}）`;
+  const basis=N.type==='TERM'?`认领单 ${N.claim} · ${CLAIMS.find(c=>c[0]===N.claim)[1]}`:N.type==='FEE'?`备用金 ${fmt(BAL['PA.FEE'])} 补至目标额 ${fmt(WATER.target)}`:N.type==='FEEBACK'?`备用金 ${fmt(BAL['PA.FEE'])}，收回 ${fmt(a)}`:N.type==='ADV'?'垫资单 AD2610090012':`垫资收回（可收回上限 ${fmt(cap())}）`;
   const no='TR26100900'+String(30+TRS.length);TRS.push({no,type:N.type,amt:a,parts,basis,st:'待审批',by:'沈亮',time:'2026-10-09 '+new Date().toTimeString().slice(0,5),att:[]});if(N.type==='TERM')used.add(N.claim);
   closeMd();render();toast(`已提交 ${no}，待审批`)}
 /* 审批 / 执行 */
