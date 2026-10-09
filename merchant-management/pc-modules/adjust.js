@@ -29,17 +29,16 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 // ded = 抵扣方式 ACCOUNT 账扣 / INVOICE 票扣（BR-14，配在类型模板上、建后不可改）
 // 类型编码系统生成 ADJT-{4 位流水}；人工类型一律必须挂单据（账扣填关联业务单号，票扣选原发票），不再按类型配置
 DB.adjTypes = DB.adjTypes || [
-  {code:'ADJ-FINE',    cn:'缺货罚款',       en:'Shortage Fine',         dir:'DEDUCTION', on:1, sys:1, ded:'ACCOUNT'},
-  {code:'ADJT-0001', cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', on:1, sys:0, ded:'ACCOUNT'},
-  {code:'ADJT-0002', cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', on:1, sys:0, ded:'ACCOUNT'},
-  {code:'ADJT-0003', cn:'质量问题扣款',   en:'Quality Deduction',     dir:'DEDUCTION', on:1, sys:0, ded:'ACCOUNT'},
-  {code:'ADJT-0004', cn:'佣金差额调整',   en:'Commission Correction', dir:'DEDUCTION', on:1, sys:0, ded:'INVOICE'},
-  {code:'ADJT-0005', cn:'补货金额调整',   en:'Replenish Correction',  dir:'DEDUCTION', on:1, sys:0, ded:'INVOICE'},
-  {code:'ADJT-0006', cn:'平台活动补贴',   en:'Campaign Subsidy',      dir:'ADDITION',  on:1, sys:0, ded:'ACCOUNT'},
-  {code:'ADJT-0007', cn:'物流费用补贴',   en:'Logistics Subsidy',     dir:'ADDITION',  on:1, sys:0, ded:'ACCOUNT'},
-  {code:'ADJT-0008', cn:'系统错账补款',   en:'System Error Comp.',    dir:'ADDITION',  on:1, sys:0, ded:'ACCOUNT'},
-  {code:'ADJT-0009', cn:'耗材金额调整',   en:'Supplies Correction',   dir:'ADDITION',  on:1, sys:0, ded:'INVOICE'},
-  {code:'ADJT-0010', cn:'保证金退还',     en:'Deposit Refund',        dir:'ADDITION',  on:0, sys:0, ded:'ACCOUNT'},
+  {code:'ADJT-0001', cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', on:1, ded:'ACCOUNT'},
+  {code:'ADJT-0002', cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', on:1, ded:'ACCOUNT'},
+  {code:'ADJT-0003', cn:'质量问题扣款',   en:'Quality Deduction',     dir:'DEDUCTION', on:1, ded:'ACCOUNT'},
+  {code:'ADJT-0004', cn:'佣金差额调整',   en:'Commission Correction', dir:'DEDUCTION', on:1, ded:'INVOICE'},
+  {code:'ADJT-0005', cn:'补货金额调整',   en:'Replenish Correction',  dir:'DEDUCTION', on:1, ded:'INVOICE'},
+  {code:'ADJT-0006', cn:'平台活动补贴',   en:'Campaign Subsidy',      dir:'ADDITION',  on:1, ded:'ACCOUNT'},
+  {code:'ADJT-0007', cn:'物流费用补贴',   en:'Logistics Subsidy',     dir:'ADDITION',  on:1, ded:'ACCOUNT'},
+  {code:'ADJT-0008', cn:'系统错账补款',   en:'System Error Comp.',    dir:'ADDITION',  on:1, ded:'ACCOUNT'},
+  {code:'ADJT-0009', cn:'耗材金额调整',   en:'Supplies Correction',   dir:'ADDITION',  on:1, ded:'INVOICE'},
+  {code:'ADJT-0010', cn:'保证金退还',     en:'Deposit Refund',        dir:'ADDITION',  on:0, ded:'ACCOUNT'},
 ];
 const tOf = c => (DB.adjTypes||[]).find(t=>t.code==c) || {code:c, cn:c, en:'', dir:'DEDUCTION', on:0, ded:'ACCOUNT'};
 window.adjTypeOf = tOf;
@@ -140,7 +139,7 @@ const addLog = (no,c) => logOf(no).push({t:ts(), u:'当前账号', c});
 function fineAsAdj(){
   return (typeof fineGroups=='function'?fineGroups(true):[]).map(g=>({
     adjustNo:g.no, shopCode:shopOfMerchant(g.merchant), merchantCode:g.merchant,
-    adjustTypeCode:'ADJ-FINE', adjustTypeName:tOf('ADJ-FINE').cn, amount:g.amt, currency:'SGD',
+    adjustTypeCode:'ADJ-FINE', adjustTypeName:'缺货罚款', amount:g.amt, currency:'SGD',
     bizNo:g.deliveryNo, remark:'', effectiveTime:g.at, createdBy:'',
     sourceType:'SHORTAGE_FINE', fineStatus:g.status||'pending', status:g.status=='revoked'?'voided':'effective',
     pushStatus:g.push=='pushed'?'PUSHED':'PENDING', syncStatus:g.push=='pushed'?'SUCCESS':'', syncErrorText:'', pushedAt:g.pushedAt||'', pushedBy:'',
@@ -213,7 +212,7 @@ PAGES['p-adjust']=()=>{
     <div class="fg3">
       <div class="fr"><label class="fl">店铺</label><input id="af-shop" value="${esc(f.shop)}" placeholder="店铺名称或编码" list="af-shoplist"><datalist id="af-shoplist">${Object.keys(SHOPS).map(c=>`<option>${shopName(c)}</option>`).join('')}</datalist></div>
       <div class="fr"><label class="fl">调整单号 / 关联业务单号</label><input id="af-no" value="${esc(f.no)}" placeholder="如 ADJ-SG-20260909-002"></div>
-      <div class="fr"><label class="fl">调整类型</label><select id="af-type">${opt('',f.type,'全部')}${DB.adjTypes.map(t=>opt(t.code,f.type,t.cn+(t.on?'':'（已停用）'))).join('')}</select></div>
+      <div class="fr"><label class="fl">调整类型</label><select id="af-type">${opt('',f.type,'全部')}${opt('ADJ-FINE',f.type,'缺货罚款')}${DB.adjTypes.map(t=>opt(t.code,f.type,t.cn+(t.on?'':'（已停用）'))).join('')}</select></div>
     </div>
     <div class="fg3">
       <div class="fr"><label class="fl">方向</label><select id="af-dir">${opt('',f.dir,'全部')}${opt('ADDITION',f.dir,'正向 · 补商家')}${opt('DEDUCTION',f.dir,'负向 · 扣商家')}</select></div>
@@ -290,7 +289,7 @@ window.adj_newAsk=function(keep, mode, src){
     if(o && mode=='recreate'){ Object.assign(DB.adjDraft,{sc:o.shopCode,tc:o.adjustTypeCode,amt:o.amount.toFixed(2),biz:o.bizNo,rk:o.remark}); }
   }
   const d=DB.adjDraft, o=d.srcNo?adjOf(d.srcNo):null;
-  const types=(DB.adjTypes||[]).filter(t=>t.on&&!t.sys);
+  const types=(DB.adjTypes||[]).filter(t=>t.on);
   const dedLbl=t=>t.ded=='INVOICE'?'（票扣）':'（账扣）';
   const group=(dir,label)=>`<optgroup label="${label}">${types.filter(t=>t.dir==dir).map(t=>`<option value="${t.code}" ${d.tc==t.code?'selected':''}>${t.cn}${dedLbl(t)}</option>`).join('')}</optgroup>`;
   const lockShop = d.mode=='correct';
@@ -635,17 +634,15 @@ PAGES['p-adjust-type']=()=>{
       <div class="row" style="margin-left:auto"><button class="btn btn-p btn-sm" onclick="DB.adjtDraft=null;adjt_edit('')">新增类型</button></div>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>类型编码</th><th>中文名称</th><th>英文名称</th><th>方向</th><th>抵扣方式</th><th>来源</th><th style="text-align:right">已用单数</th><th>状态</th><th>操作</th></tr></thead>
+      <thead><tr><th>类型编码</th><th>中文名称</th><th>英文名称</th><th>方向</th><th>抵扣方式</th><th>状态</th><th>操作</th></tr></thead>
       <tbody>${DB.adjTypes.map(t=>`<tr>
         <td class="mono" style="white-space:nowrap">${t.code}</td>
         <td>${esc(t.cn)}</td>
         <td style="color:var(--ts)">${esc(t.en)}</td>
         <td style="white-space:nowrap">${dirTag(t.dir)}</td>
         <td style="white-space:nowrap">${adjDedTag(t)}</td>
-        <td>${t.sys?'系统生成':'人工建单'}</td>
-        <td style="text-align:right">${t.sys?'—':used(t.code)}</td>
         <td>${t.on?'<span class="tag t-g"><span class="dot"></span>启用</span>':'<span class="tag t-gr"><span class="dot"></span>停用</span>'}</td>
-        <td style="white-space:nowrap">${t.sys?'':`<button class="btn btn-o btn-sm" onclick="adjt_edit('${t.code}')">编辑</button><button class="btn btn-o btn-sm" style="margin-left:6px" onclick="adjt_toggle('${t.code}')">${t.on?'停用':'启用'}</button>`}</td>
+        <td style="white-space:nowrap">${`<button class="btn btn-o btn-sm" onclick="adjt_edit('${t.code}')">编辑</button><button class="btn btn-o btn-sm" style="margin-left:6px" onclick="adjt_toggle('${t.code}')">${t.on?'停用':'启用'}</button>`}</td>
       </tr>`).join('')}</tbody>
     </table></div></div>
   </div>`;
@@ -700,12 +697,12 @@ window.adjt_save=function(code, confirmed){
   else {
     const max=Math.max(0,...DB.adjTypes.map(t=>+((/^ADJT-(\d+)$/.exec(t.code)||[0,0])[1])));
     newCode='ADJT-'+String(max+1).padStart(4,'0');
-    DB.adjTypes.push({code:newCode, cn:v.cn, en:v.en, dir:v.dir, on:1, sys:0, ded:v.ded||'ACCOUNT'});
+    DB.adjTypes.push({code:newCode, cn:v.cn, en:v.en, dir:v.dir, on:1, ded:v.ded||'ACCOUNT'});
   }
   DB.adjtDraft=null; closeModal(); render(); toast(newCode?`调整类型已保存，编码 ${newCode}`:'调整类型已保存','ok');
 };
 window.adjt_toggle=function(code){
-  const t=tOf(code); if(t.sys) return;
+  const t=tOf(code);
   if(t.on){
     modal(`<div class="mc-hd"><h3>停用「${esc(t.cn)}」？</h3><button class="mc-x" onclick="closeModal()">×</button></div>
     <div class="mc-bd"><div class="ib ib-b"><span class="i">ℹ️</span>停用后不可用于新建调整单。已生成的 ${(DB.adjOrders||[]).filter(r=>r.adjustTypeCode==code).length} 张调整单不受影响。</div></div>
