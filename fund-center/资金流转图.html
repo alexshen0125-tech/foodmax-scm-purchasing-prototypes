@@ -37,17 +37,48 @@ tr.r:hover td{background:#f5faff}
 tr.r.on td{background:#e6f4ff}
 .n{display:inline-flex;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;font-size:12px;align-items:center;justify-content:center}
 .rule li{margin:4px 0 4px 18px;color:var(--tx2)}
+.seg{display:inline-flex;border:1px solid #d9d9d9;border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{border:0;background:#fff;padding:7px 16px;font:inherit;cursor:pointer;color:var(--tx2)}
+.seg button+button{border-left:1px solid #d9d9d9}
+.seg button.on{background:var(--pri);color:#fff}
+.chg{display:inline-block;margin-left:6px;padding:0 6px;border-radius:4px;background:#fff1f0;color:#cf1322;border:1px solid #ffa39e;font-size:11px;line-height:18px;vertical-align:1px}
+.chg.del{background:#f5f5f5;color:#8c8c8c;border-color:#d9d9d9}
+.badge rect{fill:#fff1f0;stroke:#ff4d4f}
+.badge text{fill:#cf1322;font-size:11px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+.lbl.old{fill:#8c8c8c}
+.lbl.new{fill:#cf1322;font-weight:600}
+.lbl.gone{fill:#8c8c8c;text-decoration:line-through}
+.cmp td:nth-child(2){color:#8c8c8c}
+.cmp td:nth-child(3){color:#1f1f1f;font-weight:500}
+.cmp td:nth-child(4){color:var(--tx2);font-size:12px}
+.mono{font-family:SFMono-Regular,Menlo,monospace;font-size:12px}
+.calc{background:#fafafa;border-radius:8px;padding:10px 12px;margin-top:10px;color:var(--tx2)}
+.calc b{color:#1f1f1f}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>平台三账户资金流转图</h1>
-  <div class="sub">2026-10-09 口径 · 点击编号或表格行高亮对应流转，再点一次取消</div>
+  <div class="sub">2026-10-10 · 按测试环境真实流水更正手续费口径 · 点击编号或表格行高亮对应流转，再点一次取消</div>
+  <div class="seg"><button id="m1" class="on" onclick="setMode('new')">测试环境实测（现方案）</button><button id="m0" onclick="setMode('old')">原方案（9/22）</button></div>
   <div class="card">
     <div class="legend"><span><i style="background:#52c41a"></i>收款</span><span><i style="background:#1677ff"></i>结算</span><span><i style="background:#fa8c16"></i>退款 / 手续费</span><span><i style="background:#722ed1"></i>平台资金调拨</span><span><i style="background:#8c8c8c"></i>提现</span><span style="color:var(--tx3)">虚线 = 回收 / 提现</span></div>
     <svg id="g" viewBox="0 0 1260 770">
       <defs></defs>
     </svg>
+  </div>
+  <div class="card"><b>测试环境实测 vs 原方案（9/22）</b>
+    <div style="color:var(--tx3);margin:2px 0 10px">原方案按「分账金额 = 收单净额」设计，没有拿真实流水核对；10/09 对测试环境两笔真实订单（…124 / …233）逐条核对后改成下面的口径。图上标「改」的就是这几条。</div>
+    <table class="cmp"><thead><tr><th style="width:150px">环节</th><th>原方案（9/22）</th><th>测试环境实测（现方案）</th><th style="width:34%">实测依据</th></tr></thead><tbody>
+    <tr><td>② 转到 Holding</td><td>实付 − 收单手续费（7.11 − 0.24 = 6.87）</td><td><b>实付全额</b>转入（7.11），Holding 不承担手续费</td><td>分账划出 <span class="mono">spt_sgpd4dcs6hml9nykaoi</span>：−7.11，手续费 0</td></tr>
+    <tr><td>⑨ 收单手续费</td><td>算在线上收单金额里，Holding 少收</td><td>Airwallex 在<b>平台主账户</b>扣，实际由<b>手续费备用金</b>出</td><td>买家支付 <span class="mono">att_sgpdfw92bhml9nm047g_nly2pt</span>：+7.11，手续费 0.24，净额 6.87；但分出去的是 7.11，差的 0.24 是平台主账户自己的钱</td></tr>
+    <tr><td>⑦ Holding 撤回</td><td>转回退款要用的钱（实付 − 手续费）</td><td>Holding <b>全额撤回</b>（分账撤销）；<b>可能比退款晚几个批次到账</b></td><td>分账撤销 <span class="mono">rev_sgpd4dcs6hml9otcllw</span>：+7.11。订单 …233：退款 9/29 先扣，撤销 10/4 才回，差 5 天</td></tr>
+    <tr><td>⑧ 退款给客户</td><td>线上收单 + 备用金<b>补上当初被扣的收单手续费</b></td><td>全额从线上收单退，<b>没有「差额补足」</b></td><td>退款 <span class="mono">rfd_sgpdttjqxhml9oteies_nly2pt</span>：−7.11（不含补差）</td></tr>
+    <tr><td>⑨ 退款手续费</td><td>固定每笔（0.13）</td><td><b>不固定</b>，按 Airwallex 实际扣的记</td><td>订单 …124 扣 0.13；订单 …233 扣 0.32</td></tr>
+    <tr><td>⑨ 支付失败</td><td>没考虑</td><td>支付尝试失败<b>也扣费</b>，由备用金出</td><td>买家支付 +0.00，手续费 0.10，净额 −0.10</td></tr>
+    <tr><td>备用金水位</td><td>只在退款时消耗，1,000 预警 / 补到 5,000</td><td><b>每笔收单都消耗</b>，水位要按日均单量重估（待定）</td><td>例：日均收单 5 万、费率 2%，一天约消耗 1,000</td></tr>
+    </tbody></table>
+    <div class="calc">核对（订单 …124，同一批次 <span class="mono">bat_20260925_SGD_1</span> 结算）：平台主账户 +6.87（收单净额）− 7.11（分账划出）− 7.24（退款含手续费）+ 7.11（分账撤销）= <b>−0.37 = 收单手续费 0.24 + 退款手续费 0.13</b>；Holding +7.11 − 7.11 = <b>0</b>。手续费全部落在平台主账户。</div>
   </div>
   <div class="card"><table id="t"><thead><tr><th style="width:44px">#</th><th>钱从哪到哪</th><th>交易类型</th><th>单据</th><th>怎么触发</th></tr></thead><tbody></tbody></table></div>
   <div class="card"><b>规则</b><ul class="rule">
@@ -102,6 +133,16 @@ const ROWS={1:['线上客户 → 平台主账户 · 线上收单','客户线上�
  13:['平台主账户 · 手续费备用金 → 佣金账户','手续费备用金回收（超过目标额的部分）','资金调拨单','人工'],
  14:['店铺子账户 → 商家银行卡','商家提现','提现单','商家发起'],
  15:['佣金账户 → 公司银行账户','佣金提现（本期不做）','提现单','人工']};
+/* 原方案（9/22）：只覆盖改动的几条；X = 原方案有、现已取消的「备用金补收单手续费差额」 */
+const CHG=['2','7','8','9'];
+const OLD_LBL={'2':'按结算批次转 · 实付 − 手续费','7':'转回实付 − 手续费','8':'退款给客户','9':'退款手续费（固定每笔）'};
+const NEW_LBL={'2':'按结算批次转 · 实付全额','7':'全额撤回（可能晚到）','8':'退款给客户（全额）','9':'收单 / 退款 / 失败尝试手续费'};
+const OLD_ROWS={2:['平台主账户 · 线上收单 → Holding · 线上收单','按结算批次自动转到 Holding（多张支付单合一笔 = Σ 实付 − 手续费）','结算批次','Airwallex 自动'],
+ 7:['Holding · 线上收单（不够时平台垫资）→ 平台主账户 · 线上收单','把退款要用的钱转回（实付 − 手续费）','退款资金单','售后同意退款'],
+ 8:['平台主账户 · 线上收单 + 手续费备用金 → 客户','退款给客户（备用金补上当初被扣的收单手续费）','退款资金单','同上'],
+ 9:['平台主账户 · 手续费备用金 → Airwallex','退款手续费（固定每笔）','退款资金单','退款时']};
+const XE=['X',C.rf,1,`M${L('PA3')},${Y('PA3',.2)} H250 V205 H${X('C1')} V${B('C1')}`,[250,470],'',[0,0]];
+let MODE='new';
 const g=document.getElementById('g'),ns='http://www.w3.org/2000/svg';
 const el=(t,a,txt)=>{const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;g.appendChild(e);return e};
 const defs=g.querySelector('defs');Object.entries(C).forEach(([k,c])=>{const m=document.createElementNS(ns,'marker');m.setAttribute('id','a'+k);m.setAttribute('viewBox','0 0 10 10');m.setAttribute('refX','9');m.setAttribute('refY','5');m.setAttribute('markerWidth','7');m.setAttribute('markerHeight','7');m.setAttribute('orient','auto-start-reverse');const p=document.createElementNS(ns,'path');p.setAttribute('d','M0,0 L10,5 L0,10 z');p.setAttribute('fill',c);m.appendChild(p);defs.appendChild(m)});
@@ -109,10 +150,30 @@ const defs=g.querySelector('defs');Object.entries(C).forEach(([k,c])=>{const m=d
 [['平台主账户 PA',270,60,230,575],['Holding 清分账户 HA',620,60,230,575]].forEach(([t,x,y,w,h])=>{el('rect',{x,y,width:w,height:h,rx:12,class:'acc'});el('text',{x:x+14,y:y+26,class:'acct'},t)});
 Object.entries(N).forEach(([k,n])=>{el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:8,class:n.c||'box'});el('text',{x:n.x+n.w/2,y:n.y+n.h/2,'text-anchor':'middle','dominant-baseline':'central',class:'boxt','font-weight':(k==='CA'||k==='M')?600:400},n.t)});
 const key=c=>Object.keys(C).find(k=>C[k]===c);
-E.forEach(([id,c,d,p,np,lb,lp])=>{el('path',{d:p,class:'e'+(d?' dash':''),stroke:c,'marker-end':`url(#a${key(c)})`,'data-id':id});el('text',{x:lp[0],y:lp[1],class:'lbl','data-id':id,'text-anchor':'middle'},lb);const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id',id);gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${c}"></circle><text x="${np[0]}" y="${np[1]}">${id}</text>`;gg.onclick=()=>pick(id);g.appendChild(gg)});
 const col=id=>E.find(e=>e[0]===String(id))[1];
-document.querySelector('#t tbody').innerHTML=Object.entries(ROWS).map(([id,r])=>`<tr class="r" data-id="${id}" onclick="pick('${id}')"><td><span class="n" style="background:${col(id)}">${id}</span></td><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+function draw(){
+  g.querySelectorAll('[data-id],.badge,.xl').forEach(e=>e.remove());
+  const old=MODE==='old';
+  E.forEach(([id,c,d,p,np,lb,lp])=>{
+    const ch=CHG.includes(id);
+    el('path',{d:p,class:'e'+(d?' dash':''),stroke:c,'marker-end':`url(#a${key(c)})`,'data-id':id});
+    const ly=id==='9'?lp[1]+38:lp[1];
+    el('text',{x:lp[0],y:ly,class:'lbl'+(ch?(old?' old':' new'):''),'data-id':id,'text-anchor':'middle'},ch?(old?OLD_LBL[id]:'改：'+NEW_LBL[id]):lb);
+    const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id',id);gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${c}"></circle><text x="${np[0]}" y="${np[1]}">${id}</text>`;gg.onclick=()=>pick(id);g.appendChild(gg);
+  });
+  /* 原方案有、现已取消：手续费备用金 → 客户「补收单手续费差额」 */
+  const [id,c,d,p,np]=XE;
+  const pe=el('path',{d:p,class:'e dash',stroke:old?c:'#bfbfbf','marker-end':old?`url(#a${key(c)})`:'','data-id':'X'});
+  el('text',{x:175,y:222,class:'lbl '+(old?'old':'gone'),'data-id':'X','text-anchor':'middle'},old?'备用金补收单手续费差额':'补手续费差额（已取消）');
+  const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id','X');gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${old?c:'#bfbfbf'}"></circle><text x="${np[0]}" y="${np[1]}">✕</text>`;gg.onclick=()=>pick('X');g.appendChild(gg);
+  const rows=Object.entries(ROWS).map(([id,r])=>[id,old&&OLD_ROWS[id]?OLD_ROWS[id]:r]);
+  rows.splice(8,0,['X',old?['平台主账户 · 手续费备用金 → 客户','退款时补上当初被扣的收单手续费（差额补足）','退款资金单','退款时']:['平台主账户 · 手续费备用金 → 客户','<s>退款时补收单手续费差额</s>：测试环境里 Holding 全额撤回，不需要补','—','已取消']]);
+  document.querySelector('#t tbody').innerHTML=rows.map(([id,r])=>{const ch=CHG.includes(id);const tag=id==='X'?`<span class="chg${old?'':' del'}">${old?'原方案独有':'已取消'}</span>`:(ch&&!old?'<span class="chg">改</span>':'');return `<tr class="r" data-id="${id}" onclick="pick('${id}')"><td><span class="n" style="background:${id==='X'?(old?C.rf:'#bfbfbf'):col(id)}">${id==='X'?'✕':id}</span></td><td>${r[0]}</td><td>${r[1]}${tag}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`}).join('');
+  if(CUR){const c0=CUR;CUR=null;pick(c0)}
+}
+function setMode(m){MODE=m;document.getElementById('m1').classList.toggle('on',m==='new');document.getElementById('m0').classList.toggle('on',m==='old');draw()}
 let CUR=null;
+draw();
 function pick(id){CUR=CUR===id?null:id;g.classList.toggle('dim',!!CUR);g.querySelectorAll('[data-id]').forEach(e=>e.classList.toggle('on',e.getAttribute('data-id')===CUR));document.querySelectorAll('tr.r').forEach(r=>r.classList.toggle('on',r.dataset.id===CUR))}
 </script>
 </body>
