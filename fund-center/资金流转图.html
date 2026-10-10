@@ -161,13 +161,13 @@ function draw(){
     el('text',{x:lp[0],y:ly,class:'lbl'+(ch?(old?' old':' new'):''),'data-id':id,'text-anchor':'middle'},ch?(old?OLD_LBL[id]:'改：'+NEW_LBL[id]):lb);
     const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id',id);gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${c}"></circle><text x="${np[0]}" y="${np[1]}">${id}</text>`;gg.onclick=()=>pick(id);g.appendChild(gg);
   });
-  /* 原方案有、现已取消：手续费备用金 → 客户「补收单手续费差额」 */
-  const [id,c,d,p,np]=XE;
+  /* 原方案独有：手续费备用金 → 客户「补收单手续费差额」，现方案不画 */
+  if(old){const [id,c,d,p,np]=XE;
   const pe=el('path',{d:p,class:'e dash',stroke:old?c:'#bfbfbf','marker-end':old?`url(#a${key(c)})`:'','data-id':'X'});
   el('text',{x:175,y:222,class:'lbl '+(old?'old':'gone'),'data-id':'X','text-anchor':'middle'},old?'备用金补收单手续费差额':'补手续费差额（已取消）');
-  const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id','X');gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${old?c:'#bfbfbf'}"></circle><text x="${np[0]}" y="${np[1]}">✕</text>`;gg.onclick=()=>pick('X');g.appendChild(gg);
+  const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id','X');gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${old?c:'#bfbfbf'}"></circle><text x="${np[0]}" y="${np[1]}">✕</text>`;gg.onclick=()=>pick('X');g.appendChild(gg);}
   const rows=Object.entries(ROWS).map(([id,r])=>[id,old&&OLD_ROWS[id]?OLD_ROWS[id]:r]);
-  rows.splice(8,0,['X',old?['平台主账户 · 手续费备用金 → 客户','退款时补上当初被扣的收单手续费（差额补足）','退款资金单','退款时']:['平台主账户 · 手续费备用金 → 客户','<s>退款时补收单手续费差额</s>：测试环境里 Holding 全额撤回，不需要补','—','已取消']]);
+  if(old)rows.splice(8,0,['X',['平台主账户 · 手续费备用金 → 客户','退款时补上当初被扣的收单手续费（差额补足）','退款资金单','退款时']]);
   document.querySelector('#t tbody').innerHTML=rows.map(([id,r])=>{const ch=CHG.includes(id);const tag=id==='X'?`<span class="chg${old?'':' del'}">${old?'原方案独有':'已取消'}</span>`:(ch&&!old?'<span class="chg">改</span>':'');return `<tr class="r" data-id="${id}" onclick="pick('${id}')"><td><span class="n" style="background:${id==='X'?(old?C.rf:'#bfbfbf'):col(id)}">${id==='X'?'✕':id}</span></td><td>${r[0]}</td><td>${r[1]}${tag}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`}).join('');
   if(CUR){const c0=CUR;CUR=null;pick(c0)}
 }
