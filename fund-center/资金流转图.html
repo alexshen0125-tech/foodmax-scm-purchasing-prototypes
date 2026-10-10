@@ -51,6 +51,38 @@ tr.r.on td{background:#e6f4ff}
 .chg.mtg{background:#e6f4ff;color:#0958d9;border-color:#91caff}
 .chg.pend{background:#fffbe6;color:#ad6800;border-color:#ffe58f}
 .upd li{margin:4px 0 4px 18px;color:var(--tx2)}
+.simbtn{margin-left:12px;border:1px solid var(--pri);color:var(--pri);background:#fff;border-radius:8px;padding:7px 16px;font:inherit;cursor:pointer}
+.simbtn.on{background:var(--pri);color:#fff}
+#sim{display:none}
+#sim.on{display:block}
+.sc{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+.sc button{border:1px solid #d9d9d9;background:#fff;border-radius:16px;padding:5px 14px;font:inherit;cursor:pointer;color:var(--tx2)}
+.sc button.on{border-color:var(--pri);color:var(--pri);background:#e6f4ff}
+.ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ctl button{border:1px solid #d9d9d9;background:#fff;border-radius:6px;padding:5px 14px;font:inherit;cursor:pointer}
+.ctl button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.ctl button:disabled{opacity:.4;cursor:not-allowed}
+.stp{margin-top:12px;display:grid;grid-template-columns:1fr 280px;gap:16px}
+@media(max-width:900px){.stp{grid-template-columns:1fr}}
+.now{background:#f0f7ff;border:1px solid #bae0ff;border-radius:8px;padding:10px 12px;min-height:64px}
+.now .h{font-weight:600;font-size:14px}
+.now .x{color:var(--tx2);margin-top:2px}
+.warn{margin-top:8px;background:#fff1f0;border:1px solid #ffa39e;color:#a8071a;border-radius:6px;padding:6px 10px}
+.memo{border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.memo .t{color:var(--tx3);font-size:12px;margin-bottom:4px}
+.memo div.r{display:flex;justify-content:space-between;padding:2px 0}
+.slist{margin-top:10px;color:var(--tx3);font-size:12px;line-height:1.9}
+.slist span{display:inline-block;margin-right:10px}
+.slist span.done{color:#389e0d}
+.slist span.cur{color:var(--pri);font-weight:600}
+.bal{font-size:12px;font-weight:700;fill:#1f1f1f;text-anchor:middle;dominant-baseline:central;display:none}
+.bal.neg{fill:#cf1322}
+.simon .bal{display:block}
+.ftot{font-size:12px;fill:#595959;display:none}
+.simon .ftot{display:block}
+.dlt{font-size:13px;font-weight:700;animation:fl 1.6s ease-out forwards}
+@keyframes fl{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+.dot{fill:#fff;stroke-width:3}
 .upd b{color:#1f1f1f}
 .lbl.gone{fill:#8c8c8c;text-decoration:line-through}
 .cmp td:nth-child(2){color:#8c8c8c}
@@ -65,7 +97,15 @@ tr.r.on td{background:#e6f4ff}
 <div class="wrap">
   <h1>平台三账户资金流转图</h1>
   <div class="sub">2026-10-10 · 手续费按测试环境实测（10/09）+ 账户与垫资规则按 10/10 会议更新 · 点击编号或表格行高亮对应流转，再点一次取消</div>
-  <div class="seg"><button id="m1" class="on" onclick="setMode('new')">测试环境实测（现方案）</button><button id="m0" onclick="setMode('old')">原手续费方案（9/22）</button></div>
+  <div class="seg"><button id="m1" class="on" onclick="setMode('new')">测试环境实测（现方案）</button><button id="m0" onclick="setMode('old')">原手续费方案（9/22）</button></div><button class="simbtn" id="simBtn" onclick="toggleSim()">▶ 动态模拟</button>
+  <div class="card" id="sim">
+    <b>动态模拟：一笔钱进来后，每个账户余额怎么动</b>
+    <div style="color:var(--tx3)">期初为示例：平台主账户 · 手续费备用金 S$500.00，佣金账户 · 佣金收入 S$2,000.00，其余为 0。选场景后点「下一步」或「自动播放」，图上对应流转高亮、余额实时变化。</div>
+    <div class="sc" id="scs"></div>
+    <div class="ctl"><button onclick="simGo(0)">重置</button><button id="bPrev" onclick="simGo(SI-1)">上一步</button><button class="pri" id="bNext" onclick="simGo(SI+1)">下一步</button><button id="bAuto" onclick="simAuto()">自动播放</button><span id="sProg" style="color:var(--tx3)"></span></div>
+    <div class="stp"><div><div class="now" id="sNow"></div><div class="slist" id="sList"></div></div>
+      <div class="memo"><div class="t">不动钱的台账</div><div id="sMemo"></div></div></div>
+  </div>
   <div class="card">
     <div class="legend"><span><i style="background:#52c41a"></i>收款</span><span><i style="background:#1677ff"></i>结算</span><span><i style="background:#fa8c16"></i>退款 / 手续费</span><span><i style="background:#722ed1"></i>平台资金调拨</span><span><i style="background:#8c8c8c"></i>提现</span><span style="color:var(--tx3)">虚线 = 回收 / 提现</span><span style="color:#cf1322">红字 = 手续费实测更正</span><span style="color:#0958d9">蓝字 = 10/10 会议更新</span></div>
     <svg id="g" viewBox="0 0 1260 790">
@@ -172,9 +212,11 @@ const g=document.getElementById('g'),ns='http://www.w3.org/2000/svg';
 const el=(t,a,txt)=>{const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;g.appendChild(e);return e};
 const defs=g.querySelector('defs');Object.entries(C).forEach(([k,c])=>{const m=document.createElementNS(ns,'marker');m.setAttribute('id','a'+k);m.setAttribute('viewBox','0 0 10 10');m.setAttribute('refX','9');m.setAttribute('refY','5');m.setAttribute('markerWidth','7');m.setAttribute('markerHeight','7');m.setAttribute('orient','auto-start-reverse');const p=document.createElementNS(ns,'path');p.setAttribute('d','M0,0 L10,5 L0,10 z');p.setAttribute('fill',c);m.appendChild(p);defs.appendChild(m)});
 /* 账户外框 */
-[['平台主账户 PA',270,60,230,575],['Holding 清分账户 HA',620,60,230,575]].forEach(([t,x,y,w,h])=>{el('rect',{x,y,width:w,height:h,rx:12,class:'acc'});el('text',{x:x+14,y:y+26,class:'acct'},t)});
-Object.entries(N).forEach(([k,n])=>{el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:k==='CA'?12:8,class:n.c||'box'});if(k==='CA')el('text',{x:n.x+14,y:n.y+24,class:'acct'},n.t);else el('text',{x:n.x+n.w/2,y:n.y+n.h/2,'text-anchor':'middle','dominant-baseline':'central',class:'boxt','font-weight':k==='M'?600:400},n.t)});
+const FT={},NM={},BL={},BK=['PA1','PA2','PA3','HA1','HA2','HA3','CA1','CA2','M'];
+[['PA','平台主账户 PA',270,60,230,575],['HA','Holding 清分账户 HA',620,60,230,575]].forEach(([k,t,x,y,w,h])=>{el('rect',{x,y,width:w,height:h,rx:12,class:'acc'});el('text',{x:x+14,y:y+26,class:'acct'},t);FT[k]=el('text',{x:x+w-14,y:y+26,class:'ftot','text-anchor':'end'},'')});
+Object.entries(N).forEach(([k,n])=>{el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:k==='CA'?12:8,class:n.c||'box'});if(k==='CA'){el('text',{x:n.x+14,y:n.y+24,class:'acct'},n.t);FT.CA=el('text',{x:n.x+n.w-14,y:n.y+24,class:'ftot','text-anchor':'end'},'')}else{NM[k]=el('text',{x:n.x+n.w/2,y:n.y+n.h/2,'text-anchor':'middle','dominant-baseline':'central',class:'boxt','font-weight':k==='M'?600:400},n.t);if(BK.includes(k))BL[k]=el('text',{x:n.x+n.w/2,y:n.y+n.h/2+11,class:'bal'},'')}});
 const key=c=>Object.keys(C).find(k=>C[k]===c);
+const ghost=el('path',{d:'',style:'display:none'});
 const col=id=>E.find(e=>e[0]===String(id))[1];
 function draw(){
   g.querySelectorAll('[data-id],.badge,.xl').forEach(e=>e.remove());
@@ -200,6 +242,73 @@ function draw(){
 }
 function setMode(m){MODE=m;document.getElementById('m1').classList.toggle('on',m==='new');document.getElementById('m0').classList.toggle('on',m==='old');draw()}
 let CUR=null;
+/* ===== 动态模拟 ===== */
+const RT={
+ r5_HA1:`M${R('HA1')},${Y('HA1',.3)} H${L('M')}`,
+ r5_HA3:`M${R('HA3')},${Y('HA3',.15)} H${V5} V${Y('HA1',.3)} H${L('M')}`,
+ r6_HA1:`M${R('HA1')},${Y('HA1',.55)} H${V6} V${Y('CA1')} H${L('CA1')}`,
+ r6b_HA1:`M${R('HA1')},${Y('HA1',.55)} H${V6} V${Y('CA2')} H${L('CA2')}`};
+const OPEN0={PA1:0,PA2:0,PA3:500,HA1:0,HA2:0,HA3:0,CA1:2000,CA2:0,M:0};
+const MEMO0={'未认领资金':0,'未收回垫资':0,'应收佣金（挂账）':0};
+const SC=[
+ {n:'① 线上订单 · 三方商家',x:'例：实付 100，收单手续费 2，佣金 10，应付商家 90',steps:[
+  {e:'1',d:{PA1:100},h:'客户线上付款 100',x:'钱先进平台主账户 · 线上收单'},
+  {e:'9a',d:{PA1:-2},h:'Airwallex 扣收单手续费 2',x:'手续费直接从收单金额里扣，线上收单只剩 98'},
+  {e:'2',d:{PA1:-98,HA1:98},h:'结算批次：净额 98 分到 Holding',x:'线上收单这一类一进一出，余额回到 0'},
+  {e:'2b',d:{PA3:-2,HA1:2},h:'备用金垫上 2，Holding 收足实付 100',x:'② 和 ②b 在 Airwallex 里是同一笔分账划出 100；手续费最终落在备用金'},
+  {e:'5',r:'r5_HA1',d:{HA1:-90,M:90},h:'周三结算：给商家打 90',x:'按结算单出款到店铺子账户'},
+  {e:'6',r:'r6_HA1',d:{HA1:-10,CA1:10},h:'佣金 10 转到佣金账户 · 佣金收入',x:'客户已付款的订单，佣金随结算直接转',end:'结果：Holding 清零；商家 +90；佣金 +10；备用金 −2（收单手续费）。'}]},
+ {n:'② 线上退款 · 撤销晚到（实测订单 …233）',x:'测试环境真实数据：实付 7.11，收单手续费 0.24，退款手续费 0.32；退款 9/29 先结算，分账撤销 10/4 才到',steps:[
+  {e:'1',d:{PA1:7.11},h:'客户线上付款 7.11',x:''},
+  {e:'9a',d:{PA1:-0.24},h:'Airwallex 扣收单手续费 0.24',x:''},
+  {e:'2',d:{PA1:-6.87,HA1:6.87},h:'净额 6.87 分到 Holding',x:''},
+  {e:'2b',d:{PA3:-0.24,HA1:0.24},h:'备用金垫上 0.24，Holding 收足 7.11',x:''},
+  {e:'8',d:{PA1:-7.11},h:'9/29 退款先结算：退客户 7.11',x:'Airwallex 按平台主账户的可用余额放行退款，不等 Holding 撤回',warn:'线上收单这一类暂时是 −7.11：Holding 的钱还没撤回，这 5 天实际占用了平台主账户里别的钱。⚠ 待确认：先退给客户，还是等撤销到账再退'},
+  {e:'9',d:{PA3:-0.32},h:'退款手续费 0.32，从备用金出',x:'退款手续费不固定（这单 0.32，另一单 0.13）'},
+  {e:'7',d:{HA1:-7.11,PA1:7.11},h:'10/4 分账撤销到账：Holding 全额撤回 7.11',x:'线上收单回到 0',end:'结果：线上收单 0；Holding 0；备用金 −0.56 = 收单手续费 0.24 + 退款手续费 0.32。'}]},
+ {n:'③ 账期订单 · 垫资与逐单收回',x:'例：订单 100，佣金 10，应付商家 90；结算日客户还没还款',steps:[
+  {e:'10',d:{CA1:-90,HA3:90},m:{'未收回垫资':90},h:'打款前：这单客户没还款，按扣佣金后的 90 垫资',x:'垫资单列明这张订单；垫资总额接近阈值会预警'},
+  {e:'5',r:'r5_HA3',d:{HA3:-90,M:90},h:'周三结算：用垫资给商家打 90',x:'商家按时拿到钱'},
+  {e:'6',r:'',d:{},m:{'应收佣金（挂账）':10},h:'佣金 10 先挂账，不转钱',x:'客户还没付钱，Holding 里没有这 10'},
+  {e:'3',d:{PA2:100},m:{'未认领资金':100},h:'客户还款 100 进平台主账户 · 账期还款',x:'扫结算单二维码会自动核销；对公转账要人工认领。（二维码的手续费归属待确认，这里先不扣）'},
+  {e:null,d:{},m:{'未认领资金':-100},h:'认领核销：确认是这张结算单的钱',x:'没认领前这 100 只能留在平台主账户，不能转 Holding、不能用来结算'},
+  {e:'4',d:{PA2:-100,HA2:100},h:'核销后转到 Holding · 账期还款',x:''},
+  {e:'11',d:{HA2:-100,CA1:100},m:{'未收回垫资':-90,'应收佣金（挂账）':-10},h:'按垫资单逐单收回：垫资 90 + 挂账佣金 10 提回佣金账户',x:'只能收回这张垫资单对应订单的钱',end:'结果：佣金账户净 +10；垫资全部收回；Holding 清零。客户不还款时第 4 步以后都不会发生，这 90 不能拿别的订单的钱收回。'}]},
+ {n:'④ 自营订单',x:'例：自营商品线上实付 100，收单手续费 2；自营佣金比例 0',steps:[
+  {e:'1',d:{PA1:100},h:'客户线上付款 100',x:''},
+  {e:'9a',d:{PA1:-2},h:'Airwallex 扣收单手续费 2',x:''},
+  {e:'2',d:{PA1:-98,HA1:98},h:'净额 98 分到 Holding',x:''},
+  {e:'2b',d:{PA3:-2,HA1:2},h:'备用金垫上 2，Holding 收足 100',x:''},
+  {e:'6b',r:'r6b_HA1',d:{HA1:-100,CA2:100},h:'清分：整单 100 分到佣金账户 · 自营收入',x:'自营和三方商家一样走清分，佣金比例 0',warn:'⚠ 待确认：自营的钱能否先留在 Holding，用来给三方商家结算（少垫资）',end:'结果：自营收入 +100；备用金 −2。'}]},
+ {n:'⑤ 补备用金',x:'例：备用金只剩 150，低于水位（示例 200），补到目标额（示例 1,000）；水位按日均单量重估，数值待定',open:{PA3:150},steps:[
+  {e:'12',d:{CA1:-850,PA3:850},h:'从佣金账户补 850，备用金回到 1,000',x:'资金划转按类型自动绑定转出 / 转入，不让人选账户',end:'备用金超过目标额时，走 ⑬ 把多出的部分收回佣金账户。'}]}];
+let SIM=false,SCI=0,SI=0,AUTO=null;
+const fm=v=>(v<0?'−':'')+'S$'+Math.abs(v).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=v=>Math.round(v*100)/100;
+function stateAt(i){const sc=SC[SCI];const b={...OPEN0,...(sc.open||{})},m={...MEMO0};sc.steps.slice(0,i).forEach(st=>{for(const k in st.d)b[k]=r2(b[k]+st.d[k]);for(const k in (st.m||{}))m[k]=r2(m[k]+st.m[k])});return {b,m}}
+function render(i){g.querySelectorAll('.dlt,.dot').forEach(e=>e.remove());const {b,m}=stateAt(i);
+  BK.forEach(k=>{BL[k].textContent=fm(b[k]);BL[k].classList.toggle('neg',b[k]<0)});
+  FT.PA.textContent=fm(r2(b.PA1+b.PA2+b.PA3));FT.HA.textContent=fm(r2(b.HA1+b.HA2+b.HA3));FT.CA.textContent=fm(r2(b.CA1+b.CA2));
+  document.getElementById('sMemo').innerHTML=Object.entries(m).map(([k,v])=>`<div class="r"><span>${k}</span><b>${fm(v)}</b></div>`).join('');
+  const sc=SC[SCI],st=sc.steps[i-1];
+  document.getElementById('sNow').innerHTML=i===0?`<div class="h">${sc.n}</div><div class="x">${sc.x}</div>`:`<div class="h">第 ${i} 步 · ${st.e?'<span class="mono">'+st.e+'</span> ':''}${st.h}</div><div class="x">${st.x||''}</div>${st.warn?`<div class="warn">${st.warn}</div>`:''}${i===sc.steps.length&&st.end?`<div class="x" style="margin-top:6px;color:#1f1f1f"><b>${st.end}</b></div>`:''}`;
+  document.getElementById('sList').innerHTML=sc.steps.map((x,j)=>`<span class="${j<i-1?'done':j===i-1?'cur':''}">${j<i?'✓':'○'} ${j+1}. ${x.h.split('：')[0]}</span>`).join('');
+  document.getElementById('sProg').textContent=`${i} / ${sc.steps.length}`;
+  document.getElementById('bPrev').disabled=i===0;document.getElementById('bNext').disabled=i===sc.steps.length;
+  CUR=null;if(i>0&&st.e)pick(st.e);else{g.classList.remove('dim');g.querySelectorAll('.on').forEach(e=>e.classList.remove('on'));document.querySelectorAll('tr.r.on').forEach(r=>r.classList.remove('on'))}}
+function anim(st){if(!st||!st.e)return;const d=st.r!==undefined?(RT[st.r]||''):E.find(e=>e[0]===st.e)[3];
+  const flt=()=>{for(const k in st.d){const n=N[k],v=st.d[k];const t=el('text',{x:n.x+n.w-6,y:n.y-4,class:'dlt','text-anchor':'end',fill:v<0?'#cf1322':'#389e0d'},(v>0?'+':'')+fm(v));setTimeout(()=>t.remove(),1700)}};
+  if(!d||/M[^M]*M/.test(d)){flt();return}
+  ghost.setAttribute('d',d);const len=ghost.getTotalLength();const c=col(st.e);const dot=el('circle',{r:7,class:'dot',stroke:c});const t0=performance.now();
+  const f=now=>{const k=Math.min(1,(now-t0)/900),p=ghost.getPointAtLength(len*k);dot.setAttribute('cx',p.x);dot.setAttribute('cy',p.y);if(k<1)requestAnimationFrame(f);else{dot.remove();flt()}};requestAnimationFrame(f)}
+function simGo(i){const sc=SC[SCI];i=Math.max(0,Math.min(sc.steps.length,i));const fwd=i===SI+1;SI=i;render(i);if(fwd)anim(sc.steps[i-1]);if(i===sc.steps.length)stopAuto()}
+function stopAuto(){if(AUTO){clearInterval(AUTO);AUTO=null;document.getElementById('bAuto').textContent='自动播放'}}
+function simAuto(){if(AUTO){stopAuto();return}if(SI===SC[SCI].steps.length)simGo(0);document.getElementById('bAuto').textContent='暂停';AUTO=setInterval(()=>simGo(SI+1),1800);simGo(SI+1)}
+function pickSc(j){stopAuto();SCI=j;document.querySelectorAll('#scs button').forEach((b,k)=>b.classList.toggle('on',k===j));SI=0;render(0)}
+function toggleSim(){SIM=!SIM;stopAuto();document.getElementById('sim').classList.toggle('on',SIM);document.getElementById('simBtn').classList.toggle('on',SIM);document.getElementById('simBtn').textContent=SIM?'■ 退出模拟':'▶ 动态模拟';g.classList.toggle('simon',SIM);
+  Object.entries(NM).forEach(([k,e])=>{if(BK.includes(k))e.setAttribute('y',N[k].y+N[k].h/2-(SIM?8:0))});
+  if(SIM){setMode('new');pickSc(SCI)}else{CUR=null;g.classList.remove('dim');g.querySelectorAll('.on').forEach(e=>e.classList.remove('on'))}}
+document.getElementById('scs').innerHTML=SC.map((x,j)=>`<button onclick="pickSc(${j})">${x.n}</button>`).join('');
 draw();
 function pick(id){CUR=CUR===id?null:id;g.classList.toggle('dim',!!CUR);g.querySelectorAll('[data-id]').forEach(e=>e.classList.toggle('on',e.getAttribute('data-id')===CUR));document.querySelectorAll('tr.r').forEach(r=>r.classList.toggle('on',r.dataset.id===CUR))}
 </script>
