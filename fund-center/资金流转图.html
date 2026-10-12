@@ -64,7 +64,8 @@ tr.r.on td{background:#e6f4ff}
 .ctl button{border:1px solid #d9d9d9;background:#fff;border-radius:6px;padding:5px 14px;font:inherit;cursor:pointer}
 .ctl button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
 .ctl button:disabled{opacity:.4;cursor:not-allowed}
-.stp{margin-top:12px;display:grid;grid-template-columns:1fr 280px;gap:16px}
+.stp{margin-top:8px;display:grid;grid-template-columns:1fr 260px;gap:16px}
+.memo div.r{padding:1px 0}
 @media(max-width:900px){.stp{grid-template-columns:1fr}}
 .now{background:#f0f7ff;border:1px solid #bae0ff;border-radius:8px;padding:10px 12px;min-height:64px}
 .now .h{font-weight:600;font-size:14px}
@@ -120,16 +121,15 @@ tr.r.on td{background:#e6f4ff}
   <div class="seg"><button id="m1" class="on" onclick="setMode('new')">测试环境实测（现方案）</button><button id="m0" onclick="setMode('old')">原手续费方案（9/22）</button></div><button class="simbtn" id="simBtn" onclick="toggleSim()">▶ 动态模拟</button>
   <div class="card" id="sim">
     <b>动态模拟：一笔钱进来后，每个账户余额怎么动</b>
-    <div style="color:var(--tx3)">期初为示例：平台主账户 · 手续费备用金 S$500.00，佣金账户 · 佣金收入 S$2,000.00，其余为 0（个别场景另有说明）。选场景后点「下一步」或「自动播放」，图上对应流转高亮、余额实时变化。</div>
+    <span style="color:var(--tx3);margin-left:8px;font-size:12px">期初示例：备用金 S$500.00、佣金收入 S$2,000.00，其余为 0；控制按钮在下方图上</span>
     <div class="sc" id="scs"></div>
-    <div class="ctl"><button onclick="simGo(0)">重置</button><button id="bPrev" onclick="simGo(SI-1)">上一步</button><button class="pri" id="bNext" onclick="simGo(SI+1)">下一步</button><button id="bAuto" onclick="simAuto()">自动播放</button><span style="color:var(--tx3);margin-left:8px">速度</span><span class="spd" id="spd"><button data-s="4200" class="on" onclick="setSpd(4200)">慢</button><button data-s="2800" onclick="setSpd(2800)">中</button><button data-s="1600" onclick="setSpd(1600)">快</button></span><span id="sProg" style="color:var(--tx3)"></span></div>
-    <div class="stp"><div><div class="now" id="sNow"></div><div class="slist" id="sList"></div></div>
+    <div class="stp"><div><div class="slist" id="sList" style="margin-top:0"></div></div>
       <div class="memo"><div class="t">不动钱的台账</div><div id="sMemo"></div></div></div>
   </div>
   <div class="vw" id="vw"><button data-v="all" class="on" onclick="setView('all')">全部</button><button data-v="on" onclick="setView('on')">纯线上收单</button><button data-v="cr" onclick="setView('cr')">账期客户转账</button><button data-v="mix" onclick="setView('mix')">两种都有</button></div>
   <div class="card">
     <div class="legend"><span><i style="background:#52c41a"></i>收款</span><span><i style="background:#1677ff"></i>结算</span><span><i style="background:#fa8c16"></i>退款 / 手续费</span><span><i style="background:#722ed1"></i>平台资金调拨</span><span><i style="background:#8c8c8c"></i>提现</span><span style="color:var(--tx3)">虚线 = 回收 / 提现</span><span style="color:#cf1322">红字 = 手续费实测更正</span><span style="color:#0958d9">蓝字 = 10/10 会议更新</span></div>
-    <div id="cap"></div>
+    <div id="cap"><div class="ctl" style="margin-bottom:8px"><button onclick="simGo(0)">重置</button><button id="bPrev" onclick="simGo(SI-1)">上一步</button><button class="pri" id="bNext" onclick="simGo(SI+1)">下一步</button><button id="bAuto" onclick="simAuto()">自动播放</button><span style="color:var(--tx3);margin-left:8px">速度</span><span class="spd" id="spd"><button data-s="4200" class="on" onclick="setSpd(4200)">慢</button><button data-s="2800" onclick="setSpd(2800)">中</button><button data-s="1600" onclick="setSpd(1600)">快</button></span><span id="sProg" style="color:var(--tx3)"></span></div><div id="capTxt"></div></div>
     <svg id="g" viewBox="0 0 1260 790">
       <defs></defs>
     </svg>
@@ -473,7 +473,7 @@ function render(i){g.querySelectorAll('.dlt,.dot').forEach(e=>e.remove());const 
   document.getElementById('sMemo').innerHTML=Object.entries(m).filter(([k,v])=>!/^HANG/.test(k)&&(v||['未收回垫资'].includes(k))&&k!=='未认领资金').map(([k,v])=>`<div class="r"><span>${k}</span><b>${fm(v)}</b></div>`).join('');
   const sc=SC[SCI],st=sc.steps[i-1];
   const nowH=i===0?`<div class="h">${sc.n}</div><div class="ln">${sc.x}</div><div class="ln" style="color:var(--tx3)">点「下一步」或「自动播放」开始</div>`:stepHtml(sc,i,st);
-  document.getElementById('sNow').innerHTML=nowH;document.getElementById('cap').innerHTML=nowH;
+  document.getElementById('capTxt').innerHTML=nowH;
   document.getElementById('sList').innerHTML=sc.steps.map((x,j)=>`<span class="${j<i-1?'done':j===i-1?'cur':''}">${j<i?'✓':'○'} ${j+1}. ${x.h.split('：')[0]}</span>`).join('');
   document.getElementById('sProg').textContent=`${i} / ${sc.steps.length}`;
   document.getElementById('bPrev').disabled=i===0;document.getElementById('bNext').disabled=i===sc.steps.length;
