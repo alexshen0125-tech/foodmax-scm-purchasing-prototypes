@@ -27,7 +27,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 /* ================= 调整类型 ================= */
 // ded = 抵扣方式 ACCOUNT 账扣 / INVOICE 票扣（BR-14，配在类型模板上、建后不可改）
-// 类型编码系统生成 ADJT-{4 位流水}；人工类型一律必须挂单据（账扣填关联业务单号，票扣选原发票），不再按类型配置
+// 类型编码系统生成 ADJT-{4 位流水}；人工类型一律必须挂单据（账扣 / 票扣都填关联业务单号），不再按类型配置
 DB.adjTypes = DB.adjTypes || [
   {code:'ADJT-0001', cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-06-20 10:12'},
   {code:'ADJT-0002', cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-06-20 10:15'},
@@ -636,7 +636,7 @@ window.adjt_edit=function(code){
       <div class="fr"><label class="fl">类型编码</label><input value="${isNew?'保存后自动生成':esc(t.code)}" ${ro}></div>
       <div class="fr"><label class="fl"><b>*</b>方向</label>${isNew?`<div style="display:flex;gap:8px">${card('DEDUCTION','负向 · 扣商家')}${card('ADDITION','正向 · 补商家')}</div><div id="at-dir-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}" ${ro}>`}</div>
     </div>
-    <div class="fr"><label class="fl"><b>*</b>抵扣方式</label>${isNew?`<div style="display:flex;gap:8px">${dcard('ACCOUNT','账扣','不开票，GST 恒 0，直接在结算中加减')}${dcard('INVOICE','票扣','挂原发票、按原票税率拆税，关联原发票开票')}</div><div id="at-ded-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.ded=='INVOICE'?'票扣':'账扣'}" ${ro}>`}</div>
+    <div class="fr"><label class="fl"><b>*</b>抵扣方式</label>${isNew?`<div style="display:flex;gap:8px">${dcard('ACCOUNT','账扣','不开票，GST 恒 0，直接在结算中加减')}${dcard('INVOICE','票扣','开票抵扣，推送后由下游开票')}</div><div id="at-ded-err" class="fl-h" style="color:var(--r)"></div>`:`<input value="${t.ded=='INVOICE'?'票扣':'账扣'}" ${ro}>`}</div>
     <div class="fg2">
       <div class="fr"><label class="fl"><b>*</b>中文名称</label><input id="at-cn" value="${esc(t.cn)}"><div id="at-cn-err" class="fl-h" style="color:var(--r)"></div></div>
       <div class="fr"><label class="fl">英文名称</label><input id="at-en" value="${esc(t.en)}"></div>
@@ -664,7 +664,7 @@ window.adjt_save=function(code, confirmed){
     if(!code){
       DB.adjtDraft=v;
       modal(`<div class="mc-hd"><h3>确认保存</h3><button class="mc-x" onclick="adjt_edit('')">×</button></div>
-      <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>方向【${v.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}】、抵扣方式【${v.ded=='INVOICE'?'票扣':'账扣'}】保存后不可修改，类型编码由系统生成，确认保存？${v.ded=='INVOICE'?'<br><span style="font-size:12px">该类型建的单将按原票税率拆出 GST，并关联原发票开票。</span>':''}</div></div>
+      <div class="mc-bd"><div class="ib ib-y"><span class="i">⚠️</span>方向【${v.dir=='ADDITION'?'正向 · 补商家':'负向 · 扣商家'}】、抵扣方式【${v.ded=='INVOICE'?'票扣':'账扣'}】保存后不可修改，类型编码由系统生成，确认保存？</div></div>
       <div class="mc-ft"><button class="btn btn-o" onclick="adjt_edit('')">返回修改</button><button class="btn btn-p" onclick="adjt_save('',true)">确认保存</button></div>`);
       return;
     }
