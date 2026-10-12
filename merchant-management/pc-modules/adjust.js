@@ -135,8 +135,12 @@ DB.adjLogs = DB.adjLogs || {
   'ADJ-SG-20260908-001':[{t:'2026-09-08 10:22',u:'陈敏',c:'创建调整单'},{t:'2026-09-08 11:00',u:'陈敏',c:'推送'}],
 };
 const dayStr = (offset) => { const d=new Date(ts().replace(' ','T')); d.setDate(d.getDate()+offset); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); };
-const DEFAULT_FILTER = () => ({shop:'',no:'',type:'',dir:'',src:'MANUAL',st:'PENDING',from:dayStr(-29),to:dayStr(0)});
+const DEFAULT_FILTER = () => ({shop:'',type:'',dir:'',from:dayStr(-29),to:dayStr(0)});
 DB.adjFilter = DB.adjFilter || DEFAULT_FILTER();
+// 状态 Tab：待推送 / 已推送（含同步重试中、下游拒收）/ 已作废
+DB.adjTab = DB.adjTab || 'PENDING';
+const ADJ_TABS = [['PENDING','待推送'],['PUSHED','已推送'],['VOIDED','已作废']];
+const tabOf = r => r.status=='voided' ? 'VOIDED' : r.pushStatus=='PUSHED' ? 'PUSHED' : 'PENDING';
 DB.adjSel    = DB.adjSel    || [];
 DB.adjSeq    = DB.adjSeq    || 7;
 const logOf = no => (DB.adjLogs[no] = DB.adjLogs[no] || []);
@@ -197,19 +201,19 @@ function amtCell(r){
 }
 const srcLabel = r => r.sourceType=='SHORTAGE_FINE' ? '缺货罚款' : '人工建单';
 
-function adjRows(){
+// 筛选结果（不含 Tab），Tab 计数用它
+function adjFiltered(){
   const f=DB.adjFilter, hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
   return adjAll().filter(r=>
        hit(shopName(r.shopCode)+' '+r.shopCode, f.shop)
-    && (!f.no || hit(r.adjustNo,f.no) || hit(r.bizNo,f.no))
     && (!f.type||r.adjustTypeCode==f.type) && (!f.dir||adjDir(r)==f.dir)
-    && (!f.src||r.sourceType==f.src) && (!f.st||displayStatus(r)==f.st)
     && (!f.from||r.effectiveTime.slice(0,10)>=f.from) && (!f.to||r.effectiveTime.slice(0,10)<=f.to));
 }
+function adjRows(){ return adjFiltered().filter(r=>tabOf(r)==DB.adjTab); }
 
 /* ================= 列表页 ================= */
 PAGES['p-adjust']=()=>{
-  const f=DB.adjFilter, rows=adjRows();
+  const f=DB.adjFilter, rows=adjRows(), base=adjFiltered();
   const canSel=rows.filter(selectable);
   DB.adjSel=DB.adjSel.filter(no=>canSel.some(r=>r.adjustNo==no));
   const allSel=canSel.length&&canSel.every(r=>DB.adjSel.includes(r.adjustNo));
@@ -219,13 +223,8 @@ PAGES['p-adjust']=()=>{
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:16px 20px 12px">
     <div class="fg3">
       <div class="fr"><label class="fl">店铺</label><input id="af-shop" value="${esc(f.shop)}" placeholder="店铺名称或编码" list="af-shoplist"><datalist id="af-shoplist">${Object.keys(SHOPS).map(c=>`<option>${shopName(c)}</option>`).join('')}</datalist></div>
-      <div class="fr"><label class="fl">调整单号 / 关联业务单号</label><input id="af-no" value="${esc(f.no)}" placeholder="如 ADJ-SG-20260909-002"></div>
       <div class="fr"><label class="fl">调整类型</label><select id="af-type">${opt('',f.type,'全部')}${opt('ADJ-FINE',f.type,'缺货罚款')}${DB.adjTypes.map(t=>opt(t.code,f.type,t.cn+(t.on?'':'（已停用）'))).join('')}</select></div>
-    </div>
-    <div class="fg3">
       <div class="fr"><label class="fl">方向</label><select id="af-dir">${opt('',f.dir,'全部')}${opt('ADDITION',f.dir,'正向 · 补商家')}${opt('DEDUCTION',f.dir,'负向 · 扣商家')}</select></div>
-      <div class="fr"><label class="fl">来源</label><select id="af-src">${opt('',f.src,'全部')}${opt('MANUAL',f.src,'人工建单')}${opt('SHORTAGE_FINE',f.src,'缺货罚款')}</select></div>
-      <div class="fr"><label class="fl">状态</label><select id="af-st">${opt('',f.st,'全部')}${['PENDING','PUSHED','PUSH_FAILED','PUSH_REJECTED','VOIDED','JUDGING'].map(k=>opt(k,f.st,ST_LABEL[k])).join('')}</select></div>
     </div>
     <div class="fg3">
       <div class="fr"><label class="fl">创建时间 起</label><input id="af-from" type="date" value="${f.from}"></div>
@@ -237,6 +236,9 @@ PAGES['p-adjust']=()=>{
       <button class="btn btn-p" onclick="adj_query()">查询</button>
     </div>
   </div></div>
+
+  <div class="tabs" style="margin-bottom:14px">${ADJ_TABS.map(([k,l])=>{const n=base.filter(r=>tabOf(r)==k).length;
+    return `<div class="tab ${DB.adjTab==k?'active':''}" onclick="DB.adjTab='${k}';DB.adjSel=[];render()">${l}${n?`<span class="tb">${n}</span>`:''}</div>`;}).join('')}</div>
 
   <div class="card">
     <div class="selbar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
@@ -275,7 +277,7 @@ PAGES['p-adjust']=()=>{
 
 window.adj_query=function(){
   const g=id=>(document.getElementById(id)||{}).value||'';
-  DB.adjFilter={shop:g('af-shop').trim(),no:g('af-no').trim(),type:g('af-type'),dir:g('af-dir'),src:g('af-src'),st:g('af-st'),from:g('af-from'),to:g('af-to')};
+  DB.adjFilter={shop:g('af-shop').trim(),type:g('af-type'),dir:g('af-dir'),from:g('af-from'),to:g('af-to')};
   DB.adjSel=[];render();
 };
 window.adj_reset=function(){DB.adjFilter=DEFAULT_FILTER();DB.adjSel=[];render();toast('筛选条件已重置','info');};
@@ -594,7 +596,6 @@ window.adj_pushDo=function(){
     else skipped++;
   });
   DB.adjSel=[]; DB.adjPushOpen={}; DB.adjPushShowAll=false; closeModal();
-  if(DB.adjFilter.st=='PENDING') DB.adjFilter.st='';
   render();
   toast(pushed?`已推送 ${pushed} 张${skipped?`，跳过 ${skipped} 张（已被他人推送或已作废）`:''}`:`所选 ${skipped} 张已被他人推送或已作废`, pushed?'ok':'info');
 };
