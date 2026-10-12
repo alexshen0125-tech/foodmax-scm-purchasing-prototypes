@@ -141,6 +141,9 @@ DB.adjSel    = DB.adjSel    || [];
 DB.adjSeq    = DB.adjSeq    || 7;
 const logOf = no => (DB.adjLogs[no] = DB.adjLogs[no] || []);
 const addLog = (no,c) => logOf(no).push({t:ts(), u:'当前账号', c});
+// 列表「操作人 / 操作时间」= 最近一次操作（建单 / 推送 / 作废）；演示数据无日志时按推送 → 建单回退
+const lastOp = r => { const l=(DB.adjLogs||{})[r.adjustNo]; if(l&&l.length) return l[l.length-1];
+  return r.pushedAt ? {t:r.pushedAt, u:r.pushedBy||'系统'} : {t:r.effectiveTime, u:r.createdBy||'系统'}; };
 
 /* ================= 行模型 ================= */
 function fineAsAdj(){
@@ -250,7 +253,7 @@ PAGES['p-adjust']=()=>{
       <thead><tr>
         <th style="width:34px"><input type="checkbox" class="skuchk" title="全选当前页待推送" ${allSel?'checked':''} onclick="adj_selAll()"></th>
         <th>调整单号</th><th>店铺名称</th><th>店铺编码</th><th style="text-align:right">金额</th>
-        <th>调整类型</th><th>抵扣方式</th><th>来源</th><th>生效时间</th><th>状态</th><th style="position:sticky;right:0;background:linear-gradient(var(--bd2),var(--bd2)),#fff;box-shadow:-1px 0 0 var(--bd)">操作</th>
+        <th>调整类型</th><th>抵扣方式</th><th>来源</th><th>生效时间</th><th>状态</th><th>操作人</th><th>操作时间</th><th style="position:sticky;right:0;background:linear-gradient(var(--bd2),var(--bd2)),#fff;box-shadow:-1px 0 0 var(--bd)">操作</th>
       </tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${selectable(r)?`<input type="checkbox" class="skuchk" ${DB.adjSel.includes(r.adjustNo)?'checked':''} onclick="adj_toggle('${r.adjustNo}')">`:''}</td>
@@ -263,8 +266,10 @@ PAGES['p-adjust']=()=>{
         <td style="white-space:nowrap">${srcLabel(r)}</td>
         <td style="white-space:nowrap;color:var(--ts)">${r.effectiveTime}</td>
         <td style="white-space:nowrap">${statusTag(r)}</td>
+        <td style="white-space:nowrap">${esc(lastOp(r).u)}</td>
+        <td style="white-space:nowrap;color:var(--ts)">${lastOp(r).t}</td>
         <td style="white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-1px 0 0 var(--bd)"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button>${canVoid(r)?`<button class="btn btn-o btn-sm" style="margin-left:6px;color:var(--r)" onclick="adj_voidAsk('${r.adjustNo}')">作废</button>`:''}</td>
-      </tr>`).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
+      </tr>`).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts);text-align:right">共 ${rows.length} 条 · 每页 50 条</div>
     </div>`;
