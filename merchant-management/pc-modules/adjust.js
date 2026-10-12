@@ -570,14 +570,14 @@ window.adj_pushAsk=function(){
   <div class="mc-bd">
     <div class="ib ib-y"><span class="i">⚠️</span>推送后不可重复推送，也不可在本页撤回。请核对店铺与金额。</div>
     <div style="border:1px solid var(--bd);border-radius:8px;overflow-x:auto;margin:10px 0 12px"><table style="margin:0;white-space:nowrap">
-      <thead><tr><th>店铺</th><th>店铺编码</th><th style="text-align:right">单数</th><th style="text-align:right">补商家合计</th><th style="text-align:right">扣商家合计</th><th style="text-align:right">净额</th></tr></thead><tbody>
+      <thead><tr><th>店铺</th><th>店铺编码</th><th style="text-align:right">补商家合计</th><th style="text-align:right">扣商家合计</th><th style="text-align:right">净额</th></tr></thead><tbody>
       ${visible.map(x=>`<tr style="cursor:pointer" onclick="DB.adjPushOpen['${x.c}']=!DB.adjPushOpen['${x.c}'];adj_pushAsk()">
-          <td>${DB.adjPushOpen[x.c]?'▾':'▸'} ${esc(shopName(x.c))}</td><td class="mono">${x.c}</td><td style="text-align:right">${x.a.length}</td>
+          <td>${DB.adjPushOpen[x.c]?'▾':'▸'} ${esc(shopName(x.c))}</td><td class="mono">${x.c}</td>
           <td style="text-align:right;color:var(--g)">${x.plus?fmtAmt(1,x.plus):'—'}</td><td style="text-align:right;color:var(--r)">${x.minus?fmtAmt(-1,x.minus):'—'}</td>
           <td style="text-align:right">${netCell(x.net)}</td></tr>
-        ${DB.adjPushOpen[x.c]?x.a.map(r=>`<tr style="background:#FAFBF9;font-size:12.5px"><td colspan="3" class="mono" style="padding-left:28px">${r.adjustNo}</td><td colspan="2">${esc(r.adjustTypeName)}</td><td style="text-align:right;color:${adjSign(r)>0?'var(--g)':'var(--r)'}">${fmtAmt(adjSign(r),r.amount)}</td></tr>`).join(''):''}`).join('')}
-      ${showAll?'':`<tr><td colspan="6" style="text-align:center"><button class="btn btn-link btn-sm" onclick="DB.adjPushShowAll=true;adj_pushAsk()">展开其余 ${shops.length-5} 个店铺</button></td></tr>`}
-      <tr style="background:#F7FBF8;font-weight:700"><td colspan="2">SGD 小计</td><td style="text-align:right">${rows.length}</td>
+        ${DB.adjPushOpen[x.c]?x.a.map(r=>`<tr style="background:#FAFBF9;font-size:12.5px"><td colspan="2" class="mono" style="padding-left:28px">${r.adjustNo}</td><td colspan="2">${esc(r.adjustTypeName)}</td><td style="text-align:right;color:${adjSign(r)>0?'var(--g)':'var(--r)'}">${fmtAmt(adjSign(r),r.amount)}</td></tr>`).join(''):''}`).join('')}
+      ${showAll?'':`<tr><td colspan="5" style="text-align:center"><button class="btn btn-link btn-sm" onclick="DB.adjPushShowAll=true;adj_pushAsk()">展开其余 ${shops.length-5} 个店铺</button></td></tr>`}
+      <tr style="background:#F7FBF8;font-weight:700"><td colspan="2">SGD 小计</td>
         <td style="text-align:right;color:var(--g)">${plusAll?fmtAmt(1,plusAll):'—'}</td><td style="text-align:right;color:var(--r)">${minusAll?fmtAmt(-1,minusAll):'—'}</td><td style="text-align:right">${netCell(r2(plusAll-minusAll))}</td></tr>
     </tbody></table></div>
   </div>
