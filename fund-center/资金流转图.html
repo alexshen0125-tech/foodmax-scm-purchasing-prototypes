@@ -82,10 +82,20 @@ tr.r.on td{background:#e6f4ff}
 .simon .bal{display:block}
 .ftot{font-size:12px;fill:#595959;display:none}
 .simon .ftot{display:block}
-.dlt{font-size:13px;font-weight:700;animation:fl 1.6s ease-out forwards}
+.dlt{font-size:13px;font-weight:700;animation:fl 2.8s ease-out forwards}
 @keyframes fl{0%{opacity:0;transform:translateY(6px)}15%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
 .dot{fill:#fff;stroke-width:3}
 .mute{opacity:.08;pointer-events:none}
+#cap{display:none;position:sticky;top:0;z-index:5;background:#f0f7ff;border:1px solid #bae0ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+#cap.on{display:block}
+#cap .h{font-weight:600;font-size:14px}
+.now .lb,#cap .lb{display:inline-block;min-width:56px;color:var(--tx3)}
+.now .ln,#cap .ln{margin-top:3px;color:var(--tx2)}
+.chgs b.dp{color:#389e0d}.chgs b.dn{color:#cf1322}
+.spd{display:inline-flex;border:1px solid #d9d9d9;border-radius:6px;overflow:hidden;margin-left:8px}
+.spd button{border:0!important;border-radius:0!important;padding:5px 10px!important}
+.spd button+button{border-left:1px solid #d9d9d9!important}
+.spd button.on{background:#141414!important;color:#fff}
 .vw{display:flex;gap:0;margin:0 0 12px;border:1px solid #d9d9d9;border-radius:8px;overflow:hidden;width:max-content;max-width:100%;flex-wrap:wrap}
 .vw button{border:0;background:#fff;padding:7px 16px;font:inherit;cursor:pointer;color:var(--tx2)}
 .vw button+button{border-left:1px solid #d9d9d9}
@@ -112,13 +122,14 @@ tr.r.on td{background:#e6f4ff}
     <b>动态模拟：一笔钱进来后，每个账户余额怎么动</b>
     <div style="color:var(--tx3)">期初为示例：平台主账户 · 手续费备用金 S$500.00，佣金账户 · 佣金收入 S$2,000.00，其余为 0（个别场景另有说明）。选场景后点「下一步」或「自动播放」，图上对应流转高亮、余额实时变化。</div>
     <div class="sc" id="scs"></div>
-    <div class="ctl"><button onclick="simGo(0)">重置</button><button id="bPrev" onclick="simGo(SI-1)">上一步</button><button class="pri" id="bNext" onclick="simGo(SI+1)">下一步</button><button id="bAuto" onclick="simAuto()">自动播放</button><span id="sProg" style="color:var(--tx3)"></span></div>
+    <div class="ctl"><button onclick="simGo(0)">重置</button><button id="bPrev" onclick="simGo(SI-1)">上一步</button><button class="pri" id="bNext" onclick="simGo(SI+1)">下一步</button><button id="bAuto" onclick="simAuto()">自动播放</button><span style="color:var(--tx3);margin-left:8px">速度</span><span class="spd" id="spd"><button data-s="4200" class="on" onclick="setSpd(4200)">慢</button><button data-s="2800" onclick="setSpd(2800)">中</button><button data-s="1600" onclick="setSpd(1600)">快</button></span><span id="sProg" style="color:var(--tx3)"></span></div>
     <div class="stp"><div><div class="now" id="sNow"></div><div class="slist" id="sList"></div></div>
       <div class="memo"><div class="t">不动钱的台账</div><div id="sMemo"></div></div></div>
   </div>
   <div class="vw" id="vw"><button data-v="all" class="on" onclick="setView('all')">全部</button><button data-v="on" onclick="setView('on')">纯线上收单</button><button data-v="cr" onclick="setView('cr')">账期客户转账</button><button data-v="mix" onclick="setView('mix')">两种都有</button></div>
   <div class="card">
     <div class="legend"><span><i style="background:#52c41a"></i>收款</span><span><i style="background:#1677ff"></i>结算</span><span><i style="background:#fa8c16"></i>退款 / 手续费</span><span><i style="background:#722ed1"></i>平台资金调拨</span><span><i style="background:#8c8c8c"></i>提现</span><span style="color:var(--tx3)">虚线 = 回收 / 提现</span><span style="color:#cf1322">红字 = 手续费实测更正</span><span style="color:#0958d9">蓝字 = 10/10 会议更新</span></div>
+    <div id="cap"></div>
     <svg id="g" viewBox="0 0 1260 790">
       <defs></defs>
     </svg>
@@ -410,7 +421,35 @@ const SC=[
  {g:'纯线上收单',k:'a',n:'补备用金 / 回收',x:'例：备用金只剩 150，低于水位（示例 200），补到目标额（示例 1,000）；水位按日均单量重估，数值待定',open:{PA3:150},steps:[
   {e:'12',d:{CA1:-850,PA3:850},h:'从佣金账户补 850，备用金回到 1,000',x:'资金划转按类型自动绑定转出 / 转入，不让人选账户'},
   {e:'13',d:{PA3:-200,CA1:200},h:'目标额下调到 800（示例）：回收多出的 200',x:'超过目标额的部分收回佣金账户',end:'结果：备用金 800。'}]}];
-let SIM=false,SCI=0,SI=0,AUTO=null;
+let SIM=false,SCI=0,SI=0,AUTO=null,SPD=4200;
+const EXPL={
+ '1':'客户在 APP 线上付款，钱先进平台主账户的「线上收单」',
+ '9a':'Airwallex 按费率直接从这笔收单金额里扣手续费，平台主账户只收到扣完后的净额',
+ '2':'每天结算批次时，Airwallex 自动把这批订单的钱分到 Holding；这一条是扣完手续费后的净额部分',
+ '2b':'Holding 要收到客户实付的全额，被扣掉的手续费由备用金补上；它和 ② 在 Airwallex 里是同一笔分账',
+ '3':'账期客户还款进平台主账户的「账期还款」：扫结算单二维码自动核销，对公转账要人工认领',
+ '4':'认领核销后，把这笔钱从平台主账户转到 Holding 的「账期还款」；没认领的钱不能转',
+ '5':'周一出结算单、周三 12:00 打款：从 Holding 把货款打到商家的店铺子账户',
+ '6':'结算时把平台佣金从 Holding 转到佣金账户；账期客户没还款的订单，佣金先挂在 Holding',
+ '6b':'自营订单和三方商家一样走清分，佣金比例 0，整单分到佣金账户的「自营收入」',
+ '6c':'客户还款认领核销后，系统自动把挂着的佣金清分到佣金账户',
+ '7':'客户退款时，Airwallex 把当初分到 Holding 的钱全额撤回平台主账户（分账撤销）',
+ '8':'从平台主账户把钱原路退给客户',
+ '9':'退款手续费、网关费都从备用金出',
+ '10':'结算单里账期客户还没还款的订单，由佣金账户按扣掉佣金后的金额垫到 Holding',
+ '11':'客户还款核销后，按垫资单把这单垫的钱收回佣金账户；客户不还就不能收',
+ '12':'备用金低于水位时，从佣金账户补到目标额',
+ '13':'备用金超过目标额的部分，收回佣金账户',
+ '14':'商家把店铺子账户里的钱提现到自己的银行卡'};
+const EXPL_NULL='这一步不动钱，只在系统里记账（认领核销 / 台账处理）';
+const BN={PA1:'平台主账户·线上收单',PA2:'平台主账户·账期还款',PA3:'平台主账户·手续费备用金',HA1:'Holding·线上收单',HA2:'Holding·账期还款',HA3:'Holding·平台垫资',HA4:'Holding·佣金挂账',CA1:'佣金账户·佣金收入',CA2:'佣金账户·自营收入',M:'店铺子账户'};
+function setSpd(v){SPD=v;document.querySelectorAll('#spd button').forEach(b=>b.classList.toggle('on',+b.dataset.s===v));if(AUTO){clearInterval(AUTO);AUTO=setInterval(()=>simGo(SI+1),SPD)}}
+function stepHtml(sc,i,st){const ch=Object.entries(st.d||{}).map(([k,v])=>`${BN[k]} <b class="${v<0?'dn':'dp'}">${v>0?'+':''}${fm(v)}</b>`).join('；');const mm=Object.entries(st.m||{}).filter(([k])=>!/^HANG/.test(k)).map(([k,v])=>`${k} ${v>0?'+':''}${fm(v)}`).concat(st.m&&st.m.HANG?[`佣金挂账 ${st.m.HANG>0?'+':''}${fm(st.m.HANG)}`]:[]).join('；');
+  return `<div class="h">第 ${i} / ${sc.steps.length} 步 · ${st.e?'<span class="mono">'+st.e+'</span> ':''}${st.h}</div>`+
+  `<div class="ln"><span class="lb">这一步</span>${st.e?EXPL[st.e]:EXPL_NULL}</div>`+
+  (st.x?`<div class="ln"><span class="lb">本例</span>${st.x}</div>`:'')+
+  `<div class="ln chgs"><span class="lb">余额变化</span>${ch||'不动钱'}${mm?`<span style="color:var(--tx3)">　台账：${mm}</span>`:''}</div>`+
+  (st.warn?`<div class="warn">${st.warn}</div>`:'')+(i===sc.steps.length&&st.end?`<div class="ln" style="color:#1f1f1f"><b>${st.end}</b></div>`:'')}
 const fm=v=>(v<0?'−':'')+'S$'+Math.abs(v).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2});
 const r2=v=>Math.round(v*100)/100;
 function stateAt(i){const sc=SC[SCI];const b={...OPEN0,...(sc.open||{})},m={...MEMO0,...(sc.memo||{})};sc.steps.slice(0,i).forEach(st=>{for(const k in st.d)b[k]=r2(b[k]+st.d[k]);for(const k in (st.m||{}))m[k]=r2(m[k]+st.m[k])});return {b,m}}
@@ -420,21 +459,22 @@ function render(i){g.querySelectorAll('.dlt,.dot').forEach(e=>e.remove());const 
   BL.HA4.textContent=fm(m.HANG)+(m.HANG?(b.HA4>=m.HANG?'（已到账）':'（客户未还，钱未到）'):'');BL.HA4.classList.add('v');
   document.getElementById('sMemo').innerHTML=Object.entries(m).filter(([k,v])=>!/^HANG/.test(k)&&(v||['未认领资金','未收回垫资'].includes(k))).map(([k,v])=>`<div class="r"><span>${k}</span><b>${fm(v)}</b></div>`).join('');
   const sc=SC[SCI],st=sc.steps[i-1];
-  document.getElementById('sNow').innerHTML=i===0?`<div class="h">${sc.n}</div><div class="x">${sc.x}</div>`:`<div class="h">第 ${i} 步 · ${st.e?'<span class="mono">'+st.e+'</span> ':''}${st.h}</div><div class="x">${st.x||''}</div>${st.warn?`<div class="warn">${st.warn}</div>`:''}${i===sc.steps.length&&st.end?`<div class="x" style="margin-top:6px;color:#1f1f1f"><b>${st.end}</b></div>`:''}`;
+  const nowH=i===0?`<div class="h">${sc.n}</div><div class="ln">${sc.x}</div><div class="ln" style="color:var(--tx3)">点「下一步」或「自动播放」开始</div>`:stepHtml(sc,i,st);
+  document.getElementById('sNow').innerHTML=nowH;document.getElementById('cap').innerHTML=nowH;
   document.getElementById('sList').innerHTML=sc.steps.map((x,j)=>`<span class="${j<i-1?'done':j===i-1?'cur':''}">${j<i?'✓':'○'} ${j+1}. ${x.h.split('：')[0]}</span>`).join('');
   document.getElementById('sProg').textContent=`${i} / ${sc.steps.length}`;
   document.getElementById('bPrev').disabled=i===0;document.getElementById('bNext').disabled=i===sc.steps.length;
   CUR=null;if(i>0&&st.e)pick(st.e);else{g.classList.remove('dim');g.querySelectorAll('.on').forEach(e=>e.classList.remove('on'));document.querySelectorAll('tr.r.on').forEach(r=>r.classList.remove('on'))}}
 function anim(st){if(!st||!st.e)return;const d=st.r!==undefined?(RT[st.r]||''):E.find(e=>e[0]===st.e)[3];
-  const flt=()=>{for(const k in st.d){const n=N[k],v=st.d[k];const t=el('text',{x:n.x+n.w-6,y:n.y-4,class:'dlt','text-anchor':'end',fill:v<0?'#cf1322':'#389e0d'},(v>0?'+':'')+fm(v));setTimeout(()=>t.remove(),1700)}};
+  const flt=()=>{for(const k in st.d){const n=N[k],v=st.d[k];const t=el('text',{x:n.x+n.w-6,y:n.y-4,class:'dlt','text-anchor':'end',fill:v<0?'#cf1322':'#389e0d'},(v>0?'+':'')+fm(v));setTimeout(()=>t.remove(),2900)}};
   if(!d||/M[^M]*M/.test(d)){flt();return}
   ghost.setAttribute('d',d);const len=ghost.getTotalLength();const c=col(st.e);const dot=el('circle',{r:7,class:'dot',stroke:c});const t0=performance.now();
-  const f=now=>{const k=Math.min(1,(now-t0)/900),p=ghost.getPointAtLength(len*k);dot.setAttribute('cx',p.x);dot.setAttribute('cy',p.y);if(k<1)requestAnimationFrame(f);else{dot.remove();flt()}};requestAnimationFrame(f)}
+  const f=now=>{const k=Math.min(1,(now-t0)/Math.min(1800,SPD*.45)),p=ghost.getPointAtLength(len*k);dot.setAttribute('cx',p.x);dot.setAttribute('cy',p.y);if(k<1)requestAnimationFrame(f);else{dot.remove();flt()}};requestAnimationFrame(f)}
 function simGo(i){const sc=SC[SCI];i=Math.max(0,Math.min(sc.steps.length,i));const fwd=i===SI+1;SI=i;render(i);if(fwd)anim(sc.steps[i-1]);if(i===sc.steps.length)stopAuto()}
 function stopAuto(){if(AUTO){clearInterval(AUTO);AUTO=null;document.getElementById('bAuto').textContent='自动播放'}}
-function simAuto(){if(AUTO){stopAuto();return}if(SI===SC[SCI].steps.length)simGo(0);document.getElementById('bAuto').textContent='暂停';AUTO=setInterval(()=>simGo(SI+1),1800);simGo(SI+1)}
+function simAuto(){if(AUTO){stopAuto();return}if(SI===SC[SCI].steps.length)simGo(0);document.getElementById('bAuto').textContent='暂停';AUTO=setInterval(()=>simGo(SI+1),SPD);simGo(SI+1)}
 function pickSc(j){stopAuto();SCI=j;const vk=Object.keys(GN).find(k=>GN[k]===SC[j].g);if(VIEW!=='all'&&VIEW!==vk){VIEW=vk;document.querySelectorAll('#vw button').forEach(b=>b.classList.toggle('on',b.dataset.v===vk));draw();const bs=VB[vk];Object.keys(N).forEach(k=>g.querySelectorAll(`[data-box="${k}"]`).forEach(e=>e.classList.toggle('mute',!!bs&&!bs.includes(k))));renderScs()}document.querySelectorAll('#scs button').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick')===`pickSc(${j})`));SI=0;render(0)}
-function toggleSim(){SIM=!SIM;stopAuto();document.getElementById('sim').classList.toggle('on',SIM);document.getElementById('simBtn').classList.toggle('on',SIM);document.getElementById('simBtn').textContent=SIM?'■ 退出模拟':'▶ 动态模拟';g.classList.toggle('simon',SIM);
+function toggleSim(){SIM=!SIM;stopAuto();document.getElementById('sim').classList.toggle('on',SIM);document.getElementById('simBtn').classList.toggle('on',SIM);document.getElementById('simBtn').textContent=SIM?'■ 退出模拟':'▶ 动态模拟';g.classList.toggle('simon',SIM);document.getElementById('cap').classList.toggle('on',SIM);
   Object.entries(NM).forEach(([k,e])=>{if(BK.includes(k)&&k!=='HA4')e.setAttribute('y',N[k].y+N[k].h/2-(SIM?8:0))});g.querySelectorAll('.dlt,.dot').forEach(e=>e.remove());
   if(SIM){setMode('new');pickSc(SCI)}else{BL.HA4.textContent='账期未还订单的佣金';BL.HA4.classList.remove('v');CUR=null;g.classList.remove('dim');g.querySelectorAll('.on').forEach(e=>e.classList.remove('on'))}}
 const KD={w:['w','全流程'],f:['f','正向'],r:['r','逆向'],a:['a','调拨']};
