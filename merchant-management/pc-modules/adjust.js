@@ -29,16 +29,16 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 // ded = 抵扣方式 ACCOUNT 账扣 / INVOICE 票扣（BR-14，配在类型模板上、建后不可改）
 // 类型编码系统生成 ADJT-{4 位流水}；人工类型一律必须挂单据（账扣填关联业务单号，票扣选原发票），不再按类型配置
 DB.adjTypes = DB.adjTypes || [
-  {code:'ADJT-0001', cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', on:1, ded:'ACCOUNT'},
-  {code:'ADJT-0002', cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', on:1, ded:'ACCOUNT'},
-  {code:'ADJT-0003', cn:'质量问题扣款',   en:'Quality Deduction',     dir:'DEDUCTION', on:1, ded:'ACCOUNT'},
-  {code:'ADJT-0004', cn:'佣金差额调整',   en:'Commission Correction', dir:'DEDUCTION', on:1, ded:'INVOICE'},
-  {code:'ADJT-0005', cn:'补货金额调整',   en:'Replenish Correction',  dir:'DEDUCTION', on:1, ded:'INVOICE'},
-  {code:'ADJT-0006', cn:'平台活动补贴',   en:'Campaign Subsidy',      dir:'ADDITION',  on:1, ded:'ACCOUNT'},
-  {code:'ADJT-0007', cn:'物流费用补贴',   en:'Logistics Subsidy',     dir:'ADDITION',  on:1, ded:'ACCOUNT'},
-  {code:'ADJT-0008', cn:'系统错账补款',   en:'System Error Comp.',    dir:'ADDITION',  on:1, ded:'ACCOUNT'},
-  {code:'ADJT-0009', cn:'耗材金额调整',   en:'Supplies Correction',   dir:'ADDITION',  on:1, ded:'INVOICE'},
-  {code:'ADJT-0010', cn:'保证金退还',     en:'Deposit Refund',        dir:'ADDITION',  on:0, ded:'ACCOUNT'},
+  {code:'ADJT-0001', cn:'售后判责赔付',   en:'After-sale Claim',      dir:'DEDUCTION', on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-06-20 10:12'},
+  {code:'ADJT-0002', cn:'逾期送货违约金', en:'Late Delivery Penalty', dir:'DEDUCTION', on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-06-20 10:15'},
+  {code:'ADJT-0003', cn:'质量问题扣款',   en:'Quality Deduction',     dir:'DEDUCTION', on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-06-20 10:18'},
+  {code:'ADJT-0004', cn:'佣金差额调整',   en:'Commission Correction', dir:'DEDUCTION', on:1, ded:'INVOICE', opBy:'林凯', opAt:'2026-06-28 15:40'},
+  {code:'ADJT-0005', cn:'补货金额调整',   en:'Replenish Correction',  dir:'DEDUCTION', on:1, ded:'INVOICE', opBy:'林凯', opAt:'2026-06-28 15:46'},
+  {code:'ADJT-0006', cn:'平台活动补贴',   en:'Campaign Subsidy',      dir:'ADDITION',  on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-06-20 10:25'},
+  {code:'ADJT-0007', cn:'物流费用补贴',   en:'Logistics Subsidy',     dir:'ADDITION',  on:1, ded:'ACCOUNT', opBy:'林凯', opAt:'2026-08-05 09:30'},
+  {code:'ADJT-0008', cn:'系统错账补款',   en:'System Error Comp.',    dir:'ADDITION',  on:1, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-07-02 14:08'},
+  {code:'ADJT-0009', cn:'耗材金额调整',   en:'Supplies Correction',   dir:'ADDITION',  on:1, ded:'INVOICE', opBy:'林凯', opAt:'2026-06-28 15:52'},
+  {code:'ADJT-0010', cn:'保证金退还',     en:'Deposit Refund',        dir:'ADDITION',  on:0, ded:'ACCOUNT', opBy:'陈敏', opAt:'2026-09-01 11:20'},
 ];
 const tOf = c => (DB.adjTypes||[]).find(t=>t.code==c) || {code:c, cn:c, en:'', dir:'DEDUCTION', on:0, ded:'ACCOUNT'};
 window.adjTypeOf = tOf;
@@ -610,7 +610,7 @@ PAGES['p-adjust-type']=()=>{
       <div class="row" style="margin-left:auto"><button class="btn btn-p btn-sm" onclick="DB.adjtDraft=null;adjt_edit('')">新增类型</button></div>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>类型编码</th><th>中文名称</th><th>英文名称</th><th>方向</th><th>抵扣方式</th><th>状态</th><th>操作</th></tr></thead>
+      <thead><tr><th>类型编码</th><th>中文名称</th><th>英文名称</th><th>方向</th><th>抵扣方式</th><th>状态</th><th>操作人</th><th>操作时间</th><th>操作</th></tr></thead>
       <tbody>${DB.adjTypes.map(t=>`<tr>
         <td class="mono" style="white-space:nowrap">${t.code}</td>
         <td>${esc(t.cn)}</td>
@@ -618,6 +618,8 @@ PAGES['p-adjust-type']=()=>{
         <td style="white-space:nowrap">${dirTag(t.dir)}</td>
         <td style="white-space:nowrap">${adjDedTag(t)}</td>
         <td>${t.on?'<span class="tag t-g"><span class="dot"></span>启用</span>':'<span class="tag t-gr"><span class="dot"></span>停用</span>'}</td>
+        <td style="white-space:nowrap">${esc(t.opBy||'—')}</td>
+        <td style="white-space:nowrap;color:var(--ts)">${t.opAt||'—'}</td>
         <td style="white-space:nowrap">${`<button class="btn btn-o btn-sm" onclick="adjt_edit('${t.code}')">编辑</button><button class="btn btn-o btn-sm" style="margin-left:6px" onclick="adjt_toggle('${t.code}')">${t.on?'停用':'启用'}</button>`}</td>
       </tr>`).join('')}</tbody>
     </table></div></div>
@@ -669,11 +671,11 @@ window.adjt_save=function(code, confirmed){
     }
   }
   let newCode='';
-  if(code){ const t=tOf(code); t.cn=v.cn; t.en=v.en; }
+  if(code){ const t=tOf(code); t.cn=v.cn; t.en=v.en; t.opBy='当前账号'; t.opAt=ts(); }
   else {
     const max=Math.max(0,...DB.adjTypes.map(t=>+((/^ADJT-(\d+)$/.exec(t.code)||[0,0])[1])));
     newCode='ADJT-'+String(max+1).padStart(4,'0');
-    DB.adjTypes.push({code:newCode, cn:v.cn, en:v.en, dir:v.dir, on:1, ded:v.ded||'ACCOUNT'});
+    DB.adjTypes.push({code:newCode, cn:v.cn, en:v.en, dir:v.dir, on:1, ded:v.ded||'ACCOUNT', opBy:'当前账号', opAt:ts()});
   }
   DB.adjtDraft=null; closeModal(); render(); toast(newCode?`调整类型已保存，编码 ${newCode}`:'调整类型已保存','ok');
 };
@@ -685,6 +687,6 @@ window.adjt_toggle=function(code){
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="adjt_toggleDo('${code}')">确认停用</button></div>`);
   }else adjt_toggleDo(code);
 };
-window.adjt_toggleDo=function(code){const t=tOf(code);t.on=t.on?0:1;closeModal();render();toast('「'+t.cn+'」已'+(t.on?'启用':'停用'),'ok');};
+window.adjt_toggleDo=function(code){const t=tOf(code);t.on=t.on?0:1;t.opBy='当前账号';t.opAt=ts();closeModal();render();toast('「'+t.cn+'」已'+(t.on?'启用':'停用'),'ok');};
 
 })();
