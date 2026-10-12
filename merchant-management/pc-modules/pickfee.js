@@ -6,7 +6,7 @@
        按次：每取一次货收一次固定金额（每家店铺单独计次，不做拼车分摊）；
        按下单金额比例：有取货的那天，当天下单金额 × 比例；可设「每日封顶」，超过按封顶收。
    - 改规则下一次生效：保存时刻之后的取货按新规则算，之前已取的货不重算。
-   - 每月汇总出账单 → 生成「自提运费」业务调整单（负向·账扣，从货款里扣）；发票单独开「物流费发票」，不和服务费/佣金合开。
+   - 每月汇总出账单，账单直接「推送财务结算」，在结算时从商家货款里扣（不走业务调整单）；发票单独开「物流费发票」，不和服务费/佣金合开。
    依赖主文件全局：DB / money / toast / modal / modalWide / closeModal / drawer / closeDrawer / render / nav / ts / flowTip */
 (function(){
 
@@ -22,10 +22,6 @@ const shopName = c => (SHOPS[c]||{}).name || c;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MODE = {TRIP:'按次', GMV:'按下单金额比例', OFF:'不收费'};
 const pct = r => +(r*100).toFixed(2)+'%';
-
-/* 调整类型：自提运费（负向·账扣），挂到业务调整单类型里 */
-if(DB.adjTypes && !DB.adjTypes.some(t=>t.cn=='自提运费'))
-  DB.adjTypes.push({code:'ADJT-0011', cn:'自提运费', en:'Pickup Freight', dir:'DEDUCTION', on:1, ded:'ACCOUNT', opBy:'林凯', opAt:'2026-10-12 15:00'});
 
 /* ================= 规则版本：每次保存追加一版，from = 保存时刻（下一次取货起生效） ================= */
 DB.pfRules = DB.pfRules || {
@@ -159,12 +155,14 @@ window.pf_hist=function(s){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
 
-/* ================= 页面二：自提运费账单（取货明细 / 月度账单） ================= */
+
+/* ================= 页面二：自提运费账单（月度账单 / 取货明细） ================= */
 DB.pfTab = DB.pfTab || 'BILL';
 DB.pfFilter = DB.pfFilter || {shop:'', month:'2026-09'};
-DB.pfBills = DB.pfBills || {   // 账单处理状态：key = 店铺|月份
-  'SH2026062000001|2026-09':{adjNo:'ADJ-SG-20261001-001', invNo:'LOG-INV-2026-000012'},
-  'SH2026070200005|2026-09':{adjNo:'ADJ-SG-20261001-002', invNo:''},
+DB.pfSel = DB.pfSel || [];
+DB.pfBills = DB.pfBills || {   // 账单推送/开票状态：key = 店铺|月份
+  'SH2026062000001|2026-09':{pushedAt:'2026-10-02 10:15', pushedBy:'林凯', invNo:'LOG-INV-2026-000012'},
+  'SH2026070200005|2026-09':{pushedAt:'2026-10-02 10:16', pushedBy:'林凯', invNo:''},
 };
 const CUR_MONTH='2026-10';
 const billNo = (s,ym) => `PF-${ym.replace('-','')}-${s.slice(-5)}`;
@@ -173,21 +171,25 @@ function billsOf(ym){
   return Object.keys(SHOPS).map(s=>{
     const list=calc.filter(p=>p.shop==s); if(!list.length) return null;
     const st=DB.pfBills[s+'|'+ym]||{};
-    return {shop:s, ym, no:billNo(s,ym), list, times:list.length, fee:+list.reduce((a,p)=>a+p.fee,0).toFixed(2), adjNo:st.adjNo||'', invNo:st.invNo||'', open:ym>=CUR_MONTH};
+    return {shop:s, ym, no:billNo(s,ym), list, times:list.length, fee:+list.reduce((a,p)=>a+p.fee,0).toFixed(2),
+      pushedAt:st.pushedAt||'', pushedBy:st.pushedBy||'', invNo:st.invNo||'', open:ym>=CUR_MONTH};
   }).filter(Boolean);
 }
+const canPush = b => !b.open && b.fee>0 && !b.pushedAt;
 const billTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>本月进行中</span>'
   : !b.fee ? '<span class="tag t-gr"><span class="dot"></span>无需收费</span>'
-  : !b.adjNo ? '<span class="tag t-y"><span class="dot"></span>待生成调整单</span>'
-  : '<span class="tag t-g"><span class="dot"></span>已生成调整单</span>';
-const invTag = b => b.open||!b.fee||!b.adjNo ? '<span style="color:var(--ts)">—</span>'
+  : !b.pushedAt ? '<span class="tag t-y"><span class="dot"></span>待推送</span>'
+  : '<span class="tag t-g"><span class="dot"></span>已推送</span>';
+const invTag = b => !b.pushedAt ? '<span style="color:var(--ts)">—</span>'
   : b.invNo ? `<span class="mono">${b.invNo}</span>` : '<span class="tag t-y"><span class="dot"></span>待开票</span>';
+const dash = '<span style="color:var(--ts)">—</span>';
 
 PAGES['p-pickfee-bill']=()=>{
   const f=DB.pfFilter, opt=(v,l)=>`<option value="${v}" ${f.shop==v?'selected':''}>${l}</option>`;
   const hit=s=>!f.shop||f.shop==s;
   const bills=billsOf(f.month).filter(b=>hit(b.shop));
   const picks=pfCalc().filter(p=>p.at.startsWith(f.month)&&hit(p.shop)).reverse();
+  DB.pfSel=DB.pfSel.filter(no=>bills.some(b=>b.no==no&&canPush(b)));
   const tabs=[['BILL','月度账单',bills.length],['PICK','取货明细',picks.length]];
   return `${flowTip('')}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:16px 20px 12px">
@@ -197,26 +199,37 @@ PAGES['p-pickfee-bill']=()=>{
       <div class="fr"></div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
-      <button class="btn btn-o" onclick="DB.pfFilter={shop:'',month:'2026-09'};render()">重置</button>
-      <button class="btn btn-p" onclick="DB.pfFilter={shop:document.getElementById('pf-f-shop').value,month:document.getElementById('pf-f-month').value||'2026-09'};render()">查询</button>
+      <button class="btn btn-o" onclick="DB.pfFilter={shop:'',month:'2026-09'};DB.pfSel=[];render()">重置</button>
+      <button class="btn btn-p" onclick="DB.pfFilter={shop:document.getElementById('pf-f-shop').value,month:document.getElementById('pf-f-month').value||'2026-09'};DB.pfSel=[];render()">查询</button>
     </div>
   </div></div>
   <div class="tabs" style="margin-bottom:14px">${tabs.map(([k,l,n])=>`<div class="tab ${DB.pfTab==k?'active':''}" onclick="DB.pfTab='${k}';render()">${l}${n?`<span class="tb">${n}</span>`:''}</div>`).join('')}</div>
   ${DB.pfTab=='BILL'?billTable(bills):pickTable(picks)}`;
 };
 function billTable(bills){
-  return `<div class="card"><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>账单号</th><th>店铺名称</th><th>店铺编码</th><th>月份</th><th style="text-align:right">取货次数</th><th style="text-align:right">运费合计</th><th>状态</th><th>业务调整单</th><th>物流费发票</th><th>操作</th></tr></thead><tbody>
+  const sel=bills.filter(canPush), all=sel.length&&sel.every(b=>DB.pfSel.includes(b.no));
+  return `<div class="card">
+    <div class="selbar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
+      <span style="color:var(--ts)">已选 <b style="color:var(--tp)">${DB.pfSel.length}</b> 张</span><span style="flex:1"></span>
+      <button class="btn btn-p btn-sm" ${DB.pfSel.length?'':'disabled'} onclick="pf_push(DB.pfSel.slice())">推送财务结算</button>
+    </div>
+    <div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选待推送" ${all?'checked':''} ${sel.length?'':'disabled'} onclick="pf_selAll()"></th><th>账单号</th><th>店铺名称</th><th>店铺编码</th><th>月份</th><th style="text-align:right">取货次数</th><th style="text-align:right">运费合计</th><th>状态</th><th>推送人</th><th>推送时间</th><th>物流费发票</th><th>操作</th></tr></thead><tbody>
     ${bills.length?bills.map(b=>`<tr>
+      <td>${canPush(b)?`<input type="checkbox" class="skuchk" ${DB.pfSel.includes(b.no)?'checked':''} onclick="pf_toggle('${b.no}')">`:''}</td>
       <td class="mono" style="white-space:nowrap">${b.no}</td><td style="white-space:nowrap">${esc(shopName(b.shop))}</td><td class="mono">${b.shop}</td><td>${b.ym}</td>
       <td style="text-align:right">${b.times}</td><td style="text-align:right"><b>${money(b.fee)}</b></td>
-      <td>${billTag(b)}</td>
-      <td>${b.adjNo?`<a class="mono" style="cursor:pointer;color:var(--g)" onclick="nav('p-adjust')">${b.adjNo}</a>`:'<span style="color:var(--ts)">—</span>'}</td>
+      <td>${billTag(b)}</td><td>${b.pushedBy?esc(b.pushedBy):dash}</td><td style="white-space:nowrap">${b.pushedAt||dash}</td>
       <td>${invTag(b)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_bill('${b.shop}','${b.ym}')">明细</button>${!b.open&&b.fee&&!b.adjNo?` <button class="btn btn-link" onclick="pf_genAdj('${b.shop}','${b.ym}')">生成调整单</button>`:''}${!b.open&&b.adjNo&&!b.invNo?` <button class="btn btn-link" onclick="pf_inv('${b.shop}','${b.ym}')">开物流费发票</button>`:''}</td>
-    </tr>`).join(''):`<tr><td colspan="10"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">该月没有取货记录</div></div></td></tr>`}
+      <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_bill('${b.shop}','${b.ym}')">明细</button>${canPush(b)?` <button class="btn btn-link" onclick="pf_push(['${b.no}'])">推送</button>`:''}${b.pushedAt&&!b.invNo?` <button class="btn btn-link" onclick="pf_inv('${b.shop}','${b.ym}')">开物流费发票</button>`:''}</td>
+    </tr>`).join(''):`<tr><td colspan="12"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">该月没有取货记录</div></div></td></tr>`}
     </tbody></table></div></div></div>`;
 }
+window.pf_toggle=function(no){ const i=DB.pfSel.indexOf(no); i<0?DB.pfSel.push(no):DB.pfSel.splice(i,1); render(); };
+window.pf_selAll=function(){
+  const f=DB.pfFilter, ok=billsOf(f.month).filter(b=>(!f.shop||f.shop==b.shop)&&canPush(b)).map(b=>b.no);
+  DB.pfSel = ok.every(no=>DB.pfSel.includes(no)) ? [] : ok; render();
+};
 function pickTable(picks){
   return `<div class="card">
     <div class="selbar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
@@ -235,6 +248,7 @@ function pickRows(picks,withShop){
   </tbody></table>`;
 }
 const billOf = (s,ym) => billsOf(ym).find(b=>b.shop==s);
+const billByNo = no => { const f=DB.pfFilter; return billsOf(f.month).find(b=>b.no==no); };
 window.pf_bill=function(s,ym){
   const b=billOf(s,ym);
   drawer(`<div class="drawer-hd"><div><h3>自提运费账单 <span class="mono" style="font-size:12.5px;color:var(--ts)">${b.no}</span></h3><div style="margin-top:4px">${billTag(b)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
@@ -242,36 +256,26 @@ window.pf_bill=function(s,ym){
     <div class="kv" style="margin-bottom:16px">
       <div><div class="k">店铺</div><div class="v">${esc(shopName(s))}（${s}）</div></div><div><div class="k">月份</div><div class="v">${ym}</div></div>
       <div><div class="k">取货次数</div><div class="v">${b.times}</div></div><div><div class="k">运费合计</div><div class="v">${money(b.fee)}</div></div>
-      <div><div class="k">业务调整单</div><div class="v">${b.adjNo||'—'}</div></div><div><div class="k">物流费发票</div><div class="v">${b.invNo||'—'}</div></div>
+      <div><div class="k">推送人 / 推送时间</div><div class="v">${b.pushedAt?esc(b.pushedBy)+' · '+b.pushedAt:'—'}</div></div><div><div class="k">物流费发票</div><div class="v">${b.invNo||'—'}</div></div>
     </div>
     ${pickRows(b.list.slice().reverse(),false)}
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${!b.open&&b.fee&&!b.adjNo?`<button class="btn btn-p" onclick="closeDrawer();pf_genAdj('${s}','${ym}')">生成调整单</button>`:''}${!b.open&&b.adjNo&&!b.invNo?`<button class="btn btn-p" onclick="closeDrawer();pf_inv('${s}','${ym}')">开物流费发票</button>`:''}</div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${canPush(b)?`<button class="btn btn-p" onclick="closeDrawer();pf_push(['${b.no}'])">推送财务结算</button>`:''}${b.pushedAt&&!b.invNo?`<button class="btn btn-p" onclick="closeDrawer();pf_inv('${s}','${ym}')">开物流费发票</button>`:''}</div>`);
 };
-window.pf_genAdj=function(s,ym){
-  const b=billOf(s,ym);
-  modal(`<div class="mc-hd"><h3>生成自提运费调整单</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <table class="subtbl"><tbody>
-      <tr><td style="color:var(--ts);width:90px">店铺</td><td>${esc(shopName(s))}</td></tr>
-      <tr><td style="color:var(--ts)">账单</td><td class="mono">${b.no}（${ym}，取货 ${b.times} 次）</td></tr>
-      <tr><td style="color:var(--ts)">调整类型</td><td>自提运费 · 负向 · 账扣</td></tr>
-      <tr><td style="color:var(--ts)">金额</td><td><b style="color:var(--r)">-${money(b.fee)}</b></td></tr>
+window.pf_push=function(nos){
+  const list=nos.map(billByNo).filter(b=>b&&canPush(b));
+  if(!list.length){toast('请选择待推送的账单','err');return;}
+  const total=+list.reduce((a,b)=>a+b.fee,0).toFixed(2);
+  modal(`<div class="mc-hd"><h3>推送财务结算</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <table class="subtbl"><thead><tr><th>账单号</th><th>店铺</th><th style="text-align:right">运费合计</th></tr></thead><tbody>
+      ${list.map(b=>`<tr><td class="mono">${b.no}</td><td>${esc(shopName(b.shop))}</td><td style="text-align:right">${money(b.fee)}</td></tr>`).join('')}
     </tbody></table>
-    <div class="ib ib-b" style="margin-top:12px"><span class="i">ℹ️</span>生成后在「业务调整单」里为待推送状态，推送后从商家货款中扣除。</div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="pf_genAdjDo('${s}','${ym}')">确认生成</button></div>`);
+    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后在结算时从商家货款中扣除，账单不能再修改。</div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick='pf_pushDo(${JSON.stringify(list.map(b=>b.no))})'>确认推送</button></div>`);
 };
-window.pf_genAdjDo=function(s,ym){
-  const b=billOf(s,ym), d=ts().slice(0,10).replace(/-/g,'');
-  const n=(DB.adjOrders||[]).filter(r=>r.adjustNo.includes(d)).length+1;
-  const no=`ADJ-SG-${d}-${String(n).padStart(3,'0')}`;
-  (DB.adjOrders=DB.adjOrders||[]).unshift({adjustNo:no, shopCode:s, merchantCode:SHOPS[s].merchant,
-    adjustTypeCode:'ADJT-0011', adjustTypeName:'自提运费', amount:b.fee, currency:'SGD',
-    deductionType:'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'', taxRate:null, amountExclTax:b.fee, gstAmount:0,
-    bizNo:b.no, remark:`${ym} 自提运费，取货 ${b.times} 次`, effectiveTime:ts(), createdBy:'当前账号',
-    sourceType:'MANUAL', status:'effective', voidReason:'', pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''});
-  if(DB.adjLogs) DB.adjLogs[no]=[{t:ts(),u:'当前账号',c:`由自提运费账单 ${b.no} 生成`}];
-  (DB.pfBills[s+'|'+ym]=DB.pfBills[s+'|'+ym]||{}).adjNo=no;
-  closeModal(); render(); toast(`已生成调整单 ${no}`,'ok');
+window.pf_pushDo=function(nos){
+  nos.map(billByNo).filter(Boolean).forEach(b=>{ Object.assign(DB.pfBills[b.shop+'|'+b.ym]=DB.pfBills[b.shop+'|'+b.ym]||{}, {pushedAt:ts(), pushedBy:'当前账号'}); });
+  DB.pfSel=[]; closeModal(); render(); toast(`已推送 ${nos.length} 张账单到财务结算`,'ok');
 };
 window.pf_inv=function(s,ym){
   const b=billOf(s,ym);
@@ -280,7 +284,7 @@ window.pf_inv=function(s,ym){
       <tr><td style="color:var(--ts);width:90px">购方</td><td>${esc(shopName(s))}（${s}）</td></tr>
       <tr><td style="color:var(--ts)">开票内容</td><td>物流费 · ${ym} 自提运费</td></tr>
       <tr><td style="color:var(--ts)">开票金额</td><td><b>${money(b.fee)}</b></td></tr>
-      <tr><td style="color:var(--ts)">关联</td><td class="mono">${b.no} / ${b.adjNo}</td></tr>
+      <tr><td style="color:var(--ts)">关联账单</td><td class="mono">${b.no}</td></tr>
     </tbody></table>
     <div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>物流费发票单独开具，不和服务费、佣金合开。</div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="pf_invDo('${s}','${ym}')">确认开票</button></div>`);
