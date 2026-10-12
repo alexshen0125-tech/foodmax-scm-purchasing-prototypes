@@ -319,12 +319,7 @@ window.adj_newAsk=function(keep, mode, src){
     <div class="fg2">
       <div class="fr"><label class="fl"><b>*</b>金额（S$）</label><input id="an-amt" inputmode="decimal" value="${d.amt}" placeholder="0.00" onkeydown="adj_amtKey(event)" oninput="adj_amtInput()" onblur="adj_amtBlur()"><div id="an-amt-pre" class="fl-h" style="color:var(--ts)">请先选择调整类型</div><div id="an-amt-err" class="fl-h" style="color:var(--r)"></div></div>
       <div class="fr" id="an-bizwrap"><label class="fl" id="an-bizl">关联业务单号</label><input id="an-biz" value="${esc(d.biz)}" ${d.mode=='correct'?'readonly style="background:#F3F4F6;color:var(--ts)"':''} placeholder="订单号 / 送货单号 / 售后单号"><div id="an-biz-err" class="fl-h" style="color:var(--r)"></div></div>
-      <div class="fr" id="an-invwrap" style="display:none"><label class="fl"><b>*</b>关联原发票</label>
-        <select id="an-inv" onchange="adj_amtInput()"><option value="">请选择被调整的发票</option></select>
-        <div id="an-inv-err" class="fl-h" style="color:var(--r)"></div></div>
     </div>
-    <div class="fr" id="an-taxwrap" style="display:none"><label class="fl">税额拆分</label>
-      <div id="an-tax" style="padding:9px 12px;background:var(--bd2);border-radius:8px;font-size:12.5px;color:var(--ts)">请先填写金额</div></div>
     <div class="fr"><label class="fl"><b>*</b>调整说明 <span id="an-rk-cnt" style="float:right;font-weight:400;color:var(--tt)">0/500</span></label><textarea id="an-remark" rows="3" oninput="adj_rkCount()">${esc(d.rk)}</textarea><div id="an-rk-err" class="fl-h" style="color:var(--r)"></div></div>
     <div class="fr"><label class="fl">附件</label><div class="up" onclick="toast('原型不做真实上传','info')"><div class="uic">📎</div><div class="ut">点击上传</div><div class="us">jpg / png / pdf，单个 ≤ 10MB，最多 5 个</div></div></div>
     <div id="an-note" style="font-size:11.5px;color:var(--ts);line-height:1.7;padding:10px 0 2px;border-top:1px dashed var(--bd2)"></div>
@@ -341,24 +336,16 @@ window.adj_shopChange=function(){
   const c=(document.getElementById('an-shop')||{}).value, s=SHOPS[c]||{};
   const el=document.getElementById('an-mc'); if(el) el.innerHTML=c?(s.merchant?`${merchantName(s.merchant)} <span class="mono" style="color:var(--ts)">${s.merchant}</span>`:'—'):'—';
   const st=document.getElementById('an-shop-stop'); if(st) st.textContent=s.stopped?'该店铺已停用':'';
-  // 换店铺要重挑发票
-  const tc=(document.getElementById('an-type')||{}).value, t=tc?tOf(tc):null;
-  if(t&&t.ded=='INVOICE'){ const sel=document.getElementById('an-inv'); if(sel) sel.value=''; adj_fillInv(t); adj_amtInput(); }
 };
 window.adj_typeChange=function(){
   const code=(document.getElementById('an-type')||{}).value, t=code?tOf(code):null;
   const inv = !!(t&&t.ded=='INVOICE');
   const d=document.getElementById('an-dir'); if(d) d.innerHTML=t?(dirTag(t.dir)+' '+adjDedTag(t)):'—';
   const l=document.getElementById('an-bizl'); if(l) l.innerHTML='<b>*</b>关联业务单号';
-  // 账扣走业务单号文本，票扣换成发票下拉 + 税额拆分（BR-14）
-  const bw=document.getElementById('an-bizwrap'), iw=document.getElementById('an-invwrap'), tw=document.getElementById('an-taxwrap');
-  if(bw) bw.style.display = inv?'none':'';
-  if(iw) iw.style.display = inv?'':'none';
-  if(tw) tw.style.display = inv?'':'none';
-  if(inv) adj_fillInv(t);
+  // 账扣 / 票扣都只填关联业务单号；建单不选原发票、不拆税
   const n=document.getElementById('an-note');
   if(n) n.innerHTML = !t ? '抵扣方式由调整类型决定，选择类型后显示。'
-    : inv ? `本类型为<b>票扣</b>：将按原票税率拆出 GST，并关联所选原发票开票。<b style="color:var(--r)">推送后不可撤回。</b>`
+    : inv ? `本类型为<b>票扣</b>：推送后由下游开票。<b style="color:var(--r)">推送后不可撤回。</b>`
           : '本类型为<b>账扣</b>：不开发票、不产生 GST，直接在结算中加减。';
   adj_amtInput();
 };
@@ -384,18 +371,6 @@ window.adj_amtInput=function(){
   const t=tOf(code), v=+cleaned||0, plus=t.dir=='ADDITION';
   pre.textContent = plus ? `将补给商家 ${fmtAmt(1,v)}` : `将向商家扣回 ${fmtAmt(-1,v)}`;
   pre.style.color = plus ? 'var(--g)' : 'var(--r)';
-  // 票扣：按原票税率实时拆税，并对负向做余额校验（BR-03 / BR-14）
-  if(t.ded!='INVOICE') return;
-  const box=document.getElementById('an-tax'); if(!box) return;
-  const inv=adjInvOf((document.getElementById('an-inv')||{}).value);
-  if(!inv){ box.textContent='请先选择被调整的发票'; box.style.color='var(--ts)'; return; }
-  if(!v){ box.textContent='请填写金额'; box.style.color='var(--ts)'; return; }
-  const x=adjSplitTax(v, inv.rate);
-  box.innerHTML=`未税 <b>${money(x.ex)}</b> ＋ GST <b>${money(x.gst)}</b>（${(inv.rate*100).toFixed(0)}%）＝ 含税 <b>${money(x.incl)}</b>`;
-  box.style.color='var(--tp)';
-  const left=adjInvLeft(inv), over = !plus && v>left;
-  const ae=document.getElementById('an-amt-err');
-  if(ae) ae.textContent = over ? `调整金额不能超过该发票可调整余额 ${money(left)}` : '';
 };
 window.adj_amtBlur=function(){
   const v=String((document.getElementById('an-amt')||{}).value||''), e=document.getElementById('an-amt-err');
@@ -413,18 +388,8 @@ function validateDraft(){
   if(!d.sc) err.shop='请选择店铺'; else if(!(SHOPS[d.sc]||{}).merchant) err.shop='该店铺未绑定商家，无法建单';
   if(!d.tc) err.type='请选择调整类型';
   if(!(+d.amt>0)) err.amt='请填写大于 0 的金额'; else if(/\.\d{3,}$/.test(d.amt)) err.amt='金额最多两位小数'; else if(+d.amt>9999999999.99) err.amt='金额超出可录入范围';
-  const ty=d.tc?tOf(d.tc):null, isInv=!!(ty&&ty.ded=='INVOICE');
-  if(isInv){
-    d.invNo=g('an-inv');
-    const inv=adjInvOf(d.invNo);
-    if(!d.invNo||!inv) err.inv='请选择被调整的发票';
-    else if(inv.shopCode!=d.sc||!IC_NAME[inv.ic]) err.inv='该发票不属于所选店铺或不可调整，请重新选择';
-    else {
-      const left=adjInvLeft(inv);
-      if(ty.dir=='DEDUCTION'&&+d.amt>left) err.amt=`调整金额不能超过该发票可调整余额 ${money(left)}`;
-      d.rate=inv.rate; d.ic=inv.ic;
-    }
-  } else if(ty&&!d.biz) err.biz='请填写关联业务单号';
+  const ty=d.tc?tOf(d.tc):null;
+  if(ty&&!d.biz) err.biz='请填写关联业务单号';
   else if(d.biz&&!/^[A-Za-z0-9_-]{1,64}$/.test(d.biz)) err.biz='关联业务单号仅支持字母、数字、- 和 _，最多 64 位';
   if(!d.rk) err.rk='请填写调整说明'; else if([...d.rk].length>500) err.rk='调整说明不能超过 500 字';
   [['shop','an-shop-err'],['type','an-type-err'],['amt','an-amt-err'],['biz','an-biz-err'],['inv','an-inv-err'],['rk','an-rk-err']].forEach(([k,id])=>{const el=document.getElementById(id); if(el) el.textContent=err[k]||'';});
@@ -461,11 +426,7 @@ window.adj_newConfirm=function(withPush,dup){
       <tr><td style="color:var(--ts);width:120px">所属商家</td><td>${merchantName(mc)} <span class="mono" style="color:var(--ts)">${mc}</span></td></tr>
       <tr><td style="color:var(--ts)">调整类型</td><td>${t.cn} <span class="mono" style="color:var(--ts);font-size:12px">${t.code}</span></td></tr>
       <tr><td style="color:var(--ts)">方向</td><td>${dirTag(t.dir)}</td></tr>
-      ${t.ded=='INVOICE'?(()=>{const inv=adjInvOf(d.invNo), x=inv?adjSplitTax(+d.amt,inv.rate):null;
-        return `<tr><td style="color:var(--ts)">抵扣方式</td><td>票扣</td></tr>
-      <tr><td style="color:var(--ts)">被调整原发票</td><td class="mono">${esc(d.invNo)||'—'}${inv?` <span style="color:var(--ts);font-family:inherit">（${IC_NAME[inv.ic]}，票面 ${money(inv.incl)}）</span>`:''}</td></tr>
-      <tr><td style="color:var(--ts)">税额拆分</td><td>${x?`未税 ${money(x.ex)} ＋ GST ${money(x.gst)}（${(inv.rate*100).toFixed(0)}%）`:'—'}</td></tr>`;})()
-      :`<tr><td style="color:var(--ts)">抵扣方式</td><td>账扣</td></tr>`}
+      <tr><td style="color:var(--ts)">抵扣方式</td><td>${t.ded=='INVOICE'?'票扣':'账扣'}</td></tr>
       <tr><td style="color:var(--ts)">关联业务单</td><td class="mono">${esc(d.biz)||'—'}</td></tr>
     </tbody></table></div>
   </div>
@@ -481,17 +442,14 @@ window.adj_newDo=function(withPush){
   const now=ts(), t=tOf(d.tc);
   const no='ADJ-'+(DB.siteCode||'SG')+'-'+now.slice(0,10).replace(/-/g,'')+'-'+String(DB.adjSeq++).padStart(3,'0');
   const amt=+(+d.amt).toFixed(2), isInv=t.ded=='INVOICE';
-  const inv=isInv?adjInvOf(d.invNo):null;
-  const tax=isInv&&inv?adjSplitTax(amt, inv.rate):{ex:amt, gst:0};
+  const inv=null, tax={ex:amt, gst:0};
   DB.adjOrders.unshift({adjustNo:no, shopCode:d.sc, merchantCode:(SHOPS[d.sc]||{}).merchant||'',
     adjustTypeCode:d.tc, adjustTypeName:t.cn, amount:amt, currency:'SGD',
-    deductionType:isInv?'INVOICE':'ACCOUNT', invoiceCategory:isInv&&inv?inv.ic:'', originalInvoiceNo:isInv?d.invNo:'',
+    deductionType:isInv?'INVOICE':'ACCOUNT', invoiceCategory:'', originalInvoiceNo:'',
     taxRate:isInv&&inv?inv.rate:null, amountExclTax:tax.ex, gstAmount:tax.gst,
     invoiceStatus:isInv?'PENDING_INV':'NONE',
     bizNo:d.biz, remark:d.rk, effectiveTime:now, createdBy:'当前账号', sourceType:'MANUAL', status:'effective', voidReason:'',
     pushStatus:withPush?'PUSHED':'PENDING', syncStatus:withPush?'SUCCESS':'', syncErrorText:'', pushedAt:withPush?now:'', pushedBy:withPush?'当前账号':''});
-  // 负向票扣占用原票可调整余额；作废会释放（见 adj_voidDo）
-  if(isInv&&inv&&t.dir=='DEDUCTION') inv.used=+((inv.used||0)+amt).toFixed(2);
   addLog(no,'创建调整单'); if(withPush) addLog(no,'推送');
   DB.adjDraft=null; closeModal(); DB.adjSel=[]; render();
   toast(`调整单 ${no} ${withPush?'已新建并推送':'已新建，待推送'} <a style="color:inherit;text-decoration:underline;cursor:pointer;margin-left:6px" onclick="adj_detail('${no}')">查看</a>`,'ok');
@@ -519,13 +477,13 @@ window.adj_detail=function(no){
       +kv('调整类型',`${esc(r.adjustTypeName)} <span class="mono" style="font-size:12px;color:var(--ts)">${t.code}</span>`)
       +kv('方向',adjDir(r)=='ADDITION'?'正向 · 补商家':'负向 · 扣商家')
       +kv('抵扣方式',adjDedTag(t))
-      +(r.deductionType=='INVOICE'
+      +(r.deductionType=='INVOICE'&&r.originalInvoiceNo
         ? kv('被调整原发票',`<span class="mono">${esc(r.originalInvoiceNo)||'—'}</span>`)
         : kv('关联业务单号',`<span class="mono">${esc(r.bizNo)||'—'}</span>`))
       +kv('生效时间',r.effectiveTime)
       +kv('来源',isManual(r)?'人工建单':`缺货罚款 · <span class="mono">${r.adjustNo}</span>`)+kv('币种',r.currency))}
 
-    ${r.deductionType=='INVOICE'?`${sec('税额与开票')}
+    ${r.deductionType=='INVOICE'&&r.originalInvoiceNo?`${sec('税额与开票')}
     ${grid(kv('未税金额',money(r.amountExclTax))+kv('GST 税额',money(r.gstAmount))
       +kv('税率',((r.taxRate||0)*100).toFixed(0)+'%（取自原票）')
       +kv('开票状态',r.pushStatus=='PUSHED'
@@ -608,10 +566,10 @@ window.adj_pushAsk=function(){
   const netCell=v=>v===0?`<span style="color:var(--tt)">${money(0)}</span>`:`<span style="color:${v>0?'var(--g)':'var(--r)'};font-weight:600">${fmtAmt(v>0?1:-1,Math.abs(v))}</span>`;
   const showAll=DB.adjPushShowAll||shops.length<=10, visible=showAll?shops:shops.slice(0,5);
   const plusAll=sum(rows,1), minusAll=sum(rows,-1);
-  modal(`<div class="mc-hd"><h3>推送调整单</h3><p>将 ${rows.length} 张调整单推送至下游</p><button class="mc-x" onclick="DB.adjPushOpen={};DB.adjPushShowAll=false;closeModal()">×</button></div>
+  modalWide(`<div class="mc-hd"><h3>推送调整单</h3><p>将 ${rows.length} 张调整单推送至下游</p><button class="mc-x" onclick="DB.adjPushOpen={};DB.adjPushShowAll=false;closeModal()">×</button></div>
   <div class="mc-bd">
     <div class="ib ib-y"><span class="i">⚠️</span>推送后不可重复推送，也不可在本页撤回。请核对店铺与金额。</div>
-    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:10px 0 12px"><table style="margin:0">
+    <div style="border:1px solid var(--bd);border-radius:8px;overflow-x:auto;margin:10px 0 12px"><table style="margin:0;white-space:nowrap">
       <thead><tr><th>店铺</th><th>店铺编码</th><th style="text-align:right">单数</th><th style="text-align:right">补商家合计</th><th style="text-align:right">扣商家合计</th><th style="text-align:right">净额</th></tr></thead><tbody>
       ${visible.map(x=>`<tr style="cursor:pointer" onclick="DB.adjPushOpen['${x.c}']=!DB.adjPushOpen['${x.c}'];adj_pushAsk()">
           <td>${DB.adjPushOpen[x.c]?'▾':'▸'} ${esc(shopName(x.c))}</td><td class="mono">${x.c}</td><td style="text-align:right">${x.a.length}</td>
