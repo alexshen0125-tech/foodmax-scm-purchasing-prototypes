@@ -144,7 +144,7 @@ const TYPES={PA:{FEE:'手续费备用金',TERMU:'账期还款 · 未认领',TERM
 const END={PA:{FEE:1235.20,TERMU:2650,TERMC:5800,ONL:0},HA:{ONL:17630.30,TERM:9500,ADV:0,HANG:0},CA:{COM:12480,SELF:1860}};
 const OPEN={PA:{},HA:{},CA:{}};
 const DOCT={TR:'资金调拨单',RF:'退款资金单',AF:'垫资单',ST:'结算单',CL:'认领单',att:'支付单',tr_:'商家提现'};
-const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],PAYFEE:['收单（手续费）','Payment · Fee'],DEP:['入金','Deposit'],FEE:['费用','Fee'],ADJ:['系统内认领（不是 Airwallex 流水）','—']};
+const AW={PAY:['收单','Payment'],SPLIT:['账户间划转（分账）','Transfer · FundsSplit'],REV:['账户间划转（分账冲回）','Transfer · FundsSplitReversal'],TRF:['账户间划转','Transfer'],REF:['退款','Refund'],PAYFEE:['收单（手续费）','Payment · Fee'],DEP:['入金','Deposit'],FEE:['费用','Fee'],ADJ:['系统内认领（不是 Airwallex 流水）','—'],QRS:['账户间划转（分账）','Transfer · FundsSplit']};
 let seq=0;const B64='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';const rid=()=>{let x=(++seq)*7919+17,o='ftx_';for(let i=0;i<22;i++){x=(x*48271)%2147483647;o+=B64[x%64]}return o};
 /* acc,资金类型,时间,交易类型,对方,单据,金额,手续费,AW类型,订单号,批次,状态 */
 const R=[];
@@ -168,7 +168,7 @@ add('PA','TERMC','2026-10-09 09:40','认领到订单（由未认领转来）','�
 add('PA','TERMU','2026-10-09 08:55','账期客户对公转账（没写还哪些单，待认领）','Rasa Cafe','—',2650,0,'DEP');
 add('PA','TERMC','2026-10-08 15:12','账期客户扫结算单二维码还款（付款时自动关联订单）','Ah Hock Kitchen','att_sgpdqr7k2m9xh4wp_ahk001',1280,0,'PAY');
 add('PA','FEE','2026-10-08 15:12','二维码还款手续费（按收单，备用金出）','Airwallex','att_sgpdqr7k2m9xh4wp_ahk001',-25.60,0,'PAYFEE');
-add('PA','TERMC','2026-10-09 10:20','已认领的钱转到 Holding','Holding 清分账户','TR20261009-0003',-1280,0,'TRF');
+add('PA','TERMC','2026-10-08 23:00','二维码还款按结算批次自动分账到 Holding','Holding 清分账户','att_sgpdqr7k2m9xh4wp_ahk001',-1280,0,'QRS','','bat_20261008_SGD_1');
 add('PA','ONL','2026-10-08 23:00','客户线上付款到账','客户 Ah Hock Kitchen','att_sgpdgtkg1n1y0k7oe_istd1o',100,0,'PAY','261008045600000207','bat_20261008_SGD_1');
 add('PA','FEE','2026-10-08 23:00','收单手续费（Airwallex 扣）','Airwallex','att_sgpdgtkg1n1y0k7oe_istd1o',-2,0,'PAYFEE','261008045600000207','bat_20261008_SGD_1');
 add('PA','ONL','2026-10-08 23:00','按结算批次自动转到 Holding','Holding 清分账户','att_sgpdgtkg1n1y0k7oe_istd1o',-100,0,'SPLIT','261008045600000207','bat_20261008_SGD_1');
@@ -205,7 +205,7 @@ add('HA','HANG','2026-10-06 15:31','认领完成，挂账佣金自动分账到�
 add('HA','TERM','2026-10-08 14:00','平台主账户转来的已认领账期回款（货款部分）','平台主账户','TR20261008-0002',2500,0,'TRF');
 add('HA','HANG','2026-10-08 14:00','平台主账户转来的已认领账期回款（垫资订单挂账佣金）','平台主账户','TR20261008-0002',150,0,'TRF');
 add('HA','HANG','2026-10-08 14:01','认领完成，挂账佣金自动分账到佣金账户','佣金账户','TR20261008-0003',-150,0,'TRF');
-add('HA','TERM','2026-10-09 10:20','平台主账户转来的已认领账期回款（二维码）','平台主账户','TR20261009-0003',1280,0,'TRF');
+add('HA','TERM','2026-10-08 23:00','二维码还款自动分账进来（账期还款）','平台主账户','att_sgpdqr7k2m9xh4wp_ahk001',1280,0,'QRS','','bat_20261008_SGD_1');
 add('HA','TERM','2026-10-08 12:00','结算时把货款打给商家','商家 ZZ QA 测试商家（ZZQA0722M1）','ST2026W41-ZZQA0722M1-R1',-2380,0,'TRF');
 add('HA','TERM','2026-10-08 12:00','结算时佣金直接分到佣金账户（订单已认领）','佣金账户','ST2026W41-ZZQA0722M1-R1',-420,0,'TRF');
 add('HA','ADV','2026-10-08 11:40','逐单垫资：账期未认领订单，按扣佣金后金额垫进来','佣金账户','AF20261008-0001',3480,0,'TRF');
@@ -296,7 +296,7 @@ function renderP(){
    ${Q.acc==='CA'?(()=>{const pa=END.PA.FEE,adv=5850,com=s.rs.find(r=>r.k==='COM').end,self=s.rs.find(r=>r.k==='SELF').end;
      return `<div style="padding:10px 16px;border-top:1px solid var(--bd)"><b>平台自有资金在哪</b>　佣金收入 <b>${fmt(com)}</b><span class="muted"> · </span>自营收入 <b>${fmt(self)}</b>（佣金账户）<span class="muted"> · </span>手续费备用金 <b>${fmt(pa)}</b>（平台主账户）<span class="muted"> · </span>垫资未收回 <b>${fmt(adv)}</b>（已打给商家，等客户还款后逐单收回）<span class="muted"> · </span>合计 <b>${fmt(r2(com+self+pa+adv))}</b></div>`})():''}
    ${Q.acc==='HA'?`<div style="padding:10px 16px;border-top:1px solid var(--bd)" class="muted">佣金挂账：账期未认领订单的佣金结算时不分给佣金账户，客户钱认领转进来时先进这里，随即自动分账；另有 <b style="color:var(--tx)">S$400.00</b> 挂账佣金还没分账（客户没还清或钱没到 Holding）（不计入余额，见垫资管理）</div>`:''}
-   ${Q.acc==='PA'?`<div style="padding:10px 16px;border-top:1px solid var(--bd)" class="muted">账期还款分「未认领 / 已认领」：对公转账先进未认领，业务认领到订单后改为已认领（系统内调整，不是 Airwallex 流水）；二维码还款付款时自动关联订单，直接算已认领。只有已认领的能转 Holding</div>`:''}
+   ${Q.acc==='PA'?`<div style="padding:10px 16px;border-top:1px solid var(--bd)" class="muted">账期还款分「未认领 / 已认领」：对公转账先进未认领，业务认领到订单后改为已认领（系统内调整，不是 Airwallex 流水）；二维码还款付款时自动关联订单，直接算已认领，并按批次自动分账进 Holding。对公转账认领后人工转 Holding</div>`:''}
    <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;gap:18px;align-items:center"><span>待结算 <b>${s.pendN}</b> 笔 · ${fmt(s.pendAmt)}</span>${s.staleN?`<span class="link" onclick="Q.st='待结算';render()">${tag('超 2 天未结算 '+s.staleN+' 笔','orange')}</span>`:''}</div></div>
   <div class="flt">
    <div class="fi"><label>资金类型</label><select class="ipt" style="width:150px" onchange="Q.ft=this.value;render()"><option value="">全部</option>${Object.entries(TYPES[Q.acc]).map(([k,v])=>`<option value="${k}" ${Q.ft===k?'selected':''}>${v}</option>`).join('')}</select></div>
@@ -349,7 +349,7 @@ function openFlow(id){const r=disp(base()).find(x=>x.id===id);if(r.adj)return op
    <table class="t" style="border:1px solid var(--bd)"><thead><tr><th>资金类型</th><th>说明</th><th>对方</th><th class="num">收入</th><th class="num">支出</th></tr></thead><tbody>${parts.map(p=>`<tr><td>${TYPES[r.acc][p.ft]}</td><td>${p.what}</td><td>${p.cp||r.cp}</td><td class="num">${p.amt>0?fmt(p.amt):''}</td><td class="num">${p.amt<0?fmt(-p.amt):''}</td></tr>`).join('')}</tbody></table>`}))}
 function openDoc(doc){
   const fs=R.filter(r=>r.doc===doc).sort((a,b)=>a.time.localeCompare(b.time)),used=new Set(),moves=[];
-  const side=r=>`${ACC[r.acc]} · ${TYPES[r.acc][r.ft]}`,INT=['TRF','SPLIT','REV','ADJ'];
+  const side=r=>`${ACC[r.acc]} · ${TYPES[r.acc][r.ft]}`,INT=['TRF','SPLIT','REV','ADJ','QRS'];
   /* 1. 一对一：同金额反向 */
   fs.forEach(r=>{if(used.has(r.id)||r.amt>=0||!INT.includes(r.aw))return;const m=fs.find(x=>!used.has(x.id)&&(x.acc!==r.acc||r.aw==='ADJ')&&x.id!==r.id&&INT.includes(x.aw)&&r2(x.amt)===r2(-r.amt));if(m){used.add(r.id);used.add(m.id);moves.push({time:r.time,from:side(r),to:side(m),what:r.aw==='ADJ'?'业务认领到订单（系统内调整，不动钱）':r.what,amt:-r.amt,st:r.st})}});
   /* 1b. 一转多：一笔转出 = 几笔转入合计（如账期回款拆成账期还款 + 佣金挂账） */

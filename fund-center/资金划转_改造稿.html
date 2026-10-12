@@ -137,7 +137,7 @@ const NAME={'PA.FEE':'平台主账户 · 手续费备用金','PA.TERMC':'平台�
 const WATER={low:1000,target:5000};
 /* 划转类型 → 绑定转出 / 转入（不可改）；AUTO 为系统自动，不能手工新建 */
 const TYPES={
- TERM:{name:'账期回款转 Holding',from:['PA.TERMC'],to:'HA.TERM',basis:'认领单',hint:'只有已认领（已关联订单）的账期回款能转；其中垫资订单挂着的佣金进 Holding · 佣金挂账，随后自动分账'},
+ TERM:{name:'账期回款转 Holding',from:['PA.TERMC'],to:'HA.TERM',basis:'认领单',hint:'对公转账认领后在这里人工转；二维码还款按结算批次自动分账进 Holding，不在这里转。垫资订单挂着的佣金进 Holding · 佣金挂账，随后自动分账'},
  FEE:{name:'补手续费备用金',from:['CA.COM'],to:'PA.FEE',basis:'备用金水位',hint:'平台主账户手续费备用金低于水位时补足'},
  FEEBACK:{name:'手续费备用金回收',from:['PA.FEE'],to:'CA.COM',basis:'备用金水位',hint:'手续费备用金超过需要时，收回佣金账户'},
  ADV:{name:'垫资',from:['CA.COM'],to:'HA.ADV',basis:'垫资单',hint:'按垫资单逐单垫（账期未认领订单，扣佣金后的金额），垫资单在垫资管理发起'},
@@ -154,8 +154,7 @@ let TRS=[
  {no:'TR20261006-0004',type:'AUTO',amt:150,parts:[['HA.HANG',150]],basis:'订单 260922045600000031 挂账佣金：客户钱已认领到账，自动分账',st:'已完成',by:'系统',time:'2026-10-06 15:31',att:[['TR20261006-0004-01','2026-10-06 15:31','SETTLED']]},
  {no:'TR20261008-0002',type:'TERM',amt:2650,parts:[['PA.TERMC',2650]],dest:[['HA.TERM',2500],['HA.HANG',150]],basis:'认领单 CL20261007-0002 · Sunny Bistro（含垫资订单 260923045600000017 挂账佣金 150.00）',st:'已完成',by:'沈亮',time:'2026-10-08 13:52',att:[['TR20261008-0002-01','2026-10-08 13:55','insufficient_fund'],['TR20261008-0002-02','2026-10-08 14:00','SETTLED']]},
  {no:'TR20261008-0003',type:'AUTO',amt:150,parts:[['HA.HANG',150]],basis:'订单 260923045600000017 挂账佣金：客户钱已认领到账，自动分账',st:'已完成',by:'系统',time:'2026-10-08 14:01',att:[['TR20261008-0003-01','2026-10-08 14:01','SETTLED']]},
- {no:'TR20261009-0002',type:'BACK',amt:1850,parts:[['HA.TERM',1850]],basis:'垫资单 AF20261001-0001 · 订单 260922045600000031（Golden Wok Restaurant 已还款）',st:'已完成',by:'沈亮',time:'2026-10-09 10:00',att:[['TR20261009-0002-01','2026-10-09 10:05','SETTLED']]},
- {no:'TR20261009-0003',type:'TERM',amt:1280,parts:[['PA.TERMC',1280]],dest:[['HA.TERM',1280]],basis:'二维码还款 · Ah Hock Kitchen（付款时自动关联订单，无需人工认领）',st:'已完成',by:'沈亮',time:'2026-10-09 10:15',att:[['TR20261009-0003-01','2026-10-09 10:20','SETTLED']]}];
+ {no:'TR20261009-0002',type:'BACK',amt:1850,parts:[['HA.TERM',1850]],basis:'垫资单 AF20261001-0001 · 订单 260922045600000031（Golden Wok Restaurant 已还款）',st:'已完成',by:'沈亮',time:'2026-10-09 10:00',att:[['TR20261009-0002-01','2026-10-09 10:05','SETTLED']]}];
 const stC={待审批:'orange',待执行:'blue',已完成:'green',执行失败:'red',已驳回:'gray'};
 const used=new Set(TRS.filter(t=>t.type==='TERM').map(t=>t.basis.split(' ')[1]));
 const usedBack=new Set();
@@ -183,7 +182,7 @@ function paintNew(){
   const T=TYPES[N.type],fromBal=r2(T.from.reduce((s,k)=>s+BAL[k],0));
   let basis='',route='';
   if(N.type==='TERM'){const cs=CLAIMS.filter(c=>!used.has(c.no));const c=cs.find(x=>x.no===N.claim);
-    basis=`<div class="fr"><label class="req">认领单（只列已认领、未转 Holding 的）</label><select class="ipt" style="width:100%" onchange="N.claim=this.value;paintNew()"><option value="">请选择</option>${cs.map(c=>`<option value="${c.no}" ${N.claim===c.no?'selected':''}>${c.no} · ${c.cust} · ${fmt(c.amt)}</option>`).join('')}</select><div class="muted" style="font-size:12px;margin-top:4px">未认领的 ${fmt(BAL['PA.TERMU'])} 不能转，请先在认领页认领到订单；二维码还款付款时已自动关联订单</div></div>`;
+    basis=`<div class="fr"><label class="req">认领单（只列已认领、未转 Holding 的）</label><select class="ipt" style="width:100%" onchange="N.claim=this.value;paintNew()"><option value="">请选择</option>${cs.map(c=>`<option value="${c.no}" ${N.claim===c.no?'selected':''}>${c.no} · ${c.cust} · ${fmt(c.amt)}</option>`).join('')}</select><div class="muted" style="font-size:12px;margin-top:4px">未认领的 ${fmt(BAL['PA.TERMU'])} 不能转，请先在认领页认领到订单；二维码还款会按批次自动分账，不用在这里转</div></div>`;
     if(c){const sp=splitOf(c);route=`<div class="fr"><label>转入拆分（系统按订单自动拆）</label><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>转入</th><th>说明</th><th class="num">金额</th></tr></thead><tbody>${sp.map(([k,v])=>`<tr><td>${NAME[k]}</td><td class="muted" style="font-size:12px">${k==='HA.HANG'?c.hang.map(h=>`垫资订单 ${h[0]}（${h[1]}）挂账佣金`).join('；')+'，到账后自动分账到佣金账户':'对应订单的货款部分；垫资订单的这部分之后在垫资管理按订单收回'}</td><td class="num">${fmt(v)}</td></tr>`).join('')}</tbody></table></div>`}}
   if(N.type==='FEE')basis=`<div class="fr"><label>业务依据</label><div class="muted">手续费备用金当前 ${fmt(BAL['PA.FEE'])}，低水位 ${fmt(WATER.low)}，目标额 ${fmt(WATER.target)}；默认补足到目标额</div></div>`;
   if(N.type==='FEEBACK')basis=`<div class="fr"><label>业务依据</label><div class="muted">手续费备用金当前 ${fmt(BAL['PA.FEE'])}，目标额 ${fmt(WATER.target)}，低水位 ${fmt(WATER.low)}；默认收回超过目标额的部分</div></div>`;

@@ -144,7 +144,7 @@ const D={
     F('2026-10-08 13:40','认领到订单（Sunny Bistro）','CL20261007-0002',2650),
     F('2026-10-08 14:00','转到 Holding','TR20261008-0002',-2650),
     F('2026-10-08 15:12','账期客户扫结算单二维码还款，自动关联订单（Ah Hock Kitchen）','att_sgpdqr7k2m9xh4wp_ahk001',1280),
-    F('2026-10-09 10:20','转到 Holding','TR20261009-0003',-1280),
+    F('2026-10-08 23:00','二维码还款按结算批次自动分账到 Holding','bat_20261008_SGD_1',-1280),
     F('2026-10-09 09:40','认领到订单（Mei Ling Eatery）','CL20261008-0001',5800)]},
   ONL:{name:'线上收单金额',flows:[
     F('2026-10-09 09:25','Holding 把退款的钱全额撤回','RF20261009-0001',100.00),
@@ -164,7 +164,7 @@ const D={
     F('2026-09-30 23:59','期初余额','—',6320.00),
     F('2026-10-06 15:30','平台主账户转来的已认领账期回款（另 150.00 进佣金挂账）','TR20261006-0003',4050.00),
     F('2026-10-08 14:00','平台主账户转来的已认领账期回款（另 150.00 进佣金挂账）','TR20261008-0002',2500.00),
-    F('2026-10-09 10:20','平台主账户转来的已认领账期回款（二维码）','TR20261009-0003',1280.00),
+    F('2026-10-08 23:00','二维码还款按结算批次自动分账进来','bat_20261008_SGD_1',1280.00),
     F('2026-10-08 12:00','结算时把货款打给商家','ST2026W41-ZZQA0722M1-R1',-2380.00),
     F('2026-10-08 12:00','结算时佣金直接分到佣金账户（订单已认领）','ST2026W41-ZZQA0722M1-R1',-420.00),
     F('2026-10-09 10:05','按垫资单逐单收回 → 佣金账户','TR20261009-0002',-1850.00)]},
@@ -218,7 +218,7 @@ function typeExtra(a,k){
   const v=tSum(a,k);
   if(a==='PA'&&k==='FEE'){const pct=Math.min(100,v/W.target*100),low=v<W.low;return `<div class="bar"><i style="width:${pct}%;background:${low?'var(--err)':'var(--ok)'}"></i><span class="mk" style="left:${W.low/W.target*100}%"></span></div><div class="sub">低水位 ${fmt(W.low)} · 目标额 ${fmt(W.target)} ${low?tag('低于水位','red'):''}</div>`}
   if(a==='PA'&&k==='TERMU'){return v?`<div class="sub">对公转账还不知道还的是哪些单 · 1 笔 · 挂 1 天 ${tag('不能转 Holding','orange')}</div><div class="sub">认领到订单后才算已认领</div>`:''}
-  if(a==='PA'&&k==='TERMC'){return v?`<div class="sub">已认领待转 Holding 1 笔 <a class="link" href="资金划转_改造稿.html">去资金划转</a></div><div class="sub">二维码还款自动关联订单，直接算已认领</div>`:''}
+  if(a==='PA'&&k==='TERMC'){return v?`<div class="sub">已认领待转 Holding 1 笔 <a class="link" href="资金划转_改造稿.html">去资金划转</a></div><div class="sub">二维码还款自动关联订单、按批次自动分账进 Holding</div>`:''}
   if(a==='PA'&&k==='ONL'){return `<div class="sub">${v?'退款在途':'—'}</div>`}
   if(a==='HA'&&k==='HANG'){return `<div class="sub">账期未认领订单的佣金：结算时不分给佣金账户，挂在这里；认领完成、钱转进来后自动分账</div><div class="sub">另有 <b>${fmt(hangWait())}</b> 挂账佣金客户钱还没到（不计入余额）</div>`}
   if(a==='HA'&&k==='ADV'){return `<div class="sub">垫进来当天就随结算打给商家，正常为 0</div>`}
