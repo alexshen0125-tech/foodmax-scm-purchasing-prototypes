@@ -111,6 +111,16 @@ table.l .num{text-align:right;font-variant-numeric:tabular-nums}
 .gap .h .sp{flex:1}
 .chk{background:#fff;border:1px solid var(--bd);border-radius:8px;margin-top:16px;padding:12px 18px}
 .note{background:#fffbe6;border:1px solid #ffe58f;color:#874d00;border-radius:8px;padding:8px 14px;margin-bottom:16px;font-size:12px}
+.tl{position:relative;margin:4px 0 0 6px;padding-left:22px;border-left:2px solid #f0f0f0}
+.tl .st{position:relative;padding:0 0 16px}
+.tl .st:before{content:'';position:absolute;left:-29px;top:4px;width:12px;height:12px;border-radius:50%;background:#d9d9d9;border:2px solid #fff;box-shadow:0 0 0 1px #d9d9d9}
+.tl .st.ok:before{background:#52c41a;box-shadow:0 0 0 1px #52c41a}
+.tl .st.cur:before{background:#1677ff;box-shadow:0 0 0 3px #bae0ff}
+.tl .st.bad:before{background:#ff4d4f;box-shadow:0 0 0 1px #ff4d4f}
+.tl .st .h{font-weight:600}
+.tl .st .d{color:var(--tx3);font-size:12px;margin-top:2px}
+.tl .st.todo .h{color:var(--tx3);font-weight:400}
+.prog{display:inline-block;width:60px;height:6px;background:#f0f0f0;border-radius:3px;vertical-align:middle;margin-left:6px;overflow:hidden}.prog i{display:block;height:100%;background:#fa8c16}
 .bar3{height:6px;background:#f0f0f0;border-radius:3px;margin-top:8px;overflow:hidden}.bar3 i{display:block;height:100%;border-radius:3px}
 </style>
 <div class="layout">
@@ -138,94 +148,120 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const NOW=()=>'2026-10-09 '+new Date().toTimeString().slice(0,5);
 /* 与资金总览 / 资金划转 / 财务交易流水一致 */
 let CA=12480.00,HA_ADV=0;const LIMIT=20000;
-/* 垫资只垫账期未认领订单，金额 = 订单金额 − 佣金（应付商家部分）；佣金挂在 Holding */
+/* 规则：只垫账期未认领订单；每单垫 = 订单金额 − 佣金；佣金挂在 Holding；客户的钱认领并转进 Holding 后佣金自动分账、垫资人工逐单收回；部分还款等还清再处理 */
 const ADS=[
- {no:'AF20261001-0001',time:'2026-09-30 10:30',by:'沈亮',st:'已转入',period:'2026-09-30 结算',orders:[
-   {order:'260922045600000031',cust:'Golden Wok Restaurant',mer:'Fresh Greens Trading',amt:2000,com:150,pay:'已转 Holding',payDoc:'CL20261006-0001 · TR20261006-0003',back:'已收回',backDoc:'TR20261009-0002'},
-   {order:'260923045600000017',cust:'Sunny Bistro',mer:'Ocean Catch Seafood',amt:1600,com:150,pay:'已转 Holding',payDoc:'CL20261007-0002 · TR20261008-0002',back:'可收回',backDoc:''}]},
- {no:'AF20261008-0001',time:'2026-10-08 11:40',by:'沈亮',st:'已转入',period:'2026-10-08 结算',orders:[
-   {order:'261001045600000044',cust:'Mei Ling Eatery',mer:'Ocean Catch Seafood',amt:2500,com:220,pay:'已认领，待转 Holding',payDoc:'CL20261008-0001',back:'未到账',backDoc:''},
-   {order:'261002045600000051',cust:'Rasa Cafe',mer:'Prime Meat Supply',amt:1300,com:100,pay:'未认领',payDoc:'',back:'未到账',backDoc:'',overdue:12}]}];
+ {no:'AF20261001-0001',time:'2026-09-30 10:30',by:'沈亮',st:'已转入',period:'2026-09-30 结算',payout:'2026-09-30 12:00',orders:[
+   {order:'260922045600000031',cust:'Golden Wok Restaurant',mer:'Fresh Greens Trading',st_:'ST2026W40-SH20260713476005-R1',amt:2000,com:150,way:'对公转账',repaid:2000,claim:['CL20261006-0001','2026-10-06 14:50'],toHA:['TR20261006-0003','2026-10-06 15:30'],split:['TR20261006-0004','2026-10-06 15:31'],back:['TR20261009-0002','2026-10-09 10:05','已收回']},
+   {order:'260923045600000017',cust:'Sunny Bistro',mer:'Ocean Catch Seafood',st_:'ST2026W40-SH20260716476017-R1',amt:1600,com:150,way:'对公转账',repaid:1600,claim:['CL20261007-0002','2026-10-08 13:40'],toHA:['TR20261008-0002','2026-10-08 14:00'],split:['TR20261008-0003','2026-10-08 14:01']},
+   {order:'260924045600000022',cust:'Golden Wok Restaurant',mer:'Prime Meat Supply',st_:'ST2026W40-SH2026081200001-R1',amt:1000,com:80,way:'对公转账',repaid:600,part:[['CL20261006-0001 · TR20261006-0003','2026-10-06 15:30',600]],overdue:2}]},
+ {no:'AF20261008-0001',time:'2026-10-08 11:40',by:'沈亮',st:'已转入',period:'2026-10-08 结算',payout:'2026-10-08 12:00',orders:[
+   {order:'261001045600000044',cust:'Mei Ling Eatery',mer:'Ocean Catch Seafood',st_:'ST2026W41-SH20260716476017-R1',amt:2500,com:220,way:'对公转账',repaid:2500,claim:['CL20261008-0001','2026-10-09 09:40']},
+   {order:'261002045600000051',cust:'Rasa Cafe',mer:'Prime Meat Supply',st_:'ST2026W41-SH2026081200001-R1',amt:1300,com:100,repaid:0,hint:'Rasa Cafe 10-09 08:55 对公转账 S$2,650.00 还没认领，可能包含这单',overdue:12}]}];
 /* 下一次结算里账期未认领的订单 */
 const NEXT={period:'2026-10-14（周三）12:00 结算',orders:[
-  {order:'261009045600000012',cust:'Rasa Cafe',mer:'Prime Meat Supply',amt:3120,com:312,sel:true},
+  {order:'261009045600000012',cust:'Rasa Cafe',mer:'Prime Meat Supply',amt:3120,com:312,sel:true,hint:'Rasa Cafe 有 S$2,650.00 对公转账还没认领'},
   {order:'261009045600000015',cust:'Golden Wok Restaurant',mer:'ZZ QA 测试商家',amt:2650.40,com:265.04,sel:true}]};
 const BACKS=[{no:'TR20261009-0002',time:'2026-10-09 10:05',by:'沈亮',st:'已完成',items:[['AF20261001-0001','260922045600000031',1850]]}];
 const advOf=o=>r2(o.amt-o.com);
-const allO=()=>ADS.filter(a=>a.st!=='待转账').flatMap(a=>a.orders.map(o=>({...o,ad:a.no})));
-const outAmt=()=>r2(allO().filter(o=>o.back!=='已收回'&&o.back!=='坏账核销').reduce((s,o)=>s+advOf(o),0));
-const canAmt=()=>r2(allO().filter(o=>o.back==='可收回').reduce((s,o)=>s+advOf(o),0));
-const hangAmt=()=>r2(allO().filter(o=>o.pay!=='已转 Holding'&&o.back!=='坏账核销').reduce((s,o)=>s+o.com,0));
-const adSt=a=>{if(a.st==='待转账')return ['待转账','orange'];const os=a.orders;if(os.every(o=>o.back==='已收回'||o.back==='坏账核销'))return ['已结清','green'];if(os.some(o=>o.back==='已收回'||o.back==='坏账核销'))return ['部分收回','blue'];return ['已转入','blue']};
-const payC={'已转 Holding':'green','已认领，待转 Holding':'blue','未认领':'gray'};
-const backC={已收回:'green',可收回:'blue',未到账:'gray',坏账核销:'red',收回审批中:'orange'};
-let TAB='adv';
+/* 状态推导 */
+const payS=o=>o.bad?['坏账核销','red']:o.toHA?['已转 Holding','green']:o.claim?['已认领，待转 Holding','blue']:o.repaid>0?[`部分还款 ${fmt(o.repaid)} / ${fmt(o.amt)}`,'orange']:o.hint?['可能已到账，未认领','orange']:['未还款','gray'];
+const backS=o=>o.bad?['坏账核销','red']:o.back?[o.back[2],o.back[2]==='已收回'?'green':'orange']:o.toHA?['可收回','blue']:['未到账','gray'];
+const hangS=o=>o.bad?['已冲销','red']:o.split?['已自动分账','green']:['挂账中（钱未到）','gray'];
+const can=o=>!o.bad&&o.toHA&&!o.back;
+const allO=()=>ADS.filter(a=>a.st!=='待转账').flatMap(a=>a.orders.map(o=>Object.assign(o,{ad:a.no})));
+const outAmt=()=>r2(allO().filter(o=>!o.bad&&!(o.back&&o.back[2]==='已收回')).reduce((s,o)=>s+advOf(o),0));
+const canAmt=()=>r2(allO().filter(can).reduce((s,o)=>s+advOf(o),0));
+const hangAmt=()=>r2(allO().filter(o=>!o.bad&&!o.split).reduce((s,o)=>s+o.com,0));
+const adSt=a=>{if(a.st==='待转账')return ['待转账','orange'];const os=a.orders,done=o=>o.bad||(o.back&&o.back[2]==='已收回');if(os.every(done))return [os.some(o=>o.bad)?'已结清（含坏账）':'已结清','green'];if(os.some(done))return ['部分收回','blue'];return ['已打款，待收回','blue']};
+let TAB='adv',OF='';
 function render(){
   const used=r2(outAmt()),pct=Math.min(100,used/LIMIT*100);
   $('ct').innerHTML=`<div class="crumb">垫资管理</div>
-  <div class="title"><h1>垫资管理</h1><span class="muted">账期未认领的订单，结算时由佣金账户按扣佣金后的金额逐单垫；客户的钱认领到账后，逐单收回</span><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
+  <div class="title"><h1>垫资管理</h1><span class="muted">账期未认领的订单，结算时由佣金账户按扣佣金后的金额逐单垫；客户的钱认领到账后，佣金自动分账、垫资逐单收回</span><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
   <div class="note">⚠ 待确认：平台补贴、已结算给商家后又退款的缺口是否也走垫资（10/10 会议只定了账期未认领订单）。本页暂只处理账期未认领订单。</div>
   <div class="kpi"><div><div class="muted">佣金账户可用余额</div><div class="v">${fmt(CA)}</div></div>
    <div><div class="muted">未收回垫资</div><div class="v">${fmt(used)}</div><div class="bar3"><i style="width:${pct}%;background:${pct>=80?'var(--err)':'var(--pri)'}"></i></div><div class="muted" style="font-size:12px;margin-top:4px">阈值 ${fmt(LIMIT)}（示例，待定）· 已用 ${pct.toFixed(0)}% ${pct>=80?tag('接近阈值','red'):''}</div></div>
-   <div><div class="muted">客户已还、可收回</div><div class="v" style="color:var(--pri)">${fmt(canAmt())}</div></div>
-   <div><div class="muted">佣金挂账（钱未到）</div><div class="v">${fmt(hangAmt())}</div><div class="muted" style="font-size:12px;margin-top:4px">认领到账后自动分到佣金账户</div></div>
+   <div><div class="muted">客户已还、可收回</div><div class="v" style="color:var(--pri)">${fmt(canAmt())}</div><div class="muted" style="font-size:12px;margin-top:4px">${allO().filter(can).length} 笔订单</div></div>
+   <div><div class="muted">佣金挂账（钱未到 Holding）</div><div class="v">${fmt(hangAmt())}</div><div class="muted" style="font-size:12px;margin-top:4px">还清并转进 Holding 后自动分账</div></div>
    <div><div class="muted">Holding 平台垫资金额</div><div class="v">${fmt(HA_ADV)}</div><div class="muted" style="font-size:12px;margin-top:4px">垫进来当天随结算打给商家</div></div></div>
   <div class="tbox"><div class="tabs">${[['adv','垫资'],['back','垫资收回'],['ord','按订单看']].map(([k,l])=>`<div class="tab ${TAB===k?'on':''}" onclick="TAB='${k}';render()">${l}</div>`).join('')}</div></div>
   ${TAB==='adv'?advTab():TAB==='back'?backTab():ordTab()}`;
 }
 function advTab(){
   const sel=NEXT.orders.filter(o=>o.sel),tot=r2(sel.reduce((s,o)=>s+advOf(o),0));
-  return `<div class="bar2"><b>下一次结算要垫的订单</b><span class="muted">${NEXT.period} · 账期未认领 ${NEXT.orders.length} 笔</span><span class="sp"></span><span>应垫 <b style="color:var(--err)">${fmt(tot)}</b></span><span class="link" onclick="openNext()">订单明细</span><button class="btn p" onclick="openNew()">发起垫资</button></div>
+  return `<div class="bar2"><b>下一次结算要垫的订单</b><span class="muted">${NEXT.period} · 账期未认领 ${NEXT.orders.length} 笔</span>${NEXT.orders.some(o=>o.hint)?tag('有未认领转账，先认领可能少垫','orange'):''}<span class="sp"></span><span>应垫 <b style="color:var(--err)">${fmt(tot)}</b></span><span class="link" onclick="openNext()">订单明细</span><button class="btn p" ${NEXT.orders.length?'':'disabled'} onclick="openNew()">发起垫资</button></div>
   <div class="tw"><table class="l"><thead><tr><th>垫资单</th><th>垫资时间</th><th>对应结算</th><th class="num">订单数</th><th class="num">垫资金额</th><th class="num">已收回</th><th class="num">未收回</th><th class="num">挂账佣金</th><th>状态</th><th>发起人</th><th>操作</th></tr></thead><tbody>
-  ${ADS.slice().reverse().map(a=>{const tot=r2(a.orders.reduce((s,o)=>s+advOf(o),0)),bk=r2(a.orders.filter(o=>o.back==='已收回').reduce((s,o)=>s+advOf(o),0)),bd=r2(a.orders.filter(o=>o.back==='坏账核销').reduce((s,o)=>s+advOf(o),0)),[st,c]=adSt(a);
-   return `<tr><td><span class="link" onclick="openAD('${a.no}')">${a.no}</span></td><td>${a.time}</td><td>${a.period}</td><td class="num">${a.orders.length}</td><td class="num">${fmt(tot)}</td><td class="num">${fmt(bk)}</td><td class="num">${fmt(r2(tot-bk-bd))}</td><td class="num">${fmt(r2(a.orders.reduce((s,o)=>s+o.com,0)))}</td><td>${tag(st,c)}</td><td>${a.by}</td><td>${a.st==='待转账'?`<span class="link" onclick="doTransfer('${a.no}')" style="margin-right:12px">确认转账</span>`:''}<span class="link" onclick="openAD('${a.no}')">详情</span></td></tr>`}).join('')}
+  ${ADS.slice().reverse().map(a=>{const tot=r2(a.orders.reduce((s,o)=>s+advOf(o),0)),bk=r2(a.orders.filter(o=>o.back&&o.back[2]==='已收回').reduce((s,o)=>s+advOf(o),0)),bd=r2(a.orders.filter(o=>o.bad).reduce((s,o)=>s+advOf(o),0)),hg=r2(a.orders.filter(o=>!o.bad&&!o.split).reduce((s,o)=>s+o.com,0)),[st,c]=adSt(a);
+   return `<tr><td><span class="link" onclick="openAD('${a.no}')">${a.no}</span></td><td>${a.time}</td><td>${a.period}</td><td class="num">${a.orders.length}</td><td class="num">${fmt(tot)}</td><td class="num">${fmt(bk)}</td><td class="num">${fmt(r2(tot-bk-bd))}</td><td class="num">${fmt(hg)}</td><td>${tag(st,c)}</td><td>${a.by}</td><td>${a.st==='待转账'?`<span class="link" onclick="doTransfer('${a.no}')" style="margin-right:12px">确认转账</span>`:''}<span class="link" onclick="openAD('${a.no}')">详情</span></td></tr>`}).join('')}
   </tbody></table></div>`;
 }
 function backTab(){
-  const can=allO().filter(o=>o.back==='可收回');
-  return `<div class="bar2"><b>可收回 ${fmt(canAmt())}</b><span class="muted">客户的钱已认领并转进 Holding · 账期还款的垫资订单，按订单收回；客户没还的不能收</span><span class="sp"></span><button class="btn p" ${can.length?'':'disabled'} onclick="openBack()">垫资收回</button></div>
+  return `<div class="bar2"><b>可收回 ${fmt(canAmt())}</b><span class="muted">只有客户把这单还清、钱已认领并转进 Holding · 账期还款的垫资订单才能收回；部分还款等还清再收</span><span class="sp"></span><button class="btn p" ${allO().some(can)?'':'disabled'} onclick="openBack()">垫资收回</button></div>
   <div class="tw"><table class="l"><thead><tr><th>资金调拨单</th><th>收回时间</th><th>收回的订单</th><th>从哪转出</th><th class="num">收回金额</th><th>状态</th><th>发起人</th></tr></thead><tbody>
-  ${BACKS.slice().reverse().map(b=>`<tr><td><span class="link">${b.no}</span></td><td>${b.time}</td><td>${b.items.map(i=>`${i[1]} <span class="muted">（${i[0]}）</span> ${fmt(i[2])}`).join('<br>')}</td><td>Holding · 账期还款金额</td><td class="num">${fmt(b.items.reduce((s,i)=>s+i[2],0))}</td><td>${tag(b.st,b.st==='已完成'?'green':'orange')}</td><td>${b.by}</td></tr>`).join('')}
+  ${BACKS.slice().reverse().map(b=>`<tr><td><span class="link">${b.no}</span></td><td>${b.time}</td><td>${b.items.map(i=>`<span class="link" onclick="openOrd('${i[1]}')">${i[1]}</span> <span class="muted">（${i[0]}）</span> ${fmt(i[2])}`).join('<br>')}</td><td>Holding · 账期还款金额</td><td class="num">${fmt(b.items.reduce((s,i)=>s+i[2],0))}</td><td>${tag(b.st,b.st==='已完成'?'green':'orange')}</td><td>${b.by}</td></tr>`).join('')}
   </tbody></table></div>
-  <div class="chk"><b>每日核对</b>　${tag('通过','green')}　<span class="muted">未收回垫资 ${fmt(outAmt())} = 各垫资单未收回订单之和；Holding 平台垫资金额 ${fmt(HA_ADV)} = 已垫未打款；佣金挂账（钱未到）${fmt(hangAmt())} = 未到账垫资订单的佣金之和</span></div>`;
+  <div class="chk"><b>每日核对</b>　${tag('通过','green')}<div class="muted" style="margin-top:6px;line-height:1.9">① 未收回垫资 ${fmt(outAmt())} = 各垫资单未收回订单之和<br>② Holding 平台垫资金额 ${fmt(HA_ADV)} = 已垫进来、还没随结算打出的金额<br>③ 佣金挂账（钱未到 Holding）${fmt(hangAmt())} = 未分账的垫资订单佣金之和<br>④ 已转 Holding 的垫资订单，其佣金都已自动分账（无漏分）</div></div>`;
 }
+const ORDF={'':'全部','wait':'客户未还清','can':'可收回','done':'已收回','bad':'坏账核销'};
 function ordTab(){
-  return `<div class="tw" style="border-top:1px solid var(--bd);border-radius:8px"><table class="l"><thead><tr><th>订单</th><th>垫资单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">佣金（挂账）</th><th class="num">垫资金额</th><th>客户还款</th><th>收回</th><th>操作</th></tr></thead><tbody>${allO().map(o=>orderRow(o)).join('')}</tbody></table></div>`;
+  const os=allO().filter(o=>!OF||(OF==='wait'&&!o.toHA&&!o.bad)||(OF==='can'&&can(o))||(OF==='done'&&o.back&&o.back[2]==='已收回')||(OF==='bad'&&o.bad));
+  return `<div class="bar2">${Object.entries(ORDF).map(([k,l])=>`<span class="link" style="${OF===k?'font-weight:600':'color:var(--tx2)'}" onclick="OF='${k}';render()">${l}</span>`).join('<span class="muted">|</span>')}<span class="sp"></span><span class="muted">共 ${os.length} 笔</span></div>
+  <div class="tw"><table class="l"><thead><tr><th>订单</th><th>垫资单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">垫资金额</th><th>客户还款</th><th>佣金</th><th>垫资收回</th><th>操作</th></tr></thead><tbody>${os.map(o=>orderRow(o)).join('')||'<tr><td colspan="9" class="muted" style="text-align:center;padding:30px">暂无</td></tr>'}</tbody></table></div>`;
 }
-const orderRow=(o,inDr)=>`<tr><td>${o.order}${o.overdue?`<div>${tag('超期 '+o.overdue+' 天','red')}</div>`:''}</td>${inDr?'':`<td><span class="link" onclick="openAD('${o.ad}')">${o.ad}</span></td>`}<td>${o.cust} → ${o.mer}</td><td class="num">${fmt(o.amt)}</td><td class="num">${fmt(o.com)}</td><td class="num">${fmt(advOf(o))}</td><td>${tag(o.pay,payC[o.pay]||'gray')}${o.payDoc?`<div class="muted" style="font-size:12px">${o.payDoc}</div>`:''}</td><td>${tag(o.back,backC[o.back])}${o.backDoc?`<div class="muted" style="font-size:12px">${o.backDoc}</div>`:''}</td><td>${o.back==='可收回'?`<span class="link" onclick="openBack('${o.order}')">收回</span>`:o.pay==='已认领，待转 Holding'?`<a class="link" href="资金划转_改造稿.html">去转 Holding</a>`:o.pay==='未认领'&&o.back!=='坏账核销'?`<span class="link" onclick="badDebt('${o.order}')">坏账核销</span>`:'—'}</td></tr>`;
+const orderRow=(o,inDr)=>{const [ps,pc]=payS(o),[bs,bc]=backS(o),[hs,hc]=hangS(o);
+ return `<tr><td><span class="link" onclick="openOrd('${o.order}')">${o.order}</span>${o.overdue&&!o.toHA&&!o.bad?`<div>${tag('超期 '+o.overdue+' 天','red')}</div>`:''}</td>${inDr?'':`<td><span class="link" onclick="openAD('${o.ad}')">${o.ad}</span></td>`}<td>${o.cust} → ${o.mer}</td><td class="num">${fmt(o.amt)}</td><td class="num">${fmt(advOf(o))}</td>
+ <td>${tag(ps,pc)}${o.repaid>0&&o.repaid<o.amt?`<span class="prog"><i style="width:${o.repaid/o.amt*100}%"></i></span>`:''}${o.way&&o.repaid?`<div class="muted" style="font-size:12px">${o.way}</div>`:''}</td>
+ <td>${tag(hs,hc)}<div class="muted" style="font-size:12px">${fmt(o.com)}</div></td><td>${tag(bs,bc)}</td>
+ <td>${can(o)?`<span class="link" onclick="openBack('${o.order}')">收回</span>`:o.claim&&!o.toHA?`<a class="link" href="资金划转_改造稿.html">去转 Holding</a>`:o.hint&&!o.bad?`<span class="link" onclick="toast('打开认领页：Rasa Cafe 2,650.00')" style="margin-right:10px">去认领</span>`:''}${!o.toHA&&!o.bad&&!o.claim&&o.overdue>7?`<span class="link" onclick="badDebt('${o.order}')">坏账核销</span>`:''}${!can(o)&&!(o.claim&&!o.toHA)&&!o.hint&&!(!o.toHA&&!o.bad&&!o.claim&&o.overdue>7)?'—':''}</td></tr>`};
 let DR=null;
 function openDr(fn){DR=fn;$('mask').style.display='block';$('dr').style.display='flex';const r=DR();$('drT').innerHTML=r.t;$('drB').innerHTML=r.b}
 function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
-function openAD(no){const a=ADS.find(x=>x.no===no);openDr(()=>{const tot=r2(a.orders.reduce((s,o)=>s+advOf(o),0)),[st,c]=adSt(a);return {t:'垫资单 '+no,b:`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[['垫资金额',fmt(tot)+' <span class="muted">（订单金额 − 佣金，佣金挂在 Holding）</span>'],['对应结算',a.period],['资金路径','佣金账户 → Holding · 平台垫资金额 → 结算打给商家'],['状态',tag(st,c)],['发起人 / 时间',a.by+' · '+a.time]].map(([k,v])=>`<tr><td class="muted" style="width:140px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
-  <div style="font-weight:600;margin-bottom:8px">垫了哪些订单（逐单收回）</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>订单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">佣金（挂账）</th><th class="num">垫资金额</th><th>客户还款</th><th>收回</th><th>操作</th></tr></thead><tbody>${a.orders.map(o=>orderRow({...o,ad:a.no},true)).join('')}</tbody></table>`}})}
-function openNext(){openDr(()=>({t:'下一次结算要垫的订单',b:`<div class="muted" style="margin-bottom:10px">${NEXT.period}：结算单里账期客户还没认领到账的订单。每单垫 = 订单金额 − 佣金；佣金挂在 Holding，认领到账后自动分账</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>订单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">佣金（挂账）</th><th class="num">要垫</th></tr></thead><tbody>${NEXT.orders.map(o=>`<tr><td>${o.order}</td><td>${o.cust} → ${o.mer}</td><td class="num">${fmt(o.amt)}</td><td class="num">${fmt(o.com)}</td><td class="num">${fmt(advOf(o))}</td></tr>`).join('')}</tbody></table>
-  <div class="muted" style="margin-top:10px;font-size:12px">提示：Rasa Cafe 10-09 有一笔 S$2,650.00 对公转账还没认领，如果认领到 261009045600000012，这单就不用垫了</div>`}))}
+function openAD(no){const a=ADS.find(x=>x.no===no);openDr(()=>{const tot=r2(a.orders.reduce((s,o)=>s+advOf(o),0)),[st,c]=adSt(a);return {t:'垫资单 '+no,b:`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[['垫资金额',fmt(tot)+' <span class="muted">（订单金额 − 佣金，佣金挂在 Holding）</span>'],['对应结算',a.period+(a.payout?' · 打款 '+a.payout:'')],['资金路径','佣金账户 → Holding · 平台垫资金额 → 结算打给商家'],['状态',tag(st,c)],['发起人 / 时间',a.by+' · '+a.time]].map(([k,v])=>`<tr><td class="muted" style="width:140px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
+  <div style="font-weight:600;margin-bottom:8px">垫了哪些订单（逐单收回，点订单看全过程）</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>订单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">垫资金额</th><th>客户还款</th><th>佣金</th><th>垫资收回</th><th>操作</th></tr></thead><tbody>${a.orders.map(o=>orderRow({...o,ad:a.no},true)).join('')}</tbody></table>`}})}
+/* 订单全过程 */
+function openOrd(order){const a=ADS.find(x=>x.orders.some(o=>o.order===order)),o=a.orders.find(x=>x.order===order);openDr(()=>{
+  const S=[];const add=(ok,h,d)=>S.push({ok,h,d});
+  add(true,`① 垫资 ${fmt(advOf(o))}`,`${a.time} · 垫资单 ${a.no} · 佣金账户 → Holding · 平台垫资（订单 ${fmt(o.amt)} − 佣金 ${fmt(o.com)}）`);
+  add(true,`② 结算打给商家 ${fmt(advOf(o))}`,`${a.payout||'—'} · 结算单 ${o.st_} · Holding · 平台垫资 → ${o.mer}`);
+  add(true,`③ 佣金 ${fmt(o.com)} 挂在 Holding`,'结算时不分给佣金账户，记「佣金挂账」；这时客户还没付钱，不动钱');
+  if(o.bad){add('bad','④ 坏账核销',`${o.bad} · 垫资 ${fmt(advOf(o))} 转坏账损失，挂账佣金 ${fmt(o.com)} 冲销，不动钱`)}
+  else{const paid=o.repaid>=o.amt;
+  add(o.repaid>0?(paid?true:'cur'):'cur',`④ 客户还款 ${o.repaid?fmt(o.repaid)+' / '+fmt(o.amt):''}`,o.repaid?(o.way==='二维码'?'扫结算单二维码，付款时自动关联订单':'对公转账')+(o.part?' · '+o.part.map(p=>`${p[1]} ${p[0]} ${fmt(p[2])}`).join('；'):'')+(paid?'':' · <b style="color:#d46b08">部分还款：等还清再分账和收回，已还的钱先留在 Holding · 账期还款</b>'):(o.hint?`<span style="color:#d46b08">${o.hint}，先去认领</span>`:'客户还没还款'));
+  if(o.way!=='二维码')add(o.claim||o.part?true:(paid?'cur':false),'⑤ 认领到这单',o.claim?`${o.claim[1]} · 认领单 ${o.claim[0]} · 平台主账户：未认领 → 已认领`:o.part?`已还的 ${fmt(o.repaid)} 已认领（${o.part.map(p=>p[0].split(' · ')[0]).join('、')}）；剩余 ${fmt(r2(o.amt-o.repaid))} 等客户还`:'对公转账要业务人工认领到订单');
+  add(o.toHA||o.part?true:(o.claim?'cur':false),'⑥ 转进 Holding',!o.toHA&&o.part?`已还的 ${fmt(o.repaid)} 已转进 Holding · 账期还款（${o.part.map(p=>p[0].split(' · ')[1]).join('、')}），先留着不分账、不收回`:o.toHA?`${o.toHA[1]} · 资金调拨单 ${o.toHA[0]} · 货款 ${fmt(advOf(o))} 进账期还款、佣金 ${fmt(o.com)} 进佣金挂账`:(o.claim?'<a class="link" href="资金划转_改造稿.html">去资金划转</a>':'只有已认领的钱能转'));
+  add(o.split?true:false,`⑦ 佣金 ${fmt(o.com)} 自动分账`,o.split?`${o.split[1]} · ${o.split[0]} · Holding · 佣金挂账 → 佣金账户（系统自动）`:(o.part?'还清后系统自动分账':'转进 Holding 后系统自动分账'));
+  add(o.back&&o.back[2]==='已收回'?true:(o.toHA?'cur':false),`⑧ 垫资收回 ${fmt(advOf(o))}`,o.back?`${o.back[1]} · ${o.back[0]} · ${o.back[2]} · Holding · 账期还款 → 佣金账户`:(o.toHA?`<span class="link" onclick="openBack('${o.order}')">发起收回</span>（人工）`:'客户还清并转进 Holding 后才能收回'))}
+  const cls=x=>x===true?'ok':x==='cur'?'cur':x==='bad'?'bad':'todo';
+  const [ps,pc]=payS(o),[bs,bc]=backS(o),[hs,hc]=hangS(o);
+  return {t:'垫资订单 '+order,b:`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[['客户 → 商家',o.cust+' → '+o.mer],['订单金额 / 佣金 / 垫资',`${fmt(o.amt)} / ${fmt(o.com)} / ${fmt(advOf(o))}`],['垫资单',`<span class="link" onclick="openAD('${a.no}')">${a.no}</span>`],['当前',`客户还款 ${tag(ps,pc)}　佣金 ${tag(hs,hc)}　垫资收回 ${tag(bs,bc)}`]].map(([k,v])=>`<tr><td class="muted" style="width:150px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
+   <div style="font-weight:600;margin-bottom:12px">全过程</div><div class="tl">${S.map(x=>`<div class="st ${cls(x.ok)}"><div class="h">${x.h}</div><div class="d">${x.d}</div></div>`).join('')}</div>`}})}
+function openNext(){openDr(()=>({t:'下一次结算要垫的订单',b:`<div class="muted" style="margin-bottom:10px">${NEXT.period}：结算单里账期客户的钱还没认领到账的订单（没还款，或钱到了没认领）。每单垫 = 订单金额 − 佣金；佣金挂在 Holding</div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>订单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">佣金（挂账）</th><th class="num">要垫</th><th>提示</th></tr></thead><tbody>${NEXT.orders.map(o=>`<tr><td>${o.order}</td><td>${o.cust} → ${o.mer}</td><td class="num">${fmt(o.amt)}</td><td class="num">${fmt(o.com)}</td><td class="num">${fmt(advOf(o))}</td><td>${o.hint?`<span style="color:#d46b08">${o.hint}</span> <span class="link" onclick="toast('打开认领页')">去认领</span>`:'—'}</td></tr>`).join('')}</tbody></table>`}))}
 /* 发起垫资：勾选订单，金额 = 订单垫资之和（不可改） */
 function openNew(){$('mdT').textContent='发起垫资';paintNew();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitNew()">提交</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
 function paintNew(){const sel=NEXT.orders.filter(o=>o.sel),tot=r2(sel.reduce((s,o)=>s+advOf(o),0)),after=r2(outAmt()+tot);let e='';if(!sel.length)e='请至少勾选 1 笔订单';else if(tot>CA)e=`超过佣金账户可用余额 ${fmt(CA)}`;
-  $('mdB').innerHTML=`<table class="t" style="border:1px solid var(--bd);margin-bottom:14px"><tbody><tr><td class="muted" style="width:160px">对应结算</td><td>${NEXT.period}</td></tr><tr><td class="muted">资金路径</td><td>佣金账户 → Holding · 平台垫资金额</td></tr><tr><td class="muted">佣金账户可用余额</td><td>${fmt(CA)}</td></tr></tbody></table>
-  <div class="fr"><label class="req">垫哪些订单（账期未认领）</label><table class="t" style="border:1px solid var(--bd)"><thead><tr><th></th><th>订单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">佣金</th><th class="num">要垫</th></tr></thead><tbody>${NEXT.orders.map((o,i)=>`<tr><td><input type="checkbox" ${o.sel?'checked':''} onchange="NEXT.orders[${i}].sel=this.checked;paintNew()"></td><td>${o.order}</td><td>${o.cust} → ${o.mer}</td><td class="num">${fmt(o.amt)}</td><td class="num">${fmt(o.com)}</td><td class="num">${fmt(advOf(o))}</td></tr>`).join('')}</tbody></table></div>
-  <div class="fr"><label>垫资金额（按订单自动算，不可改）</label><div style="font-size:18px;font-weight:600">${fmt(tot)}</div><div class="err">${e}</div>${!e&&after>=LIMIT*.8?`<div style="color:#d46b08;font-size:12px">提醒：垫完后未收回垫资 ${fmt(after)}，接近阈值 ${fmt(LIMIT)}</div>`:''}</div>
+  $('mdB').innerHTML=`<table class="t" style="border:1px solid var(--bd);margin-bottom:14px"><tbody><tr><td class="muted" style="width:160px">对应结算</td><td>${NEXT.period}</td></tr><tr><td class="muted">资金路径</td><td>佣金账户 → Holding · 平台垫资金额 → 周三随结算打给商家</td></tr><tr><td class="muted">佣金账户可用余额</td><td>${fmt(CA)}</td></tr></tbody></table>
+  <div class="fr"><label class="req">垫哪些订单（账期未认领）</label><table class="t" style="border:1px solid var(--bd)"><thead><tr><th></th><th>订单</th><th>客户 → 商家</th><th class="num">订单金额</th><th class="num">佣金</th><th class="num">要垫</th></tr></thead><tbody>${NEXT.orders.map((o,i)=>`<tr><td><input type="checkbox" ${o.sel?'checked':''} onchange="NEXT.orders[${i}].sel=this.checked;paintNew()"></td><td>${o.order}${o.hint?`<div style="color:#d46b08;font-size:12px">${o.hint}</div>`:''}</td><td>${o.cust} → ${o.mer}</td><td class="num">${fmt(o.amt)}</td><td class="num">${fmt(o.com)}</td><td class="num">${fmt(advOf(o))}</td></tr>`).join('')}</tbody></table></div>
+  <div class="fr"><label>垫资金额（按订单自动算，不可改）</label><div style="font-size:18px;font-weight:600">${fmt(tot)}</div><div class="muted" style="font-size:12px">这些订单的佣金 ${fmt(r2(sel.reduce((s,o)=>s+o.com,0)))} 结算时记入 Holding · 佣金挂账</div><div class="err">${e}</div>${!e&&after>=LIMIT*.8?`<div style="color:#d46b08;font-size:12px">提醒：垫完后未收回垫资 ${fmt(after)}，接近阈值 ${fmt(LIMIT)}</div>`:''}</div>
   <div class="fr"><label>备注</label><input class="ipt" style="width:100%" placeholder="选填"></div>`}
 function submitNew(){const sel=NEXT.orders.filter(o=>o.sel),tot=r2(sel.reduce((s,o)=>s+advOf(o),0));if(!sel.length||tot>CA){paintNew();return}
-  const no='AF20261009-000'+String(ADS.length+1);ADS.push({no,time:NOW(),by:'沈亮',st:'待转账',period:NEXT.period,orders:sel.map(o=>({order:o.order,cust:o.cust,mer:o.mer,amt:o.amt,com:o.com,pay:'未认领',payDoc:'',back:'未到账',backDoc:''}))});
+  const no='AF20261009-000'+String(ADS.length+1);ADS.push({no,time:NOW(),by:'沈亮',st:'待转账',period:NEXT.period,payout:'',orders:sel.map(o=>({order:o.order,cust:o.cust,mer:o.mer,st_:'（10-14 结算单）',amt:o.amt,com:o.com,repaid:0,hint:o.hint}))});
   NEXT.orders=NEXT.orders.filter(o=>!o.sel);closeMd();render();toast(`已生成垫资单 ${no}（${sel.length} 笔订单，${fmt(tot)}），待转账`)}
 function doTransfer(no){const a=ADS.find(x=>x.no===no),amt=r2(a.orders.reduce((s,o)=>s+advOf(o),0));a.st='已转入';HA_ADV=r2(HA_ADV+amt);CA=r2(CA-amt);render();toast(`${no} 已转入 Holding · 平台垫资金额 ${fmt(amt)}，周三随结算打给商家`)}
-/* 垫资收回：只列客户已还（已认领并转进 Holding）的垫资订单 */
+/* 垫资收回：只列已还清、已转进 Holding 的垫资订单（人工） */
 let BSEL={};
-function openBack(only){const can=allO().filter(o=>o.back==='可收回');BSEL={};can.forEach(o=>BSEL[o.order]=!only||o.order===only);$('mdT').textContent='垫资收回';paintBack();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitBack()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
-function paintBack(){const can=allO().filter(o=>o.back==='可收回'),sel=can.filter(o=>BSEL[o.order]),tot=r2(sel.reduce((s,o)=>s+advOf(o),0));
+function openBack(only){const cs=allO().filter(can);BSEL={};cs.forEach(o=>BSEL[o.order]=!only||o.order===only);$('mdT').textContent='垫资收回';paintBack();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitBack()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
+function paintBack(){const cs=allO().filter(can),sel=cs.filter(o=>BSEL[o.order]),tot=r2(sel.reduce((s,o)=>s+advOf(o),0)),part=allO().filter(o=>!o.bad&&o.repaid>0&&o.repaid<o.amt);
   $('mdB').innerHTML=`<table class="t" style="border:1px solid var(--bd);margin-bottom:14px"><tbody><tr><td class="muted" style="width:140px">转出</td><td>Holding · 账期还款金额</td></tr><tr><td class="muted">转入</td><td>佣金账户 · 佣金收入</td></tr></tbody></table>
-  <div class="fr"><label class="req">收回哪些订单（客户已还）</label><table class="t" style="border:1px solid var(--bd)"><thead><tr><th></th><th>订单</th><th>垫资单</th><th>客户还款</th><th class="num">收回金额</th></tr></thead><tbody>${can.map(o=>`<tr><td><input type="checkbox" ${BSEL[o.order]?'checked':''} onchange="BSEL['${o.order}']=this.checked;paintBack()"></td><td>${o.order}</td><td>${o.ad}</td><td class="muted" style="font-size:12px">${o.payDoc}</td><td class="num">${fmt(advOf(o))}</td></tr>`).join('')}</tbody></table></div>
-  <div class="fr"><label>收回金额（按订单自动算，不可改）</label><div style="font-size:18px;font-weight:600">${fmt(tot)}</div><div class="err">${sel.length?'':'请至少勾选 1 笔订单'}</div><div class="muted" style="font-size:12px">这单的挂账佣金已在客户钱转进 Holding 时自动分账，不在这里收</div></div>`}
-function submitBack(){const sel=allO().filter(o=>o.back==='可收回'&&BSEL[o.order]);if(!sel.length){paintBack();return}
-  const no='TR20261009-00'+String(30+BACKS.length);BACKS.push({no,time:NOW(),by:'沈亮',st:'待审批',items:sel.map(o=>[o.ad,o.order,advOf(o)])});
-  ADS.forEach(a=>a.orders.forEach(o=>{if(sel.some(x=>x.order===o.order)){o.back='收回审批中';o.backDoc=no}}));closeMd();render();toast(`已生成资金调拨单 ${no}（垫资收回 ${fmt(sel.reduce((s,o)=>s+advOf(o),0))}），待审批`)}
+  <div class="fr"><label class="req">收回哪些订单（客户已还清并转进 Holding）</label><table class="t" style="border:1px solid var(--bd)"><thead><tr><th></th><th>订单</th><th>垫资单</th><th>客户还款</th><th class="num">收回金额</th></tr></thead><tbody>${cs.map(o=>`<tr><td><input type="checkbox" ${BSEL[o.order]?'checked':''} onchange="BSEL['${o.order}']=this.checked;paintBack()"></td><td>${o.order}</td><td>${o.ad}</td><td class="muted" style="font-size:12px">${o.claim?o.claim[0]+' · ':''}${o.toHA[0]}</td><td class="num">${fmt(advOf(o))}</td></tr>`).join('')}</tbody></table>${part.length?`<div class="muted" style="font-size:12px;margin-top:6px">另有 ${part.length} 笔部分还款（${part.map(o=>o.order+' 已还 '+fmt(o.repaid)+' / '+fmt(o.amt)).join('；')}），等还清再收</div>`:''}</div>
+  <div class="fr"><label>收回金额（按订单自动算，不可改）</label><div style="font-size:18px;font-weight:600">${fmt(tot)}</div><div class="err">${sel.length?'':'请至少勾选 1 笔订单'}</div><div class="muted" style="font-size:12px">这单的挂账佣金已在钱转进 Holding 时自动分账，不在这里收</div></div>`}
+function submitBack(){const sel=allO().filter(o=>can(o)&&BSEL[o.order]);if(!sel.length){paintBack();return}
+  const no='TR20261009-00'+String(30+BACKS.length),t=NOW();BACKS.push({no,time:t,by:'沈亮',st:'待审批',items:sel.map(o=>[o.ad,o.order,advOf(o)])});
+  sel.forEach(o=>o.back=[no,t,'收回审批中']);closeMd();if(DR)closeDr();render();toast(`已生成资金调拨单 ${no}（垫资收回 ${fmt(sel.reduce((s,o)=>s+advOf(o),0))}），待审批`)}
 /* 坏账核销：客户一直不还 */
 function badDebt(order){const a=ADS.find(x=>x.orders.some(o=>o.order===order)),o=a.orders.find(x=>x.order===order);$('mdT').textContent='坏账核销';
-  $('mdB').innerHTML=`<div style="margin-bottom:12px">订单 <b>${order}</b>（${o.cust} → ${o.mer}）客户${o.overdue?'已超期 '+o.overdue+' 天':''}未还款。</div><table class="t" style="border:1px solid var(--bd);margin-bottom:12px"><tbody><tr><td class="muted" style="width:160px">垫资转坏账损失</td><td>${fmt(advOf(o))}</td></tr><tr><td class="muted">挂账佣金冲销</td><td>${fmt(o.com)}</td></tr><tr><td class="muted">动钱吗</td><td>不动钱；不能拿别的订单的钱来补</td></tr></tbody></table><div class="fr"><label class="req">核销原因</label><input class="ipt" style="width:100%" placeholder="如：客户已停业、催收无果"></div>`;
+  $('mdB').innerHTML=`<div style="margin-bottom:12px">订单 <b>${order}</b>（${o.cust} → ${o.mer}）客户${o.overdue?'已超期 '+o.overdue+' 天':''}未还款。</div><table class="t" style="border:1px solid var(--bd);margin-bottom:12px"><tbody><tr><td class="muted" style="width:160px">垫资转坏账损失</td><td>${fmt(advOf(o))}</td></tr><tr><td class="muted">挂账佣金冲销</td><td>${fmt(o.com)}</td></tr><tr><td class="muted">动钱吗</td><td>不动钱；不能拿别的订单的钱来补</td></tr></tbody></table>${o.hint?`<div style="color:#d46b08;margin-bottom:12px">注意：${o.hint}，建议先认领</div>`:''}<div class="fr"><label class="req">核销原因</label><input class="ipt" style="width:100%" placeholder="如：客户已停业、催收无果"></div>`;
   $('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="doBad('${order}')">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
-function doBad(order){ADS.forEach(a=>a.orders.forEach(o=>{if(o.order===order){o.back='坏账核销';o.pay='未认领'}}));closeMd();if(DR)closeDr();render();toast(`订单 ${order} 已提交坏账核销`)}
+function doBad(order){ADS.forEach(a=>a.orders.forEach(o=>{if(o.order===order)o.bad=NOW()}));closeMd();if(DR)closeDr();render();toast(`订单 ${order} 已坏账核销（审批通过）`)}
 function closeMd(){$('mask2').style.display='none';$('md').style.display='none'}
 render();
 </script>
