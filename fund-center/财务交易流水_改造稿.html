@@ -276,7 +276,7 @@ function base(){return R.filter(r=>r.acc===Q.acc)}
 function rows(){return disp(base()).filter(r=>(!Q.ft||(r.parts?r.parts.some(p=>p.ft===Q.ft):r.ft===Q.ft))&&(!Q.what||r.what===Q.what)&&(!Q.st||r.st===Q.st)&&(!Q.kw||[r.doc,r.order,r.id,r.bat,...(r.items||[]).flatMap(i=>[i.order,i.pi])].some(x=>x.toLowerCase().includes(Q.kw.toLowerCase())))).sort((a,b)=>b.time.localeCompare(a.time))}
 function summary(){
   const ts=TYPES[Q.acc],b=base(),done=b.filter(r=>r.st==='已结算'),pend=b.filter(r=>r.st==='待结算');
-  const row=k=>{const all=done.filter(r=>r.ft===k),fs=all.filter(r=>r.aw!=='ADJ'),adj=r2(all.filter(r=>r.aw==='ADJ').reduce((s,r)=>s+r.amt,0)),fee=r2(fs.reduce((s,r)=>s+r.fee+(r.what.includes('退款手续费')?-r.amt:0),0)),pf=r2(fs.reduce((s,r)=>s+r.fee,0)),inn=r2(fs.filter(r=>r.amt>0).reduce((s,r)=>s+r.amt,0)+pf),out=r2(-fs.filter(r=>r.amt<0).reduce((s,r)=>s+r.amt,0)+pf);return {k,name:ts[k],op:OPEN[Q.acc][k],inn,out,fee,adj,end:r2(OPEN[Q.acc][k]+inn-out+adj)}};
+  const row=k=>{const all=done.filter(r=>r.ft===k),fs=all.filter(r=>r.aw!=='ADJ'),adj=r2(all.filter(r=>r.aw==='ADJ').reduce((s,r)=>s+r.amt,0)),fee=r2(fs.reduce((s,r)=>s+r.fee+((r.aw==='PAYFEE'||r.what.includes('退款手续费'))?-r.amt:0),0)),pf=r2(fs.reduce((s,r)=>s+r.fee,0)),inn=r2(fs.filter(r=>r.amt>0).reduce((s,r)=>s+r.amt,0)+pf),out=r2(-fs.filter(r=>r.amt<0).reduce((s,r)=>s+r.amt,0)+pf);return {k,name:ts[k],op:OPEN[Q.acc][k],inn,out,fee,adj,end:r2(OPEN[Q.acc][k]+inn-out+adj)}};
   const rs=Object.keys(ts).map(row),T=k=>r2(rs.reduce((s,r)=>s+r[k],0));
   return {rs,tot:{op:T('op'),inn:T('inn'),out:T('out'),fee:T('fee'),adj:T('adj'),end:T('end')},pendN:pend.length,pendAmt:r2(pend.reduce((s,r)=>s+r.amt,0)),staleN:pend.filter(stale).length};
 }
