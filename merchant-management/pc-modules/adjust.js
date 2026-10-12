@@ -228,8 +228,8 @@ PAGES['p-adjust']=()=>{
       <div class="fr"><label class="fl">状态</label><select id="af-st">${opt('',f.st,'全部')}${['PENDING','PUSHED','PUSH_FAILED','PUSH_REJECTED','VOIDED','JUDGING'].map(k=>opt(k,f.st,ST_LABEL[k])).join('')}</select></div>
     </div>
     <div class="fg3">
-      <div class="fr"><label class="fl">生效时间 起</label><input id="af-from" type="date" value="${f.from}"></div>
-      <div class="fr"><label class="fl">生效时间 止</label><input id="af-to" type="date" value="${f.to}"></div>
+      <div class="fr"><label class="fl">创建时间 起</label><input id="af-from" type="date" value="${f.from}"></div>
+      <div class="fr"><label class="fl">创建时间 止</label><input id="af-to" type="date" value="${f.to}"></div>
       <div class="fr"></div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
@@ -250,7 +250,7 @@ PAGES['p-adjust']=()=>{
       <thead><tr>
         <th style="width:34px"><input type="checkbox" class="skuchk" title="全选当前页待推送" ${allSel?'checked':''} onclick="adj_selAll()"></th>
         <th>调整单号</th><th>店铺名称</th><th>店铺编码</th><th style="text-align:right">金额</th>
-        <th>调整类型</th><th>抵扣方式</th><th>来源</th><th>生效时间</th><th>状态</th><th>创建人</th><th>创建时间</th><th>推送人</th><th>推送时间</th><th style="position:sticky;right:0;background:linear-gradient(var(--bd2),var(--bd2)),#fff;box-shadow:-1px 0 0 var(--bd)">操作</th>
+        <th>调整类型</th><th>抵扣方式</th><th>来源</th><th>状态</th><th>创建人</th><th>创建时间</th><th>推送人</th><th>推送时间</th><th style="position:sticky;right:0;background:linear-gradient(var(--bd2),var(--bd2)),#fff;box-shadow:-1px 0 0 var(--bd)">操作</th>
       </tr></thead><tbody>
       ${rows.map(r=>`<tr>
         <td>${selectable(r)?`<input type="checkbox" class="skuchk" ${DB.adjSel.includes(r.adjustNo)?'checked':''} onclick="adj_toggle('${r.adjustNo}')">`:''}</td>
@@ -261,14 +261,13 @@ PAGES['p-adjust']=()=>{
         <td style="white-space:nowrap">${esc(r.adjustTypeName)}</td>
         <td style="white-space:nowrap">${adjDedTag(tOf(r.adjustTypeCode))}</td>
         <td style="white-space:nowrap">${srcLabel(r)}</td>
-        <td style="white-space:nowrap;color:var(--ts)">${r.effectiveTime}</td>
         <td style="white-space:nowrap">${statusTag(r)}</td>
         <td style="white-space:nowrap">${esc(r.createdBy||'系统')}</td>
         <td style="white-space:nowrap;color:var(--ts)">${r.effectiveTime}</td>
         <td style="white-space:nowrap">${r.pushedAt?esc(r.pushedBy||'系统'):'—'}</td>
         <td style="white-space:nowrap;color:var(--ts)">${r.pushedAt||'—'}</td>
         <td style="white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-1px 0 0 var(--bd)"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button>${canVoid(r)?`<button class="btn btn-o btn-sm" style="margin-left:6px;color:var(--r)" onclick="adj_voidAsk('${r.adjustNo}')">作废</button>`:''}</td>
-      </tr>`).join('')||`<tr><td colspan="15" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
+      </tr>`).join('')||`<tr><td colspan="14" style="text-align:center;color:var(--ts);padding:22px">${adjAll().length?'没有符合筛选条件的调整单':'暂无业务调整单'}</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts);text-align:right">共 ${rows.length} 条 · 每页 50 条</div>
     </div>`;
@@ -484,7 +483,7 @@ window.adj_detail=function(no){
       +(r.deductionType=='INVOICE'&&r.originalInvoiceNo
         ? kv('被调整原发票',`<span class="mono">${esc(r.originalInvoiceNo)||'—'}</span>`)
         : kv('关联业务单号',`<span class="mono">${esc(r.bizNo)||'—'}</span>`))
-      +kv('生效时间',r.effectiveTime)
+      +kv('创建时间',r.effectiveTime)
       +kv('来源',isManual(r)?'人工建单':`缺货罚款 · <span class="mono">${r.adjustNo}</span>`)+kv('币种',r.currency))}
 
     ${r.deductionType=='INVOICE'&&r.originalInvoiceNo?`${sec('税额与开票')}
