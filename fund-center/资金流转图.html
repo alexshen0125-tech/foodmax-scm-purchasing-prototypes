@@ -138,7 +138,7 @@ tr.r.on td{background:#e6f4ff}
     <li><b>垫资逐单垫、逐单收回</b>（⑩ ⑪）：只垫结算单里账期客户还没还款的订单，金额 = 扣掉佣金后应付商家的钱；收回时只能按垫资单，对应客户还款核销后才能提回，客户不还就不能提，坏账不能拿别的订单的钱补。原来「按 Holding 总缺口垫、按总数收回」作废</li>
     <li><b>账期未还款订单的佣金挂在 Holding</b>（⑥）：给商家结算时，这单的佣金不结算给佣金账户，挂在 Holding「佣金挂账」；客户还款认领核销后，挂账佣金走 ⑥c <b>自动清分</b>到佣金账户，垫资按 ⑪ 逐单人工收回</li>
     <li><b>佣金账户分两类</b>（⑥ ⑥b）：佣金收入、自营收入；自营订单和三方商家一样走清分，佣金比例 0，整单分到自营收入</li>
-    <li><b>账期还款主推结算单二维码</b>（③ ④）：每张结算单一个 Airwallex 二维码，金额不能改，付完自动核销；对公客户才开银行转账（备注结算单号）。没认领的钱留在平台主账户，认领核销后才能转 Holding</li>
+    <li><b>账期还款主推结算单二维码</b>（③ ④）：每张结算单一个 Airwallex 二维码，金额不能改，付完自动核销；对公客户才开银行转账（备注结算单号）。平台主账户里的账期还款分「已认领」「未认领」：二维码付款自动关联订单，直接算已认领；对公转账先进未认领，人工认领到订单后才能转 Holding</li>
     <li>垫资总额设阈值，接近时预警；网关费每次调用 0.1 新币（支付失败也收）</li>
     <li><span class="chg pend" style="margin-left:0">待确认</span> 二维码还款走收单通道（约 2% 手续费），这笔钱算「账期还款」还是另算、手续费是否也由备用金补；自营的钱能否先留在 Holding 用于给商家结算（会上有「可以，少垫资」和「等核销完再转」两种说法）</li>
   </ul></div>
@@ -158,8 +158,8 @@ tr.r.on td{background:#e6f4ff}
   <div class="card"><table id="t"><thead><tr><th style="width:44px">#</th><th>钱从哪到哪</th><th>交易类型</th><th>单据</th><th>怎么触发</th></tr></thead><tbody></tbody></table></div>
   <div class="card"><b>规则</b><ul class="rule">
     <li>每类钱单独记账，不能互相挪用；垫资只能按垫资单逐单收回（⑪），客户还款核销后才能提回，坏账不能拿别的订单的钱补</li>
-    <li>账期客户的钱没认领核销前留在平台主账户，不能转 Holding、不能用来结算</li>
-    <li>对账：平台主账户余额 = 3 类之和；Holding 余额 = 3 类之和（「佣金挂账」显示挂着的佣金金额；客户还款前没有对应的钱，还款后这部分钱进「佣金挂账」，再自动清分走）；佣金账户余额 = 佣金收入 + 自营收入</li>
+    <li>账期客户的钱分「已认领」「未认领」：只有已认领（已关联订单）的才能转 Holding；未认领的留在平台主账户，不能转、不能用来结算</li>
+    <li>对账：平台主账户余额 = 线上收单 + 账期还款（已认领 + 未认领）+ 备用金；Holding 余额 = 3 类之和（「佣金挂账」显示挂着的佣金金额；客户还款前没有对应的钱，还款后这部分钱进「佣金挂账」，再自动清分走）；佣金账户余额 = 佣金收入 + 自营收入</li>
     <li>我方发起的划转（④ ⑩ ⑪ ⑫ ⑬）统一走「资金划转」，按类型自动绑定转出 / 转入，单号写进 request_id</li>
     <li>收单手续费：Airwallex 从收单金额里直接扣（⑨a），平台主账户只剩净额；分账时 Holding 要收实付全额，差的手续费由备用金垫上（②b）。所以线上收单这一类一进一出为 0，<b>手续费最终都落在备用金</b>；退款手续费、失败尝试费也由备用金直接出（⑨）</li>
     <li>备用金水位要按单量估：每天收单手续费 + 退款手续费 + 网关费；垫资总额设阈值，接近时预警</li>
@@ -171,7 +171,7 @@ const C={in:'#52c41a',st:'#1677ff',rf:'#fa8c16',adv:'#722ed1',wd:'#8c8c8c'};
 /* 节点 */
 const N={
  C1:{x:20,y:105,w:140,h:52,t:'线上客户',c:'ext'},C2:{x:20,y:330,w:140,h:52,t:'账期客户',c:'ext'},AW:{x:20,y:560,w:140,h:52,t:'Airwallex（手续费）',c:'ext2'},
- PA1:{x:290,y:100,w:190,h:62,t:'线上收单金额'},PA2:{x:290,y:325,w:190,h:62,t:'账期还款金额'},PA3:{x:290,y:555,w:190,h:62,t:'手续费备用金'},
+ PA1:{x:290,y:100,w:190,h:62,t:'线上收单金额'},PA2a:{x:290,y:282,w:190,h:56,t:'账期还款 · 已认领'},PA2b:{x:290,y:392,w:190,h:56,t:'账期还款 · 未认领'},PA3:{x:290,y:555,w:190,h:62,t:'手续费备用金'},
  HA1:{x:640,y:100,w:190,h:62,t:'线上收单金额'},HA2:{x:640,y:325,w:190,h:62,t:'账期还款金额'},HA3:{x:640,y:555,w:190,h:62,t:'平台垫资金额'},HA4:{x:640,y:440,w:190,h:62,t:'佣金挂账（待结算）'},
  M:{x:1010,y:100,w:200,h:62,t:'店铺子账户（商家）'},CA:{x:1000,y:470,w:220,h:190,t:'佣金账户 CA',c:'acc'},
  CA1:{x:1015,y:505,w:190,h:46,t:'佣金收入'},CA2:{x:1015,y:585,w:190,h:46,t:'自营收入（佣金比例 0）'},
@@ -184,10 +184,12 @@ const E=[
  ['8',C.rf,0,`M${L('PA1')},${Y('PA1',.75)} H${R('C1')}`,[225,Y('PA1',.75)],'退款给客户',[176,Y('PA1',.75)+20]],
  ['2',C.in,0,`M${R('PA1')},${Y('PA1',.3)} H${L('HA1')}`,[560,Y('PA1',.3)],'按结算批次自动转',[560,Y('PA1',.3)-14]],
  ['7',C.rf,0,`M${L('HA1')},${Y('HA1',.75)} H${R('PA1')}`,[560,Y('HA1',.75)],'退款的钱转回',[560,Y('HA1',.75)+22]],
- ['3',C.in,0,`M${R('C2')},${Y('C2')} H${L('PA2')}`,[225,Y('C2')],'二维码 / 对公转账',[205,Y('C2')-14]],
- ['4',C.adv,0,`M${R('PA2')},${Y('PA2')} H${L('HA2')}`,[560,Y('PA2')],'认领核销后人工转',[560,Y('PA2')-14]],
+ ['3a',C.in,0,`M${R('C2')},${Y('C2',.3)} H205 V${Y('PA2a')} H${L('PA2a')}`,[240,Y('PA2a')],'二维码（自动关联订单）',[212,Y('PA2a')-14]],
+ ['3b',C.in,0,`M${R('C2')},${Y('C2',.7)} H205 V${Y('PA2b')} H${L('PA2b')}`,[240,Y('PA2b')],'对公转账（不知道还哪些单）',[212,Y('PA2b')+24]],
+ ['3c',C.adv,0,`M${X('PA2b')},${T('PA2b')} V${B('PA2a')}`,[X('PA2b'),(B('PA2a')+T('PA2b'))/2],'人工认领到订单',[X('PA2b')+70,(B('PA2a')+T('PA2b'))/2+4]],
+ ['4',C.adv,0,`M${R('PA2a')},${Y('PA2a')} H560 V${Y('HA2')} H${L('HA2')}`,[520,Y('PA2a')],'只转已认领的',[520,Y('PA2a')-14]],
  ['9',C.rf,0,`M${L('PA3')},${Y('PA3')} H${R('AW')}`,[225,Y('PA3')],'退款 / 失败尝试手续费',[225,Y('PA3')-16]],
- ['9a',C.rf,0,`M${L('PA1')},${Y('PA1',.95)} H262 V530 H${X('AW')} V${T('AW')}`,[262,450],'收单手续费',[200,522]],
+ ['9a',C.rf,0,`M${L('PA1')},${Y('PA1',.95)} H262 V530 H${X('AW')} V${T('AW')}`,[262,505],'收单手续费',[200,522]],
  ['2b',C.rf,0,`M${R('PA3')},${Y('PA3',.2)} H600 V190 H${X('HA1',.2)} V${B('HA1')}`,[600,262],'',[0,0]],
  ['5',C.st,0,`M${R('HA3')},${Y('HA3',.15)} H${V5} V${Y('HA2',.2)} M${R('HA2')},${Y('HA2',.2)} H${V5} V${Y('HA1',.3)} M${R('HA1')},${Y('HA1',.3)} H${L('M')}`,[985,Y('HA1',.3)],'货款',[985,Y('HA1',.3)-14]],
  ['6',C.st,0,`M${R('HA1')},${Y('HA1',.55)} H${V6} V${Y('HA2',.5)} M${R('HA2')},${Y('HA2',.5)} H${V6} V${Y('CA1')} H${L('CA1')}`,[985,Y('CA1')],'佣金（账期未还挂在 Holding）',[960,Y('CA1')-16]],
@@ -202,8 +204,10 @@ const E=[
 const ROWS={1:['线上客户 → 平台主账户 · 线上收单','客户线上付款到账（按实付记，aegis 叫「买家支付」）','支付单','客户付款'],
  2:['平台主账户 · 线上收单 → Holding · 线上收单','按结算批次转到 Holding：收单金额被扣完手续费后剩下的净额（实测 7.11 − 0.24 = 6.87）','结算批次','Airwallex 自动'],
  '2b':['平台主账户 · 手续费备用金 → Holding · 线上收单','备用金垫上被扣掉的收单手续费（实测 0.24），和 ② 合起来 Holding 收到实付全额 7.11；Airwallex 在同一笔「分账划出」里完成，不是单独转账','结算批次','Airwallex 自动'],
- 3:['账期客户 → 平台主账户 · 账期还款','主推：每张结算单一个 Airwallex 二维码，金额不能改，付完自动核销；对公客户才开银行转账，转账备注结算单号，人工认领','结算单二维码 / 认领单','客户扫码 / 转账'],
- 4:['平台主账户 · 账期还款 → Holding · 账期还款','认领核销后才能转；没认领的钱留在平台主账户，不能动','资金调拨单','人工（Airwallex 不自动转）'],
+ '3a':['账期客户 → 平台主账户 · 账期还款 · 已认领','扫结算单二维码付款：金额不能改，付款时就关联到订单，自动核销，直接算「已认领」','结算单二维码','客户扫码'],
+ '3b':['账期客户 → 平台主账户 · 账期还款 · 未认领','对公银行转账：不知道还的是哪些订单，先进「未认领」，不能转 Holding、不能用来结算','—','客户转账'],
+ '3c':['平台主账户 · 账期还款：未认领 → 已认领','业务人工认领到具体订单后改为「已认领」；只是改分类，不动钱','认领单','人工'],
+ 4:['平台主账户 · 账期还款 · 已认领 → Holding · 账期还款','只有已认领（已关联订单、已核销）的钱才能转；未认领的不能转','资金调拨单','人工（Airwallex 不自动转）'],
  5:['Holding（线上 / 账期 / 垫资）→ 店铺子账户','结算货款（一个商家一张结算单，已扣负应付）','结算单','周一出单，周三 12:00 打款'],
  6:['Holding（线上 / 账期）→ 佣金账户 · 佣金收入','结算时佣金转佣金账户；<b>账期客户还没还款的订单，佣金不结算给佣金账户，挂在 Holding 待结算</b>，记在 Holding「佣金挂账」，客户还款认领核销后走 ⑥c 自动清分','结算单','随结算打款'],
  '6c':['Holding · 佣金挂账 → 佣金账户 · 佣金收入','账期订单挂着的佣金：客户还款认领核销、钱转进 Holding 后，<b>系统自动清分</b>到佣金账户','结算单','自动（还款认领核销后）'],
@@ -227,12 +231,12 @@ const OLD_ROWS={2:['平台主账户 · 线上收单 → Holding · 线上收单'
  8:['平台主账户 · 线上收单 + 手续费备用金 → 客户','退款给客户（备用金补上当初被扣的收单手续费）','退款资金单','同上'],
  9:['平台主账户 · 手续费备用金 → Airwallex','退款手续费（固定每笔）','退款资金单','退款时']};
 const OLD_HIDE=['2b'];
-const MTG=['3','4','6','6b','6c','10','11'];
-const PEND={'3':'二维码走收单通道（约 2% 手续费），算「账期还款」还是另算、手续费是否由备用金补','6b':'自营的钱能否先留在 Holding 用于给商家结算（少垫资）'};
+const MTG=['3a','3b','3c','4','6','6b','6c','10','11'];
+const PEND={'3a':'二维码走收单通道（约 2% 手续费），算「账期还款」还是另算、手续费是否由备用金补','6b':'自营的钱能否先留在 Holding 用于给商家结算（少垫资）'};
 const XE=['X',C.rf,1,`M${L('PA3')},${Y('PA3',.2)} H240 V205 H${X('C1')} V${B('C1')}`,[240,400],'',[0,0]];
 let MODE='new',VIEW='all';
-const VE={on:['1','9a','2','2b','5','6','6b','7','8','9','10','11','12','13','14','15'],cr:['3','4','5','6','6b','6c','10','11','12','13','14','15']};
-const VB={on:['C1','AW','PA1','PA3','HA1','HA3','M','CA','CA1','CA2','MB','CB'],cr:['C2','PA2','PA3','HA2','HA3','HA4','M','CA','CA1','CA2','MB','CB']};
+const VE={on:['1','9a','2','2b','5','6','6b','7','8','9','10','11','12','13','14','15'],cr:['3a','3b','3c','4','5','6','6b','6c','10','11','12','13','14','15']};
+const VB={on:['C1','AW','PA1','PA3','HA1','HA3','M','CA','CA1','CA2','MB','CB'],cr:['C2','PA2a','PA2b','PA3','HA2','HA3','HA4','M','CA','CA1','CA2','MB','CB']};
 const PV={
  on:{'5':`M${R('HA3')},${Y('HA3',.15)} H${V5} V${Y('HA1',.3)} M${R('HA1')},${Y('HA1',.3)} H${L('M')}`,'6':`M${R('HA1')},${Y('HA1',.55)} H${V6} V${Y('CA1')} H${L('CA1')}`,'11':`M${R('HA1')},${Y('HA1',.9)} H${V11} V${Y('CA',.93)} H${L('CA')}`},
  cr:{'5':`M${R('HA2')},${Y('HA2',.2)} H${V5} M${R('HA3')},${Y('HA3',.15)} H${V5} V${Y('HA1',.3)} H${L('M')}`,'6':`M${R('HA2')},${Y('HA2',.5)} H${V6} V${Y('CA1')} H${L('CA1')}`}};
@@ -241,12 +245,12 @@ function setView(v){VIEW=v;document.querySelectorAll('#vw button').forEach(b=>b.
   const bs=VB[v];Object.keys(N).forEach(k=>{const els=g.querySelectorAll(`[data-box="${k}"]`);els.forEach(e=>e.classList.toggle('mute',!!bs&&!bs.includes(k)))});
   if(SIM){const cur=SC[SCI];if(v!=='all'&&cur.g!==GN[v]){const j=SC.findIndex(x=>x.g===GN[v]);if(j>=0)pickSc(j)}else render(SI)}renderScs()}
 const GN={on:'纯线上收单',cr:'账期客户转账',mix:'两种都有'};
-const ORDER=['1','9a','2','2b','3','4','5','6','6c','6b','7','8','9','10','11','12','13','14','15'];
+const ORDER=['1','9a','2','2b','3a','3b','3c','4','5','6','6c','6b','7','8','9','10','11','12','13','14','15'];
 const g=document.getElementById('g'),ns='http://www.w3.org/2000/svg';
 const el=(t,a,txt)=>{const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;g.appendChild(e);return e};
 const defs=g.querySelector('defs');Object.entries(C).forEach(([k,c])=>{const m=document.createElementNS(ns,'marker');m.setAttribute('id','a'+k);m.setAttribute('viewBox','0 0 10 10');m.setAttribute('refX','9');m.setAttribute('refY','5');m.setAttribute('markerWidth','7');m.setAttribute('markerHeight','7');m.setAttribute('orient','auto-start-reverse');const p=document.createElementNS(ns,'path');p.setAttribute('d','M0,0 L10,5 L0,10 z');p.setAttribute('fill',c);m.appendChild(p);defs.appendChild(m)});
 /* 账户外框 */
-const FT={},NM={},BL={},BK=['PA1','PA2','PA3','HA1','HA2','HA3','HA4','CA1','CA2','M'];
+const FT={},NM={},BL={},BK=['PA1','PA2a','PA2b','PA3','HA1','HA2','HA3','HA4','CA1','CA2','M'];
 [['PA','平台主账户 PA',270,60,230,575],['HA','Holding 清分账户 HA',620,60,230,575]].forEach(([k,t,x,y,w,h])=>{el('rect',{x,y,width:w,height:h,rx:12,class:'acc'});el('text',{x:x+14,y:y+26,class:'acct'},t);FT[k]=el('text',{x:x+w-14,y:y+26,class:'ftot','text-anchor':'end'},'')});
 Object.entries(N).forEach(([k,n])=>{el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:k==='CA'?12:8,class:n.c||'box','data-box':k});if(k==='CA'){el('text',{x:n.x+14,y:n.y+24,class:'acct'},n.t);FT.CA=el('text',{x:n.x+n.w-14,y:n.y+24,class:'ftot','text-anchor':'end'},'')}else{NM[k]=el('text',{x:n.x+n.w/2,y:n.y+n.h/2,'text-anchor':'middle','dominant-baseline':'central',class:'boxt','data-box':k,'font-weight':k==='M'?600:400},n.t);if(BK.includes(k)&&k!=='HA4')BL[k]=el('text',{x:n.x+n.w/2,y:n.y+n.h/2+11,class:'bal','data-box':k},'');if(k==='HA4'){NM[k].setAttribute('y',n.y+n.h/2-9);BL.HA4=el('text',{x:n.x+n.w/2,y:n.y+n.h/2+11,class:'hsub','data-box':'HA4'},'账期未还订单的佣金')}}});
 const key=c=>Object.keys(C).find(k=>C[k]===c);
@@ -262,7 +266,7 @@ function draw(){
     el('path',{d:(PV[VIEW]&&PV[VIEW][id])||p,class:'e'+(d?' dash':''),stroke:c,'marker-end':`url(#a${key(c)})`,'data-id':id});
     const ly=id==='9'?lp[1]+38:lp[1];
     if(id==='6c'){el('text',{x:858,y:Y('HA4')-16,class:'lbl mtg','data-id':id,'text-anchor':'middle'},'还款核销后')}
-    else if(id==='2b'){el('text',{x:592,y:300,class:'lbl new','data-id':id,'text-anchor':'end'},'改：备用金垫上被扣的手续费');el('text',{x:592,y:316,class:'lbl new','data-id':id,'text-anchor':'end'},'② + ②b = 实付全额')}
+    else if(id==='2b'){el('text',{x:592,y:226,class:'lbl new','data-id':id,'text-anchor':'end'},'改：备用金垫上被扣的手续费');el('text',{x:592,y:242,class:'lbl new','data-id':id,'text-anchor':'end'},'② + ②b = 实付全额')}
     else el('text',{x:lp[0],y:ly,class:'lbl'+(ch?(old?' old':' new'):(MTG.includes(id)?' mtg':'')),'data-id':id,'text-anchor':'middle'},ch?(old?OLD_LBL[id]:'改：'+NEW_LBL[id]):lb);
     const gg=document.createElementNS(ns,'g');gg.setAttribute('class','num');gg.setAttribute('data-id',id);gg.innerHTML=`<circle cx="${np[0]}" cy="${np[1]}" r="11" fill="${c}"></circle><text x="${np[0]}" y="${np[1]}" style="font-size:${isNaN(id)?10:12}px">${id}</text>`;gg.onclick=()=>pick(id);g.appendChild(gg);
   });
@@ -287,7 +291,7 @@ const RT={
  r5_HA2:`M${R('HA2')},${Y('HA2',.2)} H${V5} V${Y('HA1',.3)} H${L('M')}`,
  r11_HA1:`M${R('HA1')},${Y('HA1',.9)} H${V11} V${Y('CA',.93)} H${L('CA')}`,
  r6b_HA1:`M${R('HA1')},${Y('HA1',.55)} H${V6} V${Y('CA2')} H${L('CA2')}`};
-const OPEN0={PA1:0,PA2:0,PA3:500,HA1:0,HA2:0,HA3:0,HA4:0,CA1:2000,CA2:0,M:0};
+const OPEN0={PA1:0,PA2a:0,PA2b:0,PA3:500,HA1:0,HA2:0,HA3:0,HA4:0,CA1:2000,CA2:0,M:0};
 const MEMO0={'未认领资金':0,'未收回垫资':0,'商家负应付':0,'坏账核销（客户应收）':0,HANG:0};
 const SC=[
  {g:'纯线上收单',k:'w',n:'纯线上一周全流程',x:'商家 A，佣金 10%，收单手续费 2%。线上订单 O1 100、O2 50（O2 结算前全额退款）',steps:[
@@ -305,15 +309,14 @@ const SC=[
   {e:'14',d:{M:-90},h:'商家提现 90',x:''},
   {e:'12',d:{CA1:-3.13,PA3:3.13},h:'补备用金 3.13（本周手续费）',x:'示例：把备用金补回 500',end:'结果：Holding、线上收单清零；佣金账户净 +6.87 = 佣金 10 − 本周手续费 3.13。'}]},
  {g:'账期客户转账',k:'w',n:'账期一周全流程',x:'商家 B，佣金 10%。账期订单 K1 100（结算前已还）、K2 200（结算时没还，下周还）',steps:[
-  {e:'3',d:{PA2:100},m:{'未认领资金':100},h:'K1 客户扫结算单二维码还款 100',x:'二维码金额不能改，付完自动核销。（二维码手续费归属待确认，这里先不扣）'},
-  {e:null,d:{},m:{'未认领资金':-100},h:'K1 自动核销',x:''},
-  {e:'4',d:{PA2:-100,HA2:100},h:'K1 转进 Holding · 账期还款',x:''},
+  {e:'3a',d:{PA2a:100},h:'K1 客户扫结算单二维码还款 100，自动关联 K1',x:'直接算已认领。（二维码手续费归属待确认，这里先不扣）'},
+  {e:'4',d:{PA2a:-100,HA2:100},h:'K1 转进 Holding · 账期还款',x:''},
   {e:'10',d:{CA1:-180,HA3:180},m:{'未收回垫资':180},h:'周三打款前：K2 没还，垫扣佣金后的 180',x:'只垫没还的 K2'},
   {e:'5',d:{HA2:-90,HA3:-180,M:270},h:'结算：K1 90 + K2 180 = 打给商家 270',x:''},
   {e:'6',r:'r6_HA2',d:{HA2:-10,CA1:10},m:{HANG:20},h:'K1 佣金 10 转佣金账户；K2 佣金 20 挂在 Holding',x:''},
-  {e:'3',d:{PA2:200},m:{'未认领资金':200},h:'下周 K2 对公转账还款 200',x:'转账备注结算单号'},
-  {e:null,d:{},m:{'未认领资金':-200},h:'K2 人工认领核销',x:'没认领前留在平台主账户'},
-  {e:'4',d:{PA2:-200,HA2:180,HA4:20},h:'K2 转进 Holding：180 进账期还款，20 进佣金挂账',x:''},
+  {e:'3b',d:{PA2b:200},h:'下周 K2 客户对公转账 200',x:'系统不知道还的是哪些单，先进未认领'},
+  {e:'3c',d:{PA2b:-200,PA2a:200},h:'业务人工认领到 K2',x:'没认领前这 200 不能转 Holding'},
+  {e:'4',d:{PA2a:-200,HA2:180,HA4:20},h:'K2 转进 Holding：180 进账期还款，20 进佣金挂账',x:''},
   {e:'6c',d:{HA4:-20,CA1:20},m:{HANG:-20},h:'自动清分：K2 佣金 20 → 佣金账户',x:'系统自动'},
   {e:'11',d:{HA2:-180,CA1:180},m:{'未收回垫资':-180},h:'按垫资单收回 K2 垫资 180',x:'人工发起'},
   {e:'14',d:{M:-270},h:'商家提现 270',x:'',end:'结果：账期还款、Holding 清零；佣金账户净 +30（K1 10 + K2 20）；垫资全部收回。'}]},
@@ -331,9 +334,9 @@ const SC=[
   {e:'10',d:{CA1:-180,HA3:180},m:{'未收回垫资':180},h:'周三打款前：K1 客户没还，垫扣佣金后的 180',x:'垫资单列明 K1'},
   {e:'5',d:{HA1:-90,HA3:-180,M:270},h:'结算：O1 90 + K1 180 = 打给商家 270',x:'O2 已退款，不结算'},
   {e:'6',r:'r6_HA1',d:{HA1:-10,CA1:10},m:{HANG:20},h:'O1 佣金 10 转佣金账户；K1 佣金 20 挂在 Holding',x:'看 Holding 里的「佣金挂账」'},
-  {e:'3',d:{PA2:200},m:{'未认领资金':200},h:'下周 K1 客户还款 200',x:'扫结算单二维码自动核销；对公转账要人工认领'},
-  {e:null,d:{},m:{'未认领资金':-200},h:'认领核销 K1',x:''},
-  {e:'4',d:{PA2:-200,HA2:180,HA4:20},h:'转进 Holding：180 进账期还款，20 进佣金挂账',x:''},
+  {e:'3b',d:{PA2b:200},h:'下周 K1 客户对公转账 200',x:'先进未认领'},
+  {e:'3c',d:{PA2b:-200,PA2a:200},h:'业务人工认领到 K1',x:''},
+  {e:'4',d:{PA2a:-200,HA2:180,HA4:20},h:'转进 Holding：180 进账期还款，20 进佣金挂账',x:''},
   {e:'6c',d:{HA4:-20,CA1:20},m:{HANG:-20},h:'自动清分：K1 佣金 20 → 佣金账户',x:'系统自动'},
   {e:'11',d:{HA2:-180,CA1:180},m:{'未收回垫资':-180},h:'按垫资单收回 K1 垫资 180',x:'人工发起'},
   {e:'14',d:{M:-270},h:'商家提现 270',x:'商家自己发起'},
@@ -354,18 +357,17 @@ const SC=[
   {e:'2b',d:{PA3:-2,HA1:2},h:'备用金垫上 2，Holding 收足 100',x:''},
   {e:'6b',r:'r6b_HA1',d:{HA1:-100,CA2:100},h:'清分：整单 100 分到佣金账户 · 自营收入',x:'自营和三方商家一样走清分，佣金比例 0',warn:'⚠ 待确认：自营的钱能否先留在 Holding，用来给三方商家结算（少垫资）',end:'结果：自营收入 +100；备用金 −2。'}]},
  {g:'账期客户转账',k:'f',n:'账期订单 · 结算前已还款',x:'例：订单 100，佣金 10，应付商家 90；客户在周三结算前就还了，不用垫资',steps:[
-  {e:'3',d:{PA2:100},m:{'未认领资金':100},h:'客户还款 100 进平台主账户 · 账期还款',x:'扫结算单二维码自动核销；对公转账要人工认领'},
-  {e:null,d:{},m:{'未认领资金':-100},h:'认领核销',x:'没认领前不能转 Holding'},
-  {e:'4',d:{PA2:-100,HA2:100},h:'转进 Holding · 账期还款',x:''},
+  {e:'3a',d:{PA2a:100},h:'客户扫结算单二维码还款 100，自动关联订单',x:'直接算已认领'},
+  {e:'4',d:{PA2a:-100,HA2:100},h:'转进 Holding · 账期还款',x:''},
   {e:'5',r:'r5_HA2',d:{HA2:-90,M:90},h:'周三结算：从账期还款给商家打 90',x:''},
   {e:'6',r:'r6_HA2',d:{HA2:-10,CA1:10},h:'佣金 10 随结算直接转佣金账户',x:'客户已还款，不用挂账',end:'结果：不需要垫资；Holding 清零；佣金 +10。'}]},
  {g:'账期客户转账',k:'f',n:'账期订单 · 垫资 → 还款 → 收回',x:'例：订单 100，佣金 10，应付商家 90；结算日客户还没还款',steps:[
   {e:'10',d:{CA1:-90,HA3:90},m:{'未收回垫资':90},h:'打款前：这单客户没还款，按扣佣金后的 90 垫资',x:'垫资单列明这张订单；垫资总额接近阈值会预警'},
   {e:'5',r:'r5_HA3',d:{HA3:-90,M:90},h:'周三结算：用垫资给商家打 90',x:'商家按时拿到钱'},
   {e:'6',r:'',d:{},m:{HANG:10},h:'佣金 10 不结算给佣金账户，挂在 Holding',x:'看 Holding 里的「佣金挂账」：记了 10 待结算，但客户还没付钱，这时还没有对应的钱'},
-  {e:'3',d:{PA2:100},m:{'未认领资金':100},h:'客户还款 100 进平台主账户 · 账期还款',x:'扫结算单二维码会自动核销；对公转账要人工认领。（二维码的手续费归属待确认，这里先不扣）'},
-  {e:null,d:{},m:{'未认领资金':-100},h:'认领核销：确认是这张结算单的钱',x:'没认领前这 100 只能留在平台主账户，不能转 Holding、不能用来结算'},
-  {e:'4',d:{PA2:-100,HA2:90,HA4:10},h:'核销后转进 Holding：90 进账期还款，10 进佣金挂账',x:'这 100 里 90 对应垫资，10 就是这单挂着的佣金，钱到了'},
+  {e:'3b',d:{PA2b:100},h:'客户对公转账还款 100',x:'不知道还的是哪些单，先进未认领'},
+  {e:'3c',d:{PA2b:-100,PA2a:100},h:'业务人工认领到这张订单',x:'没认领前这 100 只能留在平台主账户，不能转 Holding、不能用来结算'},
+  {e:'4',d:{PA2a:-100,HA2:90,HA4:10},h:'核销后转进 Holding：90 进账期还款，10 进佣金挂账',x:'这 100 里 90 对应垫资，10 就是这单挂着的佣金，钱到了'},
   {e:'6c',d:{HA4:-10,CA1:10},m:{HANG:-10},h:'自动清分：佣金挂账 10 → 佣金账户 · 佣金收入',x:'系统自动，不用人工操作'},
   {e:'11',d:{HA2:-90,CA1:90},m:{'未收回垫资':-90},h:'按垫资单逐单收回垫资 90',x:'人工发起，只能收回这张垫资单对应订单的钱',end:'结果：垫资 90 收回、佣金 10 到账，佣金账户净 +10；Holding 清零。'}]},
  {g:'两种都有',k:'f',n:'一张结算单 · 线上 + 账期混合',x:'例：商家同一周有线上订单 100（已付）和账期订单 200（未还），佣金 10%',steps:[
@@ -417,6 +419,11 @@ const SC=[
   {e:null,d:{},m:{'未收回垫资':-90,HANG:-10,'坏账核销（客户应收）':100},h:'按坏账核销流程处理',x:'垫资 90 转坏账损失，挂账佣金 10 冲销；不动钱',end:'结果：佣金账户少了垫出去的 90；Holding 不受影响。'}]},
  {g:'纯线上收单',k:'r',n:'支付失败',x:'客户付款失败（金额 0），网关费照收',steps:[
   {e:'9',d:{PA3:-0.1},h:'支付失败也收网关费 0.10（备用金出）',x:'测试环境实测：买家支付 +0.00，手续费 0.10',end:'备用金水位要把这类费用算进去。'}]},
+{g:'账期客户转账',k:'r',n:'对公转账 · 部分认领不出来',x:'客户对公转账 300，业务只能认领到订单 K3（200），另外 100 不知道是哪张单',steps:[
+  {e:'3b',d:{PA2b:300},h:'客户对公转账 300',x:'没写清还哪些单，全部先进未认领'},
+  {e:'3c',d:{PA2b:-200,PA2a:200},h:'业务认领到 K3：200 改为已认领',x:''},
+  {e:'4',d:{PA2a:-200,HA2:200},h:'已认领的 200 转进 Holding · 账期还款',x:'后面按 K3 正常结算或收回垫资'},
+  {e:null,d:{},h:'剩下 100 认领不出来',x:'留在「账期还款 · 未认领」：不能转 Holding、不能用来结算，等业务继续认领（或退回客户）',end:'结果：平台主账户 · 账期还款 · 未认领还剩 100。'}]},
 /* ===== 资金调拨 ===== */
  {g:'纯线上收单',k:'a',n:'补备用金 / 回收',x:'例：备用金只剩 150，低于水位（示例 200），补到目标额（示例 1,000）；水位按日均单量重估，数值待定',open:{PA3:150},steps:[
   {e:'12',d:{CA1:-850,PA3:850},h:'从佣金账户补 850，备用金回到 1,000',x:'资金划转按类型自动绑定转出 / 转入，不让人选账户'},
@@ -427,8 +434,10 @@ const EXPL={
  '9a':'Airwallex 按费率直接从这笔收单金额里扣手续费，平台主账户只收到扣完后的净额',
  '2':'每天结算批次时，Airwallex 自动把这批订单的钱分到 Holding；这一条是扣完手续费后的净额部分',
  '2b':'Holding 要收到客户实付的全额，被扣掉的手续费由备用金补上；它和 ② 在 Airwallex 里是同一笔分账',
- '3':'账期客户还款进平台主账户的「账期还款」：扫结算单二维码自动核销，对公转账要人工认领',
- '4':'认领核销后，把这笔钱从平台主账户转到 Holding 的「账期还款」；没认领的钱不能转',
+ '3a':'客户扫结算单二维码付款，付款时就关联到订单，直接进「账期还款 · 已认领」',
+ '3b':'客户对公转账，不知道还的是哪些订单，先进「账期还款 · 未认领」，不能转 Holding',
+ '3c':'业务人工把这笔钱认领到具体订单，从「未认领」改为「已认领」；只改分类，不动钱',
+ '4':'只有「已认领」的钱才能从平台主账户转到 Holding 的「账期还款」',
  '5':'周一出结算单、周三 12:00 打款：从 Holding 把货款打到商家的店铺子账户',
  '6':'结算时把平台佣金从 Holding 转到佣金账户；账期客户没还款的订单，佣金先挂在 Holding',
  '6b':'自营订单和三方商家一样走清分，佣金比例 0，整单分到佣金账户的「自营收入」',
@@ -442,7 +451,7 @@ const EXPL={
  '13':'备用金超过目标额的部分，收回佣金账户',
  '14':'商家把店铺子账户里的钱提现到自己的银行卡'};
 const EXPL_NULL='这一步不动钱，只在系统里记账（认领核销 / 台账处理）';
-const BN={PA1:'平台主账户·线上收单',PA2:'平台主账户·账期还款',PA3:'平台主账户·手续费备用金',HA1:'Holding·线上收单',HA2:'Holding·账期还款',HA3:'Holding·平台垫资',HA4:'Holding·佣金挂账',CA1:'佣金账户·佣金收入',CA2:'佣金账户·自营收入',M:'店铺子账户'};
+const BN={PA1:'平台主账户·线上收单',PA2a:'平台主账户·账期还款·已认领',PA2b:'平台主账户·账期还款·未认领',PA3:'平台主账户·手续费备用金',HA1:'Holding·线上收单',HA2:'Holding·账期还款',HA3:'Holding·平台垫资',HA4:'Holding·佣金挂账',CA1:'佣金账户·佣金收入',CA2:'佣金账户·自营收入',M:'店铺子账户'};
 function setSpd(v){SPD=v;document.querySelectorAll('#spd button').forEach(b=>b.classList.toggle('on',+b.dataset.s===v));if(AUTO){clearInterval(AUTO);AUTO=setInterval(()=>simGo(SI+1),SPD)}}
 function stepHtml(sc,i,st){const ch=Object.entries(st.d||{}).map(([k,v])=>`${BN[k]} <b class="${v<0?'dn':'dp'}">${v>0?'+':''}${fm(v)}</b>`).join('；');const mm=Object.entries(st.m||{}).filter(([k])=>!/^HANG/.test(k)).map(([k,v])=>`${k} ${v>0?'+':''}${fm(v)}`).concat(st.m&&st.m.HANG?[`佣金挂账 ${st.m.HANG>0?'+':''}${fm(st.m.HANG)}`]:[]).join('；');
   return `<div class="h">第 ${i} / ${sc.steps.length} 步 · ${st.e?'<span class="mono">'+st.e+'</span> ':''}${st.h}</div>`+
@@ -455,9 +464,9 @@ const r2=v=>Math.round(v*100)/100;
 function stateAt(i){const sc=SC[SCI];const b={...OPEN0,...(sc.open||{})},m={...MEMO0,...(sc.memo||{})};sc.steps.slice(0,i).forEach(st=>{for(const k in st.d)b[k]=r2(b[k]+st.d[k]);for(const k in (st.m||{}))m[k]=r2(m[k]+st.m[k])});return {b,m}}
 function render(i){g.querySelectorAll('.dlt,.dot').forEach(e=>e.remove());const {b,m}=stateAt(i);
   BK.forEach(k=>{if(k==='HA4')return;BL[k].textContent=fm(b[k]);BL[k].classList.toggle('neg',b[k]<0)});
-  FT.PA.textContent=fm(r2(b.PA1+b.PA2+b.PA3));FT.HA.textContent=fm(r2(b.HA1+b.HA2+b.HA3+b.HA4));FT.CA.textContent=fm(r2(b.CA1+b.CA2));
+  FT.PA.textContent=fm(r2(b.PA1+b.PA2a+b.PA2b+b.PA3));FT.HA.textContent=fm(r2(b.HA1+b.HA2+b.HA3+b.HA4));FT.CA.textContent=fm(r2(b.CA1+b.CA2));
   BL.HA4.textContent=fm(m.HANG)+(m.HANG?(b.HA4>=m.HANG?'（已到账）':'（客户未还，钱未到）'):'');BL.HA4.classList.add('v');
-  document.getElementById('sMemo').innerHTML=Object.entries(m).filter(([k,v])=>!/^HANG/.test(k)&&(v||['未认领资金','未收回垫资'].includes(k))).map(([k,v])=>`<div class="r"><span>${k}</span><b>${fm(v)}</b></div>`).join('');
+  document.getElementById('sMemo').innerHTML=Object.entries(m).filter(([k,v])=>!/^HANG/.test(k)&&(v||['未收回垫资'].includes(k))&&k!=='未认领资金').map(([k,v])=>`<div class="r"><span>${k}</span><b>${fm(v)}</b></div>`).join('');
   const sc=SC[SCI],st=sc.steps[i-1];
   const nowH=i===0?`<div class="h">${sc.n}</div><div class="ln">${sc.x}</div><div class="ln" style="color:var(--tx3)">点「下一步」或「自动播放」开始</div>`:stepHtml(sc,i,st);
   document.getElementById('sNow').innerHTML=nowH;document.getElementById('cap').innerHTML=nowH;
