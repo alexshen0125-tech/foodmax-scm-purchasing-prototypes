@@ -15,6 +15,8 @@ const SHOPS = {
   'SH2026070200004':{name:'海丰水产旗舰店',   merchant:'M2026-0902'},
   'SH2026070200005':{name:'万丰肉禽旗舰店',   merchant:'M2026-1103'},
   'SH2026071500006':{name:'南洋鲜果行',       merchant:''},
+  'SH2026072000007':{name:'阳光烘焙原料店',   merchant:'M2026-0820'},
+  'SH2026080300008':{name:'金狮干货行',       merchant:''},
 };
 const shopName = c => (SHOPS[c]||{}).name || c;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -80,7 +82,7 @@ function pfCalc(){
 
 /* ================= 页面一：自提运费规则 ================= */
 PAGES['p-pickfee-rule']=()=>{
-  const rows=Object.keys(SHOPS).map(s=>{
+  const rows=Object.keys(SHOPS).filter(s=>curRule(s)).map(s=>{
     const v=curRule(s), vers=(DB.pfRules[s]||[]).length;
     return `<tr>
       <td style="white-space:nowrap"><b>${esc(shopName(s))}</b></td>
@@ -90,20 +92,23 @@ PAGES['p-pickfee-rule']=()=>{
       <td>${v&&v.mode=='GMV'?(v.cap?money(v.cap):'不封顶'):'<span style="color:var(--ts)">—</span>'}</td>
       <td style="white-space:nowrap">${v?v.from:'<span style="color:var(--ts)">—</span>'}</td>
       <td>${v?esc(v.by):'<span style="color:var(--ts)">—</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_edit('${s}')">${v?'修改':'设置'}</button>${vers?` <button class="btn btn-link" onclick="pf_hist('${s}')">变更记录</button>`:''}</td>
+      <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_edit('${s}')">修改</button>${vers?` <button class="btn btn-link" onclick="pf_hist('${s}')">变更记录</button>`:''}</td>
     </tr>`;}).join('');
   return `${flowTip('')}
-  <div class="card"><div class="card-hd"><h3>自提运费规则</h3><span class="sub">平台按店铺指定 · 未设置的店铺不收运费</span></div>
+  <div class="card"><div class="card-hd"><h3>自提运费规则</h3><span class="sub">已设置 ${Object.keys(SHOPS).filter(s=>curRule(s)).length} 家店铺 · 未设置的店铺不收运费</span><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>店铺名称</th><th>店铺编码</th><th>计费方式</th><th>收费标准</th><th>每日封顶</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
-      <tbody>${rows}</tbody></table></div></div></div>`;
+      <tbody>${rows||'<tr><td colspan="8"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置自提运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置计费方式</div></div></td></tr>'}</tbody></table></div></div></div>`;
 };
 window.pf_edit=function(s){
+  const isNew=!s, free=Object.keys(SHOPS).filter(k=>!curRule(k));
+  if(isNew&&!free.length){toast('所有店铺都已设置收费规则','info');return;}
   const v=curRule(s)||{mode:'TRIP', price:80, rate:0.02, cap:''};
   const m=v.mode=='OFF'?'TRIP':v.mode;
-  modal(`<div class="mc-hd"><h3>${curRule(s)?'修改':'设置'}自提运费 · ${esc(shopName(s))}</h3><p>${s}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modal(`<div class="mc-hd"><h3>${isNew?'新增收费规则':'修改自提运费 · '+esc(shopName(s))}</h3>${isNew?'':`<p>${s}</p>`}<button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    ${isNew?`<div class="fr"><label class="fl"><b>*</b>店铺</label><select id="pf-shop"><option value="">请选择店铺</option>${free.map(k=>`<option value="${k}">${esc(shopName(k))}（${k}）</option>`).join('')}</select></div>`:''}
     <div class="fr"><label class="fl"><b>*</b>计费方式</label>
-      <div class="row" style="gap:18px">${['TRIP','GMV','OFF'].map(k=>`<label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="radio" name="pf-mode" value="${k}" ${(v.mode||m)==k?'checked':''} onchange="pf_modeSw()">${MODE[k]}</label>`).join('')}</div></div>
+      <div class="row" style="gap:18px">${(isNew?['TRIP','GMV']:['TRIP','GMV','OFF']).map(k=>`<label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer"><input type="radio" name="pf-mode" value="${k}" ${(v.mode||m)==k?'checked':''} onchange="pf_modeSw()">${MODE[k]}</label>`).join('')}</div></div>
     <div id="pf-trip" class="fr" style="display:${(v.mode||m)=='TRIP'?'':'none'}"><label class="fl"><b>*</b>每次金额</label>
       <div class="row" style="gap:6px;align-items:center">$ <input id="pf-price" type="number" step="0.01" min="0.01" value="${v.price||''}" style="max-width:140px"> / 次</div></div>
     <div id="pf-gmv" style="display:${(v.mode||m)=='GMV'?'':'none'}">
@@ -120,6 +125,7 @@ window.pf_modeSw=function(){
   document.getElementById('pf-gmv').style.display=m=='GMV'?'':'none';
 };
 window.pf_save=function(s){
+  if(!s){ s=(document.getElementById('pf-shop')||{}).value; if(!s){toast('请选择店铺','err');return;} }
   const m=(document.querySelector('input[name=pf-mode]:checked')||{}).value, nv={mode:m};
   if(m=='TRIP'){ const p=parseFloat(document.getElementById('pf-price').value); if(!(p>0)){toast('请填写每次金额（大于 0）','err');return;} nv.price=+p.toFixed(2); }
   if(m=='GMV'){
@@ -130,18 +136,19 @@ window.pf_save=function(s){
   }
   const old=curRule(s);
   if(old && old.mode==nv.mode && ruleText(old)==ruleText(nv)){toast('规则没有变化','info');return;}
-  modal(`<div class="mc-hd"><h3>确认修改自提运费</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modal(`<div class="mc-hd"><h3>${old?"确认修改自提运费":"确认新增收费规则"}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <table class="subtbl"><tbody>
       <tr><td style="color:var(--ts);width:90px">店铺</td><td>${esc(shopName(s))}</td></tr>
-      <tr><td style="color:var(--ts)">原规则</td><td>${ruleText(old)}</td></tr>
+      <tr><td style="color:var(--ts)">原规则</td><td>${old?ruleText(old):'未设置（不收费）'}</td></tr>
       <tr><td style="color:var(--ts)">新规则</td><td><b>${ruleText(nv)}</b></td></tr>
     </tbody></table>
     <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>保存后从<b>下一次取货</b>起按新规则计费，已经取过的货不重算。</div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="pf_edit('${s}')">返回修改</button><button class="btn btn-p" onclick='pf_commit("${s}",${JSON.stringify(nv)})'>确认保存</button></div>`);
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="pf_edit('${old?s:''}')">返回修改</button><button class="btn btn-p" onclick='pf_commit("${s}",${JSON.stringify(nv)})'>确认保存</button></div>`);
 };
 window.pf_commit=function(s,nv){
   (DB.pfRules[s]=DB.pfRules[s]||[]).push({...nv, from:ts(), by:'当前账号'});
-  closeModal(); render(); toast('已保存，下一次取货起按新规则计费','ok');
+  const isNew=DB.pfRules[s].length==1;
+  closeModal(); render(); toast(isNew?'已新增，下一次取货起开始收运费':'已保存，下一次取货起按新规则计费','ok');
 };
 window.pf_hist=function(s){
   const vers=(DB.pfRules[s]||[]).slice().reverse();
