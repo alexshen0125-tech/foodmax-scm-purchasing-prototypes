@@ -752,6 +752,10 @@ const DB = {
     {id:'#SG20260630004',client:'新味坊',contact:'吴敏',phone:'+65 8123 9920',addr:'Toa Payoh Lor 4 #01-03',orderTime:'06-29 18:30',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
     // 饮料订单（含 BCRS 押金）：行项 bcrsContainers=该售卖规格单位容器数，行押金=件数×容器数×0.10（椰子水 24瓶/箱→10×24×0.1=24、1瓶→20×1×0.1=2）
     {id:'#SG20260630005',client:'珍宝海鲜（新加坡）',contact:'李经理',phone:'+65 8222 3344',addr:'Jurong East St 21 #01-05',orderTime:'06-30 11:20',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:600.00,discount:0,platSub:0,lines:[{sku:'SKU8826',name:'NFC 椰子水 24瓶/箱',qty:10,unit:'箱',spec:'24瓶/箱(330ml)',price:55.00,bcrsContainers:24},{sku:'SKU8825',name:'NFC 椰子水',qty:20,unit:'瓶',spec:'330ml/瓶',price:2.50,bcrsContainers:1}],status:'pending',labels:[],pickId:'',deliveryId:'',note:''},
+    // 部分 SKU 取消订单：行 cancelQty=该 SKU 取消数量（≤qty），cancelReason/cancelAt=取消原因/时间；取消部分已原路退款客户、不计入订单金额（amt=Σ(下单数量−取消数量)×单价）
+    // 与售后单关联：DB.afterSales[].order==订单号 → 订单详情展示售后单号，点击跳转售后详情
+    {id:'#SG20260702018',client:'食为天餐厅',contact:'林女士',phone:'+65 8990 2231',addr:'Geylang Lor 9 #01-22',orderTime:'07-01 20:15',deliver:'07-02',deliverWindow:'06:00~10:00',warehouse:'兀兰DC',amt:116.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:20,unit:'件',spec:'1kg/件',price:5.80},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',spec:'1kg/件',price:3.50,cancelQty:10,cancelReason:'商家缺货',cancelAt:'07-01 22:40'}],status:'received',labels:[],pickId:'',deliveryId:'',note:''},
+    {id:'#SG20260701012',client:'鼎泰丰',contact:'陈店长',phone:'+65 8765 1203',addr:'Paragon Orchard Rd #B1-03',orderTime:'06-30 19:40',deliver:'07-01',deliverWindow:'06:00~10:00',warehouse:'裕廊DC',amt:167.20,discount:0,lines:[{sku:'SKU8813',name:'芥蓝',qty:4,unit:'件',spec:'10kg/件',price:32.50},{sku:'SKU8801',name:'小棠菜',qty:6,unit:'件',spec:'1kg/件',price:9.30,cancelQty:2,cancelReason:'客户取消',cancelAt:'06-30 21:05'}],status:'received',labels:[],pickId:'',deliveryId:'',note:''},
   ],
   // 备货单(JH)/送货单(SH)：备货单按 送达日 自动成单（一天一张）；贴码后按仓拆成送货单
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
@@ -3085,7 +3089,8 @@ PAGES['m-pick']=()=>{ ensurePickOrders(); return `<div class="empty"><div class=
 /* ---------- 商家端：订单履约（闭环C 商家侧） ---------- */
 PAGES['m-order']=()=>{
   const cfg=DB.orderCfg;
-  const list=ordTab=='all'?DB.orders:DB.orders.filter(o=>ordCoarse(o.status)==ordTab);
+  const list=ordFiltered().filter(o=>ordTab=='all'||ordCoarse(o.status)==ordTab);
+  const of=DB.ordFilter||{};
   return `
   <div class="row" style="justify-content:flex-end;margin-bottom:14px;align-items:center">
     <div style="display:flex;gap:8px">
@@ -3094,16 +3099,23 @@ PAGES['m-order']=()=>{
       <button class="btn btn-o btn-sm" onclick="ord_settings()">⏰ 截止 ${cfg.cutoff}</button>
     </div>
   </div>
+  <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">订单号</div><input id="of-id" value="${of.id||''}" placeholder="请输入订单号" style="min-width:180px" onkeydown="if(event.key=='Enter')ordQuery()"></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">退款标识</div><select id="of-cx" style="min-width:140px"><option value="">全部</option><option value="part" ${of.cx=='part'?'selected':''}>部分退款</option><option value="none" ${of.cx=='none'?'selected':''}>无</option></select></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">售后</div><select id="of-as" style="min-width:140px"><option value="">全部</option><option value="has" ${of.as=='has'?'selected':''}>有售后</option><option value="none" ${of.as=='none'?'selected':''}>无售后</option></select></div>
+    <button class="btn btn-p btn-sm" onclick="ordQuery()">查询</button><button class="btn btn-o btn-sm" onclick="ordReset()">重置</button>
+  </div></div>
   <div class="tabs">${ORD_TABS.map(t=>`<div class="tab ${ordTab==t[0]?'active':''}" onclick="ordTab='${t[0]}';render()">${t[1]}${ordTabCount(t[0])?`<span class="tb" style="background:var(--ts)">${ordTabCount(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span><div><b>多退少补金额</b>（按重量定价商品）= Σ<b>(实发净重 − 应发净重) × 单价</b>，<b>+</b>为多发补款客户、<b>−</b>为少发退款客户；<b>平台佣金变更</b> = 多退少补金额 × 该行品类佣金率（服务+物流），补款佣金增、退款佣金减。<b>结算后预计收入 = 预估收入 + 多退少补金额 − 佣金变更</b>。货到仓库 WMS 重新分拣分配后按各订单实际分配重量结算（收货/完成即定稿）。</div></div>
   <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · <b>实付金额 = 订单金额 − 商家补贴</b>（客户实际支付）· 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>订单号</th><th>客户名称</th><th>送达时间</th><th>仓库</th><th>状态</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额（商家让利已在客户实付中扣除，不重复扣）">实付金额</th><th style="text-align:right">平台服务费<span style="font-weight:400">(预估)</span></th><th style="text-align:right" title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th style="text-align:right">预计收入<span style="font-weight:400">(预估)</span></th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>订单号</th><th>客户名称</th><th>送达时间</th><th>仓库</th><th>状态</th><th title="部分退款 = 订单内有 SKU 被取消（全部或部分数量），取消部分已原路退款客户；整单取消见「已取消」">退款标识</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额（商家让利已在客户实付中扣除，不重复扣）">实付金额</th><th style="text-align:right">平台服务费<span style="font-weight:400">(预估)</span></th><th style="text-align:right" title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th style="text-align:right">预计收入<span style="font-weight:400">(预估)</span></th><th>操作</th></tr></thead><tbody>
     ${list.map((o)=>{const i=DB.orders.indexOf(o);return `<tr>
       <td class="mono">${o.id}</td>
       <td>${ord_mask(o.client)}</td>
       <td>${o.deliver?o.deliver+(o.deliverWindow?' '+o.deliverWindow.split('~')[0]:''):'—'}</td>
       <td>${o.warehouse||'—'}</td>
       <td>${ordTag(o)}${o.status=='pending'?'<div style="font-size:11px;color:var(--ts);margin-top:2px">待分拣贴标</div>':o.status=='packed'?'<div style="font-size:11px;color:var(--pp);margin-top:2px">已贴标·待交接</div>':''}</td>
+      <td>${ordCxTag(o)}</td>
       <td style="text-align:right"><b>${money(o.amt)}</b></td>
       <td style="text-align:right;color:var(--r)">${ord_disc(o)>0?'-':''}${money(ord_disc(o))}</td>
       <td style="text-align:right"><b>${money(ord_paid(o))}</b></td>
@@ -3111,7 +3123,7 @@ PAGES['m-order']=()=>{
       <td style="text-align:right">${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${f>0?'+':''}${money(f)}</div>`;})()}</td>
       <td style="text-align:right"><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ord_ops(o,i)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">该状态暂无订单</td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">没有符合条件的订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
@@ -3119,7 +3131,20 @@ let ordTab='all';
 const ORD_TABS=[['all','全部'],['pending','待发货'],['shipped','备货中'],['received','已收货'],['done','已完成'],['canceled','已取消']];
 function ordCoarse(s){return s=='packed'?'pending':s;}                 // 已贴标为待发货内子态，状态列归“待发货”
 function ordTag(o){return tag('order',ordCoarse(o.status));}
-function ordTabCount(t){return t=='all'?DB.orders.length:DB.orders.filter(o=>ordCoarse(o.status)==t).length;}
+function ordTabCount(t){const L=ordFiltered();return t=='all'?L.length:L.filter(o=>ordCoarse(o.status)==t).length;}
+/* 部分 SKU 取消 → 「部分退款」标识：订单内 ≥1 行 cancelQty>0 且订单非整单取消；取消部分已原路退款客户、不计入订单金额 */
+function lineCxQty(l){return +l.cancelQty||0;}                        // 该 SKU 取消数量
+function lineEffQty(l){return l.qty-lineCxQty(l);}                    // 实际履约数量 = 下单数量 − 取消数量
+function ordCxLines(o){return (o.lines||[]).filter(l=>lineCxQty(l)>0);}
+function ordIsPartCx(o){return o.status!='canceled'&&ordCxLines(o).length>0;}
+function ordCxAmt(o){return ordCxLines(o).reduce((s,l)=>s+lineCxQty(l)*l.price,0);}   // 取消退款金额 = Σ 取消数量 × 单价
+function ordCxTag(o){return ordIsPartCx(o)?`<span class="tag t-y" style="font-size:11px" title="${ordCxLines(o).length} 个 SKU 已取消，已退款客户 ${money(ordCxAmt(o))}">部分退款</span>`:'<span style="color:var(--tt)">—</span>';}
+function ordAfters(o){return DB.afterSales.map((a,i)=>({a,i})).filter(x=>x.a.order==o.id);}  // 订单关联的售后单
+/* 订单列表筛选：订单号（模糊）/ 退款标识（部分退款/无）/ 售后（有/无），与状态 Tab 叠加，Tab 计数随筛选 */
+function ordFiltered(){const f=DB.ordFilter||{};return DB.orders.filter(o=>(!f.id||o.id.toLowerCase().includes(f.id.toLowerCase()))&&(!f.cx||(f.cx=='part'?ordIsPartCx(o):!ordIsPartCx(o)))&&(!f.as||(f.as=='has'?ordAfters(o).length>0:!ordAfters(o).length)));}
+function ordQuery(){const g=id=>(document.getElementById(id)||{}).value||'';DB.ordFilter={id:g('of-id').trim(),cx:g('of-cx'),as:g('of-as')};render();}
+function ordReset(){DB.ordFilter={};render();}
+function ord_goAfter(i){closeDrawer();nav('m-aftersale');setTimeout(()=>act_afterDetail(i),60);}   // 订单详情 → 售后详情
 function ord_items(o){return o.lines?o.lines.map(l=>`${l.name} ${l.qty}${l.unit}`).join(' · '):(o.items||'');}
 function ord_mask(n){return n?n[0]+'****':'—';}                     // 客户信息脱敏：只保留首字
 /* 后台类目树（采购分类，货品中心维护）——真实模型 CategoryItem{id,name,parentId,parentName,path,pathName,children}；
@@ -3160,7 +3185,7 @@ function commTotal(code,leafId,dateStr){const r=commRates(code,leafId,dateStr);r
 const PRODUCT_BACK_CAT={'小棠菜':31,'娃娃菜':31,'白菜':31,'菠菜':31,'芥蓝':31,'空心菜':31,'土豆':32,'冰鲜三文鱼':1,'三文鱼':1,'生蚝':1,'鸡胸肉':41};
 const FRONT2BACK={'新鲜蔬菜':3,'海鲜水产':1,'肉禽蛋品':4,'调味品':5};
 function lineCat(l){if(PRODUCT_BACK_CAT[l.name]!=null)return PRODUCT_BACK_CAT[l.name];const p=DB.products.find(x=>x.name==l.name)||DB.products.find(x=>(x.skus||[]).some(s=>s.skuId==l.sku));return (p&&FRONT2BACK[p.cat])||3;}
-function ord_feeParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';return (o.lines||[]).reduce((a,l)=>{const r=commRates(code,lineCat(l),d),amt=l.qty*l.price;a.svc+=amt*r.svc;a.logi+=amt*r.logi;return a;},{svc:0,logi:0});} // 平台佣金=各行 品类费率(服务/物流)逐行计佣汇总
+function ord_feeParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';return (o.lines||[]).reduce((a,l)=>{const r=commRates(code,lineCat(l),d),amt=lineEffQty(l)*l.price;a.svc+=amt*r.svc;a.logi+=amt*r.logi;return a;},{svc:0,logi:0});} // 平台佣金=各行 品类费率(服务/物流)逐行计佣汇总
 function ord_feeSvc(o){return ord_feeParts(o).svc;}                  // 服务佣金
 function ord_feeLogi(o){return ord_feeParts(o).logi;}               // 物流佣金
 function ord_fee(o){const p=ord_feeParts(o);return p.svc+p.logi;}   // 佣金合计
@@ -3176,9 +3201,9 @@ function ordBcrs(o){return (o.lines||[]).reduce((s,l)=>s+lineBcrs(l),0);}
 /* 多退少补（客户侧·货到仓库 WMS 重新分拣分配后，按各订单实际分配重量 vs 应发结算）——演示用每行稳定模拟实发差异。
    多退少补金额 = Σ(实发净重 − 应发净重)×单价（+补款客户 / −退款客户）；平台佣金变更 = 多退少补金额 × 该行品类佣金率(服务+物流)。 */
 function ordAdjParts(o){const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';
-  return (o.lines||[]).reduce((a,l)=>{const p=DB.products.find(x=>x.name==l.name);if(!p||!(p.skus&&p.skus[0]&&p.skus[0].refund))return a; // 仅按重量定价(多退少补)品
+  return (o.lines||[]).reduce((a,l)=>{const p=DB.products.find(x=>x.name==l.name);if(!p||!(p.skus&&p.skus[0]&&p.skus[0].refund)||lineEffQty(l)<=0)return a; // 仅按重量定价(多退少补)品
     let h=7;const key=o.id+'|'+l.sku;for(const c of key)h=(h*31+c.charCodeAt(0))>>>0;const rate=((h%7)<3?1:-1)*(0.02+(h%50)/1000); // 稳定伪随机差异率 ±2%~±7%(非零·增减混合)
-    const due=+(l.qty*(p.skus[0].qty||1)).toFixed(2),diffW=+(due*rate).toFixed(2),amt=+(diffW*l.price).toFixed(2); // 差异净重、差额(未税)
+    const due=+(lineEffQty(l)*(p.skus[0].qty||1)).toFixed(2),diffW=+(due*rate).toFixed(2),amt=+(diffW*l.price).toFixed(2); // 差异净重、差额(未税)
     const r=commRates(code,lineCat(l),d),feeAdj=+(amt*(r.svc+r.logi)).toFixed(2); // 佣金变更=差额×品类佣金率
     a.amt+=amt;a.fee+=feeAdj;a.has=true;a.rows.push({name:l.name,unit:l.unit,price:l.price,due,diffW,amt,feeAdj,pct:r.svc+r.logi});return a;},
     {amt:0,fee:0,has:false,rows:[]});}
@@ -4328,18 +4353,18 @@ function retAppealCell(a){
   if(w.to&&n>=w.to)return `<span style="color:var(--tt)">申诉已截止</span>`;
   return `<span style="color:var(--g)">可申诉</span>`;
 }
-function act_retAppeal(i){const a=DB.afterSales[i];if(!retAppealOpen(a))return toast('当前不在申诉时间内','err');DB._ra={i,type:retAppealDefault(a),photo:false};raModal();}
+function act_retAppeal(i){const a=DB.afterSales[i];if(!retAppealOpen(a))return toast('当前不在申诉时间内','err');DB._ra={t:a,type:retAppealDefault(a),photo:false};raModal();}
 function raModal(){
-  const {i,type,photo}=DB._ra,a=DB.afterSales[i],w=retAppealWin(a);
+  const {t:a,type,photo}=DB._ra,w=retAppealWin(a),PL=a._priceLabel||'售后单价';
   const chips=w.types.map(t=>`<button class="btn btn-sm ${t==type?'btn-p':'btn-o'}" onclick="raSwitch('${t}')">${RA_TYPES[t]}</button>`).join(' ');
-  const tip={short:'取回数量少于退回数量，申请平台赔付差额。',none:'系统显示已提货，但你实际没有拿到这些货。',noarrive:`退货单生成已超过 ${RA_WAIT_H} 小时，货物仍未到仓。`,damage:'货物在平台仓暂存或运输中损坏，无法再售卖。客户退回时就已损坏的属于判责问题，不在此申诉。'}[type];
+  const tip={short:'取回数量少于退回数量，申请平台赔付差额。',none:'系统显示已提货，但你实际没有拿到这些货。',noarrive:`退货单生成已超过 ${RA_WAIT_H} 小时，货物仍未到仓。`,damage:a._whr?'货物在平台仓暂存期间损坏，无法再售卖。':'货物在平台仓暂存或运输中损坏，无法再售卖。客户退回时就已损坏的属于判责问题，不在此申诉。'}[type];
   const rows=a.retItems.map((x,k)=>{const mx=raMax(a,x,type),pr=retUnitPrice(a,x);return `<tr><td style="white-space:nowrap">${x.name}<div style="font-size:11px;color:var(--ts)">${x.sku} · ${x.spec}</div></td><td style="text-align:right">${x.retQty}</td><td style="text-align:right">${pickQtyCell(a,x)}</td><td style="text-align:right"><input class="ra-q" data-k="${k}" data-p="${pr}" type="number" min="0" max="${mx}" value="${mx}" ${mx?'':'disabled'} oninput="raCalc()" style="width:72px;text-align:right"></td><td style="text-align:right;color:var(--ts)">${money(pr)}</td></tr>`;}).join('');
-  const html=new String(`<div class="mc-hd"><h3>退货申诉 · TH-${a.id.slice(-6)}</h3><p>${retItemsName(a)} · ${a.returnStatus}</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  const html=new String(`<div class="mc-hd"><h3>退货申诉 · ${a._title||'TH-'+a.id.slice(-6)}</h3><p>${retItemsName(a)} · ${a.returnStatus}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="ib ib-b"><span class="i">📣</span><div>每张退货单<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}本申诉只针对退回的货，不影响原售后单判责。</div></div>
+    <div class="ib ib-b"><span class="i">📣</span><div>${a._whr?'每张送货单的仓库退回':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}${a._whr?'只能申诉已取回的商品。':'本申诉只针对退回的货，不影响原售后单判责。'}</div></div>
     <div class="fr"><label class="fl">申诉类型</label><div class="row" style="gap:8px;flex-wrap:wrap">${chips}</div><div style="font-size:12px;color:var(--ts);margin-top:6px">${tip}</div></div>
     <div class="fr"><label class="fl">申诉数量 <span style="font-weight:400;color:var(--ts);font-size:12px">（已按类型预填，可改小）</span></label>
-      <table><thead><tr><th>商品</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th style="text-align:right">申诉数量</th><th style="text-align:right">售后单价</th></tr></thead><tbody>${rows}</tbody></table>
+      <table><thead><tr><th>商品</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th style="text-align:right">申诉数量</th><th style="text-align:right">${PL}</th></tr></thead><tbody>${rows}</tbody></table>
       <div style="text-align:right;margin-top:10px;font-size:13px">预计赔付 <b id="ra-total" style="color:var(--g);font-size:15px">—</b></div></div>
     <div class="fr"><label class="fl">说明 <span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span></label><textarea id="ra-desc" placeholder="例：到仓提货时仓库只找到 1 箱番茄"></textarea></div>
     <div class="fr"><label class="fl">照片 ${type=='damage'?'<span style="color:var(--r);font-size:12px;font-weight:400">（必填，至少 1 张）</span>':'<span style="font-weight:400;color:var(--ts);font-size:12px">（选填）</span>'}</label><div class="up ${photo?'done':''}" onclick="DB._ra.photo=true;this.classList.add('done');this.querySelector('.uic').textContent='✓';this.querySelector('.ut').textContent='已上传 2 张'"><div class="uic">${photo?'✓':'📷'}</div><div class="ut">${photo?'已上传 2 张':'点击上传照片'}</div><div class="us">支持 jpg/png，最多 9 张 · 货物现状 / 提货单 / 包装标签</div></div></div>
@@ -4351,25 +4376,27 @@ function raSwitch(t){DB._ra.type=t;raModal();}
 function raQtys(){return [...document.querySelectorAll('.ra-q')].map(el=>{const mx=+el.max;let v=Math.floor(+el.value||0);if(v<0)v=0;if(v>mx)v=mx;return {k:+el.dataset.k,qty:v,price:+el.dataset.p};});}
 function raCalc(){const el=document.getElementById('ra-total');if(!el)return;const sum=raQtys().reduce((s,q)=>s+q.qty*q.price,0);el.textContent=money(sum);}
 function raSubmit(){
-  const {i,type,photo}=DB._ra,a=DB.afterSales[i];
+  const {t:a,type,photo}=DB._ra;
   const qs=raQtys();
   if(!qs.some(q=>q.qty>0))return toast('申诉数量不能都为 0','err');
   if(type=='damage'&&!photo)return toast('货损申诉请至少上传 1 张照片','err');
   a.retAppeal={type,status:'审核中',at:ts(),reviewDue:Date.now()+RA_REVIEW_H*3600000,desc:(document.getElementById('ra-desc').value||'').trim(),photos:photo?2:0,
     items:qs.filter(q=>q.qty>0).map(q=>({name:a.retItems[q.k].name,qty:q.qty,price:q.price,ok:null}))};
+  if(a._save)a._save(a.retAppeal);
   closeModal();render();toast('退货申诉已提交，平台将在 48 小时内核定','ok');
 }
 // 平台端：核定退货申诉
-function act_retAppealReview(i){const a=DB.afterSales[i],ra=a.retAppeal;
+function act_retAppealReview(i){const a=DB.afterSales[i];raReviewOpen(a.retAppeal,'TH-'+a.id.slice(-6),'售后单价');}
+function raReviewOpen(ra,title,PL){DB._rv=ra;
   const rows=ra.items.map((x,k)=>`<tr><td>${x.name}</td><td style="text-align:right">${x.qty}</td><td style="text-align:right"><input class="rv-q" data-k="${k}" type="number" min="0" max="${x.qty}" value="${x.qty}" style="width:72px;text-align:right"></td><td style="text-align:right;color:var(--ts)">${money(x.price)}</td></tr>`).join('');
-  modal(`<div class="mc-hd"><h3>（平台）核定退货申诉 · TH-${a.id.slice(-6)}</h3><p>${RA_TYPES[ra.type]} · ${ra.at} 提交</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  modal(`<div class="mc-hd"><h3>（平台）核定退货申诉 · ${title}</h3><p>${RA_TYPES[ra.type]} · ${ra.at} 提交</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd"><div class="ib ib-y"><span class="i">🔎</span><div>请调仓库出库记录与监控核对。核定数量默认等于申诉数量，可改小；全部为 0 即不成立。</div></div>
   ${ra.desc?`<div class="fr"><label class="fl">商家说明</label><div style="font-size:13px">${ra.desc}</div></div>`:''}
-  <table><thead><tr><th>商品</th><th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">售后单价</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>商品</th><th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${PL}</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="fr" style="margin-top:12px"><label class="fl">核定说明</label><textarea id="rv-note" placeholder="例：监控显示仓库只出库 1 箱番茄"></textarea></div></div>
-  <div class="mc-ft"><button class="btn btn-o" onclick="raReview(${i},true)">不成立</button><button class="btn btn-p" onclick="raReview(${i},false)">确认核定</button></div>`);
+  <div class="mc-ft"><button class="btn btn-o" onclick="raReview(true)">不成立</button><button class="btn btn-p" onclick="raReview(false)">确认核定</button></div>`);
 }
-function raReview(i,reject){const a=DB.afterSales[i],ra=a.retAppeal;
+function raReview(reject){const ra=DB._rv;
   const ins=[...document.querySelectorAll('.rv-q')];
   ra.items.forEach((x,k)=>{x.ok=reject?0:Math.min(Math.max(Math.floor(+(ins[k]&&ins[k].value)||0),0),x.qty);});
   const okSum=ra.items.reduce((s,x)=>s+x.ok,0),apSum=ra.items.reduce((s,x)=>s+x.qty,0);
@@ -4384,6 +4411,7 @@ function retAppealBlock(a){
   const sec=`<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px"><span style="width:4px;height:16px;background:var(--g);border-radius:2px"></span><h3 style="font-size:14.5px;font-weight:700">退货申诉</h3></div>`;
   if(!ra){
     if(a.type!='退货退款')return '';
+    if(a._whr){const w=retAppealWin(a);let m;if(!w)m='商品取回后 24 小时内，如发现少取、没拿到或货损，可在此申诉。';else if(Date.now()>=w.to)m='最近一次取回已超过 24 小时，申诉已截止。';else m=`取回后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，截止时间 <b>${msTs(w.to)}</b>。只能申诉已取回的商品，每单 1 次。`;return sec+`<div class="ib ib-b" style="margin-bottom:20px"><span class="i">📣</span><div>${m}</div></div>`;}
     const w=retAppealWin(a),n=Date.now();
     let msg;
     if(a.returnStatus=='待提货')msg='货物已到仓，凭提货码到仓提货即可。提货后 24 小时内如发现少取、没拿到或货损，可在此申诉。';
@@ -4402,7 +4430,7 @@ function retAppealBlock(a){
       ${kv('照片',ra.photos?ra.photos+' 张':'未上传')}
       ${kv('说明',ra.desc)}
     </div>
-    <div style="overflow-x:auto;margin-bottom:14px"><table><thead><tr><th>商品</th><th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">售后单价</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="overflow-x:auto;margin-bottom:14px"><table><thead><tr><th>商品</th><th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${a._priceLabel||'售后单价'}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${ra.status!='审核中'?`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">${kv('赔付合计',ra.comp>0?`<span style="color:var(--g)">${money(ra.comp)}</span>`:money(0))}${kv('业务调整单',ra.adjNo?`<span class="mono">${ra.adjNo}</span>`:'—')}${kv('核定说明',ra.note)}</div>`:'<div style="margin-bottom:20px"></div>'}`;
 }
 
@@ -5706,7 +5734,7 @@ PAGES['p-aftersale']=()=>{
   return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">三方判责（商家/平台/买家）· 待判责 ${DB.afterSales.filter(a=>a.status=='pending').length} · 待复核 ${DB.afterSales.filter(a=>a.status=='appealing').length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>时效</th><th>金额</th><th>操作</th></tr></thead><tbody>
     ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td><span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></td><td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td><span class="tag t-g">${a.age}</span></td><td>${afterAmtCell(a)}</td><td>${afterPlatOps(a,i)}</td></tr>`).join('')}
-  </tbody></table></div></div></div>`;
+  </tbody></table></div></div></div>`+(typeof whr_platAppealCard=='function'?whr_platAppealCard():'');
 };
 function afterPlatOps(a,i){
   if(a.status=='pending')return `<button class="btn btn-p btn-sm" onclick="act_judge(${i})">判责</button>`;
@@ -5887,13 +5915,13 @@ function ord_shortage(i){const o=DB.orders[i];
   modal(`<div class="mc-hd"><h3>缺货整单取消 · ${o.id}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="ib ib-r"><span class="i">⚠️</span>本期<b>不支持部分发货 / 缺货补发</b>。任一商品缺货且无法满足，只能整单取消并全额退款客户 ${money(o.amt)}。</div><div class="fr"><label class="fl">缺货原因（回传客户）</label><textarea id="ord-sh">今日到货不足，无法满足本单数量，已为您整单退款。</textarea></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">再想想</button><button class="btn btn-d" onclick="ord_doShortage(${i})">确认整单取消并退款</button></div>`);
 }
 function ord_doShortage(i){DB.orders[i].status='canceled';closeModal();render();toast(`${DB.orders[i].id} 已整单取消并退款客户`,'info');}
-function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pending:0,packed:0,shipped:1,received:2,done:3};
+function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pending:0,packed:0,shipped:1,received:2,done:3},cx=ordIsPartCx(o),afs=ordAfters(o);
   drawer(`<div class="drawer-hd"><div><h3>订单 ${o.id}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ord_mask(o.client)} · 下单 ${o.orderTime||''}</div></div><span class="x" onclick="closeDrawer()">×</span></div><div class="drawer-bd">
     <div class="card" style="box-shadow:none;margin-bottom:14px"><div class="card-bd">${pipe(['待发货','备货中','已收货','已完成'],rej?0:map[o.status],rej?0:-1)}${o.status=='packed'?'<div style="text-align:center;font-size:12px;color:var(--pp);margin-top:4px">待发货内：已分拣贴标，待交接仓库收货</div>':''}</div></div>
     <div style="overflow-x:auto;margin-bottom:8px"><table style="border:1px solid var(--bd2);border-radius:8px;overflow:hidden;white-space:nowrap">
-      <thead><tr><th>SKU 编码</th><th>SKU 名称</th><th style="text-align:right">数量</th><th>规格</th><th style="text-align:right">单价</th><th style="text-align:right">订单金额</th><th style="text-align:right" title="BCRS 饮料容器押金 = 平台固定 S$0.10 × 容器数 × 件数（三因子）；过手项，不计 GST/佣金/预计收入，随货透传客户下单/订单/发票">押金金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额">实付金额</th><th style="text-align:right">平台服务费(预估)</th><th style="text-align:right">预计收入(预估)</th><th style="text-align:right" title="按重量定价商品逐件称重：应发净重=规格量×件数，实发净重=仓库实称合计">应发净重 / 实发净重</th><th style="text-align:right" title="多退少补金额 =(实发净重−应发净重)×单价；+补款客户/−退款客户。小字为随之变更的平台服务费。货到仓库分拣分配后结算">多退少补金额</th></tr></thead><tbody>
-      ${(()=>{const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';const P=ordHasAdj(o)?ordAdjParts(o):null;return (o.lines||[]).map(l=>{const ar=P?P.rows.find(x=>x.name==l.name):null;const amt=l.qty*l.price,r=commRates(code,lineCat(l),d),svc=amt*r.svc,logi=amt*r.logi,disc=o.amt?ord_disc(o)*amt/o.amt:0,psub=o.amt?ord_platSub(o)*amt/o.amt:0,inc=amt-disc+psub-svc-logi;return `<tr><td class="mono" style="font-size:12px;color:var(--ts)">${l.sku||'—'}</td><td style="white-space:normal;min-width:120px"><b>${l.name}</b>${l.promo?` <span class="tag t-r" style="font-size:10px">特价</span> <span style="font-size:11px;color:var(--ts)">原价 <s>${money(l.promo.orig)}</s> · 让利 ${money((l.promo.orig-l.price)*l.qty)}（商家承担）</span>`:''}${(o.status=='pending'||o.status=='packed')?' <span class="tag t-gr" style="font-size:10px">已预订</span>':''}</td><td style="text-align:right">${l.qty}${l.unit}</td><td style="color:var(--ts)">${l.spec||'—'}</td><td style="text-align:right">${money(l.price)}/${l.unit}</td><td style="text-align:right"><b>${money(amt)}</b></td><td style="text-align:right">${lineBcrs(l)>0?`<span class="tag t-b" style="font-size:11px" title="过手项·不计 GST/佣金/预计收入">${money(lineBcrs(l))}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right;color:var(--r)">${disc>0?'-':''}${money(disc)}</td><td style="text-align:right"><b>${money(amt-disc)}</b></td><td style="text-align:right;color:var(--r)">${(svc+logi)>0?'-':''}${money(svc+logi)}</td><td style="text-align:right;color:var(--gd)"><b>${money(inc)}</b></td><td style="text-align:right">${ar?`<span style="color:var(--ts)">${ar.due}</span> <span style="color:var(--bd2)">/</span> <b>${(ar.due+ar.diffW).toFixed(2)}</b> <span style="font-size:11px;color:var(--ts)">kg</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${ar?`<b style="color:${ar.amt>0?'var(--y)':ar.amt<0?'var(--r)':'var(--ts)'}">${ar.amt>0?'+':''}${money(ar.amt)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${ar.feeAdj>0?'+':''}${money(ar.feeAdj)}</div>`:'<span style="color:var(--tt)">—</span>'}</td></tr>`;}).join('');})()}
-      <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计（共 ${(o.lines||[]).length} 种商品）</td><td style="text-align:right">${money(o.amt)}</td><td style="text-align:right">${ordBcrs(o)>0?`<b class="tag t-b" title="过手项·不计 GST/佣金/预计收入">${money(ordBcrs(o))}</b>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right;color:var(--r)">${ord_disc(o)>0?'-':''}${money(ord_disc(o))}</td><td style="text-align:right">${money(ord_paid(o))}</td><td style="text-align:right;color:var(--r)">${ord_fee(o)>0?'-':''}${money(ord_fee(o))}</td><td style="text-align:right;color:var(--gd)">${money(ord_income(o))}</td><td></td><td></td></tr>
+      <thead><tr><th>SKU 编码</th><th>SKU 名称</th><th style="text-align:right">数量</th>${cx?'<th style="text-align:right" title="该 SKU 被取消的数量；取消部分已原路退款客户，不计入订单金额">取消数量</th>':''}<th>规格</th><th style="text-align:right">单价</th><th style="text-align:right">订单金额</th><th style="text-align:right" title="BCRS 饮料容器押金 = 平台固定 S$0.10 × 容器数 × 件数（三因子）；过手项，不计 GST/佣金/预计收入，随货透传客户下单/订单/发票">押金金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额">实付金额</th><th style="text-align:right">平台服务费(预估)</th><th style="text-align:right">预计收入(预估)</th><th style="text-align:right" title="按重量定价商品逐件称重：应发净重=规格量×件数，实发净重=仓库实称合计">应发净重 / 实发净重</th><th style="text-align:right" title="多退少补金额 =(实发净重−应发净重)×单价；+补款客户/−退款客户。小字为随之变更的平台服务费。货到仓库分拣分配后结算">多退少补金额</th></tr></thead><tbody>
+      ${(()=>{const code=DB.merchant.code,d=o.deliver?('2026-'+o.deliver):'';const P=ordHasAdj(o)?ordAdjParts(o):null;return (o.lines||[]).map(l=>{const ar=P?P.rows.find(x=>x.name==l.name):null;const amt=lineEffQty(l)*l.price,r=commRates(code,lineCat(l),d),svc=amt*r.svc,logi=amt*r.logi,disc=o.amt?ord_disc(o)*amt/o.amt:0,psub=o.amt?ord_platSub(o)*amt/o.amt:0,inc=amt-disc+psub-svc-logi;const lcx=lineCxQty(l);return `<tr${lcx>=l.qty?' style="background:#FBF6EC"':''}><td class="mono" style="font-size:12px;color:var(--ts)">${l.sku||'—'}</td><td style="white-space:normal;min-width:120px"><b>${l.name}</b>${lcx?` <span class="tag t-y" style="font-size:10px" title="${l.cancelReason||''} · ${l.cancelAt||''}">${lcx>=l.qty?'已取消':'部分取消'}</span>`:''}${l.promo?` <span class="tag t-r" style="font-size:10px">特价</span> <span style="font-size:11px;color:var(--ts)">原价 <s>${money(l.promo.orig)}</s> · 让利 ${money((l.promo.orig-l.price)*l.qty)}（商家承担）</span>`:''}${(o.status=='pending'||o.status=='packed')?' <span class="tag t-gr" style="font-size:10px">已预订</span>':''}</td><td style="text-align:right">${l.qty}${l.unit}</td>${cx?`<td style="text-align:right">${lcx?`<span style="color:var(--y);font-weight:600">${lcx}${l.unit}</span>`:'<span style="color:var(--tt)">—</span>'}</td>`:''}<td style="color:var(--ts)">${l.spec||'—'}</td><td style="text-align:right">${money(l.price)}/${l.unit}</td><td style="text-align:right"><b>${money(amt)}</b></td><td style="text-align:right">${lineBcrs(l)>0?`<span class="tag t-b" style="font-size:11px" title="过手项·不计 GST/佣金/预计收入">${money(lineBcrs(l))}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right;color:var(--r)">${disc>0?'-':''}${money(disc)}</td><td style="text-align:right"><b>${money(amt-disc)}</b></td><td style="text-align:right;color:var(--r)">${(svc+logi)>0?'-':''}${money(svc+logi)}</td><td style="text-align:right;color:var(--gd)"><b>${money(inc)}</b></td><td style="text-align:right">${ar?`<span style="color:var(--ts)">${ar.due}</span> <span style="color:var(--bd2)">/</span> <b>${(ar.due+ar.diffW).toFixed(2)}</b> <span style="font-size:11px;color:var(--ts)">kg</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${ar?`<b style="color:${ar.amt>0?'var(--y)':ar.amt<0?'var(--r)':'var(--ts)'}">${ar.amt>0?'+':''}${money(ar.amt)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${ar.feeAdj>0?'+':''}${money(ar.feeAdj)}</div>`:'<span style="color:var(--tt)">—</span>'}</td></tr>`;}).join('');})()}
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="${cx?6:5}">合计（共 ${(o.lines||[]).length} 种商品）</td><td style="text-align:right">${money(o.amt)}</td><td style="text-align:right">${ordBcrs(o)>0?`<b class="tag t-b" title="过手项·不计 GST/佣金/预计收入">${money(ordBcrs(o))}</b>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right;color:var(--r)">${ord_disc(o)>0?'-':''}${money(ord_disc(o))}</td><td style="text-align:right">${money(ord_paid(o))}</td><td style="text-align:right;color:var(--r)">${ord_fee(o)>0?'-':''}${money(ord_fee(o))}</td><td style="text-align:right;color:var(--gd)">${money(ord_income(o))}</td><td></td><td></td></tr>
       </tbody></table></div>
     <div style="font-size:11.5px;color:var(--ts);margin-bottom:14px"><b>平台服务费(预估)</b> = 服务佣金 + 物流佣金，按各商品所属<b>品类佣金率</b>${ord_fee(o)>0?'（合计综合 '+(ord_feePct(o)*100).toFixed(1)+'%）':'（免佣期）'}逐行计 · <b>实付金额</b> = 订单金额 − 商家补贴（客户实际支付，商家让利已在其中扣除）· 预计收入 = 实付金额 + 平台补贴 − 平台服务费,均为<b>预估</b>,以订单实际完成为准 · 结算：完成后 3 天${ord_promoSave(o)>0?` · <b>商家特价让利</b> ${money(ord_promoSave(o))} = Σ(原价 − 活动价)×件数，由商家 100% 承担，已体现在活动价成交额中——<b>不重复扣减、不进平台优惠</b>；平台服务费按活动价成交额计`:''}${ordBcrs(o)>0?` · <b>BCRS 押金</b> ${money(ordBcrs(o))} = 平台固定 ${money(BCRS_UNIT_PRICE)}×容器数×件数，属<b>过手项</b>——不计 GST/佣金基数/预计收入，随货透传客户下单/订单/发票原样展示，空瓶罐回收点退还客户`:''}${ordHasAdj(o)?` · <b>多退少补金额</b> = Σ(实发净重 − 应发净重)×单价（+补款客户 / −退款客户），平台佣金随之变更；<b>结算后预计收入 ${(()=>{const inc2=+(ord_income(o)+ordAdjust(o)-ordAdjFee(o)).toFixed(2);return `${inc2>=ord_income(o)?'≈':''} ${money(inc2)}`;})()}</b>（= 预估收入 ${money(ord_income(o))} ${ordAdjust(o)>=0?'+':'−'} 多退少补 ${money(Math.abs(ordAdjust(o)))} ${ordAdjFee(o)>=0?'−':'+'} 佣金变更 ${money(Math.abs(ordAdjFee(o)))}）。${ordSettled(o)?'已随仓库分拣分配结算':'货到仓库分拣分配后结算'}，以实际分配重量为准`:''}</div>
     <div class="card" style="box-shadow:none;margin-bottom:0"><div class="card-hd"><h3 style="font-size:14px">订单信息</h3></div><div class="card-bd"><dl class="dl">
@@ -5902,10 +5930,12 @@ function ord_detail(i){const o=DB.orders[i],rej=o.status=='canceled',map={pendin
       <dt>配送时间</dt><dd>${o.deliver||'—'} ${o.deliverWindow||''}</dd>
       <dt>配送仓库</dt><dd>${o.warehouse||'—'}</dd>
       ${o.note?`<dt>备注</dt><dd>${o.note}</dd>`:''}
+      ${afs.length?`<dt>售后单号</dt><dd>${afs.map(x=>`<a class="mono" style="color:var(--b);cursor:pointer;text-decoration:underline;margin-right:10px" title="查看售后详情" onclick="ord_goAfter(${x.i})">${x.a.id}</a>`).join('')}</dd>`:''}
     </dl></div></div>
     ${typeof weighSection=='function'?weighSection(o):''}
     ${o.labels&&o.labels.length?`<div class="ib ib-b"><span class="i">🏷️</span>SKU 标签 ${o.labels.length} 张：${o.labels.map(p=>`<span class="mono">${p.code}</span>`).join('、')}</div>`:''}
     ${o.status=='done'?`<div class="ib ib-g"><span class="i">✅</span>订单已完成（${o.doneDate||''}）。预计结算日：完成后 3 天。</div>`:''}
+    ${cx?`<div class="ib ib-y" style="margin-top:12px"><span class="i">↩️</span><div><b>部分退款</b>：${ordCxLines(o).map(l=>`${l.name}（${l.sku}）取消 ${lineCxQty(l)}${l.unit} · ${l.cancelReason||''} · ${l.cancelAt||''}`).join('；')}。已原路退款客户 <b>${money(ordCxAmt(o))}</b>，取消部分不计入订单金额与预计收入。</div></div>`:''}
     ${rej?`<div class="ib ib-r"><span class="i">⛔</span>缺货整单取消，已退款客户 ${money(o.amt)}。</div>`:''}
   </div><div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${o.status=='pending'?`<button class="btn btn-link" style="color:var(--r)" onclick="closeDrawer();ord_customerCancel(${i})">🔬 演示：模拟客户取消</button>`:o.status=='shipped'?`<button class="btn btn-link" onclick="closeDrawer();ord_receive(${i})">🔬 演示：模拟客户收货</button>`:o.status=='received'?`<button class="btn btn-o btn-sm" onclick="closeDrawer();ord_afterSale(${i})">发起售后</button> <button class="btn btn-link" onclick="closeDrawer();ord_done(${i})">🔬 演示：模拟订单完成</button>`:''}</div>`);
 }
@@ -6249,8 +6279,8 @@ goHome();
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20260923i"></script>
-<script src="pc-modules/weigh.js?v=20260817d"></script>
-<script src="pc-modules/delivery.js?v=20260923k"></script>
+<script src="pc-modules/weigh.js?v=20261014a"></script>
+<script src="pc-modules/delivery.js?v=20261014a"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
 <script src="pc-modules/analysis.js?v=20260730f"></script>

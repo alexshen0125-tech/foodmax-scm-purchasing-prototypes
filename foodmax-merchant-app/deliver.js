@@ -561,7 +561,10 @@ function openReturnDetail(no){
     mount:(p)=>{const b=p.querySelector('#ra-go');if(b)b.onclick=()=>openRetAppeal(g,true);}});
 }
 function raDetail(g,sec,box,kv){
+  if(!g)return sec('退货申诉')+`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">商品取回后 24 小时内，如发现少取、没拿到或货损，可发起申诉。</div>`;
   const a=g.appeal;
+  if(!a&&g._whr){const w=raWin(g);const m=Date.now()>=w.to?'最近一次取回已超过 24 小时，申诉已截止。':`取回后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，截止时间 <b>${msTs(w.to)}</b>。只能申诉已取回的商品，每单 1 次。`;
+    return sec('退货申诉')+`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${m}</div>`;}
   if(!a){
     const w=raWin(g),n=Date.now();let msg='';
     if(g.st==='待提货')msg='货物已到仓，凭提货码到仓提货即可。提货后 24 小时内如发现少取、没拿到或货损，可发起申诉。';
@@ -573,16 +576,16 @@ function raDetail(g,sec,box,kv){
   }
   return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',RA_TYPES[a.type])+kv('申诉时间',a.at)+(a.status==='审核中'?kv('核定截止时间',msTs(a.reviewDue)):kv('核定时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
-      <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>申诉数量 ${x.qty}</span><span>核定数量 ${x.ok==null?'—':x.ok}</span><span>售后单价 ${fmtS(x.price)}</span><span>赔付 ${x.ok==null?'—':fmtS(x.ok*x.price)}</span></div></div>`).join(''))
+      <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>申诉数量 ${x.qty}</span><span>核定数量 ${x.ok==null?'—':x.ok}</span><span>${g._priceLabel||'售后单价'} ${fmtS(x.price)}</span><span>赔付 ${x.ok==null?'—':fmtS(x.ok*x.price)}</span></div></div>`).join(''))
     +(a.status!=='审核中'?sec('核定结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('业务调整单',a.adjNo?`<span style="font-family:monospace">${a.adjNo}</span>`:'—')+kv('核定说明',a.note)):'');
 }
 /* 退货申诉表单：类型（按状态给可选项、系统预选）→ 申诉数量（已预填）→ 提交；预计赔付自动算 */
 function openRetAppeal(g,fromDetail){
   if(!raOpen(g))return toast('当前不在申诉时间内');
   const w=raWin(g);let type=raDefault(g),photo=false;
-  const tips={short:'取回数量少于退回数量，申请平台赔付差额。',none:'系统显示已提货，但你实际没有拿到这些货。',noarrive:`退货单生成已超过 ${RA_WAIT_H} 小时，货物仍未到仓。`,damage:'货物在平台仓暂存或运输中损坏，无法再售卖。客户退回时就已损坏的属于判责问题，不在此申诉。'};
+  const tips={short:'取回数量少于退回数量，申请平台赔付差额。',none:'系统显示已提货，但你实际没有拿到这些货。',noarrive:`退货单生成已超过 ${RA_WAIT_H} 小时，货物仍未到仓。`,damage:g._whr?'货物在平台仓暂存期间损坏，无法再售卖。':'货物在平台仓暂存或运输中损坏，无法再售卖。客户退回时就已损坏的属于判责问题，不在此申诉。'};
   pushPage({title:'退货申诉',body:`
-    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">每张退货单<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}本申诉只针对退回的货，不影响原售后单判责。</div>
+    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${g._whr?'每张送货单的仓库退回':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}${g._whr?'只能申诉已取回的商品。':'本申诉只针对退回的货，不影响原售后单判责。'}</div>
     <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉类型</span></div>
       <div id="ra-types" style="display:flex;flex-wrap:wrap;gap:9px"></div>
       <div id="ra-tip" style="font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5"></div></div>
@@ -620,8 +623,9 @@ function openRetAppeal(g,fromDetail){
         setTimeout(()=>{b.classList.remove('loading');
           g.appeal={type,status:'审核中',at:nowTs(),reviewDue:Date.now()+RA_REVIEW_H*3600000,desc:q('#ra-desc').value.trim(),photos:photo?2:0,
             items:qs.filter(x=>x.qty>0).map(x=>({name:g.items[x.k].name,qty:x.qty,price:g.items[x.k].price,ok:null}))};
+          if(g._save)g._save(g.appeal);
           toast('退货申诉已提交，平台将在 48 小时内核定');
-          if(window._rtRedraw)window._rtRedraw();
+          if(g._whr){if(window._whrRedraw)window._whrRedraw();}else if(window._rtRedraw)window._rtRedraw();
           setTimeout(()=>{popPage();if(fromDetail)popPage();},600);},600);
       };
     }});
@@ -635,19 +639,33 @@ function openRetAppeal(g,fromDetail){
    （当日不可卖、次日优先抵扣，BR-16d）。本台账只保留「送错」一种类型。 ============ */
 window.FM.DB.whReturns = window.FM.DB.whReturns || [
   {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
-   type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedQty:null,pickedAt:'',
+   type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedQty:null,pickedAt:'',price:3.20,
    note:'与本单小棠菜串货，实物为上海青'},
   {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8871',name:'菜心',spec:'1kg/件',unit:'件',
-   type:'送错',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'已取回',pickedQty:3,pickedAt:'2026-06-29 09:30',
+   type:'送错',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'已取回',pickedQty:2,pickedAt:relTs(-4),price:2.80,
    note:'应送清单无此 SKU，实物为菜心'},
   {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8806',name:'芥兰',spec:'1kg/件',unit:'件',
-   type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedQty:null,pickedAt:'',
+   type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedQty:null,pickedAt:'',price:3.50,
    note:'应送清单无此 SKU，实物为芥兰'},
   {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8812',name:'咸鸭蛋',spec:'30枚/盘',unit:'盘',
-   type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedQty:2,pickedAt:'2026-05-20 10:15',
+   type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedQty:2,pickedAt:'2026-05-20 10:15',price:9.00,
    note:'与本单鲜鸡蛋串货'},
 ];
 const WHR=()=>window.FM.DB.whReturns||[];
+/* 仓库退回申诉（2026-10-14 草案，与 PC pc-modules/delivery.js whrAdapter 同口径）：
+   只能申诉【已取回】商品；同一送货单最近一次取回后 24h 内，可申诉 少取/没拿到/货损不可售；每单 1 次；
+   赔付 = 核定数量 × 供货单价（送错货不进结算，按商家供货价）→ 业务调整单「平台付给商家」 */
+window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
+  'SH20260518001':{type:'damage',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,
+    items:[{name:'咸鸭蛋',qty:1,price:9.00,ok:1}],comp:9.00,adjNo:'TZ-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
+};
+function whrAdapter(no){
+  const g=whrGroups().find(x=>x.no===no); if(!g)return null;
+  const picked=g.list.filter(x=>x.status==='已取回'); if(!picked.length)return null;
+  return {_whr:true,_priceLabel:'供货单价',no,st:'已提货',pickup:picked.map(x=>x.pickedAt).sort().pop(),appeal:window.FM.DB.whrAppeals[no]||null,
+    items:picked.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price})),
+    _save:ra=>{window.FM.DB.whrAppeals[no]=ra;}};
+}
 function whrOf(id){return WHR().filter(r=>r.deliveryNo===id);}
 window.whrOfDelivery=whrOf;
 function whrGroups(){
@@ -684,7 +702,8 @@ function whrCard(g){
     <div class="dl-meta"><span class="k">存放</span><span class="vv">${g.warehouse} · ${g.slot}</span></div>
     <div class="dl-meta"><span class="k">登记</span><span class="vv">${g.at}</span></div>
     <div class="dl-kbox"><div class="k"><div class="l">退回数量</div><div class="v">${g.qty}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${g.pickedQty==null?'<span style="color:var(--sub)">—</span>':g.pickedQty}</div></div></div>
-    <div class="dl-acts"><div class="a key" data-a="whrdetail">详情</div><div class="a" data-a="whrdeliv">送货单</div></div>
+    ${(()=>{const ad=whrAdapter(g.no),l=ad?raLine(ad):'';return l?`<div style="margin-top:10px;font-size:12.5px">${l}</div>`:'';})()}
+    <div class="dl-acts"><div class="a key" data-a="whrdetail">详情</div>${(()=>{const ad=whrAdapter(g.no);return ad&&raOpen(ad)?'<div class="a" data-a="whrappeal">申诉</div>':'';})()}<div class="a" data-a="whrdeliv">送货单</div></div>
   </div>`;
 }
 // 详情：逐 SKU 区分
@@ -719,9 +738,11 @@ function openWhrDetail(no){
       <div class="whr-ph" data-sku="${r.skuCode}" style="margin-top:8px;color:var(--emerald);font-weight:700;font-size:12.5px;min-height:32px;display:flex;align-items:center;cursor:pointer">📷 ${r.photos} 张实物照片</div>
     </div>`).join(''))}
     <div style="margin:12px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">状态由<b>仓库</b>在交接时<b>按项</b>回写，同单可分批取回；商家端只读，无编辑与线上预约入口。</div>
+    ${raDetail(whrAdapter(g.no),sec,box,kv)}
     <div style="height:8px"></div>`,
-    footer:`<button class="btn primary" style="width:100%" id="whr-go">查看送货单</button>`,
+    footer:(()=>{const ad=whrAdapter(g.no);return ad&&raOpen(ad)?`<div style="display:flex;gap:10px;width:100%"><button class="btn" style="flex:1" id="whr-go">查看送货单</button><button class="btn primary" style="flex:1" id="whr-ra">申诉</button></div>`:`<button class="btn primary" style="width:100%" id="whr-go">查看送货单</button>`;})(),
     mount:(p)=>{
+      const ra=p.querySelector('#whr-ra');if(ra)ra.onclick=()=>openRetAppeal(whrAdapter(g.no),true);
       p.querySelectorAll('.whr-ph').forEach(e=>e.onclick=()=>openWhrPhotos(g.no,e.dataset.sku));
       const b=p.querySelector('#whr-go');if(b)b.onclick=()=>{popPage();window.FM.DB.delivView=g.no;openSignin();};
     }});
@@ -765,9 +786,10 @@ function openReturn(){
         whr.querySelectorAll('[data-whr]').forEach(c=>{
           const no=c.dataset.whr;
           c.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();
-            if(b.dataset.a==='whrdetail')openWhrDetail(no); else {window.FM.DB.delivView=no;openSignin();}});
+            if(b.dataset.a==='whrdetail')openWhrDetail(no); else if(b.dataset.a==='whrappeal')openRetAppeal(whrAdapter(no)); else {window.FM.DB.delivView=no;openSignin();}});
         });
       }
+      window._whrRedraw=drawWhr;
       segs.forEach(sg=>sg.onclick=()=>{
         segs.forEach(x=>{const on=x===sg;x.style.background=on?'#fff':'transparent';x.style.color=on?'var(--emerald-2)':'var(--sub)';x.style.boxShadow=on?'var(--sh-sm)':'none';});
         const isWhr=sg.dataset.s==='whr';
