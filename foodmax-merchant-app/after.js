@@ -215,6 +215,11 @@ const DATA={
      orderDate:'2026-07-01',wh:'盛港DC',afAmt:'S$49.20',afQty:12,city:'中区',
      fill:{gap:12,fillQty:12,refundQty:0,unit:'件',selfPrice:'S$4.10',custPrice:'S$5.80'},
      fillAmt:'S$49.20',refundAmt:'S$0.00',fillStatus:'已补发',replNo:'RPL-20260702-011'},
+    // 与 PC AS-26070205 同源：退货退款，关联订单 #SG20260701012（订单详情可点售后单号跳转）
+    {refundNo:'RF-26070205',ty:'退货退款',resp:'合作商承担100%',img:'🥬',nm:'芥蓝',sp:'10kg/件',price:'S$32.50',qty:2,
+     paid:'S$65.00',needPay:'S$65.00',judgeTime:'2026-07-01 18:22:10',appealAmt:'S$0',
+     reason:'商品质量问题-到货偏软，要求退回',orderNo:'AS-26070205',oid:'#SG20260701012',
+     orderDate:'2026-06-30',wh:'裕廊DC',afAmt:'S$65.00',afQty:2,city:'中区'},
   ],
   appeal:[
     {refundNo:'RF-2606290006946',ty:'仅退款',resp:'合作商承担100%',img:'🧈',nm:'盐卤老豆腐 5斤',sp:'5斤/袋',price:'S$11.99',qty:1,
@@ -576,4 +581,8 @@ function openAfter(){
 
 window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.after=openAfter;
+// 订单详情 → 售后详情：按订单号取关联售后单（去重），按售后单号打开详情
+function afterOfOrder(oid){const seen={};return Object.values(DATA).flat().filter(d=>d.oid===oid&&!seen[d.orderNo]&&(seen[d.orderNo]=1));}
+window.FM_MOD.afterOfOrder=afterOfOrder;
+window.FM_MOD.afterDetailByNo=function(no){const d=Object.values(DATA).flat().find(x=>x.orderNo===no);if(d)openDetail(d);};
 })();

@@ -275,6 +275,9 @@ const DB={
     {id:'#SG20260615004',client:'新味坊',orderDate:'2026-06-15',deliver:'06-15',window:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
     // 饮料订单（含 BCRS 押金）：行项带 bcrsContainers=该售卖单位容器数，行押金=件数×容器数×0.10（椰子水 24瓶/箱→10×24×0.1=24、1瓶→20×1×0.1=2）
     {id:'#SG20260701005',client:'珍宝海鲜（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:600.00,discount:0,platSub:0,lines:[{sku:'SKU8826',name:'NFC 椰子水 24瓶/箱',qty:10,unit:'箱',spec:'24瓶/箱(330ml)',price:55.00,bcrsContainers:24},{sku:'SKU8825',name:'NFC 椰子水',qty:20,unit:'瓶',spec:'330ml/瓶',price:2.50,bcrsContainers:1}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    // 部分 SKU 取消（与 PC 同源）：行 cancelQty=取消数量，取消部分已原路退款客户、不计入订单金额 → 订单号后标「部分退款」
+    {id:'#SG20260702018',client:'食为天餐厅',orderDate:'2026-07-01',deliver:'07-02',window:'06:00~10:00',warehouse:'兀兰DC',amt:116.00,discount:0,lines:[{sku:'SKU8803',name:'菠菜',qty:20,unit:'件',spec:'1kg/件',price:5.80},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',spec:'1kg/件',price:3.50,cancelQty:10,cancelReason:'商家缺货',cancelAt:'07-01 22:40'}],status:'received',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260701012',client:'鼎泰丰',orderDate:'2026-06-30',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:167.20,discount:0,lines:[{sku:'SKU8813',name:'芥蓝',qty:4,unit:'件',spec:'10kg/件',price:32.50},{sku:'SKU8801',name:'小棠菜',qty:6,unit:'件',spec:'1kg/件',price:9.30,cancelQty:2,cancelReason:'客户取消',cancelAt:'06-30 21:05'}],status:'received',labels:[],pickId:'',deliveryId:''},
   ],
   pickOrders:[], deliveries:[], pickSeq:0, deliverySeq:0,
 };
@@ -404,11 +407,11 @@ renderHome();
 </script>
 <script src="goods.js?v=20260923s"></script>
 <script src="stock.js?v=20260811k"></script>
-<script src="order.js"></script>
+<script src="order.js?v=20261014"></script>
 <script src="pick.js"></script>
 <script src="label.js?v=20260923i"></script>
 <script src="weigh.js"></script>
-<script src="after.js?v=20260907"></script>
+<script src="after.js?v=20261014"></script>
 <script src="invoice.js?v=20260915a"></script>
 <script src="analysis.js"></script>
 <script src="ticket.js"></script>

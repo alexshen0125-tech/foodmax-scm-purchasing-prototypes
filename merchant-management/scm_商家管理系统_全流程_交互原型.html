@@ -1255,7 +1255,7 @@ const NAV={
       {id:'m-stock-transit',ic:'🚚',t:'在途库存',badge:()=>typeof invTransitCount=='function'?invTransitCount():0},
       {id:'m-stock-presend',ic:'🏬',t:'在仓预送库存',when:()=>presendOn()},
     ]},
-    {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1},
+    {id:'m-delivery',ic:'🚚',t:'送货管理',p1:1,badge:()=>typeof ckPendingCount=='function'?ckPendingCount():0,by:'y'},   // 角标 = 待核货/需重核的送货单数
     {id:'m-mkt-group',ic:'📣',t:'营销活动',p1:1,children:[
       {id:'m-promo',ic:'🏷️',t:'商品特价',badge:()=>typeof promoLiveCount=='function'?promoLiveCount():0},
       {id:'m-enroll',ic:'📣',t:'平台活动',badge:()=>typeof enrollTodo=='function'?enrollTodo():0,by:'y'},
@@ -1565,6 +1565,7 @@ const WP_QUICK=[
   {t:'新建商品',ic:'🥦',bg:'var(--gl)',p:'m-product'},
   {t:'打印标签',ic:'🏷️',bg:'var(--yl)',p:'m-pick-label',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
   {t:'备货参考',ic:'📊',bg:'var(--gl)',p:'m-pick-ref'},
+  {t:'送货核货',ic:'✅',bg:'var(--yl)',p:'m-delivery',badge:()=>typeof ckPendingCount=='function'?ckPendingCount():0},
   {t:'结算单',ic:'💰',bg:'var(--bl)',p:'m-settle'},
   {t:'耗材商城',ic:'🖨️',bg:'var(--gl)',p:'m-supply'},
 ];
@@ -3108,14 +3109,13 @@ PAGES['m-order']=()=>{
   <div class="tabs">${ORD_TABS.map(t=>`<div class="tab ${ordTab==t[0]?'active':''}" onclick="ordTab='${t[0]}';render()">${t[1]}${ordTabCount(t[0])?`<span class="tb" style="background:var(--ts)">${ordTabCount(t[0])}</span>`:''}</div>`).join('')}</div>
   <div class="ib ib-b" style="margin-bottom:12px"><span class="i">⚖️</span><div><b>多退少补金额</b>（按重量定价商品）= Σ<b>(实发净重 − 应发净重) × 单价</b>，<b>+</b>为多发补款客户、<b>−</b>为少发退款客户；<b>平台佣金变更</b> = 多退少补金额 × 该行品类佣金率（服务+物流），补款佣金增、退款佣金减。<b>结算后预计收入 = 预估收入 + 多退少补金额 − 佣金变更</b>。货到仓库 WMS 重新分拣分配后按各订单实际分配重量结算（收货/完成即定稿）。</div></div>
   <div class="card"><div class="card-hd"><h3>订单</h3><span class="sub">共 ${list.length} 笔 · <b>实付金额 = 订单金额 − 商家补贴</b>（客户实际支付）· 平台服务费/预计收入均为<b>预估</b>，以最终订单完成数据为准</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>订单号</th><th>客户名称</th><th>送达时间</th><th>仓库</th><th>状态</th><th title="部分退款 = 订单内有 SKU 被取消（全部或部分数量），取消部分已原路退款客户；整单取消见「已取消」">退款标识</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额（商家让利已在客户实付中扣除，不重复扣）">实付金额</th><th style="text-align:right">平台服务费<span style="font-weight:400">(预估)</span></th><th style="text-align:right" title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th style="text-align:right">预计收入<span style="font-weight:400">(预估)</span></th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>订单号</th><th>客户名称</th><th>送达时间</th><th>仓库</th><th>状态</th><th style="text-align:right">订单金额</th><th style="text-align:right">商家补贴</th><th style="text-align:right" title="实付金额 = 订单金额 − 商家补贴，即客户实际支付的金额（商家让利已在客户实付中扣除，不重复扣）">实付金额</th><th style="text-align:right">平台服务费<span style="font-weight:400">(预估)</span></th><th style="text-align:right" title="多退少补金额 = Σ(实发净重 − 应发净重)×单价；+补款客户 / −退款客户。货到仓库分拣分配后结算">多退少补金额</th><th style="text-align:right">预计收入<span style="font-weight:400">(预估)</span></th><th>操作</th></tr></thead><tbody>
     ${list.map((o)=>{const i=DB.orders.indexOf(o);return `<tr>
-      <td class="mono">${o.id}</td>
+      <td class="mono" style="white-space:nowrap">${o.id}${ordCxTag(o)}</td>
       <td>${ord_mask(o.client)}</td>
       <td>${o.deliver?o.deliver+(o.deliverWindow?' '+o.deliverWindow.split('~')[0]:''):'—'}</td>
       <td>${o.warehouse||'—'}</td>
       <td>${ordTag(o)}${o.status=='pending'?'<div style="font-size:11px;color:var(--ts);margin-top:2px">待分拣贴标</div>':o.status=='packed'?'<div style="font-size:11px;color:var(--pp);margin-top:2px">已贴标·待交接</div>':''}</td>
-      <td>${ordCxTag(o)}</td>
       <td style="text-align:right"><b>${money(o.amt)}</b></td>
       <td style="text-align:right;color:var(--r)">${ord_disc(o)>0?'-':''}${money(ord_disc(o))}</td>
       <td style="text-align:right"><b>${money(ord_paid(o))}</b></td>
@@ -3123,7 +3123,7 @@ PAGES['m-order']=()=>{
       <td style="text-align:right">${(()=>{if(!ordHasAdj(o))return '<span style="color:var(--tt)">—</span>';const a=ordAdjust(o),f=ordAdjFee(o);return `<b style="color:${a>0?'var(--y)':a<0?'var(--r)':'var(--ts)'}">${a>0?'+':''}${money(a)}</b><div style="font-size:11px;color:var(--ts)">平台服务费(预估) ${f>0?'+':''}${money(f)}</div>`;})()}</td>
       <td style="text-align:right"><b style="color:var(--gd)">${money(ord_income(o))}</b></td>
       <td>${ord_ops(o,i)}</td>
-    </tr>`;}).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">没有符合条件的订单</td></tr>`}
+    </tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:22px">没有符合条件的订单</td></tr>`}
     </tbody></table></div></div></div>`;
 };
 function ord_cnt(s){return DB.orders.filter(o=>o.status==s).length;}
@@ -3138,7 +3138,7 @@ function lineEffQty(l){return l.qty-lineCxQty(l);}                    // 实际�
 function ordCxLines(o){return (o.lines||[]).filter(l=>lineCxQty(l)>0);}
 function ordIsPartCx(o){return o.status!='canceled'&&ordCxLines(o).length>0;}
 function ordCxAmt(o){return ordCxLines(o).reduce((s,l)=>s+lineCxQty(l)*l.price,0);}   // 取消退款金额 = Σ 取消数量 × 单价
-function ordCxTag(o){return ordIsPartCx(o)?`<span class="tag t-y" style="font-size:11px" title="${ordCxLines(o).length} 个 SKU 已取消，已退款客户 ${money(ordCxAmt(o))}">部分退款</span>`:'<span style="color:var(--tt)">—</span>';}
+function ordCxTag(o){return ordIsPartCx(o)?` <span class="tag t-y" style="font-size:11px;margin-left:4px;font-family:inherit" title="${ordCxLines(o).length} 个 SKU 已取消，已退款客户 ${money(ordCxAmt(o))}">部分退款</span>`:'';}   // 订单号后标识（不单独成列）
 function ordAfters(o){return DB.afterSales.map((a,i)=>({a,i})).filter(x=>x.a.order==o.id);}  // 订单关联的售后单
 /* 订单列表筛选：订单号（模糊）/ 退款标识（部分退款/无）/ 售后（有/无），与状态 Tab 叠加，Tab 计数随筛选 */
 function ordFiltered(){const f=DB.ordFilter||{};return DB.orders.filter(o=>(!f.id||o.id.toLowerCase().includes(f.id.toLowerCase()))&&(!f.cx||(f.cx=='part'?ordIsPartCx(o):!ordIsPartCx(o)))&&(!f.as||(f.as=='has'?ordAfters(o).length>0:!ordAfters(o).length)));}
@@ -4776,6 +4776,25 @@ window.act_shopPsSkus=function(mcode){
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
       <button class="btn btn-p" onclick="closeDrawer();act_shopPresend('${mcode}')">修改种类上限</button></div>`);
 };
+/* 送货前核货开关（运营按店铺配置，默认开启；开/关立即生效，只影响尚未签到的送货单） */
+function act_shopCheck(mcode){
+  const on=ckCfgOf(mcode).on;
+  modal(`<div class="mc-hd"><h3>送货前核货 · ${shopNameOf(mcode)}</h3><p>${mcode}</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <div class="ib ib-b"><span class="i">✅</span><div>开启后，该商家每张送货单须在截单后<b>逐 SKU 核货</b>，<b>核完仓库才能扫码签到收货</b>；未核货或核货失效的送货单，仓库扫码签到被拦截。<br>关闭后不再拦截，商家端不显示核货入口。<b>开 / 关立即生效，只影响尚未签到的送货单。</b></div></div>
+    <div class="fr" style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+      <label class="fl" style="margin:0">送货前核货</label>
+      <label class="chip-ck ${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="act_shopCheckSet('${mcode}',this.checked)">${on?'已开启':'已关闭'}</label>
+    </div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
+}
+function act_shopCheckSet(mcode,on){
+  const doIt=()=>{if(!mcode||mcode==DB.merchant.code)DB.merchant.checkMode=!!on;else ckCfgOf(mcode).on=!!on;closeModal();render();
+    toast(on?'已开启送货前核货，未签到的送货单需商家核货后才能收货':'已关闭送货前核货，仓库签到不再拦截','ok');};
+  if(on){doIt();return;}
+  askConfirm(`关闭后，${shopNameOf(mcode)} 的送货单<b>不核货也能被仓库签到收货</b>，立即生效。确认关闭？`,doIt);
+}
 function act_shopPresendSet(mcode,on){
   psCfgSet(mcode,'on',!!on);
   if(mcode==DB.merchant.code&&!on&&['m-stock-presend'].includes(DB.page))DB.page='m-pick-ref';
@@ -4849,15 +4868,16 @@ function shopAllTab(){
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
       <td>${psCfgOf(r.mcode).on?`<span class="tag t-g"><span class="dot"></span>已开通</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">上限 ${psCfgOf(r.mcode).limit} 种</div>`:'<span class="tag t-gr">未开通</span>'}</td>
+      <td>${(typeof ckCfgOf=='function'&&ckCfgOf(r.mcode).on)?'<span class="tag t-g"><span class="dot"></span>已开启</span>':'<span class="tag t-gr">已关闭</span>'}</td>
       <td><div style="display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;align-items:center"><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
         <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button>
-        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button>${psCfgOf(r.mcode).on?`<button class="btn btn-link" onclick="act_shopPsSkus('${r.mcode}')">预送 SKU 清单</button>`:''}</div></td></tr>`;};
+        <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button><button class="btn btn-link" onclick="act_shopCheck('${r.mcode}')">送货前核货</button>${psCfgOf(r.mcode).on?`<button class="btn btn-link" onclick="act_shopPsSkus('${r.mcode}')">预送 SKU 清单</button>`:''}</div></td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>预送模式</th><th>操作</th></tr></thead>
-    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="12"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
+    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>预送模式</th><th>送货前核货</th><th>操作</th></tr></thead>
+    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="14"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
 }
 
@@ -6280,7 +6300,8 @@ goHome();
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20260923i"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
-<script src="pc-modules/delivery.js?v=20261014a"></script>
+<script src="pc-modules/delivery.js?v=20261014c"></script>
+<script src="pc-modules/checkgoods.js?v=20261014a"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
 <script src="pc-modules/analysis.js?v=20260730f"></script>
@@ -6289,7 +6310,7 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
-<script src="pc-modules/presend.js?v=20260923k"></script>
+<script src="pc-modules/presend.js?v=20261014a"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

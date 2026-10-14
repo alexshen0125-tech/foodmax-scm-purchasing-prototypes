@@ -61,11 +61,11 @@
     DB.weighF=DB.weighF||{};const f=DB.weighF;const agg={};
     scopeOrders().forEach(o=>{
       if(f.date&&o.deliver!=f.date)return;if(f.wh&&o.warehouse!=f.wh)return;
-      (o.lines||[]).forEach(l=>{const m=skuMeta(l);if(!m.weighable)return;
+      (o.lines||[]).forEach(l=>{const m=skuMeta(l);if(!m.weighable)return;if((+l.qty||0)-(+l.cancelQty||0)<=0)return;   // 已取消 SKU 不称重
         if(f.name&&!((l.name||'').includes(f.name))&&!((l.sku||'').includes(f.name)))return;
         const wh=o.warehouse||'—',key=wh+'|'+l.sku;
         if(!agg[key])agg[key]={key,wh,sku:l.sku,name:l.name,unit:m.unit,specQty:m.specQty,up:kgPrice(l),portionN:0,locked:false};
-        agg[key].portionN+=(+l.qty||0);
+        agg[key].portionN+=(+l.qty||0)-(+l.cancelQty||0);   // 按实际履约数量（扣除取消数量）
         if(lockedByStatus(o))agg[key].locked=true;});
     });
     return Object.values(agg).map(computeGroup);

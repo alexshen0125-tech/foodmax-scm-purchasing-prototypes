@@ -27,6 +27,9 @@ css.textContent=`
 .oc .meta{padding:11px 0 4px;}
 .oc .ml{display:flex;font-size:13px;line-height:1.9;color:#27433A;}
 .oc .ml .lk{flex:0 0 64px;color:var(--sub);}
+.oc .ml .cx{font-size:10.5px;font-weight:700;color:var(--amber);background:#FBF1DE;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:1px;font-family:inherit;font-style:normal;}
+.odd-line .cx{font-size:10.5px;font-weight:700;color:var(--amber);background:#FBF1DE;padding:1px 7px;border-radius:20px;margin-left:4px;}
+.odd-row a.asno{color:var(--emerald);font-family:monospace;text-decoration:underline;margin-left:10px;cursor:pointer;display:inline-block;min-height:24px;}
 .oc .ml .sg{font-size:9.5px;border:1px solid var(--emerald);color:var(--emerald);padding:0 4px;border-radius:4px;margin-left:6px;vertical-align:1px;}
 .oc .it{display:flex;gap:12px;padding-top:11px;}
 .oc .it .img{width:56px;height:56px;border-radius:13px;flex:0 0 56px;background:var(--mint-soft);display:flex;align-items:center;justify-content:center;font-size:26px;}
@@ -84,6 +87,12 @@ const TABS=[
   {k:'done',label:'已完成',match:o=>o.status==='done'},
   {k:'cancel',label:'已取消',match:o=>o.status==='canceled'},
 ];
+/* 部分 SKU 取消 →「部分退款」：订单非整单取消且 ≥1 行 cancelQty>0；取消部分已原路退款、不计入订单金额（与 PC 同口径） */
+const cxQty=l=>+l.cancelQty||0;
+const isPartCx=o=>o.status!=='canceled'&&(o.lines||[]).some(l=>cxQty(l)>0);
+const cxAmt=o=>(o.lines||[]).reduce((s,l)=>s+cxQty(l)*l.price,0);
+const aftersOf=o=>(window.FM_MOD&&window.FM_MOD.afterOfOrder)?window.FM_MOD.afterOfOrder(o.id):[];
+const XF=[{k:'all',label:'全部',m:()=>true},{k:'part',label:'部分退款',m:isPartCx},{k:'after',label:'有售后',m:o=>aftersOf(o).length>0}];
 function listOf(k){const t=TABS.find(x=>x.k===k);return (window.FM.DB.orders||[]).filter(t.match);}
 
 function card(o){
@@ -93,7 +102,7 @@ function card(o){
     <div class="oh"><span class="buyer">${ordMask(o.client)}</span>
       <span class="st ${STCLASS[st]}">${st}${o.status==='packed'?'<span class="sub2">已贴标</span>':''}</span></div>
     <div class="meta">
-      <div class="ml"><span class="lk">订单号</span><span style="font-family:monospace">${o.id}</span></div>
+      <div class="ml"><span class="lk">订单号</span><span style="font-family:monospace">${o.id}${isPartCx(o)?'<i class="cx">部分退款</i>':''}</span></div>
       <div class="ml"><span class="lk">下单时间</span><span>${o.orderDate||'—'}</span></div>
       <div class="ml"><span class="lk">送达时间</span><span>${o.deliver} ${o.window}</span></div>
       <div class="ml"><span class="lk">入库仓库</span><span>${o.warehouse}<i class="sg">SG仓</i></span></div>
@@ -124,7 +133,8 @@ function openDetail(o){
       <div class="st" style="color:var(--${STCLASS[st]==='emerald'?'emerald':STCLASS[st]==='amber'?'amber':STCLASS[st]==='red'?'red':'sub'})">${st}${o.status==='packed'?' · 已贴标待交接':''}</div></div>
     <div class="odd-tl">${steps.map((s,i)=>`<div class="n ${i<=cur&&o.status!=='canceled'?'on':''}"><div class="dot"></div>${s}</div>`).join('')}</div>
     <div class="odd-sec">商品明细</div>
-    <div class="odd-card">${o.lines.map(l=>{const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;return `<div class="odd-line"><div><div class="nm">${l.name}${bc?' <span class="bcrs-b">BCRS</span>':''}</div>${l.spec?`<div class="qp">规格 ${l.spec}</div>`:''}<div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;}).join('')}</div>
+    <div class="odd-card">${o.lines.map(l=>{const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;const cq=cxQty(l);return `<div class="odd-line"${cq>=l.qty?' style="background:#FBF6EC"':''}><div><div class="nm">${l.name}${bc?' <span class="bcrs-b">BCRS</span>':''}${cq?`<span class="cx">${cq>=l.qty?'已取消':'部分取消'}</span>`:''}</div>${cq?`<div class="qp" style="color:var(--amber)">取消 ${cq}${l.unit} · ${l.cancelReason||''} · ${l.cancelAt||''}</div>`:''}${l.spec?`<div class="qp">规格 ${l.spec}</div>`:''}<div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;}).join('')}</div>
+    ${isPartCx(o)?`<div style="margin:10px 16px 0;padding:11px 14px;border-radius:14px;background:#FBF1DE;color:#7A5A12;font-size:12.5px;line-height:1.6"><b>部分退款</b>：已取消 SKU 已原路退款客户 <b>S$${cxAmt(o).toFixed(2)}</b>，不计入订单金额与预计收入。</div>`:''}
     <div class="odd-sec">配送信息</div>
     <div class="odd-card">
       <div class="odd-row"><span class="k">订单号</span><span style="font-family:monospace">${o.id}</span></div>
@@ -133,6 +143,7 @@ function openDetail(o){
       <div class="odd-row"><span class="k">入库仓库</span><span>${o.warehouse}</span></div>
       ${o.pickId?`<div class="odd-row"><span class="k">备货单</span><span style="font-family:monospace">${o.pickId}</span></div>`:''}
       ${o.deliveryId?`<div class="odd-row"><span class="k">送货单</span><span style="font-family:monospace">${o.deliveryId}</span></div>`:''}
+      ${aftersOf(o).length?`<div class="odd-row"><span class="k">售后单号</span><span>${aftersOf(o).map(d=>`<a class="asno" onclick="window.FM_MOD.afterDetailByNo('${d.orderNo}')">${d.orderNo}</a>`).join('')}</span></div>`:''}
     </div>
     <div class="odd-sec">金额（预估，以订单完成为准）</div>
     <div class="odd-card">
@@ -160,6 +171,7 @@ function renderList(container,inTab){
     <div class="od-bar">
       <div class="od-fl on" data-f="status">订单状态${svg('back','style="transform:rotate(-90deg)"')}</div>
       <div class="od-fl" data-f="time">订单时间${svg('back','style="transform:rotate(-90deg)"')}</div>
+      <div class="od-fl" data-f="xf">退款售后${svg('back','style="transform:rotate(-90deg)"')}</div>
       <div class="od-fl" data-f="wh">全部仓库${svg('back','style="transform:rotate(-90deg)"')}</div>
     </div>
     <div class="od-list" id="ol"></div>`;
@@ -167,11 +179,13 @@ function renderList(container,inTab){
   const statusFl=container.querySelector('[data-f="status"]');
   const timeFl=container.querySelector('[data-f="time"]');
   const whFl=container.querySelector('[data-f="wh"]');
-  const state={statusK:'send',date:{type:'all'}};
+  const xfFl=container.querySelector('[data-f="xf"]');
+  const state={statusK:'send',date:{type:'all'},xf:'all'};
 
   // 订单时间筛选：按 orderDate(下单日期) 精确匹配单个日期，不支持区间；与订单状态 tab 叠加生效
   const matchDate=(o)=>{const f=state.date;if(f.type!=='day')return true;return (o.orderDate||'')===f.day;};
-  const dataNow=()=>listOf(state.statusK).filter(matchDate);
+  const matchXf=(o)=>XF.find(x=>x.k===state.xf).m(o);   // 退款售后：全部 / 部分退款 / 有售后，与状态、时间叠加
+  const dataNow=()=>listOf(state.statusK).filter(matchDate).filter(matchXf);
 
   const paintList=()=>{
     const t=TABS.find(x=>x.k===state.statusK),data=dataNow();
@@ -182,12 +196,13 @@ function renderList(container,inTab){
   const draw=()=>{list.innerHTML=skel(3);setTimeout(paintList,300);};
 
   // 订单状态：sheet 计数已叠加当前时间筛选
-  statusFl.onclick=()=>sheet(TABS.map(t=>({label:`${t.label}（${listOf(t.k).filter(matchDate).length}）`,onClick:()=>{state.statusK=t.k;statusFl.firstChild.textContent=t.label;draw();}})));
+  statusFl.onclick=()=>sheet(TABS.map(t=>({label:`${t.label}（${listOf(t.k).filter(matchDate).filter(matchXf).length}）`,onClick:()=>{state.statusK=t.k;statusFl.firstChild.textContent=t.label;draw();}})));
 
   // 订单时间：选单个日期（不支持区间、不支持不限时间）
   timeFl.onclick=()=>openDatePick(state.date.type==='day'?state.date.day:TODAY,
     (day)=>{state.date={type:'day',day};timeFl.firstChild.textContent=day;timeFl.classList.add('on');draw();});
 
+  xfFl.onclick=()=>sheet(XF.map(x=>({label:`${x.label}（${listOf(state.statusK).filter(matchDate).filter(x.m).length}）`,onClick:()=>{state.xf=x.k;xfFl.firstChild.textContent=x.k==='all'?'退款售后':x.label;xfFl.classList.toggle('on',x.k!=='all');draw();}})));
   whFl.onclick=()=>toast('选择入库仓库');
   draw();
 }
