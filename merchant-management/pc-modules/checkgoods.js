@@ -2,7 +2,8 @@
    背景：商家送货到仓错漏多。改为：截单后商家先按送货单逐 SKU 核货，核完仓库才能扫码签到收货。
    口径（2026-10-14 沈亮「按建议」拍板）：
    - 粒度：按送货单（一仓一张）逐 SKU 核「件数」，称重品也只核件数（重量走称重录入）。
-   - 动作：核货数量预填应送数量，商家只改不一致的行 → 确认核货。上限 = 应送数量（不能多填），下限 0。
+   - 动作：PC 手动核货——核货数量预填应送数量，商家只改不一致的行 → 确认核货。上限 = 应送数量（不能多填），下限 0。
+           App 另支持扫码核货（2026-10-14 追加）：从 0 起扫一张标签 +1 件，同序号去重、别仓/别单/本单无此 SKU 不计数并报警；结果写同一 d.check（method=scan）。
    - 少装：允许带差异提交 = 商家申报缺货。缺口照现有少货链路走（平台补采优先 → 补不足按实收出库标缺货），
            缺货罚款仍按仓库实收清点计，主动申报不减免。核货数量只作对账参考，结算一律以仓库实收为准。
    - 卡点：未核货 / 核货已失效 → 仓库扫码签到被拦截。截单后才能核货（与打印送货单同一时点），不设截止时间。
@@ -39,7 +40,7 @@
     if(!isLocked(d)||d.check)return;
     const lines={},snap={};
     ckLines(d).forEach(l=>{const s=SEED_SHORT[d.id]&&SEED_SHORT[d.id][l.sku];lines[l.sku]=(s!=null?s:l.should);snap[l.sku]=l.should;});
-    d.check={by:who(),at:`${d.deliver} ${d.signTime?ckBefore(d.signTime):'23:40'}`,lines,snap};
+    d.check={by:who(),at:`${d.deliver} ${d.signTime?ckBefore(d.signTime):'23:40'}`,lines,snap,method:d.id=='SH20260701008'?'scan':'manual',manualAdj:0};
   }
 
   function ckBefore(t){const [h,m]=t.split(':').map(Number);const x=(h*60+m-8+1440)%1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0');}   // 演示：签到前 8 分钟核货
@@ -79,7 +80,7 @@
   // 列表「核货」列副行
   window.ckSub=function(d){
     const s=ckState(d);
-    if(s=='done'){const sh=ckShortQty(d);return `<div style="font-size:11px;color:var(--ts);margin-top:2px">${d.check.at}</div>${sh?`<div style="font-size:11px;color:var(--r);margin-top:2px">申报缺货 ${sh} 件</div>`:''}`;}
+    if(s=='done'){const sh=ckShortQty(d);return `<div style="font-size:11px;color:var(--ts);margin-top:2px">${d.check.at}${d.check.method=='scan'?' · App 扫码':''}</div>${sh?`<div style="font-size:11px;color:var(--r);margin-top:2px">申报缺货 ${sh} 件</div>`:''}`;}
     if(s=='stale')return '<div style="font-size:11px;color:var(--r);margin-top:2px">应送数量有变</div>';
     if(s=='todo')return '<div style="font-size:11px;color:var(--ts);margin-top:2px">核完仓库才能收货</div>';
     return '';
@@ -110,8 +111,8 @@
         <span class="x" onclick="closeDrawer()">×</span></div>
       <div class="drawer-bd">
         ${stale?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⚠️</span><div>上次核货后<b>应送数量有变化</b>（客户取消或改单），原核货已失效，请按最新应送数量重新核货。</div></div>`:''}
-        ${ro?(d.check?`<div class="ib ib-gr" style="margin-bottom:12px"><span class="i">✅</span><div>${d.check.by} 于 ${d.check.at} 确认核货${ckShortQty(d)?`，申报缺货 <b style="color:var(--r)">${ckShortQty(d)}</b> 件`:'，与应送一致'}。${isLocked(d)?'仓库已签到，核货记录已锁定。':'签到前可撤回重核。'}</div></div>`:'')
-          :`<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📦</span><div>对照车上实际装的货，<b>数量一致的不用动</b>，只改装少了的行，改完点「确认核货」。<b>核完仓库才能扫码签到收货。</b></div></div>`}
+        ${ro?(d.check?`<div class="ib ib-gr" style="margin-bottom:12px"><span class="i">✅</span><div>${d.check.by} 于 ${d.check.at} ${d.check.method=='scan'?`在 App <b>扫码核货</b>${d.check.manualAdj?`（手动补录 ${d.check.manualAdj} 件）`:''}`:'确认核货'}${ckShortQty(d)?`，申报缺货 <b style="color:var(--r)">${ckShortQty(d)}</b> 件`:'，与应送一致'}。${isLocked(d)?'仓库已签到，核货记录已锁定。':'签到前可撤回重核。'}</div></div>`:'')
+          :`<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📦</span><div>对照车上实际装的货，<b>数量一致的不用动</b>，只改装少了的行，改完点「确认核货」。<b>核完仓库才能扫码签到收货。</b><br>在车边核货可用<b>商家 App 扫码核货</b>：逐件扫标签，扫一张记 1 件，扫到别仓的货会报警。</div></div>`}
         <table><thead><tr><th>商品</th><th>规格</th><th style="text-align:right">应送数量</th><th style="text-align:right">${ro?'核货数量':'实装数量'}</th><th style="text-align:right">差异</th></tr></thead>
           <tbody>${rows}</tbody></table>
         <div id="ck-sum" style="margin-top:12px;font-size:12.5px;color:var(--ts)">${ckSumHtml(d,ls,ro)}</div>
