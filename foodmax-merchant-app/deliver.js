@@ -505,6 +505,7 @@ const pickOf=(g,x)=>(x.pickQty==null&&g.st==='已提货')?0:x.pickQty;
 const RA_TYPES={short:'少取',none:'没拿到',noarrive:'未到仓',damage:'货损不可售'};
 const RA_WAIT_H=48,RA_WIN_H=24,RA_REVIEW_H=48;
 const RA_TONE={'审核中':['#E8F0FE','#2563EB'],'成立':['var(--mint-soft)','var(--emerald-2)'],'部分成立':['var(--amber-soft)','#B45309'],'不成立':['var(--muted)','var(--sub)']};
+const msTs=ms=>relTs((ms-Date.now())/3600000);
 const tsMs=v=>{const t=v?Date.parse(String(v).replace(' ','T')):NaN;return isNaN(t)?0:t;};
 const fmtS=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 function raWin(g){
@@ -521,9 +522,9 @@ function raTag(st){const c=RA_TONE[st]||RA_TONE['不成立'];return `<span style
 function raLine(g){
   if(g.appeal)return raTag(g.appeal.status);
   const w=raWin(g);if(!w)return '';const n=Date.now();
-  if(w.from&&n<w.from)return `<span style="color:var(--sub)">${cdSpan(w.from)} 后可申诉未到仓</span>`;
+  if(w.from&&n<w.from)return '';
   if(w.to&&n>=w.to)return `<span style="color:var(--sub)">申诉已截止</span>`;
-  return w.to?`<span style="color:var(--red)">申诉剩 ${cdSpan(w.to)}</span>`:`<span style="color:var(--emerald-2)">可申诉未到仓</span>`;
+  return `<span style="color:var(--emerald-2)">可申诉</span>`;
 }
 function pickVal(g,x){
   const vals=(x?[x]:g.items).map(i=>pickOf(g,i));
@@ -536,7 +537,7 @@ function returnCard(g){
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     <div class="dl-kbox" style="margin-top:10px;padding:10px 0"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div></div>
     <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?`已于 ${g.pickup} 提货`:'—'}</span></div>
-    ${(g.appeal||raWin(g))?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?`<span data-ra="${g.no}" style="min-height:36px;min-width:72px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13px;cursor:pointer">申诉</span>`:''}</div>`:''}
+    ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?`<span data-ra="${g.no}" style="min-height:36px;min-width:72px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13px;cursor:pointer">申诉</span>`:''}</div>`:''}
   </div>`;
 }
 // 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
@@ -565,12 +566,12 @@ function raDetail(g,sec,box,kv){
     const w=raWin(g),n=Date.now();let msg='';
     if(g.st==='待提货')msg='货物已到仓，凭提货码到仓提货即可。提货后 24 小时内如发现少取、没拿到或货损，可发起申诉。';
     else if(!w)return '';
-    else if(w.from&&n<w.from)msg=`退货单生成满 ${RA_WAIT_H} 小时仍未到仓可申诉「未到仓」，还需等 ${cdSpan(w.from)}。`;
+    else if(w.from&&n<w.from)msg=`退货单生成满 ${RA_WAIT_H} 小时仍未到仓可申诉「未到仓」，预计 ${msTs(w.from)} 起可申诉。`;
     else if(w.to&&n>=w.to)msg='提货已超过 24 小时，申诉已截止。';
-    else msg=w.to?`提货后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，剩 <b style="color:var(--red)">${cdSpan(w.to)}</b>。每单只能申诉 1 次。`:'货物超过 48 小时仍未到仓，可申诉「未到仓」。每单只能申诉 1 次。';
+    else msg=w.to?`提货后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，截止时间 <b>${msTs(w.to)}</b>。每单只能申诉 1 次。`:'货物超过 48 小时仍未到仓，可申诉「未到仓」。每单只能申诉 1 次。';
     return sec('退货申诉')+`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${msg}</div>`;
   }
-  return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',RA_TYPES[a.type])+kv('申诉时间',a.at)+(a.status==='审核中'?kv('核定截止',`剩 ${cdSpan(a.reviewDue)}`):kv('核定时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
+  return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',RA_TYPES[a.type])+kv('申诉时间',a.at)+(a.status==='审核中'?kv('核定截止时间',msTs(a.reviewDue)):kv('核定时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
       <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>申诉数量 ${x.qty}</span><span>核定数量 ${x.ok==null?'—':x.ok}</span><span>售后单价 ${fmtS(x.price)}</span><span>赔付 ${x.ok==null?'—':fmtS(x.ok*x.price)}</span></div></div>`).join(''))
     +(a.status!=='审核中'?sec('核定结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('业务调整单',a.adjNo?`<span style="font-family:monospace">${a.adjNo}</span>`:'—')+kv('核定说明',a.note)):'');
@@ -581,7 +582,7 @@ function openRetAppeal(g,fromDetail){
   const w=raWin(g);let type=raDefault(g),photo=false;
   const tips={short:'取回数量少于退回数量，申请平台赔付差额。',none:'系统显示已提货，但你实际没有拿到这些货。',noarrive:`退货单生成已超过 ${RA_WAIT_H} 小时，货物仍未到仓。`,damage:'货物在平台仓暂存或运输中损坏，无法再售卖。客户退回时就已损坏的属于判责问题，不在此申诉。'};
   pushPage({title:'退货申诉',body:`
-    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">每张退货单<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止剩 <b style="color:var(--red)">${cdSpan(w.to)}</b>。`:''}本申诉只针对退回的货，不影响原售后单判责。</div>
+    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">每张退货单<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}本申诉只针对退回的货，不影响原售后单判责。</div>
     <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉类型</span></div>
       <div id="ra-types" style="display:flex;flex-wrap:wrap;gap:9px"></div>
       <div id="ra-tip" style="font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5"></div></div>

@@ -4306,6 +4306,7 @@ PAGES['m-after-return']=()=>{
    RA-06 赔付 = Σ 核定数量 × 售后单价（售后金额按 SKU 拆分后 ÷ 退回数量），走业务调整单「平台付给商家」，进入当期结算 */
 const RA_TYPES={short:'少取',none:'没拿到',noarrive:'未到仓',damage:'货损不可售'};
 const RA_WAIT_H=48, RA_WIN_H=24, RA_REVIEW_H=48;
+function msTs(ms){const d=new Date(ms);const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
 function tsMs(s){const t=s?Date.parse(String(s).replace(' ','T')):NaN;return isNaN(t)?0:t;}
 function retUnitPrice(a,x){return x.price!=null?x.price:a.amt/Math.max(retQtySum(a),1);}
 function retAppealWin(a){
@@ -4323,9 +4324,9 @@ function retAppealCell(a){
   if(ra)return `<span class="tag ${RA_TONE[ra.status]||'t-gr'}"><span class="dot"></span>${ra.status=='审核中'?'申诉审核中':'申诉'+ra.status}</span>`;
   const w=retAppealWin(a);if(!w)return QTY_EMPTY;
   const n=Date.now();
-  if(w.from&&n<w.from)return `<span style="color:var(--ts)">${cdSpan(w.from)} 后可申诉</span>`;
+  if(w.from&&n<w.from)return QTY_EMPTY;
   if(w.to&&n>=w.to)return `<span style="color:var(--tt)">申诉已截止</span>`;
-  return w.to?`<span style="color:var(--r)">剩 ${cdSpan(w.to)}</span>`:`<span style="color:var(--g)">可申诉</span>`;
+  return `<span style="color:var(--g)">可申诉</span>`;
 }
 function act_retAppeal(i){const a=DB.afterSales[i];if(!retAppealOpen(a))return toast('当前不在申诉时间内','err');DB._ra={i,type:retAppealDefault(a),photo:false};raModal();}
 function raModal(){
@@ -4335,7 +4336,7 @@ function raModal(){
   const rows=a.retItems.map((x,k)=>{const mx=raMax(a,x,type),pr=retUnitPrice(a,x);return `<tr><td style="white-space:nowrap">${x.name}<div style="font-size:11px;color:var(--ts)">${x.sku} · ${x.spec}</div></td><td style="text-align:right">${x.retQty}</td><td style="text-align:right">${pickQtyCell(a,x)}</td><td style="text-align:right"><input class="ra-q" data-k="${k}" data-p="${pr}" type="number" min="0" max="${mx}" value="${mx}" ${mx?'':'disabled'} oninput="raCalc()" style="width:72px;text-align:right"></td><td style="text-align:right;color:var(--ts)">${money(pr)}</td></tr>`;}).join('');
   const html=new String(`<div class="mc-hd"><h3>退货申诉 · TH-${a.id.slice(-6)}</h3><p>${retItemsName(a)} · ${a.returnStatus}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="ib ib-b"><span class="i">📣</span><div>每张退货单<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止剩 <b style="color:var(--r)">${cdSpan(w.to)}</b>。`:''}本申诉只针对退回的货，不影响原售后单判责。</div></div>
+    <div class="ib ib-b"><span class="i">📣</span><div>每张退货单<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}本申诉只针对退回的货，不影响原售后单判责。</div></div>
     <div class="fr"><label class="fl">申诉类型</label><div class="row" style="gap:8px;flex-wrap:wrap">${chips}</div><div style="font-size:12px;color:var(--ts);margin-top:6px">${tip}</div></div>
     <div class="fr"><label class="fl">申诉数量 <span style="font-weight:400;color:var(--ts);font-size:12px">（已按类型预填，可改小）</span></label>
       <table><thead><tr><th>商品</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th style="text-align:right">申诉数量</th><th style="text-align:right">售后单价</th></tr></thead><tbody>${rows}</tbody></table>
@@ -4387,9 +4388,9 @@ function retAppealBlock(a){
     let msg;
     if(a.returnStatus=='待提货')msg='货物已到仓，凭提货码到仓提货即可。提货后 24 小时内如发现少取、没拿到或货损，可在此申诉。';
     else if(!w)return '';
-    else if(w.from&&n<w.from)msg=`退货单生成满 ${RA_WAIT_H} 小时仍未到仓可申诉「未到仓」，还需等 ${cdSpan(w.from)}。`;
+    else if(w.from&&n<w.from)msg=`退货单生成满 ${RA_WAIT_H} 小时仍未到仓可申诉「未到仓」，预计 ${msTs(w.from)} 起可申诉。`;
     else if(w.to&&n>=w.to)msg='提货已超过 24 小时，申诉已截止。';
-    else msg=w.to?`提货后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，剩 <b style="color:var(--r)">${cdSpan(w.to)}</b>。`:'货物超过 48 小时仍未到仓，可申诉「未到仓」。';
+    else msg=w.to?`提货后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，截止时间 <b>${msTs(w.to)}</b>。`:'货物超过 48 小时仍未到仓，可申诉「未到仓」。';
     return sec+`<div class="ib ib-b" style="margin-bottom:20px"><span class="i">📣</span><div>${msg}</div></div>`;
   }
   const rows=ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.qty}</td><td style="text-align:right">${x.ok==null?QTY_EMPTY:x.ok}</td><td style="text-align:right;color:var(--ts)">${money(x.price)}</td><td style="text-align:right">${x.ok==null?QTY_EMPTY:money(x.ok*x.price)}</td></tr>`).join('');
@@ -4397,7 +4398,7 @@ function retAppealBlock(a){
       ${kv('申诉状态',`<span class="tag ${RA_TONE[ra.status]}"><span class="dot"></span>${ra.status}</span>`)}
       ${kv('申诉类型',RA_TYPES[ra.type])}
       ${kv('申诉时间',ra.at)}
-      ${ra.status=='审核中'?kv('预计核定截止',`剩 ${cdSpan(ra.reviewDue)}`):kv('核定时间',ra.reviewAt)}
+      ${ra.status=='审核中'?kv('核定截止时间',msTs(ra.reviewDue)):kv('核定时间',ra.reviewAt)}
       ${kv('照片',ra.photos?ra.photos+' 张':'未上传')}
       ${kv('说明',ra.desc)}
     </div>
