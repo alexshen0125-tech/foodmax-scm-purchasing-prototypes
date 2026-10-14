@@ -209,7 +209,7 @@ const TILES=[
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
 ];
 // 备货(备货)+正向送货；退库取回(退货)已挪到售后管理(after.js)
-const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'presendstock',l:'在仓预送',ic:'box',when:()=>PRESEND_ON},{k:'presendrecon',l:'送货盘点',ic:'chart'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign'},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
+const DELIVER=[{k:'pick',l:'备货参考',ic:'layers'},{k:'presendstock',l:'在仓预送',ic:'box',when:()=>PRESEND_ON},{k:'presendrecon',l:'送货盘点',ic:'chart'},{k:'label',l:'打印标签',ic:'tag'},{k:'signin',l:'送货签到',ic:'sign',badge:()=>window.FM_CK_PENDING?window.FM_CK_PENDING():0},{k:'ticket',l:'票证上传',ic:'ticket',badge:'21'},{k:'handover',l:'物资交接',ic:'swap'},{k:'progress',l:'交货进度',ic:'progress'}];
 const READY=new Set(['goods']);
 
 /* 页面栈 + 公共能力(确认/toast/抽屉/骨架) */
@@ -266,7 +266,10 @@ if(!window._cdTick)window._cdTick=setInterval(()=>{document.querySelectorAll('[d
 // 未开通的商家完全没有预送逻辑——无预送量、无在仓寄存、相关入口不出现，备货与打标只按订单量。
 // 演示店铺已开通；与 PC 原型 DB.merchant.presendMode 同一开关。
 const PRESEND_ON=true;
-const PRESEND_SKU_LIMIT=20;   // 预送 SKU 种类上限（BR-22）：运营平台按商家配置，默认 20，与 PC 同口径
+const PRESEND_SKU_LIMIT=20;
+// 送货前核货：运营平台「店铺管理 › 送货前核货」按店铺开通（默认未开通）。开通的店铺截单后先核货，核完仓库才能扫码签到；
+// 未开通保持现有流程、不出现核货入口。演示店铺已开通；与 PC 原型 DB.merchant.checkMode 同一开关。
+const CHECK_ON=true;   // 预送 SKU 种类上限（BR-22）：运营平台按商家配置，默认 20，与 PC 同口径
 const DB={
   orders:[
     {id:'#SG20260701001',client:'海底捞（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,platSub:8.00,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',spec:'1kg/件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
@@ -357,7 +360,7 @@ window.homeCustom=()=>{const r=HD_RANGE;const m=document.createElement('div');m.
 function renderHome(){
   const hd=homeDash();
   const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${(typeof t.badge==='function'?t.badge():t.badge)?`<span class="bdg ${t.amber?'amber':''}">${typeof t.badge==='function'?t.badge():t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
-  const deliver=DELIVER.filter(d=>!d.when||d.when()).map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${d.badge?`<span class="bdg">${d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
+  const deliver=DELIVER.filter(d=>!d.when||d.when()).map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${(typeof d.badge==='function'?d.badge():d.badge)?`<span class="bdg">${typeof d.badge==='function'?d.badge():d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
   document.getElementById('v-home').innerHTML=`<div class="stagger">
     <div class="hm-top"><div class="hm-logo">${svg('leaf')}</div>
       <div class="hm-store"><div class="nm">鲜丰食材 · Fresh Harvest Pte Ltd</div><div class="sub"><span class="dot"></span>正常营业 · Food Max 优选商家</div></div>
@@ -422,7 +425,7 @@ renderHome();
 <script src="settle.js?v=20260915a"></script>
 <script src="replen.js?v=20260831a"></script>
 <script src="biz.js"></script>
-<script src="deliver.js?v=20261014b"></script>
+<script src="deliver.js?v=20261014c"></script>
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260923s"></script>
 <script src="supply.js"></script>

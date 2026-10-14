@@ -90,6 +90,8 @@
                         :h<4?planned+(2+hnum(sd+'od',6))
                         :planned;
           const quota=Math.max(orderQty,psQty);                                // 当日可卖上限 = 全天预测总量（已含订单），多收不进配额（BR-16d）
+          // 商家核货数（送货前核货）：不能超过应送；短收的约一半商家已在核货时如实申报（核货=实收），另一半核了足量但实收少（实收比核货少）
+          const checked=received<planned&&hnum(sd+'ck',2)==0?received:planned;
           const stock=open+received;                                           // 当天仓里能动的货
           const demand=Math.max(1,Math.round(need*(0.7+hnum(sd+'ra',45)/100))); // 当日真实销量 = 全天预测量的 70%–114%（预测含订单量）
           const sold=Math.min(stock,demand,quota);
@@ -97,7 +99,7 @@
           const close=stock-outQty;                                            // 期末在仓（按实出扣）
           carry[key]=close;
           return {sku:r.sku,name:r.name,unit:r.unit,spec:r.spec,orderQty,psQty,need,
-                  open,ded,psNet,planned,received,sold,out:outQty,close,
+                  open,ded,psNet,planned,checked,received,sold,out:outQty,close,
                   short:Math.max(0,planned-received),over:Math.max(0,received-planned)};
         });
         docs.push({no:'SH'+d.replace(/-/g,'')+String(++seq).padStart(3,'0'),date:d,wh,lines});
@@ -286,7 +288,8 @@
           多收照收入寄存、当日不可卖（BR-16c/BR-16d）。 */
   window.ensurePsAudit=function(){ensurePresend();};   // 数据在 ensurePresend 里由 buildAudit 一次建好
   const sum=(arr,f)=>arr.reduce((a,x)=>a+f(x),0);
-  function docTotals(d){return {open:sum(d.lines,l=>l.open),planned:sum(d.lines,l=>l.planned),
+  const CKON=()=>typeof ckOn=='function'&&ckOn();   // 送货前核货已开通才展示「商家核货」列
+  function docTotals(d){return {open:sum(d.lines,l=>l.open),planned:sum(d.lines,l=>l.planned),checked:sum(d.lines,l=>l.checked==null?l.planned:l.checked),
     received:sum(d.lines,l=>l.received),sold:sum(d.lines,l=>l.sold),out:sum(d.lines,l=>l.out),close:sum(d.lines,l=>l.close),
     short:sum(d.lines,l=>l.short),over:sum(d.lines,l=>l.over)};}
   function docTag(t){
@@ -343,6 +346,7 @@
       <table class="subtbl" style="margin-bottom:22px"><tbody>
         <tr><td style="width:42%;color:var(--ts)">期初在仓（昨日留仓 + 昨日多收）</td><td>${t.open} </td></tr>
         <tr><td style="color:var(--ts)">应送（取大后扣期初在仓）</td><td><b>${t.planned}</b></td></tr>
+        ${CKON()?'':'<!--'}<tr><td style="color:var(--ts)">商家核货</td><td>${t.checked}${t.checked<t.planned?` <span style="font-size:12px;color:var(--r)">送货前申报缺货 ${t.planned-t.checked}</span>`:''}</td></tr>${CKON()?'':'-->'}
         <tr><td style="color:var(--ts)">仓库实收</td><td><b>${t.received}</b></td></tr>
         <tr><td style="color:var(--ts)">短收</td><td>${t.short?`<span style="color:var(--r)">−${t.short}</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>
         <tr><td style="color:var(--ts)">多收</td><td>${t.over?`<span style="color:var(--gold)">+${t.over}</span> <span style="font-size:12px;color:var(--ts)">已入在仓寄存，当日不参与售卖</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>
@@ -351,11 +355,11 @@
         <tr><td style="color:var(--ts)"><b>期末在仓</b></td><td><b style="color:${t.close?'var(--gold)':'var(--ts)'}">${t.close}</b> <span style="font-size:12px;color:var(--ts)">= 期初 ${t.open} + 实收 ${t.received} − 仓库实出 ${t.out}，明日优先消耗</span></td></tr>
       </tbody></table>
       <h4 style="font-size:13px;color:var(--ts);margin:0 0 10px">逐 SKU 明细</h4>
-      <table><thead><tr><th>商品</th><th>送货类型</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
+      <table><thead><tr><th>商品</th><th>送货类型</th><th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th>${CKON()?'<th style="text-align:right">商家核货</th>':''}<th style="text-align:right">实收</th><th style="text-align:right">差异</th><th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th></tr></thead><tbody>
         ${d.lines.map(l=>`<tr><td><b>${l.name}</b><div style="font-size:11px;color:var(--ts)">订单 ${l.orderQty}${l.psQty?` · <span style="color:var(--gold)">预送 ${l.psQty}</span>`:''} · 取大 ${l.need}${l.ded?` · <span style="color:var(--g)">抵扣在仓 −${l.ded}</span>`:''}</div></td>
           <td>${l.psQty?'<span class="tag t-y">预测送货</span>':'<span class="tag t-g">实际送货</span>'}</td>
           <td style="text-align:right;color:var(--ts)">${l.open||'—'}</td>
-          <td style="text-align:right">${l.planned}</td><td style="text-align:right">${l.received}</td>
+          <td style="text-align:right">${l.planned}</td>${CKON()?`<td style="text-align:right;${l.checked<l.planned?'color:var(--r)':''}">${l.checked}</td>`:''}<td style="text-align:right;${CKON()&&l.received<l.checked?'color:var(--r);font-weight:600':''}">${l.received}</td>
           <td style="text-align:right">${l.short?`<span style="color:var(--r)">−${l.short}</span>`:(l.over?`<span style="color:var(--gold)">+${l.over}</span>`:'<span style="color:var(--tt)">0</span>')}</td>
           <td style="text-align:right;color:var(--ts)">${l.sold}</td>
           <td style="text-align:right">${l.out!==l.sold?`<b style="color:var(--r)">${l.out}</b><div style="font-size:11px;color:var(--r)">少发 ${l.sold-l.out}</div>`:`<span style="color:var(--ts)">${l.out}</span>`}</td>
@@ -423,7 +427,8 @@
       <td>${d.date}</td><td class="mono">${d.no}</td><td>${d.wh}</td><td>${d.lines.length}</td>
       <td style="text-align:right;color:var(--ts)">${t.open||'—'}</td>
       <td style="text-align:right">${t.planned}</td>
-      <td style="text-align:right"><b>${t.received}</b></td>
+      ${CKON()?`<td style="text-align:right">${t.checked<t.planned?`<span style="color:var(--r)">${t.checked}</span><div style="font-size:11px;color:var(--r)">申报缺 ${t.planned-t.checked}</div>`:t.checked}</td>`:''}
+      <td style="text-align:right"><b>${t.received}</b>${CKON()&&t.received<t.checked?`<div style="font-size:11px;color:var(--r)">比核货少 ${t.checked-t.received}</div>`:''}</td>
       <td style="text-align:right">${t.short?`<span style="color:var(--r)">−${t.short}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right">${t.over?`<span style="color:var(--gold)">+${t.over}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right;color:var(--ts)">${t.sold}</td>
@@ -431,7 +436,7 @@
       <td style="text-align:right"><b style="color:${t.close?'var(--gold)':'var(--ts)'}">${t.close}</b></td>
       <td>${docTag(t)}</td>
       <td><button class="btn btn-sm btn-link" onclick="event.stopPropagation();paDocDrawer('${d.no}')">明细</button></td></tr>`;}).join('')
-      : `<tr><td colspan="14"><div class="empty"><div class="e-ic">${icon('🚚')}</div><div class="e-t">该日无送货单</div><div class="e-s">换个送货日或仓库再看看</div></div></td></tr>`;
+      : `<tr><td colspan="${CKON()?15:14}"><div class="empty"><div class="e-ic">${icon('🚚')}</div><div class="e-t">该日无送货单</div><div class="e-s">换个送货日或仓库再看看</div></div></td></tr>`;
 
     const skuBody=sRows.length?sRows.map(r=>{const key=r.sku+'|'+r.wh,ts=todayShouldOf(r);
       return `<tr onclick="paSkuDrawer('${key}')" style="cursor:pointer">
@@ -490,7 +495,7 @@
     <div class="card-bd flush"><div style="overflow-x:auto">
     ${tab=='doc'?`<table>
       <thead><tr><th>送货日</th><th>送货单号</th><th>入库仓库</th><th>SKU 数</th>
-        <th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th><th style="text-align:right">仓库实收</th>
+        <th style="text-align:right">期初在仓</th><th style="text-align:right">应送</th>${CKON()?'<th style="text-align:right" title="商家送货前核货确认的实装数量，不超过应送">商家核货</th>':''}<th style="text-align:right">仓库实收</th>
         <th style="text-align:right">短收</th><th style="text-align:right">多收</th>
         <th style="text-align:right">卖出</th><th style="text-align:right">仓库实出</th><th style="text-align:right">期末在仓</th><th>结果</th><th style="width:90px">操作</th>
       </tr></thead><tbody>${docBody}</tbody></table>`

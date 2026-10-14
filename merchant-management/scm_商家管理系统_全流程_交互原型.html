@@ -1537,7 +1537,7 @@ PAGES['m-dash']=()=>{
     <div class="sc"><div class="sc-l">动销覆盖</div><div class="sc-v">${d.cover}%</div><div class="sc-s">动销 ${d.cn.split(' / ')[0]} / 在售 ${d.cn.split(' / ')[1]} SPU</div></div>
   </div>
   <div class="card"><div class="card-hd"><h3>⚡ 常用功能</h3><span class="sub">高频操作一键直达</span></div>
-    <div class="card-bd"><div class="wp-qa">${WP_QUICK.map(q=>`
+    <div class="card-bd"><div class="wp-qa">${WP_QUICK.filter(q=>!q.when||q.when()).map(q=>`
       <div class="wp-qi" onclick="nav('${q.p}')"><div class="qic" style="background:${q.bg}"><span>${q.ic}</span></div><span class="qil">${q.t}</span>${q.badge&&q.badge()>0?`<span class="qib">${q.badge()}</span>`:''}</div>`).join('')}</div>
     </div>
   </div>
@@ -1565,7 +1565,7 @@ const WP_QUICK=[
   {t:'新建商品',ic:'🥦',bg:'var(--gl)',p:'m-product'},
   {t:'打印标签',ic:'🏷️',bg:'var(--yl)',p:'m-pick-label',badge:()=>DB.orders.filter(o=>o.status=='pending').length},
   {t:'备货参考',ic:'📊',bg:'var(--gl)',p:'m-pick-ref'},
-  {t:'送货核货',ic:'✅',bg:'var(--yl)',p:'m-delivery',badge:()=>typeof ckPendingCount=='function'?ckPendingCount():0},
+  {t:'送货核货',ic:'✅',bg:'var(--yl)',p:'m-delivery',when:()=>typeof ckOn=='function'&&ckOn(),badge:()=>typeof ckPendingCount=='function'?ckPendingCount():0},
   {t:'结算单',ic:'💰',bg:'var(--bl)',p:'m-settle'},
   {t:'耗材商城',ic:'🖨️',bg:'var(--gl)',p:'m-supply'},
 ];
@@ -4781,19 +4781,19 @@ function act_shopCheck(mcode){
   const on=ckCfgOf(mcode).on;
   modal(`<div class="mc-hd"><h3>送货前核货 · ${shopNameOf(mcode)}</h3><p>${mcode}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="ib ib-b"><span class="i">✅</span><div>开启后，该商家每张送货单须在截单后<b>逐 SKU 核货</b>，<b>核完仓库才能扫码签到收货</b>；未核货或核货失效的送货单，仓库扫码签到被拦截。<br>关闭后不再拦截，商家端不显示核货入口。<b>开 / 关立即生效，只影响尚未签到的送货单。</b></div></div>
+    <div class="ib ib-b"><span class="i">✅</span><div><b>已开通</b>：该商家每张送货单须在截单后<b>逐 SKU 核货</b>，<b>核完仓库才能扫码签到收货</b>；未核货或核货失效的送货单，仓库扫码签到被拦截。<br><b>未开通</b>：保持现有流程（打印送货单 → 仓库扫码签到），商家端不出现核货入口。<br>新店铺默认未开通。<b>开通 / 关闭立即生效，只影响尚未签到的送货单。</b></div></div>
     <div class="fr" style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
       <label class="fl" style="margin:0">送货前核货</label>
-      <label class="chip-ck ${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="act_shopCheckSet('${mcode}',this.checked)">${on?'已开启':'已关闭'}</label>
+      <label class="chip-ck ${on?'on':''}"><input type="checkbox" ${on?'checked':''} onchange="act_shopCheckSet('${mcode}',this.checked)">${on?'已开通':'未开通'}</label>
     </div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
 }
 function act_shopCheckSet(mcode,on){
   const doIt=()=>{if(!mcode||mcode==DB.merchant.code)DB.merchant.checkMode=!!on;else ckCfgOf(mcode).on=!!on;closeModal();render();
-    toast(on?'已开启送货前核货，未签到的送货单需商家核货后才能收货':'已关闭送货前核货，仓库签到不再拦截','ok');};
+    toast(on?'已开通送货前核货，未签到的送货单需商家核货后仓库才能收货':'已关闭送货前核货，恢复现有流程，仓库签到不再拦截','ok');};
   if(on){doIt();return;}
-  askConfirm(`关闭后，${shopNameOf(mcode)} 的送货单<b>不核货也能被仓库签到收货</b>，立即生效。确认关闭？`,doIt);
+  askConfirm(`关闭后，${shopNameOf(mcode)} 恢复现有流程，送货单<b>不核货也能被仓库签到收货</b>，立即生效。确认关闭？`,doIt);
 }
 function act_shopPresendSet(mcode,on){
   psCfgSet(mcode,'on',!!on);
@@ -4868,7 +4868,7 @@ function shopAllTab(){
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
       <td>${psCfgOf(r.mcode).on?`<span class="tag t-g"><span class="dot"></span>已开通</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">上限 ${psCfgOf(r.mcode).limit} 种</div>`:'<span class="tag t-gr">未开通</span>'}</td>
-      <td>${(typeof ckCfgOf=='function'&&ckCfgOf(r.mcode).on)?'<span class="tag t-g"><span class="dot"></span>已开启</span>':'<span class="tag t-gr">已关闭</span>'}</td>
+      <td>${(typeof ckCfgOf=='function'&&ckCfgOf(r.mcode).on)?'<span class="tag t-g"><span class="dot"></span>已开通</span>':'<span class="tag t-gr">未开通</span>'}</td>
       <td><div style="display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;align-items:center"><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
@@ -6300,8 +6300,8 @@ goHome();
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20260923i"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
-<script src="pc-modules/delivery.js?v=20261014c"></script>
-<script src="pc-modules/checkgoods.js?v=20261014a"></script>
+<script src="pc-modules/delivery.js?v=20261014d"></script>
+<script src="pc-modules/checkgoods.js?v=20261014b"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
 <script src="pc-modules/analysis.js?v=20260730f"></script>
@@ -6310,7 +6310,7 @@ goHome();
 <script src="pc-modules/replenish.js?v=20260831a"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
-<script src="pc-modules/presend.js?v=20261014a"></script>
+<script src="pc-modules/presend.js?v=20261014b"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

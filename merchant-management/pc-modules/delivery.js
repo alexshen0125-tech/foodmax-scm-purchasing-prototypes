@@ -88,14 +88,15 @@
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
-    return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。</div>
-    <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单 · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
+    return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。${(typeof ckOn=='function'&&ckOn())?'<br><b>送货前先核货</b>：截单后对照车上实际装的货逐个 SKU 核数量，<b>核完仓库才能扫码签到收货</b>；签到前可撤回重核。':''}</div>
+    <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单${(typeof ckPendingCount=='function'&&ckPendingCount())?` · <b style="color:var(--y)">待核货 ${ckPendingCount()}</b>`:''} · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>送货单</th><th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>送货单</th>${(typeof ckOn=='function'&&ckOn())?'<th>核货</th>':''}<th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
       ${DL.map(d=>{if(d.booked===undefined)d.booked=false;if(d.signed===undefined)d.signed=(d.status=='已签到'||d.status=='交接完成');const done=d.status=='交接完成';
       const cf=dvCutoff(d);
       return `<tr>
         <td class="mono" style="white-space:nowrap">${d.id}<div style="font-size:11px;color:var(--ts);margin-top:2px">备货单 ${d.pickId}</div>${d.printed?`<div style="font-size:11px;color:var(--gd);margin-top:2px">🖨️ 已打印 ${d.printedAt||''}</div>`:''}</td>
+        ${(typeof ckOn=='function'&&ckOn())?`<td style="white-space:nowrap">${ckTag(d)+ckSub(d)}</td>`:''}
         <td>${d.booked?`<span class="tag t-y"><span class="dot"></span>已预约</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${d.bookWindow||d.window}</div>`:'<span class="tag t-gr"><span class="dot"></span>未预约</span>'}</td>
         <td>${done?'<span class="tag t-g"><span class="dot"></span>已入库</span>':(d.signed?'<span class="tag t-b"><span class="dot"></span>已签到</span>':'<span class="tag t-gr"><span class="dot"></span>未签到</span>')}</td>
         <td><b>${d.warehouse}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${d.orderIds.length} 单</div></td>
@@ -104,11 +105,13 @@
         <td>${done?(dvShort(d)
           ?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)}</span><div style="font-size:11px;color:var(--ts);margin-top:2px">平台补采 <b style="color:var(--gold)">${dvReplQty(d)}</b> 件</div>${dvFineAmt(d)>0?`<div style="font-size:11px;color:var(--r);margin-top:2px">罚款 ${money(dvFineAmt(d))}</div>`:''}`
           :'<span class="tag t-g"><span class="dot"></span>足额收货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">平台补采 0 件</div>')
-          :'<span style="color:var(--ts);font-size:12px">待清点</span>'}${(done&&dvOverQty(d))?`<div style="font-size:11px;color:var(--gold);margin-top:2px">多收 <b>${dvOverQty(d)}</b> 件 · 已入寄存</div>`:''}${(typeof whrOfDelivery=='function'&&whrOfDelivery(d.id).some(r=>r.type=='送错'))?'<div style="margin-top:4px"><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>有错货</span></div>':''}</td>
+          :'<span style="color:var(--ts);font-size:12px">待清点</span>'}${(done&&dvOverQty(d))?`<div style="font-size:11px;color:var(--gold);margin-top:2px">多收 <b>${dvOverQty(d)}</b> 件 · 已入寄存</div>`:''}${(done&&typeof ckRecvGap=='function'&&ckRecvGap(d))?`<div style="font-size:11px;color:var(--r);margin-top:2px">实收比核货少 <b>${ckRecvGap(d)}</b> 件</div>`:''}${(typeof whrOfDelivery=='function'&&whrOfDelivery(d.id).some(r=>r.type=='送错'))?'<div style="margin-top:4px"><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>有错货</span></div>':''}</td>
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
-          :`${cf.passed
-              ?`<button class="btn btn-p btn-sm" onclick="deliv_print('${d.id}')">${d.printed?'重新打印':'打印'}</button>`
+          :`${(()=>{if(typeof ckState!='function'||d.signed)return '';const s=ckState(d);
+              if(s=='todo'||s=='stale')return cf.passed?`<button class="btn btn-p btn-sm" onclick="ck_open('${d.id}')">${s=='stale'?'重新核货':'核货'}</button> `:`<button class="btn btn-o btn-sm" disabled style="opacity:.42;cursor:not-allowed" title="未到营业截单时间 ${cf.at}，截单后才能核货">核货</button> `;
+              if(s=='done')return `<button class="btn btn-o btn-sm" onclick="ck_open('${d.id}')">核货记录</button> `;return '';})()}${cf.passed
+              ?`<button class="btn ${(typeof ckBlocked=='function'&&ckBlocked(d))?'btn-o':'btn-p'} btn-sm" onclick="deliv_print('${d.id}')">${d.printed?'重新打印':'打印'}</button>`
               :`<button class="btn btn-o btn-sm" disabled style="opacity:.42;cursor:not-allowed" title="未到营业截单时间 ${cf.at}${cf.wd?'（'+cf.wd+'）':''}，截单后送货单内容才固定，届时可打印">打印</button>`
             } ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">已签到 · 待仓库交接</span>':`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
       </tr>`;}).join('')}
@@ -220,7 +223,7 @@
   window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
     modal(`<div class="mc-hd"><h3>送货签到码 · ${d.warehouse}</h3><p>送货单 ${d.id} · 备货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
       <div class="kv" style="margin-bottom:14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">送达时段</div><div class="v" style="font-size:13px">${d.deliver} ${d.window}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div></div>
-      <div class="ib ib-b" style="margin-bottom:10px"><span class="i">ℹ️</span>到仓<b>出示此码</b>，由<b>仓库人员扫码确认签到</b>——商家端不做签到操作。</div>
+      <div class="ib ib-b" style="margin-bottom:10px"><span class="i">ℹ️</span>到仓<b>出示此码</b>，由<b>仓库人员扫码确认签到</b>——商家端不做签到操作。</div>${(typeof ckBlocked=='function'&&ckBlocked(d))?`<div class="ib ib-r" style="margin-bottom:10px"><span class="i">⛔</span><div>本单<b>${ckState(d)=='stale'?'核货已失效':'还没核货'}</b>，仓库扫码会被拦截。<button class="btn btn-link" style="padding:0 4px" onclick="closeModal();ck_open('${d.id}')">去核货 →</button></div></div>`:''}
       <div style="background:var(--gl);border-radius:12px;padding:18px 0 14px;text-align:center;margin-bottom:6px">
         <div style="font-weight:700;margin-bottom:12px">送货签到码</div>${qrBlock(d.id)}
         <div style="font-size:12px;color:var(--ts);margin-top:12px">仓库扫码签到后，逐张核验交接入仓</div></div>
@@ -255,6 +258,7 @@
     (d.orderIds||[]).forEach(oid=>{const o=DB.orders.find(x=>x.id==oid);if(!o)return;(o.lines||[]).forEach(l=>{const k=l.sku;if(!map[k])map[k]={sku:l.sku,name:l.name,unit:l.unit,qty:0};map[k].qty+=l.qty;});});
     return Object.values(map).map(r=>{const p=DB.products.find(x=>x.name==r.name);const spec=p&&p.skus&&p.skus[0]?`${p.skus[0].qty}${p.unit}/${r.unit||'件'}`:'—';return {sku:r.sku,name:r.name,brand:(p&&p.brand)||'无',spec,skuUnit:r.unit||'件',box:1,orderQty:r.qty,bookQty:r.qty,inQty:inbound?r.qty:0,recvQty:inbound?r.qty:null,packQty:r.qty,vol:+(volPer(r.name)*r.qty).toFixed(6)};});
   }
+  window.dvDetailLines=dvDetailLines;
   function detailPage(d){
     const meta=DC_META[d.warehouse]||{};const lines=dvDetailLines(d);const inbound=d.status=='交接完成';
     const dash=v=>(v===undefined||v===null||v==='')?'—':v;
@@ -274,6 +278,7 @@
         ${kvItem('送达时段',`${d.deliver} ${dash(d.window)}`)}
         ${kvItem('应送货',`${dvShould(d)} 件`)}
         ${kvItem('已入库',`${dvIn(d)} 件`)}
+        ${(typeof ckOn=='function'&&ckOn())?kvItem('核货',ckTag(d)+(d.check?`<div style="font-size:11.5px;color:var(--ts);margin-top:3px">${d.check.by} · ${d.check.at}${ckShortQty(d)?` · <span style="color:var(--r)">申报缺货 ${ckShortQty(d)} 件</span>`:''}</div>`:'')+(['todo','stale'].includes(ckState(d))&&!d.signed?`<button class="btn btn-link" style="padding:0" onclick="ck_open('${d.id}')">去核货 →</button>`:'')):''}
         ${kvItem('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')}
         ${kvItem('签到时间',(d.signed||inbound)?`${d.deliver} ${d.signTime||'00:12'} 仓库扫码确认`:'未签到')}
         ${kvItem('交接时间',inbound?`${d.deliver} 已交接入仓`:'未交接')}
@@ -316,14 +321,15 @@
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">错货<b>不新增单据、不产生结算</b>，沿用本送货单标记；也可在「售后管理 › 退货单 › 仓库退回」统一查看。<b>多送同一 SKU 不进此表</b>——仓库照收，见上方商品明细「差异」列。<button class="btn btn-link" style="padding-left:4px" onclick="DB.retSrcTab='wh';nav('m-after-return')">前往 →</button></div>
     </div></div>`:''}
     <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">应送数量<br><span style="font-weight:400;color:var(--ts)">订单 + 预送</span></th><th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异<br><span style="font-weight:400;color:var(--ts)">短收 − / 多收 +</span></th><th style="text-align:right">平台补采</th><th style="text-align:right">缺货罚款</th></tr></thead><tbody>
+      <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">应送数量<br><span style="font-weight:400;color:var(--ts)">订单 + 预送</span></th>${(typeof ckOn=='function'&&ckOn())?'<th style="text-align:right">商家核货数量</th>':''}<th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">差异<br><span style="font-weight:400;color:var(--ts)">短收 − / 多收 +</span></th><th style="text-align:right">平台补采</th><th style="text-align:right">缺货罚款</th></tr></thead><tbody>
       ${lines.map((r,i)=>{const diff=(r.recvQty==null)?null:(r.recvQty-r.bookQty);
         return `<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td>
         <td style="text-align:right">${r.bookQty}${(()=>{const pn=(typeof presendNet=='function'?presendNet(r.name,d.warehouse,r.orderQty||0):null);if(!pn||!pn.gross)return '';return `<div style="font-size:11px;color:var(--ts)">订单 ${r.orderQty||0} · <span style="color:var(--gold)">预送 ${pn.gross}</span> · 取大 ${pn.need}</div>`;})()}</td>
+        ${(typeof ckOn=='function'&&ckOn())?`<td style="text-align:right">${(()=>{const c=ckQty(d,r.sku);if(c==null)return '<span style="color:var(--tt)">—</span>';return c<r.bookQty?`<b style="color:var(--r)">${c}</b><div style="font-size:11px;color:var(--r)">申报缺 ${r.bookQty-c}</div>`:`${c}`;})()}</td>`:''}
         <td style="text-align:right;${r.recvQty==null?'color:var(--ts)':(diff<0?'color:var(--r);font-weight:600':'color:var(--gd);font-weight:600')}">${r.recvQty==null?'待清点':r.recvQty}</td>
         <td style="text-align:right;${diff<0?'color:var(--r);font-weight:600':(diff>0?'color:var(--gold);font-weight:600':'color:var(--ts)')}">${diff==null?'—':(diff<0?diff:(diff>0?'+'+diff:'0'))}${diff>0?'<div style="font-size:11px;color:var(--ts)">多收 · 已入寄存</div>':''}</td>
         <td style="text-align:right;${dvReplSku(d,r.sku)>0?'color:var(--gold);font-weight:600':'color:var(--ts)'}">${dvReplSku(d,r.sku)}</td>
-        <td style="text-align:right;${dvFineSku(d,r.sku)>0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${dvFineSku(d,r.sku)>0?'-'+money(dvFineSku(d,r.sku)):'—'}</td></tr>`;}).join('')||`<tr><td colspan="10" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+        <td style="text-align:right;${dvFineSku(d,r.sku)>0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${dvFineSku(d,r.sku)>0?'-'+money(dvFineSku(d,r.sku)):'—'}</td></tr>`;}).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<br><b>多收</b>：你实际送的比应送多，仓库<b>照收不设上限</b>，超出部分计入你的<b>在仓寄存库存</b>（「库存管理 › 在仓预送库存」可查），<b>当天不参与售卖</b>、不结算，<b>次日优先抵扣应送量</b>。送来的若是应送清单外的 SKU，属<b>送错</b>，仍走仓库退回、需线下取回。<b>平台补采</b>＝该 SKU 缺口由平台自营现货补齐的数量（未补为 0），按<b>自营商品原定价</b>在结算单中抵扣；<b>缺货罚款</b>＝该 SKU 缺口件数 × 罚款标准，<b>与是否补采无关</b>，两者各自独立进结算单。</div></div>
       ${(d.signed&&!inbound)?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
