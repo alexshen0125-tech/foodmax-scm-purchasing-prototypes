@@ -326,7 +326,7 @@ function renderList(container){
         <div class="nums"><div class="n"><div class="v">0</div><div class="l">高投预警</div></div>
           <div class="n"><div class="v">0</div><div class="l">高投商品</div></div></div></div>
     </div>
-    <div id="ret-card" style="margin:10px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退货单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退商品到仓提货进度（商家只读 · 仓库确认 · 72h 提货）</div></div>${svg('arrow')}</div>
+    <div id="ret-card" style="margin:10px 16px 10px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:space-between;cursor:pointer;min-height:44px"><div><div style="font-size:14.5px;font-weight:700;color:#27433A">📦 退货单（退货回仓）</div><div style="font-size:12px;color:var(--sub);margin-top:2px">客退商品到仓提货进度（商家只读 · 仓库确认 · 可申诉少取/货损）</div></div>${svg('arrow')}</div>
     <div class="as-filters"><span class="fl" id="f-city">全部城市 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="fl" id="f-date">履约日期 ${svg('arrow','style="transform:rotate(90deg)"')}</span>
       <span class="ft">支持按照履约日期筛选</span></div>

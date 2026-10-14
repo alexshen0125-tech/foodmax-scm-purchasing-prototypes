@@ -257,7 +257,7 @@ function ordIncome(o){return +(ordPaid(o)+(o.platSub||0)-ordFee(o)).toFixed(2);}
 const BCRS_UNIT_PRICE=0.10;                                   // 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计GST）
 function lineBcrs(l){return +((+l.qty||0)*(+l.bcrsContainers||0)*BCRS_UNIT_PRICE).toFixed(2);} // 行押金 = 件数 × 该售卖单位容器数 × 0.10
 function ordBcrs(o){return +((o.lines||[]).reduce((s,l)=>s+lineBcrs(l),0)).toFixed(2);} // 订单 BCRS 押金合计
-/* 倒计时：data-cd=截止毫秒；全局每秒刷新（退货单72h提货时限 / 申诉24h窗口） */
+/* 倒计时：data-cd=截止毫秒；全局每秒刷新（退货单申诉窗口 / 售后申诉24h窗口） */
 function fmtRemain(ms){let s=Math.floor((ms-Date.now())/1000);if(!ms||isNaN(s))return '—';if(s<=0)return '已截止';const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const m=Math.floor(s/60),ss=s%60;const p=n=>(''+n).padStart(2,'0');return (d?d+'天 ':'')+p(h)+':'+p(m)+':'+p(ss);}
 function cdSpan(ms){return `<b data-cd="${ms}">${fmtRemain(ms)}</b>`;}
 function arriveDueMs(str,hrs){if(!str)return 0;const t=Date.parse(str.replace(' ','T'));return isNaN(t)?0:t+hrs*3600000;}
@@ -419,7 +419,7 @@ renderHome();
 <script src="settle.js?v=20260915a"></script>
 <script src="replen.js?v=20260831a"></script>
 <script src="biz.js"></script>
-<script src="deliver.js?v=20260916a"></script>
+<script src="deliver.js?v=20261014a"></script>
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260923s"></script>
 <script src="supply.js"></script>
