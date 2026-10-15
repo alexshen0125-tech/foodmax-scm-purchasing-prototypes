@@ -346,7 +346,7 @@
       <table class="subtbl" style="margin-bottom:22px"><tbody>
         <tr><td style="width:42%;color:var(--ts)">期初在仓（昨日留仓 + 昨日多收）</td><td>${t.open} </td></tr>
         <tr><td style="color:var(--ts)">应送（取大后扣期初在仓）</td><td><b>${t.planned}</b></td></tr>
-        ${CKON()?'':'<!--'}<tr><td style="color:var(--ts)">商家核货</td><td>${t.checked}${t.checked<t.planned?` <span style="font-size:12px;color:var(--r)">送货前申报缺货 ${t.planned-t.checked}</span>`:''}</td></tr>${CKON()?'':'-->'}
+        ${CKON()?'':'<!--'}<tr><td style="color:var(--ts)">商家核货</td><td>${t.checked}${t.checked<t.planned?` <span style="font-size:12px;color:var(--r)">送货前报少送 ${t.planned-t.checked}</span>`:''}</td></tr>${CKON()?'':'-->'}
         <tr><td style="color:var(--ts)">仓库实收</td><td><b>${t.received}</b></td></tr>
         <tr><td style="color:var(--ts)">短收</td><td>${t.short?`<span style="color:var(--r)">−${t.short}</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>
         <tr><td style="color:var(--ts)">多收</td><td>${t.over?`<span style="color:var(--gold)">+${t.over}</span> <span style="font-size:12px;color:var(--ts)">已入在仓寄存，当日不参与售卖</span>`:'<span style="color:var(--tt)">—</span>'}</td></tr>
@@ -427,8 +427,8 @@
       <td>${d.date}</td><td class="mono">${d.no}</td><td>${d.wh}</td><td>${d.lines.length}</td>
       <td style="text-align:right;color:var(--ts)">${t.open||'—'}</td>
       <td style="text-align:right">${t.planned}</td>
-      ${CKON()?`<td style="text-align:right">${t.checked<t.planned?`<span style="color:var(--r)">${t.checked}</span><div style="font-size:11px;color:var(--r)">申报缺 ${t.planned-t.checked}</div>`:t.checked}</td>`:''}
-      <td style="text-align:right"><b>${t.received}</b>${CKON()&&t.received<t.checked?`<div style="font-size:11px;color:var(--r)">比核货少 ${t.checked-t.received}</div>`:''}</td>
+      ${CKON()?`<td style="text-align:right;${t.checked<t.planned?'color:var(--r)':''}">${t.checked}</td>`:''}
+      <td style="text-align:right;${CKON()&&t.received<t.checked?'color:var(--r)':''}"><b>${t.received}</b></td>
       <td style="text-align:right">${t.short?`<span style="color:var(--r)">−${t.short}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right">${t.over?`<span style="color:var(--gold)">+${t.over}</span>`:'<span style="color:var(--tt)">—</span>'}</td>
       <td style="text-align:right;color:var(--ts)">${t.sold}</td>

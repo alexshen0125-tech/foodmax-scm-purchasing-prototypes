@@ -81,6 +81,11 @@ css.textContent=`
 .ck-cam .dm-t{font-size:11.5px;color:rgba(255,255,255,.6);margin-bottom:8px;}
 .ck-cam .dm-b{display:flex;flex-wrap:wrap;gap:6px;}
 .ck-cam .dm-b span{font-size:12px;padding:0 10px;min-height:34px;display:flex;align-items:center;border-radius:9px;background:rgba(255,255,255,.12);cursor:pointer;}
+.ck-cam .alarm{margin-top:14px;border-radius:12px;padding:10px 12px;background:#DC2626;color:#fff;font-size:13.5px;display:flex;align-items:center;gap:10px;justify-content:space-between;animation:ckpulse 1s ease-in-out infinite alternate;}
+.ck-cam .alarm span{flex:0 0 auto;background:#fff;color:#DC2626;font-weight:800;border-radius:10px;padding:0 12px;min-height:40px;display:flex;align-items:center;cursor:pointer;}
+@keyframes ckpulse{from{box-shadow:0 0 0 0 rgba(220,38,38,.6)}to{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
+.ck-cam .tally span.off{background:#DC2626;color:#fff;}
+.ck-cam .done.go{background:#fff;color:#059669;}
 .ck-cam .done{margin-top:12px;min-height:48px;border-radius:14px;background:#10B981;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;cursor:pointer;}
 .dl-acts .a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:var(--muted);color:#27433A;padding:0 4px;}
 .dl-acts .a.key{background:var(--emerald);color:#fff;box-shadow:0 6px 16px rgba(5,150,105,.28);}
@@ -221,12 +226,12 @@ function dvReplName(d,name){return dvRepl(d).filter(r=>r.name===name).reduce((a,
 /* ============ 送货前核货（2026-10-14，与 PC pc-modules/checkgoods.js 同口径）============
    按店铺开通（运营平台「店铺管理 › 送货前核货」，默认未开通；与 PC DB.merchant.checkMode 同一开关，App 读 CHECK_ON）。
    开通：截单后按送货单逐 SKU 核件数（预填应送，只改装少的行，上限=应送）→ 确认核货 → 仓库才能扫码签到；签到前可撤回/修改，签到后锁定；
-         应送数量变化（客户取消/改单）→ 核货失效需重核。装少了 = 申报缺货，缺口照现有少货规则（平台补采优先），罚款按仓库实收计，主动申报不减免。
+         应送数量变化（客户取消/改单）→ 核货失效需重核。装少了 = 少送，缺口照现有少货规则（平台补采优先），罚款按仓库实收计，主动申报不减免。
    未开通：保持现有流程，不出现任何核货入口。 */
 const ckOnA=()=>typeof CHECK_ON!=='undefined'&&CHECK_ON;
 const ckLocked=d=>d.signed||d.status==='交接完成';
 const ckLinesA=d=>dvSku(d).map(r=>({key:r.name,name:r.name,code:r.code,unit:r.unit||'件',should:+r.qty||0}));
-const CK_SEED_SHORT={};   // 演示：可按 送货单→{商品名:核货数} 预置申报缺货
+const CK_SEED_SHORT={};   // 演示：可按 送货单→{商品名:核货数} 预置少送
 function ckNowA(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
 function ckSeedA(d){
   if(d._ckSeeded)return;d._ckSeeded=true;
@@ -234,49 +239,66 @@ function ckSeedA(d){
   const lines={},snap={};ckLinesA(d).forEach(l=>{const s=CK_SEED_SHORT[d.id]&&CK_SEED_SHORT[d.id][l.key];lines[l.key]=s!=null?s:l.should;snap[l.key]=l.should;});
   d.check={by:'merchant-sg-0125',at:`${d.deliver} 23:40`,lines,snap};
 }
-function ckStateA(d){            // off / todo / stale / done
+function ckStateA(d){            // off / none / todo / stale / done
   if(!ckOnA())return 'off';
   ckSeedA(d);
+  if(!ckLinesA(d).some(l=>l.should>0))return 'off';             // 应送全为 0：无需核货（BR-02）
   if(d.check){if(ckLocked(d))return 'done';const cur=ckLinesA(d),snap=d.check.snap||{};
     return (cur.length!==Object.keys(snap).length||cur.some(l=>snap[l.key]!==l.should))?'stale':'done';}
-  return ckLocked(d)?'off':'todo';
+  return ckLocked(d)?'none':'todo';                              // 已签到但无核货记录（开通前已签到 / 降级放行）=「未核货」
 }
 const ckBlockedA=d=>{const s=ckStateA(d);return s==='todo'||s==='stale';};
 const ckShortA=d=>d.check?ckLinesA(d).reduce((a,l)=>a+Math.max(0,l.should-(d.check.lines[l.key]!=null?d.check.lines[l.key]:l.should)),0):0;
-window.FM_CK_PENDING=()=>{if(!ckOnA())return 0;if(window.FM.ensureDeliveriesFromPrint)window.FM.ensureDeliveriesFromPrint();return (window.FM.DB.deliveries||[]).filter(d=>!ckLocked(d)&&ckBlockedA(d)).length;};
-function ckChipA(d){const s=ckStateA(d);if(s==='off')return '';
-  const m={todo:['待核货','var(--amber-soft)','#B45309'],stale:['需重核','var(--red-soft)','var(--red)'],done:['已核货','var(--mint-soft)','var(--emerald-2)']}[s];return stChip(m[0],m[1],m[2]);}
+// 角标：已截单、未签到、待核货 / 需重核（BR-15）
+window.FM_CK_PENDING=()=>{if(!ckOnA())return 0;if(window.FM.ensureDeliveriesFromPrint)window.FM.ensureDeliveriesFromPrint();return (window.FM.DB.deliveries||[]).filter(d=>!ckLocked(d)&&dvCutoff(d).passed&&ckBlockedA(d)).length;};
+function ckChipA(d){const s=ckStateA(d);if(s==='off')return ckOnA()?stChip('无需核货','var(--muted)','var(--sub)'):'';
+  const m={none:['未核货','var(--muted)','var(--sub)'],todo:['待核货','var(--amber-soft)','#B45309'],stale:['需重核','var(--red-soft)','var(--red)'],done:['已核货','var(--mint-soft)','var(--emerald-2)']}[s];return stChip(m[0],m[1],m[2]);}
 /* 核货页：两种方式，同一结果（每 SKU 实装件数）
-   ① 扫码核货（App 默认）：从 0 开始，扫一张标签 = 该 SKU +1 件。标签二维码含 备货单号 + 入库仓库 + SKU + 序号（按 SKU 一件一张、序号连续，见 PC pick.js）。
-      - 同一序号重复扫 → 不计数，提示「已扫过」
-      - 别的仓库 / 别的送货单的标签 → 不计数，红色提示「不是这车的货」（防送错仓）
-      - 本送货单没有的 SKU → 不计数，提示「本单没有这个商品」
-      - 预贴标签（按商品打印，无序号）→ 每扫一次 +1，扫够应送后不再累加
-      - 标签破损扫不出 → 在该行用 −/+ 手动补录（记为手动补录件数）
-   ② 手动核货：预填应送，只改装少的行。
-   两种方式提交后都写 d.check（method=scan/manual，manualAdj=手动补录件数），后续拦截/撤回/失效规则一致。 */
+   ① 扫码核货（App 默认）：扫一张标签 = 该 SKU +1 件。去重键 = 标签二维码（序号标签每张不同）。
+      - 同一张重复扫 → 不计数；别仓 / 同仓别的送货单 / 本单没有的商品 → 不计数，红色报警常驻到点「已拿下车」
+      - 扫满应送后同 SKU 不再计数（超打 / 补打的标签同理）
+      - 标签破损扫不出 → 行内「+」手动补录；「−」先撤回本行最近扫的一张，没扫过的才减补录
+      - 修改 / 重核：保留上次已扫的标签，只有应送变少的行按新应送截掉多出的
+      - 未提交离开：已扫结果按送货单存草稿，再进来自动恢复
+   ② 手动核货：预填应送，只改装少的行。 */
+window.FM_CK_DRAFT=window.FM_CK_DRAFT||{};
 const skuOfCode=c=>{const m=String(c||'').match(/(\d{4})$/);return m?'SKU'+m[1]:String(c||'');};
-function ckUnits(d){   // 本送货单应有的标签：每 SKU 1..应送 序号
-  const u=[];ckLinesA(d).forEach(l=>{for(let i=1;i<=l.should;i++)u.push({code:`${d.pickId}|${d.warehouse}|${skuOfCode(l.code)}|${i}`,key:l.key,seq:i});});return u;}
-function ckOpenA(d,forceEdit,mode){
-  const st=ckStateA(d);if(st==='off')return;
+function ckUnits(d){   // 本送货单已打印的标签：每 SKU 序号 1..应送，另含 2 张超打（序号 > 应送）
+  const u=[];ckLinesA(d).forEach(l=>{for(let i=1;i<=l.should+2;i++)u.push({code:`${d.pickId}|${skuOfCode(l.code)}|${d.warehouse}|${d.id}|${i}`,key:l.key,seq:i});});return u;}
+function ckOpenA(d,forceEdit,mode,autoScan){
+  const st=ckStateA(d);if(st==='off'||st==='none')return;
   const ro=ckLocked(d)||(st==='done'&&!forceEdit);
   if(!ro&&!dvCutoff(d).passed){toast(`未到营业截单时间（${dvCutoff(d).at}），截单后才能核货`);return;}
-  const ls=ckLinesA(d);if(!ls.length){toast('本送货单没有需要送的商品，无需核货');return;}
-  mode=mode||(d.check&&d.check.method)||'scan';
-  const qty={},adj={},scanned=new Set();
-  ls.forEach(l=>{const c=d.check&&d.check.lines[l.key];adj[l.key]=0;
+  const ls=ckLinesA(d).filter(l=>l.should>0);
+  const draft=window.FM_CK_DRAFT[d.id];
+  mode=mode||(draft&&draft.mode)||(d.check&&d.check.method)||'scan';
+  // 扫码状态：codes[行]=已扫标签，adj[行]=手动补录件数
+  const codes={},adj={},qty={};
+  ls.forEach(l=>{codes[l.key]=[];adj[l.key]=0;});
+  let restored=0;
+  if(!ro&&mode==='scan'){
+    const src=(draft&&draft.mode==='scan')?draft:(d.check&&d.check.method==='scan'?{codes:d.check.codes||{},adj:d.check.adj||{}}:null);
+    if(src)ls.forEach(l=>{const c=(src.codes[l.key]||[]).slice(0,l.should);codes[l.key]=c;adj[l.key]=Math.min(src.adj[l.key]||0,l.should-c.length);});
+    if(draft&&draft.mode==='scan')restored=ls.reduce((a,l)=>a+codes[l.key].length+adj[l.key],0);
+  }
+  const scanCnt=k=>codes[k].length;
+  const calc=()=>ls.forEach(l=>{if(ro)return;if(mode==='scan')qty[l.key]=scanCnt(l.key)+adj[l.key];});
+  ls.forEach(l=>{const c=d.check&&d.check.lines[l.key];
     if(ro)qty[l.key]=c!=null?c:l.should;
-    else if(mode==='scan')qty[l.key]=0;
-    else qty[l.key]=(c!=null&&c<=l.should&&st!=='todo')?c:l.should;});
-  const tot=()=>({sh:ls.reduce((a,l)=>a+l.should,0),ck:ls.reduce((a,l)=>a+qty[l.key],0)});
+    else if(mode==='manual')qty[l.key]=(draft&&draft.mode==='manual'&&draft.qty[l.key]!=null)?Math.min(draft.qty[l.key],l.should):((c!=null&&st!=='todo')?Math.min(c,l.should):l.should);});
+  calc();
+  const saveDraft=()=>{if(ro)return;const t=ls.reduce((a,l)=>a+(mode==='scan'?scanCnt(l.key)+adj[l.key]:0),0);
+    if(mode==='scan'&&t===0){delete window.FM_CK_DRAFT[d.id];return;}
+    window.FM_CK_DRAFT[d.id]=mode==='scan'?{mode,codes:JSON.parse(JSON.stringify(codes)),adj:{...adj}}:{mode,qty:{...qty}};};
+  const allCodes=()=>new Set([].concat(...ls.map(l=>codes[l.key])));
+  const tot=()=>({sh:ls.reduce((a,l)=>a+l.should,0),ck:ls.reduce((a,l)=>a+qty[l.key],0),sc:ls.reduce((a,l)=>a+scanCnt(l.key),0)});
   const sumHtml=()=>{const t=tot(),gap=t.sh-t.ck;
-    if(!ro&&mode==='scan')return `已扫 <b style="color:var(--ink)">${t.ck}</b> / ${t.sh} 件${gap>0?` · 还差 <b style="color:var(--red)">${gap}</b> 件`:' · <b style="color:var(--emerald)">全部扫齐</b>'}`;
-    return `应送 <b>${t.sh}</b> · ${ro?'核货':'实装'} <b>${t.ck}</b> 件${gap>0?` · <b style="color:var(--red)">申报缺货 ${gap} 件</b>`:' · <b style="color:var(--emerald)">与应送一致</b>'}`;};
+    if(!ro&&mode==='scan')return `已核 <b style="color:var(--ink)">${t.ck}</b> / ${t.sh} 件${gap>0?` · 还差 <b style="color:var(--red)">${gap}</b> 件`:' · <b style="color:var(--emerald)">全部扫齐</b>'}`;
+    return `应送 <b>${t.sh}</b> · ${ro?'核货':'实装'} <b>${t.ck}</b> 件${gap>0?` · <b style="color:var(--red)">少 ${gap} 件</b>`:' · <b style="color:var(--emerald)">与应送一致</b>'}`;};
   const rowHtml=(l,i)=>{const v=qty[l.key],diff=v-l.should,sc=mode==='scan'&&!ro;
     return `<div class="ck-row${(diff<0&&!sc)?' short':''}${(sc&&diff>=0)?' full':''}" data-i="${i}">
       <div class="ck-l"><div class="ck-n">${l.name}</div>
-        <div class="ck-s">${sc?`已扫 <b style="color:${diff>=0?'var(--emerald)':'var(--ink)'}">${v}</b> / ${l.should} ${l.unit}${adj[l.key]?` · 手动补录 ${adj[l.key]}`:''}`:`应送 <b>${l.should}</b> ${l.unit}${diff<0?` · <span style="color:var(--red);font-weight:700">缺 ${-diff}</span>`:''}`}</div>
+        <div class="ck-s">${sc?`已扫 <b style="color:${diff>=0?'var(--emerald)':'var(--ink)'}">${scanCnt(l.key)}</b>${adj[l.key]?` + 补录 ${adj[l.key]}`:''} / ${l.should} ${l.unit}`:`应送 <b>${l.should}</b> ${l.unit}${diff<0?` · <span style="color:var(--red);font-weight:700">少 ${-diff}</span>`:''}`}</div>
         ${sc?`<div class="ck-bar"><i style="width:${Math.min(100,Math.round(v/l.should*100))}%"></i></div>`:''}</div>
       ${ro?`<div class="ck-ro" style="${diff<0?'color:var(--red)':''}">${v}</div>`:`<div class="ck-stp${sc?' sm':''}"><button class="m" ${v<=0?'disabled':''}>−</button>${sc?`<span class="v">${v}</span>`:`<input type="number" inputmode="numeric" min="0" max="${l.should}" value="${v}">`}<button class="p" ${v>=l.should?'disabled':''}>+</button></div>`}
     </div>`;};
@@ -284,86 +306,98 @@ function ckOpenA(d,forceEdit,mode){
   pushPage({title:ro?'核货记录':'送货核货',subtitle:`${d.warehouse} · ${d.id}`,body:`
     <div style="padding:12px 16px 0">
       ${ro?'':`<div class="ck-seg"><div class="sg ${mode==='scan'?'on':''}" data-m="scan">扫码核货</div><div class="sg ${mode==='manual'?'on':''}" data-m="manual">手动核货</div></div>`}
-      ${st==='stale'&&!ro?`<div class="ck-tip red">上次核货后<b>应送数量有变化</b>（客户取消或改单），请按最新应送重新核货。</div>`:''}
-      ${ro?`<div class="ck-tip">${d.check.by} 于 ${d.check.at} ${methodTxt(d.check)}${ckShortA(d)?`，申报缺货 <b style="color:var(--red)">${ckShortA(d)}</b> 件`:'，与应送一致'}。${ckLocked(d)?'仓库已签到，记录已锁定。':'签到前可修改或撤回。'}</div>`
+      ${st==='stale'&&!ro?`<div class="ck-tip red">上次核货后<b>应送数量变了</b>（客户取消或改单），请按新的应送再核一遍${mode==='scan'?'，上次扫过的不用重扫':''}。</div>`:''}
+      ${restored?`<div class="ck-tip">已恢复上次没提交的扫码结果（${restored} 件），接着扫就行。</div>`:''}
+      ${ro?`<div class="ck-tip">${d.check.by} 于 ${d.check.at} ${methodTxt(d.check)}${ckShortA(d)?`，少送 <b style="color:var(--red)">${ckShortA(d)}</b> 件`:'，与应送一致'}。${ckLocked(d)?'仓库已签到，不能再改。':'仓库签到前可以修改或撤回。'}</div>`
         :mode==='scan'?`<div class="ck-scanbtn" id="ck-scan">${svg('scan')||''}<span>扫码</span><em>对着货上的标签逐件扫，扫一张记 1 件</em></div>`
-        :`<div class="ck-tip">对照车上实际装的货，<b>数量一致的不用动</b>，只改装少的行。<b>核完仓库才能扫码签到收货。</b></div>`}
+        :`<div class="ck-tip">对照车上实际装的货，数量对的不用动，只改装少的。</div>`}
       <div class="ck-list">${ls.map(rowHtml).join('')}</div>
-      ${ro?'':`<div style="font-size:11.5px;color:var(--sub);line-height:1.65;margin:10px 2px 16px">${mode==='scan'?'· 标签破损扫不出，用该行 −/+ 手动补录。<br>· 扫到别的仓库或本单没有的商品会红色提示，不计数，请把货拿下车。<br>':''}· 多带的货仓库照收、进在仓寄存，不用核。<br>· 没扫齐 / 装少了 = 申报缺货：缺口走现有少货规则（平台自营现货补采优先），缺货罚款仍按仓库实收计。<br>· 结算以仓库实收为准，核货数量只作对账参考。</div>`}
+      ${ro?'':`<div style="font-size:11.5px;color:var(--sub);line-height:1.65;margin:10px 2px 16px">少送的照现在的少货规则处理，罚款按仓库实际收到的数算。${mode==='scan'?'标签破损扫不出，点该行「+」补上。':''}</div>`}
     </div>`,
     footer:`<div style="width:100%"><div id="ck-sum" style="font-size:12.5px;color:var(--sub);text-align:center;margin-bottom:8px">${sumHtml()}</div>${ro
-      ?(ckLocked(d)?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" disabled>已锁定</button>`:`<div style="display:flex;gap:10px"><button class="btn" id="ck-rv" style="flex:1;background:var(--red-soft);color:var(--red)">撤回核货</button><button class="btn primary" id="ck-ed" style="flex:1">修改核货</button></div>`)
+      ?(ckLocked(d)?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" disabled>仓库已签到</button>`:`<div style="display:flex;gap:10px"><button class="btn" id="ck-rv" style="flex:1;background:var(--red-soft);color:var(--red)">撤回核货</button><button class="btn primary" id="ck-ed" style="flex:1">修改核货</button></div>`)
       :`<button class="btn primary" style="width:100%" id="ck-ok">确认核货</button>`}</div>`,
     mount:(pg)=>{
       const sumEl=pg.querySelector('#ck-sum');
-      const refresh=(i)=>{const l=ls[i],row=pg.querySelector(`.ck-row[data-i="${i}"]`);const w=document.createElement('div');w.innerHTML=rowHtml(l,i);row.replaceWith(w.firstElementChild);bindRow(i);sumEl.innerHTML=sumHtml();};
+      const refreshAll=()=>{calc();ls.forEach((_,i)=>refresh(i,true));sumEl.innerHTML=sumHtml();saveDraft();};
+      const refresh=(i,noSum)=>{const l=ls[i],row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row)return;const w=document.createElement('div');w.innerHTML=rowHtml(l,i);row.replaceWith(w.firstElementChild);bindRow(i);if(!noSum){sumEl.innerHTML=sumHtml();saveDraft();}};
       const bindRow=(i)=>{const row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row||ro)return;const l=ls[i];
-        row.querySelector('.m').onclick=()=>{if(qty[l.key]<=0)return;qty[l.key]--;if(mode==='scan')adj[l.key]--;refresh(i);};
-        row.querySelector('.p').onclick=()=>{if(qty[l.key]>=l.should)return;qty[l.key]++;if(mode==='scan')adj[l.key]++;refresh(i);};
+        row.querySelector('.m').onclick=()=>{
+          if(mode==='scan'){if(codes[l.key].length){codes[l.key].pop();toast('已撤回最近扫的一张，可重新扫');}else if(adj[l.key]>0)adj[l.key]--;else return;calc();}
+          else{if(qty[l.key]<=0)return;qty[l.key]--;}refresh(i);};
+        row.querySelector('.p').onclick=()=>{if(qty[l.key]>=l.should)return;if(mode==='scan'){adj[l.key]++;calc();}else qty[l.key]++;refresh(i);};
         const ip=row.querySelector('input');
-        if(ip)ip.onchange=e=>{let v=Math.floor(+e.target.value);if(isNaN(v)||v<0)v=0;if(v>l.should){v=l.should;toast(`不能超过应送 ${l.should}；多带的货仓库照收，不用填`);}qty[l.key]=v;refresh(i);};};
+        if(ip)ip.onchange=e=>{let v=Math.floor(+e.target.value);if(isNaN(v)||v<0)v=0;if(v>l.should){v=l.should;toast(`不能超过应送 ${l.should}，多带的仓库照收，不用填`);}qty[l.key]=v;refresh(i);};};
       ls.forEach((_,i)=>bindRow(i));
       pg.querySelectorAll('.ck-seg .sg').forEach(b=>b.onclick=()=>{const m=b.dataset.m;if(m===mode)return;
-        const t=tot();const go=()=>{popPage();setTimeout(()=>ckOpenA(d,true,m),60);};
-        if(mode==='scan'&&t.ck>0)confirmDialog({title:'切换为手动核货？',body:`已扫的 ${t.ck} 件不保留，手动核货按应送数量预填。`,okText:'切换',onOk:go});else go();});
+        const t=tot();const go=()=>{delete window.FM_CK_DRAFT[d.id];popPage();setTimeout(()=>ckOpenA(d,true,m),60);};
+        if(mode==='scan'&&t.ck>0)confirmDialog({title:'切换为手动核货？',body:`已扫的 ${t.ck} 件不保留，手动核货按应送数量预填。`,okText:'切换',onOk:go});
+        else if(mode==='manual'&&ls.some(l=>qty[l.key]!==l.should))confirmDialog({title:'切换为扫码核货？',body:'手动改过的数量不保留，扫码从 0 开始计。',okText:'切换',onOk:go});
+        else go();});
       /* ---------- 扫码取景（演示：模拟相机连续扫码）---------- */
-      const sb=pg.querySelector('#ck-scan');
-      if(sb)sb.onclick=()=>{
+      const openScanner=()=>{
         const units=ckUnits(d);
-        const other=(window.FM.DB.deliveries||[]).find(x=>x!==d&&x.warehouse!==d.warehouse&&!ckLocked(x))||{id:'SH20260701002',warehouse:'兀兰DC',pickId:d.pickId};
+        const otherWh=(window.FM.DB.deliveries||[]).find(x=>x!==d&&x.warehouse!==d.warehouse)||{id:'SH20260701002',warehouse:'兀兰DC',pickId:d.pickId};
+        const offload=[];   // 待拿下车
         const m=document.createElement('div');m.className='ck-cam';
         m.innerHTML=`<div class="top"><span class="x">✕</span><span>扫码核货 · ${d.warehouse}</span><span style="width:44px"></span></div>
           <div class="vf"><i class="c1"></i><i class="c2"></i><i class="c3"></i><i class="c4"></i><div class="ln"></div><div class="hint">把标签二维码放进框内，自动连续识别</div></div>
+          <div class="alarm" id="ck-al" style="display:none"></div>
           <div class="res" id="ck-res">准备就绪，开始扫码</div>
           <div class="tally" id="ck-tl"></div>
           <div class="demo"><div class="dm-t">🔬 演示：模拟扫到的标签</div>
-            <div class="dm-b"><span data-s="next">下一件</span><span data-s="ten">连扫 10 件</span><span data-s="dup">重复扫</span><span data-s="wrong">别仓的货</span><span data-s="pre">预贴标签</span><span data-s="none">本单没有的商品</span></div></div>
+            <div class="dm-b"><span data-s="next">下一件</span><span data-s="ten">连扫 10 件</span><span data-s="dup">重复扫</span><span data-s="wrong">别仓的货</span><span data-s="samewh">同仓别的送货单</span><span data-s="none">本单没有的商品</span></div></div>
           <div class="done" id="ck-done">完成，返回核货单</div>`;
         document.querySelector('.phone').appendChild(m);
-        const res=m.querySelector('#ck-res'),tl=m.querySelector('#ck-tl');
-        const paintTally=()=>{const t=tot();tl.innerHTML=`<b>${t.ck}</b> / ${t.sh} 件`+ls.filter(l=>qty[l.key]<l.should).slice(0,3).map(l=>`<span>${l.name} 差 ${l.should-qty[l.key]}</span>`).join('');};
-        const say=(ok,txt)=>{res.className='res '+(ok?'ok':'err');res.innerHTML=txt;try{navigator.vibrate&&navigator.vibrate(ok?40:[80,60,80]);}catch(e){}};
-        const hit=(code)=>{   // 解析标签：备货单|仓库|SKU|序号（预贴标签只有 PRE|SKU）
+        const res=m.querySelector('#ck-res'),tl=m.querySelector('#ck-tl'),al=m.querySelector('#ck-al'),dn=m.querySelector('#ck-done');
+        const full=()=>ls.every(l=>qty[l.key]>=l.should);
+        const paint=()=>{const t=tot();tl.innerHTML=`<b>${t.ck}</b> / ${t.sh} 件`+ls.filter(l=>qty[l.key]<l.should).slice(0,3).map(l=>`<span>${l.name} 差 ${l.should-qty[l.key]}</span>`).join('')+(offload.length?`<span class="off">待拿下车 ${offload.length} 件</span>`:'');
+          dn.textContent=full()?'全部扫齐，提交核货':'完成，返回核货单';dn.classList.toggle('go',full());
+          if(offload.length){al.style.display='';al.innerHTML=`<div>${offload[offload.length-1]}</div><span id="ck-off">已拿下车</span>`;al.querySelector('#ck-off').onclick=()=>{offload.pop();paint();};}else al.style.display='none';};
+        const beep=ok=>{try{navigator.vibrate&&navigator.vibrate(ok?40:[80,60,80]);}catch(e){}};   // 正式实现：成功短提示音 + 震动，报警长提示音 + 双震
+        const say=(ok,txt)=>{res.className='res '+(ok?'ok':'err');res.innerHTML=txt;beep(ok);};
+        const alarm=txt=>{offload.push(txt);res.className='res err';res.innerHTML='不计数，见上方红色提醒';beep(false);};
+        const hit=(code)=>{   // 演示协议：备货单|SKU|仓库|送货单|序号（正式以后端 manifest / resolve 为准）
           const p=String(code).split('|');
-          if(p[0]==='PRE'){const l=ls.find(x=>skuOfCode(x.code)===p[1]);
-            if(!l)return say(false,'本送货单没有这个商品，不计数，请拿下车');
-            if(qty[l.key]>=l.should)return say(false,`${l.name} 已扫够 ${l.should} 件，多带的不用扫`);
-            qty[l.key]++;return say(true,`✓ ${l.name} +1（预贴标签）· ${qty[l.key]}/${l.should}`);}
-          if(p[0]!==d.pickId&&p[1]===d.warehouse)return say(false,'不是本送货单的标签，不计数');
-          if(p[1]!==d.warehouse)return say(false,`<b>这件是 ${p[1]} 的货</b>，不是这车的，请拿下车`);
+          if(p[2]!==d.warehouse)return alarm(`这件是 <b>${p[2]}</b> 的货，不是这车的，请拿下车`);
+          if(p[3]!==d.id)return alarm(`这件是送货单 <b>${p[3]}</b> 的货，不是这张单的，请拿下车`);
           const u=units.find(x=>x.code===code);
-          if(!u)return say(false,'本送货单没有这个商品，不计数，请拿下车');
-          if(scanned.has(code))return say(false,`这张已扫过（序号 ${u.seq}），不重复计数`);
+          if(!u)return alarm('本送货单没有这个商品，请拿下车');
+          if(allCodes().has(code))return say(false,`这张已扫过（序号 ${u.seq}），不重复计数`);
           const l=ls.find(x=>x.key===u.key);
-          if(qty[l.key]>=l.should)return say(false,`${l.name} 已核满 ${l.should} 件`);
-          scanned.add(code);qty[l.key]++;say(true,`✓ ${l.name} 序号 ${u.seq} · ${qty[l.key]}/${l.should}`);};
-        const nextUnit=()=>units.find(u=>!scanned.has(u.code)&&qty[u.key]<ls.find(x=>x.key===u.key).should);
-        paintTally();
+          if(qty[l.key]>=l.should)return say(false,`${l.name} 已扫够 ${l.should} 件，多带的不用扫`);
+          codes[l.key].push(code);calc();say(true,`✓ ${l.name} 序号 ${u.seq} · ${qty[l.key]}/${l.should}`);};
+        const nextUnit=()=>{const s=allCodes();return units.find(u=>!s.has(u.code)&&qty[u.key]<ls.find(x=>x.key===u.key).should);};
+        paint();
         m.querySelectorAll('.dm-b span').forEach(b=>b.onclick=()=>{const k=b.dataset.s;
           if(k==='next'){const u=nextUnit();if(!u)say(true,'本单已全部扫齐');else hit(u.code);}
-          else if(k==='ten'){let n=0;for(;n<10;n++){const u=nextUnit();if(!u)break;hit(u.code);}if(!nextUnit())say(true,'本单已全部扫齐');}
-          else if(k==='dup'){const c=[...scanned].pop();if(!c)say(false,'还没扫过标签，先扫「下一件」');else hit(c);}
-          else if(k==='wrong')hit(`${other.pickId||d.pickId}|${other.warehouse==d.warehouse?'兀兰DC':other.warehouse}|SKU8804|3`);
-          else if(k==='pre')hit(`PRE|${skuOfCode(ls[0].code)}`);
-          else hit(`${d.pickId}|${d.warehouse}|SKU9999|1`);
-          paintTally();});
-        const close=()=>{m.remove();ls.forEach((_,i)=>refresh(i));};
-        m.querySelector('.x').onclick=close;m.querySelector('#ck-done').onclick=close;
+          else if(k==='ten'){for(let n=0;n<10;n++){const u=nextUnit();if(!u)break;hit(u.code);}if(!nextUnit())say(true,'本单已全部扫齐');}
+          else if(k==='dup'){const c=[...allCodes()].pop();if(!c)say(false,'还没扫过标签，先扫「下一件」');else hit(c);}
+          else if(k==='wrong')hit(`${d.pickId}|SKU8804|${otherWh.warehouse===d.warehouse?'兀兰DC':otherWh.warehouse}|${otherWh.id}|3`);
+          else if(k==='samewh')hit(`${d.pickId}|${skuOfCode(ls[0].code)}|${d.warehouse}|SH20260702009|1`);
+          else hit(`${d.pickId}|SKU9999|${d.warehouse}|${d.id}|1`);
+          paint();saveDraft();});
+        const close=()=>{m.remove();refreshAll();};
+        m.querySelector('.x').onclick=close;
+        dn.onclick=()=>{const f=full();close();if(f){const ok=pg.querySelector('#ck-ok');ok&&ok.onclick();}};
       };
+      const sb=pg.querySelector('#ck-scan');if(sb)sb.onclick=openScanner;
+      if(autoScan&&sb&&!restored)setTimeout(openScanner,120);   // 卡片「扫码核货」直接进相机
       const ok=pg.querySelector('#ck-ok');
       if(ok)ok.onclick=()=>{
         if(ckLocked(d)){toast('仓库已签到，不能再修改核货');return;}
+        if(mode==='scan'&&tot().sc===0){toast('还没扫任何标签，先点「扫码」开始核货');return;}
         const commit=()=>{const lines={},snap={};ls.forEach(l=>{lines[l.key]=qty[l.key];snap[l.key]=l.should;});
-          const manualAdj=mode==='scan'?ls.reduce((a,l)=>a+Math.max(0,adj[l.key]),0):0;
-          ok.classList.add('loading');setTimeout(()=>{d.check={by:'merchant-sg-0125',at:ckNowA(),lines,snap,method:mode,manualAdj};const g=ckShortA(d);
-            toast(g?`已核货，申报缺货 ${g} 件，仓库可签到收货`:'已核货，仓库可签到收货');popPage();rerenderSignin();},350);};
+          const manualAdj=mode==='scan'?ls.reduce((a,l)=>a+adj[l.key],0):0;
+          ok.classList.add('loading');setTimeout(()=>{d.check={by:'merchant-sg-0125',at:ckNowA(),lines,snap,method:mode,manualAdj,codes:mode==='scan'?JSON.parse(JSON.stringify(codes)):null,adj:mode==='scan'?{...adj}:null};
+            delete window.FM_CK_DRAFT[d.id];const g=ckShortA(d);
+            toast(g?`${d.id} 已核货，少送 ${g} 件，仓库可签到收货`:`${d.id} 已核货，仓库可签到收货`);popPage();rerenderSignin();},350);};
         const gap=ls.reduce((a,l)=>a+l.should-qty[l.key],0);
         if(!gap){commit();return;}
-        if(mode==='scan'&&tot().ck===0){toast('还没扫任何标签，先点「扫码」开始核货');return;}
-        confirmDialog({title:mode==='scan'?`还有 ${gap} 件没扫到`:`确认申报缺货 ${gap} 件？`,body:ls.filter(l=>qty[l.key]<l.should).map(l=>`${l.name}：应送 ${l.should}，${mode==='scan'?'已扫':'实装'} ${qty[l.key]}`).join('<br>')+`<br><br>${mode==='scan'?'没扫到的按<b>申报缺货</b>提交。若货在车上只是没扫，请返回继续扫。<br>':''}缺口按现有少货规则处理（平台自营现货补采优先，补不足按实收出库标缺货）；缺货罚款按仓库实收计，主动申报不减免。`,okText:'按缺货提交',onOk:commit});
+        confirmDialog({title:mode==='scan'?`还有 ${gap} 件没扫到`:`确认少送 ${gap} 件？`,body:ls.filter(l=>qty[l.key]<l.should).map(l=>`${l.name}：应送 ${l.should}，${mode==='scan'?'已核':'实装'} ${qty[l.key]}`).join('<br>')+`<br><br>${mode==='scan'?'货在车上只是没扫的，返回接着扫；确实没装的，按少送提交。<br>':''}少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。`,okText:'按少送提交',onOk:commit});
       };
       const rv=pg.querySelector('#ck-rv');
-      if(rv)rv.onclick=()=>confirmDialog({title:'撤回核货？',body:'撤回后送货单回到「待核货」，重新核货之前仓库扫码签到会被拦截。',danger:1,okText:'确认撤回',onOk:()=>{delete d.check;toast('已撤回核货');popPage();rerenderSignin();}});
+      if(rv)rv.onclick=()=>confirmDialog({title:'撤回核货？',body:'撤回后要重新核货，仓库才能签到收货。',danger:1,okText:'确认撤回',onOk:()=>{delete d.check;toast('已撤回核货');popPage();rerenderSignin();}});
       const ed=pg.querySelector('#ck-ed');
       if(ed)ed.onclick=()=>{popPage();setTimeout(()=>ckOpenA(d,true),60);};
     }});
@@ -413,8 +447,10 @@ function signinCard(d){
       :stChip('收货清点 · 足额收货','var(--mint-soft)','var(--emerald-2)')}</div>`:''}
     ${d.printed?`<div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;color:var(--emerald-2);font-weight:600">🖨️ 已打印 ${d.printedAt||''}</div>`:''}
     ${(()=>{const s=ckStateA(d);
-      if((s==='todo'||s==='stale')&&!d.signed)return `<div class="ck-go${s==='stale'?' red':''}" data-ck="go">${s==='stale'?'应送有变化，重新扫码核货':'扫码核货'}<span style="font-weight:500;font-size:12px;opacity:.85">· 核完仓库才能收货</span></div>`;
-      if(s==='done'&&d.check)return `<div class="ck-done" data-ck="view"><span>${d.check.method==='scan'?'扫码':'已'}核货 ${d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">申报缺货 ${ckShortA(d)} 件</b>`:''}</span><span style="color:var(--emerald);font-weight:700">${ckLocked(d)?'查看':'查看/修改'} ›</span></div>`;
+      if((s==='todo'||s==='stale')&&!d.signed)return dvCutoff(d).passed
+        ?`<div class="ck-go${s==='stale'?' red':''}" data-ck="go">${s==='stale'?'应送变了，重新核货':'扫码核货'}<span style="font-weight:500;font-size:12px;opacity:.85">· 核完仓库才能收货</span></div>`
+        :`<div class="ck-go" data-ck="off" style="opacity:.42;box-shadow:none">扫码核货<span style="font-weight:500;font-size:12px;opacity:.85">· 截单后可用</span></div>`;
+      if(s==='done'&&d.check)return `<div class="ck-done" data-ck="view"><span>${d.check.method==='scan'?'扫码':'手动'}核货 ${d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">少送 ${ckShortA(d)} 件</b>`:''}</span><span style="color:var(--emerald);font-weight:700">${ckLocked(d)?'查看':'查看/修改'} ›</span></div>`;
       return '';})()}
     <div class="dl-acts">${done
       ?`<div class="a" data-a="detail">查看详情</div>`
@@ -515,10 +551,10 @@ function dvSignQR(d){const m=document.createElement('div');m.className='modal-ma
   document.querySelector('.phone').appendChild(m);
   m.querySelector('.cancel').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
   m.querySelector('.ok').onclick=()=>{
-    if(ckBlockedA(d)){m.remove();confirmDialog({title:'签到被拦截',body:`仓库扫码结果：<b>${ckStateA(d)==='stale'?'商家核货已失效（应送数量有变化）':'商家未核货'}</b>，暂不能签到收货。核货完成后仓库再扫码。`,okText:'去核货',onOk:()=>ckOpenA(d)});return;}
+    if(ckBlockedA(d)){m.remove();confirmDialog({title:'签到被拦截',body:`仓库扫码结果：<b>${ckStateA(d)==='stale'?'应送数量变了，要重新核货':'商家还没核货'}</b>，暂不能签到收货。请打开 App「送货签到」核货，核完仓库再扫码。`,okText:'去核货',onOk:()=>ckOpenA(d)});return;}
     d.signed=true;d.signTime=d.signTime||'00:12';m.remove();toast('仓库已扫码确认签到，待逐张核验交接入仓');rerenderSignin();};}
 function bindSignin(el,d){
-  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>ckOpenA(d));
+  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{const k=b.dataset.ck;if(k==='off'){toast(`未到营业截单时间（${dvCutoff(d).at}），截单后才能核货`);return;}ckOpenA(d,k==='go',null,k==='go');});
   el.querySelectorAll('.dl-acts .a').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
     // 签到与预约相互独立；签到由仓库扫码确认，商家端只出示签到码
     if(a==='print')dvPrint(d);
@@ -579,7 +615,7 @@ function openSignDetail(d){
       kv('入库仓库',d.warehouse)+
       kv('送达时段',`${d.deliver} ${d.window||''}`)+
       kv('应送货',`${totQty} 件`)+
-      (ckStateA(d)!=='off'?kv('核货',d.check?`${d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">申报缺货 ${ckShortA(d)} 件</b>`:' · 与应送一致'}`:`<b style="color:#B45309">${ckStateA(d)==='stale'?'需重核':'待核货'}</b>`):'')+
+      (ckStateA(d)!=='off'?kv('核货',d.check?`${d.check.method==='scan'?'扫码':'手动'}核货 ${d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">少送 ${ckShortA(d)} 件</b>`:' · 与应送一致'}`:`<b style="color:${ckStateA(d)==='none'?'var(--sub)':'#B45309'}">${{stale:'需重核',none:'未核货',todo:'待核货'}[ckStateA(d)]}</b>`):'')+
       kv('实收数量（收货清点）',d.status==='交接完成'?`<b style="color:${totIn<totQty?'var(--red)':(totIn>totQty?'var(--amber)':'var(--emerald)')}">${totIn}</b> 件${totIn<totQty?`（短收 ${totQty-totIn} 件）`:''}${totIn>totQty?`（多收 ${totIn-totQty} 件 · 已入寄存）`:''}`:'待清点')+
       kv('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')+
       kv('签到时间',signed?`${d.signTime||'00:12'} 仓库扫码确认`:'未签到')+
