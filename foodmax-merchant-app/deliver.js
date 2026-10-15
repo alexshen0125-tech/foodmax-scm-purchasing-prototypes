@@ -319,11 +319,12 @@ function ckOpenA(d,forceEdit,mode,autoScan){
     </div>`,
     footer:`<div style="width:100%"><div id="ck-sum" style="font-size:12.5px;color:var(--sub);text-align:center;margin-bottom:8px">${sumHtml()}</div>${ro
       ?(ckLocked(d)?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" disabled>仓库已签到</button>`:`<div style="display:flex;gap:10px"><button class="btn" id="ck-rv" style="flex:1;background:var(--red-soft);color:var(--red)">撤回核货</button><button class="btn primary" id="ck-ed" style="flex:1">修改核货</button></div>`)
-      :`<button class="btn primary" style="width:100%" id="ck-ok">确认核货</button>`}</div>`,
+      :`<button class="btn primary" style="width:100%" id="ck-ok">${tot().ck<tot().sh?'提交异常核货':'确认核货'}</button>`}</div>`,
     mount:(pg)=>{
       const sumEl=pg.querySelector('#ck-sum');
-      const refreshAll=()=>{calc();ls.forEach((_,i)=>refresh(i,true));sumEl.innerHTML=sumHtml();saveDraft();};
-      const refresh=(i,noSum)=>{const l=ls[i],row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row)return;const w=document.createElement('div');w.innerHTML=rowHtml(l,i);row.replaceWith(w.firstElementChild);bindRow(i);if(!noSum){sumEl.innerHTML=sumHtml();saveDraft();}};
+      const okTxt=()=>{const b=pg.querySelector('#ck-ok');if(b){const t=tot();b.textContent=t.ck<t.sh?'提交异常核货':'确认核货';}};   // 对不齐 →「提交异常核货」
+      const refreshAll=()=>{calc();ls.forEach((_,i)=>refresh(i,true));sumEl.innerHTML=sumHtml();okTxt();saveDraft();};
+      const refresh=(i,noSum)=>{const l=ls[i],row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row)return;const w=document.createElement('div');w.innerHTML=rowHtml(l,i);row.replaceWith(w.firstElementChild);bindRow(i);if(!noSum){sumEl.innerHTML=sumHtml();okTxt();saveDraft();}};
       const bindRow=(i)=>{const row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row||ro)return;const l=ls[i];
         row.querySelector('.m').onclick=()=>{
           if(mode==='scan'){if(codes[l.key].length){codes[l.key].pop();toast('已撤回最近扫的一张，可重新扫');}else if(adj[l.key]>0)adj[l.key]--;else return;calc();}
@@ -394,10 +395,10 @@ function ckOpenA(d,forceEdit,mode,autoScan){
           const manualAdj=mode==='scan'?ls.reduce((a,l)=>a+adj[l.key],0):0;
           ok.classList.add('loading');setTimeout(()=>{d.check={by:'merchant-sg-0125',at:ckNowA(),lines,snap,method:mode,manualAdj,codes:mode==='scan'?JSON.parse(JSON.stringify(codes)):null,adj:mode==='scan'?{...adj}:null};
             delete window.FM_CK_DRAFT[d.id];const g=ckShortA(d);
-            toast(g?`${d.id} 已核货，少送 ${g} 件，仓库可签到收货`:`${d.id} 已核货，仓库可签到收货`);popPage();rerenderSignin();},350);};
+            toast(g?`${d.id} 已提交异常核货，少送 ${g} 件，仓库可签到收货`:`${d.id} 已核货，仓库可签到收货`);popPage();rerenderSignin();},350);};
         const gap=ls.reduce((a,l)=>a+l.should-qty[l.key],0);
         if(!gap){commit();return;}
-        confirmDialog({title:mode==='scan'?`还有 ${gap} 件没扫到`:`确认少送 ${gap} 件？`,body:ls.filter(l=>qty[l.key]<l.should).map(l=>`${l.name}：应送 ${l.should}，${mode==='scan'?'已核':'实际核货'} ${qty[l.key]}`).join('<br>')+`<br><br>${mode==='scan'?'货在车上只是没扫的，返回接着扫；确实没装的，按少送提交。<br>':''}少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。`,okText:'按少送提交',onOk:commit});
+        confirmDialog({title:mode==='scan'?`还有 ${gap} 件没扫到`:`确认少送 ${gap} 件？`,body:ls.filter(l=>qty[l.key]<l.should).map(l=>`${l.name}：应送 ${l.should}，${mode==='scan'?'已核':'实际核货'} ${qty[l.key]}`).join('<br>')+`<br><br>${mode==='scan'?'货在车上只是没扫的，返回接着扫；确实没装的，按少送提交。<br>':''}少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。`,okText:'提交异常核货',onOk:commit});
       };
       const rv=pg.querySelector('#ck-rv');
       if(rv)rv.onclick=()=>confirmDialog({title:'撤回核货？',body:'撤回后要重新核货，仓库才能签到收货。',danger:1,okText:'确认撤回',onOk:()=>{delete d.check;toast('已撤回核货');popPage();rerenderSignin();}});

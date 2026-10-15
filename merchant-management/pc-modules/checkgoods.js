@@ -128,8 +128,10 @@
       </div>
       <div class="drawer-ft">${ro
         ?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button>${(!isLocked(d)&&d.check)?`<button class="btn btn-o" style="color:var(--r)" onclick="ck_revoke('${d.id}')">撤回核货</button><button class="btn btn-p" onclick="ck_reopen('${d.id}')">修改核货</button>`:''}`
-        :`<button class="btn btn-o" onclick="ck_cancel()">取消</button><button class="btn btn-p" onclick="ck_submit('${d.id}')">确认核货</button>`}</div>`);
+        :`<button class="btn btn-o" onclick="ck_cancel()">取消</button><button class="btn btn-p" id="ck-ok" onclick="ck_submit('${d.id}')">${ckOkTxt(ls,sku=>CK.qty[sku])}</button>`}</div>`);
   };
+  // 主按钮：任一行核货数 < 应送（对不齐）→「提交异常核货」，否则「确认核货」
+  function ckOkTxt(ls,get){return ls.some(l=>(+get(l.sku)||0)<l.should)?'提交异常核货':'确认核货';}
   function ckSumHtml(d,ls,ro){
     const get=sku=>ro?(d.check?d.check.lines[sku]:0):CK.qty[sku];
     const sh=ls.reduce((a,l)=>a+l.should,0),ck=ls.reduce((a,l)=>a+(+get(l.sku)||0),0),gap=sh-ck;
@@ -146,6 +148,7 @@
     if(cell)cell.innerHTML=diff<0?`<b style="color:var(--r)">${diff}</b>`:'<span style="color:var(--tt)">0</span>';
     if(row)row.style.background=diff<0?'#FDF3F2':'';
     const d=dvGet(CK.id);const s=document.getElementById('ck-sum');if(d&&s)s.innerHTML=ckSumHtml(d,ckLines(d),false);
+    const ok=document.getElementById('ck-ok');if(d&&ok)ok.textContent=ckOkTxt(ckLines(d).filter(l=>l.should>0),k=>CK.qty[k]);
   };
   window.ck_submit=function(id){
     const d=dvGet(id);if(!d||!CK||CK.id!=id)return;
@@ -157,7 +160,7 @@
       d.check={by:who(),at:nowStr(),lines,snap};CK=null;
       closeModal();closeDrawer();render();
       const sh=ckShortQty(d);
-      toast(sh?`${d.id} 已核货，少送 ${sh} 件，仓库可签到收货`:`${d.id} 已核货，仓库可签到收货`,'ok');
+      toast(sh?`${d.id} 已提交异常核货，少送 ${sh} 件，仓库可签到收货`:`${d.id} 已核货，仓库可签到收货`,'ok');
     };
     if(!shorts.length){commit();return;}
     const gap=shorts.reduce((a,l)=>a+l.should-(+CK.qty[l.sku]||0),0);
@@ -169,7 +172,7 @@
         </tbody></table>
         <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span><div>少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。</div></div>
       </div>
-      <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">返回修改</button><button class="btn btn-p" onclick="_ckCommit()">确认核货</button></div>`);
+      <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">返回修改</button><button class="btn btn-p" onclick="_ckCommit()">提交异常核货</button></div>`);
   };
   window.ck_cancel=function(){
     if(CK&&CK.init&&JSON.stringify(CK.qty)!==CK.init){window._ckDiscard=()=>{CK=null;closeModal();closeDrawer();};
