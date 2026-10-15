@@ -497,8 +497,8 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>
         <div class="pb-cell" id="pb-halal-row" style="display:none"><div class="lab"><span class="rq">*</span>是否HALAL</div><div class="val"><span class="vtxt" id="pb-halal-v">${f.halal||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-bcrs-tip" id="pb-halal-off" style="display:none">店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」上传 HALAL 证书。</div>
-        <div class="pb-cell" id="pb-halalshow-row"><div class="lab"><span class="rq">*</span>对 HALAL 客户展示</div><div class="val"><span class="vtxt" id="pb-halalshow-v">${f.halalShow}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-bcrs-tip">选「否」则 HALAL 客户在商城看不到本商品；猪肉、酒类平台默认不对 HALAL 客户展示。</div>
+        <div class="pb-cell" id="pb-halalshow-row"><div class="lab"><span class="rq">*</span>是否对 HALAL 客户展示</div><div class="val"><span class="vtxt" id="pb-halalshow-v">${f.halalShow}</span></div><span class="ch">${svg('arrow')}</span></div>
+        <div class="pb-bcrs-tip">选「否」则 HALAL 客户在商城看不到本商品，由商家自行判断、平台不做校验；猪肉、酒类商品平台默认不对 HALAL 客户展示，不受此项影响。</div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每 1 <b id="pb-bcrs-unit">${bcrsUnitName(f)}</b> 容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
         <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">${bcrsTipHtml(bcrsUnitName(f))}</div>
@@ -543,8 +543,9 @@ function openForm(prefill){
   });
 }
 
+function pbDirty(f){return !!(f.name||f.alias||f.cat||f.tax||f.stdType!=="非标品"||f.netQty||f.netPackType||f.stockPackQty||f.specs.some(s=>s.specUnit)||f.origin||f.brand||f.desc||f.specs.some(s=>s.qty||s.price||s.stock));}
 function confirmExit(f){
-  const dirty=f.name||f.alias||f.cat||f.tax||f.stdType!=="非标品"||f.netQty||f.netPackType||f.stockPackQty||f.specs.some(s=>s.specUnit)||f.origin||f.brand||f.desc||f.specs.some(s=>s.qty||s.price||s.stock);
+  const dirty=pbDirty(f);
   const done=()=>{popPage();pbPages.pop();};
   if(!dirty)return done();
   confirmDialog({title:'是否退出建品？',body:'已填写的信息将不会保存。',danger:1,okText:'退出',onOk:done});
@@ -830,7 +831,8 @@ function halalToggle(p,f){
   const on=halalGateApp(f),catOn=!!(f.cat&&f.cat.halal);
   if(!on){f.halal='';const v=p.querySelector('#pb-halal-v');if(v)v.innerHTML='<span class=ph>请选择</span>';}
   row.style.display=on?'':'none';off.style.display=(catOn&&!on)?'':'none';
-  const pend=window.FM_MOD&&window.FM_MOD.halalPending&&window.FM_MOD.halalPending();if(catOn&&!on)off.textContent=(pend&&pend.on==='是')?'店铺 HALAL 资质审核中，通过后可把商品设为 HALAL。':'店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」上传 HALAL 证书。';
+  const pend=window.FM_MOD&&window.FM_MOD.halalPending&&window.FM_MOD.halalPending();if(catOn&&!on){off.innerHTML=(pend&&pend.on==='是')?'店铺 HALAL 资质审核中，通过后可把商品设为 HALAL。':'店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请先在<span class="pb-halal-go" style="color:var(--g,#0E7A52);font-weight:600">「我的 › 店铺信息」</span>上传 HALAL 证书。';
+    const go=off.querySelector('.pb-halal-go');if(go)go.onclick=()=>{const leave=()=>{popPage();pbPages.pop();window.FM_MOD.openStore();};if(pbDirty(f))confirmDialog({title:'去店铺信息？',body:'离开将丢失本页未保存的商品内容。',okText:'去店铺信息',onOk:leave});else leave();};}
 }
 /* ---- BCRS 类目门控：仅 cat.bcrs=true 的类目显示；切到不支持的类目则隐藏并重置为「否」 ---- */
 function bcrsToggle(p,f){

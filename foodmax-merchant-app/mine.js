@@ -178,7 +178,7 @@ let STORE_ABBR='鲜丰食材';   // 已填值（演示态）
    ② 建品「是否HALAL」门控：店铺（已审核生效值）=是 → 再看类目是否挂载 halal；两者都满足才出现且必填（publish.js halalToggle）
    ③ 是→否：店铺下存在 是否HALAL=HALAL 的商品则不允许修改
    ④ 证书有效期到期处理本期不做 */
-const STORE_HALAL=window.FM_HALAL=window.FM_HALAL||{on:'是',certNo:'MUIS-HC-2026-01842',files:['MUIS_HALAL_Certificate.pdf']};   // 已审核生效值（挂 window 供 publish.js 建品门控读取）
+const STORE_HALAL=window.FM_HALAL=window.FM_HALAL||{on:'是',files:['MUIS_HALAL_Certificate.pdf']};   // 已审核生效值（挂 window 供 publish.js 建品门控读取）
 let STORE_HALAL_PENDING=null;   // 已提交待审核的变更
 let STORE_HALAL_REJECT='';      // 最近一次驳回原因（运营驳回回写）
 function halalGoods(){return (window.FM_PRODUCTS||[]).filter(g=>g.halal===1&&g.status!=='deleted');}
@@ -217,7 +217,8 @@ function openStore(){
       const drawFiles=()=>{p.querySelector('#st-hl-files').innerHTML=hl.files.map((f,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--muted,#F3F6F0);font-size:13px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${f}</span><span data-del="${i}" style="color:#C0453B;font-size:13px;padding:0 4px">删除</span></div>`).join('')+(hl.files.length<5?`<div class="mn-up" id="st-hl-add">${svg('box')}上传证书</div>`:'');
         p.querySelectorAll('[data-del]').forEach(d=>d.onclick=()=>{hl.files.splice(+d.dataset.del,1);drawFiles();});
         const a=p.querySelector('#st-hl-add');if(a)a.onclick=()=>{hl.files.push(`HALAL证书_${hl.files.length+1}.pdf`);drawFiles();};};
-      const blockMsg=l=>`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:#FCEDEB;color:#A33A31;font-size:12.5px;line-height:1.6"><b>店铺下还有 ${l.length} 个 HALAL 商品，不能改为无 HALAL 资质。</b><br>${l.slice(0,5).map(g=>`${g.n}${g.code?`（${g.code}）`:''}`).join('、')}${l.length>5?` 等 ${l.length} 个`:''}<br>请先在商品管理中将这些商品的「是否HALAL」改为非HALAL，再修改店铺设置。<div class="st-hl-jump" style="margin-top:6px;font-weight:700;color:var(--g,#0E7A52)">去商品管理 →</div></div>`;
+      const stL=g=>{const sk=g.skus||[];if(sk.length&&sk.every(s=>s.recycled))return '回收站';return {reviewing:'审核中',rejected:'审核驳回',forced_off:'强制下架'}[g.status]||(sk.length&&sk.every(s=>s.off)?'已下架':'在售');};
+      const blockMsg=l=>`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:#FCEDEB;color:#A33A31;font-size:12.5px;line-height:1.6"><b>店铺下还有 ${l.length} 个 HALAL 商品，不能改为无 HALAL 资质。</b><br>${l.slice(0,5).map(g=>`${g.n}（${g.code?g.code+' · ':''}${stL(g)}）`).join('、')}${l.length>5?` 等 ${l.length} 个`:''}${l.some(g=>stL(g)==='回收站')?'<br>回收站里的商品：彻底删除，或恢复后改为非HALAL。':''}<br>请先在商品管理中将这些商品的「是否HALAL」改为非HALAL，再修改店铺设置。<div class="st-hl-jump" style="margin-top:6px;font-weight:700;color:var(--g,#0E7A52)">去商品管理 →</div></div>`;
       const pick=v=>{errBox.innerHTML='';
         if(v==='否'&&STORE_HALAL.on==='是'){const l=halalGoods();if(l.length){hl.on='是';seg();errBox.innerHTML=blockMsg(l);const j=errBox.querySelector('.st-hl-jump');if(j)j.onclick=()=>{window.FM_GOODS_FILTER={halal:1};window.FM_MOD.goods();};return false;}}
         hl.on=v;seg();certBox.style.display=v==='是'?'':'none';return true;};
