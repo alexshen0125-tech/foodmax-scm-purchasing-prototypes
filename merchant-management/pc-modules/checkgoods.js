@@ -128,10 +128,8 @@
       </div>
       <div class="drawer-ft">${ro
         ?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button>${(!isLocked(d)&&d.check)?`<button class="btn btn-o" style="color:var(--r)" onclick="ck_revoke('${d.id}')">撤回核货</button><button class="btn btn-p" onclick="ck_reopen('${d.id}')">修改核货</button>`:''}`
-        :`<button class="btn btn-o" onclick="ck_cancel()">取消</button><button class="btn btn-p" id="ck-ok" onclick="ck_submit('${d.id}')">${ckOkTxt(ls,sku=>CK.qty[sku])}</button>`}</div>`);
+        :`<button class="btn btn-o" onclick="ck_cancel()">取消</button><button class="btn btn-p" onclick="ck_submit('${d.id}')">确认核货</button>`}</div>`);
   };
-  // 主按钮：任一行核货数 < 应送（对不齐）→「提交异常核货」，否则「确认核货」
-  function ckOkTxt(ls,get){return ls.some(l=>(+get(l.sku)||0)<l.should)?'提交异常核货':'确认核货';}
   function ckSumHtml(d,ls,ro){
     const get=sku=>ro?(d.check?d.check.lines[sku]:0):CK.qty[sku];
     const sh=ls.reduce((a,l)=>a+l.should,0),ck=ls.reduce((a,l)=>a+(+get(l.sku)||0),0),gap=sh-ck;
@@ -148,7 +146,6 @@
     if(cell)cell.innerHTML=diff<0?`<b style="color:var(--r)">${diff}</b>`:'<span style="color:var(--tt)">0</span>';
     if(row)row.style.background=diff<0?'#FDF3F2':'';
     const d=dvGet(CK.id);const s=document.getElementById('ck-sum');if(d&&s)s.innerHTML=ckSumHtml(d,ckLines(d),false);
-    const ok=document.getElementById('ck-ok');if(d&&ok)ok.textContent=ckOkTxt(ckLines(d).filter(l=>l.should>0),k=>CK.qty[k]);
   };
   window.ck_submit=function(id){
     const d=dvGet(id);if(!d||!CK||CK.id!=id)return;

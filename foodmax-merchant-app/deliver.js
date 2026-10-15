@@ -319,12 +319,11 @@ function ckOpenA(d,forceEdit,mode,autoScan){
     </div>`,
     footer:`<div style="width:100%"><div id="ck-sum" style="font-size:12.5px;color:var(--sub);text-align:center;margin-bottom:8px">${sumHtml()}</div>${ro
       ?(ckLocked(d)?`<button class="btn" style="width:100%;background:var(--muted);color:#46604F" disabled>仓库已签到</button>`:`<div style="display:flex;gap:10px"><button class="btn" id="ck-rv" style="flex:1;background:var(--red-soft);color:var(--red)">撤回核货</button><button class="btn primary" id="ck-ed" style="flex:1">修改核货</button></div>`)
-      :`<button class="btn primary" style="width:100%" id="ck-ok">${tot().ck<tot().sh?'提交异常核货':'确认核货'}</button>`}</div>`,
+      :`<button class="btn primary" style="width:100%" id="ck-ok">确认核货</button>`}</div>`,
     mount:(pg)=>{
       const sumEl=pg.querySelector('#ck-sum');
-      const okTxt=()=>{const b=pg.querySelector('#ck-ok');if(b){const t=tot();b.textContent=t.ck<t.sh?'提交异常核货':'确认核货';}};   // 对不齐 →「提交异常核货」
-      const refreshAll=()=>{calc();ls.forEach((_,i)=>refresh(i,true));sumEl.innerHTML=sumHtml();okTxt();saveDraft();};
-      const refresh=(i,noSum)=>{const l=ls[i],row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row)return;const w=document.createElement('div');w.innerHTML=rowHtml(l,i);row.replaceWith(w.firstElementChild);bindRow(i);if(!noSum){sumEl.innerHTML=sumHtml();okTxt();saveDraft();}};
+      const refreshAll=()=>{calc();ls.forEach((_,i)=>refresh(i,true));sumEl.innerHTML=sumHtml();saveDraft();};
+      const refresh=(i,noSum)=>{const l=ls[i],row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row)return;const w=document.createElement('div');w.innerHTML=rowHtml(l,i);row.replaceWith(w.firstElementChild);bindRow(i);if(!noSum){sumEl.innerHTML=sumHtml();saveDraft();}};
       const bindRow=(i)=>{const row=pg.querySelector(`.ck-row[data-i="${i}"]`);if(!row||ro)return;const l=ls[i];
         row.querySelector('.m').onclick=()=>{
           if(mode==='scan'){if(codes[l.key].length){codes[l.key].pop();toast('已撤回最近扫的一张，可重新扫');}else if(adj[l.key]>0)adj[l.key]--;else return;calc();}
