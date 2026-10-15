@@ -173,12 +173,12 @@ const abbrW=s=>[...(s||'')].reduce((n,c)=>n+(ABBR_W2.test(c)?2:1),0);
 const abbrCut=(s,max)=>{let n=0,out='';for(const c of s||''){const w=ABBR_W2.test(c)?2:1;if(n+w>max)break;n+=w;out+=c;}return out;};
 let STORE_ABBR='鲜丰食材';   // 已填值（演示态）
 /* 店铺级 HALAL 资质（2026-09-23，与 PC shopProfileEdit/halalCardEdit 同口径）
-   ① 开店/编辑店铺信息时选「是否有 HALAL 资质」；选「是」须上传证书（不填证书编号），随店铺信息一并提交审核（2026-10-15 由「是否有HALAL商品」改名）
+   ① App 只能查看 HALAL 资质（2026-10-15 拍板）；开店/编辑在 PC 店铺资料完成：选「是」须上传证书（多组，每组 ≥1 附件，单个 ≤20MB，不填证书编号），随店铺信息审核
    ④ 商品「是否对 HALAL 客户展示」商家自选、不校验（publish.js pb-halalshow-row）
    ② 建品「是否HALAL」门控：店铺（已审核生效值）=是 → 再看类目是否挂载 halal；两者都满足才出现且必填（publish.js halalToggle）
    ③ 是→否：店铺下存在 是否HALAL=HALAL 的商品则不允许修改
    ④ 证书有效期到期处理本期不做 */
-const STORE_HALAL=window.FM_HALAL=window.FM_HALAL||{on:'是',files:['MUIS_HALAL_Certificate.pdf']};   // 已审核生效值（挂 window 供 publish.js 建品门控读取）
+const STORE_HALAL=window.FM_HALAL=window.FM_HALAL||{on:'是',quals:[['MUIS_HALAL_Certificate.pdf']]};   // 已审核生效值（挂 window 供 publish.js 建品门控读取）
 let STORE_HALAL_PENDING=null;   // 已提交待审核的变更
 let STORE_HALAL_REJECT='';      // 最近一次驳回原因（运营驳回回写）
 function halalGoods(){return (window.FM_PRODUCTS||[]).filter(g=>g.halal===1&&g.status!=='deleted');}
@@ -195,13 +195,10 @@ function openStore(){
     <div class="mn-fld"><div class="fk">店铺logo <span class="q">?</span></div><div style="height:8px"></div><div class="mn-up">${svg('box')}上传图片</div></div>
     <div class="mn-fld"><div class="fk">店铺背景</div><div class="fh">至多上传五张图片，将按照图片顺序依次展示</div><div class="mn-up">${svg('box')}上传图片</div></div>
     <div class="mn-fld">
-      <div class="fk"><span class="req">*</span>是否有 HALAL 资质</div>
-      <div class="fh">选「是」须上传 HALAL 证书，审核通过后建品才能把商品设为 HALAL；选「否」则不能设置 HALAL 商品。</div>
-      <div id="st-hl-seg" style="display:flex;gap:10px;margin-top:8px">${['否','是'].map(v=>`<div class="st-hl-opt" data-v="${v}" style="flex:1;text-align:center;padding:10px 0;border-radius:12px;font-size:14px;font-weight:600;border:1.5px solid var(--line,#E3EADF);cursor:pointer">${v}</div>`).join('')}</div>
-      <div id="st-hl-err"></div>
-    </div>
-    <div id="st-hl-cert">
-      <div class="mn-fld"><div class="fk"><span class="req">*</span>HALAL 证书</div><div class="fh">支持 jpg / png / pdf，单个 ≤10MB，最多 5 个</div><div id="st-hl-files" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div></div>
+      <div class="fk">是否有 HALAL 资质</div>
+      <div style="margin-top:6px;font-size:14px;font-weight:600">${STORE_HALAL.on}</div>
+      ${STORE_HALAL.on==='是'?STORE_HALAL.quals.map((g,i)=>`<div style="margin-top:10px"><div class="fh">HALAL 资质 ${i+1}</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${g.map(f=>`<div class="st-hl-file" style="padding:10px 12px;border-radius:10px;background:var(--muted,#F3F6F0);font-size:13px">📄 ${f}</div>`).join('')}</div></div>`).join(''):''}
+      <div class="fh" style="margin-top:8px">App 只能查看。如需修改 HALAL 资质，请在电脑端「店铺资料」中修改并上传证书。</div>
     </div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="st-sub">提交审核</button>`,
@@ -210,37 +207,16 @@ function openStore(){
       const banner=(bg,fg,html)=>p.querySelector('.mn-list').insertAdjacentHTML('beforebegin',`<div style="margin:12px 14px 0;padding:10px 12px;border-radius:12px;background:${bg};color:${fg};font-size:12.5px;line-height:1.6">${html}</div>`);
       if(STORE_HALAL_PENDING)banner('#FFF7E6','#8A5A12','<b>资料变更审核中</b>：下方为当前生效资料，审核期间只读。');
       else if(STORE_HALAL_REJECT)banner('#FCEDEB','#A33A31',`<b>资料变更被驳回</b>：${STORE_HALAL_REJECT}<br>当前仍按原资料生效，可修改后重新提交。`);
-      // HALAL 资质：单选 + 证书
-      const hl={on:STORE_HALAL.on,files:[...STORE_HALAL.files]};
-      const seg=()=>p.querySelectorAll('.st-hl-opt').forEach(o=>{const on=o.dataset.v===hl.on;o.style.background=on?'var(--gl,#E7F2E9)':'#fff';o.style.borderColor=on?'var(--g,#0E7A52)':'var(--line,#E3EADF)';o.style.color=on?'var(--g,#0E7A52)':'inherit';});
-      const certBox=p.querySelector('#st-hl-cert'),errBox=p.querySelector('#st-hl-err');
-      const drawFiles=()=>{p.querySelector('#st-hl-files').innerHTML=hl.files.map((f,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--muted,#F3F6F0);font-size:13px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${f}</span><span data-del="${i}" style="color:#C0453B;font-size:13px;padding:0 4px">删除</span></div>`).join('')+(hl.files.length<5?`<div class="mn-up" id="st-hl-add">${svg('box')}上传证书</div>`:'');
-        p.querySelectorAll('[data-del]').forEach(d=>d.onclick=()=>{hl.files.splice(+d.dataset.del,1);drawFiles();});
-        const a=p.querySelector('#st-hl-add');if(a)a.onclick=()=>{hl.files.push(`HALAL证书_${hl.files.length+1}.pdf`);drawFiles();};};
-      const stL=g=>{const sk=g.skus||[];if(sk.length&&sk.every(s=>s.recycled))return '回收站';return {reviewing:'审核中',rejected:'审核驳回',forced_off:'强制下架'}[g.status]||(sk.length&&sk.every(s=>s.off)?'已下架':'在售');};
-      const blockMsg=l=>`<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:#FCEDEB;color:#A33A31;font-size:12.5px;line-height:1.6"><b>店铺下还有 ${l.length} 个 HALAL 商品，不能改为无 HALAL 资质。</b><br>${l.slice(0,5).map(g=>`${g.n}（${g.code?g.code+' · ':''}${stL(g)}）`).join('、')}${l.length>5?` 等 ${l.length} 个`:''}${l.some(g=>stL(g)==='回收站')?'<br>回收站里的商品：彻底删除，或恢复后改为非HALAL。':''}<br>请先在商品管理中将这些商品的「是否HALAL」改为非HALAL，再修改店铺设置。<div class="st-hl-jump" style="margin-top:6px;font-weight:700;color:var(--g,#0E7A52)">去商品管理 →</div></div>`;
-      const pick=v=>{errBox.innerHTML='';
-        if(v==='否'&&STORE_HALAL.on==='是'){const l=halalGoods();if(l.length){hl.on='是';seg();errBox.innerHTML=blockMsg(l);const j=errBox.querySelector('.st-hl-jump');if(j)j.onclick=()=>{window.FM_GOODS_FILTER={halal:1};window.FM_MOD.goods();};return false;}}
-        hl.on=v;seg();certBox.style.display=v==='是'?'':'none';return true;};
-      p.querySelectorAll('.st-hl-opt').forEach(o=>o.onclick=()=>pick(o.dataset.v));
-      seg();drawFiles();certBox.style.display=hl.on==='是'?'':'none';
-      if(STORE_HALAL_PENDING){   // 审核中两端只读（BR-03）：禁用 HALAL 区块并隐藏提交
-        p.querySelectorAll('.st-hl-opt').forEach(o=>{o.onclick=null;o.style.opacity='.6';});
-        p.querySelectorAll('#st-hl-cert input,#st-abbr').forEach(i=>i.disabled=true);
-        p.querySelectorAll('#st-hl-files [data-del],#st-hl-add').forEach(e=>e.style.display='none');
-        const sb=document.querySelectorAll('#st-sub');const b=sb[sb.length-1];if(b)b.style.display='none';
-      }
+      p.querySelectorAll('.st-hl-file').forEach(e=>e.onclick=()=>toast('预览证书'));
+      if(STORE_HALAL_PENDING){const sb=document.querySelectorAll('#st-sub');const b=sb[sb.length-1];if(b)b.style.display='none';p.querySelector('#st-abbr').disabled=true;}
       const inp=p.querySelector('#st-abbr'),cnt=p.querySelector('#st-abbr-c');
       inp.oninput=()=>{const cut=abbrCut(inp.value,SHOP_ABBR_MAX);if(cut!==inp.value)inp.value=cut;cnt.textContent=abbrW(inp.value);inp.classList.remove('err');};
       p.querySelector('#st-sub').onclick=()=>{
         // 必填：为空停在当前页标红聚焦，不提交（与 PC checkShopForm 同口径）
         if(!inp.value.trim()){inp.classList.add('err');inp.focus();toast('请填写店铺简称');return;}
         if(STORE_HALAL_PENDING){toast('资料变更审核中，暂不可重复提交');return;}
-        if(hl.on==='否'&&STORE_HALAL.on==='是'&&halalGoods().length){errBox.innerHTML=blockMsg(halalGoods());toast('店铺下还有 HALAL 商品，不能改为无 HALAL 资质');return;}
-        if(hl.on==='是'){if(!hl.files.length){toast('请上传 HALAL 证书');return;}}
         STORE_ABBR=inp.value.trim();STORE_HALAL_REJECT='';
-        STORE_HALAL_PENDING={on:hl.on,files:hl.on==='是'?[...hl.files]:[]};   // 审核通过后才替换 STORE_HALAL
-        toast('已提交，运营审核通过后生效');
+        toast('已保存');
       };
     }});
 }
@@ -356,7 +332,7 @@ function openQual(){
     </div>
     ${STORE_HALAL.on==='是'?`<div class="mn-qz">
       <div class="qt">HALAL证书</div>
-      ${STORE_HALAL.files.map(f=>`<div class="qimg">📄 ${f}</div>`).join('')}
+      ${STORE_HALAL.quals.map((g,i)=>`<div class="qr"><span class="qk">资质 ${i+1}</span><span class="qv">${g.length} 个附件</span></div>${g.map(f=>`<div class="qimg">📄 ${f}</div>`).join('')}`).join('')}
       <div class="qr"><span class="qk">有效期</span><span class="qv">—</span></div>
       <div class="qr"><span class="qk">状态</span><span class="qv">有效</span></div>
     </div>`:''}
