@@ -88,7 +88,7 @@
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
-    return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。${(typeof ckOn=='function'&&ckOn())?'<br><b>送货前先核货</b>：截单后对照车上实际装的货逐个 SKU 核数量，<b>核完仓库才能扫码签到收货</b>；签到前可撤回重核。':''}</div>
+    return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。${(typeof ckOn=='function'&&ckOn())?'<br><b>送货前先核货</b>：营业截止（截单）后才能开始核货，对照车上实际装的货逐个 SKU 核数量（按实际打印数带出），<b>核完仓库才能扫码签到收货</b>；签到前可撤回重核。':''}</div>
     <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单${(typeof ckPendingCount=='function'&&ckPendingCount())?` · <b style="color:var(--y)">待核货 ${ckPendingCount()}</b>`:''} · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>送货单</th>${(typeof ckOn=='function'&&ckOn())?'<th>核货状态</th><th>核货时间</th><th style="text-align:right">少送(件)</th>':''}<th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
