@@ -173,7 +173,7 @@ const abbrW=s=>[...(s||'')].reduce((n,c)=>n+(ABBR_W2.test(c)?2:1),0);
 const abbrCut=(s,max)=>{let n=0,out='';for(const c of s||''){const w=ABBR_W2.test(c)?2:1;if(n+w>max)break;n+=w;out+=c;}return out;};
 let STORE_ABBR='鲜丰食材';   // 已填值（演示态）
 /* 店铺级 HALAL 资质（2026-09-23，与 PC shopProfileEdit/halalCardEdit 同口径）
-   ① 开店/编辑店铺信息时选「是否有 HALAL 资质」；选「是」须上传证书（编号选填），随店铺信息一并提交审核（2026-10-15 由「是否有HALAL商品」改名）
+   ① 开店/编辑店铺信息时选「是否有 HALAL 资质」；选「是」须上传证书（不填证书编号），随店铺信息一并提交审核（2026-10-15 由「是否有HALAL商品」改名）
    ④ 商品「是否对 HALAL 客户展示」商家自选、不校验（publish.js pb-halalshow-row）
    ② 建品「是否HALAL」门控：店铺（已审核生效值）=是 → 再看类目是否挂载 halal；两者都满足才出现且必填（publish.js halalToggle）
    ③ 是→否：店铺下存在 是否HALAL=HALAL 的商品则不允许修改
@@ -201,7 +201,6 @@ function openStore(){
       <div id="st-hl-err"></div>
     </div>
     <div id="st-hl-cert">
-      <div class="mn-fld"><div class="fk">HALAL 证书编号</div><input class="fin" id="st-hl-no" maxlength="50" placeholder="选填，证书上的编号，最多 50 字符" value="${STORE_HALAL.certNo||''}"></div>
       <div class="mn-fld"><div class="fk"><span class="req">*</span>HALAL 证书</div><div class="fh">支持 jpg / png / pdf，单个 ≤10MB，最多 5 个</div><div id="st-hl-files" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div></div>
     </div>
     <div style="height:10px"></div>`,
@@ -237,9 +236,9 @@ function openStore(){
         if(!inp.value.trim()){inp.classList.add('err');inp.focus();toast('请填写店铺简称');return;}
         if(STORE_HALAL_PENDING){toast('资料变更审核中，暂不可重复提交');return;}
         if(hl.on==='否'&&STORE_HALAL.on==='是'&&halalGoods().length){errBox.innerHTML=blockMsg(halalGoods());toast('店铺下还有 HALAL 商品，不能改为无 HALAL 资质');return;}
-        if(hl.on==='是'){const no=p.querySelector('#st-hl-no');if(no.value.trim()&&!/^[A-Za-z0-9\-\/ ]{1,50}$/.test(no.value.trim())){no.classList.add('err');no.focus();toast('证书编号仅支持字母、数字、- / 和空格');return;}if(!hl.files.length){toast('请上传 HALAL 证书');return;}}
+        if(hl.on==='是'){if(!hl.files.length){toast('请上传 HALAL 证书');return;}}
         STORE_ABBR=inp.value.trim();STORE_HALAL_REJECT='';
-        STORE_HALAL_PENDING={on:hl.on,certNo:hl.on==='是'?p.querySelector('#st-hl-no').value.trim():'',files:hl.on==='是'?[...hl.files]:[]};   // 审核通过后才替换 STORE_HALAL
+        STORE_HALAL_PENDING={on:hl.on,files:hl.on==='是'?[...hl.files]:[]};   // 审核通过后才替换 STORE_HALAL
         toast('已提交，运营审核通过后生效');
       };
     }});
@@ -357,7 +356,6 @@ function openQual(){
     ${STORE_HALAL.on==='是'?`<div class="mn-qz">
       <div class="qt">HALAL证书</div>
       ${STORE_HALAL.files.map(f=>`<div class="qimg">📄 ${f}</div>`).join('')}
-      <div class="qr"><span class="qk">证书编号</span><span class="qv">${STORE_HALAL.certNo}</span></div>
       <div class="qr"><span class="qk">有效期</span><span class="qv">—</span></div>
       <div class="qr"><span class="qk">状态</span><span class="qv">有效</span></div>
     </div>`:''}
