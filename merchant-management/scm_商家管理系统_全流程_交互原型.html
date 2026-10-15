@@ -2800,7 +2800,7 @@ const BUILD_FIELDS_COMMON_MID=[
   {k:'保质期单位',req:'条件必填',rule:'「是否开启效期管理=是」时必填，枚举：天 / 月 / 年',ex:'天'},
   {k:'APP是否展示效期',req:'必填',rule:'枚举：展示 / 不展示',ex:'展示'},
   {k:'是否HALAL',req:'条件必填',rule:'枚举：HALAL / 非HALAL。类目支持 HALAL 时必填，不支持的类目留空。<b>店铺无 HALAL 资质（或资质审核中）时不能填 HALAL</b>，填了该商品导入失败',ex:'非HALAL'},
-  {k:'是否对HALAL客户展示',req:'选填',rule:'枚举：是 / 否；留空默认「是」。商家自行判断，平台不校验；猪肉、酒类平台默认不对 HALAL 客户展示',ex:'是'},
+  {k:'是否对HALAL客户展示',req:'必填',rule:'枚举：是 / 否；必填，留空该商品导入失败。商家自行判断，平台不校验取值对错；猪肉、酒类平台默认不对 HALAL 客户展示',ex:'是'},
   {k:'储存条件',req:'必填',rule:'枚举：常温 / 冷藏 / 冷冻 / 冷鲜',ex:'冷藏'},
   {k:'履约方式',req:'必填',rule:'枚举：平台仓配 / 商家直送',ex:'平台仓配'},
   {k:'产地',req:'选填',rule:'如 马来西亚；无则留空',ex:'马来西亚'},
@@ -2858,11 +2858,11 @@ function impAddUI(){return `<div class="card"><div class="card-hd"><h3>📥 批�
 const IMP_DEMO={
   '非标品':{
     spu:[
-      {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
-      {ln:3,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
+      {ln:2,code:'T001',name:'芥蓝',halal:'',halalShow:'是',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
+      {ln:3,code:'T004',name:'',halal:'',halalShow:'是',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
       {ln:4,code:'T005',name:'娃娃菜',halal:'HALAL',halalShow:'是',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''},
       /* 单位越界样例：非标品模板里填了计件单位「扎」，应被拦截 */
-      {ln:5,code:'T006',name:'秋葵',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'001',detailImg:''}],
+      {ln:5,code:'T006',name:'秋葵',halal:'',halalShow:'是',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'001',detailImg:''}],
     sku:[{ln:2,code:'T001',qty:1,specUnit:'kg',packUnit:''},{ln:3,code:'T001',qty:5,specUnit:'kg',packUnit:'箱'},{ln:4,code:'T004',qty:1,specUnit:'kg',packUnit:''},{ln:5,code:'T005',qty:2,specUnit:'kg',packUnit:'包'},{ln:6,code:'T006',qty:1,specUnit:'扎',packUnit:''},{ln:7,code:'T999',qty:1,specUnit:'kg',packUnit:''}],
   },
   '标品':{
@@ -2905,7 +2905,8 @@ function impParseBuild(mode='invalid'){
       else if(hv=='HALAL'&&!shopHalalOn)errs.push('店铺未上传 HALAL 资质（或资质审核中），不能导入 HALAL 商品');
       else if(hv&&r.cat&&!catH)errs.push(`类目「${r.cat}」不支持 HALAL，「是否HALAL」请留空`);
       else if(!hv&&catH&&shopHalalOn)errs.push('类目支持 HALAL，「是否HALAL」必填');
-      if(r.halalShow&&!['是','否'].includes(r.halalShow))errs.push(`「是否对HALAL客户展示」只能填 是 / 否（当前「${r.halalShow}」）`); }
+      if(!r.halalShow)errs.push('「是否对HALAL客户展示」必填（是 / 否）');
+      else if(!['是','否'].includes(r.halalShow))errs.push(`「是否对HALAL客户展示」只能填 是 / 否（当前「${r.halalShow}」）`); }
     if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
     else if(r.cat&&!CAT_SCOPE.includes(r.cat))errs.push('经营许可证未覆盖「'+r.cat+'」类目');
     // 图片校验：主图ID必填且须在主图素材库中存在；详情图ID选填、缺失仅告警不阻断
