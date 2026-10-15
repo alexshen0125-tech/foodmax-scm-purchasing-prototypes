@@ -459,6 +459,7 @@ function openForm(prefill){
     stockUnitIsPack:'是', stockPackQty:'',  // 寄售标品：库存单位是否就是最小包装单位；否则填 1 个库存单位装几个最小包装
     measure: prefill?prefill.measure:'',   // 【兼容】旧「最小售卖单位」，已被 stdType + 规格级 specUnit 取代
     netQty:'', netUnit:'', netPackType:'', measureNote:'',  // netQty/netUnit = 标品的「单件净含量」，非标品不填；netPackType=最小包装单位(单品/单包)
+    halalShow:'是',                        // 是否对HALAL客户展示：商家自选，默认是，不校验、不受类目/店铺门控（2026-10-15）
     halal:'',                              // 是否HALAL：门控=店铺生效值 STORE_HALAL.on==='是' 且 cat.halal；门控内必填(非HALAL/HALAL)，门控外不提交
     bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每 1 <最小包装单位/库存单位> 容器数(整数)，押金单价平台固定 0.10
     sellType:'售卖品',                      // 销售类型固定，不可改
@@ -495,7 +496,9 @@ function openForm(prefill){
         <div class="pb-hint" id="pb-packqty-hint" style="display:none;padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>
         <div class="pb-cell" id="pb-halal-row" style="display:none"><div class="lab"><span class="rq">*</span>是否HALAL</div><div class="val"><span class="vtxt" id="pb-halal-v">${f.halal||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-bcrs-tip" id="pb-halal-off" style="display:none">店铺未开通 HALAL 经营，本商品不设置是否HALAL。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」开通。</div>
+        <div class="pb-bcrs-tip" id="pb-halal-off" style="display:none">店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」上传 HALAL 证书。</div>
+        <div class="pb-cell" id="pb-halalshow-row"><div class="lab"><span class="rq">*</span>对 HALAL 客户展示</div><div class="val"><span class="vtxt" id="pb-halalshow-v">${f.halalShow}</span></div><span class="ch">${svg('arrow')}</span></div>
+        <div class="pb-bcrs-tip">选「否」则 HALAL 客户在商城看不到本商品；猪肉、酒类平台默认不对 HALAL 客户展示。</div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每 1 <b id="pb-bcrs-unit">${bcrsUnitName(f)}</b> 容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
         <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">${bcrsTipHtml(bcrsUnitName(f))}</div>
@@ -827,7 +830,7 @@ function halalToggle(p,f){
   const on=halalGateApp(f),catOn=!!(f.cat&&f.cat.halal);
   if(!on){f.halal='';const v=p.querySelector('#pb-halal-v');if(v)v.innerHTML='<span class=ph>请选择</span>';}
   row.style.display=on?'':'none';off.style.display=(catOn&&!on)?'':'none';
-  const pend=window.FM_MOD&&window.FM_MOD.halalPending&&window.FM_MOD.halalPending();if(catOn&&!on)off.textContent=(pend&&pend.on==='是')?'店铺 HALAL 经营审核中，通过后可设置是否HALAL。':'店铺未开通 HALAL 经营，本商品不设置是否HALAL。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」开通。';
+  const pend=window.FM_MOD&&window.FM_MOD.halalPending&&window.FM_MOD.halalPending();if(catOn&&!on)off.textContent=(pend&&pend.on==='是')?'店铺 HALAL 资质审核中，通过后可把商品设为 HALAL。':'店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请先在「我的 › 店铺信息」上传 HALAL 证书。';
 }
 /* ---- BCRS 类目门控：仅 cat.bcrs=true 的类目显示；切到不支持的类目则隐藏并重置为「否」 ---- */
 function bcrsToggle(p,f){
@@ -871,6 +874,7 @@ function bindForm(p,f){
   bcrsToggle(p,f);
   p.querySelector('#pb-halal-row').onclick=()=>pbGridPicker('是否HALAL',['非HALAL','HALAL'],f.halal,v=>{f.halal=v;setPH(p.querySelector('#pb-halal-v'),v,1);paint(p,f);});
   halalToggle(p,f);
+  p.querySelector('#pb-halalshow-row').onclick=()=>pbGridPicker('是否对 HALAL 客户展示',['是','否'],f.halalShow,v=>{f.halalShow=v;setPH(p.querySelector('#pb-halalshow-v'),v,1);paint(p,f);});
   // 最小售卖单位(变更后 SKU 售卖规格单位联动只读)
   p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
     f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);stdToggle(p,f);renderSpecs(p,f);bcrsToggle(p,f);paint(p,f);});   // 换模式即换 BCRS 单位来源（最小包装单位 ↔ 库存单位）

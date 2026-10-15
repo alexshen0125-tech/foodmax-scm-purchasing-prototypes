@@ -686,7 +686,7 @@ const DB = {
     // 收款账户与结算方式：入驻（招商准入）时已提交，开店任务直接沿用、不重复填写
     bankAcct:'DBS Bank · 绿鲜源蔬果 Green Fresh Produce Pte Ltd · SGD 账户尾号 6621',
     settle:'月结 30 天（T+30）· 银行转账 · SGD',
-    // 店铺级 HALAL 经营（2026-09-23）：是否有 HALAL 商品 + 证书（证书编号 + 附件，进「经营资质」类型 HALAL证书）
+    // 店铺级 HALAL 经营（2026-09-23）：是否有 HALAL 资质 + 证书（证书编号 + 附件，进「经营资质」类型 HALAL证书）
     halal:'是', halalCertNo:'MUIS-HC-2026-01842', halalFiles:['MUIS_HALAL_Certificate.pdf'],
   },
   // 资质
@@ -1876,7 +1876,8 @@ function checkShopForm(){
 function doEditShop(){if(!checkShopForm())return;const c=JSON.parse(JSON.stringify(DB.shop));readShopForm(c);DB.shopChange=c;DB.shopChangeAt='2026-09-23 10:30';DB.shopChangeReject='';DB.shopEditing=false;render();toast('已提交，运营审核通过后生效','ok');}
 
 /* ===== 店铺级 HALAL 经营（2026-09-23）=====
-   ① 开店 / 编辑店铺资料时选「是否有 HALAL 商品」；选「是」须填 HALAL 证书编号 + 上传证书附件，随开店/变更审核一并审
+   ① 开店 / 编辑店铺资料时选「是否有 HALAL 资质」；选「是」须上传 HALAL 证书（证书编号选填），随开店/变更审核一并审（2026-10-15 由「是否有HALAL商品」改名）
+   ⑤ 商品「是否对 HALAL 客户展示」商家自选、不做校验，与「是否HALAL」互不关联；猪肉/酒类由平台兜底不对 HALAL 客户展示
    ② 建品「是否HALAL」门控：先看店铺（已审核生效值 halal=='是'）→ 再看后台类目是否挂载 halal 字段；两者都满足才出现，且必填
    ③ 店铺 是→否：店铺下存在 是否HALAL=HALAL 的商品（除已删除外任意状态）则不允许修改，提示先把这些商品改为非HALAL
    ④ 证书有效期到期处理本期不做（证书只记编号 + 附件） */
@@ -1891,9 +1892,9 @@ function halalFileChips(files,editable){
 function halalCardView(s){
   const on=s.halal=='是';
   return `<div class="card"><div class="card-bd">
-      ${secT('HALAL 经营')}
+      ${secT('HALAL 资质')}
       <div class="rd-grid">
-        ${rdRow('是否有 HALAL 商品',on?'<span class="tag t-g"><span class="dot"></span>是</span>':'否')}
+        ${rdRow('是否有 HALAL 资质',on?'<span class="tag t-g"><span class="dot"></span>是</span>':'否')}
         ${on?rdRow('HALAL 证书编号',`<span class="mono">${s.halalCertNo||'—'}</span>`):''}
       </div>
       ${on?`<div class="rd-grid" style="grid-template-columns:1fr">${rdRow('HALAL 证书',`<div class="row" style="gap:8px;flex-wrap:wrap">${halalFileChips(s.halalFiles||[],false)||'—'}</div>`)}</div>`:''}
@@ -1903,14 +1904,14 @@ function halalCardEdit(s){
   HALAL_EDIT={files:[...(s.halalFiles||[])]};
   const on=s.halal=='是';
   return `<div class="card"><div class="card-bd">
-      ${secT('HALAL 经营')}
-      <div class="fr"><label class="fl"><i class="rq">*</i>是否有 HALAL 商品</label>
+      ${secT('HALAL 资质')}
+      <div class="fr"><label class="fl"><i class="rq">*</i>是否有 HALAL 资质</label>
         <div class="row" style="gap:14px">${['否','是'].map(v=>`<label class="chip-ck ${(on?'是':'否')==v?'on':''}"><input type="radio" name="es-halal" value="${v}" ${(on?'是':'否')==v?'checked':''} onchange="halalPick('${v}')">${v}</label>`).join('')}</div>
-        <div class="fl-h">选「是」后，建品时类目支持 HALAL 的商品需逐个选择「是否HALAL」；选「否」则建品不出现该项。</div>
+        <div class="fl-h">选「是」须上传 HALAL 证书，审核通过后建品/批量导入才能把商品设为 HALAL；选「否」则不能设置 HALAL 商品。</div>
         <div id="halal-err"></div>
       </div>
       <div id="halal-cert" style="display:${on?'block':'none'}">
-        <div class="fr"><label class="fl"><i class="rq">*</i>HALAL 证书编号</label><input id="es-halal-no" maxlength="50" value="${s.halalCertNo||''}" placeholder="请输入证书上的编号，最多 50 字符" style="max-width:420px"></div>
+        <div class="fr"><label class="fl">HALAL 证书编号</label><input id="es-halal-no" maxlength="50" value="${s.halalCertNo||''}" placeholder="选填，证书上的编号，最多 50 字符" style="max-width:420px"></div>
         <div class="fr" style="margin-bottom:0"><label class="fl"><i class="rq">*</i>HALAL 证书</label>
           <div class="row" id="halal-files" style="gap:8px;flex-wrap:wrap;align-items:center">${halalFileChips(HALAL_EDIT.files,true)}<button type="button" class="btn btn-o btn-sm" onclick="halalAddFile()">＋ 上传证书</button></div>
           <div class="fl-h">支持 jpg / png / pdf，单个 ≤10MB，最多 5 个。</div>
@@ -1924,7 +1925,7 @@ function halalDelFile(i){HALAL_EDIT.files.splice(i,1);halalRedrawFiles();}
 function halalSetRadio(v){document.querySelectorAll('input[name=es-halal]').forEach(r=>{r.checked=r.value==v;r.parentElement.classList.toggle('on',r.value==v);});}
 // 是→否 拦截：以「当前生效」为是、且店铺下仍有 HALAL 商品为准；拦截后单选回到「是」
 function halalBlockMsg(list){
-  return `<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span><div><b>店铺下还有 ${list.length} 个 HALAL 商品，不能改为「否」。</b><br>${list.slice(0,5).map(p=>`${p.name}（${p.id}）`).join('、')}${list.length>5?` 等 ${list.length} 个`:''}<br>请先在商品管理中将这些商品的「是否HALAL」改为非HALAL，再修改店铺设置。 <a href="javascript:halalJump()">去商品管理 →</a></div></div>`;
+  return `<div class="ib ib-r" style="margin-top:8px"><span class="i">⛔</span><div><b>店铺下还有 ${list.length} 个 HALAL 商品，不能改为无 HALAL 资质。</b><br>${list.slice(0,5).map(p=>`${p.name}（${p.id}）`).join('、')}${list.length>5?` 等 ${list.length} 个`:''}<br>请先在商品管理中将这些商品的「是否HALAL」改为非HALAL，再修改店铺设置。 <a href="javascript:halalJump()">去商品管理 →</a></div></div>`;
 }
 // 拦截跳转：商品列表预置「是否HALAL=HALAL」，Tab 定位到命中最多的桶（halalStat.topShelfTab）
 function halalJump(){const tabOf=p=>p.status=='reviewing'?'review':p.status=='rejected'?'rejected':p.status=='forced_off'?'forced':isOnShelf(p)?'onsale':'off';const cnt={};shopHalalProducts().forEach(p=>{const t=tabOf(p);cnt[t]=(cnt[t]||0)+1;});DB.shopEditing=false;DB.prodTab='list';DB.pFilter={halal:'1'};DB.pPage=1;DB.mTab=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0]||'onsale';nav('m-product');}
@@ -1936,11 +1937,10 @@ function halalPick(v){
 }
 function halalFormCheck(){
   const v=(document.querySelector('input[name=es-halal]:checked')||{}).value;
-  if(v=='否'&&DB.shop.halal=='是'&&shopHalalProducts().length){halalPick('否');toast('店铺下还有 HALAL 商品，不能改为「否」','err');return false;}
+  if(v=='否'&&DB.shop.halal=='是'&&shopHalalProducts().length){halalPick('否');toast('店铺下还有 HALAL 商品，不能改为无 HALAL 资质','err');return false;}
   if(v!='是')return true;
   const no=document.getElementById('es-halal-no');
-  if(no&&!no.value.trim()){no.style.borderColor='var(--r)';no.focus();toast('请填写 HALAL 证书编号','err');return false;}
-  if(no&&!/^[A-Za-z0-9\-\/ ]{1,50}$/.test(no.value.trim())){no.style.borderColor='var(--r)';no.focus();toast('证书编号仅支持字母、数字、- / 和空格','err');return false;}
+  if(no&&no.value.trim()&&!/^[A-Za-z0-9\-\/ ]{1,50}$/.test(no.value.trim())){no.style.borderColor='var(--r)';no.focus();toast('证书编号仅支持字母、数字、- / 和空格','err');return false;}
   if(!HALAL_EDIT.files.length){toast('请上传 HALAL 证书','err');return false;}
   return true;
 }
@@ -2187,7 +2187,7 @@ function act_spuDetail(i){
       ${dl('品类',p.cat)}${dl('税率',p.tax||'9%')}
       ${dl('商品类型',`<span class="tag ${isStd(p)?'t-b':'t-gr'}" style="font-size:10.5px">${stdTypeName(p)}</span> <span style="color:var(--ts);font-size:12px">${isStd(p)?'净含量维护在商品维度：取申报的单件净含量，不乘售卖规格数量':'净含量 ＝ 售卖规格数量 + 售卖规格单位，无独立字段'}</span>`)}
       ${isStd(p)?dl('单件净含量',spuNetTxt(p)||'—')+dl('净含量计量单位',unitTxtCode(stdTypeName(p),'net',p.netUnit))+dl('最小包装单位',unitTxtCode('标品','spec',p.netPackType))+(p.consign?dl('库存单位换算',stockPackTxt(p)||'—'):''):dl('净含量','<span style="color:var(--ts)">＝ 售卖规格数量 + 售卖规格单位（见下方各规格）</span>')}
-      ${dl('是否HALAL',p.halal===1?'<span class="tag t-g" style="font-size:10.5px">HALAL</span>':p.halal===0?'非HALAL':'未设置')}
+      ${dl('是否HALAL',p.halal===1?'<span class="tag t-g" style="font-size:10.5px">HALAL</span>':p.halal===0?'非HALAL':'未设置')}${dl('是否对 HALAL 客户展示',p.halalShow===0?'否':'是')}
       ${dl('BCRS 押金',p.bcrs?`<span class="tag t-b" style="font-size:10.5px">BCRS</span> 每 1 ${bcrsUnitName(p)} ${(+p.bcrsUnitContainers||0)} 容器 × ${money(BCRS_UNIT_PRICE)}（单容器法规押金 ${money(BCRS_UNIT_PRICE)}·平台固定·不计 GST）`:'不支持')}${dl('销售类型',p.saleType||'售卖品')}${dl('售卖模式',p.consign?'<span class="tag t-pp" style="font-size:10.5px">寄售</span> 库存由货品库存决定、逐规格不可维护':'自售（经销买断）')}${p.consign?dl('库存单位',(p.stockUnit||'—')+'　<span style="color:var(--ts);font-size:12px">1 份 = 数量 个该单位</span>'):''}
       ${dl('商品名称(EN)',p.nameEn||'—')}${dl('商品别名',p.alias||'—')}
       ${dl('商品别名(EN)',p.aliasEn||'—')}
@@ -2459,7 +2459,8 @@ function act_editSpu(i){const isNew=i==undefined;const p=isNew?{id:'',cat:'',uni
       </div>
     </div>
     <div class="fr" id="halal-block" style="display:none"><label class="fl"><b>*</b>是否HALAL</label>${radio('f-halal',p.halal===1?'HALAL':p.halal===0?'非HALAL':'',['非HALAL','HALAL'])}</div>
-    <div class="fr" id="halal-off" style="display:none;font-size:12px;color:var(--ts)">${DB.shopChange&&DB.shopChange.halal=='是'&&DB.shop.halal!='是'?'店铺 HALAL 经营审核中，通过后可设置是否HALAL。':`店铺未开通 HALAL 经营，本商品不设置是否HALAL。如需售卖 HALAL 商品，请先在<a href="javascript:halalGoShop()">店铺资料</a>中开通。`}</div>
+    <div class="fr" id="halal-off" style="display:none;font-size:12px;color:var(--ts)">${DB.shopChange&&DB.shopChange.halal=='是'&&DB.shop.halal!='是'?'店铺 HALAL 资质审核中，通过后可把商品设为 HALAL。':`店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请先在<a href="javascript:halalGoShop()">店铺资料</a>上传 HALAL 证书。`}</div>
+    <div class="fr"><label class="fl"><b>*</b>是否对 HALAL 客户展示</label>${radio('f-halalshow',p.halalShow===0?'否':'是',['是','否'])}<div class="fl-h">选「否」则 HALAL 客户在商城看不到本商品，由商家自行判断、平台不做校验；猪肉、酒类商品平台默认不对 HALAL 客户展示，不受此项影响。</div></div>
     <div class="fg3"><div class="fr"><label class="fl"><b>*</b>销售类型</label><input value="售卖品" readonly title="默认售卖品，不可修改" style="background:#F3F4F6;color:var(--ts)"></div>
       <div class="fr"><label class="fl">售卖模式</label><select id="f-supply" ${supplyLock?'disabled style="background:#F3F4F6;color:var(--ts)"':'onchange="EDIT_SUPPLY=this.value;supplyToggle();renderSkuEditor()"'}><option value="自售" ${EDIT_SUPPLY=='自售'?'selected':''}>自售</option><option value="寄售" ${EDIT_SUPPLY=='寄售'?'selected':''}>寄售</option></select></div>
       <div class="fr"><label class="fl">产地</label><input id="f-origin" data-tr value="${p.origin||''}" placeholder="选填">${AO('origin')}</div></div>
@@ -2741,7 +2742,7 @@ function catUnitSync(init){
 function catHint(){const cat=document.getElementById('f-cat').value;const c=CATS[cat];const box=document.getElementById('cat-hint');
   // BCRS 类目门控：仅支持 BCRS 的类目显示「是否支持 BCRS」；否则隐藏并重置为否
   const bb=document.getElementById('bcrs-block');if(bb){if(c&&c.bcrs){bb.style.display='';}else{bb.style.display='none';const r=document.querySelector('input[name=f-bcrs][value="否"]');if(r){r.checked=true;const row=r.closest('.row');if(row){row.querySelectorAll('.chip-ck').forEach(e=>e.classList.remove('on'));r.parentElement.classList.add('on');}}const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display='none';}}
-  // HALAL 门控：先看店铺（生效值）是否有 HALAL 商品 → 再看类目是否挂载 halal 字段
+  // HALAL 门控：先看店铺（生效值）是否有 HALAL 资质 → 再看类目是否挂载 halal 字段
   const hb=document.getElementById('halal-block'),ho=document.getElementById('halal-off'),catOn=!!(c&&c.halal),shopOn=DB.shop.halal=='是';if(hb)hb.style.display=(catOn&&shopOn)?'':'none';if(ho)ho.style.display=(catOn&&!shopOn)?'':'none';
   if(!box)return;let h='';if(c&&!CAT_SCOPE.includes(cat))h=`<div class="ib ib-r" style="margin:10px 0"><span class="i">⛔</span>经营许可证未覆盖「${cat}」类目，提交将被资质校验拦截。</div>`;else if(c&&c.baseRisk=='高')h=`<div class="ib ib-gr" style="margin:10px 0"><span class="i">ℹ️</span>「${cat}」为高风险类目，首次建档默认进人工审核。</div>`;box.innerHTML=h;}
 function bcrsToggle(){const e=document.querySelector('input[name=f-bcrs]:checked');const on=e&&e.value=='是';const dep=document.getElementById('bcrs-deposit');if(dep)dep.style.display=on?'':'none';if(on)bcrsPreview();}
@@ -2758,6 +2759,7 @@ function collectSpu(i){const g=id=>document.getElementById(id);const gr=n=>{cons
   if(p.consign===undefined)p.consign=((g('f-supply')||{}).value||'自售')=='寄售';
   if(p.consign&&p.stdType=='标品'){p.stockUnitIsPack=gr('f-stockispack')||'是';p.stockPackQty=p.stockUnitIsPack=='否'?(parseInt((g('f-packqty')||{}).value,10)||0):1;}
   else{p.stockUnitIsPack='';p.stockPackQty=0;}   /* 最小售卖单位/规格备注已下线：unit 由净含量单位派生，仅供历史数据与下游兼容 */p.expEn=gr('f-expen')||'是';p.qp=g('f-qp').value.trim();p.qpu=(g('f-qpu')||{}).value||'';p.storage=g('f-storage').value;p.fulfil=g('f-fulfil').value;p.brand=g('f-brand').value.trim();p.origin=g('f-origin').value.trim();p.desc=g('f-desc').value.trim();p.saleType='售卖品';p.name=g('f-name').value.trim();p.alias=g('f-alias').value.trim();p.showExp=g('f-showexp').value;p.img=g('f-img').classList.contains('done');p.detail=g('f-detail').classList.contains('done');p.reject='';p.consign=((g('f-supply')||{}).value||'自售')=='寄售';   // 售卖模式：寄售=true
+  p.halalShow=gr('f-halalshow')=='否'?0:1;   /* 是否对HALAL客户展示：商家自选，默认是，不校验 */
   { const hv=gr('f-halal'); p.halal=halalGate(p.cat)?(hv=='HALAL'?1:hv=='非HALAL'?0:null):(i<0?null:(p.halal??null)); }   /* HALAL(BR-12/13)：门控内取选择；门控外（店铺否 或 类目未挂载）不提交 → 新建 null、编辑保留原值 */
   const bcrsOn=(gr('f-bcrs')=='是')&&!!(CATS[p.cat]&&CATS[p.cat].bcrs);p.bcrs=bcrsOn;p.bcrsUnitContainers=bcrsOn?(parseInt((g('f-bcrscnt')||{}).value,10)||0):0;   /* BCRS：仅支持类目+选是才存；每 1 份容器数(押金单价平台固定0.10) */ const prev=(i>=0&&DB.products[i].skus)||[],prevById=new Map(prev.map(x=>[x.skuId,x]));p.skus=EDIT_SKUS.map(s=>{const old=s.skuId?prevById.get(s.skuId):null,sellUnit=p.consign?(p.stockUnit||''):(p.stdType=='标品'&&p.netPackType?p.netPackType:(s.sellUnit||'')),qty=parseInt(s.qty,10)||0;   /* 自售标品：售卖规格单位恒等最小包装单位 */return{skuId:(old&&old.skuId)||s.skuId||('SKU'+(++SKU_SEQ)),qty,packUnit:s.packUnit||'',sellUnit,containedPackCount:p.stdType=='标品'?(qty*(stockPackRatio(p)||0)):null,   /* 派生：售卖规格数量 × 库存换算比例，不再手填 */refund:(['kg','g'].includes(sellUnit)&&s.refund?1:0),price:parseFloat(s.price)||0,stock:parseInt(s.stock)||0,safe:(old&&old.safe)||0,stockMode:s.stockMode||'finite',soldToday:(s.soldToday!=null?s.soldToday:(old&&old.soldToday))||0,createdAt:(old&&old.createdAt)||s.createdAt||ts(),updatedAt:ts()};});p.updatedAt=ts();if(!p.createdAt)p.createdAt=ts();return p;}
 function upsert(i,p){if(i<0)DB.products.unshift(p);else DB.products[i]=p;}
@@ -2797,6 +2799,8 @@ const BUILD_FIELDS_COMMON_MID=[
   {k:'保质期',req:'条件必填',rule:'「是否开启效期管理=是」时必填，正整数，如 7；为「否」时留空',ex:'7'},
   {k:'保质期单位',req:'条件必填',rule:'「是否开启效期管理=是」时必填，枚举：天 / 月 / 年',ex:'天'},
   {k:'APP是否展示效期',req:'必填',rule:'枚举：展示 / 不展示',ex:'展示'},
+  {k:'是否HALAL',req:'条件必填',rule:'枚举：HALAL / 非HALAL。类目支持 HALAL 时必填，不支持的类目留空。<b>店铺无 HALAL 资质（或资质审核中）时不能填 HALAL</b>，填了该商品导入失败',ex:'非HALAL'},
+  {k:'是否对HALAL客户展示',req:'选填',rule:'枚举：是 / 否；留空默认「是」。商家自行判断，平台不校验；猪肉、酒类平台默认不对 HALAL 客户展示',ex:'是'},
   {k:'储存条件',req:'必填',rule:'枚举：常温 / 冷藏 / 冷冻 / 冷鲜',ex:'冷藏'},
   {k:'履约方式',req:'必填',rule:'枚举：平台仓配 / 商家直送',ex:'平台仓配'},
   {k:'产地',req:'选填',rule:'如 马来西亚；无则留空',ex:'马来西亚'},
@@ -2844,7 +2848,7 @@ function impBuildUI(){const T=impType();
   <div class="ib ib-b" style="margin:0 0 12px"><span class="i">🖼️</span>图片批量绑定：先在<a class="btn-link" style="color:var(--g)" onclick="DB.matTab='main';nav('m-material')">商品素材库</a>上传主图/详情图（文件名即图片ID），再在模板「商品主图ID / 商品详情图ID」列填入图片ID。<b>主图ID必填且必须已上传</b>，否则该商品建品失败；详情图ID选填。</div>
   ${buildFieldsTable()}
   <div class="row" style="gap:12px;margin-bottom:12px"><button class="btn btn-o" onclick="downloadTemplate('build')">⬇️ 下载${T}建品 XLSX</button><div class="up" style="flex:1" onclick="impParseBuild('valid')"><div class="uic">📄</div><div class="ut">上传已填写的${T}模板</div><div class="us">演示：点此解析合规模板</div></div></div>
-  <div class="row" style="gap:8px;margin:-4px 0 12px"><button class="btn btn-o btn-sm" onclick="impParseBuild('invalid')">模拟非法单位/缺最小包装数</button><button class="btn btn-o btn-sm" onclick="impRejectWrongType()">模拟上传错类型模板</button></div>
+  <div class="row" style="gap:8px;margin:-4px 0 12px"><button class="btn btn-o btn-sm" onclick="impParseBuild('invalid')">模拟非法单位/缺最小包装数</button><button class="btn btn-o btn-sm" onclick="impRejectWrongType()">模拟上传错类型模板</button><button class="btn btn-o btn-sm" onclick="impParseBuild('noqual')">模拟店铺无 HALAL 资质</button></div>
   <div id="imp-out"></div>
   <div class="ib ib-gr" style="margin-top:12px"><span class="i">ℹ️</span>上传时按<b>模板类型</b>解析：表头与所选类型不符会整表拒收，不做逐行猜测。库存不在建品模板内（建品一律不含库存，后续列表维护）。逐行校验，<b>失败不阻断其它商品</b>；成功商品走首次建档审核。</div>
   </div></div>`;}
@@ -2856,23 +2860,25 @@ const IMP_DEMO={
     spu:[
       {ln:2,code:'T001',name:'芥蓝',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'7',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'芥蓝主图,芥蓝主图2',detailImg:'芥蓝详情A,芥蓝详情'},
       {ln:3,code:'T004',name:'',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'',detailImg:''},
-      {ln:4,code:'T005',name:'娃娃菜',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''},
+      {ln:4,code:'T005',name:'娃娃菜',halal:'HALAL',halalShow:'是',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'',brand:'',mainImg:'娃娃菜999',detailImg:''},
       /* 单位越界样例：非标品模板里填了计件单位「扎」，应被拦截 */
       {ln:5,code:'T006',name:'秋葵',cat:'新鲜蔬菜',tax:'9%',expEn:'是',qp:'5',qpu:'天',showExp:'展示',storage:'冷藏',fulfil:'平台仓配',origin:'马来西亚',brand:'',mainImg:'001',detailImg:''}],
     sku:[{ln:2,code:'T001',qty:1,specUnit:'kg',packUnit:''},{ln:3,code:'T001',qty:5,specUnit:'kg',packUnit:'箱'},{ln:4,code:'T004',qty:1,specUnit:'kg',packUnit:''},{ln:5,code:'T005',qty:2,specUnit:'kg',packUnit:'包'},{ln:6,code:'T006',qty:1,specUnit:'扎',packUnit:''},{ln:7,code:'T999',qty:1,specUnit:'kg',packUnit:''}],
   },
   '标品':{
     spu:[
-      {ln:2,code:'S001',name:'可口可乐',cat:'饮料',tax:'9%',netQty:'330',netUnit:'ml',netPackType:'瓶',expEn:'是',qp:'12',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'新加坡',brand:'Coca-Cola',mainImg:'001',detailImg:'002'},
-      {ln:3,code:'S002',name:'冰鲜三文鱼',cat:'海鲜水产',tax:'9%',netQty:'500',netUnit:'g',netPackType:'盒',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
-      {ln:4,code:'S003',name:'金标酱油',cat:'调味品',tax:'9%',netQty:'500',netUnit:'ml',netPackType:'瓶',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
+      {ln:2,code:'S001',name:'可口可乐',halal:'非HALAL',halalShow:'是',cat:'饮料',tax:'9%',netQty:'330',netUnit:'ml',netPackType:'瓶',expEn:'是',qp:'12',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'新加坡',brand:'Coca-Cola',mainImg:'001',detailImg:'002'},
+      {ln:3,code:'S002',name:'冰鲜三文鱼',halal:'HALAL',halalShow:'是',cat:'海鲜水产',tax:'9%',netQty:'500',netUnit:'g',netPackType:'盒',expEn:'是',qp:'3',qpu:'天',showExp:'展示',storage:'冷冻',fulfil:'平台仓配',origin:'挪威',brand:'Fjord',mainImg:'',detailImg:''},
+      {ln:4,code:'S003',name:'金标酱油',halal:'HALAL',halalShow:'',cat:'调味品',tax:'9%',netQty:'500',netUnit:'ml',netPackType:'瓶',expEn:'否',qp:'',qpu:'',showExp:'不展示',storage:'常温',fulfil:'平台仓配',origin:'',brand:'',mainImg:'001',detailImg:'002'},
       /* 标品必填样例：漏填单件净含量，应被拦截 */
-      {ln:5,code:'S004',name:'即食海带丝',cat:'海鲜水产',tax:'9%',netQty:'',netUnit:'',netPackType:'袋',expEn:'是',qp:'6',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'中国山东',brand:'',mainImg:'001',detailImg:''}],
+      {ln:5,code:'S004',name:'即食海带丝',halal:'',halalShow:'否',cat:'海鲜水产',tax:'9%',netQty:'',netUnit:'',netPackType:'袋',expEn:'是',qp:'6',qpu:'月',showExp:'展示',storage:'常温',fulfil:'平台仓配',origin:'中国山东',brand:'',mainImg:'001',detailImg:''}],
     sku:[{ln:2,code:'S001',qty:1,specUnit:'瓶',containedPackCount:1,packUnit:''},{ln:3,code:'S001',qty:24,specUnit:'瓶',containedPackCount:24,packUnit:'箱'},{ln:4,code:'S001',qty:2,specUnit:'打',containedPackCount:24,packUnit:'箱'},{ln:5,code:'S002',qty:1,specUnit:'盒',containedPackCount:1,packUnit:''},{ln:6,code:'S003',qty:2,specUnit:'打',containedPackCount:'',packUnit:'箱'},{ln:7,code:'S004',qty:1,specUnit:'袋',containedPackCount:1,packUnit:''},{ln:8,code:'S999',qty:1,specUnit:'瓶',containedPackCount:1,packUnit:''}],
   },
 };
 function impRejectWrongType(){const T=impType(),other=T=='标品'?'非标品':'标品',box=document.getElementById('imp-out');box.innerHTML=`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span><div><b>整表拒收，未进入逐行解析</b><br>当前声明类型为「${T}」，上传文件表头检测为「${other}」。请切换 Tab 并下载对应 XLSX 模板。</div></div>`;toast('模板类型与当前 Tab 不一致，已整表拒收','err');}
 function impParseBuild(mode='invalid'){
+  const shopHalalOn=mode=='noqual'?false:DB.shop.halal=='是';   /* 门控读店铺生效值；noqual=演示店铺无 HALAL 资质 */
+  if(mode=='noqual')mode='invalid';
   const T=impType(),src=IMP_DEMO[T],first=src.spu[0].code,demo=mode=='valid'?{spu:[src.spu[0]],sku:src.sku.filter(r=>r.code==first)}:src;
   /* 模板类型即商品类型，逐行沿用；不再从行里读「商品类型」列 */
   const spuRows=demo.spu.map(r=>({...r,stdType:T}));
@@ -2893,6 +2899,13 @@ function impParseBuild(mode='invalid'){
       else if(!netPackUnits().includes(r.netPackType))errs.push(`最小包装单位「${r.netPackType}」不在标品计件单位枚举内`);
     }
     if(r.expEn=='是'&&(!r.qp||!r.qpu))errs.push('效期管理=是，保质期/单位必填');
+    // HALAL 校验（与建档同口径）：店铺无资质不能填 HALAL；类目未挂载 halal 时须留空；挂载且店铺有资质时必填
+    { const catH=!!(CATS[r.cat]&&CATS[r.cat].halal),hv=r.halal||'';
+      if(hv&&!['HALAL','非HALAL'].includes(hv))errs.push(`「是否HALAL」只能填 HALAL / 非HALAL（当前「${hv}」）`);
+      else if(hv=='HALAL'&&!shopHalalOn)errs.push('店铺未上传 HALAL 资质（或资质审核中），不能导入 HALAL 商品');
+      else if(hv&&r.cat&&!catH)errs.push(`类目「${r.cat}」不支持 HALAL，「是否HALAL」请留空`);
+      else if(!hv&&catH&&shopHalalOn)errs.push('类目支持 HALAL，「是否HALAL」必填');
+      if(r.halalShow&&!['是','否'].includes(r.halalShow))errs.push(`「是否对HALAL客户展示」只能填 是 / 否（当前「${r.halalShow}」）`); }
     if(r.cat&&!CATS[r.cat])errs.push('后台类目不在分类字典');
     else if(r.cat&&!CAT_SCOPE.includes(r.cat))errs.push('经营许可证未覆盖「'+r.cat+'」类目');
     // 图片校验：主图ID必填且须在主图素材库中存在；详情图ID选填、缺失仅告警不阻断
@@ -2930,7 +2943,7 @@ function impConfirmBuild(){
   const ready=[],rejected=[];
   IMP.spus.filter(x=>x.ok).forEach(o=>{
     const r=o.row,vs=o.skus.filter(x=>x.ok),mainImgs=o.mainIds||[],detailImgs=o.detailIds||[];
-    const p={id:r.code,name:r.name,cat:r.cat,tax:r.tax||'',stdType:r.stdType||'标品',netQty:r.netQty||'',netUnit:r.netUnit||'',netPackType:r.netPackType||'',unit:r.netUnit||'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map((x,k)=>({skuId:`PENDING-${r.code}-${k}`,qty:Number(x.row.qty),sellUnit:x.row.specUnit||'',packUnit:x.row.packUnit||'',containedPackCount:r.stdType=='标品'?Number(x.row.containedPackCount):null,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};
+    const p={id:r.code,name:r.name,halal:r.halal=='HALAL'?1:r.halal=='非HALAL'?0:null,halalShow:r.halalShow=='否'?0:1,cat:r.cat,tax:r.tax||'',stdType:r.stdType||'标品',netQty:r.netQty||'',netUnit:r.netUnit||'',netPackType:r.netPackType||'',unit:r.netUnit||'',saleType:'售卖品',showExp:r.showExp,storage:r.storage,fulfil:r.fulfil,expEn:r.expEn,qp:r.qp,qpu:r.qpu,alias:'',origin:r.origin||'',brand:r.brand||'',desc:'',mainImgs,detailImgs,img:mainImgs.length>0,detail:detailImgs.length>0,reject:'',note:'',createdAt:ts(),updatedAt:ts(),skus:vs.map((x,k)=>({skuId:`PENDING-${r.code}-${k}`,qty:Number(x.row.qty),sellUnit:x.row.specUnit||'',packUnit:x.row.packUnit||'',containedPackCount:r.stdType=='标品'?Number(x.row.containedPackCount):null,price:0,stock:0,safe:0,createdAt:ts(),updatedAt:ts()}))};
     p.netQty=isStd(p)?(parseMeasure(p.netQty)||p.netQty):'';const fails=autoCheck(p);if(fails.length){rejected.push(...fails.map(f=>[f[0],`${r.code}：${f[1]}`]));return;}ready.push(p);
   });
   if(!ready.length){showSchemaFailures(rejected.length?rejected:[['发布校验','没有可发布的商品']]);return;}
@@ -5001,7 +5014,7 @@ function shopAction(m){
 function act_reviewTask(kind){
   const isChg=kind=='change',m=DB.merchant,s=isChg?DB.shopChange:DB.shop,o=DB.shop;
   // 资料变更：列出与当前生效资料不同的字段，HALAL 相关单独标出
-  const F=[['name','店铺名称'],['abbr','店铺简称'],['type','店铺类型'],['cats','主营品类'],['intro','店铺简介'],['contact','联系人'],['service','客服电话'],['delivery','配送范围'],['addr','经营地址'],['uen','UEN'],['settleType','结算方式'],['payDay','最晚付款日'],['halal','是否有 HALAL 商品'],['halalCertNo','HALAL 证书编号'],['halalFiles','HALAL 证书']];
+  const F=[['name','店铺名称'],['abbr','店铺简称'],['type','店铺类型'],['cats','主营品类'],['intro','店铺简介'],['contact','联系人'],['service','客服电话'],['delivery','配送范围'],['addr','经营地址'],['uen','UEN'],['settleType','结算方式'],['payDay','最晚付款日'],['halal','是否有 HALAL 资质'],['halalCertNo','HALAL 证书编号'],['halalFiles','HALAL 证书']];
   const fv=v=>Array.isArray(v)?(v.join('、')||'—'):(v||'—');
   const diff=isChg?F.filter(([k])=>JSON.stringify(o[k]??'')!==JSON.stringify(s[k]??'')):[];
   const hOn=s.halal=='是';
@@ -5012,8 +5025,8 @@ function act_reviewTask(kind){
     <h4 style="font-size:13.5px;margin-bottom:10px">🏪 店铺基础信息</h4>
     <div class="kv" style="margin-bottom:10px"><div><div class="k">店铺名称</div><div class="v">${s.name}</div></div><div><div class="k">店铺简称</div><div class="v">${s.abbr||'—'}</div></div><div><div class="k">店铺类型</div><div class="v">${s.type}</div></div><div><div class="k">主营品类</div><div class="v">${s.cats.join(' · ')}</div></div><div><div class="k">客服电话</div><div class="v">${s.service}</div></div><div><div class="k">营业时间</div><div class="v">${s.hours}</div></div><div><div class="k">配送范围</div><div class="v">${s.delivery}</div></div></div>
     <div class="kv" style="margin-bottom:8px"><div style="grid-column:1/-1"><div class="k">店铺简介</div><div class="v" style="font-weight:400">${s.intro}</div></div><div style="grid-column:1/-1"><div class="k">经营地址</div><div class="v" style="font-weight:400">${s.addr}</div></div></div>
-    <h4 style="font-size:13.5px;margin:14px 0 10px">HALAL 经营</h4>
-    <div class="kv"><div><div class="k">是否有 HALAL 商品</div><div class="v">${hOn?'<span class="tag t-g"><span class="dot"></span>是</span>':'否'}</div></div>
+    <h4 style="font-size:13.5px;margin:14px 0 10px">HALAL 资质</h4>
+    <div class="kv"><div><div class="k">是否有 HALAL 资质</div><div class="v">${hOn?'<span class="tag t-g"><span class="dot"></span>是</span>':'否'}</div></div>
       ${hOn?`<div><div class="k">HALAL 证书编号</div><div class="v mono">${s.halalCertNo||'—'}</div></div><div style="grid-column:1/-1"><div class="k">HALAL 证书</div><div class="v row" style="gap:8px;flex-wrap:wrap">${halalFileChips(s.halalFiles||[],false)}</div></div>`:''}</div>
   </div><div class="drawer-ft">${isChg
     ?`<button class="btn btn-d" onclick="act_rejectShopChange()">✕ 驳回</button><button class="btn btn-p" onclick="act_approveShopChange()">✓ 审核通过 · 变更生效</button>`
@@ -5035,7 +5048,7 @@ function act_shopDetail(){
   drawer(`<div class="drawer-hd"><h3>店铺详情 · ${s.name}</h3><span class="x" onclick="closeDrawer()">×</span></div><div class="drawer-bd">
     <h4 style="font-size:14px;margin-bottom:10px">店铺资料</h4>
     <dl class="dl" style="margin-bottom:18px"><dt>店铺名称</dt><dd>${s.name}</dd><dt>店铺简称</dt><dd>${s.abbr}</dd><dt>店铺类型</dt><dd>${s.type}</dd><dt>主营品类</dt><dd>${s.cats.join('、')}</dd><dt>联系人</dt><dd>${s.contact}</dd><dt>客服电话</dt><dd class="mono">${s.service}</dd><dt>UEN（开票用）</dt><dd class="mono">${s.uen}</dd><dt>配送范围</dt><dd>${s.delivery}</dd><dt>经营地址</dt><dd>${s.addr}</dd>
-      <dt>是否有 HALAL 商品</dt><dd>${s.halal=='是'?'<span class="tag t-g"><span class="dot"></span>是</span>':'否'}</dd></dl>
+      <dt>是否有 HALAL 资质</dt><dd>${s.halal=='是'?'<span class="tag t-g"><span class="dot"></span>是</span>':'否'}</dd></dl>
     <h4 style="font-size:14px;margin-bottom:10px">收款结算</h4>
     <dl class="dl" style="margin-bottom:18px"><dt>收款账户</dt><dd>${s.bankAcct}</dd><dt>结算方式</dt><dd>${s.settleType}</dd><dt>最晚付款日</dt><dd>${s.payDay}</dd></dl>
     <h4 style="font-size:14px;margin-bottom:10px">经营资质</h4>
