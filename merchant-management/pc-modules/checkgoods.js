@@ -2,7 +2,7 @@
    背景：商家送货到仓错漏多。改为：截单后商家先按送货单逐 SKU 核货，核完仓库才能扫码签到收货。
    口径（2026-10-14 沈亮「按建议」拍板）：
    - 粒度：按送货单（一仓一张）逐 SKU 核「件数」，称重品也只核件数（重量走称重录入）。
-   - 动作：PC 手动核货——「实际打印数」列预填该 SKU 实际打印的标签张数（2026-10-15 改，原预填应送），商家只改装少的行 → 确认核货。
+   - 动作：PC 手动核货——「实际核货数量」列预填该 SKU 实际打印的标签张数（2026-10-15 改，原预填应送），商家只改装少的行 → 确认核货。
            上限 = min(实际打印数, 应送数量)（不能多填），下限 0；打印数 < 应送的行一打开就显示少送。
            App 另支持扫码核货（2026-10-14 追加）：从 0 起扫一张标签 +1 件，同序号去重、别仓/别单/本单无此 SKU 不计数并报警；结果写同一 d.check（method=scan）。
    - 少装：允许带差异提交 = 商家申报缺货。缺口照现有少货链路走（平台补采优先 → 补不足按实收出库标缺货），
@@ -121,7 +121,7 @@
         ${stale?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⚠️</span><div>上次核货后<b>应送数量变了</b>（客户取消或改单），请按新的应送再核一遍。</div></div>`:''}
         ${ro?(d.check?`<div class="ib ib-gr" style="margin-bottom:12px"><span class="i">✅</span><div>${d.check.by} 于 ${d.check.at} ${d.check.method=='scan'?`在 App <b>扫码核货</b>${d.check.manualAdj?`（手动补录 ${d.check.manualAdj} 件）`:''}`:'确认核货'}${ckShortQty(d)?`，少送 <b style="color:var(--r)">${ckShortQty(d)}</b> 件`:'，与应送一致'}。${isLocked(d)?'仓库已签到，不能再改。':'仓库签到前可以修改或撤回。'}</div></div>`:'')
           :`<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📦</span><div>已按实际打印的标签数带出，对照车上实际装的货，数量对的不用动，只改装少的。在车边核可以用商家 App 扫码。</div></div>`}
-        <table><thead><tr><th>商品</th><th>规格</th><th style="text-align:right">应送数量</th><th style="text-align:right">${ro?'核货数量':'实际打印数'}</th><th style="text-align:right">差异</th></tr></thead>
+        <table><thead><tr><th>商品</th><th>规格</th><th style="text-align:right">应送数量</th><th style="text-align:right">${ro?'核货数量':'实际核货数量'}</th><th style="text-align:right">差异</th></tr></thead>
           <tbody>${rows}</tbody></table>
         <div id="ck-sum" style="margin-top:12px;font-size:12.5px;color:var(--ts)">${ckSumHtml(d,ls,ro)}</div>
         ${ro?'':`<div style="margin-top:14px;font-size:12px;color:var(--ts);line-height:1.7">少送的照现在的少货规则处理，罚款按仓库实际收到的数算。</div>`}
@@ -134,7 +134,7 @@
     const get=sku=>ro?(d.check?d.check.lines[sku]:0):CK.qty[sku];
     const sh=ls.reduce((a,l)=>a+l.should,0),ck=ls.reduce((a,l)=>a+(+get(l.sku)||0),0),gap=sh-ck;
     const n=ls.filter(l=>(+get(l.sku)||0)<l.should).length;
-    return `应送 <b style="color:var(--tp)">${sh}</b> 件 · ${ro?'核货':'实际打印'} <b style="color:var(--tp)">${ck}</b> 件 · ${gap>0?`<b style="color:var(--r)">少送 ${gap} 件（${n} 个 SKU）</b>`:'<b style="color:var(--g)">与应送一致</b>'}`;
+    return `应送 <b style="color:var(--tp)">${sh}</b> 件 · ${ro?'核货':'实际核货'} <b style="color:var(--tp)">${ck}</b> 件 · ${gap>0?`<b style="color:var(--r)">少送 ${gap} 件（${n} 个 SKU）</b>`:'<b style="color:var(--g)">与应送一致</b>'}`;
   }
   window.ck_input=function(sku,i,max,cap,el){
     if(!CK)return;
@@ -164,7 +164,7 @@
     window._ckCommit=commit;
     modal(`<div class="mc-hd"><h3>确认少送 ${gap} 件？</h3><p>${d.id} · ${d.warehouse}</p><button class="mc-x" onclick="closeModal()">×</button></div>
       <div class="mc-bd">
-        <table class="subtbl"><thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实际打印数</th><th style="text-align:right">少送</th></tr></thead><tbody>
+        <table class="subtbl"><thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实际核货</th><th style="text-align:right">少送</th></tr></thead><tbody>
           ${shorts.map(l=>`<tr><td>${l.name}</td><td style="text-align:right">${l.should}</td><td style="text-align:right">${+CK.qty[l.sku]||0}</td><td style="text-align:right;color:var(--r)"><b>${l.should-(+CK.qty[l.sku]||0)}</b></td></tr>`).join('')}
         </tbody></table>
         <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span><div>少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。</div></div>

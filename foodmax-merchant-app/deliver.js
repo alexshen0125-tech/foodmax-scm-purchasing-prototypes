@@ -297,7 +297,7 @@ function ckOpenA(d,forceEdit,mode,autoScan){
   const tot=()=>({sh:ls.reduce((a,l)=>a+l.should,0),ck:ls.reduce((a,l)=>a+qty[l.key],0),sc:ls.reduce((a,l)=>a+scanCnt(l.key),0)});
   const sumHtml=()=>{const t=tot(),gap=t.sh-t.ck;
     if(!ro&&mode==='scan')return `已核 <b style="color:var(--ink)">${t.ck}</b> / ${t.sh} 件${gap>0?` · 还差 <b style="color:var(--red)">${gap}</b> 件`:' · <b style="color:var(--emerald)">全部扫齐</b>'}`;
-    return `应送 <b>${t.sh}</b> · ${ro?'核货':'实际打印'} <b>${t.ck}</b> 件${gap>0?` · <b style="color:var(--red)">少 ${gap} 件</b>`:' · <b style="color:var(--emerald)">与应送一致</b>'}`;};
+    return `应送 <b>${t.sh}</b> · ${ro?'核货':'实际核货'} <b>${t.ck}</b> 件${gap>0?` · <b style="color:var(--red)">少 ${gap} 件</b>`:' · <b style="color:var(--emerald)">与应送一致</b>'}`;};
   const rowHtml=(l,i)=>{const v=qty[l.key],diff=v-l.should,sc=mode==='scan'&&!ro;
     return `<div class="ck-row${(diff<0&&!sc)?' short':''}${(sc&&diff>=0)?' full':''}" data-i="${i}">
       <div class="ck-l"><div class="ck-n">${l.name}</div>
@@ -397,7 +397,7 @@ function ckOpenA(d,forceEdit,mode,autoScan){
             toast(g?`${d.id} 已核货，少送 ${g} 件，仓库可签到收货`:`${d.id} 已核货，仓库可签到收货`);popPage();rerenderSignin();},350);};
         const gap=ls.reduce((a,l)=>a+l.should-qty[l.key],0);
         if(!gap){commit();return;}
-        confirmDialog({title:mode==='scan'?`还有 ${gap} 件没扫到`:`确认少送 ${gap} 件？`,body:ls.filter(l=>qty[l.key]<l.should).map(l=>`${l.name}：应送 ${l.should}，${mode==='scan'?'已核':'实际打印'} ${qty[l.key]}`).join('<br>')+`<br><br>${mode==='scan'?'货在车上只是没扫的，返回接着扫；确实没装的，按少送提交。<br>':''}少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。`,okText:'按少送提交',onOk:commit});
+        confirmDialog({title:mode==='scan'?`还有 ${gap} 件没扫到`:`确认少送 ${gap} 件？`,body:ls.filter(l=>qty[l.key]<l.should).map(l=>`${l.name}：应送 ${l.should}，${mode==='scan'?'已核':'实际核货'} ${qty[l.key]}`).join('<br>')+`<br><br>${mode==='scan'?'货在车上只是没扫的，返回接着扫；确实没装的，按少送提交。<br>':''}少送的照现在的少货规则处理：平台有货就替你补上（按自营原价从结算里扣），没货就不补；罚款按仓库实际收到的数算，提前报了也照罚。`,okText:'按少送提交',onOk:commit});
       };
       const rv=pg.querySelector('#ck-rv');
       if(rv)rv.onclick=()=>confirmDialog({title:'撤回核货？',body:'撤回后要重新核货，仓库才能签到收货。',danger:1,okText:'确认撤回',onOk:()=>{delete d.check;toast('已撤回核货');popPage();rerenderSignin();}});
