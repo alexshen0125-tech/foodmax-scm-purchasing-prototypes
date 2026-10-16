@@ -151,17 +151,109 @@ function fineCard(g){
     <div class="r2">${fnQty(g)} 件 × ${money(g.rate)}/件<span class="amt">-${money(fnAmt(g))}</span></div>
   </div>`;
 }
+/* ── 客诉罚款 / 客诉考核（与 PC pc-modules/cpfine.js 同口径）──────────────
+   只统计判责已结案的商家责售后工单，按 品类 × 问题类型 × 统计周（周一至周日）汇总；
+   客诉量 = 计入工单的商品行数；客诉率 = 客诉量 ÷ 同周同品类履约商品行数；
+   档位（客诉量区间 + 客诉率门槛）由平台配置，处理方式 警告 / 罚款；每周三平台确认出单，
+   罚款按商家×周合并一张罚款单，不开发票，作为独立扣减项进结算单。罚款金额本期待平台配置。 */
+const CP_ISSUE={wrong:'发错货',short:'缺斤短两',quality:'品质问题'};
+const CP_TIERS=[{min:1,max:2,act:'warn'},{min:3,max:5,act:'fine'},{min:6,max:9,act:'fine'},{min:10,max:'',act:'fine'}];
+const cpMon=off=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7+off*7);return d;};
+const cpYmd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const CP_WEEKS=[0,-1,-2].map(o=>{const s=cpMon(o),e=new Date(s);e.setDate(s.getDate()+6);return {off:o,start:cpYmd(s),end:cpYmd(e),
+  st:o===0?['统计中','rp-c-blue']:o===-1?['待平台确认出单','rp-c-amber']:['已出单','rp-c-green']};});
+// 商家本人各周的考核行（tk = 计入工单）
+const CP_ROWS={
+  0:[{cat:'新鲜蔬菜',issue:'short',base:520,tk:[['AS-CP1301','#SG1013-11','丰***','菠菜 1kg/件','超时默认认可'],['AS-CP1402','#SG1014-07','食***','小棠菜 1kg/件','主动认可']]}],
+  '-1':[
+    {cat:'新鲜蔬菜',issue:'short',base:846,tk:[['AS-CP0601','#SG1006-12','食***','菠菜 1kg/件','超时默认认可'],['AS-CP0702','#SG1007-03','丰***','小棠菜 1kg/件','维持原判'],['AS-CP0803','#SG1008-21','海***','菜心 1kg/件','主动认可'],['AS-CP1004','#SG1010-09','新***','空心菜 1kg/件','未申诉']]},
+    {cat:'新鲜蔬菜',issue:'quality',base:846,tk:[['AS-CP0705','#SG1007-15','金***','西兰花 5kg/件','超时默认认可'],['AS-CP0906','#SG1009-02','鼎***','芥蓝 10kg/件','维持原判']]},
+    {cat:'新鲜蔬菜',issue:'wrong',base:846,tk:[['AS-CP0807','#SG1008-18','小***','娃娃菜 15kg/件','主动认可']]},
+    {cat:'肉禽蛋品',issue:'short',base:118,tk:[['AS-CP1108','#SG1011-05','南***','鲜鸡蛋 30枚/盘','未申诉']]}],
+  '-2':[{cat:'新鲜蔬菜',issue:'short',base:812,tk:[['AS-CP3101','#SG0901-08','鼎***','菜心 1kg/件','未申诉'],['AS-CP3202','#SG0902-14','海***','菠菜 1kg/件','超时默认认可'],['AS-CP3303','#SG0903-06','新***','空心菜 1kg/件','主动认可']]}],
+};
+const CP_ON=false;  // 平台规则启用状态（罚款金额待平台配置，当前未启用）
+const CP_FINES=[];   // 客诉罚款单：平台确认出单后生成；罚款金额待平台配置，本期暂无
+const cpTier=n=>{for(let i=CP_TIERS.length-1;i>=0;i--){const t=CP_TIERS[i];if(n>=t.min&&(t.max===''||n<=t.max))return i;}return -1;};
+function cpRes(r,off){
+  const n=r.tk.length,i=cpTier(n),t=CP_TIERS[i];
+  if(!CP_ON||off===-2)return pill('规则未启用 · 仅统计','#EEF2F0','#64748B');   // 平台未启用客诉罚款规则时只统计不处理
+  const pre=off===0||off===-1?'预计':'';
+  return t&&t.act==='fine'?pill(pre+'罚款','var(--red-soft)','var(--red)'):pill(pre+'警告','var(--amber-soft)','#B45309');
+}
+function cpNext(r){const n=r.tk.length,i=cpTier(n),nx=CP_TIERS.find((t,j)=>j>i&&t.act==='fine');return CP_TIERS[i]&&CP_TIERS[i].act==='fine'?'':nx?`再 ${nx.min-n} 单进入第 ${CP_TIERS.indexOf(nx)+1} 档（罚款）`:'';}
+function cpCard(r,off,idx){
+  const n=r.tk.length,i=cpTier(n);
+  return `<div class="rp-card" data-cp="${off}|${idx}">
+    <div class="r1"><span class="no">${r.cat} · ${CP_ISSUE[r.issue]}</span>${cpRes(r,off)}</div>
+    <div class="qty">
+      <div class="q"><div class="v neg">${n}</div><div class="l">商责客诉量</div></div>
+      <div class="q"><div class="v">${r.base}</div><div class="l">履约商品行数</div></div>
+      <div class="q"><div class="v">${(n/r.base*100).toFixed(2)}%</div><div class="l">客诉率</div></div>
+      <div class="q"><div class="v">${i<0?'—':'第 '+(i+1)+' 档'}</div><div class="l">命中档位</div></div>
+    </div>
+    ${off===0&&cpNext(r)?`<div class="r2">${cpNext(r)}</div>`:''}
+  </div>`;
+}
+function openCpDetail(off,idx){
+  const r=CP_ROWS[off][idx],w=CP_WEEKS.find(x=>x.off==off),n=r.tk.length,i=cpTier(n);
+  pushPage({title:'客诉考核明细',navbar:true,body:`
+    <div class="rp-card2">
+      <div class="rp-ct">${r.cat} · ${CP_ISSUE[r.issue]} <span class="desc">${cpRes(r,+off)}</span></div>
+      <div class="rp-row"><span class="k">统计周</span><span class="v">${w.start} ~ ${w.end}</span></div>
+      <div class="rp-row"><span class="k">商责客诉量</span><span class="v">${n} 单</span></div>
+      <div class="rp-row"><span class="k">履约商品行数</span><span class="v">${r.base}</span></div>
+      <div class="rp-row"><span class="k">客诉率</span><span class="v">${(n/r.base*100).toFixed(2)}%</span></div>
+      <div class="rp-row"><span class="k">命中档位</span><span class="v">${i<0?'—':'第 '+(i+1)+' 档（'+CP_TIERS[i].min+(CP_TIERS[i].max===''?' 单及以上':' ~ '+CP_TIERS[i].max+' 单')+'）'}</span></div>
+      <div class="rp-row"><span class="k">罚款金额</span><span class="v">${CP_ON&&CP_TIERS[i]&&CP_TIERS[i].act==='fine'&&+off!==-2?'待平台出单':'—'}</span></div>
+    </div>
+    <div class="rp-card2">
+      <div class="rp-ct">计入的售后工单 <span class="desc">${n} 单</span></div>
+      ${r.tk.map(x=>`<div class="rp-row" style="display:block">
+        <div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">${x[3]}</b>${pill('商家责','var(--red-soft)','var(--red)')}</div>
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:12.5px;color:#46604F;flex-wrap:wrap"><span style="font-family:monospace">${x[0]}</span><span style="font-family:monospace">${x[1]}</span><span>${x[2]}</span><span style="margin-left:auto">${x[4]}</span></div>
+      </div>`).join('')}
+    </div>
+    <div style="margin:12px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">只统计判责已结案的商家责工单；对单张工单判责有异议，在售后订单的申诉期内申诉，申诉中的工单不计入。</div>
+    <div style="height:8px"></div>`,
+    footer:`<button class="btn primary" style="width:100%" id="cp-close">关闭</button>`,
+    mount:(p)=>{const b=p.querySelector('#cp-close');if(b)b.onclick=popPage;}});
+}
+let _fnTab='receipt', _cpWeek=0;
 function openFine(){
+  _fnTab='receipt';
   pushPage({title:'罚款单',body:`
-    <div class="rp-intro" style="background:var(--red-soft);color:var(--red)">送货到仓被清点出<b>少货</b>时，按 <b>缺口件数 × ${money(FINES[0].rate)}/件</b> 计罚。<b>一张送货单一张罚款单</b>，同单多 SKU 缺货合并计罚。罚款<b>按件计、与货值无关</b>，<b>不开发票</b>，作为独立扣减项进当期结算单。<br><b>罚款与平台补采互不关联</b>——只要清点出缺口就计罚，自营无货未补采时同样计罚。</div>
+    <div class="rp-tabs" id="fn-tabs"></div>
+    <div id="fn-head"></div>
     <div class="rp-list" id="fn-list"></div>`,
     mount:(p)=>{
-      const list=p.querySelector('#fn-list');
-      list.innerHTML=skel(3);
-      setTimeout(()=>{
-        list.innerHTML=FINES.length?FINES.map(fineCard).join(''):`<div class="empty"><div class="ei">${svg('alert')}</div><h4>暂无罚款单</h4><p>足额送货到仓即不会产生罚款单</p></div>`;
-        list.querySelectorAll('[data-fine]').forEach(c=>c.onclick=()=>openFineDetail(c.dataset.fine));
-      },420);
+      const tabs=p.querySelector('#fn-tabs'),head=p.querySelector('#fn-head'),list=p.querySelector('#fn-list');
+      function drawTabs(){
+        tabs.innerHTML=[['receipt','到仓少货',FINES.filter(g=>g.status==='pending').length],['cp','客诉罚款',CP_FINES.length],['week','客诉考核',0]]
+          .map(([k,t,n])=>`<div class="rp-tab ${_fnTab===k?'on':''}" data-t="${k}">${t}${n?` ${n}`:''}</div>`).join('');
+        tabs.querySelectorAll('.rp-tab').forEach(x=>x.onclick=()=>{if(_fnTab===x.dataset.t)return;_fnTab=x.dataset.t;drawTabs();drawList();});
+      }
+      function drawList(){
+        head.innerHTML='';list.innerHTML=skel(3);
+        setTimeout(()=>{
+          if(_fnTab==='receipt'){
+            head.innerHTML=`<div class="rp-intro" style="background:var(--red-soft);color:var(--red)">送货到仓被清点出<b>少货</b>时，按 <b>缺口件数 × ${money(FINES[0].rate)}/件</b> 计罚。<b>一张送货单一张罚款单</b>，同单多 SKU 缺货合并计罚。罚款<b>按件计、与货值无关</b>，<b>不开发票</b>，作为独立扣减项进当期结算单。<br><b>罚款与平台补采互不关联</b>——只要清点出缺口就计罚，自营无货未补采时同样计罚。</div>`;
+            list.innerHTML=FINES.length?FINES.map(fineCard).join(''):`<div class="empty"><div class="ei">${svg('alert')}</div><h4>暂无罚款单</h4><p>足额送货到仓即不会产生罚款单</p></div>`;
+            list.querySelectorAll('[data-fine]').forEach(c=>c.onclick=()=>openFineDetail(c.dataset.fine));
+          } else if(_fnTab==='cp'){
+            list.innerHTML=CP_FINES.length?'':`<div class="empty"><div class="ei">${svg('alert')}</div><h4>暂无客诉罚款单</h4><p>每周三按上周客诉考核结果出单</p></div>`;
+          } else {
+            const w=CP_WEEKS.find(x=>x.off===_cpWeek);
+            head.innerHTML=`<div class="rp-tabs">${CP_WEEKS.map(x=>`<div class="rp-tab ${x.off===_cpWeek?'on':''}" data-w="${x.off}">${x.start.slice(5)} ~ ${x.end.slice(5)}</div>`).join('')}</div>
+              <div style="margin:0 16px 10px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub)"><span class="rp-chip ${w.st[1]}">${w.st[0]}</span>${w.start} ~ ${w.end}</div>`;
+            head.querySelectorAll('[data-w]').forEach(x=>x.onclick=()=>{_cpWeek=+x.dataset.w;drawList();});
+            const rs=CP_ROWS[_cpWeek]||[];
+            list.innerHTML=rs.length?rs.map((r,i)=>cpCard(r,_cpWeek,i)).join(''):`<div class="empty"><div class="ei">${svg('alert')}</div><h4>该周无商家责客诉</h4><p>切换上方统计周查看</p></div>`;
+            list.querySelectorAll('[data-cp]').forEach(c=>c.onclick=()=>{const[o,i]=c.dataset.cp.split('|');openCpDetail(o,+i);});
+          }
+        },300);
+      }
+      drawTabs();drawList();
     }});
 }
 function openFineDetail(no){

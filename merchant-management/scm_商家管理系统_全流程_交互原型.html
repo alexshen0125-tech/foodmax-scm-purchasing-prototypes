@@ -1270,7 +1270,7 @@ const NAV={
     {id:'m-recon',ic:'🧮',t:'对账单',p1:1},
     {id:'m-settle',ic:'💰',t:'结算单',p1:1,badge:()=>DB.bill.status=='generated'?1:0,by:'y'},
     {id:'m-replenish',ic:'🔁',t:'平台补采',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.status=='pending').length:0,by:'y'},
-    {id:'m-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.fineNo&&r.status=='pending').length:0,by:'y'},
+    {id:'m-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>(DB.replOrders?DB.replOrders.filter(r=>r.fineNo&&r.status=='pending').length:0)+(typeof cpPendingCount=='function'?cpPendingCount():0),by:'y'},
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1},
     {id:'m-account',ic:'💳',t:'账户管理',p1:1},
     {sec:'合规'},
@@ -1294,8 +1294,10 @@ const NAV={
     {sec:'结算'},
     {id:'p-commission',ic:'💹',t:'佣金配置',p1:1},
     {id:'p-weighcfg',ic:'⚖️',t:'多退少补规则',p1:1},
-    {id:'p-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>DB.fineOrders?DB.fineOrders.filter(g=>g.push=='pending').length:0,by:'y'},
+    {id:'p-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>(DB.fineOrders?DB.fineOrders.filter(g=>g.push=='pending').length:0)+(typeof cpOpsPendingCount=='function'?cpOpsPendingCount():0),by:'y'},
     {id:'p-replcfg',ic:'⚙️',t:'缺货罚款标准',p1:1},
+    {id:'p-cpweek',ic:'📋',t:'客诉考核',p1:1,badge:()=>typeof cpWeekPendingCount=='function'?cpWeekPendingCount():0,by:'y'},
+    {id:'p-cpcfg',ic:'⚙️',t:'客诉罚款规则',p1:1},
     {id:'p-adjust',ic:'💰',t:'业务调整单',p1:1,badge:()=>(DB.adjOrders||[]).filter(r=>r.pushStatus=='PENDING'&&r.status=='effective').length,by:'y'},   // 只计人工单，罚款单菜单角标各计各的
     {id:'p-adjust-type',ic:'⚙️',t:'调整类型配置',p1:1},
     {id:'p-pickfee-rule',ic:'🚚',t:'自提运费规则',p1:1},
@@ -5770,7 +5772,7 @@ PAGES['p-invoice']=()=>{
 PAGES['p-aftersale']=()=>{
   return `<div class="card"><div class="card-hd"><h3>售后工单</h3><span class="sub">三方判责（商家/平台/买家）· 待判责 ${DB.afterSales.filter(a=>a.status=='pending').length} · 待复核 ${DB.afterSales.filter(a=>a.status=='appealing').length}</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
     <thead><tr><th>工单号</th><th>客户/订单</th><th>类型</th><th>商品/原因</th><th>时效</th><th>金额</th><th>操作</th></tr></thead><tbody>
-    ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td><span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></td><td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div></td><td><span class="tag t-g">${a.age}</span></td><td>${afterAmtCell(a)}</td><td>${afterPlatOps(a,i)}</td></tr>`).join('')}
+    ${DB.afterSales.map((a,i)=>`<tr><td class="mono">${a.id}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td><span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></td><td style="max-width:200px;white-space:normal">${a.item}<div style="font-size:12px;color:var(--ts)">${a.reason}</div>${a.issueType&&typeof CP_ISSUE!='undefined'?`<span class="tag t-gr" style="font-size:10.5px;margin-top:4px">${CP_ISSUE[a.issueType]}</span>`:''}</td><td><span class="tag t-g">${a.age}</span></td><td>${afterAmtCell(a)}</td><td>${afterPlatOps(a,i)}</td></tr>`).join('')}
   </tbody></table></div></div></div>`+(typeof whr_platAppealCard=='function'?whr_platAppealCard():'');
 };
 function afterPlatOps(a,i){
@@ -6135,6 +6137,8 @@ function ord_doAfterSale(i){const o=DB.orders[i],type=document.getElementById('a
 function act_judge(i){const a=DB.afterSales[i];
   modalWide(`<div class="mc-hd"><h3>售后判责 · ${a.id}</h3><p>${ord_mask(a.client)} · ${a.item} · <span class="tag ${afterTypeTone(a.type)}" style="font-size:11px">${a.type}</span></p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <div class="ib ib-gr"><span class="i">⚖️</span>申请原因：${a.reason}（${a.age}）。${a.type=='退货退款'?'判非买家责后需餐厅退货回仓再结案。':'退款不退货，判责即结案。'}选择责任方：</div>
+    <div class="fg2" style="margin-bottom:12px"><div class="fr"><label class="fl"><b>*</b>问题类型（判商家责必选）</label><select id="jd-issue"><option value="">请选择</option><option value="wrong" ${a.issueType=='wrong'?'selected':''}>发错货</option><option value="short" ${a.issueType=='short'||/少送|缺/.test(a.reason)?'selected':''}>缺斤短两</option><option value="quality" ${a.issueType=='quality'||/腐烂|变质|偏软|发黄/.test(a.reason)?'selected':''}>品质问题</option></select></div>
+    <div class="fr"><label class="fl">品类</label><input value="${a.cat||(/蛋|鸡|肉/.test(a.item)?'肉禽蛋品':'新鲜蔬菜')}" readonly style="background:#F3F4F6;color:var(--ts)"></div></div>
     <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="rc" style="background:var(--rl);border:1px solid #FCA5A5;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'商家')"><div style="font-weight:700">商家责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">腐烂/缺斤/规格不符<br><b style="color:var(--r)">退款，扣商家货款${a.type=='退货退款'?'·货回商家仓':''}</b></p></div>
       <div class="rc" style="background:var(--bl);border:1px solid #93C5FD;border-radius:10px;padding:16px;cursor:pointer;color:var(--tp)" onclick="doJudge(${i},'平台')"><div style="font-weight:700">平台责</div><p style="color:var(--ts);font-size:12.5px;margin-top:6px">配送损坏/描述有误<br><b style="color:var(--b)">平台退款，内部追责</b></p></div>
@@ -6142,7 +6146,11 @@ function act_judge(i){const a=DB.afterSales[i];
     </div>
   </div>`);
 }
-function doJudge(i,liable){const a=DB.afterSales[i];a.liable=liable;
+function doJudge(i,liable){const a=DB.afterSales[i];
+  const iss=(document.getElementById('jd-issue')||{}).value||'';
+  if(liable=='商家'&&!iss){toast('判商家责请先选择问题类型','err');return;}
+  a.issueType=iss||a.issueType||'';a.cat=a.cat||(/蛋|鸡|肉/.test(a.item)?'肉禽蛋品':'新鲜蔬菜');
+  a.liable=liable;
   if(liable=='买家'){a.refundType='驳回·买家承担';a.status='closed';a.returnStatus='';}
   else if(a.type=='退货退款'){a.refundType=liable=='商家'?'退货退款·货退平台仓待提·扣商家货款':'平台承担·退款·货退平台仓待提';a.status='judged';a.returnStatus='待仓库入库';}
   else{a.refundType=liable=='商家'?'退款不退货·扣商家货款':'平台承担·退款至餐厅';a.status='closed';}
@@ -6162,12 +6170,13 @@ function confirmAcceptLiab(i){
   const d=new Date();const p=n=>String(n).padStart(2,'0');
   a.accepted=1;a.acceptedAt=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   a.appealDeadline=Date.now();                       // 申诉窗口即时关闭
+  if(a.issueType){a.cpCounted=1;a.cpCloseBy='主动认可';a.cpClosedAt=a.acceptedAt;}   // 判责结案 → 计入本周客诉考核
   if(a.type=='退款不退货')a.status='closed';          // 退款不退货：无后续实物流程，认可即结案；退货退款：等退货单闭环后结案
   closeModal();render();toast('已认可判责，申诉入口已关闭','ok');
 }
 // 平台端：复核申诉
 function act_reviewAppeal(i,uphold){const a=DB.afterSales[i];
-  if(uphold){a.status='closed';a.appeal=(a.appeal||'')+'（平台复核：维持原判·商家责）';render();toast('复核完成：维持原判','info');}
+  if(uphold){a.status='closed';a.appeal=(a.appeal||'')+'（平台复核：维持原判·商家责）';if(a.issueType){a.cpCounted=1;a.cpCloseBy='维持原判';a.cpClosedAt=ts();}render();toast('复核完成：维持原判','info');}
   else{a.liable='平台';a.refundType='申诉成立·改判平台责·退款至餐厅';a.status='closed';a.returnStatus='';render();toast('复核完成：申诉成立，改判平台责','ok');}
 }
 // 商家/仓：退货退款回仓确认
@@ -6325,6 +6334,7 @@ goHome();
 <script src="pc-modules/quality.js?v=20260730f"></script>
 <script src="pc-modules/supply.js?v=20260831a"></script>
 <script src="pc-modules/replenish.js?v=20260831a"></script>
+<script src="pc-modules/cpfine.js?v=20261016b"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
 <script src="pc-modules/presend.js?v=20261015a"></script>
