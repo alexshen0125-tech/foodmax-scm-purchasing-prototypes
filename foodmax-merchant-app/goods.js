@@ -163,7 +163,7 @@ const PRODUCTS=[
   {ic:'🟡',n:'萝卜丸子',cat:'肉禽蛋品',sales:0,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00',
    skus:[{spec:'2.5kg/袋',price:12.00,stock:4,off:true,recycled:true,createdAt:'2026-06-08 11:30',updatedAt:'2026-06-09 10:00'}]},
   // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 售卖规格数量 × 押金单价
-  {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',code:'SPU8820',cat:'饮料',halal:1,bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
+  {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',code:'SPU8820',cat:'饮料',halal:1,halalCert:{file:'HALAL证书_椰子水.pdf',exp:'2027-06-30'},bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
    skus:[{spec:'1瓶',qty:1,price:2.50,stock:200,off:false,stockMode:'finite',soldToday:18,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00'},{spec:'24瓶/箱',qty:24,price:55.00,stock:40,off:false,stockMode:'finite',createdAt:'2026-07-10 10:20',updatedAt:'2026-07-18 09:40'}]},
   // ↓ 审核态样例(对齐 PC SPU8818/8821/8823)：待审核 / 审核拒绝(字段级意见) / 强制下架(原因)
   {ic:'🍗',n:'鲜丰 · 鸡胸肉',code:'SPU8818',cat:'肉禽蛋品',halal:1,status:'reviewing',sales:0,createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10',
@@ -180,6 +180,8 @@ const PRODUCTS=[
 ];
 /* 审核态（平台回写，商家端只读）：reviewing 待审核 / rejected 审核拒绝 / forced_off 强制下架
    BR-AUD-02 独占分桶：三态商品不出现在销售中/未上架；BR-AUD-03 全部规格不可售，与 sku.off 无关 */
+/* HALAL 上架校验（2026-10-16）：HALAL 商品无证书或证书已过期不能上架；过期不提醒、不自动下架 */
+const halalBlockedApp=g=>{if(g.halal!==1)return false;const c=g.halalCert,d=new Date(),p=n=>(''+n).padStart(2,'0'),t=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());return !(c&&c.file&&c.exp&&c.exp>=t);};
 const AUD={reviewing:['待审核','rv'],rejected:['审核拒绝','rj'],forced_off:['强制下架','fo']};
 const audOf=g=>AUD[g.status]?g.status:'';                 // 非三态（含无 status）一律按已审核通过处理
 const isAud=g=>!!audOf(g);
@@ -243,6 +245,7 @@ function bindSku(el,g,s,gi,si,state){
   const tg=el.querySelector('[data-sku-toggle]');
   if(tg)tg.onclick=()=>{
     const to=s.off?'上架':'下架';
+    if(s.off&&halalBlockedApp(g))return toast(`「${g.n}」是 HALAL 商品，需上传有效 HALAL 证书后才能上架`);
     const doIt=()=>{s.off=!s.off;s.updatedAt=ts();g.updatedAt=ts();toast(`「${g.n} ${s.spec}」已${s.off?'下架':'上架'}（即时生效，无需审核）`);state.redraw();};
     confirmDialog({title:`确认${to}该规格？`,body:`「${g.n} ${s.spec}」${to}后${s.off?'客户即可下单':'客户将无法下单，可随时重新上架'}。`,danger:!s.off,okText:to,onOk:doIt});
   };
@@ -416,6 +419,7 @@ function renderList(container,inTab){
     }else{
       bulkBar.querySelector('#bup').onclick=()=>{const sel=data().filter(x=>x.s._sel);if(!sel.length)return toast('请先选择规格');
         const toOff=state.tab==='sale';const to=toOff?'下架':'上架';
+        if(!toOff){const bad=sel.filter(x=>halalBlockedApp(x.g));if(bad.length){if(bad.length===sel.length)return toast('所选商品是 HALAL 商品且无有效证书，不能上架');toast(`${bad.length} 个规格因 HALAL 证书缺失或已过期跳过`);bad.forEach(x=>{x.s._sel=false;});sel.splice(0,sel.length,...sel.filter(x=>!halalBlockedApp(x.g)));}}
         confirmDialog({title:`批量${to} ${sel.length} 个规格？`,body:`将${to}所选 ${sel.length} 个售卖规格(SKU)，即时生效、无需审核。`,danger:toOff,okText:to,onOk:()=>{sel.forEach(x=>{x.s.off=toOff;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已${to} ${sel.length} 个规格`);exitManage();}});};
       bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改价 ${n} 个规格`);};
       bulkBar.querySelector('#bst').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改库存 ${n} 个规格`);};

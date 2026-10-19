@@ -68,9 +68,15 @@ const CATS=[
   {n:'海鲜水产',tax:9, guide:25, halal:true},
   {n:'调味品',  tax:9, guide:18, halal:true},
   {n:'饮料',    tax:9, guide:5, bcrs:true, halal:true},   // halal:true=类目挂载 halal 字段（与 PC CATS 同源）
+  {n:'猪肉类',  tax:9, guide:12},
+  {n:'酒类',    tax:9, guide:20},
 ];
+// HALAL 高风险类目（运营平台配置，与 PC DB.halalRiskCats 同源）：「是否HALAL」「是否对 HALAL 客户展示」固定为否
+window.FM_HALAL_RISK=window.FM_HALAL_RISK||['猪肉类','酒类'];
+const isRiskApp=c=>!!c&&window.FM_HALAL_RISK.includes(c.n);
+const HALAL_TODAY_APP=(()=>{const d=new Date(),p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());})();
 // 经营许可证覆盖的类目(资质校验，BR-08)：调味品未覆盖(与 PC CAT_SCOPE 一致)
-const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料']);
+const LICENSE=new Set(['新鲜蔬菜','肉禽蛋品','海鲜水产','饮料','猪肉类','酒类']);
 // BCRS 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计 GST；与 PC 同源）。商家只填「每 1 <单位> 容器数」，押金=容器数×0.10×数量
 /* BCRS 的「一份」是哪一件：与售卖规格单位同源——自售标品＝最小包装单位（瓶/罐/袋…）、寄售＝库存单位；都没有时回落「份」 */
 function bcrsUnitName(f){return ((f&&(f.stdType==='标品'?f.netPackType:(f.supplyMode==='寄售'?f.stockUnit:'')))||'份');}   /* 容器＝最小包装那一层 */
@@ -460,7 +466,8 @@ function openForm(prefill){
     measure: prefill?prefill.measure:'',   // 【兼容】旧「最小售卖单位」，已被 stdType + 规格级 specUnit 取代
     netQty:'', netUnit:'', netPackType:'', measureNote:'',  // netQty/netUnit = 标品的「单件净含量」，非标品不填；netPackType=最小包装单位(单品/单包)
     halalShow:'是',                        // 是否对HALAL客户展示：商家自选，默认是，不校验、不受类目/店铺门控（2026-10-15）
-    halal:'',                              // 是否HALAL：门控=店铺生效值 STORE_HALAL.on==='是' 且 cat.halal；门控内必填(非HALAL/HALAL)，门控外不提交
+    halal:'非HALAL',                       // 是否HALAL（2026-10-16）：所有类目必选，默认非HALAL；高风险类目固定非HALAL
+    halalCertFile:'', halalExp:'',         // 选 HALAL 须上传 1 份证书 + 到期日（SPU 级）
     bcrs:'否', bcrsUnitContainers:'',       // BCRS：仅 cat.bcrs 类目可选；每 1 <最小包装单位/库存单位> 容器数(整数)，押金单价平台固定 0.10
     sellType:'售卖品',                      // 销售类型固定，不可改
     supplyMode:'自售',                      // 售卖模式(dev supplyMode 1=自售/2=寄售)：默认自售，保存后不可修改；寄售→SKU库存只读
@@ -495,10 +502,15 @@ function openForm(prefill){
         <div class="pb-cell" id="pb-packunit-row" style="display:none;cursor:default"><div class="lab">包装单位</div><div class="val"><span class="vtxt" id="pb-packunit-v" style="color:var(--sub)">🔒 ${f.netPackType||'—'}</span></div></div>
         <div class="pb-hint" id="pb-packqty-hint" style="display:none;padding:2px 14px 8px;font-size:11.5px;color:var(--sub);line-height:1.6"></div>
         <div class="pb-cell" id="pb-mnote-row"><div class="lab">备注</div><div class="val"><input id="pb-mnote" placeholder="单位补充说明，选填" maxlength="40" value="${f.measureNote}"></div></div>
-        <div class="pb-cell" id="pb-halal-row" style="display:none"><div class="lab"><span class="rq">*</span>是否HALAL</div><div class="val"><span class="vtxt" id="pb-halal-v">${f.halal||'<span class=ph>请选择</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-bcrs-tip" id="pb-halal-off" style="display:none">店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请在电脑端「店铺资料」上传 HALAL 证书。</div>
+        <div class="pb-cell" id="pb-halal-row"><div class="lab"><span class="rq">*</span>是否HALAL</div><div class="val"><span class="vtxt" id="pb-halal-v">${f.halal}</span></div><span class="ch">${svg('arrow')}</span></div>
+        <div class="pb-bcrs-tip" id="pb-halal-risk" style="display:none"></div>
+        <div id="pb-hcert" style="display:none">
+          <div class="pb-cell" id="pb-hcert-row"><div class="lab"><span class="rq">*</span>HALAL 证书</div><div class="val"><span class="vtxt" id="pb-hcert-v">${f.halalCertFile||'<span class=ph>上传证书</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
+          <div class="pb-cell"><div class="lab"><span class="rq">*</span>证书到期日</div><div class="val"><input id="pb-hexp" type="date" value="${f.halalExp}"></div></div>
+          <div class="pb-bcrs-tip">1 份证书，支持 jpg / png / pdf，单个 ≤20MB；换批次时上传新证书替换旧证书。</div>
+        </div>
         <div class="pb-cell" id="pb-halalshow-row"><div class="lab"><span class="rq">*</span>是否对 HALAL 客户展示</div><div class="val"><span class="vtxt" id="pb-halalshow-v">${f.halalShow}</span></div><span class="ch">${svg('arrow')}</span></div>
-        <div class="pb-bcrs-tip">选「否」则 HALAL 客户在商城看不到本商品，由商家自行判断、平台不做校验；猪肉、酒类商品平台默认不对 HALAL 客户展示，不受此项影响。</div>
+        <div class="pb-bcrs-tip">选「否」则 HALAL 客户在商城看不到本商品，由商家自行判断。</div>
         <div class="pb-cell" id="pb-bcrs-row" style="display:none"><div class="lab">支持 BCRS</div><div class="val"><span class="vtxt" id="pb-bcrs-v">${f.bcrs}</span></div><span class="ch">${svg('arrow')}</span></div>
         <div class="pb-cell" id="pb-bcrsdep-row" style="display:none"><div class="lab"><span class="rq">*</span>每 1 <b id="pb-bcrs-unit">${bcrsUnitName(f)}</b> 容器数</div><div class="val"><input id="pb-bcrscnt" inputmode="numeric" placeholder="如 1（一瓶=1容器）" value="${f.bcrsUnitContainers}"><span class="pre" id="pb-bcrs-unitprice">个 · 押金单价 S$${BCRS_UNIT_PRICE.toFixed(2)}/容器</span></div></div>
         <div class="pb-bcrs-tip" id="pb-bcrs-tip" style="display:none">${bcrsTipHtml(bcrsUnitName(f))}</div>
@@ -770,7 +782,7 @@ function runChecks(f){
   if(!f.cat)                    fails.push(['必填','缺少「后台类目」']);
   if(!String(f.tax).trim())     fails.push(['必填','缺少「税率」']);
   if(!STD_TYPES.includes(f.stdType)) fails.push(['必填','缺少「商品类型」']);
-  if(halalGateApp(f)&&!f.halal)  fails.push(['必填','缺少「是否HALAL」']);
+  if(f.halal==='HALAL'&&!isRiskApp(f.cat)){if(!f.halalCertFile)fails.push(['必填','选择 HALAL 须上传「HALAL 证书」']);if(!f.halalExp)fails.push(['必填','缺少「证书到期日」']);else if(f.halalExp<HALAL_TODAY_APP)fails.push(['校验','证书已过期，请上传有效证书']);}
   /* 标品：净含量是包装申报的固定值，必填；非标品无此字段 */
   if(f.stdType==='标品'){
     if(!(parseFloat(f.netQty)>0)) fails.push(['净含量','「单件净含量」必填——标品的净含量是包装上申报的固定值，不由售卖规格数量倒推']);
@@ -824,14 +836,13 @@ function renderErrors(p,fails){
   box.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-/* ---- HALAL 门控：先看店铺（生效值）→ 再看类目是否挂载 halal；门控外清空不提交 ---- */
-function halalGateApp(f){const h=window.FM_HALAL;return !!h&&h.on==='是'&&!!(f.cat&&f.cat.halal);}
+/* ---- HALAL（2026-10-16）：所有类目开放、默认非HALAL；选 HALAL 展开证书 + 到期日；高风险类目两项固定为否 ---- */
 function halalToggle(p,f){
-  const row=p.querySelector('#pb-halal-row'),off=p.querySelector('#pb-halal-off');if(!row)return;
-  const on=halalGateApp(f),catOn=!!(f.cat&&f.cat.halal);
-  if(!on){f.halal='';const v=p.querySelector('#pb-halal-v');if(v)v.innerHTML='<span class=ph>请选择</span>';}
-  row.style.display=on?'':'none';off.style.display=(catOn&&!on)?'':'none';
-  const pend=window.FM_MOD&&window.FM_MOD.halalPending&&window.FM_MOD.halalPending();if(catOn&&!on){off.innerHTML=(pend&&pend.on==='是')?'店铺 HALAL 资质审核中，通过后可把商品设为 HALAL。':'店铺未上传 HALAL 资质，不能设置 HALAL 商品。如需售卖 HALAL 商品，请在电脑端「店铺资料」上传 HALAL 证书。';}
+  const risk=isRiskApp(f.cat),tip=p.querySelector('#pb-halal-risk'),box=p.querySelector('#pb-hcert');
+  if(risk){f.halal='非HALAL';f.halalShow='否';f._riskForced=true;tip.style.display='';tip.textContent=`「${f.cat.n}」为高风险类目，「是否HALAL」「是否对 HALAL 客户展示」固定为否。`;}
+  else{tip.style.display='none';if(f._riskForced){f.halalShow='是';f._riskForced=false;}}   // 离开高风险类目：展示字段回到默认「是」
+  p.querySelector('#pb-halal-v').innerHTML=f.halal;p.querySelector('#pb-halalshow-v').innerHTML=f.halalShow;
+  box.style.display=(!risk&&f.halal==='HALAL')?'':'none';
 }
 /* ---- BCRS 类目门控：仅 cat.bcrs=true 的类目显示；切到不支持的类目则隐藏并重置为「否」 ---- */
 function bcrsToggle(p,f){
@@ -873,9 +884,11 @@ function bindForm(p,f){
     bcrsToggle(p,f);paint(p,f);});
   p.querySelector('#pb-bcrscnt').oninput=e=>{f.bcrsUnitContainers=e.target.value;paint(p,f);};
   bcrsToggle(p,f);
-  p.querySelector('#pb-halal-row').onclick=()=>pbGridPicker('是否HALAL',['非HALAL','HALAL'],f.halal,v=>{f.halal=v;setPH(p.querySelector('#pb-halal-v'),v,1);paint(p,f);});
+  p.querySelector('#pb-halal-row').onclick=()=>{if(isRiskApp(f.cat))return toast('高风险类目固定为非HALAL');pbGridPicker('是否HALAL',['非HALAL','HALAL'],f.halal,v=>{f.halal=v;setPH(p.querySelector('#pb-halal-v'),v,1);halalToggle(p,f);paint(p,f);});};
+  p.querySelector('#pb-hcert-row').onclick=()=>{f.halalCertFile=`HALAL证书_${f.name||'商品'}.pdf`;setPH(p.querySelector('#pb-hcert-v'),f.halalCertFile,1);paint(p,f);};
+  p.querySelector('#pb-hexp').oninput=e=>{f.halalExp=e.target.value;paint(p,f);};
   halalToggle(p,f);
-  p.querySelector('#pb-halalshow-row').onclick=()=>pbGridPicker('是否对 HALAL 客户展示',['是','否'],f.halalShow,v=>{f.halalShow=v;setPH(p.querySelector('#pb-halalshow-v'),v,1);paint(p,f);});
+  p.querySelector('#pb-halalshow-row').onclick=()=>isRiskApp(f.cat)?toast('高风险类目固定为否'):pbGridPicker('是否对 HALAL 客户展示',['是','否'],f.halalShow,v=>{f.halalShow=v;setPH(p.querySelector('#pb-halalshow-v'),v,1);paint(p,f);});
   // 最小售卖单位(变更后 SKU 售卖规格单位联动只读)
   p.querySelector('#pb-supply-row').onclick=()=>pbGridPicker('售卖模式',['自售','寄售'],f.supplyMode,v=>{
     f.supplyMode=v;setPH(p.querySelector('#pb-supply-v'),v,1);stdToggle(p,f);renderSpecs(p,f);bcrsToggle(p,f);paint(p,f);});   // 换模式即换 BCRS 单位来源（最小包装单位 ↔ 库存单位）

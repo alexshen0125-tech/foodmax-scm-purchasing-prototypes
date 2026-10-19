@@ -198,7 +198,7 @@ function openStore(){
       <div class="fk">是否有 HALAL 资质</div>
       <div style="margin-top:6px;font-size:14px;font-weight:600">${STORE_HALAL.on}</div>
       ${STORE_HALAL.on==='是'?STORE_HALAL.quals.map((g,i)=>`<div style="margin-top:10px"><div class="fh">HALAL 资质 ${i+1}</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">${g.map(f=>`<div class="st-hl-file" style="padding:10px 12px;border-radius:10px;background:var(--muted,#F3F6F0);font-size:13px">📄 ${f}</div>`).join('')}</div></div>`).join(''):''}
-      <div class="fh" style="margin-top:8px">App 只能查看。如需修改 HALAL 资质，请在电脑端「店铺资料」中修改并上传证书。</div>
+      <div class="fh" style="margin-top:8px">店铺资质仅作展示，与商品能否设为 HALAL 无关。App 只能查看，如需修改请在电脑端「店铺资料」中修改。</div>
     </div>
     <div style="height:10px"></div>`,
     footer:`<button class="btn primary" id="st-sub">提交审核</button>`,
