@@ -165,6 +165,9 @@ const PRODUCTS=[
   // BCRS 样例(对齐 PC SPU8820 椰子水)：饮料类目 + 押金单价 S$0.10/瓶；每 SKU 押金 = 售卖规格数量 × 押金单价
   {ic:'🥥',n:'鲜丰 · NFC 椰子水 330ml',code:'SPU8820',cat:'饮料',halal:1,halalCert:{file:'HALAL证书_椰子水.pdf',exp:'2027-06-30'},bcrs:true,bcrsUnitContainers:1,sales:11,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00',
    skus:[{spec:'1瓶',qty:1,price:2.50,stock:200,off:false,stockMode:'finite',soldToday:18,createdAt:'2026-07-10 10:20',updatedAt:'2026-07-21 18:00'},{spec:'24瓶/箱',qty:24,price:55.00,stock:40,off:false,stockMode:'finite',createdAt:'2026-07-10 10:20',updatedAt:'2026-07-18 09:40'}]},
+  // HALAL 证书已过期、未上架样例（2026-10-16）：上架时被拦，卡片标「HALAL 证书已过期」
+  {ic:'🍖',n:'鲜丰 · 冷冻羊腿',code:'SPU8830',cat:'肉禽蛋品',halal:1,halalCert:{file:'HALAL证书_羊腿.pdf',exp:'2026-01-31'},sales:0,createdAt:'2026-05-02 10:00',updatedAt:'2026-10-01 10:00',
+   skus:[{spec:'1kg/袋',qty:1,price:18.00,stock:30,off:true,stockMode:'finite',createdAt:'2026-05-02 10:00',updatedAt:'2026-10-01 10:00'}]},
   // ↓ 审核态样例(对齐 PC SPU8818/8821/8823)：待审核 / 审核拒绝(字段级意见) / 强制下架(原因)
   {ic:'🍗',n:'鲜丰 · 鸡胸肉',code:'SPU8818',cat:'肉禽蛋品',halal:1,status:'reviewing',sales:0,createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10',
    skus:[{spec:'1kg/袋',price:13.50,stock:0,off:false,stockMode:'finite',createdAt:'2026-08-01 09:10',updatedAt:'2026-08-01 09:10'}]},
@@ -227,7 +230,7 @@ function skuCard(g,s,gi,si,manage,tab){
     <div class="chk" data-chk></div>
     <div class="body">
       <div class="top"><div class="img">${g.ic}</div>
-        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span>${aud?`<span class="aud-b ${AUD[aud][1]}">${AUD[aud][0]}</span>`:''}${g.consign?'<span class="consign-b">寄售</span>':''}${s.refund?'<span class="refund-b">多退少补</span>':''}${bc?'<span class="bcrs-b">BCRS</span>':''}</div>
+        <div style="flex:1"><div class="nm">${g.n} <span class="spec">· ${s.spec}</span>${aud?`<span class="aud-b ${AUD[aud][1]}">${AUD[aud][0]}</span>`:''}${g.consign?'<span class="consign-b">寄售</span>':''}${halalBlockedApp(g)?`<span class="aud-b rj">${(g.halalCert&&g.halalCert.file)?'HALAL 证书已过期':'缺 HALAL 证书'}</span>`:''}${s.refund?'<span class="refund-b">多退少补</span>':''}${bc?'<span class="bcrs-b">BCRS</span>':''}</div>
           <div class="sp">${g.cat}</div>
           ${g.bad?`<div class="tag bad" data-bad>⚠ ${g.bad} ›</div>`:''}
           ${audRow}</div>
@@ -419,7 +422,7 @@ function renderList(container,inTab){
     }else{
       bulkBar.querySelector('#bup').onclick=()=>{const sel=data().filter(x=>x.s._sel);if(!sel.length)return toast('请先选择规格');
         const toOff=state.tab==='sale';const to=toOff?'下架':'上架';
-        if(!toOff){const bad=sel.filter(x=>halalBlockedApp(x.g));if(bad.length){if(bad.length===sel.length)return toast('所选商品是 HALAL 商品且无有效证书，不能上架');toast(`${bad.length} 个规格因 HALAL 证书缺失或已过期跳过`);bad.forEach(x=>{x.s._sel=false;});sel.splice(0,sel.length,...sel.filter(x=>!halalBlockedApp(x.g)));}}
+        if(!toOff){const bad=sel.filter(x=>halalBlockedApp(x.g));if(bad.length){if(bad.length===sel.length)return toast(`所选商品是 HALAL 商品且无有效证书，不能上架：${[...new Set(bad.map(x=>x.g.n))].join('、')}`);toast(`${bad.length} 个规格因 HALAL 证书缺失或已过期跳过：${[...new Set(bad.map(x=>x.g.n))].join('、')}`);bad.forEach(x=>{x.s._sel=false;});sel.splice(0,sel.length,...sel.filter(x=>!halalBlockedApp(x.g)));}}
         confirmDialog({title:`批量${to} ${sel.length} 个规格？`,body:`将${to}所选 ${sel.length} 个售卖规格(SKU)，即时生效、无需审核。`,danger:toOff,okText:to,onOk:()=>{sel.forEach(x=>{x.s.off=toOff;x.s.updatedAt=ts();x.g.updatedAt=ts();x.s._sel=false;});toast(`已${to} ${sel.length} 个规格`);exitManage();}});};
       bulkBar.querySelector('#bpx').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改价 ${n} 个规格`);};
       bulkBar.querySelector('#bst').onclick=()=>{const n=data().filter(x=>x.s._sel).length;if(!n)return toast('请先选择规格');toast(`批量改库存 ${n} 个规格`);};

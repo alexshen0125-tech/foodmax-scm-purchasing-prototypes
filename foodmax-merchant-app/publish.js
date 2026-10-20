@@ -67,7 +67,7 @@ const CATS=[
   {n:'肉禽蛋品',tax:9, guide:14, halal:true},
   {n:'海鲜水产',tax:9, guide:25, halal:true},
   {n:'调味品',  tax:9, guide:18, halal:true},
-  {n:'饮料',    tax:9, guide:5, bcrs:true, halal:true},   // halal:true=类目挂载 halal 字段（与 PC CATS 同源）
+  {n:'饮料',    tax:9, guide:5, bcrs:true, halal:true},   // halal 字段已不参与 HALAL 显示（2026-10-16 所有类目开放）
   {n:'猪肉类',  tax:9, guide:12},
   {n:'酒类',    tax:9, guide:20},
 ];
@@ -506,7 +506,7 @@ function openForm(prefill){
         <div class="pb-bcrs-tip" id="pb-halal-risk" style="display:none"></div>
         <div id="pb-hcert" style="display:none">
           <div class="pb-cell" id="pb-hcert-row"><div class="lab"><span class="rq">*</span>HALAL 证书</div><div class="val"><span class="vtxt" id="pb-hcert-v">${f.halalCertFile||'<span class=ph>上传证书</span>'}</span></div><span class="ch">${svg('arrow')}</span></div>
-          <div class="pb-cell"><div class="lab"><span class="rq">*</span>证书到期日</div><div class="val"><input id="pb-hexp" type="date" value="${f.halalExp}"></div></div>
+          <div class="pb-cell"><div class="lab"><span class="rq">*</span>证书到期日</div><div class="val"><input id="pb-hexp" type="date" min="${HALAL_TODAY_APP}" value="${f.halalExp}"></div></div>
           <div class="pb-bcrs-tip">1 份证书，支持 jpg / png / pdf，单个 ≤20MB；换批次时上传新证书替换旧证书。</div>
         </div>
         <div class="pb-cell" id="pb-halalshow-row"><div class="lab"><span class="rq">*</span>是否对 HALAL 客户展示</div><div class="val"><span class="vtxt" id="pb-halalshow-v">${f.halalShow}</span></div><span class="ch">${svg('arrow')}</span></div>
@@ -885,7 +885,7 @@ function bindForm(p,f){
   p.querySelector('#pb-bcrscnt').oninput=e=>{f.bcrsUnitContainers=e.target.value;paint(p,f);};
   bcrsToggle(p,f);
   p.querySelector('#pb-halal-row').onclick=()=>{if(isRiskApp(f.cat))return toast('高风险类目固定为非HALAL');pbGridPicker('是否HALAL',['非HALAL','HALAL'],f.halal,v=>{f.halal=v;setPH(p.querySelector('#pb-halal-v'),v,1);halalToggle(p,f);paint(p,f);});};
-  p.querySelector('#pb-hcert-row').onclick=()=>{f.halalCertFile=`HALAL证书_${f.name||'商品'}.pdf`;setPH(p.querySelector('#pb-hcert-v'),f.halalCertFile,1);paint(p,f);};
+  p.querySelector('#pb-hcert-row').onclick=()=>{f.halalCertFile=`HALAL证书_${f.name||'商品'}.pdf`;setPH(p.querySelector('#pb-hcert-v'),`${f.halalCertFile} · 替换`,1);paint(p,f);};
   p.querySelector('#pb-hexp').oninput=e=>{f.halalExp=e.target.value;paint(p,f);};
   halalToggle(p,f);
   p.querySelector('#pb-halalshow-row').onclick=()=>isRiskApp(f.cat)?toast('高风险类目固定为否'):pbGridPicker('是否对 HALAL 客户展示',['是','否'],f.halalShow,v=>{f.halalShow=v;setPH(p.querySelector('#pb-halalshow-v'),v,1);paint(p,f);});

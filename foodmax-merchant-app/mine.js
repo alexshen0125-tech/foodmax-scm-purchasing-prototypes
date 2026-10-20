@@ -174,14 +174,11 @@ const abbrCut=(s,max)=>{let n=0,out='';for(const c of s||''){const w=ABBR_W2.tes
 let STORE_ABBR='鲜丰食材';   // 已填值（演示态）
 /* 店铺级 HALAL 资质（2026-09-23，与 PC shopProfileEdit/halalCardEdit 同口径）
    ① App 只能查看 HALAL 资质（2026-10-15 拍板）；开店/编辑在 PC 店铺资料完成：选「是」须上传证书（多组，每组 ≥1 附件，单个 ≤20MB，不填证书编号），随店铺信息审核
-   ④ 商品「是否对 HALAL 客户展示」商家自选、不校验（publish.js pb-halalshow-row）
-   ② 建品「是否HALAL」门控：店铺（已审核生效值）=是 → 再看类目是否挂载 halal；两者都满足才出现且必填（publish.js halalToggle）
-   ③ 是→否：店铺下存在 是否HALAL=HALAL 的商品则不允许修改
-   ④ 证书有效期到期处理本期不做 */
+   ② 2026-10-16 会议：店铺资质只做展示，与商品是否 HALAL 无关；商品 HALAL 证书在商品上维护（publish.js halalToggle）
+   ③ 店铺改「否」不做任何拦截 */
 const STORE_HALAL=window.FM_HALAL=window.FM_HALAL||{on:'是',quals:[['MUIS_HALAL_Certificate.pdf']]};   // 已审核生效值（挂 window 供 publish.js 建品门控读取）
 let STORE_HALAL_PENDING=null;   // 已提交待审核的变更
 let STORE_HALAL_REJECT='';      // 最近一次驳回原因（运营驳回回写）
-function halalGoods(){return (window.FM_PRODUCTS||[]).filter(g=>g.halal===1&&g.status!=='deleted');}
 
 function openStore(){
   pushPage({title:'店铺信息',body:`
