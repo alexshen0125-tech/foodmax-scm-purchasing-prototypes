@@ -141,11 +141,12 @@ function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c
    两种来源分属【两个独立清分科目】，不合并——商家要能看出这笔钱是「到仓少货」还是「售后补货」造成的。
    线上结算科目是可扩展数组（contracts/reconciliation.ts:29-36 SettlementClearing{clearingType,clearingTypeLabel,amount,sortNo}），
    新增科目不需要改结算主表结构。 */
-// 应清算 = 汇总总额 − 逆向扣减 − 服务佣金 − 物流佣金 − 耗材 − 平台补采 − 缺货罚款 − 售后补货
+// 应清算 = 汇总总额 − 逆向扣减 − 服务佣金 − 物流佣金 − 耗材 − 平台补采 − 缺货罚款 − 售后补货 ± 业务调整
 // 每个 sync 都用这一条完整公式（缺席科目 ||0 兜底），谁最后跑结果都一致，避免互相覆盖漏项
 window.recalcBillNet=function(){
   DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)
-    -(DB.bill.supply||0)-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)).toFixed(2);
+    -(DB.bill.supply||0)-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)
+    +(DB.bill.adjust||[]).reduce((s,a)=>s+a.dir*a.amt,0)).toFixed(2);
 };
 window.replSettleSync=function(){
   // 仅统计 source='receipt'（到仓少货）；售后补货走 fillSettleSync 的独立科目

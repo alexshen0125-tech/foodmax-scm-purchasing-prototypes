@@ -83,7 +83,7 @@ window.supplySettleSync=function(){
   if(amt>0)DB.bill.items.push(['耗材采购扣款（含税）',del.length,-amt]);
   // 统一走 replenish.js 的完整公式（含缺货罚款与售后补货），避免各模块各算一套互相覆盖漏项
   if(window.recalcBillNet)recalcBillNet();
-  else DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-amt-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)).toFixed(2);
+  else DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)-amt-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)+(DB.bill.adjust||[]).reduce((s,a)=>s+a.dir*a.amt,0)).toFixed(2);
 };
 supplySettleSync();
 
