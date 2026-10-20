@@ -873,7 +873,7 @@ function tag(dict,key){const[t,c]=S[dict][key];return `<span class="tag ${c}"><s
 const ASSUME={Q1:'假设：品类指导价已存在，价格正常区间=指导价×[0.5,2.0]',Q2:'假设：低风险商品本期开启自动通过（抽审 10%）',Q5:'假设：审核通过商品落「商家商品表」，与货品中心打通本期留接口位',Q6:'假设：高风险品类=冻品/进口/即食/农残抽检叶菜，强制传质检报告',Q7:'假设：图片违禁词识别复用 ad_compliance（qwen-vl）'};
 // 后台类目（含税率/风险/指导价 + 是否支持 BCRS）；bcrs=true 的类目，商家建品时才可选「是否支持 BCRS」
 const CATS={'新鲜蔬菜':{tax:0,baseRisk:'低',guide:6.0},'肉禽蛋品':{tax:0.09,baseRisk:'中',guide:14.0,halal:true},'海鲜水产':{tax:0.09,baseRisk:'高',guide:25.0,halal:true},'调味品':{tax:0.09,baseRisk:'低',guide:18.0,halal:true},'饮料':{tax:0.09,baseRisk:'低',guide:5.0,bcrs:true,halal:true},'猪肉类':{tax:0.09,baseRisk:'中',guide:12.0},'酒类':{tax:0.09,baseRisk:'低',guide:20.0}};
-/* HALAL 高风险类目（2026-10-16 会议）：运营平台「后台类目 › HALAL 高风险类目」配置；命中则「是否HALAL」「是否对 HALAL 客户展示」固定为否 */
+/* HALAL 高风险类目（2026-10-16 会议）：运营平台「后台类目」类目树上标注（二级类目详情设置）；命中则「是否HALAL」「是否对 HALAL 客户展示」固定为否 */
 DB.halalRiskCats=['猪肉类','酒类'];
 function isHalalRisk(cat){return (DB.halalRiskCats||[]).includes(cat);}
 const HALAL_TODAY=(()=>{const d=new Date(),p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());})();
@@ -5203,20 +5203,12 @@ const CAT_CSS=`<style>
 .tpl-def{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px}.tpl-def select{max-width:160px}
 </style>`;
 PAGES['p-category']=()=>{
-  const tabs=[['tree','类目树'],['fields','字段库'],['tpl','字段模板库'],['halal','HALAL 高风险类目']];
+  const tabs=[['tree','类目树'],['fields','字段库'],['tpl','字段模板库']];
   return CAT_CSS+`<div class="tabs">${tabs.map(t=>`<div class="tab ${DB.catTab==t[0]?'active':''}" onclick="DB.catTab='${t[0]}';render()">${t[1]}</div>`).join('')}</div>`
-    +(DB.catTab=='tree'?catTreeTab():DB.catTab=='fields'?fieldLibTab():DB.catTab=='halal'?halalRiskTab():tplLibTab());
+    +(DB.catTab=='tree'?catTreeTab():DB.catTab=='fields'?fieldLibTab():tplLibTab());
 };
-/* ===== Tab 4 · HALAL 高风险类目（2026-10-16）：勾选二级类目；命中类目的商品「是否HALAL」「是否对 HALAL 客户展示」固定为否 ===== */
-let HALAL_RISK_EDIT=null;
-function halalRiskTab(){if(!HALAL_RISK_EDIT)HALAL_RISK_EDIT=[...DB.halalRiskCats];const E=HALAL_RISK_EDIT;
-  return `<div class="card"><div class="card-hd"><h3>HALAL 高风险类目</h3><span class="sub">已选 ${E.length} 个二级类目</span></div><div class="card-bd">
-    <div class="fl-h" style="margin:0 0 12px">勾选的类目下，商家新建 / 编辑 / 批量导入商品时，「是否HALAL」固定为非HALAL、「是否对 HALAL 客户展示」固定为否。保存后立即生效。</div>
-    ${OPS_CATS.map(c=>`<div style="margin-bottom:12px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">${c.n}</div><div class="row" style="gap:10px;flex-wrap:wrap">${(c.children||[]).map(k=>`<label class="chip-ck ${E.includes(k)?'on':''}"><input type="checkbox" ${E.includes(k)?'checked':''} onchange="halalRiskToggle('${k}')">${k}</label>`).join('')}</div></div>`).join('')}
-    <div class="row" style="gap:8px;margin-top:6px"><button class="btn btn-p" onclick="halalRiskSave()">保存</button><button class="btn btn-o" onclick="HALAL_RISK_EDIT=null;render()">重置</button></div>
-  </div></div>`;}
-function halalRiskToggle(k){const E=HALAL_RISK_EDIT,i=E.indexOf(k);if(i<0)E.push(k);else E.splice(i,1);render();}
-function halalRiskSave(){DB.halalRiskCats=[...HALAL_RISK_EDIT];HALAL_RISK_EDIT=null;render();toast('HALAL 高风险类目已保存，立即生效','ok');
+/* ===== HALAL 高风险类目（2026-10-20）：直接在类目树上标注，二级类目详情里设置「是否 HALAL 高风险类目」；命中类目的商品「是否HALAL」「是否对 HALAL 客户展示」固定为否 ===== */
+function halalRiskSet(cat,on){const L=DB.halalRiskCats,i=L.indexOf(cat);if(on&&i<0)L.push(cat);if(!on&&i>=0)L.splice(i,1);render();toast(on?`「${cat}」已设为 HALAL 高风险类目，立即生效`:`「${cat}」已取消 HALAL 高风险类目，立即生效`,'ok');
 };
 function tplSourceTag(cat){const r=tplResolve(cat);return r.source=='own'?`<span class="tag t-g"><span class="dot"></span>本级挂载</span>`:r.source=='inherit'?`<span class="tag t-y"><span class="dot"></span>继承自「${r.from}」</span>`:`<span class="tag t-gr"><span class="dot"></span>平台默认</span>`;}
 function tplPill(cat){const r=tplResolve(cat);return `<span class="ct-tpl ${r.source}" title="${r.source=='own'?'本级挂载':r.source=='inherit'?'继承自 '+r.from:'未挂载，走平台默认'}">${r.tpl.name}</span>`;}
@@ -5225,7 +5217,7 @@ function catTreeTab(){
   const sel=DB.catSel,kw=DB.catKw.trim();
   const rows=OPS_CATS.filter(c=>!kw||c.n.includes(kw)||(c.children||[]).some(k=>k.includes(kw))).map(c=>{const open=kw?true:DB.catOpen[c.n]!==false;const kids=(c.children||[]).filter(k=>!kw||k.includes(kw)||c.n.includes(kw));
     return `<div class="ct-row ${sel==c.n?'on':''}" onclick="DB.catSel='${c.n}';render()"><span class="ct-caret" onclick="event.stopPropagation();DB.catOpen['${c.n}']=${open?'false':'true'};render()">${(c.children||[]).length?(open?'▾':'▸'):''}</span><span class="ct-lv">L1</span><span>${c.n}</span><span class="ct-cnt">(${(c.children||[]).length})</span>${tplPill(c.n)}</div>`
-      +(open?kids.map(k=>`<div class="ct-row sub ${sel==k?'on':''}" onclick="DB.catSel='${k}';render()"><span class="ct-caret"></span><span class="ct-lv">L2</span><span>${k}</span>${tplPill(k)}</div>`).join(''):'');}).join('');
+      +(open?kids.map(k=>`<div class="ct-row sub ${sel==k?'on':''}" onclick="DB.catSel='${k}';render()"><span class="ct-caret"></span><span class="ct-lv">L2</span><span>${k}</span>${tplPill(k)}${isHalalRisk(k)?'<span class="tag t-r" style="font-size:10px;margin-left:4px">HALAL高风险</span>':''}</div>`).join(''):'');}).join('');
   return `<div class="ct-wrap">
     <div class="card" style="margin:0"><div class="card-hd"><h3>类目树</h3><div class="row" style="gap:8px"><button class="btn btn-p btn-sm" onclick="toast('演示：新增一级类目','info')">添加父级类目</button><button class="btn btn-o btn-sm" onclick="toast('演示：开启拖拽排序','info')">开启排序</button></div></div>
       <div class="card-bd" style="padding:12px 14px"><input placeholder="搜索类目名称" value="${DB.catKw}" oninput="DB.catKw=this.value;render();const e=document.querySelector('.ct-wrap input');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}" style="margin-bottom:10px">
@@ -5249,6 +5241,7 @@ function catDetail(cat){
       <div class="fg3"><div class="fr"><label class="fl"><b>*</b>类目名称</label><input value="${cat}"></div><div class="fr"><label class="fl">排序</label><input type="number" value="${lv==1?OPS_CATS.findIndex(c=>c.n==cat)+1:opsCatChildren(par).indexOf(cat)+1}"></div><div class="fr"><label class="fl">父类目</label><input value="${par||'（根分类，无上级）'}" readonly style="background:#F3F4F6;color:var(--ts)"></div></div>
       <div class="fg3"><div class="fr"><label class="fl">中文名</label><input value="${cat}"></div><div class="fr"><label class="fl">英文名</label><input value="${({'新鲜蔬菜':'Fresh Vegetables','肉禽蛋品':'Meat, Poultry & Eggs','海鲜水产':'Seafood','调味品':'Condiments','饮料':'Beverages'})[cat]||''}" placeholder="English name"></div><div class="fr"><label class="fl">税率 / 风险</label><input value="${(CATS[cat]||CATS[par])?((CATS[cat]||CATS[par]).tax*100)+'% · '+(CATS[cat]||CATS[par]).baseRisk+'风险':'—'}" readonly style="background:#F3F4F6;color:var(--ts)"></div></div>
     </div></div>
+  ${lv==2?`<div class="card" style="margin:0 0 18px"><div class="card-hd"><h3>HALAL 高风险类目</h3><span class="sub">设为「是」后，商家在本类目下新建 / 编辑 / 批量导入商品时，「是否HALAL」固定为非HALAL、「是否对 HALAL 客户展示」固定为否 · 切换后立即生效，已有商品不自动修改</span></div><div class="card-bd"><div class="row" style="gap:14px">${['否','是'].map(v=>`<label class="chip-ck ${(isHalalRisk(cat)?'是':'否')==v?'on':''}"><input type="radio" name="cat-halal-risk" ${(isHalalRisk(cat)?'是':'否')==v?'checked':''} onchange="halalRiskSet('${cat}',${v=='是'})">${v}</label>`).join('')}</div></div></div>`:''}
   <div class="card" style="margin:0 0 18px"><div class="card-hd"><h3>字段模板</h3><span class="sub">决定商家建品时「最小包装单位 / 净含量单位 / 售卖单位 / 售卖规格单位（寄售）」的可选值与默认值 · 每级均可挂载，1 类目 1 模板 · <b>单独保存</b>，不随上方类目信息一起提交</span></div>
     <div class="card-bd">
       <div class="row" style="gap:12px;align-items:center;flex-wrap:wrap">
