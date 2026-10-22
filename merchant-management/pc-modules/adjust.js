@@ -1,11 +1,13 @@
 /* PC · 店铺运营平台 —— 业务调整单（正/负向款项单据）+ 调整类型配置
-   ▍对应 PRD：采购/merchant management/PRD/scm_运营端业务调整单_prd.md v2.0（规则以 PRD 为准，本文件只做交互演示）
+   ▍对应 PRD：采购/merchant management/PRD/scm_运营端业务调整单_prd.md v3.0（规则以 PRD 为准，本文件只做交互演示）
    ▍要点：
    - 只产生款项并推送，不涉及结算。业务主体 = 店铺；商家仅财务归集，只在详情展示。
    - 金额恒正，方向由调整类型决定；± 与颜色只在展示层。
-   - 新建（待推送，仅命中近 7 天重复时确认）/ 新建并推送（必须二次确认）。
-   - 未推送人工单可作废（含「作废并重新建单」）；已推送的单不可再动，从详情「新建纠正单」另建一张。
-   - 状态展示：待推送 / 已推送 / 同步重试中（下游失败或 30 分钟未确认）/ 已作废 / 判责中（仅罚款行）。
+   - 建单 = 提交飞书审批（待审批）→ 审批通过（待推送，生效时间 = 审批通过时刻）→ 推送；驳回为终态，可「重新建单」。
+   - 不再提供「新建并推送」（2026-10-22 协调会：加审批后不能跳过审批直接推送）。
+   - 待审批 / 待推送的人工单可作废（待审批作废同步撤回飞书审批）；已推送的单不可再动，从详情「新建纠正单」另建一张。
+   - 「在飞书中打开」生产环境直接跳飞书审批单；原型用预览弹窗模拟，弹窗里的「同意 / 拒绝」只为演示审批结果回写，生产不渲染。
+   - 状态展示：待审批 / 已驳回 / 待推送 / 已推送 / 同步重试中 / 下游拒收 / 已作废 / 判责中（仅罚款行）。
    - 缺货罚款单在本页只读展示，推送仍在罚款单页。
    依赖主文件全局：DB / money / toast / modal / modalWide / closeModal / drawer / closeDrawer
                    / render / nav / ts / flowTip / fineGroups / fine_detail(replenish.js)。 */
@@ -107,21 +109,58 @@ DB.adjOrders = DB.adjOrders || [
    sourceType:'MANUAL', status:'effective', voidReason:'',
    pushStatus:'PUSHED', syncStatus:'SUCCESS', syncErrorText:'', pushedAt:'2026-09-08 11:00', pushedBy:'陈敏'},
 ];
-DB.adjLogs = DB.adjLogs || {
-  'ADJ-SG-20260914-003':[{t:'2026-09-14 09:20',u:'林凯',c:'创建调整单'},{t:'2026-09-14 09:26',u:'林凯',c:'作废，原因：金额录错，应为 240.00，已重新建单'}],
-  'ADJ-SG-20260913-002':[{t:'2026-09-13 08:30',u:'林凯',c:'创建调整单'}],
-  'ADJ-SG-20260912-004':[{t:'2026-09-12 17:12',u:'林凯',c:'创建调整单'}],
-  'ADJ-SG-20260910-004':[{t:'2026-09-10 09:05',u:'陈敏',c:'创建调整单'},{t:'2026-09-10 09:30',u:'陈敏',c:'推送'}],
-  'ADJ-SG-20260909-002':[{t:'2026-09-09 15:40',u:'陈敏',c:'创建调整单'},{t:'2026-09-09 16:02',u:'陈敏',c:'推送'}],
-  'ADJ-SG-20260908-001':[{t:'2026-09-08 10:22',u:'陈敏',c:'创建调整单'},{t:'2026-09-08 11:00',u:'陈敏',c:'推送'}],
-};
+// 审批中 / 已驳回演示（2026-10-22 新增审批）
+// 日期取相对今天，保证默认「近 30 天」筛选下可见
+const relT=(off,hm)=>{const d=new Date();d.setDate(d.getDate()+off);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+hm;};
+const relNo=(off,seq)=>'ADJ-SG-'+relT(off,'').slice(0,10).replace(/-/g,'')+'-'+seq;
+const NO_A=relNo(0,'003'), NO_B=relNo(0,'001'), NO_R=relNo(-1,'002');
+if(!DB.adjOrders.some(r=>r.status=='approving')) DB.adjOrders.unshift(
+  {adjustNo:NO_A, shopCode:'SH2026070200005', merchantCode:'M2026-1103',
+   adjustTypeCode:'ADJT-0001', adjustTypeName:'售后判责赔付', amount:96.40, currency:'SGD', deductionType:'ACCOUNT',
+   bizNo:'AS-26092002', remark:'客户反馈鸡翅解冻后异味，判商家责任，按成交价赔付', attachCount:2, dupHint:'近 7 天已有 1 张相同店铺、类型、金额的调整单，请确认不是重复创建。', createdAt:relT(0,'10:40'), effectiveTime:'', createdBy:'吴婷',
+   sourceType:'MANUAL', status:'approving', voidReason:'',
+   apv:{inst:'7C1E9A20-5B8D-4E1F-9A61-0F3D2B7C6E10', submittedAt:relT(0,'10:40'), approver:'', comment:'', at:''},
+   pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
+  {adjustNo:NO_B, shopCode:'SH2026062000001', merchantCode:'M2026-0815',
+   adjustTypeCode:'ADJT-0007', adjustTypeName:'物流费用补贴', amount:680.00, currency:'SGD', deductionType:'ACCOUNT',
+   bizNo:'LOG-202609-011', remark:'9 月第 3 周冷链车加班 4 趟，按协议每趟 170 补贴', createdAt:relT(0,'09:15'), effectiveTime:'', createdBy:'陈敏',
+   sourceType:'MANUAL', status:'approving', voidReason:'',
+   apv:{inst:'7C1E9A20-5B8D-4E1F-9A61-0F3D2B7C6E0F', submittedAt:relT(0,'09:15'), approver:'', comment:'', at:''},
+   pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''},
+  {adjustNo:NO_R, shopCode:'SH2026070200004', merchantCode:'M2026-0902',
+   adjustTypeCode:'ADJT-0003', adjustTypeName:'质量问题扣款', amount:520.00, currency:'SGD', deductionType:'ACCOUNT',
+   bizNo:'QC-26092001', remark:'虾仁冰衣超标，整批扣款', attachCount:1, createdAt:relT(-1,'16:02'), effectiveTime:'', createdBy:'吴婷',
+   sourceType:'MANUAL', status:'rejected', voidReason:'',
+   apv:{inst:'7C1E9A20-5B8D-4E1F-9A61-0F3D2B7C6E0A', submittedAt:relT(-1,'16:02'), approver:'王蕾', comment:'质检报告只抽检了 2 箱，按整批扣款依据不足，请按抽检比例重算', at:relT(-1,'17:30')},
+   pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''}
+);
+// 旧演示单补齐：创建时间 createdAt（建单时刻）与审批信息；生效时间 effectiveTime = 审批通过时刻
+DB.adjOrders.forEach(r=>{
+  if(!r.createdAt){ const d=new Date(String(r.effectiveTime).replace(' ','T')); d.setMinutes(d.getMinutes()-25); const p=n=>String(n).padStart(2,'0');
+    r.createdAt=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  if(!r.apv) r.apv={inst:'7B0D'+r.adjustNo.replace(/\D/g,'').slice(-8)+'-A1C3-4F2E-8D5B-3E9A7C1F0B2D', submittedAt:r.createdAt, approver:'王蕾', comment:'同意', at:r.effectiveTime};
+});
+DB.adjLogs = DB.adjLogs || {};
+Object.assign(DB.adjLogs, {
+  [NO_A]:[{t:relT(0,'10:40'),u:'吴婷',c:'创建调整单并提交飞书审批'}],
+  [NO_B]:[{t:relT(0,'09:15'),u:'陈敏',c:'创建调整单并提交飞书审批'}],
+  [NO_R]:[{t:relT(-1,'16:02'),u:'吴婷',c:'创建调整单并提交飞书审批'},{t:relT(-1,'17:30'),u:'王蕾',c:'审批驳回，意见：质检报告只抽检了 2 箱，按整批扣款依据不足，请按抽检比例重算'}],
+  'ADJ-SG-20260914-003':[{t:'2026-09-14 08:55',u:'林凯',c:'创建调整单并提交飞书审批'},{t:'2026-09-14 09:20',u:'王蕾',c:'审批通过，意见：同意'},{t:'2026-09-14 09:26',u:'林凯',c:'作废，原因：金额录错，应为 240.00，已重新建单'}],
+  'ADJ-SG-20260913-002':[{t:'2026-09-13 08:05',u:'林凯',c:'创建调整单并提交飞书审批'},{t:'2026-09-13 08:30',u:'王蕾',c:'审批通过，意见：同意'}],
+  'ADJ-SG-20260912-004':[{t:'2026-09-12 16:47',u:'林凯',c:'创建调整单并提交飞书审批'},{t:'2026-09-12 17:12',u:'王蕾',c:'审批通过，意见：同意'}],
+  'ADJ-SG-20260910-004':[{t:'2026-09-10 08:40',u:'陈敏',c:'创建调整单并提交飞书审批'},{t:'2026-09-10 09:05',u:'王蕾',c:'审批通过，意见：同意'},{t:'2026-09-10 09:30',u:'陈敏',c:'推送'}],
+  'ADJ-SG-20260909-002':[{t:'2026-09-09 15:15',u:'陈敏',c:'创建调整单并提交飞书审批'},{t:'2026-09-09 15:40',u:'王蕾',c:'审批通过，意见：同意'},{t:'2026-09-09 16:02',u:'陈敏',c:'推送'}],
+  'ADJ-SG-20260908-001':[{t:'2026-09-08 09:57',u:'陈敏',c:'创建调整单并提交飞书审批'},{t:'2026-09-08 10:22',u:'王蕾',c:'审批通过，意见：同意'},{t:'2026-09-08 11:00',u:'陈敏',c:'推送'}],
+});
 const dayStr = (offset) => { const d=new Date(ts().replace(' ','T')); d.setDate(d.getDate()+offset); const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); };
 const DEFAULT_FILTER = () => ({shop:'',type:'',dir:'',from:dayStr(-29),to:dayStr(0)});
 DB.adjFilter = DB.adjFilter || DEFAULT_FILTER();
-// 状态 Tab：待推送 / 已推送（含同步重试中、下游拒收）/ 已作废
+// 状态 Tab：待审批 / 待推送 / 已推送（含同步重试中、下游拒收）/ 已驳回 / 已作废
 DB.adjTab = DB.adjTab || 'PENDING';
-const ADJ_TABS = [['PENDING','待推送'],['PUSHED','已推送'],['VOIDED','已作废']];
-const tabOf = r => r.status=='voided' ? 'VOIDED' : r.pushStatus=='PUSHED' ? 'PUSHED' : 'PENDING';
+const ADJ_TABS = [['APPROVING','待审批'],['REJECTED','已驳回'],['PENDING','待推送'],['PUSHED','已推送'],['VOIDED','已作废']];
+// 计数只显示在要人处理的三个 Tab；已驳回只计还没重新建单的
+const tabCount = (rows,k) => k=='APPROVING'||k=='PENDING' ? rows.filter(r=>tabOf(r)==k).length : k=='REJECTED' ? rows.filter(r=>tabOf(r)==k&&!r.recreatedNo).length : 0;
+const tabOf = r => r.status=='voided' ? 'VOIDED' : r.status=='rejected' ? 'REJECTED' : r.status=='approving' ? 'APPROVING' : r.pushStatus=='PUSHED' ? 'PUSHED' : 'PENDING';
 DB.adjSel    = DB.adjSel    || [];
 DB.adjSeq    = DB.adjSeq    || 7;
 const logOf = no => (DB.adjLogs[no] = DB.adjLogs[no] || []);
@@ -132,13 +171,13 @@ function fineAsAdj(){
   return (typeof fineGroups=='function'?fineGroups(true):[]).map(g=>({
     adjustNo:g.no, shopCode:shopOfMerchant(g.merchant), merchantCode:g.merchant,
     adjustTypeCode:'ADJ-FINE', adjustTypeName:'缺货罚款', amount:g.amt, currency:'SGD',
-    bizNo:g.deliveryNo, remark:'', effectiveTime:g.at, createdBy:'',
+    bizNo:g.deliveryNo, remark:'', createdAt:g.at, effectiveTime:g.at, createdBy:'',
     sourceType:'SHORTAGE_FINE', fineStatus:g.status||'pending', status:g.status=='revoked'?'voided':'effective',
     pushStatus:g.push=='pushed'?'PUSHED':'PENDING', syncStatus:g.push=='pushed'?'SUCCESS':'', syncErrorText:'', pushedAt:g.pushedAt||'', pushedBy:'',
   }));
 }
 function adjAll(){
-  return (DB.adjOrders||[]).concat(fineAsAdj()).sort((a,b)=>String(b.effectiveTime).localeCompare(String(a.effectiveTime))||String(b.adjustNo).localeCompare(String(a.adjustNo)));
+  return (DB.adjOrders||[]).concat(fineAsAdj()).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))||String(b.adjustNo).localeCompare(String(a.adjustNo)));
 }
 const adjOf = no => adjAll().find(r=>r.adjustNo==no);
 window.adjOf = adjOf;
@@ -147,10 +186,12 @@ const minutesSince = t => (new Date(ts().replace(' ','T')) - new Date(String(t).
 function adjDir(r){ return tOf(r.adjustTypeCode).dir; }
 const adjSign = r => adjDir(r)=='ADDITION' ? 1 : -1;
 window.adjDir = adjDir;
-// 展示态：PENDING / PUSHED / PUSH_FAILED / VOIDED / JUDGING（PRD BR-08 / BR-10）
+// 展示态：APPROVING / REJECTED / PENDING / PUSHED / PUSH_FAILED / PUSH_REJECTED / VOIDED / JUDGING（PRD BR-04 / BR-08 / BR-10）
 function displayStatus(r){
   if(r.sourceType=='SHORTAGE_FINE' && r.fineStatus=='judging') return 'JUDGING';
   if(r.status=='voided') return 'VOIDED';
+  if(r.status=='approving') return 'APPROVING';
+  if(r.status=='rejected') return 'REJECTED';
   if(r.pushStatus!='PUSHED') return 'PENDING';
   if(r.syncStatus=='SUCCESS') return 'PUSHED';
   if(r.syncStatus=='REJECTED') return 'PUSH_REJECTED';
@@ -162,13 +203,14 @@ const syncReason = r => r.syncErrorText || (r.pushStatus=='PUSHED'&&!r.syncStatu
 const unconfirmed = r => r.pushStatus=='PUSHED' && !r.syncStatus && minutesSince(r.pushedAt)<30;
 const isManual = r => r.sourceType=='MANUAL';
 const selectable = r => isManual(r) && r.pushStatus=='PENDING' && r.status=='effective';
-const canVoid    = r => isManual(r) && r.pushStatus=='PENDING' && r.status=='effective';
+const canVoid    = r => isManual(r) && r.pushStatus=='PENDING' && (r.status=='effective'||r.status=='approving');
+const canRecreate= r => isManual(r) && r.status=='rejected' && !r.recreatedNo;
 const canCorrect = r => isManual(r) && r.pushStatus=='PUSHED'  && r.status=='effective';
 
-const ST_LABEL = {PENDING:'待推送', PUSHED:'已推送', PUSH_FAILED:'同步重试中', PUSH_REJECTED:'下游拒收', VOIDED:'已作废', JUDGING:'判责中'};
+const ST_LABEL = {APPROVING:'待审批', REJECTED:'已驳回', PENDING:'待推送', PUSHED:'已推送', PUSH_FAILED:'同步重试中', PUSH_REJECTED:'下游拒收', VOIDED:'已作废', JUDGING:'判责中'};
 function statusTag(r){
-  const d=displayStatus(r), cls={PENDING:'t-y',PUSHED:'t-g',PUSH_FAILED:'t-y',PUSH_REJECTED:'t-r',VOIDED:'t-gr',JUDGING:'t-gr'}[d];
-  const tip = d=='PUSH_FAILED' ? ` title="${esc(syncReason(r))}，系统自动重试，请勿重复建单"` : d=='PUSH_REJECTED' ? ` title="${esc(r.syncErrorText)}"` : '';
+  const d=displayStatus(r), cls={APPROVING:'t-b',REJECTED:'t-r',PENDING:'t-y',PUSHED:'t-g',PUSH_FAILED:'t-y',PUSH_REJECTED:'t-r',VOIDED:'t-gr',JUDGING:'t-gr'}[d];
+  const tip = d=='PUSH_FAILED' ? ` title="${esc(syncReason(r))}，系统自动重试，请勿重复建单"` : d=='PUSH_REJECTED' ? ` title="${esc(r.syncErrorText)}"` : d=='REJECTED' ? ` title="${esc((r.apv||{}).comment)}"` : '';
   return `<span class="tag ${cls}"${tip}><span class="dot"></span>${ST_LABEL[d]}</span>`;
 }
 function dirTag(dir){ return dir=='ADDITION'
@@ -177,7 +219,7 @@ function dirTag(dir){ return dir=='ADDITION'
 function fmtAmt(sign, amount){ return `${sign>0?'+':'-'}${money(amount)}`; }
 function amtCell(r){
   const s=adjSign(r), voided=r.status=='voided';
-  const style = voided ? 'color:var(--tt);text-decoration:line-through' : `color:${s>0?'var(--g)':'var(--r)'};font-weight:700`;
+  const style = r.status=='rejected' ? 'color:var(--tt)' : voided ? 'color:var(--tt);text-decoration:line-through' : `color:${s>0?'var(--g)':'var(--r)'};font-weight:700`;
   return `<span style="${style}">${fmtAmt(s,r.amount)}</span>`;
 }
 const srcLabel = r => r.sourceType=='SHORTAGE_FINE' ? '缺货罚款' : '人工建单';
@@ -188,7 +230,7 @@ function adjFiltered(){
   return adjAll().filter(r=>
        hit(shopName(r.shopCode)+' '+r.shopCode, f.shop)
     && (!f.type||r.adjustTypeCode==f.type) && (!f.dir||adjDir(r)==f.dir)
-    && (!f.from||r.effectiveTime.slice(0,10)>=f.from) && (!f.to||r.effectiveTime.slice(0,10)<=f.to));
+    && (!f.from||r.createdAt.slice(0,10)>=f.from) && (!f.to||r.createdAt.slice(0,10)<=f.to));
 }
 function adjRows(){ return adjFiltered().filter(r=>tabOf(r)==DB.adjTab); }
 
@@ -218,7 +260,7 @@ PAGES['p-adjust']=()=>{
     </div>
   </div></div>
 
-  <div class="tabs" style="margin-bottom:14px">${ADJ_TABS.map(([k,l])=>{const n=base.filter(r=>tabOf(r)==k).length;
+  <div class="tabs" style="margin-bottom:14px">${ADJ_TABS.map(([k,l])=>{const n=tabCount(base,k);
     return `<div class="tab ${DB.adjTab==k?'active':''}" onclick="DB.adjTab='${k}';DB.adjSel=[];render()">${l}${n?`<span class="tb">${n}</span>`:''}</div>`;}).join('')}</div>
 
   <div class="card">
@@ -246,11 +288,11 @@ PAGES['p-adjust']=()=>{
         <td style="white-space:nowrap">${srcLabel(r)}</td>
         <td style="white-space:nowrap">${statusTag(r)}</td>
         <td style="white-space:nowrap">${esc(r.createdBy||'系统')}</td>
-        <td style="white-space:nowrap;color:var(--ts)">${r.effectiveTime}</td>
+        <td style="white-space:nowrap;color:var(--ts)">${r.createdAt}</td>
         <td style="white-space:nowrap">${r.pushedAt&&r.pushedBy?esc(r.pushedBy):'—'}</td>
         <td style="white-space:nowrap;color:var(--ts)">${r.pushedAt||'—'}</td>
-        <td style="white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-1px 0 0 var(--bd)"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button>${canVoid(r)?`<button class="btn btn-o btn-sm" style="margin-left:6px;color:var(--r)" onclick="adj_voidAsk('${r.adjustNo}')">作废</button>`:''}</td>
-      </tr>`).join('')||`<tr><td colspan="${pend?14:13}" style="text-align:center;color:var(--ts);padding:22px">${!adjAll().length?'暂无业务调整单':base.length?'暂无'+ADJ_TABS.find(x=>x[0]==DB.adjTab)[1]+'的调整单':'没有符合筛选条件的调整单'}</td></tr>`}
+        <td style="white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-1px 0 0 var(--bd)"><button class="btn btn-o btn-sm" onclick="adj_detail('${r.adjustNo}')">详情</button>${canRecreate(r)?`<button class="btn btn-o btn-sm" style="margin-left:6px" onclick="adj_newAsk(false,'recreate','${r.adjustNo}')">重新建单</button>`:''}${r.recreatedNo?`<a class="mono" style="margin-left:8px;font-size:12px;color:var(--g);cursor:pointer" onclick="adj_detail('${r.recreatedNo}')">已重建 ${r.recreatedNo}</a>`:''}${canVoid(r)?`<button class="btn btn-o btn-sm" style="margin-left:6px;color:var(--r)" onclick="adj_voidAsk('${r.adjustNo}')">作废</button>`:''}</td>
+      </tr>`).join('')||`<tr><td colspan="${pend?14:13}" style="text-align:center;color:var(--ts);padding:22px">${!adjAll().length?'暂无业务调整单':JSON.stringify(DB.adjFilter)==JSON.stringify(DEFAULT_FILTER())?'暂无'+ADJ_TABS.find(x=>x[0]==DB.adjTab)[1]+'的调整单':'没有符合筛选条件的调整单'}</td></tr>`}
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts);text-align:right">共 ${rows.length} 条 · 每页 50 条</div>
     </div>`;
@@ -280,7 +322,7 @@ window.adj_newAsk=function(keep, mode, src){
     const o = src ? adjOf(src) : null;
     DB.adjDraft = {mode:mode||'new', srcNo:src||'', sc:'', tc:'', amt:'', biz:'', rk:''};
     if(o && mode=='correct'){ DB.adjDraft.sc=o.shopCode; DB.adjDraft.biz=o.adjustNo; }
-    if(o && mode=='recreate'){ Object.assign(DB.adjDraft,{sc:o.shopCode,tc:o.adjustTypeCode,amt:o.amount.toFixed(2),biz:o.bizNo,rk:o.remark}); }
+    if(o && mode=='recreate'){ DB.adjDraft.fromRejected = o.status=='rejected'; DB.adjDraft.typeOff = !tOf(o.adjustTypeCode).on; DB.adjDraft.attachCount=o.attachCount||0; Object.assign(DB.adjDraft,{sc:o.shopCode,tc:tOf(o.adjustTypeCode).on?o.adjustTypeCode:'',amt:o.amount.toFixed(2),biz:o.bizNo,rk:o.remark}); }
   }
   const d=DB.adjDraft, o=d.srcNo?adjOf(d.srcNo):null;
   const types=(DB.adjTypes||[]).filter(t=>t.on);
@@ -290,6 +332,7 @@ window.adj_newAsk=function(keep, mode, src){
   const title = {new:'新建业务调整单', correct:'新建纠正单', recreate:'重新建单'}[d.mode];
   modalWide(`<div class="mc-hd"><h3>${title}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
+    ${d.mode=='recreate'&&o&&d.fromRejected?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">↩︎</span>原单 <span class="mono">${o.adjustNo}</span> 已被驳回：${esc((o.apv||{}).comment)}</div>`:''}
     ${d.mode=='correct'&&o?`<div class="ib ib-b" style="margin-bottom:12px"><span class="i">↩︎</span>纠正原单 <span class="mono">${o.adjustNo}</span>：${esc(o.adjustTypeName)} ${fmtAmt(adjSign(o),o.amount)}</div>`:''}
     <div class="fg2">
       <div class="fr"><label class="fl"><b>*</b>店铺</label>
@@ -299,7 +342,7 @@ window.adj_newAsk=function(keep, mode, src){
       <div class="fr"><label class="fl">所属商家</label><div id="an-mc" style="padding:9px 0">—</div></div>
     </div>
     <div class="fg2">
-      <div class="fr"><label class="fl"><b>*</b>调整类型</label><select id="an-type" onchange="adj_typeChange()"><option value="">请选择调整类型</option>${group('DEDUCTION','负向 · 扣商家')}${group('ADDITION','正向 · 补商家')}</select><div id="an-type-err" class="fl-h" style="color:var(--r)"></div></div>
+      <div class="fr"><label class="fl"><b>*</b>调整类型</label><select id="an-type" onchange="adj_typeChange()"><option value="">请选择调整类型</option>${group('DEDUCTION','负向 · 扣商家')}${group('ADDITION','正向 · 补商家')}</select><div id="an-type-err" class="fl-h" style="color:var(--r)">${d.typeOff&&!d.tc?'原调整类型已停用，请重新选择':''}</div></div>
       <div class="fr"><label class="fl">方向 / 抵扣方式</label><div id="an-dir" style="padding:9px 0">—</div></div>
     </div>
     <div class="fg2">
@@ -312,8 +355,7 @@ window.adj_newAsk=function(keep, mode, src){
   </div>
   <div class="mc-ft">
     <button class="btn btn-link" onclick="closeModal()">取消</button>
-    <button class="btn btn-o" onclick="adj_newSubmit(true)">新建并推送</button>
-    <button class="btn btn-p" onclick="adj_newSubmit(false)">新建</button>
+    <button class="btn btn-p" onclick="adj_newSubmit()">提交审批</button>
   </div>`);
   adj_shopChange(); adj_typeChange(); adj_rkCount();
   if(d.mode=='recreate'){ const a=document.getElementById('an-amt'); if(a&&a.focus) a.focus(); }
@@ -330,9 +372,10 @@ window.adj_typeChange=function(){
   const l=document.getElementById('an-bizl'); if(l) l.innerHTML='<b>*</b>关联业务单号';
   // 账扣 / 票扣都只填关联业务单号；建单不选原发票、不拆税
   const n=document.getElementById('an-note');
-  if(n) n.innerHTML = !t ? '抵扣方式由调整类型决定，选择类型后显示。'
-    : inv ? `本类型为<b>票扣</b>：推送后由下游开票。<b style="color:var(--r)">推送后不可撤回。</b>`
-          : '本类型为<b>账扣</b>：不开票、不算税，直接在结算中加减。<b style="color:var(--r)">推送后不可撤回。</b>';
+  const apvTip='提交后进入飞书审批，审批通过后才能推送。';
+  if(n) n.innerHTML = !t ? '抵扣方式由调整类型决定，选择类型后显示。'+apvTip
+    : inv ? `本类型为<b>票扣</b>：推送后由下游开票。${apvTip}<b style="color:var(--r)">推送后不可撤回。</b>`
+          : `本类型为<b>账扣</b>：不开发票、不产生 GST，直接在结算中加减。${apvTip}<b style="color:var(--r)">推送后不可撤回。</b>`;
   adj_amtInput();
 };
 window.adj_amtKey=function(e){ if(['-','e','E','+',','].includes(e.key)) e.preventDefault(); };
@@ -373,24 +416,23 @@ function validateDraft(){
 window.adjValidateDraft = validateDraft;
 function dupInfo(sc,tc,amt){
   const from=dayStr(-6);
-  const hits=(DB.adjOrders||[]).filter(r=>r.status=='effective'&&r.syncStatus!='REJECTED'&&r.shopCode==sc&&r.adjustTypeCode==tc&&r.amount==+amt&&r.effectiveTime.slice(0,10)>=from);
+  const hits=(DB.adjOrders||[]).filter(r=>(r.status=='effective'||r.status=='approving')&&r.syncStatus!='REJECTED'&&r.shopCode==sc&&r.adjustTypeCode==tc&&r.amount==+amt&&r.createdAt.slice(0,10)>=from);
   return {count:hits.length, retrying:hits.filter(r=>displayStatus(r)=='PUSH_FAILED').map(r=>r.adjustNo)};
 }
-window.adj_newSubmit=function(withPush){
+window.adj_newSubmit=function(){
   const {d,ok}=validateDraft(); if(!ok) return;
   Object.assign(DB.adjDraft,{sc:d.sc,tc:d.tc,amt:d.amt,biz:d.biz,rk:d.rk});
   const dup=dupInfo(d.sc,d.tc,d.amt);
-  if(!withPush&&!dup.count){ adj_newDo(false); return; }
-  adj_newConfirm(withPush,dup);
+  if(!dup.count){ adj_newDo(); return; }
+  adj_newConfirm(dup);
 };
-window.adj_newConfirm=function(withPush,dup){
+window.adj_newConfirm=function(dup){
   const d=DB.adjDraft, t=tOf(d.tc), mc=(SHOPS[d.sc]||{}).merchant, s=t.dir=='ADDITION'?1:-1;
   const warns=[];
-  if(withPush) warns.push('<div class="ib ib-y"><span class="i">⚠️</span>推送后本单不可作废、不可撤回；如需纠正只能另建一张调整单。</div>');
   if(dup.retrying.length) warns.push(`<div class="ib ib-r"><span class="i">⛔</span>单据 <span class="mono">${dup.retrying[0]}</span> 与本单相同，正在同步重试中，系统会自动重试，重复建单会造成双份款项。</div>`);
-  else if(dup.count) warns.push(`<div class="ib ib-y"><span class="i">⚠️</span>近 7 天已有 ${dup.count} 张相同店铺、类型、金额的调整单，请确认不是重复创建。</div>`);
-  if(withPush&&(SHOPS[d.sc]||{}).stopped) warns.push('<div class="ib ib-y"><span class="i">⚠️</span>该店铺已停用</div>');
-  modal(`<div class="mc-hd"><h3>${withPush?'确认新建并推送':'确认新建'}</h3><button class="mc-x" onclick="adj_newAsk(true)">×</button></div>
+  else if(dup.count) warns.push(`<div class="ib ib-y"><span class="i">⚠️</span>近 7 天已有 ${dup.count} 张相同店铺、类型、金额的调整单，请确认不是重复创建。提交后审批单上也会显示这条提醒。</div>`);
+  if((SHOPS[d.sc]||{}).stopped) warns.push('<div class="ib ib-y"><span class="i">⚠️</span>该店铺已停用</div>');
+  modal(`<div class="mc-hd"><h3>确认提交审批</h3><button class="mc-x" onclick="adj_newAsk(true)">×</button></div>
   <div class="mc-bd">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 12px">
       <span style="font-size:16px;font-weight:700">${esc(shopName(d.sc))}</span>
@@ -407,24 +449,30 @@ window.adj_newConfirm=function(withPush,dup){
   </div>
   <div class="mc-ft">
     <button class="btn btn-o" id="adj-back" onclick="adj_newAsk(true)">返回修改</button>
-    <button class="btn btn-p" id="adj-ok" ${withPush?'disabled':''} onclick="adj_newDo(${withPush?'true':'false'})">${withPush?'确认新建并推送':'确认新建'}</button>
+    <button class="btn btn-p" id="adj-ok" onclick="adj_newDo()">确认提交审批</button>
   </div>`);
   const back=document.getElementById('adj-back'); if(back&&back.focus) back.focus();
-  if(withPush) setTimeout(()=>{const b=document.getElementById('adj-ok'); if(b) b.disabled=false;},1000);
 };
-window.adj_newDo=function(withPush){
+window.adj_newDo=function(){
   const d=DB.adjDraft; if(!d) return;
   const now=ts(), t=tOf(d.tc);
   const no='ADJ-'+(DB.siteCode||'SG')+'-'+now.slice(0,10).replace(/-/g,'')+'-'+String(DB.adjSeq++).padStart(3,'0');
   const amt=+(+d.amt).toFixed(2), isInv=t.ded=='INVOICE';
+  const dup=dupInfo(d.sc,d.tc,d.amt);
   DB.adjOrders.unshift({adjustNo:no, shopCode:d.sc, merchantCode:(SHOPS[d.sc]||{}).merchant||'',
     adjustTypeCode:d.tc, adjustTypeName:t.cn, amount:amt, currency:'SGD',
     deductionType:isInv?'INVOICE':'ACCOUNT',
-    bizNo:d.biz, remark:d.rk, effectiveTime:now, createdBy:'当前账号', sourceType:'MANUAL', status:'effective', voidReason:'',
-    pushStatus:withPush?'PUSHED':'PENDING', syncStatus:withPush?'SUCCESS':'', syncErrorText:'', pushedAt:withPush?now:'', pushedBy:withPush?'当前账号':''});
-  addLog(no,'创建调整单'); if(withPush) addLog(no,'推送');
+    bizNo:d.biz, remark:d.rk, createdAt:now, effectiveTime:'', createdBy:'当前账号', sourceType:'MANUAL', status:'approving', voidReason:'',
+    dupHint:dup.retrying.length?`单据 ${dup.retrying[0]} 与本单相同，正在同步重试中，系统会自动重试，重复建单会造成双份款项。`
+           :dup.count?`近 7 天已有 ${dup.count} 张相同店铺、类型、金额的调整单，请确认不是重复创建。`:'',
+    entryType:{new:'NEW',correct:'CORRECT',recreate:d.fromRejected?'RECREATE':'VOID_RECREATE'}[d.mode], sourceAdjustNo:d.srcNo||'',
+    attachCount:d.attachCount||0,
+    apv:{inst:'7D'+Date.now().toString(16).toUpperCase()+'-A1C3-4F2E-8D5B-3E9A7C1F0B2D', submittedAt:now, approver:'', comment:'', at:''},
+    pushStatus:'PENDING', syncStatus:'', syncErrorText:'', pushedAt:'', pushedBy:''});
+  addLog(no,'创建调整单并提交飞书审批');
+  if(d.mode=='recreate'&&d.fromRejected){ const src=(DB.adjOrders||[]).find(x=>x.adjustNo==d.srcNo); if(src) src.recreatedNo=no; }
   DB.adjDraft=null; closeModal(); DB.adjSel=[]; render();
-  toast(`调整单 ${no} ${withPush?'已新建并推送':'已新建，待推送'} <a style="color:inherit;text-decoration:underline;cursor:pointer;margin-left:6px" onclick="adj_detail('${no}')">查看</a>`,'ok');
+  toast(`调整单 ${no} 已提交审批，审批通过后进入待推送 <a style="color:inherit;text-decoration:underline;cursor:pointer;margin-left:6px" onclick="adj_detail('${no}')">查看</a>`,'ok');
 };
 
 /* ================= 详情抽屉 ================= */
@@ -439,9 +487,11 @@ window.adj_detail=function(no){
 
   drawer(`<div class="drawer-hd"><div><h3>${r.adjustNo}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${esc(r.adjustTypeName)} · ${esc(shopName(r.shopCode))}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div style="font-size:30px;font-weight:800;letter-spacing:-.5px;margin:4px 0 2px;${voided?'color:var(--tt);text-decoration:line-through':`color:${s>0?'var(--g)':'var(--r)'}`}">${fmtAmt(s,r.amount)}</div>
+    <div style="font-size:30px;font-weight:800;letter-spacing:-.5px;margin:4px 0 2px;${r.status=='rejected'?'color:var(--tt)':voided?'color:var(--tt);text-decoration:line-through':`color:${s>0?'var(--g)':'var(--r)'}`}">${fmtAmt(s,r.amount)}</div>
     <div style="font-size:12.5px;color:var(--ts)">${s>0?'将补给商家':'向商家扣回'} · ${r.currency}</div>
     ${voided&&isManual(r)?`<div class="ib ib-gr" style="margin-top:12px"><span class="i">🚫</span>本单已作废，不会推送给下游。作废原因：${esc(r.voidReason)}</div>`:''}
+    ${r.status=='rejected'?`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span>审批已驳回，本单不会推送。驳回意见：${esc((r.apv||{}).comment)}${r.recreatedNo?`；已重新建单 <a class="mono" style="cursor:pointer;text-decoration:underline" onclick="adj_detail('${r.recreatedNo}')">${r.recreatedNo}</a>`:''}</div>`:''}
+    ${r.status=='approving'?`<div class="ib ib-b" style="margin-top:12px"><span class="i">⏳</span>飞书审批中，审批通过后进入待推送。</div>`:''}
     <div class="row" style="gap:8px;margin-top:12px">${dirTag(adjDir(r))}<span class="tag t-gr"><span class="dot"></span>${srcLabel(r)}</span>${statusTag(r)}</div>
 
     ${sec('单据信息')}
@@ -450,7 +500,7 @@ window.adj_detail=function(no){
       +kv('方向',adjDir(r)=='ADDITION'?'正向 · 补商家':'负向 · 扣商家')
       +kv('抵扣方式',adjDedTag(t))
       +kv('关联业务单号',`<span class="mono">${esc(r.bizNo)||'—'}</span>`)
-      +kv('创建时间',r.effectiveTime)
+      +kv('创建时间',r.createdAt)+kv('生效时间',r.effectiveTime||'—')
       +kv('来源',isManual(r)?'人工建单':`缺货罚款 · <span class="mono">${r.adjustNo}</span>`)+kv('币种',r.currency))}
 
 
@@ -459,7 +509,15 @@ window.adj_detail=function(no){
 
     ${isManual(r)?sec('调整说明')+`<div style="background:var(--bg);border:1px solid var(--bd2);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7">${esc(r.remark)}</div>`:''}
 
-    ${voided?'':sec('推送信息')+grid(kv('状态',statusTag(r))+kv('推送时间',r.pushedAt)+kv('推送人',r.pushedBy))
+    ${isManual(r)&&r.apv?sec('审批信息')+grid(
+        kv('审批状态',{approving:'<span class="tag t-b"><span class="dot"></span>审批中</span>',rejected:'<span class="tag t-r"><span class="dot"></span>已驳回</span>'}[r.status]
+          ||(r.apv.at?'<span class="tag t-g"><span class="dot"></span>已通过</span>':'<span class="tag t-gr"><span class="dot"></span>已撤回</span>'))
+        +(r.status=='approving'?kv('当前审批人','王蕾'):kv('审批人',esc(r.apv.approver)))
+        +kv('审批时间',r.apv.at)+kv('审批意见',esc(r.apv.comment)))
+      +`<div style="margin-top:10px"><button class="btn btn-o btn-sm" onclick="adj_apvForm('${r.adjustNo}')">在飞书中打开</button></div>`
+      :isManual(r)?sec('审批信息')+'<div style="font-size:13px;color:var(--ts)">历史导入单，未走审批</div>':''}
+
+    ${voided||r.status=='rejected'||r.status=='approving'?'':sec('推送信息')+grid(kv('状态',statusTag(r))+kv('推送时间',r.pushedAt)+kv('推送人',r.pushedBy))
       +(ds=='PUSH_FAILED'?`<div class="ib ib-y" style="margin-top:12px"><span class="i">⏳</span>${esc(syncReason(r))}。系统自动重试，请勿重复建单。</div>`:'')
       +(ds=='PUSH_REJECTED'?`<div class="ib ib-r" style="margin-top:12px"><span class="i">⛔</span>下游拒收：${esc(r.syncErrorText)}。本单不会入账，核对后请新建一张正确的调整单。</div>`:'')
       +(unconfirmed(r)?'<div style="font-size:12.5px;color:var(--ts);margin-top:8px">下游确认中</div>':'')}
@@ -472,18 +530,84 @@ window.adj_detail=function(no){
   <div class="drawer-ft">
     <button class="btn btn-o" onclick="closeDrawer()">关闭</button>
     ${canVoid(r)?`<button class="btn btn-d" onclick="adj_voidAsk('${r.adjustNo}')">作废</button>`:''}
+    ${canRecreate(r)?`<button class="btn btn-p" onclick="closeDrawer();adj_newAsk(false,'recreate','${r.adjustNo}')">重新建单</button>`:''}
     ${canCorrect(r)?`<button class="btn btn-o" onclick="closeDrawer();adj_newAsk(false,'correct','${r.adjustNo}')">新建纠正单</button>`:''}
     ${!isManual(r)&&typeof fine_detail=='function'?`<button class="btn btn-o" onclick="closeDrawer();fine_detail('${r.adjustNo}')">查看罚款单明细</button>`:''}
   </div>`);
+};
+
+/* ================= 飞书审批单（审批人在飞书看到的内容） ================= */
+// 字段 = PRD §6.11 审批表单；同意 / 拒绝由审批人在飞书操作，回调后本侧改状态。原型里可直接点，演示回调效果
+window.adj_apvForm=function(no){
+  const r=adjOf(no); if(!r||!r.apv) return;
+  const t=tOf(r.adjustTypeCode), s=adjSign(r), mc=r.merchantCode, pend=r.status=='approving';
+  const row=(k,v)=>`<div style="display:flex;padding:9px 0;border-bottom:1px solid #F0F1F3;font-size:13px"><div style="width:110px;flex:none;color:#8F959E">${k}</div><div style="flex:1;min-width:0;color:#1F2329;word-break:break-word">${v||'—'}</div></div>`;
+  const res = r.status=='rejected'?['已拒绝','#F54A45','#FEF1F1'] : r.status=='approving'?['审批中','#3370FF','#EFF4FF'] : r.apv.at?['已通过','#34C724','#EEFBEB']:['已撤回','#8F959E','#F2F3F5'];
+  const amtTxt=(s>0?'补商家 ':'扣商家 ')+money(r.amount);
+  // 关联原单：纠正单 / 驳回后重建（PRD §6.11 第 6 项）
+  let link='';
+  const src=r.sourceAdjustNo?adjOf(r.sourceAdjustNo):null;
+  if(src&&r.entryType=='CORRECT') link=`纠正原单 ${src.adjustNo}：${src.adjustTypeName} ${fmtAmt(adjSign(src),src.amount)}（${ST_LABEL[displayStatus(src)]}）`;
+  if(src&&r.entryType=='RECREATE'){
+    const ch=[['店铺',shopName(src.shopCode),shopName(r.shopCode)],['类型',src.adjustTypeName,r.adjustTypeName],['金额',src.amount.toFixed(2),r.amount.toFixed(2)],['关联业务单号',src.bizNo,r.bizNo],['说明',src.remark,r.remark]]
+      .filter(x=>x[1]!==x[2]).map(x=>x[0]=='说明'?'说明已修改':`${x[0]} ${x[1]}→${x[2]}`);
+    link=`重提原单 ${src.adjustNo}，上次驳回意见：${(src.apv||{}).comment||'—'}；本次变更：${ch.length?ch.join('，'):'本次未改内容'}`;
+  }
+  modalWide(`<div class="mc-hd"><h3>飞书审批单</h3><p>原型模拟：审批人在飞书「审批」应用中看到的内容；飞书表单不支持颜色，全部为纯文本</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd" style="background:#F5F6F7">
+    <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(31,35,41,.08);overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid #F0F1F3;display:flex;align-items:center;gap:10px">
+        <div style="width:34px;height:34px;border-radius:8px;background:#3370FF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">调</div>
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;color:#1F2329">业务调整单 · ${esc(shopName(r.shopCode))} · ${amtTxt.replace(' ','')}</div><div style="font-size:12px;color:#8F959E;margin-top:2px">${esc(r.createdBy)} 提交于 ${r.createdAt}</div></div>
+        <span style="font-size:12px;padding:2px 8px;border-radius:4px;color:${res[1]};background:${res[2]};flex:none">${res[0]}</span>
+      </div>
+      <div style="padding:6px 20px 12px">
+        ${row('金额',amtTxt)}
+        ${row('店铺',`${esc(shopName(r.shopCode))}（${r.shopCode}）`)}
+        ${row('调整类型',esc(r.adjustTypeName))}
+        ${row('调整说明',esc(r.remark))}
+        ${row('关联业务单号',esc(r.bizNo))}
+        ${link?row('关联原单',esc(link)):''}
+        ${r.dupHint?row('重复提醒','⚠ 疑似重复：'+esc(r.dupHint)):''}
+        ${r.attachCount?row('附件',`共 ${r.attachCount} 个附件，请在运营平台详情查看`):''}
+        ${row('所属商家',`${esc(merchantName(mc))}（${mc}）`)}
+        ${row('抵扣方式',t.ded=='INVOICE'?'票扣':'账扣')}
+        ${row('调整单号',r.adjustNo)}
+        ${row('运营平台详情',`https://ops.foodmax.sg/adjust/list?adjustNo=${r.adjustNo}`)}
+      </div>
+      ${pend?`<div style="padding:12px 20px;border-top:1px solid #F0F1F3">
+        <div style="font-size:11.5px;color:#8F959E;margin-bottom:6px">演示：模拟审批人在飞书操作（生产不渲染）</div>
+        <textarea id="apv-cmt" rows="2" placeholder="审批意见（拒绝时必填）" style="width:100%;border:1px solid #DEE0E3;border-radius:6px;padding:8px;font-size:13px"></textarea>
+        <div id="apv-err" style="font-size:12px;color:#F54A45;min-height:16px"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn btn-o" onclick="adj_apvAct('${r.adjustNo}',false)">拒绝</button>
+          <button class="btn btn-p" style="background:#3370FF;border-color:#3370FF" onclick="adj_apvAct('${r.adjustNo}',true)">同意</button>
+        </div></div>`
+      :`<div style="padding:12px 20px;border-top:1px solid #F0F1F3;font-size:12.5px;color:#646A73">${r.apv.approver?`${esc(r.apv.approver)} 于 ${r.apv.at||'—'} ${r.status=='rejected'?'拒绝':'同意'}：${esc(r.apv.comment)}`:'审批已撤回'}</div>`}
+    </div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
+};
+window.adj_apvAct=function(no,ok){
+  const r=(DB.adjOrders||[]).find(x=>x.adjustNo==no); if(!r||r.status!='approving'){closeModal();render();return;}
+  const c=String((document.getElementById('apv-cmt')||{}).value||'').trim();
+  if(!ok&&!c){const e=document.getElementById('apv-err'); if(e) e.textContent='拒绝时请填写审批意见'; return;}
+  const now=ts();
+  Object.assign(r.apv,{approver:'王蕾', comment:c||'同意', at:now});
+  if(ok){ r.status='effective'; r.effectiveTime=now; addLog(no,'审批通过，意见：'+(c||'同意')); }
+  else { r.status='rejected'; addLog(no,'审批驳回，意见：'+c); }
+  closeModal(); render(); adj_detail(no);
+  toast(ok?`调整单 ${no} 审批通过，已进入待推送`:`调整单 ${no} 已被驳回`, ok?'ok':'info');
 };
 
 /* ================= 作废 ================= */
 window.adj_voidAsk=function(no){
   const r=adjOf(no); if(!r||!canVoid(r)) return;
   const s=adjSign(r);
-  modal(`<div class="mc-hd"><h3>作废调整单</h3><p>${r.adjustNo} · 尚未推送</p><button class="mc-x" onclick="closeModal()">×</button></div>
+  const apv=r.status=='approving';
+  modal(`<div class="mc-hd"><h3>作废调整单</h3><p>${r.adjustNo} · ${apv?'审批中':'尚未推送'}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="ib ib-y"><span class="i">⚠️</span>作废后本单不会推送给下游，且不可恢复。</div>
+    <div class="ib ib-y"><span class="i">⚠️</span>作废后本单不会推送给下游，且不可恢复。${apv?'飞书审批会同步撤回。':''}</div>
     <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin:10px 0 12px"><table style="margin:0"><tbody>
       <tr><td style="color:var(--ts);width:120px">店铺</td><td>${esc(shopName(r.shopCode))} <span class="mono" style="color:var(--ts)">${r.shopCode}</span></td></tr>
       <tr><td style="color:var(--ts)">调整类型</td><td>${esc(r.adjustTypeName)}</td></tr>
@@ -499,15 +623,16 @@ window.adj_voidAsk=function(no){
 };
 window.adj_voidDo=function(no,recreate){
   const r=(DB.adjOrders||[]).find(x=>x.adjustNo==no); if(!r) return;
-  if(!(r.pushStatus=='PENDING'&&r.status=='effective')){closeModal();closeDrawer();render();toast('该单已被推送或已作废，无法作废','err');return;}
+  if(!(r.pushStatus=='PENDING'&&(r.status=='effective'||r.status=='approving'))){closeModal();closeDrawer();render();toast('该单已被推送、已驳回或已作废，无法作废','err');return;}
   const why=String((document.getElementById('av-why')||{}).value||'').trim(), e=document.getElementById('av-err');
   if(!why){ if(e) e.textContent='请填写作废原因'; return; }
   if([...why].length>200){ if(e) e.textContent='作废原因不能超过 200 字'; return; }
-  r.status='voided'; r.voidReason=why; addLog(no,'作废，原因：'+why);
+  const wasApv=r.status=='approving';
+  r.status='voided'; r.voidReason=why; addLog(no,'作废，原因：'+why+(wasApv?'（已撤回飞书审批）':''));
   DB.adjSel=DB.adjSel.filter(x=>x!=no);
   closeModal();closeDrawer();render();
   if(recreate) adj_newAsk(false,'recreate',no);
-  else toast('调整单 '+no+' 已作废','ok');
+  else toast('调整单 '+no+' 已作废'+(wasApv?'，飞书审批已撤回':''),'ok');
 };
 
 /* ================= 批量推送（人工单） ================= */
