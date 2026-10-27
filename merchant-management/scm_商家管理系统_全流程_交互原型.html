@@ -1325,6 +1325,7 @@ const NAV={
     {id:'p-inv-query',ic:'🔎',t:'发票查询',p1:1},
     {sec:'供货'},
     {id:'p-label-reprint',ic:'🏷️',t:'标签补打',p1:1},
+    {id:'p-shortage',ic:'📉',t:'商家报缺',p1:1,badge:()=>typeof shortPendingCount=='function'?shortPendingCount():0,by:'y'},
     {id:'p-consign',ic:'🧾',t:'供货单管理',p1:1,badge:()=>DB.consigns?DB.consigns.filter(c=>c.status==10).length:0},
     {id:'p-consign-return',ic:'↩️',t:'退货单管理',p1:1,badge:()=>DB.consignReturns?DB.consignReturns.filter(r=>r.status==10).length:0,by:'y'},
     {sec:'耗材'},
@@ -6402,7 +6403,7 @@ goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260917a"></script>
-<script src="pc-modules/pick.js?v=20260923i"></script>
+<script src="pc-modules/pick.js?v=20261027a"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
 <script src="pc-modules/delivery.js?v=20261015b"></script>
 <script src="pc-modules/checkgoods.js?v=20261015e"></script>
@@ -6422,5 +6423,6 @@ goHome();
 <script src="pc-modules/adjust.js?v=20261022b"></script>
 <script src="pc-modules/pickfee.js?v=20261012c"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
+<script src="pc-modules/shortage.js?v=20261027a"></script>
 </body>
 </html>

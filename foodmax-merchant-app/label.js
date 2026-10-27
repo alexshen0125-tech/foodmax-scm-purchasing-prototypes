@@ -81,7 +81,7 @@ document.head.appendChild(css);
 
 /* ================= 标签打印 Tab ================= */
 const state={date:null,wh:'',name:''};
-const pend=()=>(window.FM.DB.orders||[]).filter(o=>o.status==='pending');
+const pend=()=>(window.FM.DB.orders||[]).filter(o=>o.status==='pending'||o.status==='packed');   // 与 PC refOrders 同口径：待发货（含已贴标）
 const dates=()=>[...new Set(pend().map(o=>o.deliver))];
 const whs=()=>[...new Set(pend().map(o=>o.warehouse))];
 function yday(sku){let h=7;for(const c of String(sku))h=(h*31+c.charCodeAt(0))>>>0;return 5+h%95;}
@@ -96,8 +96,9 @@ function rows(){
     (o.lines||[]).forEach(l=>{
       if(f.name&&!(l.name||'').includes(f.name)&&!(l.sku||'').includes(f.name))return;
       const key=o.warehouse+'|'+l.sku,m=metaOf(l.sku);
-      if(!agg[key])agg[key]={key,wh:o.warehouse,sku:l.sku,name:l.name,unit:l.unit,cat:m.cat,spec:m.spec,refund:m.refund,qty:0};
-      agg[key].qty+=l.qty;});
+      if(!agg[key])agg[key]={key,wh:o.warehouse,sku:l.sku,name:l.name,unit:l.unit,cat:m.cat,spec:m.spec,refund:m.refund,qty:0,shortQty:0};
+      const sh=window.FM_SHORT?window.FM_SHORT.lineOf(o.id,l.sku):0;   // 商家报缺扣减（shortage.js）
+      agg[key].qty+=l.qty-sh;agg[key].shortQty+=sh;});
   });
   // 应送货 = max(0, max(订单量, 预送量) − 在仓剩余)：预送量是全天预测总量、已含订单量，取大不相加（四处同口径）
   // 预送量标签形态与订单货一致：按 SKU 一件一张、不含订单/客户信息
@@ -106,7 +107,8 @@ function rows(){
     const g=(typeof PS_QTY==='function')?PS_QTY(r.name,r.wh):0,lf=(typeof PS_LEFT==='function')?PS_LEFT(r.name,r.wh):0;
     const need=Math.max(r.ordQty,g);
     r.psGross=g;r.needQty=need;r.leftQty=Math.min(lf,need);
-    r.qty=Math.max(0,need-lf);});          // max(0, max(订单量,预送量) − 在仓剩余)
+    r.qty=Math.max(0,need-lf);             // max(0, max(订单量,预送量) − 在仓剩余)
+    if(r.shortQty){r.psGross=0;r.leftQty=0;r.needQty=r.ordQty;r.qty=r.ordQty;}});   // 报缺的 SKU 当日不送预送量
   return out;
 }
 
@@ -130,20 +132,23 @@ function renderPrint(box){
       <div class="lb-frow"><span class="lb-fl">商品名称</span><input class="lb-search" id="lb-name" placeholder="输入商品名 / SKU 编码" value="${state.name||''}"></div>
     </div>
     <div class="lb-sum"><div class="k"><div class="v">${should}</div><div class="l">应送货(张)</div></div><div class="k"><div class="v g">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${unpr}</div><div class="l">未打印</div></div></div>
+    <div class="bq-entry" id="lb-bq"><span>📉 报缺记录${window.FM_SHORT&&window.FM_SHORT.count(state.date)?`（${window.FM_SHORT.count(state.date)}）`:''} <span class="bq-tag ${window.FM.DB.labelCutoff?'gr':'y'}" id="lb-cut" title="演示：点击切换截单状态">${window.FM.DB.labelCutoff?'已截单':'未截单'}</span></span><span class="c">缺货在标签详情里报 ›</span></div>
     ${rs.length?whSet.map(w=>`
       <div class="lb-sec">${w}<span class="hint">应送货 ${byWh[w].reduce((a,r)=>a+r.qty,0)} 张</span></div>
       <div class="lb-tbl">${byWh[w].map(r=>{const pr=Math.min(r.qty,printedOf(r.key)),un=r.qty-pr;
         const wtag=r.refund?(weighed(r.key)?'<span class="wtag done">已称重</span>':'<span class="wtag wait">待称重</span>'):'';
         return `<div class="lb-row" data-key="${r.key}">
-        <div class="top"><span class="nm">${r.name}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
+        <div class="top"><span class="nm">${r.name}${window.FM_SHORT?window.FM_SHORT.tags(state.date,r.wh,r.sku):''}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
-        <div class="meta">订单 ${r.ordQty}${r.psGross?` · <b style="color:var(--amber)">预送 ${r.psGross}</b> · 取大 ${r.needQty}`:''}${r.leftQty?` · <b style="color:var(--emerald-2)">抵扣在仓 −${r.leftQty}</b>`:''}</div>
+        ${printedOf(r.key)>r.qty?`<div class="meta" style="color:#C0453B">多打 ${printedOf(r.key)-r.qty} 张，请作废序号 ${r.qty+1}–${printedOf(r.key)}</div>`:''}
+        <div class="meta">订单 ${r.ordQty+(r.shortQty||0)}${r.shortQty?` · <b style="color:#C0453B">报缺 −${r.shortQty}</b>`:''}${r.psGross?` · <b style="color:var(--amber)">预送 ${r.psGross}</b> · 取大 ${r.needQty}`:''}${r.leftQty?` · <b style="color:var(--emerald-2)">抵扣在仓 −${r.leftQty}</b>`:''}</div>
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span></div>
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
     :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>该筛选下暂无应送货标签</h4><p>切换配送日期 / 仓库看看</p></div>`}
     <div style="height:12px"></div>`;
   df.bind(box);
+  const bq=box.querySelector('#lb-bq');if(bq)bq.onclick=e=>{if(e.target.id==='lb-cut'){window.FM.DB.labelCutoff=!window.FM.DB.labelCutoff;renderPrint(box);return;}if(window.FM_SHORT)window.FM_SHORT.records(state.date,()=>renderPrint(box));};
   box.querySelectorAll('.lb-row[data-key]').forEach(el=>el.onclick=()=>openLabelDetail(el.dataset.key));
   box.querySelectorAll('[data-wh]').forEach(el=>el.onclick=()=>{state.wh=el.dataset.wh;renderPrint(box);});
   const s=box.querySelector('#lb-name');if(s)s.oninput=()=>{state.name=s.value.trim();const p=s.selectionStart;renderPrint(box);const n=box.querySelector('#lb-name');if(n){n.focus();n.setSelectionRange(p,p);}};
@@ -400,7 +405,8 @@ function preReprint(id,box){
 
 /* ================= 标签打印 · SKU 详情页（点击进入打印） ================= */
 function rowOf(key){const [wh,sku]=key.split('|');const m=metaOf(sku);let qty=0,name='',unit='件';
-  pend().forEach(o=>{if(o.warehouse!==wh)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;qty+=(+l.qty||0);name=l.name;unit=l.unit;});});
+  let sq=0;pend().forEach(o=>{if(o.warehouse!==wh)return;if(state.date&&o.deliver!==state.date)return;(o.lines||[]).forEach(l=>{if(l.sku!==sku)return;const sh=window.FM_SHORT?window.FM_SHORT.lineOf(o.id,sku):0;qty+=(+l.qty||0)-sh;sq+=sh;name=l.name;unit=l.unit;});});
+  if(sq)return {key,wh,sku,name,unit,ordQty:qty,shortQty:sq,psGross:0,needQty:qty,leftQty:0,qty,cat:metaOf(sku).cat,spec:metaOf(sku).spec,refund:metaOf(sku).refund};
   const g=(typeof PS_QTY==='function')?PS_QTY(name,wh):0;
   const need=Math.max(qty,g),lf=Math.min(need,(typeof PS_LEFT==='function')?PS_LEFT(name,wh):0);   // BR-15b：取大后扣在仓
   return {key,wh,sku,name,unit,ordQty:qty,psGross:g,needQty:need,leftQty:lf,qty:Math.max(0,need-lf),cat:m.cat,spec:m.spec,refund:m.refund};}
@@ -423,6 +429,7 @@ function onPrintClick(key){const r=rowOf(key);
   reallyPrint(key);}
 function goWeighFor(){window.FM.popPage();LBTAB='weigh';if(LBROOT)mount(LBROOT);}
 window.lp_goWeigh=goWeighFor;
+window.lp_short=function(key){window.FM_SHORT.open(state.date,key,printedOf(key),()=>{drawLabelDetail(CURLP.querySelector('#lpd'),key);if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}});};
 // 按序号打印 / 补打：点弱按钮弹窗填 [起始,结束] 区间，漏打时补打指定几张
 window.lp_seqModal=function(key){const r=rowOf(key);
   if(r.refund&&!weighed(key)){window.FM.toast('该商品为多退少补，请先完成称重','err');return;}
@@ -462,6 +469,9 @@ function drawLabelDetail(box,key){
     ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
       :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>
         <div class="lp-seqlink" onclick="lp_seqModal('${key}')">🔢 按序号打印 / 补打</div>`}
+    ${r.shortQty?`<div class="lp-printer" style="color:#C0453B">📉 已报缺 ${r.shortQty}${r.unit||'件'}（订单 ${r.ordQty+r.shortQty} → 应送 ${r.qty}）${window.FM_SHORT.stopped(state.date,r.wh,r.sku)?' · 已停售':''}</div>`:''}
+    ${printedOf(key)>r.qty?`<div class="lp-gatetip">🏷 多打 ${printedOf(key)-r.qty} 张：请作废<b>序号 ${r.qty+1}–${printedOf(key)}</b> 的标签，不要贴到货上。</div>`:''}
+    ${window.FM_SHORT&&r.ordQty>0?`<div class="bq-lk" onclick="lp_short('${key}')">缺货了？报缺货 ›</div>`:''}
     <div style="height:14px"></div>`;
   refreshPrintFooter(key);
 }
