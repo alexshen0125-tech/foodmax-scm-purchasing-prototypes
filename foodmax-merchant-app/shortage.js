@@ -4,8 +4,9 @@
    - 报缺时看 SKU 当前售卖状态：售卖中 → 提交即自动下架（可在报缺记录重新上架，上架后新单不参与分摊）；售罄/已下架 → 不处理
    - 报缺【不影响打印标签数据】，商家端【不展示订单】（2026-10-27 用户改）：分摊结果只给客服看
    - 通知客服：小蜜蜂推飞书群 + 运营平台「商家报缺」待办；系统不自动改单
-   - 报缺不产生罚款（2026-10-27 定）
+   - 报缺本身不产生罚款；仓库到仓少收照现有逻辑罚（2026-10-27 定）
    - 撤销：客服未处理任何一单前可撤销
+   - 重新上架 / 撤销连带上架：仅当本单自动下架、SKU 当前仍下架、且同 SKU 没有其他有效报缺单（PRD BR-08）
    前缀 bq-。数据挂 window.FM.DB.shortReports。 */
 (function(){
 const FM=window.FM,D=FM.DB;
@@ -53,6 +54,7 @@ css.textContent=`
 .bq-tag.r{background:#FBEAE8;color:#C0453B;}
 .bq-tag.gr{background:var(--muted);color:var(--sub);}
 .bq-tag.y{background:#FBF3E2;color:#A9711F;}
+.bq-tag.b{background:#E8EFFD;color:#2563EB;}
 .bq-tag.g{background:var(--mint-soft);color:var(--emerald-2);}
 .bq-entry{margin:12px 16px 0;display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:14px;padding:12px 15px;box-shadow:var(--sh-sm);font-size:13.5px;font-weight:600;cursor:pointer;min-height:44px;box-sizing:border-box;}
 .bq-entry .c{color:var(--sub);font-weight:500;font-size:12.5px;}
@@ -79,7 +81,9 @@ function info(date,wh,sku){let ordered=0,name='',unit='件',spec='';
   D.orders.filter(o=>(o.status==='pending'||o.status==='packed')&&o.deliver===date&&o.warehouse===wh).forEach(o=>(o.lines||[]).forEach(l=>{if(l.sku===sku){ordered+=l.qty;name=l.name;unit=l.unit||'件';spec=l.spec||'';}}));
   return {ordered,name,unit,spec,reported:keyShort(date,wh,sku)};}
 function repStatus(r){if(r.status==='revoked')return 'revoked';const d=r.allocs.filter(a=>a.cs==='done').length;return d===0?'pending':(d===r.allocs.length?'done':'doing');}
-const ST={pending:['y','待处理'],doing:['y','处理中'],done:['g','已处理'],revoked:['gr','已撤销']};
+const otherActive=r=>D.shortReports.some(x=>x!==r&&active(x)&&x.sku===r.sku);
+const canRelist=r=>r.status!=='revoked'&&r.stopSale&&saleOf(r.sku)==='已下架'&&!otherActive(r);
+const ST={pending:['y','待处理'],doing:['b','处理中'],done:['g','已处理'],revoked:['gr','已撤销']};
 
 /* ---------- 报缺页（pushPage，底部主按钮 = 确认报缺） ---------- */
 function open(date,key,printed,onDone){
@@ -92,24 +96,26 @@ function open(date,key,printed,onDone){
         <div class="bq-sum"><div class="k"><div class="v">${li.ordered}</div><div class="l">订单量</div></div><div class="k"><div class="v">${li.reported}</div><div class="l">已报缺</div></div><div class="k"><div class="v r">${cap}</div><div class="l">还可报缺</div></div></div></div>
       <div class="bq-card"><div class="bq-h">缺货数量（${li.unit}）</div>
         <div class="bq-step"><div class="b ${st.qty<=1?'off':''}" data-d="-1">−</div><input id="bq-q" type="number" inputmode="numeric" value="${st.qty}"><div class="b ${st.qty>=cap?'off':''}" data-d="1">+</div></div>
-        <div class="bq-all" data-all="1">全部缺货（${cap}）</div></div>
-      <div class="bq-tip g">📣 提交后平台客服会联系受影响的客户处理。打印标签数量不变，按实际能送的货贴标送货即可。</div>
+        <div class="bq-all" data-all="1">全部缺货（${cap}）</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;margin-top:6px"><span style="font-size:13px;color:var(--sub)">实际能送（${li.unit}）</span><input id="bq-send" class="bq-in" style="width:96px;text-align:center" type="number" inputmode="numeric" value="${cap-st.qty}"></div></div>
+      <div class="bq-tip g">📣 缺的 ${st.qty} ${li.unit}不用送，标签只打、只贴实际送的件数。提交后平台客服会联系受影响的客户处理。</div>
       <div class="bq-card" style="display:flex;justify-content:space-between;align-items:center"><span class="bq-h" style="margin:0">当前售卖状态</span><span class="bq-tag ${SALE_CLS[saleOf(sku)]}" style="font-size:12px;padding:3px 10px">${saleOf(sku)}</span></div>
-      ${saleOf(sku)==='售卖中'?`<div class="bq-tip y">⏸ 该商品<b>售卖中</b>：提交后会<b>自动下架</b>，不再接新单。货到了可在「报缺记录」重新上架。</div>`:''}
+      ${saleOf(sku)==='售卖中'?`<div class="bq-tip y">⏸ 该商品<b>售卖中</b>：提交后会<b>自动下架</b>，不再接新单。货到了可在「报缺记录」或「商品管理」重新上架。</div>`:''}
       <div class="bq-card"><div class="bq-h">缺货原因</div><div class="lb-pills">${REASONS.map(x=>`<span class="lb-pill ${st.rmk===x?'on':''}" data-rs="${x}">${x}</span>`).join('')}</div></div>
       <div style="height:16px"></div>`;
     box.querySelectorAll('.bq-step .b').forEach(b=>b.onclick=()=>{st.qty=Math.max(1,Math.min(cap,st.qty+(+b.dataset.d)));draw(box);});
     box.querySelector('[data-all]').onclick=()=>{st.qty=cap;draw(box);};
     const q=box.querySelector('#bq-q');q.onchange=()=>{let n=parseInt(q.value,10);if(isNaN(n)||n<1)n=1;if(n>cap){n=cap;FM.toast(`最多可报 ${cap}（订单量 − 已报缺）`);}st.qty=n;draw(box);};
     box.querySelectorAll('[data-rs]').forEach(el=>el.onclick=()=>{st.rmk=el.dataset.rs;draw(box);});
+    const sd=box.querySelector('#bq-send');sd.onchange=()=>{let n=parseInt(sd.value,10);if(isNaN(n)||n<0)n=0;if(n>cap-1){n=cap-1;FM.toast(`实际能送最多 ${cap-1}（至少缺 1 件才需要报缺）`);}st.qty=cap-n;draw(box);};
   };
   FM.pushPage({title:'报缺货',body:'<div id="bq-b"></div>',footer:'<button class="btn danger" id="bq-ok" style="background:#C0453B;color:#fff">确认报缺</button>',
     mount:p=>{const box=p.querySelector('#bq-b');draw(box);
       p.querySelector('#bq-ok').onclick=()=>{const q=box.querySelector('#bq-q');if(q)q.onchange&&q.onchange();
-        const al=allocate(date,wh,sku,st.qty);if(!al.length){FM.toast('没有可分摊的订单','err');return;}
-        D.shortReports.unshift({id:'BQ'+date.replace('-','')+String(++D.shortSeq).padStart(3,'0'),date,wh,sku,name:li.name,unit:li.unit,spec:li.spec,qty:st.qty,rmk:st.rmk,
+        const al=allocate(date,wh,sku,st.qty);if(!al.length){FM.toast('没有可分单的订单','err');return;}
+        D.shortReports.unshift({id:'BQ2026'+date.replace('-','')+String(++D.shortSeq).padStart(6,'0'),date,wh,sku,name:li.name,unit:li.unit,spec:li.spec,qty:st.qty,rmk:st.rmk,
           time:nowStr(),phase:D.labelCutoff?'after':'before',saleAt:saleOf(sku),stopSale:saleOf(sku)==='售卖中',restoredAt:'',
-          allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),status:'active'});
+          allocs:al.map(a=>({orderId:a.orderId,client:a.client,contact:(D.orders.find(o=>o.id===a.orderId)||{}).contact||'',phone:(D.orders.find(o=>o.id===a.orderId)||{}).phone||'',orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),status:'active'});
         const auto=saleOf(sku)==='售卖中';if(auto)D.skuSale[sku]='已下架';   // 售卖中 → 自动下架；售罄/已下架不处理
         FM.popPage();onDone&&onDone();
         FM.toast(`已报缺 ${st.qty}${li.unit}，已通知客服处理${auto?'；该商品已自动下架':''}`,'ok');};}});
@@ -122,13 +128,15 @@ function records(date,onChange){
       <div class="r1"><span class="nm">${r.name}<span class="bq-tag r">缺 ${r.qty}</span><span class="bq-tag ${SALE_CLS[saleOf(r.sku)]}">${saleOf(r.sku)}</span></span><span class="bq-tag ${ST[s][0]}">${ST[s][1]}</span></div>
       <div class="m">${r.id} · ${r.wh} · ${r.sku}</div>
       <div class="m">报缺 ${r.time} · ${r.phase==='before'?'截单前':'截单后'}${r.rmk?` · ${r.rmk}`:''}</div>
-      ${(r.stopSale&&r.status!=='revoked'&&saleOf(r.sku)==='已下架')||s==='pending'?`<div class="ops">${r.stopSale&&r.status!=='revoked'&&saleOf(r.sku)==='已下架'?`<button class="btn" data-rs="${r.id}">重新上架</button>`:''}${s==='pending'?`<button class="btn" style="color:#C0453B" data-rv="${r.id}">撤销报缺</button>`:''}</div>`:''}
+            <div class="m">自动下架 ${r.stopSale?'是':'否'}${r.restoredAt?` · 重新上架 ${r.restoredAt}`:''}</div>
+      ${canRelist(r)||s==='pending'?`<div class="ops">${canRelist(r)?`<button class="btn" data-rs="${r.id}">重新上架</button>`:''}${s==='pending'?`<button class="btn" style="color:#C0453B" data-rv="${r.id}">撤销报缺</button>`:''}</div>`:''}
     </div>`;}).join('')+'<div style="height:16px"></div>'
     :`<div class="empty"><h4>该配送日暂无报缺</h4><p>在标签详情页点「报缺货」上报</p></div>`;
     box.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{const r=D.shortReports.find(x=>x.id===b.dataset.rs);
-      FM.confirmDialog({title:`重新上架「${r.name}」？`,body:'上架后新进的订单不参与本次报缺分摊，按正常订单备货送货。',okText:'重新上架',onOk:()=>{D.skuSale[r.sku]='售卖中';r.restoredAt=nowStr();draw(box);onChange&&onChange();FM.toast('已重新上架','ok');}});});
+      FM.confirmDialog({title:`重新上架「${r.name}」？`,body:'上架后新进的订单不参与本次报缺分单，按正常订单备货送货。',okText:'重新上架',onOk:()=>{D.skuSale[r.sku]='售卖中';r.restoredAt=nowStr();draw(box);onChange&&onChange();FM.toast('已重新上架','ok');}});});
     box.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{const r=D.shortReports.find(x=>x.id===b.dataset.rv);
-      FM.confirmDialog({title:`撤销报缺 ${r.id}？`,body:`${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale&&saleOf(r.sku)==='已下架'?'商品同时重新上架，':''}向客服推送撤销通知。`,danger:true,okText:'撤销',onOk:()=>{if(r.stopSale&&saleOf(r.sku)==='已下架')D.skuSale[r.sku]='售卖中';r.status='revoked';draw(box);onChange&&onChange();FM.toast('已撤销，已通知客服','ok');}});});
+      const re=canRelist(r);
+      FM.confirmDialog({title:`撤销报缺 ${r.id}？`,body:`撤销后客服不再处理这 ${r.qty}${r.unit}「${r.name}」缺货，请按订单量正常送货。${re?'商品同时重新上架。':''}`,danger:true,okText:'撤销',onOk:()=>{if(re)D.skuSale[r.sku]='售卖中';r.status='revoked';draw(box);onChange&&onChange();FM.toast('已撤销，已通知客服','ok');}});});
   };
   FM.pushPage({title:'报缺记录 · '+date,body:'<div id="bq-rl"></div>',mount:p=>draw(p.querySelector('#bq-rl'))});
 }

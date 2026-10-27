@@ -139,7 +139,7 @@ function renderPrint(box){
         <div class="top"><span class="nm">${r.name}${window.FM_SHORT?window.FM_SHORT.tags(state.date,r.wh,r.sku):''}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
         <div class="meta">订单 ${r.ordQty}${r.psGross?` · <b style="color:var(--amber)">预送 ${r.psGross}</b> · 取大 ${r.needQty}`:''}${r.leftQty?` · <b style="color:var(--emerald-2)">抵扣在仓 −${r.leftQty}</b>`:''}</div>
-        <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span></div>
+        <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span>${window.FM_SHORT&&r.ordQty>0?`<span class="i lb-bqbtn" data-bq="${r.key}" style="margin-left:auto;color:#C0453B;font-weight:700;padding:6px 0 6px 12px">报缺货</span>`:''}</div>
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
     :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>该筛选下暂无应送货标签</h4><p>切换配送日期 / 仓库看看</p></div>`}
@@ -147,6 +147,7 @@ function renderPrint(box){
   df.bind(box);
   const bq=box.querySelector('#lb-bq');if(bq)bq.onclick=e=>{if(e.target.id==='lb-cut'){window.FM.DB.labelCutoff=!window.FM.DB.labelCutoff;renderPrint(box);return;}if(window.FM_SHORT)window.FM_SHORT.records(state.date,()=>renderPrint(box));};
   box.querySelectorAll('.lb-row[data-key]').forEach(el=>el.onclick=()=>openLabelDetail(el.dataset.key));
+  box.querySelectorAll('[data-bq]').forEach(el=>el.onclick=e=>{e.stopPropagation();window.FM_SHORT.open(state.date,el.dataset.bq,printedOf(el.dataset.bq),()=>renderPrint(box));});   // 列表行直接报缺（≤3 步）
   box.querySelectorAll('[data-wh]').forEach(el=>el.onclick=()=>{state.wh=el.dataset.wh;renderPrint(box);});
   const s=box.querySelector('#lb-name');if(s)s.oninput=()=>{state.name=s.value.trim();const p=s.selectionStart;renderPrint(box);const n=box.querySelector('#lb-name');if(n){n.focus();n.setSelectionRange(p,p);}};
 }

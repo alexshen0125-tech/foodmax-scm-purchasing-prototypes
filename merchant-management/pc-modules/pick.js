@@ -287,7 +287,7 @@
         <td style="text-align:right">${last||(un>0?un:'—')}</td>
         <td style="white-space:nowrap">${un<=0?'<span style="color:var(--ts)">打印完成</span>':(wgBlocked(r)
           ?`<button class="btn btn-p btn-sm" disabled title="该商品有 ${r.wgWait} 个订单未录实发净重，完成称重后才能打印">打印</button> <button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重</button>`
-          :`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`)}${r.ordQty>0?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_open('${r.key}')">报缺货</button>`:''}</td>
+          :`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`)}${r.ordQty>0?(r.ordQty-(r.shortQty||0)>0?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_open('${r.key}')">报缺货</button>`:` <button class="btn btn-link btn-sm" disabled title="该商品订单量已全部报缺">报缺货</button>`):''}</td>
       </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
       </tbody></table></div></div></div>`;
   }
