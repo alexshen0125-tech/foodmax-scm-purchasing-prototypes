@@ -9,7 +9,8 @@
        · 截单前报 → 该 SKU【立即停售】（可售库存清零、不再接新单），分摊结果立即定稿并推送；
          商家可手动「恢复售卖」，恢复后新进的订单不参与本次分摊。
        · 截单后报 → 订单已固定，直接分摊推送。
-   - 报缺后：该 SKU 应送货、未打印数实时扣减；已打印 > 新应送的，提示作废多打的序号段。
+   - 报缺【不影响打印标签数据】：应送货/已打印/未打印照旧，只在行上标「已报缺 N」（2026-10-27 用户改）。
+   - 商家端【不展示订单】：分摊到哪些订单只给客服看（运营平台待办 + 飞书群），商家弹窗/记录不出现订单。
    - 客服：系统不自动改单。通知 = 小蜜蜂推飞书群 + 运营平台「商家报缺」待办；
            客服联系客户后在客诉链路处理（部分退款 / 补自营商品 / 客户接受少送），回到待办登记结果。
    - 罚款：主动报缺【照罚不减免】，件数 × 缺货罚款标准（replFineRate），并入该仓送货单的缺货罚款单。
@@ -69,13 +70,12 @@
       <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="short_submit()">确认报缺</button></div>`);
   };
   function draftBody(){
-    const d=DB.shortDraft,li=d.li;const al=allocate(d.date,d.wh,d.sku,d.qty);
-    const canSend=li.ordered-li.reported-d.qty;const over=Math.max(0,d.printed-canSend);
+    const d=DB.shortDraft,li=d.li;
     const fine=d.qty*replFineRate();
     return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-        <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">${li.ordered}</div>${li.reported?`<div class="sc-s">已报缺 ${li.reported}</div>`:''}</div>
-        <div class="sc"><div class="sc-l">已打印</div><div class="sc-v">${d.printed}</div></div>
-        <div class="sc ${canSend<li.ordered?'warn':''}"><div class="sc-l">报缺后应送</div><div class="sc-v">${canSend}</div></div>
+        <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">${li.ordered}</div></div>
+        <div class="sc"><div class="sc-l">已报缺</div><div class="sc-v">${li.reported}</div></div>
+        <div class="sc"><div class="sc-l">还可报缺</div><div class="sc-v">${d.cap}</div></div>
       </div>
       <div class="fr"><label class="fl"><b>*</b>缺货数量（${li.unit}）</label>
         <div class="row" style="gap:8px;align-items:center">
@@ -84,13 +84,8 @@
           <button class="btn btn-o btn-sm" onclick="short_step(1)" ${d.qty>=d.cap?'disabled':''}>+</button>
           <button class="btn btn-link btn-sm" onclick="short_setQty(${d.cap},1)">全部缺货（${d.cap}）</button>
         </div></div>
-      <div style="font-size:12.5px;color:var(--ts);margin:12px 0 6px">按<b>下单时间从晚到早</b>扣到以下订单，提交后通知客服联系客户：</div>
-      <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden"><table style="margin:0">
-        <thead><tr><th>订单号</th><th>客户</th><th>下单时间</th><th style="text-align:right">订购数量</th><th style="text-align:right">缺货数量</th></tr></thead><tbody>
-        ${al.map(a=>`<tr><td class="mono">${a.orderId}</td><td>${ord_mask(a.client)}</td><td>${a.orderTime}</td><td style="text-align:right">${a.ordered}</td><td style="text-align:right;color:var(--r);font-weight:600">${a.short}</td></tr>`).join('')}
-      </tbody></table></div>
-      ${DB.labelCutoff?'':`<div class="ib ib-y" style="margin-top:12px"><span class="i">⏸️</span><div>当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单，以上分摊结果不再变化。货到了可在「报缺记录」里恢复售卖。</div></div>`}
-      ${over?`<div class="ib ib-r" style="margin-top:12px"><span class="i">🏷️</span><div>已打印 ${d.printed} 张，报缺后应送 ${canSend}：请把<b>序号 ${canSend+1}–${d.printed}</b> 的 ${over} 张标签作废，不要贴到货上。</div></div>`:''}
+      <div class="ib ib-b" style="margin-top:12px"><span class="i">📣</span><div>提交后平台客服会联系受影响的客户处理。打印标签数量不变，按实际能送的货贴标送货即可。</div></div>
+      ${DB.labelCutoff?'':`<div class="ib ib-y" style="margin-top:12px"><span class="i">⏸️</span><div>当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单。货到了可在「报缺记录」里恢复售卖。</div></div>`}
       <div class="ib ib-gr" style="margin-top:12px"><span class="i">⚖️</span><div>报缺的件数照常计<b>缺货罚款</b>：${d.qty} × ${money(replFineRate())} = <b>${money(fine)}</b>，并入该仓送货单的罚款单。</div></div>
       <div class="fr" style="margin-top:12px"><label class="fl">缺货原因</label><input id="sh-rmk" maxlength="100" placeholder="选填，如：供应商断货" value="${d.rmk||''}" oninput="DB.shortDraft.rmk=this.value"></div>`;
   }
@@ -107,7 +102,7 @@
       allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),
       status:'active',push:[{type:'报缺',at:nowStr()}]};
     DB.shortReports.unshift(r);DB.shortDraft=null;closeModal();render();
-    toast(`已报缺 ${d.qty}${d.li.unit}，扣到 ${al.length} 个订单；已通知客服（飞书群 + 运营平台待办）${r.stopSale?'；该商品已停售':''}`,'ok');
+    toast(`已报缺 ${d.qty}${d.li.unit}，已通知客服处理${r.stopSale?'；该商品已停售':''}`,'ok');
   };
 
   /* ================= 商家端 · 报缺记录抽屉 ================= */
@@ -115,10 +110,10 @@
     const date=(DB.labelF||{}).date;const list=DB.shortReports.filter(r=>r.date==date);
     drawer(`<div class="drawer-hd"><div><h3>报缺记录</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">配送日 ${date||'—'} · 共 ${list.length} 条</div></div><span class="x" onclick="closeDrawer()">×</span></div>
     <div class="drawer-bd">${list.length?`<div style="overflow-x:auto"><table>
-      <thead><tr><th>报缺单号</th><th>仓库</th><th>商品名称</th><th>SKU编码</th><th style="text-align:right">缺货数量</th><th style="text-align:right">受影响订单</th><th>报缺时间</th><th>售卖状态</th><th>客服处理</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>报缺单号</th><th>仓库</th><th>商品名称</th><th>SKU编码</th><th style="text-align:right">缺货数量</th><th>报缺时间</th><th>售卖状态</th><th>客服处理</th><th>操作</th></tr></thead><tbody>
       ${list.map(r=>{const st=repStatus(r);return `<tr>
         <td class="mono">${r.id}</td><td>${r.wh}</td><td><b>${r.name}</b></td><td class="mono">${r.sku}</td>
-        <td style="text-align:right">${r.qty}</td><td style="text-align:right">${r.allocs.length}</td><td>${r.time}</td>
+        <td style="text-align:right">${r.qty}</td><td>${r.time}</td>
         <td>${r.status=='revoked'?'—':(r.stopSale?'<span class="tag t-r"><span class="dot"></span>已停售</span>':(r.phase=='before'?'<span class="tag t-g"><span class="dot"></span>已恢复</span>':'<span style="color:var(--ts)">截单后报缺</span>'))}</td>
         <td>${stTag(st)}</td>
         <td style="white-space:nowrap"><button class="btn btn-link btn-sm" onclick="short_detail('${r.id}',0)">详情</button>${r.stopSale&&r.status!='revoked'?`<button class="btn btn-link btn-sm" onclick="short_restore('${r.id}')">恢复售卖</button>`:''}${st=='pending'?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_revoke('${r.id}')">撤销</button>`:''}</td>
@@ -154,13 +149,13 @@
         ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('售卖状态',r.status=='revoked'?'—':(r.stopSale?'已停售':(r.phase=='before'?`已恢复（${r.restoredAt}）`:'—')))}${kv('缺货原因',r.rmk)}${kv('缺货罚款',money(r.fine))}
         ${kv('处理状态',stTag(st))}
       </div>
-      <h4 style="font-size:14px;margin-bottom:12px">受影响订单</h4>
+      ${ops?`<h4 style="font-size:14px;margin-bottom:12px">受影响订单</h4>
       <div style="overflow-x:auto;margin-bottom:22px"><table>
         <thead><tr><th>订单号</th><th>客户</th><th>下单时间</th><th style="text-align:right">订购数量</th><th style="text-align:right">缺货数量</th><th>处理状态</th><th>处理方式</th><th>处理备注</th><th>处理时间</th>${ops&&r.status!='revoked'?'<th>操作</th>':''}</tr></thead><tbody>
-        ${r.allocs.map((a,i)=>`<tr><td class="mono">${a.orderId}</td><td>${ops?a.client:ord_mask(a.client)}</td><td>${a.orderTime}</td><td style="text-align:right">${a.ordered}</td><td style="text-align:right;color:var(--r);font-weight:600">${a.short}</td>
+        ${r.allocs.map((a,i)=>`<tr><td class="mono">${a.orderId}</td><td>${a.client}</td><td>${a.orderTime}</td><td style="text-align:right">${a.ordered}</td><td style="text-align:right;color:var(--r);font-weight:600">${a.short}</td>
           <td>${r.status=='revoked'?stTag('revoked'):stTag(a.cs=='done'?'done':'pending')}</td><td>${a.way||'—'}</td><td>${a.note||'—'}</td><td>${a.csAt||'—'}</td>
           ${ops&&r.status!='revoked'?`<td>${a.cs=='done'?'<span style="color:var(--ts)">—</span>':`<button class="btn btn-link btn-sm" onclick="short_handle('${r.id}',${i})">登记处理</button>`}</td>`:''}</tr>`).join('')}
-      </tbody></table></div>
+      </tbody></table></div>`:''}
       ${ops?`<h4 style="font-size:14px;margin-bottom:12px">飞书群通知 · ${FS_GROUP}</h4>
       <div style="display:flex;flex-direction:column;gap:12px">${r.push.map(p=>`<div><div style="font-size:12px;color:var(--ts);margin-bottom:6px">小蜜蜂 · ${p.at}</div>${fsCard(r,p.type)}</div>`).join('')}</div>`:''}
     </div>

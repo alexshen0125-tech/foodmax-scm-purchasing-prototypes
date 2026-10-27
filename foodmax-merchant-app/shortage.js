@@ -2,7 +2,7 @@
    与 PC pc-modules/shortage.js 同口径（沈亮 2026-10-27）：
    - 粒度 配送日 × 仓 × SKU；按【下单时间从晚到早】扣到订单（BR-02）
    - 截单前报 → 立即停售、分摊定稿；可在报缺记录里恢复售卖（恢复后新单不参与分摊）；截单后报 → 直接分摊
-   - 报缺后应送货、未打印实时扣减；已打印 > 新应送 → 提示作废多打序号段
+   - 报缺【不影响打印标签数据】，商家端【不展示订单】（2026-10-27 用户改）：分摊结果只给客服看
    - 通知客服：小蜜蜂推飞书群 + 运营平台「商家报缺」待办；系统不自动改单
    - 主动报缺照罚：件数 × 缺货罚款标准（S$40/件）
    - 撤销：客服未处理任何一单前可撤销
@@ -84,17 +84,14 @@ function open(date,key,printed,onDone){
   if(cap<=0){FM.toast('该商品订单量已全部报缺');return;}
   const st={qty:1,rmk:''};
   const draw=box=>{
-    const al=allocate(date,wh,sku,st.qty);const can=cap-st.qty;const over=Math.max(0,printed-can);
     box.innerHTML=`
       <div class="bq-card"><div class="bq-h">${li.name} · ${li.spec||li.unit} · ${wh} · 配送日 ${date}</div>
-        <div class="bq-sum"><div class="k"><div class="v">${li.ordered}</div><div class="l">订单量${li.reported?`(已报缺${li.reported})`:''}</div></div><div class="k"><div class="v">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${can}</div><div class="l">报缺后应送</div></div></div></div>
+        <div class="bq-sum"><div class="k"><div class="v">${li.ordered}</div><div class="l">订单量</div></div><div class="k"><div class="v">${li.reported}</div><div class="l">已报缺</div></div><div class="k"><div class="v r">${cap}</div><div class="l">还可报缺</div></div></div></div>
       <div class="bq-card"><div class="bq-h">缺货数量（${li.unit}）</div>
         <div class="bq-step"><div class="b ${st.qty<=1?'off':''}" data-d="-1">−</div><input id="bq-q" type="number" inputmode="numeric" value="${st.qty}"><div class="b ${st.qty>=cap?'off':''}" data-d="1">+</div></div>
         <div class="bq-all" data-all="1">全部缺货（${cap}）</div></div>
-      <div class="bq-card"><div class="bq-h">按下单时间从晚到早扣到以下订单</div>
-        ${al.map(a=>`<div class="bq-ord"><div class="l"><div class="no">${a.orderId}</div><div class="s">${mask(a.client)} · 下单 ${a.orderTime} · 订 ${a.ordered}</div></div><div class="q">缺 ${a.short}</div></div>`).join('')}</div>
-      ${D.labelCutoff?'':`<div class="bq-tip y">⏸ 当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单，以上分摊不再变化。货到了可在「报缺记录」恢复售卖。</div>`}
-      ${over?`<div class="bq-tip r">🏷 已打印 ${printed} 张，报缺后应送 ${can}：请把<b>序号 ${can+1}–${printed}</b> 的 ${over} 张标签作废，不要贴到货上。</div>`:''}
+      <div class="bq-tip g">📣 提交后平台客服会联系受影响的客户处理。打印标签数量不变，按实际能送的货贴标送货即可。</div>
+      ${D.labelCutoff?'':`<div class="bq-tip y">⏸ 当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单。货到了可在「报缺记录」恢复售卖。</div>`}
       <div class="bq-tip g">⚖️ 报缺照常计缺货罚款：${st.qty} × S$${FINE.toFixed(2)} = <b>S$${(st.qty*FINE).toFixed(2)}</b>，并入该仓送货单罚款单。</div>
       <div class="bq-card"><div class="bq-h">缺货原因（选填）</div><input class="bq-in" id="bq-r" maxlength="100" placeholder="如：供应商断货" value="${st.rmk}"></div>
       <div style="height:16px"></div>`;
@@ -111,7 +108,7 @@ function open(date,key,printed,onDone){
           time:nowStr(),phase:D.labelCutoff?'after':'before',stopSale:!D.labelCutoff,restoredAt:'',fine:st.qty*FINE,
           allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),status:'active'});
         FM.popPage();onDone&&onDone();
-        FM.toast(`已报缺 ${st.qty}${li.unit}，扣到 ${al.length} 个订单，已通知客服${D.labelCutoff?'':'；该商品已停售'}`,'ok');};}});
+        FM.toast(`已报缺 ${st.qty}${li.unit}，已通知客服处理${D.labelCutoff?'':'；该商品已停售'}`,'ok');};}});
 }
 
 /* ---------- 报缺记录页 ---------- */
@@ -120,8 +117,7 @@ function records(date,onChange){
     box.innerHTML=list.length?list.map(r=>{const s=repStatus(r);return `<div class="bq-card bq-rec">
       <div class="r1"><span class="nm">${r.name}<span class="bq-tag r">缺 ${r.qty}</span>${r.status!=='revoked'&&r.stopSale?'<span class="bq-tag gr">已停售</span>':''}</span><span class="bq-tag ${ST[s][0]}">${ST[s][1]}</span></div>
       <div class="m">${r.id} · ${r.wh} · ${r.sku}</div>
-      <div class="m">报缺 ${r.time} · ${r.phase==='before'?'截单前':'截单后'} · 扣到 ${r.allocs.length} 个订单</div>
-      ${r.allocs.map(a=>`<div class="bq-ord"><div class="l"><div class="no">${a.orderId}</div><div class="s">${mask(a.client)} · 下单 ${a.orderTime}${a.cs==='done'?` · 客服已处理：${a.way}`:''}</div></div><div class="q">缺 ${a.short}</div></div>`).join('')}
+      <div class="m">报缺 ${r.time} · ${r.phase==='before'?'截单前':'截单后'}${r.rmk?` · ${r.rmk}`:''}</div>
       ${(r.stopSale&&r.status!=='revoked')||s==='pending'?`<div class="ops">${r.stopSale&&r.status!=='revoked'?`<button class="btn" data-rs="${r.id}">恢复售卖</button>`:''}${s==='pending'?`<button class="btn" style="color:#C0453B" data-rv="${r.id}">撤销报缺</button>`:''}</div>`:''}
     </div>`;}).join('')+'<div style="height:16px"></div>'
     :`<div class="empty"><h4>该配送日暂无报缺</h4><p>在标签详情页点「报缺货」上报</p></div>`;
