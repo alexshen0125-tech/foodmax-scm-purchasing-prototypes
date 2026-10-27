@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>商采应付单 · 退货申诉赔付</title>
+<style>
+  :root{--green:#1a9b2c;--green-bg:#eef8ef;--line:#ebeef5;--text:#303133;--sub:#909399;--bg:#f2f3f5;--warn-bg:#fdf6ec;--red:#f56c6c;--red-bg:#fef0f0}
+  *{box-sizing:border-box}
+  body{margin:0;font:13px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
+  .top{height:54px;background:var(--green);color:#fff;display:flex;align-items:center;padding:0 24px;gap:34px}
+  .top b{font-size:22px;font-style:italic}.top span{font-size:15px;font-weight:600;opacity:.95}.top .on{background:rgba(255,255,255,.15);padding:17px 14px}
+  .wrap{display:flex;min-height:calc(100vh - 54px)}
+  .side1{width:84px;background:#f5f6f7;border-right:1px solid var(--line)}.side1 div{padding:22px 0;text-align:center;color:#606266}.side1 .on{background:#fff;color:var(--green)}
+  .side2{width:140px;background:#fff;border-right:1px solid var(--line);padding-top:10px}.side2 div{padding:14px 20px}.side2 .grp{font-weight:600}.side2 .on{color:var(--green);background:var(--green-bg)}
+  .main{flex:1;min-width:0}
+  .card{background:#fff;padding:20px 20px 16px}
+  .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.head h1{font-size:20px;margin:0 8px 0 0}
+  .tag{display:inline-block;font-size:12px;line-height:20px;padding:0 6px;border:1px solid #d9ecff;border-radius:3px}
+  .t-g{color:#1a9b2c;background:#f0f9eb;border-color:#c2e7b0}.t-i{color:#909399;background:#f4f4f5;border-color:#e9e9eb}.t-o{color:#e6a23c;background:#fdf6ec;border-color:#f5dab1}.t-b{color:#409eff;background:#ecf5ff;border-color:#b3d8ff}
+  .sum{display:flex;gap:6px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .sum .it{padding:8px 12px;min-width:92px}.sum .it.on{background:var(--green-bg)}.sum .l{color:#606266}.sum .v{font-size:17px;font-weight:600;margin-top:4px}.sum .on .v{color:var(--green)}
+  .sum .it[title]{cursor:help}
+  .mini.tk{color:#606266;background:#f4f4f5;border:1px solid #e9e9eb}.mini.err{color:#f56c6c;background:#fef0f0;border:1px solid #fbc4c4}
+  .sk{padding:16px 0}.sk i{display:block;height:14px;background:linear-gradient(90deg,#f0f2f5,#e6e8eb,#f0f2f5);border-radius:3px;margin:10px 0}
+  .err{padding:36px 0;text-align:center;color:var(--red)}
+  .sw{display:flex;gap:8px;align-items:center;margin-left:auto;color:#606266}
+  .gap{height:10px;background:var(--bg)}
+  .tabs{display:flex;gap:40px;border-bottom:2px solid var(--line);padding:0 4px}.tabs div{padding:12px 0;font-size:14px;cursor:pointer}.tabs .on{color:var(--green);border-bottom:2px solid var(--green);margin-bottom:-2px}
+  .search{display:flex;gap:12px;margin:16px 0;flex-wrap:wrap}
+  input,select{height:32px;border:1px solid #dcdfe6;border-radius:4px;padding:0 10px;font-size:13px;width:200px;outline:none;background:#fff}
+  .btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid #dcdfe6;background:#fff;cursor:pointer;font-size:13px;color:#606266}.btn:hover{color:var(--green);border-color:#a3d9ab}.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+  .tbl-wrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:1180px}
+  th{background:#f5f7fa;color:#606266;font-weight:600;text-align:left;padding:11px 10px;white-space:nowrap}
+  td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+  .r{text-align:right}.minor{color:var(--sub);font-size:12px}
+  .mini{font-size:11px;line-height:16px;padding:0 4px;margin-left:6px;border-radius:2px;vertical-align:1px}
+  .mini.cp{color:#b88230;background:#fdf6ec;border:1px solid #f5dab1}
+  .bizlink{color:var(--green);cursor:pointer;text-decoration:none}.bizlink:hover{text-decoration:underline}
+  tr.cur>td{background:#eef8ef!important}
+  .foot{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:18px 0 4px;color:#606266}
+  .pg{min-width:26px;height:26px;border-radius:3px;background:#f4f4f5;border:0;font-size:12px;color:#606266}.pg.on{background:var(--green);color:#fff}
+  .empty{padding:36px 0;text-align:center;color:var(--sub)}
+  .drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:20;opacity:0;pointer-events:none;transition:opacity .2s}.drawer-mask.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:60vw;min-width:800px;max-width:1100px;background:#fff;z-index:21;transform:translateX(100%);transition:transform .25s;display:flex;flex-direction:column;box-shadow:-6px 0 24px rgba(0,0,0,.12)}.drawer.on{transform:none}
+  .drawer-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line)}.drawer-hd h2{margin:0;font-size:16px}.drawer-hd h2 small{font-weight:400;color:var(--sub);margin-left:10px;font-size:13px}
+  .x{border:0;background:none;font-size:20px;color:#909399;cursor:pointer}
+  .drawer-bd{flex:1;overflow:auto;padding:0 20px 16px}
+  .sec{font-weight:600;font-size:14px;margin:16px 0 8px}
+  .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 24px}.kv .k{color:var(--sub);font-size:12px}.kv .v{margin-top:2px}
+  .inner{overflow-x:auto;border:1px solid var(--line)}.inner table{min-width:1000px}.inner th{padding:9px 10px;font-size:12px}.inner td{padding:8px 10px;font-size:12px}
+  .st{font-size:11px;padding:0 5px;border-radius:2px;line-height:18px;display:inline-block;color:var(--red);background:var(--red-bg);cursor:help}
+  .tot td{font-weight:600;background:#f7faf7}
+</style>
+</head>
+<body>
+<div class="top"><b>Foodmax</b><span>财务中台国际</span><span>应收管理</span><span class="on">应付管理</span><span>资金管理</span><span>存货核算</span><span>综合费用</span><span>会计平台</span></div>
+<div class="wrap">
+  <div class="side1"><div>采购业务</div><div class="on">采购应付</div><div>采购付款</div><div>采购收款</div><div>往来核销</div></div>
+  <div class="side2"><div class="grp">商采应付</div><div class="on">商采应付单</div><div>商采入账表</div><div class="grp">综采应付</div></div>
+  <div class="main">
+    <div class="card">
+      <div class="head">
+        <h1 id="apNo"></h1>
+        <span class="tag t-g">已审批</span><span class="tag t-i">未冻结</span><span class="tag t-i">未付款</span><span class="tag t-i">未核销</span><span class="tag t-i">未推送</span>
+        <span class="sw">（原型）切换样例：<select id="ap" onchange="switchAp()" style="width:220px"><option value="a">含赔付单的应付单</option><option value="b">无赔付单的应付单</option></select></span>
+      </div>
+      <div class="sum" id="sum"></div>
+    </div>
+    <div class="gap"></div>
+    <div class="card">
+      <div class="tabs"><div class="on">采购明细</div><div>发票明细</div><div>开票差异</div><div>预付核销</div><div>账扣明细</div><div>付款明细</div></div>
+      <div class="search">
+        <input id="qBiz" placeholder="单据编号" onkeydown="if(event.key==='Enter')render()">
+        <input id="qStore" placeholder="仓库ID" onkeydown="if(event.key==='Enter')render()">
+        <select id="qType" onchange="render()" style="width:140px"><option value="">全部</option><option>采购单</option><option>退货单</option><option>调整单</option><option>赔付单</option></select>
+        <button class="btn pri" onclick="render()">⌕ 查询</button><button class="btn" onclick="reset()">重置</button>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>单据类型</th><th>单据编号</th><th>采购分类</th><th>仓库</th><th>调整类型</th><th>预付单ID</th><th class="r">计划金额</th><th class="r">结算金额</th><th class="r">已预付金额</th><th class="r">应付金额</th><th>创建日期</th><th>完成日期</th></tr></thead>
+        <tbody id="tb"></tbody>
+      </table></div>
+      <div class="foot">共 <span id="cnt"></span> 条 <button class="pg" disabled>‹</button><button class="pg on">1</button><button class="pg" disabled>›</button></div>
+    </div>
+  </div>
+</div>
+<div class="drawer-mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true"></div>
+<div id="toast" style="position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#f0f9eb;color:#1a9b2c;border:1px solid #c2e7b0;padding:8px 18px;border-radius:4px;display:none;z-index:30"></div>
+
+<script>
+/* 退货申诉赔付接入商采结算（PRD：../01_PRD.md v1.1）
+   - 赔付单 = 商采结算单新明细类型「赔付单」（F-BR-02）；计划 = 结算 = 应付 = 赔付含税合计，已预付 0（F-BR-05）
+   - 采购明细拆为「单据类型」「单据编号」两列共 12 列；票扣调整单仍可点开 09-18 调整单抽屉，票扣标签在「单据类型」列（§6.2）
+   - 赔付行：采购分类单一显示、多个显示「多个」、全缺「—」；任一行核算分类缺失 → 单据编号后红色「核算分类缺失」
+   - 汇总「其中退货申诉赔付」紧跟结算金额、同样式、为 0 不显示、悬停给不含税与税额（§6.1）
+   - 抽屉：先核定后来源；明细一字段一列；合计各行求和；加载 / 失败重试 / 空态（§6.3） */
+const fmt=n=>n==null?'-':(n<0?'-':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round(n*100)/100;
+const ADJ_TYPE={2:'罚款',3:'促销补差'};
+const COMP={
+  'PF-20261030-012':{src:'客户退货',retNo:'TH-070209',appealNo:'RA20261029000031',result:'部分成立',reviewAt:'2026-10-30 15:20',reviewer:'林晓',gst:'已注册',
+    items:[{ln:2,pro:'PRO20261028000044',sku:'SKU8862',name:'番茄 5kg/箱',ret:2,qty:1,price:18.00,rate:.09,cls:'蔬菜/果菜'}]},
+  'PF-20261031-004':{src:'客户退货',retNo:'TH-070231',appealNo:'RA20261030000008',result:'成立',reviewAt:'2026-10-31 11:05',reviewer:'陈敏',gst:'已注册',
+    items:[{ln:1,pro:'PRO20261029000012',sku:'SKU8813',name:'芥蓝 1kg/包',ret:2,qty:2,price:3.50,rate:.09,cls:'蔬菜/叶菜'},
+           {ln:2,pro:'PRO20261029000012',sku:'SKU8875',name:'生菜 1kg/包',ret:3,qty:2.65,price:2.51,rate:.09,cls:''}]},
+  'PF-20261101-002':{src:'仓库退回',retNo:'WR20260628002',appealNo:'RA20261101000003',result:'成立',reviewAt:'2026-11-01 10:12',reviewer:'林晓',gst:'未注册',
+    items:[{ln:1,pro:null,sku:'SKU8812',name:'咸鸭蛋 30枚/盘',ret:2,qty:2,price:9.00,rate:0,cls:'蛋类/加工'}]},
+};
+// 行金额由 merchant-service 算定后推送，这里只是复现：含税 = round(数量 × 单价, 2)；不含税 = round(含税 ÷ (1 + 税率), 2)；税额 = 含税 − 不含税
+Object.values(COMP).forEach(c=>c.items.forEach(x=>{x.amt=r2(x.qty*x.price);x.ex=r2(x.amt/(1+x.rate));x.tax=r2(x.amt-x.ex);}));
+const compSum=no=>r2(COMP[no].items.reduce((a,x)=>a+x.amt,0));
+const compCls=no=>{const s=[...new Set(COMP[no].items.map(x=>x.cls).filter(Boolean))];return !s.length?'—':s.length>1?'多个':s[0];};
+const compMiss=no=>COMP[no].items.some(x=>!x.cls);
+const BASE=[
+  {type:'采购单',no:'PO20261027000318',cls:'蔬菜/叶菜',store:'SG01-B',plan:4640.00,set:4603.85,pre:0,c:'2026-10-27',f:'2026-10-28'},
+  {type:'采购单',no:'PO20261028000102',cls:'蔬菜/果菜',store:'SG01-B',plan:1820.00,set:1820.00,pre:0,c:'2026-10-28',f:'2026-10-29'},
+  {type:'退货单',no:'PRO20261028000044',cls:'蔬菜/果菜',store:'SG01-B',plan:-36.00,set:-36.00,pre:0,c:'2026-10-28',f:'2026-10-28'},
+  {type:'调整单',no:'ADJ20261029000007',cls:'蔬菜/叶菜',store:'SG01-B',cat:3,ticket:true,plan:-57.20,set:-57.20,pre:0,c:'2026-10-29',f:'2026-10-29'},
+];
+const APS={
+  a:{no:'AP20261103000021',bill:'2026-11-03',rows:BASE.concat(['PF-20261030-012','PF-20261031-004','PF-20261101-002'].map(no=>({type:'赔付单',no,comp:true,cls:compCls(no),store:'SG01-B',plan:compSum(no),set:compSum(no),pre:0,c:no.slice(3,7)+'-'+no.slice(7,9)+'-'+no.slice(9,11),f:'2026-11-03'})))},
+  b:{no:'AP20261103000022',bill:'2026-11-03',rows:BASE.slice(0,3)},
+};
+let ap='a',cur=null,dw=null;
+const rows=()=>APS[ap].rows;
+function sums(){
+  const rs=rows(),set=r2(rs.reduce((a,r)=>a+r.set,0)),acct=0;   // 样例无账扣罚款
+  const cps=rs.filter(r=>r.comp),cp=r2(cps.reduce((a,r)=>a+r.set,0));
+  const ex=r2(cps.reduce((a,r)=>a+COMP[r.no].items.reduce((b,x)=>b+x.ex,0),0)),tx=r2(cp-ex);
+  const items=[['结算金额',set,1],...(cp?[['其中退货申诉赔付',cp,0,`已含在结算金额内；不含税 ${fmt(ex)}、税额 ${fmt(tx)}`]]:[]),['账扣罚款金额',acct],['冲预付金额',0],['应付金额',r2(set),1],
+    ['应开票金额',set],['发票抵扣金额',0],['实收发票金额',0],['多票金额',0],['少票金额',set],['历史多票抵扣',0],['历史少票补交',0]];
+  document.getElementById('sum').innerHTML=items.map(([l,v,on,tip])=>`<div class="it ${on?'on':''}" ${tip?`title="${tip}"`:''}><div class="l">${l}</div><div class="v">${fmt(v)}</div></div>`).join('');
+}
+function render(){
+  document.getElementById('apNo').textContent='应付单号：'+APS[ap].no;
+  const q=document.getElementById('qBiz').value.trim(),qs=document.getElementById('qStore').value.trim(),t=document.getElementById('qType').value;
+  const vis=rows().filter(r=>(!q||r.no.includes(q))&&(!qs||r.store.includes(qs))&&(!t||r.type===t));
+  document.getElementById('cnt').textContent=vis.length;
+  document.getElementById('tb').innerHTML=vis.length?vis.map(r=>`<tr class="${cur===r.no?'cur':''}">
+    <td>${r.type}${r.ticket?'<span class="mini tk">票扣</span>':''}</td>
+    <td>${r.comp?`<a class="bizlink" href="javascript:void(0)" onclick="openDrawer('${r.no}')">${r.no}</a>${compMiss(r.no)?'<span class="mini err">核算分类缺失</span>':''}`
+        :r.ticket?`<a class="bizlink" href="javascript:void(0)" onclick="toast('（原型）打开 09-18 调整单明细抽屉：${r.no}')">${r.no}</a>`:r.no}</td>
+    <td>${r.cls}</td><td>${r.store}</td><td>${r.cat?ADJ_TYPE[r.cat]:''}</td><td></td>
+    <td class="r">${fmt(r.plan)}</td><td class="r">${fmt(r.set)}</td><td class="r">${fmt(r.pre)}</td><td class="r">${fmt(r.set-r.pre)}</td>
+    <td>${r.c}</td><td>${r.f}</td></tr>`).join(''):`<tr><td colspan="12"><div class="empty">没有符合条件的明细</div></td></tr>`;
+  sums();
+}
+function reset(){['qBiz','qStore','qType'].forEach(id=>document.getElementById(id).value='');render();}
+function switchAp(){ap=document.getElementById('ap').value;closeDrawer();reset();}
+let fails=0;
+function openDrawer(no){cur=no;dw={no,state:'loading'};render();paint();
+  setTimeout(()=>{if(!dw||dw.no!==no)return;
+    if(no==='PF-20261031-004'&&fails===0){fails++;dw.state='error';}else dw.state='ok';paint();},500);}
+function paint(){
+  const el=document.getElementById('drawer'),d=dw;if(!d)return;
+  const c=COMP[d.no],kv=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
+  let bd='';
+  if(d.state==='loading')bd='<div class="sk"><i style="width:60%"></i><i></i><i></i><i style="width:80%"></i></div>';
+  else if(d.state==='error')bd=`<div class="err">明细加载失败 &nbsp;<button class="btn" onclick="dw.state='loading';paint();setTimeout(()=>{dw.state='ok';paint();},400)">重试</button></div>`;
+  else{
+    const sum=k=>r2(c.items.reduce((a,x)=>a+x[k],0));
+    bd=`<div class="sec">基础信息</div>
+    <div class="kv">${kv('核定结论',c.result)}${kv('核定时间',c.reviewAt)}${kv('核定人',c.reviewer)}${kv('来源',c.src)}${kv('关联退货单号',c.retNo)}${kv('申诉单号',c.appealNo)}${kv('商家 GST 登记',c.gst)}</div>
+    <div class="sec">赔付明细</div>
+    ${c.items.length?`<div class="inner"><table>
+      <thead><tr><th>行号</th><th>退供单号</th><th>SKU 编号</th><th>SKU 名称</th><th>核算分类</th><th class="r">退回数量</th><th class="r">核定数量</th><th class="r">单价（含税）</th><th class="r">税率</th><th class="r">含税金额</th><th class="r">不含税金额</th><th class="r">税额</th></tr></thead>
+      <tbody>${c.items.map(x=>`<tr><td>${x.ln}</td><td>${x.pro||'—'}</td><td>${x.sku}</td><td>${x.name}</td>
+        <td>${x.cls||'<span class="st" title="核算分类缺失：SKU 未维护 FMS 核算分类，维护后重新推送凭证">缺失</span>'}</td>
+        <td class="r">${x.ret}</td><td class="r">${x.qty}</td><td class="r">${fmt(x.price)}</td><td class="r">${+(x.rate*100).toFixed(4)}%</td><td class="r">${fmt(x.amt)}</td><td class="r">${fmt(x.ex)}</td><td class="r">${fmt(x.tax)}</td></tr>`).join('')}
+        <tr class="tot"><td colspan="9">合计</td><td class="r">${fmt(sum('amt'))}</td><td class="r">${fmt(sum('ex'))}</td><td class="r">${fmt(sum('tax'))}</td></tr></tbody></table></div>`
+      :'<div class="empty">该赔付单暂无明细</div>'}`;
+  }
+  el.innerHTML=`<div class="drawer-hd"><h2>赔付单明细<small>${d.no}</small></h2><button class="x" aria-label="关闭" onclick="closeDrawer()">×</button></div><div class="drawer-bd">${bd}</div>`;
+  el.classList.add('on');document.getElementById('mask').classList.add('on');
+}
+function closeDrawer(){cur=null;dw=null;render();document.getElementById('drawer').classList.remove('on');document.getElementById('mask').classList.remove('on');}
+let tt;function toast(m){const e=document.getElementById('toast');e.textContent=m;e.style.display='block';clearTimeout(tt);tt=setTimeout(()=>e.style.display='none',2500);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dw)closeDrawer();});
+render();
+</script>
+</body>
+</html>
