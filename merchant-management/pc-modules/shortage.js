@@ -13,10 +13,10 @@
    - 商家端【不展示订单】：分摊到哪些订单只给客服看（运营平台待办 + 飞书群），商家弹窗/记录不出现订单。
    - 客服：系统不自动改单。通知 = 小蜜蜂推飞书群 + 运营平台「商家报缺」待办；
            客服联系客户后在客诉链路处理（部分退款 / 补自营商品 / 客户接受少送），回到待办登记结果。
-   - 罚款：主动报缺【照罚不减免】（商家报缺页不展示罚款提示，2026-10-27）。
+   - 罚款：报缺【不产生罚款】（2026-10-27 定）；报缺件数冲抵到仓少货，冲抵部分不罚（待确认）。
    - 缺货原因：枚举 供应商断货/到货不足/品质不合格/其他，必选，默认「供应商断货」。
    - 撤销：受影响订单全部「待处理」时商家可撤销，同步推撤销通知；客服处理过任一单即不可撤销。
-   依赖主文件全局：DB / toast / modal / closeModal / drawer / closeDrawer / render / nav / askConfirm / ord_mask / money / replFineRate。 */
+   依赖主文件全局：DB / toast / modal / closeModal / drawer / closeDrawer / render / nav / askConfirm / ord_mask / money。 */
 (function(){
 
   /* ================= 演示数据 ================= */
@@ -78,7 +78,6 @@
   };
   function draftBody(){
     const d=DB.shortDraft,li=d.li;
-    const fine=d.qty*replFineRate();
     return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
         <div class="sc"><div class="sc-l">订单量</div><div class="sc-v">${li.ordered}</div></div>
         <div class="sc"><div class="sc-l">已报缺</div><div class="sc-v">${li.reported}</div></div>
@@ -106,7 +105,7 @@
     const d=DB.shortDraft;const al=allocate(d.date,d.wh,d.sku,d.qty);if(!al.length){toast('没有可分摊的订单','err');return;}
     const id='BQ'+d.date.replace('-','')+String(++DB.shortSeq).padStart(3,'0');
     const r={id,date:d.date,wh:d.wh,sku:d.sku,name:d.li.name,unit:d.li.unit,spec:d.li.spec,qty:d.qty,rmk:d.rmk,
-      time:nowStr(),phase:DB.labelCutoff?'after':'before',saleAt:saleOf(d.sku),stopSale:saleOf(d.sku)=='售卖中',restoredAt:'',fine:d.qty*replFineRate(),
+      time:nowStr(),phase:DB.labelCutoff?'after':'before',saleAt:saleOf(d.sku),stopSale:saleOf(d.sku)=='售卖中',restoredAt:'',
       allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),
       status:'active',push:[{type:'报缺',at:nowStr()}]};
     if(r.stopSale)DB.skuSale[d.sku]='已下架';   // 售卖中 → 自动下架；售罄/已下架不处理
@@ -133,7 +132,7 @@
     askConfirm(`重新上架「${r.name}」？上架后新进的订单<b>不参与本次报缺分摊</b>，按正常订单备货送货。`,()=>{DB.skuSale[r.sku]='售卖中';r.restoredAt=nowStr();render();short_records();toast(`「${r.name}」已重新上架`,'ok');});};
   window.short_revoke=function(id){const r=DB.shortReports.find(x=>x.id==id);if(!r)return;
     if(repStatus(r)!='pending'){toast('客服已开始处理，不能撤销','err');return;}
-    askConfirm(`撤销报缺 ${r.id}？${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale&&saleOf(r.sku)=='已下架'?'商品同时重新上架，':''}将向客服推送撤销通知，不再计缺货罚款。`,()=>{if(r.stopSale&&saleOf(r.sku)=='已下架')DB.skuSale[r.sku]='售卖中';r.status='revoked';r.push.push({type:'撤销',at:nowStr()});render();short_records();toast(`已撤销 ${r.id}，已通知客服`,'ok');});};
+    askConfirm(`撤销报缺 ${r.id}？${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale&&saleOf(r.sku)=='已下架'?'商品同时重新上架，':''}将向客服推送撤销通知。`,()=>{if(r.stopSale&&saleOf(r.sku)=='已下架')DB.skuSale[r.sku]='售卖中';r.status='revoked';r.push.push({type:'撤销',at:nowStr()});render();short_records();toast(`已撤销 ${r.id}，已通知客服`,'ok');});};
 
   /* ================= 共用 · 报缺详情抽屉（商家只读 / 运营可处理） ================= */
   function fsCard(r,type){const st=r.allocs;return `<div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;max-width:460px">
@@ -155,7 +154,7 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 18px;margin-bottom:22px">
         ${kv('商家名称',DB.merchant.name)}${kv('商家编码',`<span class="mono">${DB.merchant.code}</span>`)}${kv('商品名称',r.name)}${kv('SKU编码',`<span class="mono">${r.sku}</span>`)}
         ${kv('配送日期',r.date)}${kv('入库仓库',r.wh)}${kv('缺货数量',`${r.qty}${r.unit}`)}${kv('报缺时间',r.time)}
-        ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('报缺时售卖状态',r.saleAt)}${kv('自动下架',r.stopSale?(r.restoredAt?`是 · ${r.restoredAt} 重新上架`:'是'):'否')}${kv('缺货原因',r.rmk)}${ops?kv('缺货罚款',money(r.fine)):''}
+        ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('报缺时售卖状态',r.saleAt)}${kv('自动下架',r.stopSale?(r.restoredAt?`是 · ${r.restoredAt} 重新上架`:'是'):'否')}${kv('缺货原因',r.rmk)}
         ${kv('处理状态',stTag(st))}
       </div>
       ${ops?`<h4 style="font-size:14px;margin-bottom:12px">受影响订单</h4>

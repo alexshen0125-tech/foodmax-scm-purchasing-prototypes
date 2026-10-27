@@ -4,13 +4,12 @@
    - 报缺时看 SKU 当前售卖状态：售卖中 → 提交即自动下架（可在报缺记录重新上架，上架后新单不参与分摊）；售罄/已下架 → 不处理
    - 报缺【不影响打印标签数据】，商家端【不展示订单】（2026-10-27 用户改）：分摊结果只给客服看
    - 通知客服：小蜜蜂推飞书群 + 运营平台「商家报缺」待办；系统不自动改单
-   - 主动报缺照罚：件数 × 缺货罚款标准（S$40/件）
+   - 报缺不产生罚款（2026-10-27 定）
    - 撤销：客服未处理任何一单前可撤销
    前缀 bq-。数据挂 window.FM.DB.shortReports。 */
 (function(){
 const FM=window.FM,D=FM.DB;
 const REASONS=['库存维护不准','缺货','到货不足','品质不合格'];   // 缺货原因枚举，默认第一项（与 PC 同）
-const FINE=40;   // 缺货罚款标准 S$/件（与 PC replFineRate 同源，平台可配）
 
 /* 演示数据：订单补下单时间 + 两笔裕廊DC 小棠菜，便于演示「下单晚的先扣」 */
 (D.orders||[]).forEach(o=>{if(!o.orderTime)o.orderTime=({'#SG20260701001':'06-30 09:12','#SG20260701002':'06-30 10:40','#SG20260701005':'06-30 11:20'})[o.id]||'06-30 08:00';});
@@ -109,7 +108,7 @@ function open(date,key,printed,onDone){
       p.querySelector('#bq-ok').onclick=()=>{const q=box.querySelector('#bq-q');if(q)q.onchange&&q.onchange();
         const al=allocate(date,wh,sku,st.qty);if(!al.length){FM.toast('没有可分摊的订单','err');return;}
         D.shortReports.unshift({id:'BQ'+date.replace('-','')+String(++D.shortSeq).padStart(3,'0'),date,wh,sku,name:li.name,unit:li.unit,spec:li.spec,qty:st.qty,rmk:st.rmk,
-          time:nowStr(),phase:D.labelCutoff?'after':'before',saleAt:saleOf(sku),stopSale:saleOf(sku)==='售卖中',restoredAt:'',fine:st.qty*FINE,
+          time:nowStr(),phase:D.labelCutoff?'after':'before',saleAt:saleOf(sku),stopSale:saleOf(sku)==='售卖中',restoredAt:'',
           allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),status:'active'});
         const auto=saleOf(sku)==='售卖中';if(auto)D.skuSale[sku]='已下架';   // 售卖中 → 自动下架；售罄/已下架不处理
         FM.popPage();onDone&&onDone();
@@ -129,7 +128,7 @@ function records(date,onChange){
     box.querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{const r=D.shortReports.find(x=>x.id===b.dataset.rs);
       FM.confirmDialog({title:`重新上架「${r.name}」？`,body:'上架后新进的订单不参与本次报缺分摊，按正常订单备货送货。',okText:'重新上架',onOk:()=>{D.skuSale[r.sku]='售卖中';r.restoredAt=nowStr();draw(box);onChange&&onChange();FM.toast('已重新上架','ok');}});});
     box.querySelectorAll('[data-rv]').forEach(b=>b.onclick=()=>{const r=D.shortReports.find(x=>x.id===b.dataset.rv);
-      FM.confirmDialog({title:`撤销报缺 ${r.id}？`,body:`${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale&&saleOf(r.sku)==='已下架'?'商品同时重新上架，':''}向客服推送撤销通知，不再计缺货罚款。`,danger:true,okText:'撤销',onOk:()=>{if(r.stopSale&&saleOf(r.sku)==='已下架')D.skuSale[r.sku]='售卖中';r.status='revoked';draw(box);onChange&&onChange();FM.toast('已撤销，已通知客服','ok');}});});
+      FM.confirmDialog({title:`撤销报缺 ${r.id}？`,body:`${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale&&saleOf(r.sku)==='已下架'?'商品同时重新上架，':''}向客服推送撤销通知。`,danger:true,okText:'撤销',onOk:()=>{if(r.stopSale&&saleOf(r.sku)==='已下架')D.skuSale[r.sku]='售卖中';r.status='revoked';draw(box);onChange&&onChange();FM.toast('已撤销，已通知客服','ok');}});});
   };
   FM.pushPage({title:'报缺记录 · '+date,body:'<div id="bq-rl"></div>',mount:p=>draw(p.querySelector('#bq-rl'))});
 }
