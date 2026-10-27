@@ -166,12 +166,14 @@
           <div class="field"><label>来源系统</label><select class="sel" id="psSrc"><option value="">全部</option><option>易点易动</option><option>手工录入</option></select></div>
           <div class="field"><label>是否财务列管</label><select class="sel" id="psFm"><option value="">全部</option><option value="1">是</option><option value="0">否</option></select></div>
           <div class="field"><label>推送状态</label><select class="sel" id="psSt"><option value="">全部</option><option>数据异常</option><option>无需推送</option><option>待推送</option><option>推送成功</option><option>推送失败</option><option>已推送</option><option>推送结果异常</option></select></div>
-          <div class="field"><label>单据类型</label><select class="sel" id="psDoc"><option value="">全部</option><option>领用</option><option>转移</option><option>跨主体调拨</option><option>报废</option></select></div>
+          <div class="field"><label>易点单据类型</label><select class="sel" id="psYd"><option value="">全部</option><option>入库单</option><option>领用单</option><option>调拨单</option><option>报废单</option><option>认领单</option><option>财务标记更正单</option></select></div>
+          <div class="field"><label>FMS 单据类型</label><select class="sel" id="psDoc"><option value="">全部</option><option>领用</option><option>转移</option><option>跨主体调拨</option><option>报废</option></select></div>
           <div class="field"><label>推 EBS 类型</label><select class="sel" id="psEbs"><option value="">全部</option><option>新增</option><option>调整</option><option>转移</option><option>调拨</option><option>报废</option><option>不推</option></select></div>
           <div class="field"><label>变更时间</label><input class="ipt" placeholder="开始 ~ 结束"></div>
           <div class="field"><label>接收时间</label><input class="ipt" placeholder="开始 ~ 结束"></div>
           <div class="field"><label>法人公司</label><select class="sel"><option>全部</option><option>FOODMAX SG</option><option>FOODMAX MY</option></select></div>
           <div class="field multi"><label>资产编码</label><textarea class="ipt ta" placeholder="多个编码精准查询，每行一个"></textarea></div>
+          <div class="field multi"><label>易点单据号</label><textarea class="ipt ta" id="psNo" placeholder="多个单号精准查询，每行一个"></textarea></div>
           <div class="search-actions"><button class="btn primary" onclick="renderPush()">查询</button><button class="btn" onclick="resetPush()">重置</button></div>
         </div>
       </div>
@@ -191,11 +193,11 @@
           </div>
         </div>
         <div class="table-wrap">
-          <table style="min-width:2100px">
+          <table style="min-width:2350px">
             <thead><tr>
               <th><input type="checkbox" id="psAll"></th>
-              <th>变更时间</th><th>接收时间</th><th>资产编码</th><th>资产描述</th><th>来源系统</th><th>是否财务列管</th>
-              <th>单据类型</th><th>推 EBS 类型</th><th>推送状态</th><th>失败原因</th><th>EBS 资产编码</th>
+              <th>变更时间</th><th>接收时间</th><th>易点单据类型</th><th>易点单据号</th><th>资产编码</th><th>资产描述</th><th>来源系统</th><th>是否财务列管</th>
+              <th>FMS 单据类型</th><th>推 EBS 类型</th><th>推送状态</th><th>失败原因</th><th>EBS 资产编码</th>
               <th>法人公司</th><th>使用部门</th><th>仓库</th><th>推送时间</th>
               <th class="opcol">操作</th>
             </tr></thead>
@@ -226,7 +228,7 @@
         <div class="table-wrap">
           <table style="min-width:1700px">
             <thead><tr>
-              <th>入库时间</th><th>资产编码</th><th>资产描述</th><th>法人公司</th><th>法人编码</th><th>使用部门</th><th>FMS 部门</th><th>FMS 部门类别</th>
+              <th>入库时间</th><th>易点入库单号</th><th>资产编码</th><th>资产描述</th><th>法人公司</th><th>法人编码</th><th>使用部门</th><th>FMS 部门</th><th>FMS 部门类别</th>
               <th>资产大类</th><th>资产小类</th><th class="num">原值</th><th>采购单号</th><th>供应商</th><th>仓库</th>
               <th class="opcol">操作</th>
             </tr></thead>
@@ -272,20 +274,20 @@
 <script>
 // ---------- 示例数据：每条 = 一次资产事件（fa_asset 一行） ----------
 const E = [
-  {id:1, ct:'2026-11-02 10:20', rt:'2026-11-02 10:20', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'IT 部', deptId:'od_1023', fmsDept:'信息技术部', fmsDeptCat:'管理', fmsDeptNo:'1023', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'2026-11-02 10:25', last:null},
-  {id:2, ct:'2026-11-05 15:02', rt:'2026-11-05 15:02', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'转移', ebs:'转移', st:'推送成功', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'2026-11-05 15:06', last:1},
-  {id:3, ct:'2026-11-09 09:41', rt:'2026-11-09 09:41', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'转移', ebs:'不推', st:'无需推送', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'—', last:2},
-  {id:4, ct:'2026-11-03 11:00', rt:'2026-11-03 11:00', code:'YD2611000102', desc:'人体工学办公椅', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'320.00', dps:'2026-11-03', dept:'运营部', deptId:'od_1060', fmsDept:'运营部', fmsDeptCat:'履约', fmsDeptNo:'1060', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0091', vendor:'Office Pro', pt:'—', last:null},
-  {id:5, ct:'2026-11-04 14:30', rt:'2026-11-04 14:30', code:'YD2611000103', desc:'电动叉车 1.5T', src:'易点易动', fm:1, doc:'领用', ebs:'不推', st:'数据异常', why:'该 HR 部门没有 FMS 部门！HR 部门编码: od_1101', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'18,600.00', dps:'2026-11-04', dept:'仓储二组', deptId:'od_1101', fmsDept:'—', fmsDeptCat:'—', fmsDeptNo:'—', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0102', vendor:'Toyota MH', pt:'—', last:null},
-  {id:6, ct:'2026-11-06 16:12', rt:'2026-11-06 16:12', code:'YD2611000103', desc:'电动叉车 1.5T', src:'易点易动', fm:1, doc:'转移', ebs:'转移', st:'待推送', why:'此前存在数据异常的历史数据，等前一条修复后自动推送', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'18,600.00', dps:'2026-11-04', dept:'仓储一组', deptId:'od_1100', fmsDept:'仓储部', fmsDeptCat:'履约', fmsDeptNo:'1100', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0102', vendor:'Toyota MH', pt:'—', last:5},
-  {id:7, ct:'2026-11-04 17:05', rt:'2026-11-04 17:05', code:'YD2611000104', desc:'重型货架 A 型', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送失败', why:'EBS：资产类别 10.02 未在账簿 FM_SG_FA 初始化', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'6,240.00', dps:'2026-11-04', dept:'仓储一组', deptId:'od_1100', fmsDept:'仓储部', fmsDeptCat:'履约', fmsDeptNo:'1100', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 120）', po:'PO2610-0105', vendor:'Rack Asia', pt:'2026-11-04 17:40', last:null},
-  {id:8, ct:'2026-11-01 09:00', rt:'2026-11-01 09:00', code:'YD2611000105', desc:'1 号仓办公区装修', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100238', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'装修费', subCode:'10', cost:'42,000.00', dps:'2026-11-01', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'36', po:'PO2610-0070', vendor:'BuildRight', pt:'2026-11-01 09:05', last:null},
-  {id:9, ct:'2026-11-07 10:30', rt:'2026-11-07 10:30', code:'YD2610000031', desc:'商用冷柜 1200L', src:'易点易动', fm:1, doc:'跨主体调拨', ebs:'调拨', st:'已推送', why:'已发出，等待 EBS 返回调拨结果', ebsNo:'100190', corp:'FOODMAX MY', corpCode:'MY01', book:'FM_MY_FA', root:'固定资产', rootCode:'10', sub:'生产设备', subCode:'03', cost:'9,800.00', dps:'2026-10-08', dept:'吉隆坡运营部', deptId:'od_2010', fmsDept:'MY 运营部', fmsDeptCat:'履约', fmsDeptNo:'2010', store:'吉隆坡 1 号仓', storeNo:'MY-W01', storeSeg:'M101', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2609-0211', vendor:'ColdTech', pt:'2026-11-07 10:35', last:null, fromCorp:'FOODMAX SG'},
-  {id:10, ct:'2026-11-08 13:20', rt:'2026-11-08 13:20', code:'YD2609000017', desc:'激光打印机', src:'易点易动', fm:1, doc:'报废', ebs:'报废', st:'推送成功', why:'', ebsNo:'100102', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,200.00', dps:'2025-09-12', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'已报废', life:'0（取分类默认 36）', po:'PO2509-0040', vendor:'HP SG', pt:'2026-11-08 13:25', last:null, ret:'回收报废'},
-  {id:11, ct:'2026-11-03 11:05', rt:'2026-11-03 11:05', code:'YD2611000106', desc:'钢制文件柜', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'780.00', dps:'2026-11-03', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0092', vendor:'Office Pro', pt:'—', last:null},
-  {id:12, ct:'2026-11-10 10:00', rt:'2026-11-10 10:00', code:'YD2611000106', desc:'钢制文件柜', src:'易点易动', fm:1, doc:'转移', ebs:'新增', st:'待推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'780.00', dps:'2026-11-03', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0092', vendor:'Office Pro', pt:'—', last:null, corr:true},
-  {id:13, ct:'2026-11-03 11:08', rt:'2026-11-03 11:08', code:'YD2611000107', desc:'碎纸机', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'260.00', dps:'2026-11-03', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0093', vendor:'Office Pro', pt:'—', last:null},
-  {id:14, ct:'2026-10-20 16:00', rt:'2026-10-20 16:00', code:'KEXP2610003', desc:'会议室投影仪', src:'手工录入', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100221', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'2,400.00', dps:'2026-10-20', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'—', vendor:'Epson SG', pt:'2026-10-20 16:05', last:null},
+  {id:1, ydType:'入库单', ydNo:'RK202611020001', ct:'2026-11-02 10:20', rt:'2026-11-02 10:20', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'IT 部', deptId:'od_1023', fmsDept:'信息技术部', fmsDeptCat:'管理', fmsDeptNo:'1023', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'2026-11-02 10:25', last:null},
+  {id:2, ydType:'领用单', ydNo:'LY202611050003', ct:'2026-11-05 15:02', rt:'2026-11-05 15:02', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'转移', ebs:'转移', st:'推送成功', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'2026-11-05 15:06', last:1},
+  {id:3, ydType:'领用单', ydNo:'LY202611090001', ct:'2026-11-09 09:41', rt:'2026-11-09 09:41', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'转移', ebs:'不推', st:'无需推送', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'—', last:2},
+  {id:4, ydType:'入库单', ydNo:'RK202611030002', ct:'2026-11-03 11:00', rt:'2026-11-03 11:00', code:'YD2611000102', desc:'人体工学办公椅', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'320.00', dps:'2026-11-03', dept:'运营部', deptId:'od_1060', fmsDept:'运营部', fmsDeptCat:'履约', fmsDeptNo:'1060', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0091', vendor:'Office Pro', pt:'—', last:null},
+  {id:5, ydType:'入库单', ydNo:'RK202611040005', ct:'2026-11-04 14:30', rt:'2026-11-04 14:30', code:'YD2611000103', desc:'电动叉车 1.5T', src:'易点易动', fm:1, doc:'领用', ebs:'不推', st:'数据异常', why:'该 HR 部门没有 FMS 部门！HR 部门编码: od_1101', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'18,600.00', dps:'2026-11-04', dept:'仓储二组', deptId:'od_1101', fmsDept:'—', fmsDeptCat:'—', fmsDeptNo:'—', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0102', vendor:'Toyota MH', pt:'—', last:null},
+  {id:6, ydType:'调拨单', ydNo:'DB202611060001', ct:'2026-11-06 16:12', rt:'2026-11-06 16:12', code:'YD2611000103', desc:'电动叉车 1.5T', src:'易点易动', fm:1, doc:'转移', ebs:'转移', st:'待推送', why:'此前存在数据异常的历史数据，等前一条修复后自动推送', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'18,600.00', dps:'2026-11-04', dept:'仓储一组', deptId:'od_1100', fmsDept:'仓储部', fmsDeptCat:'履约', fmsDeptNo:'1100', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0102', vendor:'Toyota MH', pt:'—', last:5},
+  {id:7, ydType:'入库单', ydNo:'RK202611040006', ct:'2026-11-04 17:05', rt:'2026-11-04 17:05', code:'YD2611000104', desc:'重型货架 A 型', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送失败', why:'EBS：资产类别 10.02 未在账簿 FM_SG_FA 初始化', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'6,240.00', dps:'2026-11-04', dept:'仓储一组', deptId:'od_1100', fmsDept:'仓储部', fmsDeptCat:'履约', fmsDeptNo:'1100', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 120）', po:'PO2610-0105', vendor:'Rack Asia', pt:'2026-11-04 17:40', last:null},
+  {id:8, ydType:'入库单', ydNo:'RK202611010001', ct:'2026-11-01 09:00', rt:'2026-11-01 09:00', code:'YD2611000105', desc:'1 号仓办公区装修', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100238', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'装修费', subCode:'10', cost:'42,000.00', dps:'2026-11-01', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'36', po:'PO2610-0070', vendor:'BuildRight', pt:'2026-11-01 09:05', last:null},
+  {id:9, ydType:'调拨单', ydNo:'DB202611070002', ct:'2026-11-07 10:30', rt:'2026-11-07 10:30', code:'YD2610000031', desc:'商用冷柜 1200L', src:'易点易动', fm:1, doc:'跨主体调拨', ebs:'调拨', st:'已推送', why:'已发出，等待 EBS 返回调拨结果', ebsNo:'100190', corp:'FOODMAX MY', corpCode:'MY01', book:'FM_MY_FA', root:'固定资产', rootCode:'10', sub:'生产设备', subCode:'03', cost:'9,800.00', dps:'2026-10-08', dept:'吉隆坡运营部', deptId:'od_2010', fmsDept:'MY 运营部', fmsDeptCat:'履约', fmsDeptNo:'2010', store:'吉隆坡 1 号仓', storeNo:'MY-W01', storeSeg:'M101', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2609-0211', vendor:'ColdTech', pt:'2026-11-07 10:35', last:null, fromCorp:'FOODMAX SG'},
+  {id:10, ydType:'报废单', ydNo:'BF202611080001', ct:'2026-11-08 13:20', rt:'2026-11-08 13:20', code:'YD2609000017', desc:'激光打印机', src:'易点易动', fm:1, doc:'报废', ebs:'报废', st:'推送成功', why:'', ebsNo:'100102', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,200.00', dps:'2025-09-12', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'已报废', life:'0（取分类默认 36）', po:'PO2509-0040', vendor:'HP SG', pt:'2026-11-08 13:25', last:null, ret:'回收报废'},
+  {id:11, ydType:'入库单', ydNo:'RK202611030002', ct:'2026-11-03 11:05', rt:'2026-11-03 11:05', code:'YD2611000106', desc:'钢制文件柜', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'780.00', dps:'2026-11-03', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0092', vendor:'Office Pro', pt:'—', last:null},
+  {id:12, ydType:'财务标记更正单', ydNo:'GZ202611100001', ct:'2026-11-10 10:00', rt:'2026-11-10 10:00', code:'YD2611000106', desc:'钢制文件柜', src:'易点易动', fm:1, doc:'转移', ebs:'新增', st:'待推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'780.00', dps:'2026-11-03', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0092', vendor:'Office Pro', pt:'—', last:null, corr:true},
+  {id:13, ydType:'入库单', ydNo:'RK202611030002', ct:'2026-11-03 11:08', rt:'2026-11-03 11:08', code:'YD2611000107', desc:'碎纸机', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'260.00', dps:'2026-11-03', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0093', vendor:'Office Pro', pt:'—', last:null},
+  {id:14, ydType:'—', ydNo:'—', ct:'2026-10-20 16:00', rt:'2026-10-20 16:00', code:'KEXP2610003', desc:'会议室投影仪', src:'手工录入', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100221', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'2,400.00', dps:'2026-10-20', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'—', vendor:'Epson SG', pt:'2026-10-20 16:05', last:null},
 ];
 const byId = Object.fromEntries(E.map(e=>[e.id,e]));
 const ST_TAG = {'数据异常':'orange','无需推送':'info','待推送':'blue','推送成功':'green','推送失败':'red','已推送':'purple','推送结果异常':'red'};
@@ -340,8 +342,8 @@ function openAsset(code){
   $('dwBody').innerHTML = `
     <div class="seg"><div class="seg-title">当前资产信息（最新一条）</div><div class="kvgrid">${assetKv(e)}</div></div>
     <div class="seg"><div class="seg-title">事件记录（${list.length} 条）</div>
-      <div class="table-wrap"><table><thead><tr><th>变更时间</th><th>单据类型</th><th>是否财务列管</th><th>推 EBS 类型</th><th>推送状态</th><th>使用部门</th><th>仓库</th><th>操作</th></tr></thead><tbody>
-      ${list.map(x=>`<tr><td>${x.ct}</td><td>${x.doc}</td><td>${fmTag(x.fm)}</td><td>${x.ebs}</td><td>${tag(x.st,ST_TAG[x.st])}</td><td>${x.dept}</td><td>${x.store}</td><td><button class="btn text" onclick="openEvent(${x.id})">详情</button></td></tr>`).join('')}
+      <div class="table-wrap"><table><thead><tr><th>变更时间</th><th>易点单据类型</th><th>易点单据号</th><th>FMS 单据类型</th><th>是否财务列管</th><th>推 EBS 类型</th><th>推送状态</th><th>使用部门</th><th>仓库</th><th>操作</th></tr></thead><tbody>
+      ${list.map(x=>`<tr><td>${x.ct}</td><td>${x.ydType}</td><td class="mono">${x.ydNo}</td><td>${x.doc}</td><td>${fmTag(x.fm)}</td><td>${x.ebs}</td><td>${tag(x.st,ST_TAG[x.st])}</td><td>${x.dept}</td><td>${x.store}</td><td><button class="btn text" onclick="openEvent(${x.id})">详情</button></td></tr>`).join('')}
       </tbody></table></div></div>`;
   $('dwFoot').innerHTML = `<button class="btn" onclick="closeDrawer()">关闭</button>`;
   openDrawer();
@@ -360,15 +362,16 @@ document.querySelectorAll('#psTabs .vtab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('#psTabs .vtab').forEach(x=>x.classList.remove('on')); t.classList.add('on'); psTab=t.dataset.t; renderPush();
 });
 function renderPush(){
-  const src=$('psSrc').value, fm=$('psFm').value, st=$('psSt').value, doc=$('psDoc').value, ebs=$('psEbs').value;
-  let rows = E.filter(e=>(!src||e.src===src)&&(fm===''||String(e.fm)===fm)&&(!st||e.st===st)&&(!doc||e.doc===doc)&&(!ebs||e.ebs===ebs));
+  const src=$('psSrc').value, fm=$('psFm').value, st=$('psSt').value, doc=$('psDoc').value, ebs=$('psEbs').value, yt=$('psYd').value;
+  const nos=$('psNo').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  let rows = E.filter(e=>(!src||e.src===src)&&(fm===''||String(e.fm)===fm)&&(!st||e.st===st)&&(!doc||e.doc===doc)&&(!ebs||e.ebs===ebs)&&(!yt||e.ydType===yt)&&(!nos.length||nos.includes(e.ydNo)));
   if(psTab==='todo') rows = rows.filter(e=>TODO.includes(e.st));
   if(psTab==='stuck') rows = rows.filter(e=>TODO.includes(e.st) && e.ct < '2026-11-09');
   const order = s => ['数据异常','推送失败','推送结果异常','已推送','待推送'].includes(s) ? 0 : 1;
   rows.sort((a,b)=> order(a.st)-order(b.st) || (a.ct<b.ct?1:-1));
   $('psBody').innerHTML = rows.map(e=>`<tr>
     <td><input type="checkbox" class="psck" data-st="${e.st}"></td>
-    <td>${e.ct}</td><td>${e.rt}</td><td class="mono">${e.code}</td><td>${e.desc}</td><td>${e.src}</td><td>${fmTag(e.fm)}</td>
+    <td>${e.ct}</td><td>${e.rt}</td><td>${e.ydType}</td><td class="mono">${e.ydNo}</td><td class="mono">${e.code}</td><td>${e.desc}</td><td>${e.src}</td><td>${fmTag(e.fm)}</td>
     <td>${e.doc}</td><td>${e.ebs}</td><td>${tag(e.st,ST_TAG[e.st])}</td><td class="${e.why&&e.st!=='已推送'&&e.st!=='待推送'?'danger-txt':''}">${e.why||'—'}</td><td class="mono">${e.ebsNo}</td>
     <td>${e.corp}</td><td>${e.dept}</td><td>${e.store}</td><td>${e.pt}</td>
     <td class="opcol"><button class="btn text" onclick="openEvent(${e.id})">详情</button></td></tr>`).join('');
@@ -383,7 +386,7 @@ function renderPush(){
   $('psAll').checked=false; $('psAll').onchange=e=>{document.querySelectorAll('.psck').forEach(c=>c.checked=e.target.checked);upd();};
   upd();
 }
-function resetPush(){ ['psSrc','psFm','psSt','psDoc','psEbs'].forEach(i=>$(i).value=''); renderPush(); }
+function resetPush(){ ['psSrc','psFm','psSt','psDoc','psEbs','psYd','psNo'].forEach(i=>$(i).value=''); renderPush(); }
 
 function judgeHtml(e){
   const L = e.last ? byId[e.last] : null;
@@ -405,7 +408,7 @@ function judgeHtml(e){
     <tr><td>仓库段（仓库核算编码）</td><td>${L.storeSeg}</td><td>${e.storeSeg}</td><td class="${sc?'chg':''}">${sc?'变化 → 转移':'未变'}</td></tr></table></div>`;
 }
 function reqJson(e){
-  const o = {assetCode:e.code, financeManaged:e.fm, rootCategoryCode:e.rootCode, subCategoryCode:e.subCode, quantity:1,
+  const o = {sourceDocType:{'入库单':'RK','领用单':'LY','调拨单':'DB','报废单':'BF','认领单':'RL','财务标记更正单':'GZ'}[e.ydType], sourceDocNo:e.ydNo, assetCode:e.code, financeManaged:e.fm, rootCategoryCode:e.rootCode, subCategoryCode:e.subCode, quantity:1,
     fixedAssetsCost:Number(e.cost.replace(/,/g,'')), useHrDeptId:e.deptId, storeBusinessId:e.storeNo, assetSource:'10',
     assetStatus:e.ast==='已报废'?'6':'1', mdCorporationBusinessCode:e.corpCode, description:e.desc,
     documentType:{'领用':1,'转移':3,'报废':4}[e.doc], lifeInMonths:parseInt(e.life)||0, datePlacedInService:'<'+e.dps+' 毫秒>', changeTime:'<'+e.ct+' 毫秒>', purchaseNo:e.po};
@@ -428,7 +431,7 @@ function openEvent(id){
   $('dwBody').innerHTML = `
     ${showReason?`<div class="reason">${e.st}：${e.why}</div>`:''}
     <div class="seg"><div class="seg-title">事件信息</div><div class="kvgrid">
-      ${[['资产编码',e.code],['资产描述',e.desc],['来源系统',e.src],['是否财务列管',e.fm?'是':'否'],['单据类型',e.doc],['推送状态',e.st],
+      ${[['易点单据类型',e.ydType],['易点单据号',e.ydNo],['来源系统',e.src],['资产编码',e.code],['资产描述',e.desc],['是否财务列管',e.fm?'是':'否'],['FMS 单据类型',e.doc],['推送状态',e.st],
          ['变更时间',e.ct],['接收时间',e.rt],['推送时间',e.pt],['推 EBS 类型',e.ebs],['EBS 资产编码',e.ebsNo],['费用账户',`${e.corpCode}.${e.fmsDeptNo}.6602190101.0.${e.storeSeg}.0.0.0.0.0`]]
          .map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}</div></div>
     <div class="seg"><div class="seg-title">判断依据</div>${judgeHtml(e)}</div>
@@ -445,7 +448,7 @@ function openEvent(id){
 // ---------- 非资产入库清单 ----------
 function renderNon(){
   const rows = E.filter(e=>!e.fm && e.doc==='领用');
-  $('naBody').innerHTML = rows.map(e=>`<tr><td>${e.ct}</td><td class="mono">${e.code}</td><td>${e.desc}</td><td>${e.corp}</td><td>${e.corpCode}</td><td>${e.dept}</td><td>${e.fmsDept}</td><td>${e.fmsDeptCat}</td>
+  $('naBody').innerHTML = rows.map(e=>`<tr><td>${e.ct}</td><td class="mono">${e.ydNo}</td><td class="mono">${e.code}</td><td>${e.desc}</td><td>${e.corp}</td><td>${e.corpCode}</td><td>${e.dept}</td><td>${e.fmsDept}</td><td>${e.fmsDeptCat}</td>
     <td>${e.root}</td><td>${e.sub}</td><td class="num">${e.cost}</td><td>${e.po}</td><td>${e.vendor}</td><td>${e.store}</td>
     <td class="opcol"><button class="btn text" onclick="openEvent(${e.id})">详情</button></td></tr>`).join('');
   $('naCount').textContent = `共 ${rows.length} 条`;
@@ -453,6 +456,8 @@ function renderNon(){
 
 // ---------- 字段对照 ----------
 const MAP = [
+  ['单据类型 <span class="star">★</span>','sourceDocType','是','source_doc_type（新增列）','—','RK 入库 / LY 领用 / DB 调拨 / BF 报废 / RL 认领 / GZ 财务标记更正 / PD 盘点'],
+  ['单据号（入库单流水号、调拨单号等） <span class="star">★</span>','sourceDocNo','是','source_doc_no（新增列）','—','易点原始单号，用于追溯和按单查结果'],
   ['资产卡片.资产编码','assetCode','是','asset_code','TAG_NUMBER','≤ 15 位，全局唯一'],
   ['卡片.是否财务列管 <span class="star">★</span>','financeManaged','是','finance_managed（新增列）','—','1 是 / 0 否；否 → 不推 EBS'],
   ['入库单.财务资产类别','rootCategoryCode / subCategoryCode','是','root_category_code / sub_category_code','ASSET_CATEGORY_CODE（大类.小类）','选 FMS 资产分类'],
