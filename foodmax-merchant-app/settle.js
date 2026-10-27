@@ -230,7 +230,7 @@ function openDetail(b){
       return `<div class="se-card"><div class="se-ct">退货申诉赔付<span class="desc">${c.n} 笔 · 已计入业务调整 · 平台补款</span></div>
         <div class="se-row"><span class="k">赔付合计（含税）</span><span class="v" style="color:var(--emerald-2)">+${money(c.sum)}</span></div>
         <div class="se-row"><span class="k">开票状态</span><span class="v" style="${c.st==='待开票'?'color:#B45309':''}">${c.st}</span></div>
-        <div class="se-tip">请就这笔开 <b>1 张发票给 Foodmax</b>；未开票不影响打款。<span id="se-rc-lk" style="font-weight:700;cursor:pointer">${c.st==='待开票'?'去上传发票':'查看赔付发票'} ›</span></div></div>`;})()}
+        <div class="se-tip">${c.todo?`其中 <b>${c.todo} 笔待开票</b>，请开发票给 Foodmax（可勾选多张合并开 1 张）`:'已全部上传发票'}；未开票不影响打款。<span id="se-rc-lk" style="font-weight:700;cursor:pointer">${c.st==='待开票'?'去上传发票':'查看赔付发票'} ›</span></div></div>`;})()}
 
     <div class="se-card">
       <div class="se-ct">账单构成<span class="desc">按类目汇总</span></div>

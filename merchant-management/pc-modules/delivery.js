@@ -411,7 +411,10 @@
      · 赔付 = Σ 核定数量 × 供货单价（price，送错货不进结算，没有售后单价，按商家供货价）→ 业务调整单「平台付给商家」 */
   DB.whrAppeals = DB.whrAppeals || {
     'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
-      items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,adjNo:'TZ-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
+      items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,adjNo:'TZ-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'},
+    // 核定后还没进结算单（待进结算单 · 待开票），演示合并开票
+    'WR20260628002':{kind:'goods',status:'成立',at:relTs(-5),reviewAt:relTs(-2),desc:'取回 1 件生菜压烂',photos:2,compStatus:'已生成',
+      items:[{name:'生菜',ret:4,sysPick:4,actual:4,damaged:1,short:0,qty:1,price:2.50,ok:1}],comp:2.50,adjNo:'TZ-20261026-114',note:'虚拟库位叠放压损，平台承担'}
   };
 
   // 把一条仓库退回记录包装成 RA 申诉对象（全部商品，_picked 区分已取回 / 待取回）

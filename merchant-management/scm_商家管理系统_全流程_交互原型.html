@@ -1321,6 +1321,7 @@ const NAV={
     {id:'p-cpcfg',ic:'⚙️',t:'客诉罚款规则',p1:1},
     {id:'p-adjust',ic:'💰',t:'业务调整单',p1:1,badge:()=>(DB.adjOrders||[]).filter(r=>r.pushStatus=='PENDING'&&r.status=='effective').length,by:'y'},   // 只计人工单，罚款单菜单角标各计各的
     {id:'p-adjust-type',ic:'⚙️',t:'调整类型配置',p1:1},
+    {id:'p-ret-comp',ic:'💸',t:'退货赔付',p1:1},   // 只读：全部商家的退货申诉赔付单 + 商家开给 Foodmax 的发票
     {id:'p-pickfee-rule',ic:'🚚',t:'自提运费规则',p1:1},
     {id:'p-pickfee-bill',ic:'🧾',t:'自提运费账单',p1:1},
     {id:'p-settle',ic:'🧮',t:'对账结算'},
@@ -6119,7 +6120,7 @@ function act_billDetail(key){
     </tbody></table>
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">⚖️</span><div>业务调整是平台与你线下确认后创建的补款 / 扣款单，按<b>生效日期</b>归入本期：<b>平台补款</b>加到应清算金额，<b>平台扣款</b>从中扣除。<b>账扣</b>不开发票；<b>票扣</b>会对关联的原发票开票调整，金额以含税计。业务调整不计 GMV、不计抽佣；有异议请先联系对接运营，先不要认可。</div></div>`:''}
     ${(()=>{const c=typeof retCompBillSum=='function'?retCompBillSum(sel.no):null;if(!c)return '';
-      return `<div class="ib ${c.st=='待开票'?'ib-y':'ib-g'}" style="margin-bottom:14px"><span class="i">💸</span><div>本期含<b>退货申诉赔付 ${c.n} 笔 ${money(c.sum)}</b>（已计入业务调整 · 平台补款，随本单打款）。请就这笔开 <b>1 张发票给 Foodmax</b>，开票状态：<b>${c.st}</b>；未开票不影响打款。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();DB.rcpTab='inv';nav('m-ret-comp')">${c.st=='待开票'?'去上传发票':'查看赔付发票'} →</button></div></div>`;})()}
+      return `<div class="ib ${c.st=='待开票'?'ib-y':'ib-g'}" style="margin-bottom:14px"><span class="i">💸</span><div>本期含<b>退货申诉赔付 ${c.n} 笔 ${money(c.sum)}</b>（已计入业务调整 · 平台补款，随本单打款）。${c.todo?`其中 <b>${c.todo} 笔待开票</b>，请开发票给 Foodmax（可在退货赔付里勾选多张合并开 1 张）`:'已全部上传发票'}；未开票不影响打款。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();DB.rcpTab='inv';nav('m-ret-comp')">${c.st=='待开票'?'去上传发票':'查看赔付发票'} →</button></div></div>`;})()}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
       ${sel.items.map(it=>`<tr><td>${it[0]}</td><td>${it[1]}</td><td style="${it[2]<0?'color:var(--r)':''}">${it[2]<0?'-':''}${money(Math.abs(it[2]))}</td></tr>`).join('')}
@@ -6413,7 +6414,7 @@ goHome();
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20261027c"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
-<script src="pc-modules/delivery.js?v=20261027a"></script>
+<script src="pc-modules/delivery.js?v=20261027b"></script>
 <script src="pc-modules/checkgoods.js?v=20261015e"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
@@ -6432,6 +6433,6 @@ goHome();
 <script src="pc-modules/pickfee.js?v=20261012c"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027e"></script>
-<script src="pc-modules/retcomp.js?v=20261027a"></script>
+<script src="pc-modules/retcomp.js?v=20261027c"></script>
 </body>
 </html>
