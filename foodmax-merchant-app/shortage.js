@@ -9,6 +9,7 @@
    前缀 bq-。数据挂 window.FM.DB.shortReports。 */
 (function(){
 const FM=window.FM,D=FM.DB;
+const REASONS=['供应商断货','到货不足','品质不合格','其他'];   // 缺货原因枚举，默认第一项（与 PC 同）
 const FINE=40;   // 缺货罚款标准 S$/件（与 PC replFineRate 同源，平台可配）
 
 /* 演示数据：订单补下单时间 + 两笔裕廊DC 小棠菜，便于演示「下单晚的先扣」 */
@@ -82,7 +83,7 @@ const ST={pending:['y','待处理'],doing:['y','处理中'],done:['g','已处理
 function open(date,key,printed,onDone){
   const [wh,sku]=key.split('|');const li=info(date,wh,sku);const cap=li.ordered-li.reported;
   if(cap<=0){FM.toast('该商品订单量已全部报缺');return;}
-  const st={qty:1,rmk:''};
+  const st={qty:1,rmk:REASONS[0]};
   const draw=box=>{
     box.innerHTML=`
       <div class="bq-card"><div class="bq-h">${li.name} · ${li.spec||li.unit} · ${wh} · 配送日 ${date}</div>
@@ -92,19 +93,18 @@ function open(date,key,printed,onDone){
         <div class="bq-all" data-all="1">全部缺货（${cap}）</div></div>
       <div class="bq-tip g">📣 提交后平台客服会联系受影响的客户处理。打印标签数量不变，按实际能送的货贴标送货即可。</div>
       ${D.labelCutoff?'':`<div class="bq-tip y">⏸ 当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单。货到了可在「报缺记录」恢复售卖。</div>`}
-      <div class="bq-tip g">⚖️ 报缺照常计缺货罚款：${st.qty} × S$${FINE.toFixed(2)} = <b>S$${(st.qty*FINE).toFixed(2)}</b>，并入该仓送货单罚款单。</div>
-      <div class="bq-card"><div class="bq-h">缺货原因（选填）</div><input class="bq-in" id="bq-r" maxlength="100" placeholder="如：供应商断货" value="${st.rmk}"></div>
+      <div class="bq-card"><div class="bq-h">缺货原因</div><div class="lb-pills">${REASONS.map(x=>`<span class="lb-pill ${st.rmk===x?'on':''}" data-rs="${x}">${x}</span>`).join('')}</div></div>
       <div style="height:16px"></div>`;
     box.querySelectorAll('.bq-step .b').forEach(b=>b.onclick=()=>{st.qty=Math.max(1,Math.min(cap,st.qty+(+b.dataset.d)));draw(box);});
     box.querySelector('[data-all]').onclick=()=>{st.qty=cap;draw(box);};
     const q=box.querySelector('#bq-q');q.onchange=()=>{let n=parseInt(q.value,10);if(isNaN(n)||n<1)n=1;if(n>cap){n=cap;FM.toast(`最多可报 ${cap}（订单量 − 已报缺）`);}st.qty=n;draw(box);};
-    box.querySelector('#bq-r').oninput=e=>{st.rmk=e.target.value;};
+    box.querySelectorAll('[data-rs]').forEach(el=>el.onclick=()=>{st.rmk=el.dataset.rs;draw(box);});
   };
   FM.pushPage({title:'报缺货',body:'<div id="bq-b"></div>',footer:'<button class="btn danger" id="bq-ok" style="background:#C0453B;color:#fff">确认报缺</button>',
     mount:p=>{const box=p.querySelector('#bq-b');draw(box);
       p.querySelector('#bq-ok').onclick=()=>{const q=box.querySelector('#bq-q');if(q)q.onchange&&q.onchange();
         const al=allocate(date,wh,sku,st.qty);if(!al.length){FM.toast('没有可分摊的订单','err');return;}
-        D.shortReports.unshift({id:'BQ'+date.replace('-','')+String(++D.shortSeq).padStart(3,'0'),date,wh,sku,name:li.name,unit:li.unit,spec:li.spec,qty:st.qty,rmk:st.rmk.trim(),
+        D.shortReports.unshift({id:'BQ'+date.replace('-','')+String(++D.shortSeq).padStart(3,'0'),date,wh,sku,name:li.name,unit:li.unit,spec:li.spec,qty:st.qty,rmk:st.rmk,
           time:nowStr(),phase:D.labelCutoff?'after':'before',stopSale:!D.labelCutoff,restoredAt:'',fine:st.qty*FINE,
           allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),status:'active'});
         FM.popPage();onDone&&onDone();

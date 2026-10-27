@@ -13,7 +13,8 @@
    - 商家端【不展示订单】：分摊到哪些订单只给客服看（运营平台待办 + 飞书群），商家弹窗/记录不出现订单。
    - 客服：系统不自动改单。通知 = 小蜜蜂推飞书群 + 运营平台「商家报缺」待办；
            客服联系客户后在客诉链路处理（部分退款 / 补自营商品 / 客户接受少送），回到待办登记结果。
-   - 罚款：主动报缺【照罚不减免】，件数 × 缺货罚款标准（replFineRate），并入该仓送货单的缺货罚款单。
+   - 罚款：主动报缺【照罚不减免】（商家报缺页不展示罚款提示，2026-10-27）。
+   - 缺货原因：枚举 供应商断货/到货不足/品质不合格/其他，必选，默认「供应商断货」。
    - 撤销：受影响订单全部「待处理」时商家可撤销，同步推撤销通知；客服处理过任一单即不可撤销。
    依赖主文件全局：DB / toast / modal / closeModal / drawer / closeDrawer / render / nav / askConfirm / ord_mask / money / replFineRate。 */
 (function(){
@@ -31,6 +32,7 @@
   if(DB.labelCutoff===undefined)DB.labelCutoff=false;     // 演示：当前是否已截单（打印标签页「未截单/已截单」标签可点切换）
   const FS_GROUP='三方商家缺货处理群';                       // 飞书客服群名（待确认）
   const WAYS=['部分退款','补自营商品','客户接受少送'];
+  const REASONS=['供应商断货','到货不足','品质不合格','其他'];   // 缺货原因枚举，默认第一项
   const nowStr=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
 
   /* ================= 核心计算 ================= */
@@ -64,7 +66,7 @@
     const li=lineInfo(date,wh,sku);const cap=li.ordered-li.reported;
     if(cap<=0){toast('该商品订单量已全部报缺','info');return;}
     const printed=((DB.labelPrinted||{})[key])||0;
-    DB.shortDraft={key,date,wh,sku,qty:Math.min(1,cap),cap,printed,li};
+    DB.shortDraft={key,date,wh,sku,qty:Math.min(1,cap),cap,printed,li,rmk:REASONS[0]};
     modal(`<div class="mc-hd"><h3>报缺货 · ${li.name}</h3><p>${li.spec||li.unit}（${sku}） · ${wh} · 配送日 ${date}</p><button class="mc-x" onclick="closeModal()">×</button></div>
       <div class="mc-bd" id="sh-bd">${draftBody()}</div>
       <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-d" onclick="short_submit()">确认报缺</button></div>`);
@@ -86,9 +88,9 @@
         </div></div>
       <div class="ib ib-b" style="margin-top:12px"><span class="i">📣</span><div>提交后平台客服会联系受影响的客户处理。打印标签数量不变，按实际能送的货贴标送货即可。</div></div>
       ${DB.labelCutoff?'':`<div class="ib ib-y" style="margin-top:12px"><span class="i">⏸️</span><div>当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单。货到了可在「报缺记录」里恢复售卖。</div></div>`}
-      <div class="ib ib-gr" style="margin-top:12px"><span class="i">⚖️</span><div>报缺的件数照常计<b>缺货罚款</b>：${d.qty} × ${money(replFineRate())} = <b>${money(fine)}</b>，并入该仓送货单的罚款单。</div></div>
-      <div class="fr" style="margin-top:12px"><label class="fl">缺货原因</label><input id="sh-rmk" maxlength="100" placeholder="选填，如：供应商断货" value="${d.rmk||''}" oninput="DB.shortDraft.rmk=this.value"></div>`;
+      <div class="fr" style="margin-top:12px"><label class="fl"><b>*</b>缺货原因</label><div class="row" style="gap:8px;flex-wrap:wrap">${REASONS.map(x=>`<button class="btn btn-sm ${d.rmk==x?'btn-p':'btn-o'}" onclick="DB.shortDraft.rmk='${x}';short_redraw()">${x}</button>`).join('')}</div></div>`;
   }
+  window.short_redraw=function(){redraw();};
   function redraw(){const el=document.getElementById('sh-bd');if(el)el.innerHTML=draftBody();}
   window.short_step=function(n){const d=DB.shortDraft;d.qty=Math.max(1,Math.min(d.cap,d.qty+n));redraw();};
   window.short_setQty=function(v,force){const d=DB.shortDraft;let n=parseInt(v,10);if(isNaN(n))return;
@@ -97,7 +99,7 @@
   window.short_submit=function(){
     const d=DB.shortDraft;const al=allocate(d.date,d.wh,d.sku,d.qty);if(!al.length){toast('没有可分摊的订单','err');return;}
     const id='BQ'+d.date.replace('-','')+String(++DB.shortSeq).padStart(3,'0');
-    const r={id,date:d.date,wh:d.wh,sku:d.sku,name:d.li.name,unit:d.li.unit,spec:d.li.spec,qty:d.qty,rmk:(d.rmk||'').trim(),
+    const r={id,date:d.date,wh:d.wh,sku:d.sku,name:d.li.name,unit:d.li.unit,spec:d.li.spec,qty:d.qty,rmk:d.rmk,
       time:nowStr(),phase:DB.labelCutoff?'after':'before',stopSale:!DB.labelCutoff,restoredAt:'',fine:d.qty*replFineRate(),
       allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),
       status:'active',push:[{type:'报缺',at:nowStr()}]};
@@ -146,7 +148,7 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 18px;margin-bottom:22px">
         ${kv('商家名称',DB.merchant.name)}${kv('商家编码',`<span class="mono">${DB.merchant.code}</span>`)}${kv('商品名称',r.name)}${kv('SKU编码',`<span class="mono">${r.sku}</span>`)}
         ${kv('配送日期',r.date)}${kv('入库仓库',r.wh)}${kv('缺货数量',`${r.qty}${r.unit}`)}${kv('报缺时间',r.time)}
-        ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('售卖状态',r.status=='revoked'?'—':(r.stopSale?'已停售':(r.phase=='before'?`已恢复（${r.restoredAt}）`:'—')))}${kv('缺货原因',r.rmk)}${kv('缺货罚款',money(r.fine))}
+        ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('售卖状态',r.status=='revoked'?'—':(r.stopSale?'已停售':(r.phase=='before'?`已恢复（${r.restoredAt}）`:'—')))}${kv('缺货原因',r.rmk)}${ops?kv('缺货罚款',money(r.fine)):''}
         ${kv('处理状态',stTag(st))}
       </div>
       ${ops?`<h4 style="font-size:14px;margin-bottom:12px">受影响订单</h4>
