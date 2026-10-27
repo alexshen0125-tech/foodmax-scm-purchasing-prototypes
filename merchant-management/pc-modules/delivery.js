@@ -408,7 +408,7 @@
      · 2026-10-27：待取回 / 已取回都能申诉、不限时间；逐 SKU 填实际数量 / 坏了不能卖（已取回按取回数、待取回按在仓数预填）；
        数量都没问题按「其他」提交、说明必填（无「未到仓」——货已在仓登记）
      · 平台 48h 内核定
-     · 赔付 = Σ 核定数量 × 供货单价（price，送错货不进结算，没有售后单价，按商家供货价）→ 赔付单推送进结算单
+     · 赔付 = Σ 核定数量 × 商品售价（10-27 会议：仓库丢损按售价赔、不扣佣金）→ 赔付单推送进结算单
      · 2026-10-27 会议：商家自己送多的不赔 → 申诉入口默认关闭（DB.whrAppealOn），关闭时列表/详情不出现申诉按钮；历史已核定的照常展示 */
   DB.whrAppeals = DB.whrAppeals || {
     'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
@@ -419,7 +419,7 @@
   function whrAdapter(no){
     const g=whrGroups().find(x=>x.no==no); if(!g)return null;
     const pc=g.list.filter(x=>x.status=='已取回').length,pend=g.list.length-pc;
-    return {_whr:true,_title:no,_priceLabel:'供货单价',_pendingCount:pend,_stLabel:!pc?'待取回':(pend?'部分取回':'已取回'),id:no,type:'退货退款',returnStatus:pc?'已提货':'待提货',amt:0,
+    return {_whr:true,_title:no,_priceLabel:'商品售价',_pendingCount:pend,_stLabel:!pc?'待取回':(pend?'部分取回':'已取回'),id:no,type:'退货退款',returnStatus:pc?'已提货':'待提货',amt:0,
       retAppeal:DB.whrAppeals[no]||null,
       retItems:g.list.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price,_picked:r.status=='已取回'})),
       _save:ra=>{DB.whrAppeals[no]=ra;}};
@@ -432,7 +432,7 @@
     if(!nos.length)return '';
     return `<div class="card" style="margin-top:16px"><div class="card-hd"><h3>仓库退回 · 申诉待核定</h3><span class="sub">${nos.length} 单</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>退回单号</th><th>申诉类型</th><th>申诉商品</th><th style="text-align:right">申诉数量</th><th>申诉时间</th><th>操作</th></tr></thead><tbody>
-      ${nos.map(no=>{const ra=DB.whrAppeals[no];return `<tr><td class="mono">${no}</td><td>${raKindLabel(ra)}</td><td>${ra.items.map(x=>x.name).join('、')}</td><td style="text-align:right">${ra.items.reduce((s,x)=>s+x.qty,0)}</td><td style="font-size:12px;color:var(--ts)">${ra.at}</td><td><button class="btn btn-p btn-sm" onclick="raReviewOpen(DB.whrAppeals['${no}'],'${no}','供货单价')">核定退货申诉</button></td></tr>`;}).join('')}
+      ${nos.map(no=>{const ra=DB.whrAppeals[no];return `<tr><td class="mono">${no}</td><td>${raKindLabel(ra)}</td><td>${ra.items.map(x=>x.name).join('、')}</td><td style="text-align:right">${ra.items.reduce((s,x)=>s+x.qty,0)}</td><td style="font-size:12px;color:var(--ts)">${ra.at}</td><td><button class="btn btn-p btn-sm" onclick="raReviewOpen(DB.whrAppeals['${no}'],'${no}','商品售价')">核定退货申诉</button></td></tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   };
   window.whrOfDelivery=function(id){return (DB.whReturns||[]).filter(r=>r.deliveryNo==id);};

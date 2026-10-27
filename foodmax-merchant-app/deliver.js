@@ -750,7 +750,7 @@ const pickOf=(g,x)=>(x.pickQty==null&&g.st==='已提货')?0:x.pickQty;
    · 未到仓（待仓库入库）：申诉数量默认 = 退回数量
    · 其他：申诉数量全为 0 但说明写了问题 → 按「其他」提交，平台核定数量（上限 = 退回数量）
    · 每张退货单 / 每条退回记录 1 次；平台 48h 内给结果
-   · 赔付 = Σ 核定数量 × 单价（客户退货=原订单结算单价，仓库退回=供货单价），生成赔付单直接推送进结算单（货权转移阶段，随结算单开票）
+   · 赔付 = Σ 核定数量 × 单价（客户退货=原订单结算单价，仓库退回=商品售价，不扣佣金），生成赔付单直接推送进结算单（货权转移阶段，随结算单开票）
    · 10-27 会议：客服核实；仓库退回申诉入口默认关闭（FM.DB.whrAppealOn，与 PC 同） */
 const RA_KIND={goods:'实物问题',noarrive:'未到仓'};
 const RA_REVIEW_H=48;
@@ -923,7 +923,7 @@ window.FM.DB.whReturns = window.FM.DB.whReturns || [
 const WHR=()=>window.FM.DB.whReturns||[];
 /* 仓库退回申诉（scm_退货申诉_prd.md，与 PC pc-modules/delivery.js whrAdapter 同口径）：
    以【退回单号 returnNo】为单位（一张送货单可多条退回记录），每条 1 次；2026-10-27 起待取回 / 已取回都能申诉、不限时间；
-   赔付 = 核定数量 × 供货单价（送错货不进结算，按商家供货价）→ 赔付单推送进结算单 */
+   赔付 = 核定数量 × 商品售价（10-27 会议：仓库丢损按售价赔、不扣佣金）→ 赔付单推送进结算单 */
 window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
   'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
     items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,compNo:'PF-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
@@ -931,7 +931,7 @@ window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
 function whrAdapter(no){
   const g=whrGroups().find(x=>x.no===no); if(!g)return null;
   const pc=g.list.filter(x=>x.status==='已取回').length;
-  return {_whr:true,_priceLabel:'供货单价',_pendingCount:g.list.length-pc,no,st:pc?'已提货':'待提货',appeal:window.FM.DB.whrAppeals[no]||null,
+  return {_whr:true,_priceLabel:'商品售价',_pendingCount:g.list.length-pc,no,st:pc?'已提货':'待提货',appeal:window.FM.DB.whrAppeals[no]||null,
     items:g.list.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price,_picked:r.status==='已取回'})),
     _save:ra=>{window.FM.DB.whrAppeals[no]=ra;}};
 }
@@ -1095,7 +1095,7 @@ window.FM_MOD.retCompSrc=()=>{
   const out=[];
   RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'客户退货',retNo:g.no,ra,priceLabel:'原订单结算单价',open:()=>openReturnDetail(g.no)});});
   const wa=window.FM.DB.whrAppeals||{};
-  Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'供货单价',open:()=>openWhrDetail(no)});});
+  Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:()=>openWhrDetail(no)});});
   return out;
 };
 window.FM_MOD.raKindLabel=raKindLabel;
