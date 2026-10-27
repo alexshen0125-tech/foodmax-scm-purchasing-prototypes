@@ -277,7 +277,7 @@
       ${rows.map((r,i)=>{const pr=Math.min(r.qty,printedOf(r.key));const un=r.qty-pr;const last=DB.labelLast[r.key]||0;const done=un<=0;return `<tr>
         <td><input type="checkbox" ${sel.includes(r.key)?'checked':''} onclick="label_toggleSel('${r.key}')"></td>
         <td>${i+1}</td>
-        <td><b>${r.name}</b>${r.shortQty?` <span class="tag t-r" style="font-size:10px">已报缺 ${r.shortQty}</span>`:''}${(typeof shortStopped=='function')&&shortStopped(f.date,String(r.key).split('|')[0],r.sku)?' <span class="tag t-gr" style="font-size:10px">已停售</span>':''}${done?' <span class="tag t-g" style="font-size:10px">打印完成</span>':''}${wgBlocked(r)?` <span class="tag t-r" style="font-size:10px">待称重 ${r.wgWait}</span>`:(r.wgNeed?' <span class="tag t-g" style="font-size:10px">已称重</span>':'')}</td>
+        <td><b>${r.name}</b>${r.shortQty?` <span class="tag t-r" style="font-size:10px">已报缺 ${r.shortQty}</span>`:''}${(typeof shortStopped=='function')&&shortStopped(f.date,String(r.key).split('|')[0],r.sku)?' <span class="tag t-gr" style="font-size:10px">已下架</span>':''}${done?' <span class="tag t-g" style="font-size:10px">打印完成</span>':''}${wgBlocked(r)?` <span class="tag t-r" style="font-size:10px">待称重 ${r.wgWait}</span>`:(r.wgNeed?' <span class="tag t-g" style="font-size:10px">已称重</span>':'')}</td>
         <td>${specLabel(r)} <span style="color:var(--ts)">(${r.sku})</span></td>
         <td style="font-size:12px;color:var(--ts)">${r.cat}</td>
         <td style="text-align:right">${yday(r.sku)}</td>

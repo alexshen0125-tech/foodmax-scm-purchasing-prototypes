@@ -6,8 +6,8 @@
    - 粒度：配送日 × 入库仓库 × SKU，与打印标签行一致；只报件数。
    - 分摊：同一 配送日×仓×SKU 的待发货订单按【下单时间从晚到早】依次扣，扣满一单再扣下一单（BR-02）。
    - 时点：截单前、截单后都能报，送货签到前截止。
-       · 截单前报 → 该 SKU【立即停售】（可售库存清零、不再接新单），分摊结果立即定稿并推送；
-         商家可手动「恢复售卖」，恢复后新进的订单不参与本次分摊。
+       · 报缺时看该 SKU 当前售卖状态（售卖中/售罄/已下架）：售卖中 → 提交即【自动下架】，不再接新单，分摊结果定稿；
+         售罄 / 已下架 → 不处理。自动下架的商家可在报缺记录「重新上架」，上架后新进的订单不参与本次分摊。
        · 截单后报 → 订单已固定，直接分摊推送。
    - 报缺【不影响打印标签数据】：应送货/已打印/未打印照旧，只在行上标「已报缺 N」（2026-10-27 用户改）。
    - 商家端【不展示订单】：分摊到哪些订单只给客服看（运营平台待办 + 飞书群），商家弹窗/记录不出现订单。
@@ -32,7 +32,12 @@
   if(DB.labelCutoff===undefined)DB.labelCutoff=false;     // 演示：当前是否已截单（打印标签页「未截单/已截单」标签可点切换）
   const FS_GROUP='三方商家缺货处理群';                       // 飞书客服群名（待确认）
   const WAYS=['部分退款','补自营商品','客户接受少送'];
-  const REASONS=['供应商断货','到货不足','品质不合格','其他'];   // 缺货原因枚举，默认第一项
+  const REASONS=['库存维护不准','缺货','到货不足','品质不合格'];   // 缺货原因枚举，默认第一项
+  // SKU 当前售卖状态（演示；落地取商品 SKU 状态：可售=售卖中 / 库存≤0=售罄 / 已下架）
+  DB.skuSale=DB.skuSale||{SKU8826:'售罄',SKU8825:'已下架'};
+  const saleOf=sku=>DB.skuSale[sku]||'售卖中';
+  const SALE_TAG={'售卖中':'t-g','售罄':'t-y','已下架':'t-gr'};
+  const saleTag=sku=>`<span class="tag ${SALE_TAG[saleOf(sku)]}"><span class="dot"></span>${saleOf(sku)}</span>`;
   const nowStr=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
 
   /* ================= 核心计算 ================= */
@@ -40,7 +45,7 @@
   // 某订单某 SKU 已被报缺扣掉的件数（打印标签应送货据此扣减）
   window.shortLineOf=function(orderId,sku){let n=0;DB.shortReports.filter(active).forEach(r=>r.allocs.forEach(a=>{if(a.orderId==orderId&&r.sku==sku)n+=a.short;}));return n;};
   window.shortOfKey=function(date,wh,sku){return DB.shortReports.filter(r=>active(r)&&r.date==date&&r.wh==wh&&r.sku==sku).reduce((s,r)=>s+r.qty,0);};
-  window.shortStopped=function(date,wh,sku){return DB.shortReports.some(r=>active(r)&&r.date==date&&r.wh==wh&&r.sku==sku&&r.stopSale);};
+  window.shortStopped=function(date,wh,sku){return saleOf(sku)=='已下架'&&DB.shortReports.some(r=>active(r)&&r.date==date&&r.wh==wh&&r.sku==sku&&r.stopSale);};
   // 候选订单：待发货（含已贴标），同 配送日×仓×SKU；可扣量 = 订购 − 已报缺
   function candOrders(date,wh,sku){
     const out=[];
@@ -87,7 +92,8 @@
           <button class="btn btn-link btn-sm" onclick="short_setQty(${d.cap},1)">全部缺货（${d.cap}）</button>
         </div></div>
       <div class="ib ib-b" style="margin-top:12px"><span class="i">📣</span><div>提交后平台客服会联系受影响的客户处理。打印标签数量不变，按实际能送的货贴标送货即可。</div></div>
-      ${DB.labelCutoff?'':`<div class="ib ib-y" style="margin-top:12px"><span class="i">⏸️</span><div>当前<b>未截单</b>：提交后该商品<b>立即停售</b>，不再接新单。货到了可在「报缺记录」里恢复售卖。</div></div>`}
+      <div class="fr" style="margin-top:12px"><label class="fl">当前售卖状态</label><div>${saleTag(d.sku)}</div></div>
+      ${saleOf(d.sku)=='售卖中'?`<div class="ib ib-y"><span class="i">⏸️</span><div>该商品<b>售卖中</b>：提交后会<b>自动下架</b>，不再接新单。货到了可在「报缺记录」里重新上架。</div></div>`:''}
       <div class="fr" style="margin-top:12px"><label class="fl"><b>*</b>缺货原因</label><div class="row" style="gap:8px;flex-wrap:wrap">${REASONS.map(x=>`<button class="btn btn-sm ${d.rmk==x?'btn-p':'btn-o'}" onclick="DB.shortDraft.rmk='${x}';short_redraw()">${x}</button>`).join('')}</div></div>`;
   }
   window.short_redraw=function(){redraw();};
@@ -100,11 +106,12 @@
     const d=DB.shortDraft;const al=allocate(d.date,d.wh,d.sku,d.qty);if(!al.length){toast('没有可分摊的订单','err');return;}
     const id='BQ'+d.date.replace('-','')+String(++DB.shortSeq).padStart(3,'0');
     const r={id,date:d.date,wh:d.wh,sku:d.sku,name:d.li.name,unit:d.li.unit,spec:d.li.spec,qty:d.qty,rmk:d.rmk,
-      time:nowStr(),phase:DB.labelCutoff?'after':'before',stopSale:!DB.labelCutoff,restoredAt:'',fine:d.qty*replFineRate(),
+      time:nowStr(),phase:DB.labelCutoff?'after':'before',saleAt:saleOf(d.sku),stopSale:saleOf(d.sku)=='售卖中',restoredAt:'',fine:d.qty*replFineRate(),
       allocs:al.map(a=>({orderId:a.orderId,client:a.client,orderTime:a.orderTime,ordered:a.ordered,short:a.short,cs:'pending',way:'',note:'',csAt:''})),
       status:'active',push:[{type:'报缺',at:nowStr()}]};
+    if(r.stopSale)DB.skuSale[d.sku]='已下架';   // 售卖中 → 自动下架；售罄/已下架不处理
     DB.shortReports.unshift(r);DB.shortDraft=null;closeModal();render();
-    toast(`已报缺 ${d.qty}${d.li.unit}，已通知客服处理${r.stopSale?'；该商品已停售':''}`,'ok');
+    toast(`已报缺 ${d.qty}${d.li.unit}，已通知客服处理${r.stopSale?'；该商品已自动下架':''}`,'ok');
   };
 
   /* ================= 商家端 · 报缺记录抽屉 ================= */
@@ -116,17 +123,17 @@
       ${list.map(r=>{const st=repStatus(r);return `<tr>
         <td class="mono">${r.id}</td><td>${r.wh}</td><td><b>${r.name}</b></td><td class="mono">${r.sku}</td>
         <td style="text-align:right">${r.qty}</td><td>${r.time}</td>
-        <td>${r.status=='revoked'?'—':(r.stopSale?'<span class="tag t-r"><span class="dot"></span>已停售</span>':(r.phase=='before'?'<span class="tag t-g"><span class="dot"></span>已恢复</span>':'<span style="color:var(--ts)">截单后报缺</span>'))}</td>
+        <td>${saleTag(r.sku)}</td>
         <td>${stTag(st)}</td>
-        <td style="white-space:nowrap"><button class="btn btn-link btn-sm" onclick="short_detail('${r.id}',0)">详情</button>${r.stopSale&&r.status!='revoked'?`<button class="btn btn-link btn-sm" onclick="short_restore('${r.id}')">恢复售卖</button>`:''}${st=='pending'?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_revoke('${r.id}')">撤销</button>`:''}</td>
+        <td style="white-space:nowrap"><button class="btn btn-link btn-sm" onclick="short_detail('${r.id}',0)">详情</button>${r.stopSale&&r.status!='revoked'&&saleOf(r.sku)=='已下架'?`<button class="btn btn-link btn-sm" onclick="short_restore('${r.id}')">重新上架</button>`:''}${st=='pending'?`<button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_revoke('${r.id}')">撤销</button>`:''}</td>
       </tr>`;}).join('')}</tbody></table></div>`:`<div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日暂无报缺</div><div class="e-s">在打印标签列表点「报缺货」即可上报。</div></div>`}</div>
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
   };
   window.short_restore=function(id){const r=DB.shortReports.find(x=>x.id==id);if(!r)return;
-    askConfirm(`恢复「${r.name}」售卖？恢复后新进的订单<b>不参与本次报缺分摊</b>，按正常订单备货送货。`,()=>{r.stopSale=false;r.restoredAt=nowStr();render();short_records();toast(`「${r.name}」已恢复售卖`,'ok');});};
+    askConfirm(`重新上架「${r.name}」？上架后新进的订单<b>不参与本次报缺分摊</b>，按正常订单备货送货。`,()=>{DB.skuSale[r.sku]='售卖中';r.restoredAt=nowStr();render();short_records();toast(`「${r.name}」已重新上架`,'ok');});};
   window.short_revoke=function(id){const r=DB.shortReports.find(x=>x.id==id);if(!r)return;
     if(repStatus(r)!='pending'){toast('客服已开始处理，不能撤销','err');return;}
-    askConfirm(`撤销报缺 ${r.id}？${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale?'商品同时恢复售卖，':''}将向客服推送撤销通知，不再计缺货罚款。`,()=>{r.status='revoked';r.stopSale=false;r.push.push({type:'撤销',at:nowStr()});render();short_records();toast(`已撤销 ${r.id}，已通知客服`,'ok');});};
+    askConfirm(`撤销报缺 ${r.id}？${r.qty}${r.unit}「${r.name}」恢复为应送，${r.stopSale&&saleOf(r.sku)=='已下架'?'商品同时重新上架，':''}将向客服推送撤销通知，不再计缺货罚款。`,()=>{if(r.stopSale&&saleOf(r.sku)=='已下架')DB.skuSale[r.sku]='售卖中';r.status='revoked';r.push.push({type:'撤销',at:nowStr()});render();short_records();toast(`已撤销 ${r.id}，已通知客服`,'ok');});};
 
   /* ================= 共用 · 报缺详情抽屉（商家只读 / 运营可处理） ================= */
   function fsCard(r,type){const st=r.allocs;return `<div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;max-width:460px">
@@ -135,7 +142,7 @@
         <div><b>商家：</b>${DB.merchant.name}（${DB.merchant.code}）</div>
         <div><b>商品：</b>${r.name} ${r.spec||''}（${r.sku}）</div>
         <div><b>配送日 / 仓库：</b>${r.date} · ${r.wh}</div>
-        <div><b>缺货：</b><span style="color:var(--r);font-weight:600">${r.qty}${r.unit}</span> · ${r.phase=='before'?'截单前报缺（已停售）':'截单后报缺'}${r.rmk?` · ${r.rmk}`:''}</div>
+        <div><b>缺货：</b><span style="color:var(--r);font-weight:600">${r.qty}${r.unit}</span> · ${r.phase=='before'?'截单前报缺':'截单后报缺'}${r.stopSale?' · 已自动下架':''}${r.rmk?` · ${r.rmk}`:''}</div>
         <div style="margin-top:4px"><b>受影响订单（下单晚的先扣）：</b></div>
         ${st.map(a=>`<div class="mono" style="font-size:12px">${a.orderId} · ${a.client} · 下单 ${a.orderTime} · 订 ${a.ordered} 缺 ${a.short}</div>`).join('')}
       </div>
@@ -148,7 +155,7 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 18px;margin-bottom:22px">
         ${kv('商家名称',DB.merchant.name)}${kv('商家编码',`<span class="mono">${DB.merchant.code}</span>`)}${kv('商品名称',r.name)}${kv('SKU编码',`<span class="mono">${r.sku}</span>`)}
         ${kv('配送日期',r.date)}${kv('入库仓库',r.wh)}${kv('缺货数量',`${r.qty}${r.unit}`)}${kv('报缺时间',r.time)}
-        ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('售卖状态',r.status=='revoked'?'—':(r.stopSale?'已停售':(r.phase=='before'?`已恢复（${r.restoredAt}）`:'—')))}${kv('缺货原因',r.rmk)}${ops?kv('缺货罚款',money(r.fine)):''}
+        ${kv('报缺时点',r.phase=='before'?'截单前':'截单后')}${kv('报缺时售卖状态',r.saleAt)}${kv('自动下架',r.stopSale?(r.restoredAt?`是 · ${r.restoredAt} 重新上架`:'是'):'否')}${kv('缺货原因',r.rmk)}${ops?kv('缺货罚款',money(r.fine)):''}
         ${kv('处理状态',stTag(st))}
       </div>
       ${ops?`<h4 style="font-size:14px;margin-bottom:12px">受影响订单</h4>

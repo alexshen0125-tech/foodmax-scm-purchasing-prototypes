@@ -465,7 +465,7 @@ function drawLabelDetail(box,key){
     ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
       :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>
         <div class="lp-seqlink" onclick="lp_seqModal('${key}')">🔢 按序号打印 / 补打</div>`}
-    ${window.FM_SHORT&&window.FM_SHORT.keyShort(state.date,r.wh,r.sku)?`<div class="lp-printer" style="color:#C0453B">📉 已报缺 ${window.FM_SHORT.keyShort(state.date,r.wh,r.sku)}${r.unit||'件'}，已通知客服处理${window.FM_SHORT.stopped(state.date,r.wh,r.sku)?' · 已停售':''}</div>`:''}
+    ${window.FM_SHORT&&window.FM_SHORT.keyShort(state.date,r.wh,r.sku)?`<div class="lp-printer" style="color:#C0453B">📉 已报缺 ${window.FM_SHORT.keyShort(state.date,r.wh,r.sku)}${r.unit||'件'}，已通知客服处理${window.FM_SHORT.stopped(state.date,r.wh,r.sku)?' · 已自动下架':''}</div>`:''}
     ${window.FM_SHORT&&r.ordQty>0?`<div class="bq-lk" onclick="lp_short('${key}')">缺货了？报缺货 ›</div>`:''}
     <div style="height:14px"></div>`;
   refreshPrintFooter(key);
