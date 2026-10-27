@@ -3,7 +3,7 @@
        近区（祝融、白斯班江一带）S$20 / 次，不拼车；普通区 S$80 / 车，最多 4 家拼车，按同车商家数平摊
    - 同一天只收一次（按当天第一趟所在的车算）；改区域下一次取货起生效
    - 免运费期：有了第一次取货任务起 14 天内免运费（含首取当天）；超出免运费期还要免的，平台走飞书审批（凡哥批）通过后不扣，商家这边显示「已减免」
-   - 按周出账（周一至周日），推送后在那周结算单里从货款扣，并自动开物流服务费发票（9% GST）
+   - 按周出账（周一至周日），推送后在那周结算单里从货款扣；物流服务费发票按结算单单独开（一张结算单一张票，9% GST）
    - 只显示同车商家数，不显示是哪几家
    - 演示数据与 PC 一致（绿鲜源蔬果旗舰店 SH2026062000001，普通区）
    样式复用 replen.js 注入的 .rp-* 类 */
@@ -25,7 +25,7 @@ const zoneStd=z=>z==='NEAR'?`${money(PRICE.NEAR)} / 次，不拼车`:z==='NORMAL
 DB.pfRules=DB.pfRules||[{from:'2026-10-01 00:00',zone:'NORMAL'}];
 DB.pfBills=DB.pfBills||{
   '2026-10-05':{pushedAt:'2026-10-12 10:15',invNo:'LOG-INV-2026-000012'},
-  '2026-10-12':{pushedAt:'2026-10-19 09:40',invNo:'LOG-INV-2026-000016'},
+  '2026-10-12':{pushedAt:'2026-10-19 09:40',invNo:'LOG-INV-2026-000015'},
 };
 DB.pfVoids=DB.pfVoids||{'PK2026102164':{}};   // 与 PC 一致：飞书免运费审批通过（凡哥批）的一笔，商家这边显示已减免
 const ruleAt=t=>DB.pfRules.filter(v=>v.from<=t).pop()||null;
@@ -64,7 +64,7 @@ function bills(){
   return wks.map(m=>{const list=all.filter(p=>monday(p.at.slice(0,10))===m),st=DB.pfBills[m]||{},sum=k=>r2(list.reduce((a,p)=>a+p[k],0));
     const fee=sum('fee'),due=sum('charge');
     return {wk:m,no:`PF-${m.replace(/-/g,'')}-${SHOP.code.slice(-5)}`,list,times:list.length,fee,waive:r2(fee-due),due,
-      pushedAt:st.pushedAt||'',invNo:st.invNo||'',open:addDays(m,6)>=TODAY};});
+      pushedAt:st.pushedAt||'',invNo:st.invNo||'',stNo:st.pushedAt?`ST${m.replace(/-/g,'')}-M0815`:'',open:addDays(m,6)>=TODAY};});
 }
 const billSt=b=>b.open?'本周进行中':!b.due?'无需收费':!b.pushedAt?'待出账':'已出账';
 const ST_C={'本周进行中':'rp-c-gray','无需收费':'rp-c-gray','待出账':'rp-c-amber','已出账':'rp-c-green'};
@@ -99,6 +99,7 @@ function open(){
               <div class="r1"><span class="no">${b.no}</span><span style="margin-left:auto">${chip(billSt(b),ST_C[billSt(b)])}</span></div>
               <div class="sub">${weekLabel(b.wk)}${b.pushedAt?` · 出账 ${b.pushedAt}`:''}</div>
               <div class="qty"><div class="q"><div class="v">${b.times}</div><div class="l">取货次数</div></div><div class="q"><div class="v">${money(b.fee)}</div><div class="l">计费金额</div></div><div class="q"><div class="v">${b.waive?money(b.waive):'—'}</div><div class="l">减免金额</div></div></div>
+              ${b.stNo?`<div class="sub" style="margin-top:8px">结算单 <span style="font-family:monospace">${b.stNo}</span> · ${b.invNo?'已开票':'待开票'}</div>`:''}
               <div class="r2"><span>应扣金额</span><span class="amt">${money(b.due)}</span></div></div>`).join('')
               :`<div class="empty"><div class="ei">${svg('truck')}</div><h4>暂无账单</h4><p>平台为您取货后，每周汇总出一张账单</p></div>`;
             list.querySelectorAll('[data-i]').forEach(c=>c.onclick=()=>openBill(bs[+c.dataset.i]));
@@ -123,7 +124,8 @@ function openBill(b){
       ${rowKV('账单号',`<span style="font-family:monospace">${b.no}</span>`)}${rowKV('结算周期',`${b.wk} ~ ${addDays(b.wk,6)}`)}${rowKV('取货次数',b.times)}
       ${rowKV('计费金额',money(b.fee))}${rowKV('减免金额',b.waive?money(b.waive):'')}
       ${rowKV('出账时间',b.pushedAt)}${rowKV('扣款方式',b.pushedAt?'结算时从货款中扣除':'')}
-      ${rowKV('物流费发票',b.invNo?`<span style="font-family:monospace">${b.invNo}</span>`:'')}
+      ${rowKV('结算单号',b.stNo?`<span style="font-family:monospace">${b.stNo}</span>`:'')}
+      ${rowKV('物流费发票',b.invNo?`<span style="font-family:monospace">${b.invNo}</span>`:b.pushedAt?'待开票（按结算单开）':'',b.invNo||!b.pushedAt?'':'amber')}
       ${b.invNo?rowKV('未税金额',money(net))+rowKV('GST（9%）',money(r2(b.due-net))):''}
       <div class="rp-row total"><span class="k">应扣金额</span><span class="v">${money(b.due)}</span></div></div>
     <div class="rp-card2" style="padding-bottom:4px"><div class="rp-ct">取货明细<span class="desc">${b.times} 次</span></div></div>
