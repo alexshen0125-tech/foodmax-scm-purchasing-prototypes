@@ -4358,6 +4358,9 @@ function pickQtyVal(a,x){ // x 缺省 = 整单合计
 }
 function retQtyCell(a){return (a.retItems||[]).length?`<span style="font-variant-numeric:tabular-nums">${retQtySum(a)}</span>`:QTY_EMPTY;}
 function pickQtyCell(a,x){const v=pickQtyVal(a,x);return v==null?QTY_EMPTY:`<span style="font-variant-numeric:tabular-nums">${v}</span>`;}
+// 退货金额：关联正向订单，按正向订单该行结算单价（商家应结口径）× 退回数量，按行四舍五入再求和（与赔付同口径）
+function retAmt(a){return +((a.retItems||[]).reduce((s,x)=>s+(x.price==null?0:Math.round(x.retQty*x.price*100)/100),0)).toFixed(2);}
+function retAmtCell(a){return (a.retItems||[]).length?money(retAmt(a)):money(a.amt);}
 function retItemsName(a){const l=a.retItems||[];return l.length?(l[0].name+(l.length>1?` 等${l.length}件`:'')):a.item;}
 PAGES['m-after-return']=()=>{
   const rt=DB.retSrcTab||'cust';
@@ -4370,9 +4373,9 @@ PAGES['m-after-return']=()=>{
   const rs=DB.afterSales.filter(a=>a.type=='退货退款'&&a.returnStatus);
   const stTag=s=>{const m={'待仓库入库':'t-pp','待提货':'t-b','已提货':'t-g'}[s]||'t-gr';return `<span class="tag ${m}"><span class="dot"></span>${s}</span>`;};
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
-    return `<tr><td class="mono" style="white-space:nowrap">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${retItemsName(a)}</td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td>${afterAmtCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.pickupAt||'—'}</td><td>${stTag(a.returnStatus)}</td><td style="font-size:12px;white-space:nowrap">${retAppealCell(a)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>${retAppealOpen(a)?` <button class="btn btn-o btn-sm" onclick="act_retAppeal(${i})">申诉</button>`:''}</td></tr>`;}).join('');
-  return srcTabs+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货）→ <b>已提货</b>。商家端<b>只读</b>，<b>状态均由仓库确认</b>；<b>不设提货时限</b>，货物在仓暂存至商家提走。<b>退货申诉</b>：<b>各状态都能申诉、不限时间</b>——没到仓可申诉「未到仓」；在仓（待提货）或已提货后发现数量不对、坏了不能卖或其他问题都可以申诉；每单 1 次，客服核实成立后，客户退货按<b>原订单该商品的结算单价 × 核定数量</b>赔给你，随结算单结算。`)}
-  <div class="card"><div class="card-hd"><h3>客户退货</h3><span class="sub">客户售后「退货退款」判责后到仓暂存，商家凭提货码自提（商家只读 · 仓库确认）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th>金额</th><th>到仓时间</th><th>提货时间</th><th>状态</th><th>申诉</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
+    return `<tr><td class="mono" style="white-space:nowrap">TH-${a.id.slice(-6)}</td><td>${ord_mask(a.client)}<div class="mono" style="font-size:12px;color:var(--ts)">${a.order}</div></td><td>${retItemsName(a)}</td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td style="text-align:right">${retAmtCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.pickupAt||'—'}</td><td>${stTag(a.returnStatus)}</td><td style="font-size:12px;white-space:nowrap">${retAppealCell(a)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>${retAppealOpen(a)?` <button class="btn btn-o btn-sm" onclick="act_retAppeal(${i})">申诉</button>`:''}</td></tr>`;}).join('');
+  return srcTabs+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b>（司机取货送大仓）→ <b>待提货</b>（仓库确认到货）→ <b>已提货</b>。商家端<b>只读</b>，<b>状态均由仓库确认</b>；<b>不设提货时限</b>，货物在仓暂存至商家提走。<b>退货申诉</b>：<b>各状态都能申诉、不限时间</b>——没到仓可申诉「未到仓」；在仓（待提货）或已提货后发现数量不对、坏了不能卖或其他问题都可以申诉；每单 1 次，客服核实成立后，客户退货按<b>正向订单该商品的结算单价 × 核定数量</b>赔给你（与正向订单结算同口径），随结算单结算。`)}
+  <div class="card"><div class="card-hd"><h3>客户退货</h3><span class="sub">客户售后「退货退款」判责后到仓暂存，商家凭提货码自提（商家只读 · 仓库确认）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户/订单</th><th>退货商品</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th style="text-align:right">退货金额</th><th>到仓时间</th><th>提货时间</th><th>状态</th><th>申诉</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
 };
 
 /* ---------- 退货单申诉（scm_退货申诉_prd.md）：只管退回的实物，不改原售后判责、不占售后申诉的 1 次机会 ----------
@@ -4383,7 +4386,7 @@ PAGES['m-after-return']=()=>{
    · 其他：数量都没问题（申诉数量全为 0）但说明写了问题 → 按「其他」提交，平台核定数量（上限 = 退回数量）
    每张退货单 / 每条退回记录 1 次。平台 48h 内核定，核定数量默认 = 申诉数量；部分成立 / 不成立须写核定说明；
    赔付 = Σ 核定数量 × 单价，生成赔付单直接推送进结算单（货权转移阶段，商家随结算单开票）
-   2026-10-27 会议：核实方 = 客服；客户退货单价 = 原订单该行结算单价（佣金/补贴照扣）；仓库退回申诉入口默认关闭（DB.whrAppealOn） */
+   2026-10-27 会议：核实方 = 客服；客户退货单价 = 正向订单该行结算单价（与正向订单结算同口径：实付+平台补贴−抽佣）；退货单金额同样关联正向订单；仓库退回申诉入口默认关闭（DB.whrAppealOn） */
 const RA_KIND={goods:'实物问题',noarrive:'未到仓'};
 const RA_REVIEW_H=48;
 function raKindLabel(ra){return ra.other?'其他':RA_KIND[ra.kind];}
@@ -4411,7 +4414,7 @@ function retAppealCell(a){
 }
 function act_retAppeal(i){const a=DB.afterSales[i];if(!retAppealOpen(a))return toast('该单不能申诉','err');DB._ra={t:a,photo:false,busy:false};raModal();}
 function raModal(){
-  const {t:a,photo}=DB._ra,w=retAppealWin(a),PL=a._priceLabel||'原订单结算单价',goods=w.kind=='goods';
+  const {t:a,photo}=DB._ra,w=retAppealWin(a),PL=a._priceLabel||'正向订单结算单价',goods=w.kind=='goods';
   const sysH=a._whr?'系统记录数量':(a.returnStatus=='已提货'?'系统记录提货':'应有数量'),actH=a._whr||a.returnStatus=='已提货'?(a._whr?'实际数量':'实际拿到'):'实际数量（已拿到＋仓里还在）';
   const stCol=a._whr?'<th>状态</th>':'';
   const rows=a.retItems.map((x,k)=>{const pr=retUnitPrice(a,x),sp=raSys(a,x);
@@ -4470,7 +4473,7 @@ function raSubmit(){
   },400);
 }
 // 平台端：核定退货申诉
-function act_retAppealReview(i){const a=DB.afterSales[i];raReviewOpen(a.retAppeal,'TH-'+a.id.slice(-6),'原订单结算单价');}
+function act_retAppealReview(i){const a=DB.afterSales[i];raReviewOpen(a.retAppeal,'TH-'+a.id.slice(-6),'正向订单结算单价');}
 function raReviewOpen(ra,title,PL){DB._rv={ra,title,PL};
   const goods=ra.kind=='goods';
   const rows=ra.items.map((x,k)=>`<tr><td>${x.name}</td><td style="text-align:right">${x.ret}</td>${goods?`<td style="text-align:right">${x.sysPick}</td><td style="text-align:right">${x.actual}</td><td style="text-align:right">${x.damaged}</td>`:''}<td style="text-align:right">${x.qty}</td><td style="text-align:right"><input class="rv-q" data-k="${k}" type="number" min="0" max="${x.cap??x.qty}" step="any" value="${x.qty}" style="width:72px;text-align:right"></td><td style="text-align:right">${x.price==null?`<input class="rv-p" data-k="${k}" type="number" min="0" step="0.01" placeholder="补单价" style="width:80px;text-align:right">`:money(x.price)}</td></tr>`).join('');
@@ -4523,7 +4526,7 @@ function retAppealBlock(a){
       ${kv('照片',ra.photos?`<button class="btn btn-link btn-sm" style="padding:0" onclick="toast('（原型）查看已上传的 ${ra.photos} 张照片','info')">📷 ${ra.photos} 张</button>`:'未上传')}
       ${kv('说明',ra.desc)}
     </div>
-    <div style="overflow-x:auto;margin-bottom:14px"><table><thead><tr><th>商品</th><th style="text-align:right">退回数量</th>${goods?`<th style="text-align:right">系统记录</th><th style="text-align:right">实际数量</th><th style="text-align:right">坏了不能卖</th>`:''}<th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${a._priceLabel||'原订单结算单价'}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="overflow-x:auto;margin-bottom:14px"><table><thead><tr><th>商品</th><th style="text-align:right">退回数量</th>${goods?`<th style="text-align:right">系统记录</th><th style="text-align:right">实际数量</th><th style="text-align:right">坏了不能卖</th>`:''}<th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${a._priceLabel||'正向订单结算单价'}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${ra.status!='平台处理中'?`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">${kv('赔付合计',ra.comp>0?`<span style="color:var(--g)">${money(ra.comp)}</span>`:money(0))}${kv('赔付单',compTxt)}${kv('审核说明',ra.note)}</div>`:'<div style="margin-bottom:20px"></div>'}`;
 }
 
@@ -6343,9 +6346,9 @@ function act_afterDetail(i){const a=DB.afterSales[i];
 
     ${(a.returnStatus&&(a.retItems||[]).length)?`${sec('退货明细')}
     <div style="overflow-x:auto;margin-bottom:20px"><table>
-      <thead><tr><th>商品</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th></tr></thead><tbody>
-      ${a.retItems.map(x=>`<tr><td style="white-space:nowrap">${x.name}</td><td style="text-align:right;font-variant-numeric:tabular-nums">${x.retQty}</td><td style="text-align:right">${pickQtyCell(a,x)}</td></tr>`).join('')}
-      <tr style="background:var(--gl)"><td>合计</td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td></tr>
+      <thead><tr><th>商品</th><th>正向订单号</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th style="text-align:right">正向订单结算单价</th><th style="text-align:right">退货金额</th></tr></thead><tbody>
+      ${a.retItems.map(x=>`<tr><td style="white-space:nowrap">${x.name}</td><td class="mono" style="white-space:nowrap">${a.order}</td><td style="text-align:right;font-variant-numeric:tabular-nums">${x.retQty}</td><td style="text-align:right">${pickQtyCell(a,x)}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.price==null?'—':money(Math.round(x.retQty*x.price*100)/100)}</td></tr>`).join('')}
+      <tr style="background:var(--gl)"><td>合计</td><td></td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td></td><td style="text-align:right">${money(retAmt(a))}</td></tr>
     </tbody></table></div>`:''}
 
     ${a.returnStatus?retAppealBlock(a):''}
@@ -6451,9 +6454,9 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261027f"></script>
+<script src="pc-modules/pickfee.js?v=20261027g"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
-<script src="pc-modules/retcomp.js?v=20261027e"></script>
+<script src="pc-modules/retcomp.js?v=20261027f"></script>
 </body>
 </html>

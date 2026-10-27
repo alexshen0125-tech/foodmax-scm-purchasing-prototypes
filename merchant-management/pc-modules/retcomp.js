@@ -16,7 +16,7 @@ const MER=()=>({name:DB.merchant.name,code:DB.merchant.code});   // 原型只有
 window.retCompRows=function(){
   const out=[];
   (DB.afterSales||[]).forEach((a,i)=>{const ra=a.retAppeal;if(!ra||!(ra.comp>0))return;
-    out.push({compNo:ra.compNo,src:'客户退货',retNo:'TH-'+a.id.slice(-6),ra,priceLabel:'原订单结算单价',open:`closeDrawer();act_afterDetail(${i})`});});
+    out.push({compNo:ra.compNo,src:'客户退货',retNo:'TH-'+a.id.slice(-6),ra,priceLabel:'正向订单结算单价',open:`closeDrawer();act_afterDetail(${i})`});});
   Object.keys(DB.whrAppeals||{}).forEach(no=>{const ra=DB.whrAppeals[no];if(!ra||!(ra.comp>0))return;
     out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:`closeDrawer();DB.retSrcTab='wh';nav('m-after-return');setTimeout(()=>whr_detail('${no}'),50)`});});
   out.forEach(r=>{r.bill=billOf(r.compNo);r.mer=MER();});

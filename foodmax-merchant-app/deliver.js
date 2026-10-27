@@ -718,23 +718,23 @@ function stationPopup(ware,kind){
 /* ============ 退货取回 → 退货单（2026-07-21 会议定稿：商家只读；确认由仓库操作。2026-10-14：线上无逾期规则，删除 72h 提货时限 / 逾期未提） ============ */
 // 退货单：三方退货到平台仓不入库仅暂存。状态 待仓库入库→待提货(仓库确认到货)→已提货；货物在仓暂存至商家提走。
 // 商家端只读展示状态+提货码，无状态确认/预约/新建权限（三方退款须基于已判责售后工单，禁止商家自建）
-// items：retQty=审核通过退款数量（退回数量）；pickQty=WMS 累计出库数量（取回数量），提货前为 null；price=原订单结算单价（申诉赔付用，10-27 会议：按原订单该行应结金额赔）
+// items：retQty=审核通过退款数量（退回数量）；pickQty=WMS 累计出库数量（取回数量），提货前为 null；price=正向订单该行结算单价（退货金额与申诉赔付共用，按正向订单结算同口径：实付+平台补贴−抽佣）
 // 口径与 PC scm_商家管理系统_全流程_交互原型.html 的 retQtySum/pickQtyVal/retAppealWin 一致
 // 相对当前时刻偏移 h 小时（演示数据用，保证申诉窗口在演示时可用）
 function relTs(h){const d=new Date(Date.now()+h*3600000);const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
 function nowTs(){return relTs(0);}
 const RETURN=[
- {no:'TKD2026063008266685',ware:'裕廊DC',st:'待提货',order:'2026-07-20 08:51',gen:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',pickup:'',
+ {no:'TKD2026063008266685',orderNo:'#SG20260630685',ware:'裕廊DC',st:'待提货',order:'2026-07-20 08:51',gen:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',pickup:'',
   items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,pickQty:null,price:32.50}]},
- {no:'TKD2026062908267496',ware:'兀兰DC',st:'待仓库入库',order:relTs(-60),gen:relTs(-60),code:'897256',arrive:'',pickup:'',
+ {no:'TKD2026062908267496',orderNo:'#SG20260629496',ware:'兀兰DC',st:'待仓库入库',order:relTs(-60),gen:relTs(-60),code:'897256',arrive:'',pickup:'',
   items:[{name:'娃娃菜',sku:'SKU8812',spec:'15kg/件',unit:'件',retQty:1,pickQty:null,price:105.00}]},
- {no:'TKD2026062908314280',ware:'盛港DC',st:'待提货',order:'2026-07-20 06:04',gen:'2026-07-20 06:04',code:'715187',arrive:'2026-07-20 14:00',pickup:'',
+ {no:'TKD2026062908314280',orderNo:'#SG20260629280',ware:'盛港DC',st:'待提货',order:'2026-07-20 06:04',gen:'2026-07-20 06:04',code:'715187',arrive:'2026-07-20 14:00',pickup:'',
   items:[{name:'上海青',sku:'SKU8806',spec:'1kg/件',unit:'件',retQty:4,pickQty:2,price:5.80}]},
- {no:'TKD2026062708201337',ware:'大巴窑DC',st:'已提货',order:relTs(-40),gen:relTs(-40),code:'330218',arrive:relTs(-26),pickup:relTs(-5),
+ {no:'TKD2026062708201337',orderNo:'#SG20260627337',ware:'大巴窑DC',st:'已提货',order:relTs(-40),gen:relTs(-40),code:'330218',arrive:relTs(-26),pickup:relTs(-5),
   items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},
- {no:'TKD2026062508198820',ware:'裕廊DC',st:'已提货',order:relTs(-50),gen:relTs(-50),code:'118904',arrive:relTs(-30),pickup:relTs(-3),
+ {no:'TKD2026062508198820',orderNo:'#SG20260625820',ware:'裕廊DC',st:'已提货',order:relTs(-50),gen:relTs(-50),code:'118904',arrive:relTs(-30),pickup:relTs(-3),
   items:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}]},
- {no:'TKD2026061808190012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
+ {no:'TKD2026061808190012',orderNo:'#SG20260618012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
   items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:4,pickQty:2,price:18.00}],
   appeal:{kind:'goods',status:'部分成立',at:'2026-06-17 15:02',reviewAt:'2026-06-18 11:30',desc:'仓库只找到 2 箱，另 2 箱未见',photos:0,compStatus:'已生成',
     items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,compNo:'PF-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
@@ -780,13 +780,15 @@ function pickVal(g,x){
   const vals=(x?[x]:g.items).map(i=>pickOf(g,i));
   return vals.every(v=>v==null)?null:vals.reduce((s,v)=>s+(v||0),0);
 }
+// 退货金额：关联正向订单，按正向订单结算单价 × 退回数量（按行四舍五入再求和），与 PC retAmt 同口径
+const retAmt=g=>+g.items.reduce((s,x)=>s+(x.price==null?0:Math.round(x.retQty*x.price*100)/100),0).toFixed(2);
 function pickHtml(g,x){const v=pickVal(g,x);return v==null?'<span style="color:var(--sub)">—</span>':`${v}`;}
 const raBtn=no=>`<span data-ra="${no}" style="min-height:44px;min-width:88px;padding:0 14px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13.5px;cursor:pointer">退货申诉</span>`;
 function returnCard(g){
   return `<div class="dl-rcard" data-rno="${g.no}" style="cursor:pointer">
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
-    <div class="dl-kbox" style="margin-top:10px;padding:10px 0"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div></div>
+    <div class="dl-kbox" style="margin-top:10px;padding:10px 0"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div><div class="k"><div class="l">退货金额</div><div class="v">${fmtS(retAmt(g))}</div></div></div>
     <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?`已于 ${g.pickup} 提货`:'—'}</span></div>
     ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
@@ -798,13 +800,13 @@ function openReturnDetail(no){
   const sec=t=>`<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">${t}</div>`;
   const box=i=>`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">${i}</div>`;
   pushPage({title:'退货单详情',navbar:true,body:`
-    <div class="dl-kbox" style="margin:12px 16px 0;background:#fff;box-shadow:var(--sh-sm)"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div></div>
+    <div class="dl-kbox" style="margin:12px 16px 0;background:#fff;box-shadow:var(--sh-sm)"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div><div class="k"><div class="l">退货金额</div><div class="v">${fmtS(retAmt(g))}</div></div></div>
     ${sec('单据信息')}
-    ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('状态',g.st)+kv('存放仓库',g.ware)+kv('到仓时间',g.arrive)+kv('提货时间',g.pickup))}
+    ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('正向订单号',`<span style="font-family:monospace">${g.orderNo||'—'}</span>`)+kv('状态',g.st)+kv('存放仓库',g.ware)+kv('到仓时间',g.arrive)+kv('提货时间',g.pickup))}
     ${sec('退货明细')}
     ${box(g.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
       <b style="font-size:14px">${x.name}</b><div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
-      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>退回数量 ${x.retQty}</span><span>取回数量 ${pickHtml(g,x)}</span></div>
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>退回数量 ${x.retQty}</span><span>取回数量 ${pickHtml(g,x)}</span><span>结算单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>
     </div>`).join(''))}
     ${raDetail(g,sec,box,kv)}
     <div style="height:8px"></div>`,
@@ -823,7 +825,7 @@ function raDetail(g,sec,box,kv){
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec('退货申诉')+raTip(msg);
   }
-  const goods=a.kind==='goods',PL=g._priceLabel||'原订单结算单价';
+  const goods=a.kind==='goods',PL=g._priceLabel||'正向订单结算单价';
   const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.compNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中</span>':'—');
   return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
@@ -846,7 +848,7 @@ function openRetAppeal(g,onDone){
         ${line('退回数量',`<span>${x.retQty} ${x.unit}</span>`)}
         ${goods?line(sysL(x),`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,x.retQty))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
         ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}
-        ${line(g._priceLabel||'原订单结算单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
+        ${line(g._priceLabel||'正向订单结算单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
       </div>`;}).join('')}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px"><span style="color:var(--sub)">预计赔付</span><b id="ra-total" style="font-size:17px;color:var(--emerald-2)">—</b></div>
       <div id="ra-nop" style="font-size:12px;color:#B45309;text-align:right"></div></div>
@@ -1093,7 +1095,7 @@ window.FM_MOD.return=openReturn;
 // 退货赔付（财务 › 退货赔付，retcomp.js）取数：核定成立/部分成立且赔付>0 的申诉，一笔一行
 window.FM_MOD.retCompSrc=()=>{
   const out=[];
-  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'客户退货',retNo:g.no,ra,priceLabel:'原订单结算单价',open:()=>openReturnDetail(g.no)});});
+  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'客户退货',retNo:g.no,ra,priceLabel:'正向订单结算单价',open:()=>openReturnDetail(g.no)});});
   const wa=window.FM.DB.whrAppeals||{};
   Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:()=>openWhrDetail(no)});});
   return out;
