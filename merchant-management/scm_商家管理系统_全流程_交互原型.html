@@ -6150,7 +6150,7 @@ function act_billDetail(key){
     <table style="margin-bottom:8px"><thead><tr><th>账单号</th><th>店铺</th><th>结算周期</th><th style="text-align:right">应扣金额</th></tr></thead><tbody>
       ${(sel.pickBills||[]).map(x=>`<tr><td class="mono">${x.no}</td><td>${x.shop}</td><td style="white-space:nowrap">${x.range}</td><td style="text-align:right;color:var(--r)">-${money(x.amt)}</td></tr>`).join('')}
     </tbody></table>
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🚚</span><div>平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（${money(sel.pick)}，含 9% GST），不和服务费发票合开：${inv?`已开具 <b class="mono">${inv.invNo}</b>`:'认可本结算单后自动开具'}。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-pickfee')">查看取货运费 →</button>${inv?`<button class="btn btn-link" onclick="closeDrawer();DB.invTab='logi';nav('m-invoice')">查看物流服务费发票 →</button>`:''}</div></div>`;})():''}
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🚚</span><div>平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（${money(sel.pick)}，含 9% GST），不和服务费发票合开：${inv?`已开具 <b class="mono">${inv.invNo}</b>`:'随结算单开票'}。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-pickfee')">查看取货运费 →</button>${inv?`<button class="btn btn-link" onclick="closeDrawer();DB.invTab='logi';nav('m-invoice')">查看物流服务费发票 →</button>`:''}</div></div>`;})():''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
       ${sel.items.map(it=>`<tr><td>${it[0]}</td><td>${it[1]}</td><td style="${it[2]<0?'color:var(--r)':''}">${it[2]<0?'-':''}${money(Math.abs(it[2]))}</td></tr>`).join('')}
@@ -6160,7 +6160,7 @@ function act_billDetail(key){
     <table><thead><tr><th>清分类型</th><th>金额</th><th>收款方</th><th>清分 / 到账</th></tr></thead><tbody>
       <tr><td>商户结算清分</td><td style="color:var(--gd);font-weight:600">${money(sel.net)}</td><td>绿鲜源蔬果 Pte Ltd · DBS ****8821</td><td>${payoutTag}</td></tr>
       <tr><td>平台抽佣（服务费）</td><td>${money(sel.feeSvc||0)}</td><td>平台 · 服务费发票</td><td>${(sel.feeSvc||0)<=0?'<span class="tag t-gr"><span class="dot"></span>免佣期 · 无服务费</span>':(isCur&&sel.status=='generated'?'<span class="tag t-y"><span class="dot"></span>认可后自动开票</span>':'<span class="tag t-g"><span class="dot"></span>已开具服务费发票</span>')}</td></tr>
-      ${(sel.pick||0)>0?`<tr><td>取货运费（物流服务费）</td><td>${money(sel.pick)}</td><td>平台 · 物流服务费发票</td><td>${window.pfStInv&&pfStInv(sel.no)?'<span class="tag t-g"><span class="dot"></span>已开具物流服务费发票</span>':'<span class="tag t-y"><span class="dot"></span>认可后自动开票</span>'}</td></tr>`:''}
+      ${(sel.pick||0)>0?`<tr><td>取货运费（物流服务费）</td><td>${money(sel.pick)}</td><td>平台 · 物流服务费发票</td><td>${window.pfStInv&&pfStInv(sel.no)?'<span class="tag t-g"><span class="dot"></span>已开具物流服务费发票</span>':'<span class="tag t-y"><span class="dot"></span>待开票</span>'}</td></tr>`:''}
     </tbody></table>
     ${!isCur?`<div class="ib ib-g" style="margin-top:14px"><span class="i">💰</span>本期已结清，货款 ${money(sel.net)} 已到账。${sel.payTime||''}</div>`:''}
   </div>
@@ -6192,7 +6192,7 @@ function act_confirmBillAsk(no){
     <div class="ib ib-y"><span class="i">⚠️</span>
       认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款流程。<br>
       ${(b.feeSvc||0)>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「发票管理 → 服务费发票」查看下载）。<br>`:'本期处免佣期，服务佣金为 0，不开具服务费发票。<br>'}
-      ${(b.pick||0)>0?`就本结算单的取货运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「发票管理 › 物流服务费发票」查看下载）。<br>`:''}
+      ${(b.pick||0)>0?`本结算单的取货运费 <b>${money(b.pick)}</b> 已在结算单生成时单独开具物流服务费发票（含 9% GST，在「发票管理 › 物流服务费发票」查看下载）。<br>`:''}
       <b style="color:var(--r)">认可后不可撤回</b>；如有异议请先线下联系平台运营 / 客服，先不要认可。</div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="cfm-ok" onclick="act_confirmBillSubmit('${b.no}')">确认认可</button></div>`);
@@ -6217,7 +6217,7 @@ function act_confirmBill(no){
     const gst=+(b.feeSvc*0.09).toFixed(2);
     DB.svcInvoices.unshift({no:'SVC-INV-2026-703',billNo:b.no,range:b.range,fee:+b.feeSvc.toFixed(2),gst,total:+(b.feeSvc+gst).toFixed(2),issueDate:b.confirmAt.slice(0,10),status:'已开票'});
   }
-  const pInv=window.pfIssueInv?pfIssueInv(b.no):null;   // 本结算单的取货运费 → 单独开物流服务费发票
+  const pInv=null;   // 物流服务费发票在结算单生成时已开（pickfee.js pfSettleSync），认可不再开票
   render();
   toast((b.feeSvc>0?'已认可，账单已推送财务；服务费发票已自动开具':'已认可，账单已推送财务（免佣期不开服务费发票）')+(pInv?`；物流服务费发票 ${pInv.invNo} 已开具`:''),'ok');
 }
@@ -6465,7 +6465,7 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261027h"></script>
+<script src="pc-modules/pickfee.js?v=20261027k"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
 <script src="pc-modules/retcomp.js?v=20261027f"></script>

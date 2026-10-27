@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磐石 Aegis · 取货运费收入与开票（原型）</title>
+<!--
+  对应 PRD：财务/01_需求中心/A_清结算/开发迭代/2026-10-27_v1.0_取货运费收入与开票_沈亮/01_PRD.md v1.0
+  基线：CLJS-20 原型（2026-09-15 实读 aegis-te 现网：收入单据 / 结算单列表 / 结算单详情 / 佣金开票）
+  只画本期改动：① 收入单据新增类型「取货运费」+ 详情抽屉 ② 结算单列表加「取货运费」列 ③ 结算单详情概览③加取货运费行 + 新 Tab「取货运费」 ④ 佣金开票加发票类型「物流服务费发票」
+  上游：采购/merchant management/PRD/scm_取货运费_prd.md（运营平台推送周账单）
+-->
+<style>
+:root{
+  --ink:#141b2e;--sub:#64708a;--faint:#8a94a8;--line:#e6e9f0;--line-soft:#eff1f6;
+  --bg:#f3f5f9;--primary:#2563eb;--primary-soft:#eaf2ff;--brand:#e11d48;--brand-soft:#fdeef2;--brand-line:#f7cdd8;
+  --success:#16835b;--success-soft:#e7f7ef;--warn:#b76a08;--warn-soft:#fff4df;--danger:#c8312c;--danger-soft:#fff0ef;
+  --purple:#6d3ac3;--purple-soft:#f2ecff;--sidebar-w:228px;--topbar-h:58px;
+  --shadow:0 1px 3px rgba(20,27,46,.06),0 1px 2px rgba(20,27,46,.04);--shadow-lg:0 18px 46px rgba(20,27,46,.16);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Inter,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit}
+.topbar{height:var(--topbar-h);position:fixed;inset:0 0 auto 0;z-index:40;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 22px;gap:12px}
+.logo{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#2f6fe4,#1b47a8);font-weight:800}
+.brand-name{font-size:15.5px;font-weight:800}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:14px;color:var(--sub);font-size:12.5px}
+.site{padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.avatar{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;background:#eef2ff;color:#3949ab;font-weight:800}
+.layout{display:flex;padding-top:var(--topbar-h)}
+.sidebar{position:fixed;left:0;top:var(--topbar-h);bottom:0;width:var(--sidebar-w);padding:14px 12px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;z-index:30}
+.nav-group{padding:4px 0 8px}.nav-group+.nav-group{border-top:1px solid var(--line-soft);margin-top:4px;padding-top:8px}
+.nav-title{padding:6px 12px;font-size:10.5px;letter-spacing:1.2px;color:#a2abbd;font-weight:800}
+.nav-item{display:flex;align-items:center;gap:10px;margin:1px 0;padding:9px 12px;border-radius:9px;font-size:13.5px;color:#3d4658;cursor:pointer;position:relative}
+.nav-item:hover{background:#f4f6fb}
+.nav-item.active{color:var(--primary);font-weight:700;background:linear-gradient(90deg,var(--primary-soft),#fff);box-shadow:inset 0 0 0 1px #cfe0ff}
+.nav-item.active:before{content:"";position:absolute;left:0;top:50%;width:3px;height:18px;transform:translateY(-50%);background:var(--primary);border-radius:0 3px 3px 0}
+.nav-item .ic{width:20px;text-align:center}
+.nav-item .new{margin-left:auto;padding:1px 6px;border-radius:8px;background:var(--success-soft);color:var(--success);font-size:10px;font-weight:800}
+.main{margin-left:var(--sidebar-w);width:calc(100% - var(--sidebar-w));min-height:calc(100vh - var(--topbar-h));padding:22px 26px 44px}
+.page{display:none}.page.active{display:block}
+.crumb{font-size:12px;color:var(--faint);margin-bottom:7px}
+.page-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.page-head h1{font-size:20px;line-height:1.3;margin:0;font-weight:800}
+.page-head .desc{font-size:12.5px;color:var(--sub);margin-top:5px}
+.page-head .site-badge{margin-left:auto;color:var(--primary);background:var(--primary-soft);border:1px solid #cfe0ff;border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:650}
+.chg{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--success-soft);color:var(--success);font-size:10.5px;font-weight:800;vertical-align:middle}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+.panel-hd{display:flex;align-items:center;gap:10px;padding:13px 18px;border-bottom:1px solid var(--line-soft);font-weight:750;font-size:14px}
+.panel-hd .sub{font-weight:400;color:var(--sub);font-size:12px}
+.filter{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-start;padding:15px 18px;background:linear-gradient(180deg,#fafbfd,#f7f9fc);border-bottom:1px solid var(--line-soft)}
+.filter-item{display:flex;flex-direction:column;gap:5px;min-width:150px}.filter-item.wide{min-width:215px}
+.filter-item label{font-size:11.5px;color:var(--sub);font-weight:600}
+.ipt,.sel{height:34px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);outline:none;font-size:12.5px}
+.ipt:focus,.sel:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.acts{display:flex;gap:8px;margin-left:auto;margin-top:21px}
+.btn{height:34px;padding:0 14px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:650;cursor:pointer}
+.btn:hover{border-color:#bec8d8;box-shadow:var(--shadow)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.link{border:0;background:transparent;color:var(--primary);height:auto;padding:0;box-shadow:none;cursor:pointer}
+.table-wrap{overflow:auto}
+table.data{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+th,td{padding:10px 13px;border-bottom:1px solid var(--line-soft);text-align:left;vertical-align:middle}
+thead th{position:sticky;top:0;background:#f6f8fb;color:var(--sub);font-weight:700;z-index:1}
+thead tr.grp th{background:#eef2f8;text-align:center;font-size:11.5px;letter-spacing:.3px}
+tbody tr:hover{background:#f7f9fc}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.8px}
+.subline{font-size:10.8px;color:var(--faint);margin-top:2px}
+.pos{color:var(--success);font-weight:750}.neg{color:var(--danger);font-weight:750}.zero{color:var(--faint)}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:650;white-space:nowrap}
+.t-supply{background:#eaf2ff;color:#2858a5}.t-repl{background:var(--purple-soft);color:var(--purple)}
+.t-fine{background:var(--danger-soft);color:var(--danger)}.t-adj{background:#fff1e6;color:#b45309}
+.d-s2p{background:var(--danger-soft);color:var(--danger)}.d-p2s{background:var(--success-soft);color:var(--success)}
+.s-pending{background:var(--warn-soft);color:var(--warn)}.s-settled{background:var(--success-soft);color:var(--success)}
+.s-none{background:#f0f2f6;color:var(--sub)}.s-fail{background:var(--danger-soft);color:var(--danger)}
+.k-acc{background:#f0f2f6;color:var(--sub)}
+#page-adjs tr.grp th:first-child,#page-adjs tbody td:first-child,#page-adjs tfoot td:first-child{position:sticky;left:0;background:#fff;z-index:2;box-shadow:1px 0 0 var(--line-soft)}
+#page-adjs tr.grp th:last-child,#page-adjs tbody td:last-child,#page-adjs tfoot td:last-child{position:sticky;right:0;background:#fff;z-index:2;box-shadow:-1px 0 0 var(--line-soft)}
+#page-adjs tr.grp th:first-child,#page-adjs tr.grp th:last-child{background:#f6f8fb;z-index:3}
+#page-adjs thead th{position:static}
+#page-adjs thead tr.grp th{background:#f6f8fb;color:var(--sub);font-size:12.5px;letter-spacing:0;text-align:left}
+#page-adjs thead tr.grp th[colspan]{text-align:center;border-bottom:1px solid var(--line)}
+#page-adjs tfoot td{background:#f6f8fb;font-weight:750;border-top:1px solid var(--line)}.k-inv{background:#eaf2ff;color:#2858a5}
+.hl{outline:2px solid #ffd08a;outline-offset:-2px;background:#fffaf2 !important}
+.pagination{display:flex;align-items:center;padding:12px 18px;color:var(--sub);font-size:12px}
+.pagination .pages{margin-left:auto;display:flex;gap:5px}
+.page-btn{width:30px;height:30px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.page-btn.active{border-color:var(--primary);color:var(--primary)}
+.tabs{display:flex;gap:26px;padding:0 18px;border-bottom:1px solid var(--line-soft);overflow-x:auto}
+.tab{border:0;border-bottom:2px solid transparent;background:transparent;padding:12px 1px 10px;color:var(--sub);cursor:pointer;font-weight:650;font-size:13px;white-space:nowrap}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.concl{display:flex;align-items:baseline;gap:14px;padding:16px 20px;background:#f2f7ff;border-bottom:1px solid var(--line-soft)}
+.concl .k{font-size:12.5px;color:var(--sub)}
+.concl .v{font-size:30px;font-weight:850;font-variant-numeric:tabular-nums}
+.concl .note{font-size:11.5px;color:var(--faint)}
+.concl .ok{margin-left:auto;font-size:11.5px;color:var(--success);font-weight:700}
+.seg{padding:16px 20px;border-bottom:1px solid var(--line-soft)}
+.seg h4{margin:0 0 10px;font-size:13px;font-weight:750;color:#2c3444;display:flex;align-items:center;gap:8px}
+.seg h4 .dir{font-weight:400;color:var(--faint);font-size:11.5px}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:13px;border-bottom:1px dashed var(--line-soft)}
+.row:last-child{border-bottom:0}
+.row .sign{width:14px;color:var(--sub);font-weight:700;text-align:center}
+.row .label{flex:1}
+.row .cnt{font-size:11px;color:var(--primary);cursor:pointer}
+.row .amt{font-variant-numeric:tabular-nums;font-weight:700}
+.seg .sum{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-weight:750}
+.seg .sum .v{font-size:17px}
+.note-bar{padding:12px 20px;font-size:11.8px;color:var(--sub);background:#fafbfd}
+.mask{position:fixed;inset:0;background:rgba(18,24,38,.42);opacity:0;visibility:hidden;transition:.2s;z-index:80}
+.mask.open{opacity:1;visibility:visible}
+.drawer{position:fixed;right:0;top:0;width:min(760px,96vw);height:100vh;background:#fff;transform:translateX(100%);transition:.24s;z-index:81;display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:15px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.drawer-head h2{font-size:16.5px;margin:0}
+.drawer-head .close{margin-left:auto;border:0;background:none;font-size:22px;cursor:pointer;color:var(--sub)}
+.drawer-body{padding:18px 22px;overflow:auto}
+.drawer h3{display:flex;align-items:center;gap:8px;font-size:14px;margin:20px 0 10px}
+.drawer h3:first-child{margin-top:0}
+.drawer h3:before{content:"";width:3px;height:15px;border-radius:2px;background:var(--primary)}
+.kv{width:100%;border-collapse:collapse;font-size:12.5px}
+.kv th,.kv td{border:1px solid var(--line);padding:9px 11px}
+.kv th{width:132px;background:#fafbfc;color:var(--sub);font-weight:600}
+.amount-box{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:6px}
+.amount-item{padding:14px 16px}.amount-item+.amount-item{border-left:1px solid var(--line)}
+.amount-item .k{font-size:11.5px;color:var(--sub)}.amount-item .v{font-size:18px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.empty{padding:46px 20px;text-align:center;color:var(--sub)}.empty b{display:block;color:var(--ink);font-size:14px;margin-bottom:4px}
+.toast-wrap{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:120}
+.toast{padding:10px 15px;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 10px 26px rgba(20,27,46,.16);font-size:12.5px}
+.foot{text-align:center;color:var(--faint);font-size:11.5px;padding:16px}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;width:100%;padding:16px}.amount-box{grid-template-columns:1fr}.amount-item+.amount-item{border-left:0;border-top:1px solid var(--line)}}
+</style>
+
+<style>
+.t-pick{background:#e8f6f4;color:#0f766e}
+.inv-wait{background:var(--warn-soft);color:var(--warn)}.inv-ok{background:var(--success-soft);color:var(--success)}.inv-follow{background:#f0f2f6;color:var(--sub)}
+.st-gen{background:var(--warn-soft);color:var(--warn)}.st-cfm{background:#eaf2ff;color:#2858a5}.st-paid{background:var(--success-soft);color:var(--success)}
+.selbar{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line-soft);background:#fafbfd;font-size:12.5px;color:var(--sub)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="logo">FM</div><div class="brand-name">磐石 Aegis · 清结算平台</div>
+  <div class="top-right"><span class="site">新加坡站点 · SGD</span><span>简体中文</span><span class="avatar">沈</span><span>沈亮</span></div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">订单与分账</div>
+      <div class="nav-item"><span class="ic">📥</span>订单接入</div>
+      <div class="nav-item"><span class="ic">🧮</span>分账明细</div>
+    </div>
+    <div class="nav-group"><div class="nav-title">平台收入</div>
+      <div class="nav-item active" data-page="incomes"><span class="ic">▦</span>收入单据<span class="new">改</span></div>
+      <div class="nav-item"><span class="ic">▤</span>销售开票</div>
+    </div>
+    <div class="nav-group"><div class="nav-title">清分与结算</div>
+      <div class="nav-item" data-page="bills"><span class="ic">💰</span>结算单<span class="new">改</span></div>
+      <div class="nav-item"><span class="ic">⇄</span>业务调整单</div>
+      <div class="nav-item" data-page="invs"><span class="ic">🧾</span>佣金开票<span class="new">改</span></div>
+      <div class="nav-item"><span class="ic">🕐</span>付款单</div>
+    </div>
+    <div class="nav-group"><div class="nav-title">其他</div>
+      <div class="nav-item"><span class="ic">🏦</span>出款管理</div>
+      <div class="nav-item"><span class="ic">📊</span>对账与台账</div>
+      <div class="nav-item"><span class="ic">🏪</span>主数据</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- ========== 收入单据（改：新增类型「取货运费」） ========== -->
+    <section class="page active" id="page-incomes">
+      <div class="crumb">平台收入 / 收入单据</div>
+      <div class="page-head">
+        <div><h1>收入单据<span class="chg">改：新增类型「取货运费」</span></h1></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="filter">
+          <div class="filter-item wide"><label>收入单号 / 上游源单号</label><input class="ipt" id="i-kw" placeholder="PI / 取货运费账单号"></div>
+          <div class="filter-item"><label>店铺</label><select class="sel" id="i-shop"><option value="">全部店铺</option></select></div>
+          <div class="filter-item"><label>收入类型</label><select class="sel" id="i-type"><option value="">全部</option></select></div>
+          <div class="filter-item"><label>结算状态</label><select class="sel" id="i-st"><option value="">全部</option><option value="PENDING">待结算</option><option value="SETTLED">已结算</option></select></div>
+          <div class="acts"><button class="btn primary" id="i-go">查 询</button><button class="btn" id="i-reset">重 置</button><button class="btn" id="i-export">导 出</button></div>
+        </div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr>
+            <th>收入单号</th><th>收入类型</th><th>上游源单号</th><th>店铺名称</th><th>店铺编码</th><th>归期时间</th>
+            <th class="num">未税 S$</th><th class="num">GST S$</th><th class="num">含税 S$</th><th>收入方向</th><th>结算状态</th><th>结算单号</th><th>开票状态</th><th>发票号</th><th>接入时间</th><th>操作</th>
+          </tr></thead>
+          <tbody id="inc-rows"></tbody>
+        </table></div>
+        <div class="pagination"><span id="inc-total">共 0 条</span><div class="pages"><button class="page-btn">‹</button><button class="page-btn active">1</button><button class="page-btn">›</button></div></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · 取货运费收入与开票 原型（仅画本期改动）</div>
+    </section>
+
+    <!-- ========== 结算单列表（改：加「取货运费」列） ========== -->
+    <section class="page" id="page-bills">
+      <div class="crumb">清分与结算 / 结算单</div>
+      <div class="page-head">
+        <div><h1>结算单<span class="chg">改：其他收入结算加「取货运费」列</span></h1></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="table-wrap"><table class="data">
+          <thead>
+            <tr class="grp">
+              <th colspan="4" style="text-align:left">　</th>
+              <th colspan="2">订单侧与平台分成</th>
+              <th colspan="6">其他收入结算</th>
+              <th colspan="1">汇总值</th>
+              <th colspan="2">　</th>
+            </tr>
+            <tr>
+              <th>结算单号</th><th>店铺名称</th><th>店铺编码</th><th>结算周期</th>
+              <th class="num">应付店铺 S$</th><th class="num">平台抽佣(含税) S$</th>
+              <th class="num">耗材采购收入 S$</th><th class="num">自营补货收入 S$</th><th class="num">店铺罚款 S$</th><th class="num">业务调整 S$</th><th class="num">取货运费 S$ <span class="chg">新</span></th><th class="num">其他收入合计 S$</th>
+              <th class="num">结算净额 S$</th>
+              <th>结算单状态</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="bill-rows"></tbody>
+        </table></div>
+        <div class="pagination"><span id="bill-total">共 0 条</span><div class="pages"><button class="page-btn">‹</button><button class="page-btn active">1</button><button class="page-btn">›</button></div></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · 取货运费收入与开票 原型</div>
+    </section>
+
+    <!-- ========== 结算单详情（改：概览③加取货运费 + 新 Tab） ========== -->
+    <section class="page" id="page-bill">
+      <div class="crumb"><span class="btn link" data-page="bills">结算单</span> › 结算单详情</div>
+      <div class="page-head">
+        <div><h1 id="bd-no"></h1><div class="desc" id="bd-desc"></div></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="tabs" id="bill-tabs">
+          <button class="tab active" data-tab="ov">概览</button>
+          <button class="tab" data-tab="x">订单明细（订单级）</button>
+          <button class="tab" data-tab="x">应付明细</button>
+          <button class="tab" data-tab="x">平台耗材收入</button>
+          <button class="tab" data-tab="x">自营补货收入</button>
+          <button class="tab" data-tab="x">店铺罚款单</button>
+          <button class="tab" data-tab="x">业务调整单</button>
+          <button class="tab" data-tab="pick">取货运费 <span class="chg">新</span></button>
+          <button class="tab" data-tab="x">未纳入订单</button>
+        </div>
+        <div id="tab-ov"></div>
+        <div id="tab-pick" style="display:none"></div>
+        <div id="tab-x" style="display:none"><div class="empty"><b>本原型不重画该页签</b>结构与现网一致，本期无改动。</div></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · 取货运费收入与开票 原型</div>
+    </section>
+
+    <!-- ========== 佣金开票（改：加发票类型「物流服务费发票」） ========== -->
+    <section class="page" id="page-invs">
+      <div class="crumb">清分与结算 / 佣金开票</div>
+      <div class="page-head">
+        <div><h1>佣金开票<span class="chg">改：加发票类型「物流服务费发票」</span></h1></div>
+        <span class="site-badge">当前 site：新加坡</span>
+      </div>
+      <div class="panel">
+        <div class="filter">
+          <div class="filter-item wide"><label>发票号 / 结算单号</label><input class="ipt" id="v-kw"></div>
+          <div class="filter-item"><label>发票类型</label><select class="sel" id="v-type"><option value="">全部</option><option value="SVC">服务费发票</option><option value="LOGI">物流服务费发票</option></select></div>
+          <div class="filter-item"><label>开票状态</label><select class="sel" id="v-st"><option value="">全部</option><option value="WAIT">待开</option><option value="DONE">已开</option></select></div>
+          <div class="acts"><button class="btn primary" id="v-go">查 询</button><button class="btn" id="v-reset">重 置</button></div>
+        </div>
+        <div class="selbar"><span>已选 <b id="v-sel-n" style="color:var(--ink)">0</b> 张</span><span style="flex:1"></span><button class="btn" id="v-retry" disabled>重开异常单</button></div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th style="width:34px"></th><th>发票号</th><th>发票类型</th><th>结算单号</th><th>收票方</th><th>店铺编码</th><th class="num">未税 S$</th><th class="num">GST S$</th><th class="num">价税合计 S$</th><th>结算单状态</th><th>开票状态</th><th>开票时间</th><th>失败原因</th><th>操作</th></tr></thead>
+          <tbody id="inv-rows"></tbody>
+        </table></div>
+        <div class="pagination"><span id="inv-total">共 0 条</span></div>
+      </div>
+      <div class="foot">© 2026 磐石 Aegis · 取货运费收入与开票 原型</div>
+    </section>
+  </main>
+</div>
+
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head"><h2 id="dr-title"></h2><button class="close" id="dr-close">×</button></div>
+  <div class="drawer-body" id="dr-body"></div>
+</aside>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+/* ============ 演示数据（与 PRD AC 对齐） ============
+   结算单 = 店铺 × 结算周期（现网 DAILY），单号 ST{日期}-{店铺编码}
+   取货运费：上游一张已推送周账单 = 一条收入单据；归期 = 推送时间；物流服务费发票按结算单开，结算单生成时开（与佣金发票同一时点）
+   「今天」= 2026-10-28；日期、发票号均为演示（真实首批数据 2026-11；发票号按现网 15 位规则） */
+const TYPE = {SUPPLY:['耗材采购','t-supply'], REPL:['自营补货','t-repl'], FINE:['店铺罚款','t-fine'], PICK:['取货运费','t-pick']};
+const SHOP = {SH20260713476005:'Foodmax测试店铺', SH20260715476017:'小沈小卖部'};
+const r2 = n => Math.round(n*100)/100;
+const money = n => (n<0?'-':'') + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const net = incl => r2(incl/1.09), gst = incl => r2(incl - net(incl));
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pill = (t,c) => `<span class="pill ${c}">${t}</span>`;
+const dash = '<span class="zero">—</span>';
+function toast(msg){const w=$('#toast-wrap');const d=document.createElement('div');d.className='toast';d.textContent=msg;w.appendChild(d);setTimeout(()=>d.remove(),2200);}
+
+/* 结算单（状态码沿用《对账结算》v2.1 BR-03） */
+const BILLS = [
+  {no:'ST20261027-SH20260713476005', shop:'SH20260713476005', cycle:'DAILY 20261027', payable:203.83, comm:35.97, supply:9.21, repl:0, fine:0, adj:0, st:'TO_RECON'},
+  {no:'ST20261019-SH20260713476005', shop:'SH20260713476005', cycle:'DAILY 20261019', payable:512.40, comm:90.42, supply:0, repl:34.88, fine:40.00, adj:0, st:'PAID_DONE'},
+  {no:'ST20261027-SH20260715476017', shop:'SH20260715476017', cycle:'DAILY 20261027', payable:120.00, comm:18.00, supply:0, repl:0, fine:0, adj:0, st:'TO_PAY'},
+];
+const ST_L = {TO_RECON:['待对账','st-gen'], TO_PAY:['待付款','st-cfm'], PAID_DONE:['已付款','st-paid']};   // aegis 现网状态（CLJS-08）
+
+/* 取货运费周账单快照（上游取货运费服务推送） */
+const PICKS = {
+  'PF-20261012-SH20260713476005':{week:'2026-10-12 ~ 2026-10-18', times:7, fee:153.34, waive:0, recs:[
+    ['2026-10-17','TC2026101701','2026-10-17 06:24',3,'普通区 · S$80.00 ÷ 同车 3 家 = S$26.67',26.67,'计费'],
+    ['2026-10-16','TC2026101601','2026-10-16 06:17',4,'普通区 · S$80.00 ÷ 同车 4 家 = S$20.00',20.00,'计费']]},
+  'PF-20261019-SH20260713476005':{week:'2026-10-19 ~ 2026-10-25', times:8, fee:146.67, waive:26.67, recs:[
+    ['2026-10-19','TC2026101901','2026-10-19 06:38',4,'普通区 · S$80.00 ÷ 同车 4 家 = S$20.00',20.00,'计费'],
+    ['2026-10-19','TC2026101902','2026-10-19 07:51',1,'当天已在 TC2026101901 计费，不重复收',0,'不重复收'],
+    ['2026-10-21','TC2026102101','2026-10-21 06:52',3,'普通区 · S$80.00 ÷ 同车 3 家 = S$26.67',26.67,'已减免'],
+    ['2026-10-22','TC2026102201','2026-10-22 06:09',2,'普通区 · S$80.00 ÷ 同车 2 家 = S$40.00',40.00,'计费']]},
+  'PF-20261019-SH20260715476017':{week:'2026-10-19 ~ 2026-10-25', times:4, fee:80.00, waive:0, recs:[
+    ['2026-10-20','TC2026102001','2026-10-20 06:45',4,'普通区 · S$80.00 ÷ 同车 4 家 = S$20.00',20.00,'计费'],
+    ['2026-10-20','TC2026102003','2026-10-20 08:10',1,'当天已在 TC2026102001 计费，不重复收',0,'不重复收'],
+    ['2026-10-22','TC2026102202','2026-10-22 06:30',4,'普通区 · S$80.00 ÷ 同车 4 家 = S$20.00',20.00,'计费'],
+    ['2026-10-24','TC2026102402','2026-10-24 06:55',2,'普通区 · S$80.00 ÷ 同车 2 家 = S$40.00',40.00,'计费']]},
+  'PF-20261026-SH20260713476005':{week:'2026-10-26 ~ 2026-11-01', times:3, fee:60.00, waive:0, recs:[
+    ['2026-10-26','TC2026102601','2026-10-26 06:40',4,'普通区 · S$80.00 ÷ 同车 4 家 = S$20.00',20.00,'计费']]},
+};
+
+/* 收入单据（现网三类 + 本期新增 取货运费） */
+const INCOMES = [
+  {no:'PI2026102700012', type:'PICK', src:'PF-20261019-SH20260713476005', shop:'SH20260713476005', at:'2026-10-27 09:15:02', incl:120.00, net:110.09, gst:9.91, st:'SETTLED', bill:'ST20261027-SH20260713476005', ing:'2026-10-27 09:15:05'},
+  {no:'PI2026101900031', type:'PICK', src:'PF-20261012-SH20260713476005', shop:'SH20260713476005', at:'2026-10-19 09:40:11', incl:153.34, net:140.68, gst:12.66, st:'SETTLED', bill:'ST20261019-SH20260713476005', ing:'2026-10-19 09:40:14'},
+  {no:'PI2026102700013', type:'PICK', src:'PF-20261019-SH20260715476017', shop:'SH20260715476017', at:'2026-10-27 09:16:40', incl:80.00, net:73.39, gst:6.61, st:'SETTLED', bill:'ST20261027-SH20260715476017', ing:'2026-10-27 09:16:43'},
+  {no:'PI2026102800003', type:'PICK', src:'PF-20261026-SH20260713476005', shop:'SH20260713476005', at:'2026-10-27 23:59:50', incl:60.00, net:55.05, gst:4.95, st:'PENDING', bill:'', ing:'2026-10-28 03:10:02', late:'归期 10-27，但到达时 DAILY 20261027 已生成 → 顺延进下一张（DAILY 20261028）'},
+  {no:'PI2026102700004', type:'SUPPLY', src:'HC20261027003', shop:'SH20260713476005', at:'2026-10-27 08:12:00', incl:9.21, st:'SETTLED', bill:'ST20261027-SH20260713476005', ing:'2026-10-27 08:12:04', inv:'已开票', invNo:'SUP-INV-2026-000201'},
+  {no:'PI2026101900011', type:'FINE', src:'FN20261019002', shop:'SH20260713476005', at:'2026-10-19 11:30:00', incl:40.00, st:'SETTLED', bill:'ST20261019-SH20260713476005', ing:'2026-10-19 11:30:03', inv:'不开票'},
+];
+
+/* 物流服务费发票 = 结算单维度；服务费发票沿用现网 */
+const INVS = [   // 结算单生成即开（与佣金发票同一时点）；物流服务费金额 = Σ 本单取货运费收入快照
+  {no:'261020476000141', type:'SVC',  bill:'ST20261019-SH20260713476005', amt:90.42, net:82.95, gst:7.47, st:'DONE', at:'2026-10-20 03:05', fail:''},
+  {no:'261020476000142', type:'LOGI', bill:'ST20261019-SH20260713476005', st:'DONE', at:'2026-10-20 03:05', fail:''},
+  {no:'261028476000188', type:'SVC',  bill:'ST20261027-SH20260713476005', amt:35.97, net:33.00, gst:2.97, st:'DONE', at:'2026-10-28 03:05', fail:''},
+  {no:'261028476000189', type:'LOGI', bill:'ST20261027-SH20260713476005', st:'DONE', at:'2026-10-28 03:05', fail:''},
+  {no:'261028476170190', type:'SVC',  bill:'ST20261027-SH20260715476017', amt:18.00, net:16.51, gst:1.49, st:'DONE', at:'2026-10-28 03:05', fail:''},
+  {no:'', type:'LOGI', bill:'ST20261027-SH20260715476017', st:'WAIT', at:'', fail:'收票方 UEN 缺失'},
+];
+// 物流服务费发票金额 = Σ 收入快照（不按合计重新拆税）
+INVS.filter(v=>v.type=='LOGI').forEach(v=>{const ps=INCOMES.filter(i=>i.type=='PICK'&&i.bill==v.bill);v.amt=r2(ps.reduce((a,i)=>a+i.incl,0));v.net=r2(ps.reduce((a,i)=>a+i.net,0));v.gst=r2(ps.reduce((a,i)=>a+i.gst,0));});
+const INV_T = {SVC:'服务费发票', LOGI:'物流服务费发票'};
+const pickOf = bill => INCOMES.filter(i=>i.type=='PICK'&&i.bill==bill);
+const pickSum = bill => r2(pickOf(bill).reduce((a,i)=>a+i.incl,0));
+const logiInv = bill => INVS.find(v=>v.type=='LOGI'&&v.bill==bill);
+const billOf = no => BILLS.find(b=>b.no==no);
+
+/* 收入单据「开票状态」：取货运费按结算单开 */
+function incInv(i){
+  if(i.type!='PICK') return i.inv=='已开票'?pill('已开票','inv-ok'):i.inv=='不开票'?pill('不开票','s-none'):pill(i.inv||'—','s-none');
+  const v=i.bill&&logiInv(i.bill);
+  return v&&v.st=='DONE'?pill('已开票','inv-ok'):pill('随结算单开票','inv-follow');
+}
+function incInvNo(i){
+  if(i.type!='PICK') return i.invNo?`<span class="mono">${i.invNo}</span>`:dash;
+  const v=i.bill&&logiInv(i.bill); return v&&v.no?`<span class="mono">${v.no}</span>`:dash;
+}
+
+/* ============ 收入单据 ============ */
+function fillFilters(){
+  $('#i-type').innerHTML='<option value="">全部</option>'+Object.entries(TYPE).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join('');
+  $('#i-shop').innerHTML='<option value="">全部店铺</option>'+Object.entries(SHOP).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+}
+function incomeRows(){
+  const kw=$('#i-kw').value.trim(), sh=$('#i-shop').value, ty=$('#i-type').value, st=$('#i-st').value;
+  const rows=INCOMES.filter(i=>(!kw||i.no.includes(kw)||i.src.includes(kw))&&(!sh||i.shop==sh)&&(!ty||i.type==ty)&&(!st||i.st==st));
+  $('#inc-rows').innerHTML=rows.map(i=>`<tr>
+    <td class="mono">${i.no}</td><td>${pill(TYPE[i.type][0],TYPE[i.type][1])}</td><td class="mono">${i.src}</td>
+    <td>${SHOP[i.shop]}</td><td class="mono">${i.shop}</td><td>${i.at}</td>
+    <td class="num">${money(i.net??net(i.incl))}</td><td class="num">${money(i.gst??gst(i.incl))}</td><td class="num">${money(i.incl)}</td>
+    <td>${pill('店铺 → 平台','d-s2p')}</td><td>${i.st=='SETTLED'?pill('已结算','s-settled'):pill('待结算','s-pending')}</td>
+    <td>${i.bill?`<span class="btn link mono" data-bill="${i.bill}">${i.bill}</span>`:dash}</td>
+    <td>${incInv(i)}</td><td>${incInvNo(i)}</td><td>${i.ing}</td>
+    <td>${i.type=='PICK'?`<span class="btn link" data-inc="${i.no}">详情</span>`:'<span class="zero">详情</span>'}</td></tr>`).join('')||`<tr><td colspan="16"><div class="empty"><b>没有符合条件的收入单据</b></div></td></tr>`;
+  $('#inc-total').textContent=`共 ${rows.length} 条`;
+}
+function openIncome(no){
+  const i=INCOMES.find(x=>x.no==no), p=PICKS[i.src], v=i.bill&&logiInv(i.bill);
+  $('#dr-title').textContent='收入单据详情 · 取货运费';
+  $('#dr-body').innerHTML=`<h3>单据信息</h3>
+    <table class="kv"><tr><th>收入单号</th><td class="mono">${i.no}</td><th>收入类型</th><td>${pill('取货运费','t-pick')}</td></tr>
+    <tr><th>上游源单号</th><td class="mono">${i.src}</td><th>结算周（作业日）</th><td>${p.week}</td></tr>
+    <tr><th>店铺名称</th><td>${SHOP[i.shop]}</td><th>店铺编码</th><td class="mono">${i.shop}</td></tr>
+    <tr><th>归期时间（推送时间）</th><td>${i.at}</td><th>接入时间</th><td>${i.ing}</td></tr></table>
+    <h3>金额（上游快照）</h3>
+    <div class="amount-box"><div class="amount-item"><div class="k">计费金额</div><div class="v">${money(p.fee)}</div></div><div class="amount-item"><div class="k">减免金额</div><div class="v">${money(p.waive)}</div></div><div class="amount-item"><div class="k">应扣（含税）</div><div class="v">${money(i.incl)}</div></div></div>
+    <table class="kv"><tr><th>未税</th><td>${money(i.net)}</td><th>GST 9%</th><td>${money(i.gst)}</td></tr><tr><th>取货次数</th><td>${p.times}</td><th>收入方向</th><td>店铺 → 平台</td></tr></table>
+    <h3>取货记录快照 <span style="font-weight:400;color:var(--faint);font-size:12px">只读，清结算不重算</span></h3>
+    <div class="table-wrap"><table class="data"><thead><tr><th>作业日</th><th>车次</th><th>取货时间</th><th class="num">同车店铺数</th><th>计费说明</th><th class="num">计费金额</th><th>状态</th></tr></thead><tbody>
+      ${p.recs.map(r=>`<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td class="num">${r[3]}</td><td>${r[4]}</td><td class="num">${money(r[5])}</td><td>${r[6]}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="subline" style="margin-top:6px">演示只列部分记录；真实为该周账单全部记录</div>
+    <h3>结算与开票</h3>
+    <table class="kv"><tr><th>结算状态</th><td>${i.st=='SETTLED'?'已结算':'待结算'}</td><th>结算单号</th><td class="mono">${i.bill||'—'}</td></tr>
+    <tr><th>物流服务费发票</th><td class="mono">${v&&v.no?v.no:'—'}</td><th>开票状态</th><td>${v&&v.st=='DONE'?'已开票':'随结算单开票'}</td></tr>${i.late?`<tr><th>归期说明</th><td colspan="3">${i.late}</td></tr>`:''}</table>`;
+  openDrawer();
+}
+
+/* ============ 结算单 ============ */
+const otherSum = b => r2(b.supply+b.repl+b.fine-b.adj+pickSum(b.no));
+const billNet = b => r2(b.payable-otherSum(b));
+function billRows(){
+  $('#bill-rows').innerHTML=BILLS.map(b=>`<tr>
+    <td class="mono"><span class="btn link" data-bill="${b.no}">${b.no}</span></td><td>${SHOP[b.shop]}</td><td class="mono">${b.shop}</td><td>${b.cycle}</td>
+    <td class="num">${money(b.payable)}</td><td class="num">${money(b.comm)}</td>
+    <td class="num">${money(b.supply)}</td><td class="num">${money(b.repl)}</td><td class="num">${money(b.fine)}</td><td class="num">${money(b.adj)}</td>
+    <td class="num" style="background:#fffaf2">${pickSum(b.no)?money(pickSum(b.no)):'0.00'}</td><td class="num">${money(otherSum(b))}</td>
+    <td class="num"><b>${money(billNet(b))}</b></td><td>${pill(ST_L[b.st][0],ST_L[b.st][1])}</td>
+    <td><span class="btn link" data-bill="${b.no}">详情</span></td></tr>`).join('');
+  $('#bill-total').textContent=`共 ${BILLS.length} 条`;
+}
+function openBill(no){
+  const b=billOf(no), ps=pickOf(no), pk=pickSum(no), v=logiInv(no);
+  $('#bd-no').textContent=b.no; $('#bd-desc').textContent=`${SHOP[b.shop]} · 三方店 · ${b.cycle} · ${ST_L[b.st][0]}`;
+  $('#tab-ov').innerHTML=`<div class="concl"><span class="k">本单结论</span><span class="k">结算净额</span><span class="v">S$${money(billNet(b))}</span><span class="ok">恒等式通过</span></div>
+    <div class="seg"><h4>② 平台分成</h4><div class="sum"><span>小计 · 应付店铺</span><span class="v">S$${money(b.payable)}</span></div></div>
+    <div class="seg" style="background:#fffaf2"><h4>③ 其他收支<span class="dir">店铺 → 平台 / 平台 → 店铺</span></h4>
+      <div class="row"><span class="sign">−</span><span class="label">耗材采购收入</span><span class="amt">${money(b.supply)}</span></div>
+      <div class="row"><span class="sign">−</span><span class="label">自营补货收入</span><span class="amt">${money(b.repl)}</span></div>
+      <div class="row"><span class="sign">−</span><span class="label">店铺罚款 ${pill('不开票','s-none')}</span><span class="amt">${money(b.fine)}</span></div>
+      <div class="row"><span class="sign">±</span><span class="label">业务调整</span><span class="amt">${money(b.adj)}</span></div>
+      <div class="row" style="background:#fff"><span class="sign">−</span><span class="label"><b>取货运费</b> <span class="chg">新</span> <span class="cnt" data-tab-jump="pick">${ps.length} 张 →</span></span><span class="amt">${money(pk)}</span></div>
+      <div class="sum"><span>合计 · 结算净额</span><span class="v">S$${money(billNet(b))} <span class="ok" style="font-size:11px">✓ 恒等式通过</span></span></div>
+    </div>
+    <div class="note-bar">结算净额 ＝ 应付店铺 ${money(b.payable)} − 耗材 ${money(b.supply)} − 补货 ${money(b.repl)} − 罚款 ${money(b.fine)} ${b.adj>=0?'+':'−'} 业务调整 ${money(Math.abs(b.adj))} − 取货运费 ${money(pk)} ＝ <b>S$${money(billNet(b))}</b></div>`;
+  $('#tab-pick').innerHTML=`<div class="table-wrap"><table class="data"><thead><tr><th>收入单号</th><th>取货运费账单号</th><th>结算周（作业日）</th><th class="num">取货次数</th><th class="num">计费金额</th><th class="num">减免金额</th><th class="num">未税</th><th class="num">GST</th><th class="num">应扣（含税）</th><th>归期时间</th></tr></thead><tbody>
+    ${ps.length?ps.map(i=>{const p=PICKS[i.src];return `<tr><td class="mono"><span class="btn link" data-inc="${i.no}">${i.no}</span></td><td class="mono">${i.src}</td><td>${p.week}</td><td class="num">${p.times}</td><td class="num">${money(p.fee)}</td><td class="num">${money(p.waive)}</td><td class="num">${money(i.net)}</td><td class="num">${money(i.gst)}</td><td class="num"><b>${money(i.incl)}</b></td><td>${i.at}</td></tr>`;}).join(''):`<tr><td colspan="10"><div class="empty"><b>本结算单没有取货运费</b></div></td></tr>`}
+    </tbody></table></div>
+    <div class="note-bar">本单取货运费合计：未税 ${money(v?v.net:0)}、GST ${money(v?v.gst:0)}、含税 ${money(pk)}（各收入快照之和）。物流服务费发票：${v?(v.st=='DONE'?`已开 <span class="mono">${v.no}</span>`:`待开（${esc(v.fail)}）`):(pk?'随结算单开票':'本单无取货运费，不开')}</div>`;
+  showTab('ov'); showPage('bill');
+}
+
+/* ============ 佣金开票 ============ */
+let SEL=[];
+function invRows(){
+  const kw=$('#v-kw').value.trim(), ty=$('#v-type').value, st=$('#v-st').value;
+  const rows=INVS.filter(v=>(!kw||v.no.includes(kw)||v.bill.includes(kw))&&(!ty||v.type==ty)&&(!st||v.st==st));
+  SEL=SEL.filter(b=>rows.some(v=>v.bill+v.type==b));
+  $('#inv-rows').innerHTML=rows.map(v=>{const b=billOf(v.bill), k=v.bill+v.type;return `<tr>
+    <td>${v.st=='WAIT'?`<input type="checkbox" data-sel="${k}" ${SEL.includes(k)?'checked':''}>`:''}</td>
+    <td class="mono">${v.no||dash}</td><td>${v.type=='LOGI'?pill('物流服务费发票','t-pick'):pill('服务费发票','t-supply')}</td>
+    <td class="mono"><span class="btn link" data-bill="${v.bill}">${v.bill}</span></td><td>${SHOP[b.shop]}</td><td class="mono">${b.shop}</td>
+    <td class="num">${money(v.net)}</td><td class="num">${money(v.gst)}</td><td class="num"><b>${money(v.amt)}</b></td>
+    <td>${pill(ST_L[b.st][0],ST_L[b.st][1])}</td><td>${v.st=='DONE'?pill('已开','inv-ok'):pill('待开','inv-wait')}</td><td>${v.at||dash}</td><td>${v.fail?esc(v.fail):dash}</td>
+    <td>${v.st=='DONE'?'<span class="btn link" data-dl="1">下载</span>':dash}</td></tr>`;}).join('');
+  $('#inv-total').textContent=`共 ${rows.length} 条`;
+  $('#v-sel-n').textContent=SEL.length; $('#v-retry').disabled=!SEL.length;
+}
+
+/* ============ 通用 ============ */
+function openDrawer(){ $('#mask').classList.add('open'); $('#drawer').classList.add('open'); }
+function closeDrawer(){ $('#mask').classList.remove('open'); $('#drawer').classList.remove('open'); }
+function showPage(id){
+  $$('.page').forEach(p=>p.classList.toggle('active',p.id=='page-'+id));
+  $$('.nav-item[data-page]').forEach(n=>n.classList.toggle('active',n.dataset.page==(id=='bill'?'bills':id)));
+  window.scrollTo(0,0);
+}
+function showTab(t){
+  $$('#bill-tabs .tab').forEach(x=>x.classList.toggle('active',x.dataset.tab==t&&(t!='x'||x===document.activeElement)));
+  ['ov','pick','x'].forEach(k=>$('#tab-'+k).style.display=k==t?'':'none');
+}
+document.addEventListener('click',e=>{
+  const nav=e.target.closest('.nav-item[data-page]'); if(nav){showPage(nav.dataset.page);return;}
+  const bl=e.target.closest('[data-bill]'); if(bl){closeDrawer();openBill(bl.dataset.bill);return;}
+  const inc=e.target.closest('[data-inc]'); if(inc){openIncome(inc.dataset.inc);return;}
+  const tb=e.target.closest('#bill-tabs .tab'); if(tb){$$('#bill-tabs .tab').forEach(x=>x.classList.remove('active'));tb.classList.add('active');['ov','pick','x'].forEach(k=>$('#tab-'+k).style.display=k==tb.dataset.tab?'':'none');return;}
+  const tj=e.target.closest('[data-tab-jump]'); if(tj){showTab(tj.dataset.tabJump);return;}
+  const cr=e.target.closest('.crumb [data-page]'); if(cr){showPage(cr.dataset.page);return;}
+  const sel=e.target.closest('[data-sel]'); if(sel){const k=sel.dataset.sel,i=SEL.indexOf(k);i<0?SEL.push(k):SEL.splice(i,1);invRows();return;}
+  if(e.target.closest('[data-dl]')){toast('演示：已下载发票 PDF');return;}
+});
+$('#dr-close').onclick=closeDrawer; $('#mask').onclick=closeDrawer;
+$('#i-go').onclick=incomeRows; $('#i-reset').onclick=()=>{$('#i-kw').value='';['#i-shop','#i-type','#i-st'].forEach(s=>$(s).value='');incomeRows();};
+$('#i-export').onclick=()=>toast('演示：已按当前筛选导出（含取货运费账单号、计费 / 减免 / 应扣、未税 / GST）');
+$('#v-go').onclick=invRows; $('#v-reset').onclick=()=>{$('#v-kw').value='';$('#v-type').value='';$('#v-st').value='';invRows();};
+$('#v-retry').onclick=()=>{
+  SEL.forEach(k=>{const v=INVS.find(x=>x.bill+x.type==k); if(v){v.st='DONE'; v.no='261028476170191'; v.at='2026-10-28 10:05'; v.fail='';}});
+  toast(`已重开 ${SEL.length} 张，沿用原开票任务`); SEL=[]; invRows(); incomeRows();
+};
+fillFilters(); incomeRows(); billRows(); invRows();
+</script>
+</body>
+</html>

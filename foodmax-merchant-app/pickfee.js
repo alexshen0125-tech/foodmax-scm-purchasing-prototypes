@@ -3,7 +3,7 @@
        近区（祝融、白斯班江一带）S$20 / 次，不拼车；普通区 S$80 / 车，最多 4 家拼车，按同车店铺数平摊
    - 同一天只收一次（按当天第一趟所在的车算）；改区域下一次取货起生效
    - 免运费期：有了第一次取货任务起 14 天内免运费（含首取当天）；超出免运费期还要免的，平台走飞书审批（凡哥批）通过后不扣，商家这边显示「已减免」
-   - 按周出账（周一至周日），推送后进入下一张生成的结算单（已生成的不改），从货款扣；物流服务费发票按结算单单独开（一张结算单一张票，9% GST），结算单认可时开
+   - 按周出账（周一至周日），推送后进入下一张生成的结算单（已生成的不改），从货款扣；物流服务费发票按结算单单独开（一张结算单一张票，9% GST），结算单生成时开（与 aegis 佣金发票同一时点）
    - 只显示同车店铺数，不显示是哪几家、车次、司机；按当前登录店铺显示
    - 演示数据与 PC 一致（绿鲜源蔬果旗舰店 SH2026062000001，普通区）
    样式复用 replen.js 注入的 .rp-* 类 */
@@ -27,7 +27,7 @@ DB.pfBills=DB.pfBills||{
   '2026-10-05':{pushedAt:'2026-10-12 10:15',stNo:'ST202606-M0815'},   // 结算单 ST202606 生成前推送，已归入该单
   '2026-10-12':{pushedAt:'2026-10-19 09:40',stNo:'ST202606-M0815'},
 };
-DB.pfInvs=DB.pfInvs||{};   // 物流服务费发票：key = 结算单号，结算单认可时开
+DB.pfInvs=DB.pfInvs||{};   // 物流服务费发票：key = 结算单号，结算单生成时开（与 aegis 佣金发票同一时点）
 DB.pfVoids=DB.pfVoids||{'PK2026102164':{}};   // 与 PC 一致：飞书免运费审批通过（凡哥批）的一笔，商家这边显示已减免
 const ruleAt=t=>DB.pfRules.filter(v=>v.from<=t).pop()||null;
 const curRule=()=>DB.pfRules[DB.pfRules.length-1]||null;
@@ -79,11 +79,11 @@ window.FM_MOD.pickfeeInv=no=>DB.pfInvs[no]||null;
 // 发票管理 › 物流服务费：一张结算单一张（invoice.js 调用）
 window.FM_MOD.pickfeeInvList=()=>Object.entries(DB.pfInvs).map(([no,v])=>({stNo:no,...v,net:r2(v.amt/(1+GST)),gst:r2(v.amt-r2(v.amt/(1+GST))),cnt:inSettle(no).length}));
 window.FM_MOD.pickfeeIssue=no=>{const l=inSettle(no),amt=r2(l.reduce((a,b)=>a+b.due,0));if(!amt||DB.pfInvs[no])return null;
-  return DB.pfInvs[no]={invNo:'LOG-INV-2026-000013',at:new Date().toISOString().slice(0,16).replace('T',' '),amt};};
+  return DB.pfInvs[no]={invNo:'LOG-INV-2026-000014',at:'2026-07-01 03:05',amt};};
 (function(){const cur=window.FM_MOD.settleCur&&FM_MOD.settleCur();if(!cur||cur.pick!=null)return;
   const l=inSettle(cur.no),amt=r2(l.reduce((a,b)=>a+b.due,0));cur.pick=amt;cur.pickCnt=l.length;
   cur.pickBills=l.map(b=>({no:b.no,shop:SHOP.name,range:`${b.wk} ~ ${addDays(b.wk,6)}`,amt:b.due}));
-  if(amt>0){cur.items.push(['取货运费（物流服务费·含税）',l.length,-amt]);cur.net=r2(cur.net-amt);}})();
+  if(amt>0){cur.items.push(['取货运费（物流服务费·含税）',l.length,-amt]);cur.net=r2(cur.net-amt);window.FM_MOD.pickfeeIssue(cur.no);}})();   // 结算单已生成 → 开票
 
 let _tab='bill';
 function open(){
@@ -136,7 +136,7 @@ function openBill(b){
       ${rowKV('计费金额',money(b.fee))}${rowKV('减免金额',b.waive?money(b.waive):'')}
       ${rowKV('出账时间',b.pushedAt)}${rowKV('扣款方式',b.pushedAt?'结算时从货款中扣除':'')}
       ${rowKV('结算单号',b.stNo?`<span style="font-family:monospace">${b.stNo}</span>`:'')}
-      ${rowKV('物流服务费发票',b.invNo?`<span style="font-family:monospace">${b.invNo}</span>`:b.pushedAt?'认可结算单后开':'',b.invNo||!b.pushedAt?'':'amber')}
+      ${rowKV('物流服务费发票',b.invNo?`<span style="font-family:monospace">${b.invNo}</span>`:b.pushedAt?'随结算单开票':'',b.invNo||!b.pushedAt?'':'amber')}
       <div class="rp-row total"><span class="k">应扣金额</span><span class="v">${money(b.due)}</span></div></div>
     <div class="rp-card2" style="padding-bottom:4px"><div class="rp-ct">取货明细<span class="desc">${b.times} 次</span></div></div>
     <div class="rp-list">${b.list.slice().reverse().map(pickCard).join('')}</div>`,

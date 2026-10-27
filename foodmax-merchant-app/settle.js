@@ -143,7 +143,7 @@ function askConfirmBill(after){
       <ul class="se-cfm-ul">
         <li>认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款</li>
         <li>${b.feeSvc>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「我的 → 发票管理 → 服务费发票」查看下载）`:'本期处免佣期，服务佣金为 0，不开具服务费发票'}</li>
-        ${(b.pick||0)>0?`<li>就本结算单的取货运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「开票管理 › 物流服务费」查看下载）</li>`:''}
+        ${(b.pick||0)>0?`<li>本结算单的取货运费 <b>${money(b.pick)}</b> 已在结算单生成时单独开具物流服务费发票（含 9% GST，在「开票管理 › 物流服务费」查看下载）</li>`:''}
         <li class="warn"><b>认可后不可撤回</b>；有异议请先线下联系平台运营 / 客服，先不要认可</li>
       </ul>
     </div>`,
@@ -154,7 +154,7 @@ function askConfirmBill(after){
       b.confirmBy='陈店主（商家 App）';
       const due=new Date(n.getTime()+30*864e5);   // 预计到账 = 认可日 + 结算账期（月结 30 天）
       b.expectedPayDate=`${due.getFullYear()}-${z(due.getMonth()+1)}-${z(due.getDate())}`;
-      const pInv=window.FM_MOD.pickfeeIssue?FM_MOD.pickfeeIssue(b.no):null;   // 取货运费按结算单单独开物流服务费发票
+      const pInv=null;   // 物流服务费发票在结算单生成时已开
       toast((b.feeSvc>0?'已认可，账单已推送财务；服务费发票已自动开具':'已认可，账单已推送财务')+(pInv?'；物流服务费发票已开具':''));
       after&&after();
     }});
@@ -240,7 +240,7 @@ function openDetail(b){
 
     ${(b.pick||0)>0?(()=>{const inv=window.FM_MOD.pickfeeInv?FM_MOD.pickfeeInv(b.no):null;return `<div class="se-card"><div class="se-ct">取货运费<span class="desc">${b.pickCnt} 张账单 · 只读</span></div>
       ${(b.pickBills||[]).map(x=>`<div class="se-row" style="align-items:flex-start"><span class="k">${x.no}<br><span style="font-size:11.5px;color:var(--sub)">${x.shop||''} · 结算周期 ${x.range}</span></span><span class="v neg">-${money(x.amt)}</span></div>`).join('')}
-      <div class="se-tip">平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（含 9% GST），不和服务费发票合开：${inv?`已开具 <b>${inv.invNo}</b>`:'认可本结算单后自动开具'}。<span id="se-pf-lk" style="font-weight:700;cursor:pointer">查看取货运费 ›</span></div></div>`;})():''}
+      <div class="se-tip">平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（含 9% GST），不和服务费发票合开：${inv?`已开具 <b>${inv.invNo}</b>`:'随结算单开票'}。<span id="se-pf-lk" style="font-weight:700;cursor:pointer">查看取货运费 ›</span></div></div>`;})():''}
 
     <div class="se-card">
       <div class="se-ct">账单构成<span class="desc">按类目汇总</span></div>
@@ -267,8 +267,8 @@ function openDetail(b){
       </div>
       ${(b.pick||0)>0?`<div class="se-leg">
         <div class="lt"><span class="nm">取货运费（物流服务费）</span><span class="am" style="color:var(--amber)">${money(b.pick)}</span></div>
-        <div class="payee">运费入平台 · 你<b>认可账单后</b>平台就本结算单<b>单独开具</b>物流服务费发票（GST 9%）</div>
-        <div class="sts">${window.FM_MOD.pickfeeInv&&FM_MOD.pickfeeInv(b.no)?'<span class="se-chip se-c-green">发票 已开</span>':'<span class="se-chip se-c-amber">认可后自动开票</span>'}</div>
+        <div class="payee">运费入平台 · 结算单<b>生成时</b>平台就本结算单<b>单独开具</b>物流服务费发票（GST 9%）</div>
+        <div class="sts">${window.FM_MOD.pickfeeInv&&FM_MOD.pickfeeInv(b.no)?'<span class="se-chip se-c-green">发票 已开</span>':'<span class="se-chip se-c-amber">待开票</span>'}</div>
       </div>`:''}
     </div>
 
