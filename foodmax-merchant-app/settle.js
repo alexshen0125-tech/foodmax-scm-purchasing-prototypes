@@ -143,7 +143,7 @@ function askConfirmBill(after){
       <ul class="se-cfm-ul">
         <li>认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款</li>
         <li>${b.feeSvc>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「我的 → 发票管理 → 服务费发票」查看下载）`:'本期处免佣期，服务佣金为 0，不开具服务费发票'}</li>
-        ${(b.pick||0)>0?`<li>就本结算单的取货运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「取货运费」查看下载）</li>`:''}
+        ${(b.pick||0)>0?`<li>就本结算单的取货运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「开票管理 › 物流服务费」查看下载）</li>`:''}
         <li class="warn"><b>认可后不可撤回</b>；有异议请先线下联系平台运营 / 客服，先不要认可</li>
       </ul>
     </div>`,
@@ -239,7 +239,7 @@ function openDetail(b){
       <div class="se-tip">赔付单直接推送进本结算单，<b>已计入应结金额与应开票金额</b>，请随本结算单一并开票，无需单独开票。<span id="se-rc-lk" style="font-weight:700;cursor:pointer">查看退货赔付 ›</span></div></div>`:''}
 
     ${(b.pick||0)>0?(()=>{const inv=window.FM_MOD.pickfeeInv?FM_MOD.pickfeeInv(b.no):null;return `<div class="se-card"><div class="se-ct">取货运费<span class="desc">${b.pickCnt} 张账单 · 只读</span></div>
-      ${(b.pickBills||[]).map(x=>`<div class="se-row" style="align-items:flex-start"><span class="k">${x.no}<br><span style="font-size:11.5px;color:var(--sub)">结算周期 ${x.range}</span></span><span class="v neg">-${money(x.amt)}</span></div>`).join('')}
+      ${(b.pickBills||[]).map(x=>`<div class="se-row" style="align-items:flex-start"><span class="k">${x.no}<br><span style="font-size:11.5px;color:var(--sub)">${x.shop||''} · 结算周期 ${x.range}</span></span><span class="v neg">-${money(x.amt)}</span></div>`).join('')}
       <div class="se-tip">平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（含 9% GST），不和服务费发票合开：${inv?`已开具 <b>${inv.invNo}</b>`:'认可本结算单后自动开具'}。<span id="se-pf-lk" style="font-weight:700;cursor:pointer">查看取货运费 ›</span></div></div>`;})():''}
 
     <div class="se-card">

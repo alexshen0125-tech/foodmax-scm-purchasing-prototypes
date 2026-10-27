@@ -3,17 +3,17 @@
    ▍规则：
    - 平台按店铺指定所属区域（商家不能自选）；未设置的店铺不收运费；改区域从下一次取货起生效，已取的不重算
        近区（祝融、白斯班江一带）：S$20 / 次 / 商家，不拼车
-       普通区：S$80 / 车，最多 4 家拼车，按同车实际商家数平摊（80 ÷ 同车商家数，四舍五入到分）；一车只有自己 = S$80
+       普通区：S$80 / 车，最多 4 家拼车，按同车实际店铺数平摊（80 ÷ 同车店铺数，四舍五入到分）；一车只有自己 = S$80
    - 同一商家同一天只收一次：按当天第一趟取货所在的车计费，后面的趟次（含一车装不下分到第二辆车）不再收
    - 免运费期：店铺有了第一次取货任务起 14 天内（含首取当天）免运费；费用照常算（同车分摊人数照常算进去），这一笔记「免运费期内」不扣
      （2026-10-27 沈亮改：起算点由「入驻」改为「首次取货」；还没取过货的店铺不起算）
    - 超出免运费期还要免：在取货明细勾选同一店铺的计费记录「申请免运费」→ 飞书审批（凡哥批，抄送张可心）；通过才不扣，审批中的账单不能推送
-   - 按周出账（周一至周日，对齐每周结算单）；运营手动推送到对应那周的结算单，从货款里扣
+   - 按周出账（周一至周日，对齐每周结算单）；运营手动推送，进该商家下一张生成的结算单，从货款里扣
    - 发票按结算单单独开：一张结算单开一张「物流服务费」发票（9% GST），金额 = 该结算单里所有取货运费账单应扣合计
      （可跨周、跨店铺）；不和佣金/服务费合开。账单推送进商家当前未结算的结算单（结算单里多一项「取货运费」扣款），
      结算单被商家认可时自动开票
    ▍假设（待确认）：S$20 / S$80 是含 GST 价，发票金额 = 应扣金额，未税 = 含税 ÷ 1.09
-   ▍商家端：财务 › 取货运费（m-pickfee），只读；只显示同车商家数，不显示是哪几家；App 同口径（v2/pickfee.js）
+   ▍商家端：财务 › 取货运费（m-pickfee），只读；只显示同车店铺数，不显示是哪几家、车次、司机；App 同口径（v2/pickfee.js）
    依赖主文件全局：DB / money / toast / modal / closeModal / drawer / closeDrawer / render / ts */
 (function(){
 
@@ -99,10 +99,10 @@ function pfCalc(){
   const first={};
   return DB.pfPickups.slice().sort((a,b)=>a.at.localeCompare(b.at)||a.no.localeCompare(b.no)).map(p=>{
     const v=ruleAt(p.shop,p.at), date=p.at.slice(0,10);
-    if(!v || v.zone=='OFF') return {...p, rule:v, fee:0, charge:0, st:'NONE', basis:'未设置收费规则，不收费'};
+    if(!v || v.zone=='OFF') return {...p, rule:v, fee:0, charge:0, st:'NONE', basis:v?'规则为不收费':'未设置收费规则，不收费'};
     const k=p.shop+date;
-    if(first[k]) return {...p, rule:v, fee:0, charge:0, st:'DUP', basis:`当天已在 ${first[k]} 计费，不重复收`};
-    first[k]=p.trip;
+    if(first[k]) return {...p, rule:v, fee:0, charge:0, st:'DUP', basis:`当天已在 ${first[k].trip} 计费，不重复收`, mBasis:`当天 ${first[k].at.slice(11)} 那趟已计费，不重复收`};
+    first[k]={trip:p.trip, at:p.at};
     const fee = v.zone=='NEAR' ? PRICE.NEAR : r2(PRICE.NORMAL/p.mates);
     const basis = v.zone=='NEAR' ? `近区 · ${money(PRICE.NEAR)} / 次`
       : p.mates==1 ? `普通区 · 单独一车 ${money(PRICE.NORMAL)}` : `普通区 · ${money(PRICE.NORMAL)} ÷ 同车 ${p.mates} 家 = ${money(fee)}`;
@@ -113,7 +113,7 @@ function pfCalc(){
     return {...p, rule:v, fee, charge:fee, st:'CHARGE', basis};
   });
 }
-const PST = {CHARGE:['计费','t-g'], FREE:['免运费期内','t-b'], PENDING:['免运费审批中','t-y'], VOID:['审批免运费','t-b']};
+const PST = {CHARGE:['计费','t-g'], FREE:['免运费期内','t-b'], PENDING:['免运费审批中','t-y'], VOID:['已减免','t-b'], DUP:['不重复收','t-gr'], NONE:['不收费','t-gr']};
 const pstTag = p => PST[p.st] ? `<span class="tag ${PST[p.st][1]}"><span class="dot"></span>${PST[p.st][0]}</span>` : dash;
 
 /* ================= 周账单：店铺 × 结算周 ================= */
@@ -124,9 +124,9 @@ DB.pfBills = DB.pfBills || {   // key = 店铺|周一日期
   'SH2026072000007|2026-10-05':{pushedAt:'2026-10-12 10:16', pushedBy:'林凯', stNo:'ST202606-M0820'},
   'SH2026062000001|2026-10-12':{pushedAt:'2026-10-19 09:40', pushedBy:'林凯', stNo:'ST202606-M0815'},
 };
-const billNo = (s,m) => `PF-${m.replace(/-/g,'')}-${s.slice(-5)}`;
-/* 结算单：账单推送进该商家「当前还没结算」的那张结算单（绿鲜源 = 结算单模块里的当期单 DB.bill；
-   当期单已认可/已打款 → 进下一期）。物流服务费发票按结算单开：结算单被商家认可时，就单里的取货运费合计自动开一张 */
+const billNo = (s,m) => `PF-${m.replace(/-/g,'')}-${s}`;   // 用完整店铺编码，避免后 5 位撞号
+/* 结算单：账单推送后挂到该商家「下一张生成的结算单」——当期单还没生成就进当期，已生成（不论是否认可）就进下一期，
+   已生成的结算单不改（与《对账结算》BR-01 / 业务调整单 CLJS-20 同口径）。演示里 ST202606 的两张是结算单生成前推送的。物流服务费发票按结算单开：结算单被商家认可时，就单里的取货运费合计自动开一张 */
 const merOf = s => (SHOPS[s]||{}).merchant || '';
 DB.pfSettleSt = DB.pfSettleSt || {'ST202606-M0902':{st:'confirmed', at:'2026-10-14 16:20'}};   // 其他商家结算单状态（演示）
 DB.pfInvs = DB.pfInvs || {'ST202606-M0902':{invNo:'LOG-INV-2026-000012', at:'2026-10-14 16:20', amt:420.01}};   // key = 结算单号
@@ -136,7 +136,7 @@ const stTag = no => { const [l,c]=ST_L[stStatus(no)]||ST_L.none; return `<span c
 const nextPeriod = no => { const y=+no.slice(2,6), m=+no.slice(6,8), n=m==12?[y+1,1]:[y,m+1]; return `ST${n[0]}${String(n[1]).padStart(2,'0')}`; };
 function curSettle(mc){
   const base=DB.bill.no.slice(0,8), no=`${base}-M${mc.slice(-4)}`;
-  return ['none','generated'].includes(stStatus(no)) ? no : `${nextPeriod(no)}-M${mc.slice(-4)}`;
+  return stStatus(no)=='none' ? no : `${nextPeriod(no)}-M${mc.slice(-4)}`;   // 已生成的结算单不改，进下一张（与业务调整单 CLJS-20 同口径）
 }
 const allWeeks = () => [...new Set(DB.pfPickups.map(p=>monday(p.at.slice(0,10))))].sort().reverse();
 function billsOf(m){
@@ -158,7 +158,7 @@ function settles(){
   return Object.entries(out).map(([no,list])=>({no, mc:merOf(list[0].shop), list, amt:r2(list.reduce((a,b)=>a+b.due,0)), inv:DB.pfInvs[no]||null, shops:[...new Set(list.map(b=>b.shop))]}))
     .sort((a,b)=>b.no.localeCompare(a.no));
 }
-const invTag = t => t.inv ? '<span class="tag t-g"><span class="dot"></span>已开票</span>' : '<span class="tag t-y"><span class="dot"></span>结算单认可后开</span>';
+const invTag = t => t.inv ? '<span class="tag t-g"><span class="dot"></span>已开票</span>' : '<span class="tag t-y"><span class="dot"></span>待开票</span>';
 // 结算单被认可时调用：就单里取货运费合计开一张物流服务费发票
 window.pfIssueInv = function(no){
   const t=settles().find(x=>x.no==no); if(!t||t.inv||!(t.amt>0)) return null;
@@ -197,15 +197,16 @@ PAGES['p-pickfee-rule']=()=>{
       <td>${zoneTag(v.zone)}</td>
       <td style="white-space:nowrap">${zoneStd(v.zone)=='—'?dash:zoneStd(v.zone)}</td>
       <td style="white-space:nowrap">${firstPick(s)||dash}</td>
-      <td style="white-space:nowrap">${!fe?'<span style="color:var(--ts)">首次取货起算</span>':fe>=TODAY?`${fe} <span class="tag t-b" style="font-size:10.5px">免运费中</span>`:fe}</td>
+      <td style="white-space:nowrap">${fe||dash}</td>
+      <td style="white-space:nowrap">${!fe?'<span class="tag t-gr"><span class="dot"></span>未开始</span>':fe>=TODAY?'<span class="tag t-b"><span class="dot"></span>免运费中</span>':'<span class="tag t-gr"><span class="dot"></span>已结束</span>'}</td>
       <td style="white-space:nowrap">${v.from}</td>
       <td>${esc(v.by)}</td>
       <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_edit('${s}')">修改</button> <button class="btn btn-link" onclick="pf_hist('${s}')">变更记录</button></td>
     </tr>`;}).join('');
-  return `<div class="card"><div class="card-hd"><h3>取货运费规则</h3><span class="sub">近区 = 祝融、白斯班江一带 · 已设置 ${set.length} 家店铺，未设置的不收运费 · 首次取货起 ${FREE_DAYS} 天内免运费</span><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
+  return `<div class="card"><div class="card-hd"><h3>取货运费规则</h3><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>店铺名称</th><th>店铺编码</th><th>所属区域</th><th>收费标准</th><th>首次取货日期</th><th>免运费截止</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="9"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置取货运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置所属区域</div></div></td></tr>'}</tbody></table></div></div></div>`;
+      <thead><tr><th>店铺名称</th><th>店铺编码</th><th>所属区域</th><th>收费标准</th><th>首次取货日期</th><th>免运费截止</th><th>免运费状态</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="10"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置取货运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置所属区域</div></div></td></tr>'}</tbody></table></div></div></div>`;
 };
 window.pf_edit=function(s){
   const isNew=!s, free=Object.keys(SHOPS).filter(k=>!curRule(k));
@@ -316,16 +317,17 @@ function pickTable(picks){
 const pushedOf = p => !!(DB.pfBills[p.shop+'|'+monday(p.at.slice(0,10))]||{}).pushedAt;
 const canApply = p => p.st=='CHARGE' && !pushedOf(p);
 function pickRows(picks,withShop,canOp){
-  const cols=(withShop?12:11)+(canOp?1:0);
-  return `<table><thead><tr>${canOp?'<th style="width:34px"></th>':''}<th>取货记录号</th>${withShop?'<th>店铺名称</th>':''}<th>取货时间</th><th>车次</th><th style="text-align:right">同车商家数</th><th>取货地点</th><th>司机</th><th>所属区域</th><th>计费说明</th><th style="text-align:right">计费金额</th><th>状态</th>${canOp?'<th>操作</th>':''}</tr></thead><tbody>
+  const cols=(withShop?12:11)+(canOp?2:0);
+  return `<table><thead><tr>${canOp?'<th style="width:34px"></th>':''}<th>取货记录号</th>${withShop?'<th>店铺名称</th>':''}<th>取货时间</th><th>车次</th><th style="text-align:right">同车店铺数</th><th>取货地点</th><th>司机</th><th>所属区域</th><th>计费说明</th><th style="text-align:right">计费金额</th><th>状态</th>${canOp?'<th>免运费审批</th><th>操作</th>':''}</tr></thead><tbody>
     ${picks.length?picks.map(p=>`<tr>
       ${canOp?`<td>${canApply(p)?`<input type="checkbox" ${DB.pfVSel.includes(p.no)?'checked':''} onclick="pf_vToggle('${p.no}')">`:''}</td>`:''}
       <td class="mono" style="white-space:nowrap">${p.no}</td>${withShop?`<td style="white-space:nowrap">${esc(shopName(p.shop))}</td>`:''}
       <td class="mono" style="white-space:nowrap">${p.at}</td><td class="mono" style="white-space:nowrap">${p.trip}</td>
       <td style="text-align:right">${p.mates}</td><td style="white-space:nowrap">${p.market}</td><td style="white-space:nowrap">${esc(p.driver)}</td>
       <td style="white-space:nowrap">${p.rule?ZONE[p.rule.zone]:'不收费'}</td>
-      <td style="font-size:12.5px;color:var(--ts)">${p.basis}${p.apv?`<br>审批 <a class="btn-link" style="cursor:pointer" onclick="pf_apvDetail('${p.apv.id}')">${p.apv.id}</a>`:''}</td>
+      <td style="font-size:12.5px;color:var(--ts)">${p.basis}</td>
       <td style="text-align:right">${p.fee?money(p.fee):money(0)}</td><td style="white-space:nowrap">${pstTag(p)}</td>
+      ${canOp?`<td class="mono" style="white-space:nowrap">${p.apv?`<a class="btn-link" style="cursor:pointer" onclick="pf_apvDetail('${p.apv.id}')">${p.apv.id}</a>`:dash}</td>`:''}
       ${canOp?`<td style="white-space:nowrap">${canApply(p)?`<button class="btn btn-link" onclick="pf_apply(['${p.no}'])">申请免运费</button>`:dash}</td>`:''}</tr>`).join('')
     :`<tr><td colspan="${cols}"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">没有取货记录</div></div></td></tr>`}
   </tbody></table>`;
@@ -340,7 +342,7 @@ window.pf_bill=function(s,m){
       ${kv('店铺',`${esc(shopName(s))}（${s}）`)}${kv('结算周期',weekLabel(m))}
       ${kv('取货次数',b.times)}${kv('计费金额',money(b.fee))}${kv('减免金额',b.waive?money(b.waive):'—')}${kv('应扣金额',money(b.due))}
       ${kv('推送人',b.pushedBy?esc(b.pushedBy):'—')}${kv('推送时间',b.pushedAt||'—')}
-      ${kv('结算单号',b.stNo?`<span class="mono">${b.stNo}</span>`:'—')}${kv('结算单状态',b.stNo?stTag(b.stNo):'—')}${kv('物流费发票',b.invNo?`<a class="btn-link" style="cursor:pointer" onclick="pf_inv('${b.stNo}')">${b.invNo}</a>`:b.pushedAt?'结算单认可后开具':'—')}
+      ${kv('结算单号',b.stNo?`<span class="mono">${b.stNo}</span>`:'—')}${kv('结算单状态',b.stNo?stTag(b.stNo):'—')}${kv('物流费发票',b.invNo?`<a class="btn-link" style="cursor:pointer" onclick="pf_inv('${b.stNo}')">${b.invNo}</a>`:b.pushedAt?'认可结算单后开':'—')}
     </div>
     ${pickRows(b.list.slice().reverse(),false,false)}
   </div>
@@ -351,10 +353,10 @@ window.pf_push=function(nos){
   if(!list.length){toast('请选择待推送的账单','err');return;}
   const total=r2(list.reduce((a,b)=>a+b.due,0));
   modal(`<div class="mc-hd"><h3>推送到结算单</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <table class="subtbl"><thead><tr><th>账单号</th><th>店铺</th><th>结算周期</th><th>进入结算单</th><th style="text-align:right">应扣金额</th></tr></thead><tbody>
+    <table class="subtbl"><thead><tr><th>账单号</th><th>店铺</th><th>结算周期</th><th>预计进入结算单</th><th style="text-align:right">应扣金额</th></tr></thead><tbody>
       ${list.map(b=>`<tr><td class="mono">${b.no}</td><td>${esc(shopName(b.shop))}</td><td style="white-space:nowrap">${weekLabel(b.wk)}</td><td class="mono">${curSettle(merOf(b.shop))}</td><td style="text-align:right">${money(b.due)}</td></tr>`).join('')}
     </tbody></table>
-    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后进入该商家当前还没结算的结算单，作为「取货运费」扣款项从货款中扣除；账单不能再修改。结算单被商家认可时，就单里的取货运费合计单独开一张物流服务费发票（含 9% GST）。</div>
+    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后进入该商家下一张生成的结算单（已生成的结算单不改；结算单号在结算单生成时确定），作为「取货运费」扣款项从货款中扣除；账单不能再修改。结算单被商家认可时，就单里的取货运费合计单独开一张物流服务费发票（含 9% GST）。</div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick='pf_pushDo(${JSON.stringify(list.map(b=>b.no))})'>确认推送</button></div>`);
 };
 window.pf_pushDo=function(nos){
@@ -460,9 +462,9 @@ window.pf_apvDone=function(id,st){
 };
 window.pf_import=function(){
   modal(`<div class="mc-hd"><h3>导入取货数据</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div class="up" onclick="toast('演示：已选择 取货数据_2026-10-26.xlsx','info')"><div class="uic">📄</div><div class="ut">选择 Excel 文件</div><div class="us">列：车次 / 取货时间 / 店铺编码 / 取货地点 / 司机 / 车牌；同一车次同一店铺重复的行自动跳过</div></div>
+    <div class="up" onclick="toast('演示：已选择 取货数据_2026-10-26.xlsx','info')"><div class="uic">📄</div><div class="ut">选择 Excel 文件</div><div class="us">列：作业日 / 车次 / 取货时间 / 店铺编码 / 取货地点 / 司机 / 车牌（均为必填，时间按新加坡时间）；同一车次的行按车次整车替换；物流回传过或已锁定（有店铺账单已推送 / 记录在审批中）的车次拒收；≤ 5,000 行</div></div>
     <div class="row" style="margin-top:10px"><button class="btn btn-link" onclick="toast('演示：模板已下载','info')">下载导入模板</button></div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="closeModal();toast('演示：导入 0 条，跳过重复 0 条','info')">开始导入</button></div>`);
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="closeModal();toast('演示：新增 0 条，覆盖 0 条，失败 0 条','info')">开始导入</button></div>`);
 };
 
 /* ================= 商家端：财务 › 取货运费（m-pickfee，只读） =================
@@ -470,14 +472,15 @@ window.pf_import=function(){
    - 账单、运费与运营端同一份计算（pfCalc）
    - 状态换成商家能懂的说法：待推送 → 待出账；已推送 → 已出账（结算时从货款扣）；作废 → 已减免
    - 物流服务费发票按结算单开（同一结算单的多家店铺合一张），账单上显示所在结算单号与发票号
-   - 只显示同车商家数，不显示是哪几家；不显示推送人、规则修改人、作废原因等内部信息 */
+   - 只显示同车店铺数，不显示是哪几家、车次、司机、车牌、数据来源；不显示推送人、规则修改人、审批原因与编号
+   - 商家端按当前登录店铺显示（会话按店铺，切店查看另一家）；结算单按商家合并，明细列出每张账单的店铺 */
 const myShop = () => Object.keys(SHOPS).find(s=>SHOPS[s].merchant==DB.merchant.code) || '';
 window.pfMerchantOn = () => { const s=myShop(); return !!(s && (DB.pfRules[s]||[]).length); };
 const mBillTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>本周进行中</span>'
   : !b.due ? '<span class="tag t-gr"><span class="dot"></span>无需收费</span>'
   : !b.pushedAt ? '<span class="tag t-y"><span class="dot"></span>待出账</span>'
   : '<span class="tag t-g"><span class="dot"></span>已出账</span>';
-const MPST = {CHARGE:['计费','t-g'], PENDING:['计费','t-g'], FREE:['免运费期内','t-b'], VOID:['已减免','t-b']};
+const MPST = {CHARGE:['计费','t-g'], PENDING:['计费','t-g'], FREE:['免运费期内','t-b'], VOID:['已减免','t-b'], DUP:['不重复收','t-gr'], NONE:['不收费','t-gr']};
 const mPstTag = p => MPST[p.st] ? `<span class="tag ${MPST[p.st][1]}"><span class="dot"></span>${MPST[p.st][0]}</span>` : dash;
 const myWeeks = s => [...new Set(DB.pfPickups.filter(p=>p.shop==s).map(p=>monday(p.at.slice(0,10))))].sort().reverse();
 DB.pfMTab = DB.pfMTab || 'BILL';
@@ -491,11 +494,11 @@ PAGES['m-pickfee']=()=>{
   const picks=pfCalc().filter(p=>p.shop==s&&(!wk||monday(p.at.slice(0,10))==wk)).reverse();
   const kv=(k,val)=>`<div><div class="k">${k}</div><div class="v">${val}</div></div>`;
   const tabs=[['BILL','周账单',bills.length],['PICK','取货明细',picks.length]];
-  return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>当前收费规则</h3><span class="sub">平台去批发市场帮您取货收的运费；按周出账单，结算时从货款中扣除，并开物流服务费发票给您</span><button class="btn btn-o btn-sm" onclick="pf_mHist()">变更记录</button></div>
+  return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>当前收费规则</h3><button class="btn btn-o btn-sm" onclick="pf_mHist()">变更记录</button></div>
     <div class="card-bd"><div class="kv">
       ${kv('店铺',`${esc(shopName(s))}（<span class="mono">${s}</span>）`)}
       ${kv('所属区域',ZONE[v.zone])}
-      ${kv('收费标准',v.zone=='NORMAL'?`${money(PRICE.NORMAL)} / 车，最多 ${MAX_POOL} 家拼车，按同车商家数平摊；同一天只收一次`:v.zone=='NEAR'?`${money(PRICE.NEAR)} / 次；同一天只收一次`:'—')}
+      ${kv('收费标准',v.zone=='NORMAL'?`${money(PRICE.NORMAL)} / 车，最多 ${MAX_POOL} 家拼车，按同车店铺数平摊；同一天只收一次`:v.zone=='NEAR'?`${money(PRICE.NEAR)} / 次；同一天只收一次`:'—')}
       ${kv('免运费期',fe?`首次取货起 ${FREE_DAYS} 天（${firstPick(s)} ~ ${fe}）${fe>=TODAY?' <span class="tag t-b" style="font-size:10.5px">免运费中</span>':''}`:`首次取货起 ${FREE_DAYS} 天内免运费`)}
       ${kv('生效时间',v.from)}
     </div></div></div>
@@ -519,11 +522,11 @@ function mBillTable(bills){
     </tbody></table></div></div></div>`;
 }
 function mPickRows(picks){
-  return `<table><thead><tr><th>取货记录号</th><th>取货时间</th><th style="text-align:right">同车商家数</th><th>取货地点</th><th>计费说明</th><th style="text-align:right">计费金额</th><th>状态</th></tr></thead><tbody>
+  return `<table><thead><tr><th>取货记录号</th><th>取货时间</th><th style="text-align:right">同车店铺数</th><th>取货地点</th><th>计费说明</th><th style="text-align:right">计费金额</th><th>状态</th></tr></thead><tbody>
     ${picks.length?picks.map(p=>`<tr>
       <td class="mono" style="white-space:nowrap">${p.no}</td><td class="mono" style="white-space:nowrap">${p.at}</td>
       <td style="text-align:right">${p.mates}</td><td style="white-space:nowrap">${p.market}</td>
-      <td style="font-size:12.5px;color:var(--ts)">${p.basis}</td>
+      <td style="font-size:12.5px;color:var(--ts)">${p.mBasis||p.basis}</td>
       <td style="text-align:right">${money(p.fee)}</td><td style="white-space:nowrap">${mPstTag(p)}</td></tr>`).join('')
     :`<tr><td colspan="7"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">没有取货记录</div></div></td></tr>`}
   </tbody></table>`;
@@ -538,12 +541,23 @@ window.pf_mBill=function(m){
       ${kv('结算周期',weekLabel(m))}${kv('取货次数',b.times)}
       ${kv('计费金额',money(b.fee))}${kv('减免金额',b.waive?money(b.waive):'—')}${kv('应扣金额',money(b.due))}
       ${kv('出账时间',b.pushedAt||'—')}${kv('扣款方式',b.pushedAt?'结算时从货款中扣除':'—')}
-      ${kv('结算单号',b.stNo?`<a class="btn-link mono" style="cursor:pointer" onclick="closeDrawer();nav('m-settle')">${b.stNo}</a>`:'—')}${kv('物流费发票',b.invNo||(b.pushedAt?'结算单认可后开具':'—'))}
-      ${kv('发票金额（含税，整张结算单）',iv?money(inv.amt):'—')}${kv('未税金额',iv?money(iv.net):'—')}${kv('GST（9%）',iv?money(iv.gst):'—')}
+      ${kv('结算单号',b.stNo?`<a class="btn-link mono" style="cursor:pointer" onclick="closeDrawer();nav('m-settle')">${b.stNo}</a>`:'—')}${kv('物流服务费发票',b.invNo?`<a class="btn-link mono" style="cursor:pointer" onclick="closeDrawer();DB.invTab='logi';nav('m-invoice')">${b.invNo}</a>`:(b.pushedAt?'认可结算单后开':'—'))}
     </div>
     ${mPickRows(b.list.slice().reverse())}
   </div>
   <div class="drawer-ft">${b.invNo?`<button class="btn btn-o" onclick="toast('演示：已下载 ${b.invNo}.pdf','info')">下载发票</button>`:''}<button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+};
+/* 商家端 · 发票管理 › ⑤ 物流服务费发票：一张结算单一行（本商家） */
+window.pfInvoiceContent=function(){
+  const mc=merOf(myShop()), rows=settles().filter(t=>t.mc==mc);
+  return `<div class="card"><div class="card-hd"><h3>物流服务费发票</h3></div><div class="card-bd ${rows.length?'flush':''}">${rows.length?`<div style="overflow-x:auto"><table>
+    <thead><tr><th>发票号码</th><th>结算单号</th><th style="text-align:right">取货运费账单数</th><th style="text-align:right">未税金额</th><th style="text-align:right">GST（9%）</th><th style="text-align:right">发票金额（含税）</th><th>开票状态</th><th>开票时间</th><th>操作</th></tr></thead><tbody>
+    ${rows.map(t=>{const a=t.inv?t.inv.amt:t.amt, iv=invSplit(a);return `<tr>
+      <td class="mono" style="white-space:nowrap">${t.inv?t.inv.invNo:dash}</td><td class="mono" style="white-space:nowrap">${t.no}</td><td style="text-align:right">${t.list.length}</td>
+      <td style="text-align:right">${money(iv.net)}</td><td style="text-align:right">${money(iv.gst)}</td><td style="text-align:right"><b>${money(a)}</b></td>
+      <td>${invTag(t)}</td><td style="white-space:nowrap">${t.inv?t.inv.at:dash}</td>
+      <td style="white-space:nowrap">${t.inv?`<button class="btn btn-link" onclick="toast('演示：已下载 ${t.inv.invNo}.pdf','info')">下载</button>`:dash}</td></tr>`;}).join('')}
+    </tbody></table></div>`:'<div class="empty"><div class="e-ic">🧾</div><div class="e-t">暂无物流服务费发票</div><div class="e-s">认可含取货运费的结算单后自动开具</div></div>'}</div></div>`;
 };
 window.pf_mHist=function(){
   const s=myShop(), vers=(DB.pfRules[s]||[]).slice().reverse();

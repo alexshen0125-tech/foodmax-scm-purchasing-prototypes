@@ -277,6 +277,8 @@ function render(page){
   }else if(st.seg==='svc'){
     head=`<div class="iv-tip fm">服务费发票由平台在你<b>认可账单后自动开具</b>并推送（就该期平台服务佣金，GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${SVC.length}</b> 张</span></div>`;
+  }else if(st.seg==='logi'){
+    head=`<div class="iv-stat"><span>平台开具 · 一张结算单一张 · 共 <b>${(FM_MOD.pickfeeInvList?FM_MOD.pickfeeInvList():[]).length}</b> 张</span></div>`;
   }else{
     head=`<div class="iv-tip fm">补采发票由平台在与你<b>结算完成后自动开具</b>并推送——平台就<b>自营现货替你补齐的缺口数量</b>按自营商品原定价向你开销售发票（GST 9%），<b>无需你申请</b>；此处仅供查看与下载。</div>
       <div class="iv-stat"><span>平台开具 · 共 <b>${RPL.length}</b> 张</span></div>`;
@@ -292,6 +294,12 @@ function render(page){
     }else if(st.seg==='svc'){
       listEl.innerHTML=SVC.length?SVC.map(svcCard).join(''):empty('暂无服务费发票','你认可账单后，平台会开具服务费发票并显示在此');
       bindCards(listEl,'svc');
+    }else if(st.seg==='logi'){
+      const L=FM_MOD.pickfeeInvList?FM_MOD.pickfeeInvList():[];
+      listEl.innerHTML=L.length?L.map(v=>`<div class="rp-card" style="cursor:default"><div class="r1"><span class="no">${v.invNo}</span><span style="margin-left:auto" class="rp-chip rp-c-green">已开票</span></div>
+        <div class="sub">结算单 <span style="font-family:monospace">${v.stNo}</span> · 开票 ${v.at}</div>
+        <div class="qty"><div class="q"><div class="v">${v.cnt}</div><div class="l">取货运费账单</div></div><div class="q"><div class="v">S$${v.net.toFixed(2)}</div><div class="l">未税</div></div><div class="q"><div class="v">S$${v.gst.toFixed(2)}</div><div class="l">GST 9%</div></div></div>
+        <div class="r2"><span>发票金额（含税）</span><span class="amt" style="color:var(--ink)">S$${v.amt.toFixed(2)}</span></div></div>`).join(''):empty('暂无物流服务费发票','认可含取货运费的结算单后，平台会开具物流服务费发票并显示在此');
     }else{
       listEl.innerHTML=RPL.length?RPL.map(rplCard).join(''):empty('暂无平台补采发票','产生平台补采且结算完成后，平台会开具补货销售发票并显示在此');
       bindCards(listEl,'rpl');
@@ -301,7 +309,7 @@ function render(page){
 
 function open(){
   pushPage({title:'开票管理',body:`
-    <div class="iv-seg" id="ivseg"><span class="s on" data-s="cust">客户开票</span><span class="s" data-s="svc">服务费</span><span class="s" data-s="rpl">补货</span></div>
+    <div class="iv-seg" id="ivseg"><span class="s on" data-s="cust">客户开票</span><span class="s" data-s="svc">服务费</span><span class="s" data-s="rpl">补货</span>${window.FM_MOD&&FM_MOD.pickfeeOn&&FM_MOD.pickfeeOn()?'<span class="s" data-s="logi">物流服务费</span>':''}</div>
     <div id="ivdyn"></div>`,
     mount:(page)=>{
       page._st={seg:'cust'};
