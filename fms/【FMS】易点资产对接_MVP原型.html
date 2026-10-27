@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资产推送记录 MVP · FMS 原型</title>
+<style>
+  :root{
+    --primary:#409eff;--primary-light:#ecf5ff;--success:#67c23a;--warning:#e6a23c;
+    --danger:#f56c6c;--info:#909399;--border:#dcdfe6;--border-light:#e4e7ed;
+    --text:#303133;--text-reg:#606266;--text-sec:#909399;--bg:#f0f2f5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  .layout{display:flex;min-height:100vh}
+  .aside{width:208px;background:#2f3a4b;flex:none}
+  .aside .logo{height:56px;display:flex;align-items:center;gap:9px;padding:0 18px;color:#fff;font-weight:700;font-size:15px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .aside .logo .sq{width:22px;height:22px;border-radius:5px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .aside .grp{padding:14px 20px 6px;font-size:12px;color:#8592a6}
+  .aside .mi{padding:11px 20px 11px 28px;font-size:14px;color:#c3cad6;cursor:pointer;border-left:3px solid transparent}
+  .aside .mi:hover{background:rgba(255,255,255,.06);color:#fff}
+  .aside .mi.on{color:#fff;background:rgba(64,158,255,.16);border-left-color:var(--primary);font-weight:600}
+  .aside .mi .new{font-size:10px;background:var(--danger);color:#fff;border-radius:8px;padding:0 6px;margin-left:6px}
+  .content{flex:1;display:flex;flex-direction:column;min-width:0;background:#f2f3f5}
+  .topbar{height:56px;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid #ebeef5}
+  .crumb{font-size:15px;color:var(--text-sec)}.crumb b{color:var(--text);font-weight:600}
+  .user{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-reg)}
+  .user .avatar{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .main{flex:1;padding:16px;overflow:auto}
+  .page{display:none}.page.active{display:block}
+  .card{background:#fff;border-radius:4px;padding:16px 16px 0;box-shadow:0 1px 4px rgba(0,21,41,.04);margin-bottom:14px}
+  .ptitle{font-size:16px;font-weight:600}
+  .search{display:flex;flex-wrap:wrap;gap:14px 18px}
+  .field{display:flex;align-items:center}.field label{color:var(--text-reg);font-size:13px;width:96px;text-align:right;margin-right:8px;flex:none}
+  .ipt,.sel{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 11px;width:180px;color:var(--text);font-size:13px;background:#fff;outline:none}
+  .ipt:focus,.sel:focus{border-color:var(--primary)}
+  .ta{height:auto;min-height:58px;padding:7px 11px;resize:vertical;line-height:1.4;font-family:inherit;width:220px}
+  .field.multi{align-items:flex-start}.field.multi label{padding-top:8px}
+  .search-actions{display:flex;align-items:center;gap:10px;padding-bottom:16px;margin-left:auto}
+  .btn{height:32px;padding:0 15px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text-reg);font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+  .btn:hover:not(:disabled){color:var(--primary);border-color:#c6e2ff;background:var(--primary-light)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}.btn.primary:hover:not(:disabled){background:#66b1ff;color:#fff}
+  .btn:disabled{cursor:not-allowed;color:#c0c4cc;background:#f5f7fa;border-color:#e4e7ed}
+  .btn.text{border:none;background:none;color:var(--primary);padding:0 5px;height:auto;font-size:12px}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}
+  .toolbar-right{display:flex;gap:10px;align-items:center}
+  .selinfo{font-size:12px;color:var(--text-sec)}
+  .vtabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--border-light)}
+  .vtab{padding:8px 18px;font-size:14px;color:var(--text-reg);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .vtab:hover{color:var(--primary)}.vtab.on{color:var(--primary);font-weight:600;border-bottom-color:var(--primary)}
+  .table-wrap{overflow-x:auto;border:1px solid var(--border-light);border-radius:4px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  thead th{background:#fafafa;font-weight:600;text-align:left;padding:9px 12px;border-bottom:1px solid var(--border-light);white-space:nowrap}
+  tbody td{padding:8px 12px;border-bottom:1px solid var(--border-light);color:var(--text-reg);white-space:nowrap}
+  tbody tr:hover{background:#f5f7fa}
+  td.num,th.num{text-align:right}
+  .tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:12px;line-height:20px;border:1px solid}
+  .tag.info{color:var(--info);background:#f4f4f5;border-color:#e9e9eb}.tag.blue{color:var(--primary);background:var(--primary-light);border-color:#d9ecff}
+  .tag.green{color:var(--success);background:#f0f9eb;border-color:#e1f3d8}.tag.orange{color:var(--warning);background:#fdf6ec;border-color:#faecd8}.tag.red{color:var(--danger);background:#fef0f0;border-color:#fde2e2}
+  .tag.purple{color:#7c3aed;background:#f5f0ff;border-color:#e4d9fb}
+  .mono{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12px}
+  .danger-txt{color:var(--danger)}
+  .pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 4px;color:var(--text-reg);font-size:13px}
+  .pager .pg{min-width:30px;height:30px;border-radius:4px;border:1px solid var(--border);background:#fff;display:inline-flex;align-items:center;justify-content:center}.pager .pg.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .opcol{position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -6px rgba(0,0,0,.12)}
+  thead .opcol{background:#fafafa}
+  /* 抽屉 */
+  .mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:50}.mask.show{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:880px;max-width:96vw;background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,.15);transform:translateX(100%);transition:transform .25s;z-index:60;display:flex;flex-direction:column}
+  .drawer.show{transform:translateX(0)}
+  .drawer-hd{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border-light)}
+  .drawer-hd h3{font-size:16px;font-weight:600}.drawer-hd .x{cursor:pointer;color:var(--text-sec);font-size:22px;border:none;background:none}
+  .drawer-bd{flex:1;overflow:auto;padding:16px 20px}
+  .drawer-ft{padding:12px 20px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:10px}
+  .seg{margin-bottom:18px}
+  .seg-title{font-size:14px;font-weight:600;padding-left:9px;border-left:3px solid var(--primary);margin-bottom:12px}
+  .kvgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 18px}
+  .kv{display:flex;flex-direction:column;gap:2px}.kv span{color:var(--text-sec);font-size:12px}.kv b{color:var(--text);font-weight:500;font-size:13px;word-break:break-all}
+  .judge{background:#f4f9ff;border:1px solid #d9ecff;border-radius:6px;padding:12px 14px}
+  .judge table{font-size:12.5px;margin-top:8px;background:#fff}
+  .judge td,.judge th{padding:6px 10px;border:1px solid #e4e7ed}
+  .judge .res{font-size:14px;margin-bottom:4px}.judge .res b{color:var(--primary)}
+  .chg{color:var(--success);font-weight:600}
+  .reason{font-size:13px;color:var(--danger);background:#fef0f0;border:1px solid #fde2e2;border-radius:6px;padding:9px 14px;margin-bottom:14px}
+  pre.json{background:#1e2430;color:#d6deeb;border-radius:6px;padding:12px 14px;font-size:12px;line-height:1.55;overflow:auto;max-height:280px}
+  /* 弹窗（确认类） */
+  .dialog{position:fixed;top:20vh;left:50%;transform:translateX(-50%);background:#fff;border-radius:6px;width:440px;box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:70;display:none}
+  .dialog.show{display:block}
+  .dialog .bd{padding:20px;font-size:14px;color:var(--text-reg);line-height:1.8}
+  .dialog .ft{padding:10px 20px 16px;display:flex;justify-content:flex-end;gap:10px}
+  .toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#f0f9eb;border:1px solid #e1f3d8;color:var(--success);padding:9px 18px;border-radius:4px;font-size:13px;z-index:80;display:none}
+  /* 字段对照 */
+  .rel{width:100%;font-size:12.5px;border-collapse:collapse;margin-bottom:18px}
+  .rel th{background:#fafafa;padding:8px 10px;text-align:left;border:1px solid var(--border-light);font-weight:600}
+  .rel td{padding:7px 10px;border:1px solid var(--border-light);color:var(--text-reg);vertical-align:top;white-space:normal}
+  .rel .k{font-family:"SF Mono",Menlo,monospace;font-size:11.5px;color:#0b6b5e}
+  .star{color:var(--danger);font-weight:600}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="aside">
+    <div class="logo"><span class="sq">▣</span> FMS 财务管理</div>
+    <div class="grp">综合费用 · 固定资产</div>
+    <div class="mi on">资产推送记录<span class="new">新</span></div>
+  </aside>
+  <div class="content">
+    <header class="topbar">
+      <div class="crumb">综合费用 / 固定资产 / <b>资产推送记录</b></div>
+      <div class="user">谢董琪 <span class="avatar">琪</span></div>
+    </header>
+    <div class="main">
+      <div class="card">
+        <div class="search">
+          <div class="field"><label>推送状态</label><select class="sel" id="fSt"><option value="">全部</option><option>数据异常</option><option>推送失败</option><option>推送结果异常</option><option>已推送</option><option>待推送</option><option>推送成功</option><option>无需推送</option></select></div>
+          <div class="field"><label>是否财务列管</label><select class="sel" id="fFm"><option value="">全部</option><option value="1">是</option><option value="0">否</option></select></div>
+          <div class="field"><label>法人公司</label><select class="sel" id="fCorp"><option value="">全部</option><option>FOODMAX SG</option><option>FOODMAX MY</option></select></div>
+          <div class="field"><label>接收时间</label><input class="ipt" placeholder="开始 ~ 结束"></div>
+          <div class="field multi"><label>资产编码</label><textarea class="ipt ta" id="fCode" placeholder="多个编码精准查询，每行一个"></textarea></div>
+          <div class="field multi"><label>易点单据号</label><textarea class="ipt ta" id="fNo" placeholder="多个单号精准查询，每行一个"></textarea></div>
+          <div class="search-actions"><button class="btn primary" onclick="render()">查询</button><button class="btn" onclick="reset()">重置</button></div>
+        </div>
+      </div>
+      <div class="card" style="padding-bottom:6px">
+        <div class="vtabs" id="tabs">
+          <div class="vtab on" data-t="todo">待处理</div>
+          <div class="vtab" data-t="all">全部</div>
+        </div>
+        <div class="toolbar">
+          <div class="ptitle">资产推送记录</div>
+          <div class="toolbar-right">
+            <span class="selinfo" id="selInfo">勾选后可批量重新推送</span>
+            <button class="btn" id="btnRetry" disabled onclick="confirmRetry()">批量重新推送</button>
+            <button class="btn" onclick="confirmFix()">处理异常</button>
+            <button class="btn" onclick="toast('已加入导出任务，可在下载中心查看')">导出</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table style="min-width:1700px">
+            <thead><tr>
+              <th><input type="checkbox" id="ckAll"></th>
+              <th>接收时间</th><th>易点单据类型</th><th>易点单据号</th><th>资产编码</th><th>资产描述</th><th>是否财务列管</th>
+              <th>推 EBS 类型</th><th>推送状态</th><th>失败原因</th><th>EBS 资产编码</th><th>法人公司</th>
+              <th class="opcol">操作</th>
+            </tr></thead>
+            <tbody id="tb"></tbody>
+          </table>
+        </div>
+        <div class="pager"><span id="cnt"></span><span class="pg">‹</span><span class="pg active">1</span><span class="pg">›</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="mask" id="mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hd"><h3 id="dwTitle">详情</h3><button class="x" onclick="closeDrawer()">×</button></div>
+  <div class="drawer-bd" id="dwBody"></div>
+  <div class="drawer-ft" id="dwFoot"></div>
+</div>
+<div class="dialog" id="dlg"><div class="bd" id="dlgBody"></div><div class="ft"><button class="btn" onclick="closeDlg()">取消</button><button class="btn primary" id="dlgOk">确定</button></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const E = [
+  {id:1, ydType:'入库单', ydNo:'RK202611020001', ct:'2026-11-02 10:20', rt:'2026-11-02 10:20', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'IT 部', deptId:'od_1023', fmsDept:'信息技术部', fmsDeptCat:'管理', fmsDeptNo:'1023', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'2026-11-02 10:25', last:null},
+  {id:2, ydType:'领用单', ydNo:'LY202611050003', ct:'2026-11-05 15:02', rt:'2026-11-05 15:02', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'转移', ebs:'转移', st:'推送成功', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'2026-11-05 15:06', last:1},
+  {id:3, ydType:'领用单', ydNo:'LY202611090001', ct:'2026-11-09 09:41', rt:'2026-11-09 09:41', code:'YD2611000101', desc:'ThinkPad T14 笔记本', src:'易点易动', fm:1, doc:'转移', ebs:'不推', st:'无需推送', why:'', ebsNo:'100234', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,850.00', dps:'2026-11-02', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'PO2610-0088', vendor:'Lenovo SG', pt:'—', last:2},
+  {id:4, ydType:'入库单', ydNo:'RK202611030002', ct:'2026-11-03 11:00', rt:'2026-11-03 11:00', code:'YD2611000102', desc:'人体工学办公椅', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'320.00', dps:'2026-11-03', dept:'运营部', deptId:'od_1060', fmsDept:'运营部', fmsDeptCat:'履约', fmsDeptNo:'1060', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0091', vendor:'Office Pro', pt:'—', last:null},
+  {id:5, ydType:'入库单', ydNo:'RK202611040005', ct:'2026-11-04 14:30', rt:'2026-11-04 14:30', code:'YD2611000103', desc:'电动叉车 1.5T', src:'易点易动', fm:1, doc:'领用', ebs:'不推', st:'数据异常', why:'该 HR 部门没有 FMS 部门！HR 部门编码: od_1101', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'18,600.00', dps:'2026-11-04', dept:'仓储二组', deptId:'od_1101', fmsDept:'—', fmsDeptCat:'—', fmsDeptNo:'—', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0102', vendor:'Toyota MH', pt:'—', last:null},
+  {id:6, ydType:'调拨单', ydNo:'DB202611060001', ct:'2026-11-06 16:12', rt:'2026-11-06 16:12', code:'YD2611000103', desc:'电动叉车 1.5T', src:'易点易动', fm:1, doc:'转移', ebs:'转移', st:'待推送', why:'此前存在数据异常的历史数据，等前一条修复后自动推送', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'18,600.00', dps:'2026-11-04', dept:'仓储一组', deptId:'od_1100', fmsDept:'仓储部', fmsDeptCat:'履约', fmsDeptNo:'1100', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0102', vendor:'Toyota MH', pt:'—', last:5},
+  {id:7, ydType:'入库单', ydNo:'RK202611040006', ct:'2026-11-04 17:05', rt:'2026-11-04 17:05', code:'YD2611000104', desc:'重型货架 A 型', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送失败', why:'EBS：资产类别 10.02 未在账簿 FM_SG_FA 初始化', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'仓储设备', subCode:'02', cost:'6,240.00', dps:'2026-11-04', dept:'仓储一组', deptId:'od_1100', fmsDept:'仓储部', fmsDeptCat:'履约', fmsDeptNo:'1100', store:'新加坡 2 号仓', storeNo:'SG-W02', storeSeg:'S102', asrc:'购入', ast:'使用中', life:'0（取分类默认 120）', po:'PO2610-0105', vendor:'Rack Asia', pt:'2026-11-04 17:40', last:null},
+  {id:8, ydType:'入库单', ydNo:'RK202611010001', ct:'2026-11-01 09:00', rt:'2026-11-01 09:00', code:'YD2611000105', desc:'1 号仓办公区装修', src:'易点易动', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100238', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'装修费', subCode:'10', cost:'42,000.00', dps:'2026-11-01', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'36', po:'PO2610-0070', vendor:'BuildRight', pt:'2026-11-01 09:05', last:null},
+  {id:9, ydType:'调拨单', ydNo:'DB202611070002', ct:'2026-11-07 10:30', rt:'2026-11-07 10:30', code:'YD2610000031', desc:'商用冷柜 1200L', src:'易点易动', fm:1, doc:'跨主体调拨', ebs:'调拨', st:'已推送', why:'已发出，等待 EBS 返回调拨结果', ebsNo:'100190', corp:'FOODMAX MY', corpCode:'MY01', book:'FM_MY_FA', root:'固定资产', rootCode:'10', sub:'生产设备', subCode:'03', cost:'9,800.00', dps:'2026-10-08', dept:'吉隆坡运营部', deptId:'od_2010', fmsDept:'MY 运营部', fmsDeptCat:'履约', fmsDeptNo:'2010', store:'吉隆坡 1 号仓', storeNo:'MY-W01', storeSeg:'M101', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2609-0211', vendor:'ColdTech', pt:'2026-11-07 10:35', last:null, fromCorp:'FOODMAX SG'},
+  {id:10, ydType:'报废单', ydNo:'BF202611080001', ct:'2026-11-08 13:20', rt:'2026-11-08 13:20', code:'YD2609000017', desc:'激光打印机', src:'易点易动', fm:1, doc:'报废', ebs:'报废', st:'推送成功', why:'', ebsNo:'100102', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'1,200.00', dps:'2025-09-12', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'已报废', life:'0（取分类默认 36）', po:'PO2509-0040', vendor:'HP SG', pt:'2026-11-08 13:25', last:null, ret:'回收报废'},
+  {id:11, ydType:'入库单', ydNo:'RK202611030002', ct:'2026-11-03 11:05', rt:'2026-11-03 11:05', code:'YD2611000106', desc:'钢制文件柜', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'780.00', dps:'2026-11-03', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0092', vendor:'Office Pro', pt:'—', last:null},
+  {id:12, ydType:'财务标记更正单', ydNo:'GZ202611100001', ct:'2026-11-10 10:00', rt:'2026-11-10 10:00', code:'YD2611000106', desc:'钢制文件柜', src:'易点易动', fm:1, doc:'转移', ebs:'新增', st:'待推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'780.00', dps:'2026-11-03', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 60）', po:'PO2610-0092', vendor:'Office Pro', pt:'—', last:null, corr:true},
+  {id:13, ydType:'入库单', ydNo:'RK202611030002', ct:'2026-11-03 11:08', rt:'2026-11-03 11:08', code:'YD2611000107', desc:'碎纸机', src:'易点易动', fm:0, doc:'领用', ebs:'不推', st:'无需推送', why:'', ebsNo:'—', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'长期待摊费用', rootCode:'40', sub:'低值易耗品', subCode:'14', cost:'260.00', dps:'2026-11-03', dept:'财务部', deptId:'od_1045', fmsDept:'财务部', fmsDeptCat:'管理', fmsDeptNo:'1045', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0', po:'PO2610-0093', vendor:'Office Pro', pt:'—', last:null},
+  {id:14, ydType:'—', ydNo:'—', ct:'2026-10-20 16:00', rt:'2026-10-20 16:00', code:'KEXP2610003', desc:'会议室投影仪', src:'手工录入', fm:1, doc:'领用', ebs:'新增', st:'推送成功', why:'', ebsNo:'100221', corp:'FOODMAX SG', corpCode:'SG01', book:'FM_SG_FA', root:'固定资产', rootCode:'10', sub:'办公设备', subCode:'01', cost:'2,400.00', dps:'2026-10-20', dept:'行政部', deptId:'od_1012', fmsDept:'行政部', fmsDeptCat:'管理', fmsDeptNo:'1012', store:'新加坡 1 号仓', storeNo:'SG-W01', storeSeg:'S101', asrc:'购入', ast:'使用中', life:'0（取分类默认 36）', po:'—', vendor:'Epson SG', pt:'2026-10-20 16:05', last:null},
+];
+const byId = Object.fromEntries(E.map(e=>[e.id,e]));
+const ST_TAG = {'数据异常':'orange','无需推送':'info','待推送':'blue','推送成功':'green','推送失败':'red','已推送':'purple','推送结果异常':'red'};
+const TODO = ['数据异常','推送失败','推送结果异常','已推送','待推送'];
+const tag=(t,c)=>`<span class="tag ${c}">${t}</span>`;
+const fmTag=v=>v?tag('是','blue'):tag('否','info');
+const $=id=>document.getElementById(id);
+let tab='todo';
+document.querySelectorAll('#tabs .vtab').forEach(t=>t.onclick=()=>{document.querySelectorAll('#tabs .vtab').forEach(x=>x.classList.remove('on'));t.classList.add('on');tab=t.dataset.t;render();});
+const lines=v=>v.split('\n').map(x=>x.trim()).filter(Boolean);
+function render(){
+  const st=$('fSt').value, fm=$('fFm').value, corp=$('fCorp').value, codes=lines($('fCode').value), nos=lines($('fNo').value);
+  let rows=E.filter(e=>(!st||e.st===st)&&(fm===''||String(e.fm)===fm)&&(!corp||e.corp===corp)&&(!codes.length||codes.includes(e.code))&&(!nos.length||nos.includes(e.ydNo)));
+  if(tab==='todo') rows=rows.filter(e=>TODO.includes(e.st));
+  const pri=s=>['数据异常','推送失败','推送结果异常'].includes(s)?0:['已推送','待推送'].includes(s)?1:2;
+  rows.sort((a,b)=>pri(a.st)-pri(b.st)||(a.rt<b.rt?1:-1));
+  $('tb').innerHTML=rows.map(e=>`<tr>
+    <td><input type="checkbox" class="ck" data-st="${e.st}"></td>
+    <td>${e.rt}</td><td>${e.ydType}</td><td class="mono">${e.ydNo}</td><td class="mono">${e.code}</td><td>${e.desc}</td><td>${fmTag(e.fm)}</td>
+    <td>${e.ebs}</td><td>${tag(e.st,ST_TAG[e.st])}</td><td class="${['数据异常','推送失败','推送结果异常'].includes(e.st)?'danger-txt':''}">${e.why||'—'}</td><td class="mono">${e.ebsNo}</td><td>${e.corp}</td>
+    <td class="opcol"><button class="btn text" onclick="openEvent(${e.id})">详情</button></td></tr>`).join('');
+  $('cnt').textContent=`共 ${rows.length} 条`;
+  const upd=()=>{const ck=[...document.querySelectorAll('.ck:checked')];const ok=ck.filter(c=>['推送失败','待推送'].includes(c.dataset.st));
+    $('btnRetry').disabled=!ok.length;$('selInfo').textContent=!ck.length?'勾选后可批量重新推送':`已选 ${ck.length} 条，其中可重推 ${ok.length} 条（推送失败 / 待推送）`;};
+  document.querySelectorAll('.ck').forEach(c=>c.onchange=upd);
+  $('ckAll').checked=false;$('ckAll').onchange=e=>{document.querySelectorAll('.ck').forEach(c=>c.checked=e.target.checked);upd();};upd();
+}
+function reset(){['fSt','fFm','fCorp','fCode','fNo'].forEach(i=>$(i).value='');render();}
+function judge(e){
+  if(!e.fm) return '是否财务列管 = 否，只留记录，不推 EBS。';
+  if(e.st==='数据异常') return '主数据不全，还没法判断。修好主数据后点「处理异常」重新计算。';
+  if(e.doc==='跨主体调拨') return `法人公司从 ${e.fromCorp} 变为 ${e.corp}，且资产已在 EBS 建卡 → 跨主体调拨。`;
+  if(e.doc==='报废') return '易点做了报废 → 推 EBS 报废，之后该资产不能再有任何动作。';
+  if(e.corr) return '财务把「是否财务列管」从否改成是，该资产此前没有列管记录 → 按新增建卡。';
+  if(!e.last) return '该资产在 FMS 没有列管记录 → 新增建卡。';
+  const L=byId[e.last]; const parts=[];
+  parts.push(`与上一条（${L.rt} ${L.ydType} ${L.ydNo}）比：`);
+  parts.push(`使用部门 ${L.dept} → ${e.dept}${L.fmsDeptNo!==e.fmsDeptNo?'（变了）':'（没变）'}`);
+  parts.push(`仓库 ${L.store} → ${e.store}${L.storeSeg!==e.storeSeg?'（变了）':'（没变）'}`);
+  const chg=L.fmsDeptNo!==e.fmsDeptNo||L.storeSeg!==e.storeSeg;
+  parts.push(chg?'结论：推 EBS 转移。':'结论：部门和仓库都没变，不推 EBS。');
+  return parts.join('<br>');
+}
+function logs(e){
+  const r=[[e.rt,'接收','成功','易点推送，FMS 已收下']];
+  if(e.st==='数据异常') r.push([e.rt,'计算费用账户','数据异常',e.why]);
+  if(e.st==='推送成功') r.push([e.pt,'推 EBS','成功',e.ebs==='新增'?'EBS 返回资产编码 '+e.ebsNo:'EBS 处理成功']);
+  if(e.st==='推送失败'){r.push([e.pt,'推 EBS','失败',e.why]);r.push(['2026-11-04 17:45','自动重试 1/3','失败',e.why]);}
+  if(e.st==='已推送') r.push([e.pt,'推 EBS（跨主体调拨）','已发出','等待 EBS 返回调拨结果']);
+  return r.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td></tr>`).join('');
+}
+function openEvent(id){
+  const e=byId[id]; const bad=['数据异常','推送失败','推送结果异常'].includes(e.st);
+  $('dwTitle').textContent=`推送详情 · ${e.code}`;
+  const kv=[['易点单据类型',e.ydType],['易点单据号',e.ydNo],['资产编码',e.code],['资产描述',e.desc],['是否财务列管',e.fm?'是':'否'],['推送状态',e.st],
+    ['推 EBS 类型',e.ebs],['EBS 资产编码',e.ebsNo],['法人公司',e.corp],['使用部门',e.dept],['仓库',e.store],['原值（不含税）',e.cost],
+    ['启用日期',e.dps],['变更时间',e.ct],['接收时间',e.rt]];
+  $('dwBody').innerHTML=`${bad?`<div class="reason">${e.st}：${e.why}</div>`:''}
+    <div class="seg"><div class="seg-title">基本信息</div><div class="kvgrid">${kv.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join('')}</div></div>
+    <div class="seg"><div class="seg-title">为什么这么推</div><div class="judge" style="font-size:13px;line-height:1.9">${judge(e)}</div></div>
+    <div class="seg"><div class="seg-title">处理日志</div><div class="table-wrap"><table><thead><tr><th>时间</th><th>动作</th><th>结果</th><th>说明</th></tr></thead><tbody>${logs(e)}</tbody></table></div></div>`;
+  $('dwFoot').innerHTML=`<button class="btn" onclick="closeDrawer()">关闭</button>`+(e.st==='数据异常'?`<button class="btn primary" onclick="confirmFix()">处理异常</button>`:'')+(['推送失败','待推送'].includes(e.st)?`<button class="btn primary" onclick="confirmRetry(1)">重新推送</button>`:'');
+  $('mask').classList.add('show');$('drawer').classList.add('show');
+}
+function closeDrawer(){$('mask').classList.remove('show');$('drawer').classList.remove('show');}
+function toast(t){const x=$('toast');x.textContent=t;x.style.display='block';clearTimeout(x._t);x._t=setTimeout(()=>x.style.display='none',2200);}
+function openDlg(h,ok){$('dlgBody').innerHTML=h;$('dlg').classList.add('show');$('dlgOk').onclick=()=>{closeDlg();ok();};}
+function closeDlg(){$('dlg').classList.remove('show');}
+function confirmRetry(one){const n=one?1:[...document.querySelectorAll('.ck:checked')].filter(c=>['推送失败','待推送'].includes(c.dataset.st)).length;
+  openDlg(`确定重新推送 <b>${n}</b> 条记录到 EBS 吗？<br>同一资产会按时间先后依次推送；前面有数据异常的不会推。`,()=>toast(`已提交 ${n} 条重新推送`));}
+function confirmFix(){openDlg('将重新计算<b>全部「数据异常」</b>记录。<br>主数据已修好的会变为「待推送」并自动推送，仍不全的保持「数据异常」。确定执行吗？',()=>toast('已开始处理异常，完成后刷新列表查看'));}
+render();
+</script>
+</body>
+</html>
