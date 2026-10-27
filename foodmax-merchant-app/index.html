@@ -207,8 +207,8 @@ const TILES=[
   {k:'fine',l:'罚款单',ic:'alert',bg:'#FEE2E2',st:'var(--red)',badge:'3'},
   // 退货赔付（2026-10-27）：与 PC 侧栏「财务 › 退货赔付」对齐；赔付单直接推送进结算单，随结算单开票
   {k:'retcomp',l:'退货赔付',ic:'wallet',bg:'#D1FAE5',st:'var(--emerald-2)'},
-  // 自提运费（2026-10-27）：与 PC「财务 › 自提运费」对齐，只读；平台没给本店设过规则则不显示
-  {k:'pickfee',l:'自提运费',ic:'truck',bg:'#FEF3C7',st:'#B45309',when:()=>window.FM_MOD&&FM_MOD.pickfeeOn&&FM_MOD.pickfeeOn()},
+  // 取货运费（2026-10-27，原「自提运费」改名）：与 PC「财务 › 取货运费」对齐，只读；平台没给本店设过规则则不显示
+  {k:'pickfee',l:'取货运费',ic:'truck',bg:'#FEF3C7',st:'#B45309',when:()=>window.FM_MOD&&FM_MOD.pickfeeOn&&FM_MOD.pickfeeOn()},
   {k:'mkt',l:'营销活动',ic:'mega',bg:'#FEE2E2',st:'var(--red)'},
   {k:'supply',l:'耗材商城',ic:'printer',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
@@ -428,12 +428,12 @@ renderHome();
 <script src="account.js?v=20260819d"></script>
 <script src="finance.js"></script>
 <script src="recon.js"></script>
-<script src="settle.js?v=20261027d"></script>
+<script src="settle.js?v=20261027e"></script>
 <script src="replen.js?v=20261016b"></script>
 <script src="biz.js"></script>
 <script src="deliver.js?v=20261027d"></script>
 <script src="retcomp.js?v=20261027d"></script>
-<script src="pickfee.js?v=20261027e"></script>
+<script src="pickfee.js?v=20261027f"></script>
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260923s"></script>
 <script src="supply.js"></script>

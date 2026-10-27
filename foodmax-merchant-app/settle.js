@@ -133,7 +133,7 @@ function askConfirmBill(after){
     .concat(adjSum(b,1)>0?[['业务调整 · 平台补款',adjSum(b,1)]]:[])
     .concat(adjSum(b,-1)>0?[['业务调整 · 平台扣款',-adjSum(b,-1)]]:[])
     .concat(compSum(b)>0?[['退货申诉赔付',compSum(b)]]:[])
-    .concat((b.pick||0)>0?[['自提运费（物流服务费·含税）',-b.pick]]:[]);
+    .concat((b.pick||0)>0?[['取货运费（物流服务费·含税）',-b.pick]]:[]);
   const tbl=rows.map(r=>`<div class="se-cfm-r"><span>${r[0]}</span><b style="${r[1]<0?'color:var(--red)':''}">${r[1]<0?'-':''}${money(Math.abs(r[1]))}</b></div>`).join('');
   confirmDialog({title:'认可账单',okText:'确认认可',
     body:`<div class="se-cfm">
@@ -143,7 +143,7 @@ function askConfirmBill(after){
       <ul class="se-cfm-ul">
         <li>认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款</li>
         <li>${b.feeSvc>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「我的 → 发票管理 → 服务费发票」查看下载）`:'本期处免佣期，服务佣金为 0，不开具服务费发票'}</li>
-        ${(b.pick||0)>0?`<li>就本结算单的自提运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「自提运费」查看下载）</li>`:''}
+        ${(b.pick||0)>0?`<li>就本结算单的取货运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「取货运费」查看下载）</li>`:''}
         <li class="warn"><b>认可后不可撤回</b>；有异议请先线下联系平台运营 / 客服，先不要认可</li>
       </ul>
     </div>`,
@@ -154,7 +154,7 @@ function askConfirmBill(after){
       b.confirmBy='陈店主（商家 App）';
       const due=new Date(n.getTime()+30*864e5);   // 预计到账 = 认可日 + 结算账期（月结 30 天）
       b.expectedPayDate=`${due.getFullYear()}-${z(due.getMonth()+1)}-${z(due.getDate())}`;
-      const pInv=window.FM_MOD.pickfeeIssue?FM_MOD.pickfeeIssue(b.no):null;   // 自提运费按结算单单独开物流服务费发票
+      const pInv=window.FM_MOD.pickfeeIssue?FM_MOD.pickfeeIssue(b.no):null;   // 取货运费按结算单单独开物流服务费发票
       toast((b.feeSvc>0?'已认可，账单已推送财务；服务费发票已自动开具':'已认可，账单已推送财务')+(pInv?'；物流服务费发票已开具':''));
       after&&after();
     }});
@@ -222,7 +222,7 @@ function openDetail(b){
       ${adjSum(b,1)>0?`<div class="se-row"><span class="k">业务调整 · 平台补款（${adjOf(b,1).length} 单）</span><span class="v" style="color:var(--emerald-2)">+${money(adjSum(b,1))}</span></div>`:''}
       ${adjSum(b,-1)>0?`<div class="se-row"><span class="k">业务调整 · 平台扣款（${adjOf(b,-1).length} 单）</span><span class="v neg">-${money(adjSum(b,-1))}</span></div>`:''}
       ${compSum(b)>0?`<div class="se-row"><span class="k">退货申诉赔付（${b.comp.length} 单）</span><span class="v" style="color:var(--emerald-2)">+${money(compSum(b))}<span class="eq">计入应开票金额</span></span></div>`:''}
-      ${(b.pick||0)>0?`<div class="se-row"><span class="k">自提运费（${b.pickCnt} 张账单）</span><span class="v neg">-${money(b.pick)}<span class="eq">物流服务费 · 单独开票</span></span></div>`:''}
+      ${(b.pick||0)>0?`<div class="se-row"><span class="k">取货运费（${b.pickCnt} 张账单）</span><span class="v neg">-${money(b.pick)}<span class="eq">物流服务费 · 单独开票</span></span></div>`:''}
       <div class="se-row brand"><span class="k">应清算给供应商</span><span class="v">${money(b.net)}</span></div>
       <div class="se-idn">${money(b.net)} + ${money(b.reverse+b.feeSvc+b.feeLogi+(b.repl||0)+(b.fine||0)+(b.fill||0)+(b.pick||0)+adjSum(b,-1))}${adjSum(b,1)+compSum(b)>0?` − ${money(adjSum(b,1)+compSum(b))}`:''} = ${money(b.gross)} ✓ 勾稽平</div>
       ${(b.repl||0)>0?`<div class="se-tip">本期含<b>平台补采扣款 ${money(b.repl)}</b>（${b.replCnt} 单）——你送货到仓少货、由平台自营现货补货的部分，视同你向平台采购；<b>少货不下调 GMV 与抽佣</b>。<span id="se-repl-lk" style="font-weight:700;cursor:pointer">查看平台补采单 ›</span></div>`:''}
@@ -238,9 +238,9 @@ function openDetail(b){
       ${b.comp.map(c=>`<div class="se-row" style="align-items:flex-start"><span class="k">${c.no}<br><span style="font-size:11.5px;color:var(--sub)">关联 ${c.biz} · 核定 ${c.at.slice(0,10)}</span></span><span class="v" style="color:var(--emerald-2)">+${money(c.amt)}</span></div>`).join('')}
       <div class="se-tip">赔付单直接推送进本结算单，<b>已计入应结金额与应开票金额</b>，请随本结算单一并开票，无需单独开票。<span id="se-rc-lk" style="font-weight:700;cursor:pointer">查看退货赔付 ›</span></div></div>`:''}
 
-    ${(b.pick||0)>0?(()=>{const inv=window.FM_MOD.pickfeeInv?FM_MOD.pickfeeInv(b.no):null;return `<div class="se-card"><div class="se-ct">自提运费<span class="desc">${b.pickCnt} 张账单 · 只读</span></div>
+    ${(b.pick||0)>0?(()=>{const inv=window.FM_MOD.pickfeeInv?FM_MOD.pickfeeInv(b.no):null;return `<div class="se-card"><div class="se-ct">取货运费<span class="desc">${b.pickCnt} 张账单 · 只读</span></div>
       ${(b.pickBills||[]).map(x=>`<div class="se-row" style="align-items:flex-start"><span class="k">${x.no}<br><span style="font-size:11.5px;color:var(--sub)">结算周期 ${x.range}</span></span><span class="v neg">-${money(x.amt)}</span></div>`).join('')}
-      <div class="se-tip">平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（含 9% GST），不和服务费发票合开：${inv?`已开具 <b>${inv.invNo}</b>`:'认可本结算单后自动开具'}。<span id="se-pf-lk" style="font-weight:700;cursor:pointer">查看自提运费 ›</span></div></div>`;})():''}
+      <div class="se-tip">平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（含 9% GST），不和服务费发票合开：${inv?`已开具 <b>${inv.invNo}</b>`:'认可本结算单后自动开具'}。<span id="se-pf-lk" style="font-weight:700;cursor:pointer">查看取货运费 ›</span></div></div>`;})():''}
 
     <div class="se-card">
       <div class="se-ct">账单构成<span class="desc">按类目汇总</span></div>
@@ -266,7 +266,7 @@ function openDetail(b){
         ${b.feeSvc>0&&b.status!='generated'?`<div class="payee" id="se-inv-lk" style="cursor:pointer;color:var(--emerald-2);font-weight:600">查看服务费发票 ›</div>`:''}
       </div>
       ${(b.pick||0)>0?`<div class="se-leg">
-        <div class="lt"><span class="nm">自提运费（物流服务费）</span><span class="am" style="color:var(--amber)">${money(b.pick)}</span></div>
+        <div class="lt"><span class="nm">取货运费（物流服务费）</span><span class="am" style="color:var(--amber)">${money(b.pick)}</span></div>
         <div class="payee">运费入平台 · 你<b>认可账单后</b>平台就本结算单<b>单独开具</b>物流服务费发票（GST 9%）</div>
         <div class="sts">${window.FM_MOD.pickfeeInv&&FM_MOD.pickfeeInv(b.no)?'<span class="se-chip se-c-green">发票 已开</span>':'<span class="se-chip se-c-amber">认可后自动开票</span>'}</div>
       </div>`:''}
@@ -300,6 +300,6 @@ function openDetail(b){
 
 window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.settle=openSettle;
-window.FM_MOD.settleCur=()=>CUR;   // pickfee.js 把已推送进本单的自提运费并进当期单（pick / items / net）
+window.FM_MOD.settleCur=()=>CUR;   // pickfee.js 把已推送进本单的取货运费并进当期单（pick / items / net）
 window.FM_MOD.settleBills=()=>rows().map(b=>({no:b.no,range:b.range,cur:b===CUR,comp:b.comp||[]}));
 })();

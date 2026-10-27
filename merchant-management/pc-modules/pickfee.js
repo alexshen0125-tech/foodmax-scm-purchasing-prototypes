@@ -1,4 +1,4 @@
-/* PC · 自提运费（平台去批发市场取商家的货，按店铺收运费）
+/* PC · 取货运费（原名「自提运费」，2026-10-27 改名）（平台去批发市场取商家的货，按店铺收运费）
    ▍口径来源：2026-10-27「司机上门取货以及仓库退货差异结算沟通」会议（推翻 10-12 的按次/按比例、按月出账）
    ▍规则：
    - 平台按店铺指定所属区域（商家不能自选）；未设置的店铺不收运费；改区域从下一次取货起生效，已取的不重算
@@ -9,11 +9,11 @@
      （2026-10-27 沈亮改：起算点由「入驻」改为「首次取货」；还没取过货的店铺不起算）
    - 超出免运费期还要免：在取货明细勾选同一店铺的计费记录「申请免运费」→ 飞书审批（凡哥批，抄送张可心）；通过才不扣，审批中的账单不能推送
    - 按周出账（周一至周日，对齐每周结算单）；运营手动推送到对应那周的结算单，从货款里扣
-   - 发票按结算单单独开：一张结算单开一张「物流服务费」发票（9% GST），金额 = 该结算单里所有自提运费账单应扣合计
-     （可跨周、跨店铺）；不和佣金/服务费合开。账单推送进商家当前未结算的结算单（结算单里多一项「自提运费」扣款），
+   - 发票按结算单单独开：一张结算单开一张「物流服务费」发票（9% GST），金额 = 该结算单里所有取货运费账单应扣合计
+     （可跨周、跨店铺）；不和佣金/服务费合开。账单推送进商家当前未结算的结算单（结算单里多一项「取货运费」扣款），
      结算单被商家认可时自动开票
    ▍假设（待确认）：S$20 / S$80 是含 GST 价，发票金额 = 应扣金额，未税 = 含税 ÷ 1.09
-   ▍商家端：财务 › 自提运费（m-pickfee），只读；只显示同车商家数，不显示是哪几家；App 同口径（v2/pickfee.js）
+   ▍商家端：财务 › 取货运费（m-pickfee），只读；只显示同车商家数，不显示是哪几家；App 同口径（v2/pickfee.js）
    依赖主文件全局：DB / money / toast / modal / closeModal / drawer / closeDrawer / render / ts */
 (function(){
 
@@ -126,7 +126,7 @@ DB.pfBills = DB.pfBills || {   // key = 店铺|周一日期
 };
 const billNo = (s,m) => `PF-${m.replace(/-/g,'')}-${s.slice(-5)}`;
 /* 结算单：账单推送进该商家「当前还没结算」的那张结算单（绿鲜源 = 结算单模块里的当期单 DB.bill；
-   当期单已认可/已打款 → 进下一期）。物流服务费发票按结算单开：结算单被商家认可时，就单里的自提运费合计自动开一张 */
+   当期单已认可/已打款 → 进下一期）。物流服务费发票按结算单开：结算单被商家认可时，就单里的取货运费合计自动开一张 */
 const merOf = s => (SHOPS[s]||{}).merchant || '';
 DB.pfSettleSt = DB.pfSettleSt || {'ST202606-M0902':{st:'confirmed', at:'2026-10-14 16:20'}};   // 其他商家结算单状态（演示）
 DB.pfInvs = DB.pfInvs || {'ST202606-M0902':{invNo:'LOG-INV-2026-000012', at:'2026-10-14 16:20', amt:420.01}};   // key = 结算单号
@@ -151,7 +151,7 @@ function billsOf(m){
   }).filter(Boolean);
 }
 const allBills = () => allWeeks().flatMap(billsOf);
-/* 结算单维度：同一结算单里的自提运费账单（可跨周、跨店铺）合开一张票 */
+/* 结算单维度：同一结算单里的取货运费账单（可跨周、跨店铺）合开一张票 */
 function settles(){
   const out={};
   allBills().filter(b=>b.stNo).forEach(b=>(out[b.stNo]=out[b.stNo]||[]).push(b));
@@ -159,7 +159,7 @@ function settles(){
     .sort((a,b)=>b.no.localeCompare(a.no));
 }
 const invTag = t => t.inv ? '<span class="tag t-g"><span class="dot"></span>已开票</span>' : '<span class="tag t-y"><span class="dot"></span>结算单认可后开</span>';
-// 结算单被认可时调用：就单里自提运费合计开一张物流服务费发票
+// 结算单被认可时调用：就单里取货运费合计开一张物流服务费发票
 window.pfIssueInv = function(no){
   const t=settles().find(x=>x.no==no); if(!t||t.inv||!(t.amt>0)) return null;
   const n=Object.keys(DB.pfInvs).length+12;
@@ -170,8 +170,8 @@ window.pfSettleSync = function(){
   if(!DB.bill) return;
   const t=settles().find(x=>x.no==DB.bill.no);
   DB.bill.pick=t?t.amt:0; DB.bill.pickCnt=t?t.list.length:0; DB.bill.pickBills=t?t.list.map(b=>({no:b.no, shop:shopName(b.shop), range:weekLabel(b.wk), amt:b.due})):[];
-  DB.bill.items=(DB.bill.items||[]).filter(it=>it[0]!='自提运费（物流服务费·含税）');
-  if(DB.bill.pick>0) DB.bill.items.push(['自提运费（物流服务费·含税）',DB.bill.pickCnt,-DB.bill.pick]);
+  DB.bill.items=(DB.bill.items||[]).filter(it=>it[0]!='取货运费（物流服务费·含税）');
+  if(DB.bill.pick>0) DB.bill.items.push(['取货运费（物流服务费·含税）',DB.bill.pickCnt,-DB.bill.pick]);
   if(window.recalcBillNet) recalcBillNet();
 };
 window.pfStInv = no => DB.pfInvs[no]||null;
@@ -186,7 +186,7 @@ const billTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>�
   : '<span class="tag t-g"><span class="dot"></span>已推送</span>';
 const invSplit = amt => { const net=r2(amt/(1+GST)); return {net, gst:r2(amt-net)}; };
 
-/* ================= 页面一：自提运费规则 ================= */
+/* ================= 页面一：取货运费规则 ================= */
 PAGES['p-pickfee-rule']=()=>{
   const set=Object.keys(SHOPS).filter(s=>curRule(s));
   const rows=set.map(s=>{
@@ -202,17 +202,17 @@ PAGES['p-pickfee-rule']=()=>{
       <td>${esc(v.by)}</td>
       <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_edit('${s}')">修改</button> <button class="btn btn-link" onclick="pf_hist('${s}')">变更记录</button></td>
     </tr>`;}).join('');
-  return `<div class="card"><div class="card-hd"><h3>自提运费规则</h3><span class="sub">近区 = 祝融、白斯班江一带 · 已设置 ${set.length} 家店铺，未设置的不收运费 · 首次取货起 ${FREE_DAYS} 天内免运费</span><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
+  return `<div class="card"><div class="card-hd"><h3>取货运费规则</h3><span class="sub">近区 = 祝融、白斯班江一带 · 已设置 ${set.length} 家店铺，未设置的不收运费 · 首次取货起 ${FREE_DAYS} 天内免运费</span><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>店铺名称</th><th>店铺编码</th><th>所属区域</th><th>收费标准</th><th>首次取货日期</th><th>免运费截止</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="9"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置自提运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置所属区域</div></div></td></tr>'}</tbody></table></div></div></div>`;
+      <tbody>${rows||'<tr><td colspan="9"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置取货运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置所属区域</div></div></td></tr>'}</tbody></table></div></div></div>`;
 };
 window.pf_edit=function(s){
   const isNew=!s, free=Object.keys(SHOPS).filter(k=>!curRule(k));
   if(isNew&&!free.length){toast('所有店铺都已设置收费规则','info');return;}
   const z=(curRule(s)||{zone:'NORMAL'}).zone;
-  const opt=k=>`<label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;cursor:pointer"><input type="radio" name="pf-zone" value="${k}" ${z==k?'checked':''} style="margin-top:3px"><span><b style="font-weight:600">${ZONE[k]}</b><span style="color:var(--ts);font-size:12.5px;margin-left:8px">${k=='NEAR'?'祝融、白斯班江一带 · ':k=='NORMAL'?'近区以外 · ':''}${k=='OFF'?'停止收取自提运费':zoneStd(k)}</span></span></label>`;
-  modal(`<div class="mc-hd"><h3>${isNew?'新增收费规则':'修改自提运费 · '+esc(shopName(s))}</h3>${isNew?'':`<p>${s}</p>`}<button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  const opt=k=>`<label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;cursor:pointer"><input type="radio" name="pf-zone" value="${k}" ${z==k?'checked':''} style="margin-top:3px"><span><b style="font-weight:600">${ZONE[k]}</b><span style="color:var(--ts);font-size:12.5px;margin-left:8px">${k=='NEAR'?'祝融、白斯班江一带 · ':k=='NORMAL'?'近区以外 · ':''}${k=='OFF'?'停止收取取货运费':zoneStd(k)}</span></span></label>`;
+  modal(`<div class="mc-hd"><h3>${isNew?'新增收费规则':'修改取货运费 · '+esc(shopName(s))}</h3>${isNew?'':`<p>${s}</p>`}<button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     ${isNew?`<div class="fr"><label class="fl"><b>*</b>店铺</label><select id="pf-shop" onchange="pf_joinShow()"><option value="">请选择店铺</option>${free.map(k=>`<option value="${k}">${esc(shopName(k))}（${k}）</option>`).join('')}</select></div>`:''}
     <div class="fr"><label class="fl"><b>*</b>所属区域</label><div>${(isNew?['NEAR','NORMAL']:['NEAR','NORMAL','OFF']).map(opt).join('')}</div></div>
     <div class="fr"><label class="fl">首次取货 / 免运费截止</label><div id="pf-join" style="font-size:13px;padding-top:2px">${s?pf_freeText(s):'选择店铺后显示'}</div></div>
@@ -229,7 +229,7 @@ window.pf_save=function(s){
   if(!zone){toast('请选择所属区域','err');return;}
   const old=curRule(s), nv={zone};
   if(old && old.zone==zone){toast('规则没有变化','info');return;}
-  modal(`<div class="mc-hd"><h3>${old?'确认修改自提运费':'确认新增收费规则'}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+  modal(`<div class="mc-hd"><h3>${old?'确认修改取货运费':'确认新增收费规则'}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <table class="subtbl"><tbody>
       <tr><td style="color:var(--ts);width:90px">店铺</td><td>${esc(shopName(s))}</td></tr>
       <tr><td style="color:var(--ts)">原规则</td><td>${old?ruleText(old):'未设置（不收费）'}</td></tr>
@@ -252,7 +252,7 @@ window.pf_hist=function(s){
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
 
-/* ================= 页面二：自提运费账单（周账单 / 取货明细） ================= */
+/* ================= 页面二：取货运费账单（周账单 / 取货明细） ================= */
 const lastClosedWeek = () => allWeeks().find(m=>addDays(m,6)<TODAY) || allWeeks()[0];
 DB.pfTab = DB.pfTab || 'BILL';
 DB.pfFilter = DB.pfFilter || {shop:'', wk:lastClosedWeek()};
@@ -334,7 +334,7 @@ const billByNo = no => billsOf(DB.pfFilter.wk).find(b=>b.no==no);
 window.pf_bill=function(s,m){
   const b=billOf(s,m); if(!b) return;
   const kv=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v}</div></div>`;
-  drawer(`<div class="drawer-hd"><div><h3>自提运费账单 <span class="mono" style="font-size:12.5px;color:var(--ts)">${b.no}</span></h3><div style="margin-top:4px">${billTag(b)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>取货运费账单 <span class="mono" style="font-size:12.5px;color:var(--ts)">${b.no}</span></h3><div style="margin-top:4px">${billTag(b)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="kv" style="margin-bottom:16px">
       ${kv('店铺',`${esc(shopName(s))}（${s}）`)}${kv('结算周期',weekLabel(m))}
@@ -354,7 +354,7 @@ window.pf_push=function(nos){
     <table class="subtbl"><thead><tr><th>账单号</th><th>店铺</th><th>结算周期</th><th>进入结算单</th><th style="text-align:right">应扣金额</th></tr></thead><tbody>
       ${list.map(b=>`<tr><td class="mono">${b.no}</td><td>${esc(shopName(b.shop))}</td><td style="white-space:nowrap">${weekLabel(b.wk)}</td><td class="mono">${curSettle(merOf(b.shop))}</td><td style="text-align:right">${money(b.due)}</td></tr>`).join('')}
     </tbody></table>
-    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后进入该商家当前还没结算的结算单，作为「自提运费」扣款项从货款中扣除；账单不能再修改。结算单被商家认可时，就单里的自提运费合计单独开一张物流服务费发票（含 9% GST）。</div>
+    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后进入该商家当前还没结算的结算单，作为「取货运费」扣款项从货款中扣除；账单不能再修改。结算单被商家认可时，就单里的取货运费合计单独开一张物流服务费发票（含 9% GST）。</div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick='pf_pushDo(${JSON.stringify(list.map(b=>b.no))})'>确认推送</button></div>`);
 };
 window.pf_pushDo=function(nos){
@@ -465,7 +465,7 @@ window.pf_import=function(){
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="closeModal();toast('演示：导入 0 条，跳过重复 0 条','info')">开始导入</button></div>`);
 };
 
-/* ================= 商家端：财务 › 自提运费（m-pickfee，只读） =================
+/* ================= 商家端：财务 › 取货运费（m-pickfee，只读） =================
    - 只看本商家的店铺；店铺从没设置过收费规则 → 不显示菜单
    - 账单、运费与运营端同一份计算（pfCalc）
    - 状态换成商家能懂的说法：待推送 → 待出账；已推送 → 已出账（结算时从货款扣）；作废 → 已减免
@@ -485,7 +485,7 @@ DB.pfMWk = DB.pfMWk || '';
 
 PAGES['m-pickfee']=()=>{
   const s=myShop(), v=curRule(s);
-  if(!pfMerchantOn()) return `<div class="card"><div class="card-bd"><div class="empty"><div class="e-ic">🚚</div><div class="e-t">未开通自提运费</div><div class="e-s">平台没有为您的店铺设置自提运费，取货不收费</div></div></div></div>`;
+  if(!pfMerchantOn()) return `<div class="card"><div class="card-bd"><div class="empty"><div class="e-ic">🚚</div><div class="e-t">未开通取货运费</div><div class="e-s">平台没有为您的店铺设置取货运费，取货不收费</div></div></div></div>`;
   const wk=DB.pfMWk, weeks=myWeeks(s), fe=freeEnd(s);
   const bills=(wk?[wk]:weeks).map(m=>billOf(s,m)).filter(Boolean);
   const picks=pfCalc().filter(p=>p.shop==s&&(!wk||monday(p.at.slice(0,10))==wk)).reverse();
@@ -532,7 +532,7 @@ window.pf_mBill=function(m){
   const s=myShop(), b=billOf(s,m); if(!b) return;
   const kv=(k,val)=>`<div><div class="k">${k}</div><div class="v">${val}</div></div>`;
   const inv=b.stNo?DB.pfInvs[b.stNo]:null, iv=inv?invSplit(inv.amt):null;
-  drawer(`<div class="drawer-hd"><div><h3>自提运费账单 <span class="mono" style="font-size:12.5px;color:var(--ts)">${b.no}</span></h3><div style="margin-top:4px">${mBillTag(b)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>取货运费账单 <span class="mono" style="font-size:12.5px;color:var(--ts)">${b.no}</span></h3><div style="margin-top:4px">${mBillTag(b)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="kv" style="margin-bottom:16px">
       ${kv('结算周期',weekLabel(m))}${kv('取货次数',b.times)}

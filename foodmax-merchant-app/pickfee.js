@@ -1,4 +1,4 @@
-/* Food Max 商家端 v2 · 财务 › 自提运费（与 PC pc-modules/pickfee.js 商家端 m-pickfee 同口径；2026-10-27 会议定）
+/* Food Max 商家端 v2 · 财务 › 取货运费（与 PC pc-modules/pickfee.js 商家端 m-pickfee 同口径；2026-10-27 会议定）
    - 平台按店铺指定所属区域，商家只读：
        近区（祝融、白斯班江一带）S$20 / 次，不拼车；普通区 S$80 / 车，最多 4 家拼车，按同车商家数平摊
    - 同一天只收一次（按当天第一趟所在的车算）；改区域下一次取货起生效
@@ -81,13 +81,13 @@ window.FM_MOD.pickfeeIssue=no=>{const l=inSettle(no),amt=r2(l.reduce((a,b)=>a+b.
 (function(){const cur=window.FM_MOD.settleCur&&FM_MOD.settleCur();if(!cur||cur.pick!=null)return;
   const l=inSettle(cur.no),amt=r2(l.reduce((a,b)=>a+b.due,0));cur.pick=amt;cur.pickCnt=l.length;
   cur.pickBills=l.map(b=>({no:b.no,range:`${b.wk} ~ ${addDays(b.wk,6)}`,amt:b.due}));
-  if(amt>0){cur.items.push(['自提运费（物流服务费·含税）',l.length,-amt]);cur.net=r2(cur.net-amt);}})();
+  if(amt>0){cur.items.push(['取货运费（物流服务费·含税）',l.length,-amt]);cur.net=r2(cur.net-amt);}})();
 
 let _tab='bill';
 function open(){
   _tab='bill';
   const v=curRule();
-  pushPage({title:'自提运费',body:`
+  pushPage({title:'取货运费',body:`
     <div class="rp-card2"><div class="rp-ct">当前收费规则<span class="desc" id="pf-hist" style="color:var(--emerald-2);cursor:pointer;float:right;min-height:32px;line-height:32px;margin-top:-8px">变更记录 ›</span></div>
       ${rowKV('店铺',SHOP.name)}${rowKV('所属区域',ZONE[v.zone])}${rowKV('收费标准',zoneStd(v.zone))}
       ${rowKV('同一天',v.zone==='OFF'?'—':'只收一次')}
@@ -128,8 +128,8 @@ const pickCard=p=>`<div class="rp-card" style="cursor:default">
   <div class="qty"><div class="q"><div class="v">${p.mates}</div><div class="l">同车商家数</div></div><div class="q"><div class="v">${money(p.fee)}</div><div class="l">计费金额</div></div></div>
   <div class="r2"><span style="font-size:12px">${p.basis}</span></div></div>`;
 function openBill(b){
-  const inv=b.stNo?DB.pfInvs[b.stNo]:null,net=inv?r2(inv.amt/(1+GST)):null;   // 发票按结算单开，金额 = 整张结算单的自提运费
-  pushPage({title:'自提运费账单',body:`
+  const inv=b.stNo?DB.pfInvs[b.stNo]:null,net=inv?r2(inv.amt/(1+GST)):null;   // 发票按结算单开，金额 = 整张结算单的取货运费
+  pushPage({title:'取货运费账单',body:`
     <div class="rp-card2"><div class="rp-ct">账单信息<span class="desc">${chip(billSt(b),ST_C[billSt(b)])}</span></div>
       ${rowKV('账单号',`<span style="font-family:monospace">${b.no}</span>`)}${rowKV('结算周期',`${b.wk} ~ ${addDays(b.wk,6)}`)}${rowKV('取货次数',b.times)}
       ${rowKV('计费金额',money(b.fee))}${rowKV('减免金额',b.waive?money(b.waive):'')}
