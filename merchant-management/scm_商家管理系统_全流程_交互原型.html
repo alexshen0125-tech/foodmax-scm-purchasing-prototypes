@@ -5526,7 +5526,7 @@ PAGES['p-settle']=()=>{
   <div class="card"><div class="card-hd"><h3>${b.period} 结算</h3>${tag('bill',b.status)}</div><div class="card-bd">
     ${b.status=='none'?`<div class="ib ib-b"><span class="i">🧮</span>当前可结算订单 ${billable.length} 笔（已完成）。点击生成对账单并推送商家。${billable.length?'':'<br><b>提示：</b>请先在「商家端 → 订单管理」完成订单履约（打包贴码 → 交接发货 → 订单完成）。'}</div>
       <button class="btn btn-p btn-lg" ${billable.length?'':'disabled'} onclick="act_genBill()">生成对账单并推送</button>`
-    :`<div class="kv" style="margin-bottom:16px"><div><div class="k">汇总总额（GMV）</div><div class="v">${money(b.gross)}</div></div><div><div class="k">逆向扣减</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div><div><div class="k">平台抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeSvc||0)}</div></div><div><div class="k">物流抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeLogi||0)}</div></div><div><div class="k">应清算给供应商</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>`}
+    :`<div class="kv" style="margin-bottom:16px"><div><div class="k">汇总总额（GMV）</div><div class="v">${money(b.gross)}</div></div><div><div class="k">逆向扣减</div><div class="v" style="color:var(--r)">-${money(b.reverse)}</div></div><div><div class="k">平台抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeSvc||0)}</div></div><div><div class="k">物流抽佣</div><div class="v" style="color:var(--r)">-${money(b.feeLogi||0)}</div></div>${(b.pick||0)>0?`<div><div class="k">自提运费（${b.pickCnt} 张账单）</div><div class="v" style="color:var(--r)">-${money(b.pick)}</div></div>`:''}<div><div class="k">应清算给供应商</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>`}
     ${b.status=='generated'?`<div class="ib ib-y"><span class="i">⏳</span>已推送商家，<b>等待商家在结算单列表点「认可账单」</b>；未认可前不进入付款、不开服务费发票，<b>系统不做超时自动认可</b>，需要时由运营线下催办。商家如有异议将线下联系运营核查，需纠错时可作废重出。</div>`:''}
     ${b.status=='disputed'?`<div class="ib ib-r"><span class="i">📝</span>商家提出异议：<b>${b.dispute}</b><br>请核查后调整对账单（数量差异/价格差异/退货未冲减/单边账）。</div><button class="btn btn-p btn-lg" onclick="act_adjustBill()">核查并出具调整后对账单</button>`:''}
     ${b.status=='adjusted'?`<div class="ib ib-b"><span class="i">⏳</span>调整后对账单已推送，等待商家复核确认。</div>`:''}
@@ -6086,6 +6086,7 @@ function act_genBill(){
     .concat(comp.length?[['退货申诉赔付',comp.length,billComp({comp})]]:[])};
   // 生成发票占位（每签收订单一张，按订单对单个客户开具，不做多客户合并）
   DB.invoices=signed.map(o=>({order:o.id,client:o.client,amt:o.amt,status:'none',no:'',reject:''}));
+  if(window.pfSettleSync)pfSettleSync();   // 已推送进本单的自提运费账单保留
   render();toast('对账单已生成并推送商家认可','ok');
 }
 // 业务调整按方向汇总：d=1 平台补款合计、d=-1 平台扣款合计（均为正数）
@@ -6116,9 +6117,10 @@ function act_billDetail(key){
       ${billAdj(sel,1)>0?`<div><div class="k">业务调整 · 平台补款（${sel.adjust.filter(a=>a.dir>0).length} 单）</div><div class="v" style="color:var(--g)">+${money(billAdj(sel,1))}</div></div>`:''}
       ${billAdj(sel,-1)>0?`<div><div class="k">业务调整 · 平台扣款（${sel.adjust.filter(a=>a.dir<0).length} 单）</div><div class="v" style="color:var(--r)">-${money(billAdj(sel,-1))}</div></div>`:''}
       ${billComp(sel)>0?`<div><div class="k">退货申诉赔付（${sel.comp.length} 单）</div><div class="v" style="color:var(--g)">+${money(billComp(sel))}</div></div>`:''}
+      ${(sel.pick||0)>0?`<div><div class="k">自提运费（物流服务费·含税 · ${sel.pickCnt||0} 张账单）</div><div class="v" style="color:var(--r)">-${money(sel.pick)}</div></div>`:''}
       <div><div class="k">应清算给供应商（应结净额）</div><div class="v" style="color:var(--g);font-size:18px">${money(sel.net)}</div></div>
     </div>
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣 − 耗材采购扣款 − 平台补采扣款 − 缺货罚款${(sel.adjust||[]).length?' ± 业务调整':''}${billComp(sel)>0?' + 退货申诉赔付':''}</b>；平台就抽佣部分向你开具佣金税票，就耗材部分开具耗材销售发票，就平台补采部分开具补采销售发票；<b>罚款不开发票</b>，仅作结算扣减项。
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🧮</span>口径同清结算平台结算单：<b>应清算给供应商 = 汇总总额 − 逆向扣减 − 平台抽佣 − 物流抽佣 − 耗材采购扣款 − 平台补采扣款 − 缺货罚款${(sel.pick||0)>0?' − 自提运费':''}${(sel.adjust||[]).length?' ± 业务调整':''}${billComp(sel)>0?' + 退货申诉赔付':''}</b>；平台就抽佣部分向你开具佣金税票，就耗材部分开具耗材销售发票，就平台补采部分开具补采销售发票；<b>罚款不开发票</b>，仅作结算扣减项。
       <br>少货由平台补采的订单，<b>GMV 与抽佣仍按应送数量足额计</b>，不因少货下调。</div>
     ${(sel.repl||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🔁</span><div>本期含<b>平台补采扣款 ${money(sel.repl)}</b>（${sel.replCnt} 单，按<b>自营商品原定价</b>计，<b>不加价</b>）${(sel.fine||0)>0?` 与 <b>缺货罚款 ${money(sel.fine)}</b>（${sel.fineCnt} 单，缺口件数 × ${money(DB.replCfg?DB.replCfg.finePerUnit:40)}/件）`:''}——均因你送货到仓少货产生，<b>两者相互独立、无关联</b>：补采只在自营有货补齐时产生，罚款只要清点出缺口就计。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-replenish')">查看平台补采单 →</button><button class="btn btn-link" onclick="closeDrawer();nav('m-fine')">查看罚款单 →</button></div></div>`:''}
     ${isCur&&(sel.supply||0)>0?`<div class="ib ib-y" style="margin-bottom:14px"><span class="i">🖨️</span><div>本期含耗材采购扣款 <b>${money(sel.supply)}</b>（已交付 ${sel.supplyCnt} 单，按含税金额扣）；当期应清算不足以覆盖时，差额结转下期继续扣。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-supply-order')">查看耗材订单 →</button></div></div>`:''}
@@ -6130,15 +6132,21 @@ function act_billDetail(key){
     </tbody></table>
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">⚖️</span><div>业务调整是平台与你线下确认后创建的补款 / 扣款单，按<b>生效日期</b>归入本期：<b>平台补款</b>加到应清算金额，<b>平台扣款</b>从中扣除。<b>账扣</b>不开发票；<b>票扣</b>会对关联的原发票开票调整，金额以含税计。业务调整不计 GMV、不计抽佣；有异议请先联系对接运营，先不要认可。</div></div>`:''}
     ${billComp(sel)>0?`<div class="ib ib-g" style="margin-bottom:14px"><span class="i">💸</span><div>本期含<b>退货申诉赔付 ${sel.comp.length} 单 ${money(billComp(sel))}</b>：退货申诉经客服核实成立后生成赔付单，直接推送进本结算单，<b>已计入应结金额与应开票金额</b>，请随本结算单一并开票，无需单独开票。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-ret-comp')">查看退货赔付 →</button></div></div>`:''}
+    ${(sel.pick||0)>0?(()=>{const inv=window.pfStInv?pfStInv(sel.no):null;return `<div style="font-weight:600;font-size:13px;margin:4px 2px 6px">自提运费明细 <span style="font-weight:400;color:var(--ts);font-size:12px">${sel.pickCnt} 张账单 · 只读</span></div>
+    <table style="margin-bottom:8px"><thead><tr><th>账单号</th><th>店铺</th><th>结算周期</th><th style="text-align:right">应扣金额</th></tr></thead><tbody>
+      ${(sel.pickBills||[]).map(x=>`<tr><td class="mono">${x.no}</td><td>${x.shop}</td><td style="white-space:nowrap">${x.range}</td><td style="text-align:right;color:var(--r)">-${money(x.amt)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🚚</span><div>平台去批发市场帮你取货的运费，按周出账后推送进本结算单，从货款中扣除。<b>物流服务费发票按本结算单单独开一张</b>（${money(sel.pick)}，含 9% GST），不和服务费发票合开：${inv?`已开具 <b class="mono">${inv.invNo}</b>`:'认可本结算单后自动开具'}。<br><button class="btn btn-link" style="padding-left:0" onclick="closeDrawer();nav('m-pickfee')">查看自提运费 →</button></div></div>`;})():''}
     <div style="font-weight:600;font-size:13px;margin:4px 2px 6px">账单构成</div>
     <table><thead><tr><th>类目</th><th>笔数</th><th>金额</th></tr></thead><tbody>
       ${sel.items.map(it=>`<tr><td>${it[0]}</td><td>${it[1]}</td><td style="${it[2]<0?'color:var(--r)':''}">${it[2]<0?'-':''}${money(Math.abs(it[2]))}</td></tr>`).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td>应清算给供应商</td><td>—</td><td style="color:var(--gd)">${money(sel.net)}</td></tr>
     </tbody></table>
-    <div style="font-weight:600;font-size:13px;margin:16px 2px 6px">清分进度 <span style="font-weight:400;color:var(--ts);font-size:12px">与你相关的 2 部分 · 只读</span></div>
+    <div style="font-weight:600;font-size:13px;margin:16px 2px 6px">清分进度 <span style="font-weight:400;color:var(--ts);font-size:12px">与你相关的 ${(sel.pick||0)>0?3:2} 部分 · 只读</span></div>
     <table><thead><tr><th>清分类型</th><th>金额</th><th>收款方</th><th>清分 / 到账</th></tr></thead><tbody>
       <tr><td>商户结算清分</td><td style="color:var(--gd);font-weight:600">${money(sel.net)}</td><td>绿鲜源蔬果 Pte Ltd · DBS ****8821</td><td>${payoutTag}</td></tr>
       <tr><td>平台抽佣（服务费）</td><td>${money(sel.feeSvc||0)}</td><td>平台 · 服务费发票</td><td>${(sel.feeSvc||0)<=0?'<span class="tag t-gr"><span class="dot"></span>免佣期 · 无服务费</span>':(isCur&&sel.status=='generated'?'<span class="tag t-y"><span class="dot"></span>认可后自动开票</span>':'<span class="tag t-g"><span class="dot"></span>已开具服务费发票</span>')}</td></tr>
+      ${(sel.pick||0)>0?`<tr><td>自提运费（物流服务费）</td><td>${money(sel.pick)}</td><td>平台 · 物流服务费发票</td><td>${window.pfStInv&&pfStInv(sel.no)?'<span class="tag t-g"><span class="dot"></span>已开具物流服务费发票</span>':'<span class="tag t-y"><span class="dot"></span>认可后自动开票</span>'}</td></tr>`:''}
     </tbody></table>
     ${!isCur?`<div class="ib ib-g" style="margin-top:14px"><span class="i">💰</span>本期已结清，货款 ${money(sel.net)} 已到账。${sel.payTime||''}</div>`:''}
   </div>
@@ -6158,7 +6166,8 @@ function act_confirmBillAsk(no){
     .concat((b.fill||0)>0?[['售后补货扣款（含税）',-b.fill]]:[])
     .concat(billAdj(b,1)>0?[['业务调整 · 平台补款',billAdj(b,1)]]:[])
     .concat(billAdj(b,-1)>0?[['业务调整 · 平台扣款',-billAdj(b,-1)]]:[])
-    .concat(billComp(b)>0?[['退货申诉赔付',billComp(b)]]:[]);
+    .concat(billComp(b)>0?[['退货申诉赔付',billComp(b)]]:[])
+    .concat((b.pick||0)>0?[['自提运费（物流服务费·含税）',-b.pick]]:[]);
   modal(`<div class="mc-hd"><h3>认可账单</h3><p>${b.no} · ${b.range}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
     <table style="margin:0 0 12px"><tbody>
@@ -6169,6 +6178,7 @@ function act_confirmBillAsk(no){
     <div class="ib ib-y"><span class="i">⚠️</span>
       认可即视为对账无误，账单<b>立即推送平台财务</b>进入打款流程。<br>
       ${(b.feeSvc||0)>0?`同时就本期服务佣金 <b>${money(b.feeSvc)}</b> 自动开具服务费发票（GST 9%，在「发票管理 → 服务费发票」查看下载）。<br>`:'本期处免佣期，服务佣金为 0，不开具服务费发票。<br>'}
+      ${(b.pick||0)>0?`就本结算单的自提运费 <b>${money(b.pick)}</b> 单独开具一张物流服务费发票（含 9% GST，在「自提运费」查看下载）。<br>`:''}
       <b style="color:var(--r)">认可后不可撤回</b>；如有异议请先线下联系平台运营 / 客服，先不要认可。</div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="cfm-ok" onclick="act_confirmBillSubmit('${b.no}')">确认认可</button></div>`);
@@ -6193,8 +6203,9 @@ function act_confirmBill(no){
     const gst=+(b.feeSvc*0.09).toFixed(2);
     DB.svcInvoices.unshift({no:'SVC-INV-2026-703',billNo:b.no,range:b.range,fee:+b.feeSvc.toFixed(2),gst,total:+(b.feeSvc+gst).toFixed(2),issueDate:b.confirmAt.slice(0,10),status:'已开票'});
   }
+  const pInv=window.pfIssueInv?pfIssueInv(b.no):null;   // 本结算单的自提运费 → 单独开物流服务费发票
   render();
-  toast(b.feeSvc>0?'已认可，账单已推送财务；服务费发票已自动开具':'已认可，账单已推送财务（免佣期不开服务费发票）','ok');
+  toast((b.feeSvc>0?'已认可，账单已推送财务；服务费发票已自动开具':'已认可，账单已推送财务（免佣期不开服务费发票）')+(pInv?`；物流服务费发票 ${pInv.invNo} 已开具`:''),'ok');
 }
 function act_disputeBill(){
   modal(`<div class="mc-hd"><h3>提出账单异议</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd"><div class="fr"><label class="fl">异议说明（附签收单/出库记录）</label><textarea id="dis-reason">6月25日 #20260625011 订单，系统记 18kg，实际送仓 20kg，请核查少计的 2kg 货款。</textarea></div><div class="up done"><div class="uic">📎</div><div class="ut">已附 出库记录.pdf ✓</div></div></div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="DB.bill.status='disputed';DB.bill.dispute=document.getElementById('dis-reason').value;closeModal();render();toast('异议已提交，平台核查中','ok')">提交异议</button></div>`);
@@ -6431,7 +6442,7 @@ goHome();
 <script src="pc-modules/analysis.js?v=20260730f"></script>
 <script src="pc-modules/quality.js?v=20260730f"></script>
 <script src="pc-modules/supply.js?v=20260831a"></script>
-<script src="pc-modules/replenish.js?v=20260831a"></script>
+<script src="pc-modules/replenish.js?v=20261027a"></script>
 <script src="pc-modules/cpfine.js?v=20261016b"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
@@ -6440,7 +6451,7 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261027d"></script>
+<script src="pc-modules/pickfee.js?v=20261027e"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
 <script src="pc-modules/retcomp.js?v=20261027d"></script>

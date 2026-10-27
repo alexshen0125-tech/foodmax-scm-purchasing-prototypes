@@ -145,7 +145,7 @@ function rTag(s){const[t,c]=R_ST[s]||['—','t-gr'];return `<span class="tag ${c
 // 每个 sync 都用这一条完整公式（缺席科目 ||0 兜底），谁最后跑结果都一致，避免互相覆盖漏项
 window.recalcBillNet=function(){
   DB.bill.net=+(DB.bill.gross-DB.bill.reverse-(DB.bill.feeSvc||0)-(DB.bill.feeLogi||0)
-    -(DB.bill.supply||0)-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)
+    -(DB.bill.supply||0)-(DB.bill.repl||0)-(DB.bill.fine||0)-(DB.bill.fill||0)-(DB.bill.pick||0)   // pick = 自提运费（pickfee.js 同步）
     +(DB.bill.adjust||[]).reduce((s,a)=>s+a.dir*a.amt,0)).toFixed(2);
 };
 window.replSettleSync=function(){
