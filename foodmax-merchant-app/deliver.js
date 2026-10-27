@@ -1088,6 +1088,15 @@ window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.signin=openSignin;
 window.FM_MOD.progress=openProgress;
 window.FM_MOD.return=openReturn;
+// 退货赔付（财务 › 退货赔付，retcomp.js）取数：核定成立/部分成立且赔付>0 的申诉，一笔一行
+window.FM_MOD.retCompSrc=()=>{
+  const out=[];
+  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({adjNo:ra.adjNo,src:'客户退货',retNo:g.no,ra,priceLabel:'售后单价',open:()=>openReturnDetail(g.no)});});
+  const wa=window.FM.DB.whrAppeals||{};
+  Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({adjNo:ra.adjNo,src:'仓库退回',retNo:no,ra,priceLabel:'供货单价',open:()=>openWhrDetail(no)});});
+  return out;
+};
+window.FM_MOD.raKindLabel=raKindLabel;
 // 金刚区「退货单」磁贴角标 = 客户退货待提货单数 + 仓库退回待取回项数（与 PC 侧栏角标同源同口径）
 window.FM_MOD.returnBadge=()=>RETURN.filter(g=>g.st==='待提货').length+(window.FM.DB.whReturns||[]).filter(r=>r.status==='待取回').length;
 })();

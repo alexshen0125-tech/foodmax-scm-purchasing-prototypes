@@ -205,6 +205,8 @@ const TILES=[
   {k:'settle',l:'结算单',ic:'wallet',bg:'#FEF3C7',st:'#B45309',badge:'1'},
   {k:'replen',l:'平台补采',ic:'swap',bg:'#FEF3C7',st:'#B45309',badge:'2',amber:1},
   {k:'fine',l:'罚款单',ic:'alert',bg:'#FEE2E2',st:'var(--red)',badge:'3'},
+  // 退货赔付（2026-10-27）：与 PC 侧栏「财务 › 退货赔付」对齐；角标 = 待开票的结算单数
+  {k:'retcomp',l:'退货赔付',ic:'wallet',bg:'#D1FAE5',st:'var(--emerald-2)',badge:()=>window.FM_MOD&&FM_MOD.retCompTodo?FM_MOD.retCompTodo()||'':''},
   {k:'mkt',l:'营销活动',ic:'mega',bg:'#FEE2E2',st:'var(--red)'},
   {k:'supply',l:'耗材商城',ic:'printer',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
@@ -424,10 +426,11 @@ renderHome();
 <script src="account.js?v=20260819d"></script>
 <script src="finance.js"></script>
 <script src="recon.js"></script>
-<script src="settle.js?v=20260915a"></script>
+<script src="settle.js?v=20261027a"></script>
 <script src="replen.js?v=20261016b"></script>
 <script src="biz.js"></script>
-<script src="deliver.js?v=20261027a"></script>
+<script src="deliver.js?v=20261027b"></script>
+<script src="retcomp.js?v=20261027a"></script>
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260923s"></script>
 <script src="supply.js"></script>
