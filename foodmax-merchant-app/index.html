@@ -207,6 +207,8 @@ const TILES=[
   {k:'fine',l:'罚款单',ic:'alert',bg:'#FEE2E2',st:'var(--red)',badge:'3'},
   // 退货赔付（2026-10-27）：与 PC 侧栏「财务 › 退货赔付」对齐；角标 = 待开票的结算单数
   {k:'retcomp',l:'退货赔付',ic:'wallet',bg:'#D1FAE5',st:'var(--emerald-2)',badge:()=>window.FM_MOD&&FM_MOD.retCompTodo?FM_MOD.retCompTodo()||'':''},
+  // 自提运费（2026-10-27）：与 PC「财务 › 自提运费」对齐，只读；平台没给本店设过规则则不显示
+  {k:'pickfee',l:'自提运费',ic:'truck',bg:'#FEF3C7',st:'#B45309',when:()=>window.FM_MOD&&FM_MOD.pickfeeOn&&FM_MOD.pickfeeOn()},
   {k:'mkt',l:'营销活动',ic:'mega',bg:'#FEE2E2',st:'var(--red)'},
   {k:'supply',l:'耗材商城',ic:'printer',bg:'#D1FAE5',st:'var(--emerald-2)'},
   {k:'supplyorder',l:'耗材订单',ic:'box',bg:'#FEF3C7',st:'#B45309'},
@@ -362,7 +364,7 @@ window.homeCustom=()=>{const r=HD_RANGE;const m=document.createElement('div');m.
     if(!f||!t||Date.parse(f)>Date.parse(t)){toast('请选择有效日期区间');return;}HD_RANGE={from:f,to:t};HD_PERIOD='custom';close();renderHome();};};
 function renderHome(){
   const hd=homeDash();
-  const tiles=TILES.map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${(typeof t.badge==='function'?t.badge():t.badge)?`<span class="bdg ${t.amber?'amber':''}">${typeof t.badge==='function'?t.badge():t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
+  const tiles=TILES.filter(t=>!t.when||t.when()).map(t=>`<div class="gi" data-k="${t.k}" data-l="${t.l}"><div class="tile" style="background:${t.bg}">${svg(t.ic,`style="stroke:${t.st}"`)}</div><span class="gl">${t.l}</span>${(typeof t.badge==='function'?t.badge():t.badge)?`<span class="bdg ${t.amber?'amber':''}">${typeof t.badge==='function'?t.badge():t.badge}</span>`:''}${t.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:12px"></span>':''}</div>`).join('');
   const deliver=DELIVER.filter(d=>!d.when||d.when()).map(d=>`<div class="di" data-k="${d.k}" data-l="${d.l}"><div class="ic">${svg(d.ic)}</div><span class="dl">${d.l}</span>${(typeof d.badge==='function'?d.badge():d.badge)?`<span class="bdg">${typeof d.badge==='function'?d.badge():d.badge}</span>`:''}${d.dot?'<span class="bdg" style="padding:0;width:8px;height:8px;border-radius:50%;margin-left:10px"></span>':''}</div>`).join('');
   document.getElementById('v-home').innerHTML=`<div class="stagger">
     <div class="hm-top"><div class="hm-logo">${svg('leaf')}</div>
@@ -431,6 +433,7 @@ renderHome();
 <script src="biz.js"></script>
 <script src="deliver.js?v=20261027c"></script>
 <script src="retcomp.js?v=20261027c"></script>
+<script src="pickfee.js?v=20261027a"></script>
 <script src="message.js?v=20260908a"></script>
 <script src="publish.js?v=20260923s"></script>
 <script src="supply.js"></script>

@@ -7,6 +7,7 @@
        按下单金额比例：有取货的那天，当天下单金额 × 比例；可设「每日封顶」，超过按封顶收。
    - 改规则下一次生效：保存时刻之后的取货按新规则算，之前已取的货不重算。
    - 每月汇总出账单，账单直接「推送财务结算」，在结算时从商家货款里扣（不走业务调整单）；发票单独开「物流费发票」，不和服务费/佣金合开。
+   - 商家端（2026-10-27）：财务 › 自提运费（m-pickfee），只读看本店规则/月度账单/取货明细，可下载物流费发票；App 同口径（v2/pickfee.js）。
    依赖主文件全局：DB / money / toast / modal / modalWide / closeModal / drawer / closeDrawer / render / nav / ts / flowTip */
 (function(){
 
@@ -293,6 +294,89 @@ window.pf_invDo=function(s,ym){
   const n=Object.values(DB.pfBills).filter(x=>x.invNo).length+12;
   DB.pfBills[s+'|'+ym].invNo=`LOG-INV-2026-${String(n+1).padStart(6,'0')}`;
   closeModal(); render(); toast('物流费发票已开具','ok');
+};
+
+/* ================= 商家端：财务 › 自提运费（m-pickfee，只读） =================
+   - 只看本商家的店铺；店铺从没设置过收费规则 → 不显示菜单
+   - 账单、取货明细、运费与运营端同一份计算（pfCalc），不另算
+   - 状态换成商家能懂的说法：待推送 → 待出账；已推送 → 已出账（结算时从货款扣）
+   - 不显示内部信息：推送人、规则修改人、取货数据来源 */
+const myShop = () => Object.keys(SHOPS).find(s=>SHOPS[s].merchant==DB.merchant.code) || '';
+window.pfMerchantOn = () => { const s=myShop(); return !!(s && (DB.pfRules[s]||[]).length); };
+const mBillTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>本月进行中</span>'
+  : !b.fee ? '<span class="tag t-gr"><span class="dot"></span>无需收费</span>'
+  : !b.pushedAt ? '<span class="tag t-y"><span class="dot"></span>待出账</span>'
+  : '<span class="tag t-g"><span class="dot"></span>已出账</span>';
+const mInvTag = b => !b.pushedAt ? dash
+  : b.invNo ? `<span class="mono">${b.invNo}</span>` : '<span class="tag t-y"><span class="dot"></span>待开票</span>';
+const myMonths = s => [...new Set(DB.pfPickups.filter(p=>p.shop==s).map(p=>p.at.slice(0,7)))].sort().reverse();
+DB.pfMTab = DB.pfMTab || 'BILL';
+DB.pfMMonth = DB.pfMMonth || '';
+
+PAGES['m-pickfee']=()=>{
+  const s=myShop(), v=curRule(s);
+  if(!pfMerchantOn()) return `<div class="card"><div class="card-bd"><div class="empty"><div class="e-ic">🚚</div><div class="e-t">未开通自提运费</div><div class="e-s">平台没有为您的店铺设置自提运费，取货不收费</div></div></div></div>`;
+  const ym=DB.pfMMonth, months=myMonths(s);
+  const bills=(ym?[ym]:months).map(m=>billsOf(m).find(b=>b.shop==s)).filter(Boolean);
+  const picks=pfCalc().filter(p=>p.shop==s&&(!ym||p.at.startsWith(ym))).reverse();
+  const kv=(k,val)=>`<div><div class="k">${k}</div><div class="v">${val}</div></div>`;
+  const tabs=[['BILL','月度账单',bills.length],['PICK','取货明细',picks.length]];
+  return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>当前收费规则</h3><span class="sub">平台去批发市场帮您取货收的运费；每月出账单，结算时从货款中扣除</span><button class="btn btn-o btn-sm" onclick="pf_mHist()">变更记录</button></div>
+    <div class="card-bd"><div class="kv">
+      ${kv('店铺',`${esc(shopName(s))}（<span class="mono">${s}</span>）`)}
+      ${kv('计费方式',MODE[v.mode])}
+      ${kv('收费标准',v.mode=='OFF'?'—':v.mode=='TRIP'?`${money(v.price)} / 次`:`取货当天下单金额 × ${pct(v.rate)}`)}
+      ${v.mode=='GMV'?kv('每日封顶',v.cap?money(v.cap):'不封顶'):''}
+      ${kv('生效时间',v.from)}
+    </div></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">月份</div><select id="pf-m-month" style="min-width:140px"><option value="">全部</option>${months.map(m=>`<option ${ym==m?'selected':''}>${m}</option>`).join('')}</select></div>
+    <button class="btn btn-p btn-sm" onclick="DB.pfMMonth=document.getElementById('pf-m-month').value;render()">查询</button><button class="btn btn-o btn-sm" onclick="DB.pfMMonth='';render()">重置</button>
+  </div></div>
+  <div class="tabs" style="margin-bottom:14px">${tabs.map(([k,l,n])=>`<div class="tab ${DB.pfMTab==k?'active':''}" onclick="DB.pfMTab='${k}';render()">${l}${n?`<span class="tb">${n}</span>`:''}</div>`).join('')}</div>
+  ${DB.pfMTab=='BILL'?mBillTable(bills):`<div class="card"><div class="card-bd flush"><div style="overflow-x:auto">${mPickRows(picks)}</div></div></div>`}`;
+};
+function mBillTable(bills){
+  return `<div class="card"><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>账单号</th><th>月份</th><th style="text-align:right">取货次数</th><th style="text-align:right">运费合计</th><th>账单状态</th><th>出账时间</th><th>物流费发票</th><th>操作</th></tr></thead><tbody>
+    ${bills.length?bills.map(b=>`<tr>
+      <td class="mono" style="white-space:nowrap">${b.no}</td><td>${b.ym}</td>
+      <td style="text-align:right">${b.times}</td><td style="text-align:right"><b>${money(b.fee)}</b></td>
+      <td>${mBillTag(b)}</td><td style="white-space:nowrap">${b.pushedAt||dash}</td><td>${mInvTag(b)}</td>
+      <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_mBill('${b.ym}')">明细</button>${b.invNo?` <button class="btn btn-link" onclick="toast('演示：已下载 ${b.invNo}.pdf','info')">下载发票</button>`:''}</td>
+    </tr>`).join(''):`<tr><td colspan="8"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">该月没有取货记录</div></div></td></tr>`}
+    </tbody></table></div></div></div>`;
+}
+function mPickRows(picks){
+  return `<table><thead><tr><th>取货记录号</th><th>取货时间</th><th>取货地点</th><th>司机</th><th>计费方式</th><th>计费说明</th><th style="text-align:right">运费</th></tr></thead><tbody>
+    ${picks.length?picks.map(p=>`<tr>
+      <td class="mono" style="white-space:nowrap">${p.no}</td><td class="mono" style="white-space:nowrap">${p.at}</td>
+      <td style="white-space:nowrap">${p.market}</td><td>${esc(p.driver)}</td>
+      <td style="white-space:nowrap">${MODE[(p.rule||{}).mode||'OFF']}</td><td style="font-size:12.5px;color:var(--ts)">${p.basis}</td>
+      <td style="text-align:right">${p.fee?`<b>${money(p.fee)}</b>`:money(0)}</td></tr>`).join('')
+    :`<tr><td colspan="7"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">没有取货记录</div></div></td></tr>`}
+  </tbody></table>`;
+}
+window.pf_mBill=function(ym){
+  const s=myShop(), b=billOf(s,ym); if(!b) return;
+  const kv=(k,val)=>`<div><div class="k">${k}</div><div class="v">${val}</div></div>`;
+  drawer(`<div class="drawer-hd"><div><h3>自提运费账单 <span class="mono" style="font-size:12.5px;color:var(--ts)">${b.no}</span></h3><div style="margin-top:4px">${mBillTag(b)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="kv" style="margin-bottom:16px">
+      ${kv('月份',ym)}${kv('取货次数',b.times)}${kv('运费合计',money(b.fee))}
+      ${kv('出账时间',b.pushedAt||'—')}${kv('扣款方式',b.pushedAt?'结算时从货款中扣除':'—')}${kv('物流费发票',b.invNo?`<span class="mono">${b.invNo}</span>`:b.pushedAt?'待开票':'—')}
+    </div>
+    ${mPickRows(b.list.slice().reverse())}
+  </div>
+  <div class="drawer-ft">${b.invNo?`<button class="btn btn-o" onclick="toast('演示：已下载 ${b.invNo}.pdf','info')">下载发票</button>`:''}<button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+};
+window.pf_mHist=function(){
+  const s=myShop(), vers=(DB.pfRules[s]||[]).slice().reverse();
+  drawer(`<div class="drawer-hd"><h3>收费规则变更记录</h3><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd"><table><thead><tr><th>生效时间</th><th>计费方式</th><th>收费标准</th></tr></thead><tbody>
+    ${vers.map((v,i)=>`<tr><td class="mono" style="white-space:nowrap">${v.from}${i==0?' <span class="tag t-g" style="font-size:10.5px">当前</span>':''}</td><td>${MODE[v.mode]}</td><td>${ruleText(v)}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
 window.pf_import=function(){
   modal(`<div class="mc-hd"><h3>导入仓库取货台账</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">

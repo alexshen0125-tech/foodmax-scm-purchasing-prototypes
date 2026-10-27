@@ -1292,6 +1292,7 @@ const NAV={
     {id:'m-replenish',ic:'🔁',t:'平台补采',p1:1,badge:()=>DB.replOrders?DB.replOrders.filter(r=>r.status=='pending').length:0,by:'y'},
     {id:'m-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>(DB.replOrders?DB.replOrders.filter(r=>r.fineNo&&r.status=='pending').length:0)+(typeof cpPendingCount=='function'?cpPendingCount():0),by:'y'},
     {id:'m-ret-comp',ic:'💸',t:'退货赔付',p1:1,badge:()=>typeof retCompTodo=='function'?retCompTodo():0,by:'y'},   // 角标 = 待开票的结算单数
+    {id:'m-pickfee',ic:'🚚',t:'自提运费',p1:1,when:()=>typeof pfMerchantOn=='function'&&pfMerchantOn()},   // 只读；平台没给本店设过自提运费规则则不显示
     {id:'m-invoice',ic:'🧾',t:'发票管理',p1:1},
     {id:'m-account',ic:'💳',t:'账户管理',p1:1},
     {sec:'合规'},
@@ -6430,7 +6431,7 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261012c"></script>
+<script src="pc-modules/pickfee.js?v=20261027a"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
 <script src="pc-modules/retcomp.js?v=20261027c"></script>
