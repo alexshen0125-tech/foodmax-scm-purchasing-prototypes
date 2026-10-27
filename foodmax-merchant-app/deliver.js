@@ -718,7 +718,7 @@ function stationPopup(ware,kind){
 /* ============ 退货取回 → 退货单（2026-07-21 会议定稿：商家只读；确认由仓库操作。2026-10-14：线上无逾期规则，删除 72h 提货时限 / 逾期未提） ============ */
 // 退货单：三方退货到平台仓不入库仅暂存。状态 待仓库入库→待提货(仓库确认到货)→已提货；货物在仓暂存至商家提走。
 // 商家端只读展示状态+提货码，无状态确认/预约/新建权限（三方退款须基于已判责售后工单，禁止商家自建）
-// items：retQty=审核通过退款数量（退回数量）；pickQty=WMS 累计出库数量（取回数量），提货前为 null；price=售后单价（申诉赔付用）
+// items：retQty=审核通过退款数量（退回数量）；pickQty=WMS 累计出库数量（取回数量），提货前为 null；price=原订单结算单价（申诉赔付用，10-27 会议：按原订单该行应结金额赔）
 // 口径与 PC scm_商家管理系统_全流程_交互原型.html 的 retQtySum/pickQtyVal/retAppealWin 一致
 // 相对当前时刻偏移 h 小时（演示数据用，保证申诉窗口在演示时可用）
 function relTs(h){const d=new Date(Date.now()+h*3600000);const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
@@ -737,7 +737,7 @@ const RETURN=[
  {no:'TKD2026061808190012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
   items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:4,pickQty:2,price:18.00}],
   appeal:{kind:'goods',status:'部分成立',at:'2026-06-17 15:02',reviewAt:'2026-06-18 11:30',desc:'仓库只找到 2 箱，另 2 箱未见',photos:0,compStatus:'已生成',
-    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,adjNo:'TZ-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
+    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,compNo:'PF-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
 ];
 const retSum=g=>g.items.reduce((s,x)=>s+x.retQty,0);
 // 取回数量 = 各 SKU WMS 累计出库数量（可分次取）；SKU 无出库记录 = null，退货单进入 已提货 时补 0；
@@ -750,7 +750,8 @@ const pickOf=(g,x)=>(x.pickQty==null&&g.st==='已提货')?0:x.pickQty;
    · 未到仓（待仓库入库）：申诉数量默认 = 退回数量
    · 其他：申诉数量全为 0 但说明写了问题 → 按「其他」提交，平台核定数量（上限 = 退回数量）
    · 每张退货单 / 每条退回记录 1 次；平台 48h 内给结果
-   · 赔付 = Σ 核定数量 × 单价（客户退货=售后单价，仓库退回=供货单价），生成业务调整单（平台付给商家） */
+   · 赔付 = Σ 核定数量 × 单价（客户退货=原订单结算单价，仓库退回=供货单价），生成赔付单直接推送进结算单（货权转移阶段，随结算单开票）
+   · 10-27 会议：客服核实；仓库退回申诉入口默认关闭（FM.DB.whrAppealOn，与 PC 同） */
 const RA_KIND={goods:'实物问题',noarrive:'未到仓'};
 const RA_REVIEW_H=48;
 const raKindLabel=a=>a.other?'其他':RA_KIND[a.kind];
@@ -763,6 +764,7 @@ const fmtS=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maxim
 const r2=n=>Math.round((+n||0)*100)/100;
 function raWin(g){
   if(g.appeal)return null;
+  if(g._whr&&!window.FM.DB.whrAppealOn)return null;   // 仓库退回申诉入口默认关闭
   if(g.st==='待仓库入库')return {kind:'noarrive'};
   if(['待提货','已提货','逾期未提'].includes(g.st))return {kind:'goods'};
   return null;   // 已取消等：不开放
@@ -821,12 +823,12 @@ function raDetail(g,sec,box,kv){
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec('退货申诉')+raTip(msg);
   }
-  const goods=a.kind==='goods',PL=g._priceLabel||'售后单价';
-  const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.adjNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中，生成后平台付给你</span>':'—');
+  const goods=a.kind==='goods',PL=g._priceLabel||'原订单结算单价';
+  const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.compNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中</span>':'—');
   return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
       ${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}${kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price)))}</div>`).join(''))
-    +(a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('业务调整单',comp)+kv('审核说明',a.note)):'');
+    +(a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('赔付单',comp)+kv('审核说明',a.note)):'');
 }
 /* 退货申诉表单：按实际情况填写（实际拿到 / 坏了几件，系统算申诉数量与预计赔付）→ 提交 */
 function openRetAppeal(g,onDone){
@@ -844,7 +846,7 @@ function openRetAppeal(g,onDone){
         ${line('退回数量',`<span>${x.retQty} ${x.unit}</span>`)}
         ${goods?line(sysL(x),`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,x.retQty))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
         ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}
-        ${line(g._priceLabel||'售后单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
+        ${line(g._priceLabel||'原订单结算单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
       </div>`;}).join('')}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px"><span style="color:var(--sub)">预计赔付</span><b id="ra-total" style="font-size:17px;color:var(--emerald-2)">—</b></div>
       <div id="ra-nop" style="font-size:12px;color:#B45309;text-align:right"></div></div>
@@ -921,13 +923,10 @@ window.FM.DB.whReturns = window.FM.DB.whReturns || [
 const WHR=()=>window.FM.DB.whReturns||[];
 /* 仓库退回申诉（scm_退货申诉_prd.md，与 PC pc-modules/delivery.js whrAdapter 同口径）：
    以【退回单号 returnNo】为单位（一张送货单可多条退回记录），每条 1 次；2026-10-27 起待取回 / 已取回都能申诉、不限时间；
-   赔付 = 核定数量 × 供货单价（送错货不进结算，按商家供货价）→ 业务调整单「平台付给商家」 */
+   赔付 = 核定数量 × 供货单价（送错货不进结算，按商家供货价）→ 赔付单推送进结算单 */
 window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
   'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
-    items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,adjNo:'TZ-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'},
-  // 核定后还没进结算单（待进结算单 · 待开票），演示合并开票；与 PC 同
-  'WR20260628002':{kind:'goods',status:'成立',at:relTs(-5),reviewAt:relTs(-2),desc:'取回 1 件生菜压烂',photos:2,compStatus:'已生成',
-    items:[{name:'生菜',ret:4,sysPick:4,actual:4,damaged:1,short:0,qty:1,price:2.50,ok:1}],comp:2.50,adjNo:'TZ-20261026-114',note:'虚拟库位叠放压损，平台承担'}
+    items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,compNo:'PF-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
 };
 function whrAdapter(no){
   const g=whrGroups().find(x=>x.no===no); if(!g)return null;
@@ -1094,9 +1093,9 @@ window.FM_MOD.return=openReturn;
 // 退货赔付（财务 › 退货赔付，retcomp.js）取数：核定成立/部分成立且赔付>0 的申诉，一笔一行
 window.FM_MOD.retCompSrc=()=>{
   const out=[];
-  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({adjNo:ra.adjNo,src:'客户退货',retNo:g.no,ra,priceLabel:'售后单价',open:()=>openReturnDetail(g.no)});});
+  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'客户退货',retNo:g.no,ra,priceLabel:'原订单结算单价',open:()=>openReturnDetail(g.no)});});
   const wa=window.FM.DB.whrAppeals||{};
-  Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({adjNo:ra.adjNo,src:'仓库退回',retNo:no,ra,priceLabel:'供货单价',open:()=>openWhrDetail(no)});});
+  Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'供货单价',open:()=>openWhrDetail(no)});});
   return out;
 };
 window.FM_MOD.raKindLabel=raKindLabel;

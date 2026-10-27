@@ -94,15 +94,16 @@ const CUR={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',g
   // 业务调整：运营平台建单推送、清结算按生效日期归期进本单；dir +1 平台补给商家 / −1 从结算扣回；amt 含税金额恒正
   adjust:[{no:'ADJ-SG-20260612-001',type:'平台活动补贴',dir:1,amt:120.00,ded:'账扣',biz:'',at:'2026-06-12 18:30'},
           {no:'ADJ-SG-20260618-002',type:'质量问题扣款',dir:-1,amt:64.00,ded:'账扣',biz:'QC-26061801',at:'2026-06-18 09:12'},
-          {no:'ADJ-SG-20260625-001',type:'佣金差额调整',dir:-1,amt:300.00,ded:'票扣',biz:'SVC-INV-2026-702',at:'2026-06-25 14:05'},
-          {no:'TZ-20260618-317',type:'退货申诉赔付',dir:1,amt:18.00,ded:'账扣',biz:'TKD2026061808190012',at:'2026-06-18 15:20'}],
-  items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',3,-314.40],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95],['平台补采扣款（含税）',3,-44.60],['缺货罚款',3,-720.00],['售后补货扣款（含税）',2,-98.40],['业务调整 · 平台补款',2,138.00],['业务调整 · 平台扣款',2,-364.00]]};
+          {no:'ADJ-SG-20260625-001',type:'佣金差额调整',dir:-1,amt:300.00,ded:'票扣',biz:'SVC-INV-2026-702',at:'2026-06-25 14:05'}],
+  // 退货申诉赔付单：货权转移阶段直接推送进结算单，计入应结与应开票金额，随结算单开票（与 PC comp[] 同）
+  comp:[{no:'PF-20260618-317',amt:18.00,biz:'TKD2026061808190012',at:'2026-06-18 15:20'}],
+  items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',3,-314.40],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95],['平台补采扣款（含税）',3,-44.60],['缺货罚款',3,-720.00],['售后补货扣款（含税）',2,-98.40],['业务调整 · 平台补款',1,120.00],['业务调整 · 平台扣款',2,-364.00],['退货申诉赔付',1,18.00]]};
 const HIST=[
   {period:'2026年5月',no:'ST202605-M0815',range:'2026-05-01 ~ 05-31',genDate:'2026-06-01',status:'paid',
    gross:44180.00,reverse:210.00,feeSvc:1104.50,feeLogi:662.70,repl:118.60,replCnt:2,fine:560.00,fineCnt:2,fill:55.20,fillCnt:1,net:41558.00,
-   adjust:[{no:'ADJ-SG-20260520-001',type:'错账补回',dir:1,amt:80.00,ded:'账扣',biz:'#SG20260512033',at:'2026-05-20 11:02'},
-           {no:'TZ-20260521-208',type:'退货申诉赔付',dir:1,amt:9.00,ded:'账扣',biz:'SH20260518001',at:'2026-05-21 10:05'}],payTime:'2026-06-03 09:12 已到账 DBS ****8821',
-   items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['平台补采扣款（含税）',2,-118.60],['缺货罚款',2,-560.00],['售后补货扣款（含税）',1,-55.20],['业务调整 · 平台补款',2,89.00]]},
+   adjust:[{no:'ADJ-SG-20260520-001',type:'错账补回',dir:1,amt:80.00,ded:'账扣',biz:'#SG20260512033',at:'2026-05-20 11:02'}],
+   comp:[{no:'PF-20260521-208',amt:9.00,biz:'SH20260518001',at:'2026-05-21 10:05'}],payTime:'2026-06-03 09:12 已到账 DBS ****8821',
+   items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['平台补采扣款（含税）',2,-118.60],['缺货罚款',2,-560.00],['售后补货扣款（含税）',1,-55.20],['业务调整 · 平台补款',1,80.00],['退货申诉赔付',1,9.00]]},
   {period:'2026年4月',no:'ST202604-M0815',range:'2026-04-01 ~ 04-30',genDate:'2026-05-01',status:'paid',
    gross:39650.00,reverse:0,feeSvc:991.25,feeLogi:594.75,net:38064.00,payTime:'2026-05-06 09:08 已到账 DBS ****8821',
    items:[['订单货款（含历史）',80,39650.00],['逆向扣减（售后判商家责）',0,0],['平台抽佣·服务佣金（按品类佣金率）',80,-991.25],['物流抽佣·物流佣金（按品类佣金率）',80,-594.75]]},
@@ -111,6 +112,7 @@ const rows=()=>[CUR,...HIST];
 // 业务调整按方向汇总：d=1 补款合计、d=-1 扣款合计（均为正数）
 const adjOf=(b,d)=>(b.adjust||[]).filter(a=>a.dir==d);
 const adjSum=(b,d)=>adjOf(b,d).reduce((s,a)=>s+a.amt,0);
+const compSum=b=>(b.comp||[]).reduce((s,a)=>s+a.amt,0);   // 退货申诉赔付（加款）
 const money=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const statusChip=b=>{
   if(b.status=='paid')return `<span class="se-chip se-c-green">已结清</span>`;
@@ -129,7 +131,8 @@ function askConfirmBill(after){
     .concat((b.fine||0)>0?[['缺货罚款',-b.fine]]:[])
     .concat((b.fill||0)>0?[['售后补货扣款（含税）',-b.fill]]:[])
     .concat(adjSum(b,1)>0?[['业务调整 · 平台补款',adjSum(b,1)]]:[])
-    .concat(adjSum(b,-1)>0?[['业务调整 · 平台扣款',-adjSum(b,-1)]]:[]);
+    .concat(adjSum(b,-1)>0?[['业务调整 · 平台扣款',-adjSum(b,-1)]]:[])
+    .concat(compSum(b)>0?[['退货申诉赔付',compSum(b)]]:[]);
   const tbl=rows.map(r=>`<div class="se-cfm-r"><span>${r[0]}</span><b style="${r[1]<0?'color:var(--red)':''}">${r[1]<0?'-':''}${money(Math.abs(r[1]))}</b></div>`).join('');
   confirmDialog({title:'认可账单',okText:'确认认可',
     body:`<div class="se-cfm">
@@ -205,7 +208,7 @@ function openDetail(b){
     ${isCur?`<div class="se-steps">${STEPS.map((s,i)=>`<div class="s ${i<idx?'done':i==idx?'cur':''}"><div class="d"></div>${s}</div>`).join('')}</div>`:''}
 
     <div class="se-card">
-      <div class="se-ct">结算单构成<span class="desc">应清算给供应商 = 汇总总额 − 逆向 − 抽佣 − 扣款项${(b.adjust||[]).length?' ± 业务调整':''}</span></div>
+      <div class="se-ct">结算单构成<span class="desc">应清算给供应商 = 汇总总额 − 逆向 − 抽佣 − 扣款项${(b.adjust||[]).length?' ± 业务调整':''}${compSum(b)>0?' + 退货赔付':''}</span></div>
       <div class="se-row"><span class="k">汇总总额（GMV）</span><span class="v">${money(b.gross)}</span></div>
       <div class="se-row"><span class="k">逆向扣减（售后退款·判商家责）</span><span class="v neg">-${money(b.reverse)}</span></div>
       <div class="se-row"><span class="k">平台抽佣（服务佣金）${b.feeSvc>0?'':'· 免佣期'}</span><span class="v neg">-${money(b.feeSvc)}</span></div>
@@ -215,8 +218,9 @@ function openDetail(b){
       ${(b.fill||0)>0?`<div class="se-row"><span class="k">售后补货扣款（含税 · ${b.fillCnt} 单）</span><span class="v neg">-${money(b.fill)}<span class="eq">自营商品原定价，不加价 · 不计罚款</span></span></div>`:''}
       ${adjSum(b,1)>0?`<div class="se-row"><span class="k">业务调整 · 平台补款（${adjOf(b,1).length} 单）</span><span class="v" style="color:var(--emerald-2)">+${money(adjSum(b,1))}</span></div>`:''}
       ${adjSum(b,-1)>0?`<div class="se-row"><span class="k">业务调整 · 平台扣款（${adjOf(b,-1).length} 单）</span><span class="v neg">-${money(adjSum(b,-1))}</span></div>`:''}
+      ${compSum(b)>0?`<div class="se-row"><span class="k">退货申诉赔付（${b.comp.length} 单）</span><span class="v" style="color:var(--emerald-2)">+${money(compSum(b))}<span class="eq">计入应开票金额</span></span></div>`:''}
       <div class="se-row brand"><span class="k">应清算给供应商</span><span class="v">${money(b.net)}</span></div>
-      <div class="se-idn">${money(b.net)} + ${money(b.reverse+b.feeSvc+b.feeLogi+(b.repl||0)+(b.fine||0)+(b.fill||0)+adjSum(b,-1))}${adjSum(b,1)>0?` − ${money(adjSum(b,1))}`:''} = ${money(b.gross)} ✓ 勾稽平</div>
+      <div class="se-idn">${money(b.net)} + ${money(b.reverse+b.feeSvc+b.feeLogi+(b.repl||0)+(b.fine||0)+(b.fill||0)+adjSum(b,-1))}${adjSum(b,1)+compSum(b)>0?` − ${money(adjSum(b,1)+compSum(b))}`:''} = ${money(b.gross)} ✓ 勾稽平</div>
       ${(b.repl||0)>0?`<div class="se-tip">本期含<b>平台补采扣款 ${money(b.repl)}</b>（${b.replCnt} 单）——你送货到仓少货、由平台自营现货补货的部分，视同你向平台采购；<b>少货不下调 GMV 与抽佣</b>。<span id="se-repl-lk" style="font-weight:700;cursor:pointer">查看平台补采单 ›</span></div>`:''}
       ${(b.fill||0)>0?`<div class="se-tip">本期含<b>售后补货扣款 ${money(b.fill)}</b>（${b.fillCnt} 单）——客户签收后发现缺货、判你责且要求补货不退款，由平台<b>自营现货补发</b>给客户的部分，按自营商品原定价计价、<b>不计缺货罚款</b>；自营库存不足转退款的部分已计入上方<b>逆向扣减</b>。<span id="se-fill-lk" style="font-weight:700;cursor:pointer">查看售后补货单 ›</span></div>`:''}
     </div>
@@ -226,11 +230,9 @@ function openDetail(b){
       ${b.adjust.map(a=>`<div class="se-row" style="align-items:flex-start"><span class="k">${a.type} <span class="se-chip se-c-gray">${a.ded}</span><br><span style="font-size:11.5px;color:var(--sub)">${a.no}${a.biz?' · 关联 '+a.biz:''} · 生效 ${a.at.slice(0,10)}</span></span><span class="v ${a.dir<0?'neg':''}" style="${a.dir>0?'color:var(--emerald-2)':''}">${a.dir>0?'+':'-'}${money(a.amt)}</span></div>`).join('')}
       <div class="se-tip">业务调整是平台与你线下确认后创建的补款 / 扣款单，按<b>生效日期</b>归入本期结算：<b>平台补款</b>加到应清算金额，<b>平台扣款</b>从中扣除。<b>账扣</b>不开发票；<b>票扣</b>会对关联的原发票开票调整，金额以含税计。业务调整不计 GMV、不计抽佣；有异议请先联系对接运营，先不要认可。</div>
     </div>`:''}
-    ${(()=>{const c=window.FM_MOD&&FM_MOD.retCompBillSum?FM_MOD.retCompBillSum(b.no):null;if(!c)return '';
-      return `<div class="se-card"><div class="se-ct">退货申诉赔付<span class="desc">${c.n} 笔 · 已计入业务调整 · 平台补款</span></div>
-        <div class="se-row"><span class="k">赔付合计（含税）</span><span class="v" style="color:var(--emerald-2)">+${money(c.sum)}</span></div>
-        <div class="se-row"><span class="k">开票状态</span><span class="v" style="${c.st==='待开票'?'color:#B45309':''}">${c.st}</span></div>
-        <div class="se-tip">${c.todo?`其中 <b>${c.todo} 笔待开票</b>，请开发票给 Foodmax（可勾选多张合并开 1 张）`:'已全部上传发票'}；未开票不影响打款。<span id="se-rc-lk" style="font-weight:700;cursor:pointer">${c.st==='待开票'?'去上传发票':'查看赔付发票'} ›</span></div></div>`;})()}
+    ${compSum(b)>0?`<div class="se-card"><div class="se-ct">退货申诉赔付<span class="desc">${b.comp.length} 单 · 客服核实成立</span></div>
+      ${b.comp.map(c=>`<div class="se-row" style="align-items:flex-start"><span class="k">${c.no}<br><span style="font-size:11.5px;color:var(--sub)">关联 ${c.biz} · 核定 ${c.at.slice(0,10)}</span></span><span class="v" style="color:var(--emerald-2)">+${money(c.amt)}</span></div>`).join('')}
+      <div class="se-tip">赔付单直接推送进本结算单，<b>已计入应结金额与应开票金额</b>，请随本结算单一并开票，无需单独开票。<span id="se-rc-lk" style="font-weight:700;cursor:pointer">查看退货赔付 ›</span></div></div>`:''}
 
     <div class="se-card">
       <div class="se-ct">账单构成<span class="desc">按类目汇总</span></div>
@@ -272,7 +274,7 @@ function openDetail(b){
     footer:foot,
     mount:(p)=>{
       const close=p.querySelector('#se-close');if(close)close.onclick=popPage;
-      const rc=p.querySelector('#se-rc-lk');if(rc)rc.onclick=()=>{if(window.FM_MOD&&FM_MOD.retcomp)FM_MOD.retcomp('inv');};
+      const rc=p.querySelector('#se-rc-lk');if(rc)rc.onclick=()=>{if(window.FM_MOD&&FM_MOD.retcomp)FM_MOD.retcomp();};
       const lk=p.querySelector('#se-repl-lk');
       if(lk)lk.onclick=()=>{window.FM_MOD&&window.FM_MOD.replen?window.FM_MOD.replen():toast('平台补采模块加载中');};
       const lk3=p.querySelector('#se-inv-lk');
@@ -284,5 +286,5 @@ function openDetail(b){
 
 window.FM_MOD=window.FM_MOD||{};
 window.FM_MOD.settle=openSettle;
-window.FM_MOD.settleBills=()=>rows().map(b=>({no:b.no,range:b.range,cur:b===CUR,adjust:b.adjust||[]}));
+window.FM_MOD.settleBills=()=>rows().map(b=>({no:b.no,range:b.range,cur:b===CUR,comp:b.comp||[]}));
 })();
