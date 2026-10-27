@@ -502,7 +502,7 @@
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="whr_detail('${g.no}')">详情</button>${(()=>{const a=whrAdapter(g.no);return a&&retAppealOpen(a)?` <button class="btn btn-o btn-sm" onclick="whr_appeal('${g.no}')">申诉</button>`:'';})()} <button class="btn btn-o btn-sm" onclick="DB.delivTab='sign';DB.delivView='${g.deliveryNo}';nav('m-delivery')">送货单</button></td>
       </tr>`).join('')}
       </tbody></table></div>
-      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">状态由<b>仓库</b>在交接时按项回写（待取回 → 已取回），同单部分取回时显示「部分取回」；商家端只读。取货时间<b>线下与仓库确认</b>，本期不做线上预约。${DB.whrAppealOn?'待取回、已取回都可以点<b>申诉</b>（数量不对、坏了不能卖或其他问题），不限时间，每条退回记录 1 次。':''}</div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">状态由<b>仓库</b>在交接时按项回写（待取回 → 已取回），同单部分取回时显示「部分取回」；商家端只读。取货时间<b>线下与仓库确认</b>，本期不做线上预约。</div>
     </div>`;
   };
   // 仓库退回详情（右侧抽屉）：逐 SKU 区分展示
