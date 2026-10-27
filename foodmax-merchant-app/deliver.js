@@ -736,53 +736,57 @@ const RETURN=[
   items:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}]},
  {no:'TKD2026061808190012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
   items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:4,pickQty:2,price:18.00}],
-  appeal:{type:'short',status:'部分成立',at:'2026-06-17 15:02',reviewAt:'2026-06-18 11:30',desc:'仓库只找到 2 箱，另 2 箱未见',photos:0,
-    items:[{name:'番茄',qty:2,price:18.00,ok:1}],comp:18.00,adjNo:'TZ-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
+  appeal:{kind:'goods',status:'部分成立',at:'2026-06-17 15:02',reviewAt:'2026-06-18 11:30',desc:'仓库只找到 2 箱，另 2 箱未见',photos:0,compStatus:'已生成',
+    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,adjNo:'TZ-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
 ];
 const retSum=g=>g.items.reduce((s,x)=>s+x.retQty,0);
 // 取回数量 = 各 SKU WMS 累计出库数量（可分次取）；SKU 无出库记录 = null，退货单进入 已提货 时补 0；
 // 单 SKU null 显示「—」；合计全 null 显示「—」、否则 null 按 0 计。纯展示不标色（与 PC 同口径）
 const pickOf=(g,x)=>(x.pickQty==null&&g.st==='已提货')?0:x.pickQty;
-/* 退货单申诉（2026-10-14 草案，口径待拍板，与 PC RA-01~06 同口径）：只管退回的实物，不改原售后判责
-   待仓库入库：生成满 48h 仍未到仓 → 可申诉「未到仓」；已提货：提货后 24h 内 → 少取/没拿到/货损不可售；待提货不开放
-   默认类型：取回<退回 → 少取，否则 → 货损；申诉数量按类型预填上限；货损必传照片；每单 1 次；平台 48h 内核定
-   赔付 = Σ 核定数量 × 售后单价，走业务调整单「平台付给商家」进当期结算 */
-const RA_TYPES={short:'少取',none:'没拿到',noarrive:'未到仓',damage:'货损不可售'};
-const RA_WAIT_H=48,RA_WIN_H=24,RA_REVIEW_H=48;
-const RA_TONE={'审核中':['#E8F0FE','#2563EB'],'成立':['var(--mint-soft)','var(--emerald-2)'],'部分成立':['var(--amber-soft)','#B45309'],'不成立':['var(--muted)','var(--sub)']};
+/* 退货单申诉（scm_退货申诉_prd.md，与 PC retAppealWin / raModal 同口径）：只管退回的实物，不改原售后判责
+   2026-10-27：所有状态都能申诉（已取消除外），不设时间窗口
+   · 实物问题（待提货 / 已提货 / 逾期未提(存量)；仓库退回待取回 / 已取回）：按 SKU 填「实际数量」（默认=系统记录：已提货/已取回取取回数，
+     在仓取退回数）和「其中坏了不能卖」（默认 0），申诉数量 = (退回 − 实际数量) + 损坏，系统算；有损坏时照片必填
+   · 未到仓（待仓库入库）：申诉数量默认 = 退回数量
+   · 其他：申诉数量全为 0 但说明写了问题 → 按「其他」提交，平台核定数量（上限 = 退回数量）
+   · 每张退货单 / 每条退回记录 1 次；平台 48h 内给结果
+   · 赔付 = Σ 核定数量 × 单价（客户退货=售后单价，仓库退回=供货单价），生成业务调整单（平台付给商家） */
+const RA_KIND={goods:'实物问题',noarrive:'未到仓'};
+const RA_REVIEW_H=48;
+const raKindLabel=a=>a.other?'其他':RA_KIND[a.kind];
+// 系统记录数：已提货 / 已取回 → 系统取回数；还在仓里 → 退回数量
+const raSys=(g,x)=>(g._whr?x._picked:g.st==='已提货')?(x.pickQty||0):x.retQty;
+const RA_TONE={'平台处理中':['#E8F0FE','#2563EB'],'成立':['var(--mint-soft)','var(--emerald-2)'],'部分成立':['var(--amber-soft)','#B45309'],'不成立':['var(--muted)','var(--sub)']};
 const msTs=ms=>relTs((ms-Date.now())/3600000);
 const tsMs=v=>{const t=v?Date.parse(String(v).replace(' ','T')):NaN;return isNaN(t)?0:t;};
 const fmtS=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const r2=n=>Math.round((+n||0)*100)/100;
 function raWin(g){
   if(g.appeal)return null;
-  if(g.st==='待仓库入库')return {from:tsMs(g.gen)+RA_WAIT_H*3600000,to:0,types:['noarrive']};
-  if(g.st==='已提货')return {from:0,to:tsMs(g.pickup)+RA_WIN_H*3600000,types:['short','none','damage']};
-  return null;
+  if(g.st==='待仓库入库')return {kind:'noarrive'};
+  if(['待提货','已提货','逾期未提'].includes(g.st))return {kind:'goods'};
+  return null;   // 已取消等：不开放
 }
-function raOpen(g){const w=raWin(g);if(!w)return false;const n=Date.now();return (!w.from||n>=w.from)&&(!w.to||n<w.to);}
-function raDefault(g){if(g.st==='待仓库入库')return 'noarrive';return (pickVal(g)||0)<retSum(g)?'short':'damage';}
-function raMax(g,x,t){const r=x.retQty||0,p=pickOf(g,x)||0;return t==='short'?Math.max(r-p,0):t==='noarrive'?r:p;}
-function raTag(st){const c=RA_TONE[st]||RA_TONE['不成立'];return `<span style="display:inline-block;background:${c[0]};color:${c[1]};font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px">${st==='审核中'?'申诉审核中':'申诉'+st}</span>`;}
+function raOpen(g){return !!raWin(g);}
+function raTag(st){const c=RA_TONE[st]||RA_TONE['不成立'];return `<span style="display:inline-block;background:${c[0]};color:${c[1]};font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px">${st==='平台处理中'?'退货申诉·平台处理中':'退货申诉'+st}</span>`;}
 // 卡片/详情上的申诉状态一行
 function raLine(g){
   if(g.appeal)return raTag(g.appeal.status);
-  const w=raWin(g);if(!w)return '';const n=Date.now();
-  if(w.from&&n<w.from)return '';
-  if(w.to&&n>=w.to)return `<span style="color:var(--sub)">申诉已截止</span>`;
-  return `<span style="color:var(--emerald-2)">可申诉</span>`;
+  return raWin(g)?`<span style="color:var(--emerald-2)">可申诉</span>`:'';
 }
 function pickVal(g,x){
   const vals=(x?[x]:g.items).map(i=>pickOf(g,i));
   return vals.every(v=>v==null)?null:vals.reduce((s,v)=>s+(v||0),0);
 }
 function pickHtml(g,x){const v=pickVal(g,x);return v==null?'<span style="color:var(--sub)">—</span>':`${v}`;}
+const raBtn=no=>`<span data-ra="${no}" style="min-height:44px;min-width:88px;padding:0 14px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13.5px;cursor:pointer">退货申诉</span>`;
 function returnCard(g){
   return `<div class="dl-rcard" data-rno="${g.no}" style="cursor:pointer">
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     <div class="dl-kbox" style="margin-top:10px;padding:10px 0"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div></div>
     <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?`已于 ${g.pickup} 提货`:'—'}</span></div>
-    ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?`<span data-ra="${g.no}" style="min-height:36px;min-width:72px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13px;cursor:pointer">申诉</span>`:''}</div>`:''}
+    ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
 }
 // 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
@@ -802,76 +806,91 @@ function openReturnDetail(no){
     </div>`).join(''))}
     ${raDetail(g,sec,box,kv)}
     <div style="height:8px"></div>`,
-    footer:raOpen(g)?`<button class="btn primary" id="ra-go">申诉</button>`:'',
-    mount:(p)=>{const b=p.querySelector('#ra-go');if(b)b.onclick=()=>openRetAppeal(g,true);}});
+    footer:raOpen(g)?`<button class="btn primary" id="ra-go">退货申诉</button>`:'',
+    mount:(p)=>{const b=p.querySelector('#ra-go');if(b)b.onclick=()=>openRetAppeal(g,()=>{popPage();openReturnDetail(no);});}});
 }
+const raTip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
 function raDetail(g,sec,box,kv){
-  if(!g)return sec('退货申诉')+`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">商品取回后 24 小时内，如发现少取、没拿到或货损，可发起申诉。</div>`;
+  if(!g)return '';
   const a=g.appeal;
-  if(!a&&g._whr){const w=raWin(g);const m=Date.now()>=w.to?'最近一次取回已超过 24 小时，申诉已截止。':`取回后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，截止时间 <b>${msTs(w.to)}</b>。只能申诉已取回的商品，每单 1 次。`;
-    return sec('退货申诉')+`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${m}</div>`;}
   if(!a){
-    const w=raWin(g),n=Date.now();let msg='';
-    if(g.st==='待提货')msg='货物已到仓，凭提货码到仓提货即可。提货后 24 小时内如发现少取、没拿到或货损，可发起申诉。';
-    else if(!w)return '';
-    else if(w.from&&n<w.from)msg=`退货单生成满 ${RA_WAIT_H} 小时仍未到仓可申诉「未到仓」，预计 ${msTs(w.from)} 起可申诉。`;
-    else if(w.to&&n>=w.to)msg='提货已超过 24 小时，申诉已截止。';
-    else msg=w.to?`提货后 24 小时内可申诉「少取 / 没拿到 / 货损不可售」，截止时间 <b>${msTs(w.to)}</b>。每单只能申诉 1 次。`:'货物超过 48 小时仍未到仓，可申诉「未到仓」。每单只能申诉 1 次。';
-    return sec('退货申诉')+`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${msg}</div>`;
+    const w=raWin(g);if(!w)return '';
+    const once=g._whr?'每条退回记录只能申诉 1 次。':'每张退货单只能申诉 1 次。';
+    const msg=w.kind==='noarrive'?`货还没到仓。如一直没到仓或有其他问题，可以申诉「未到仓」，不限时间。${once}`
+      :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`
+      :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
+    return sec('退货申诉')+raTip(msg);
   }
-  return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',RA_TYPES[a.type])+kv('申诉时间',a.at)+(a.status==='审核中'?kv('核定截止时间',msTs(a.reviewDue)):kv('核定时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
+  const goods=a.kind==='goods',PL=g._priceLabel||'售后单价';
+  const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.adjNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中，生成后平台付给你</span>':'—');
+  return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
-      <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>申诉数量 ${x.qty}</span><span>核定数量 ${x.ok==null?'—':x.ok}</span><span>${g._priceLabel||'售后单价'} ${fmtS(x.price)}</span><span>赔付 ${x.ok==null?'—':fmtS(x.ok*x.price)}</span></div></div>`).join(''))
-    +(a.status!=='审核中'?sec('核定结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('业务调整单',a.adjNo?`<span style="font-family:monospace">${a.adjNo}</span>`:'—')+kv('核定说明',a.note)):'');
+      ${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}${kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price)))}</div>`).join(''))
+    +(a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('业务调整单',comp)+kv('审核说明',a.note)):'');
 }
-/* 退货申诉表单：类型（按状态给可选项、系统预选）→ 申诉数量（已预填）→ 提交；预计赔付自动算 */
-function openRetAppeal(g,fromDetail){
-  if(!raOpen(g))return toast('当前不在申诉时间内');
-  const w=raWin(g);let type=raDefault(g),photo=false;
-  const tips={short:'取回数量少于退回数量，申请平台赔付差额。',none:'系统显示已提货，但你实际没有拿到这些货。',noarrive:`退货单生成已超过 ${RA_WAIT_H} 小时，货物仍未到仓。`,damage:g._whr?'货物在平台仓暂存期间损坏，无法再售卖。':'货物在平台仓暂存或运输中损坏，无法再售卖。客户退回时就已损坏的属于判责问题，不在此申诉。'};
+/* 退货申诉表单：按实际情况填写（实际拿到 / 坏了几件，系统算申诉数量与预计赔付）→ 提交 */
+function openRetAppeal(g,onDone){
+  if(!raOpen(g))return toast('该单不能申诉');
+  const w=raWin(g),goods=w.kind==='goods';let photo=false,dirty=false;
+  const sysL=x=>g._whr?(x._picked?'系统记录取回':'在仓数量'):(g.st==='已提货'?'系统记录提货':'应有数量'),actL=x=>(g._whr?x._picked:g.st==='已提货')?'实际拿到':(g._whr?'实际在仓':'实际数量（已拿到＋仓里还在）');
+  const inp=(cls,k,v,mx)=>`<input class="${cls}" data-k="${k}" type="number" inputmode="decimal" min="0" ${mx!=null?`max="${mx}"`:''} step="any" value="${v}" style="width:76px;height:44px;text-align:center;font-size:16px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit">`;
+  const line=(l,r)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0"><span style="font-size:13px;color:#46604F">${l}</span>${r}</div>`;
   pushPage({title:'退货申诉',body:`
-    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${g._whr?'每张送货单的仓库退回':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内核定。${w.to?`申诉截止时间 <b>${msTs(w.to)}</b>。`:''}${g._whr?'只能申诉已取回的商品。':'本申诉只针对退回的货，不影响原售后单判责。'}</div>
-    <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉类型</span></div>
-      <div id="ra-types" style="display:flex;flex-wrap:wrap;gap:9px"></div>
-      <div id="ra-tip" style="font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5"></div></div>
-    <div class="as-dblock"><div class="bt"><span>申诉数量</span><span style="font-size:12px;color:var(--sub);font-weight:400">已按类型预填，可改小</span></div><div id="ra-items"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px"><span style="color:var(--sub)">预计赔付</span><b id="ra-total" style="font-size:17px;color:var(--emerald-2)">—</b></div></div>
-    <div class="as-dblock"><div class="bt"><span>说明</span><span style="font-size:12px;color:var(--sub);font-weight:400">选填</span></div>
-      <textarea id="ra-desc" placeholder="例：到仓提货时仓库只找到 1 箱番茄" style="width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:12px;padding:11px;font-size:16px;font-family:inherit;outline:none;resize:none"></textarea></div>
-    <div class="as-dblock"><div class="bt"><span>照片</span><span id="ra-phreq" style="font-size:12px;font-weight:400"></span></div>
+    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${g._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。</div>
+    ${g._pendingCount?`<div style="margin:10px 16px 0;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">本条退回记录还有 <b>${g._pendingCount} 项</b>未取回。每条记录只能申诉 1 次，提交后这些商品取回时<b>不能再申诉</b>。</div>`:''}
+    <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>${goods?'按实际情况填写':'未到仓数量'}</span><span style="font-size:12px;color:var(--sub);font-weight:400">${goods?'数量不对就改，都没问题写说明':'默认全部，其他问题改 0 写说明'}</span></div>
+      ${g.items.map((x,k)=>{const sp=raSys(g,x);return `<div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+        <b style="font-size:14px">${x.name}</b>${g._whr?`<span style="font-size:11.5px;color:var(--sub);margin-left:6px">${x._picked?'已取回':'待取回'}</span>`:''}
+        ${line('退回数量',`<span>${x.retQty} ${x.unit}</span>`)}
+        ${goods?line(sysL(x),`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,x.retQty))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
+        ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}
+        ${line(g._priceLabel||'售后单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
+      </div>`;}).join('')}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px"><span style="color:var(--sub)">预计赔付</span><b id="ra-total" style="font-size:17px;color:var(--emerald-2)">—</b></div>
+      <div id="ra-nop" style="font-size:12px;color:#B45309;text-align:right"></div></div>
+    <div class="as-dblock"><div class="bt"><span>说明</span><span id="ra-descreq" style="font-size:12px;color:var(--sub);font-weight:400">选填，最多 500 字</span></div>
+      <textarea id="ra-desc" maxlength="500" placeholder="例：到仓提货时仓库只找到 1 箱番茄" style="width:100%;min-height:80px;border:1.5px solid var(--line);border-radius:12px;padding:11px;font-size:16px;font-family:inherit;outline:none;resize:none"></textarea></div>
+    <div class="as-dblock"><div class="bt"><span>照片</span><span id="ra-phreq" style="font-size:12px;font-weight:400;color:var(--sub)">选填</span></div>
       <div class="as-imgs"><div class="im" id="ra-ph" style="width:72px;height:72px;cursor:pointer;display:flex;align-items:center;justify-content:center">${svg('box')}</div></div>
       <div style="font-size:12px;color:var(--sub);margin-top:6px">货物现状 / 提货单 / 包装标签，最多 9 张</div></div>
     <div style="height:6px"></div>`,
     footer:`<button class="btn primary" id="ra-sub">提交申诉</button>`,
     mount:(p)=>{
       const q=sel=>p.querySelector(sel);
-      const qtys=()=>[...p.querySelectorAll('.ra-q')].map(el=>{const mx=+el.max;let v=Math.floor(+el.value||0);v=Math.min(Math.max(v,0),mx);return {k:+el.dataset.k,qty:v};});
-      const calc=()=>{q('#ra-total').textContent=fmtS(qtys().reduce((s,x)=>s+x.qty*g.items[x.k].price,0));};
-      const draw=()=>{
-        q('#ra-types').innerHTML=w.types.map(t=>`<span data-t="${t}" style="min-height:40px;padding:0 16px;display:flex;align-items:center;border-radius:999px;font-size:13.5px;font-weight:600;cursor:pointer;${t===type?'background:var(--mint-soft);color:var(--emerald-2);border:1.5px solid var(--emerald)':'background:#fff;color:#46604F;border:1.5px solid var(--line)'}">${RA_TYPES[t]}</span>`).join('');
-        q('#ra-tip').textContent=tips[type];
-        q('#ra-items').innerHTML=g.items.map((x,k)=>{const mx=raMax(g,x,type);return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-          <div style="min-width:0"><b style="font-size:14px">${x.name}</b><div style="font-size:11.5px;color:var(--sub);margin-top:3px">退回 ${x.retQty} · 取回 ${pickHtml(g,x)} · ${fmtS(x.price)}/${x.unit}</div></div>
-          <input class="ra-q" data-k="${k}" type="number" inputmode="numeric" min="0" max="${mx}" value="${mx}" ${mx?'':'disabled'} style="width:72px;height:40px;text-align:center;font-size:16px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit"></div>`;}).join('');
-        q('#ra-phreq').innerHTML=type==='damage'?'<span style="color:var(--red)">必填，至少 1 张</span>':'<span style="color:var(--sub)">选填</span>';
-        p.querySelectorAll('#ra-types [data-t]').forEach(c=>c.onclick=()=>{type=c.dataset.t;draw();});
-        p.querySelectorAll('.ra-q').forEach(el=>el.oninput=calc);
-        calc();
-      };
-      draw();
-      q('#ra-ph').onclick=()=>{photo=true;q('#ra-ph').innerHTML='<span style="font-size:12px;color:var(--emerald-2);font-weight:700">已传 2 张</span>';};
+      // 有填写时点返回先确认，避免误触丢内容
+      const back=p.querySelector('.back');if(back)back.onclick=()=>{if(!dirty)return popPage();confirmDialog({title:'放弃填写？',body:'已填写的内容不会保存。',okText:'放弃',onOk:popPage});};
+      const vals=()=>g.items.map((x,k)=>{
+        if(!goods){const el=q(`.ra-na[data-k="${k}"]`);const v=Math.min(Math.max(r2(el.value),0),x.retQty);return {k,ret:x.retQty,qty:v,price:x.price};}
+        const act=Math.min(Math.max(r2(q(`.ra-act[data-k="${k}"]`).value),0),x.retQty),dmg=Math.min(Math.max(r2(q(`.ra-dmg[data-k="${k}"]`).value),0),act);
+        const short=r2(x.retQty-act);return {k,ret:x.retQty,sysPick:raSys(g,x),actual:act,damaged:dmg,short,qty:r2(short+dmg),price:x.price};});
+      const calc=()=>{const vs=vals();vs.forEach(v=>{q('#ra-q-'+v.k).textContent=v.qty;});
+        q('#ra-total').textContent=fmtS(vs.reduce((s,v)=>s+(v.price==null?0:r2(v.qty*v.price)),0));
+        const nop=vs.filter(v=>v.price==null&&v.qty>0).reduce((s,v)=>s+v.qty,0);q('#ra-nop').textContent=nop?`另有 ${nop} 件单价待平台确认，按审核结果赔付`:'';
+        const dm=vs.some(v=>v.damaged>0);const rq=q('#ra-phreq');rq.textContent=dm?'有损坏，必填，至少 1 张':'选填';rq.style.color=dm?'var(--red)':'var(--sub)';
+        // 申诉数量全为 0 → 按「其他」提交，说明必填
+        const oth=!vs.some(v=>v.qty>0),dr=q('#ra-descreq');dr.textContent=oth?'数量都没问题，按「其他」申诉，必填':'选填，最多 500 字';dr.style.color=oth?'var(--red)':'var(--sub)';};
+      // 失焦时把超范围的值改回范围内，看到的 = 提交的
+      p.querySelectorAll('.ra-act,.ra-dmg,.ra-na').forEach(el=>{el.oninput=()=>{dirty=true;calc();};el.onblur=()=>{
+        const k=+el.dataset.k,x=g.items[k];let mx=x.retQty;if(el.classList.contains('ra-dmg'))mx=Math.max(r2(q(`.ra-act[data-k="${k}"]`).value),0);
+        let v=r2(el.value);if(v<0)v=0;if(v>mx){v=mx;toast(`最多 ${mx}`);}el.value=v;
+        if(el.classList.contains('ra-act')){const d=q(`.ra-dmg[data-k="${k}"]`);if(+d.value>v)d.value=v;}calc();};});
+      q('#ra-desc').oninput=()=>{dirty=true;};
+      calc();
+      q('#ra-ph').onclick=()=>{photo=true;dirty=true;q('#ra-ph').innerHTML='<span style="font-size:12px;color:var(--emerald-2);font-weight:700">已传 2 张</span>';};
       q('#ra-sub').onclick=()=>{
-        const qs=qtys();
-        if(!qs.some(x=>x.qty>0))return toast('申诉数量不能都为 0');
-        if(type==='damage'&&!photo)return toast('货损申诉请至少上传 1 张照片');
-        const b=q('#ra-sub');b.classList.add('loading');
+        const b=q('#ra-sub');if(b.classList.contains('loading'))return;
+        const vs=vals(),other=!vs.some(v=>v.qty>0),desc=q('#ra-desc').value.trim();
+        if(other&&!desc)return toast('数量都没问题的，请在说明里写清楚是什么问题');
+        if(vs.some(v=>v.damaged>0)&&!photo)return toast('有损坏的商品请至少上传 1 张照片');
+        b.classList.add('loading');
         setTimeout(()=>{b.classList.remove('loading');
-          g.appeal={type,status:'审核中',at:nowTs(),reviewDue:Date.now()+RA_REVIEW_H*3600000,desc:q('#ra-desc').value.trim(),photos:photo?2:0,
-            items:qs.filter(x=>x.qty>0).map(x=>({name:g.items[x.k].name,qty:x.qty,price:g.items[x.k].price,ok:null}))};
+          g.appeal={kind:w.kind,other,status:'平台处理中',at:nowTs(),reviewDue:Date.now()+RA_REVIEW_H*3600000,desc,photos:photo?2:0,compStatus:'无需',
+            items:vs.filter(v=>other||v.qty>0).map(v=>({name:g.items[v.k].name,ret:v.ret,sysPick:v.sysPick,actual:v.actual,damaged:v.damaged,short:v.short,qty:v.qty,cap:other?v.ret:v.qty,price:v.price,ok:null}))};
           if(g._save)g._save(g.appeal);
-          toast('退货申诉已提交，平台将在 48 小时内核定');
+          toast('退货申诉已提交，平台将在 48 小时内给出结果');
           if(g._whr){if(window._whrRedraw)window._whrRedraw();}else if(window._rtRedraw)window._rtRedraw();
-          setTimeout(()=>{popPage();if(fromDetail)popPage();},600);},600);
+          // 从详情进来的：回到刷新后的详情，直接看到「平台处理中」；从列表进来的：回列表
+          setTimeout(()=>{popPage();if(onDone)onDone();},600);},600);
       };
     }});
 }
@@ -883,42 +902,45 @@ function openRetAppeal(g,fromDetail){
    照收不设上限，多收量在送货单商品明细的差异里正向展示，并入在仓寄存库存
    （当日不可卖、次日优先抵扣，BR-16d）。本台账只保留「送错」一种类型。 ============ */
 window.FM.DB.whReturns = window.FM.DB.whReturns || [
-  {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
+  {returnNo:'WR20260628001',deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
    type:'送错',qty:6,photos:3,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:22',status:'待取回',pickedQty:null,pickedAt:'',price:3.20,
    note:'与本单小棠菜串货，实物为上海青'},
-  {deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8871',name:'菜心',spec:'1kg/件',unit:'件',
+  {returnNo:'WR20260628001',deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8871',name:'菜心',spec:'1kg/件',unit:'件',
    type:'送错',qty:3,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 01:25',status:'已取回',pickedQty:2,pickedAt:relTs(-4),price:2.80,
    note:'应送清单无此 SKU，实物为菜心'},
-  {deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8806',name:'芥兰',spec:'1kg/件',unit:'件',
+  {returnNo:'WR20260629001',deliveryNo:'SH20260629005',warehouse:'兀兰DC',skuCode:'SKU8806',name:'芥兰',spec:'1kg/件',unit:'件',
    type:'送错',qty:4,photos:2,slot:'WD-VIRT-03',registeredAt:'2026-06-29 03:40',status:'待取回',pickedQty:null,pickedAt:'',price:3.50,
    note:'应送清单无此 SKU，实物为芥兰'},
-  {deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8812',name:'咸鸭蛋',spec:'30枚/盘',unit:'盘',
+  {returnNo:'WR20260628002',deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8875',name:'生菜',spec:'1kg/件',unit:'件',
+   type:'送错',qty:4,photos:2,slot:'SG-VIRT-01',registeredAt:'2026-06-28 09:10',status:'已取回',pickedQty:4,pickedAt:relTs(-6),price:2.50,
+   note:'同一送货单第二次推送的退回记录'},
+  {returnNo:'SH20260518001',deliveryNo:'SH20260518001',warehouse:'裕廊DC',skuCode:'SKU8812',name:'咸鸭蛋',spec:'30枚/盘',unit:'盘',
    type:'送错',qty:2,photos:3,slot:'JR-VIRT-07',registeredAt:'2026-05-18 02:30',status:'已取回',pickedQty:2,pickedAt:'2026-05-20 10:15',price:9.00,
    note:'与本单鲜鸡蛋串货'},
 ];
 const WHR=()=>window.FM.DB.whReturns||[];
-/* 仓库退回申诉（2026-10-14 草案，与 PC pc-modules/delivery.js whrAdapter 同口径）：
-   只能申诉【已取回】商品；同一送货单最近一次取回后 24h 内，可申诉 少取/没拿到/货损不可售；每单 1 次；
+/* 仓库退回申诉（scm_退货申诉_prd.md，与 PC pc-modules/delivery.js whrAdapter 同口径）：
+   以【退回单号 returnNo】为单位（一张送货单可多条退回记录），每条 1 次；2026-10-27 起待取回 / 已取回都能申诉、不限时间；
    赔付 = 核定数量 × 供货单价（送错货不进结算，按商家供货价）→ 业务调整单「平台付给商家」 */
 window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
-  'SH20260518001':{type:'damage',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,
-    items:[{name:'咸鸭蛋',qty:1,price:9.00,ok:1}],comp:9.00,adjNo:'TZ-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
+  'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
+    items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,adjNo:'TZ-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
 };
 function whrAdapter(no){
   const g=whrGroups().find(x=>x.no===no); if(!g)return null;
-  const picked=g.list.filter(x=>x.status==='已取回'); if(!picked.length)return null;
-  return {_whr:true,_priceLabel:'供货单价',no,st:'已提货',pickup:picked.map(x=>x.pickedAt).sort().pop(),appeal:window.FM.DB.whrAppeals[no]||null,
-    items:picked.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price})),
+  const pc=g.list.filter(x=>x.status==='已取回').length;
+  return {_whr:true,_priceLabel:'供货单价',_pendingCount:g.list.length-pc,no,st:pc?'已提货':'待提货',appeal:window.FM.DB.whrAppeals[no]||null,
+    items:g.list.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price,_picked:r.status==='已取回'})),
     _save:ra=>{window.FM.DB.whrAppeals[no]=ra;}};
 }
 function whrOf(id){return WHR().filter(r=>r.deliveryNo===id);}
 window.whrOfDelivery=whrOf;
 function whrGroups(){
-  const map={};WHR().forEach(r=>{(map[r.deliveryNo]=map[r.deliveryNo]||[]).push(r);});
+  const map={};WHR().forEach(r=>{const k=r.returnNo||r.deliveryNo;(map[k]=map[k]||[]).push(r);});
   return Object.keys(map).map(no=>{
     const list=map[no].slice().sort((a,b)=>(a.type==='送错'?0:1)-(b.type==='送错'?0:1));
     const wait=list.filter(x=>x.status==='待取回').length;
-    return {no,list,warehouse:list[0].warehouse,slot:[...new Set(list.map(x=>x.slot))].join(' / '),
+    return {no,deliveryNo:list[0].deliveryNo,list,warehouse:list[0].warehouse,slot:[...new Set(list.map(x=>x.slot))].join(' / '),
       at:list.map(x=>x.registeredAt).sort()[0],qty:list.reduce((a,x)=>a+x.qty,0),
       // 取回数量 = Σ 已取回项 pickedQty；整单未取 → null（「—」）
       pickedQty:wait===list.length?null:list.filter(x=>x.status==='已取回').reduce((a,x)=>a+(x.pickedQty||0),0),wait,
@@ -935,10 +957,11 @@ function whrStChip(g){
   if(g.status==='部分取回')return stChip(`部分取回 ${g.list.length-g.wait}/${g.list.length}`,'var(--amber-soft)','#B45309');
   return stChip(`待取回 ${g.list.length} 项`,'#E1EBFF','#2563EB');
 }
-// 列表：一行=一张送货单（同单多项合并）
+// 列表：一张卡片=一条退回记录（退回单号）；一张送货单可能有多条
 function whrCard(g){
-  return `<div class="dl-card" data-whr="${g.no}">
-    <div class="dl-ch"><span>来源送货单</span><span class="no">${g.no}</span></div>
+  return `<div class="dl-card" data-whr="${g.no}" data-dno="${g.deliveryNo}">
+    <div class="dl-ch"><span>退回单号</span><span class="no">${g.no}</span></div>
+    <div class="dl-meta"><span class="k">来源送货单</span><span class="vv">${g.deliveryNo}</span></div>
     <div style="display:flex;align-items:center;gap:8px;margin:9px 0 3px;flex-wrap:wrap">
       ${[...new Set(g.list.map(x=>x.type))].map(whrTypeChip).join('')}${whrStChip(g)}
     </div>
@@ -948,7 +971,7 @@ function whrCard(g){
     <div class="dl-meta"><span class="k">登记</span><span class="vv">${g.at}</span></div>
     <div class="dl-kbox"><div class="k"><div class="l">退回数量</div><div class="v">${g.qty}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${g.pickedQty==null?'<span style="color:var(--sub)">—</span>':g.pickedQty}</div></div></div>
     ${(()=>{const ad=whrAdapter(g.no),l=ad?raLine(ad):'';return l?`<div style="margin-top:10px;font-size:12.5px">${l}</div>`:'';})()}
-    <div class="dl-acts"><div class="a key" data-a="whrdetail">详情</div>${(()=>{const ad=whrAdapter(g.no);return ad&&raOpen(ad)?'<div class="a" data-a="whrappeal">申诉</div>':'';})()}<div class="a" data-a="whrdeliv">送货单</div></div>
+    <div class="dl-acts"><div class="a key" data-a="whrdetail">详情</div>${(()=>{const ad=whrAdapter(g.no);return ad&&raOpen(ad)?'<div class="a" data-a="whrappeal">退货申诉</div>':'';})()}<div class="a" data-a="whrdeliv">送货单</div></div>
   </div>`;
 }
 // 详情：逐 SKU 区分
@@ -963,14 +986,14 @@ function openWhrDetail(no){
     </div>
     ${sec('单据信息')}
     ${box(
-      kv('来源送货单',`<span style="font-family:monospace">${g.no}</span>`)+
+      kv('退回单号',`<span style="font-family:monospace">${g.no}</span>`)+
+      kv('来源送货单',`<span style="font-family:monospace">${g.deliveryNo}</span>`)+
       kv('存放仓库',g.warehouse)+
       kv('虚拟库位',`<span style="font-family:monospace">${g.slot}</span>`)+
       kv('首次登记时间',g.at)+
       kv('退回商品',`${g.list.length} 个 SKU`)+
       kv('退回数量',`${g.qty}`)+
-      kv('取回数量',g.pickedQty==null?'—':`${g.pickedQty}`)+
-      kv('退回单号','无（沿用原送货单标记，不另生成单号）')
+      kv('取回数量',g.pickedQty==null?'—':`${g.pickedQty}`)
     )}
     ${sec('退回商品明细 · 逐 SKU')}
     ${box(g.list.map(r=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
@@ -985,11 +1008,11 @@ function openWhrDetail(no){
     <div style="margin:12px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">状态由<b>仓库</b>在交接时<b>按项</b>回写，同单可分批取回；商家端只读，无编辑与线上预约入口。</div>
     ${raDetail(whrAdapter(g.no),sec,box,kv)}
     <div style="height:8px"></div>`,
-    footer:(()=>{const ad=whrAdapter(g.no);return ad&&raOpen(ad)?`<div style="display:flex;gap:10px;width:100%"><button class="btn" style="flex:1" id="whr-go">查看送货单</button><button class="btn primary" style="flex:1" id="whr-ra">申诉</button></div>`:`<button class="btn primary" style="width:100%" id="whr-go">查看送货单</button>`;})(),
+    footer:(()=>{const ad=whrAdapter(g.no);return ad&&raOpen(ad)?`<div style="display:flex;gap:10px;width:100%"><button class="btn" style="flex:1" id="whr-go">查看送货单</button><button class="btn primary" style="flex:1" id="whr-ra">退货申诉</button></div>`:`<button class="btn primary" style="width:100%" id="whr-go">查看送货单</button>`;})(),
     mount:(p)=>{
-      const ra=p.querySelector('#whr-ra');if(ra)ra.onclick=()=>openRetAppeal(whrAdapter(g.no),true);
-      p.querySelectorAll('.whr-ph').forEach(e=>e.onclick=()=>openWhrPhotos(g.no,e.dataset.sku));
-      const b=p.querySelector('#whr-go');if(b)b.onclick=()=>{popPage();window.FM.DB.delivView=g.no;openSignin();};
+      const ra=p.querySelector('#whr-ra');if(ra)ra.onclick=()=>openRetAppeal(whrAdapter(g.no),()=>{popPage();openWhrDetail(no);});
+      p.querySelectorAll('.whr-ph').forEach(e=>e.onclick=()=>openWhrPhotos(g.deliveryNo,e.dataset.sku));
+      const b=p.querySelector('#whr-go');if(b)b.onclick=()=>{popPage();window.FM.DB.delivView=g.deliveryNo;openSignin();};
     }});
 }
 function openWhrPhotos(no,sku){
@@ -1011,7 +1034,7 @@ function openReturn(){
       <span class="s" data-s="whr" style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:14.5px;font-weight:700;color:var(--sub);border-radius:11px;cursor:pointer">仓库退回</span>
     </div>
     <div id="rt-cust">
-    <div class="dl-banner" id="dl-rbn"><span>三方退货货物到仓后不入库、仅暂存。<b>提货确认由仓库操作</b>，商家凭提货码到仓自提，货物在仓暂存至你提走。提货后 <b>24 小时</b>内发现少取、没拿到或货损，可在退货单上<b>申诉</b>；退货单生成满 <b>48 小时</b>仍未到仓，可申诉「未到仓」。</span><span class="x">✕</span></div>
+    <div class="dl-banner" id="dl-rbn"><span>三方退货货物到仓后不入库、仅暂存。<b>提货确认由仓库操作</b>，商家凭提货码到仓自提，货物在仓暂存至你提走。退货单<b>各状态都能退货申诉、不限时间</b>：没到仓申诉「未到仓」，在仓或提货后发现数量不对、坏了不能卖或其他问题也可以申诉。</span><span class="x">✕</span></div>
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
     <div class="dl-tabs" id="dl-rtab"><span class="t on" data-t="all">全部</span><span class="t" data-t="待仓库入库">待仓库入库</span><span class="t" data-t="待提货">待提货</span><span class="t" data-t="已提货">已提货</span></div>
     <div class="dl-list" id="dl-rtl"></div></div>
@@ -1024,14 +1047,14 @@ function openReturn(){
         const gs=whrGroups();
         whr.innerHTML=gs.length?`
           <div style="margin:8px 16px 10px;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
-            <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送错</b>（应送清单外的 SKU）的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。沿用原送货单标记，不另生成退货单号。<br><b>多送同一 SKU 不进这里</b>：仓库照收，计入你的在仓寄存库存，当日不参与售卖、次日优先抵扣应送量。
+            <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送错</b>（应送清单外的 SKU）的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。每条退回记录有自己的<b>退回单号</b>，一张送货单可能有多条。<br><b>多送同一 SKU 不进这里</b>：仓库照收，计入你的在仓寄存库存，当日不参与售卖、次日优先抵扣应送量。
           </div>
           <div class="dl-list">${gs.map(whrCard).join('')}</div>`
           :`<div class="empty"><div class="ei">${svg('box')}</div><h4>暂无待退回商品</h4><p>送货到仓被清点出送错（应送清单外的 SKU）时，仓库登记台账后在此生成取货通知；多送同一 SKU 仓库照收，不在这里</p></div>`;
         whr.querySelectorAll('[data-whr]').forEach(c=>{
           const no=c.dataset.whr;
           c.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{e.stopPropagation();
-            if(b.dataset.a==='whrdetail')openWhrDetail(no); else if(b.dataset.a==='whrappeal')openRetAppeal(whrAdapter(no)); else {window.FM.DB.delivView=no;openSignin();}});
+            if(b.dataset.a==='whrdetail')openWhrDetail(no); else if(b.dataset.a==='whrappeal')openRetAppeal(whrAdapter(no)); else {window.FM.DB.delivView=c.dataset.dno;openSignin();}});
         });
       }
       window._whrRedraw=drawWhr;
