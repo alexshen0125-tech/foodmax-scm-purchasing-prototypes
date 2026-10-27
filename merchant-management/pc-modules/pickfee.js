@@ -5,8 +5,9 @@
        近区（祝融、白斯班江一带）：S$20 / 次 / 商家，不拼车
        普通区：S$80 / 车，最多 4 家拼车，按同车实际商家数平摊（80 ÷ 同车商家数，四舍五入到分）；一车只有自己 = S$80
    - 同一商家同一天只收一次：按当天第一趟取货所在的车计费，后面的趟次（含一车装不下分到第二辆车）不再收
-   - 新商家入驻 14 天内免运费：费用照常算（同车分摊人数照常算进去），这一笔记「新商家免运费」不扣
-   - 超过 14 天还要免：招商走飞书审批（凡哥批，抄送运营），运营在取货明细里把那一笔「作废」，填原因和审批编号
+   - 免运费期：店铺有了第一次取货任务起 14 天内（含首取当天）免运费；费用照常算（同车分摊人数照常算进去），这一笔记「免运费期内」不扣
+     （2026-10-27 沈亮改：起算点由「入驻」改为「首次取货」；还没取过货的店铺不起算）
+   - 超出免运费期还要免：在取货明细勾选同一店铺的计费记录「申请免运费」→ 飞书审批（凡哥批，抄送张可心）；通过才不扣，审批中的账单不能推送
    - 按周出账（周一至周日，对齐每周结算单）；运营手动推送到对应那周的结算单，从货款里扣
    - 推送即自动开「物流服务费」发票给商家，9% GST
    ▍假设（待确认）：S$20 / S$80 是含 GST 价，发票金额 = 应扣金额，未税 = 含税 ÷ 1.09
@@ -15,12 +16,12 @@
 (function(){
 
 const SHOPS = {
-  'SH2026062000001':{name:'绿鲜源蔬果旗舰店', merchant:'M2026-0815', join:'2026-06-20'},
-  'SH2026070200004':{name:'海丰水产旗舰店',   merchant:'M2026-0902', join:'2026-07-02'},
-  'SH2026070200005':{name:'万丰肉禽旗舰店',   merchant:'M2026-1103', join:'2026-07-02'},
-  'SH2026071500006':{name:'南洋鲜果行',       merchant:'',           join:'2026-10-08'},
-  'SH2026072000007':{name:'阳光烘焙原料店',   merchant:'M2026-0820', join:'2026-07-20'},
-  'SH2026080300008':{name:'金狮干货行',       merchant:'',           join:'2026-08-03'},
+  'SH2026062000001':{name:'绿鲜源蔬果旗舰店', merchant:'M2026-0815', first:'2026-07-02'},
+  'SH2026070200004':{name:'海丰水产旗舰店',   merchant:'M2026-0902', first:'2026-07-10'},
+  'SH2026070200005':{name:'万丰肉禽旗舰店',   merchant:'M2026-1103', first:'2026-07-08'},
+  'SH2026071500006':{name:'南洋鲜果行',       merchant:'',           first:''},
+  'SH2026072000007':{name:'阳光烘焙原料店',   merchant:'M2026-0820', first:'2026-08-01'},
+  'SH2026080300008':{name:'金狮干货行',       merchant:'',           first:''},
 };
 const shopName = c => (SHOPS[c]||{}).name || c;
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,8 +40,10 @@ const fmt = d => d.toISOString().slice(0,10);
 const addDays = (s,n) => { const d=D(s); d.setUTCDate(d.getUTCDate()+n); return fmt(d); };
 const monday = s => { const d=D(s), w=(d.getUTCDay()+6)%7; return addDays(s,-w); };
 const weekLabel = m => `${m} ~ ${addDays(m,6)}`;
-const freeEnd = s => addDays(SHOPS[s].join, FREE_DAYS-1);           // 免运费最后一天（含）
-const inFree = (s,date) => date <= freeEnd(s);
+// 首次取货日期：SHOPS.first = 演示窗口之前已有的历史首取；没有则取取货记录里最早一天；都没有 = 还没取过货
+const firstPick = s => SHOPS[s].first || ((DB.pfPickups||[]).filter(p=>p.shop==s).map(p=>p.at.slice(0,10)).sort()[0]) || '';
+const freeEnd = s => { const f=firstPick(s); return f ? addDays(f, FREE_DAYS-1) : ''; };   // 免运费最后一天（含）
+const inFree = (s,date) => { const e=freeEnd(s); return !!e && date <= e; };
 
 /* ================= 规则版本：每次保存追加一版，from = 保存时刻（下一次取货起生效） ================= */
 DB.pfRules = DB.pfRules || {
@@ -73,10 +76,20 @@ if(!DB.pfPickups){
     });
   }
 }
-/* 作废（超 14 天免运费，走飞书审批后运营作废）：key = 取货记录号 */
-DB.pfVoids = DB.pfVoids || {
-  'PK2026102164':{reason:'招商申请：新品类试运营期再免一周运费，凡哥已批', apv:'AP-20261021-0032', at:'2026-10-21 15:02', by:'陈敏'},
-};
+/* 免运费审批（超出免运费期还要免）：在取货明细勾选同一店铺的计费记录 → 提交飞书审批（审批人凡哥，抄送运营张可心）
+   审批中：照常计费，所在周账单不能推送；通过：这些记录作废、不扣商家；驳回：恢复计费，可重新申请
+   一张审批只针对一家店铺，可一次覆盖多天（避免一天一批） */
+const APPROVER='凡哥', APV_CC='张可心';
+if(!DB.pfApprovals){
+  const firstOf=(shop,d1,d2)=>{ const seen={}; return DB.pfPickups.filter(p=>p.shop==shop&&p.at.slice(0,10)>=d1&&p.at.slice(0,10)<=d2)
+    .sort((a,b)=>a.at.localeCompare(b.at)).filter(p=>!seen[p.at.slice(0,10)]&&(seen[p.at.slice(0,10)]=1)).map(p=>p.no); };
+  DB.pfApprovals=[
+    {id:'AP-20261021-0032', shop:'SH2026062000001', nos:['PK2026102164'], reason:'新品类试运营期，再免一天运费', by:'陈敏', at:'2026-10-21 11:20', st:'APPROVED', doneAt:'2026-10-21 15:02', cmt:'同意'},
+    {id:'AP-20261026-0041', shop:'SH2026071500006', nos:firstOf('SH2026071500006','2026-10-22','2026-10-24'), reason:'商家首月货量小，免运费期延长 3 天', by:'陈敏', at:'2026-10-26 10:05', st:'PENDING'},
+  ];
+}
+const apvOf = no => DB.pfApprovals.filter(a=>a.nos.includes(no)&&a.st!='REJECTED').pop() || null;
+window.pfApvPending = () => DB.pfApprovals.filter(a=>a.st=='PENDING').length;
 
 /* 计费：每店每天只在第一趟算一次 */
 function pfCalc(){
@@ -90,13 +103,14 @@ function pfCalc(){
     const fee = v.zone=='NEAR' ? PRICE.NEAR : r2(PRICE.NORMAL/p.mates);
     const basis = v.zone=='NEAR' ? `近区 · ${money(PRICE.NEAR)} / 次`
       : p.mates==1 ? `普通区 · 单独一车 ${money(PRICE.NORMAL)}` : `普通区 · ${money(PRICE.NORMAL)} ÷ 同车 ${p.mates} 家 = ${money(fee)}`;
-    const vd=DB.pfVoids[p.no];
-    if(vd) return {...p, rule:v, fee, charge:0, st:'VOID', basis, void:vd};
     if(inFree(p.shop,date)) return {...p, rule:v, fee, charge:0, st:'FREE', basis};
+    const ap=apvOf(p.no);
+    if(ap&&ap.st=='APPROVED') return {...p, rule:v, fee, charge:0, st:'VOID', basis, apv:ap};
+    if(ap&&ap.st=='PENDING') return {...p, rule:v, fee, charge:fee, st:'PENDING', basis, apv:ap};
     return {...p, rule:v, fee, charge:fee, st:'CHARGE', basis};
   });
 }
-const PST = {CHARGE:['计费','t-g'], FREE:['新商家免运费','t-b'], VOID:['已作废','t-gr']};
+const PST = {CHARGE:['计费','t-g'], FREE:['免运费期内','t-b'], PENDING:['免运费审批中','t-y'], VOID:['审批免运费','t-b']};
 const pstTag = p => PST[p.st] ? `<span class="tag ${PST[p.st][1]}"><span class="dot"></span>${PST[p.st][0]}</span>` : dash;
 
 /* ================= 周账单：店铺 × 结算周 ================= */
@@ -120,9 +134,11 @@ function billsOf(m){
   }).filter(Boolean);
 }
 const billOf = (s,m) => billsOf(m).find(b=>b.shop==s);
-const canPush = b => !b.open && b.due>0 && !b.pushedAt;
+const hasPending = b => b.list.some(p=>p.st=='PENDING');
+const canPush = b => !b.open && b.due>0 && !b.pushedAt && !hasPending(b);
 const billTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>本周进行中</span>'
   : !b.due ? '<span class="tag t-gr"><span class="dot"></span>无需收费</span>'
+  : !b.pushedAt && hasPending(b) ? '<span class="tag t-y"><span class="dot"></span>免运费审批中</span>'
   : !b.pushedAt ? '<span class="tag t-y"><span class="dot"></span>待推送</span>'
   : '<span class="tag t-g"><span class="dot"></span>已推送</span>';
 const invSplit = amt => { const net=r2(amt/(1+GST)); return {net, gst:r2(amt-net)}; };
@@ -137,15 +153,15 @@ PAGES['p-pickfee-rule']=()=>{
       <td class="mono">${s}</td>
       <td>${zoneTag(v.zone)}</td>
       <td style="white-space:nowrap">${zoneStd(v.zone)=='—'?dash:zoneStd(v.zone)}</td>
-      <td style="white-space:nowrap">${SHOPS[s].join}</td>
-      <td style="white-space:nowrap">${fe>=TODAY?`${fe} <span class="tag t-b" style="font-size:10.5px">免运费中</span>`:fe}</td>
+      <td style="white-space:nowrap">${firstPick(s)||dash}</td>
+      <td style="white-space:nowrap">${!fe?'<span style="color:var(--ts)">首次取货起算</span>':fe>=TODAY?`${fe} <span class="tag t-b" style="font-size:10.5px">免运费中</span>`:fe}</td>
       <td style="white-space:nowrap">${v.from}</td>
       <td>${esc(v.by)}</td>
       <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_edit('${s}')">修改</button> <button class="btn btn-link" onclick="pf_hist('${s}')">变更记录</button></td>
     </tr>`;}).join('');
-  return `<div class="card"><div class="card-hd"><h3>自提运费规则</h3><span class="sub">近区 = 祝融、白斯班江一带 · 已设置 ${set.length} 家店铺，未设置的不收运费 · 新商家入驻 ${FREE_DAYS} 天内免运费</span><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
+  return `<div class="card"><div class="card-hd"><h3>自提运费规则</h3><span class="sub">近区 = 祝融、白斯班江一带 · 已设置 ${set.length} 家店铺，未设置的不收运费 · 首次取货起 ${FREE_DAYS} 天内免运费</span><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>店铺名称</th><th>店铺编码</th><th>所属区域</th><th>收费标准</th><th>入驻日期</th><th>免运费截止</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
+      <thead><tr><th>店铺名称</th><th>店铺编码</th><th>所属区域</th><th>收费标准</th><th>首次取货日期</th><th>免运费截止</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="9"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置自提运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置所属区域</div></div></td></tr>'}</tbody></table></div></div></div>`;
 };
 window.pf_edit=function(s){
@@ -156,12 +172,13 @@ window.pf_edit=function(s){
   modal(`<div class="mc-hd"><h3>${isNew?'新增收费规则':'修改自提运费 · '+esc(shopName(s))}</h3>${isNew?'':`<p>${s}</p>`}<button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     ${isNew?`<div class="fr"><label class="fl"><b>*</b>店铺</label><select id="pf-shop" onchange="pf_joinShow()"><option value="">请选择店铺</option>${free.map(k=>`<option value="${k}">${esc(shopName(k))}（${k}）</option>`).join('')}</select></div>`:''}
     <div class="fr"><label class="fl"><b>*</b>所属区域</label><div>${(isNew?['NEAR','NORMAL']:['NEAR','NORMAL','OFF']).map(opt).join('')}</div></div>
-    <div class="fr"><label class="fl">入驻日期 / 免运费截止</label><div id="pf-join" style="font-size:13px;padding-top:2px">${s?`${SHOPS[s].join} 入驻，${freeEnd(s)} 前免运费`:'选择店铺后显示'}</div></div>
+    <div class="fr"><label class="fl">首次取货 / 免运费截止</label><div id="pf-join" style="font-size:13px;padding-top:2px">${s?pf_freeText(s):'选择店铺后显示'}</div></div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="pf_save('${s}')">保存</button></div>`);
 };
+window.pf_freeText = s => firstPick(s) ? `${firstPick(s)} 首次取货，${freeEnd(s)} 前（含）免运费` : `还没有取货，首次取货起 ${FREE_DAYS} 天内免运费`;
 window.pf_joinShow=function(){
   const s=document.getElementById('pf-shop').value, el=document.getElementById('pf-join');
-  el.textContent = s ? `${SHOPS[s].join} 入驻，${freeEnd(s)} 前免运费` : '选择店铺后显示';
+  el.textContent = s ? pf_freeText(s) : '选择店铺后显示';
 };
 window.pf_save=function(s){
   if(!s){ s=(document.getElementById('pf-shop')||{}).value; if(!s){toast('请选择店铺','err');return;} }
@@ -203,7 +220,9 @@ PAGES['p-pickfee-bill']=()=>{
   const bills=billsOf(f.wk).filter(b=>hit(b.shop));
   const picks=pfCalc().filter(p=>monday(p.at.slice(0,10))==f.wk&&hit(p.shop)).reverse();
   DB.pfSel=DB.pfSel.filter(no=>bills.some(b=>b.no==no&&canPush(b)));
-  const tabs=[['BILL','周账单',bills.length],['PICK','取货明细',picks.length]];
+  const apvs=DB.pfApprovals.filter(a=>hit(a.shop)).slice().sort((a,b)=>b.at.localeCompare(a.at));
+  DB.pfVSel=(DB.pfVSel||[]).filter(no=>picks.some(p=>p.no==no&&canApply(p)));
+  const tabs=[['BILL','周账单',bills.length],['PICK','取货明细',picks.length],['APV','免运费审批',apvs.filter(a=>a.st=='PENDING').length]];
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">店铺</div><select id="pf-f-shop" style="min-width:180px"><option value="">全部</option>${Object.keys(SHOPS).map(s=>`<option value="${s}" ${f.shop==s?'selected':''}>${esc(shopName(s))}</option>`).join('')}</select></div>
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">结算周</div><select id="pf-f-wk" style="min-width:220px">${allWeeks().map(m=>`<option value="${m}" ${f.wk==m?'selected':''}>${weekLabel(m)}</option>`).join('')}</select></div>
@@ -211,7 +230,7 @@ PAGES['p-pickfee-bill']=()=>{
     <button class="btn btn-o btn-sm" onclick="DB.pfFilter={shop:'',wk:lastClosedWeek()};DB.pfSel=[];render()">重置</button>
   </div></div>
   <div class="tabs" style="margin-bottom:14px">${tabs.map(([k,l,n])=>`<div class="tab ${DB.pfTab==k?'active':''}" onclick="DB.pfTab='${k}';render()">${l}${n?`<span class="tb">${n}</span>`:''}</div>`).join('')}</div>
-  ${DB.pfTab=='BILL'?billTable(bills):pickTable(picks)}`;
+  ${DB.pfTab=='BILL'?billTable(bills):DB.pfTab=='PICK'?pickTable(picks):apvTable(apvs)}`;
 };
 window.lastClosedWeek=lastClosedWeek;
 function billTable(bills){
@@ -241,25 +260,30 @@ window.pf_selAll=function(){
   DB.pfSel = ok.every(no=>DB.pfSel.includes(no)) ? [] : ok; render();
 };
 function pickTable(picks){
+  const sel=DB.pfVSel, amt=r2(picks.filter(p=>sel.includes(p.no)).reduce((a,p)=>a+p.fee,0));
   return `<div class="card">
     <div class="selbar" style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
-      <span style="flex:1"></span><button class="btn btn-o btn-sm" onclick="pf_import()">导入取货数据</button>
+      <span style="color:var(--ts)">已选 <b style="color:var(--tp)">${sel.length}</b> 条${sel.length?` · 减免 <b style="color:var(--tp)">${money(amt)}</b>`:''}</span><span style="flex:1"></span>
+      <button class="btn btn-o btn-sm" onclick="pf_import()">导入取货数据</button>
+      <button class="btn btn-p btn-sm" ${sel.length?'':'disabled'} title="${sel.length?'':'勾选同一店铺的计费记录后可申请'}" onclick="pf_apply(DB.pfVSel.slice())">申请免运费${sel.length?`（${sel.length}）`:''}</button>
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto">${pickRows(picks,true,true)}</div></div></div>`;
 }
 const pushedOf = p => !!(DB.pfBills[p.shop+'|'+monday(p.at.slice(0,10))]||{}).pushedAt;
+const canApply = p => p.st=='CHARGE' && !pushedOf(p);
 function pickRows(picks,withShop,canOp){
-  const cols=withShop?12:11;
-  return `<table><thead><tr><th>取货记录号</th>${withShop?'<th>店铺名称</th>':''}<th>取货时间</th><th>车次</th><th style="text-align:right">同车商家数</th><th>取货地点</th><th>司机</th><th>所属区域</th><th>计费说明</th><th style="text-align:right">计费金额</th><th>状态</th>${canOp?'<th>操作</th>':''}</tr></thead><tbody>
+  const cols=(withShop?12:11)+(canOp?1:0);
+  return `<table><thead><tr>${canOp?'<th style="width:34px"></th>':''}<th>取货记录号</th>${withShop?'<th>店铺名称</th>':''}<th>取货时间</th><th>车次</th><th style="text-align:right">同车商家数</th><th>取货地点</th><th>司机</th><th>所属区域</th><th>计费说明</th><th style="text-align:right">计费金额</th><th>状态</th>${canOp?'<th>操作</th>':''}</tr></thead><tbody>
     ${picks.length?picks.map(p=>`<tr>
+      ${canOp?`<td>${canApply(p)?`<input type="checkbox" ${DB.pfVSel.includes(p.no)?'checked':''} onclick="pf_vToggle('${p.no}')">`:''}</td>`:''}
       <td class="mono" style="white-space:nowrap">${p.no}</td>${withShop?`<td style="white-space:nowrap">${esc(shopName(p.shop))}</td>`:''}
       <td class="mono" style="white-space:nowrap">${p.at}</td><td class="mono" style="white-space:nowrap">${p.trip}</td>
       <td style="text-align:right">${p.mates}</td><td style="white-space:nowrap">${p.market}</td><td style="white-space:nowrap">${esc(p.driver)}</td>
       <td style="white-space:nowrap">${p.rule?ZONE[p.rule.zone]:'不收费'}</td>
-      <td style="font-size:12.5px;color:var(--ts)">${p.basis}${p.void?`<br>作废原因：${esc(p.void.reason)}${p.void.apv?`（审批 ${esc(p.void.apv)}）`:''}`:''}</td>
+      <td style="font-size:12.5px;color:var(--ts)">${p.basis}${p.apv?`<br>审批 <a class="btn-link" style="cursor:pointer" onclick="pf_apvDetail('${p.apv.id}')">${p.apv.id}</a>`:''}</td>
       <td style="text-align:right">${p.fee?money(p.fee):money(0)}</td><td style="white-space:nowrap">${pstTag(p)}</td>
-      ${canOp?`<td style="white-space:nowrap">${p.st=='CHARGE'&&!pushedOf(p)?`<button class="btn btn-link" onclick="pf_void('${p.no}')">作废</button>`:dash}</td>`:''}</tr>`).join('')
-    :`<tr><td colspan="${cols-(canOp?0:1)}"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">没有取货记录</div></div></td></tr>`}
+      ${canOp?`<td style="white-space:nowrap">${canApply(p)?`<button class="btn btn-link" onclick="pf_apply(['${p.no}'])">申请免运费</button>`:dash}</td>`:''}</tr>`).join('')
+    :`<tr><td colspan="${cols}"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">没有取货记录</div></div></td></tr>`}
   </tbody></table>`;
 }
 const billByNo = no => billsOf(DB.pfFilter.wk).find(b=>b.no==no);
@@ -296,23 +320,71 @@ window.pf_pushDo=function(nos){
   });
   DB.pfSel=[]; closeModal(); render(); toast(`已推送 ${nos.length} 张账单到结算单，物流服务费发票已自动开具`,'ok');
 };
-window.pf_void=function(no){
-  const p=pfCalc().find(x=>x.no==no); if(!p) return;
-  modal(`<div class="mc-hd"><h3>作废运费</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <table class="subtbl"><tbody>
-      <tr><td style="color:var(--ts);width:90px">店铺</td><td>${esc(shopName(p.shop))}</td></tr>
-      <tr><td style="color:var(--ts)">取货记录</td><td class="mono">${p.no} · ${p.at}</td></tr>
-      <tr><td style="color:var(--ts)">计费金额</td><td><b>${money(p.fee)}</b></td></tr>
-    </tbody></table>
-    <div class="fr" style="margin-top:12px"><label class="fl"><b>*</b>作废原因</label><textarea id="pf-v-reason" rows="2" maxlength="200" placeholder="例如：招商申请延长免运费，已获批">招商申请延长免运费</textarea></div>
-    <div class="fr"><label class="fl">飞书审批编号</label><input id="pf-v-apv" maxlength="40" placeholder="超 14 天免运费需凡哥审批，填审批编号便于查证"></div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="pf_voidDo('${no}')">确认作废</button></div>`);
+window.pf_vToggle=function(no){
+  const p=pfCalc().find(x=>x.no==no), other=DB.pfVSel.length&&pfCalc().find(x=>x.no==DB.pfVSel[0]);
+  const i=DB.pfVSel.indexOf(no);
+  if(i<0&&other&&other.shop!=p.shop){toast('一张审批只能选同一家店铺的记录','err');return;}
+  i<0?DB.pfVSel.push(no):DB.pfVSel.splice(i,1); render();
 };
-window.pf_voidDo=function(no){
-  const reason=document.getElementById('pf-v-reason').value.trim(), apv=document.getElementById('pf-v-apv').value.trim();
-  if(!reason){toast('请填写作废原因','err');return;}
-  DB.pfVoids[no]={reason, apv, at:ts(), by:'当前账号'};
-  closeModal(); render(); toast('已作废，这一笔不再扣商家','ok');
+window.pf_apply=function(nos){
+  const all=pfCalc(), list=nos.map(n=>all.find(x=>x.no==n)).filter(p=>p&&canApply(p));
+  if(!list.length){toast('请勾选要免运费的计费记录','err');return;}
+  if(new Set(list.map(p=>p.shop)).size>1){toast('一张审批只能选同一家店铺的记录','err');return;}
+  const amt=r2(list.reduce((a,p)=>a+p.fee,0)), s=list[0].shop;
+  modal(`<div class="mc-hd"><h3>申请免运费</h3><p>${esc(shopName(s))} · 超出免运费期，需审批通过才不扣</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <table class="subtbl"><thead><tr><th>取货记录号</th><th>取货时间</th><th style="text-align:right">计费金额</th></tr></thead><tbody>
+      ${list.map(p=>`<tr><td class="mono">${p.no}</td><td class="mono">${p.at}</td><td style="text-align:right">${money(p.fee)}</td></tr>`).join('')}
+      <tr style="font-weight:600"><td colspan="2">减免合计</td><td style="text-align:right">${money(amt)}</td></tr>
+    </tbody></table>
+    <div class="fr" style="margin-top:12px"><label class="fl"><b>*</b>申请原因</label><textarea id="pf-a-reason" rows="2" maxlength="200" placeholder="例如：商家首月货量小，免运费期延长 3 天"></textarea></div>
+    <div class="fr"><label class="fl">审批人 / 抄送</label><div style="font-size:13px;padding-top:2px">${APPROVER}（飞书审批） / ${APV_CC}</div></div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick='pf_applyDo(${JSON.stringify(list.map(p=>p.no))})'>提交审批</button></div>`);
+};
+window.pf_applyDo=function(nos){
+  const reason=document.getElementById('pf-a-reason').value.trim();
+  if(!reason){toast('请填写申请原因','err');return;}
+  const shop=DB.pfPickups.find(p=>p.no==nos[0]).shop, t=ts();
+  const id=`AP-${t.slice(0,10).replace(/-/g,'')}-${String(DB.pfApprovals.length+42).padStart(4,'0')}`;
+  DB.pfApprovals.push({id, shop, nos, reason, by:'当前账号', at:t, st:'PENDING'});
+  DB.pfVSel=[]; closeModal(); render(); toast(`已提交飞书审批 ${id}，等${APPROVER}审批`,'ok');
+};
+const APV_ST = {PENDING:['审批中','t-y'], APPROVED:['已通过','t-g'], REJECTED:['已驳回','t-r']};
+const apvTag = a => `<span class="tag ${APV_ST[a.st][1]}"><span class="dot"></span>${APV_ST[a.st][0]}</span>`;
+const apvAmt = a => { const all=pfCalc(); return r2(a.nos.reduce((s,n)=>s+((all.find(x=>x.no==n)||{}).fee||0),0)); };
+function apvTable(apvs){
+  return `<div class="card"><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <thead><tr><th>审批编号</th><th>店铺名称</th><th style="text-align:right">取货记录数</th><th style="text-align:right">减免金额</th><th>申请原因</th><th>申请人</th><th>申请时间</th><th>审批人</th><th>审批状态</th><th>审批时间</th><th>操作</th></tr></thead><tbody>
+    ${apvs.length?apvs.map(a=>`<tr>
+      <td class="mono" style="white-space:nowrap">${a.id}</td><td style="white-space:nowrap">${esc(shopName(a.shop))}</td>
+      <td style="text-align:right">${a.nos.length}</td><td style="text-align:right">${money(apvAmt(a))}</td>
+      <td style="max-width:240px">${esc(a.reason)}</td><td>${esc(a.by)}</td><td style="white-space:nowrap">${a.at}</td><td>${APPROVER}</td>
+      <td>${apvTag(a)}</td><td style="white-space:nowrap">${a.doneAt||dash}</td>
+      <td><button class="btn btn-link" onclick="pf_apvDetail('${a.id}')">详情</button></td>
+    </tr>`).join(''):`<tr><td colspan="11"><div class="empty" style="padding:26px"><div class="e-ic">📝</div><div class="e-t">暂无免运费审批</div><div class="e-s">在「取货明细」勾选计费记录后申请</div></div></td></tr>`}
+    </tbody></table></div></div></div>`;
+}
+window.pf_apvDetail=function(id){
+  const a=DB.pfApprovals.find(x=>x.id==id); if(!a) return;
+  const all=pfCalc(), list=a.nos.map(n=>all.find(x=>x.no==n)).filter(Boolean);
+  const kv=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  drawer(`<div class="drawer-hd"><div><h3>免运费审批 <span class="mono" style="font-size:12.5px;color:var(--ts)">${a.id}</span></h3><div style="margin-top:4px">${apvTag(a)}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  <div class="drawer-bd">
+    <div class="kv" style="margin-bottom:16px">
+      ${kv('店铺',`${esc(shopName(a.shop))}（${a.shop}）`)}${kv('减免金额',money(apvAmt(a)))}
+      ${kv('申请人',esc(a.by))}${kv('申请时间',a.at)}${kv('审批人',APPROVER)}${kv('抄送',APV_CC)}
+      ${kv('审批时间',a.doneAt||'—')}${kv('审批意见',a.cmt?esc(a.cmt):'—')}
+      ${kv('申请原因',esc(a.reason))}
+    </div>
+    <table><thead><tr><th>取货记录号</th><th>取货时间</th><th>计费说明</th><th style="text-align:right">计费金额</th></tr></thead><tbody>
+      ${list.map(p=>`<tr><td class="mono">${p.no}</td><td class="mono">${p.at}</td><td style="font-size:12.5px;color:var(--ts)">${p.basis}</td><td style="text-align:right">${money(p.fee)}</td></tr>`).join('')}
+    </tbody></table>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${a.st=='PENDING'?`<button class="btn btn-o" onclick="pf_apvDone('${a.id}','REJECTED')">${APPROVER}驳回</button><button class="btn btn-p" onclick="pf_apvDone('${a.id}','APPROVED')">${APPROVER}通过</button>`:''}</div>`);
+};
+window.pf_apvDone=function(id,st){
+  const a=DB.pfApprovals.find(x=>x.id==id); if(!a||a.st!='PENDING') return;
+  Object.assign(a,{st, doneAt:ts(), cmt:st=='APPROVED'?'同意':'不同意，按规则收取'});
+  closeDrawer(); render(); toast(st=='APPROVED'?'审批通过，这些运费不再扣商家':'审批驳回，恢复计费','ok');
 };
 window.pf_import=function(){
   modal(`<div class="mc-hd"><h3>导入取货数据</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
@@ -332,7 +404,7 @@ const mBillTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>
   : !b.due ? '<span class="tag t-gr"><span class="dot"></span>无需收费</span>'
   : !b.pushedAt ? '<span class="tag t-y"><span class="dot"></span>待出账</span>'
   : '<span class="tag t-g"><span class="dot"></span>已出账</span>';
-const MPST = {CHARGE:['计费','t-g'], FREE:['新商家免运费','t-b'], VOID:['已减免','t-b']};
+const MPST = {CHARGE:['计费','t-g'], PENDING:['计费','t-g'], FREE:['免运费期内','t-b'], VOID:['已减免','t-b']};
 const mPstTag = p => MPST[p.st] ? `<span class="tag ${MPST[p.st][1]}"><span class="dot"></span>${MPST[p.st][0]}</span>` : dash;
 const myWeeks = s => [...new Set(DB.pfPickups.filter(p=>p.shop==s).map(p=>monday(p.at.slice(0,10))))].sort().reverse();
 DB.pfMTab = DB.pfMTab || 'BILL';
@@ -351,7 +423,7 @@ PAGES['m-pickfee']=()=>{
       ${kv('店铺',`${esc(shopName(s))}（<span class="mono">${s}</span>）`)}
       ${kv('所属区域',ZONE[v.zone])}
       ${kv('收费标准',v.zone=='NORMAL'?`${money(PRICE.NORMAL)} / 车，最多 ${MAX_POOL} 家拼车，按同车商家数平摊；同一天只收一次`:v.zone=='NEAR'?`${money(PRICE.NEAR)} / 次；同一天只收一次`:'—')}
-      ${kv('新商家免运费',`入驻 ${FREE_DAYS} 天内免运费（${SHOPS[s].join} ~ ${fe}）${fe>=TODAY?' <span class="tag t-b" style="font-size:10.5px">免运费中</span>':''}`)}
+      ${kv('免运费期',fe?`首次取货起 ${FREE_DAYS} 天（${firstPick(s)} ~ ${fe}）${fe>=TODAY?' <span class="tag t-b" style="font-size:10.5px">免运费中</span>':''}`:`首次取货起 ${FREE_DAYS} 天内免运费`)}
       ${kv('生效时间',v.from)}
     </div></div></div>
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">

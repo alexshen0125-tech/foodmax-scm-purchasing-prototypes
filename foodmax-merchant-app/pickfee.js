@@ -2,7 +2,7 @@
    - 平台按店铺指定所属区域，商家只读：
        近区（祝融、白斯班江一带）S$20 / 次，不拼车；普通区 S$80 / 车，最多 4 家拼车，按同车商家数平摊
    - 同一天只收一次（按当天第一趟所在的车算）；改区域下一次取货起生效
-   - 新商家入驻 14 天内免运费；超期免运费由平台审批后作废，商家这边显示「已减免」
+   - 免运费期：有了第一次取货任务起 14 天内免运费（含首取当天）；超出免运费期还要免的，平台走飞书审批（凡哥批）通过后不扣，商家这边显示「已减免」
    - 按周出账（周一至周日），推送后在那周结算单里从货款扣，并自动开物流服务费发票（9% GST）
    - 只显示同车商家数，不显示是哪几家
    - 演示数据与 PC 一致（绿鲜源蔬果旗舰店 SH2026062000001，普通区）
@@ -11,7 +11,7 @@
 const {pushPage,toast,svg,skel}=window.FM;
 const money=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const DB=window.FM.DB;
-const SHOP={code:'SH2026062000001',name:'绿鲜源蔬果旗舰店',join:'2026-06-20'};
+const SHOP={code:'SH2026062000001',name:'绿鲜源蔬果旗舰店',first:'2026-07-02'};   // first = 首次取货日期（演示窗口之前的历史首取）
 const TODAY='2026-10-27',PRICE={NEAR:20,NORMAL:80},MAX_POOL=4,FREE_DAYS=14,GST=0.09;
 const ZONE={NEAR:'近区',NORMAL:'普通区',OFF:'不收费'};
 const r2=n=>Math.round(n*100)/100;
@@ -19,7 +19,7 @@ const D=s=>new Date(s+'T00:00:00Z'),fmt=d=>d.toISOString().slice(0,10);
 const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return fmt(d);};
 const monday=s=>addDays(s,-((D(s).getUTCDay()+6)%7));
 const weekLabel=m=>`${m.slice(5)} ~ ${addDays(m,6).slice(5)}`;
-const freeEnd=addDays(SHOP.join,FREE_DAYS-1);
+const freeEnd=addDays(SHOP.first,FREE_DAYS-1);
 const zoneStd=z=>z==='NEAR'?`${money(PRICE.NEAR)} / 次，不拼车`:z==='NORMAL'?`${money(PRICE.NORMAL)} / 车，最多 ${MAX_POOL} 家拼车平摊`:'—';
 
 DB.pfRules=DB.pfRules||[{from:'2026-10-01 00:00',zone:'NORMAL'}];
@@ -27,7 +27,7 @@ DB.pfBills=DB.pfBills||{
   '2026-10-05':{pushedAt:'2026-10-12 10:15',invNo:'LOG-INV-2026-000012'},
   '2026-10-12':{pushedAt:'2026-10-19 09:40',invNo:'LOG-INV-2026-000016'},
 };
-DB.pfVoids=DB.pfVoids||{'PK2026102164':{}};   // 与 PC 一致：平台审批后作废的一笔
+DB.pfVoids=DB.pfVoids||{'PK2026102164':{}};   // 与 PC 一致：飞书免运费审批通过（凡哥批）的一笔，商家这边显示已减免
 const ruleAt=t=>DB.pfRules.filter(v=>v.from<=t).pop()||null;
 const curRule=()=>DB.pfRules[DB.pfRules.length-1]||null;
 
@@ -68,7 +68,7 @@ function bills(){
 }
 const billSt=b=>b.open?'本周进行中':!b.due?'无需收费':!b.pushedAt?'待出账':'已出账';
 const ST_C={'本周进行中':'rp-c-gray','无需收费':'rp-c-gray','待出账':'rp-c-amber','已出账':'rp-c-green'};
-const PST={CHARGE:['计费','rp-c-green'],FREE:['新商家免运费','rp-c-blue'],VOID:['已减免','rp-c-blue']};
+const PST={CHARGE:['计费','rp-c-green'],FREE:['免运费期内','rp-c-blue'],VOID:['已减免','rp-c-blue']};
 const chip=(t,c)=>`<span class="rp-chip ${c||'rp-c-gray'}">${t}</span>`;
 const rowKV=(k,v,cls)=>`<div class="rp-row"><span class="k">${k}</span><span class="v ${cls||''}">${v||'—'}</span></div>`;
 window.FM_MOD.pickfeeOn=()=>DB.pfRules.length>0;
@@ -81,7 +81,7 @@ function open(){
     <div class="rp-card2"><div class="rp-ct">当前收费规则<span class="desc" id="pf-hist" style="color:var(--emerald-2);cursor:pointer;float:right;min-height:32px;line-height:32px;margin-top:-8px">变更记录 ›</span></div>
       ${rowKV('店铺',SHOP.name)}${rowKV('所属区域',ZONE[v.zone])}${rowKV('收费标准',zoneStd(v.zone))}
       ${rowKV('同一天',v.zone==='OFF'?'—':'只收一次')}
-      ${rowKV('新商家免运费',`${SHOP.join} ~ ${freeEnd}`)}${rowKV('生效时间',v.from)}
+      ${rowKV('免运费期',`首次取货起 ${FREE_DAYS} 天（${SHOP.first} ~ ${freeEnd}）`)}${rowKV('生效时间',v.from)}
       <div style="font-size:12px;color:var(--sub);line-height:1.6;padding-top:8px;border-top:1px solid var(--line)">平台去批发市场帮您取货收的运费；按周出账单，结算时从货款中扣除，并开物流服务费发票给您</div></div>
     <div class="rp-tabs" id="pf-tabs"></div><div class="rp-list" id="pf-list"></div>`,
     mount:(p)=>{

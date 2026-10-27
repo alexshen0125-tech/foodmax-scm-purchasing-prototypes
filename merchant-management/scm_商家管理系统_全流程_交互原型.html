@@ -1324,7 +1324,7 @@ const NAV={
     {id:'p-adjust-type',ic:'⚙️',t:'调整类型配置',p1:1},
     {id:'p-ret-comp',ic:'💸',t:'退货赔付',p1:1},   // 只读：全部商家的退货申诉赔付单 + 商家开给 Foodmax 的发票
     {id:'p-pickfee-rule',ic:'🚚',t:'自提运费规则',p1:1},
-    {id:'p-pickfee-bill',ic:'🧾',t:'自提运费账单',p1:1},
+    {id:'p-pickfee-bill',ic:'🧾',t:'自提运费账单',p1:1,badge:()=>typeof pfApvPending=='function'?pfApvPending():0,by:'y'},   // 角标 = 免运费审批中的单数
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
     {sec:'财务'},
@@ -6431,7 +6431,7 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261027b"></script>
+<script src="pc-modules/pickfee.js?v=20261027c"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
 <script src="pc-modules/retcomp.js?v=20261027c"></script>
