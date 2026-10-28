@@ -16,7 +16,7 @@ const MER=()=>({name:DB.merchant.name,code:DB.merchant.code});   // 原型只有
 window.retCompRows=function(){
   const out=[];
   (DB.afterSales||[]).forEach((a,i)=>{const ra=a.retAppeal;if(!ra||!(ra.comp>0))return;
-    out.push({compNo:ra.compNo,src:'客户退货',retNo:'TH-'+a.id.slice(-6),ra,priceLabel:'正向订单结算单价',open:`closeDrawer();act_afterDetail(${i})`});});
+    out.push({compNo:ra.compNo,src:'客户退货',retNo:'TH-'+a.id.slice(-6),order:a.order,ra,priceLabel:'正向订单结算单价',open:`closeDrawer();act_afterDetail(${i})`});});
   Object.keys(DB.whrAppeals||{}).forEach(no=>{const ra=DB.whrAppeals[no];if(!ra||!(ra.comp>0))return;
     out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:`closeDrawer();DB.retSrcTab='wh';nav('m-after-return');setTimeout(()=>whr_detail('${no}'),50)`});});
   out.forEach(r=>{r.bill=billOf(r.compNo);r.mer=MER();});
@@ -32,6 +32,49 @@ function settleSt(r){
 const SETTLE_TONE={'待进结算单':'t-gr','已进结算单':'t-b','已打款':'t-g'};
 const stTag=(t,tone)=>`<span class="tag ${tone[t]||'t-gr'}"><span class="dot"></span>${t}</span>`;
 const sum2=a=>+a.reduce((s,v)=>s+v,0).toFixed(2);
+const r2=n=>Math.round(n*100)/100;
+
+/* 原订单应结明细（10-28 沈亮：赔付金额要能看到原订单本该结给商家多少钱）
+   客户退货：正向订单该行 应结 = 客户实付 + 平台补贴 − 平台抽佣（服务 + 物流 + 通道）；结算单价 = 应结 ÷ 下单数量；赔付 = 结算单价 × 核定数量
+   数据取原订单结算快照（ra.origin，按商品）；原型缺快照时按单价反推演示（服务 6% / 物流 3% / 通道 1%）
+   仓库退回：没有原订单，按商品售价 × 核定数量，不扣佣金 */
+function origOf(r,x){
+  const o=(r.ra.origin||{})[x.name];if(o)return {...o,settle:r2(o.paid+o.platSub-o.svc-o.logi-o.chan)};
+  const qty=x.ret,settle=r2(x.price*qty),base=r2(settle/0.9),svc=r2(base*.06),logi=r2(base*.03),chan=r2(base-settle-svc-logi);
+  return {orderQty:qty,paid:base,platSub:0,svc,logi,chan,settle};
+}
+function origHtml(r){
+  const ok=r.ra.items.filter(x=>x.ok>0);
+  if(r.src=='仓库退回')return `<div style="font-size:12.5px;color:var(--ts);margin-bottom:8px">仓库退回没有原订单，按商品售价赔付，不扣佣金</div>
+    <table class="subtbl" style="width:100%"><thead><tr><th>商品</th><th style="text-align:right">商品售价</th><th style="text-align:right">核定数量</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
+    ${ok.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${money(x.price)}</td><td style="text-align:right">${x.ok}</td><td style="text-align:right">${money(r2(x.ok*x.price))}</td></tr>`).join('')}</tbody></table>`;
+  return ok.map(x=>{const o=origOf(r,x),line=(l,v,c)=>`<tr${c?` style="${c}"`:''}><td>${l}</td><td style="text-align:right">${v}</td></tr>`;
+    return `<div style="font-weight:600;font-size:13px;margin:4px 0 6px">${x.name} <span style="font-weight:400;color:var(--ts);font-size:12px">正向订单 <span class="mono">${r.order||'—'}</span></span></div>
+    <table class="subtbl" style="margin-bottom:10px;width:100%"><tbody>
+      ${line('下单数量',o.orderQty)}
+      ${line('客户实付',money(o.paid))}
+      ${line('＋ 平台补贴',money(o.platSub))}
+      ${line('− 服务佣金',money(o.svc))}
+      ${line('− 物流佣金',money(o.logi))}
+      ${line('− 通道费',money(o.chan))}
+      ${line('＝ 原订单应结金额',`<b>${money(o.settle)}</b>`,'background:var(--gl)')}
+      ${line('÷ 下单数量 ＝ 结算单价',money(x.price))}
+      ${line('× 核定数量 '+x.ok+' ＝ 赔付金额',`<b style="color:var(--g)">${money(r2(x.ok*x.price))}</b>`,'background:var(--gl)')}
+    </tbody></table>`;}).join('')+`<div style="font-size:11.5px;color:var(--ts)">客户实付已扣除店铺自己的优惠；佣金按原订单结算时的费率</div>`;
+}
+window.rcpOrig=function(no,ev){
+  ev.stopPropagation();const r=retCompRows().find(x=>x.compNo==no);if(!r)return;
+  let el=document.getElementById('rcp-pop');if(el)el.remove();
+  el=document.createElement('div');el.id='rcp-pop';
+  el.style.cssText='position:fixed;z-index:1200;width:340px;max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 32px rgba(18,39,29,.18);padding:14px 16px';
+  el.innerHTML=`<div style="display:flex;align-items:center;margin-bottom:8px"><b style="font-size:14px">${r.src=='仓库退回'?'赔付金额依据':'原订单应结明细'}</b><span style="margin-left:auto;cursor:pointer;color:var(--ts);font-size:18px" onclick="document.getElementById('rcp-pop').remove()">×</span></div>${origHtml(r)}`;
+  document.body.appendChild(el);
+  const b=ev.currentTarget.getBoundingClientRect(),h=el.offsetHeight;
+  el.style.left=Math.max(12,Math.min(b.right-340,window.innerWidth-352))+'px';
+  el.style.top=(b.bottom+6+h>window.innerHeight?Math.max(12,b.top-h-6):b.bottom+6)+'px';
+  setTimeout(()=>{const off=e=>{if(!el.contains(e.target)){el.remove();document.removeEventListener('click',off);}};document.addEventListener('click',off);},0);
+};
+document.addEventListener('keydown',e=>{if(e.key=='Escape'){const el=document.getElementById('rcp-pop');if(el)el.remove();}});
 
 PAGES['m-ret-comp']=()=>listContent(false);
 PAGES['p-ret-comp']=()=>switchCard()+listContent(true);
@@ -80,7 +123,7 @@ function listContent(ops){
       <td style="white-space:nowrap">${r.ra.status}</td>
       <td>${ok.map(x=>x.name).join('、')}</td>
       <td style="text-align:right">${sum2(ok.map(x=>x.ok))}</td>
-      <td style="text-align:right;color:var(--g);font-weight:600">${money(r.ra.comp)}</td>
+      <td style="text-align:right"><a href="javascript:void(0)" title="查看原订单应结明细" onclick="rcpOrig('${r.compNo}',event)" style="color:var(--g);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--g)">${money(r.ra.comp)}</a></td>
       <td style="white-space:nowrap;font-size:12px;color:var(--ts)">${r.ra.reviewAt||'—'}</td>
       <td class="mono" style="white-space:nowrap">${r.bill?r.bill.no:'—'}</td>
       <td style="white-space:nowrap">${stTag(settleSt(r),SETTLE_TONE)}</td>
@@ -102,6 +145,8 @@ window.rcpDetail=function(no,ops){
       ${ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.qty}</td><td style="text-align:right">${x.ok==null?'—':x.ok}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.ok&&x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</td></tr>`).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="4">赔付合计</td><td style="text-align:right;color:var(--gd)">${money(ra.comp)}</td></tr>
     </tbody></table>
+    ${sec(r.src=='仓库退回'?'赔付金额依据':'原订单应结明细')}
+    ${origHtml(r)}
     ${sec('结算')}
     <div class="kv">${kv('结算单号',r.bill?`<span class="mono">${r.bill.no}</span>`:'')}${kv('结算区间',r.bill?r.bill.range:'')}${kv('结算状态',stTag(settleSt(r),SETTLE_TONE))}${kv('开票',r.bill?`随结算单 <span class="mono">${r.bill.no}</span> 一并开票`:'进结算单后随结算单开票')}</div>
   </div>

@@ -737,7 +737,8 @@ const RETURN=[
  {no:'TKD2026061808190012',orderNo:'#SG20260618012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
   items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:4,pickQty:2,price:18.00}],
   appeal:{kind:'goods',status:'部分成立',at:'2026-06-17 15:02',reviewAt:'2026-06-18 11:30',desc:'仓库只找到 2 箱，另 2 箱未见',photos:0,compStatus:'已生成',
-    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,compNo:'RC-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
+    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,compNo:'RC-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付',
+    origin:{'番茄':{orderQty:4,paid:76.00,platSub:4.00,svc:4.80,logi:2.40,chan:0.80}}}},
 ];
 const retSum=g=>g.items.reduce((s,x)=>s+x.retQty,0);
 // 取回数量 = 各 SKU WMS 累计出库数量（可分次取）；SKU 无出库记录 = null，退货单进入 已提货 时补 0；
@@ -1103,7 +1104,7 @@ window.FM_MOD.return=openReturn;
 // 退货赔付（财务 › 退货赔付，retcomp.js）取数：核定成立/部分成立且赔付>0 的申诉，一笔一行
 window.FM_MOD.retCompSrc=()=>{
   const out=[];
-  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'客户退货',retNo:g.no,ra,priceLabel:'正向订单结算单价',open:()=>openReturnDetail(g.no)});});
+  RETURN.forEach(g=>{const ra=g.appeal;if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'客户退货',retNo:g.no,order:g.orderNo,ra,priceLabel:'正向订单结算单价',open:()=>openReturnDetail(g.no)});});
   const wa=window.FM.DB.whrAppeals||{};
   Object.keys(wa).forEach(no=>{const ra=wa[no];if(ra&&ra.comp>0)out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:()=>openWhrDetail(no)});});
   return out;
