@@ -770,7 +770,7 @@ const DB = {
             {no:'ADJ-SG-20260618-002',type:'质量问题扣款',dir:-1,amt:64.00,ded:'账扣',biz:'QC-26061801',at:'2026-06-18 09:12'},
             {no:'ADJ-SG-20260625-001',type:'佣金差额调整',dir:-1,amt:300.00,ded:'票扣',biz:'SVC-INV-2026-702',at:'2026-06-25 14:05'}],
     // 退货申诉赔付单（货权转移阶段：赔付单直接推送进结算单，计入应结金额与应开票金额，商家随结算单开票）
-    comp:[{no:'PF-20260618-317',amt:18.00,biz:'TH-070209',at:'2026-06-18 15:20'}],
+    comp:[{no:'RC-20260618-317',amt:18.00,biz:'TH-070209',at:'2026-06-18 15:20'}],
     items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',2,-268.00],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95],['业务调整 · 平台补款',1,120.00],['业务调整 · 平台扣款',2,-364.00],['退货申诉赔付',1,18.00]]},
   invoices:[
     // 平台代商家开给客户的销售发票（TAX INVOICE）。amt = 含税应付；sub/gst/goods/disc/ship 满足
@@ -815,7 +815,7 @@ const DB = {
   billsHistory:[
     {period:'2026年5月', no:'ST202605-M0815', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:118.60, replCnt:2, fine:560.00, fineCnt:2, net:41613.20,
       adjust:[{no:'ADJ-SG-20260520-001',type:'错账补回',dir:1,amt:80.00,ded:'账扣',biz:'#SG20260512033',at:'2026-05-20 11:02'}],
-      comp:[{no:'PF-20260521-208',amt:9.00,biz:'SH20260518001',at:'2026-05-21 10:05'}],
+      comp:[{no:'RC-20260521-208',amt:9.00,biz:'SH20260518001',at:'2026-05-21 10:05'}],
       items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['平台补采扣款（含税）',2,-118.60],['缺货罚款',2,-560.00],['业务调整 · 平台补款',1,80.00],['退货申诉赔付',1,9.00]], payTime:'2026-06-03 09:12 已到账 DBS ****8821'},
     {period:'2026年4月', no:'ST202604-M0815', range:'2026-04-01 ~ 04-30', genDate:'2026-05-01', status:'paid', gross:39650.00, reverse:0, fee:1586.00, feeSvc:991.25, feeLogi:594.75, net:38064.00,
       items:[['订单货款（含历史）',80,39650.00],['逆向扣减（售后判商家责）',0,0],['平台抽佣·服务佣金（按品类佣金率）',80,-991.25],['物流抽佣·物流佣金（按品类佣金率）',80,-594.75]], payTime:'2026-05-06 09:08 已到账 DBS ****8821'},
@@ -841,7 +841,7 @@ const DB = {
      fill:{sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',gap:6,fillQty:6,refundQty:0,selfPrice:9.20,custPrice:12.80}, fillAmt:55.20, refundAmt:0, fillStatus:'已补发', fillAt:'2026-05-18 15:40', replNo:'RPL-20260518-002'},
     {id:'AS-26070204', refundNo:'RF-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'已提货', arriveAt:relTs(-30), pickupAt:relTs(-3), retItems:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}]},
     {id:'AS-26070209', refundNo:'RF-26070209', client:'南洋茶餐室', order:'#SG20260628015', item:'西兰花 5kg 等2件', reason:'到货发黄，要求退回', age:'签收后7小时', type:'退货退款', amt:96.00, status:'closed', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'已提货', arriveAt:relTs(-26), pickupAt:relTs(-5),
-      retAppeal:{kind:'goods',status:'成立',at:'2026-06-17 10:20',reviewAt:'2026-06-18 15:20',reviewDue:0,desc:'到仓提货时只找到 1 箱番茄',photos:0,compStatus:'已生成',items:[{name:'番茄',ret:2,sysPick:1,actual:1,damaged:0,short:1,qty:1,cap:1,price:18.00,ok:1}],comp:18.00,compNo:'PF-20260618-317',note:'监控确认仓库少出 1 箱'}, retItems:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},
+      retAppeal:{kind:'goods',status:'成立',at:'2026-06-17 10:20',reviewAt:'2026-06-18 15:20',reviewDue:0,desc:'到仓提货时只找到 1 箱番茄',photos:0,compStatus:'已生成',items:[{name:'番茄',ret:2,sysPick:1,actual:1,damaged:0,short:1,qty:1,cap:1,price:18.00,ok:1}],comp:18.00,compNo:'RC-20260618-317',note:'监控确认仓库少出 1 箱'}, retItems:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},
   ],
   // 违规
   violations:[],
@@ -4511,7 +4511,7 @@ function raReviewPre(reject){const {ra}=DB._rv;
 function raReviewApply(){const {ra,pending:p}=DB._rv;
   ra.items.forEach((x,k)=>{x.ok=p.oks[k];x.price=p.prices[k];});
   ra.status=p.result;ra.comp=p.comp;ra.note=p.note;ra.reviewAt=ts();
-  if(ra.comp>0){ra.compStatus='已生成';ra.compNo='PF-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100);}else ra.compStatus='无需';
+  if(ra.comp>0){ra.compStatus='已生成';ra.compNo='RC-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100);}else ra.compStatus='无需';
   closeModal();render();toast(`退货申诉${ra.status}${ra.comp>0?'，赔付 '+money(ra.comp)+' 已生成赔付单':''}`,ra.comp>0?'ok':'info');
 }
 function retAppealBlock(a){
@@ -6449,7 +6449,7 @@ goHome();
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20261027d"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
-<script src="pc-modules/delivery.js?v=20261027e"></script>
+<script src="pc-modules/delivery.js?v=20261028a"></script>
 <script src="pc-modules/checkgoods.js?v=20261015e"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>
@@ -6468,6 +6468,6 @@ goHome();
 <script src="pc-modules/pickfee.js?v=20261027k"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
-<script src="pc-modules/retcomp.js?v=20261027f"></script>
+<script src="pc-modules/retcomp.js?v=20261028a"></script>
 </body>
 </html>

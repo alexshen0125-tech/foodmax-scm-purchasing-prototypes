@@ -737,7 +737,7 @@ const RETURN=[
  {no:'TKD2026061808190012',orderNo:'#SG20260618012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
   items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:4,pickQty:2,price:18.00}],
   appeal:{kind:'goods',status:'部分成立',at:'2026-06-17 15:02',reviewAt:'2026-06-18 11:30',desc:'仓库只找到 2 箱，另 2 箱未见',photos:0,compStatus:'已生成',
-    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,compNo:'PF-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
+    items:[{name:'番茄',ret:4,sysPick:2,actual:2,damaged:0,short:2,qty:2,price:18.00,ok:1}],comp:18.00,compNo:'RC-20260618-317',note:'监控确认仓库少出 1 箱；另 1 箱客户退回时已缺失，不予赔付'}},
 ];
 const retSum=g=>g.items.reduce((s,x)=>s+x.retQty,0);
 // 取回数量 = 各 SKU WMS 累计出库数量（可分次取）；SKU 无出库记录 = null，退货单进入 已提货 时补 0；
@@ -938,7 +938,7 @@ const WHR=()=>window.FM.DB.whReturns||[];
    赔付 = 核定数量 × 商品售价（10-27 会议：仓库丢损按售价赔、不扣佣金）→ 赔付单推送进结算单 */
 window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
   'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
-    items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,compNo:'PF-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
+    items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,compNo:'RC-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
 };
 function whrAdapter(no){
   const g=whrGroups().find(x=>x.no===no); if(!g)return null;

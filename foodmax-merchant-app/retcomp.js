@@ -1,5 +1,5 @@
 /* Food Max 商家端 v2 · 财务 › 退货赔付（与 PC pc-modules/retcomp.js 同口径，2026-10-27 沈亮定 + 当日会议）
-   - 数据：退货申诉经客服核定成立 / 部分成立且赔付 > 0（deliver.js FM_MOD.retCompSrc），一笔申诉 = 一张赔付单（PF-…）
+   - 数据：退货申诉经客服核定成立 / 部分成立且赔付 > 0（deliver.js FM_MOD.retCompSrc），一笔申诉 = 一张赔付单（RC-…）
    - 结算（货权转移阶段）：赔付单直接推送进结算单（settle.js FM_MOD.settleBills 的 comp[] 含该赔付单号即归该单），
      计入应结金额与应开票金额，随结算单一并开票，不单独开票 / 上传
    - 平台化后是否平台代开发票待 Simon 确认，届时再加代开发票下载

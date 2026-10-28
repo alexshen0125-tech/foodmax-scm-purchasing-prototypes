@@ -412,7 +412,7 @@
      · 2026-10-27 会议：商家自己送多的不赔 → 申诉入口默认关闭（DB.whrAppealOn），关闭时列表/详情不出现申诉按钮；历史已核定的照常展示 */
   DB.whrAppeals = DB.whrAppeals || {
     'SH20260518001':{kind:'goods',status:'成立',at:'2026-05-20 16:40',reviewAt:'2026-05-21 10:05',desc:'取回时 1 盘蛋壳大面积破裂',photos:3,compStatus:'已生成',
-      items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,compNo:'PF-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
+      items:[{name:'咸鸭蛋',ret:2,sysPick:2,actual:2,damaged:1,short:0,qty:1,price:9.00,ok:1}],comp:9.00,compNo:'RC-20260521-208',note:'仓库虚拟库位叠放压损，平台承担'}
   };
 
   // 把一条仓库退回记录包装成 RA 申诉对象（全部商品，_picked 区分已取回 / 待取回）

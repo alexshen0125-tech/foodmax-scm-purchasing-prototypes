@@ -100,12 +100,12 @@ const fmt=n=>n==null?'-':(n<0?'-':'')+Math.abs(n).toLocaleString('en-US',{minimu
 const r2=n=>Math.round(n*100)/100;
 const ADJ_TYPE={2:'罚款',3:'促销补差'};
 const COMP={
-  'PF-20261030-012':{src:'客户退货',retNo:'TH-070209',appealNo:'RA20261029000031',result:'部分成立',reviewAt:'2026-10-30 15:20',reviewer:'林晓',gst:'已注册',
+  'RC-20261030-012':{src:'客户退货',retNo:'TH-070209',appealNo:'RA20261029000031',result:'部分成立',reviewAt:'2026-10-30 15:20',reviewer:'林晓',gst:'已注册',
     items:[{ln:2,pro:'PRO20261028000044',sku:'SKU8862',name:'番茄 5kg/箱',ret:2,qty:1,price:18.00,rate:.09,cls:'蔬菜/果菜'}]},
-  'PF-20261031-004':{src:'客户退货',retNo:'TH-070231',appealNo:'RA20261030000008',result:'成立',reviewAt:'2026-10-31 11:05',reviewer:'陈敏',gst:'已注册',
+  'RC-20261031-004':{src:'客户退货',retNo:'TH-070231',appealNo:'RA20261030000008',result:'成立',reviewAt:'2026-10-31 11:05',reviewer:'陈敏',gst:'已注册',
     items:[{ln:1,pro:'PRO20261029000012',sku:'SKU8813',name:'芥蓝 1kg/包',ret:2,qty:2,price:3.50,rate:.09,cls:'蔬菜/叶菜'},
            {ln:2,pro:'PRO20261029000012',sku:'SKU8875',name:'生菜 1kg/包',ret:3,qty:2.65,price:2.51,rate:.09,cls:''}]},
-  'PF-20261101-002':{src:'仓库退回',retNo:'WR20260628002',appealNo:'RA20261101000003',result:'成立',reviewAt:'2026-11-01 10:12',reviewer:'林晓',gst:'未注册',
+  'RC-20261101-002':{src:'仓库退回',retNo:'WR20260628002',appealNo:'RA20261101000003',result:'成立',reviewAt:'2026-11-01 10:12',reviewer:'林晓',gst:'未注册',
     items:[{ln:1,pro:null,sku:'SKU8812',name:'咸鸭蛋 30枚/盘',ret:2,qty:2,price:9.00,rate:0,cls:'蛋类/加工'}]},
 };
 // 行金额由 merchant-service 算定后推送，这里只是复现：含税 = round(数量 × 单价, 2)；不含税 = round(含税 ÷ (1 + 税率), 2)；税额 = 含税 − 不含税
@@ -120,7 +120,7 @@ const BASE=[
   {type:'调整单',no:'ADJ20261029000007',cls:'蔬菜/叶菜',store:'SG01-B',cat:3,ticket:true,plan:-57.20,set:-57.20,pre:0,c:'2026-10-29',f:'2026-10-29'},
 ];
 const APS={
-  a:{no:'AP20261103000021',bill:'2026-11-03',rows:BASE.concat(['PF-20261030-012','PF-20261031-004','PF-20261101-002'].map(no=>({type:'赔付单',no,comp:true,cls:compCls(no),store:'SG01-B',plan:compSum(no),set:compSum(no),pre:0,c:no.slice(3,7)+'-'+no.slice(7,9)+'-'+no.slice(9,11),f:'2026-11-03'})))},
+  a:{no:'AP20261103000021',bill:'2026-11-03',rows:BASE.concat(['RC-20261030-012','RC-20261031-004','RC-20261101-002'].map(no=>({type:'赔付单',no,comp:true,cls:compCls(no),store:'SG01-B',plan:compSum(no),set:compSum(no),pre:0,c:no.slice(3,7)+'-'+no.slice(7,9)+'-'+no.slice(9,11),f:'2026-11-03'})))},
   b:{no:'AP20261103000022',bill:'2026-11-03',rows:BASE.slice(0,3)},
 };
 let ap='a',cur=null,dw=null;
@@ -152,7 +152,7 @@ function switchAp(){ap=document.getElementById('ap').value;closeDrawer();reset()
 let fails=0;
 function openDrawer(no){cur=no;dw={no,state:'loading'};render();paint();
   setTimeout(()=>{if(!dw||dw.no!==no)return;
-    if(no==='PF-20261031-004'&&fails===0){fails++;dw.state='error';}else dw.state='ok';paint();},500);}
+    if(no==='RC-20261031-004'&&fails===0){fails++;dw.state='error';}else dw.state='ok';paint();},500);}
 function paint(){
   const el=document.getElementById('drawer'),d=dw;if(!d)return;
   const c=COMP[d.no],kv=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
