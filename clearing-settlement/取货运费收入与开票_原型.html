@@ -332,7 +332,7 @@ const TYPE = {SUPPLY:['耗材采购','t-supply'], REPL:['自营补货','t-repl']
 const SHOP = {SH20260713476005:'Foodmax测试店铺', SH20260715476017:'小沈小卖部'};
 const r2 = n => Math.round(n*100)/100;
 const money = n => (n<0?'-':'') + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-const net = incl => r2(incl/1.09), gst = incl => r2(incl - net(incl));
+const net = incl => r2(incl/1.09), gst = incl => r2(incl - net(incl));   // 仅用于现网耗材等演示；取货运费用上游快照（未税为维护价，GST = ROUND(未税 × 9%, 2)）
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pill = (t,c) => `<span class="pill ${c}">${t}</span>`;
@@ -368,10 +368,10 @@ const PICKS = {
 
 /* 收入单据（现网三类 + 本期新增 取货运费） */
 const INCOMES = [
-  {no:'PI2026102700012', type:'PICK', src:'PF-20261019-SH20260713476005', shop:'SH20260713476005', at:'2026-10-27 09:15:02', incl:120.00, net:110.09, gst:9.91, st:'SETTLED', bill:'ST20261027-SH20260713476005', ing:'2026-10-27 09:15:05'},
-  {no:'PI2026101900031', type:'PICK', src:'PF-20261012-SH20260713476005', shop:'SH20260713476005', at:'2026-10-19 09:40:11', incl:153.34, net:140.68, gst:12.66, st:'SETTLED', bill:'ST20261019-SH20260713476005', ing:'2026-10-19 09:40:14'},
-  {no:'PI2026102700013', type:'PICK', src:'PF-20261019-SH20260715476017', shop:'SH20260715476017', at:'2026-10-27 09:16:40', incl:80.00, net:73.39, gst:6.61, st:'SETTLED', bill:'ST20261027-SH20260715476017', ing:'2026-10-27 09:16:43'},
-  {no:'PI2026102800003', type:'PICK', src:'PF-20261026-SH20260713476005', shop:'SH20260713476005', at:'2026-10-27 23:59:50', incl:60.00, net:55.05, gst:4.95, st:'PENDING', bill:'', ing:'2026-10-28 03:10:02', late:'归期 10-27，但到达时 DAILY 20261027 已生成 → 顺延进下一张（DAILY 20261028）'},
+  {no:'PI2026102700012', type:'PICK', src:'PF-20261019-SH20260713476005', shop:'SH20260713476005', at:'2026-10-27 09:15:02', incl:130.80, net:120.00, gst:10.80, st:'SETTLED', bill:'ST20261027-SH20260713476005', ing:'2026-10-27 09:15:05'},
+  {no:'PI2026101900031', type:'PICK', src:'PF-20261012-SH20260713476005', shop:'SH20260713476005', at:'2026-10-19 09:40:11', incl:167.14, net:153.34, gst:13.80, st:'SETTLED', bill:'ST20261019-SH20260713476005', ing:'2026-10-19 09:40:14'},
+  {no:'PI2026102700013', type:'PICK', src:'PF-20261019-SH20260715476017', shop:'SH20260715476017', at:'2026-10-27 09:16:40', incl:87.20, net:80.00, gst:7.20, st:'SETTLED', bill:'ST20261027-SH20260715476017', ing:'2026-10-27 09:16:43'},
+  {no:'PI2026102800003', type:'PICK', src:'PF-20261026-SH20260713476005', shop:'SH20260713476005', at:'2026-10-27 23:59:50', incl:65.40, net:60.00, gst:5.40, st:'PENDING', bill:'', ing:'2026-10-28 03:10:02', late:'归期 10-27，但到达时 DAILY 20261027 已生成 → 顺延进下一张（DAILY 20261028）'},
   {no:'PI2026102700004', type:'SUPPLY', src:'HC20261027003', shop:'SH20260713476005', at:'2026-10-27 08:12:00', incl:9.21, st:'SETTLED', bill:'ST20261027-SH20260713476005', ing:'2026-10-27 08:12:04', inv:'已开票', invNo:'SUP-INV-2026-000201'},
   {no:'PI2026101900011', type:'FINE', src:'FN20261019002', shop:'SH20260713476005', at:'2026-10-19 11:30:00', incl:40.00, st:'SETTLED', bill:'ST20261019-SH20260713476005', ing:'2026-10-19 11:30:03', inv:'不开票'},
 ];
@@ -444,10 +444,10 @@ function openIncome(no){
     <tr><th>店铺名称</th><td>${SHOP[i.shop]}</td><th>店铺编码</th><td class="mono">${i.shop}</td></tr>
     <tr><th>归期时间（推送时间）</th><td>${i.at}</td><th>接入时间</th><td>${i.ing}</td></tr></table>
     <h3>金额（上游快照）</h3>
-    <div class="amount-box"><div class="amount-item"><div class="k">计费金额</div><div class="v">${money(p.fee)}</div></div><div class="amount-item"><div class="k">减免金额</div><div class="v">${money(p.waive)}</div></div><div class="amount-item"><div class="k">应扣（含税）</div><div class="v">${money(i.incl)}</div></div></div>
-    <table class="kv"><tr><th>未税</th><td>${money(i.net)}</td><th>GST 9%</th><td>${money(i.gst)}</td></tr><tr><th>取货次数</th><td>${p.times}</td><th>收入方向</th><td>店铺 → 平台</td></tr></table>
+    <div class="amount-box"><div class="amount-item"><div class="k">计费（未税）</div><div class="v">${money(p.fee)}</div></div><div class="amount-item"><div class="k">减免（未税）</div><div class="v">${money(p.waive)}</div></div><div class="amount-item"><div class="k">应扣（含税）</div><div class="v">${money(i.incl)}</div></div></div>
+    <table class="kv"><tr><th>应扣（未税）</th><td>${money(i.net)}</td><th>GST 9%</th><td>${money(i.gst)}</td></tr><tr><th>取货次数</th><td>${p.times}</td><th>收入方向</th><td>店铺 → 平台</td></tr></table>
     <h3>取货记录快照 <span style="font-weight:400;color:var(--faint);font-size:12px">只读，清结算不重算</span></h3>
-    <div class="table-wrap"><table class="data"><thead><tr><th>作业日</th><th>车次</th><th>取货时间</th><th class="num">同车店铺数</th><th>计费说明</th><th class="num">计费金额</th><th>状态</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="data"><thead><tr><th>作业日</th><th>车次</th><th>取货时间</th><th class="num">同车店铺数</th><th>计费说明</th><th class="num">计费金额（未税）</th><th>状态</th></tr></thead><tbody>
       ${p.recs.map(r=>`<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td class="num">${r[3]}</td><td>${r[4]}</td><td class="num">${money(r[5])}</td><td>${r[6]}</td></tr>`).join('')}
     </tbody></table></div>
     <div class="subline" style="margin-top:6px">演示只列部分记录；真实为该周账单全部记录</div>
@@ -524,7 +524,7 @@ function openBill(no){
     ${cs.length?cs.map(c=>`<tr><td class="mono"><span class="btn link" data-comp="${c.no}">${c.no}</span></td><td>${c.src}</td><td class="mono">${c.ret}</td><td>${c.result}</td><td>${c.at}</td><td class="num">${money(c.net)}</td><td class="num">${money(c.gst)}</td><td class="num"><b>${money(c.incl)}</b></td></tr>`).join(''):`<tr><td colspan="8"><div class="empty"><b>本结算单没有退货申诉赔付</b></div></td></tr>`}
     </tbody></table></div>
     <div class="note-bar">本单退货申诉赔付合计：未税 ${money(r2(cs.reduce((a,c)=>a+c.net,0)))}、GST ${money(r2(cs.reduce((a,c)=>a+c.gst,0)))}、含税 ${money(compSum(no))}（各赔付单快照之和），平台 → 店铺，计入结算净额。</div>`;
-  $('#tab-pick').innerHTML=`<div class="table-wrap"><table class="data"><thead><tr><th>收入单号</th><th>取货运费账单号</th><th>结算周（作业日）</th><th class="num">取货次数</th><th class="num">计费金额</th><th class="num">减免金额</th><th class="num">未税</th><th class="num">GST</th><th class="num">应扣（含税）</th><th>归期时间</th></tr></thead><tbody>
+  $('#tab-pick').innerHTML=`<div class="table-wrap"><table class="data"><thead><tr><th>收入单号</th><th>取货运费账单号</th><th>结算周（作业日）</th><th class="num">取货次数</th><th class="num">计费（未税）</th><th class="num">减免（未税）</th><th class="num">应扣（未税）</th><th class="num">GST</th><th class="num">应扣（含税）</th><th>归期时间</th></tr></thead><tbody>
     ${ps.length?ps.map(i=>{const p=PICKS[i.src];return `<tr><td class="mono"><span class="btn link" data-inc="${i.no}">${i.no}</span></td><td class="mono">${i.src}</td><td>${p.week}</td><td class="num">${p.times}</td><td class="num">${money(p.fee)}</td><td class="num">${money(p.waive)}</td><td class="num">${money(i.net)}</td><td class="num">${money(i.gst)}</td><td class="num"><b>${money(i.incl)}</b></td><td>${i.at}</td></tr>`;}).join(''):`<tr><td colspan="10"><div class="empty"><b>本结算单没有取货运费</b></div></td></tr>`}
     </tbody></table></div>
     <div class="note-bar">本单取货运费合计：未税 ${money(v?v.net:0)}、GST ${money(v?v.gst:0)}、含税 ${money(pk)}（各收入快照之和）。物流服务费发票：${v?(v.st=='DONE'?`已开 <span class="mono">${v.no}</span>`:`待开（${esc(v.fail)}）`):(pk?'随结算单开票':'本单无取货运费，不开')}</div>`;

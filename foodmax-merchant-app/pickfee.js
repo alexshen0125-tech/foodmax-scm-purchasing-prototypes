@@ -20,7 +20,8 @@ const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return fmt(d);
 const monday=s=>addDays(s,-((D(s).getUTCDay()+6)%7));
 const weekLabel=m=>`${m} ~ ${addDays(m,6).slice(5)}`;
 const freeEnd=addDays(SHOP.first,FREE_DAYS-1);
-const zoneStd=z=>z==='NEAR'?`${money(PRICE.NEAR)} / 次，不拼车`:z==='NORMAL'?`${money(PRICE.NORMAL)} / 车，最多 ${MAX_POOL} 家拼车平摊`:'—';
+const zoneStd=z=>z==='NEAR'?`${money(PRICE.NEAR)} / 次（未税），不拼车`:z==='NORMAL'?`${money(PRICE.NORMAL)} / 车（未税），最多 ${MAX_POOL} 家拼车平摊`:'—';
+const gstOf=n=>Math.round(Math.round(n*100)*9/100)/100;   // 单价为未税价：每张周账单 GST = ROUND(应扣未税 × 9%, 2)（2026-10-28 定）
 
 DB.pfRules=DB.pfRules||[{from:'2026-10-01 00:00',zone:'NORMAL'}];
 DB.pfBills=DB.pfBills||{
@@ -64,7 +65,7 @@ function bills(){
   const all=calc(),wks=[...new Set(all.map(p=>monday(p.at.slice(0,10))))].sort().reverse();
   return wks.map(m=>{const list=all.filter(p=>monday(p.at.slice(0,10))===m),st=DB.pfBills[m]||{},sum=k=>r2(list.reduce((a,p)=>a+p[k],0));
     const fee=sum('fee'),due=sum('charge');
-    return {wk:m,no:`PF-${m.replace(/-/g,'')}-${SHOP.code}`,list,times:list.length,fee,waive:r2(fee-due),due,
+    return {wk:m,no:`PF-${m.replace(/-/g,'')}-${SHOP.code}`,list,times:list.length,fee,waive:r2(fee-due),due,gst:gstOf(due),incl:r2(due+gstOf(due)),
       pushedAt:st.pushedAt||'',stNo:st.stNo||'',invNo:st.stNo&&DB.pfInvs[st.stNo]?DB.pfInvs[st.stNo].invNo:'',open:addDays(m,6)>=TODAY};});
 }
 const billSt=b=>b.open?'本周进行中':!b.due?'无需收费':!b.pushedAt?'待出账':'已出账';
@@ -77,12 +78,12 @@ window.FM_MOD.pickfeeOn=()=>DB.pfRules.length>0;
 const inSettle=no=>bills().filter(b=>b.stNo===no);
 window.FM_MOD.pickfeeInv=no=>DB.pfInvs[no]||null;
 // 发票管理 › 物流服务费：一张结算单一张（invoice.js 调用）
-window.FM_MOD.pickfeeInvList=()=>Object.entries(DB.pfInvs).map(([no,v])=>({stNo:no,...v,net:r2(v.amt/(1+GST)),gst:r2(v.amt-r2(v.amt/(1+GST))),cnt:inSettle(no).length}));
-window.FM_MOD.pickfeeIssue=no=>{const l=inSettle(no),amt=r2(l.reduce((a,b)=>a+b.due,0));if(!amt||DB.pfInvs[no])return null;
-  return DB.pfInvs[no]={invNo:'LOG-INV-2026-000014',at:'2026-07-01 03:05',amt};};
+window.FM_MOD.pickfeeInvList=()=>Object.entries(DB.pfInvs).map(([no,v])=>({stNo:no,...v,cnt:inSettle(no).length}));
+window.FM_MOD.pickfeeIssue=no=>{const l=inSettle(no),amt=r2(l.reduce((a,b)=>a+b.incl,0));if(!amt||DB.pfInvs[no])return null;
+  return DB.pfInvs[no]={invNo:'LOG-INV-2026-000014',at:'2026-07-01 03:05',net:r2(l.reduce((a,b)=>a+b.due,0)),gst:r2(l.reduce((a,b)=>a+b.gst,0)),amt};};
 (function(){const cur=window.FM_MOD.settleCur&&FM_MOD.settleCur();if(!cur||cur.pick!=null)return;
-  const l=inSettle(cur.no),amt=r2(l.reduce((a,b)=>a+b.due,0));cur.pick=amt;cur.pickCnt=l.length;
-  cur.pickBills=l.map(b=>({no:b.no,shop:SHOP.name,range:`${b.wk} ~ ${addDays(b.wk,6)}`,amt:b.due}));
+  const l=inSettle(cur.no),amt=r2(l.reduce((a,b)=>a+b.incl,0));cur.pick=amt;cur.pickCnt=l.length;
+  cur.pickBills=l.map(b=>({no:b.no,shop:SHOP.name,range:`${b.wk} ~ ${addDays(b.wk,6)}`,amt:b.incl}));
   if(amt>0){cur.items.push(['取货运费（物流服务费·含税）',l.length,-amt]);cur.net=r2(cur.net-amt);window.FM_MOD.pickfeeIssue(cur.no);}})();   // 结算单已生成 → 开票
 
 let _tab='bill';
@@ -109,9 +110,9 @@ function open(){
             list.innerHTML=bs.length?bs.map((b,i)=>`<div class="rp-card" data-i="${i}">
               <div class="r1"><span class="no">${b.no}</span><span style="margin-left:auto">${chip(billSt(b),ST_C[billSt(b)])}</span></div>
               <div class="sub">${weekLabel(b.wk)}${b.pushedAt?` · 出账 ${b.pushedAt}`:''}</div>
-              <div class="qty"><div class="q"><div class="v">${b.times}</div><div class="l">取货次数</div></div><div class="q"><div class="v">${money(b.fee)}</div><div class="l">计费金额</div></div><div class="q"><div class="v">${b.waive?money(b.waive):'—'}</div><div class="l">减免金额</div></div></div>
+              <div class="qty"><div class="q"><div class="v">${b.times}</div><div class="l">取货次数</div></div><div class="q"><div class="v">${money(b.fee)}</div><div class="l">计费（未税）</div></div><div class="q"><div class="v">${b.waive?money(b.waive):'—'}</div><div class="l">减免（未税）</div></div></div>
               ${b.stNo?`<div class="sub" style="margin-top:8px">结算单 <span style="font-family:monospace">${b.stNo}</span> · ${b.invNo?'已开票':'待开票'}</div>`:''}
-              <div class="r2"><span>应扣金额</span><span class="amt">${money(b.due)}</span></div></div>`).join('')
+              <div class="r2"><span>应扣（含税）· 未税 ${money(b.due)} + GST ${money(b.gst)}</span><span class="amt">${money(b.incl)}</span></div></div>`).join('')
               :`<div class="empty"><div class="ei">${svg('truck')}</div><h4>暂无账单</h4><p>平台为您取货后，每周汇总出一张账单</p></div>`;
             list.querySelectorAll('[data-i]').forEach(c=>c.onclick=()=>openBill(bs[+c.dataset.i]));
           }else{
@@ -126,18 +127,17 @@ function open(){
 const pickCard=p=>`<div class="rp-card" style="cursor:default">
   <div class="r1"><span class="no">${p.no}</span><span style="margin-left:auto">${PST[p.st]?chip(PST[p.st][0],PST[p.st][1]):''}</span></div>
   <div class="sub">${p.at} · ${p.market}</div>
-  <div class="qty"><div class="q"><div class="v">${p.mates}</div><div class="l">同车店铺数</div></div><div class="q"><div class="v">${money(p.fee)}</div><div class="l">计费金额</div></div></div>
+  <div class="qty"><div class="q"><div class="v">${p.mates}</div><div class="l">同车店铺数</div></div><div class="q"><div class="v">${money(p.fee)}</div><div class="l">计费（未税）</div></div></div>
   <div class="r2"><span style="font-size:12px">${p.basis}</span></div></div>`;
 function openBill(b){
-  const inv=b.stNo?DB.pfInvs[b.stNo]:null,net=inv?r2(inv.amt/(1+GST)):null;   // 发票按结算单开，金额 = 整张结算单的取货运费
   pushPage({title:'取货运费账单',body:`
     <div class="rp-card2"><div class="rp-ct">账单信息<span class="desc">${chip(billSt(b),ST_C[billSt(b)])}</span></div>
       ${rowKV('账单号',`<span style="font-family:monospace">${b.no}</span>`)}${rowKV('结算周期',`${b.wk} ~ ${addDays(b.wk,6)}`)}${rowKV('取货次数',b.times)}
-      ${rowKV('计费金额',money(b.fee))}${rowKV('减免金额',b.waive?money(b.waive):'')}
+      ${rowKV('计费（未税）',money(b.fee))}${rowKV('减免（未税）',b.waive?money(b.waive):'')}${rowKV('应扣（未税）',money(b.due))}${rowKV('GST 9%',money(b.gst))}
       ${rowKV('出账时间',b.pushedAt)}${rowKV('扣款方式',b.pushedAt?'结算时从货款中扣除':'')}
       ${rowKV('结算单号',b.stNo?`<span style="font-family:monospace">${b.stNo}</span>`:'')}
       ${rowKV('物流服务费发票',b.invNo?`<span style="font-family:monospace">${b.invNo}</span>`:b.pushedAt?'随结算单开票':'',b.invNo||!b.pushedAt?'':'amber')}
-      <div class="rp-row total"><span class="k">应扣金额</span><span class="v">${money(b.due)}</span></div></div>
+      <div class="rp-row total"><span class="k">应扣（含税）</span><span class="v">${money(b.incl)}</span></div></div>
     <div class="rp-card2" style="padding-bottom:4px"><div class="rp-ct">取货明细<span class="desc">${b.times} 次</span></div></div>
     <div class="rp-list">${b.list.slice().reverse().map(pickCard).join('')}</div>`,
     footer:b.invNo?`<button class="btn primary" style="width:100%" id="pf-dl">下载物流服务费发票</button>`:'',
