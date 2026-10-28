@@ -119,11 +119,11 @@ const pstTag = p => PST[p.st] ? `<span class="tag ${PST[p.st][1]}"><span class="
 
 /* ================= 周账单：店铺 × 结算周 ================= */
 DB.pfBills = DB.pfBills || {   // key = 店铺|周一日期
-  'SH2026062000001|2026-10-05':{pushedAt:'2026-10-12 10:15', pushedBy:'林凯', stNo:'ST202606-M0815'},
+  'SH2026062000001|2026-10-05':{pushedAt:'2026-10-12 10:15', pushedBy:'林凯', stNo:'ST202606-M0815', reconDate:'2026-06-30'},
   'SH2026070200004|2026-10-05':{pushedAt:'2026-10-12 10:15', pushedBy:'林凯', stNo:'ST202606-SH2026070200004'},
   'SH2026070200005|2026-10-05':{pushedAt:'2026-10-12 10:16', pushedBy:'林凯', stNo:'ST202606-SH2026070200005'},
   'SH2026072000007|2026-10-05':{pushedAt:'2026-10-12 10:16', pushedBy:'林凯', stNo:'ST202606-SH2026072000007'},
-  'SH2026062000001|2026-10-12':{pushedAt:'2026-10-19 09:40', pushedBy:'林凯', stNo:'ST202606-M0815'},
+  'SH2026062000001|2026-10-12':{pushedAt:'2026-10-19 09:40', pushedBy:'林凯', stNo:'ST202606-M0815', reconDate:'2026-07-01'},
 };
 const billNo = (s,m) => `PF-${m.replace(/-/g,'')}-${s}`;   // 用完整店铺编码，避免后 5 位撞号
 /* 结算单：账单推送后挂到该商家「下一张生成的结算单」——当期单还没生成就进当期，已生成（不论是否认可）就进下一期，
@@ -150,7 +150,8 @@ function billsOf(m){
     const fee=sum('fee'), due=sum('charge');
     const gst=gstOf(due);
     return {shop:s, wk:m, no:billNo(s,m), list, times:list.length, fee, waive:r2(fee-due), due, gst, incl:r2(due+gst),
-      pushedAt:st.pushedAt||'', pushedBy:st.pushedBy||'', open:addDays(m,6)>=TODAY,
+      pushedAt:st.pushedAt||'', pushedBy:st.pushedBy||'', open:addDays(m,6)>=TODAY, wkEnd:addDays(m,6),
+      reconDate:st.pushedAt?(st.reconDate||st.pushedAt.slice(0,10)):'',   // 对账单计入日 = 推送日（演示数据把两张已推送账单挂到对账单演示日期上）
       stNo:st.stNo||'', invNo:st.stNo?((DB.pfInvs[st.stNo]||{}).invNo||''):''};
   }).filter(Boolean);
 }
@@ -173,13 +174,15 @@ window.pfIssueInv = function(no){
 window.pfSettleSync = function(){
   if(!DB.bill) return;
   const t=settles().find(x=>x.no==DB.bill.no);
-  DB.bill.pick=t?t.amt:0; DB.bill.pickCnt=t?t.list.length:0; DB.bill.pickBills=t?t.list.map(b=>({no:b.no, shop:shopName(b.shop), range:weekLabel(b.wk), amt:b.incl})):[];
+  DB.bill.pick=t?t.amt:0; DB.bill.pickCnt=t?t.list.length:0; DB.bill.pickBills=t?t.list.map(b=>({no:b.no, shop:shopName(b.shop), range:weekLabel(b.wk), times:b.times, amt:b.incl})):[];
   DB.bill.items=(DB.bill.items||[]).filter(it=>it[0]!='取货运费（物流服务费·含税）');
   if(DB.bill.pick>0) DB.bill.items.push(['取货运费（物流服务费·含税）',DB.bill.pickCnt,-DB.bill.pick]);
   if(window.recalcBillNet) recalcBillNet();
   if(DB.bill.status&&DB.bill.status!='none'&&DB.bill.pick>0) pfIssueInv(DB.bill.no);   // 结算单已生成 → 开票
 };
 window.pfStInv = no => DB.pfInvs[no]||null;
+// 商家端对账单：当天计入的取货运费账单（本店、已推送，计入日 = 推送日）
+window.pfReconPicks = date => allBills().filter(b=>b.shop==myShop()&&b.pushedAt&&b.reconDate==date);
 const invCell = b => b.invNo ? `<span class="mono">${b.invNo}</span>` : b.pushedAt ? '<span class="tag t-y"><span class="dot"></span>待开票</span>' : dash;
 const billOf = (s,m) => billsOf(m).find(b=>b.shop==s);
 const hasPending = b => b.list.some(p=>p.st=='PENDING');

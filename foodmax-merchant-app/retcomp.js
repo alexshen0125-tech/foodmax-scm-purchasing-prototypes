@@ -82,4 +82,10 @@ function openDetail(r){
     mount:(p)=>{p.querySelector('#rc-src').onclick=r.open;const b=p.querySelector('#rc-bill');if(b)b.onclick=()=>{if(window.FM_MOD.settle)window.FM_MOD.settle();};}});
 }
 window.FM_MOD.retcomp=open;
+// 对账单：当天计入的退货赔付（计入日 = 核定日；演示把 6 月结算单那张挂到对账单演示日期 06-29，与 PC 一致）
+const RC_RECON_DEMO={'RC-20260618-317':'2026-06-29'};
+window.FM_MOD.retCompRecon=date=>compRows().filter(r=>(RC_RECON_DEMO[r.compNo]||(r.ra.reviewAt||'').slice(0,10))===date).map(r=>{
+  const ok=(r.ra.items||[]).filter(x=>x.ok>0);
+  return {compNo:r.compNo,src:r.src,retNo:r.retNo,goods:ok.map(x=>x.name).join('、'),qty:ok.reduce((a,x)=>a+x.ok,0),amt:r.ra.comp,at:r.ra.reviewAt||'',stNo:r.bill?r.bill.no:''};
+});
 })();

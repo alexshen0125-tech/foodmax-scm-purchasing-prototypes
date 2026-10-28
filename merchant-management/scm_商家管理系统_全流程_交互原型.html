@@ -3349,7 +3349,9 @@ const dRevFee =d=>sum(d.after||[],x=>rcAft(d,x).fee);
 const dRevInc =d=>sum(d.after||[],x=>rcAft(d,x).inc);     // 售后扣款（逆向应付商家）
 const dAftN =d=>sum(d.after||[],x=>x.qty*rcLn(d,x.sku).price);
 const dSettle=d=>dInc(d)-dRevInc(d);                   // 当日结算（货款）= 正向商家收入 − 售后扣款（逆向应付商家）
-const dNet   =d=>dSettle(d)-dRpl(d)-dFine(d)-dSup(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 缺货罚款 − 耗材订单（同汇总卡「预计实付」）
+const dPick  =d=>window.pfReconPicks?+pfReconPicks(d.date).reduce((a,b)=>a+b.incl,0).toFixed(2):0;   // 取货运费（含税）：按计入日（推送日）落到当天对账单，pickfee.js
+const dComp  =d=>window.rcReconComps?+rcReconComps(d.date).reduce((a,r)=>a+r.amt,0).toFixed(2):0;     // 退货赔付（平台补给商家）：按计入日（核定日）落到当天对账单，retcomp.js
+const dNet   =d=>dSettle(d)-dRpl(d)-dFine(d)-dSup(d)-dPick(d)+dComp(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 缺货罚款 − 耗材订单 − 取货运费 + 退货赔付（同汇总卡「预计实付」）
 const rplAmt =r=>Math.round(r.selfPrice*r.qty*100)/100;                    // 补采金额(含税)=自营原定价×数量，不加价
 const rplFine=r=>Math.round(r.qty*(DB.replCfg?DB.replCfg.finePerUnit:40)*100)/100;  // 缺货罚款=缺口件数×罚款标准
 const rplNet =r=>Math.round(rplAmt(r)/(1+GST_DEFAULT/100)*100)/100;
@@ -3390,14 +3392,14 @@ function rcLine(op,lb,cap,v,opt){
    v = {paidG, plat, fee, aft, sub, settle, rpl, sup, fine}；opts.heroLabel / opts.subLines(数组) */
 function rcSumBody(v,opts){
   opts=opts||{};const fineUnit=DB.replCfg?DB.replCfg.finePerUnit:40;
-  const sep=v.rpl+v.sup+v.fine, net=v.settle-sep;
+  const sep=v.rpl+v.sup+v.fine+(v.pick||0)-(v.comp||0), net=v.settle-sep;
   return `<div class="rc-sum${opts.noHero?' no-hero':''}">
     ${opts.noHero?'':`<div class="rc-hero">
       <div class="k">${opts.heroLabel||'预计实付（本期到账）'}</div>
       <div class="big"><span class="c">S$</span>${money(net).replace('S$','')}</div>
-      <div class="sub" style="font-size:12.5px;color:var(--tp)">= ${opts.settleLabel||'结算合计（货款）'}<b>${money(v.settle)}</b> − 另行结算三项 <b style="color:var(--r)">${money(sep)}</b></div>
+      <div class="sub" style="font-size:12.5px;color:var(--tp)">= ${opts.settleLabel||'结算合计（货款）'}<b>${money(v.settle)}</b> − 另行结算各项 <b style="color:var(--r)">${money(sep)}</b></div>
       ${(opts.subLines||[]).map((l,i)=>`<div class="sub"${i?' style="margin-top:4px"':''}>${l}</div>`).join('')}
-      <div class="rc-tip"><b>口径</b>：${opts.heroShort||'预计实付'} = ${opts.settleLabel||'结算合计（货款）'} − 平台补采 − 耗材订单 − 缺货罚款；${opts.settleLabel||'结算合计（货款）'} = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。${opts.tipExtra||''}</div>
+      <div class="rc-tip"><b>口径</b>：${opts.heroShort||'预计实付'} = ${opts.settleLabel||'结算合计（货款）'} − 平台补采 − 耗材订单 − 缺货罚款 − 取货运费 + 退货赔付；${opts.settleLabel||'结算合计（货款）'} = 实付金额（含税）+ 平台补贴 − 平台服务费 − 售后扣款（含税）。商家补贴已在客户实付中扣除，不再重复扣。${opts.tipExtra||''}</div>
     </div>`}
     <div class="rc-ledger">
       <div class="tt">货款算式<span>${opts.ledgerSub||'列表各单同列累计'} · 正向 / 逆向 / 净额</span></div>
@@ -3411,12 +3413,14 @@ function rcSumBody(v,opts){
     </div>
     <div class="rc-side">
       <div class="tt">另行结算<span>结算单付款时从货款中抵扣</span></div>
-      <div class="warn">以下三项不计入${opts.settleLabel||'结算合计（货款）'}，在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。${opts.warnExtra||''}</div>
+      <div class="warn">以下各项不计入${opts.settleLabel||'结算合计（货款）'}，在结算单付款时单独抵扣，同一笔不重复扣。<br><span class="rc-tag inv" style="margin:0 4px 0 0">开票说明</span>平台补采、耗材订单由平台<b>各自单独</b>向你开具销售发票（结算单付款后自动开，在「发票管理」查看），与服务费发票互不顶替；缺货罚款不是商品交易，<b>不开发票</b>。${opts.warnExtra||''}</div>
       ${rcLine('',opts.settleLabel||'结算合计（货款）','左侧算式结果',v.settle)}
       ${rcLine('−','平台补采','到仓少货由平台自营补足，按自营含税价计（GST 9%）',v.rpl,{tag:'单独开票',tagCls:'inv'})}
       ${rcLine('−','耗材订单','耗材商城下单，送货单「已交付」当日计费',v.sup,{tag:'单独开票',tagCls:'inv'})}
       ${rcLine('−','缺货罚款',`缺口件数 × ${money(fineUnit)}/件，缺货即罚、与是否补采无关`,v.fine,{tag:'不开发票',tagCls:'noinv'})}
-      ${rcLine('=',opts.heroLabel||'预计实付（本期到账）',`${money(v.settle)} − ${money(v.rpl)} − ${money(v.sup)} − ${money(v.fine)} = <b>${money(net)}</b>`,net,{total:true})}
+      ${rcLine('−','取货运费','平台去批发市场帮你取货的运费，按周出账、推送当日计入（未税 + 9% GST）',v.pick||0,{tag:'物流服务费发票',tagCls:'inv'})}
+      ${rcLine('+','退货赔付','退货申诉核定成立的赔付，平台补给你，核定当日计入',v.comp||0,{tag:'随结算单开票',tagCls:'inv'})}
+      ${rcLine('=',opts.heroLabel||'预计实付（本期到账）',`${money(v.settle)} − ${money(v.rpl)} − ${money(v.sup)} − ${money(v.fine)} − ${money(v.pick||0)} + ${money(v.comp||0)} = <b>${money(net)}</b>`,net,{total:true})}
     </div>
   </div>`;
 }
@@ -3425,7 +3429,7 @@ function rcSumCard(rows,T){
   // 结算周期默认周一–周日：原型演示数据落在 2026-06-29（周一）– 07-05（周日）这一周期
   const cyc={from:'2026-06-29',to:'2026-07-05'};
   const v={paidG:T(dPaidG),plat:T(dPlat),fee:T(dFee),sub:T(dSub),incFwd:T(dInc),aft:T(dRevInc),settle:T(dSettle),
-           revPaid:T(dRevPaid),revPlat:T(dRevPlat),revFee:T(dRevFee),revSub:T(dRevSub),rpl:T(dRpl),sup:T(dSup),fine:T(dFine)};
+           revPaid:T(dRevPaid),revPlat:T(dRevPlat),revFee:T(dRevFee),revSub:T(dRevSub),rpl:T(dRpl),sup:T(dSup),fine:T(dFine),pick:T(dPick),comp:T(dComp)};
   return `<div class="card"><div class="card-bd" style="padding:18px 20px">${rcSumBody(v,{
     subLines:[`本结算周期 ${cyc.from}（周一）– ${cyc.to}（周日）· 截至 ${last} · ${rows.length} 张对账单`,`数据源：财务结算单明细 · <a href="javascript:nav('m-settle')" style="color:var(--g);font-weight:500">查看本期结算单 ›</a>`],
     tipExtra:'<br>结算周期为<b>周一至周日</b>，只按周期查看；周期结束后本数即该周结算单的实付净额。'
@@ -3460,7 +3464,9 @@ PAGES['m-recon']=()=>{
       <th style="text-align:right" title="另行结算，付款时抵扣；单独开票">平台补采</th>
       <th style="text-align:right" title="另行结算，付款时抵扣；缺货即罚，与是否补采无关；不开发票">缺货罚款</th>
       <th style="text-align:right" title="另行结算，付款时抵扣；单独开票">耗材订单</th>
-      <th style="text-align:right" title="（客户实付 + 平台补贴 − 平台服务费 − 售后扣款）− 平台补采 − 缺货罚款 − 耗材订单，公式同汇总卡「预计实付」">预估当日结算<br><span style="font-weight:400;color:var(--ts)">扣补采/罚款/耗材后</span></th>
+      <th style="text-align:right" title="另行结算，付款时抵扣；按结算单开物流服务费发票">取货运费<br><span style="font-weight:400;color:var(--ts)">含税</span></th>
+      <th style="text-align:right" title="另行结算，平台补给你；随结算单开票">退货赔付</th>
+      <th style="text-align:right" title="（客户实付 + 平台补贴 − 平台服务费 − 售后扣款）− 平台补采 − 缺货罚款 − 耗材订单 − 取货运费 + 退货赔付，公式同汇总卡「预计实付」">预估当日结算<br><span style="font-weight:400;color:var(--ts)">含另行结算各项</span></th>
       <th>操作</th></tr></thead><tbody>
     ${rows.map(d=>{const os=rcOrders(d);return `<tr>
       <td><input type="checkbox" class="skuchk" ${DB.rcSel.includes(d.no)?'checked':''} onclick="toggleReconSel('${d.no}')"></td>
@@ -3476,7 +3482,9 @@ PAGES['m-recon']=()=>{
       <td style="text-align:right;color:var(--ts)">${dRpl(d)?rcNeg(dRpl(d)):'—'}</td>
       <td style="text-align:right;color:var(--r)">${dFine(d)?rcNeg(dFine(d)):'—'}</td>
       <td style="text-align:right;color:var(--ts)">${dSup(d)?rcNeg(dSup(d)):'—'}</td>
-      <td style="text-align:right;color:var(--gd);font-weight:600" title="当日结算货款 ${money(dSettle(d))} − 补采 ${money(dRpl(d))} − 罚款 ${money(dFine(d))} − 耗材 ${money(dSup(d))}">${money(dNet(d))}</td>
+      <td style="text-align:right;color:var(--ts)">${dPick(d)?rcNeg(dPick(d)):'—'}</td>
+      <td style="text-align:right;color:var(--g)">${dComp(d)?'+'+money(dComp(d)):'—'}</td>
+      <td style="text-align:right;color:var(--gd);font-weight:600" title="当日结算货款 ${money(dSettle(d))} − 补采 ${money(dRpl(d))} − 罚款 ${money(dFine(d))} − 耗材 ${money(dSup(d))} − 取货运费 ${money(dPick(d))} + 退货赔付 ${money(dComp(d))}">${money(dNet(d))}</td>
       <td><button class="btn btn-o btn-sm" onclick="act_reconDetail('${d.no}')">详情</button></td></tr>`;}).join('')}
     </tbody></table></div></div></div>`;
 };
@@ -3494,7 +3502,29 @@ const RC_SHEETS=[
   {k:'rpl', n:'自营补货商品明细',      g:'补采单号 + 商品编码 + 子单号',   f:d=>(d.repl||[]).length},
   {k:'sup', n:'耗材采购商品明细',      g:'耗材送货单号 + 耗材编码',        f:d=>(d.supply||[]).length},
   {k:'adj', n:'业务调整明细',          g:'调整单号（一单一行）',            f:d=>rcAdj(d).length},
+  {k:'comp',n:'退货赔付明细',          g:'赔付单号（一单一行）',            f:d=>rcCompList(d).length},
+  {k:'pick',n:'取货运费账单',          g:'取货运费账单号（一单一行）',      f:d=>rcPickList(d).length},
+  {k:'pickR',n:'取货运费记录',         g:'取货记录号（一趟一行）',          f:d=>rcPickList(d).reduce((a,b)=>a+b.list.length,0)},
 ];
+const rcPickList=d=>window.pfReconPicks?pfReconPicks(d.date):[];
+const rcCompList=d=>window.rcReconComps?rcReconComps(d.date):[];
+const rcTH=(t,s)=>`<th style="text-align:right">${t}${s?`<br><span style="font-weight:400;color:var(--ts)">${s}</span>`:''}</th>`;
+function rcPickTab(d){
+  const ps=rcPickList(d);
+  if(!ps.length)return `<div class="empty" style="padding:28px 0"><div class="e-ic">🚚</div><div class="e-t">当天没有计入的取货运费</div></div>`;
+  return `<div style="overflow-x:auto"><table><thead><tr><th>取货运费账单号</th><th>结算周（作业日）</th>${rcTH('取货次数')}${rcTH('计费','未税')}${rcTH('减免','未税')}${rcTH('应扣','未税')}${rcTH('GST 9%')}${rcTH('应扣','含税')}<th>推送时间</th><th>结算单号</th><th>物流服务费发票</th></tr></thead><tbody>
+    ${ps.map(b=>`<tr><td class="mono">${b.no}</td><td>${b.wk} ~ ${b.wkEnd}</td><td style="text-align:right">${b.times}</td><td style="text-align:right">${money(b.fee)}</td><td style="text-align:right">${b.waive?money(b.waive):'—'}</td><td style="text-align:right">${money(b.due)}</td><td style="text-align:right">${money(b.gst)}</td><td style="text-align:right;color:var(--r);font-weight:600">${rcNeg(b.incl)}</td><td style="font-size:12px;color:var(--ts)">${b.pushedAt}</td><td class="mono">${b.stNo||'—'}</td><td class="mono">${b.invNo||'随结算单开票'}</td></tr>`).join('')}
+    <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计（另行结算）</td><td style="text-align:right">${money(ps.reduce((a,b)=>a+b.due,0))}</td><td style="text-align:right">${money(ps.reduce((a,b)=>a+b.gst,0))}</td><td style="text-align:right">${rcNeg(dPick(d))}</td><td colspan="3"></td></tr>
+  </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">取货运费按周出账，推送当日计入对账单；单价为未税价，每张周账单 GST = 应扣未税 × 9%；结算单生成时按结算单开物流服务费发票。逐趟明细见「财务 › 取货运费」或导出「取货运费记录」Sheet。<button class="btn btn-link" style="padding-left:4px" onclick="closeDrawer();nav('m-pickfee')">查看取货运费 →</button></div></div>`;
+}
+function rcCompTab(d){
+  const cs=rcCompList(d);
+  if(!cs.length)return `<div class="empty" style="padding:28px 0"><div class="e-ic">💸</div><div class="e-t">当天没有计入的退货赔付</div></div>`;
+  return `<div style="overflow-x:auto"><table><thead><tr><th>赔付单号</th><th>来源</th><th>关联单号</th><th>赔付商品</th>${rcTH('核定数量')}${rcTH('赔付金额')}<th>核定时间</th><th>结算单号</th><th>开票</th></tr></thead><tbody>
+    ${cs.map(r=>`<tr><td class="mono">${r.compNo}</td><td>${r.src}</td><td class="mono">${r.retNo}</td><td>${r.goods}</td><td style="text-align:right">${r.qty}</td><td style="text-align:right;color:var(--g);font-weight:600">+${money(r.amt)}</td><td style="font-size:12px;color:var(--ts)">${r.at}</td><td class="mono">${r.stNo||'待进结算单'}</td><td>随结算单开票</td></tr>`).join('')}
+    <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计（另行结算 · 平台补给你）</td><td style="text-align:right;color:var(--g)">+${money(dComp(d))}</td><td colspan="3"></td></tr>
+  </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">退货申诉核定成立后生成赔付单，核定当日计入对账单，推送进结算单随货款打给你。<button class="btn btn-link" style="padding-left:4px" onclick="closeDrawer();nav('m-ret-comp')">查看退货赔付 →</button></div></div>`;
+}
 // 业务调整挂到「生效日期 = 对账单日期」的那一天；只取本店铺、已生效、已推送的单（数据与运营端业务调整单同源）
 function rcAdj(d){
   const shop=DB.shopCode||'SH2026062000001';
@@ -3568,7 +3598,7 @@ function act_reconDetail(no){
   const TH=(t,s)=>`<th style="text-align:right">${t}${s?`<br><span style="font-weight:400;color:var(--ts)">${s}</span>`:''}</th>`;
   drawer(`<div class="drawer-hd"><div><h3>${d.no} · 对账单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${d.date} · ${d.wh} · 关联 ${nOrd} 个订单 · 实付金额未税 ${money(dPaidN(d))} / 含税 ${money(dPaidG(d))} · 数据源：财务结算单明细</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
-    <div style="margin-bottom:16px;padding:14px 16px;border:1px solid var(--bd);border-radius:10px;background:#fff">${rcSumBody({paidG:dPaidG(d),plat:dPlat(d),fee:dFee(d),sub:dSub(d),incFwd:dInc(d),aft:dRevInc(d),settle:dSettle(d),revPaid:dRevPaid(d),revPlat:dRevPlat(d),revFee:dRevFee(d),revSub:dRevSub(d),rpl:dRpl(d),sup:dSup(d),fine:dFine(d)},{
+    <div style="margin-bottom:16px;padding:14px 16px;border:1px solid var(--bd);border-radius:10px;background:#fff">${rcSumBody({paidG:dPaidG(d),plat:dPlat(d),fee:dFee(d),sub:dSub(d),incFwd:dInc(d),aft:dRevInc(d),settle:dSettle(d),revPaid:dRevPaid(d),revPlat:dRevPlat(d),revFee:dRevFee(d),revSub:dRevSub(d),rpl:dRpl(d),sup:dSup(d),fine:dFine(d),pick:dPick(d),comp:dComp(d)},{
       noHero:true,heroLabel:'预估当日结算',settleLabel:'当日结算（货款）',ledgerSub:'本单各行累计',
       warnExtra:'<br>补采与罚款<b>互不关联</b>：补采只在自营有货补齐时产生，罚款只要清点出缺口就计。'
     })}</div>
@@ -3580,6 +3610,8 @@ function act_reconDetail(no){
       <div class="tab ${tab=='fine'?'active':''}" onclick="DB.rcTab='fine';act_reconDetail('${no}')">缺货罚款${fin.length?`<span class="tb">${fin.length}</span>`:''}</div>
       <div class="tab ${tab=='supply'?'active':''}" onclick="DB.rcTab='supply';act_reconDetail('${no}')">耗材订单${sup.length?`<span class="tb">${sup.length}</span>`:''}</div>
       <div class="tab ${tab=='adjust'?'active':''}" onclick="DB.rcTab='adjust';act_reconDetail('${no}')">业务调整${adj.length?`<span class="tb">${adj.length}</span>`:''}</div>
+      <div class="tab ${tab=='pick'?'active':''}" onclick="DB.rcTab='pick';act_reconDetail('${no}')">取货运费${rcPickList(d).length?`<span class="tb">${rcPickList(d).length}</span>`:''}</div>
+      <div class="tab ${tab=='comp'?'active':''}" onclick="DB.rcTab='comp';act_reconDetail('${no}')">退货赔付${rcCompList(d).length?`<span class="tb">${rcCompList(d).length}</span>`:''}</div>
     </div>
     ${tab=='sku'?`<div style="overflow-x:auto"><table><thead><tr><th>SKU 编码</th><th>商品名称</th><th>规格</th>
       ${TH('未税单价')}${TH('含税单价')}<th>税率</th>${TH('应发件数')}${TH('实发件数')}${TH('实发金额','未税')}${TH('实发金额','含税')}${TH('商家补贴')}<th style="text-align:right">服务费率</th>${TH('平台服务费')}${TH('商家收入')}</tr></thead><tbody>
@@ -3640,6 +3672,7 @@ function act_reconDetail(no){
         <td><span class="tag t-b"><span class="dot"></span>${r.status}</span></td></tr>`;}).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="9">合计（另行结算）</td><td style="text-align:right">${rcNeg(sum(rpl,rplNet))}</td><td style="text-align:right">${rcNeg(dRpl(d))}</td><td></td></tr>
       </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">补采金额（含税）= ROUND(自营商品原定价 × 补采数量, 2)，<b>不加价</b>；缺货罚款 = 缺口件数 × 罚款标准（S$${DB.replCfg?DB.replCfg.finePerUnit:40}/件），与货值无关、不开发票。缺口由平台自营现货全额补足，客户订单无感。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">📦</div><div class="e-t">当日无平台补采</div><div class="e-s">收货清点无少货，或缺口未由自营补足。</div></div>`)
+    :tab=='pick'?rcPickTab(d):tab=='comp'?rcCompTab(d)
     :tab=='adjust'?(adj.length?`<div style="overflow-x:auto"><table><thead><tr><th>调整单号</th><th>调整类型</th><th>抵扣方式</th><th>方向</th><th>关联业务单号 / 原发票号</th><th>生效时间</th>${TH('金额','未税')}${TH('GST')}${TH('金额','含税')}<th>发票</th><th>状态</th></tr></thead><tbody>
       ${adj.map(r=>{const sg=rcAdjSign(r),iv=r.deductionType=='INVOICE';return `<tr><td class="mono">${r.adjustNo}</td>
         <td>${r.adjustTypeName}<div style="font-size:11px;color:var(--ts)">${r.adjustTypeCode}</div></td>
@@ -3670,7 +3703,7 @@ function act_reconDetail(no){
       </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:8px">耗材按送货单「已交付」回写时间落期计费，支付方式固定为结算抵扣，商家无支付动作；不参与佣金、不计 GMV。</div></div>`:`<div class="empty" style="padding:28px 0"><div class="e-ic">🏷️</div><div class="e-t">当日无耗材订单</div><div class="e-s">耗材订单按交付回写日计入对账单。</div></div>`)}
     <div style="font-size:11.5px;color:var(--ts);margin-top:10px">数据源：<b>财务结算单明细汇总</b>，商家端不自行取数计算。金额 = 客户实付 = 实发金额含税 − 商家补贴 − 平台补贴；平台服务费 =（客户实付 + 平台补贴）× 平台服务费率；当日结算 = 客户实付 + 平台补贴 − 平台服务费 − 售后扣款（商家补贴不重复扣）。原：商家收入 = 实发金额含税 − 商家补贴 − 平台服务费；当日结算（货款）= 商家收入 − 售后扣款。全为标品按整件对账，实发件数取仓库签收入库件数。平台补采与耗材订单<b>各自独立结算</b>，按其在结算单明细的计入日落到当天对账单，仅展示不并入当日结算，付款时轧差：实付 = 货款应结 − 平台补采 − 耗材。</div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="toast('已导出本单对账明细（7 个 Sheet，业务调整明细 18 列）','ok')">⬇️ 导出本单</button><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="toast('已导出本单对账明细（10 个 Sheet：含退货赔付明细、取货运费账单、取货运费记录）','ok')">⬇️ 导出本单</button><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 }
 
 /* ---------- 商家端：结算单（闭环D 商家侧） ---------- */
@@ -3689,12 +3722,14 @@ PAGES['m-settle']=()=>{
   <button class="btn btn-o btn-sm" ${selRows.length?'':'disabled style="opacity:.45;cursor:not-allowed"'} title="勾选后可导出所选；未勾选请用右上角「导出」导出全部" onclick="act_exportBills()">⬇️ 导出所选${selRows.length?`（${selRows.length}）`:''}</button></div>
   ${selRows.length?`<div class="selbar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px"><span>已选 <b>${selRows.length}</b> 张 · 应清算合计 <b style="color:var(--gd)">${money(selSum)}</b></span><button class="btn btn-link" style="margin-left:auto" onclick="DB.billSel=[];render()">取消选择</button></div>`:''}
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选（仅用于导出；认可需逐单进行）" ${allSel?'checked':''} onclick="selAllBills()"></th><th>结算单号</th><th>结算区间</th><th>状态</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选（仅用于导出；认可需逐单进行）" ${allSel?'checked':''} onclick="selAllBills()"></th><th>结算单号</th><th>结算区间</th><th>状态</th><th style="text-align:right">取货运费<br><span style="font-weight:400;color:var(--ts)">含税</span></th><th style="text-align:right">退货赔付</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
     ${rows.map(x=>`<tr>
       <td><input type="checkbox" class="skuchk" ${DB.billSel.includes(x.no)?'checked':''} onclick="toggleBillSel('${x.no}')"></td>
       <td class="mono">${x.no}</td>
       <td>${x.range}</td>
       <td>${x===cur?tag('bill',x.status):'<span class="tag t-g"><span class="dot"></span>已结清</span>'}</td>
+      <td style="text-align:right;color:var(--ts)">${(x.pick||0)>0?rcNeg(x.pick):'—'}</td>
+      <td style="text-align:right;color:var(--g)">${billComp(x)>0?'+'+money(billComp(x)):'—'}</td>
       <td style="color:var(--gd);font-weight:600">${money(x.net)}</td>
       <td style="color:var(--ts);font-size:12px">${x!==cur?(x.payTime||'已到账'):(x.status=='confirmed'&&x.expectedPayDate?`预计 ${x.expectedPayDate} 前到账`:'—')}</td>
       <td style="white-space:nowrap">${x===cur&&x.status=='generated'?`<button class="btn btn-p btn-sm" onclick="act_confirmBillAsk('${x.no}')">认可账单</button> `:''}<button class="btn btn-o btn-sm" onclick="act_billDetail('${x===cur?'':x.period}')">详情</button></td>
@@ -3718,9 +3753,15 @@ function act_exportBills(){
     </tbody></table></div>
     <label class="fl" style="display:block;margin-bottom:6px">导出格式</label>
     <div class="row" style="gap:8px;flex-wrap:wrap">
-      <label class="chip-ck on"><input type="radio" name="expfmt" value="excel" checked onchange="document.querySelectorAll('[name=expfmt]').forEach(r=>r.parentElement.classList.toggle('on',r.checked))">Excel 明细表（含逐笔构成）</label>
+      <label class="chip-ck on"><input type="radio" name="expfmt" value="excel" checked onchange="document.querySelectorAll('[name=expfmt]').forEach(r=>r.parentElement.classList.toggle('on',r.checked))">Excel 明细表（按统一导出模板，含逐笔构成）</label>
       <label class="chip-ck"><input type="radio" name="expfmt" value="pdf" onchange="document.querySelectorAll('[name=expfmt]').forEach(r=>r.parentElement.classList.toggle('on',r.checked))">PDF 对账单（每张一页）</label>
     </div>
+    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-top:12px"><table style="margin:0"><thead><tr><th>Excel 包含的 Sheet</th><th style="text-align:right">本次行数</th></tr></thead><tbody>
+      <tr><td>SKU汇总 / 订单级商品明细（正向、逆向）、自营补货、耗材采购、业务调整</td><td style="text-align:right;color:var(--ts)">按明细</td></tr>
+      <tr><td>退货赔付明细（一单一行）</td><td style="text-align:right" class="mono">${targets.reduce((a,t)=>a+(t.comp||[]).length,0)}</td></tr>
+      <tr><td>取货运费账单（一单一行）</td><td style="text-align:right" class="mono">${targets.reduce((a,t)=>a+(t.pickCnt||0),0)}</td></tr>
+      <tr><td>取货运费记录（一趟一行）</td><td style="text-align:right" class="mono">${targets.reduce((a,t)=>a+((t.pickBills||[]).reduce((b,x)=>b+(x.times||0),0)),0)}</td></tr>
+    </tbody></table></div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="doExportBills(${targets.length})">确认导出</button></div>`);
 }
@@ -6466,9 +6507,9 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261028a"></script>
+<script src="pc-modules/pickfee.js?v=20261028b"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
-<script src="pc-modules/retcomp.js?v=20261028b"></script>
+<script src="pc-modules/retcomp.js?v=20261028c"></script>
 </body>
 </html>

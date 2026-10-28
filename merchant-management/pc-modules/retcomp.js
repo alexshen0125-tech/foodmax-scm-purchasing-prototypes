@@ -153,4 +153,13 @@ window.rcpDetail=function(no,ops){
   <div class="drawer-ft">${ops?'':`<button class="btn btn-o" onclick="${r.open}">查看${r.src=='仓库退回'?'退回记录':'退货单'}</button>${r.bill?`<button class="btn btn-o" onclick="closeDrawer();act_billDetail('${r.bill===DB.bill?'':r.bill.period}')">查看结算单</button>`:''}`}<button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 };
 
+
+/* 商家端对账单 / 结算单导出：当天计入的退货赔付单（计入日 = 核定日；演示把 6 月结算单里那张挂到对账单演示日期 06-29） */
+const RC_RECON_DEMO={'RC-20260618-317':'2026-06-29'};
+window.rcReconComps=function(date){
+  return retCompRows().filter(r=>(RC_RECON_DEMO[r.compNo]||(r.ra.reviewAt||'').slice(0,10))==date).map(r=>{
+    const ok=(r.ra.items||[]).filter(x=>x.ok>0);
+    return {compNo:r.compNo, src:r.src, retNo:r.retNo, goods:ok.map(x=>x.name).join('、'), qty:sum2(ok.map(x=>x.ok)), amt:r.ra.comp, at:r.ra.reviewAt||'', stNo:r.bill?r.bill.no:''};
+  });
+};
 })();

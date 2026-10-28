@@ -25,8 +25,8 @@ const gstOf=n=>Math.round(Math.round(n*100)*9/100)/100;   // 单价为未税价�
 
 DB.pfRules=DB.pfRules||[{from:'2026-10-01 00:00',zone:'NORMAL'}];
 DB.pfBills=DB.pfBills||{
-  '2026-10-05':{pushedAt:'2026-10-12 10:15',stNo:'ST202606-M0815'},   // 结算单 ST202606 生成前推送，已归入该单
-  '2026-10-12':{pushedAt:'2026-10-19 09:40',stNo:'ST202606-M0815'},
+  '2026-10-05':{pushedAt:'2026-10-12 10:15',stNo:'ST202606-M0815',reconDate:'2026-06-30'},   // 结算单 ST202606 生成前推送，已归入该单
+  '2026-10-12':{pushedAt:'2026-10-19 09:40',stNo:'ST202606-M0815',reconDate:'2026-07-01'},
 };
 DB.pfInvs=DB.pfInvs||{};   // 物流服务费发票：key = 结算单号，结算单生成时开（与 aegis 佣金发票同一时点）
 DB.pfVoids=DB.pfVoids||{'PK2026102164':{}};   // 与 PC 一致：飞书免运费审批通过（凡哥批）的一笔，商家这边显示已减免
@@ -66,7 +66,7 @@ function bills(){
   return wks.map(m=>{const list=all.filter(p=>monday(p.at.slice(0,10))===m),st=DB.pfBills[m]||{},sum=k=>r2(list.reduce((a,p)=>a+p[k],0));
     const fee=sum('fee'),due=sum('charge');
     return {wk:m,no:`PF-${m.replace(/-/g,'')}-${SHOP.code}`,list,times:list.length,fee,waive:r2(fee-due),due,gst:gstOf(due),incl:r2(due+gstOf(due)),
-      pushedAt:st.pushedAt||'',stNo:st.stNo||'',invNo:st.stNo&&DB.pfInvs[st.stNo]?DB.pfInvs[st.stNo].invNo:'',open:addDays(m,6)>=TODAY};});
+      pushedAt:st.pushedAt||'',stNo:st.stNo||'',wkEnd:addDays(m,6),reconDate:st.pushedAt?(st.reconDate||st.pushedAt.slice(0,10)):'',invNo:st.stNo&&DB.pfInvs[st.stNo]?DB.pfInvs[st.stNo].invNo:'',open:addDays(m,6)>=TODAY};});
 }
 const billSt=b=>b.open?'本周进行中':!b.due?'无需收费':!b.pushedAt?'待出账':'已出账';
 const ST_C={'本周进行中':'rp-c-gray','无需收费':'rp-c-gray','待出账':'rp-c-amber','已出账':'rp-c-green'};
@@ -77,6 +77,8 @@ window.FM_MOD.pickfeeOn=()=>DB.pfRules.length>0;
 /* 结算单联动（与 PC pfSettleSync / pfIssueInv 同口径） */
 const inSettle=no=>bills().filter(b=>b.stNo===no);
 window.FM_MOD.pickfeeInv=no=>DB.pfInvs[no]||null;
+// 对账单：当天计入的取货运费账单（计入日 = 推送日；演示把两张已推送账单挂到对账单演示日期）
+window.FM_MOD.pickfeeRecon=date=>bills().filter(b=>b.pushedAt&&b.reconDate===date);
 // 发票管理 › 物流服务费：一张结算单一张（invoice.js 调用）
 window.FM_MOD.pickfeeInvList=()=>Object.entries(DB.pfInvs).map(([no,v])=>({stNo:no,...v,cnt:inSettle(no).length}));
 window.FM_MOD.pickfeeIssue=no=>{const l=inSettle(no),amt=r2(l.reduce((a,b)=>a+b.incl,0));if(!amt||DB.pfInvs[no])return null;

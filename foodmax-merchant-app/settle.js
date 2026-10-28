@@ -176,7 +176,7 @@ function openSettle(){
             <div class="r1"><span class="no">${b.no}</span>${statusChip(b)}</div>
             <div class="rng">${b.range}</div>
             <div class="big disp"><span class="c">S$</span>${money(b.net).slice(2)}</div>
-            <div class="glbl">应清算给供应商（到手货款）</div>
+            <div class="glbl">应清算给供应商（到手货款）${(b.pick||0)>0?` · 含取货运费 −${money(b.pick)}`:''}${compSum(b)>0?` · 退货赔付 +${money(compSum(b))}`:''}</div>
             <div class="r2">平台抽佣 ${money(b.feeSvc+b.feeLogi)} · ${b.status=='paid'?b.payTime:(b.status=='confirmed'&&b.expectedPayDate?'预计 '+b.expectedPayDate+' 前到账':'待认可')}<span class="ar">›</span></div>
             ${b.status=='generated'?`<button class="btn primary se-ok" data-ok="1">认可账单</button>`:''}
           </div>
