@@ -121,19 +121,19 @@ function renderPrint(box){
   const printed=rs.reduce((a,r)=>a+Math.min(r.qty,printedOf(r.key)),0);
   const unpr=should-printed;
   const ps=window.FM.PRESEND_ON===true,lock=lockOn();
-  const needAll=rs.reduce((a,r)=>a+r.needQty,0),usedAll=rs.reduce((a,r)=>a+r.leftQty,0);
+  const needAll=rs.reduce((a,r)=>a+r.needQty,0),stockAll=rs.reduce((a,r)=>a+(r.stockLeft||0),0);
   const byWh={};rs.forEach(r=>{(byWh[r.wh]=byWh[r.wh]||[]).push(r);});
   const whSet=Object.keys(byWh);
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
   const df=dateField(state.date,ds,d=>{state.date=d;renderPrint(box);});
   box.innerHTML=`
-    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送数量 = max(订单量, 预送量)</b>：预送量是算法预测的全天销量、<b>已含订单量</b>，取大不相加。<b>需打标签数 = 应送数量 − 已用在仓预送</b>（昨天留仓的与你昨天多送被照收的货今日优先消耗），<b>不要重复打标重复送</b>。已用在仓预送以仓库回传的期末库存为准，<b>仓库未回传前 12:00 前不可打印</b>；回传后系统自动校验，少打补打、多打作废。':''}</div>
+    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送数量 = max(订单量, 预送量)</b>：预送量是算法预测的全天销量、<b>已含订单量</b>，取大不相加。<b>需打标签数 = max(0, 应送数量 − 在仓库存)</b>（昨天留仓的与你昨天多送被照收的货今日优先消耗），<b>不要重复打标重复送</b>。在仓库存以仓库回传的期末库存为准，<b>仓库未回传前 12:00 前不可打印</b>；回传后系统自动校验，少打补打、多打作废。':''}</div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
       <div class="lb-frow"><span class="lb-fl">商品名称</span><input class="lb-search" id="lb-name" placeholder="输入商品名 / SKU 编码" value="${state.name||''}"></div>
     </div>
-    <div class="lb-sum">${ps?`<div class="k"><div class="v">${needAll}</div><div class="l">应送数量</div></div><div class="k"><div class="v g">${lock?'—':'−'+usedAll}</div><div class="l">已用在仓预送</div></div><div class="k"><div class="v">${lock?'—':should}</div><div class="l">需打标签数</div></div>`:`<div class="k"><div class="v">${should}</div><div class="l">应送货(张)</div></div>`}<div class="k"><div class="v g">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${lock?'—':unpr}</div><div class="l">未打印</div></div></div>
+    <div class="lb-sum">${ps?`<div class="k"><div class="v">${needAll}</div><div class="l">应送数量</div></div><div class="k"><div class="v">${lock?'—':stockAll}</div><div class="l">在仓库存</div></div><div class="k"><div class="v">${lock?'—':should}</div><div class="l">需打标签数</div></div>`:`<div class="k"><div class="v">${should}</div><div class="l">应送货(张)</div></div>`}<div class="k"><div class="v g">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${lock?'—':unpr}</div><div class="l">未打印</div></div></div>
     ${ps?`<div class="bq-entry" id="lb-wms"><span>在仓库存 <span class="bq-tag ${lock?'y':'gr'}" title="演示：点击切换仓库回传状态">${PS_WMS_TXT()}</span></span><span class="c">${lock?'回传后可打印':'已按回传数计算'}</span></div>`:''}
     <div class="bq-entry" id="lb-bq"><span>📉 报缺记录${window.FM_SHORT&&window.FM_SHORT.count(state.date)?`（${window.FM_SHORT.count(state.date)}）`:''} <span class="bq-tag ${window.FM.DB.labelCutoff?'gr':'y'}" id="lb-cut" title="演示：点击切换截单状态">${window.FM.DB.labelCutoff?'已截单':'未截单'}</span></span><span class="c">缺货在标签详情里报 ›</span></div>
     ${rs.length?whSet.map(w=>`
@@ -143,7 +143,7 @@ function renderPrint(box){
         return `<div class="lb-row" data-key="${r.key}">
         <div class="top"><span class="nm">${r.name}${window.FM_SHORT?window.FM_SHORT.tags(state.date,r.wh,r.sku):''}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${lock?'—':r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
-        ${ps?`<div class="kv"><span class="i">订单量 <b>${r.ordQty}</b></span><span class="i">在仓库存 <b>${lock?'待回传':(r.stockLeft||0)}</b></span><span class="i">应送数量 <b>${r.needQty}</b></span><span class="i">已用在仓 <b style="color:var(--emerald-2)">${lock?'待回传':(r.leftQty?'−'+r.leftQty:'—')}</b></span></div>`:''}
+        ${ps?`<div class="kv"><span class="i">订单量 <b>${r.ordQty}</b></span><span class="i">在仓库存 <b>${lock?'待回传':(r.stockLeft||0)}</b></span><span class="i">应送数量 <b>${r.needQty}</b></span></div>`:''}
         ${!lock&&printedOf(r.key)>r.qty?`<div class="meta" style="color:#C0453B">多打 ${printedOf(r.key)-r.qty} 张 · 作废</div>`:''}
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span>${window.FM_SHORT&&r.ordQty>0?`<span class="i lb-bqbtn" data-bq="${r.key}" style="margin-left:auto;color:#C0453B;font-weight:700;padding:6px 0 6px 12px">报缺货</span>`:''}</div>
         <span class="chev">›</span>
@@ -473,7 +473,6 @@ function drawLabelDetail(box,key){
       <div class="r"><span class="k">订单量</span><span class="v">${r.ordQty}</span></div>
       <div class="r"><span class="k">在仓库存</span><span class="v">${lockOn()?'待仓库回传':(r.stockLeft||0)}</span></div>
       <div class="r"><span class="k">应送数量</span><span class="v">${r.needQty}</span></div>
-      <div class="r"><span class="k">已用在仓预送</span><span class="v">${lockOn()?'待仓库回传':(r.leftQty?'−'+r.leftQty:'—')}</span></div>
     </div>`:''}
     <div class="lb-sum"><div class="k"><div class="v">${lockOn()?'—':r.qty}</div><div class="l">${window.FM.PRESEND_ON===true?'需打标签数':'应送货(张)'}</div></div><div class="k"><div class="v g">${pr}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${lockOn()?'—':un}</div><div class="l">未打印</div></div></div>
     ${!lockOn()&&printedOf(key)>r.qty?`<div class="lp-printer" style="color:#C0453B">多打 ${printedOf(key)-r.qty} 张，今日只需 ${r.qty} 张，多余标签作废</div>`:''}
