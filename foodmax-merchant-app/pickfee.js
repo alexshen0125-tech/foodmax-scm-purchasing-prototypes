@@ -19,11 +19,12 @@ const D=s=>new Date(s+'T00:00:00Z'),fmt=d=>d.toISOString().slice(0,10);
 const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return fmt(d);};
 const monday=s=>addDays(s,-((D(s).getUTCDay()+6)%7));
 const weekLabel=m=>`${m} ~ ${addDays(m,6).slice(5)}`;
-const freeEnd=addDays(SHOP.first,FREE_DAYS-1);
 const zoneStd=z=>z==='NEAR'?`${money(PRICE.NEAR)} / 次（未税），不拼车`:z==='NORMAL'?`${money(PRICE.NORMAL)} / 车（未税），最多 ${MAX_POOL} 家拼车平摊`:'—';
 const gstOf=n=>Math.round(Math.round(n*100)*9/100)/100;   // 单价为未税价：每张周账单 GST = ROUND(应扣未税 × 9%, 2)（2026-10-28 定）
 
-DB.pfRules=DB.pfRules||[{from:'2026-10-01 00:00',zone:'NORMAL'}];
+DB.pfRules=DB.pfRules||[{from:'2026-10-01 00:00',zone:'NORMAL',fee:'CHARGE'}];   // 与 PC 一致：上线迁移后老规则带收费方式（首取 07-02 起 14 天已过 → 立即收费）
+const feeText=v=>!v||v.zone==='OFF'?'—':v.fee==='FREE'?`免运费 ${v.freeFrom} ~ ${v.freeTo}`:'立即收费';
+const feeTag=v=>v&&v.fee==='FREE'?(v.freeFrom<=TODAY&&v.freeTo>=TODAY?' '+chip('免运费中','rp-c-blue'):v.freeTo<TODAY?' '+chip('已结束','rp-c-gray'):''):'';
 DB.pfBills=DB.pfBills||{
   '2026-10-05':{pushedAt:'2026-10-12 10:15',stNo:'ST202606-M0815',reconDate:'2026-06-30'},   // 结算单 ST202606 生成前推送，已归入该单
   '2026-10-12':{pushedAt:'2026-10-19 09:40',stNo:'ST202606-M0815',reconDate:'2026-07-01'},
@@ -57,7 +58,7 @@ function calc(){
     const fee=v.zone==='NEAR'?PRICE.NEAR:r2(PRICE.NORMAL/p.mates);
     const basis=v.zone==='NEAR'?`近区 · ${money(PRICE.NEAR)} / 次`:p.mates===1?`普通区 · 单独一车 ${money(PRICE.NORMAL)}`:`普通区 · ${money(PRICE.NORMAL)} ÷ 同车 ${p.mates} 家 = ${money(fee)}`;   // 与 PC 同文案
     if(DB.pfVoids[p.no])return {...p,rule:v,fee,charge:0,st:'VOID',basis};
-    if(date<=freeEnd)return {...p,rule:v,fee,charge:0,st:'FREE',basis};
+    if(v.fee==='FREE'&&date>=v.freeFrom&&date<=v.freeTo)return {...p,rule:v,fee,charge:0,st:'FREE',basis};   // 按取货时匹配的规则版本判断（BR-07）
     return {...p,rule:v,fee,charge:fee,st:'CHARGE',basis};
   });
 }
@@ -96,7 +97,7 @@ function open(){
     <div class="rp-card2"><div class="rp-ct">当前收费规则<span class="desc" id="pf-hist" style="color:var(--emerald-2);cursor:pointer;float:right;min-height:32px;line-height:32px;margin-top:-8px">变更记录 ›</span></div>
       ${rowKV('店铺',SHOP.name)}${rowKV('所属区域',ZONE[v.zone])}${rowKV('收费标准',zoneStd(v.zone))}
       ${rowKV('同一天',v.zone==='OFF'?'—':'只收一次')}
-      ${rowKV('免运费期',`首次取货起 ${FREE_DAYS} 天（${SHOP.first} ~ ${freeEnd}）`)}${rowKV('生效时间',v.from)}</div>
+      ${rowKV('收费方式',feeText(v)+feeTag(v))}${rowKV('生效时间',v.from)}</div>
     <div class="rp-tabs" id="pf-tabs"></div><div class="rp-list" id="pf-list"></div>`,
     mount:(p)=>{
       const tabs=p.querySelector('#pf-tabs'),list=p.querySelector('#pf-list');
@@ -150,6 +151,7 @@ function openHist(){
   pushPage({title:'收费规则变更记录',body:`<div class="rp-card2">${vs.map((v,i)=>`<div class="rp-row" style="display:block">
       <div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">${ZONE[v.zone]}</b>${i===0?chip('当前','rp-c-green'):''}</div>
       <div style="font-size:12.5px;color:#46604F;margin-top:5px">${zoneStd(v.zone)}</div>
+      <div style="font-size:12.5px;color:#46604F;margin-top:3px">收费方式：${feeText(v)}</div>
       <div style="font-size:12px;color:var(--sub);margin-top:3px">生效 ${v.from}</div></div>`).join('')}</div>`});
 }
 window.FM_MOD.pickfee=open;
