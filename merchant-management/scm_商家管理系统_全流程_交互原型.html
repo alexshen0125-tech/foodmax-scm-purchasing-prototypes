@@ -1325,7 +1325,6 @@ const NAV={
     {id:'p-adjust',ic:'💰',t:'业务调整单',p1:1,badge:()=>(DB.adjOrders||[]).filter(r=>r.pushStatus=='PENDING'&&r.status=='effective').length,by:'y'},   // 只计人工单，罚款单菜单角标各计各的
     {id:'p-adjust-type',ic:'⚙️',t:'调整类型配置',p1:1},
     {id:'p-ret-comp',ic:'💸',t:'退货赔付',p1:1},   // 全部商家赔付单（只读）+ 仓库退回申诉入口开关
-    {id:'p-pickfee-rule',ic:'🚚',t:'取货运费规则',p1:1},
     {id:'p-pickfee-bill',ic:'🧾',t:'取货运费账单',p1:1,badge:()=>typeof pfApvPending=='function'?pfApvPending():0,by:'y'},   // 角标 = 免运费审批中的单数
     {id:'p-settle',ic:'🧮',t:'对账结算'},
     {id:'p-invoice',ic:'🧾',t:'发票开票付款',badge:()=>DB.bill.status=='confirmed'?DB.invoices.filter(i=>i.status=='none').length:0,by:'y'},
@@ -5016,17 +5015,19 @@ function shopAllTab(){
       <td>${tag('opstatus',r.op)}</td>
       <td>${tag('awx',a.status)}${a.status=='ACTION_REQUIRED'&&a.rfi?`<div style="font-size:11.5px;color:var(--y2,#A9711F);margin-top:3px">${a.rfi.items.length} 项待补</div>`:''}</td>
       <td>${r.cats}</td><td>${r.contact} <span class="mono">${r.phone}</span></td><td>${r.openTime}</td><td>${r.settle}</td><td>${r.latestPay}</td><td class="mono">${r.mcode}</td>
+      <td>${pfShopPickupOn(r.shopCode)?'<span class="tag t-g"><span class="dot"></span>已开启</span>':'<span class="tag t-gr">已关闭</span>'}</td><td style="white-space:nowrap">${pfShopPeriod(r.shopCode)}</td><td>${pfShopZoneTag(r.shopCode)}</td>
       <td>${psCfgOf(r.mcode).on?`<span class="tag t-g"><span class="dot"></span>已开通</span><div style="font-size:11.5px;color:var(--ts);margin-top:3px">上限 ${psCfgOf(r.mcode).limit} 种</div>`:'<span class="tag t-gr">未开通</span>'}</td>
       <td>${(typeof ckCfgOf=='function'&&ckCfgOf(r.mcode).on)?'<span class="tag t-g"><span class="dot"></span>已开通</span>':'<span class="tag t-gr">未开通</span>'}</td>
       <td><div style="display:flex;flex-wrap:wrap;column-gap:10px;row-gap:2px;align-items:center"><button class="btn btn-link" onclick="act_pAwxView('${r.mcode}')">收款账户</button>
         ${r.mine?shopAction(m):`<button class="btn btn-link" onclick="toast('查看店铺档案','info')">查看</button>`}
         <button class="btn btn-link" onclick="act_shopHours('${r.mcode}')">查看营业时间</button>
         <button class="btn btn-link" onclick="act_shopOpStatus('${r.mcode}')">变更营业状态</button>
+        <button class="btn btn-link" onclick="pf_pickupCfg('${r.shopCode}','${r.shopName}')">上门提货配置</button>
         <button class="btn btn-link" onclick="act_shopPresend('${r.mcode}')">预送模式</button><button class="btn btn-link" onclick="act_shopCheck('${r.mcode}')">送货前核货</button>${psCfgOf(r.mcode).on?`<button class="btn btn-link" onclick="act_shopPsSkus('${r.mcode}')">预送 SKU 清单</button>`:''}</div></td></tr>`;};
   return `${filter}<div class="card"><div class="card-hd"><h3>店铺列表</h3><span class="sub">全部平台商家店铺（已开通店铺管理系统）</span></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>预送模式</th><th>送货前核货</th><th>操作</th></tr></thead>
-    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="14"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
+    <thead><tr><th>店铺名称</th><th>店铺简称</th><th>店铺编号</th><th>营业状态</th><th>收款账户</th><th>主营品类</th><th>联系人/电话</th><th>开通时间</th><th>结算方式</th><th>最晚付款日</th><th>对应供应商</th><th>上门提货</th><th>提货周期</th><th>取货运费</th><th>预送模式</th><th>送货前核货</th><th>操作</th></tr></thead>
+    <tbody>${rows.length?rows.map(tr).join(''):`<tr><td colspan="17"><div class="empty" style="padding:22px"><div class="e-ic">🏬</div><div class="e-t">没有符合筛选条件的店铺</div><div class="e-s">调整筛选条件或点「重置」后重试</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
 }
 
@@ -6507,7 +6508,7 @@ goHome();
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>
 <script src="pc-modules/adjust.js?v=20261022b"></script>
-<script src="pc-modules/pickfee.js?v=20261028b"></script>
+<script src="pc-modules/pickfee.js?v=20261030a"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
 <script src="pc-modules/retcomp.js?v=20261028c"></script>

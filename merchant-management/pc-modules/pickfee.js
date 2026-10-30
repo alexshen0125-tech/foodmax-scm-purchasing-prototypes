@@ -22,10 +22,11 @@ const SHOPS = {
   'SH2026070200004':{name:'海丰水产旗舰店',   merchant:'M2026-0902', first:'2026-07-10'},
   'SH2026070200005':{name:'万丰肉禽旗舰店',   merchant:'M2026-0902', first:'2026-07-08'},
   'SH2026071500006':{name:'南洋鲜果行',       merchant:'M2026-1008',           first:''},
-  'SH2026072000007':{name:'阳光烘焙原料店',   merchant:'M2026-0820', first:'2026-08-01'},
+  'SH2026062200003':{name:'阳光烘焙原料店',   merchant:'M2026-0820', first:'2026-08-01'},
   'SH2026080300008':{name:'金狮干货行',       merchant:'',           first:''},
 };
-const shopName = c => (SHOPS[c]||{}).name || c;
+const EXTRA_NAMES = {};   // 店铺管理里有、但还没有取货运费演示数据的店铺
+const shopName = c => (SHOPS[c]||{}).name || EXTRA_NAMES[c] || c;
 const MERCH = {'M2026-0815':'绿鲜源蔬果（新加坡）', 'M2026-0902':'海丰食品集团', 'M2026-0820':'阳光烘焙原料', 'M2026-1008':'南洋鲜果行'};   // 海丰集团名下两家店：海丰水产 + 万丰肉禽
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dash = '<span style="color:var(--ts)">—</span>';
@@ -45,7 +46,7 @@ const addDays = (s,n) => { const d=D(s); d.setUTCDate(d.getUTCDate()+n); return 
 const monday = s => { const d=D(s), w=(d.getUTCDay()+6)%7; return addDays(s,-w); };
 const weekLabel = m => `${m} ~ ${addDays(m,6)}`;
 // 首次取货日期：SHOPS.first = 演示窗口之前已有的历史首取；没有则取取货记录里最早一天；都没有 = 还没取过货
-const firstPick = s => SHOPS[s].first || ((DB.pfPickups||[]).filter(p=>p.shop==s).map(p=>p.at.slice(0,10)).sort()[0]) || '';
+const firstPick = s => (SHOPS[s]||{}).first || ((DB.pfPickups||[]).filter(p=>p.shop==s).map(p=>p.at.slice(0,10)).sort()[0]) || '';
 const freeEnd = s => { const f=firstPick(s); return f ? addDays(f, FREE_DAYS-1) : ''; };   // 免运费最后一天（含）
 const inFree = (s,date) => { const e=freeEnd(s); return !!e && date <= e; };
 
@@ -56,7 +57,7 @@ DB.pfRules = DB.pfRules || {
   'SH2026070200005':[{from:'2026-10-01 00:00', zone:'NORMAL', by:'林凯'},
                      {from:'2026-10-14 10:20', zone:'NEAR',   by:'陈敏'}],
   'SH2026071500006':[{from:'2026-10-08 00:00', zone:'NORMAL', by:'陈敏'}],
-  'SH2026072000007':[{from:'2026-10-01 00:00', zone:'NORMAL', by:'林凯'}],
+  'SH2026062200003':[{from:'2026-10-01 00:00', zone:'NORMAL', by:'林凯'}],
 };
 const curRule = s => { const v=DB.pfRules[s]; return v&&v.length ? v[v.length-1] : null; };
 const ruleAt = (s,t) => (DB.pfRules[s]||[]).filter(v=>v.from<=t).pop() || null;
@@ -65,7 +66,7 @@ const ruleAt = (s,t) => (DB.pfRules[s]||[]).filter(v=>v.from<=t).pop() || null;
 const MARKETS = ['巴西班让批发中心','裕廊渔港','双溪加株批发市场'];
 const DRIVERS = [['陈志明','GBA 2381K'],['Ahmad','GBC 7712M'],['林国强','GBD 1029P'],['Rajesh','GBE 5560T']];
 if(!DB.pfPickups){
-  const A='SH2026062000001',B='SH2026070200004',C='SH2026070200005',Dn='SH2026071500006',E='SH2026072000007';
+  const A='SH2026062000001',B='SH2026070200004',C='SH2026070200005',Dn='SH2026071500006',E='SH2026062200003';
   const p2=n=>String(n).padStart(2,'0');
   DB.pfPickups=[]; let seq=1;
   for(let s='2026-10-05'; s<=TODAY; s=addDays(s,1)){
@@ -122,7 +123,7 @@ DB.pfBills = DB.pfBills || {   // key = 店铺|周一日期
   'SH2026062000001|2026-10-05':{pushedAt:'2026-10-12 10:15', pushedBy:'林凯', stNo:'ST202606-M0815', reconDate:'2026-06-30'},
   'SH2026070200004|2026-10-05':{pushedAt:'2026-10-12 10:15', pushedBy:'林凯', stNo:'ST202606-SH2026070200004'},
   'SH2026070200005|2026-10-05':{pushedAt:'2026-10-12 10:16', pushedBy:'林凯', stNo:'ST202606-SH2026070200005'},
-  'SH2026072000007|2026-10-05':{pushedAt:'2026-10-12 10:16', pushedBy:'林凯', stNo:'ST202606-SH2026072000007'},
+  'SH2026062200003|2026-10-05':{pushedAt:'2026-10-12 10:16', pushedBy:'林凯', stNo:'ST202606-SH2026062200003'},
   'SH2026062000001|2026-10-12':{pushedAt:'2026-10-19 09:40', pushedBy:'林凯', stNo:'ST202606-M0815', reconDate:'2026-07-01'},
 };
 const billNo = (s,m) => `PF-${m.replace(/-/g,'')}-${s}`;   // 用完整店铺编码，避免后 5 位撞号
@@ -131,7 +132,7 @@ const billNo = (s,m) => `PF-${m.replace(/-/g,'')}-${s}`;   // 用完整店铺编
    结算单粒度 = 店铺 × 结算周期（以 aegis 现网为准，单号 ST{周期}-{店铺编码}）；演示里绿鲜源的结算单沿用结算单模块的当期单 ST202606-M0815 */
 const merOf = s => (SHOPS[s]||{}).merchant || '';
 DB.pfSettleSt = DB.pfSettleSt || {'ST202606-SH2026070200004':{st:'confirmed', at:'2026-10-14 16:20'}, 'ST202606-SH2026070200005':{st:'confirmed', at:'2026-10-14 16:22'}};   // 其他店铺结算单状态（演示）
-DB.pfInvs = DB.pfInvs || {'ST202606-SH2026070200004':{invNo:'LOG-INV-2026-000012', at:'2026-10-14 16:20', net:180.01, gst:16.20, amt:196.21}, 'ST202606-SH2026070200005':{invNo:'LOG-INV-2026-000013', at:'2026-10-14 16:22', net:240.00, gst:21.60, amt:261.60}, 'ST202606-SH2026072000007':{invNo:'LOG-INV-2026-000011', at:'2026-10-13 03:05', net:180.01, gst:16.20, amt:196.21}};   // 结算单生成即开   // key = 结算单号
+DB.pfInvs = DB.pfInvs || {'ST202606-SH2026070200004':{invNo:'LOG-INV-2026-000012', at:'2026-10-14 16:20', net:180.01, gst:16.20, amt:196.21}, 'ST202606-SH2026070200005':{invNo:'LOG-INV-2026-000013', at:'2026-10-14 16:22', net:240.00, gst:21.60, amt:261.60}, 'ST202606-SH2026062200003':{invNo:'LOG-INV-2026-000011', at:'2026-10-13 03:05', net:180.01, gst:16.20, amt:196.21}};   // 结算单生成即开   // key = 结算单号
 const ST_L = {none:['待生成','t-gr'], generated:['待商家认可','t-y'], confirmed:['已认可','t-b'], paid:['已打款','t-g'], voided:['已作废','t-gr']};
 const stStatus = no => no==DB.bill.no ? (DB.payment=='paid'?'paid':DB.bill.status) : (DB.pfSettleSt[no]||{}).st || (no.startsWith(DB.bill.no.slice(0,8))?'generated':'none');
 const stTag = no => { const [l,c]=ST_L[stStatus(no)]||ST_L.none; return `<span class="tag ${c}"><span class="dot"></span>${l}</span>`; };
@@ -194,74 +195,100 @@ const billTag = b => b.open ? '<span class="tag t-gr"><span class="dot"></span>�
   : '<span class="tag t-g"><span class="dot"></span>已推送</span>';
 const tSplit = t => t.inv ? {net:t.inv.net, gst:t.inv.gst} : {net:t.net, gst:t.gst};   // 发票未税 / GST = 各周账单之和
 
-/* ================= 页面一：取货运费规则 ================= */
-PAGES['p-pickfee-rule']=()=>{
-  const set=Object.keys(SHOPS).filter(s=>curRule(s));
-  const rows=set.map(s=>{
-    const v=curRule(s), fe=freeEnd(s);
-    return `<tr>
-      <td style="white-space:nowrap"><b>${esc(shopName(s))}</b></td>
-      <td class="mono">${s}</td>
-      <td>${zoneTag(v.zone)}</td>
-      <td style="white-space:nowrap">${zoneStd(v.zone)=='—'?dash:zoneStd(v.zone)}</td>
-      <td style="white-space:nowrap">${firstPick(s)||dash}</td>
-      <td style="white-space:nowrap">${fe||dash}</td>
-      <td style="white-space:nowrap">${!fe?'<span class="tag t-gr"><span class="dot"></span>未开始</span>':fe>=TODAY?'<span class="tag t-b"><span class="dot"></span>免运费中</span>':'<span class="tag t-gr"><span class="dot"></span>已结束</span>'}</td>
-      <td style="white-space:nowrap">${v.from}</td>
-      <td>${esc(v.by)}</td>
-      <td style="white-space:nowrap"><button class="btn btn-link" onclick="pf_edit('${s}')">修改</button> <button class="btn btn-link" onclick="pf_hist('${s}')">变更记录</button></td>
-    </tr>`;}).join('');
-  return `<div class="card"><div class="card-hd"><h3>取货运费规则</h3><button class="btn btn-p btn-sm" onclick="pf_edit('')">＋ 新增收费规则</button></div>
-    <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>店铺名称</th><th>店铺编码</th><th>所属区域</th><th>收费标准</th><th>首次取货日期</th><th>免运费截止</th><th>免运费状态</th><th>生效时间</th><th>修改人</th><th>操作</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="10"><div class="empty" style="padding:26px"><div class="e-ic">🚚</div><div class="e-t">还没有店铺设置取货运费</div><div class="e-s">点右上角「新增收费规则」，选店铺并设置所属区域</div></div></td></tr>'}</tbody></table></div></div></div>`;
+/* ================= 店铺管理 › 上门提货配置（2026-10-30 沈亮定：取货运费设置并入此弹窗，不再单独菜单） =================
+   上半部分 1:1 照线上 h5-foodmax-platform 分支 onepaas-release-20261029164419-MKR：
+     src/views/shop/components/ShopPickupConfigDialog.vue（弹窗）、src/services/common/typings/shop.d.ts:449 ShopPickupConfig / :473 ShopPickupConfigSaveReq
+     接口 /platform/shop/pickupConfig/detail · /platform/shop/pickupConfig/save（src/services/common/shop.ts:198/205）
+   下半部分「取货运费」为本期新增：所属区域（近区/普通区/不收费）随同一个「保存」提交，生成新规则版本，下一次取货起生效 */
+DB.pickupCfg = DB.pickupCfg || {
+  'SH2026062000001':{enabled:1, period:['2026-10-01','2026-12-31'], wh:'WH-SG01', st:'05:00', et:'07:00', addr:'Blk 16 Pasir Panjang Wholesale Centre #01-23', post:'110016', contact:'陈立', rc:'65', phone:'91234567'},
+  'SH2026062200003':{enabled:1, period:['2026-10-01','2026-12-31'], wh:'WH-SG01', st:'06:00', et:'08:00', addr:'Blk 13 Pasir Panjang Wholesale Centre #01-08', post:'110013', contact:'李娜', rc:'65', phone:'88902231'},
 };
-window.pf_edit=function(s){
-  const isNew=!s, free=Object.keys(SHOPS).filter(k=>!curRule(k));
-  if(isNew&&!free.length){toast('所有店铺都已设置收费规则','info');return;}
-  const z=(curRule(s)||{zone:'NORMAL'}).zone;
-  const opt=k=>`<label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;cursor:pointer"><input type="radio" name="pf-zone" value="${k}" ${z==k?'checked':''} style="margin-top:3px"><span><b style="font-weight:600">${ZONE[k]}</b><span style="color:var(--ts);font-size:12.5px;margin-left:8px">${k=='NEAR'?'祝融、白斯班江一带 · ':k=='NORMAL'?'近区以外 · ':''}${k=='OFF'?'停止收取取货运费':zoneStd(k)}</span></span></label>`;
-  modal(`<div class="mc-hd"><h3>${isNew?'新增收费规则':'修改取货运费 · '+esc(shopName(s))}</h3>${isNew?'':`<p>${s}</p>`}<button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    ${isNew?`<div class="fr"><label class="fl"><b>*</b>店铺</label><select id="pf-shop" onchange="pf_joinShow()"><option value="">请选择店铺</option>${free.map(k=>`<option value="${k}">${esc(shopName(k))}（${k}）</option>`).join('')}</select></div>`:''}
-    <div class="fr"><label class="fl"><b>*</b>所属区域</label><div>${(isNew?['NEAR','NORMAL']:['NEAR','NORMAL','OFF']).map(opt).join('')}</div></div>
-    <div class="fr"><label class="fl">首次取货 / 免运费截止</label><div id="pf-join" style="font-size:13px;padding-top:2px">${s?pf_freeText(s):'选择店铺后显示'}</div></div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="pf_save('${s}')">保存</button></div>`);
-};
+const PK_WH = [['WH-SG01','Foodmax 大仓（Jurong）'],['WH-SG02','Foodmax 冷链仓（Tuas）']];
+const PK_RULE = {'SH2026062000001':'营业日：周一至周六；每日截单 16:00', 'SH2026062200003':'营业日：周一至周日；每日截单 16:00'};
+window.pfShopPickupOn = c => !!(DB.pickupCfg[c] && DB.pickupCfg[c].enabled);
+window.pfShopPeriod = c => { const v=DB.pickupCfg[c]; return v&&v.period&&v.period[0] ? `${v.period[0]} 至 ${v.period[1]}` : '—'; };
+window.pfShopZoneTag = c => { const v=curRule(c); return v ? zoneTag(v.zone) : '<span class="tag t-gr">未设置</span>'; };
 window.pf_freeText = s => firstPick(s) ? `${firstPick(s)} 首次取货，${freeEnd(s)} 前（含）免运费` : `还没有取货，首次取货起 ${FREE_DAYS} 天内免运费`;
-window.pf_joinShow=function(){
-  const s=document.getElementById('pf-shop').value, el=document.getElementById('pf-join');
-  el.textContent = s ? pf_freeText(s) : '选择店铺后显示';
+
+window.pf_pickupCfg=function(code,name){
+  if(name && !SHOPS[code]) EXTRA_NAMES[code]=name;
+  const c=DB.pickupCfg[code]||{enabled:0, period:['',''], wh:'', st:'', et:'', addr:'', post:'', contact:'', rc:'65', phone:''};
+  const v=curRule(code), z=v?v.zone:'';
+  const inp=(id,val,ph,ml)=>`<input id="${id}" value="${esc(val)}" ${ph?`placeholder="${ph}"`:''} ${ml?`maxlength="${ml}"`:''} style="width:100%">`;
+  const fi=(label,body,span,req=true)=>`<div class="fr" style="${span?'grid-column:1 / -1;':''}margin:0"><label class="fl">${req?'<b style="color:var(--r)">*</b> ':''}${label}</label>${body}</div>`;
+  const zopt=k=>`<label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;cursor:pointer"><input type="radio" name="pk-zone" value="${k}" ${z==k?'checked':''} onchange="pf_zoneHint('${code}')" style="margin-top:3px"><span><span style="font-weight:600">${ZONE[k]}</span><span style="color:var(--ts);font-size:12.5px;margin-left:8px">${k=='NEAR'?'祝融、白斯班江一带 · '+zoneStd(k):k=='NORMAL'?'近区以外 · '+zoneStd(k):'不收取取货运费'}</span></span></label>`;
+  modalWide(`<div class="mc-hd"><h3>上门提货配置 · ${esc(shopName(code))}（${code}）</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <label class="fl">上门提货</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <label class="chip-ck ${c.enabled?'on':''}" id="pk-sw-l"><input type="checkbox" id="pk-sw" ${c.enabled?'checked':''} onchange="pf_pkToggle(this.checked)"><span id="pk-sw-t">${c.enabled?'已开启':'已关闭'}</span></label>
+      <span style="font-size:12.5px;color:var(--ts)">周期内有实际订单才生成提货任务</span>
+    </div>
+    <div class="ib ib-b" style="margin-bottom:8px"><span class="i">ℹ️</span><div><b>安排说明：</b>平台仅在提货周期内，结合本店铺营业时间、每日截单时间及实际待提订单安排上门提货；当日无待提订单时，不生成提货任务。</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📋</span><div><b>店铺规则（只读）：</b>${PK_RULE[code]||'未获取到营业时间'}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 16px">
+      ${fi('提货周期',`<div style="display:flex;align-items:center;gap:8px"><input id="pk-ps" type="date" value="${c.period[0]||''}" style="flex:1"><span style="color:var(--ts)">至</span><input id="pk-pe" type="date" value="${c.period[1]||''}" style="flex:1"></div>`,true)}
+      ${fi('收货仓',`<select id="pk-wh" style="width:100%"><option value="">请选择</option>${PK_WH.map(([k,l])=>`<option value="${k}" ${c.wh==k?'selected':''}>${l}</option>`).join('')}</select>`)}
+      ${fi('提货时间',`<div style="display:flex;align-items:center;gap:8px"><input id="pk-st" type="time" value="${c.st}" style="flex:1"><span style="color:var(--ts)">至</span><input id="pk-et" type="time" value="${c.et}" style="flex:1"></div>`)}
+      ${fi('提货地址',inp('pk-addr',c.addr,'请输入街道、楼名及门牌号',255),true)}
+      ${fi('邮政编码',inp('pk-post',c.post,'',16))}
+      ${fi('提货联系人',inp('pk-contact',c.contact,'',50))}
+      ${fi('提货联系方式',`<div style="display:flex;gap:8px"><select id="pk-rc" style="width:96px"><option value="65" ${c.rc=='65'?'selected':''}>+65</option><option value="60" ${c.rc=='60'?'selected':''}>+60</option><option value="86" ${c.rc=='86'?'selected':''}>+86</option></select><input id="pk-phone" value="${esc(c.phone)}" maxlength="20" style="flex:1"></div>`)}
+    </div>
+    <div style="border-top:1px dashed var(--bd);margin:18px 0 12px"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h4 style="margin:0;font-size:14px">取货运费</h4>
+      ${v?`<button class="btn btn-link btn-sm" onclick="pf_hist('${code}')">变更记录</button>`:''}
+    </div>
+    <div class="fr"><label class="fl"><b style="color:var(--r)">*</b> 所属区域</label><div>${['NEAR','NORMAL','OFF'].map(zopt).join('')}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;font-size:13px">
+      <div><div style="font-size:12px;color:var(--ts);margin-bottom:3px">当前规则</div>${v?`${ruleText(v)}<div style="font-size:12px;color:var(--ts)">${v.from} 起生效 · ${esc(v.by)}</div>`:'未设置（不收费）'}</div>
+      <div><div style="font-size:12px;color:var(--ts);margin-bottom:3px">首次取货 / 免运费截止</div>${pf_freeText(code)}</div>
+    </div>
+    <div class="ib ib-y" id="pk-zone-hint" style="margin-top:12px;display:none"></div>
+    <div style="font-size:12px;color:var(--ts);margin-top:10px">单价为未税价，每张周账单另加 9% GST。关闭上门提货不会生成提货任务，也就不产生运费；所属区域保留。</div>
+  </div>
+  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="pk-save" onclick="pf_pkSave('${code}')">${c.enabled?'保存并开启':'保存并关闭'}</button></div>`);
 };
-window.pf_save=function(s){
-  if(!s){ s=(document.getElementById('pf-shop')||{}).value; if(!s){toast('请选择店铺','err');return;} }
-  const zone=(document.querySelector('input[name=pf-zone]:checked')||{}).value;
-  if(!zone){toast('请选择所属区域','err');return;}
-  const old=curRule(s), nv={zone};
-  if(old && old.zone==zone){toast('规则没有变化','info');return;}
-  modal(`<div class="mc-hd"><h3>${old?'确认修改取货运费':'确认新增收费规则'}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <table class="subtbl"><tbody>
-      <tr><td style="color:var(--ts);width:90px">店铺</td><td>${esc(shopName(s))}</td></tr>
-      <tr><td style="color:var(--ts)">原规则</td><td>${old?ruleText(old):'未设置（不收费）'}</td></tr>
-      <tr><td style="color:var(--ts)">新规则</td><td><b>${ruleText(nv)}</b></td></tr>
-    </tbody></table>
-    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>保存后从<b>下一次取货</b>起按新规则计费，已经取过的货不重算。</div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="pf_edit('${old?s:''}')">返回修改</button><button class="btn btn-p" onclick='pf_commit("${s}",${JSON.stringify(nv)})'>确认保存</button></div>`);
+window.pf_pkToggle=function(on){
+  document.getElementById('pk-sw-l').classList.toggle('on',on);
+  document.getElementById('pk-sw-t').textContent=on?'已开启':'已关闭';
+  document.getElementById('pk-save').textContent=on?'保存并开启':'保存并关闭';
 };
-window.pf_commit=function(s,nv){
-  (DB.pfRules[s]=DB.pfRules[s]||[]).push({...nv, from:ts(), by:'当前账号'});
-  const isNew=DB.pfRules[s].length==1;
-  closeModal(); render(); toast(isNew?'已新增，下一次取货起开始收运费':'已保存，下一次取货起按新规则计费','ok');
+window.pf_zoneHint=function(code){
+  const z=(document.querySelector('input[name=pk-zone]:checked')||{}).value, old=curRule(code), el=document.getElementById('pk-zone-hint');
+  const changed = z && (!old ? z!='OFF' : old.zone!=z);
+  el.style.display=changed?'flex':'none';
+  if(changed) el.innerHTML=`<span class="i">⚠️</span><div>取货运费将由「${old?ruleText(old):'未设置（不收费）'}」改为「<b>${ruleText({zone:z})}</b>」，保存后从<b>下一次取货</b>起按新规则计费，已经取过的货不重算。</div>`;
+};
+window.pf_pkSave=function(code){
+  const g=id=>(document.getElementById(id)||{}).value||'';
+  const on=document.getElementById('pk-sw').checked;
+  const f={enabled:on?1:0, period:[g('pk-ps'),g('pk-pe')], wh:g('pk-wh'), st:g('pk-st'), et:g('pk-et'), addr:g('pk-addr').trim(), post:g('pk-post').trim(), contact:g('pk-contact').trim(), rc:g('pk-rc'), phone:g('pk-phone').trim()};
+  const z=(document.querySelector('input[name=pk-zone]:checked')||{}).value;
+  if(on){
+    const miss=!f.period[0]||!f.period[1]||!f.wh||!f.st||!f.et||!f.addr||!f.post||!f.contact||!f.rc||!f.phone;
+    if(miss){toast('请先补全必填项再开启上门提货','err');return;}
+    if(!z){toast('请选择取货运费所属区域','err');return;}
+  }
+  if(f.period[0]&&f.period[1]&&f.period[0]>f.period[1]){toast('提货周期开始日期不能晚于结束日期','err');return;}
+  if(f.st&&f.et&&f.st>=f.et){toast('提货开始时间需早于结束时间','err');return;}
+  DB.pickupCfg[code]=f;
+  const old=curRule(code); let msg='已保存';
+  if(z && (old ? old.zone!=z : z!='OFF')){ (DB.pfRules[code]=DB.pfRules[code]||[]).push({zone:z, from:ts(), by:'当前账号'}); msg='已保存，取货运费下一次取货起按新规则计费'; }
+  closeModal(); render(); toast(msg,'ok');
 };
 window.pf_hist=function(s){
   const vers=(DB.pfRules[s]||[]).slice().reverse();
-  drawer(`<div class="drawer-hd"><h3>变更记录 · ${esc(shopName(s))}</h3><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><h3>取货运费变更记录 · ${esc(shopName(s))}</h3><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd"><table><thead><tr><th>生效时间</th><th>所属区域</th><th>收费标准</th><th>修改人</th></tr></thead><tbody>
     ${vers.map((v,i)=>`<tr><td class="mono" style="white-space:nowrap">${v.from}${i==0?' <span class="tag t-g" style="font-size:10.5px">当前</span>':''}</td><td>${ZONE[v.zone]}</td><td>${zoneStd(v.zone)}</td><td>${esc(v.by)}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
 
-/* ================= 页面二：取货运费账单（周账单 / 取货明细） ================= */
+/* ================= 页面：取货运费账单（周账单 / 取货明细） ================= */
 const lastClosedWeek = () => allWeeks().find(m=>addDays(m,6)<TODAY) || allWeeks()[0];
 DB.pfTab = DB.pfTab || 'BILL';
 DB.pfFilter = DB.pfFilter || {shop:'', wk:lastClosedWeek()};
