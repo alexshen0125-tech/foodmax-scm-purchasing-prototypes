@@ -158,7 +158,7 @@
       const wh=String(r.key).split('|')[0];
       r.ordQty=r.qty;
       const pn=(typeof presendNet=='function')?presendNet(r.name,wh,r.ordQty):{gross:0,ded:0,should:r.qty};
-      r.psGross=pn.gross;r.leftQty=pn.ded;r.needQty=pn.need;
+      r.psGross=pn.gross;r.leftQty=pn.ded;r.needQty=pn.need;r.stockLeft=pn.left;   // stockLeft = 仓库在仓库存（期末），leftQty = 本单用掉的部分
       r.qty=pn.should;                           // max(0, max(订单量,预送量) − 在仓剩余)
       r.byPs=pn.gross>r.ordQty;                  // 本行需求按预送量取数
       // 商家报缺不影响打印标签数据（2026-10-27）：只打「已报缺」标记，应送货/已打印/未打印照旧
@@ -280,7 +280,7 @@
       ${lbPsOn?`<span>应送数量：<b>${rows.reduce((a,r)=>a+(r.needQty||0),0)}</b></span><span>已用在仓预送：<b style="color:var(--g)">${lock?'待回传':(()=>{const u=rows.reduce((a,r)=>a+(r.leftQty||0),0);return u?'−'+u:'0';})()}</b></span><span>需打标签数：<b>${lock?'待回传':should}</b></span>`:`<span>应送货：<b>${should}</b></span>`}<span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${lock?'—':unpr}</b></span><span>未称重拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span><span>多打：<b style="color:${over?'var(--r)':'inherit'}">${over}</b></span><span class="tag ${DB.labelCutoff?'t-gr':'t-y'}" style="font-size:11px;cursor:pointer" title="演示：点击切换截单状态" onclick="DB.labelCutoff=!DB.labelCutoff;render()">${DB.labelCutoff?'已截单':'未截单'}</span>${lbPsOn&&typeof presendWmsTag=='function'?presendWmsTag():''}
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:34px"><input type="checkbox" title="全选本页商品" ${allSel?'checked':''} onclick="label_selAll()"></th><th style="width:44px">序号</th><th>商品名称</th><th>规格(编码)</th><th>分类</th><th style="text-align:right">昨日销量</th>${lbPsOn?'<th style="text-align:right">订单量</th><th style="text-align:right">预送量</th><th style="text-align:right">应送数量</th><th style="text-align:right">已用在仓预送</th><th style="text-align:right">需打标签数</th>':'<th style="text-align:right">应送货</th>'}<th style="text-align:right">已打印数</th><th style="text-align:right">未打印数</th><th style="text-align:right">本次打印数</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th style="width:34px"><input type="checkbox" title="全选本页商品" ${allSel?'checked':''} onclick="label_selAll()"></th><th style="width:44px">序号</th><th>商品名称</th><th>规格(编码)</th><th>分类</th><th style="text-align:right">昨日销量</th>${lbPsOn?'<th style="text-align:right">订单量</th><th style="text-align:right">在仓库存</th><th style="text-align:right">应送数量</th><th style="text-align:right">已用在仓预送</th><th style="text-align:right">需打标签数</th>':'<th style="text-align:right">应送货</th>'}<th style="text-align:right">已打印数</th><th style="text-align:right">未打印数</th><th style="text-align:right">本次打印数</th><th>操作</th></tr></thead><tbody>
       ${rows.map((r,i)=>{const pr=Math.min(r.qty,printedOf(r.key));const un=r.qty-pr;const last=DB.labelLast[r.key]||0;const done=un<=0;return `<tr>
         <td><input type="checkbox" ${sel.includes(r.key)?'checked':''} onclick="label_toggleSel('${r.key}')"></td>
         <td>${i+1}</td>
@@ -288,7 +288,7 @@
         <td>${specLabel(r)} <span style="color:var(--ts)">(${r.sku})</span></td>
         <td style="font-size:12px;color:var(--ts)">${r.cat}</td>
         <td style="text-align:right">${yday(r.sku)}</td>
-        ${lbPsOn?`<td style="text-align:right">${r.ordQty}</td><td style="text-align:right">${r.psGross?`<span style="color:var(--gold)">${r.psGross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${r.needQty}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':(r.leftQty?`<span style="color:var(--g)">−${r.leftQty}</span>`:'<span style="color:var(--tt)">—</span>')}</td>`:''}
+        ${lbPsOn?`<td style="text-align:right">${r.ordQty}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':(r.stockLeft?r.stockLeft:'<span style="color:var(--tt)">0</span>')}</td><td style="text-align:right">${r.needQty}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':(r.leftQty?`<span style="color:var(--g)">−${r.leftQty}</span>`:'<span style="color:var(--tt)">—</span>')}</td>`:''}
         <td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':`<b>${r.qty}</b>`}${lock?'':`<div style="font-size:11px;color:var(--tt)">${r.wgNeed&&!wgBlocked(r)?`实发 ${r.wgReal.toFixed(1)}kg`:`序号 1–${r.qty}`}</div>`}${!lock&&printedOf(r.key)>r.qty?`<div><span class="tag t-r" style="font-size:10px">多打 ${printedOf(r.key)-r.qty} 张·作废</span></div>`:''}</td>
         <td style="text-align:right;color:var(--gd)">${pr}</td>
         <td style="text-align:right;${un>0&&!lock?'color:var(--r);font-weight:600':''}">${lock?'—':un}</td>
