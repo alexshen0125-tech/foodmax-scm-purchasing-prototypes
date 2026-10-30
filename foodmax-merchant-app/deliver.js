@@ -653,7 +653,7 @@ function openSignDetail(d){
     ):''}
     ${sec('商品明细 · 按 SKU 件数')}
     ${box(
-      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit}${(ckStateA(d)!=='off'&&d.check&&d.check.lines[r.name]!=null)?` · 核货 <b style="color:${d.check.lines[r.name]<r.qty?'var(--red)':'inherit'}">${d.check.lines[r.name]}${r.unit}</b>`:''} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${r.inQty<r.qty?` · 差异 <b style="color:var(--red)">-${r.qty-r.inQty}</b>`:''}${r.inQty>r.qty?` · 差异 <b style="color:var(--amber)">+${r.inQty-r.qty}</b>（多收·已入寄存）`:''} · 平台补采 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
+      rows.map(r=>`<div style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit}${(ckStateA(d)!=='off'&&d.check&&d.check.lines[r.name]!=null)?` · 核货 <b style="color:${d.check.lines[r.name]<r.qty?'var(--red)':'inherit'}">${d.check.lines[r.name]}${r.unit}</b>`:''} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${d.status==='交接完成'?` · 短收 <b style="color:${r.inQty<r.qty?'var(--red)':'var(--sub)'}">${Math.max(0,r.qty-r.inQty)}</b> · 多收 <b style="color:${r.inQty>r.qty?'var(--amber)':'var(--sub)'}">${Math.max(0,r.inQty-r.qty)}</b>`:''} · 平台补采 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div></div>`).join('')||'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>'
     )}
     <div style="margin:8px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>平台补采</b>＝缺口由平台自营现货补货的数量（未补货为 0），按含税售价 ×(1+加价率) 在结算单中抵扣。<br><b>多收</b>：你送的比应送多，仓库<b>照收不设上限</b>，超出部分计入<b>在仓寄存库存</b>，<b>当天不参与售卖</b>、不结算，次日优先抵扣应送量。送来应送清单外的 SKU 属<b>送错</b>，仍需线下取回。</div>
     <div style="height:8px"></div>`,
@@ -914,7 +914,7 @@ function openRetAppeal(g,onDone){
    与 PC pc-modules/delivery.js 的 DB.whReturns 同源同口径。
 
    ⚠️ 2026-09-15 沈亮拍板（BR-16c）：「送多」不再走退回。商家实送多于应送时仓库
-   照收不设上限，多收量在送货单商品明细的差异里正向展示，并入在仓寄存库存
+   照收不设上限，多收量在送货单商品明细的「多收」字段展示，并入在仓寄存库存
    （当日不可卖、次日优先抵扣，BR-16d）。本台账只保留「送错」一种类型。 ============ */
 window.FM.DB.whReturns = window.FM.DB.whReturns || [
   {returnNo:'WR20260628001',deliveryNo:'SH20260628004',warehouse:'盛港DC',skuCode:'SKU8899',name:'上海青',spec:'1kg/件',unit:'件',
