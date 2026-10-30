@@ -90,14 +90,14 @@ const CUST=[
 const TSTAT={issued:'已开具',credited:'已冲抵'};
 // ② 服务费发票·平台开具(与 PC 端 DB.svcInvoices 对齐)
 const SVC=[
-  {no:'SVC-INV-2026-702',billNo:'ST202605-M0815',range:'2026-05-01 ~ 05-31',fee:'1104.50',gst:'99.41',total:'1203.91',date:'2026-06-06'},
+  {no:'SVC-INV-2026-702',billNo:'ST202605-M0815-R2',range:'2026-05-01 ~ 05-31',fee:'1104.50',gst:'99.41',total:'1203.91',date:'2026-06-06'},
   {no:'SVC-INV-2026-701',billNo:'ST202604-M0815',range:'2026-04-01 ~ 04-30',fee:'991.25',gst:'89.21',total:'1080.46',date:'2026-05-08'},
 ];
 
 // ③ 补采发票·平台开具(与 PC DB.replInvoices 对齐；平台就平台补采的缺口向商家开销售发票)
 const RPL=[
-  {no:'RPL-INV-2026-302',repl:'RPL-20260522-002',billNo:'ST202605-M0815',item:'菠菜 × 2 件',net:'9.06',gst:'0.82',total:'9.88',date:'2026-06-06'},
-  {no:'RPL-INV-2026-301',repl:'RPL-20260518-001',billNo:'ST202605-M0815',item:'鲜鸡蛋 × 12 盘',net:'120.22',gst:'10.82',total:'131.04',date:'2026-06-06'},
+  {no:'RPL-INV-2026-302',repl:'RPL-20260522-002',billNo:'ST202605-M0815-R2',item:'菠菜 × 2 件',net:'9.06',gst:'0.82',total:'9.88',date:'2026-06-06'},
+  {no:'RPL-INV-2026-301',repl:'RPL-20260518-001',billNo:'ST202605-M0815-R2',item:'鲜鸡蛋 × 12 盘',net:'120.22',gst:'10.82',total:'131.04',date:'2026-06-06'},
 ];
 
 // 客户信息脱敏工具（与 PC maskClient 一致）。

@@ -78,7 +78,7 @@ const LIST=[
    gapQty:12,qty:12,refundQty:0,selfPrice:4.10,custPrice:5.80,status:'pending',billNo:'',invNo:''},
   {no:'RPL-20260518-002',source:'aftersale',afterNo:'AS-26051801',subOrderNo:'#SG20260517022',client:'新味坊',warehouse:'裕廊DC',
    receiptTime:'2026-05-18 15:40',sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',
-   gapQty:6,qty:6,refundQty:0,selfPrice:9.20,custPrice:12.80,status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-303'},
+   gapQty:6,qty:6,refundQty:0,selfPrice:9.20,custPrice:12.80,status:'invoiced',billNo:'ST202605-M0815-R2',invNo:'RPL-INV-2026-303'},
   {no:'RPL-20260628-003',source:'receipt',deliveryNo:'SH20260628004',subOrderNo:'#SG20260628011',warehouse:'盛港DC',
    receiptTime:'2026-06-28 01:06',sku:'SKU8801',name:'小棠菜',spec:'1kg/件',unit:'件',
    should:20,received:18,qty:2,selfPrice:2.90,status:'pending',billNo:'',invNo:''},
@@ -90,10 +90,10 @@ const LIST=[
    should:40,received:37,qty:3,selfPrice:2.30,status:'deducted',billNo:'ST202606-M0815',invNo:''},
   {no:'RPL-20260522-002',source:'receipt',deliveryNo:'SH20260522001',subOrderNo:'#SG20260522006',warehouse:'盛港DC',
    receiptTime:'2026-05-22 13:42',sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',
-   should:12,received:10,qty:2,selfPrice:4.10,status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-302'},
+   should:12,received:10,qty:2,selfPrice:4.10,status:'invoiced',billNo:'ST202605-M0815-R2',invNo:'RPL-INV-2026-302'},
   {no:'RPL-20260518-001',source:'receipt',deliveryNo:'SH20260518001',subOrderNo:'#SG20260518009',warehouse:'裕廊DC',
    receiptTime:'2026-05-18 02:18',sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',
-   should:60,received:48,qty:12,selfPrice:9.20,status:'invoiced',billNo:'ST202605-M0815',invNo:'RPL-INV-2026-301'},
+   should:60,received:48,qty:12,selfPrice:9.20,status:'invoiced',billNo:'ST202605-M0815-R2',invNo:'RPL-INV-2026-301'},
 ];
 const GST=9;
 const money=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -127,9 +127,9 @@ const FINES=[
    items:[{sku:'SKU8807',name:'芥蓝',spec:'1kg/件',unit:'件',should:25,received:20,qty:5}]},
   {no:'FN20260630007',deliveryNo:'SH20260630007',warehouse:'大巴窑DC',at:'2026-06-30 04:11',rate:40,status:'deducted',billNo:'ST202606-M0815',
    items:[{sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',should:40,received:37,qty:3}]},
-  {no:'FN20260522001',deliveryNo:'SH20260522001',warehouse:'盛港DC',at:'2026-05-22 13:42',rate:40,status:'deducted',billNo:'ST202605-M0815',
+  {no:'FN20260522001',deliveryNo:'SH20260522001',warehouse:'盛港DC',at:'2026-05-22 13:42',rate:40,status:'deducted',billNo:'ST202605-M0815-R2',
    items:[{sku:'SKU8803',name:'菠菜',spec:'1kg/件',unit:'件',should:12,received:10,qty:2}]},
-  {no:'FN20260518001',deliveryNo:'SH20260518001',warehouse:'裕廊DC',at:'2026-05-18 02:18',rate:40,status:'deducted',billNo:'ST202605-M0815',
+  {no:'FN20260518001',deliveryNo:'SH20260518001',warehouse:'裕廊DC',at:'2026-05-18 02:18',rate:40,status:'deducted',billNo:'ST202605-M0815-R2',
    items:[{sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',should:60,received:48,qty:12}]},
 ];
 const fnQty=g=>g.items.reduce((a,x)=>a+x.qty,0);

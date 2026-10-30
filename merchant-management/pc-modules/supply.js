@@ -23,11 +23,11 @@ DB.supplyGoods = DB.supplyGoods || [
 DB.supplyOrders = DB.supplyOrders || [
   {no:'HC20260518001',date:'2026-05-18 10:24',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-PRT-ZD230',name:'标签打印机 Zebra ZD230',spec:'热敏 · USB + 以太网',unit:'台',qty:1,price:328.00,tax:9}],
-   status:'invoiced',deliveryNo:'HS20260518001',deliveryStatus:'已交付',pushAt:'2026-05-18 10:25',deliveredAt:'2026-05-19 08:40',billNo:'ST202605-M0815',settledAt:'2026-06-01 02:00',invNo:'SUP-INV-2026-501',invoicedAt:'2026-06-06 10:12'},
+   status:'invoiced',deliveryNo:'HS20260518001',deliveryStatus:'已交付',pushAt:'2026-05-18 10:25',deliveredAt:'2026-05-19 08:40',billNo:'ST202605-M0815-R2',settledAt:'2026-06-01 02:00',invNo:'SUP-INV-2026-501',invoicedAt:'2026-06-06 10:12'},
   // 已计入 5 月结算单、但该结算单尚在付款中 → 未开票（演示「已结算 ≠ 已开票」）
   {no:'HC20260520001',date:'2026-05-20 14:08',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',qty:4,price:21.50,tax:9}],
-   status:'settled',deliveryNo:'HS20260520001',deliveryStatus:'已交付',pushAt:'2026-05-20 14:09',deliveredAt:'2026-05-21 08:05',billNo:'ST202605-M0815',settledAt:'2026-06-01 02:00',invNo:'',invoicedAt:''},
+   status:'settled',deliveryNo:'HS20260520001',deliveryStatus:'已交付',pushAt:'2026-05-20 14:09',deliveredAt:'2026-05-21 08:05',billNo:'ST202605-M0815-R2',settledAt:'2026-06-01 02:00',invNo:'',invoicedAt:''},
   {no:'HC20260612001',date:'2026-06-12 09:06',shop:'M2026-0815',shopName:'绿鲜源蔬果旗舰店',
    lines:[{code:'HC-LBL-6040',name:'热敏标签纸 60×40mm',spec:'500张/卷 · 20卷/箱',unit:'箱',qty:6,price:16.80,tax:9},
           {code:'HC-LBL-8060',name:'热敏标签纸 80×60mm',spec:'350张/卷 · 20卷/箱',unit:'箱',qty:2,price:21.50,tax:9}],

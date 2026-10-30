@@ -99,7 +99,10 @@ const CUR={period:'2026年6月',no:'ST202606-M0815',range:'2026-06-01 ~ 06-30',g
   comp:[{no:'RC-20260618-317',amt:18.00,biz:'TKD2026061808190012',at:'2026-06-18 15:20'}],
   items:[['订单货款（含历史）',94,47530.00],['逆向扣减（售后判商家责）',3,-314.40],['平台抽佣·服务佣金（按品类佣金率）',92,-1188.25],['物流抽佣·物流佣金（按品类佣金率）',92,-712.95],['平台补采扣款（含税）',3,-44.60],['缺货罚款',3,-720.00],['售后补货扣款（含税）',2,-98.40],['业务调整 · 平台补款',1,120.00],['业务调整 · 平台扣款',2,-364.00],['退货申诉赔付',1,18.00]]};
 const HIST=[
-  {period:'2026年5月',no:'ST202605-M0815',range:'2026-05-01 ~ 05-31',genDate:'2026-06-01',status:'paid',
+  {period:'2026年5月',no:'ST202605-M0815-R2',range:'2026-05-01 ~ 05-31',genDate:'2026-06-01',status:'paid',updatedAt:'2026-06-02 16:20',
+   // 结算单重出（BR-15）：旧版本不进列表，只在详情「历史版本」可查；对商家不出现「作废」字样（与 PC prev[] 同）
+   prev:[{no:'ST202605-M0815',genAt:'2026-06-01 09:00',updatedAt:'2026-06-02 16:20',reason:'缺货罚款单 FN20260515003（2 件 S$80.00）经核实撤销，平台重新出单',net:41478.00}],
+   
    gross:44180.00,reverse:210.00,feeSvc:1104.50,feeLogi:662.70,repl:118.60,replCnt:2,fine:560.00,fineCnt:2,fill:55.20,fillCnt:1,net:41558.00,
    adjust:[{no:'ADJ-SG-20260520-001',type:'错账补回',dir:1,amt:80.00,ded:'账扣',biz:'#SG20260512033',at:'2026-05-20 11:02'}],
    comp:[{no:'RC-20260521-208',amt:9.00,biz:'SH20260518001',at:'2026-05-21 10:05'}],payTime:'2026-06-03 09:12 已到账 DBS ****8821',
@@ -173,7 +176,7 @@ function openSettle(){
         l.innerHTML=(CUR.status=='generated'?`<div class="se-pend">📝 本期账单 <b>${CUR.no}</b>（${CUR.range}）待你核对认可，应清算 <b>${money(CUR.net)}</b>。认可后平台才会打款并开具服务费发票；如有异议请先线下联系平台运营 / 客服，不要认可。</div>`:'')
         +rs.map((b,i)=>`<div class="se-bill" data-i="${i}">
           <div class="bd">
-            <div class="r1"><span class="no">${b.no}</span>${statusChip(b)}</div>
+            <div class="r1"><span class="no">${b.no}${(b.prev||[]).length?' <span class="se-chip se-c-gray">已更新</span>':''}</span>${statusChip(b)}</div>
             <div class="rng">${b.range}</div>
             <div class="big disp"><span class="c">S$</span>${money(b.net).slice(2)}</div>
             <div class="glbl">应清算给供应商（到手货款）${(b.pick||0)>0?` · 含取货运费 −${money(b.pick)}`:''}${compSum(b)>0?` · 退货赔付 +${money(compSum(b))}`:''}</div>
@@ -204,7 +207,7 @@ function openDetail(b){
   const foot=`<button class="btn primary" id="se-close">关闭</button>`;
   pushPage({title:'结算单详情',body:`
     <div class="se-dhead">
-      <div class="no">${b.no} · ${b.range} ${statusChip(b)}</div>
+      <div class="no">${b.no} · ${b.range} ${statusChip(b)}${(b.prev||[]).length?`<span id="se-his" style="float:right;font-weight:600;color:var(--emerald-2);cursor:pointer">历史版本 ›</span>`:''}</div>
       <div class="big disp"><span class="c">S$</span>${money(b.net).slice(2)}</div>
       <div class="lbl">应清算给供应商（到手货款）</div>
     </div>
@@ -287,6 +290,7 @@ function openDetail(b){
     footer:foot,
     mount:(p)=>{
       const close=p.querySelector('#se-close');if(close)close.onclick=popPage;
+      const his=p.querySelector('#se-his');if(his)his.onclick=()=>openHistory(b);
       const rc=p.querySelector('#se-rc-lk');if(rc)rc.onclick=()=>{if(window.FM_MOD&&FM_MOD.retcomp)FM_MOD.retcomp();};
       const pf=p.querySelector('#se-pf-lk');if(pf)pf.onclick=()=>{if(window.FM_MOD&&FM_MOD.pickfee)FM_MOD.pickfee();};
       const lk=p.querySelector('#se-repl-lk');
@@ -296,6 +300,21 @@ function openDetail(b){
       const lk2=p.querySelector('#se-fill-lk');
       if(lk2)lk2.onclick=()=>{window.FM_MOD&&window.FM_MOD.replen?window.FM_MOD.replen():toast('平台补采模块加载中');};
     }});
+}
+
+// ── 3. 历史版本（BR-15）：详情页顶部「历史版本 ›」进入；只读，仅供追溯；不出现「作废」字样 ──
+function openHistory(b){
+  pushPage({title:'历史版本',body:`
+    <div class="se-card"><div class="se-ct">${b.range}<span class="desc">以当前版本为准</span></div>
+      <div class="se-row" style="align-items:flex-start"><span class="k">${b.no} <span class="se-chip se-c-green">当前</span><br><span style="font-size:11.5px;color:var(--sub)">更新 ${b.updatedAt||b.genDate}</span></span><span class="v">${money(b.net)}</span></div>
+      ${b.prev.map((v,i)=>`<div class="se-row se-old" data-i="${i}" style="align-items:flex-start;cursor:pointer"><span class="k" style="color:var(--sub)">${v.no}<br><span style="font-size:11.5px">生成 ${v.genAt} · 更新 ${v.updatedAt}</span><br><span style="font-size:11.5px">${v.reason}</span></span><span class="v" style="color:var(--sub)">${money(v.net)} ›</span></div>`).join('')}
+      <div class="se-tip">平台更新结算单后，以当前单号 <b>${b.no}</b> 为准认可、付款和开票；历史版本只读，不再参与认可、付款、开票和导出。</div>
+    </div>`,
+    mount:(p)=>{p.querySelectorAll('.se-old').forEach(r=>r.onclick=()=>{const v=b.prev[+r.dataset.i];
+      pushPage({title:v.no,body:`<div class="se-card"><div class="se-tip">这是本期结算单的历史版本，仅供追溯。平台已于 ${v.updatedAt} 更新为 <b>${b.no}</b>，请以当前版本为准。<br>更新原因：${v.reason}</div>
+        <div class="se-row"><span class="k">结算区间</span><span class="v">${b.range}</span></div>
+        <div class="se-row"><span class="k">应清算给供应商（该版本）</span><span class="v" style="color:var(--sub)">${money(v.net)}</span></div>
+        <div class="se-row brand"><span class="k">当前版本应清算</span><span class="v">${money(b.net)}</span></div></div>`});});}});
 }
 
 window.FM_MOD=window.FM_MOD||{};

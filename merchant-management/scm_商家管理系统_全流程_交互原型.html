@@ -813,7 +813,9 @@ const DB = {
   tiFilter:{},tiSel:[],
   // 历史账单（已结清 · 只读；均在免佣期内故抽佣两项=0，net=gross−逆向）
   billsHistory:[
-    {period:'2026年5月', no:'ST202605-M0815', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:118.60, replCnt:2, fine:560.00, fineCnt:2, net:41613.20,
+    {period:'2026年5月', no:'ST202605-M0815-R2', range:'2026-05-01 ~ 05-31', genDate:'2026-06-01', status:'paid', updatedAt:'2026-06-02 16:20',
+      // 结算单重出（BR-15）：被替换的旧版本不进列表/导出/勾选，只挂在有效版本详情「历史版本」里；对商家不出现「作废」字样
+      prev:[{no:'ST202605-M0815', genAt:'2026-06-01 09:00', updatedAt:'2026-06-02 16:20', reason:'缺货罚款单 FN20260515003（2 件 S$80.00）经核实撤销，平台重新出单', net:41533.20}], gross:44180.00, reverse:210.00, fee:1767.20, feeSvc:1104.50, feeLogi:662.70, repl:118.60, replCnt:2, fine:560.00, fineCnt:2, net:41613.20,
       adjust:[{no:'ADJ-SG-20260520-001',type:'错账补回',dir:1,amt:80.00,ded:'账扣',biz:'#SG20260512033',at:'2026-05-20 11:02'}],
       comp:[{no:'RC-20260521-208',amt:9.00,biz:'SH20260518001',at:'2026-05-21 10:05'}],
       items:[['订单货款（含历史）',88,44180.00],['逆向扣减（售后判商家责）',1,-210.00],['平台抽佣·服务佣金（按品类佣金率）',86,-1104.50],['物流抽佣·物流佣金（按品类佣金率）',86,-662.70],['平台补采扣款（含税）',2,-118.60],['缺货罚款',2,-560.00],['业务调整 · 平台补款',1,80.00],['退货申诉赔付',1,9.00]], payTime:'2026-06-03 09:12 已到账 DBS ****8821'},
@@ -824,7 +826,7 @@ const DB = {
   invTab:'cust',                  // 开票管理当前 Tab：cust 客户开票(按订单) / svc 服务费发票(向平台申请)
   svcSel:[],                      // 服务费发票·已勾选待合并申请的结算单号
   svcInvoices:[ // 服务费发票记录：平台与商家结算完成后自动开给商家（GST 9%），商家端只查看/下载。仅含已结算账期
-    {no:'SVC-INV-2026-702', billNo:'ST202605-M0815', range:'2026-05-01 ~ 05-31', fee:1104.50, gst:99.41, total:1203.91, issueDate:'2026-06-06', status:'已开票'},
+    {no:'SVC-INV-2026-702', billNo:'ST202605-M0815-R2', range:'2026-05-01 ~ 05-31', fee:1104.50, gst:99.41, total:1203.91, issueDate:'2026-06-06', status:'已开票'},
     {no:'SVC-INV-2026-701', billNo:'ST202604-M0815', range:'2026-04-01 ~ 04-30', fee:991.25, gst:89.21, total:1080.46, issueDate:'2026-05-08', status:'已开票'},
   ],
   // 售后（逆向）：餐厅对「已收货」订单在时效内发起；退款不退货 / 退货退款两类；平台三方判责；商家可申诉；判商家责逆向扣减货款
@@ -3724,7 +3726,7 @@ PAGES['m-settle']=()=>{
     <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" title="全选（仅用于导出；认可需逐单进行）" ${allSel?'checked':''} onclick="selAllBills()"></th><th>结算单号</th><th>结算区间</th><th>状态</th><th style="text-align:right">取货运费<br><span style="font-weight:400;color:var(--ts)">含税</span></th><th style="text-align:right">退货赔付</th><th>应清算给供应商</th><th>到账</th><th>操作</th></tr></thead><tbody>
     ${rows.map(x=>`<tr>
       <td><input type="checkbox" class="skuchk" ${DB.billSel.includes(x.no)?'checked':''} onclick="toggleBillSel('${x.no}')"></td>
-      <td class="mono">${x.no}</td>
+      <td class="mono">${x.no}${(x.prev||[]).length?` <span class="tag t-gr" style="font-family:inherit;font-size:11px;padding:1px 6px" title="平台已更新本单，旧版本可在详情「历史版本」查看">已更新</span>`:''}</td>
       <td>${x.range}</td>
       <td>${x===cur?tag('bill',x.status):'<span class="tag t-g"><span class="dot"></span>已结清</span>'}</td>
       <td style="text-align:right;color:var(--ts)">${(x.pick||0)>0?rcNeg(x.pick):'—'}</td>
@@ -6159,7 +6161,7 @@ function act_billDetail(key){
   const idx=!isCur?4:(DB.payment=='paid'?4:(sel.status=='generated'?1:2));
   const payoutTag=(!isCur||DB.payment=='paid')?'<span class="tag t-g"><span class="dot"></span>已清分 · 已到账</span>':DB.payment=='none'?'<span class="tag t-y"><span class="dot"></span>已清分 · 待打款</span>':'<span class="tag t-b"><span class="dot"></span>已清分 · 付款中</span>';
   const ft=`<button class="btn btn-p" onclick="closeDrawer()">关闭</button>`;
-  drawer(`<div class="drawer-hd"><div><h3>${sel.no} · 结算单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${sel.range} · ${isCur?'当期':'已结清'}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+  drawer(`<div class="drawer-hd"><div><h3>${sel.no} · 结算单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${sel.range} · ${isCur?'当期':'已结清'}</div></div><div style="display:flex;align-items:center;gap:12px">${(sel.prev||[]).length?`<button class="btn btn-o btn-sm" onclick="act_billHistory('${sel.no}')">历史版本</button>`:''}<span class="x" onclick="closeDrawer()">×</span></div></div>
   <div class="drawer-bd">
     ${isCur?`<div style="margin-bottom:16px">${pipe(steps,idx)}</div>`:''}
     <div class="kv" style="margin-bottom:16px">
@@ -6209,11 +6211,35 @@ function act_billDetail(key){
   </div>
   <div class="drawer-ft">${ft}</div>`);
 }
+/* 结算单历史版本（BR-15）：入口=详情抽屉右上角「历史版本」按钮；只读，仅供追溯。商家端不出现「作废」字样。 */
+function billByNo(no){return [DB.bill,...DB.billsHistory].find(x=>x.no==no);}
+function act_billHistory(no){
+  const b=billByNo(no);if(!b)return;
+  const back=`act_billDetail('${b===DB.bill?'':b.period}')`;
+  drawer(`<div class="drawer-hd"><div><h3>历史版本</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${b.range} · 当前版本 <span class="mono">${b.no}</span></div></div><div style="display:flex;align-items:center;gap:12px"><button class="btn btn-o btn-sm" onclick="${back}">返回当前版本</button><span class="x" onclick="closeDrawer()">×</span></div></div>
+  <div class="drawer-bd">
+    <table><thead><tr><th>单号</th><th>生成时间</th><th>更新时间</th><th>更新原因</th><th style="text-align:right">应清算</th><th>操作</th></tr></thead><tbody>
+      <tr><td class="mono">${b.no} <span class="tag t-g" style="font-family:inherit;font-size:11px;padding:1px 6px">当前</span></td><td>${b.updatedAt||b.genDate}</td><td>—</td><td>—</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(b.net)}</td><td><button class="btn btn-link" onclick="${back}">查看</button></td></tr>
+      ${b.prev.map((v,i)=>`<tr style="color:var(--ts)"><td class="mono">${v.no}</td><td>${v.genAt}</td><td>${v.updatedAt}</td><td>${v.reason}</td><td style="text-align:right">${money(v.net)}</td><td><button class="btn btn-link" onclick="act_billOldVer('${b.no}',${i})">查看</button></td></tr>`).join('')}
+    </tbody></table>
+    <div style="font-size:11.5px;color:var(--ts);margin-top:8px">平台更新结算单后，以当前单号 <b class="mono">${b.no}</b> 为准认可、付款和开票；历史版本只读，不再参与认可、付款、开票和导出。</div>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+}
+function act_billOldVer(no,i){
+  const b=billByNo(no),v=b&&b.prev[i];if(!v)return;
+  drawer(`<div class="drawer-hd"><div><h3>${v.no} · 历史版本</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${b.range} · 生成 ${v.genAt} · 更新 ${v.updatedAt}</div></div><div style="display:flex;align-items:center;gap:12px"><button class="btn btn-o btn-sm" onclick="act_billHistory('${b.no}')">返回历史版本</button><span class="x" onclick="closeDrawer()">×</span></div></div>
+  <div class="drawer-bd">
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🕘</span><div>这是本期结算单的历史版本，仅供追溯。平台已于 ${v.updatedAt} 更新为 <b class="mono">${b.no}</b>，请以当前版本为准。<br>更新原因：${v.reason}</div></div>
+    <div class="kv"><div><div class="k">结算区间</div><div class="v">${b.range}</div></div><div><div class="k">应清算给供应商（该版本）</div><div class="v" style="color:var(--ts);font-size:18px">${money(v.net)}</div></div><div><div class="k">当前版本应清算</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>
+  </div>
+  <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+}
 /* 认可账单（BR-03b）：入口只在结算单列表行，详情抽屉不放；二次确认·不可逆。
    认可后并行两条线：① 推平台财务走打款 ② 就本期服务佣金自动开服务费发票（feeSvc=0 的期不开票）。*/
 function act_confirmBillAsk(no){
   const b=(no&&[DB.bill,...DB.billsHistory].find(x=>x.no==no))||DB.bill;
-  if(b.status!='generated'){toast('本单已认可或已作废，无需重复操作','info');return;}
+  if(b.status!='generated'){toast('本单已认可或已更新，请以最新结算单为准','info');return;}
   const ded=[['汇总总额（GMV）',b.gross],['逆向扣减（售后判商家责）',-(b.reverse||0)],
     [(b.feeSvc||0)>0?'平台抽佣 · 服务佣金':'平台抽佣 · 服务佣金（免佣期）',-(b.feeSvc||0)],
     [(b.feeLogi||0)>0?'物流抽佣 · 物流佣金':'物流抽佣 · 物流佣金（免佣期）',-(b.feeLogi||0)]]
