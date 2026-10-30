@@ -63,7 +63,7 @@
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的库存总数)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br><b>「预送量」是算法预测的当日全天销量、已经包含订单量</b>，两者<b>不相加</b>。<b>应送数量 = max(订单量, 预送量)</b>；<b>需打标签数 = max(0, 应送数量 − 在仓库存)</b>——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>今日优先消耗</b>，不用重复送；扣完为 0 就是今日免送。在仓库存以仓库回传的期末库存为准，<b>仓库未回传前 12:00 前不可打印标签</b>。`:''}</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你当日全天的销量（已含订单量），随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的库存总数)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），在仓货今天卖不完的 SKU 继续占位，今天能卖完的才会被新 SKU 按预送量替换，没排上的只送订单量。<br><b>「预送量」是算法预测的当日全天销量、已经包含订单量</b>，两者<b>不相加</b>。<b>应送数量 = max(订单量, 预送量)</b>；<b>需打标签数 = max(0, 应送数量 − 在仓库存)</b>——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>今日优先消耗</b>，不用重复送；扣完为 0 就是今日免送。在仓库存以仓库回传的期末库存为准，<b>仓库未回传前 12:00 前不可打印标签</b>。`:''}</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -169,7 +169,7 @@
   function printedOf(key){return (DB.labelPrinted||{})[key]||0;}
   // 10-29 会议：WMS 期末库存未回传且未到 12:00 → 锁定打印（避免多打难处理）；回传后系统按新数校验，少打补打、多打进 overQty
   function psLock(){return (typeof presendLabelLock=='function')&&presendLabelLock();}
-  function lockDeny(){toast('仓库尚未回传在仓库存，12:00 前不可打印标签；回传后系统自动算出需打标签数','err');return false;}
+  function lockDeny(){toast('仓库尚未回传在仓库存，12:00 前不可打印标签','err');return false;}
   function wgBlocked(r){return (r.wgWait||0)>0;}
   function wgDeny(r){toast(`「${r.name}」还有 ${r.wgWait} 个订单未录实发净重。多退少补商品需先在「备货管理 › 称重录入」完成称重才能打印标签`,'err');}
   function allUnprinted(){DB.labelPrinted=DB.labelPrinted||{};const f=DB.labelF||{};const agg={},nm={};refOrders().forEach(o=>{if(f.date&&o.deliver!=f.date)return;(o.lines||[]).forEach(l=>{const key=o.warehouse+'|'+l.sku;agg[key]=(agg[key]||0)+l.qty;nm[key]=l.name;});});
@@ -265,35 +265,35 @@
     </div></div>
     <div class="card"><div class="card-hd" style="flex-wrap:wrap;gap:10px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-p btn-sm" ${selN?'':'disabled'} onclick="label_printSel()">批量打印${selN?`（已选 ${selN}）`:''}</button>
-        <button class="btn btn-p btn-sm" onclick="label_bySeqPrint()">按序号打印</button>
+        <button class="btn btn-p btn-sm" ${selN&&!lock?'':'disabled'} ${lock?'title="仓库尚未回传在仓库存，12:00 前不可打印标签"':''} onclick="label_printSel()">批量打印${selN?`（已选 ${selN}）`:''}</button>
+        <button class="btn btn-p btn-sm" ${lock?'disabled title="仓库尚未回传在仓库存，12:00 前不可打印标签"':''} onclick="label_bySeqPrint()">按序号打印</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出应送货标签清单.xlsx','ok')">应送货导出</button>
         <button class="btn btn-o btn-sm" onclick="short_records()">报缺记录${(()=>{const n=(DB.shortReports||[]).filter(x=>x.date==f.date&&x.status!='revoked').length;return n?`（${n}）`:'';})()}</button>
         <span style="font-size:12px;color:var(--r)">每次最多支持 50 个商品进行批量打印标签</span>
       </div>
       <div class="row" style="gap:14px;font-size:12.5px;align-items:center">
-        <span>全部仓未打印：<b style="color:var(--r)">${allUnprinted()}</b></span>
+        <span>全部仓未打印：<b style="color:var(--r)">${lock?'待回传':allUnprinted()}</b></span>
         <button class="btn btn-o btn-sm" onclick="toast('全部仓打印进度：已打印 ${printed} / 应送货 ${should}','info')">全部仓打印进度</button>
       </div>
     </div>
     <div class="card-bd" style="padding:10px 16px;display:flex;gap:22px;font-size:13px;border-bottom:1px solid var(--bd2);flex-wrap:wrap;align-items:center">
-      ${lbPsOn?`<span>应送数量：<b>${rows.reduce((a,r)=>a+(r.needQty||0),0)}</b></span><span>在仓库存：<b>${lock?'待回传':rows.reduce((a,r)=>a+(r.stockLeft||0),0)}</b></span><span>需打标签数：<b>${lock?'待回传':should}</b></span>`:`<span>应送货：<b>${should}</b></span>`}<span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${lock?'—':unpr}</b></span><span>未称重拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span><span>多打：<b style="color:${over?'var(--r)':'inherit'}">${over}</b></span><span class="tag ${DB.labelCutoff?'t-gr':'t-y'}" style="font-size:11px;cursor:pointer" title="演示：点击切换截单状态" onclick="DB.labelCutoff=!DB.labelCutoff;render()">${DB.labelCutoff?'已截单':'未截单'}</span>${lbPsOn&&typeof presendWmsTag=='function'?presendWmsTag():''}
+      ${lbPsOn?`<span>应送数量：<b>${rows.reduce((a,r)=>a+(r.needQty||0),0)}</b></span><span>在仓库存：<b>${lock?'待回传':rows.reduce((a,r)=>a+(r.stockLeft||0),0)}</b></span><span>需打标签数：<b>${lock?'待回传':should}</b></span>`:`<span>应送货：<b>${should}</b></span>`}<span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${lock?'待回传':unpr}</b></span><span>未称重拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span><span>多打：<b style="color:${over?'var(--r)':'inherit'}">${over}</b></span><span class="tag ${DB.labelCutoff?'t-gr':'t-y'}" style="font-size:11px;cursor:pointer" title="演示：点击切换截单状态" onclick="DB.labelCutoff=!DB.labelCutoff;render()">${DB.labelCutoff?'已截单':'未截单'}</span>${lbPsOn&&typeof presendWmsTag=='function'?presendWmsTag():''}
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th style="width:34px"><input type="checkbox" title="全选本页商品" ${allSel?'checked':''} onclick="label_selAll()"></th><th style="width:44px">序号</th><th>商品名称</th><th>规格(编码)</th><th>分类</th><th style="text-align:right">昨日销量</th>${lbPsOn?'<th style="text-align:right">订单量</th><th style="text-align:right">在仓库存</th><th style="text-align:right">应送数量</th><th style="text-align:right">需打标签数</th>':'<th style="text-align:right">应送货</th>'}<th style="text-align:right">已打印数</th><th style="text-align:right">未打印数</th><th style="text-align:right">本次打印数</th><th>操作</th></tr></thead><tbody>
       ${rows.map((r,i)=>{const pr=Math.min(r.qty,printedOf(r.key));const un=r.qty-pr;const last=DB.labelLast[r.key]||0;const done=un<=0;return `<tr>
         <td><input type="checkbox" ${sel.includes(r.key)?'checked':''} onclick="label_toggleSel('${r.key}')"></td>
         <td>${i+1}</td>
-        <td><b>${r.name}</b>${r.shortQty?` <span class="tag t-r" style="font-size:10px">已报缺 ${r.shortQty}</span>`:''}${(typeof shortStopped=='function')&&shortStopped(f.date,String(r.key).split('|')[0],r.sku)?' <span class="tag t-gr" style="font-size:10px">已下架</span>':''}${done?' <span class="tag t-g" style="font-size:10px">打印完成</span>':''}${wgBlocked(r)?` <span class="tag t-r" style="font-size:10px">待称重 ${r.wgWait}</span>`:(r.wgNeed?' <span class="tag t-g" style="font-size:10px">已称重</span>':'')}</td>
+        <td><b>${r.name}</b>${r.shortQty?` <span class="tag t-r" style="font-size:10px">已报缺 ${r.shortQty}</span>`:''}${(typeof shortStopped=='function')&&shortStopped(f.date,String(r.key).split('|')[0],r.sku)?' <span class="tag t-gr" style="font-size:10px">已下架</span>':''}${done&&r.qty>0?' <span class="tag t-g" style="font-size:10px">打印完成</span>':''}${wgBlocked(r)?` <span class="tag t-r" style="font-size:10px">待称重 ${r.wgWait}</span>`:(r.wgNeed?' <span class="tag t-g" style="font-size:10px">已称重</span>':'')}</td>
         <td>${specLabel(r)} <span style="color:var(--ts)">(${r.sku})</span></td>
         <td style="font-size:12px;color:var(--ts)">${r.cat}</td>
         <td style="text-align:right">${yday(r.sku)}</td>
         ${lbPsOn?`<td style="text-align:right">${r.ordQty}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':(r.stockLeft?r.stockLeft:'<span style="color:var(--tt)">0</span>')}</td><td style="text-align:right">${r.needQty}</td>`:''}
-        <td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':`<b>${r.qty}</b>`}${lock?'':`<div style="font-size:11px;color:var(--tt)">${r.wgNeed&&!wgBlocked(r)?`实发 ${r.wgReal.toFixed(1)}kg`:`序号 1–${r.qty}`}</div>`}${!lock&&printedOf(r.key)>r.qty?`<div><span class="tag t-r" style="font-size:10px">多打 ${printedOf(r.key)-r.qty} 张·作废</span></div>`:''}</td>
+        <td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':`<b>${r.qty}</b>`}${!lock&&lbPsOn&&r.qty==0&&r.needQty>0?' <span class="tag t-g" style="font-size:10px">今日免送</span>':''}${lock||r.qty==0?'':`<div style="font-size:11px;color:var(--tt)">${r.wgNeed&&!wgBlocked(r)?`实发 ${r.wgReal.toFixed(1)}kg`:`序号 1–${r.qty}`}</div>`}${!lock&&printedOf(r.key)>r.qty?`<div><span class="tag t-r" style="font-size:10px">多打 ${printedOf(r.key)-r.qty} 张·作废</span></div>`:''}</td>
         <td style="text-align:right;color:var(--gd)">${pr}</td>
-        <td style="text-align:right;${un>0&&!lock?'color:var(--r);font-weight:600':''}">${lock?'—':un}</td>
+        <td style="text-align:right;${un>0&&!lock?'color:var(--r);font-weight:600':''}">${lock?'<span style="color:var(--tt)">待回传</span>':un}</td>
         <td style="text-align:right">${lock?'—':(last||(un>0?un:'—'))}</td>
-        <td style="white-space:nowrap">${lock?'<button class="btn btn-p btn-sm" disabled title="仓库尚未回传在仓库存，12:00 前不可打印">打印</button>':un<=0?'<span style="color:var(--ts)">打印完成</span>':(wgBlocked(r)
+        <td style="white-space:nowrap">${lock?'<button class="btn btn-p btn-sm" disabled title="仓库尚未回传在仓库存，12:00 前不可打印标签">打印</button>':un<=0?`<span style="color:var(--ts)">${r.qty==0&&lbPsOn?'今日免送':'打印完成'}</span>`:(wgBlocked(r)
           ?`<button class="btn btn-p btn-sm" disabled title="该商品有 ${r.wgWait} 个订单未录实发净重，完成称重后才能打印">打印</button> <button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重</button>`
           :`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`)}${r.ordQty>0?(r.ordQty-(r.shortQty||0)>0?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_open('${r.key}')">报缺货</button>`:` <button class="btn btn-link btn-sm" disabled title="该商品订单量已全部报缺">报缺货</button>`):''}</td>
       </tr>`;}).join('')||`<tr><td colspan="${lbPsOn?14:11}"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
