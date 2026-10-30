@@ -6211,29 +6211,29 @@ function act_billDetail(key){
   </div>
   <div class="drawer-ft">${ft}</div>`);
 }
-/* 结算单历史版本（BR-15）：入口=详情抽屉右上角「历史版本」按钮；只读，仅供追溯。商家端不出现「作废」字样。 */
+/* 结算单历史版本（BR-15）：入口=详情抽屉右上角「历史版本」按钮，弹窗展示（叠在抽屉上，关闭回到详情）；只读，仅供追溯。商家端不出现「作废」字样。 */
 function billByNo(no){return [DB.bill,...DB.billsHistory].find(x=>x.no==no);}
+function billModalWide(html){modal(html);document.getElementById('mc').classList.add('wide');}
 function act_billHistory(no){
   const b=billByNo(no);if(!b)return;
-  const back=`act_billDetail('${b===DB.bill?'':b.period}')`;
-  drawer(`<div class="drawer-hd"><div><h3>历史版本</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${b.range} · 当前版本 <span class="mono">${b.no}</span></div></div><div style="display:flex;align-items:center;gap:12px"><button class="btn btn-o btn-sm" onclick="${back}">返回当前版本</button><span class="x" onclick="closeDrawer()">×</span></div></div>
-  <div class="drawer-bd">
-    <table><thead><tr><th>单号</th><th>生成时间</th><th>更新时间</th><th>更新原因</th><th style="text-align:right">应清算</th><th>操作</th></tr></thead><tbody>
-      <tr><td class="mono">${b.no} <span class="tag t-g" style="font-family:inherit;font-size:11px;padding:1px 6px">当前</span></td><td>${b.updatedAt||b.genDate}</td><td>—</td><td>—</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(b.net)}</td><td><button class="btn btn-link" onclick="${back}">查看</button></td></tr>
-      ${b.prev.map((v,i)=>`<tr style="color:var(--ts)"><td class="mono">${v.no}</td><td>${v.genAt}</td><td>${v.updatedAt}</td><td>${v.reason}</td><td style="text-align:right">${money(v.net)}</td><td><button class="btn btn-link" onclick="act_billOldVer('${b.no}',${i})">查看</button></td></tr>`).join('')}
+  billModalWide(`<div class="mc-hd"><h3>历史版本 · ${b.range}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
+    <table style="margin:0"><thead><tr><th>单号</th><th>更新时间</th><th>更新原因</th><th style="text-align:right">应清算</th><th>操作</th></tr></thead><tbody>
+      <tr><td class="mono">${b.no} <span class="tag t-g" style="font-family:inherit;font-size:11px;padding:1px 6px">当前</span></td><td>${b.updatedAt||b.genDate}</td><td>—</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(b.net)}</td><td style="color:var(--ts)">—</td></tr>
+      ${b.prev.map((v,i)=>`<tr style="color:var(--ts)"><td class="mono">${v.no}</td><td>${v.updatedAt}</td><td>${v.reason}</td><td style="text-align:right">${money(v.net)}</td><td><button class="btn btn-link" onclick="act_billOldVer('${b.no}',${i})">查看</button></td></tr>`).join('')}
     </tbody></table>
-    <div style="font-size:11.5px;color:var(--ts);margin-top:8px">平台更新结算单后，以当前单号 <b class="mono">${b.no}</b> 为准认可、付款和开票；历史版本只读，不再参与认可、付款、开票和导出。</div>
+    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">以当前单号 <b class="mono">${b.no}</b> 为准认可、付款和开票；历史版本只读，不再参与认可、付款、开票和导出。</div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+  <div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 function act_billOldVer(no,i){
   const b=billByNo(no),v=b&&b.prev[i];if(!v)return;
-  drawer(`<div class="drawer-hd"><div><h3>${v.no} · 历史版本</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${b.range} · 生成 ${v.genAt} · 更新 ${v.updatedAt}</div></div><div style="display:flex;align-items:center;gap:12px"><button class="btn btn-o btn-sm" onclick="act_billHistory('${b.no}')">返回历史版本</button><span class="x" onclick="closeDrawer()">×</span></div></div>
-  <div class="drawer-bd">
+  billModalWide(`<div class="mc-hd"><h3>${v.no} · 历史版本</h3><button class="mc-x" onclick="closeModal()">×</button></div>
+  <div class="mc-bd">
     <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🕘</span><div>这是本期结算单的历史版本，仅供追溯。平台已于 ${v.updatedAt} 更新为 <b class="mono">${b.no}</b>，请以当前版本为准。<br>更新原因：${v.reason}</div></div>
-    <div class="kv"><div><div class="k">结算区间</div><div class="v">${b.range}</div></div><div><div class="k">应清算给供应商（该版本）</div><div class="v" style="color:var(--ts);font-size:18px">${money(v.net)}</div></div><div><div class="k">当前版本应清算</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>
+    <div class="kv"><div><div class="k">结算区间</div><div class="v">${b.range}</div></div><div><div class="k">生成时间</div><div class="v">${v.genAt}</div></div><div><div class="k">应清算（该版本）</div><div class="v" style="color:var(--ts)">${money(v.net)}</div></div><div><div class="k">应清算（当前版本）</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
+  <div class="mc-ft"><button class="btn btn-o" onclick="act_billHistory('${b.no}')">返回</button><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 /* 认可账单（BR-03b）：入口只在结算单列表行，详情抽屉不放；二次确认·不可逆。
    认可后并行两条线：① 推平台财务走打款 ② 就本期服务佣金自动开服务费发票（feeSvc=0 的期不开票）。*/
