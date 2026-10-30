@@ -47,8 +47,14 @@ const monday = s => { const d=D(s), w=(d.getUTCDay()+6)%7; return addDays(s,-w);
 const weekLabel = m => `${m} ~ ${addDays(m,6)}`;
 // 首次取货日期：SHOPS.first = 演示窗口之前已有的历史首取；没有则取取货记录里最早一天；都没有 = 还没取过货
 const firstPick = s => (SHOPS[s]||{}).first || ((DB.pfPickups||[]).filter(p=>p.shop==s).map(p=>p.at.slice(0,10)).sort()[0]) || '';
-const freeEnd = s => { const f=firstPick(s); return f ? addDays(f, FREE_DAYS-1) : ''; };   // 免运费最后一天（含）
-const inFree = (s,date) => { const e=freeEnd(s); return !!e && date <= e; };
+/* 免运费（2026-10-30 沈亮定）：运营在上门提货配置里选「免运费 / 立即收费」；免运费填减免日期（起止，含两端）。
+   规则版本带 fee:'FREE'|'CHARGE' + freeFrom/freeTo；按取货时间匹配的版本判断。
+   老版本没有 fee 字段 = 原口径「首次取货起 14 天」 */
+const legacyFree = s => { const f=firstPick(s); return f ? [f, addDays(f, FREE_DAYS-1)] : null; };
+const freeRangeOf = (s,v) => !v ? null : v.fee=='CHARGE' ? null : v.fee=='FREE' ? [v.freeFrom, v.freeTo] : legacyFree(s);
+const freeEnd = s => { const r=freeRangeOf(s, curRule(s)); return r ? r[1] : ''; };   // 当前规则下免运费最后一天（含）
+const inFree = (s,date,at) => { const r=freeRangeOf(s, ruleAt(s, at||date+' 23:59')); return !!r && date>=r[0] && date<=r[1]; };
+const freeDesc = v => !v||v.zone=='OFF' ? '—' : v.fee=='CHARGE' ? '立即收费' : v.fee=='FREE' ? `免运费 ${v.freeFrom} ~ ${v.freeTo}` : '首次取货起 14 天免运费';
 
 /* ================= 规则版本：每次保存追加一版，from = 保存时刻（下一次取货起生效） ================= */
 DB.pfRules = DB.pfRules || {
@@ -108,7 +114,7 @@ function pfCalc(){
     const fee = v.zone=='NEAR' ? PRICE.NEAR : r2(PRICE.NORMAL/p.mates);
     const basis = v.zone=='NEAR' ? `近区 · ${money(PRICE.NEAR)} / 次`
       : p.mates==1 ? `普通区 · 单独一车 ${money(PRICE.NORMAL)}` : `普通区 · ${money(PRICE.NORMAL)} ÷ 同车 ${p.mates} 家 = ${money(fee)}`;
-    if(inFree(p.shop,date)) return {...p, rule:v, fee, charge:0, st:'FREE', basis};
+    if(inFree(p.shop,date,p.at)) return {...p, rule:v, fee, charge:0, st:'FREE', basis};
     const ap=apvOf(p.no);
     if(ap&&ap.st=='APPROVED') return {...p, rule:v, fee, charge:0, st:'VOID', basis, apv:ap};
     if(ap&&ap.st=='PENDING') return {...p, rule:v, fee, charge:fee, st:'PENDING', basis, apv:ap};
@@ -209,15 +215,20 @@ const PK_RULE = {'SH2026062000001':'营业日：周一至周六；每日截单 1
 window.pfShopPickupOn = c => !!(DB.pickupCfg[c] && DB.pickupCfg[c].enabled);
 window.pfShopPeriod = c => { const v=DB.pickupCfg[c]; return v&&v.period&&v.period[0] ? `${v.period[0]} 至 ${v.period[1]}` : '—'; };
 window.pfShopZoneTag = c => { const v=curRule(c); return v ? zoneTag(v.zone) : '<span class="tag t-gr">未设置</span>'; };
-window.pf_freeText = s => firstPick(s) ? `${firstPick(s)} 首次取货，${freeEnd(s)} 前（含）免运费` : `还没有取货，首次取货起 ${FREE_DAYS} 天内免运费`;
+window.pf_freeText = s => { const v=curRule(s);
+  if(v && v.fee=='CHARGE') return '立即收费，无免运费期';
+  if(v && v.fee=='FREE') return `${v.freeFrom} ~ ${v.freeTo}（含）免运费`;
+  return firstPick(s) ? `${firstPick(s)} 首次取货，${freeEnd(s)} 前（含）免运费` : `还没有取货，首次取货起 ${FREE_DAYS} 天内免运费`; };
 
 window.pf_pickupCfg=function(code,name){
   if(name && !SHOPS[code]) EXTRA_NAMES[code]=name;
   const c=DB.pickupCfg[code]||{enabled:0, period:['',''], wh:'', st:'', et:'', addr:'', post:'', contact:'', rc:'65', phone:''};
-  const v=curRule(code), z=v?v.zone:'';
+  const v=curRule(code), z=v?v.zone:'', fpd=firstPick(code);
+  const fm = v&&v.fee ? v.fee : 'FREE';   // 首次设置 / 老版本默认「免运费」
+  const fr = v&&v.fee=='FREE' ? [v.freeFrom,v.freeTo] : (legacyFree(code) || [TODAY.slice(0,10), addDays(TODAY,FREE_DAYS-1)]);
   const inp=(id,val,ph,ml)=>`<input id="${id}" value="${esc(val)}" ${ph?`placeholder="${ph}"`:''} ${ml?`maxlength="${ml}"`:''} style="width:100%">`;
   const fi=(label,body,span,req=true)=>`<div class="fr" style="${span?'grid-column:1 / -1;':''}margin:0"><label class="fl">${req?'<b style="color:var(--r)">*</b> ':''}${label}</label>${body}</div>`;
-  const zopt=k=>`<label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;cursor:pointer"><input type="radio" name="pk-zone" value="${k}" ${z==k?'checked':''} onchange="pf_zoneHint('${code}')" style="margin-top:3px"><span><span style="font-weight:600">${ZONE[k]}</span><span style="color:var(--ts);font-size:12.5px;margin-left:8px">${k=='NEAR'?'祝融、白斯班江一带 · '+zoneStd(k):k=='NORMAL'?'近区以外 · '+zoneStd(k):'不收取取货运费'}</span></span></label>`;
+  const zopt=k=>`<label style="display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;cursor:pointer"><input type="radio" name="pk-zone" value="${k}" ${z==k?'checked':''} onchange="pf_feeMode('${code}')" style="margin-top:3px"><span><span style="font-weight:600">${ZONE[k]}</span><span style="color:var(--ts);font-size:12.5px;margin-left:8px">${k=='NEAR'?'祝融、白斯班江一带 · '+zoneStd(k):k=='NORMAL'?'近区以外 · '+zoneStd(k):'不收取取货运费'}</span></span></label>`;
   modalWide(`<div class="mc-hd"><h3>上门提货配置 · ${esc(shopName(code))}（${code}）</h3><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
     <label class="fl">上门提货</label>
@@ -242,10 +253,18 @@ window.pf_pickupCfg=function(code,name){
       ${v?`<button class="btn btn-link btn-sm" onclick="pf_hist('${code}')">变更记录</button>`:''}
     </div>
     <div class="fr"><label class="fl"><b style="color:var(--r)">*</b> 所属区域</label><div>${['NEAR','NORMAL','OFF'].map(zopt).join('')}</div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;font-size:13px">
-      <div><div style="font-size:12px;color:var(--ts);margin-bottom:3px">当前规则</div>${v?`${ruleText(v)}<div style="font-size:12px;color:var(--ts)">${v.from} 起生效 · ${esc(v.by)}</div>`:'未设置（不收费）'}</div>
-      <div><div style="font-size:12px;color:var(--ts);margin-bottom:3px">首次取货 / 免运费截止</div>${pf_freeText(code)}</div>
+    <div id="pk-fee-wrap" style="${z=='OFF'?'display:none':''}">
+      <div class="fr"><label class="fl"><b style="color:var(--r)">*</b> 收费方式</label>
+        <div style="display:flex;gap:24px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pk-fee" value="FREE" ${fm=='FREE'?'checked':''} onchange="pf_feeMode('${code}')"><span style="font-weight:600">免运费</span></label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="pk-fee" value="CHARGE" ${fm=='CHARGE'?'checked':''} onchange="pf_feeMode('${code}')"><span style="font-weight:600">立即收费</span></label>
+        </div></div>
+      <div class="fr" id="pk-free-row" style="${fm=='FREE'?'':'display:none'}"><label class="fl"><b style="color:var(--r)">*</b> 减免日期</label>
+        <div style="display:flex;align-items:center;gap:8px;max-width:420px"><input id="pk-ff" type="date" value="${fr[0]}" style="flex:1" onchange="pf_zoneHint('${code}')"><span style="color:var(--ts)">至</span><input id="pk-ft" type="date" value="${fr[1]}" style="flex:1" onchange="pf_zoneHint('${code}')"></div>
+        <div style="font-size:12px;color:var(--ts);margin-top:5px">${fpd?`首次取货 ${fpd}，`:'还没有取货，'}默认按 ${FREE_DAYS} 天预填，可改；减免日期内的取货照常计费、应扣记 0</div></div>
+      <div class="fr" id="pk-charge-row" style="${fm=='CHARGE'?'':'display:none'};font-size:12.5px;color:var(--ts)">保存后从下一次取货起收费，不再给免运费期</div>
     </div>
+    <div style="font-size:13px"><div style="font-size:12px;color:var(--ts);margin-bottom:3px">当前规则</div>${v?`${ruleText(v)} · ${freeDesc(v)}<div style="font-size:12px;color:var(--ts)">${v.from} 起生效 · ${esc(v.by)}</div>`:'未设置（不收费）'}</div>
     <div class="ib ib-y" id="pk-zone-hint" style="margin-top:12px;display:none"></div>
     <div style="font-size:12px;color:var(--ts);margin-top:10px">单价为未税价，每张周账单另加 9% GST。关闭上门提货不会生成提货任务，也就不产生运费；所属区域保留。</div>
   </div>
@@ -256,34 +275,54 @@ window.pf_pkToggle=function(on){
   document.getElementById('pk-sw-t').textContent=on?'已开启':'已关闭';
   document.getElementById('pk-save').textContent=on?'保存并开启':'保存并关闭';
 };
+const pkRead = () => { const g=id=>(document.getElementById(id)||{}).value||'';
+  const zone=(document.querySelector('input[name=pk-zone]:checked')||{}).value||'';
+  const fee=zone=='OFF'?'':((document.querySelector('input[name=pk-fee]:checked')||{}).value||'');
+  return fee=='FREE' ? {zone, fee, freeFrom:g('pk-ff'), freeTo:g('pk-ft')} : {zone, fee}; };
+const ruleSame = (a,b) => !!a && a.zone==b.zone && (b.zone=='OFF' || ((a.fee||'')==b.fee && (b.fee!='FREE' || (a.freeFrom==b.freeFrom && a.freeTo==b.freeTo))));
+window.pf_feeMode=function(code){
+  const n=pkRead();
+  document.getElementById('pk-fee-wrap').style.display = n.zone=='OFF' ? 'none' : '';
+  document.getElementById('pk-free-row').style.display = n.fee=='FREE' ? '' : 'none';
+  document.getElementById('pk-charge-row').style.display = n.fee=='CHARGE' ? '' : 'none';
+  pf_zoneHint(code);
+};
 window.pf_zoneHint=function(code){
-  const z=(document.querySelector('input[name=pk-zone]:checked')||{}).value, old=curRule(code), el=document.getElementById('pk-zone-hint');
-  const changed = z && (!old ? z!='OFF' : old.zone!=z);
+  const n=pkRead(), old=curRule(code), el=document.getElementById('pk-zone-hint');
+  const changed = n.zone && (!old ? n.zone!='OFF' : !ruleSame(old,n));
   el.style.display=changed?'flex':'none';
-  if(changed) el.innerHTML=`<span class="i">⚠️</span><div>取货运费将由「${old?ruleText(old):'未设置（不收费）'}」改为「<b>${ruleText({zone:z})}</b>」，保存后从<b>下一次取货</b>起按新规则计费，已经取过的货不重算。</div>`;
+  if(changed) el.innerHTML=`<span class="i">⚠️</span><div>取货运费将由「${old?ruleText(old)+' · '+freeDesc(old):'未设置（不收费）'}」改为「<b>${ruleText(n)}${n.zone=='OFF'?'':' · '+freeDesc(n)}</b>」，保存后从<b>下一次取货</b>起按新规则计费，已经取过的货不重算。</div>`;
 };
 window.pf_pkSave=function(code){
   const g=id=>(document.getElementById(id)||{}).value||'';
   const on=document.getElementById('pk-sw').checked;
   const f={enabled:on?1:0, period:[g('pk-ps'),g('pk-pe')], wh:g('pk-wh'), st:g('pk-st'), et:g('pk-et'), addr:g('pk-addr').trim(), post:g('pk-post').trim(), contact:g('pk-contact').trim(), rc:g('pk-rc'), phone:g('pk-phone').trim()};
-  const z=(document.querySelector('input[name=pk-zone]:checked')||{}).value;
+  const n=pkRead(), z=n.zone;
   if(on){
     const miss=!f.period[0]||!f.period[1]||!f.wh||!f.st||!f.et||!f.addr||!f.post||!f.contact||!f.rc||!f.phone;
     if(miss){toast('请先补全必填项再开启上门提货','err');return;}
     if(!z){toast('请选择取货运费所属区域','err');return;}
   }
+  if(z && z!='OFF'){
+    if(!n.fee){toast('请选择收费方式','err');return;}
+    if(n.fee=='FREE'){
+      if(!n.freeFrom||!n.freeTo){toast('请填写减免日期','err');return;}
+      if(n.freeFrom>n.freeTo){toast('减免开始日期不能晚于结束日期','err');return;}
+      if(n.freeTo<TODAY){toast('减免结束日期不能早于今天','err');return;}
+    }
+  }
   if(f.period[0]&&f.period[1]&&f.period[0]>f.period[1]){toast('提货周期开始日期不能晚于结束日期','err');return;}
   if(f.st&&f.et&&f.st>=f.et){toast('提货开始时间需早于结束时间','err');return;}
   DB.pickupCfg[code]=f;
   const old=curRule(code); let msg='已保存';
-  if(z && (old ? old.zone!=z : z!='OFF')){ (DB.pfRules[code]=DB.pfRules[code]||[]).push({zone:z, from:ts(), by:'当前账号'}); msg='已保存，取货运费下一次取货起按新规则计费'; }
+  if(z && (old ? !ruleSame(old,n) : z!='OFF')){ (DB.pfRules[code]=DB.pfRules[code]||[]).push({...n, from:ts(), by:'当前账号'}); msg='已保存，取货运费下一次取货起按新规则计费'; }
   closeModal(); render(); toast(msg,'ok');
 };
 window.pf_hist=function(s){
   const vers=(DB.pfRules[s]||[]).slice().reverse();
   drawer(`<div class="drawer-hd"><h3>取货运费变更记录 · ${esc(shopName(s))}</h3><span class="x" onclick="closeDrawer()">×</span></div>
-  <div class="drawer-bd"><table><thead><tr><th>生效时间</th><th>所属区域</th><th>收费标准</th><th>修改人</th></tr></thead><tbody>
-    ${vers.map((v,i)=>`<tr><td class="mono" style="white-space:nowrap">${v.from}${i==0?' <span class="tag t-g" style="font-size:10.5px">当前</span>':''}</td><td>${ZONE[v.zone]}</td><td>${zoneStd(v.zone)}</td><td>${esc(v.by)}</td></tr>`).join('')}
+  <div class="drawer-bd"><table><thead><tr><th>生效时间</th><th>所属区域</th><th>收费标准</th><th>收费方式</th><th>修改人</th></tr></thead><tbody>
+    ${vers.map((v,i)=>`<tr><td class="mono" style="white-space:nowrap">${v.from}${i==0?' <span class="tag t-g" style="font-size:10.5px">当前</span>':''}</td><td>${ZONE[v.zone]}</td><td>${zoneStd(v.zone)}</td><td style="white-space:nowrap">${freeDesc(v)}</td><td>${esc(v.by)}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
@@ -534,7 +573,7 @@ PAGES['m-pickfee']=()=>{
       ${kv('店铺',`${esc(shopName(s))}（<span class="mono">${s}</span>）`)}
       ${kv('所属区域',ZONE[v.zone])}
       ${kv('收费标准',v.zone=='NORMAL'?`${money(PRICE.NORMAL)} / 车（未税，另加 9% GST），最多 ${MAX_POOL} 家拼车，按同车店铺数平摊；同一天只收一次`:v.zone=='NEAR'?`${money(PRICE.NEAR)} / 次（未税，另加 9% GST）；同一天只收一次`:'—')}
-      ${kv('免运费期',fe?`首次取货起 ${FREE_DAYS} 天（${firstPick(s)} ~ ${fe}）${fe>=TODAY?' <span class="tag t-b" style="font-size:10.5px">免运费中</span>':''}`:`首次取货起 ${FREE_DAYS} 天内免运费`)}
+      ${kv('免运费期',v.fee=='CHARGE'?'无（立即收费）':v.fee=='FREE'?`${v.freeFrom} ~ ${v.freeTo}${fe>=TODAY?' <span class="tag t-b" style="font-size:10.5px">免运费中</span>':''}`:fe?`首次取货起 ${FREE_DAYS} 天（${firstPick(s)} ~ ${fe}）${fe>=TODAY?' <span class="tag t-b" style="font-size:10.5px">免运费中</span>':''}`:`首次取货起 ${FREE_DAYS} 天内免运费`)}
       ${kv('生效时间',v.from)}
     </div></div></div>
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
@@ -597,8 +636,8 @@ window.pfInvoiceContent=function(){
 window.pf_mHist=function(){
   const s=myShop(), vers=(DB.pfRules[s]||[]).slice().reverse();
   drawer(`<div class="drawer-hd"><h3>收费规则变更记录</h3><span class="x" onclick="closeDrawer()">×</span></div>
-  <div class="drawer-bd"><table><thead><tr><th>生效时间</th><th>所属区域</th><th>收费标准</th></tr></thead><tbody>
-    ${vers.map((v,i)=>`<tr><td class="mono" style="white-space:nowrap">${v.from}${i==0?' <span class="tag t-g" style="font-size:10.5px">当前</span>':''}</td><td>${ZONE[v.zone]}</td><td>${zoneStd(v.zone)}</td></tr>`).join('')}
+  <div class="drawer-bd"><table><thead><tr><th>生效时间</th><th>所属区域</th><th>收费标准</th><th>收费方式</th></tr></thead><tbody>
+    ${vers.map((v,i)=>`<tr><td class="mono" style="white-space:nowrap">${v.from}${i==0?' <span class="tag t-g" style="font-size:10.5px">当前</span>':''}</td><td>${ZONE[v.zone]}</td><td>${zoneStd(v.zone)}</td><td style="white-space:nowrap">${freeDesc(v)}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
