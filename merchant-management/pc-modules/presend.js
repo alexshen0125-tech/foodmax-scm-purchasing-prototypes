@@ -97,7 +97,10 @@
           // 商家核货数（送货前核货）：不能超过应送；短收的约一半商家已在核货时如实申报（核货=实收），另一半核了足量但实收少（实收比核货少）
           const checked=received<planned&&hnum(sd+'ck',2)==0?received:planned;
           const stock=open+received;                                           // 当天仓里能动的货
-          const demand=Math.max(1,Math.round(need*(0.7+hnum(sd+'ra',45)/100))); // 当日真实销量 = 全天预测量的 70%–114%（预测含订单量）
+          // 当日真实销量 = 全天预测量的 70%–114%（预测含订单量）；
+          // 演示：最近一天让部分 SKU 卖不完留仓，今天的「在仓库存」才有数——约 1/4 大量留仓（今日在仓已够·免送）、1/2 少量留仓（部分抵扣）
+          const lv=d==AUD_DAYS[0]?hnum(r.sku+wh+'lv',4):-1;
+          const demand=lv==1?Math.max(1,Math.round(need*0.15)):lv>=2?Math.max(1,Math.round(need*0.6)):Math.max(1,Math.round(need*(0.7+hnum(sd+'ra',45)/100)));
           const sold=Math.min(stock,demand,quota);
           const outQty=hnum(sd+'ot',10)<1?Math.max(0,sold-(1+hnum(sd+'os',2))):sold; // 仓库实际出库（约 1/10 少发）
           const close=stock-outQty;                                            // 期末在仓（按实出扣）

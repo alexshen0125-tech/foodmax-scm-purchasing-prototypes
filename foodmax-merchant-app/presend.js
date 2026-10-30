@@ -126,7 +126,9 @@ function buildAudit(){
                       :h<4?planned+(2+hnum(sd+'od',6))
                       :planned;
         const quota=Math.max(orderQty,psQty), stock=open+received;          // 可卖上限 = 全天预测总量（含订单）
-        const demand=Math.max(1,Math.round(need*(0.7+hnum(sd+'ra',45)/100)));
+        // 演示（与 PC 同口径）：最近一天让部分 SKU 卖不完留仓——约 1/4 大量留仓（今日免送）、1/2 少量留仓（部分抵扣）
+        const lv=d===AUD_DAYS[0]?hnum(r.sku+wh+'lv',4):-1;
+        const demand=lv===1?Math.max(1,Math.round(need*0.15)):lv>=2?Math.max(1,Math.round(need*0.6)):Math.max(1,Math.round(need*(0.7+hnum(sd+'ra',45)/100)));
         const sold=Math.min(stock,demand,quota);
         const outQty=hnum(sd+'ot',10)<1?Math.max(0,sold-(1+hnum(sd+'os',2))):sold; // 仓库实际出库（约 1/10 少发）
         const close=stock-outQty;
