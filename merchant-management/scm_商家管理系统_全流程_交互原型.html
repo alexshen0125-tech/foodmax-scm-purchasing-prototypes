@@ -6216,24 +6216,16 @@ function billByNo(no){return [DB.bill,...DB.billsHistory].find(x=>x.no==no);}
 function billModalWide(html){modal(html);document.getElementById('mc').classList.add('wide');}
 function act_billHistory(no){
   const b=billByNo(no);if(!b)return;
+  const dl=n=>`<button class="btn btn-link" onclick="toast('已下载 ${n} 结算单（PDF）','ok')">下载</button>`;
   billModalWide(`<div class="mc-hd"><h3>历史版本 · ${b.range}</h3><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <table style="margin:0"><thead><tr><th>单号</th><th>更新时间</th><th>更新原因</th><th style="text-align:right">应清算</th><th>操作</th></tr></thead><tbody>
-      <tr><td class="mono">${b.no} <span class="tag t-g" style="font-family:inherit;font-size:11px;padding:1px 6px">当前</span></td><td>${b.updatedAt||b.genDate}</td><td>—</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(b.net)}</td><td style="color:var(--ts)">—</td></tr>
-      ${b.prev.map((v,i)=>`<tr style="color:var(--ts)"><td class="mono">${v.no}</td><td>${v.updatedAt}</td><td>${v.reason}</td><td style="text-align:right">${money(v.net)}</td><td><button class="btn btn-link" onclick="act_billOldVer('${b.no}',${i})">查看</button></td></tr>`).join('')}
+    <table style="margin:0"><thead><tr><th>单号</th><th>创建时间</th><th>作废时间</th><th style="text-align:right">应清算</th><th>操作</th></tr></thead><tbody>
+      <tr><td class="mono">${b.no} <span class="tag t-g" style="font-family:inherit;font-size:11px;padding:1px 6px">当前</span></td><td>${b.updatedAt||b.genDate}</td><td>—</td><td style="text-align:right;color:var(--gd);font-weight:600">${money(b.net)}</td><td>${dl(b.no)}</td></tr>
+      ${b.prev.map(v=>`<tr style="color:var(--ts)"><td class="mono">${v.no}</td><td>${v.genAt}</td><td>${v.updatedAt}</td><td style="text-align:right">${money(v.net)}</td><td>${dl(v.no)}</td></tr>`).join('')}
     </tbody></table>
-    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">以当前单号 <b class="mono">${b.no}</b> 为准认可、付款和开票；历史版本只读，不再参与认可、付款、开票和导出。</div>
+    <div style="font-size:11.5px;color:var(--ts);margin-top:10px">以当前单号 <b class="mono">${b.no}</b> 为准认可、付款和开票；历史版本只读，可下载留存。</div>
   </div>
   <div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
-}
-function act_billOldVer(no,i){
-  const b=billByNo(no),v=b&&b.prev[i];if(!v)return;
-  billModalWide(`<div class="mc-hd"><h3>${v.no} · 历史版本</h3><button class="mc-x" onclick="closeModal()">×</button></div>
-  <div class="mc-bd">
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">🕘</span><div>这是本期结算单的历史版本，仅供追溯。平台已于 ${v.updatedAt} 更新为 <b class="mono">${b.no}</b>，请以当前版本为准。<br>更新原因：${v.reason}</div></div>
-    <div class="kv"><div><div class="k">结算区间</div><div class="v">${b.range}</div></div><div><div class="k">生成时间</div><div class="v">${v.genAt}</div></div><div><div class="k">应清算（该版本）</div><div class="v" style="color:var(--ts)">${money(v.net)}</div></div><div><div class="k">应清算（当前版本）</div><div class="v" style="color:var(--g)">${money(b.net)}</div></div></div>
-  </div>
-  <div class="mc-ft"><button class="btn btn-o" onclick="act_billHistory('${b.no}')">返回</button><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);
 }
 /* 认可账单（BR-03b）：入口只在结算单列表行，详情抽屉不放；二次确认·不可逆。
    认可后并行两条线：① 推平台财务走打款 ② 就本期服务佣金自动开服务费发票（feeSvc=0 的期不开票）。*/

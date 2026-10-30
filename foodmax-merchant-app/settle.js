@@ -305,21 +305,14 @@ function openDetail(b){
 // ── 3. 历史版本（BR-15）：详情页顶部「历史版本 ›」弹窗展示；只读，仅供追溯；不出现「作废」字样 ──
 function openHistory(b){
   const m=document.createElement('div');m.className='modal-mask';
-  const list=()=>`<div class="mt">历史版本</div><div class="mb" style="text-align:left">
-      <div class="se-row" style="align-items:flex-start"><span class="k">${b.no} <span class="se-chip se-c-green">当前</span><br><span style="font-size:11.5px;color:var(--sub)">更新 ${b.updatedAt||b.genDate}</span></span><span class="v">${money(b.net)}</span></div>
-      ${b.prev.map((v,i)=>`<div class="se-row se-old" data-i="${i}" style="align-items:flex-start;cursor:pointer"><span class="k" style="color:var(--sub)">${v.no}<br><span style="font-size:11.5px">更新 ${v.updatedAt}</span><br><span style="font-size:11.5px">${v.reason}</span></span><span class="v" style="color:var(--sub)">${money(v.net)} ›</span></div>`).join('')}
-      <div style="font-size:11.5px;color:var(--sub);margin-top:8px">以当前单号为准认可、付款和开票；历史版本只读，不再参与认可、付款、开票和导出。</div></div>
-    <div class="mf"><div class="mbn ok" data-x="1">关闭</div></div>`;
-  const old=v=>`<div class="mt">${v.no}</div><div class="mb" style="text-align:left">
-      <div style="font-size:12.5px;color:var(--sub);margin-bottom:8px">这是历史版本，仅供追溯。平台已于 ${v.updatedAt} 更新为 <b>${b.no}</b>，请以当前版本为准。<br>更新原因：${v.reason}</div>
-      <div class="se-row"><span class="k">应清算（该版本）</span><span class="v" style="color:var(--sub)">${money(v.net)}</span></div>
-      <div class="se-row brand"><span class="k">应清算（当前版本）</span><span class="v">${money(b.net)}</span></div></div>
-    <div class="mf"><div class="mbn cancel" data-back="1">返回</div><div class="mbn ok" data-x="1">关闭</div></div>`;
-  const draw=h=>{m.innerHTML=`<div class="modal">${h}</div>`;
-    m.querySelectorAll('[data-x]').forEach(e=>e.onclick=()=>m.remove());
-    m.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>draw(list()));
-    m.querySelectorAll('.se-old').forEach(r=>r.onclick=()=>draw(old(b.prev[+r.dataset.i])));};
-  draw(list());
+  const row=(no,gen,vd,net,cur)=>`<div class="se-row" style="align-items:flex-start"><span class="k" ${cur?'':'style="color:var(--sub)"'}>${no}${cur?' <span class="se-chip se-c-green">当前</span>':''}<br><span style="font-size:11.5px;color:var(--sub)">创建 ${gen}${vd?' · 作废 '+vd:''}</span><br><span class="se-dl" data-no="${no}" style="font-size:12px;font-weight:600;color:var(--emerald-2);cursor:pointer">下载</span></span><span class="v" ${cur?'':'style="color:var(--sub)"'}>${money(net)}</span></div>`;
+  m.innerHTML=`<div class="modal"><div class="mt">历史版本</div><div class="mb" style="text-align:left">
+      ${row(b.no,b.updatedAt||b.genDate,'',b.net,true)}
+      ${b.prev.map(v=>row(v.no,v.genAt,v.updatedAt,v.net,false)).join('')}
+      <div style="font-size:11.5px;color:var(--sub);margin-top:8px">以当前单号为准认可、付款和开票；历史版本只读，可下载留存。</div></div>
+    <div class="mf"><div class="mbn ok" data-x="1">关闭</div></div></div>`;
+  m.querySelector('[data-x]').onclick=()=>m.remove();
+  m.querySelectorAll('.se-dl').forEach(e=>e.onclick=()=>toast('已下载 '+e.dataset.no+' 结算单'));
   document.querySelector('.phone').appendChild(m);
   m.onclick=e=>{if(e.target===m)m.remove();};
 }
