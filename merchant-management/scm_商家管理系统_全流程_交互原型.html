@@ -4875,53 +4875,57 @@ const PS_DEMO_SKUS={
 };
 function psHash(s,m){let h=11;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h%m;}
 function psSkuListOf(mcode){
-  /* 预送池（BR-22，跨日滚动）：① 有期末库存的 SKU 继续占位；② 库存为 0 的出池腾名额；
-     ③ 算法今日给出预送量的 SKU，已在池内的保留，不在池内的按空余名额补入，补不进的直接舍弃。 */
-  const lim=psCfgOf(mcode).limit,map={};
+  /* 预送池（BR-22，跨日滚动；2026-10-30 汰换口径）：
+     ① 锁定占位：期末库存 > 今日订单量；② 可汰换：今日订单量 ≥ 期末库存（今天就能卖完在仓货）；
+     ③ 空余名额 = 上限 − 锁定数，可汰换 SKU 与池外新 SKU 一起按今日预送量从高到低抢名额，没抢到的出池 / 舍弃。 */
+  const lim=psCfgOf(mcode).limit;let all=[],prev;
   if(mcode==DB.merchant.code){
     if(typeof ensurePresend=='function')ensurePresend();
-    (DB.presend||[]).forEach(r=>{
-      const m=map[r.sku]||(map[r.sku]={sku:r.sku,name:r.name,spec:r.spec,whs:[],ps:0,left:0});
-      m.whs.push(r.wh);
-      m.ps+=Math.min(r.fcst,r.avail);                                   // 算法预送量，逐仓取小再合计
-      m.left+=((DB.psLeft||{})[r.sku+'|'+r.wh]||0);                     // 期末库存 = 链式演算的期末在仓
-    });
+    const lg=DB.psPoolLog||{},days=DB.psPoolDays||[],pd=days[days.length-2];
+    prev=new Set(pd?[...pd.keep,...(pd.swapKeep||[]),...pd.add]:[]);
+    const map={};
+    (DB.presend||[]).forEach(r=>{if(!map[r.sku])map[r.sku]={sku:r.sku,name:r.name,spec:r.spec,whs:[]};map[r.sku].whs.push(r.wh);});
+    all=Object.values(map).map(m=>Object.assign(m,{left:(lg.openBy||{})[m.sku]||0,ord:(lg.ordBy||{})[m.sku]||0,ps:(lg.gross||{})[m.sku]||0}));
   }else{
-    (PS_DEMO_SKUS[mcode]||[]).forEach(([sku,name,spec])=>{
+    all=(PS_DEMO_SKUS[mcode]||[]).map(([sku,name,spec])=>{
       const fcst=psHash(mcode+sku+'np',10)<2?0:4+psHash(mcode+sku+'f',30);
       const avail=Math.max(2,Math.round(fcst*(0.5+psHash(mcode+sku+'a',60)/100)));
-      const left=psHash(mcode+sku+'lf',10)<4?0:1+psHash(mcode+sku+'lq',12);   // 约 4/10 期末库存为 0
-      map[sku]={sku,name,spec,whs:[['大巴窑DC','盛港DC','兀兰DC'][psHash(sku,3)]],ps:Math.min(fcst,avail),left};
+      const left=psHash(mcode+sku+'lf',10)<4?0:1+psHash(mcode+sku+'lq',12);
+      const ord=1+psHash(mcode+sku+'od',10);
+      return {sku,name,spec,whs:[['大巴窑DC','盛港DC','兀兰DC'][psHash(sku,3)]],ps:Math.min(fcst,avail),left,ord};
     });
+    prev=new Set(all.filter(r=>r.left>0).map(r=>r.sku));
   }
-  const all=Object.values(map);
-  const keep=all.filter(r=>r.left>0).sort((a,b)=>b.left-a.left||a.sku.localeCompare(b.sku)).slice(0,lim);
+  const keep=all.filter(r=>prev.has(r.sku)&&r.left>r.ord).sort((a,b)=>b.left-a.left||a.sku.localeCompare(b.sku)).slice(0,lim);
   const free=Math.max(0,lim-keep.length);
-  const add=all.filter(r=>r.ps>0&&keep.indexOf(r)<0).sort((a,b)=>b.ps-a.ps||a.sku.localeCompare(b.sku)).slice(0,free);
-  keep.forEach(r=>r.state='keep'); add.forEach(r=>r.state='add');
-  const rows=keep.concat(add);
-  rows.forEach((r,i)=>r.rank=i+1);
+  const win=all.filter(r=>r.ps>0&&keep.indexOf(r)<0).sort((a,b)=>b.ps-a.ps||a.sku.localeCompare(b.sku)).slice(0,free);
+  keep.forEach(r=>r.state='keep');win.forEach(r=>r.state=prev.has(r.sku)?'swapKeep':'add');
+  const rows=keep.concat(win);rows.forEach((r,i)=>r.rank=i+1);
   rows.free=Math.max(0,lim-rows.length);
+  rows.out=all.filter(r=>prev.has(r.sku)&&rows.indexOf(r)<0).map(r=>Object.assign(r,{state:'out'}));
   return rows;
 }
+const PS_STATE={keep:'<span class="tag t-g"><span class="dot"></span>锁定占位</span>',swapKeep:'<span class="tag t-b"><span class="dot"></span>可汰换·保留</span>',add:'<span class="tag t-y"><span class="dot"></span>今日新入池</span>',out:'<span class="tag t-gr"><span class="dot"></span>已汰换出池</span>'};
 window.act_shopPsSkus=function(mcode){
   const c=psCfgOf(mcode),rows=psSkuListOf(mcode);
-  const addN=rows.filter(r=>r.state=='add').length;
+  const addN=rows.filter(r=>r.state=='add').length,lockN=rows.filter(r=>r.state=='keep').length;
+  const tr=r=>`<tr>
+          <td>${r.rank||'—'}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td style="color:var(--ts)">${r.spec}</td>
+          <td>${r.whs.join('、')}</td>
+          <td style="text-align:right">${r.left?`<b>${r.left}</b>`:'<span style="color:var(--tt)">0</span>'}</td>
+          <td style="text-align:right">${r.ord}</td>
+          <td>${PS_STATE[r.state]}</td></tr>`;
   drawer(`<div class="drawer-hd"><div><h3>预送 SKU 清单</h3>
-      <div style="margin-top:4px"><span class="sub" style="font-size:12px">${shopNameOf(mcode)} · ${mcode} · 种类上限 ${c.limit} 种 · 在池 ${rows.length} 种 · 空余名额 ${rows.free} 种（今日新入池 ${addN} 种）</span></div></div>
+      <div style="margin-top:4px"><span class="sub" style="font-size:12px">${shopNameOf(mcode)} · ${mcode} · 种类上限 ${c.limit} 种 · 锁定占位 ${lockN} 种 · 在池 ${rows.length} 种 · 空余名额 ${rows.free} 种（今日新入池 ${addN} 种 · 汰换出池 ${rows.out.length} 种）</span></div></div>
       <span class="x" onclick="closeDrawer()">×</span></div>
     <div class="drawer-bd">
       <div style="overflow-x:auto"><table>
         <thead><tr><th style="width:52px">排名</th><th>SKU 编码</th><th>商品名称</th><th>规格</th><th>入库仓库</th>
-          <th style="text-align:right">期末库存</th><th>状态</th></tr></thead>
-        <tbody>${rows.length?rows.map(r=>`<tr>
-          <td>${r.rank}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td style="color:var(--ts)">${r.spec}</td>
-          <td>${r.whs.join('、')}</td>
-          <td style="text-align:right">${r.left?`<b>${r.left}</b>`:'<span style="color:var(--tt)">0</span>'}</td>
-          <td>${r.state=='keep'?'<span class="tag t-g"><span class="dot"></span>在池（有库存占位）</span>':'<span class="tag t-y"><span class="dot"></span>今日新入池</span>'}</td></tr>`).join('')
-          :`<tr><td colspan="7"><div class="empty"><div class="e-t">预送池为空</div><div class="e-s">该商家无期末库存占位，算法当日也未给出预送量</div></div></td></tr>`}</tbody>
+          <th style="text-align:right">期末库存</th><th style="text-align:right">今日订单量</th><th>状态</th></tr></thead>
+        <tbody>${rows.length||rows.out.length?rows.map(tr).join('')+rows.out.map(tr).join('')
+          :`<tr><td colspan="8"><div class="empty"><div class="e-t">预送池为空</div><div class="e-s">该商家无期末库存占位，算法当日也未给出预送量</div></div></td></tr>`}</tbody>
       </table></div>
-      <div style="font-size:12px;color:var(--ts);margin-top:10px">预送池跨日滚动，上限 ${c.limit} 种：<b>有期末库存的 SKU 继续占位</b>，库存为 0 的出池腾名额；算法当日给出预送量的 SKU，已在池内的照常预送，不在池内的按空余名额补入，<b>补不进的当日直接舍弃</b>、只送订单量。</div>
+      <div style="font-size:12px;color:var(--ts);margin-top:10px">预送池跨日滚动，上限 ${c.limit} 种：<b>期末库存 &gt; 今日订单量</b>的 SKU 锁定占位；<b>今日订单量 ≥ 期末库存</b>（今天就能把在仓货卖完）的 SKU 进入汰换，与池外新 SKU 一起按今日预送量从高到低抢空余名额，没抢到的出池，<b>补不进的当日直接舍弃</b>、只送订单量。</div>
     </div>
     <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>
       <button class="btn btn-p" onclick="closeDrawer();act_shopPresend('${mcode}')">修改种类上限</button></div>`);
@@ -6508,7 +6512,7 @@ goHome();
 </script>
 <!-- ===== 搬迁自 App 的功能模块（按 PC 形态适配；引用上方 const PAGES/NAV/DB/CATS 与 window 上的 money/toast/modal 等） ===== -->
 <script src="pc-modules/stock.js?v=20260917a"></script>
-<script src="pc-modules/pick.js?v=20261027d"></script>
+<script src="pc-modules/pick.js?v=20261030a"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
 <script src="pc-modules/delivery.js?v=20261028a"></script>
 <script src="pc-modules/checkgoods.js?v=20261015e"></script>
@@ -6521,7 +6525,7 @@ goHome();
 <script src="pc-modules/cpfine.js?v=20261016b"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
-<script src="pc-modules/presend.js?v=20261015a"></script>
+<script src="pc-modules/presend.js?v=20261030a"></script>
 <script src="pc-modules/promo.js?v=20260908f"></script>
 <script src="pc-modules/enroll.js?v=20260908a"></script>
 <script src="pc-modules/labelreprint.js?v=20260910h"></script>

@@ -55,13 +55,15 @@
           <td rowspan="${rs}" style="vertical-align:top;text-align:right"><b>${total}</b> ${s.unit}</td>`:'';
         const pn=typeof presendNet=='function'?presendNet(s.name,wh,q):{gross:0,left:0,ded:0,should:q};
         const should=pn.should;            // BR-15b：max(0, max(订单量,预送量) − 在仓剩余)
-        const psCols=psOn?`<td style="text-align:right">${pn.gross?`<span style="color:var(--gold)">${pn.gross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${pn.left?`<span style="color:var(--g)">${pn.left}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right"><b>${should}</b> ${s.unit}${pn.left&&!should?'<div style="font-size:11px;color:var(--g)">在仓已够·今日免送</div>':''}</td>`:'';
+        // 10-29 会议：应送数量 = 当日需求 max(订单量,预送量)；已用在仓预送单独一列；需打标签数 = 应送数量 − 已用在仓预送
+        const lock=(typeof presendLabelLock=='function')&&presendLabelLock();
+        const psCols=psOn?`<td style="text-align:right">${pn.gross?`<span style="color:var(--gold)">${pn.gross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${pn.need}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':(pn.ded?`<span style="color:var(--g)">−${pn.ded}</span>`:'<span style="color:var(--tt)">—</span>')}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':`<b>${should}</b> ${s.unit}${pn.ded&&!should?' <span class="tag t-g" style="font-size:10px">今日免送</span>':''}`}</td>`:'';
         return `<tr>${lead}<td>${wh}</td><td style="text-align:right">${whStock(s.sku,wh)}</td><td style="text-align:right;color:var(--ts)">${hist(s.sku,wh)}</td><td style="text-align:right">${q} <span style="color:var(--ts)">${s.unit}</span></td>${psCols}</tr>`;
       }).join('');
     }).join('');
 
     return `
-    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的可售库存)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br><b>「预送量」是算法预测的当日全天销量、已经包含订单量</b>，两者<b>不相加</b>。<b>今日应送 = max(0, max(订单量, 预送量) − 在仓剩余)</b>：先在订单量与预送量之间<b>取大</b>得到当日需求，再减去在仓剩余——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>今日优先消耗</b>，不用重复送；扣完为 0 就是今日免送。`:''}</div></div>
+    <div class="ib ib-b" style="margin-bottom:14px"><span class="i">📊</span><div><b>备货参考</b>：系统按<b>送达日</b>把待发货订单聚合到「SKU × 仓库」，各仓一行给出需备量、库存与历史销量，辅助你决定备多少。此表<b>只做参考不生成单据</b>，实际打印标签在「打印标签」菜单，打印首个标签后系统自动生成送货单。${psOn?`<br><b>预送量</b>是算法预测你在 16:00–22:00 还能卖出的量，随当天 18:00 那趟车一起送，由系统按 <b>min(算法预测量, 你的库存总数)</b> 于 16:00 直接定稿，<b>无需你确认</b>。每天最多 <b>${(DB.merchant&&DB.merchant.presendSkuLimit)||20}</b> 种 SKU 有预送量（平台核定），超过时按定稿量从高到低截取，被截取的只送订单量。<br><b>「预送量」是算法预测的当日全天销量、已经包含订单量</b>，两者<b>不相加</b>。<b>应送数量 = max(订单量, 预送量)</b>；<b>需打标签数 = 应送数量 − 已用在仓预送</b>——昨天没卖完的、以及你昨天多送被仓库照收的都留在仓里，<b>今日优先消耗</b>，不用重复送；扣完为 0 就是今日免送。已用在仓预送以仓库回传的期末库存为准，<b>仓库未回传前 12:00 前不可打印标签</b>。`:''}</div></div>
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">仓库</div><select onchange="DB.pickRefF.wh=this.value;render()" style="min-width:150px">${optSel(f.wh||'',whs.map(w=>[w,w]),'全部仓库')}</select></div>
       <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">配送日期(送达日)</div><select onchange="DB.pickRefF.date=this.value;render()" style="min-width:130px">${dates.map(d=>`<option value="${d}" ${f.date==d?'selected':''}>${d}</option>`).join('')||'<option value="">无</option>'}</select></div>
@@ -75,12 +77,12 @@
         <button class="btn btn-o btn-sm" onclick="toast('已导出按品备货参考表.xlsx','ok')">📤 按品导出</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出按仓备货参考表.xlsx','ok')">📤 按仓导出</button>
       </div>
-      <span class="sub">汇总：商品数 <b>${skus.length}</b> · 销量 <b>${totalQty}</b></span>
+      <span class="sub">汇总：商品数 <b>${skus.length}</b> · 销量 <b>${totalQty}</b>${psOn&&typeof presendWmsTag=='function'?' '+presendWmsTag():''}</span>
     </div>
     <div class="card-bd" style="padding:8px 16px 0"><div class="ib ib-r" style="margin:0"><span class="i">⚠️</span>由于订单延退支付/取消，请以仓库展示销量停止为准。</div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">订单量</th>${psOn?'<th style="text-align:right">预送量</th><th style="text-align:right">在仓剩余</th><th style="text-align:right">今日应送</th>':''}</tr></thead>
-      <tbody>${body||`<tr><td colspan="${psOn?12:9}"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
+      <thead><tr><th style="width:44px">序号</th><th>商品名称</th><th>规格</th><th>分类</th><th style="text-align:right">合计销量</th><th>仓库</th><th style="text-align:right">库存总数</th><th style="text-align:right">昨日销量</th><th style="text-align:right">订单量</th>${psOn?'<th style="text-align:right">预送量</th><th style="text-align:right">应送数量</th><th style="text-align:right">已用在仓预送</th><th style="text-align:right">需打标签数</th>':''}</tr></thead>
+      <tbody>${body||`<tr><td colspan="${psOn?13:9}"><div class="empty"><div class="e-ic">📭</div><div class="e-t">该配送日/筛选下暂无待备货订单</div><div class="e-s">切换配送日期，或到「订单履约」点「＋ 模拟来一单」。</div></div></td></tr>`}</tbody>
     </table></div></div></div>`;
   }
 
@@ -165,6 +167,9 @@
     return rows;
   }
   function printedOf(key){return (DB.labelPrinted||{})[key]||0;}
+  // 10-29 会议：WMS 期末库存未回传且未到 12:00 → 锁定打印（避免多打难处理）；回传后系统按新数校验，少打补打、多打进 overQty
+  function psLock(){return (typeof presendLabelLock=='function')&&presendLabelLock();}
+  function lockDeny(){toast('仓库尚未回传在仓库存，12:00 前不可打印标签；回传后系统自动算出需打标签数','err');return false;}
   function wgBlocked(r){return (r.wgWait||0)>0;}
   function wgDeny(r){toast(`「${r.name}」还有 ${r.wgWait} 个订单未录实发净重。多退少补商品需先在「备货管理 › 称重录入」完成称重才能打印标签`,'err');}
   function allUnprinted(){DB.labelPrinted=DB.labelPrinted||{};const f=DB.labelF||{};const agg={},nm={};refOrders().forEach(o=>{if(f.date&&o.deliver!=f.date)return;(o.lines||[]).forEach(l=>{const key=o.warehouse+'|'+l.sku;agg[key]=(agg[key]||0)+l.qty;nm[key]=l.name;});});
@@ -187,7 +192,7 @@
     <div class="ib ib-gr" style="margin-top:8px"><span class="i">ℹ️</span>更换标签纸后请回此重新选择，否则可能打印错位。</div></div>
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="label_savePaper()">保存设置</button></div>`);};
   window.label_savePaper=function(){const v=(document.getElementById('lp-paper')||{}).value;if(!v){toast('请选择标签纸张大小','err');return;}DB.labelPaper=v;closeModal();render();toast('已设置标签纸张：'+v,'ok');};
-  function ensurePaper(){if(!DB.labelPaper){toast('请先在「打印机设置」选择标签纸张大小，选完才能打印','err');label_paperModal();return false;}return true;}
+  function ensurePaper(){if(psLock())return lockDeny();if(!DB.labelPaper){toast('请先在「打印机设置」选择标签纸张大小，选完才能打印','err');label_paperModal();return false;}return true;}
   // 打印：一个 SKU 按应送货数量打 N 个连续序号的码；首打/续打从 已打印+1 到 N
   window.label_printOne=function(key){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${r.wgNeed?'（印实发净重，不含订单信息）':''}${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
   window.label_printAll=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
@@ -230,11 +235,13 @@
     const should=rows.reduce((a,r)=>a+r.qty,0);
     const printed=rows.reduce((a,r)=>a+Math.min(r.qty,printedOf(r.key)),0);
     const unpr=should-printed;
+    const lock=psLock();
+    const over=rows.reduce((a,r)=>a+Math.max(0,printedOf(r.key)-r.qty),0);   // 回传后需打标签数下调 → 已打的多出部分作废（overQty）
     DB.labelSel=DB.labelSel||[];const selKeys=rows.map(r=>r.key);const sel=DB.labelSel.filter(k=>selKeys.includes(k));const selN=sel.length;const allSel=selKeys.length&&selKeys.every(k=>sel.includes(k));
     const optSel=(cur,list,ph)=>`<option value="">${ph}</option>`+list.map(v=>`<option ${cur==v?'selected':''}>${v}</option>`).join('');
     return `
     ${!DB.labelPaper?`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">🖨️</span><b>尚未设置打印机纸张</b>，需先选择标签纸张大小后才能打印标签。<button class="btn btn-link btn-sm" onclick="label_paperModal()">去设置 →</button></div>`:''}
-    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。${lbPsOn?`<br><b>应送货 = max(0, max(订单量, 预送量) − 在仓剩余)</b>——<b>预送量是算法预测的当日全天销量、已经包含订单量</b>，两者取大<b>不相加</b>，再减去在仓剩余（今日优先消耗，不要重复打标重复送）。定稿量由系统于 16:00 按 min(算法预测量, 可售库存) 直接定稿、无需确认；昨天留仓的与你昨天多送被照收的货<b>先抵扣今天的预送量</b>，已在应送货里扣掉，<b>不要重复打标重复送</b>。标签形态与订单货完全一致（按 SKU 一件一张、不含订单/客户信息），到仓后由 WMS <b>先满足订单、余量入你的在仓预送库存</b>。<b>建议 16:00 预送量定稿后再打印</b>，提前打印需在定稿后补打预送部分。`:''}</div>
+    <div class="ib ib-b" style="margin-bottom:12px"><span class="i">ℹ️</span>由于订单延迟支付/取消，请以仓库展示销量停止为准。<b>多退少补商品</b>（按重量定价）按 SKU 打标、印<b>实发净重</b>，不含订单/客户信息——货到仓库由 WMS 统一重新分拣分配到各订单。${lbPsOn?`<br><b>应送数量 = max(订单量, 预送量)</b>——预送量是算法预测的当日全天销量、<b>已经包含订单量</b>，两者取大<b>不相加</b>；预送量由系统于 16:00 按 min(算法预测量, 库存总数) 直接定稿、无需确认。<br><b>需打标签数 = 应送数量 − 已用在仓预送</b>：昨天留仓的与你昨天多送被照收的货今日优先消耗，<b>不要重复打标重复送</b>。已用在仓预送以仓库回传的期末库存为准，<b>仓库未回传前，12:00 前不可打印</b>；回传后系统自动校验：少打的补打，多打的标「作废」。标签形态与订单货完全一致（按 SKU 一件一张），到仓后由 WMS <b>先满足订单、余量入你的在仓预送库存</b>。`:''}</div>
     ${blocked?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⛔</span><b>${blocked} 个商品因未完成称重被拦截，无法打印标签。</b>多退少补（按重量定价）商品必须先录实发净重——打印首张标签即自动生成送货单，届时重量已无法再改。<button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重录入 →</button></div>`:''}
     <div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:0">
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd2);padding:0 16px;flex-wrap:wrap">
@@ -270,10 +277,10 @@
       </div>
     </div>
     <div class="card-bd" style="padding:10px 16px;display:flex;gap:22px;font-size:13px;border-bottom:1px solid var(--bd2);flex-wrap:wrap;align-items:center">
-      <span>应送货：<b>${should}</b></span>${lbPsOn?`<span>按预送取数：<b style="color:var(--gold)">${rows.filter(r=>r.byPs).length}</b> 个商品</span><span>抵扣在仓：<b style="color:var(--g)">−${rows.reduce((a,r)=>a+(r.leftQty||0),0)}</b></span>`:''}<span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${unpr}</b></span><span>未称重拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span><span>超量：<b>0</b></span><span class="tag ${DB.labelCutoff?'t-gr':'t-y'}" style="font-size:11px;cursor:pointer" title="演示：点击切换截单状态" onclick="DB.labelCutoff=!DB.labelCutoff;render()">${DB.labelCutoff?'已截单':'未截单'}</span>
+      ${lbPsOn?`<span>应送数量：<b>${rows.reduce((a,r)=>a+(r.needQty||0),0)}</b></span><span>已用在仓预送：<b style="color:var(--g)">${lock?'待回传':(()=>{const u=rows.reduce((a,r)=>a+(r.leftQty||0),0);return u?'−'+u:'0';})()}</b></span><span>需打标签数：<b>${lock?'待回传':should}</b></span>`:`<span>应送货：<b>${should}</b></span>`}<span>已打印：<b style="color:var(--gd)">${printed}</b></span><span>未打印：<b style="color:var(--r)">${lock?'—':unpr}</b></span><span>未称重拦截：<b style="color:${blocked?'var(--r)':'var(--ts)'}">${blocked}</b></span><span>多打：<b style="color:${over?'var(--r)':'inherit'}">${over}</b></span><span class="tag ${DB.labelCutoff?'t-gr':'t-y'}" style="font-size:11px;cursor:pointer" title="演示：点击切换截单状态" onclick="DB.labelCutoff=!DB.labelCutoff;render()">${DB.labelCutoff?'已截单':'未截单'}</span>${lbPsOn&&typeof presendWmsTag=='function'?presendWmsTag():''}
     </div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th style="width:34px"><input type="checkbox" title="全选本页商品" ${allSel?'checked':''} onclick="label_selAll()"></th><th style="width:44px">序号</th><th>商品名称</th><th>规格(编码)</th><th>分类</th><th style="text-align:right">昨日销量</th><th style="text-align:right">应送货</th><th style="text-align:right">已打印数</th><th style="text-align:right">未打印数</th><th style="text-align:right">本次打印数</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th style="width:34px"><input type="checkbox" title="全选本页商品" ${allSel?'checked':''} onclick="label_selAll()"></th><th style="width:44px">序号</th><th>商品名称</th><th>规格(编码)</th><th>分类</th><th style="text-align:right">昨日销量</th>${lbPsOn?'<th style="text-align:right">订单量</th><th style="text-align:right">预送量</th><th style="text-align:right">应送数量</th><th style="text-align:right">已用在仓预送</th><th style="text-align:right">需打标签数</th>':'<th style="text-align:right">应送货</th>'}<th style="text-align:right">已打印数</th><th style="text-align:right">未打印数</th><th style="text-align:right">本次打印数</th><th>操作</th></tr></thead><tbody>
       ${rows.map((r,i)=>{const pr=Math.min(r.qty,printedOf(r.key));const un=r.qty-pr;const last=DB.labelLast[r.key]||0;const done=un<=0;return `<tr>
         <td><input type="checkbox" ${sel.includes(r.key)?'checked':''} onclick="label_toggleSel('${r.key}')"></td>
         <td>${i+1}</td>
@@ -281,14 +288,15 @@
         <td>${specLabel(r)} <span style="color:var(--ts)">(${r.sku})</span></td>
         <td style="font-size:12px;color:var(--ts)">${r.cat}</td>
         <td style="text-align:right">${yday(r.sku)}</td>
-        <td style="text-align:right"><b>${r.qty}</b><div style="font-size:11px;color:var(--ts)">订单 ${r.ordQty}${r.psGross?` · <span style="color:var(--gold)">预送 ${r.psGross}</span> · 取大 ${r.needQty}`:''}${r.leftQty?` · <span style="color:var(--g)">抵扣在仓 −${r.leftQty}</span>`:''}</div><div style="font-size:11px;color:var(--tt)">${r.wgNeed&&!wgBlocked(r)?`实发 ${r.wgReal.toFixed(1)}kg`:`序号 1–${r.qty}`}</div></td>
+        ${lbPsOn?`<td style="text-align:right">${r.ordQty}</td><td style="text-align:right">${r.psGross?`<span style="color:var(--gold)">${r.psGross}</span>`:'<span style="color:var(--tt)">—</span>'}</td><td style="text-align:right">${r.needQty}</td><td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':(r.leftQty?`<span style="color:var(--g)">−${r.leftQty}</span>`:'<span style="color:var(--tt)">—</span>')}</td>`:''}
+        <td style="text-align:right">${lock?'<span style="color:var(--tt)">待回传</span>':`<b>${r.qty}</b>`}${lock?'':`<div style="font-size:11px;color:var(--tt)">${r.wgNeed&&!wgBlocked(r)?`实发 ${r.wgReal.toFixed(1)}kg`:`序号 1–${r.qty}`}</div>`}${!lock&&printedOf(r.key)>r.qty?`<div><span class="tag t-r" style="font-size:10px">多打 ${printedOf(r.key)-r.qty} 张·作废</span></div>`:''}</td>
         <td style="text-align:right;color:var(--gd)">${pr}</td>
-        <td style="text-align:right;${un>0?'color:var(--r);font-weight:600':''}">${un}</td>
-        <td style="text-align:right">${last||(un>0?un:'—')}</td>
-        <td style="white-space:nowrap">${un<=0?'<span style="color:var(--ts)">打印完成</span>':(wgBlocked(r)
+        <td style="text-align:right;${un>0&&!lock?'color:var(--r);font-weight:600':''}">${lock?'—':un}</td>
+        <td style="text-align:right">${lock?'—':(last||(un>0?un:'—'))}</td>
+        <td style="white-space:nowrap">${lock?'<button class="btn btn-p btn-sm" disabled title="仓库尚未回传在仓库存，12:00 前不可打印">打印</button>':un<=0?'<span style="color:var(--ts)">打印完成</span>':(wgBlocked(r)
           ?`<button class="btn btn-p btn-sm" disabled title="该商品有 ${r.wgWait} 个订单未录实发净重，完成称重后才能打印">打印</button> <button class="btn btn-link btn-sm" onclick="nav('m-pick-weigh')">去称重</button>`
           :`<button class="btn btn-p btn-sm" onclick="label_printOne('${r.key}')">打印</button>`)}${r.ordQty>0?(r.ordQty-(r.shortQty||0)>0?` <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="short_open('${r.key}')">报缺货</button>`:` <button class="btn btn-link btn-sm" disabled title="该商品订单量已全部报缺">报缺货</button>`):''}</td>
-      </tr>`;}).join('')||`<tr><td colspan="11"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="${lbPsOn?15:11}"><div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该筛选下暂无应送货标签</div><div class="e-s">切换配送日期/仓库，或到「订单履约」模拟来一单。</div></div></td></tr>`}
       </tbody></table></div></div></div>`;
   }
 

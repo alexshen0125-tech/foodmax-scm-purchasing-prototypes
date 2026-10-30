@@ -3,7 +3,7 @@
    ② 送货盘点 FM_MOD.presendrecon：按送货单 / 按 SKU 两个维度盘每天送了多少、仓库收了多少。
 
    ⚠️ 2026-09-15 沈亮拍板：**「预送确认」页已删除**。预送量由系统直接定稿，
-      最终预送量 = min(算法预测量, 可售库存)（BR-06），商家零动作——想多备直接多送，
+      最终预送量 = min(算法预测量, 库存总数)（BR-06），商家零动作——想多备直接多送，
       仓库照收不设上限（BR-16c），多送的当日不可卖、次日抵扣（BR-16d）。
 
    口径见《scm_提前送货与预测预送_功能框架》v0.7，与 PC 端 pc-modules/presend.js 数字同源。
@@ -95,16 +95,17 @@ function buildAudit(){
   const lim=window.FM.PRESEND_SKU_LIMIT||20;
   const whs=[...new Set(ROWS.map(r=>r.wh))],carry={},docs=[];let seq=0,pool=new Set();
   AUD_DAYS.slice().reverse().forEach(d=>{
-    /* BR-22 预送池（跨日滚动，与 PC 同算法）：有期末在仓的继续占位；库存为 0 的出池腾名额；
-       算法今日给出预送量的 SKU，已在池内的保留，不在池内的按空余名额补入，补不进的直接舍弃。 */
-    const gross={},grossBy={},openBy={};
+    /* BR-22 预送池（跨日滚动，与 PC 同算法；2026-10-30 汰换口径）：期末在仓 > 今日订单量 → 锁定占位；
+       今日订单量 ≥ 期末在仓 → 可汰换，与池外新 SKU 一起按今日预送量从高到低抢空余名额，没抢到的出池 / 舍弃。 */
+    const gross={},grossBy={},openBy={},ordBy={};
     whs.forEach(wh=>ROWS.filter(r=>r.wh===wh).forEach(r=>{
       const g=on?Math.max(0,Math.round(rawQty(r)*(0.7+hnum(r.sku+wh+d+'p',70)/100))):0;
       grossBy[r.sku+'|'+wh]=g;
       gross[r.sku]=(gross[r.sku]||0)+g;
       openBy[r.sku]=(openBy[r.sku]||0)+(carry[r.sku+'|'+wh]||0);
+      ordBy[r.sku]=(ordBy[r.sku]||0)+Math.max(1,Math.round(r.orderQty*(0.7+hnum(r.sku+wh+d+'o',70)/100)));
     }));
-    const keep=[...pool].filter(k=>(openBy[k]||0)>0);
+    const keep=[...pool].filter(k=>(openBy[k]||0)>(ordBy[k]||0));
     const free=Math.max(0,lim-keep.length);
     const add=Object.keys(gross).filter(k=>gross[k]>0&&keep.indexOf(k)<0)
       .sort((a,b)=>gross[b]-gross[a]||a.localeCompare(b)).slice(0,free);
@@ -150,7 +151,7 @@ function buildStock(){
       nextNeed:Math.max(2,Math.round(l.orderQty*(0.7+hnum(l.sku+d.wh+'no',70)/100))),returning:false});
   }));
 }
-// BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
+// BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 库存总数)，系统直接定稿，无商家确认环节
 function rawQty(r){return Math.min(r.fcst,r.avail);}                       // 算法预送量（未过池）
 function finalQty(r){return (PSPOOL&&!PSPOOL.has(r.sku))?0:rawQty(r);}      // 不在预送池（BR-22）→ 不预送
 // BR-15b（2026-09-23 拍板）：需求 = max(订单量, 预送量)，应送 = max(0, 需求 − 在仓剩余)——预送量含订单量，取大不相加
@@ -237,7 +238,13 @@ window.FM_MOD.presendstock=()=>{ensure();pushPage({title:'在仓预送库存',bo
 // 供「打印标签」取最终预送量（按 商品名 + 仓库 匹配）
 const psOn=()=>window.FM.PRESEND_ON===true;   // 未开通预送模式的商家：无预送量、无在仓寄存（BR-03）
 window.PS_QTY=(name,wh)=>{if(!psOn())return 0;ensure();const r=ROWS.find(x=>x.name===name&&x.wh===wh);return r?finalQty(r):0;};
-// 供「打印标签」扣减在仓剩余（BR-15/BR-15b）：今日应送 = 订单量 + max(0, 预送量 − 在仓剩余)
+// 供「打印标签」扣减在仓剩余（BR-15b）：需打标签数 = max(0, max(订单量, 预送量) − 已用在仓预送)
+// 在仓剩余数据来源（2026-10-29 库存及WMS对接会）：优先 WMS 回传期末库存，无回传时系统推算；
+//   WMS 未回传且未到 12:00 → 锁定打印标签（演示态 FM.DB.psWms：wms / pending / calc，与 PC 同口径）
+window.PS_WMS=()=>window.FM.DB.psWms||'wms';
+window.PS_LOCK=()=>psOn()&&window.PS_WMS()==='pending';
+window.PS_WMS_NEXT=()=>{window.FM.DB.psWms={wms:'pending',pending:'calc',calc:'wms'}[window.PS_WMS()];};
+window.PS_WMS_TXT=()=>({wms:'仓库已回传',pending:'仓库未回传·12:00 前不可打印',calc:'仓库未回传·系统推算'})[window.PS_WMS()];
 window.PS_LEFT=(name,wh)=>{if(!psOn())return 0;ensure();const r=(STOCK||[]).find(x=>x.name===name&&x.wh===wh&&!x.returning);return r?r.left:0;};
 
 /* ---------- 送货盘点（两个维度：按送货单 / 按 SKU）----------

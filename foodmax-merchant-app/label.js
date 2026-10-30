@@ -110,6 +110,8 @@ function rows(){
   return out;
 }
 
+const lockOn=()=>typeof PS_LOCK==='function'&&PS_LOCK();
+const lockDeny=()=>{window.FM.toast('仓库尚未回传在仓库存，12:00 前不可打印标签','err');};
 function renderPrint(box){
   window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};
   const ds=dates();if(state.date===null)state.date=ds[0]||'';
@@ -118,33 +120,38 @@ function renderPrint(box){
   const should=rs.reduce((a,r)=>a+r.qty,0);
   const printed=rs.reduce((a,r)=>a+Math.min(r.qty,printedOf(r.key)),0);
   const unpr=should-printed;
+  const ps=window.FM.PRESEND_ON===true,lock=lockOn();
+  const needAll=rs.reduce((a,r)=>a+r.needQty,0),usedAll=rs.reduce((a,r)=>a+r.leftQty,0);
   const byWh={};rs.forEach(r=>{(byWh[r.wh]=byWh[r.wh]||[]).push(r);});
   const whSet=Object.keys(byWh);
   const pill=(val,cur,attr)=>`<span class="lb-pill ${cur===val?'on':''}" data-${attr}="${val}">`;
   const df=dateField(state.date,ds,d=>{state.date=d;renderPrint(box);});
   box.innerHTML=`
-    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送货 = max(0, max(订单量, 预送量) − 在仓剩余)</b>：预送量是算法预测的全天销量、<b>已含订单量</b>，取大不相加，再减去在仓剩余（昨天留仓的与你昨天多送被照收的货今日优先消耗），<b>不要重复打标重复送</b>。':''}</div>
+    <div class="lb-note">🏷️ 按「配送日期 + 仓库」汇总各 SKU 应送货张数（每件一张，序号连续）。多退少补商品需先在「称重商品」录实发净重，再打标签、印实发净重。${window.FM.PRESEND_ON?'<br>每天最多 <b>'+(window.FM.PRESEND_SKU_LIMIT||20)+'</b> 种 SKU 有预送量（平台核定），其余只送订单量。<br><b>应送数量 = max(订单量, 预送量)</b>：预送量是算法预测的全天销量、<b>已含订单量</b>，取大不相加。<b>需打标签数 = 应送数量 − 已用在仓预送</b>（昨天留仓的与你昨天多送被照收的货今日优先消耗），<b>不要重复打标重复送</b>。已用在仓预送以仓库回传的期末库存为准，<b>仓库未回传前 12:00 前不可打印</b>；回传后系统自动校验，少打补打、多打作废。':''}</div>
     <div class="lb-filter">
       <div class="lb-frow"><span class="lb-fl">配送日期</span>${df.html}</div>
       <div class="lb-frow"><span class="lb-fl">仓库</span><div class="lb-pills">${pill('',state.wh,'wh')}全部</span>${ws.map(w=>`${pill(w,state.wh,'wh')}${w}</span>`).join('')}</div></div>
       <div class="lb-frow"><span class="lb-fl">商品名称</span><input class="lb-search" id="lb-name" placeholder="输入商品名 / SKU 编码" value="${state.name||''}"></div>
     </div>
-    <div class="lb-sum"><div class="k"><div class="v">${should}</div><div class="l">应送货(张)</div></div><div class="k"><div class="v g">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${unpr}</div><div class="l">未打印</div></div></div>
+    <div class="lb-sum">${ps?`<div class="k"><div class="v">${needAll}</div><div class="l">应送数量</div></div><div class="k"><div class="v g">${lock?'—':'−'+usedAll}</div><div class="l">已用在仓预送</div></div><div class="k"><div class="v">${lock?'—':should}</div><div class="l">需打标签数</div></div>`:`<div class="k"><div class="v">${should}</div><div class="l">应送货(张)</div></div>`}<div class="k"><div class="v g">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${lock?'—':unpr}</div><div class="l">未打印</div></div></div>
+    ${ps?`<div class="bq-entry" id="lb-wms"><span>在仓库存 <span class="bq-tag ${lock?'y':'gr'}" title="演示：点击切换仓库回传状态">${PS_WMS_TXT()}</span></span><span class="c">${lock?'回传后可打印':'已按回传数计算'}</span></div>`:''}
     <div class="bq-entry" id="lb-bq"><span>📉 报缺记录${window.FM_SHORT&&window.FM_SHORT.count(state.date)?`（${window.FM_SHORT.count(state.date)}）`:''} <span class="bq-tag ${window.FM.DB.labelCutoff?'gr':'y'}" id="lb-cut" title="演示：点击切换截单状态">${window.FM.DB.labelCutoff?'已截单':'未截单'}</span></span><span class="c">缺货在标签详情里报 ›</span></div>
     ${rs.length?whSet.map(w=>`
-      <div class="lb-sec">${w}<span class="hint">应送货 ${byWh[w].reduce((a,r)=>a+r.qty,0)} 张</span></div>
+      <div class="lb-sec">${w}<span class="hint">${lock?'待仓库回传':`${ps?'需打标签':'应送货'} ${byWh[w].reduce((a,r)=>a+r.qty,0)} 张`}</span></div>
       <div class="lb-tbl">${byWh[w].map(r=>{const pr=Math.min(r.qty,printedOf(r.key)),un=r.qty-pr;
         const wtag=r.refund?(weighed(r.key)?'<span class="wtag done">已称重</span>':'<span class="wtag wait">待称重</span>'):'';
         return `<div class="lb-row" data-key="${r.key}">
-        <div class="top"><span class="nm">${r.name}${window.FM_SHORT?window.FM_SHORT.tags(state.date,r.wh,r.sku):''}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${r.qty}<span>${r.unit||'件'}</span></span></div>
+        <div class="top"><span class="nm">${r.name}${window.FM_SHORT?window.FM_SHORT.tags(state.date,r.wh,r.sku):''}${wtag}${un<=0?'<span class="wtag done">打印完成</span>':''}</span><span class="q">${lock?'—':r.qty}<span>${r.unit||'件'}</span></span></div>
         <div class="meta">规格 ${r.spec||'—'} · <span class="code">${r.sku}</span> · ${r.cat}</div>
-        <div class="meta">订单 ${r.ordQty}${r.psGross?` · <b style="color:var(--amber)">预送 ${r.psGross}</b> · 取大 ${r.needQty}`:''}${r.leftQty?` · <b style="color:var(--emerald-2)">抵扣在仓 −${r.leftQty}</b>`:''}</div>
+        ${ps?`<div class="kv"><span class="i">订单量 <b>${r.ordQty}</b></span><span class="i">预送量 <b style="color:var(--amber)">${r.psGross||'—'}</b></span><span class="i">应送数量 <b>${r.needQty}</b></span><span class="i">已用在仓 <b style="color:var(--emerald-2)">${lock?'待回传':(r.leftQty?'−'+r.leftQty:'—')}</b></span></div>`:''}
+        ${!lock&&printedOf(r.key)>r.qty?`<div class="meta" style="color:#C0453B">多打 ${printedOf(r.key)-r.qty} 张 · 作废</div>`:''}
         <div class="kv"><span class="i">昨日销量 <b>${yday(r.sku)}</b></span><span class="i">已打印 <b>${pr}</b></span><span class="i">未打印 <b class="${un>0?'r':''}">${un}</b></span>${window.FM_SHORT&&r.ordQty>0?`<span class="i lb-bqbtn" data-bq="${r.key}" style="margin-left:auto;color:#C0453B;font-weight:700;padding:6px 0 6px 12px">报缺货</span>`:''}</div>
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
     :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>该筛选下暂无应送货标签</h4><p>切换配送日期 / 仓库看看</p></div>`}
     <div style="height:12px"></div>`;
   df.bind(box);
+  const wm=box.querySelector('#lb-wms');if(wm)wm.onclick=()=>{PS_WMS_NEXT();renderPrint(box);};
   const bq=box.querySelector('#lb-bq');if(bq)bq.onclick=e=>{if(e.target.id==='lb-cut'){window.FM.DB.labelCutoff=!window.FM.DB.labelCutoff;renderPrint(box);return;}if(window.FM_SHORT)window.FM_SHORT.records(state.date,()=>renderPrint(box));};
   box.querySelectorAll('.lb-row[data-key]').forEach(el=>el.onclick=()=>openLabelDetail(el.dataset.key));
   box.querySelectorAll('[data-bq]').forEach(el=>el.onclick=e=>{e.stopPropagation();window.FM_SHORT.open(state.date,el.dataset.bq,printedOf(el.dataset.bq),()=>renderPrint(box));});   // 列表行直接报缺（≤3 步）
@@ -419,7 +426,7 @@ function reallyPrint(key){window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{
   window.FM.toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张（印实发净重）`,'ok');
   drawLabelDetail(CURLP.querySelector('#lpd'),key);
   if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}}   // 同步刷新底层列表，返回即最新
-function onPrintClick(key){const r=rowOf(key);
+function onPrintClick(key){if(lockOn()){lockDeny();return;}const r=rowOf(key);
   if(r.refund&&!weighed(key)){window.FM.toast('该商品为多退少补，请先在「称重商品」完成称重','err');return;}
   if(Math.min(r.qty,printedOf(key))>=r.qty){window.FM.toast('该商品标签已全部打印','info');return;}
   if(!printer().connected){connectPrinter(()=>reallyPrint(key));return;}
@@ -428,7 +435,7 @@ function goWeighFor(){window.FM.popPage();LBTAB='weigh';if(LBROOT)mount(LBROOT);
 window.lp_goWeigh=goWeighFor;
 window.lp_short=function(key){window.FM_SHORT.open(state.date,key,printedOf(key),()=>{drawLabelDetail(CURLP.querySelector('#lpd'),key);if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}});};
 // 按序号打印 / 补打：点弱按钮弹窗填 [起始,结束] 区间，漏打时补打指定几张
-window.lp_seqModal=function(key){const r=rowOf(key);
+window.lp_seqModal=function(key){if(lockOn()){lockDeny();return;}const r=rowOf(key);
   if(r.refund&&!weighed(key)){window.FM.toast('该商品为多退少补，请先完成称重','err');return;}
   const N=r.qty,pr=Math.min(r.qty,printedOf(key));
   const m=document.createElement('div');m.className='modal-mask';
@@ -462,7 +469,14 @@ function drawLabelDetail(box,key){
       <div class="r"><span class="k">分类</span><span class="v">${r.cat}</span></div>
       ${r.refund?`<div class="r"><span class="k">称重状态</span><span class="v ${gated?'refund':''}">${gated?'待称重':'已称重 ✓'}</span></div>`:''}
     </div>
-    <div class="lb-sum"><div class="k"><div class="v">${r.qty}</div><div class="l">应送货(张)</div></div><div class="k"><div class="v g">${pr}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${un}</div><div class="l">未打印</div></div></div>
+    ${window.FM.PRESEND_ON===true?`<div class="wg-dh">
+      <div class="r"><span class="k">订单量</span><span class="v">${r.ordQty}</span></div>
+      <div class="r"><span class="k">预送量</span><span class="v">${r.psGross||'—'}</span></div>
+      <div class="r"><span class="k">应送数量</span><span class="v">${r.needQty}</span></div>
+      <div class="r"><span class="k">已用在仓预送</span><span class="v">${lockOn()?'待仓库回传':(r.leftQty?'−'+r.leftQty:'—')}</span></div>
+    </div>`:''}
+    <div class="lb-sum"><div class="k"><div class="v">${lockOn()?'—':r.qty}</div><div class="l">${window.FM.PRESEND_ON===true?'需打标签数':'应送货(张)'}</div></div><div class="k"><div class="v g">${pr}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${lockOn()?'—':un}</div><div class="l">未打印</div></div></div>
+    ${!lockOn()&&printedOf(key)>r.qty?`<div class="lp-printer" style="color:#C0453B">多打 ${printedOf(key)-r.qty} 张，今日只需 ${r.qty} 张，多余标签作废</div>`:''}
     ${gated?`<div class="lp-gatetip">⚠️ 该商品为<b>多退少补</b>（按重量定价），需先录实发净重才能打印标签、印实发重量。<span class="go" onclick="lp_goWeigh()">去称重 →</span></div>`
       :`<div class="lp-printer">🖨 ${p.connected?`已连接 <b>${p.name}</b> 标签机`:'未连接标签机 · 点打印时自动搜索蓝牙连接'}</div>
         <div class="lp-seqlink" onclick="lp_seqModal('${key}')">🔢 按序号打印 / 补打</div>`}
@@ -474,7 +488,8 @@ function drawLabelDetail(box,key){
 function refreshPrintFooter(key){if(!CURLP)return;const btn=CURLP.querySelector('#lp-print');if(!btn)return;
   const r=rowOf(key);const pr=Math.min(r.qty,printedOf(key)),un=r.qty-pr;const gated=r.refund&&!weighed(key);
   btn.disabled=false;btn.style.opacity='';
-  if(gated){btn.textContent='🔒 请先完成称重';btn.className='btn';btn.style.opacity='.55';}
+  if(lockOn()){btn.textContent='🔒 仓库未回传，12:00 前不可打印';btn.className='btn';btn.style.opacity='.55';}
+  else if(gated){btn.textContent='🔒 请先完成称重';btn.className='btn';btn.style.opacity='.55';}
   else if(un<=0){btn.textContent='✓ 已全部打印';btn.className='btn';btn.disabled=true;}
   else{btn.textContent=`🖨 打印 ${un} 张标签`;btn.className='btn primary';}}
 function openLabelDetail(key){const r=rowOf(key);

@@ -3,7 +3,7 @@
    ② 送货盘点 PAGES['m-presend-recon']：两个维度——按送货单 / 按 SKU，盘每天送了多少、仓库收了多少、差多少。
 
    ⚠️ 2026-09-15 沈亮拍板：**「预送确认」页已删除**。预送量改由系统直接定稿，
-      `最终预送量 = min(算法预测量, 可售库存)`（BR-06），商家零动作——想多备直接多送，
+      `最终预送量 = min(算法预测量, 库存总数)`（BR-06），商家零动作——想多备直接多送，
       仓库照收不设上限（BR-16c），多送的当日不可卖、次日抵扣（BR-16d）。
       商家在「备货参考」「打印标签」里看到预送量与合计应送即可，不再需要确认/拒绝。
 
@@ -49,30 +49,34 @@
        期初在仓 → 应送(BR-15b 已扣期初) → 实收(可短收/多收) → 卖出(受配额封顶) → 期末在仓
      账必须平：期末在仓 = 期初在仓 + 实收 − 仓库实出（在仓是实物，以仓库实际出库为准；实出 < 卖出 = 仓库少发） */
   const AUD_DAYS=['2026-08-30','2026-08-29','2026-08-28','2026-08-27','2026-08-26','2026-08-25','2026-08-24'];
+  function ordOf(r,wh,d){return Math.max(1,Math.round(r.orderQty*(0.7+hnum(r.sku+wh+d+'o',70)/100)));}   // 当日订单量（演示）
   function buildAudit(){
     const psOn=(typeof presendOn=='function')&&presendOn();
     const whs=[...new Set(DB.presend.map(r=>r.wh))];
     const lim=(DB.merchant&&DB.merchant.presendSkuLimit)||20;
     const carry={},docs=[];let seq=0,pool=new Set(),poolLog=null;const poolDays=[];
     AUD_DAYS.slice().reverse().forEach(d=>{           // 由早到晚滚动，前一日期末即次日期初
-      /* BR-22 预送池（跨日滚动，非每日重排）：
-         ① 池内仍有期末在仓的 SKU 继续占位（不论今日算法给不给预送量）；
-         ② 期末在仓为 0 的出池，腾出名额；
-         ③ 算法今日给出预送量的 SKU：已在池内的照常预送；不在池内的按空余名额补入（按算法预送量从高到低），补不进的直接舍弃。 */
-      const gross={},grossBy={},openBy={};
+      /* BR-22 预送池（跨日滚动；2026-10-30 沈亮改汰换口径）：
+         ① 锁定占位：池内 SKU 期末在仓 > 今日订单量（今天订单用不完在仓货）→ 继续占位，不参与汰换；
+         ② 可汰换：池内 SKU 今日订单量 ≥ 期末在仓（今天订单就能把在仓用完，含在仓为 0）→ 进汰换池；
+         ③ 空余名额 = 上限 − 锁定数；可汰换 SKU 与池外新 SKU 一起按今日预送量从高到低抢名额，抢到的在池、没抢到的出池/舍弃。 */
+      const gross={},grossBy={},openBy={},ordBy={};
       whs.forEach(wh=>DB.presend.filter(r=>r.wh==wh).forEach(r=>{
         const g=psOn?Math.max(0,Math.round(rawQty(r)*(0.7+hnum(r.sku+wh+d+'p',70)/100))):0;
         grossBy[r.sku+'|'+wh]=g;
         gross[r.sku]=(gross[r.sku]||0)+g;
         openBy[r.sku]=(openBy[r.sku]||0)+(carry[r.sku+'|'+wh]||0);
+        ordBy[r.sku]=(ordBy[r.sku]||0)+ordOf(r,wh,d);
       }));
-      const keep=[...pool].filter(k=>(openBy[k]||0)>0);                        // ① 有期末在仓 → 继续占位
-      const free=Math.max(0,lim-keep.length);                                  // ② 库存为 0 的出池，腾出名额
-      const add=Object.keys(gross).filter(k=>gross[k]>0&&keep.indexOf(k)<0)    // ③ 新 SKU 按名额补入，超出舍弃
+      const prev=pool;
+      const keep=[...prev].filter(k=>(openBy[k]||0)>(ordBy[k]||0));             // ① 期末在仓 > 今日订单 → 锁定占位
+      const swap=[...prev].filter(k=>keep.indexOf(k)<0);                       // ② 今日订单 ≥ 期末在仓 → 可汰换
+      const free=Math.max(0,lim-keep.length);
+      const win=Object.keys(gross).filter(k=>gross[k]>0&&keep.indexOf(k)<0)    // ③ 可汰换 + 池外新 SKU 按预送量抢名额
         .sort((a,b)=>gross[b]-gross[a]||a.localeCompare(b)).slice(0,free);
-      const out=[...pool].filter(k=>keep.indexOf(k)<0);
-      pool=new Set(keep.concat(add));
-      poolLog={date:d,limit:lim,keep,add,out,dropped:Object.keys(gross).filter(k=>gross[k]>0&&!pool.has(k)),openBy:Object.assign({},openBy)};
+      pool=new Set(keep.concat(win));
+      const add=win.filter(k=>!prev.has(k)),swapKeep=win.filter(k=>prev.has(k)),out=swap.filter(k=>!pool.has(k));
+      poolLog={date:d,limit:lim,keep,swapKeep,add,out,dropped:Object.keys(gross).filter(k=>gross[k]>0&&!pool.has(k)&&!prev.has(k)),openBy:Object.assign({},openBy),ordBy:Object.assign({},ordBy),gross:Object.assign({},gross)};
       poolDays.push(poolLog);
       whs.forEach(wh=>{
         const rs=DB.presend.filter(r=>r.wh==wh);
@@ -80,7 +84,7 @@
         const lines=rs.map(r=>{
           const sd=r.sku+wh+d,key=r.sku+'|'+wh;
           const open=carry[key]||0;                                            // 期初在仓（昨日未售完 + 昨日多收）
-          const orderQty=Math.max(1,Math.round(r.orderQty*(0.7+hnum(sd+'o',70)/100)));
+          const orderQty=ordOf(r,wh,d);
           const psQty=pool.has(r.sku)?grossBy[key]:0;                          // 不在预送池 → 当日不预送（BR-22）
           const need=Math.max(orderQty,psQty);                                // 当日需求 = 取大（预送量是全天总量、已含订单量，不相加）
           const ded=Math.min(open,need),psNet=need-ded;                        // 在仓剩余抵扣需求（订单与预送一并抵）
@@ -142,6 +146,13 @@
     return r?r.left:0;               // 来源 = 逐日链式演算的最新期末在仓，与送货盘点同一个数
   };
 
+  // 在仓剩余数据来源（2026-10-29 库存及WMS对接会）：优先取 WMS 回传期末库存，无回传时系统按差额推算；
+  //   WMS 未回传且未到 12:00 → 锁定打印标签，避免多打（DB.psWms 演示态：wms / pending / calc）
+  const WMS_ST={wms:{t:'仓库已回传',c:'t-g'},pending:{t:'仓库未回传·12:00 前不可打印',c:'t-y'},calc:{t:'仓库未回传·系统推算',c:'t-gr'}};
+  window.presendWms=function(){return DB.psWms||'wms';};
+  window.presendLabelLock=function(){return (typeof presendOn!='function'||presendOn())&&presendWms()=='pending';};
+  window.presendWmsTag=function(){const s=WMS_ST[presendWms()];return `<span class="tag ${s.c}" style="font-size:11px;cursor:pointer" title="演示：点击切换仓库回传状态" onclick="DB.psWms={wms:'pending',pending:'calc',calc:'wms'}[presendWms()];render()">在仓库存：${s.t}</span>`;};
+
   // BR-15b（2026-09-23 沈亮拍板）：预送量是全天预测总量、已含订单量——
   //   需求 = max(订单量, 预送量)；应送 = max(0, 需求 − 在仓剩余)，在仓对订单与预送一并抵扣
   window.presendNet=function(name,wh,order){
@@ -152,7 +163,7 @@
   // 应送统一算式（BR-15b）：need = max(订单量, 预送量)；应送 = max(0, need − 在仓剩余)
   function shouldOf(order,ps,left){const need=Math.max(order,ps);return {need,ded:Math.min(left,need),should:Math.max(0,need-left)};}
   function cfg(){return DB.presendCfg;}
-  // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 可售库存)，系统直接定稿，无商家确认环节
+  // BR-06（2026-09-15 简化）：最终预送量 = min(算法预测量, 库存总数)，系统直接定稿，无商家确认环节
   function rawQty(r){return Math.min(r.fcst,r.avail);}                        // 算法预送量（未过池）
   function finalQty(r){return (DB.psPool&&!DB.psPool.has(r.sku))?0:rawQty(r);} // 不在预送池（BR-22）→ 不预送
 
