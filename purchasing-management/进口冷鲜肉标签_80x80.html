@@ -19,8 +19,9 @@
   [contenteditable]:focus { outline: 0.2mm solid #000; }
 
   .name { text-align: center; border-bottom: 0.4mm solid #000; padding-bottom: 1mm; }
-  .name-cn { font-size: 13pt; font-weight: 700; line-height: 1.2; }
-  .name-en { font-size: 8pt; font-weight: 700; line-height: 1.2; }
+  .name-en { font-size: 11.5pt; font-weight: 700; line-height: 1.2; }
+  .name-cn { font-size: 7.5pt; line-height: 1.25; }
+  .cn { font-size: 0.78em; font-weight: 400; }
 
   .dates { display: grid; grid-template-columns: repeat(2, 1fr); border: 0.3mm solid #000; }
   .dates > div { padding: 0.6mm 1mm; text-align: center; }
@@ -70,18 +71,18 @@
 
     <!-- 品名 -->
     <div class="name">
-      <div class="name-cn" contenteditable>冰鲜去骨猪后腿肉</div>
       <div class="name-en" contenteditable>Chilled Pork Leg Boneless</div>
+      <div class="name-cn" contenteditable>冰鲜去骨猪后腿肉</div>
     </div>
 
     <!-- 日期：日/月/年 -->
     <div class="dates">
       <div>
-        <div class="k">屠宰/生产日期<br>Slaughter/Prod. (D/M/Y)</div>
+        <div class="k">Date of Slaughter/Production (D/M/Y)<br><span class="cn">屠宰/生产日期</span></div>
         <div class="v" contenteditable>02/11/2026</div>
       </div>
       <div>
-        <div class="k">包装日期<br>Packed on (D/M/Y)</div>
+        <div class="k">Packed on Date (D/M/Y)<br><span class="cn">包装日期</span></div>
         <div class="v" contenteditable>03/11/2026</div>
       </div>
     </div>
@@ -89,11 +90,11 @@
     <!-- 净重 + 储存条件 -->
     <div class="key">
       <div class="box weight">
-        <div class="k">净重 Net Weight</div>
+        <div class="k">Net Weight <span class="cn">净重</span></div>
         <div class="v"><b contenteditable>&nbsp;&nbsp;&nbsp;&nbsp;</b><span>KG</span></div>
       </div>
       <div class="box temp">
-        <div class="k">储存条件 Storage</div>
+        <div class="k">Storage Conditions <span class="cn">储存条件</span></div>
         <div class="v" contenteditable>0 – 4 ℃</div>
       </div>
     </div>
@@ -101,10 +102,10 @@
     <!-- 溯源信息 + 二维码 -->
     <div class="trace">
     <div class="rows">
-      <div class="k">原产国 Country of Origin</div>        <div class="v" contenteditable>China</div>
-      <div class="k">厂号 EST. No.</div>                   <div class="v" contenteditable>4300/03025</div>
-      <div class="k">批次号 Batch No.</div>                <div class="v" contenteditable>__________</div>
-      <div class="k">兽医证书号 Vet. Cert. No.</div>       <div class="v" contenteditable>__________</div>
+      <div class="k">Country of Origin <span class="cn">原产国</span></div>        <div class="v" contenteditable>China</div>
+      <div class="k">EST. No. <span class="cn">注册厂号</span></div>                   <div class="v" contenteditable>4300/03025</div>
+      <div class="k">Batch No. <span class="cn">批次号</span></div>                <div class="v" contenteditable>__________</div>
+      <div class="k">Veterinary Cert. No. <span class="cn">兽医证书号</span></div>       <div class="v" contenteditable>__________</div>
     </div>
     <div class="qr">
       <div id="qr"></div>
@@ -113,8 +114,8 @@
 
     <!-- 生产商 / 进口商 -->
     <div class="foot">
-      <p><b>生产商 Manufacturer：</b><span contenteditable>Hunan Huale Foodstuff Co. Ltd.</span></p>
-      <p><b>进口商 Imported by：</b><span contenteditable>10X AI Technology Pte. Ltd., 8 Jurong Town Hall Road, #18-04/05/06, JTC Summit, Singapore 609434</span></p>
+      <p><b>Manufacturer</b> <span class="cn">生产商</span>: <span contenteditable>Hunan Huale Foodstuff Co. Ltd.</span></p>
+      <p><b>Imported by</b> <span class="cn">进口商</span>: <span contenteditable>10X AI Technology Pte. Ltd., 8 Jurong Town Hall Road, #18-04/05/06, JTC Summit, Singapore 609434</span></p>
     </div>
 
   </div>
