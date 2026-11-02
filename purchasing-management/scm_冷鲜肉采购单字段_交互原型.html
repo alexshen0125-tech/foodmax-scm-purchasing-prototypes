@@ -166,8 +166,8 @@ table.spec td:first-child{white-space:nowrap;font-weight:500;}
       <table class="spec">
         <thead><tr><th>标签字段</th><th>取数来源</th><th>维护位置</th><th>打印格式</th><th>规则</th></tr></thead>
         <tbody>
-          <tr><td>品名（中文）</td><td><span class="src-tag old">现有</span> 商品中文名</td><td>商品资料</td><td>原样</td><td>沿用现有标签取值</td></tr>
-          <tr><td>品名（英文）</td><td><span class="src-tag old">现有</span> 商品英文名</td><td>商品资料（多语言名称）</td><td>原样</td><td>沿用现有取值；无英文名时该行留空</td></tr>
+          <tr><td>品名（英文，主）</td><td><span class="src-tag old">现有</span> 商品英文名</td><td>商品资料（多语言名称）</td><td>原样，最大字号</td><td>沿用现有取值；无英文名时该行留空</td></tr>
+          <tr><td>品名（中文，辅）</td><td><span class="src-tag old">现有</span> 商品中文名</td><td>商品资料</td><td>原样，小字号</td><td>沿用现有标签取值</td></tr>
           <tr><td>屠宰/生产日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 生产日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>日期格式；不能晚于当天</td></tr>
           <tr><td>包装日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 包装日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>默认 = 生产日期（填生产日期时自动带出，手动改过后不再跟随）；不能早于生产日期、不能晚于当天</td></tr>
           <tr><td>净重</td><td><span class="src-tag old">现有</span> 现有标签净重字段</td><td>沿用现有</td><td>数值 + KG</td><td>沿用现有标签取值</td></tr>
@@ -346,6 +346,7 @@ function preview(i){
   function fill(){
     var doc = fr.contentDocument; if (!doc || !doc.querySelector('.name-cn')) return;
     doc.querySelector('.toolbar') && (doc.querySelector('.toolbar').style.display = 'none');
+    doc.querySelector('.spec-wrap') && (doc.querySelector('.spec-wrap').style.display = 'none');
     var z = doc.querySelector('.zoom'); z.style.transform = 'scale(1.35)'; z.style.height = 'calc(80mm * 1.35)';
     doc.querySelector('.stage').style.padding = '10px 0';
     doc.querySelector('.name-cn').textContent = r.name;

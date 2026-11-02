@@ -50,7 +50,21 @@
   .foot b { font-weight: 700; }
   .foot p + p { margin-top: 0.4mm; }
 
+  .spec-wrap { max-width: 1000px; margin: 0 auto 60px; background: #fff; border-radius: 8px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); font-size: 12.5px; color: #1F2329; }
+  .spec-wrap h2 { font-size: 15px; margin-bottom: 4px; }
+  .spec-wrap .sub { font-size: 12px; color: #86909C; margin-bottom: 12px; }
+  table.spec { width: 100%; border-collapse: collapse; }
+  table.spec th, table.spec td { border: 1px solid #E4E7ED; padding: 7px 9px; text-align: left; vertical-align: top; line-height: 1.6; }
+  table.spec th { background: #F5F7FA; color: #4E5969; font-weight: 500; white-space: nowrap; }
+  table.spec td:first-child { white-space: nowrap; font-weight: 600; }
+  .tag { font-size: 11px; border-radius: 3px; padding: 0 6px; white-space: nowrap; }
+  .tag.old { color: #4E5969; background: #F5F7FA; border: 1px solid #DCDFE6; }
+  .tag.new { color: #178a55; background: #EAF7F0; border: 1px solid #A6E0C2; }
+  .tag.tbd { color: #b26a00; background: #FDF6EC; border: 1px solid #F5DAB1; }
+  .spec-wrap ol { margin-top: 12px; padding-left: 18px; line-height: 1.9; color: #4E5969; }
+
   @media print {
+    .spec-wrap { display: none; }
     body { background: #fff; }
     .toolbar { display: none; }
     .stage { padding: 0; display: block; }
@@ -120,6 +134,37 @@
 
   </div>
 </div></div>
+
+<div class="spec-wrap">
+  <h2>字段说明</h2>
+  <div class="sub">适用：冷鲜肉供应商的自营采购单入库打印；其他品类沿用现有标签不变。依据 2026-11-02 湖南冷鲜肉入库标签调整协调会。</div>
+  <table class="spec">
+    <thead><tr><th>标签字段</th><th>取数来源</th><th>维护位置</th><th>打印格式</th><th>规则</th></tr></thead>
+    <tbody>
+      <tr><td>品名（英文，主）</td><td><span class="tag old">现有</span> 商品英文名</td><td>商品资料（多语言名称）</td><td>原样，最大字号</td><td>沿用现有取值；无英文名时该行留空</td></tr>
+      <tr><td>品名（中文，辅）</td><td><span class="tag old">现有</span> 商品中文名</td><td>商品资料</td><td>原样，小字号</td><td>沿用现有标签取值</td></tr>
+      <tr><td>Date of Slaughter/Production<br>屠宰/生产日期</td><td><span class="tag new">新增</span> 采购单商品行 · 生产日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>不能晚于当天</td></tr>
+      <tr><td>Packed on Date<br>包装日期</td><td><span class="tag new">新增</span> 采购单商品行 · 包装日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>默认 = 生产日期（填生产日期时自动带出，手动改过后不再跟随）；不能早于生产日期、不能晚于当天</td></tr>
+      <tr><td>Net Weight<br>净重</td><td><span class="tag old">现有</span> 现有标签净重字段</td><td>沿用现有</td><td>数值 + KG</td><td>沿用现有标签取值</td></tr>
+      <tr><td>Storage Conditions<br>储存条件</td><td><span class="tag old">现有</span> 商品保存条件</td><td>商品资料</td><td>如 0 – 4 ℃</td><td>沿用现有标签取值</td></tr>
+      <tr><td>Country of Origin<br>原产国</td><td><span class="tag old">现有</span> 现有原产国字段</td><td>沿用现有</td><td>英文国名，如 China</td><td>沿用现有标签取值</td></tr>
+      <tr><td>EST. No.<br>注册厂号</td><td><span class="tag new">新增</span> 采购单表头 · 注册厂号</td><td>自营采购单 · 冷鲜肉信息</td><td>原样</td><td>文本 ≤30 字符；新建采购单时带入同供应商上一张采购单的值，可改</td></tr>
+      <tr><td>Batch No.<br>批次号</td><td><span class="tag new">新增</span> 采购单商品行 · 批次号</td><td>自营采购单 · 商品明细</td><td>原样</td><td>文本 ≤50 字符</td></tr>
+      <tr><td>Veterinary Cert. No.<br>兽医证书号</td><td><span class="tag new">新增</span> 采购单表头 · 兽医证书号</td><td>自营采购单 · 冷鲜肉信息</td><td>原样</td><td>文本 ≤50 字符；每批货不同，不带入上一单</td></tr>
+      <tr><td>Manufacturer<br>生产商</td><td><span class="tag new">新增</span> 采购单表头 · 生产商</td><td>自营采购单 · 冷鲜肉信息</td><td>原样（英文）</td><td>文本 ≤200 字符；新建采购单时带入同供应商上一张采购单的值，可改</td></tr>
+      <tr><td>Imported by<br>进口商</td><td><span class="tag tbd">待确认</span> 会议未明确</td><td>—</td><td>名称 + 地址</td><td>暂按标签模板固定文字（10X AI Technology Pte. Ltd. + 地址）</td></tr>
+      <tr><td>二维码</td><td><span class="tag old">现有</span> 商品条码</td><td>沿用现有</td><td>QR</td><td>沿用现有逻辑，扫码按条码查商品；一期不在码内加新信息</td></tr>
+    </tbody>
+  </table>
+  <ol>
+    <li><b>适用范围</b>：供应商被标记为冷鲜肉供应商（供应商表新增字段，后端写死，无页面配置）时打印本标签；其他供应商仍用现有标签。</li>
+    <li><b>取哪一行</b>：入库打印时，生产日期/包装日期/批次号取入库商品对应的采购单商品行；注册厂号/兽医证书号/生产商取所属采购单表头。</li>
+    <li><b>必填时机</b>：采购单保存时不强制；采购在 SCM 点「预约发货」时表头 3 项 + 每个商品行 3 项必须填全，否则拦截并列出缺失项。</li>
+    <li><b>缺失兜底</b>：打印时某字段为空，该字段留空下划线照常打印，不阻断入库。</li>
+    <li><b>语言</b>：英文为主、中文为辅——品名英文最大字号，字段名英文在前、中文小字在后；字段值按原文打印。</li>
+    <li><b>日期显示</b>：系统存 YYYY-MM-DD，标签统一打印 DD/MM/YYYY，与表头 (D/M/Y) 一致。</li>
+  </ol>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
