@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 自营采购单 · 冷鲜肉标签字段 — 交互原型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --primary:#1FA365;--primary-hover:#178a55;--primary-bg:#EAF7F0;--primary-border:#A6E0C2;
+  --warning:#E6A23C;--warn-bg:#FDF6EC;--warn-border:#F5DAB1;--danger:#F56C6C;--danger-bg:#FEF0F0;
+  --text:#1F2329;--text-2:#4E5969;--text-3:#86909C;--text-4:#C0C4CC;
+  --border:#DCDFE6;--border-light:#E4E7ED;--bg:#F5F7FA;--white:#fff;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"PingFang SC",sans-serif;
+}
+body{font-family:var(--font);font-size:13px;color:var(--text);background:#EEF1F5;padding:20px;}
+.wrap{max-width:1240px;margin:0 auto;}
+.switch{display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:12px;color:var(--text-3);flex-wrap:wrap;}
+.switch .seg{display:inline-flex;border:1px solid var(--border);border-radius:5px;overflow:hidden;background:#fff;}
+.switch .seg span{padding:5px 12px;cursor:pointer;border-right:1px solid var(--border);color:var(--text-2);}
+.switch .seg span:last-child{border-right:0;}
+.switch .seg span.on{background:var(--primary);color:#fff;}
+.page-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.page-hd h1{font-size:17px;font-weight:600;}
+.page-hd .no{font-size:13px;color:var(--text-3);margin-left:10px;font-weight:400;}
+.st{font-size:12px;padding:2px 10px;border-radius:10px;margin-left:8px;background:#E8F3FF;color:#1664FF;border:1px solid #BEDAFF;font-weight:400;}
+.panel{background:var(--white);border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px;}
+.panel-hd{padding:12px 18px;border-bottom:1px solid var(--border-light);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.panel-hd .sub{font-size:12px;font-weight:400;color:var(--text-3);}
+.panel-bd{padding:18px;}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 22px;}
+.f-item label{display:block;font-size:12.5px;color:var(--text-2);margin-bottom:5px;}
+.req{color:var(--danger);margin-right:3px;}
+.f-item input{width:100%;border:1px solid var(--border);border-radius:5px;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);background:#fff;}
+.f-item input:focus,table.pt input:focus{outline:none;border-color:var(--primary);}
+.f-item input[readonly],table.pt input[readonly]{background:var(--bg);color:var(--text-2);border-color:var(--border-light);}
+.f-item .val{padding:8px 0;color:var(--text);}
+.f-item .err-msg,.cell-err{color:var(--danger);font-size:11px;margin-top:3px;display:none;white-space:normal;}
+.f-item.err input,table.pt td.err input{border-color:var(--danger);background:var(--danger-bg);}
+.f-item.err .err-msg,table.pt td.err .cell-err{display:block;}
+.pre{font-size:10px;color:var(--primary);background:var(--primary-bg);border:1px solid var(--primary-border);border-radius:3px;padding:0 5px;margin-left:5px;}
+table.pt{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl-wrap{overflow-x:auto;}
+table.pt th,table.pt td{border-bottom:1px solid var(--border-light);padding:8px;text-align:left;vertical-align:top;white-space:nowrap;}
+table.pt th{color:var(--text-3);font-weight:500;background:var(--bg);}
+table.pt th.cm,table.pt td.cm{background:#F6FBF8;}
+table.pt th.cm{color:var(--primary-hover);}
+table.pt input{border:1px solid var(--border);border-radius:4px;padding:5px 6px;font-size:12px;font-family:inherit;}
+table.pt input[type=date]{width:130px;}
+table.pt input.batch{width:130px;}
+table.pt .ro{color:var(--text-2);padding-top:5px;display:inline-block;}
+.link{color:var(--primary);cursor:pointer;}
+.link:hover{text-decoration:underline;}
+.btn{padding:7px 16px;border-radius:5px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text-2);}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+.btn.primary:hover{background:var(--primary-hover);}
+.btn.sm{padding:4px 10px;font-size:12px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.footer-act{display:flex;justify-content:flex-end;gap:10px;}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:50;}
+.mask.show{display:block;}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;width:520px;box-shadow:0 8px 40px rgba(0,0,0,.2);display:none;z-index:51;}
+.modal.show{display:block;}
+.modal-hd{padding:14px 18px;font-weight:600;font-size:15px;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;}
+.modal-hd .x{cursor:pointer;color:var(--text-3);}
+.modal-bd{padding:16px 18px;line-height:1.8;}
+.modal-bd ul{padding-left:18px;color:var(--danger);}
+.modal-ft{padding:12px 18px;border-top:1px solid var(--border-light);display:flex;justify-content:flex-end;gap:10px;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:440px;background:#fff;box-shadow:-6px 0 30px rgba(0,0,0,.15);transform:translateX(100%);transition:.25s;z-index:51;display:flex;flex-direction:column;}
+.drawer.show{transform:none;}
+.drawer .modal-bd{flex:1;overflow:auto;display:flex;justify-content:center;background:var(--bg);}
+.drawer iframe{border:0;width:420px;height:560px;}
+#toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:#303133;color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;}
+#toast.show{opacity:1;}
+table.spec{width:100%;border-collapse:collapse;font-size:12px;}
+table.spec th,table.spec td{border:1px solid var(--border-light);padding:7px 9px;text-align:left;vertical-align:top;line-height:1.6;}
+table.spec th{background:var(--bg);color:var(--text-2);font-weight:500;white-space:nowrap;}
+table.spec td:first-child{white-space:nowrap;font-weight:500;}
+.src-tag{font-size:11px;border-radius:3px;padding:0 6px;white-space:nowrap;}
+.src-tag.old{color:var(--text-2);background:var(--bg);border:1px solid var(--border);}
+.src-tag.new{color:var(--primary-hover);background:var(--primary-bg);border:1px solid var(--primary-border);}
+.src-tag.tbd{color:#b26a00;background:var(--warn-bg);border:1px solid var(--warn-border);}
+.rules{margin-top:12px;font-size:12px;color:var(--text-2);line-height:1.9;padding-left:18px;}
+.hide{display:none!important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="switch">
+    <span>原型切换 · 供应商：</span>
+    <div class="seg" id="segSup">
+      <span class="on" data-v="1">冷鲜肉供应商</span><span data-v="0">普通供应商</span>
+    </div>
+    <span style="margin-left:14px;">采购单状态：</span>
+    <div class="seg" id="segSt">
+      <span data-v="草稿">草稿</span><span data-v="待下单">待下单</span><span class="on" data-v="待发货">待发货</span><span data-v="待入库">待入库</span><span data-v="入库中">入库中</span><span data-v="已完成">已完成</span>
+    </div>
+  </div>
+
+  <div class="page-hd">
+    <h1>编辑采购单<span class="no">PA2026110200018</span><span class="st" id="stTag">待发货</span></h1>
+  </div>
+
+  <!-- 基本信息（现有字段，只读示意） -->
+  <div class="panel">
+    <div class="panel-hd">基本信息</div>
+    <div class="panel-bd">
+      <div class="grid">
+        <div class="f-item"><label>采购单类型</label><div class="val">商品</div></div>
+        <div class="f-item"><label>供应商</label><div class="val" id="supName">湖南冷鲜肉供应商（示例）</div></div>
+        <div class="f-item"><label>入库仓库</label><div class="val">Foodmax 大仓</div></div>
+        <div class="f-item"><label>业务类型</label><div class="val">跨境采购</div></div>
+        <div class="f-item"><label>结算币种</label><div class="val">USD</div></div>
+        <div class="f-item"><label>期望到货时间</label><div class="val">2026-11-04</div></div>
+        <div class="f-item"><label>货源国</label><div class="val">China</div></div>
+        <div class="f-item"><label>采购员</label><div class="val">沈亮（Alex）</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增：冷鲜肉信息（表头级，仅冷鲜肉供应商显示） -->
+  <div class="panel" id="cmPanel">
+    <div class="panel-hd">冷鲜肉信息 <span class="sub">打印入库标签用</span></div>
+    <div class="panel-bd">
+      <div class="grid">
+        <div class="f-item" data-k="mfr">
+          <label><span class="req">*</span>生产商 <span class="pre">上一单带入</span></label>
+          <input id="mfr" maxlength="200" value="Hunan Huale Foodstuff Co. Ltd." placeholder="英文，如 Hunan Huale Foodstuff Co. Ltd.">
+          <div class="err-msg">请填写生产商</div>
+        </div>
+        <div class="f-item" data-k="est">
+          <label><span class="req">*</span>注册厂号 <span class="pre">上一单带入</span></label>
+          <input id="est" maxlength="30" value="4300/03025" placeholder="如 4300/03025">
+          <div class="err-msg">请填写注册厂号</div>
+        </div>
+        <div class="f-item" data-k="vet">
+          <label><span class="req">*</span>兽医证书号</label>
+          <input id="vet" maxlength="50" placeholder="按本批货的兽医卫生证书填写">
+          <div class="err-msg">请填写兽医证书号</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 商品明细 -->
+  <div class="panel">
+    <div class="panel-hd">
+      <span>商品明细</span>
+      <span id="fillBar"><button class="btn sm" id="btnFill">将第 1 行日期/批次填到全部商品</button></span>
+    </div>
+    <div class="panel-bd tbl-wrap">
+      <table class="pt">
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer-act" id="actions"></div>
+
+  <!-- 标签字段逻辑说明 -->
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-hd">入库标签字段逻辑 <span class="sub">80×80 冷鲜肉标签，样式见 进口冷鲜肉标签_80x80.html</span></div>
+    <div class="panel-bd">
+      <table class="spec">
+        <thead><tr><th>标签字段</th><th>取数来源</th><th>维护位置</th><th>打印格式</th><th>规则</th></tr></thead>
+        <tbody>
+          <tr><td>品名（中文）</td><td><span class="src-tag old">现有</span> 商品中文名</td><td>商品资料</td><td>原样</td><td>沿用现有标签取值</td></tr>
+          <tr><td>品名（英文）</td><td><span class="src-tag old">现有</span> 商品英文名</td><td>商品资料（多语言名称）</td><td>原样</td><td>沿用现有取值；无英文名时该行留空</td></tr>
+          <tr><td>屠宰/生产日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 生产日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>日期格式；不能晚于当天</td></tr>
+          <tr><td>包装日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 包装日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>日期格式；不能早于生产日期、不能晚于当天</td></tr>
+          <tr><td>净重</td><td><span class="src-tag old">现有</span> 现有标签净重字段</td><td>沿用现有</td><td>数值 + KG</td><td>沿用现有标签取值</td></tr>
+          <tr><td>储存条件</td><td><span class="src-tag old">现有</span> 商品保存条件</td><td>商品资料</td><td>如 0–4℃</td><td>沿用现有标签取值</td></tr>
+          <tr><td>原产国</td><td><span class="src-tag old">现有</span> 现有原产国字段</td><td>沿用现有</td><td>英文国名，如 China</td><td>沿用现有标签取值</td></tr>
+          <tr><td>注册厂号 EST. No.</td><td><span class="src-tag new">新增</span> 采购单表头 · 注册厂号</td><td>自营采购单 · 冷鲜肉信息</td><td>原样</td><td>文本 ≤30 字符；新建采购单时带入同供应商上一张采购单的值，可改</td></tr>
+          <tr><td>批次号 Batch No.</td><td><span class="src-tag new">新增</span> 采购单商品行 · 批次号</td><td>自营采购单 · 商品明细</td><td>原样</td><td>文本 ≤50 字符</td></tr>
+          <tr><td>兽医证书号</td><td><span class="src-tag new">新增</span> 采购单表头 · 兽医证书号</td><td>自营采购单 · 冷鲜肉信息</td><td>原样</td><td>文本 ≤50 字符；每批货不同，不带入上一单</td></tr>
+          <tr><td>生产商 Manufacturer</td><td><span class="src-tag new">新增</span> 采购单表头 · 生产商</td><td>自营采购单 · 冷鲜肉信息</td><td>原样（英文）</td><td>文本 ≤200 字符；新建采购单时带入同供应商上一张采购单的值，可改</td></tr>
+          <tr><td>进口商 Imported by</td><td><span class="src-tag tbd">待确认</span> 会议未明确</td><td>—</td><td>名称 + 地址</td><td>暂按标签模板固定文字（10X AI Technology Pte. Ltd. + 地址），待确认</td></tr>
+          <tr><td>二维码</td><td><span class="src-tag old">现有</span> 商品条码</td><td>沿用现有</td><td>QR</td><td>沿用现有逻辑，扫码按条码查商品；一期不加新信息</td></tr>
+        </tbody>
+      </table>
+      <ol class="rules">
+        <li><b>适用范围</b>：供应商被标记为冷鲜肉供应商（供应商表新增字段，后端写死，无页面配置）时，该供应商的自营采购单入库打印本标签；其他供应商仍用现有标签，逻辑不变。</li>
+        <li><b>取哪一行</b>：入库打印时按入库商品对应的采购单商品行取生产日期/包装日期/批次号，按所属采购单取表头的注册厂号/兽医证书号/生产商。</li>
+        <li><b>可编辑状态</b>：草稿、待下单、待发货、待入库可编辑；入库中、已完成、已作废只读。</li>
+        <li><b>必填时机</b>：保存时不强制（下单时货还没生产，日期批次未知）；采购在 SCM 点「预约发货」时，表头 3 项 + 每个商品行 3 项必须填全，否则拦截并列出缺失项。</li>
+        <li><b>缺失兜底</b>：打印时某字段为空（如供应商在 VMS 自行预约未经校验），该字段留空下划线照常打印，不阻断入库。</li>
+        <li><b>日期显示</b>：系统存 YYYY-MM-DD，标签统一打印 DD/MM/YYYY，与标签上 (D/M/Y) 表头一致。</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- 预约发货校验 -->
+<div class="mask" id="mask"></div>
+<div class="modal" id="mdCheck">
+  <div class="modal-hd">冷鲜肉信息未填完整 <span class="x" onclick="closeAll()">✕</span></div>
+  <div class="modal-bd">
+    <div>入库标签要用到以下信息，补全后才能预约发货：</div>
+    <ul id="missList"></ul>
+  </div>
+  <div class="modal-ft"><button class="btn primary" onclick="closeAll()">去补全</button></div>
+</div>
+
+<!-- 标签预览抽屉 -->
+<div class="drawer" id="drLabel">
+  <div class="modal-hd">入库标签预览 <span class="x" onclick="closeAll()">✕</span></div>
+  <div class="modal-bd"><iframe id="lblFrame" src="进口冷鲜肉标签_80x80.html"></iframe></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// 商品取自 Foodmax PO_Rev2_28 Oct 2026.xlsx（B2B PO）
+var ROWS = [
+  {g:'G10001', name:'冰鲜猪五花肉整板切肋去骨去皮', en:'Chilled Pork Belly Sheet Ribbed Boneless Rindless', price:'5.25', qty:40},
+  {g:'G10002', name:'冰鲜猪五花肉整板切肋去骨带皮', en:'Chilled Pork Belly Sheet Ribbed Boneless Rind-On', price:'5.20', qty:50},
+  {g:'G10003', name:'冰鲜猪五花肉单条抽肋去骨带皮', en:'Chilled Pork Belly Single Ribbed Boneless Rind-On', price:'7.00', qty:50},
+  {g:'G10004', name:'冰鲜去骨猪后腿肉', en:'Chilled Pork Leg Boneless', price:'4.70', qty:240, prod:'2026-11-02', pack:'2026-11-03', batch:''},
+  {g:'G10005', name:'冰鲜去骨猪肩肉', en:'Chilled Pork Shoulder Boneless', price:'4.60', qty:180},
+  {g:'G10006', name:'冰鲜去骨猪腰脊肉', en:'Chilled Pork Loin Boneless', price:'5.10', qty:50},
+  {g:'G10007', name:'冰鲜带骨猪腰脊肉（IVP）', en:'Chilled Pork Loin Bone-In', price:'5.20', qty:120}
+];
+// 第 1 行示例已填
+ROWS[0].prod='2026-11-02'; ROWS[0].pack='2026-11-03'; ROWS[0].batch='HL20261102';
+
+var state = { chilled: true, status: '待发货' };
+var EDITABLE = ['草稿','待下单','待发货','待入库'];          // 入库中起只读
+var TODAY = '2026-11-02';
+
+function editable(){ return EDITABLE.indexOf(state.status) > -1; }
+
+function render(){
+  var cm = state.chilled, ed = editable();
+  document.getElementById('cmPanel').classList.toggle('hide', !cm);
+  document.getElementById('fillBar').classList.toggle('hide', !cm || !ed);
+  document.getElementById('supName').textContent = cm ? '湖南冷鲜肉供应商（示例）' : '普通供应商（示例）';
+  document.getElementById('stTag').textContent = state.status;
+  ['mfr','est','vet'].forEach(function(id){ document.getElementById(id).readOnly = !ed; });
+
+  var th = '<th>#</th><th>货品编码</th><th>货品名称</th><th>成本均价(含税)</th><th>采购数量(kg)</th>';
+  if (cm) th += '<th class="cm"><span class="req">*</span>生产日期</th><th class="cm"><span class="req">*</span>包装日期</th><th class="cm"><span class="req">*</span>批次号</th><th class="cm">入库标签</th>';
+  document.getElementById('thead').innerHTML = th;
+
+  var html = '';
+  ROWS.forEach(function(r, i){
+    html += '<tr><td>'+(i+1)+'</td><td>'+r.g+'</td><td>'+r.name+'<div style="color:var(--text-3);font-size:11px;">'+r.en+'</div></td><td>'+r.price+'</td><td>'+r.qty+'</td>';
+    if (cm) {
+      var ro = ed ? '' : ' readonly';
+      html += '<td class="cm" data-f="prod" data-i="'+i+'"><input type="date" max="'+TODAY+'" value="'+(r.prod||'')+'"'+ro+'><div class="cell-err"></div></td>'
+           +  '<td class="cm" data-f="pack" data-i="'+i+'"><input type="date" max="'+TODAY+'" value="'+(r.pack||'')+'"'+ro+'><div class="cell-err"></div></td>'
+           +  '<td class="cm" data-f="batch" data-i="'+i+'"><input class="batch" maxlength="50" placeholder="按外箱批次号" value="'+(r.batch||'')+'"'+ro+'><div class="cell-err"></div></td>'
+           +  '<td class="cm"><span class="link" onclick="preview('+i+')">预览</span></td>';
+    }
+    html += '</tr>';
+  });
+  document.getElementById('tbody').innerHTML = html;
+
+  document.querySelectorAll('#tbody input').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var td = inp.parentNode, i = +td.dataset.i;
+      ROWS[i][td.dataset.f] = inp.value.trim();
+      validateRow(i);
+    });
+  });
+
+  var act = '';
+  if (ed) act += '<button class="btn">取消</button><button class="btn primary" onclick="save()">保存</button>';
+  if (state.status === '待发货') act += '<button class="btn primary" onclick="booking()">预约发货</button>';
+  if (!ed) act += '<span style="color:var(--text-3);font-size:12px;align-self:center;">'+state.status+'状态下冷鲜肉信息只读</span>';
+  document.getElementById('actions').innerHTML = act;
+}
+
+// 行级校验：返回缺失/错误描述
+function validateRow(i){
+  var r = ROWS[i], errs = [];
+  function mark(f, msg){
+    var td = document.querySelector('td[data-f="'+f+'"][data-i="'+i+'"]');
+    if (!td) return;
+    td.classList.toggle('err', !!msg);
+    td.querySelector('.cell-err').textContent = msg || '';
+    if (msg) errs.push('第 '+(i+1)+' 行 '+r.name+'：'+msg);
+  }
+  mark('prod', !r.prod ? '请选择生产日期' : (r.prod > TODAY ? '不能晚于今天' : ''));
+  mark('pack', !r.pack ? '请选择包装日期' : (r.prod && r.pack < r.prod ? '不能早于生产日期' : (r.pack > TODAY ? '不能晚于今天' : '')));
+  mark('batch', !r.batch ? '请填写批次号' : '');
+  return errs;
+}
+
+function validateHeader(){
+  var errs = [], names = {mfr:'生产商', est:'注册厂号', vet:'兽医证书号'};
+  ['mfr','est','vet'].forEach(function(id){
+    var v = document.getElementById(id).value.trim();
+    document.querySelector('.f-item[data-k="'+id+'"]').classList.toggle('err', !v);
+    if (!v) errs.push(names[id]);
+  });
+  return errs;
+}
+
+// 保存：不强制必填，只校验已填内容的格式（日期先后）
+function save(){
+  var bad = false;
+  ROWS.forEach(function(r, i){
+    validateRow(i);
+    ['prod','pack','batch'].forEach(function(f){
+      var td = document.querySelector('td[data-f="'+f+'"][data-i="'+i+'"]');
+      if (td && !r[f]) { td.classList.remove('err'); }
+      else if (td && td.classList.contains('err')) bad = true;
+    });
+  });
+  document.querySelectorAll('.f-item.err').forEach(function(el){ el.classList.remove('err'); });
+  if (bad) return toast('日期填写有误，请修改后再保存');
+  toast('已保存');
+}
+
+// 预约发货：冷鲜肉信息必须全部填写
+function booking(){
+  if (!state.chilled) return toast('已打开预约发货弹窗（现有流程）');
+  var miss = validateHeader().map(function(n){ return '冷鲜肉信息：'+n; });
+  ROWS.forEach(function(r, i){ miss = miss.concat(validateRow(i)); });
+  if (!miss.length) return toast('校验通过，打开预约发货弹窗（现有流程）');
+  var show = miss.slice(0, 8).map(function(m){ return '<li>'+m+'</li>'; }).join('');
+  if (miss.length > 8) show += '<li>…等共 '+miss.length+' 项</li>';
+  document.getElementById('missList').innerHTML = show;
+  document.getElementById('mask').classList.add('show');
+  document.getElementById('mdCheck').classList.add('show');
+}
+
+document.getElementById('btnFill').onclick = function(){
+  var f = ROWS[0];
+  if (!f.prod && !f.pack && !f.batch) return toast('请先填写第 1 行');
+  ROWS.forEach(function(r, i){ if (i) { r.prod = f.prod; r.pack = f.pack; r.batch = f.batch; } });
+  render(); toast('已填到全部 '+ROWS.length+' 个商品，可逐行修改');
+};
+
+function fmt(d){ if (!d) return ''; var p = d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function preview(i){
+  var r = ROWS[i], fr = document.getElementById('lblFrame');
+  function fill(){
+    var doc = fr.contentDocument; if (!doc || !doc.querySelector('.name-cn')) return;
+    doc.querySelector('.toolbar') && (doc.querySelector('.toolbar').style.display = 'none');
+    var z = doc.querySelector('.zoom'); z.style.transform = 'scale(1.35)'; z.style.height = 'calc(80mm * 1.35)';
+    doc.querySelector('.stage').style.padding = '10px 0';
+    doc.querySelector('.name-cn').textContent = r.name;
+    doc.querySelector('.name-en').textContent = r.en;
+    var d = doc.querySelectorAll('.dates .v'); d[0].textContent = fmt(r.prod) || '__/__/____'; d[1].textContent = fmt(r.pack) || '__/__/____';
+    var v = doc.querySelectorAll('.rows .v');
+    v[1].textContent = document.getElementById('est').value || '__________';
+    v[2].textContent = r.batch || '__________';
+    v[3].textContent = document.getElementById('vet').value || '__________';
+    doc.querySelector('.foot p:first-child span').textContent = document.getElementById('mfr').value;
+  }
+  fr.onload = fill; fill();
+  document.getElementById('mask').classList.add('show');
+  document.getElementById('drLabel').classList.add('show');
+}
+
+function closeAll(){ ['mask','mdCheck','drLabel'].forEach(function(id){ document.getElementById(id).classList.remove('show'); }); }
+document.getElementById('mask').onclick = closeAll;
+
+function toast(m){ var t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(function(){ t.classList.remove('show'); }, 1800); }
+
+function seg(id, cb){
+  document.querySelectorAll('#'+id+' span').forEach(function(s){
+    s.onclick = function(){
+      document.querySelectorAll('#'+id+' span').forEach(function(x){ x.classList.remove('on'); });
+      s.classList.add('on'); cb(s.dataset.v); render();
+    };
+  });
+}
+seg('segSup', function(v){ state.chilled = v === '1'; });
+seg('segSt', function(v){ state.status = v; });
+render();
+</script>
+</body>
+</html>
