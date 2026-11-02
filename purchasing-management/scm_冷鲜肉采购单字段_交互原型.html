@@ -169,7 +169,7 @@ table.spec td:first-child{white-space:nowrap;font-weight:500;}
           <tr><td>品名（中文）</td><td><span class="src-tag old">现有</span> 商品中文名</td><td>商品资料</td><td>原样</td><td>沿用现有标签取值</td></tr>
           <tr><td>品名（英文）</td><td><span class="src-tag old">现有</span> 商品英文名</td><td>商品资料（多语言名称）</td><td>原样</td><td>沿用现有取值；无英文名时该行留空</td></tr>
           <tr><td>屠宰/生产日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 生产日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>日期格式；不能晚于当天</td></tr>
-          <tr><td>包装日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 包装日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>日期格式；不能早于生产日期、不能晚于当天</td></tr>
+          <tr><td>包装日期</td><td><span class="src-tag new">新增</span> 采购单商品行 · 包装日期</td><td>自营采购单 · 商品明细</td><td>DD/MM/YYYY</td><td>默认 = 生产日期（填生产日期时自动带出，手动改过后不再跟随）；不能早于生产日期、不能晚于当天</td></tr>
           <tr><td>净重</td><td><span class="src-tag old">现有</span> 现有标签净重字段</td><td>沿用现有</td><td>数值 + KG</td><td>沿用现有标签取值</td></tr>
           <tr><td>储存条件</td><td><span class="src-tag old">现有</span> 商品保存条件</td><td>商品资料</td><td>如 0–4℃</td><td>沿用现有标签取值</td></tr>
           <tr><td>原产国</td><td><span class="src-tag old">现有</span> 现有原产国字段</td><td>沿用现有</td><td>英文国名，如 China</td><td>沿用现有标签取值</td></tr>
@@ -241,7 +241,7 @@ function render(){
   ['mfr','est','vet'].forEach(function(id){ document.getElementById(id).readOnly = !ed; });
 
   var th = '<th>#</th><th>货品编码</th><th>货品名称</th><th>成本均价(含税)</th><th>采购数量(kg)</th>';
-  if (cm) th += '<th class="cm"><span class="req">*</span>生产日期</th><th class="cm"><span class="req">*</span>包装日期</th><th class="cm"><span class="req">*</span>批次号</th><th class="cm">入库标签</th>';
+  if (cm) th += '<th class="cm"><span class="req">*</span>生产日期</th><th class="cm"><span class="req">*</span>包装日期 <span class="pre">默认同生产日期</span></th><th class="cm"><span class="req">*</span>批次号</th><th class="cm">入库标签</th>';
   document.getElementById('thead').innerHTML = th;
 
   var html = '';
@@ -260,8 +260,13 @@ function render(){
 
   document.querySelectorAll('#tbody input').forEach(function(inp){
     inp.addEventListener('change', function(){
-      var td = inp.parentNode, i = +td.dataset.i;
-      ROWS[i][td.dataset.f] = inp.value.trim();
+      var td = inp.parentNode, i = +td.dataset.i, r = ROWS[i], f = td.dataset.f, v = inp.value.trim();
+      // 包装日期默认 = 生产日期：包装日期为空或仍等于旧生产日期（未手动改过）时跟随
+      if (f === 'prod' && (!r.pack || r.pack === r.prod)) {
+        r.pack = v;
+        document.querySelector('td[data-f="pack"][data-i="'+i+'"] input').value = v;
+      }
+      r[f] = v;
       validateRow(i);
     });
   });
