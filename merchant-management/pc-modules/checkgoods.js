@@ -105,8 +105,11 @@
     const ls=ckLines(d).filter(l=>l.should>0);
     if(!ro){CK={id,qty:{}};ls.forEach(l=>{const c=(st=='done'||st=='stale')&&d.check?d.check.lines[l.sku]:null;CK.qty[l.sku]=c!=null?Math.min(c,l.cap):l.cap;});CK.init=JSON.stringify(CK.qty);}
     const q=sku=>ro?(d.check?d.check.lines[sku]:null):CK.qty[sku];
-    const rows=ls.map((l,i)=>{const v=q(l.sku),diff=v==null?null:v-l.should;
-      return `<tr id="ckr-${i}" style="${diff<0?'background:#FDF3F2':''}">
+    /* 异常SKU = 应送数量 ≠ 实际打印数量；默认停在异常 Tab（没有异常则停在正常 Tab） */
+    const isAb=l=>l.printed!==l.should,abN=ls.filter(isAb).length,okN=ls.length-abN;
+    const tab=abN?'ab':'ok';
+    const rows=ls.map((l,i)=>{const v=q(l.sku),diff=v==null?null:v-l.should,k=isAb(l)?'ab':'ok';
+      return `<tr id="ckr-${i}" data-ck="${k}" style="${k!=tab?'display:none;':''}${diff<0?'background:#FDF3F2':''}">
         <td><b style="font-weight:600">${l.name}</b><div class="mono" style="font-size:11px;color:var(--ts)">${l.sku}</div></td>
         <td style="color:var(--ts)">${l.spec||'—'}</td>
         <td style="text-align:right">${l.should} <span style="color:var(--ts)">${l.unit}</span></td>
@@ -121,14 +124,21 @@
         ${stale?`<div class="ib ib-r" style="margin-bottom:12px"><span class="i">⚠️</span><div>上次核货后<b>应送数量变了</b>（客户取消或改单），请按新的应送再核一遍。</div></div>`:''}
         ${ro?(d.check?`<div class="ib ib-gr" style="margin-bottom:12px"><span class="i">✅</span><div>${d.check.by} 于 ${d.check.at} ${d.check.method=='scan'?`在 App <b>扫码核货</b>${d.check.manualAdj?`（手动补录 ${d.check.manualAdj} 件）`:''}`:'确认核货'}${ckShortQty(d)?`，少送 <b style="color:var(--r)">${ckShortQty(d)}</b> 件`:'，与应送一致'}。${isLocked(d)?'仓库已签到，不能再改。':'仓库签到前可以修改或撤回。'}</div></div>`:'')
           :`<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📦</span><div>已按实际打印的标签数带出，对照车上实际装的货，数量对的不用动，只改装少的。在车边核可以用商家 App 扫码。</div></div>`}
+        <div class="tabs" style="margin-bottom:12px">${[['ab','异常SKU',abN],['ok','正常SKU',okN]].map(x=>`<div class="tab ${x[0]==tab?'active':''}" data-ckt="${x[0]}" onclick="ck_tab('${x[0]}',this)">${x[1]} <span style="font-weight:600;color:var(--ts)">${x[2]}</span></div>`).join('')}</div>
         <table><thead><tr><th>商品</th><th>规格</th><th style="text-align:right">应送数量</th><th style="text-align:right">${ro?'核货数量':'实际核货数量'}</th><th style="text-align:right">差异</th></tr></thead>
-          <tbody>${rows}</tbody></table>
+          <tbody>${rows}<tr id="ck-empty" style="${(tab=='ab'?abN:okN)?'display:none':''}"><td colspan="5" style="text-align:center;color:var(--ts);padding:28px 0">暂无</td></tr></tbody></table>
         <div id="ck-sum" style="margin-top:12px;font-size:12.5px;color:var(--ts)">${ckSumHtml(d,ls,ro)}</div>
         ${ro?'':`<div style="margin-top:14px;font-size:12px;color:var(--ts);line-height:1.7">少送的照现在的少货规则处理，罚款按仓库实际收到的数算。</div>`}
       </div>
       <div class="drawer-ft">${ro
         ?`<button class="btn btn-o" onclick="closeDrawer()">关闭</button>${(!isLocked(d)&&d.check)?`<button class="btn btn-o" style="color:var(--r)" onclick="ck_revoke('${d.id}')">撤回核货</button><button class="btn btn-p" onclick="ck_reopen('${d.id}')">修改核货</button>`:''}`
         :`<button class="btn btn-o" onclick="ck_cancel()">取消</button><button class="btn btn-p" onclick="ck_submit('${d.id}')">确认核货</button>`}</div>`);
+  };
+  window.ck_tab=function(k,el){
+    const box=el.closest('.drawer-bd');if(!box)return;
+    box.querySelectorAll('[data-ckt]').forEach(t=>t.classList.toggle('active',t.dataset.ckt==k));
+    let n=0;box.querySelectorAll('tr[data-ck]').forEach(r=>{const on=r.dataset.ck==k;r.style.display=on?'':'none';if(on)n++;});
+    const e=box.querySelector('#ck-empty');if(e)e.style.display=n?'none':'';
   };
   function ckSumHtml(d,ls,ro){
     const get=sku=>ro?(d.check?d.check.lines[sku]:0):CK.qty[sku];
