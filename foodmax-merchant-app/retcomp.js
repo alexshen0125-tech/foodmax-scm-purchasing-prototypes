@@ -1,7 +1,7 @@
 /* Food Max 商家端 v2 · 财务 › 退货赔付（与 PC pc-modules/retcomp.js 同口径，2026-10-27 沈亮定 + 当日会议）
    - 数据：退货申诉经客服核定成立 / 部分成立且赔付 > 0（deliver.js FM_MOD.retCompSrc），一笔申诉 = 一张赔付单（RC-…）
-   - 结算（货权转移阶段）：赔付单直接推送进结算单（settle.js FM_MOD.settleBills 的 comp[] 含该赔付单号即归该单），
-     计入应结金额与应开票金额，随结算单一并开票，不单独开票 / 上传
+   - 结算（2026-11-04 沈亮定）：运营在店铺运营平台手动推送到清结算，推送时间 = 归期，进推送后下一张结算单
+     （settle.js FM_MOD.settleBills 的 comp[] 含该赔付单号即归该单）；未推送 / 已推送未进单，商家端都显示「待进结算单」
    - 平台化后是否平台代开发票待 Simon 确认，届时再加代开发票下载
    样式复用 replen.js 注入的 .rp-* 类 */
 (function(){
@@ -82,9 +82,9 @@ function openDetail(r){
     mount:(p)=>{p.querySelector('#rc-src').onclick=r.open;const b=p.querySelector('#rc-bill');if(b)b.onclick=()=>{if(window.FM_MOD.settle)window.FM_MOD.settle();};}});
 }
 window.FM_MOD.retcomp=open;
-// 对账单：当天计入的退货赔付（计入日 = 核定日；演示把 6 月结算单那张挂到对账单演示日期 06-29，与 PC 一致）
+// 对账单：当天计入的退货赔付（计入日 = 推送日，未推送不计入；演示中已进结算单的视为核定当天已推送；演示把 6 月结算单那张挂到对账单演示日期 06-29，与 PC 一致）
 const RC_RECON_DEMO={'RC-20260618-317':'2026-06-29'};
-window.FM_MOD.retCompRecon=date=>compRows().filter(r=>(RC_RECON_DEMO[r.compNo]||(r.ra.reviewAt||'').slice(0,10))===date).map(r=>{
+window.FM_MOD.retCompRecon=date=>compRows().filter(r=>(r.ra.pushedAt||r.bill)&&(RC_RECON_DEMO[r.compNo]||(r.ra.pushedAt||r.ra.reviewAt||'').slice(0,10))===date).map(r=>{
   const ok=(r.ra.items||[]).filter(x=>x.ok>0);
   return {compNo:r.compNo,src:r.src,retNo:r.retNo,goods:ok.map(x=>x.name).join('、'),qty:ok.reduce((a,x)=>a+x.ok,0),amt:r.ra.comp,at:r.ra.reviewAt||'',stNo:r.bill?r.bill.no:''};
 });

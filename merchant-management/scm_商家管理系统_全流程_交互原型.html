@@ -841,7 +841,9 @@ const DB = {
     {id:'AS-26070205', refundNo:'RF-26070205', client:'鼎泰丰', order:'#SG20260701012', item:'芥蓝 10kg', reason:'到货偏软，要求退回', age:'签收后9小时', type:'退货退款', amt:65.00, status:'judged', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'待提货', arriveAt:'2026-07-20 21:30', retItems:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:1,price:32.50}]},
     {id:'AS-26051801', refundNo:'', client:'新味坊', order:'#SG20260517022', item:'鲜鸡蛋 6盘', reason:'次日清点发现少送 6 盘，客户要求补货、不退款', age:'签收后14小时', type:'补货', amt:55.20, status:'closed', liable:'商家', refundType:'商家责·自营全额补发·扣商家补货货款', appeal:'', returnStatus:'',
      fill:{sku:'SKU8811',name:'鲜鸡蛋',spec:'30枚/盘',unit:'盘',gap:6,fillQty:6,refundQty:0,selfPrice:9.20,custPrice:12.80}, fillAmt:55.20, refundAmt:0, fillStatus:'已补发', fillAt:'2026-05-18 15:40', replNo:'RPL-20260518-002'},
-    {id:'AS-26070204', refundNo:'RF-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'已提货', arriveAt:relTs(-30), pickupAt:relTs(-3), retItems:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}]},
+    {id:'AS-26070204', refundNo:'RF-26070204', client:'小南国', order:'#SG20260630021', item:'芥蓝 12kg', reason:'到货偏软，要求退回', age:'签收后6小时', type:'退货退款', amt:78.00, status:'closed', liable:'平台', refundType:'平台承担·退款·货退平台仓', appeal:'', returnStatus:'已提货', arriveAt:relTs(-30), pickupAt:relTs(-3), retItems:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}],
+      retAppeal:{kind:'goods',status:'成立',at:'2026-11-02 09:40',reviewAt:'2026-11-03 16:10',reviewDue:0,desc:'提回来的芥蓝整件压烂，不能卖',photos:2,compStatus:'已生成',items:[{name:'芥蓝',ret:1,sysPick:1,actual:1,damaged:1,short:0,qty:1,cap:1,price:70.20,ok:1}],comp:70.20,compNo:'RC-20261103-012',note:'仓库确认存放时被压，平台承担',
+        origin:{'芥蓝':{orderQty:1,paid:78.00,platSub:0,svc:4.68,logi:2.34,chan:0.78}}}},   // 11-04：待推送演示（运营平台退货赔付页手动推送）
     {id:'AS-26070209', refundNo:'RF-26070209', client:'南洋茶餐室', order:'#SG20260628015', item:'西兰花 5kg 等2件', reason:'到货发黄，要求退回', age:'签收后7小时', type:'退货退款', amt:96.00, status:'closed', liable:'商家', refundType:'退货退款·货退平台仓待提·扣商家货款', appeal:'', returnStatus:'已提货', arriveAt:relTs(-26), pickupAt:relTs(-5),
       retAppeal:{kind:'goods',status:'成立',at:'2026-06-17 10:20',reviewAt:'2026-06-18 15:20',reviewDue:0,desc:'到仓提货时只找到 1 箱番茄',photos:0,compStatus:'已生成',items:[{name:'番茄',ret:2,sysPick:1,actual:1,damaged:0,short:1,qty:1,cap:1,price:18.00,ok:1}],comp:18.00,compNo:'RC-20260618-317',note:'监控确认仓库少出 1 箱',
         origin:{'番茄':{orderQty:2,paid:38.00,platSub:2.00,svc:2.40,logi:1.20,chan:0.40}}}, retItems:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},
@@ -6533,6 +6535,6 @@ goHome();
 <script src="pc-modules/pickfee.js?v=20261030d"></script>
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
-<script src="pc-modules/retcomp.js?v=20261028c"></script>
+<script src="pc-modules/retcomp.js?v=20261104a"></script>
 </body>
 </html>
