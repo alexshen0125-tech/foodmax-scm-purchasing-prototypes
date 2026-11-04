@@ -322,7 +322,7 @@ function ckOpenA(d,forceEdit,mode,autoScan){
         :mode==='scan'?`<div class="ck-scanbtn" id="ck-scan">${svg('scan')||''}<span>扫码</span><em>对着货上的标签逐件扫，扫一张记 1 件</em></div>`
         :`<div class="ck-tip">已按实际打印的标签数带出，对照车上实际装的货，数量对的不用动，只改装少的。</div>`}
       <div class="ck-tabs">${[['ab','异常SKU',abN],['ok','正常SKU',okN]].map(x=>`<div class="t ${x[0]===tab?'on':''}" data-t="${x[0]}">${x[1]} <em>${x[2]}</em></div>`).join('')}</div>
-      <div class="ck-abhint" style="${tab==='ab'?'':'display:none;'}margin:0 2px 8px;font-size:12px;color:var(--red)">注：异常SKU标识应送数量和实际打印数量不符</div>
+      <div class="ck-abhint" style="${tab==='ab'?'':'display:none;'}margin:2px 0 10px;padding:10px 12px;background:var(--red-soft);border-left:4px solid var(--red);border-radius:10px;font-size:14px;font-weight:700;color:var(--red);line-height:1.5">⚠️ 注：异常SKU表示应送数量和实际打印数量不符</div>
       <div class="ck-list">${ls.map(rowHtml).join('')}<div class="ck-empty" style="${(tab==='ab'?abN:okN)?'display:none;':''}padding:28px 0;text-align:center;font-size:12.5px;color:var(--sub)">暂无</div></div>
       ${ro?'':`<div style="font-size:11.5px;color:var(--sub);line-height:1.65;margin:10px 2px 16px">少送的照现在的少货规则处理，罚款按仓库实际收到的数算。${mode==='scan'?'标签破损扫不出，点该行「+」补上。':''}</div>`}
     </div>`,
