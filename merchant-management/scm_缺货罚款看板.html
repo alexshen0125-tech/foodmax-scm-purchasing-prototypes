@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>三方商家缺货罚款看板</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f4f5f3;
+  --surface: #ffffff;
+  --surface-2: #f7f8f6;
+  --line: #e6e8e3;
+  --text: #16181a;
+  --text-2: #55595e;
+  --text-3: #8a8f95;
+  --brand: #12935a;
+  --brand-soft: #e5f4ec;
+  --bar: #2a78d6;
+  --bar-dim: #b7d3f6;
+  --grid: #eceeea;
+  --warn: #c2410c;
+  --warn-soft: #fdeee6;
+  --good: #12935a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111312; --surface: #1a1c1b; --surface-2: #222524; --line: #2e3230;
+    --text: #f2f3f1; --text-2: #b9bdb8; --text-3: #848983;
+    --brand: #3fbf82; --brand-soft: #1d3428;
+    --bar: #3987e5; --bar-dim: #24456e; --grid: #262928;
+    --warn: #f08a5d; --warn-soft: #3a2419; --good: #3fbf82;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 16px 40px; }
+header { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 14px 0 10px; }
+h1 { font-size: 18px; font-weight: 600; }
+.sub { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+.bar-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.datebox { display: flex; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; height: 34px; }
+.datebox button { width: 34px; height: 32px; border: 0; background: none; color: var(--text-2); font-size: 16px; cursor: pointer; }
+.datebox button:disabled { color: var(--line); cursor: default; }
+.datebox input { border: 0; background: none; color: var(--text); font: inherit; width: 118px; text-align: center; }
+.seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 2px; height: 34px; }
+.seg button { border: 0; background: none; color: var(--text-2); font: inherit; padding: 0 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.seg button.on { background: var(--brand); color: #fff; }
+.period { color: var(--text-3); font-size: 12px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-top: 12px; }
+.card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.card-h h2 { font-size: 15px; font-weight: 600; }
+
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.kpi .k { color: var(--text-2); font-size: 12px; }
+.kpi .v { font-size: 22px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 13px; font-weight: 400; color: var(--text-3); margin-left: 2px; }
+.kpi .d { font-size: 12px; margin-top: 2px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.kpi .d .up { color: var(--warn); }
+.kpi .d .down { color: var(--good); }
+.kpi.hl { border-color: var(--warn); }
+.kpi.hl .v { color: var(--warn); }
+
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: 200px; }
+.chart .tip { position: absolute; pointer-events: none; background: var(--text); color: var(--surface); font-size: 12px; padding: 6px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); display: none; font-variant-numeric: tabular-nums; }
+.axis { fill: var(--text-3); font-size: 10px; }
+
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tools input, .tools select { height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--text); font: inherit; padding: 0 10px; min-width: 0; }
+.tools input { width: 150px; }
+.tabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.tabs button { border: 0; background: none; font: inherit; color: var(--text-2); padding: 8px 0; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button.on { color: var(--text); font-weight: 600; border-bottom-color: var(--brand); }
+
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th { color: var(--text-3); font-weight: 400; font-size: 12px; position: sticky; top: 0; background: var(--surface); }
+th.sortable { cursor: pointer; }
+th.sorted { color: var(--text); }
+th:first-child, td:first-child { text-align: left; position: sticky; left: 0; background: var(--surface); z-index: 1; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+td.l, th.l { text-align: left; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--surface-2); }
+td.warn { color: var(--warn); font-weight: 600; }
+.tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--warn-soft); color: var(--warn); }
+.empty { text-align: center; color: var(--text-3); padding: 28px 0; }
+.more[hidden] { display: none; }
+.more { display: block; margin: 10px auto 0; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); border-radius: 8px; padding: 6px 16px; font: inherit; cursor: pointer; }
+
+details.note { margin-top: 12px; color: var(--text-2); font-size: 12px; }
+details.note summary { cursor: pointer; color: var(--text-3); }
+details.note ul { padding-left: 18px; margin-top: 6px; }
+details.note li { margin: 3px 0; }
+
+.mask { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50; display: none; }
+.sheet { position: fixed; z-index: 51; background: var(--surface); display: none; flex-direction: column; left: 0; right: 0; bottom: 0; max-height: 86vh; border-radius: 14px 14px 0 0; }
+@media (min-width: 760px) { .sheet { left: auto; top: 0; bottom: 0; width: 620px; max-height: none; border-radius: 0; } }
+.sheet.on, .mask.on { display: flex; }
+.sheet-h { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; }
+.sheet-h h3 { font-size: 16px; font-weight: 600; }
+.sheet-h button { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--text-3); cursor: pointer; }
+.sheet-b { overflow: auto; padding: 12px 16px 24px; }
+.kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.kv div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.kv .k { font-size: 12px; color: var(--text-3); }
+.kv .v { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sheet-b h4 { font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+.sheet-b .tbl-wrap { margin: 0 -16px; padding: 0 16px; }
+.sheet-b th { background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>三方商家缺货罚款看板</h1>
+    <div class="sub" id="gen"></div>
+    <div class="bar-row">
+      <div class="datebox">
+        <button id="prev" aria-label="前一天">‹</button>
+        <input type="date" id="date">
+        <button id="next" aria-label="后一天">›</button>
+      </div>
+      <div class="seg" id="range">
+        <button data-r="1" class="on">当天</button>
+        <button data-r="7">近7天</button>
+        <button data-r="30">近30天</button>
+        <button data-r="m">本月</button>
+      </div>
+      <span class="period" id="period"></span>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <div class="card-h">
+      <h2 id="trend-title">每日缺货件数</h2>
+      <div class="seg" id="metric">
+        <button data-m="short" class="on">缺货件数</button>
+        <button data-m="shops">缺货商家数</button>
+        <button data-m="fine">罚款</button>
+      </div>
+    </div>
+    <div class="chart" id="chart"><svg></svg><div class="tip"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" id="tabs">
+      <button data-t="shop" class="on">商家排行</button>
+      <button data-t="sku">缺货明细</button>
+    </div>
+    <div class="card-h">
+      <div class="tools">
+        <input id="q" placeholder="搜商家 / 商品 / SKU">
+        <select id="bd"><option value="">全部招商负责人</option></select>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table id="tbl"></table></div>
+    <button class="more" id="more" hidden>显示更多</button>
+  </div>
+
+  <details class="note">
+    <summary>数据口径</summary>
+    <ul>
+      <li>范围：三方商家越库到仓，排除自营、测试商家、测试仓；只算仓库已完成收货的收货单。</li>
+      <li>日期：收货单的预计到货日（配送日）。当天的数据在仓库收完货后才完整。</li>
+      <li>缺货件数：按收货单 × SKU 计，应收数量 − 实收数量。</li>
+      <li>缺货率：缺货件数 ÷ 应收件数。</li>
+      <li>罚款金额（估算）：缺货件数 × S$<span id="fpu">20</span>。按收货结果估算，没有扣除撤销、申诉的罚款单，以商家后台罚款单为准。</li>
+      <li>平台补缺件数：运营在少货补缺单里已完成补发的数量，按母单号 + 货品编码对应到缺货 SKU。</li>
+      <li>仓库未扫码：这个 SKU 整行没有扫码记录，关单时系统记实收 0。可能是商家没送，也可能是仓库漏收，需要核实。</li>
+      <li>数据每小时从数仓刷新一次。</li>
+    </ul>
+  </details>
+</div>
+
+<div class="mask" id="mask"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-h"><div><h3 id="s-title"></h3><div class="sub" id="s-sub"></div></div><button id="s-close" aria-label="关闭">×</button></div>
+  <div class="sheet-b" id="s-body"></div>
+</div>
+
+<script id="dash-data" type="application/json">{}</script>
+<script>
+(function () {
+  var D = JSON.parse(document.getElementById('dash-data').textContent || '{}');
+  if (!D.shop_daily) { document.getElementById('gen').textContent = '暂无数据'; return; }
+  var FPU = D.fine_per_unit || 20;
+  document.getElementById('fpu').textContent = FPU;
+  var SD = D.shop_daily.map(function (r) { return { d: r[0], shop: r[1], pred: r[2], recv: r[3], short: r[4], sku: r[5], fine: r[6], fill: r[7] }; });
+  var SK = D.skus.map(function (r) { return { d: r[0], shop: r[1], sku: r[2], name: r[3], unit: r[4], orders: r[5], pred: r[6], recv: r[7], short: r[8], fine: r[9], unscanned: r[10], fill: r[11], receipt: r[12] }; });
+  var SHOPS = D.shops;
+  var DATES = Array.from(new Set(SD.map(function (r) { return r.d; }))).sort();
+  var MAXD = DATES[DATES.length - 1], MIND = DATES[0];
+
+  var st = { end: MAXD, range: '1', metric: 'short', tab: 'shop', q: '', bd: '', sort: { shop: ['short', -1], sku: ['d', -1] }, limit: 50 };
+
+  // ---------- 工具 ----------
+  function addDays(d, n) { var t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+  function fmt(n, p) { p = p || 0; return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: p, maximumFractionDigits: p }); }
+  function qty(n) { return Math.abs(n - Math.round(n)) < 0.005 ? fmt(n) : fmt(n, 2); }
+  function money(n) { return 'S$' + fmt(n, n % 1 ? 2 : 0); }
+  function pct(a, b) { return b ? (a / b * 100).toFixed(2) + '%' : '—'; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function md(d) { return d.slice(5); }
+  function shopName(c) { return (SHOPS[c] || [c])[0] || c; }
+  function shopBd(c) { return (SHOPS[c] || ['', ''])[1] || ''; }
+
+  function periodOf(end, range) {
+    if (range === 'm') return [end.slice(0, 8) + '01', end];
+    var n = +range; return [addDays(end, 1 - n), end];
+  }
+  function prevPeriod(p, range) {
+    if (range === 'm') { var s = addDays(p[0], -1); var ps = s.slice(0, 8) + '01'; var len = +p[1].slice(8); var pe = addDays(ps, len - 1); if (pe > s) pe = s; return [ps, pe]; }
+    var n = +range; return [addDays(p[0], -n), addDays(p[0], -1)];
+  }
+  function inP(d, p) { return d >= p[0] && d <= p[1]; }
+
+  function agg(p) {
+    var a = { arrive: new Set(), shortShops: new Set(), pred: 0, recv: 0, short: 0, fine: 0, fill: 0 };
+    SD.forEach(function (r) {
+      if (!inP(r.d, p)) return;
+      a.arrive.add(r.shop); if (r.short > 0) a.shortShops.add(r.shop);
+      a.pred += r.pred; a.recv += r.recv; a.short += r.short; a.fine += r.fine; a.fill += r.fill;
+    });
+    return a;
+  }
+
+  // ---------- KPI ----------
+  function delta(cur, prev, isMoney) {
+    if (prev == null) return '';
+    var diff = cur - prev;
+    if (Math.abs(diff) < 0.005) return '较上期持平';
+    var cls = diff > 0 ? 'up' : 'down';
+    var v = isMoney ? money(Math.abs(diff)) : qty(Math.abs(diff));
+    return '较上期 <span class="' + cls + '">' + (diff > 0 ? '+' : '−') + v + '</span>';
+  }
+  function renderKpis() {
+    var p = periodOf(st.end, st.range), pp = prevPeriod(p, st.range);
+    var a = agg(p), b = pp[0] >= MIND ? agg(pp) : null;
+    var rate = a.pred ? a.short / a.pred * 100 : 0;
+    var bRate = b && b.pred ? b.short / b.pred * 100 : null;
+    var html = [
+      ['缺货商家数', a.shortShops.size + '<small>/ ' + a.arrive.size + ' 家到货</small>', b ? delta(a.shortShops.size, b.shortShops.size) : '', false],
+      ['缺货件数', qty(a.short), b ? delta(a.short, b.short) : '', false],
+      ['罚款金额（估算）', money(a.fine), b ? delta(a.fine, b.fine, true) : '', a.fine > 0],
+      ['缺货率', rate.toFixed(2) + '%', bRate != null ? (Math.abs(rate - bRate) < 0.005 ? '较上期持平' : '较上期 <span class="' + (rate > bRate ? 'up' : 'down') + '">' + (rate > bRate ? '+' : '−') + Math.abs(rate - bRate).toFixed(2) + ' 个百分点</span>') : '', false],
+      ['应收件数', qty(a.pred), '实收 ' + qty(a.recv), false],
+      ['平台补缺件数', qty(a.fill), '', false]
+    ].map(function (k) {
+      return '<div class="kpi' + (k[3] ? ' hl' : '') + '"><div class="k">' + k[0] + '</div><div class="v">' + k[1] + '</div><div class="d">' + (k[2] || '&nbsp;') + '</div></div>';
+    }).join('');
+    document.getElementById('kpis').innerHTML = html;
+    document.getElementById('period').textContent = p[0] === p[1] ? '' : p[0] + ' 至 ' + p[1];
+  }
+
+  // ---------- 趋势图（单序列柱状，统计周期内的柱子深色） ----------
+  var METRIC = { short: ['每日缺货件数', '件'], shops: ['每日缺货商家数', '家'], fine: ['每日罚款金额（估算）', 'S$'] };
+  function dayVals() {
+    var m = {};
+    SD.forEach(function (r) {
+      var x = m[r.d] || (m[r.d] = { short: 0, shops: 0, fine: 0, arrive: 0 });
+      x.short += r.short; x.fine += r.fine; x.arrive++; if (r.short > 0) x.shops++;
+    });
+    return m;
+  }
+  var DV = dayVals();
+  function renderChart() {
+    var p = periodOf(st.end, st.range);
+    var n = Math.max(30, st.range === 'm' ? 31 : +st.range);
+    var start = addDays(st.end, 1 - n); if (start < MIND) start = MIND;
+    var days = []; for (var d = start; d <= st.end; d = addDays(d, 1)) days.push(d);
+    var vals = days.map(function (d) { return DV[d] ? DV[d][st.metric] : 0; });
+    var max = Math.max.apply(null, vals.concat([1]));
+    var ticks = 4, raw = max / ticks, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var tstep = [1, 2, 2.5, 5, 10].map(function (k) { return k * mag; }).find(function (k) { return k >= raw; });
+    if (tstep < 1) tstep = 1;
+    var nice = tstep * ticks;
+    var box = document.getElementById('chart'), svg = box.querySelector('svg'), tip = box.querySelector('.tip');
+    var W = box.clientWidth, H = 200, L = 36, R = 6, T = 10, B = 22;
+    var iw = W - L - R, ih = H - T - B, bw = iw / days.length, gap = Math.min(2, bw * 0.2);
+    var y = function (v) { return T + ih - v / nice * ih; };
+    var s = '';
+    for (var i = 0; i <= ticks; i++) {
+      var v = nice / ticks * i, yy = y(v);
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--grid)"/>';
+      s += '<text class="axis" x="' + (L - 6) + '" y="' + (yy + 3) + '" text-anchor="end">' + (st.metric === 'fine' ? fmt(v) : (v % 1 ? v.toFixed(1) : v)) + '</text>';
+    }
+    var every = Math.ceil(days.length / (W < 500 ? 6 : 10));
+    days.forEach(function (d, i) {
+      var v = vals[i], x = L + i * bw + gap / 2, w = Math.max(bw - gap, 1), h = Math.max(ih - (y(v) - T), v > 0 ? 2 : 0);
+      var on = inP(d, p);
+      if (h > 0) {
+        var r = Math.min(4, w / 2, h);
+        var yt = T + ih - h;
+        s += '<path d="M' + x + ',' + (T + ih) + 'V' + (yt + r) + 'Q' + x + ',' + yt + ' ' + (x + r) + ',' + yt + 'H' + (x + w - r) + 'Q' + (x + w) + ',' + yt + ' ' + (x + w) + ',' + (yt + r) + 'V' + (T + ih) + 'Z" fill="' + (on ? 'var(--bar)' : 'var(--bar-dim)') + '"/>';
+      }
+      if (i % every === 0 || i === days.length - 1) {
+        if (i === days.length - 1 && i % every !== 0 && (i % every) < every / 2) {} else
+        s += '<text class="axis" x="' + (i === days.length - 1 ? x + w : x + w / 2) + '" y="' + (H - 6) + '" text-anchor="' + (i === days.length - 1 ? 'end' : 'middle') + '">' + md(d) + '</text>';
+      }
+      s += '<rect data-i="' + i + '" x="' + (L + i * bw) + '" y="' + T + '" width="' + bw + '" height="' + ih + '" fill="transparent"/>';
+    });
+    s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + (T + ih) + '" y2="' + (T + ih) + '" stroke="var(--line)"/>';
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = s;
+    document.getElementById('trend-title').textContent = METRIC[st.metric][0];
+    function show(e) {
+      var t = e.target; if (!t.dataset || t.dataset.i == null) { tip.style.display = 'none'; return; }
+      var i = +t.dataset.i, d = days[i], x = DV[d] || { short: 0, shops: 0, fine: 0, arrive: 0 };
+      tip.innerHTML = d + '<br>缺货 ' + qty(x.short) + ' 件 · ' + x.shops + '/' + x.arrive + ' 家<br>罚款 ' + money(x.fine);
+      tip.style.left = Math.min(Math.max(L + (i + 0.5) * bw, 70), W - 70) + 'px';
+      tip.style.top = (y(vals[i]) - 6 < 50 ? 50 : y(vals[i]) - 6) + 'px';
+      tip.style.display = 'block';
+    }
+    svg.onmousemove = show; svg.onmouseleave = function () { tip.style.display = 'none'; };
+    svg.onclick = function (e) { var t = e.target; if (t.dataset && t.dataset.i != null) { setEnd(days[+t.dataset.i]); } };
+  }
+
+  // ---------- 表格 ----------
+  var COLS = {
+    shop: [
+      ['name', '商家', 'l'], ['bd', '招商负责人', 'l'], ['short', '缺货件数'], ['fine', '罚款（估）'], ['rate', '缺货率'],
+      ['days', '缺货天数'], ['skus', '缺货SKU数'], ['pred', '应收件数'], ['fill', '平台补缺件数']
+    ],
+    sku: [
+      ['name', '商品名称', 'l'], ['d', '到货日期', 'l'], ['shopName', '商家', 'l'], ['sku', 'SKU编码', 'l'], ['unit', '单位', 'l'],
+      ['pred', '应收'], ['recv', '实收'], ['short', '缺货件数'], ['fine', '罚款（估）'], ['orders', '涉及订单数'],
+      ['unscanned', '仓库未扫码', 'l'], ['fill', '平台补缺'], ['receipt', '收货单号', 'l']
+    ]
+  };
+  function match(row) {
+    if (st.bd && row.bd !== st.bd) return false;
+    if (!st.q) return true;
+    var q = st.q.toLowerCase();
+    return [row.name, row.shopName, row.sku, row.shop].some(function (v) { return v && String(v).toLowerCase().indexOf(q) >= 0; });
+  }
+  function shopRows(p) {
+    var m = {};
+    SD.forEach(function (r) {
+      if (!inP(r.d, p)) return;
+      var x = m[r.shop] || (m[r.shop] = { shop: r.shop, name: shopName(r.shop), bd: shopBd(r.shop), short: 0, fine: 0, pred: 0, fill: 0, days: 0, skus: 0 });
+      x.short += r.short; x.fine += r.fine; x.pred += r.pred; x.fill += r.fill; x.skus += r.sku; if (r.short > 0) x.days++;
+    });
+    return Object.keys(m).map(function (k) { var x = m[k]; x.rate = x.pred ? x.short / x.pred : 0; return x; });
+  }
+  function skuRows(p) {
+    return SK.filter(function (r) { return inP(r.d, p); }).map(function (r) {
+      return Object.assign({}, r, { shopName: shopName(r.shop), bd: shopBd(r.shop) });
+    });
+  }
+  function cell(k, r) {
+    switch (k) {
+      case 'short': return '<td class="' + (r.short > 0 ? 'warn' : '') + '">' + qty(r.short) + '</td>';
+      case 'fine': return '<td>' + money(r.fine) + '</td>';
+      case 'rate': return '<td>' + (r.rate * 100).toFixed(2) + '%</td>';
+      case 'pred': case 'recv': case 'fill': return '<td>' + qty(r[k]) + '</td>';
+      case 'unscanned': return '<td class="l">' + (r.unscanned ? '<span class="tag">未扫码</span>' : '') + '</td>';
+      case 'days': case 'skus': case 'orders': return '<td>' + r[k] + '</td>';
+      default: return '<td class="l" title="' + esc(r[k]) + '">' + esc(r[k] || '—') + '</td>';
+    }
+  }
+  function renderTable() {
+    var p = periodOf(st.end, st.range);
+    var rows = (st.tab === 'shop' ? shopRows(p).filter(function (r) { return r.short > 0 || st.q; }) : skuRows(p)).filter(match);
+    var so = st.sort[st.tab];
+    rows.sort(function (a, b) {
+      var x = a[so[0]], y = b[so[0]];
+      if (x === y) return (b.short - a.short);
+      return (x > y ? 1 : -1) * so[1];
+    });
+    var cols = COLS[st.tab];
+    var h = '<thead><tr>' + cols.map(function (c) {
+      return '<th class="sortable ' + (c[2] || '') + (so[0] === c[0] ? ' sorted' : '') + '" data-k="' + c[0] + '">' + c[1] + (so[0] === c[0] ? (so[1] < 0 ? ' ↓' : ' ↑') : '') + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+    var shown = rows.slice(0, st.limit);
+    if (!rows.length) h += '<tr><td colspan="' + cols.length + '" class="empty" style="position:static">' + (st.tab === 'shop' ? '这段时间没有商家缺货' : '这段时间没有缺货明细') + '</td></tr>';
+    shown.forEach(function (r) { h += '<tr data-shop="' + esc(r.shop) + '">' + cols.map(function (c) { return cell(c[0], r); }).join('') + '</tr>'; });
+    h += '</tbody>';
+    var t = document.getElementById('tbl'); t.innerHTML = h;
+    var more = document.getElementById('more'); more.hidden = rows.length <= st.limit; more.textContent = '显示更多（还有 ' + (rows.length - st.limit) + ' 条）';
+    t.querySelectorAll('th.sortable').forEach(function (th) {
+      th.onclick = function () { var k = th.dataset.k; var so = st.sort[st.tab]; st.sort[st.tab] = [k, so[0] === k ? -so[1] : (COLS[st.tab].find(function (c) { return c[0] === k; })[2] ? 1 : -1)]; renderTable(); };
+    });
+    t.querySelectorAll('tbody tr[data-shop]').forEach(function (tr) { tr.onclick = function () { openShop(tr.dataset.shop); }; });
+  }
+
+  // ---------- 商家详情（右侧抽屉 / 手机底部弹层） ----------
+  function openShop(code) {
+    var p = periodOf(st.end, st.range);
+    var days = SD.filter(function (r) { return r.shop === code && inP(r.d, p); }).sort(function (a, b) { return a.d < b.d ? 1 : -1; });
+    var skus = SK.filter(function (r) { return r.shop === code && inP(r.d, p); }).sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : b.short - a.short; });
+    var t = days.reduce(function (a, r) { a.pred += r.pred; a.short += r.short; a.fine += r.fine; a.fill += r.fill; if (r.short > 0) a.sd++; return a; }, { pred: 0, short: 0, fine: 0, fill: 0, sd: 0 });
+    document.getElementById('s-title').textContent = shopName(code);
+    document.getElementById('s-sub').textContent = (shopBd(code) ? '招商负责人 ' + shopBd(code) + '　' : '') + (p[0] === p[1] ? p[0] : p[0] + ' 至 ' + p[1]);
+    var h = '<div class="kv">' +
+      '<div><div class="k">缺货件数</div><div class="v">' + qty(t.short) + '</div></div>' +
+      '<div><div class="k">罚款（估算）</div><div class="v">' + money(t.fine) + '</div></div>' +
+      '<div><div class="k">缺货率</div><div class="v">' + pct(t.short, t.pred) + '</div></div>' +
+      '<div><div class="k">到货天数</div><div class="v">' + days.length + '</div></div>' +
+      '<div><div class="k">缺货天数</div><div class="v">' + t.sd + '</div></div>' +
+      '<div><div class="k">平台补缺件数</div><div class="v">' + qty(t.fill) + '</div></div></div>';
+    h += '<h4>缺货 SKU</h4><div class="tbl-wrap"><table><thead><tr><th class="l">商品名称</th><th class="l">到货日期</th><th class="l">SKU编码</th><th class="l">单位</th><th>应收</th><th>实收</th><th>缺货件数</th><th>罚款（估）</th><th class="l">仓库未扫码</th><th>平台补缺</th><th class="l">收货单号</th></tr></thead><tbody>';
+    if (!skus.length) h += '<tr><td colspan="11" class="empty" style="position:static">这段时间没有缺货</td></tr>';
+    skus.forEach(function (r) {
+      h += '<tr><td class="l" title="' + esc(r.name) + '">' + esc(r.name || '—') + '</td><td class="l">' + r.d + '</td><td class="l">' + r.sku + '</td><td class="l">' + esc(r.unit) + '</td><td>' + qty(r.pred) + '</td><td>' + qty(r.recv) + '</td><td class="warn">' + qty(r.short) + '</td><td>' + money(r.fine) + '</td><td class="l">' + (r.unscanned ? '<span class="tag">未扫码</span>' : '') + '</td><td>' + qty(r.fill) + '</td><td class="l">' + r.receipt + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    h += '<h4>每日到货</h4><div class="tbl-wrap"><table><thead><tr><th class="l">到货日期</th><th>应收件数</th><th>实收件数</th><th>缺货件数</th><th>缺货SKU数</th><th>罚款（估）</th><th>平台补缺件数</th></tr></thead><tbody>';
+    days.forEach(function (r) {
+      h += '<tr><td class="l">' + r.d + '</td><td>' + qty(r.pred) + '</td><td>' + qty(r.recv) + '</td><td class="' + (r.short > 0 ? 'warn' : '') + '">' + qty(r.short) + '</td><td>' + r.sku + '</td><td>' + money(r.fine) + '</td><td>' + qty(r.fill) + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+    document.getElementById('s-body').innerHTML = h;
+    document.getElementById('sheet').classList.add('on'); document.getElementById('mask').classList.add('on');
+  }
+  function closeSheet() { document.getElementById('sheet').classList.remove('on'); document.getElementById('mask').classList.remove('on'); }
+  document.getElementById('s-close').onclick = closeSheet;
+  document.getElementById('mask').onclick = closeSheet;
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+
+  // ---------- 控件 ----------
+  var dateEl = document.getElementById('date');
+  dateEl.min = MIND; dateEl.max = MAXD;
+  function setEnd(d) { if (d < MIND) d = MIND; if (d > MAXD) d = MAXD; st.end = d; st.limit = 50; renderAll(); }
+  dateEl.onchange = function () { if (dateEl.value) setEnd(dateEl.value); };
+  document.getElementById('prev').onclick = function () { setEnd(addDays(st.end, -1)); };
+  document.getElementById('next').onclick = function () { setEnd(addDays(st.end, 1)); };
+  function segs(id, key, cb) {
+    var el = document.getElementById(id);
+    el.querySelectorAll('button').forEach(function (b) {
+      b.onclick = function () { el.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); cb(b.dataset[key]); };
+    });
+  }
+  segs('range', 'r', function (v) { st.range = v; st.limit = 50; renderAll(); });
+  segs('metric', 'm', function (v) { st.metric = v; renderChart(); });
+  segs('tabs', 't', function (v) { st.tab = v; st.limit = 50; renderTable(); });
+  // tabs 用的是 .on 下划线样式，复用 segs 逻辑即可
+  document.getElementById('q').oninput = function (e) { st.q = e.target.value.trim(); st.limit = 50; renderTable(); };
+  var bds = Array.from(new Set(Object.keys(SHOPS).map(shopBd).filter(Boolean))).sort();
+  document.getElementById('bd').innerHTML += bds.map(function (b) { return '<option>' + esc(b) + '</option>'; }).join('');
+  document.getElementById('bd').onchange = function (e) { st.bd = e.target.value; st.limit = 50; renderTable(); };
+  document.getElementById('more').onclick = function () { st.limit += 100; renderTable(); };
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(renderChart, 120); });
+
+  function renderAll() {
+    dateEl.value = st.end;
+    document.getElementById('prev').disabled = st.end <= MIND;
+    document.getElementById('next').disabled = st.end >= MAXD;
+    renderKpis(); renderChart(); renderTable();
+  }
+  document.getElementById('gen').textContent = '数据更新于 ' + D.generated_at + '（新加坡时间）· 数据起始 ' + MIND;
+  renderAll();
+})();
+</script>
+</body>
+</html>
