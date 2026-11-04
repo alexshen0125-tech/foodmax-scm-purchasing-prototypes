@@ -322,7 +322,7 @@ function openRecon(){
         ${rc2Row({k:'rpl',op:'−',name:'平台补采',amt:T(dRpl),neg:true,sub:'到仓少货由自营补足',tag:'单独开票',tagCls:'inv'})}
         ${rc2Row({k:'sup',op:'−',name:'耗材订单',amt:T(dSup),neg:true,sub:'送货单「已交付」当日计费',tag:'单独开票',tagCls:'inv'})}
         ${T(dPick)?rc2Row({k:'sep',op:'−',name:'取货运费',amt:T(dPick),neg:true,sub:'按周出账，推送当日计入（未税 + 9% GST）',tag:'物流服务费发票',tagCls:'inv'}):''}
-        ${T(dComp)?rc2Row({k:'sep',op:'＋',name:'退货赔付',amt:T(dComp),sub:'退货申诉核定成立，平台补给你',tag:'随结算单开票',tagCls:'inv'}):''}
+        ${T(dComp)?rc2Row({k:'sep',op:'＋',name:'退货赔付',amt:T(dComp),sub:'退货申诉核定成立，平台补给你'}):''}
         ${T(dAdj)?rc2Row({k:'adj',op:T(dAdj)>0?'＋':'−',name:'业务调整',amt:()=>Math.abs(T(dAdj)),neg:T(dAdj)<0,sub:'平台补款 / 扣款，线下确认后创建',tag:'不开票',tagCls:'inv'}):''}
         ${rc2Row({k:'fine',op:'−',name:'缺货罚款',amt:null,sub:'缺口件数 × S$40/件',tag:'不开发票',tagCls:'noinv'})}
         ${rc2Row({k:'net',op:'=',name:'预计实付（本期到账）',amt:net,tot:true,sub:`${S(T(dSettle))} − ${S(sep)} = ${S(net)}`})}
@@ -483,7 +483,7 @@ function openReconDetail(no,tab){
   const compRows=dCompL(d).length?dCompL(d).map(r=>`<div class="rc-row">
       <div class="t">${r.compNo} <span style="font-weight:400;color:var(--sub);font-size:12px">${r.src}</span></div>
       <div class="s">${r.retNo} · ${r.goods} × ${r.qty} · 核定 ${r.at}</div>
-      <div class="kvs"><div><div class="k">结算单</div><div class="v">${r.stNo||'待进结算单'}</div></div><div><div class="k">开票</div><div class="v">随结算单开票</div></div>
+      <div class="kvs"><div><div class="k">结算单</div><div class="v">${r.stNo||'待进结算单'}</div></div>
         <div class="em"><div class="k">赔付金额</div><div class="v">+${S(r.amt)}</div></div></div></div>`).join('')
     :`<div class="rc-empty">当天没有计入的退货赔付<br><span>退货申诉核定成立后，核定当日计入对账单。</span></div>`;
   const supRows=sup.length?sup.map(s=>`<div class="rc-row">

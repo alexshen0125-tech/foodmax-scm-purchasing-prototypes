@@ -5,7 +5,7 @@
    - 结算（2026-11-04 沈亮定）：运营在店铺运营平台「退货赔付」页**手动推送**到清结算，推送时间 = 归期，
      进该店铺推送后下一张生成的结算单（结算单 comp[]）；未推送 / 已推送未进结算单 = 商家端「待进结算单」
      · 运营平台：推送状态 待推送 / 已推送；勾选待推送赔付单「推送到结算单」（按钮常驻，未勾选置灰）或行内「推送」；二次确认
-   - 平台化（不走货权转移）后：是否由平台代开商家 → Foodmax 的发票待 Simon 确认，本页届时再加代开发票下载
+   - 不涉及开票（2026-11-04 沈亮定）
    - 运营平台只读 + 「仓库退回申诉入口」开关（DB.whrAppealOn，默认关：商家自己送多的不赔） */
 (function(){
 
@@ -55,15 +55,14 @@ function origHtml(r){
   return ok.map(x=>{const o=origOf(r,x),line=(l,v,c)=>`<tr${c?` style="${c}"`:''}><td>${l}</td><td style="text-align:right">${v}</td></tr>`;
     return `<div style="font-weight:600;font-size:13px;margin:4px 0 6px">${x.name} <span style="font-weight:400;color:var(--ts);font-size:12px">正向订单 <span class="mono">${r.order||'—'}</span></span></div>
     <table class="subtbl" style="margin-bottom:10px;width:100%"><tbody>
-      ${line('下单数量',o.orderQty)}
+      ${line('结算数量',o.orderQty)}
       ${line('客户实付',money(o.paid))}
       ${line('＋ 平台补贴',money(o.platSub))}
       ${line('− 服务佣金',money(o.svc))}
       ${line('− 物流佣金',money(o.logi))}
       ${line('− 通道费',money(o.chan))}
       ${line('＝ 原订单应结金额',`<b>${money(o.settle)}</b>`,'background:var(--gl)')}
-      ${line('÷ 下单数量 ＝ 结算单价',money(x.price))}
-      ${line('× 核定数量 '+x.ok+' ＝ 赔付金额',`<b style="color:var(--g)">${money(r2(x.ok*x.price))}</b>`,'background:var(--gl)')}
+      ${line('× 核定数量 '+x.ok+' ÷ 结算数量 ＝ 赔付金额',`<b style="color:var(--g)">${money(r2(x.ok*x.price))}</b>`,'background:var(--gl)')}
     </tbody></table>`;}).join('')+`<div style="font-size:11.5px;color:var(--ts)">客户实付已扣除店铺自己的优惠；佣金按原订单结算时的费率</div>`;
 }
 window.rcpOrig=function(no,ev){
@@ -175,7 +174,7 @@ window.rcpDetail=function(no,ops){
     ${sec(r.src=='仓库退回'?'赔付金额依据':'原订单应结明细')}
     ${origHtml(r)}
     ${sec('结算')}
-    <div class="kv">${kv('结算单号',r.bill?`<span class="mono">${r.bill.no}</span>`:'')}${kv('结算区间',r.bill?r.bill.range:'')}${kv('结算状态',stTag(settleSt(r),SETTLE_TONE))}${kv('开票',r.bill?`随结算单 <span class="mono">${r.bill.no}</span> 一并开票`:'进结算单后随结算单开票')}</div>
+    <div class="kv">${kv('结算单号',r.bill?`<span class="mono">${r.bill.no}</span>`:'')}${kv('结算区间',r.bill?r.bill.range:'')}${kv('结算状态',stTag(settleSt(r),SETTLE_TONE))}</div>
   </div>
   <div class="drawer-ft">${ops?(ra.pushedAt?'':`<button class="btn btn-o" onclick="closeDrawer();rcpPush(['${r.compNo}'])">推送到结算单</button>`):`<button class="btn btn-o" onclick="${r.open}">查看${r.src=='仓库退回'?'退回记录':'退货单'}</button>${r.bill?`<button class="btn btn-o" onclick="closeDrawer();act_billDetail('${r.bill===DB.bill?'':r.bill.period}')">查看结算单</button>`:''}`}<button class="btn btn-p" onclick="closeDrawer()">关闭</button></div>`);
 };

@@ -2,7 +2,7 @@
    - 数据：退货申诉经客服核定成立 / 部分成立且赔付 > 0（deliver.js FM_MOD.retCompSrc），一笔申诉 = 一张赔付单（RC-…）
    - 结算（2026-11-04 沈亮定）：运营在店铺运营平台手动推送到清结算，推送时间 = 归期，进推送后下一张结算单
      （settle.js FM_MOD.settleBills 的 comp[] 含该赔付单号即归该单）；未推送 / 已推送未进单，商家端都显示「待进结算单」
-   - 平台化后是否平台代开发票待 Simon 确认，届时再加代开发票下载
+   - 不涉及开票（2026-11-04 沈亮定）
    样式复用 replen.js 注入的 .rp-* 类 */
 (function(){
 const {pushPage,popPage,svg,skel}=window.FM;
@@ -76,7 +76,7 @@ function openDetail(r){
     <div class="rp-card2"><div class="rp-ct">${r.src==='仓库退回'?'赔付金额依据':'原订单应结明细'}</div>${origRows(r)}</div>
     <div class="rp-card2"><div class="rp-ct">结算</div>
       ${rowKV('结算单号',r.bill?`<span style="font-family:monospace">${r.bill.no}</span>`:'')}${rowKV('结算区间',r.bill?r.bill.range:'')}${rowKV('结算状态',settleSt(r))}
-      ${rowKV('开票',r.bill?'随结算单一并开票':'进结算单后随结算单开票')}</div>
+</div>
     <div style="height:8px"></div>`,
     footer:`<div style="display:flex;gap:10px;width:100%"><button class="btn" style="flex:1" id="rc-src">查看${r.src==='仓库退回'?'退回记录':'退货单'}</button>${r.bill?`<button class="btn primary" style="flex:1" id="rc-bill">查看结算单</button>`:''}</div>`,
     mount:(p)=>{p.querySelector('#rc-src').onclick=r.open;const b=p.querySelector('#rc-bill');if(b)b.onclick=()=>{if(window.FM_MOD.settle)window.FM_MOD.settle();};}});
