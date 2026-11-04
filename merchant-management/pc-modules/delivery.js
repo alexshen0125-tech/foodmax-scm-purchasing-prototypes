@@ -420,7 +420,8 @@
   function whrAdapter(no){
     const g=whrGroups().find(x=>x.no==no); if(!g)return null;
     const pc=g.list.filter(x=>x.status=='已取回').length,pend=g.list.length-pc;
-    return {_whr:true,_title:no,_priceLabel:'商品售价',_pendingCount:pend,_stLabel:!pc?'待取回':(pend?'部分取回':'已取回'),id:no,type:'退货退款',returnStatus:pc?'已提货':'待提货',amt:0,
+    const lastPick=g.list.map(x=>x.pickedAt||'').sort().pop()||'';
+    return {_whr:true,_title:no,_lastPick:lastPick,_priceLabel:'商品售价',_pendingCount:pend,_stLabel:!pc?'待取回':(pend?'部分取回':'已取回'),id:no,type:'退货退款',returnStatus:pc?'已提货':'待提货',amt:0,
       retAppeal:DB.whrAppeals[no]||null,
       retItems:g.list.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price,_picked:r.status=='已取回'})),
       _save:ra=>{DB.whrAppeals[no]=ra;}};

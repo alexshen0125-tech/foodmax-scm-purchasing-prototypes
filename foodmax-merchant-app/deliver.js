@@ -746,6 +746,8 @@ const RETURN=[
   items:[{name:'上海青',sku:'SKU8806',spec:'1kg/件',unit:'件',retQty:4,pickQty:2,price:5.80}]},
  {no:'TKD2026062708201337',orderNo:'#SG20260627337',ware:'大巴窑DC',st:'已提货',order:relTs(-40),gen:relTs(-40),code:'330218',arrive:relTs(-26),pickup:relTs(-5),
   items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},
+ {no:'TKD2026062608200030',orderNo:'#SG20260626030',ware:'大巴窑DC',st:'已提货',order:relTs(-130),gen:relTs(-130),code:'330219',arrive:relTs(-120),pickup:relTs(-100),
+  items:[{name:'生菜',sku:'SKU8875',spec:'1kg/包',unit:'包',retQty:6,pickQty:6,price:5.00}]},   // 11-04：已提货超过申诉期限演示
  {no:'TKD2026062508198820',orderNo:'#SG20260625820',ware:'裕廊DC',st:'已提货',order:relTs(-50),gen:relTs(-50),code:'118904',arrive:relTs(-30),pickup:relTs(-3),
   items:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}]},
  {no:'TKD2026061808190012',orderNo:'#SG20260618012',ware:'淡滨尼DC',st:'已提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-17 10:20',
@@ -777,10 +779,15 @@ const msTs=ms=>relTs((ms-Date.now())/3600000);
 const tsMs=v=>{const t=v?Date.parse(String(v).replace(' ','T')):NaN;return isNaN(t)?0:t;};
 const fmtS=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const r2=n=>Math.round((+n||0)*100)/100;
+// 已提货申诉期限 N 天（与 PC DB.pickAppealDays 同，默认 3；运营平台配置）
+const raDays=()=>window.FM.DB.pickAppealDays||3;
+function raDeadline(g){const at=g._whr?(g._pendingCount?'':g._lastPick):(g.st==='已提货'?g.pickup:'');return at?tsMs(at)+raDays()*86400000:0;}
+function raExpired(g){const d=raDeadline(g);return !!d&&Date.now()>d;}
 function raWin(g){
   if(g.appeal)return null;
   if(g._whr&&!window.FM.DB.whrAppealOn)return null;   // 仓库退回申诉入口默认关闭
   if(g.st==='待仓库入库')return {kind:'noarrive'};
+  if(raExpired(g))return null;   // 已提货超过 N 天不能申诉
   if(['待提货','已提货','逾期未提'].includes(g.st))return {kind:'goods'};
   return null;   // 已取消等：不开放
 }
@@ -789,6 +796,7 @@ function raTag(st){const c=RA_TONE[st]||RA_TONE['不成立'];return `<span style
 // 卡片/详情上的申诉状态一行
 function raLine(g){
   if(g.appeal)return raTag(g.appeal.status);
+  if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return `<span style="color:var(--sub)">已过申诉期</span>`;
   return raWin(g)?`<span style="color:var(--emerald-2)">可申诉</span>`:'';
 }
 function pickVal(g,x){
@@ -833,10 +841,11 @@ function raDetail(g,sec,box,kv){
   if(!g)return '';
   const a=g.appeal;
   if(!a){
+    if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内可以申诉，截止时间 ${msTs(raDeadline(g))}，已过申诉期，不能再申诉。`);
     const w=raWin(g);if(!w)return '';
     const once=g._whr?'每条退回记录只能申诉 1 次。':'每张退货单只能申诉 1 次。';
     const msg=w.kind==='noarrive'?`货还没到仓。如一直没到仓或有其他问题，可以申诉「未到仓」，不限时间。${once}`
-      :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`
+      :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}）。${once}`
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec('退货申诉')+raTip(msg);
   }
@@ -958,7 +967,7 @@ window.FM.DB.whrAppeals = window.FM.DB.whrAppeals || {
 function whrAdapter(no){
   const g=whrGroups().find(x=>x.no===no); if(!g)return null;
   const pc=g.list.filter(x=>x.status==='已取回').length;
-  return {_whr:true,_priceLabel:'商品售价',_pendingCount:g.list.length-pc,no,st:pc?'已提货':'待提货',appeal:window.FM.DB.whrAppeals[no]||null,
+  return {_whr:true,_priceLabel:'商品售价',_pendingCount:g.list.length-pc,_lastPick:g.list.map(x=>x.pickedAt||'').sort().pop()||'',no,st:pc?'已提货':'待提货',appeal:window.FM.DB.whrAppeals[no]||null,
     items:g.list.map(r=>({name:r.name,sku:r.skuCode,spec:r.spec,unit:r.unit,retQty:r.qty,pickQty:r.pickedQty,price:r.price,_picked:r.status==='已取回'})),
     _save:ra=>{window.FM.DB.whrAppeals[no]=ra;}};
 }

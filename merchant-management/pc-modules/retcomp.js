@@ -80,7 +80,7 @@ window.rcpOrig=function(no,ev){
 document.addEventListener('keydown',e=>{if(e.key=='Escape'){const el=document.getElementById('rcp-pop');if(el)el.remove();}});
 
 PAGES['m-ret-comp']=()=>listContent(false);
-PAGES['p-ret-comp']=()=>switchCard()+listContent(true);
+PAGES['p-ret-comp']=()=>switchCard()+daysCard()+listContent(true);
 
 /* 运营平台：仓库退回申诉入口开关 */
 function switchCard(){
@@ -91,6 +91,26 @@ function switchCard(){
     <button class="btn ${on?'btn-o':'btn-p'} btn-sm" onclick="rcpSwitchAsk()">${on?'关闭入口':'开启入口'}</button>
   </div></div>`;
 }
+/* 运营平台：已提货申诉期限（N 天，1~30，默认 3） */
+function daysCard(){
+  return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:16px;padding:14px 16px">
+    <div style="flex:1"><div style="font-weight:600">已提货申诉期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货提货后、仓库退回全部取回后，超过这个天数不能再申诉；货还在仓里的不受限。只影响还没提交的申诉。</div></div>
+    <b style="font-size:15px">${DB.pickAppealDays} 天</b>
+    <button class="btn btn-o btn-sm" onclick="rcpDaysEdit()">修改</button>
+  </div></div>`;
+}
+window.rcpDaysEdit=function(){
+  modal(`<div class="mc-hd"><h3>已提货申诉期限</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <div style="font-size:12.5px;color:var(--ts);margin-bottom:6px">提货后可申诉天数（1~30 的整数）</div>
+    <div class="row" style="gap:8px;align-items:center"><input id="rcp-days" type="number" min="1" max="30" step="1" value="${DB.pickAppealDays}" style="width:120px"><span>天</span></div>
+    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>保存后立即生效，只影响还没提交的申诉；已提交的照常核定。</div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="rcpDaysSave()">保存</button></div>`);
+};
+window.rcpDaysSave=function(){
+  const v=+document.getElementById('rcp-days').value;
+  if(!Number.isInteger(v)||v<1||v>30){toast('请输入 1~30 的整数','err');return;}
+  DB.pickAppealDays=v;closeModal();render();toast(`已提货申诉期限已改为 ${v} 天`,'ok');
+};
 window.rcpSwitchAsk=function(){const on=!!DB.whrAppealOn;
   askConfirm(on?'关闭后，商家端仓库退回不再显示申诉按钮，已提交的申诉照常核定。确认关闭？':'开启后，商家可对仓库退回的商品发起申诉（待取回、已取回都可以）。确认开启？',()=>{DB.whrAppealOn=!on;render();toast(on?'已关闭仓库退回申诉入口':'已开启仓库退回申诉入口','ok');});};
 
