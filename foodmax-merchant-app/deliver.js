@@ -322,6 +322,7 @@ function ckOpenA(d,forceEdit,mode,autoScan){
         :mode==='scan'?`<div class="ck-scanbtn" id="ck-scan">${svg('scan')||''}<span>扫码</span><em>对着货上的标签逐件扫，扫一张记 1 件</em></div>`
         :`<div class="ck-tip">已按实际打印的标签数带出，对照车上实际装的货，数量对的不用动，只改装少的。</div>`}
       <div class="ck-tabs">${[['ab','异常SKU',abN],['ok','正常SKU',okN]].map(x=>`<div class="t ${x[0]===tab?'on':''}" data-t="${x[0]}">${x[1]} <em>${x[2]}</em></div>`).join('')}</div>
+      <div class="ck-abhint" style="${tab==='ab'?'':'display:none;'}margin:0 2px 8px;font-size:12px;color:var(--red)">注：异常SKU标识应送数量和实际打印数量不符</div>
       <div class="ck-list">${ls.map(rowHtml).join('')}<div class="ck-empty" style="${(tab==='ab'?abN:okN)?'display:none;':''}padding:28px 0;text-align:center;font-size:12.5px;color:var(--sub)">暂无</div></div>
       ${ro?'':`<div style="font-size:11.5px;color:var(--sub);line-height:1.65;margin:10px 2px 16px">少送的照现在的少货规则处理，罚款按仓库实际收到的数算。${mode==='scan'?'标签破损扫不出，点该行「+」补上。':''}</div>`}
     </div>`,
@@ -343,7 +344,8 @@ function ckOpenA(d,forceEdit,mode,autoScan){
       pg.querySelectorAll('.ck-tabs .t').forEach(b=>b.onclick=()=>{tab=b.dataset.t;
         pg.querySelectorAll('.ck-tabs .t').forEach(x=>x.classList.toggle('on',x===b));
         ls.forEach((l,i)=>{const r=pg.querySelector(`.ck-row[data-i="${i}"]`);if(r)r.style.display=(isAb(l)?'ab':'ok')===tab?'':'none';});
-        pg.querySelector('.ck-empty').style.display=(tab==='ab'?abN:okN)?'none':'';});
+        pg.querySelector('.ck-empty').style.display=(tab==='ab'?abN:okN)?'none':'';
+        pg.querySelector('.ck-abhint').style.display=tab==='ab'?'':'none';});
       pg.querySelectorAll('.ck-seg .sg').forEach(b=>b.onclick=()=>{const m=b.dataset.m;if(m===mode)return;
         const t=tot();const go=()=>{delete window.FM_CK_DRAFT[d.id];popPage();setTimeout(()=>ckOpenA(d,true,m),60);};
         if(mode==='scan'&&t.ck>0)confirmDialog({title:'切换为手动核货？',body:`已扫的 ${t.ck} 件不保留，手动核货按实际打印数预填。`,okText:'切换',onOk:go});
