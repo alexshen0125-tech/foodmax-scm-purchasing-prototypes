@@ -73,14 +73,16 @@
   .parties .addr{font-size:11.5px;color:var(--sub);line-height:1.5}
 
   table.items{width:100%;border-collapse:collapse;margin-top:4px;font-size:10.5px;table-layout:fixed;position:relative;z-index:1}
-  table.items col.c1{width:5%}table.items col.c2{width:34%}table.items col.c3{width:16%}
-  table.items col.c4{width:7%}table.items col.c5{width:18%}table.items col.c6{width:20%}
-  table.items thead th{background:var(--accent-soft);color:var(--accent);text-align:left;padding:7px 6px;font-size:10.5px;letter-spacing:.3px}
+  table.items col.c1{width:6%}table.items col.c2{width:29%}table.items col.c3{width:13%}
+  table.items col.c4{width:15%}table.items col.c5{width:7%}table.items col.c6{width:15%}table.items col.c7{width:15%}
+  table.items thead th{background:var(--accent-soft);color:var(--accent);text-align:left;padding:8px 7px;font-size:10.5px;letter-spacing:.3px;border:1px solid var(--line)}
+  table.items th.c,table.items td.c{text-align:center}
   table.items th.r,table.items td.r{text-align:right}
   table.items thead th small{font-weight:500}
-  table.items td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:break-word}
+  table.items td{padding:7px 7px;border:1px solid var(--line);vertical-align:top;overflow-wrap:break-word}
+  table.items td.b{font-weight:700}
   table.items td small{color:var(--sub)}
-  table.items tr.bcrs td{background:#E8F1FF;color:#1A56DB;font-weight:600}
+  table.items tr.bcrs td{background:transparent;color:inherit;font-weight:inherit}
   .neg{color:var(--red);font-weight:600}
 
   .totals{margin-top:12px;margin-left:auto;width:52%;font-size:12px;position:relative;z-index:1}
@@ -197,16 +199,16 @@
   </div>
 
   <table class="items">
-    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup>
     <thead><tr>
-      <th>#</th><th>Description</th><th>Specification</th>
-      <th class="r">Qty</th><th class="r">Unit Price<br><small>excl. GST</small></th><th class="r">Amount<br><small>excl. GST</small></th>
+      <th class="c">Line</th><th>Description</th><th class="c">Storage</th><th class="c">Specification</th>
+      <th class="r">Qty</th><th class="r">Unit Price<br><small>Excl. GST</small></th><th class="r">Amount<br><small>Excl. GST</small></th>
     </tr></thead>
     <tbody>
-      <tr><td>1</td><td>Live Boston Lobster</td><td>1 piece</td><td class="r">8</td><td class="r">$42.00</td><td class="r">$336.00</td></tr>
-      <tr><td>2</td><td>Organic Lettuce</td><td>1 head</td><td class="r">30</td><td class="r">$1.80</td><td class="r">$54.00</td></tr>
-      <tr><td>3</td><td>Coca-Cola 300ml × 24/case</td><td>1 case (24 cans)</td><td class="r">10</td><td class="r">$18.00</td><td class="r">$180.00</td></tr>
-      <tr class="bcrs"><td>4</td><td>BCRS Deposit <small>· not subject to GST</small></td><td>1 can</td><td class="r">240</td><td class="r">$0.10</td><td class="r">$24.00</td></tr>
+      <tr><td class="c">1</td><td>Live Boston Lobster</td><td class="c">Live</td><td class="c">1 piece</td><td class="r b">8</td><td class="r">$42.00</td><td class="r b">$336.00</td></tr>
+      <tr><td class="c">2</td><td>Organic Lettuce</td><td class="c">Refrigeration</td><td class="c">1 head</td><td class="r b">30</td><td class="r">$1.80</td><td class="r b">$54.00</td></tr>
+      <tr><td class="c">3</td><td>Coca-Cola 300ml × 24/case</td><td class="c">Room<br>temperature</td><td class="c">1 case (24 cans)</td><td class="r b">10</td><td class="r">$18.00</td><td class="r b">$180.00</td></tr>
+      <tr class="bcrs"><td class="c">4</td><td>BCRS Deposit (not subject to GST)</td><td class="c">N/A</td><td class="c">1 can</td><td class="r b">240</td><td class="r">$0.10</td><td class="r b">$24.00</td></tr>
     </tbody>
   </table>
 
@@ -284,13 +286,13 @@
   </div>
 
   <table class="items">
-    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup>
     <thead><tr>
-      <th>#</th><th>Description</th><th>Specification</th>
-      <th class="r">Qty</th><th class="r">Unit Price<br><small>excl. GST</small></th><th class="r">Amount<br><small>excl. GST</small></th>
+      <th class="c">Line</th><th>Description</th><th class="c">Storage</th><th class="c">Specification</th>
+      <th class="r">Qty</th><th class="r">Unit Price<br><small>Excl. GST</small></th><th class="r">Amount<br><small>Excl. GST</small></th>
     </tr></thead>
     <tbody>
-      <tr><td>1</td><td>Chilled Sri Lankan Crab</td><td>1 piece</td><td class="r">6</td><td class="r">$23.00</td><td class="r">$138.00</td></tr>
+      <tr><td class="c">1</td><td>Chilled Sri Lankan Crab</td><td class="c">Refrigeration</td><td class="c">1 piece</td><td class="r b">6</td><td class="r">$23.00</td><td class="r b">$138.00</td></tr>
     </tbody>
   </table>
 
@@ -365,13 +367,13 @@
   </div>
 
   <table class="items">
-    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup>
     <thead><tr>
-      <th>#</th><th>Description</th><th>Specification</th>
+      <th class="c">Line</th><th>Description</th><th class="c">Storage</th><th class="c">Specification</th>
       <th class="r">Qty</th><th class="r">Unit Price</th><th class="r">Amount</th>
     </tr></thead>
     <tbody>
-      <tr><td>1</td><td>Stainless Kitchen Shears</td><td>1 piece</td><td class="r">10</td><td class="r">$5.00</td><td class="r">$50.00</td></tr>
+      <tr><td class="c">1</td><td>Stainless Kitchen Shears</td><td class="c">Room<br>temperature</td><td class="c">1 piece</td><td class="r b">10</td><td class="r">$5.00</td><td class="r b">$50.00</td></tr>
     </tbody>
   </table>
 
@@ -509,14 +511,14 @@
   </div>
 
   <table class="items">
-    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup>
     <thead><tr>
-      <th>#</th><th>Description</th><th>Specification</th>
-      <th class="r">Qty</th><th class="r">Unit Price<br><small>excl. GST</small></th><th class="r">Amount<br><small>excl. GST</small></th>
+      <th class="c">Line</th><th>Description</th><th class="c">Storage</th><th class="c">Specification</th>
+      <th class="r">Qty</th><th class="r">Unit Price<br><small>Excl. GST</small></th><th class="r">Amount<br><small>Excl. GST</small></th>
     </tr></thead>
     <tbody>
-      <tr><td>1</td><td>Live Boston Lobster</td><td>1 piece</td><td class="r neg">−2</td><td class="r">$42.00</td><td class="r neg">−$84.00</td></tr>
-      <tr class="bcrs"><td>2</td><td>BCRS Deposit <small>· not subject to GST</small></td><td>1 can</td><td class="r">−24</td><td class="r">$0.10</td><td class="r">−$2.40</td></tr>
+      <tr><td class="c">1</td><td>Live Boston Lobster</td><td class="c">Live</td><td class="c">1 piece</td><td class="r neg">−2</td><td class="r">$42.00</td><td class="r neg">−$84.00</td></tr>
+      <tr class="bcrs"><td class="c">2</td><td>BCRS Deposit (not subject to GST)</td><td class="c">N/A</td><td class="c">1 can</td><td class="r b">−24</td><td class="r">$0.10</td><td class="r b">−$2.40</td></tr>
     </tbody>
   </table>
 
@@ -592,13 +594,13 @@
   </div>
 
   <table class="items">
-    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"></colgroup>
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"></colgroup>
     <thead><tr>
-      <th>#</th><th>Description</th><th>Specification</th>
+      <th class="c">Line</th><th>Description</th><th class="c">Storage</th><th class="c">Specification</th>
       <th class="r">Qty</th><th class="r">Unit Price</th><th class="r">Amount</th>
     </tr></thead>
     <tbody>
-      <tr><td>1</td><td>Stainless Kitchen Shears</td><td>1 piece</td><td class="r neg">−1</td><td class="r">$5.00</td><td class="r neg">−$5.00</td></tr>
+      <tr><td class="c">1</td><td>Stainless Kitchen Shears</td><td class="c">Room<br>temperature</td><td class="c">1 piece</td><td class="r neg">−1</td><td class="r">$5.00</td><td class="r neg">−$5.00</td></tr>
     </tbody>
   </table>
 
