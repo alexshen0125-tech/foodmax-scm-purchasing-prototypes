@@ -6,8 +6,8 @@
 <title>磐石 Aegis · 取货运费收入与开票（原型）</title>
 <!--
   对应 PRD：财务/01_需求中心/A_清结算/开发迭代/2026-10-27_v1.0_取货运费收入与开票_沈亮/01_PRD.md v1.0
-  基线：CLJS-20 原型（2026-09-15 实读 aegis-te 现网：收入单据 / 结算单列表 / 结算单详情 / 佣金开票）
-  只画本期改动：① 收入单据新增类型「取货运费」+ 详情抽屉 ② 结算单列表加「取货运费」列 ③ 结算单详情概览③加取货运费行 + 新 Tab「取货运费」 ④ 佣金开票加发票类型「物流服务费发票」
+  基线：CLJS-20 原型（2026-09-15 实读 aegis-te 现网：收入单据 / 结算单列表 / 结算单详情）
+  只画本期改动：① 收入单据新增类型「取货运费」+ 详情抽屉 ② 结算单列表加「取货运费」列 ③ 结算单详情概览③加取货运费行 + 新 Tab「取货运费」 ④ 新页「物流服务费开票」（独立开票任务，佣金开票不改）
   上游：采购/merchant management/PRD/scm_取货运费_prd.md（运营平台推送周账单）
 -->
 <style>
@@ -158,7 +158,8 @@ tbody tr:hover{background:#f7f9fc}
     <div class="nav-group"><div class="nav-title">清分与结算</div>
       <div class="nav-item" data-page="bills"><span class="ic">💰</span>结算单<span class="new">改</span></div>
       <div class="nav-item"><span class="ic">⇄</span>业务调整单</div>
-      <div class="nav-item" data-page="invs"><span class="ic">🧾</span>佣金开票<span class="new">改</span></div>
+      <div class="nav-item"><span class="ic">🧾</span>佣金开票</div>
+      <div class="nav-item" data-page="invs"><span class="ic">🚚</span>物流服务费开票<span class="new">新</span></div>
       <div class="nav-item"><span class="ic">🕐</span>付款单</div>
     </div>
     <div class="nav-group"><div class="nav-title">其他</div>
@@ -255,23 +256,22 @@ tbody tr:hover{background:#f7f9fc}
       <div class="foot">© 2026 磐石 Aegis · 取货运费收入与开票 原型</div>
     </section>
 
-    <!-- ========== 佣金开票（改：加发票类型「物流服务费发票」） ========== -->
+    <!-- ========== 物流服务费开票（新：独立开票任务，一张结算单最多一张） ========== -->
     <section class="page" id="page-invs">
-      <div class="crumb">清分与结算 / 佣金开票</div>
+      <div class="crumb">清分与结算 / 物流服务费开票</div>
       <div class="page-head">
-        <div><h1>佣金开票<span class="chg">改：加发票类型「物流服务费发票」</span></h1></div>
+        <div><h1>物流服务费开票<span class="chg">新：结算单含取货运费时生成即开</span></h1></div>
         <span class="site-badge">当前 site：新加坡</span>
       </div>
       <div class="panel">
         <div class="filter">
           <div class="filter-item wide"><label>发票号 / 结算单号</label><input class="ipt" id="v-kw"></div>
-          <div class="filter-item"><label>发票类型</label><select class="sel" id="v-type"><option value="">全部</option><option value="SVC">服务费发票</option><option value="LOGI">物流服务费发票</option></select></div>
           <div class="filter-item"><label>开票状态</label><select class="sel" id="v-st"><option value="">全部</option><option value="WAIT">待开</option><option value="DONE">已开</option></select></div>
           <div class="acts"><button class="btn primary" id="v-go">查 询</button><button class="btn" id="v-reset">重 置</button></div>
         </div>
         <div class="selbar"><span>已选 <b id="v-sel-n" style="color:var(--ink)">0</b> 张</span><span style="flex:1"></span><button class="btn" id="v-retry" disabled>重开异常单</button></div>
         <div class="table-wrap"><table class="data">
-          <thead><tr><th style="width:34px"></th><th>发票号</th><th>发票类型</th><th>结算单号</th><th>收票方</th><th>店铺编码</th><th class="num">未税 S$</th><th class="num">GST S$</th><th class="num">价税合计 S$</th><th>结算单状态</th><th>开票状态</th><th>开票时间</th><th>失败原因</th><th>操作</th></tr></thead>
+          <thead><tr><th style="width:34px"></th><th>发票号</th><th>结算单号</th><th>收票方</th><th>店铺编码</th><th class="num">未税 S$</th><th class="num">GST S$</th><th class="num">价税合计 S$</th><th>结算单状态</th><th>开票状态</th><th>开票时间</th><th>失败原因</th><th>操作</th></tr></thead>
           <tbody id="inv-rows"></tbody>
         </table></div>
         <div class="pagination"><span id="inv-total">共 0 条</span></div>
@@ -291,7 +291,7 @@ tbody tr:hover{background:#f7f9fc}
 <script>
 /* ============ 演示数据（与 PRD AC 对齐） ============
    结算单 = 店铺 × 结算周期（现网 DAILY），单号 ST{日期}-{店铺编码}
-   取货运费：上游一张已推送周账单 = 一条收入单据；归期 = 推送时间；物流服务费发票按结算单开，结算单生成时开（与佣金发票同一时点）
+   取货运费：上游一张已推送周账单 = 一条收入单据；归期 = 推送时间；物流服务费发票按结算单开，结算单生成时开
    「今天」= 2026-10-28；日期、发票号均为演示（真实首批数据 2026-11；发票号按现网 15 位规则） */
 const TYPE = {SUPPLY:['耗材采购','t-supply'], REPL:['自营补货','t-repl'], FINE:['店铺罚款','t-fine'], PICK:['取货运费','t-pick']};
 const SHOP = {SH20260713476005:'Foodmax测试店铺', SH20260715476017:'小沈小卖部'};
@@ -341,18 +341,14 @@ const INCOMES = [
   {no:'PI2026101900011', type:'FINE', src:'FN20261019002', shop:'SH20260713476005', at:'2026-10-19 11:30:00', incl:40.00, st:'SETTLED', bill:'ST20261019-SH20260713476005', ing:'2026-10-19 11:30:03', inv:'不开票'},
 ];
 
-/* 物流服务费发票 = 结算单维度；服务费发票沿用现网 */
-const INVS = [   // 结算单生成即开（与佣金发票同一时点）；物流服务费金额 = Σ 本单取货运费收入快照
-  {no:'261020476000141', type:'SVC',  bill:'ST20261019-SH20260713476005', amt:90.42, net:82.95, gst:7.47, st:'DONE', at:'2026-10-20 03:05', fail:''},
+/* 物流服务费发票 = 结算单维度，独立开票任务（一张结算单最多一张）；结算单生成即开；金额 = Σ 本单取货运费收入快照 */
+const INVS = [
   {no:'261020476000142', type:'LOGI', bill:'ST20261019-SH20260713476005', st:'DONE', at:'2026-10-20 03:05', fail:''},
-  {no:'261028476000188', type:'SVC',  bill:'ST20261027-SH20260713476005', amt:35.97, net:33.00, gst:2.97, st:'DONE', at:'2026-10-28 03:05', fail:''},
   {no:'261028476000189', type:'LOGI', bill:'ST20261027-SH20260713476005', st:'DONE', at:'2026-10-28 03:05', fail:''},
-  {no:'261028476170190', type:'SVC',  bill:'ST20261027-SH20260715476017', amt:18.00, net:16.51, gst:1.49, st:'DONE', at:'2026-10-28 03:05', fail:''},
   {no:'', type:'LOGI', bill:'ST20261027-SH20260715476017', st:'WAIT', at:'', fail:'收票方 UEN 缺失'},
 ];
 // 物流服务费发票金额 = Σ 收入快照（不按合计重新拆税）
 INVS.filter(v=>v.type=='LOGI').forEach(v=>{const ps=INCOMES.filter(i=>i.type=='PICK'&&i.bill==v.bill);v.amt=r2(ps.reduce((a,i)=>a+i.incl,0));v.net=r2(ps.reduce((a,i)=>a+i.net,0));v.gst=r2(ps.reduce((a,i)=>a+i.gst,0));});
-const INV_T = {SVC:'服务费发票', LOGI:'物流服务费发票'};
 const pickOf = bill => INCOMES.filter(i=>i.type=='PICK'&&i.bill==bill);
 const pickSum = bill => r2(pickOf(bill).reduce((a,i)=>a+i.incl,0));
 const logiInv = bill => INVS.find(v=>v.type=='LOGI'&&v.bill==bill);
@@ -443,15 +439,15 @@ function openBill(no){
   showTab('ov'); showPage('bill');
 }
 
-/* ============ 佣金开票 ============ */
+/* ============ 物流服务费开票 ============ */
 let SEL=[];
 function invRows(){
-  const kw=$('#v-kw').value.trim(), ty=$('#v-type').value, st=$('#v-st').value;
-  const rows=INVS.filter(v=>(!kw||v.no.includes(kw)||v.bill.includes(kw))&&(!ty||v.type==ty)&&(!st||v.st==st));
+  const kw=$('#v-kw').value.trim(), st=$('#v-st').value;
+  const rows=INVS.filter(v=>(!kw||v.no.includes(kw)||v.bill.includes(kw))&&(!st||v.st==st));
   SEL=SEL.filter(b=>rows.some(v=>v.bill+v.type==b));
   $('#inv-rows').innerHTML=rows.map(v=>{const b=billOf(v.bill), k=v.bill+v.type;return `<tr>
     <td>${v.st=='WAIT'?`<input type="checkbox" data-sel="${k}" ${SEL.includes(k)?'checked':''}>`:''}</td>
-    <td class="mono">${v.no||dash}</td><td>${v.type=='LOGI'?pill('物流服务费发票','t-pick'):pill('服务费发票','t-supply')}</td>
+    <td class="mono">${v.no||dash}</td>
     <td class="mono"><span class="btn link" data-bill="${v.bill}">${v.bill}</span></td><td>${SHOP[b.shop]}</td><td class="mono">${b.shop}</td>
     <td class="num">${money(v.net)}</td><td class="num">${money(v.gst)}</td><td class="num"><b>${money(v.amt)}</b></td>
     <td>${pill(ST_L[b.st][0],ST_L[b.st][1])}</td><td>${v.st=='DONE'?pill('已开','inv-ok'):pill('待开','inv-wait')}</td><td>${v.at||dash}</td><td>${v.fail?esc(v.fail):dash}</td>
@@ -485,7 +481,7 @@ document.addEventListener('click',e=>{
 $('#dr-close').onclick=closeDrawer; $('#mask').onclick=closeDrawer;
 $('#i-go').onclick=incomeRows; $('#i-reset').onclick=()=>{$('#i-kw').value='';['#i-shop','#i-type','#i-st'].forEach(s=>$(s).value='');incomeRows();};
 $('#i-export').onclick=()=>toast('演示：已按当前筛选导出（含取货运费账单号、计费 / 减免 / 应扣、未税 / GST）');
-$('#v-go').onclick=invRows; $('#v-reset').onclick=()=>{$('#v-kw').value='';$('#v-type').value='';$('#v-st').value='';invRows();};
+$('#v-go').onclick=invRows; $('#v-reset').onclick=()=>{$('#v-kw').value='';$('#v-st').value='';invRows();};
 $('#v-retry').onclick=()=>{
   SEL.forEach(k=>{const v=INVS.find(x=>x.bill+x.type==k); if(v){v.st='DONE'; v.no='261028476170191'; v.at='2026-10-28 10:05'; v.fail='';}});
   toast(`已重开 ${SEL.length} 张，沿用原开票任务`); SEL=[]; invRows(); incomeRows();
