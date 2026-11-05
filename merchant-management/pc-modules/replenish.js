@@ -84,7 +84,7 @@ DB.fineOrders = DB.fineOrders || [
           {sku:'SKU8805',name:'菜心',  spec:'1kg/件',unit:'件',should:15,received:12,qty:3,revoked:1}],
    status:'pending', billNo:'',
    // 部分撤销：菜心缺口 3 撤 1，按 2 件计罚；单据仍待推送，可继续撤
-   revokes:[{at:'2026-06-28 15:20',by:'运营 · 林晓',reason:'商家申诉成立',note:'商家提供装车视频，菜心实装 13 件，仓库少记 1 件',lines:[{sku:'SKU8805',name:'菜心',unit:'件',qty:1}],amt:40}]},
+   revokes:[{at:'2026-06-28 15:20',by:'运营 · 林晓',reason:'已申请免罚',note:'商家提供装车视频，菜心实装 13 件，仓库少记 1 件',lines:[{sku:'SKU8805',name:'菜心',unit:'件',qty:1}],amt:40}]},
   {no:'FN20260629005', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260629005', warehouse:'兀兰DC', at:'2026-06-29 03:24', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',should:30,received:22,qty:8}],
    status:'pending', billNo:''},
@@ -104,7 +104,7 @@ DB.fineOrders = DB.fineOrders || [
   {no:'FN20260627003', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260627003', warehouse:'裕廊DC', at:'2026-06-27 02:15', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8806',name:'生菜',  spec:'1kg/件',unit:'件',should:18,received:15,qty:3,revoked:3}],
    status:'revoked', billNo:'',
-   revokes:[{at:'2026-06-27 10:32',by:'运营 · 林晓',reason:'仓库清点有误',note:'复核监控实收 18 件，清点漏录 3 件',lines:[{sku:'SKU8806',name:'生菜',unit:'件',qty:3}],amt:120}]},
+   revokes:[{at:'2026-06-27 10:32',by:'运营 · 林晓',reason:'仓库收货有误',note:'复核监控实收 18 件，清点漏录 3 件',lines:[{sku:'SKU8806',name:'生菜',unit:'件',qty:3}],amt:120}]},
   // ↓ 其他商家（仅运营平台可见，商家端按 merchantCode 过滤）
   {no:'FN20260702011', merchant:'M2026-0902', merchantName:'海丰水产', deliveryNo:'SH20260702011', warehouse:'裕廊DC', at:'2026-07-02 01:52', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU9101',name:'冰鲜三文鱼',spec:'1kg/袋',unit:'袋',should:40,received:34,qty:6}],
@@ -558,7 +558,7 @@ window.fineRevokeSec=(g,sec)=>{
 /* 运营撤销罚款单：仅「待推送」可撤。
    到仓少货按 SKU + 件数撤（可分多次，罚款按剩余件数重算，全部撤完 → 已撤销）；
    客诉罚款无 SKU 维度，整单撤。原因必选，选「其他」时说明必填；撤销不可恢复 */
-const FINE_REVOKE_REASONS={receipt:['仓库清点有误','商家申诉成立','重复生成','其他'],cp:['判责结果有误','商家申诉成立','重复生成','其他']};
+const FINE_REVOKE_REASONS={receipt:['仓库收货有误','已申请免罚','其他'],cp:['仓库收货有误','已申请免罚','其他']};
 function fineRevokeFind(kind,no){return kind=='cp'?(DB.cpFines||[]).find(x=>x.no==no):(DB.fineOrders||[]).find(x=>x.no==no);}
 (function(){if(document.getElementById('frv-css'))return;const st=document.createElement('style');st.id='frv-css';st.textContent=`
 .frv-meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--ts)}
