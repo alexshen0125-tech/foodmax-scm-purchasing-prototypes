@@ -1449,6 +1449,9 @@ function setRole(r){
 function switchRole(){const next=ROLE_ORDER[(ROLE_ORDER.indexOf(DB.role)+1)%ROLE_ORDER.length];setRole(next);toast(`已切换到${ROLE_META[next].name}`,'info');}
 document.getElementById('sb-switch-btn').onclick=switchRole;
 function nav(p){DB.page=p;render();window.scrollTo(0,0);}
+// 客诉罚款暂不上线（2026-11-05 沈亮）：隐藏客诉考核 / 客诉罚款规则菜单与罚款单页的客诉 Tab，改 false 即恢复
+window.CP_HIDDEN=true;
+if(window.CP_HIDDEN){const CP_IDS=['p-cpweek','p-cpcfg'];Object.keys(NAV).forEach(r=>{NAV[r]=NAV[r].filter(n=>!CP_IDS.includes(n.id));NAV[r].forEach(n=>{if(n.children)n.children=n.children.filter(k=>!CP_IDS.includes(k.id));});});}
 function navToggle(id){DB.navOpen=DB.navOpen||{};const g=NAV[DB.role].find(n=>n.id==id);if(!g||!g.children)return;const childActive=g.children.some(k=>k.id==DB.page);const cur=(DB.navOpen[id]!==undefined)?DB.navOpen[id]:childActive;DB.navOpen[id]=!cur;render();}
 // 预送模式是否对当前商家开通（BR-03）：关闭 → 预送量恒为 0、相关菜单与列全部不出现
 window.presendOn=function(){return DB.merchant&&DB.merchant.presendMode===true;};
@@ -6535,7 +6538,7 @@ goHome();
 <script src="pc-modules/quality.js?v=20260730f"></script>
 <script src="pc-modules/supply.js?v=20260831a"></script>
 <script src="pc-modules/replenish.js?v=20261105i"></script>
-<script src="pc-modules/cpfine.js?v=20261105d"></script>
+<script src="pc-modules/cpfine.js?v=20261105e"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
 <script src="pc-modules/presend.js?v=20261030c"></script>

@@ -461,11 +461,13 @@ function cpMerchantWeeks(){
 /* ---------- 挂到现有「罚款单」页：按罚款事由分 Tab ---------- */
 const origOps=PAGES['p-fine'], origM=PAGES['m-fine'];
 PAGES['p-fine']=()=>{
+  if(window.CP_HIDDEN)return origOps();
   const t=DB.cpOpsTab, pend=cpFineList(true).filter(fineCanPush).length;
   return `<div class="tabs"><div class="tab ${t=='receipt'?'active':''}" onclick="DB.cpOpsTab='receipt';render()">到仓少货</div><div class="tab ${t=='cp'?'active':''}" onclick="DB.cpOpsTab='cp';render()">客诉罚款${pend?`<span class="tb">${pend}</span>`:''}</div></div>`
     +(t=='cp'?cpFineOps():origOps());
 };
 PAGES['m-fine']=()=>{
+  if(window.CP_HIDDEN)return origM();
   const t=DB.cpMTab, pend=cpFineList(false).filter(g=>g.status=='pending').length;
   return `<div class="tabs"><div class="tab ${t=='receipt'?'active':''}" onclick="DB.cpMTab='receipt';render()">到仓少货</div><div class="tab ${t=='cp'?'active':''}" onclick="DB.cpMTab='cp';render()">客诉罚款${pend?`<span class="tb">${pend}</span>`:''}</div><div class="tab ${t=='week'?'active':''}" onclick="DB.cpMTab='week';render()">客诉考核</div></div>`
     +(t=='cp'?cpMerchantFines():t=='week'?cpMerchantWeeks():origM());
@@ -480,7 +482,7 @@ window.cpSettleSync=function(){
   if(amt>0)DB.bill.items.push(['客诉罚款',pend.length,-amt]);
   if(typeof recalcBillNet=='function')recalcBillNet();
 };
-window.cpPendingCount=()=>cpFineList(false).filter(g=>g.status=='pending').length;
-window.cpOpsPendingCount=()=>cpFineList(true).filter(fineCanPush).length;
-window.cpWeekPendingCount=()=>CP_WEEKS.filter(w=>weekState(w.key)=='pending').length;
+window.cpPendingCount=()=>window.CP_HIDDEN?0:cpFineList(false).filter(g=>g.status=='pending').length;
+window.cpOpsPendingCount=()=>window.CP_HIDDEN?0:cpFineList(true).filter(fineCanPush).length;
+window.cpWeekPendingCount=()=>window.CP_HIDDEN?0:CP_WEEKS.filter(w=>weekState(w.key)=='pending').length;
 })();

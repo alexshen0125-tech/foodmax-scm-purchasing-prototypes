@@ -181,6 +181,7 @@ const CP_ROWS={
   '-2':[{cat:'新鲜蔬菜',issue:'short',base:812,tk:[['AS-CP3101','#SG0901-08','鼎***','菜心 1kg/件','未申诉'],['AS-CP3202','#SG0902-14','海***','菠菜 1kg/件','超时默认认可'],['AS-CP3303','#SG0903-06','新***','空心菜 1kg/件','主动认可']]}],
 };
 const CP_ON=false;  // 平台规则启用状态（罚款金额待平台配置，当前未启用）
+const CP_HIDDEN=true;  // 客诉罚款暂不上线（2026-11-05）
 const CP_FINES=[];   // 客诉罚款单：平台确认出单后生成；罚款金额待平台配置，本期暂无
 const cpTier=n=>{for(let i=CP_TIERS.length-1;i>=0;i--){const t=CP_TIERS[i];if(n>=t.min&&(t.max===''||n<=t.max))return i;}return -1;};
 function cpRes(r,off){
@@ -237,7 +238,9 @@ function openFine(){
     mount:(p)=>{
       const tabs=p.querySelector('#fn-tabs'),head=p.querySelector('#fn-head'),list=p.querySelector('#fn-list');
       function drawTabs(){
-        tabs.innerHTML=[['receipt','到仓少货',FINES.filter(g=>g.status==='pending').length],['cp','客诉罚款',CP_FINES.length],['week','客诉考核',0]]
+        if(CP_HIDDEN){tabs.style.display="none";return;}   // 客诉隐藏后只剩一个 Tab，整行不显示
+        // 客诉罚款暂不上线：只保留到仓少货（CP_HIDDEN 改 false 即恢复客诉罚款 / 客诉考核 Tab）
+        tabs.innerHTML=[['receipt','到仓少货',FINES.filter(g=>g.status==='pending').length]].concat(CP_HIDDEN?[]:[['cp','客诉罚款',CP_FINES.length],['week','客诉考核',0]])
           .map(([k,t,n])=>`<div class="rp-tab ${_fnTab===k?'on':''}" data-t="${k}">${t}${n?` ${n}`:''}</div>`).join('');
         tabs.querySelectorAll('.rp-tab').forEach(x=>x.onclick=()=>{if(_fnTab===x.dataset.t)return;_fnTab=x.dataset.t;drawTabs();drawList();});
       }
