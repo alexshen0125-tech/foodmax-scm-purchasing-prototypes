@@ -386,7 +386,7 @@ window.repl_invPreview=function(no){
 /* ================= 运营平台端 · 罚款单（全平台 · 按商家查询 · 推送财务结算） ================= */
 // 运营视角看全平台罚款单；支持按商家/单号/推送状态筛选；勾选后批量推送至清结算平台（PMS）
 // 状态 Tab：待推送（不含已撤销）/ 已推送 / 已撤销 / 全部（''）
-window.fineTabHit=(g,t)=>!t||(t=='revoked'?g.status=='revoked':t=='pending'?g.push=='pending'&&['judging','pending'].includes(g.status):g.push==t);
+window.fineTabHit=(g,t)=>!t||(t=='revoked'?g.status=='revoked':t=='pending'?g.push=='pending'&&g.status=='pending':g.push==t);
 window.FINE_TABS=[['pending','待推送'],['pushed','已推送'],['revoked','已撤销'],['','全部']];
 function fineOpsBase(){
   const f=DB.fineFilter||{};
@@ -395,10 +395,9 @@ function fineOpsBase(){
     .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl) && hit(g.batchNo,f.bn));
 }
 function fineOpsRows(){return fineOpsBase().filter(g=>fineTabHit(g,(DB.fineFilter||{}).push));}
-// 可撤 = 待推送 且 判责中/待结算；已推送（含推送失败）、已结算、已撤销不可撤
-window.fineCanRevoke=g=>g.push=='pending'&&['judging','pending'].includes(g.status);
-// 可推送（勾选）= 待推送 且 待结算；判责中不可推
-window.fineCanPush=g=>g.push=='pending'&&g.status=='pending';
+// 罚款单生成即「待推送 + 待结算」，无判责中状态；可撤与可推送同条件，推送后（含推送失败）不可撤
+window.fineCanRevoke=g=>g.push=='pending'&&g.status=='pending';
+window.fineCanPush=window.fineCanRevoke;
 // 推送财务结算状态：并入「状态」列展示，不另立字段列——字段集与商家端一致，运营端只多「商家」一列
 function pushTag(g){if(g.status=='revoked')return '';
   return g.push=='pushed'
@@ -757,7 +756,7 @@ window.fine_detail=function(no){
   drawer(`<div class="drawer-hd"><div><h3>${g.no} · 罚款单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${g.warehouse} · 共 ${g.items.length} 个 SKU 缺货 · 合计 ${g.qty} 件</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="row" style="gap:8px;margin-bottom:14px">${fnTag(g.status)}<span class="tag t-r"><span class="dot"></span>到仓少货</span></div>
-    ${g.status=='revoked'?`<div class="ib ib-b" style="margin-bottom:16px"><span class="i">ℹ️</span>${(g.revokes||[]).length?'本单缺口已由平台运营<b>全部撤销</b>':'本单经判责认定<b>非供货商责任</b>，已撤销'}，罚款为 0，<b>不再扣减</b>，也不会出现在结算单中。</div>`:''}
+    ${g.status=='revoked'?`<div class="ib ib-b" style="margin-bottom:16px"><span class="i">ℹ️</span>本单缺口已由平台运营<b>全部撤销</b>，罚款为 0，<b>不再扣减</b>，也不会出现在结算单中。</div>`:''}
     <div class="ib ib-r" style="margin-bottom:16px;${g.status=='revoked'?'display:none':''}"><span class="i">⚖️</span>本单送货到仓被清点出 <b>${g.items.length} 个 SKU 少货、合计 ${g.qty} 件</b>，按 <b>${money(g.rate)}/件</b> 计罚${g.rq?`，其中 <b>${g.rq} 件已由平台运营撤销</b>，按 <b>${g.lq} 件</b>计罚`:''}，罚款 <b>${money(g.amt)}</b>。罚款<b>按件计、与货值无关</b>，<b>不开发票</b>，作为独立扣减项进当期结算单。${g.noRepl?'<br><b>本单缺口未由自营补采</b>（自营无货），但缺货照常计罚——罚款与补采互不关联。':''}</div>
 
     ${sec('单据信息')}
