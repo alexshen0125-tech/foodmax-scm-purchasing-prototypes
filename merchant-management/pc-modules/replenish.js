@@ -385,13 +385,16 @@ window.repl_invPreview=function(no){
 
 /* ================= 运营平台端 · 罚款单（全平台 · 按商家查询 · 推送财务结算） ================= */
 // 运营视角看全平台罚款单；支持按商家/单号/推送状态筛选；勾选后批量推送至清结算平台（PMS）
-function fineOpsRows(){
+// 状态 Tab：待推送（不含已撤销）/ 已推送 / 已撤销 / 全部（''）
+window.fineTabHit=(g,t)=>!t||(t=='revoked'?g.status=='revoked':g.push==t&&g.status!='revoked');
+window.FINE_TABS=[['pending','待推送'],['pushed','已推送'],['revoked','已撤销'],['','全部']];
+function fineOpsBase(){
   const f=DB.fineFilter||{};
   const hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
   return fineGroups(true)
-    .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl)
-             && hit(g.batchNo,f.bn) && (!f.push||(g.push==f.push&&g.status!='revoked')));
+    .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl) && hit(g.batchNo,f.bn));
 }
+function fineOpsRows(){return fineOpsBase().filter(g=>fineTabHit(g,(DB.fineFilter||{}).push));}
 // 撤销门槛只看推送状态：待推送即可撤（含判责中 / 待结算），已推送（含推送失败）一律不可撤
 window.fineCanRevoke=g=>g.push=='pending'&&g.status!='revoked';
 // 推送财务结算状态：并入「状态」列展示，不另立字段列——字段集与商家端一致，运营端只多「商家」一列
@@ -414,9 +417,8 @@ PAGES['p-fine']=()=>{
       <div class="fr"><label class="fl">来源送货单号</label><input id="ff-dl" value="${f.dl}" placeholder="如 SH20260628004"></div>
     </div>
     <div class="fg3">
-      <div class="fr"><label class="fl">推送状态</label><select id="ff-push"><option value="">全部</option><option value="pending" ${f.push=='pending'?'selected':''}>待推送</option><option value="pushed" ${f.push=='pushed'?'selected':''}>已推送</option></select></div>
       <div class="fr"><label class="fl">批次号</label><input id="ff-bn" value="${f.bn||''}" placeholder="如 FB-SG-20260817-001"></div>
-      <div class="fr"></div>
+      <div class="fr"></div><div class="fr"></div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px">
       <button class="btn btn-o" onclick="fineOps_reset()">重置</button>
@@ -425,6 +427,9 @@ PAGES['p-fine']=()=>{
   </div></div>
 
   <div class="card">
+    <div class="card-hd" style="padding-bottom:0"><div class="tabs" style="margin:0;border:none">
+      ${FINE_TABS.map(([k,n])=>`<div class="tab ${(f.push||'')==k?'active':''}" onclick="fineOps_tab('${k}')">${n}（${fineOpsBase().filter(g=>fineTabHit(g,k)).length}）</div>`).join('')}
+    </div></div>
     <div class="selbar" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
       ${DB.fineSel.length?`<button class="btn btn-link" onclick="DB.fineSel=[];render()">取消选择</button>`:''}
       <button class="btn btn-p btn-sm" ${DB.fineSel.length?'':'disabled'} onclick="fineOps_pushAsk()">推送财务结算${DB.fineSel.length?` (${DB.fineSel.length})`:''}</button>
@@ -455,10 +460,12 @@ PAGES['p-fine']=()=>{
 };
 window.fineOps_query=function(){
   const g=id=>(document.getElementById(id)||{}).value||'';
-  DB.fineFilter={merchant:g('ff-mc').trim(),no:g('ff-no').trim(),dl:g('ff-dl').trim(),bn:g('ff-bn').trim(),push:g('ff-push')};
+  DB.fineFilter={merchant:g('ff-mc').trim(),no:g('ff-no').trim(),dl:g('ff-dl').trim(),bn:g('ff-bn').trim(),push:DB.fineFilter.push};
   DB.fineSel=[];render();
 };
-window.fineOps_reset=function(){DB.fineFilter={merchant:'',no:'',dl:'',bn:'',push:'pending'};DB.fineSel=[];render();toast('筛选条件已重置','info');};
+// 切 Tab 保留筛选条件、清空勾选（勾选只对「待推送」有效）
+window.fineOps_tab=function(k){DB.fineFilter.push=k;DB.fineSel=[];render();};
+window.fineOps_reset=function(){DB.fineFilter={merchant:'',no:'',dl:'',bn:'',push:DB.fineFilter.push};DB.fineSel=[];render();toast('筛选条件已重置','info');};
 window.fineOps_byBatch=function(bn){DB.fineFilter={merchant:'',no:'',dl:'',bn:bn,push:''};DB.fineSel=[];render();};
 window.fineOps_toggle=function(no){const i=DB.fineSel.indexOf(no);i<0?DB.fineSel.push(no):DB.fineSel.splice(i,1);render();};
 window.fineOps_selAll=function(){

@@ -88,7 +88,7 @@ DB.cpFines   = DB.cpFines   || [];
 DB.cpFineSeq = DB.cpFineSeq || 1;
 DB.cpSel     = DB.cpSel     || [];
 DB.cpFilter  = DB.cpFilter  || {week:CP_WEEKS[1].key, merchant:'', result:''};
-DB.cpFineFilter = DB.cpFineFilter || {merchant:'', push:''};
+DB.cpFineFilter = DB.cpFineFilter || {merchant:'', push:'pending'};
 DB.cpMTab    = DB.cpMTab    || 'receipt';
 DB.cpOpsTab  = DB.cpOpsTab  || 'receipt';
 DB.cpMWeek   = DB.cpMWeek   || CP_WEEKS[0].key;
@@ -353,18 +353,20 @@ const cpStTag=s=>s=='pending'?'<span class="tag t-y"><span class="dot"></span>�
 const cpPushTag=g=>g.status=='revoked'?'':g.push=='pushed'?`<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>已推送财务</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt} · <span class="mono">${g.batchNo}</span></div>`:'<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>待推送财务</span>';
 function cpFineOps(){
   const f=DB.cpFineFilter, hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
-  const rows=cpFineList(true).filter(g=>hit(g.merchant+' '+g.merchantName,f.merchant)&&(!f.push||(g.push==f.push&&g.status!='revoked')));
+  const base=cpFineList(true).filter(g=>hit(g.merchant+' '+g.merchantName,f.merchant)), rows=base.filter(g=>fineTabHit(g,f.push));
   const selectable=rows.filter(fineCanRevoke); DB.cpSel=DB.cpSel.filter(no=>selectable.some(g=>g.no==no));
   const allSel=selectable.length&&selectable.every(g=>DB.cpSel.includes(g.no));
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:16px 20px 12px">
     <div class="fg3">
       <div class="fr"><label class="fl">商家</label><input id="cpff-m" value="${f.merchant}" placeholder="商家名称或编码"></div>
-      <div class="fr"><label class="fl">推送状态</label><select id="cpff-p"><option value="">全部</option><option value="pending" ${f.push=='pending'?'selected':''}>待推送</option><option value="pushed" ${f.push=='pushed'?'selected':''}>已推送</option></select></div>
-      <div class="fr"></div>
+      <div class="fr"></div><div class="fr"></div>
     </div>
-    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px"><button class="btn btn-o" onclick="DB.cpFineFilter={merchant:'',push:''};render()">重置</button><button class="btn btn-p" onclick="DB.cpFineFilter={merchant:document.getElementById('cpff-m').value.trim(),push:document.getElementById('cpff-p').value};render()">查询</button></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:2px"><button class="btn btn-o" onclick="DB.cpFineFilter={merchant:'',push:DB.cpFineFilter.push};DB.cpSel=[];render()">重置</button><button class="btn btn-p" onclick="DB.cpFineFilter={merchant:document.getElementById('cpff-m').value.trim(),push:DB.cpFineFilter.push};DB.cpSel=[];render()">查询</button></div>
   </div></div>
   <div class="card">
+    <div class="card-hd" style="padding-bottom:0"><div class="tabs" style="margin:0;border:none">
+      ${FINE_TABS.map(([k,n])=>`<div class="tab ${(f.push||'')==k?'active':''}" onclick="DB.cpFineFilter.push='${k}';DB.cpSel=[];render()">${n}（${base.filter(g=>fineTabHit(g,k)).length}）</div>`).join('')}
+    </div></div>
     <div class="selbar" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 16px;background:#F0FBF4;border-bottom:1px solid var(--bd);font-size:13px">
       ${DB.cpSel.length?`<button class="btn btn-link" onclick="DB.cpSel=[];render()">取消选择</button>`:''}
       <button class="btn btn-p btn-sm" ${DB.cpSel.length?'':'disabled'} onclick="cp_pushAsk()">推送财务结算${DB.cpSel.length?` (${DB.cpSel.length})`:''}</button>
