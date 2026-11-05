@@ -1323,7 +1323,7 @@ const NAV={
     {sec:'结算'},
     {id:'p-commission',ic:'💹',t:'佣金配置',p1:1},
     {id:'p-weighcfg',ic:'⚖️',t:'多退少补规则',p1:1},
-    {id:'p-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>(DB.fineOrders?DB.fineOrders.filter(g=>g.push=='pending'&&g.status!='revoked').length:0)+(typeof cpOpsPendingCount=='function'?cpOpsPendingCount():0),by:'y'},
+    {id:'p-fine',ic:'⚖️',t:'罚款单',p1:1,badge:()=>(DB.fineOrders?DB.fineOrders.filter(g=>g.push=='pending'&&g.status=='pending').length:0)+(typeof cpOpsPendingCount=='function'?cpOpsPendingCount():0),by:'y'},
     {id:'p-replcfg',ic:'⚙️',t:'缺货罚款标准',p1:1},
     {id:'p-cpweek',ic:'📋',t:'客诉考核',p1:1,badge:()=>typeof cpWeekPendingCount=='function'?cpWeekPendingCount():0,by:'y'},
     {id:'p-cpcfg',ic:'⚙️',t:'客诉罚款规则',p1:1},
@@ -6534,8 +6534,8 @@ goHome();
 <script src="pc-modules/analysis.js?v=20260730f"></script>
 <script src="pc-modules/quality.js?v=20260730f"></script>
 <script src="pc-modules/supply.js?v=20260831a"></script>
-<script src="pc-modules/replenish.js?v=20261105e"></script>
-<script src="pc-modules/cpfine.js?v=20261105c"></script>
+<script src="pc-modules/replenish.js?v=20261105f"></script>
+<script src="pc-modules/cpfine.js?v=20261105d"></script>
 <script src="pc-modules/consign.js?v=20260819b"></script>
 <script src="pc-modules/message.js?v=20260924a"></script>
 <script src="pc-modules/presend.js?v=20261030c"></script>

@@ -84,7 +84,7 @@ DB.fineOrders = DB.fineOrders || [
           {sku:'SKU8805',name:'菜心',  spec:'1kg/件',unit:'件',should:15,received:12,qty:3,revoked:1}],
    status:'pending', billNo:'',
    // 部分撤销：菜心缺口 3 撤 1，按 2 件计罚；单据仍待推送，可继续撤
-   revokes:[{at:'2026-06-28 15:20',by:'运营 · 林晓',reason:'已申请免罚',note:'商家提供装车视频，菜心实装 13 件，仓库少记 1 件',lines:[{sku:'SKU8805',name:'菜心',unit:'件',qty:1}],amt:40}]},
+   revokes:[{at:'2026-06-28 15:20',by:'林晓',reason:'已申请免罚',note:'商家提供装车视频，菜心实装 13 件，仓库少记 1 件',lines:[{sku:'SKU8805',name:'菜心',unit:'件',qty:1}],amt:40}]},
   {no:'FN20260629005', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260629005', warehouse:'兀兰DC', at:'2026-06-29 03:24', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',should:30,received:22,qty:8}],
    status:'pending', billNo:''},
@@ -104,7 +104,7 @@ DB.fineOrders = DB.fineOrders || [
   {no:'FN20260627003', merchant:'M2026-0815', merchantName:'绿鲜源蔬果', deliveryNo:'SH20260627003', warehouse:'裕廊DC', at:'2026-06-27 02:15', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU8806',name:'生菜',  spec:'1kg/件',unit:'件',should:18,received:15,qty:3,revoked:3}],
    status:'revoked', billNo:'',
-   revokes:[{at:'2026-06-27 10:32',by:'运营 · 林晓',reason:'仓库收货有误',note:'复核监控实收 18 件，清点漏录 3 件',lines:[{sku:'SKU8806',name:'生菜',unit:'件',qty:3}],amt:120}]},
+   revokes:[{at:'2026-06-27 10:32',by:'林晓',reason:'仓库收货有误',note:'复核监控实收 18 件，清点漏录 3 件',lines:[{sku:'SKU8806',name:'生菜',unit:'件',qty:3}],amt:120}]},
   // ↓ 其他商家（仅运营平台可见，商家端按 merchantCode 过滤）
   {no:'FN20260702011', merchant:'M2026-0902', merchantName:'海丰水产', deliveryNo:'SH20260702011', warehouse:'裕廊DC', at:'2026-07-02 01:52', rate:40, push:'pending', pushedAt:'', batchNo:'',
    items:[{sku:'SKU9101',name:'冰鲜三文鱼',spec:'1kg/袋',unit:'袋',should:40,received:34,qty:6}],
@@ -386,7 +386,7 @@ window.repl_invPreview=function(no){
 /* ================= 运营平台端 · 罚款单（全平台 · 按商家查询 · 推送财务结算） ================= */
 // 运营视角看全平台罚款单；支持按商家/单号/推送状态筛选；勾选后批量推送至清结算平台（PMS）
 // 状态 Tab：待推送（不含已撤销）/ 已推送 / 已撤销 / 全部（''）
-window.fineTabHit=(g,t)=>!t||(t=='revoked'?g.status=='revoked':g.push==t&&g.status!='revoked');
+window.fineTabHit=(g,t)=>!t||(t=='revoked'?g.status=='revoked':t=='pending'?g.push=='pending'&&['judging','pending'].includes(g.status):g.push==t);
 window.FINE_TABS=[['pending','待推送'],['pushed','已推送'],['revoked','已撤销'],['','全部']];
 function fineOpsBase(){
   const f=DB.fineFilter||{};
@@ -395,8 +395,10 @@ function fineOpsBase(){
     .filter(g=>hit(g.merchantName+' '+g.merchant, f.merchant) && hit(g.no,f.no) && hit(g.deliveryNo,f.dl) && hit(g.batchNo,f.bn));
 }
 function fineOpsRows(){return fineOpsBase().filter(g=>fineTabHit(g,(DB.fineFilter||{}).push));}
-// 撤销门槛只看推送状态：待推送即可撤（含判责中 / 待结算），已推送（含推送失败）一律不可撤
-window.fineCanRevoke=g=>g.push=='pending'&&g.status!='revoked';
+// 可撤 = 待推送 且 判责中/待结算；已推送（含推送失败）、已结算、已撤销不可撤
+window.fineCanRevoke=g=>g.push=='pending'&&['judging','pending'].includes(g.status);
+// 可推送（勾选）= 待推送 且 待结算；判责中不可推
+window.fineCanPush=g=>g.push=='pending'&&g.status=='pending';
 // 推送财务结算状态：并入「状态」列展示，不另立字段列——字段集与商家端一致，运营端只多「商家」一列
 function pushTag(g){if(g.status=='revoked')return '';
   return g.push=='pushed'
@@ -404,7 +406,7 @@ function pushTag(g){if(g.status=='revoked')return '';
   : '<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>待推送财务</span>';}
 PAGES['p-fine']=()=>{
   const f=DB.fineFilter, rows=fineOpsRows();
-  const selectable=rows.filter(fineCanRevoke);
+  const selectable=rows.filter(fineCanPush);
   DB.fineSel=DB.fineSel.filter(no=>selectable.some(g=>g.no==no));
   const allSel=selectable.length&&selectable.every(g=>DB.fineSel.includes(g.no));
   const merchants=[...new Set(fineGroups(true).map(g=>g.merchantName))];
@@ -437,10 +439,10 @@ PAGES['p-fine']=()=>{
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr>
         <th style="width:34px"><input type="checkbox" class="skuchk" title="全选待推送" ${allSel?'checked':''} onclick="fineOps_selAll()"></th>
-        <th>罚款单号</th><th>商家编码</th><th>商家名称</th><th>事由</th><th>来源送货单</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">撤销件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th><th>操作</th>
+        <th>罚款单号</th><th>商家编码</th><th>商家名称</th><th>事由</th><th>来源送货单</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">撤销件数</th><th style="text-align:right">计罚件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th><th>操作</th>
       </tr></thead><tbody>
       ${rows.map(g=>`<tr>
-        <td>${fineCanRevoke(g)?`<input type="checkbox" class="skuchk" ${DB.fineSel.includes(g.no)?'checked':''} onclick="fineOps_toggle('${g.no}')">`:''}</td>
+        <td>${fineCanPush(g)?`<input type="checkbox" class="skuchk" ${DB.fineSel.includes(g.no)?'checked':''} onclick="fineOps_toggle('${g.no}')">`:''}</td>
         <td class="mono" style="white-space:nowrap">${g.no}</td>
         <td class="mono" style="white-space:nowrap">${g.merchant}</td>
         <td style="white-space:nowrap"><b>${g.merchantName}</b></td>
@@ -449,13 +451,14 @@ PAGES['p-fine']=()=>{
         <td style="white-space:nowrap">${g.items.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.items.length} 个 SKU</div></td>
         <td style="text-align:right"><b>${g.qty}</b></td>
         <td style="text-align:right">${g.rq||'—'}</td>
+        <td style="text-align:right"><b>${g.lq}</b></td>
         <td style="text-align:right;white-space:nowrap">${money(g.rate)} / 件</td>
         <td style="text-align:right;white-space:nowrap">${fineAmtCell(g)}</td>
         <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}<div style="margin-top:4px">${pushTag(g)}</div></td>
         <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="fine_detail('${g.no}')">详情</button>${fineCanRevoke(g)?` <button class="btn btn-o btn-sm" style="color:var(--r)" onclick="fine_revokeAsk('receipt','${g.no}')">撤销</button>`:''}</td>
-      </tr>`).join('')||`<tr><td colspan="13" style="text-align:center;color:var(--ts);padding:22px">${fineGroups(true).length?'没有符合筛选条件的罚款单':'暂无罚款单 —— 商家足额送货到仓即不会产生罚款单'}</td></tr>`}
+      </tr>`).join('')||`<tr><td colspan="14" style="text-align:center;color:var(--ts);padding:22px">${fineGroups(true).length?'没有符合筛选条件的罚款单':'暂无罚款单 —— 商家足额送货到仓即不会产生罚款单'}</td></tr>`}
       </tbody></table></div>
-      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送、不可撤销</b>；推送后仍可在此查询批次号与推送时间。<b>待推送</b>的单如缺口有误可按 SKU「撤销」部分或全部件数，罚款按剩余件数重算；全部撤完单据变「已撤销」，不再推送、不进结算。罚款<b>不开发票</b>。当前罚款标准 <b>${money(replFineRate())}/件</b>（全平台统一，生成单据时快照）<button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="nav('p-replcfg')">去配置</button>。</div>
+      <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">推送财务结算 = 将勾选的罚款单作为<b>结算减项清单</b>推送至清结算平台（PMS），由其纳入对应商家当期结算扣减。<b>已推送的单不可重复推送</b>；推送后仍可在此查询批次号与推送时间。罚款<b>不开发票</b>。当前罚款标准 <b>${money(replFineRate())}/件</b>（全平台统一，生成单据时快照）<button class="btn btn-link btn-sm" style="padding:0 0 0 4px" onclick="nav('p-replcfg')">去配置</button>。</div>
     </div>`;
 };
 window.fineOps_query=function(){
@@ -469,7 +472,7 @@ window.fineOps_reset=function(){DB.fineFilter={merchant:'',no:'',dl:'',bn:'',pus
 window.fineOps_byBatch=function(bn){DB.fineFilter={merchant:'',no:'',dl:'',bn:bn,push:''};DB.fineSel=[];render();};
 window.fineOps_toggle=function(no){const i=DB.fineSel.indexOf(no);i<0?DB.fineSel.push(no):DB.fineSel.splice(i,1);render();};
 window.fineOps_selAll=function(){
-  const sel=fineOpsRows().filter(fineCanRevoke).map(g=>g.no);
+  const sel=fineOpsRows().filter(fineCanPush).map(g=>g.no);
   DB.fineSel=(sel.length&&sel.every(n=>DB.fineSel.includes(n)))?[]:sel.slice();render();
 };
 window.fineOps_pushAsk=function(){
@@ -492,7 +495,7 @@ window.fineOps_pushDo=function(){
   const batch='FB-'+(DB.siteCode||'SG')+'-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.fineBatchSeq++).padStart(3,'0');
   const now=ts();
   let n=0,amt=0;
-  DB.fineOrders.forEach(o=>{if(DB.fineSel.includes(o.no)&&fineCanRevoke(o)){o.push='pushed';o.pushedAt=now;o.batchNo=batch;n++;amt+=o.items.reduce((a,x)=>a+fnLiable(x),0)*o.rate;}});
+  DB.fineOrders.forEach(o=>{if(DB.fineSel.includes(o.no)&&fineCanPush(o)){o.push='pushed';o.pushedAt=now;o.batchNo=batch;n++;amt+=o.items.reduce((a,x)=>a+fnLiable(x),0)*o.rate;}});
   DB.fineSel=[];closeModal();
   // 推完这批就从「待推送」结果集里消失了，直接切到本批次，让运营看得见刚推的是哪几张
   DB.fineFilter={merchant:'',no:'',dl:'',bn:batch,push:''};
@@ -593,13 +596,15 @@ function fineRevokeFind(kind,no){return kind=='cp'?(DB.cpFines||[]).find(x=>x.no
 .frv-cnt{text-align:right;font-size:11.5px;color:var(--tt);margin-top:4px}
 .frv-warn{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#8A5A12;background:var(--goldl);border-radius:10px;padding:10px 14px;line-height:1.6}
 .frv-warn svg{flex:none;margin-top:2px}
+.btn-p.frv-ok:not(:disabled){background:var(--r);background-image:none;box-shadow:0 2px 8px rgba(192,69,59,.25)}
+.btn-p.frv-ok:not(:disabled):hover{filter:brightness(.95)}
 `;document.head.appendChild(st);})();
 // 原因：选择优于输入，做成单选胶囊；选「其他」时说明必填
 function frvReasonBlock(kind){
   return `<div class="fr"><label class="fl"><b>*</b>撤销原因</label><input type="hidden" id="fr-reason" value="">
       <div class="frv-chips">${FINE_REVOKE_REASONS[kind].map(r=>`<span class="frv-chip" onclick="fine_revokePick(this,'${r}')">${r}</span>`).join('')}</div></div>
-    <div class="fr" style="margin-bottom:14px"><label class="fl"><b id="fr-note-star" style="display:none">*</b>撤销说明</label>
-      <textarea id="fr-note" maxlength="200" rows="2" placeholder="说明撤销依据，如复核监控、商家提供的装车视频" oninput="document.getElementById('fr-cnt').textContent=this.value.length;fine_revokeCalc()"></textarea>
+    <div class="fr" style="margin-bottom:14px"><label class="fl"><b id="fr-note-star" style="display:none">*</b>撤销说明<span style="color:var(--tt);font-weight:400;margin-left:6px">商家可见</span></label>
+      <textarea id="fr-note" maxlength="200" rows="2" placeholder="写给商家看的撤销依据，如：复核后实收 18 件" oninput="document.getElementById('fr-cnt').textContent=this.value.length;fine_revokeCalc()"></textarea>
       <div class="frv-cnt"><span id="fr-cnt">0</span> / 200</div></div>`;
 }
 const FRV_WARN_IC='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
@@ -615,13 +620,13 @@ window.fine_revokeAsk=function(kind,no){
   if(!fineCanRevoke(o)){toast('该罚款单已推送财务，不可撤销','err');return;}
   FRV_NO=no; FRV_KIND=kind;
   const meta=`<div class="frv-meta"><span>罚款单<b class="mono">${no}</b></span><span>商家<b>${o.merchantName}</b></span>${kind=='cp'?'':`<span>来源送货单<b class="mono">${o.deliveryNo}</b></span><span>罚款标准<b>${money(o.rate)}/件</b></span>`}</div>`;
-  const foot=`<div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="fr-ok" disabled onclick="fine_revokeDo('${kind}','${no}')">确认撤销</button></div>`;
+  const foot=`<div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p frv-ok" id="fr-ok" disabled onclick="fine_revokeDo('${kind}','${no}')">确认撤销</button></div>`;
   if(kind=='cp'){
     modal(`<div class="mc-hd"><h3>撤销罚款单</h3>${meta}<button class="mc-x" onclick="closeModal()">×</button></div>
     <div class="mc-bd">
-      <div class="frv-sum" style="grid-template-columns:1fr 1fr;margin-top:0"><div><div class="k">罚款金额</div><div class="v r">-${money(o.amt)}</div></div><div><div class="k">撤销后</div><div class="v">${money(0)}<span class="tag t-gr">整单撤销</span></div></div></div>
+      <div class="frv-sum" style="grid-template-columns:1fr 1fr;margin-top:0"><div><div class="k">罚款金额</div><div class="v r">${money(o.amt)}</div></div><div><div class="k">撤销后</div><div class="v">${money(0)}<span class="tag t-gr">整单撤销</span></div></div></div>
       ${frvReasonBlock('cp')}
-      <div class="frv-warn">${FRV_WARN_IC}<div>客诉罚款按商家 × 周合并计罚，只能<b>整单撤销</b>；撤销<b>不可恢复</b>，撤销后不再推送、不进结算，并通知商家。</div></div></div>${foot}`);
+      <div class="frv-warn">${FRV_WARN_IC}<div>客诉罚款按商家 × 周合并计罚，只能<b>整单撤销</b>；撤销<b>不可恢复</b>，撤销后不再推送、不进结算。</div></div></div>${foot}`);
     return;
   }
   const items=o.items.filter(x=>fnLiable(x)>0);
@@ -638,15 +643,15 @@ window.fine_revokeAsk=function(kind,no){
           <span class="frv-unit">${x.unit}</span>
           <button type="button" class="btn btn-link frv-all" onclick="document.querySelector('.fr-q[data-sku=&quot;${x.sku}&quot;]').value='${fnLiable(x)}';fine_revokeCalc()">全部</button>
         </div></td>
-        <td><span class="frv-after" id="fr-after-${x.sku}">-${money(+(fnLiable(x)*o.rate).toFixed(2))}</span></td></tr>`).join('')}
+        <td><span class="frv-after" id="fr-after-${x.sku}">${money(+(fnLiable(x)*o.rate).toFixed(2))}</span></td></tr>`).join('')}
       </tbody></table></div>
     <div class="frv-sum">
       <div><div class="k">本次撤销</div><div class="v" id="fr-s-n">0<small>件</small></div></div>
       <div><div class="k">撤销金额</div><div class="v" id="fr-s-amt">${money(0)}</div></div>
-      <div><div class="k">撤销后本单罚款</div><div class="v r" id="fr-s-left">-${money(+(o.items.reduce((a,x)=>a+fnLiable(x),0)*o.rate).toFixed(2))}</div></div>
+      <div><div class="k">撤销后本单罚款</div><div class="v r" id="fr-s-left">${money(+(o.items.reduce((a,x)=>a+fnLiable(x),0)*o.rate).toFixed(2))}</div></div>
     </div>
     ${frvReasonBlock('receipt')}
-    <div class="frv-warn">${FRV_WARN_IC}<div>撤销<b>不可恢复</b>。全部件数撤完后本单变为「已撤销」，不再推送财务、不进结算；商家会收到通知，并能看到撤销的商品、件数与原因。</div></div>
+    <div class="frv-warn">${FRV_WARN_IC}<div>撤销<b>不可恢复</b>。全部件数撤完后本单变为「已撤销」，不再推送财务、不进结算。商家端可看到撤销的商品、件数、原因与说明。</div></div>
   </div>${foot}`);
   fine_revokeCalc();
 };
@@ -668,15 +673,16 @@ window.fine_revokeCalc=function(){
       const tr=document.querySelector(`tr[data-row="${x.sku}"]`); if(tr)tr.classList.toggle('on',v>0);
       const st=inp.parentNode.querySelectorAll('button'); st[0].disabled=v<=0; st[1].disabled=v>=max;
       const cell=document.getElementById('fr-after-'+x.sku);
-      if(cell){cell.textContent=(max-v)>0?'-'+money(+((max-v)*o.rate).toFixed(2)):money(0);cell.classList.toggle('zero',max-v==0);}
+      if(cell){cell.textContent=money(+((max-v)*o.rate).toFixed(2));cell.classList.toggle('zero',max-v==0);}
     });
     const set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
     set('fr-s-n',`${n}<small>件</small>`);
     set('fr-s-amt',money(+(n*o.rate).toFixed(2)));
-    set('fr-s-left',left>0?'-'+money(+(left*o.rate).toFixed(2)):`${money(0)}${n>0?'<span class="tag t-gr">整单撤销</span>':''}`);
+    set('fr-s-left',left>0?money(+(left*o.rate).toFixed(2)):`${money(0)}${n>0?'<span class="tag t-gr">整单撤销</span>':''}`);
     const l=document.getElementById('fr-s-left'); if(l)l.classList.toggle('r',left>0);
   }
   const ok=document.getElementById('fr-ok');
+  if(ok&&kind=='receipt')ok.textContent=(n>0&&left==0)?'确认整单撤销':'确认撤销';
   if(ok)ok.disabled=!(reason&&(reason!='其他'||note)&&(kind=='cp'||n>0));
 };
 window.fine_revokeDo=function(kind,no){
@@ -695,9 +701,9 @@ window.fine_revokeDo=function(kind,no){
   const o=fineRevokeFind(kind,no);
   // 提交时再校验一次：弹窗打开期间可能已被他人推送 / 撤销
   if(!o||!fineCanRevoke(o)){closeModal();render();toast('该罚款单已被推送或撤销，请刷新后查看','err');return;}
-  const rec={at:ts(),by:'运营 · 林晓',reason,note,lines:[],amt:0};
+  const rec={at:ts(),by:'林晓',reason,note,lines:[],amt:0};
   if(kind=='receipt'){
-    for(const l of lines){const x=o.items.find(i=>i.sku==l.sku); if(!x||l.qty>fnLiable(x)){closeModal();render();toast('计罚件数已变化，请重新打开撤销','err');return;}}
+    for(const l of lines){const x=o.items.find(i=>i.sku==l.sku); if(!x||l.qty>fnLiable(x)){toast('计罚件数已变化，已刷新为最新可撤件数','err');fine_revokeAsk(kind,no);return;}}
     lines.forEach(l=>{const x=o.items.find(i=>i.sku==l.sku); x.revoked=(+x.revoked||0)+l.qty; rec.lines.push({sku:x.sku,name:x.name,unit:x.unit,qty:l.qty});});
     rec.amt=+(lines.reduce((a,l)=>a+l.qty,0)*o.rate).toFixed(2);
     if(o.items.every(x=>fnLiable(x)==0))o.status='revoked';
@@ -705,9 +711,13 @@ window.fine_revokeDo=function(kind,no){
   (o.revokes=o.revokes||[]).push(rec);
   const full=o.status=='revoked';
   DB.fineSel=(DB.fineSel||[]).filter(n=>n!=no); DB.cpSel=(DB.cpSel||[]).filter(n=>n!=no);
-  closeModal(); if(typeof closeDrawer=='function')closeDrawer();
+  const fromDrawer=!!document.querySelector('#drawerc.open');
+  closeModal();
   if(kind=='cp'){if(typeof cpSettleSync=='function')cpSettleSync();}else fineSettleSync();
-  render(); toast(full?`已撤销 ${no}（整单），已通知商家`:`已撤销 ${no} 中 ${rec.lines.reduce((a,l)=>a+l.qty,0)} 件，罚款按剩余件数重算，已通知商家`,'ok');
+  render();
+  // 从抽屉发起的部分撤销：原地刷新抽屉，直接看到刚生成的撤销记录；整单撤销关闭抽屉
+  if(fromDrawer){if(!full&&kind=='receipt')fine_detail(no);else closeDrawer();}
+  toast(full?`已撤销 ${no}（整单）`:`已撤销 ${no} 中 ${rec.lines.reduce((a,l)=>a+l.qty,0)} 件，罚款按剩余件数重算`,'ok');
 };
 PAGES['m-fine']=()=>{
   const gs=fineGroups();
@@ -720,7 +730,7 @@ PAGES['m-fine']=()=>{
   </div></div>
   <div class="card"><div class="card-hd"><h3>罚款单</h3><span class="sub">待结算 ${pendCnt} 单 · 共 ${gs.length} 单 / ${DB.replOrders.length} 项 · 按送货单合并</span></div>
   <div class="card-bd flush"><div style="overflow-x:auto"><table>
-    <thead><tr><th>罚款单号</th><th>事由</th><th>来源送货单</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">撤销件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr><th>罚款单号</th><th>事由</th><th>来源送货单</th><th>缺货商品</th><th style="text-align:right">缺口件数</th><th style="text-align:right">撤销件数</th><th style="text-align:right">计罚件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th><th>状态</th><th>操作</th></tr></thead><tbody>
     ${gs.map(g=>`<tr>
       <td class="mono" style="white-space:nowrap">${g.no}</td>
       <td style="white-space:nowrap"><span class="tag t-r" style="font-size:10.5px"><span class="dot"></span>到仓少货</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.at}</div></td>
@@ -728,6 +738,7 @@ PAGES['m-fine']=()=>{
       <td style="white-space:nowrap">${g.items.map(x=>`<b>${x.name}</b>`).join('、')}<div style="font-size:11px;color:var(--ts);margin-top:2px">共 ${g.items.length} 个 SKU</div></td>
       <td style="text-align:right"><b>${g.qty}</b></td>
       <td style="text-align:right">${g.rq||'—'}</td>
+      <td style="text-align:right"><b>${g.lq}</b></td>
       <td style="text-align:right;white-space:nowrap">${money(g.rate)} / 件</td>
       <td style="text-align:right;white-space:nowrap">${fineAmtCell(g)}</td>
       <td style="white-space:nowrap">${fnTag(g.status)}${g.billNo?`<div style="font-size:11px;color:var(--ts);margin-top:2px">${g.billNo}</div>`:''}</td>
@@ -746,7 +757,7 @@ window.fine_detail=function(no){
   drawer(`<div class="drawer-hd"><div><h3>${g.no} · 罚款单</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${g.warehouse} · 共 ${g.items.length} 个 SKU 缺货 · 合计 ${g.qty} 件</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     <div class="row" style="gap:8px;margin-bottom:14px">${fnTag(g.status)}<span class="tag t-r"><span class="dot"></span>到仓少货</span></div>
-    ${g.status=='revoked'?`<div class="ib ib-b" style="margin-bottom:16px"><span class="i">ℹ️</span>本单缺口已由平台运营<b>全部撤销</b>，罚款为 0，<b>不再扣减</b>，也不会出现在结算单中。撤销明细见下方「撤销记录」。</div>`:''}
+    ${g.status=='revoked'?`<div class="ib ib-b" style="margin-bottom:16px"><span class="i">ℹ️</span>${(g.revokes||[]).length?'本单缺口已由平台运营<b>全部撤销</b>':'本单经判责认定<b>非供货商责任</b>，已撤销'}，罚款为 0，<b>不再扣减</b>，也不会出现在结算单中。</div>`:''}
     <div class="ib ib-r" style="margin-bottom:16px;${g.status=='revoked'?'display:none':''}"><span class="i">⚖️</span>本单送货到仓被清点出 <b>${g.items.length} 个 SKU 少货、合计 ${g.qty} 件</b>，按 <b>${money(g.rate)}/件</b> 计罚${g.rq?`，其中 <b>${g.rq} 件已由平台运营撤销</b>，按 <b>${g.lq} 件</b>计罚`:''}，罚款 <b>${money(g.amt)}</b>。罚款<b>按件计、与货值无关</b>，<b>不开发票</b>，作为独立扣减项进当期结算单。${g.noRepl?'<br><b>本单缺口未由自营补采</b>（自营无货），但缺货照常计罚——罚款与补采互不关联。':''}</div>
 
     ${sec('单据信息')}
@@ -768,8 +779,8 @@ window.fine_detail=function(no){
         <td style="text-align:right">${x.should}</td>
         <td style="text-align:right;color:var(--r);font-weight:600">${x.received}</td>
         <td style="text-align:right;color:var(--r);font-weight:600">${x.qty} ${x.unit}</td>
-        <td style="text-align:right">${x.revoked||'—'}</td>
-        <td style="text-align:right;font-weight:600">${fnLiable(x)}</td>
+        <td style="text-align:right">${x.revoked?x.revoked+' '+x.unit:'—'}</td>
+        <td style="text-align:right;font-weight:600">${fnLiable(x)} ${x.unit}</td>
         <td style="text-align:right">${money(g.rate)}</td>
         <td style="text-align:right;white-space:nowrap">${fnLiable(x)?`<span style="color:var(--r);font-weight:700">-${money(+(fnLiable(x)*g.rate).toFixed(2))}</span>`:`<span style="color:var(--tt)">${money(0)}</span>`}</td>
       </tr>`).join('')}

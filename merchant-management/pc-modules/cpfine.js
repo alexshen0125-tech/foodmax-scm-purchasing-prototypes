@@ -354,7 +354,7 @@ const cpPushTag=g=>g.status=='revoked'?'':g.push=='pushed'?`<span class="tag t-g
 function cpFineOps(){
   const f=DB.cpFineFilter, hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
   const base=cpFineList(true).filter(g=>hit(g.merchant+' '+g.merchantName,f.merchant)), rows=base.filter(g=>fineTabHit(g,f.push));
-  const selectable=rows.filter(fineCanRevoke); DB.cpSel=DB.cpSel.filter(no=>selectable.some(g=>g.no==no));
+  const selectable=rows.filter(fineCanPush); DB.cpSel=DB.cpSel.filter(no=>selectable.some(g=>g.no==no));
   const allSel=selectable.length&&selectable.every(g=>DB.cpSel.includes(g.no));
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="padding:16px 20px 12px">
     <div class="fg3">
@@ -374,17 +374,17 @@ function cpFineOps(){
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th style="width:34px"><input type="checkbox" class="skuchk" ${allSel?'checked':''} onclick="cp_selAll()"></th><th>罚款单号</th><th>商家编码</th><th>商家名称</th><th>统计周</th><th style="text-align:right">罚款项数</th><th style="text-align:right">罚款金额</th><th>结算状态</th><th>推送状态</th><th>出单时间</th><th>操作</th></tr></thead><tbody>
       ${rows.map(g=>`<tr>
-        <td>${fineCanRevoke(g)?`<input type="checkbox" class="skuchk" ${DB.cpSel.includes(g.no)?'checked':''} onclick="cp_toggleSel('${g.no}')">`:''}</td>
+        <td>${fineCanPush(g)?`<input type="checkbox" class="skuchk" ${DB.cpSel.includes(g.no)?'checked':''} onclick="cp_toggleSel('${g.no}')">`:''}</td>
         <td class="mono">${g.no}</td><td class="mono">${g.merchant}</td><td><b>${g.merchantName}</b></td><td style="white-space:nowrap">${cpWeek(g.week).start} ~ ${cpWeek(g.week).end}</td>
         <td style="text-align:right">${g.lines.length}</td><td style="text-align:right;white-space:nowrap">${fineAmtCell(g)}</td>
         <td>${cpStTag(g.status)}</td><td>${cpPushTag(g)}</td><td style="white-space:nowrap">${g.at}</td>
-        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="cp_fineDetail('${g.no}')">详情</button>${fineCanRevoke(g)?` <button class="btn btn-o btn-sm" style="color:var(--r)" onclick="fine_revokeAsk('cp','${g.no}')">撤销</button>`:''}</td></tr>`).join('')
+        <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="cp_fineDetail('${g.no}')">详情</button></td></tr>`).join('')
       ||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:22px">${cpFineList(true).length?'没有符合筛选条件的罚款单':'暂无客诉罚款单'}</td></tr>`}
       </tbody></table></div></div>
   </div>`;
 }
 window.cp_toggleSel=function(no){const i=DB.cpSel.indexOf(no);i<0?DB.cpSel.push(no):DB.cpSel.splice(i,1);render();};
-window.cp_selAll=function(){const s=cpFineList(true).filter(fineCanRevoke).map(g=>g.no);DB.cpSel=(s.length&&s.every(n=>DB.cpSel.includes(n)))?[]:s;render();};
+window.cp_selAll=function(){const s=cpFineList(true).filter(fineCanPush).map(g=>g.no);DB.cpSel=(s.length&&s.every(n=>DB.cpSel.includes(n)))?[]:s;render();};
 window.cp_pushAsk=function(){
   const rows=cpFineList(true).filter(g=>DB.cpSel.includes(g.no)); if(!rows.length){toast('请先勾选待推送的罚款单','err');return;}
   const tot=rows.reduce((a,g)=>a+g.amt,0);
@@ -397,7 +397,7 @@ window.cp_pushAsk=function(){
 };
 window.cp_pushDo=function(){
   const batch='FB-'+(DB.siteCode||'SG')+'-'+ts().slice(0,10).replace(/-/g,'')+'-'+String(DB.fineBatchSeq++).padStart(3,'0'), now=ts(); let n=0;
-  DB.cpFines.forEach(g=>{if(DB.cpSel.includes(g.no)&&fineCanRevoke(g)){g.push='pushed';g.pushedAt=now;g.batchNo=batch;n++;}});
+  DB.cpFines.forEach(g=>{if(DB.cpSel.includes(g.no)&&fineCanPush(g)){g.push='pushed';g.pushedAt=now;g.batchNo=batch;n++;}});
   DB.cpSel=[];closeModal();render();toast(`已推送 ${n} 张客诉罚款单，批次 ${batch}`,'ok');
 };
 window.cp_fineDetail=function(no){
@@ -425,7 +425,7 @@ window.cp_fineDetail=function(no){
       <tr style="font-weight:700;background:var(--gl)"><td colspan="5">合计</td><td style="text-align:right;color:var(--r)">-${money(g.amt)}</td><td></td></tr>
       </tbody></table></div>
   </div>
-  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button>${ops&&fineCanRevoke(g)?`<button class="btn btn-o" style="color:var(--r);border-color:var(--r)" onclick="fine_revokeAsk('cp','${g.no}')">撤销罚款单</button>`:''}</div>`);
+  <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);
 };
 
 /* =================== 商家端 · 客诉罚款 / 客诉考核 =================== */
@@ -461,7 +461,7 @@ function cpMerchantWeeks(){
 /* ---------- 挂到现有「罚款单」页：按罚款事由分 Tab ---------- */
 const origOps=PAGES['p-fine'], origM=PAGES['m-fine'];
 PAGES['p-fine']=()=>{
-  const t=DB.cpOpsTab, pend=cpFineList(true).filter(fineCanRevoke).length;
+  const t=DB.cpOpsTab, pend=cpFineList(true).filter(fineCanPush).length;
   return `<div class="tabs"><div class="tab ${t=='receipt'?'active':''}" onclick="DB.cpOpsTab='receipt';render()">到仓少货</div><div class="tab ${t=='cp'?'active':''}" onclick="DB.cpOpsTab='cp';render()">客诉罚款${pend?`<span class="tb">${pend}</span>`:''}</div></div>`
     +(t=='cp'?cpFineOps():origOps());
 };
@@ -481,6 +481,6 @@ window.cpSettleSync=function(){
   if(typeof recalcBillNet=='function')recalcBillNet();
 };
 window.cpPendingCount=()=>cpFineList(false).filter(g=>g.status=='pending').length;
-window.cpOpsPendingCount=()=>cpFineList(true).filter(fineCanRevoke).length;
+window.cpOpsPendingCount=()=>cpFineList(true).filter(fineCanPush).length;
 window.cpWeekPendingCount=()=>CP_WEEKS.filter(w=>weekState(w.key)=='pending').length;
 })();

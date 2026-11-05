@@ -154,9 +154,9 @@ function fineCard(g){
     <div class="qty">
       <div class="q"><div class="v neg">${fnQty(g)}</div><div class="l">缺口件数</div></div>
       <div class="q"><div class="v">${fnRq(g)||'—'}</div><div class="l">撤销件数</div></div>
-      <div class="q"><div class="v">${money(g.rate).slice(2)}</div><div class="l">罚款标准</div></div>
+      <div class="q"><div class="v">${fnQty(g)-fnRq(g)}</div><div class="l">计罚件数</div></div>
     </div>
-    <div class="r2">${g.status==='revoked'?'已撤销 · 不扣减':`${fnQty(g)-fnRq(g)} 件 × ${money(g.rate)}/件`}<span class="amt">${fnAmtTxt(g)}</span></div>
+    <div class="r2">${g.status==='revoked'?'已撤销 · 不扣减':`罚款标准 ${money(g.rate)}/件`}<span class="amt">${fnAmtTxt(g)}</span></div>
   </div>`;
 }
 /* ── 客诉罚款 / 客诉考核（与 PC pc-modules/cpfine.js 同口径）──────────────
