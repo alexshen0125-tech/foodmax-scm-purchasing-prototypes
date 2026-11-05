@@ -125,6 +125,9 @@ const FINES=[
    items:[{sku:'SKU8804',name:'空心菜',spec:'1kg/件',unit:'件',should:30,received:22,qty:8}]},
   {no:'FN20260701008',deliveryNo:'SH20260701008',warehouse:'淡滨尼DC',at:'2026-07-01 02:40',rate:40,status:'pending',billNo:'',noRepl:1,
    items:[{sku:'SKU8807',name:'芥蓝',spec:'1kg/件',unit:'件',should:25,received:20,qty:5}]},
+  {no:'FN20260627003',deliveryNo:'SH20260627003',warehouse:'裕廊DC',at:'2026-06-27 02:15',rate:40,status:'revoked',billNo:'',
+   revoke:{reason:'仓库清点有误',note:'复核监控实收 18 件，清点漏录 3 件',at:'2026-06-27 10:32'},
+   items:[{sku:'SKU8806',name:'生菜',spec:'1kg/件',unit:'件',should:18,received:15,qty:3}]},
   {no:'FN20260630007',deliveryNo:'SH20260630007',warehouse:'大巴窑DC',at:'2026-06-30 04:11',rate:40,status:'deducted',billNo:'ST202606-M0815',
    items:[{sku:'SKU8802',name:'白菜',spec:'1kg/件',unit:'件',should:40,received:37,qty:3}]},
   {no:'FN20260522001',deliveryNo:'SH20260522001',warehouse:'盛港DC',at:'2026-05-22 13:42',rate:40,status:'deducted',billNo:'ST202605-M0815-R2',
@@ -134,9 +137,11 @@ const FINES=[
 ];
 const fnQty=g=>g.items.reduce((a,x)=>a+x.qty,0);
 const fnAmt=g=>+(fnQty(g)*g.rate).toFixed(2);
-window.FM_FINE_BY_DELIVERY=id=>FINES.find(g=>g.deliveryNo===id)||null;
+window.FM_FINE_BY_DELIVERY=id=>FINES.find(g=>g.deliveryNo===id&&g.status!=='revoked')||null;  // 已撤销不计入送货单
 const pill=(t,bg,c)=>`<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:8px;background:${bg};color:${c};white-space:nowrap">${t}</span>`;
-const fnChip=st=>st==='pending'?pill('待结算','var(--amber-soft)','#B45309'):pill('已结算','#E1EBFF','#2563EB');
+const fnChip=st=>st==='pending'?pill('待结算','var(--amber-soft)','#B45309'):st==='revoked'?pill('已撤销','#EEF2F0','#64748B'):pill('已结算','#E1EBFF','#2563EB');
+// 已撤销：金额保留原值留痕，划线弱色表示不扣减（同 PC fineAmtCell）
+const fnAmtTxt=g=>g.status==='revoked'?`<span style="color:var(--sub);text-decoration:line-through;font-weight:400">-${money(fnAmt(g))}</span>`:`-${money(fnAmt(g))}`;
 function fineCard(g){
   return `<div class="rp-card" data-fine="${g.no}">
     <div class="r1"><span class="no">${g.no}</span>${fnChip(g.status)}${pill('到仓少货','var(--red-soft)','var(--red)')}</div>
@@ -148,7 +153,7 @@ function fineCard(g){
       <div class="q"><div class="v">${money(g.rate).slice(2)}</div><div class="l">罚款标准</div></div>
       <div class="q"><div class="v neg">${money(fnAmt(g)).slice(2)}</div><div class="l">罚款金额</div></div>
     </div>
-    <div class="r2">${fnQty(g)} 件 × ${money(g.rate)}/件<span class="amt">-${money(fnAmt(g))}</span></div>
+    <div class="r2">${g.status==='revoked'?'已撤销 · 不扣减':`${fnQty(g)} 件 × ${money(g.rate)}/件`}<span class="amt">${fnAmtTxt(g)}</span></div>
   </div>`;
 }
 /* ── 客诉罚款 / 客诉考核（与 PC pc-modules/cpfine.js 同口径）──────────────
@@ -261,15 +266,22 @@ function openFineDetail(no){
   pushPage({title:'罚款单详情',navbar:true,body:`
     <div class="rp-card2">
       <div class="rp-ct">${g.no} <span class="desc">${fnChip(g.status)} ${pill('到仓少货','var(--red-soft)','var(--red)')}</span></div>
-      <div class="rp-note" style="background:var(--red-soft);color:var(--red)">本单送货到仓被清点出 <b>${g.items.length} 个 SKU 少货、合计 ${fnQty(g)} 件</b>，按 <b>${money(g.rate)}/件</b> 计罚，罚款 <b>${money(fnAmt(g))}</b>。罚款<b>按件计、与货值无关</b>，<b>不开发票</b>，作为独立扣减项进当期结算单。${g.noRepl?'<br><b>本单缺口未由自营补采</b>（自营无货），但缺货照常计罚——罚款与补采互不关联。':''}</div>
+      ${g.status==='revoked'?`<div class="rp-note" style="background:#EEF2F0;color:#46604F">本单已由平台运营<b>撤销</b>，<b>不再扣减</b>，也不会出现在结算单中。原罚款金额 ${money(fnAmt(g))} 仅作留痕。</div>`:`<div class="rp-note" style="background:var(--red-soft);color:var(--red)">本单送货到仓被清点出 <b>${g.items.length} 个 SKU 少货、合计 ${fnQty(g)} 件</b>，按 <b>${money(g.rate)}/件</b> 计罚，罚款 <b>${money(fnAmt(g))}</b>。罚款<b>按件计、与货值无关</b>，<b>不开发票</b>，作为独立扣减项进当期结算单。${g.noRepl?'<br><b>本单缺口未由自营补采</b>（自营无货），但缺货照常计罚——罚款与补采互不关联。':''}</div>`}
     </div>
+    ${g.status==='revoked'&&g.revoke?`<div class="rp-card2">
+      <div class="rp-ct">撤销信息</div>
+      <div class="rp-row"><span class="k">撤销原因</span><span class="v">${g.revoke.reason}</span></div>
+      <div class="rp-row"><span class="k">撤销说明</span><span class="v">${g.revoke.note||'—'}</span></div>
+      <div class="rp-row"><span class="k">撤销人</span><span class="v">平台运营</span></div>
+      <div class="rp-row"><span class="k">撤销时间</span><span class="v">${g.revoke.at}</span></div>
+    </div>`:''}
     <div class="rp-card2">
       <div class="rp-ct">单据信息</div>
       <div class="rp-row"><span class="k">罚款事由</span><span class="v">到仓少货</span></div>
       <div class="rp-row"><span class="k">来源送货单</span><span class="v">${g.deliveryNo}</span></div>
       <div class="rp-row"><span class="k">入库仓库</span><span class="v">${g.warehouse}</span></div>
       <div class="rp-row"><span class="k">收货清点时间</span><span class="v">${g.at}</span></div>
-      <div class="rp-row"><span class="k">抵扣所属结算单</span><span class="v">${g.billNo||'待本期结算单生成时抵扣'}</span></div>
+      <div class="rp-row"><span class="k">抵扣所属结算单</span><span class="v">${g.billNo||(g.status==='revoked'?'已撤销，不抵扣':'待本期结算单生成时抵扣')}</span></div>
     </div>
     <div class="rp-card2">
       <div class="rp-ct">缺货明细 <span class="desc">逐 SKU</span></div>
@@ -280,7 +292,7 @@ function openFineDetail(no){
           <span style="margin-left:auto;color:var(--red);font-weight:700">-${money(+(x.qty*g.rate).toFixed(2))}</span>
         </div>
       </div>`).join('')}
-      <div class="rp-row total"><span class="k">合计 ${fnQty(g)} 件</span><span class="v neg">-${money(fnAmt(g))}</span></div>
+      <div class="rp-row total"><span class="k">合计 ${fnQty(g)} 件</span><span class="v neg">${fnAmtTxt(g)}</span></div>
     </div>
     <div style="margin:12px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">罚款标准在<b>生成单据时快照</b>，后续平台调整不追溯本单。对缺口数量有异议请<b>线下联系运营</b>核对，本期不设线上申诉入口。</div>
     <div style="height:8px"></div>`,

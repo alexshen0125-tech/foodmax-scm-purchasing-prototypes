@@ -82,7 +82,7 @@
   function dvReplQty(d){return dvRepl(d).reduce((a,r)=>a+(+r.qty||0),0);}
   function dvReplSku(d,sku){return dvRepl(d).filter(r=>r.sku==sku).reduce((a,r)=>a+(+r.qty||0),0);}
   // 缺货罚款：来自独立的罚款单数据源，只要清点出缺口就有，与是否补采无关
-  function dvFine(d){return ((DB.fineOrders||[]).find(f=>f.deliveryNo==d.id))||null;}
+  function dvFine(d){return ((DB.fineOrders||[]).find(f=>f.deliveryNo==d.id&&f.status!='revoked'))||null;}  // 已撤销的罚款单不计入送货单
   function dvFineAmt(d){const f=dvFine(d);return f?+(f.items.reduce((a,x)=>a+x.qty,0)*f.rate).toFixed(2):0;}
   function dvFineSku(d,sku){const f=dvFine(d);if(!f)return 0;const it=f.items.find(x=>x.sku==sku);return it?+(it.qty*f.rate).toFixed(2):0;}
   function tabSign(){
