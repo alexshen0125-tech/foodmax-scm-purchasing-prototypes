@@ -486,7 +486,7 @@ window.fineOps_pushAsk=function(){
       ${Object.keys(byM).map(m=>`<tr><td><b>${m}</b><div style="font-size:11px;color:var(--ts);margin-top:2px" class="mono">${byM[m][0].merchant}</div></td><td style="text-align:right">${byM[m].length}</td><td style="text-align:right;color:var(--r);font-weight:600">-${money(byM[m].reduce((a,g)=>a+g.amt,0))}</td></tr>`).join('')}
       <tr style="background:#F7FBF8;font-weight:700"><td>合计 ${Object.keys(byM).length} 个商家</td><td style="text-align:right">${rows.length}</td><td style="text-align:right;color:var(--r)">-${money(total)}</td></tr>
     </tbody></table></div>
-    <div style="font-size:12.5px;color:var(--ts)">推送内容：罚款单号 / 商家编码 / 来源送货单 / 缺口件数 / 罚款标准 / 罚款金额 / 归属结算周期。<b>罚款不开发票</b>，清结算平台按减项处理。</div>
+    <div style="font-size:12.5px;color:var(--ts)">推送内容：罚款单号 / 商家编码 / 来源送货单 / 逐 SKU 计罚件数 / 罚款标准 / 罚款金额 / 归属结算周期。<b>罚款不开发票</b>，清结算平台按减项处理。已撤完的 SKU 不推送，部分撤销的 SKU 按计罚件数推送。</div>
   </div>
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="fineOps_pushDo()">确认推送</button></div>`);
 };
