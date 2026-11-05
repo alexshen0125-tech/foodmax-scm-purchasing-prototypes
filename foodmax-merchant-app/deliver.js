@@ -224,7 +224,9 @@ function dvShortQty(d){return dvSku(d).reduce((a,r)=>a+Math.max(0,r.qty-r.inQty)
 function dvRepl(d){return window.FM_REPL_BY_DELIVERY?window.FM_REPL_BY_DELIVERY(d.id):[];}
 function dvReplQty(d){return dvRepl(d).reduce((a,r)=>a+(+r.qty||0),0);}
 function dvFine(d){return window.FM_FINE_BY_DELIVERY?window.FM_FINE_BY_DELIVERY(d.id):null;}
-function dvFineAmt(d){const f=dvFine(d);return f?+(f.items.reduce((a,x)=>a+x.qty,0)*f.rate).toFixed(2):0;}
+// 罚款按计罚件数（缺口 − 平台运营撤销件数）
+function dvFineQty(d){const f=dvFine(d);return f?f.items.reduce((a,x)=>a+Math.max(0,x.qty-(x.revoked||0)),0):0;}
+function dvFineAmt(d){const f=dvFine(d);return f?+(dvFineQty(d)*f.rate).toFixed(2):0;}
 function dvReplName(d,name){return dvRepl(d).filter(r=>r.name===name).reduce((a,r)=>a+(+r.qty||0),0);}
 
 /* ============ 送货前核货（2026-10-14，与 PC pc-modules/checkgoods.js 同口径）============
@@ -639,7 +641,7 @@ function openSignDetail(d){
       kv('交接时间',d.status==='交接完成'?`${d.deliver} 已交接入仓`:'未交接')+
       kv('收货清点时间',d.status==='交接完成'?`${d.receiptTime||d.deliver+' 已清点'}（出库前·仓内清点）`:'未清点')+
       kv('收货结果',d.status==='交接完成'?(dvShort(d)?`<b style="color:var(--red)">少货 ${dvShortQty(d)} 件</b>`:'<b style="color:var(--emerald)">足额收货</b>'):'待清点')+
-      kv('缺货罚款',d.status==='交接完成'?(dvFineAmt(d)>0?`<b style="color:var(--red)">S$${dvFineAmt(d).toFixed(2)}</b>（${dvFine(d).items.reduce((a,x)=>a+x.qty,0)} 件 × S$${dvFine(d).rate.toFixed(2)}/件 · ${dvFine(d).no}）`:'无'):'—')+
+      kv('缺货罚款',d.status==='交接完成'?(dvFineAmt(d)>0?`<b style="color:var(--red)">S$${dvFineAmt(d).toFixed(2)}</b>（${dvFineQty(d)} 件 × S$${dvFine(d).rate.toFixed(2)}/件 · ${dvFine(d).no}）`:'无'):'—')+
       kv('平台补采',d.status==='交接完成'?`<b style="color:${dvReplQty(d)>0?'var(--amber)':'var(--sub)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?'（缺口由平台自营现货补货）':'（无需补货）'}`:'0 件')
     )}
     ${dvShort(d)?(()=>{const rs=(window.FM_REPL_BY_DELIVERY?window.FM_REPL_BY_DELIVERY(d.id):[]);
@@ -647,7 +649,7 @@ function openSignDetail(d){
         本单收货清点<b>少货 ${totQty-totIn} 件</b>。${rs.length
           ?`缺口已由平台<b>自营现货全额补齐</b>，客户订单未受影响（商品/金额/发票不变），已生成平台补采单 ${rs.map(r=>r.no).join('、')}——按<b>你的含税售价 ×(1+加价率)</b> 计价并在结算单中抵扣。<div id="dl-repl-lk" style="font-weight:700;margin-top:6px;min-height:32px;display:flex;align-items:center;cursor:pointer">查看平台补采单 ›</div>`
           :`自营现货不足以全额覆盖缺口，本单按<b>实收数量</b>出库并标缺货，不生成平台补采单。`}
-        ${dvFineAmt(d)>0?`<div style="margin-top:6px">另按缺货计<b>罚款 S$${dvFineAmt(d).toFixed(2)}</b>（${dvFine(d).items.reduce((a,x)=>a+x.qty,0)} 件 × S$${dvFine(d).rate.toFixed(2)}/件，单号 ${dvFine(d).no}）——<b>罚款与是否补采无关，只要清点出缺口就计</b>。</div>`:''}
+        ${dvFineAmt(d)>0?`<div style="margin-top:6px">另按缺货计<b>罚款 S$${dvFineAmt(d).toFixed(2)}</b>（${dvFineQty(d)} 件 × S$${dvFine(d).rate.toFixed(2)}/件，单号 ${dvFine(d).no}）——<b>罚款与是否补采无关，只要清点出缺口就计</b>。</div>`:''}
         <div style="color:var(--sub);margin-top:4px">对实收数量有异议请<b>线下联系平台运营</b>核对，本期不设线上申诉入口。</div>
       </div>`;})():''}
     ${(ADDR[d.warehouse]||meta.d)?sec('交货地点信息')+box(

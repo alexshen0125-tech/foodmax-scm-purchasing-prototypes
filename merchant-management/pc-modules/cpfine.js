@@ -350,7 +350,7 @@ window.cp_issueDo=function(wk){
 /* =================== 罚款单 · 客诉罚款（运营 / 商家共用） =================== */
 function cpFineList(all){return DB.cpFines.filter(g=>all||g.merchant==((DB.merchant&&DB.merchant.code)||'M2026-0815'));}
 const cpStTag=s=>s=='pending'?'<span class="tag t-y"><span class="dot"></span>待结算</span>':s=='revoked'?'<span class="tag t-gr"><span class="dot"></span>已撤销</span>':'<span class="tag t-b"><span class="dot"></span>已结算</span>';
-const cpPushTag=g=>g.status=='revoked'?`<div style="font-size:11px;color:var(--ts)">${g.revoke?g.revoke.at:''} 运营撤销</div>`:g.push=='pushed'?`<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>已推送财务</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt} · <span class="mono">${g.batchNo}</span></div>`:'<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>待推送财务</span>';
+const cpPushTag=g=>g.status=='revoked'?'':g.push=='pushed'?`<span class="tag t-g" style="font-size:10.5px"><span class="dot"></span>已推送财务</span><div style="font-size:11px;color:var(--ts);margin-top:2px">${g.pushedAt} · <span class="mono">${g.batchNo}</span></div>`:'<span class="tag t-y" style="font-size:10.5px"><span class="dot"></span>待推送财务</span>';
 function cpFineOps(){
   const f=DB.cpFineFilter, hit=(v,k)=>!k||String(v||'').toLowerCase().includes(String(k).trim().toLowerCase());
   const rows=cpFineList(true).filter(g=>hit(g.merchant+' '+g.merchantName,f.merchant)&&(!f.push||(g.push==f.push&&g.status!='revoked')));
@@ -413,7 +413,7 @@ window.cp_fineDetail=function(no){
       ${kv('抵扣所属结算单',g.billNo?`<span class="mono">${g.billNo}</span>`:g.status=='revoked'?'已撤销，不抵扣':'待本期结算单生成时抵扣')}
       ${ops&&g.status!='revoked'?kv('推送状态',cpPushTag(g)):''}
     </div>
-    ${fineRevokeSec(g,sec,kv)}
+    ${fineRevokeSec(g,sec)}
     ${sec('罚款明细')}
     <div style="overflow-x:auto"><table>
       <thead><tr><th>品类</th><th>问题类型</th><th style="text-align:right">商责客诉量</th><th style="text-align:right">客诉率</th><th>命中档位</th><th style="text-align:right">罚款金额</th><th>操作</th></tr></thead><tbody>

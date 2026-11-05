@@ -83,8 +83,10 @@
   function dvReplSku(d,sku){return dvRepl(d).filter(r=>r.sku==sku).reduce((a,r)=>a+(+r.qty||0),0);}
   // 缺货罚款：来自独立的罚款单数据源，只要清点出缺口就有，与是否补采无关
   function dvFine(d){return ((DB.fineOrders||[]).find(f=>f.deliveryNo==d.id&&f.status!='revoked'))||null;}  // 已撤销的罚款单不计入送货单
-  function dvFineAmt(d){const f=dvFine(d);return f?+(f.items.reduce((a,x)=>a+x.qty,0)*f.rate).toFixed(2):0;}
-  function dvFineSku(d,sku){const f=dvFine(d);if(!f)return 0;const it=f.items.find(x=>x.sku==sku);return it?+(it.qty*f.rate).toFixed(2):0;}
+  // 罚款按计罚件数（缺口 − 运营撤销件数）
+  function dvFineQty(d){const f=dvFine(d);return f?f.items.reduce((a,x)=>a+fnLiable(x),0):0;}
+  function dvFineAmt(d){const f=dvFine(d);return f?+(dvFineQty(d)*f.rate).toFixed(2):0;}
+  function dvFineSku(d,sku){const f=dvFine(d);if(!f)return 0;const it=f.items.find(x=>x.sku==sku);return it?+(fnLiable(it)*f.rate).toFixed(2):0;}
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
@@ -285,7 +287,7 @@
         ${kvItem('收货清点时间',inbound?(d.receiptTime||`${d.deliver} 已清点`):'未清点')}
         ${kvItem('收货结果',inbound?(dvShort(d)?`<span class="tag t-r"><span class="dot"></span>少货 ${dvShortQty(d)} 件</span>`:'<span class="tag t-g"><span class="dot"></span>足额收货</span>'):'待清点')}
         ${kvItem('平台补采',inbound?`<b style="color:${dvReplQty(d)>0?'var(--gold)':'var(--ts)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?`（缺口由平台自营现货补齐）`:'（无需补采）'}`:'0 件')}
-        ${kvItem('缺货罚款',inbound?(dvFineAmt(d)>0?`<b style="color:var(--r)">${money(dvFineAmt(d))}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${dvFine(d).items.reduce((a,x)=>a+x.qty,0)} 件 × ${money(dvFine(d).rate)}/件 · 单号 <span class="mono">${dvFine(d).no}</span></div>`:'<span style="color:var(--ts)">无</span>'):'—')}
+        ${kvItem('缺货罚款',inbound?(dvFineAmt(d)>0?`<b style="color:var(--r)">${money(dvFineAmt(d))}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${dvFineQty(d)} 件 × ${money(dvFine(d).rate)}/件 · 单号 <span class="mono">${dvFine(d).no}</span></div>`:'<span style="color:var(--ts)">无</span>'):'—')}
       </div>
     </div></div>
     ${(inbound&&dvShort(d))?(()=>{const rs=(typeof replByDelivery=='function')?replByDelivery(d.id):[];
@@ -293,7 +295,7 @@
         本单收货清点<b>少货 ${dvShortQty(d)} 件</b>。${rs.length
           ?`缺口已由平台<b>自营现货全额补齐</b>，客户订单未受影响（商品/金额/发票不变），已生成平台补采单 ${rs.map(r=>`<span class="mono">${r.no}</span>`).join('、')}——按<b>自营商品原定价</b>计价（<b>不加价</b>），在结算单中抵扣。`
           :`自营现货不足以全额覆盖缺口，本单按<b>实收数量</b>出库并标缺货，<b>不生成平台补采单</b>。`}
-        ${dvFineAmt(d)>0?`<br>另按缺货计<b>罚款 ${money(dvFineAmt(d))}</b>（${dvFine(d).items.reduce((a,x)=>a+x.qty,0)} 件 × ${money(dvFine(d).rate)}/件，单号 <span class="mono">${dvFine(d).no}</span>）——<b>罚款与是否补采无关，只要清点出缺口就计</b>。`:''}
+        ${dvFineAmt(d)>0?`<br>另按缺货计<b>罚款 ${money(dvFineAmt(d))}</b>（${dvFineQty(d)} 件 × ${money(dvFine(d).rate)}/件，单号 <span class="mono">${dvFine(d).no}</span>）——<b>罚款与是否补采无关，只要清点出缺口就计</b>。`:''}
         <br>${rs.length?`<button class="btn btn-link" style="padding-left:0" onclick="nav('m-replenish')">查看平台补采单 →</button>`:''}${dvFineAmt(d)>0?`<button class="btn btn-link" ${rs.length?'':'style="padding-left:0"'} onclick="nav('m-fine')">查看罚款单 →</button>`:''}
         <br><span style="color:var(--ts)">对实收数量有异议请<b>线下联系平台运营</b>核对（可调取仓库收货监控），本期不设线上申诉入口。</span>
       </div></div>`;})():''}
