@@ -560,51 +560,124 @@ window.fineRevokeSec=(g,sec)=>{
    客诉罚款无 SKU 维度，整单撤。原因必选，选「其他」时说明必填；撤销不可恢复 */
 const FINE_REVOKE_REASONS={receipt:['仓库清点有误','商家申诉成立','重复生成','其他'],cp:['判责结果有误','商家申诉成立','重复生成','其他']};
 function fineRevokeFind(kind,no){return kind=='cp'?(DB.cpFines||[]).find(x=>x.no==no):(DB.fineOrders||[]).find(x=>x.no==no);}
+(function(){if(document.getElementById('frv-css'))return;const st=document.createElement('style');st.id='frv-css';st.textContent=`
+.frv-meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:var(--ts)}
+.frv-meta span b{color:var(--tp);font-weight:600;margin-left:6px}
+.frv-st{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.frv-st h4{font-size:14px;font-weight:700;color:var(--tp)}
+.frv-st .h{font-size:12px;color:var(--tt);font-weight:400;margin-left:8px}
+.frv-tb{border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.frv-tb table{margin:0}.frv-tb td{vertical-align:middle;transition:background .15s}
+.frv-tb th:not(:first-child),.frv-tb td:not(:first-child){text-align:right;font-feature-settings:"tnum" 1}
+.frv-tb tr.on td{background:#F1F8F1}
+.frv-q{display:inline-flex;align-items:center;gap:8px;justify-content:flex-end}
+.frv-step{display:inline-flex;align-items:center;border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:#fff;transition:border-color .15s}
+.frv-step:focus-within{border-color:var(--g);box-shadow:0 0 0 3px rgba(14,122,82,.1)}
+.frv-step button{width:30px;height:32px;border:none;background:#F6F8F4;color:var(--ts);font-size:16px;line-height:1;cursor:pointer;padding:0}
+.frv-step button:hover:not(:disabled){color:var(--g);background:var(--gl)}.frv-step button:disabled{color:var(--bd);cursor:not-allowed}
+.frv-step input{width:52px;height:32px;border:none!important;border-left:1px solid var(--bd2)!important;border-right:1px solid var(--bd2)!important;border-radius:0!important;text-align:center;padding:0!important;font-feature-settings:"tnum" 1;font-weight:600;box-shadow:none!important}
+.frv-step input::-webkit-inner-spin-button,.frv-step input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.frv-unit{font-size:12px;color:var(--ts);min-width:14px;text-align:left}
+.frv-all{font-size:12px!important;font-weight:600}
+.frv-after{font-weight:600}.frv-after.zero{color:var(--tt);font-weight:400}
+.frv-sum{display:grid;grid-template-columns:repeat(3,1fr);margin:14px 0 22px;border:1px solid var(--bd);border-radius:12px;background:linear-gradient(180deg,#F8FBF6,#F1F6EE)}
+.frv-sum>div{padding:12px 18px}.frv-sum>div+div{border-left:1px solid var(--bd)}
+.frv-sum .k{font-size:12px;color:var(--ts)}
+.frv-sum .v{font-size:19px;font-weight:700;margin-top:3px;color:var(--tp);font-feature-settings:"tnum" 1;display:flex;align-items:center;gap:8px}
+.frv-sum .v small{font-size:12px;font-weight:500;color:var(--ts)}
+.frv-sum .v.r{color:var(--r)}
+.frv-sum .tag{font-size:11px}
+.frv-chips{display:flex;gap:8px;flex-wrap:wrap}
+.frv-chip{border:1px solid var(--bd);border-radius:20px;padding:7px 15px;font-size:13px;cursor:pointer;background:#fff;color:var(--tp);user-select:none;transition:.15s}
+.frv-chip:hover{border-color:var(--g)}.frv-chip.on{border-color:var(--g);background:var(--gl);color:var(--g);font-weight:600}
+.frv-cnt{text-align:right;font-size:11.5px;color:var(--tt);margin-top:4px}
+.frv-warn{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#8A5A12;background:var(--goldl);border-radius:10px;padding:10px 14px;line-height:1.6}
+.frv-warn svg{flex:none;margin-top:2px}
+`;document.head.appendChild(st);})();
+// 原因：选择优于输入，做成单选胶囊；选「其他」时说明必填
+function frvReasonBlock(kind){
+  return `<div class="fr"><label class="fl"><b>*</b>撤销原因</label><input type="hidden" id="fr-reason" value="">
+      <div class="frv-chips">${FINE_REVOKE_REASONS[kind].map(r=>`<span class="frv-chip" onclick="fine_revokePick(this,'${r}')">${r}</span>`).join('')}</div></div>
+    <div class="fr" style="margin-bottom:14px"><label class="fl"><b id="fr-note-star" style="display:none">*</b>撤销说明</label>
+      <textarea id="fr-note" maxlength="200" rows="2" placeholder="说明撤销依据，如复核监控、商家提供的装车视频" oninput="document.getElementById('fr-cnt').textContent=this.value.length;fine_revokeCalc()"></textarea>
+      <div class="frv-cnt"><span id="fr-cnt">0</span> / 200</div></div>`;
+}
+const FRV_WARN_IC='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+window.fine_revokePick=function(el,r){
+  document.querySelectorAll('.frv-chip').forEach(c=>c.classList.toggle('on',c===el));
+  document.getElementById('fr-reason').value=r;
+  document.getElementById('fr-note-star').style.display=r=='其他'?'':'none';
+  fine_revokeCalc();
+};
+let FRV_NO='', FRV_KIND='';
 window.fine_revokeAsk=function(kind,no){
   const o=fineRevokeFind(kind,no); if(!o)return;
   if(!fineCanRevoke(o)){toast('该罚款单已推送财务，不可撤销','err');return;}
-  const reasonBlock=`<div class="fr"><label class="fl"><b>*</b>撤销原因</label><select id="fr-reason" onchange="document.getElementById('fr-note-star').style.display=this.value=='其他'?'':'none'"><option value="">请选择</option>${FINE_REVOKE_REASONS[kind].map(r=>`<option>${r}</option>`).join('')}</select></div>
-    <div class="fr"><label class="fl"><b id="fr-note-star" style="display:none">*</b>撤销说明</label><textarea id="fr-note" maxlength="200" rows="2" placeholder="选填，最多 200 字；原因选「其他」时必填"></textarea></div>`;
+  FRV_NO=no; FRV_KIND=kind;
+  const meta=`<div class="frv-meta"><span>罚款单<b class="mono">${no}</b></span><span>商家<b>${o.merchantName}</b></span>${kind=='cp'?'':`<span>来源送货单<b class="mono">${o.deliveryNo}</b></span><span>罚款标准<b>${money(o.rate)}/件</b></span>`}</div>`;
+  const foot=`<div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="fr-ok" disabled onclick="fine_revokeDo('${kind}','${no}')">确认撤销</button></div>`;
   if(kind=='cp'){
-    modal(`<div class="mc-hd"><h3>撤销罚款单</h3><p>${no} · ${o.merchantName} <span class="mono" style="color:var(--ts)">${o.merchant}</span> · 罚款 <b style="color:var(--r)">-${money(o.amt)}</b></p><button class="mc-x" onclick="closeModal()">×</button></div>
-    <div class="mc-bd">${reasonBlock}
-      <div class="ib ib-y"><span class="i">⚠️</span>客诉罚款按商家×周合并计罚，<b>整单撤销</b>。撤销后不再推送财务、不进结算扣减，<b>不可恢复</b>；系统会通知商家。</div></div>
-    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="fine_revokeDo('cp','${no}')">确认撤销</button></div>`);
+    modal(`<div class="mc-hd"><h3>撤销罚款单</h3>${meta}<button class="mc-x" onclick="closeModal()">×</button></div>
+    <div class="mc-bd">
+      <div class="frv-sum" style="grid-template-columns:1fr 1fr;margin-top:0"><div><div class="k">罚款金额</div><div class="v r">-${money(o.amt)}</div></div><div><div class="k">撤销后</div><div class="v">${money(0)}<span class="tag t-gr">整单撤销</span></div></div></div>
+      ${frvReasonBlock('cp')}
+      <div class="frv-warn">${FRV_WARN_IC}<div>客诉罚款按商家 × 周合并计罚，只能<b>整单撤销</b>；撤销<b>不可恢复</b>，撤销后不再推送、不进结算，并通知商家。</div></div></div>${foot}`);
     return;
   }
   const items=o.items.filter(x=>fnLiable(x)>0);
-  modalWide(`<div class="mc-hd"><h3>撤销罚款</h3><p>${no} · ${o.merchantName} <span class="mono" style="color:var(--ts)">${o.merchant}</span> · 来源送货单 <span class="mono">${o.deliveryNo}</span></p><button class="mc-x" onclick="closeModal()">×</button></div>
+  modalWide(`<div class="mc-hd"><h3>撤销罚款</h3>${meta}<button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div style="border:1px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:6px"><table style="margin:0">
-      <thead><tr><th>商品</th><th style="text-align:right">缺口</th><th style="text-align:right">已撤销</th><th style="text-align:right">计罚件数</th><th style="text-align:right;width:150px">本次撤销件数</th><th style="text-align:right">撤销后罚款</th></tr></thead><tbody>
-      ${items.map(x=>`<tr>
-        <td style="white-space:nowrap"><b>${x.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${x.sku} · ${x.spec}</div></td>
-        <td style="text-align:right">${x.qty} ${x.unit}</td><td style="text-align:right">${x.revoked||'—'}</td><td style="text-align:right">${fnLiable(x)}</td>
-        <td style="text-align:right"><input class="fr-q" data-sku="${x.sku}" data-max="${fnLiable(x)}" type="number" min="0" max="${fnLiable(x)}" step="1" placeholder="0" style="width:90px;text-align:right" oninput="fine_revokeCalc('${no}')"><button class="btn btn-link btn-sm" style="padding:0 0 0 6px" onclick="this.previousElementSibling.value='${fnLiable(x)}';fine_revokeCalc('${no}')">全部</button></td>
-        <td style="text-align:right;white-space:nowrap" id="fr-after-${x.sku}">-${money(+(fnLiable(x)*o.rate).toFixed(2))}</td></tr>`).join('')}
+    <div class="frv-st"><h4>撤销件数<span class="h">按 SKU 填写本次要撤销的件数，罚款按剩余件数重算</span></h4><button class="btn btn-link btn-sm" onclick="document.querySelectorAll('.fr-q').forEach(i=>i.value=i.dataset.max);fine_revokeCalc()">整单全部撤销</button></div>
+    <div class="frv-tb"><table>
+      <thead><tr><th>商品</th><th>缺口</th><th>已撤销</th><th>计罚件数</th><th style="width:210px">本次撤销</th><th style="width:120px">撤销后罚款</th></tr></thead><tbody>
+      ${items.map(x=>`<tr data-row="${x.sku}">
+        <td style="white-space:nowrap"><b>${x.name}</b><div style="font-size:11.5px;color:var(--ts);margin-top:3px">${x.sku} · ${x.spec}</div></td>
+        <td>${x.qty}</td><td>${x.revoked||'—'}</td><td>${fnLiable(x)}</td>
+        <td><div class="frv-q">
+          <div class="frv-step"><button type="button" onclick="fine_revokeStep('${x.sku}',-1)">−</button><input class="fr-q" data-sku="${x.sku}" data-max="${fnLiable(x)}" type="number" min="0" max="${fnLiable(x)}" step="1" value="0" oninput="fine_revokeCalc()"><button type="button" onclick="fine_revokeStep('${x.sku}',1)">+</button></div>
+          <span class="frv-unit">${x.unit}</span>
+          <button type="button" class="btn btn-link frv-all" onclick="document.querySelector('.fr-q[data-sku=&quot;${x.sku}&quot;]').value='${fnLiable(x)}';fine_revokeCalc()">全部</button>
+        </div></td>
+        <td><span class="frv-after" id="fr-after-${x.sku}">-${money(+(fnLiable(x)*o.rate).toFixed(2))}</span></td></tr>`).join('')}
       </tbody></table></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:8px 2px 14px">
-      <button class="btn btn-link btn-sm" style="padding:0" onclick="document.querySelectorAll('.fr-q').forEach(i=>i.value=i.dataset.max);fine_revokeCalc('${no}')">整单全部撤销</button>
-      <span id="fr-sum" style="color:var(--ts)">本次撤销 0 件 · 撤销后本单罚款 <b style="color:var(--r)">-${money(+(o.items.reduce((a,x)=>a+fnLiable(x),0)*o.rate).toFixed(2))}</b></span>
+    <div class="frv-sum">
+      <div><div class="k">本次撤销</div><div class="v" id="fr-s-n">0<small>件</small></div></div>
+      <div><div class="k">撤销金额</div><div class="v" id="fr-s-amt">${money(0)}</div></div>
+      <div><div class="k">撤销后本单罚款</div><div class="v r" id="fr-s-left">-${money(+(o.items.reduce((a,x)=>a+fnLiable(x),0)*o.rate).toFixed(2))}</div></div>
     </div>
-    ${reasonBlock}
-    <div class="ib ib-y"><span class="i">⚠️</span>按 <b>${money(o.rate)}/件</b> 重算罚款；撤销<b>不可恢复</b>。全部件数撤完后本单变为「已撤销」，不再推送财务、不进结算。系统会通知商家，商家端可看到撤销的商品、件数与原因。</div>
-  </div>
-  <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="fine_revokeDo('receipt','${no}')">确认撤销</button></div>`);
+    ${frvReasonBlock('receipt')}
+    <div class="frv-warn">${FRV_WARN_IC}<div>撤销<b>不可恢复</b>。全部件数撤完后本单变为「已撤销」，不再推送财务、不进结算；商家会收到通知，并能看到撤销的商品、件数与原因。</div></div>
+  </div>${foot}`);
+  fine_revokeCalc();
 };
-// 输入即算：每行撤销后罚款 + 本次合计 + 撤销后本单罚款
-window.fine_revokeCalc=function(no){
-  const o=fineRevokeFind('receipt',no); if(!o)return;
+window.fine_revokeStep=function(sku,d){
+  const i=document.querySelector(`.fr-q[data-sku="${sku}"]`); if(!i)return;
+  i.value=Math.min(+i.dataset.max,Math.max(0,(Math.floor(+i.value)||0)+d)); fine_revokeCalc();
+};
+// 输入即算：行底色、行撤销后罚款、汇总三项；未填件数或未选原因时「确认撤销」置灰
+window.fine_revokeCalc=function(){
+  const kind=FRV_KIND, o=fineRevokeFind(kind,FRV_NO); if(!o)return;
+  const reason=(document.getElementById('fr-reason')||{}).value||'', note=((document.getElementById('fr-note')||{}).value||'').trim();
   let n=0, left=0;
-  o.items.forEach(x=>{
-    const inp=document.querySelector(`.fr-q[data-sku="${x.sku}"]`);
-    let v=inp?Math.floor(+inp.value||0):0; const max=fnLiable(x);
-    if(inp&&+inp.value>max){inp.value=max;v=max;}
-    if(v<0)v=0; n+=v; left+=max-v;
-    const cell=document.getElementById('fr-after-'+x.sku); if(cell)cell.textContent=(max-v)>0?'-'+money(+((max-v)*o.rate).toFixed(2)):money(0);
-  });
-  const el=document.getElementById('fr-sum');
-  if(el)el.innerHTML=`本次撤销 <b style="color:var(--tp)">${n}</b> 件 · 撤销金额 <b style="color:var(--tp)">${money(+(n*o.rate).toFixed(2))}</b> · 撤销后本单罚款 <b style="color:var(--r)">${left>0?'-'+money(+(left*o.rate).toFixed(2)):money(0)}</b>${left==0&&n>0?'（整单撤销）':''}`;
+  if(kind=='receipt'){
+    o.items.filter(x=>fnLiable(x)>0).forEach(x=>{
+      const inp=document.querySelector(`.fr-q[data-sku="${x.sku}"]`); if(!inp)return;
+      const max=fnLiable(x); let v=Math.floor(+inp.value||0);
+      if(v>max){v=max;inp.value=max;} if(v<0){v=0;inp.value=0;}
+      n+=v; left+=max-v;
+      const tr=document.querySelector(`tr[data-row="${x.sku}"]`); if(tr)tr.classList.toggle('on',v>0);
+      const st=inp.parentNode.querySelectorAll('button'); st[0].disabled=v<=0; st[1].disabled=v>=max;
+      const cell=document.getElementById('fr-after-'+x.sku);
+      if(cell){cell.textContent=(max-v)>0?'-'+money(+((max-v)*o.rate).toFixed(2)):money(0);cell.classList.toggle('zero',max-v==0);}
+    });
+    const set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
+    set('fr-s-n',`${n}<small>件</small>`);
+    set('fr-s-amt',money(+(n*o.rate).toFixed(2)));
+    set('fr-s-left',left>0?'-'+money(+(left*o.rate).toFixed(2)):`${money(0)}${n>0?'<span class="tag t-gr">整单撤销</span>':''}`);
+    const l=document.getElementById('fr-s-left'); if(l)l.classList.toggle('r',left>0);
+  }
+  const ok=document.getElementById('fr-ok');
+  if(ok)ok.disabled=!(reason&&(reason!='其他'||note)&&(kind=='cp'||n>0));
 };
 window.fine_revokeDo=function(kind,no){
   const reason=(document.getElementById('fr-reason')||{}).value||'', note=((document.getElementById('fr-note')||{}).value||'').trim();
