@@ -530,6 +530,8 @@ window.repl_saveFine=function(){
 // 罚款单 = 【一张送货单一张】，金额 = 该单各 SKU 缺口件数合计 × 罚款标准；与补采单【无任何关联】
 // 计罚件数 = 缺口 − 已撤销件数（撤销按 SKU、按件）
 window.fnLiable=x=>Math.max(0,(+x.qty||0)-(+x.revoked||0));
+// SKU 撤销状态（运营端 / 商家端同口径）：未撤 —；部分撤销；已撤销（该 SKU 不再推送财务）
+window.fnSkuRevokeTag=x=>!(+x.revoked)?'<span style="color:var(--tt)">—</span>':fnLiable(x)==0?'<span class="tag t-gr"><span class="dot"></span>已撤销</span>':'<span class="tag t-y"><span class="dot"></span>部分撤销</span>';
 function fineGroups(all){
   return (DB.fineOrders||[]).filter(g=>all?true:g.merchant==(DB.merchant.code||'M2026-0815')).map(g=>{
     const qty=g.items.reduce((a,x)=>a+x.qty,0), rq=g.items.reduce((a,x)=>a+(+x.revoked||0),0);
@@ -772,18 +774,19 @@ window.fine_detail=function(no){
 
     ${sec('缺货明细 · 逐 SKU')}
     <div style="overflow-x:auto;margin-bottom:14px"><table>
-      <thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">缺口</th><th style="text-align:right">撤销件数</th><th style="text-align:right">计罚件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th></tr></thead><tbody>
+      <thead><tr><th>商品</th><th style="text-align:right">应送</th><th style="text-align:right">实收</th><th style="text-align:right">缺口</th><th>撤销状态</th><th style="text-align:right">撤销件数</th><th style="text-align:right">计罚件数</th><th style="text-align:right">罚款标准</th><th style="text-align:right">罚款金额</th></tr></thead><tbody>
       ${g.items.map(x=>`<tr>
         <td style="white-space:nowrap"><b>${x.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${x.sku} · ${x.spec}</div></td>
         <td style="text-align:right">${x.should}</td>
         <td style="text-align:right;color:var(--r);font-weight:600">${x.received}</td>
         <td style="text-align:right;color:var(--r);font-weight:600">${x.qty} ${x.unit}</td>
+        <td style="white-space:nowrap">${fnSkuRevokeTag(x)}</td>
         <td style="text-align:right">${x.revoked?x.revoked+' '+x.unit:'—'}</td>
         <td style="text-align:right;font-weight:600">${fnLiable(x)} ${x.unit}</td>
         <td style="text-align:right">${money(g.rate)}</td>
         <td style="text-align:right;white-space:nowrap">${fnLiable(x)?`<span style="color:var(--r);font-weight:700">-${money(+(fnLiable(x)*g.rate).toFixed(2))}</span>`:`<span style="color:var(--tt)">${money(0)}</span>`}</td>
       </tr>`).join('')}
-      <tr style="font-weight:700;background:var(--gl)"><td>合计</td><td style="text-align:right">—</td><td style="text-align:right">—</td><td style="text-align:right;color:var(--r)">${g.qty}</td><td style="text-align:right">${g.rq||'—'}</td><td style="text-align:right">${g.lq}</td><td style="text-align:right">—</td><td style="text-align:right;font-size:15px">${fineAmtCell(g)}</td></tr>
+      <tr style="font-weight:700;background:var(--gl)"><td>合计</td><td style="text-align:right">—</td><td style="text-align:right">—</td><td style="text-align:right;color:var(--r)">${g.qty}</td><td></td><td style="text-align:right">${g.rq||'—'}</td><td style="text-align:right">${g.lq}</td><td style="text-align:right">—</td><td style="text-align:right;font-size:15px">${fineAmtCell(g)}</td></tr>
       </tbody></table></div>
     ${fineRevokeSec(g,sec)}
     <div class="ib ib-b"><span class="i">ℹ️</span>罚款标准在<b>生成单据时快照</b>，后续平台调整不追溯本单。对缺口数量有异议请<b>线下联系运营</b>核对，本期不设线上申诉入口。</div>

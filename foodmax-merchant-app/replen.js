@@ -282,7 +282,7 @@ function openFineDetail(no){
     <div class="rp-card2">
       <div class="rp-ct">缺货明细 <span class="desc">逐 SKU</span></div>
       ${g.items.map(x=>`<div class="rp-row" style="display:block">
-        <div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">${x.name}</b><span style="font-size:11px;color:var(--sub);font-family:monospace">${x.sku} · ${x.spec}</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><b style="font-size:14px">${x.name}</b>${x.revoked?(fnLiable(x)===0?pill('已撤销','#EEF2F0','#64748B'):pill('部分撤销','var(--amber-soft)','#B45309')):''}<span style="font-size:11px;color:var(--sub);font-family:monospace">${x.sku} · ${x.spec}</span></div>
         <div style="display:flex;gap:14px;margin-top:6px;font-size:12.5px;color:#46604F;flex-wrap:wrap">
           <span>应送 <b>${x.should}</b></span><span>实收 <b style="color:var(--red)">${x.received}</b></span><span>缺口 <b style="color:var(--red)">${x.qty}</b>${x.unit}</span>${x.revoked?`<span>撤销 <b>${x.revoked}</b></span>`:''}<span>计罚 <b>${fnLiable(x)}</b></span>
           <span style="margin-left:auto;${fnLiable(x)?'color:var(--red);font-weight:700':'color:var(--sub)'}">${fnLiable(x)?'-'+money(+(fnLiable(x)*g.rate).toFixed(2)):money(0)}</span>
