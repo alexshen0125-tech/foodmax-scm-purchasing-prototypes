@@ -331,11 +331,10 @@ function renderList(container,inTab){
         <div class="gd-pill" data-t="rejected">审核拒绝<span class="c" id="c-rejected"></span></div>
         <div class="gd-pill" data-t="forced_off">强制下架<span class="c" id="c-forced_off"></span></div>
         <div class="gd-pill" data-t="off">未上架<span class="c" id="c-off"></span></div>
-        <div class="gd-pill" data-t="recycle">回收站<span class="c" id="c-recycle"></span></div>
       </div>
     </div>
     ${(window.FM_GOODS_FILTER||{}).halal===1?`<div class="gd-sub" style="padding-bottom:0"><span id="hf-chip" style="background:var(--gl,#E7F2E9);color:var(--g,#0E7A52);border-radius:14px;padding:3px 10px;font-size:12px;font-weight:600">仅看 HALAL 商品 ✕</span></div>`:''}
-    <div class="gd-sub"><span id="sort">上架时间 · 由近及远</span><span class="mng" id="mng">管理</span></div>
+    <div class="gd-sub"><span id="sort">上架时间 · 由近及远</span><span style="display:flex;gap:14px;align-items:center"><span id="rec-ent" style="font-size:12px;color:var(--ts,#8A8F98)">回收站<span id="c-recycle"></span> ›</span><span class="mng" id="mng">管理</span></span></div>
     <div class="gd-list" id="l"></div>`;
   const list=container.querySelector('#l');
   const sortEl=container.querySelector('#sort');
@@ -362,7 +361,7 @@ function renderList(container,inTab){
     const live=[];PRODUCTS.forEach(g=>(g.skus||[]).forEach(s=>{if(!s.recycled&&!isAud(g))live.push(s);}));
     set('sale',live.filter(s=>!s.off).length);
     set('off',live.filter(s=>s.off).length);
-    set('recycle',allSkus().filter(s=>s.recycled).length);
+    const rn=allSkus().filter(s=>s.recycled).length;set('recycle',rn?`(${rn})`:'');
     // 审核态角标口径 = SPU 数（不是 SKU 数，与 PC 一致）
     Object.keys(AUD).forEach(k=>set(k,PRODUCTS.filter(g=>audOf(g)===k).length||''));
   };
@@ -395,8 +394,11 @@ function renderList(container,inTab){
   container.querySelectorAll('#f .gd-pill').forEach(p=>p.onclick=()=>{
     const t=p.dataset.t;
     container.querySelectorAll('#f .gd-pill').forEach(x=>x.classList.remove('on'));
-    p.classList.add('on');if(state.manage)exitManage();draw(t);
+    p.classList.add('on');if(state.manage)exitManage();recEnt.style.display='';draw(t);
   });
+  // 回收站弱化：不占筛选 pill，只在排序行留文字入口；进入后再点 pill 即返回
+  const recEnt=container.querySelector('#rec-ent');
+  recEnt.onclick=()=>{container.querySelectorAll('#f .gd-pill').forEach(x=>x.classList.remove('on'));if(state.manage)exitManage();recEnt.style.display='none';sortEl.innerHTML='';draw('recycle');sortEl.innerHTML=`<b style="color:var(--tp,#1F2329)">回收站</b> · 点上方标签返回`;};
 
   // 批量管理(H7)
   function enterManage(){state.manage=true;mngEl.textContent='完成';drawData(state.tab);showBulkBar();}
