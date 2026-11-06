@@ -140,8 +140,8 @@ const TYPES={
  TERM:{name:'账期回款转 Holding',from:['PA.TERMC'],to:'HA.TERM',basis:'认领单',hint:'对公转账认领后在这里人工转；二维码还款按结算批次自动分账进 Holding，不在这里转。垫资订单挂着的佣金进 Holding · 佣金挂账，随后自动分账'},
  FEE:{name:'补手续费备用金',from:['CA.COM'],to:'PA.FEE',basis:'备用金水位',hint:'平台主账户手续费备用金低于水位时补足'},
  FEEBACK:{name:'手续费备用金回收',from:['PA.FEE'],to:'CA.COM',basis:'备用金水位',hint:'手续费备用金超过需要时，收回佣金账户'},
- ADV:{name:'垫资',from:['CA.COM'],to:'HA.ADV',basis:'垫资单',hint:'按垫资单逐单垫（账期未认领订单，扣佣金后的金额），垫资单在垫资管理发起'},
- BACK:{name:'垫资收回',from:['HA.TERM'],to:'CA.COM',basis:'垫资单 · 订单',hint:'只能收回客户钱已认领并转进 Holding 的垫资订单，按订单收回'},
+ ADV:{name:'垫资',from:['CA.COM'],to:'HA.ADV',basis:'垫资单',hint:'',sys:true},
+ BACK:{name:'垫资收回',from:['HA.TERM'],to:'CA.COM',basis:'垫资单 · 订单',hint:'',sys:true},
  AUTO:{name:'佣金挂账分账（系统自动）',from:['HA.HANG'],to:'CA.COM',basis:'订单',hint:'',auto:true}};
 /* 已认领、未转 Holding 的认领单（含二维码自动关联） */
 const CLAIMS=[{no:'CL20261008-0001',cust:'Mei Ling Eatery',amt:5800,hang:[['261001045600000044','AF20261008-0001',220]]}];
@@ -149,13 +149,13 @@ const CLAIMS=[{no:'CL20261008-0001',cust:'Mei Ling Eatery',amt:5800,hang:[['2610
 const ADV_PENDING=[];
 const BACKABLE=[{ad:'AF20261001-0001',order:'260923045600000017',cust:'Sunny Bistro',amt:1450}];
 let TRS=[
- {no:'TR20261001-0001',type:'FEE',amt:1242.95,parts:[['CA.COM',1242.95]],basis:'备用金低于水位（当时 −7.75），补至目标额',st:'已完成',by:'沈亮',time:'2026-10-01 09:10',att:[['TR20261001-0001-01','2026-10-01 09:12','SETTLED']]},
- {no:'TR20261006-0003',type:'TERM',amt:4200,parts:[['PA.TERMC',4200]],dest:[['HA.TERM',4050],['HA.HANG',150]],basis:'认领单 CL20261006-0001 · Golden Wok Restaurant（含垫资订单 260922045600000031 挂账佣金 150.00）',st:'已完成',by:'沈亮',time:'2026-10-06 15:20',att:[['TR20261006-0003-01','2026-10-06 15:30','SETTLED']]},
+ {no:'TR20261001-0001',type:'FEE',amt:1242.95,parts:[['CA.COM',1242.95]],basis:'备用金低于水位（当时 −7.75），补至目标额',st:'已完成',by:'沈亮',time:'2026-10-01 09:10',ap:'财务主管',apt:'2026-10-01 09:10',att:[['TR20261001-0001-01','2026-10-01 09:12','SETTLED']]},
+ {no:'TR20261006-0003',type:'TERM',amt:4200,parts:[['PA.TERMC',4200]],dest:[['HA.TERM',4050],['HA.HANG',150]],basis:'认领单 CL20261006-0001 · Golden Wok Restaurant（含垫资订单 260922045600000031 挂账佣金 150.00）',st:'已完成',by:'沈亮',time:'2026-10-06 15:20',ap:'财务主管',apt:'2026-10-06 15:20',att:[['TR20261006-0003-01','2026-10-06 15:30','SETTLED']]},
  {no:'TR20261006-0004',type:'AUTO',amt:150,parts:[['HA.HANG',150]],basis:'订单 260922045600000031 挂账佣金：客户钱已认领到账，自动分账',st:'已完成',by:'系统',time:'2026-10-06 15:31',att:[['TR20261006-0004-01','2026-10-06 15:31','SETTLED']]},
- {no:'TR20261008-0002',type:'TERM',amt:2650,parts:[['PA.TERMC',2650]],dest:[['HA.TERM',2500],['HA.HANG',150]],basis:'认领单 CL20261007-0002 · Sunny Bistro（含垫资订单 260923045600000017 挂账佣金 150.00）',st:'已完成',by:'沈亮',time:'2026-10-08 13:52',att:[['TR20261008-0002-01','2026-10-08 13:55','insufficient_fund'],['TR20261008-0002-02','2026-10-08 14:00','SETTLED']]},
+ {no:'TR20261008-0002',type:'TERM',amt:2650,parts:[['PA.TERMC',2650]],dest:[['HA.TERM',2500],['HA.HANG',150]],basis:'认领单 CL20261007-0002 · Sunny Bistro（含垫资订单 260923045600000017 挂账佣金 150.00）',st:'已完成',by:'沈亮',time:'2026-10-08 13:52',ap:'财务主管',apt:'2026-10-08 13:52',att:[['TR20261008-0002-01','2026-10-08 13:55','insufficient_fund'],['TR20261008-0002-02','2026-10-08 14:00','SETTLED']]},
  {no:'TR20261008-0003',type:'AUTO',amt:150,parts:[['HA.HANG',150]],basis:'订单 260923045600000017 挂账佣金：客户钱已认领到账，自动分账',st:'已完成',by:'系统',time:'2026-10-08 14:01',att:[['TR20261008-0003-01','2026-10-08 14:01','SETTLED']]},
- {no:'TR20261009-0002',type:'BACK',amt:1850,parts:[['HA.TERM',1850]],basis:'垫资单 AF20261001-0001 · 订单 260922045600000031（Golden Wok Restaurant 已还款）',st:'已完成',by:'沈亮',time:'2026-10-09 10:00',att:[['TR20261009-0002-01','2026-10-09 10:05','SETTLED']]}];
-const stC={待审批:'orange',待执行:'blue',已完成:'green',执行失败:'red',已驳回:'gray'};
+ {no:'TR20261009-0002',type:'BACK',amt:1850,parts:[['HA.TERM',1850]],basis:'垫资单 AF20261001-0001 · 订单 260922045600000031（Golden Wok Restaurant 已还款）',st:'已完成',by:'沈亮',time:'2026-10-09 10:00',ap:'财务主管',apt:'2026-10-09 10:00',att:[['TR20261009-0002-01','2026-10-09 10:05','SETTLED']]}];
+const stC={待审批:'orange',执行中:'blue',已完成:'green',执行失败:'red',已驳回:'gray',已关闭:'gray'};
 const used=new Set(TRS.filter(t=>t.type==='TERM').map(t=>t.basis.split(' ')[1]));
 const usedBack=new Set();
 const destOf=t=>t.dest||[[TYPES[t.type].to,t.amt]];
@@ -163,16 +163,16 @@ let Q={type:'',st:''};
 function render(){
   const rs=TRS.filter(t=>(!Q.type||t.type===Q.type)&&(!Q.st||t.st===Q.st)).slice().reverse();
   $('ct').innerHTML=`<div class="crumb">渠道资金 / 资金划转</div>
-  <div class="title"><h1>资金划转</h1><span class="muted">平台账户之间转钱：选划转类型，转出、转入账户自动带出；佣金挂账分账由系统自动生成</span><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
+  <div class="title"><h1>资金划转</h1><span class="muted">平台账户之间转钱：建单 → 财务主管审批 → 系统自动调 Airwallex 执行；垫资、垫资收回在垫资管理发起，佣金挂账分账由系统自动生成</span><span class="sp"></span><span class="site">当前 site：新加坡</span></div>
   <div class="flt"><div class="fi"><label>划转类型</label><select class="ipt" style="width:180px" onchange="Q.type=this.value;render()"><option value="">全部</option>${Object.entries(TYPES).map(([k,v])=>`<option value="${k}" ${Q.type===k?'selected':''}>${v.name}</option>`).join('')}</select></div>
    <div class="fi"><label>状态</label><select class="ipt" style="width:140px" onchange="Q.st=this.value;render()"><option value="">全部</option>${Object.keys(stC).map(s=>`<option ${Q.st===s?'selected':''}>${s}</option>`).join('')}</select></div>
    <div class="fi"><label>划转单号</label><input class="ipt" style="width:180px" placeholder="TR…"></div>
    <button class="btn" onclick="Q={type:'',st:''};render()">重 置</button><span class="sp"></span><button class="btn p" onclick="openNew()">新建划转</button></div>
-  <div class="tw"><table class="l"><thead><tr><th>划转单号</th><th>划转类型</th><th>转出</th><th>转入</th><th class="num">金额</th><th>业务依据</th><th>状态</th><th>发起人</th><th>发起时间</th><th>操作</th></tr></thead><tbody>
-  ${rs.map(t=>`<tr><td><span class="link" onclick="openTR('${t.no}')">${t.no}</span></td><td>${TYPES[t.type].name}</td><td>${t.parts.map(p=>NAME[p[0]]).join('<br>')}</td><td>${destOf(t).map(d=>NAME[d[0]]).join('<br>')}</td><td class="num">${fmt(t.amt)}</td><td style="white-space:normal;max-width:260px">${t.basis}</td><td>${tag(t.st,stC[t.st])}</td><td>${t.by==='系统'?tag('系统自动','gray'):t.by}</td><td>${t.time}</td><td>${ops(t)}</td></tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
+  <div class="tw"><table class="l"><thead><tr><th>划转单号</th><th>划转类型</th><th>转出</th><th>转入</th><th class="num">金额</th><th>业务依据</th><th>状态</th><th>发起人</th><th>发起时间</th><th>审批人</th><th>审批时间</th><th>操作</th></tr></thead><tbody>
+  ${rs.map(t=>`<tr><td><span class="link" onclick="openTR('${t.no}')">${t.no}</span></td><td>${TYPES[t.type].name}</td><td>${t.parts.map(p=>NAME[p[0]]).join('<br>')}</td><td>${destOf(t).map(d=>NAME[d[0]]).join('<br>')}</td><td class="num">${fmt(t.amt)}</td><td style="white-space:normal;max-width:260px">${t.basis}</td><td>${tag(t.st,stC[t.st])}</td><td>${t.by==='系统'?tag('系统自动','gray'):t.by}</td><td>${t.time}</td><td>${t.ap||'—'}</td><td>${t.apt||'—'}</td><td>${ops(t)}</td></tr>`).join('')||'<tr><td colspan="12" style="text-align:center;color:var(--tx3);padding:40px">暂无数据</td></tr>'}
   </tbody></table></div>`;
 }
-const ops=t=>(t.st==='待审批'?`<span class="link" onclick="act('${t.no}','approve')" style="margin-right:10px">审批通过</span><span class="link" onclick="act('${t.no}','reject')" style="margin-right:10px">驳回</span>`:t.st==='待执行'?`<span class="link" onclick="act('${t.no}','exec')" style="margin-right:10px">执行</span>`:t.st==='执行失败'?`<span class="link" onclick="act('${t.no}','exec')" style="margin-right:10px">重试</span>`:'')+`<span class="link" onclick="openTR('${t.no}')">详情</span>`;
+const ops=t=>(t.st==='待审批'?`<span class="link" onclick="act('${t.no}','approve')" style="margin-right:10px">审批通过</span><span class="link" onclick="act('${t.no}','reject')" style="margin-right:10px">驳回</span>`:t.st==='执行中'?`<span class="muted" style="margin-right:10px">正在向 Airwallex 确认结果</span>`:t.st==='执行失败'?`<span class="link" onclick="act('${t.no}','exec')" style="margin-right:10px">重试</span><span class="link" onclick="act('${t.no}','close')" style="margin-right:10px">关闭</span>`:'')+`<span class="link" onclick="openTR('${t.no}')">详情</span>`;
 /* 新建 */
 let N={};
 function openNew(){N={type:'TERM',claim:'',amt:'',adv:'',bsel:{}};$('mdT').textContent='新建资金划转';paintNew();$('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="submitNew()">提交审批</button>`;$('mask2').style.display='block';$('md').style.display='flex'}
@@ -189,7 +189,7 @@ function paintNew(){
   if(N.type==='ADV')basis=`<div class="fr"><label class="req">垫资单</label><select class="ipt" style="width:100%"><option value="">${ADV_PENDING.length?'请选择':'暂无待转账的垫资单'}</option></select><div class="muted" style="font-size:12px;margin-top:4px">垫资单在「垫资管理」按账期未认领订单发起，金额 = 订单金额 − 佣金，不可改 · <a class="link" href="垫资管理_改造稿.html">去垫资管理</a></div></div>`;
   if(N.type==='BACK'){const os=BACKABLE.filter(o=>!usedBack.has(o.order));basis=`<div class="fr"><label class="req">收回哪些垫资订单（客户钱已认领并转进 Holding）</label><table class="t" style="border:1px solid var(--bd)"><thead><tr><th></th><th>订单</th><th>垫资单</th><th>客户</th><th class="num">收回金额</th></tr></thead><tbody>${os.map(o=>`<tr><td><input type="checkbox" ${N.bsel[o.order]?'checked':''} onchange="N.bsel['${o.order}']=this.checked;paintNew()"></td><td>${o.order}</td><td>${o.ad}</td><td>${o.cust}</td><td class="num">${fmt(o.amt)}</td></tr>`).join('')||'<tr><td colspan="5" class="muted" style="text-align:center">暂无可收回的订单</td></tr>'}</tbody></table></div>`}
   const amt=defAmt(),ro=['TERM','BACK','ADV'].includes(N.type);
-  $('mdB').innerHTML=`<div class="fr"><label class="req">划转类型</label><select class="ipt" style="width:100%" onchange="N={type:this.value,claim:'',amt:'',adv:'',bsel:{}};paintNew()">${Object.entries(TYPES).filter(([k,v])=>!v.auto).map(([k,v])=>`<option value="${k}" ${N.type===k?'selected':''}>${v.name}</option>`).join('')}</select><div class="muted" style="font-size:12px;margin-top:4px">${T.hint}</div></div>
+  $('mdB').innerHTML=`<div class="fr"><label class="req">划转类型</label><select class="ipt" style="width:100%" onchange="N={type:this.value,claim:'',amt:'',adv:'',bsel:{}};paintNew()">${Object.entries(TYPES).filter(([k,v])=>!v.auto&&!v.sys).map(([k,v])=>`<option value="${k}" ${N.type===k?'selected':''}>${v.name}</option>`).join('')}</select><div class="muted" style="font-size:12px;margin-top:4px">${T.hint}</div></div>
   <div class="route"><div class="box"><div class="k">转出（按类型自动绑定）</div><div class="v">${NAME[T.from[0]]}</div><div class="k" style="margin-top:4px">可用 ${fmt(fromBal)}</div></div><div class="arr">→</div><div class="box"><div class="k">转入（按类型自动绑定）</div><div class="v">${N.type==='TERM'?'Holding · 账期还款金额<div class="k">（垫资订单的佣金部分进佣金挂账）</div>':NAME[T.to]}</div></div></div>
   ${basis}${route}
   <div class="fr"><label class="req">划转金额（SGD）${ro?'<span class="muted" style="font-weight:400">　按单据自动算，不可改</span>':''}</label><input class="ipt" id="n_a" style="width:100%" value="${N.amt!==''&&!ro?N.amt:amt}" ${ro?'readonly':''} oninput="N.amt=this.value;chkNew()"><div class="err" id="n_e"></div></div>
@@ -210,21 +210,27 @@ function submitNew(){if(!chkNew())return;const a=r2(parseFloat($('n_a').value)),
   else basis=N.type==='FEE'?`备用金 ${fmt(BAL['PA.FEE'])} 补至目标额 ${fmt(WATER.target)}`:`备用金 ${fmt(BAL['PA.FEE'])}，收回 ${fmt(a)}`;
   const no='TR20261009-00'+String(40+TRS.length);TRS.push({no,type:N.type,amt:a,parts:[[T.from[0],a]],dest,basis,st:'待审批',by:'沈亮',time:'2026-10-09 '+new Date().toTimeString().slice(0,5),att:[]});
   closeMd();render();toast(`已提交 ${no}，待审批`)}
-/* 审批 / 执行 */
+/* 审批（通过后系统自动执行）/ 失败重试 / 关闭 */
+const nowT=()=>'2026-10-09 '+new Date().toTimeString().slice(0,5);
 function act(no,a){const t=TRS.find(x=>x.no===no);
-  if(a==='approve'){t.st='待执行';toast(no+' 审批通过')}
-  else if(a==='reject'){t.st='已驳回';if(t.type==='TERM')used.delete(t.basis.split(' ')[1]);toast(no+' 已驳回')}
-  else{const req=`${no}-${String(t.att.length+1).padStart(2,'0')}`,ok=t.parts.every(([k,x])=>BAL[k]>=x);
-    t.att.push([req,'2026-10-09 '+new Date().toTimeString().slice(0,5),ok?'SETTLED':'insufficient_fund']);
-    if(ok){t.parts.forEach(([k,x])=>BAL[k]=r2(BAL[k]-x));destOf(t).forEach(([k,x])=>BAL[k]=r2(BAL[k]+x));t.st='已完成';const h=destOf(t).find(d=>d[0]==='HA.HANG');if(h){const an='TR20261009-00'+String(40+TRS.length);BAL['HA.HANG']=r2(BAL['HA.HANG']-h[1]);BAL['CA.COM']=r2(BAL['CA.COM']+h[1]);TRS.push({no:an,type:'AUTO',amt:h[1],parts:[['HA.HANG',h[1]]],basis:`${t.basis.match(/垫资订单 [^ ]+/)||'垫资订单'} 挂账佣金：客户钱已认领到账，自动分账`,st:'已完成',by:'系统',time:'2026-10-09 '+new Date().toTimeString().slice(0,5),att:[[an+'-01','2026-10-09 '+new Date().toTimeString().slice(0,5),'SETTLED']]})}toast(`${no} 执行成功（request_id ${req}）`+(h?`；挂账佣金 ${fmt(h[1])} 已自动分账到佣金账户`:''))}
-    else{t.st='执行失败';toast(`${no} 执行失败：转出余额不足，可重试`)}}
-  render();if(DR)openTR(no)}
+  if(a==='approve'){$('mdT').textContent='审批通过';$('mdB').innerHTML=`<div>确认通过 <b>${no}</b>？通过后系统立即调 Airwallex 从 ${NAME[t.parts[0][0]]} 转出 <b>${fmt(t.amt)}</b>，不能撤回。</div>`;
+    $('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" onclick="doApprove('${no}')">确认通过</button>`;$('mask2').style.display='block';$('md').style.display='flex';return}
+  if(a==='reject'||a==='close'){const l=a==='reject'?'驳回':'关闭';$('mdT').textContent=l;$('mdB').innerHTML=`<div style="margin-bottom:10px">${l}后 <b>${no}</b> 不再转账${t.type==='TERM'?'，认领单可重新用来发起':''}。</div><div class="fr"><label class="req">${l}原因</label><input class="ipt" id="rj" style="width:100%" placeholder="请输入" oninput="$('rjb').disabled=!this.value.trim()"></div>`;
+    $('mdF').innerHTML=`<button class="btn" onclick="closeMd()">取消</button><button class="btn p" id="rjb" disabled onclick="doEnd('${no}','${a}')">确认${l}</button>`;$('mask2').style.display='block';$('md').style.display='flex';return}
+  run(t)}
+function doApprove(no){const t=TRS.find(x=>x.no===no);t.st='执行中';t.ap='财务主管';t.apt=nowT();closeMd();render();if(DR)openTR(no);toast(no+' 审批通过，系统正在向 Airwallex 转账');setTimeout(()=>run(t),1200)}
+function doEnd(no,a){const t=TRS.find(x=>x.no===no);t.st=a==='reject'?'已驳回':'已关闭';if(a==='reject'){t.ap='财务主管';t.apt=nowT()}t.why=$('rj').value.trim();if(t.type==='TERM')used.delete(t.basis.split(' ')[1]);closeMd();render();if(DR)openTR(no);toast(`${no} ${t.st}`)}
+function run(t){const no=t.no,req=`${no}-${String(t.att.length+1).padStart(2,'0')}`,ok=t.parts.every(([k,x])=>BAL[k]>=x);
+    t.att.push([req,nowT(),ok?'SETTLED':'insufficient_fund']);
+    if(ok){t.parts.forEach(([k,x])=>BAL[k]=r2(BAL[k]-x));destOf(t).forEach(([k,x])=>BAL[k]=r2(BAL[k]+x));t.st='已完成';const h=destOf(t).find(d=>d[0]==='HA.HANG');if(h){const an='TR20261009-00'+String(40+TRS.length);BAL['HA.HANG']=r2(BAL['HA.HANG']-h[1]);BAL['CA.COM']=r2(BAL['CA.COM']+h[1]);TRS.push({no:an,type:'AUTO',amt:h[1],parts:[['HA.HANG',h[1]]],basis:`${t.basis.match(/垫资订单 [^ ]+/)||'垫资订单'} 挂账佣金：客户钱已认领到账，自动分账`,st:'已完成',by:'系统',time:nowT(),att:[[an+'-01',nowT(),'SETTLED']]})}toast(`${no} 执行成功（request_id ${req}）`+(h?`；挂账佣金 ${fmt(h[1])} 已自动分账到佣金账户`:''))}
+    else{t.st='执行失败';toast(`${no} 执行失败：转出余额不足，可重试或关闭`)}
+  render();if(DR===no)openTR(no)}
 let DR=null;
 function openTR(no){DR=no;const t=TRS.find(x=>x.no===no);$('mask').style.display='block';$('dr').style.display='flex';$('drT').textContent='资金划转 '+no;
-  $('drB').innerHTML=`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[['划转类型',TYPES[t.type].name],['状态',tag(t.st,stC[t.st])],['金额',fmt(t.amt)],['业务依据',t.basis],['发起人 / 时间',t.by+' · '+t.time]].map(([k,v])=>`<tr><td class="muted" style="width:140px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
+  $('drB').innerHTML=`<table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><tbody>${[['划转类型',TYPES[t.type].name],['状态',tag(t.st,stC[t.st])],['金额',fmt(t.amt)],['业务依据',t.basis],['发起人',t.by],['发起时间',t.time],['审批人',t.ap||'—'],['审批时间',t.apt||'—']].concat(t.why?[[t.st==='已关闭'?'关闭原因':'驳回原因',t.why]]:[]).map(([k,v])=>`<tr><td class="muted" style="width:140px">${k}</td><td>${v}</td></tr>`).join('')}</tbody></table>
   <div style="font-weight:600;margin-bottom:8px">钱从哪到哪</div><table class="t" style="border:1px solid var(--bd);margin-bottom:18px"><thead><tr><th>从</th><th>到</th><th class="num">金额</th></tr></thead><tbody>${destOf(t).map(d=>`<tr><td>${NAME[t.parts[0][0]]}</td><td>${NAME[d[0]]}</td><td class="num">${fmt(d[1])}</td></tr>`).join('')}</tbody></table>
   <div style="font-weight:600;margin-bottom:8px">Airwallex 调用记录 <span class="muted" style="font-weight:400;font-size:12px">request_id = 单号-执行序号，重试换序号</span></div><table class="t" style="border:1px solid var(--bd)"><thead><tr><th>request_id</th><th>时间</th><th>结果</th></tr></thead><tbody>${t.att.length?t.att.map(a=>`<tr><td class="mono">${a[0]}</td><td>${a[1]}</td><td>${a[2]==='SETTLED'?tag('成功','green'):tag('余额不足','red')}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--tx3);padding:20px">还未执行</td></tr>'}</tbody></table>`;
-  $('drF').innerHTML=ops(t).replace(/<span class="link"[^>]*onclick="([^"]+)"[^>]*>([^<]+)<\/span>/g,(m,on,l)=>l==='详情'?'':`<button class="btn ${l==='驳回'?'':'p'}" onclick="${on}">${l}</button>`)}
+  $('drF').innerHTML=ops(t).replace(/<span class="link"[^>]*onclick="([^"]+)"[^>]*>([^<]+)<\/span>/g,(m,on,l)=>l==='详情'?'':`<button class="btn ${l==='驳回'||l==='关闭'?'':'p'}" onclick="${on}">${l}</button>`)}
 function closeDr(){DR=null;$('mask').style.display='none';$('dr').style.display='none'}
 function closeMd(){$('mask2').style.display='none';$('md').style.display='none'}
 render();
