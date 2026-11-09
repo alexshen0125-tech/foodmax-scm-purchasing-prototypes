@@ -238,7 +238,7 @@ label{font-size:13px;color:var(--t2)}
 .spec-card{border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:10px;background:#fbfcfd}
 .spec-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px}
 .spec-grid{display:grid;gap:12px 16px;align-items:start}
-.spec-grid.names{grid-template-columns:1fr 1fr auto;margin-bottom:12px}
+.spec-grid.names{grid-template-columns:1fr 1fr auto;margin-top:12px}
 .spec-grid.specs{grid-template-columns:repeat(3,minmax(0,1fr))}
 .lang-switch{display:inline-flex;border:1px solid var(--border);border-radius:4px;overflow:hidden}
 .lang-switch span{padding:3px 10px!important;border-radius:0!important;font-size:12px}
@@ -741,15 +741,15 @@ function renderSpecs(){
     <div class="spec-head"><b>规格 ${i+1}</b>${s.itemCode?`<span class="tag tag-gray">已建 · 停用 ${s.itemCode}</span>`:''}
       <span class="text-gray text-sm bom-cell" style="margin-left:auto">BOM：${bomText(s)}</span>
       <button class="btn-text danger" onclick="delSpec(${i})">删除</button></div>
-    <div class="spec-grid names" id="spec-n-${i}">
-      <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="选择库存单位、填净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
-      <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
-      <button class="btn btn-sm" style="margin-top:25px" onclick="resetNames(${i})">重新生成</button>
-    </div>
     <div class="spec-grid specs">
       <div class="f" id="rf-st-${i}"><label class="required">库存单位</label><select onchange="setSpec(${i},'stock',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择库存单位</div></div>
       <div class="f" id="rf-nw-${i}"><label class="required">净含量</label><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><div class="err">净含量须大于 0</div></div>
       <div class="f"><label>净含量单位</label><input type="text" class="lock" value="🔒 ${r.stock}" disabled></div>
+    </div>
+    <div class="spec-grid names" id="spec-n-${i}" style="${s.stock?'':'display:none'}">
+      <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="填写净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
+      <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
+      <button class="btn btn-sm" style="margin-top:25px" onclick="resetNames(${i})">重新生成</button>
     </div></div>`).join('');
 }
 function setSpec(i,k,v,soft){
@@ -800,7 +800,7 @@ function rNext(){
   const seen={};
   specs.forEach((s,i)=>{const p=`规格${i+1}`;
     need(s.stock,`rf-st-${i}`,p+'库存单位');need(parseFloat(s.nw)>0,`rf-nw-${i}`,p+'净含量');
-    {const ez=zhNameErr(s.zh),ee=enNameErr(s.en,s.zh);if(ez){setErr(`rf-zh-${i}`,ez);errs.push(p+'：'+ez);}if(ee){setErr(`rf-en-${i}`,ee);errs.push(p+'：'+ee);}}
+    if(s.stock){const ez=zhNameErr(s.zh),ee=enNameErr(s.en,s.zh);if(ez){setErr(`rf-zh-${i}`,ez);errs.push(p+'：'+ez);}if(ee){setErr(`rf-en-${i}`,ee);errs.push(p+'：'+ee);}}
     const k=[s.stock,+s.nw].join('|');
     if(s.nw&&s.stock){if(seen[k]!==undefined){setErr(`rf-st-${i}`,'与规格'+(seen[k]+1)+'重复');errs.push(p+'与规格'+(seen[k]+1)+'重复');}else seen[k]=i;}
   });
