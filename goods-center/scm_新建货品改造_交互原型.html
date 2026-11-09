@@ -235,6 +235,11 @@ label{font-size:13px;color:var(--t2)}
 .upload-img.done{border-style:solid;background:#eef7f3;color:var(--primary)}
 .collapse-head{cursor:pointer;user-select:none}
 .collapse-head .arr{color:var(--t3);font-weight:400;font-size:12px;margin-left:auto}
+.spec-card{border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:10px;background:#fbfcfd}
+.spec-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px}
+.spec-grid{display:grid;gap:12px 16px;align-items:start}
+.spec-grid.names{grid-template-columns:1fr 1fr auto;margin-bottom:12px}
+.spec-grid.specs{grid-template-columns:repeat(3,minmax(0,1fr))}
 .lang-switch{display:inline-flex;border:1px solid var(--border);border-radius:4px;overflow:hidden}
 .lang-switch span{padding:3px 10px!important;border-radius:0!important;font-size:12px}
 .lang-switch span.on{background:var(--primary);color:#fff}
@@ -732,22 +737,20 @@ function bomText(s){
 }
 function renderSpecs(){
   const r=rawRow();
-  $('spec-list').innerHTML=`<table class="inline-table" style="table-layout:fixed"><thead><tr>
-    <th style="width:22%"><span style="color:var(--danger)">*</span> 库存单位</th><th style="width:22%"><span style="color:var(--danger)">*</span> 净含量</th><th style="width:14%">净含量单位</th>
-    <th>BOM</th><th style="width:140px">操作</th></tr></thead><tbody>`+
-  specs.map((s,i)=>`<tr id="spec-n-${i}"><td colspan="5" style="background:#fbfcfd;border-top:2px solid #e4e7ed;border-bottom:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:start">
+  $('spec-list').innerHTML=specs.map((s,i)=>`<div class="spec-card" id="spec-${i}">
+    <div class="spec-head"><b>规格 ${i+1}</b>${s.itemCode?`<span class="tag tag-gray">已建 · 停用 ${s.itemCode}</span>`:''}
+      <span class="text-gray text-sm bom-cell" style="margin-left:auto">BOM：${bomText(s)}</span>
+      <button class="btn-text danger" onclick="delSpec(${i})">删除</button></div>
+    <div class="spec-grid names" id="spec-n-${i}">
       <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="选择库存单位、填净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
       <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
-      <button class="btn btn-sm" style="margin-top:26px" onclick="resetNames(${i})">重新生成</button>
-    </div></td></tr>
-  <tr id="spec-${i}">
-    <td><div class="f" id="rf-st-${i}"><select onchange="setSpec(${i},'stock',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择</div></div></td>
-    <td><div class="f" id="rf-nw-${i}"><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><div class="err">须大于 0</div></div></td>
-    <td><span class="text-gray">🔒 ${r.stock}</span></td>
-    <td class="text-sm text-gray bom-cell">${bomText(s)}</td>
-    <td>${s.itemCode?'<span class="tag tag-gray" title="'+s.itemCode+'">已建·停用</span> ':''}<button class="btn-text danger" onclick="delSpec(${i})">删除</button></td>
-  </tr>`).join('')+'</tbody></table>';
+      <button class="btn btn-sm" style="margin-top:25px" onclick="resetNames(${i})">重新生成</button>
+    </div>
+    <div class="spec-grid specs">
+      <div class="f" id="rf-st-${i}"><label class="required">库存单位</label><select onchange="setSpec(${i},'stock',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择库存单位</div></div>
+      <div class="f" id="rf-nw-${i}"><label class="required">净含量</label><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><div class="err">净含量须大于 0</div></div>
+      <div class="f"><label>净含量单位</label><input type="text" class="lock" value="🔒 ${r.stock}" disabled></div>
+    </div></div>`).join('');
 }
 function setSpec(i,k,v,soft){
   const s=specs[i];s[k]=v;rDirty=true;
@@ -756,7 +759,7 @@ function setSpec(i,k,v,soft){
   if(soft){ // 输入中不重绘输入框，只刷新名称和 BOM
     const ins=$('spec-n-'+i).querySelectorAll('input[type=text]');
     if(!s.mZh)ins[0].value=s.zh; if(!s.mEn)ins[1].value=s.en;
-    $('spec-'+i).querySelector('.bom-cell').textContent=bomText(s);
+    $('spec-'+i).querySelector('.bom-cell').textContent='BOM：'+bomText(s);
   }else renderSpecs();
 }
 function setName(i,l,v){const s=specs[i];s[l]=v;s[l==='zh'?'mZh':'mEn']=true;rDirty=true;clrErr(`rf-${l}-${i}`);}
