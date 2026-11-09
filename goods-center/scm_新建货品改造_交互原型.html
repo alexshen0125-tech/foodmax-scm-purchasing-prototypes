@@ -726,27 +726,30 @@ function bomText(s){
 function renderSpecs(){
   const r=rawRow();
   $('spec-list').innerHTML=`<table class="inline-table" style="table-layout:fixed"><thead><tr>
-    <th style="width:120px"><span style="color:var(--danger)">*</span> 库存单位</th><th style="width:120px"><span style="color:var(--danger)">*</span> 净含量</th><th style="width:90px">净含量单位</th>
-    <th><span style="color:var(--danger)">*</span> <span class="lang-badge lb-zh">中</span>成品货品名称（中文）</th><th><span style="color:var(--danger)">*</span> <span class="lang-badge lb-en">EN</span>成品货品名称（英文）</th>
-    <th style="width:110px">BOM</th><th style="width:96px">操作</th></tr></thead><tbody>`+
+    <th style="width:22%"><span style="color:var(--danger)">*</span> 库存单位</th><th style="width:22%"><span style="color:var(--danger)">*</span> 净含量</th><th style="width:14%">净含量单位</th>
+    <th>BOM</th><th style="width:140px">操作</th></tr></thead><tbody>`+
   specs.map((s,i)=>`<tr id="spec-${i}">
     <td><div class="f" id="rf-st-${i}"><select onchange="setSpec(${i},'stock',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择</div></div></td>
     <td><div class="f" id="rf-nw-${i}"><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><div class="err">须大于 0</div></div></td>
     <td><span class="text-gray">🔒 ${r.stock}</span></td>
-    <td><div class="f" id="rf-zh-${i}"><input type="text" maxlength="50" value="${s.zh}" placeholder="自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div></td>
-    <td><div class="f" id="rf-en-${i}"><input type="text" maxlength="100" value="${s.en}" placeholder="自动生成" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div></td>
     <td class="text-sm text-gray bom-cell">${bomText(s)}</td>
-    <td>${s.itemCode?'<span class="tag tag-gray" title="'+s.itemCode+'">已建·停用</span><br>':''}<button class="btn-text" onclick="resetNames(${i})">重新生成</button><button class="btn-text danger" onclick="delSpec(${i})">删除</button></td>
-  </tr>`).join('')+'</tbody></table>';
+    <td>${s.itemCode?'<span class="tag tag-gray" title="'+s.itemCode+'">已建·停用</span> ':''}<button class="btn-text danger" onclick="delSpec(${i})">删除</button></td>
+  </tr>
+  <tr id="spec-n-${i}"><td colspan="5" style="background:#fbfcfd;border-top:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:start">
+      <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="选择库存单位、填净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
+      <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
+      <button class="btn btn-sm" style="margin-top:26px" onclick="resetNames(${i})">重新生成</button>
+    </div></td></tr>`).join('')+'</tbody></table>';
 }
 function setSpec(i,k,v,soft){
   const s=specs[i];s[k]=v;rDirty=true;
   refreshNames(i);
   ['nw','st','zh','en'].forEach(x=>clrErr(`rf-${x}-${i}`));
   if(soft){ // 输入中不重绘输入框，只刷新名称和 BOM
-    const row=$('spec-'+i);const ins=row.querySelectorAll('input[type=text]');
+    const ins=$('spec-n-'+i).querySelectorAll('input[type=text]');
     if(!s.mZh)ins[0].value=s.zh; if(!s.mEn)ins[1].value=s.en;
-    row.querySelector('.bom-cell').textContent=bomText(s);
+    $('spec-'+i).querySelector('.bom-cell').textContent=bomText(s);
   }else renderSpecs();
 }
 function setName(i,l,v){const s=specs[i];s[l]=v;s[l==='zh'?'mZh':'mEn']=true;rDirty=true;clrErr(`rf-${l}-${i}`);}
