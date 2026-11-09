@@ -477,7 +477,7 @@ label{font-size:13px;color:var(--t2)}
       </div>
 
       <div class="sec">
-        <div class="sec-title">成品规格<span class="text-gray text-sm" style="font-weight:400">每个规格 = 1 个成品货品，按成品（标品）规则填写</span>
+        <div class="sec-title">成品规格<span class="text-gray text-sm" style="font-weight:400">每行 = 1 个成品货品</span>
           <button class="btn btn-sm" style="margin-left:auto" onclick="addSpec()">+ 添加规格</button></div>
         <div id="spec-list"></div>
         <div class="f" id="rf-specs"><div class="err">至少添加 1 个规格</div></div>
@@ -706,63 +706,47 @@ function submitForm(){
 
 /* ═════ 原料行 · 新建商品：① 创建成品货品 ═════ */
 const EN_UNIT={'瓶':'Bottle','罐':'Can','包':'Pack','袋':'Bag','盒':'Box','杯':'Cup','桶':'Barrel','管':'Tube','箱':'Carton'};
-let rawIdx=-1, specs=[], rDirty=false, delAt=-1, rSeq=0;
-function emptySpec(){return {key:++rSeq,itemCode:'',minpack:'',nw:'',isPack:'1',stock:'',pq:'1',zh:'',en:'',mZh:false,mEn:false};}
+let rawIdx=-1, rawCode='', specs=[], rDirty=false, delAt=-1, rSeq=0;
+function rawRow(){return ROWS.find(x=>x.code===rawCode);}
+function emptySpec(){return {key:++rSeq,itemCode:'',stock:'',nw:'',zh:'',en:'',mZh:false,mEn:false};}
 function rawBase(r,l){return l==='zh'?String(r.zh).replace(/原料$/,''):String(r.en||'').replace(/\s*Raw$/i,'');}
 function fmtNum(v){return String(Number(v));}
+// 成品名称 = 原料名去「原料」后缀 + 净含量 + 净含量单位 / 库存单位（与线上拼接规则一致，英文用字典英文单位）
 function autoName(s,l){
-  const r=ROWS[rawIdx], base=rawBase(r,l), u=r.stock;
-  if(!base||!s.nw||!s.minpack)return '';
-  const pk=l==='zh'?s.minpack:(EN_UNIT[s.minpack]||''), st=l==='zh'?s.stock:(EN_UNIT[s.stock]||'');
-  let n=`${base} ${fmtNum(s.nw)}${u}/${pk}`;
-  if(s.isPack==='0'&&s.stock&&s.pq&&s.stock!==s.minpack)n+=` ×${s.pq}/${st}`;
-  return n;
+  const r=rawRow(), base=rawBase(r,l);
+  if(!base||!s.nw||!s.stock)return '';
+  const st=l==='zh'?s.stock:(EN_UNIT[s.stock]||'');
+  return `${base} ${fmtNum(s.nw)}${r.stock}/${st}`;
 }
 function refreshNames(i){const s=specs[i];if(!s.mZh)s.zh=autoName(s,'zh');if(!s.mEn)s.en=autoName(s,'en');}
 function bomText(s){
-  const r=ROWS[rawIdx];if(!(parseFloat(s.nw)>0)||!s.stock)return '—';
-  const pq=s.isPack==='1'?1:parseInt(s.pq||'0',10);if(!pq)return '—';
-  return `1 ${s.stock} 成品 ⇐ ${+(parseFloat(s.nw)*pq).toFixed(4)} ${r.stock} ${r.zh}`;
+  const r=rawRow();if(!(parseFloat(s.nw)>0)||!s.stock)return '—';
+  return `1 ${s.stock} ⇐ ${fmtNum(s.nw)} ${r.stock}`;
 }
 function renderSpecs(){
-  const r=ROWS[rawIdx];
-  $('spec-list').innerHTML=specs.map((s,i)=>{
-    const yes=s.isPack==='1';
-    const stockSel=`<select ${yes?'disabled class="lock"':''} onchange="setSpec(${i},'stock',this.value)">`+'<option value="">请选择</option>'+SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')+'</select>';
-    return `<div class="sec" style="background:#fbfcfd;margin-bottom:10px" id="spec-${i}">
-      <div class="sec-title" style="margin-bottom:10px">规格 ${i+1}${s.itemCode?`<span class="tag tag-gray">已创建 · 停用 ${s.itemCode}</span>`:''}
-        <span class="text-gray text-sm" style="font-weight:400;margin-left:auto">BOM：${bomText(s)}</span>
-        <button class="btn-text danger" onclick="delSpec(${i})">删除</button></div>
-      <div class="fgrid">
-        <div class="f" id="rf-mp-${i}"><label class="required">最小包装单位</label>
-          <select onchange="setSpec(${i},'minpack',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.minpack?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择最小包装单位</div></div>
-        <div class="f" id="rf-nw-${i}"><label class="required">净含量</label>
-          <div class="tr-row"><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><span class="unit-lock" style="display:inline-flex;align-items:center;height:32px;padding:0 10px;background:#f5f7fa;border:1px solid var(--border);border-radius:4px;color:var(--t2)">🔒 ${r.stock}</span></div>
-          <div class="err">净含量须大于 0</div></div>
-        <div class="f"></div>
-        <div class="f span3"><div class="qa" style="padding:8px 12px"><span class="q">库存单位就是最小包装单位 <b>${s.minpack||'—'}</b> 吗？</span>
-          <div class="radio-group" style="height:auto"><label class="radio-option"><input type="radio" name="ip-${s.key}" ${yes?'checked':''} onchange="setSpec(${i},'isPack','1')"> 是</label><label class="radio-option"><input type="radio" name="ip-${s.key}" ${yes?'':'checked'} onchange="setSpec(${i},'isPack','0')"> 否</label></div></div></div>
-        <div class="f" id="rf-st-${i}"><label class="required">库存单位</label>${stockSel}
-          <span class="hint-lock">${yes?(s.minpack?'🔒 同最小包装单位，不可修改':'请先选择上方的「最小包装单位」'):''}</span><div class="err">请选择库存单位</div></div>
-        <div class="f span2" id="rf-pq-${i}" style="${yes?'display:none':''}"><label class="required">每库存单位含最小包装数</label>
-          <div class="conv" style="margin-top:0"><span>1 <b>${s.stock||'—'}</b> =</span><input type="number" min="1" step="1" placeholder="如 24" value="${yes?'':s.pq}" oninput="setSpec(${i},'pq',this.value,true)"><span class="unit-lock">包装单位 🔒 <b style="margin-left:4px">${s.minpack||'—'}</b></span></div>
-          <div class="err">请填写正整数</div></div>
-        <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label>
-          <input type="text" maxlength="50" value="${s.zh}" placeholder="选择规格后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
-        <div class="f span2" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label>
-          <div class="tr-row"><input type="text" maxlength="100" value="${s.en}" placeholder="选择规格后自动生成" oninput="setName(${i},'en',this.value)"><button class="btn btn-sm" onclick="resetNames(${i})">重新生成</button></div><div class="err">请填写英文名称</div></div>
-      </div></div>`;}).join('');
+  const r=rawRow();
+  $('spec-list').innerHTML=`<table class="inline-table" style="table-layout:fixed"><thead><tr>
+    <th style="width:120px"><span style="color:var(--danger)">*</span> 库存单位</th><th style="width:120px"><span style="color:var(--danger)">*</span> 净含量</th><th style="width:90px">净含量单位</th>
+    <th><span style="color:var(--danger)">*</span> <span class="lang-badge lb-zh">中</span>成品货品名称（中文）</th><th><span style="color:var(--danger)">*</span> <span class="lang-badge lb-en">EN</span>成品货品名称（英文）</th>
+    <th style="width:110px">BOM</th><th style="width:96px">操作</th></tr></thead><tbody>`+
+  specs.map((s,i)=>`<tr id="spec-${i}">
+    <td><div class="f" id="rf-st-${i}"><select onchange="setSpec(${i},'stock',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择</div></div></td>
+    <td><div class="f" id="rf-nw-${i}"><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><div class="err">须大于 0</div></div></td>
+    <td><span class="text-gray">🔒 ${r.stock}</span></td>
+    <td><div class="f" id="rf-zh-${i}"><input type="text" maxlength="50" value="${s.zh}" placeholder="自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div></td>
+    <td><div class="f" id="rf-en-${i}"><input type="text" maxlength="100" value="${s.en}" placeholder="自动生成" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div></td>
+    <td class="text-sm text-gray bom-cell">${bomText(s)}</td>
+    <td>${s.itemCode?'<span class="tag tag-gray" title="'+s.itemCode+'">已建·停用</span><br>':''}<button class="btn-text" onclick="resetNames(${i})">重新生成</button><button class="btn-text danger" onclick="delSpec(${i})">删除</button></td>
+  </tr>`).join('')+'</tbody></table>';
 }
 function setSpec(i,k,v,soft){
   const s=specs[i];s[k]=v;rDirty=true;
-  if(k==='isPack'){if(v==='1'){s.stock=s.minpack;s.pq='1';}else{s.stock='';s.pq='';}}
-  if(k==='minpack'&&s.isPack==='1')s.stock=v;
   refreshNames(i);
-  ['mp','nw','st','pq','zh','en'].forEach(x=>clrErr(`rf-${x}-${i}`));
+  ['nw','st','zh','en'].forEach(x=>clrErr(`rf-${x}-${i}`));
   if(soft){ // 输入中不重绘输入框，只刷新名称和 BOM
-    const card=$('spec-'+i);const ins=card.querySelectorAll('input[type=text]');
+    const row=$('spec-'+i);const ins=row.querySelectorAll('input[type=text]');
     if(!s.mZh)ins[0].value=s.zh; if(!s.mEn)ins[1].value=s.en;
-    card.querySelector('.sec-title .text-gray').textContent='BOM：'+bomText(s);
+    row.querySelector('.bom-cell').textContent=bomText(s);
   }else renderSpecs();
 }
 function setName(i,l,v){const s=specs[i];s[l]=v;s[l==='zh'?'mZh':'mEn']=true;rDirty=true;clrErr(`rf-${l}-${i}`);}
@@ -772,7 +756,7 @@ function delSpec(i){if(specs[i].itemCode){delAt=i;openDialog('ov-del-spec');retu
 function doDelSpec(){const code=specs[delAt].itemCode;ROWS=ROWS.filter(r=>r.code!==code);specs.splice(delAt,1);renderSpecs();renderList();showToast('已删除成品货品 '+code+' 及其 BOM','success');}
 function onVpR(){const y=document.querySelector('input[name=r-vp]:checked').value==='1';$('rf-qp').style.display=y?'':'none';clrErr('rf-qp');}
 function openFromRaw(i){
-  rawIdx=i;const r=ROWS[i],d=r.d;rDirty=false;
+  rawIdx=i;rawCode=ROWS[i].code;const r=ROWS[i],d=r.d;rDirty=false;
   $('r-src-name').textContent=r.zh+' / '+r.en;$('r-src-code').textContent=r.code;
   $('r-src-meta').textContent=`库存单位 ${r.stock} · 后台类目 ${r.cat}`;
   const cats=[...document.querySelectorAll('#cat option')].map(o=>o.outerHTML).join('');$('r-cat').innerHTML=cats;$('r-cat').value=d.cat||'';
@@ -802,20 +786,19 @@ function rNext(){
   if(!specs.length){setErr('rf-specs');errs.push('成品规格');}
   const seen={};
   specs.forEach((s,i)=>{const p=`规格${i+1}`;
-    need(s.minpack,`rf-mp-${i}`,p+'最小包装单位');need(parseFloat(s.nw)>0,`rf-nw-${i}`,p+'净含量');
-    need(s.stock,`rf-st-${i}`,p+'库存单位');if(s.isPack==='0')need(/^[1-9]\d*$/.test(s.pq),`rf-pq-${i}`,p+'每库存单位含最小包装数');
+    need(s.stock,`rf-st-${i}`,p+'库存单位');need(parseFloat(s.nw)>0,`rf-nw-${i}`,p+'净含量');
     need(s.zh.trim(),`rf-zh-${i}`,p+'中文名称');need(s.en.trim(),`rf-en-${i}`,p+'英文名称');
-    const k=[s.minpack,+s.nw,s.stock,s.isPack==='1'?1:s.pq].join('|');
-    if(s.minpack&&s.nw&&s.stock){if(seen[k]!==undefined){setErr(`rf-mp-${i}`,'与规格'+(seen[k]+1)+'重复');errs.push(p+'与规格'+(seen[k]+1)+'重复');}else seen[k]=i;}
+    const k=[s.stock,+s.nw].join('|');
+    if(s.nw&&s.stock){if(seen[k]!==undefined){setErr(`rf-st-${i}`,'与规格'+(seen[k]+1)+'重复');errs.push(p+'与规格'+(seen[k]+1)+'重复');}else seen[k]=i;}
   });
   if(errs.length){$('err-sum-r').textContent='还有 '+errs.length+' 项需处理：'+errs.join('、');const f=document.querySelector('#drawer-r .has-err');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});return;}
   $('err-sum-r').textContent='';
-  const r=ROWS[rawIdx];
+  const r=rawRow();
   specs.forEach(s=>{
-    const spec=`${fmtNum(s.nw)}${r.stock}/${s.minpack}`+(s.stock!==s.minpack?` · 1${s.stock}=${s.pq}${s.minpack}`:'');
+    const spec=`${fmtNum(s.nw)}${r.stock}/${s.stock}`;
     const row={zh:s.zh.trim(),en:s.en.trim(),type:'fin',stock:s.stock,spec,cat:$('r-cat').value,way:'原料制造',pur:'不可采',status:'停用',rawCode:r.code,
-      s:{minpack:s.minpack,nw:s.nw,isPack:s.isPack,stock:s.stock,pq:s.pq},
-      d:{minpack:s.minpack,nw:s.nw,nwu:r.stock,isPack:s.isPack,stock:s.stock,pq:s.pq,cat:$('r-cat').value,sc:$('r-sc').value,fm:$('r-fm').value,qp:$('r-qp').value,img:true}};
+      s:{nw:s.nw,stock:s.stock},
+      d:{minpack:s.stock,nw:s.nw,nwu:r.stock,isPack:'1',stock:s.stock,pq:'1',cat:$('r-cat').value,sc:$('r-sc').value,fm:$('r-fm').value,qp:$('r-qp').value,img:true}};
     if(s.itemCode)Object.assign(ROWS.find(x=>x.code===s.itemCode),row);
     else{s.itemCode='item20261109'+String(500+ROWS.length).padStart(4,'0');ROWS.unshift(Object.assign(row,{code:s.itemCode}));}
   });
