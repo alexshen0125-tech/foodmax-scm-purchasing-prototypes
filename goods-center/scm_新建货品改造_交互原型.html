@@ -543,21 +543,60 @@ let ROWS=[
  {code:'item202611020007',zh:'椰子水原料',en:'Coconut Water Raw',type:'raw',stock:'KG',spec:'1KG',cat:'饮料 / 椰子水',way:'原料采购',pur:'可采',status:'启用',d:{rstock:'KG',cat:'饮料 / 椰子水',vp:'1',sc:'2',fm:'2',qp:7,qpu:'1',img:true}},
  {code:'item00009025',zh:'橙汁',en:'',type:'fin',stock:'瓶',spec:'1L/瓶',cat:'饮料 / 果汁',way:'成品采购',pur:'可采',status:'启用',legacy:true,d:{minpack:'瓶',nw:1,nwu:'L',isPack:'1',stock:'瓶',cat:'饮料 / 果汁',sc:'2',fm:'2',qp:14,img:true}}
 ];
-let lang='zh', type='', dirty=false, editIdx=-1, imgDone=false, manual={zh:false,en:false};
+let lang='zh', type='', dirty=false, editIdx=-1, imgDone=false;
 
 function opts(sel,arr,ph){sel.innerHTML='<option value="">'+(ph||'请选择')+'</option>'+arr.map(u=>`<option>${u}</option>`).join('');}
 function $(id){return document.getElementById(id);}
 function showToast(m,t){const e=$('toast');e.textContent=m;e.className='toast show '+(t||'');clearTimeout(e._t);e._t=setTimeout(()=>e.className='toast',2400);}
 function openDialog(id){$(id).classList.add('show');}
 function closeDialog(id){$(id).classList.remove('show');}
-function clrErr(id){const f=$(id);if(f)f.classList.remove('has-err');}
+function clrErr(id){const f=$(id);if(f)f.classList.remove('has-err');for(const s of ['main','raw'])if(typeof SUM!=='undefined'&&SUM[s][id]){delete SUM[s][id];renderSum(s);}}
 function setErr(id,msg){const f=$(id);if(!f)return;f.classList.add('has-err');if(msg){const e=f.querySelector('.err');if(e)e.textContent=msg;}}
 
-/* ── 中英文名称语言校验：中文名须含汉字；英文名须含英文字母且不得含汉字/全角中文标点 ── */
-const HAN=/[一-鿿]/, ZH_PUNC=/[　-〿！-｠]/, LATIN=/[A-Za-z]/;
-function zhNameErr(v){v=(v||'').trim();if(!v)return '请填写中文名称';if(!HAN.test(v))return '中文名称需包含中文';return '';}
-function enNameErr(v,zh){v=(v||'').trim();if(!v)return '请填写英文名称';if(HAN.test(v)||ZH_PUNC.test(v))return '英文名称不能包含中文字符';if(!LATIN.test(v))return '英文名称需包含英文字母';
-  if(zh&&v.replace(/\s/g,'').toLowerCase()===zh.trim().replace(/\s/g,'').toLowerCase())return '英文名称不能与中文名称相同';return '';}
+/* ── 中英文名称：清洗 + 校验（PRD scm_货品名称中英文校验 BR-01~03、7.2）── */
+const MSG={
+ Z1:['请填写中文名称','Please enter the Chinese name'],
+ Z2:['中文名称不能超过 50 个字','Chinese name cannot exceed 50 characters'],
+ Z3:['中文名称不能包含换行等特殊字符','Chinese name cannot contain line breaks or control characters'],
+ Z4:['中文名称需包含中文','Chinese name must contain Chinese characters'],
+ E1:['请填写英文名称','Please enter the English name'],
+ E2:['英文名称不能超过 100 个字符','English name cannot exceed 100 characters'],
+ E3:['英文名称不能包含{c}，仅支持英文字母、数字和半角符号','English name cannot contain {c}. Only letters, digits and half-width symbols are allowed'],
+ E4:['英文名称需包含英文字母','English name must contain letters'],
+ TRF:['翻译失败，请点「重新翻译」或手动输入','Translation failed. Click Retranslate or enter it manually'],
+ L_ZH:['货品名称（中文）','Item Name (Chinese)'], L_EN:['货品名称（英文）','Item Name (English)'],
+ L_FZH:['成品货品名称（中文）','Finished Item Name (Chinese)'], L_FEN:['成品货品名称（英文）','Finished Item Name (English)'],
+ P_ZH:['请输入中文名称','Auto-translated from the English name'], P_EN:['请输入英文名称','Enter the English name'],
+ P_FN:['选择库存单位并填写净含量后自动生成','Generated after selecting stock unit and net content'],
+ B_TR:['重新翻译','Retranslate'], B_GEN:['重新生成','Regenerate'], AUTO:['机翻','Auto'],
+ SUM:['还有 {c} 项需处理：','{c} item(s) need attention: '],
+ T_CHG_ZH:['中文名称已修改，请确认英文名称','Chinese name changed. Please check the English name'],
+ T_CHG_EN:['英文名称已修改，请确认中文名称','English name changed. Please check the Chinese name'],
+ T_NORAW:['原料无英文名称，请手动填写','The raw item has no English name. Please enter it manually'],
+ T_SPEC:['规格已变化，名称未同步','Spec changed. The name was not updated'],
+};
+function msg(k,c){const m=MSG[k][lang==='zh'?0:1];return c?m.replace('{c}',c):m;}
+const WS=/^[\s　 ]+|[\s　 ]+$/g, HAN=/\p{Script=Han}/u, CTRL=/[\u0000-\u001F\u007F]/, LETTER=/[A-Za-zÀ-ÖØ-öø-ÿ]/;
+function normName(v,l){ // BR-01：去首尾空白；英文名全角转半角
+  v=String(v||'').replace(WS,'');
+  if(l==='en')v=v.replace(/[！-～]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/　/g,' ').replace(WS,'');
+  return v;
+}
+function enOk(ch){const c=ch.codePointAt(0);return (c>=0x20&&c<=0x7E)||(c>=0xC0&&c<=0xFF&&c!==0xD7&&c!==0xF7);}
+function zhRule(v){v=normName(v,'zh');if(!v)return ['Z1'];if([...v].length>50)return ['Z2'];if(CTRL.test(v))return ['Z3'];if(!HAN.test(v))return ['Z4'];return null;}
+function enRule(v){v=normName(v,'en');if(!v)return ['E1'];if([...v].length>100)return ['E2'];
+  const bad=[...new Set([...v].filter(ch=>!enOk(ch)))].slice(0,3);if(bad.length)return ['E3',bad.map(c=>'「'+c+'」').join('')];
+  if(!LETTER.test(v))return ['E4'];return null;}
+function zhNameErr(v){const r=zhRule(v);return r?msg(r[0],r[1]):'';}
+function enNameErr(v){const r=enRule(v);return r?msg(r[0],r[1]):'';}
+function nameRule(l,v){return l==='zh'?zhRule(v):enRule(v);}
+
+/* 底部汇总：只列字段名，随修复实时重算（6.4） */
+const SUM={main:{},raw:{}};
+function markErr(scope,id,label,m){setErr(id,m);SUM[scope][id]=label;}
+function renderSum(scope){const ids=Object.keys(SUM[scope]);const el=$(scope==='main'?'err-sum':'err-sum-r');if(!el)return;
+  el.textContent=ids.length?(msg('SUM',ids.length)+ids.map(k=>SUM[scope][k]).join(lang==='zh'?'、':', ')):'';}
+function clearSum(scope){SUM[scope]={};renderSum(scope);}
 
 /* ── 列表 ── */
 function renderList(){
@@ -567,33 +606,55 @@ function renderList(){
     return `<tr><td>${r.code}</td><td>${name}</td><td>${r.type==='fin'?'成品':'原料'}</td><td>${r.stock}</td><td>${r.spec}</td><td>${r.cat}</td><td>${r.way}</td><td><span class="tag ${r.pur==='可采'?'tag-green':'tag-gray'}">${r.pur}</span></td><td>${r.status}</td>
     <td><button class="btn-text" onclick="openEdit(${i})">编辑</button><button class="btn-text">详情</button>${r.type==='raw'?`<button class="btn-text" onclick="openFromRaw(${i})">新建商品</button>`:''}<button class="btn-text">日志</button></td></tr>`;}).join('');
 }
-function setLang(l){lang=l;$('lang-zh').classList.toggle('on',l==='zh');$('lang-en').classList.toggle('on',l==='en');renderList();if($('drawer').classList.contains('show'))renderName(true);showToast(l==='zh'?'已切换为简体中文环境':'Switched to English');}
+function setLang(l){lang=l;$('lang-zh').classList.toggle('on',l==='zh');$('lang-en').classList.toggle('on',l==='en');renderList();if($('drawer').classList.contains('show'))renderName(true);if($('drawer-r').classList.contains('show')&&rawCode)renderSpecs();showToast(l==='zh'?'已切换为简体中文环境':'Switched to English');}
 
-/* ── 名称：中英文同时显示、都必填 ── */
+/* ── 名称：中英文同时显示、都必填（6.3）── */
+let autoVal={zh:'',en:''}, origName={zh:'',en:''};
 function renderName(keep){
   const zv=keep&&$('nm-zh')?$('nm-zh').value:'', ev=keep&&$('nm-en')?$('nm-en').value:'';
-  const zh=`<div class="f" id="f-nm-zh"><label class="required"><span class="lang-badge lb-zh">中</span>货品名称（中文）</label>
-    <div class="tr-row"><input type="text" id="nm-zh" maxlength="50" placeholder="请输入中文名称" onblur="autoTr('zh')" oninput="onNameInput('zh')">${lang==='en'?'<button class="btn btn-sm" onclick="reTr(\'zh\')">重新翻译</button>':''}</div>
-    <div class="err">请填写中文名称</div></div>`;
-  const en=`<div class="f" id="f-nm-en"><label class="required"><span class="lang-badge lb-en">EN</span>货品名称（英文）</label>
-    <div class="tr-row"><input type="text" id="nm-en" maxlength="100" placeholder="Please enter English name" onblur="autoTr('en')" oninput="onNameInput('en')">${lang==='zh'?'<button class="btn btn-sm" onclick="reTr(\'en\')">重新翻译</button>':''}</div>
-    <div class="err">请填写英文名称</div></div>`;
-  $('name-wrap').innerHTML=lang==='zh'?zh+en:en+zh;
-  $('nm-zh').value=zv;$('nm-en').value=ev;
+  const box=(l)=>{const zh=l==='zh';return `<div class="f" id="f-nm-${l}"><label class="required"><span class="lang-badge ${zh?'lb-zh':'lb-en'}">${zh?'中':'EN'}</span>${msg(zh?'L_ZH':'L_EN')}<span class="tag tag-gray" id="auto-nm-${l}" style="margin-left:6px;display:none">${msg('AUTO')}</span></label>
+    <div class="tr-row"><input type="text" id="nm-${l}" maxlength="${zh?50:100}" placeholder="${lang==='zh'?(zh?'请输入中文名称':'自动翻译，可修改'):(zh?msg('P_ZH'):msg('P_EN'))}" onblur="onNameBlur('${l}')" oninput="onNameInput('${l}')">${lang!==l?`<button class="btn btn-sm" onclick="reTr('${l}')">${msg('B_TR')}</button>`:''}</div>
+    <div class="err"></div><div class="tr-tip" id="tip-nm-${l}" style="color:var(--warning)"></div></div>`;};
+  $('name-wrap').innerHTML=lang==='zh'?box('zh')+box('en'):box('en')+box('zh');
+  $('nm-zh').value=zv;$('nm-en').value=ev;markAuto('zh');markAuto('en');
 }
-function onNameInput(l){dirty=true;clrErr('f-nm-'+l);if(l!==lang)manual[l]=true;}
-function translate(text,to){
+function markAuto(l){const b=$('auto-nm-'+l);if(b)b.style.display=($('nm-'+l).value&&$('nm-'+l).value===autoVal[l])?'':'none';}
+function isManual(l){const v=$('nm-'+l).value.trim();return !!v&&v!==autoVal[l];} // 非空且≠上次自动填入值
+function tip(l,t){$('tip-nm-'+l).textContent=t||'';}
+function onNameInput(l){dirty=true;clrErr('f-nm-'+l);tip(l,'');markAuto(l);}
+function checkName(l){ // 失焦即时校验：为空不报（BR-06）
+  const v=$('nm-'+l).value;if(!v.trim())return;const r=nameRule(l,v);
+  if(r)markErr('main','f-nm-'+l,msg(l==='zh'?'L_ZH':'L_EN'),msg(r[0],r[1]));else clrErr('f-nm-'+l);
+}
+function translate(text,to){ // 模拟翻译接口：查不到返回空
   if(to==='en')return TR[text]||'';
   return TR_R[text.toLowerCase()]||'';
 }
-function autoTr(l){ // 当前语言主字段失焦 → 自动翻译到另一语言；对侧被手改过不覆盖
-  if(l!==lang)return;
-  const other=l==='zh'?'en':'zh', src=$('nm-'+l).value.trim();
-  if(!src||manual[other])return;
-  const v=translate(src,other);if(!v){showToast('翻译失败，请手动输入译文','warning');return;}
-  $('nm-'+other).value=v;clrErr('f-nm-'+other);
+function trFailed(src,v,to){ // 7.4 失败判定
+  if(!v)return true; const n=normName(v,to);
+  if(!n||n.toLowerCase()===src.toLowerCase())return true;
+  return !!nameRule(to,n);
 }
-function reTr(to){const from=to==='zh'?'en':'zh',src=$('nm-'+from).value.trim();if(!src){showToast('请先填写'+(from==='zh'?'中文':'英文')+'名称','warning');return;}const v=translate(src,to);if(!v){showToast('翻译失败，请手动输入译文','warning');return;}$('nm-'+to).value=v;manual[to]=false;clrErr('f-nm-'+to);showToast('已重新翻译','success');}
+function onNameBlur(l){
+  const el=$('nm-'+l);el.value=normName(el.value,l);checkName(l);
+  if(l!==lang)return; // 只有当前界面语言框失焦才翻译
+  const other=l==='zh'?'en':'zh', src=el.value;
+  if(!src)return;
+  if(isManual(other)){ // 手改过不覆盖；编辑态主语言改过时提示确认
+    if(editIdx>=0&&src!==origName[l])tip(other,msg(l==='zh'?'T_CHG_ZH':'T_CHG_EN'));
+    return;
+  }
+  doTr(other,src,false);
+}
+function doTr(to,src,force){
+  const v=translate(src,to);
+  if(trFailed(src,v,to)){ // BR-05：不回填；对侧是自动填入的旧值则清空
+    if(!force&&$('nm-'+to).value===autoVal[to]){$('nm-'+to).value='';autoVal[to]='';}
+    tip(to,msg('TRF'));markAuto(to);return false;
+  }
+  const n=normName(v,to);$('nm-'+to).value=n;autoVal[to]=n;tip(to,'');markAuto(to);checkName(to);return true;
+}
+function reTr(to){const from=to==='zh'?'en':'zh',src=normName($('nm-'+from).value,from);if(!src){showToast(lang==='zh'?'请先填写'+(from==='zh'?'中文':'英文')+'名称':'Please enter the '+(from==='zh'?'Chinese':'English')+' name first','warning');return;}if(doTr(to,src,true))showToast(lang==='zh'?'已重新翻译':'Retranslated','success');}
 
 /* ── 货品类型卡片 ── */
 function pickType(t){
@@ -647,7 +708,7 @@ function upImg(){imgDone=!imgDone;const e=$('img');e.classList.toggle('done',img
 
 /* ── 打开 / 关闭 ── */
 function resetForm(){
-  type='';dirty=false;imgDone=false;manual={zh:false,en:false};
+  type='';dirty=false;imgDone=false;autoVal={zh:'',en:''};origName={zh:'',en:''};
   document.querySelectorAll('.type-card').forEach(c=>{c.classList.remove('on','locked');});
   $('form-rest').style.display='none';
   renderName(false);
@@ -658,7 +719,7 @@ function resetForm(){
   document.querySelector('input[name=vp][value="1"]').checked=true;
   $('bcrs').checked=false;
   document.querySelectorAll('.has-err').forEach(e=>e.classList.remove('has-err'));
-  $('err-sum').textContent='';
+  clearSum('main');
   $('img').classList.remove('done');$('img').innerHTML='<span style="font-size:20px">+</span><span>上传图片</span>';
   onIsPack();onVp();renderBcrs();
 }
@@ -668,7 +729,7 @@ function openEdit(i){
   $('dr-title').textContent='编辑货品';$('btn-save').textContent='保存';
   type='';pickTypeForce(r.type);
   document.querySelectorAll('.type-card').forEach(c=>c.classList.add('locked'));
-  $('nm-zh').value=r.zh;$('nm-en').value=r.en;manual={zh:true,en:true};
+  $('nm-zh').value=r.zh;$('nm-en').value=r.en;origName={zh:r.zh,en:r.en};
   $('cat').value=d.cat||'';$('sc').value=d.sc||'';$('fm').value=d.fm||'';$('qp').value=d.qp||'';
   if(d.img){imgDone=false;upImg();}
   if(r.type==='fin'){$('minpack').value=d.minpack;$('nw').value=d.nw;$('nwu').value=d.nwu;document.querySelector(`input[name=isPack][value="${d.isPack}"]`).checked=true;onIsPack();if(d.isPack==='0'){$('stock').value=d.stock;$('pq').value=d.pq;}renderConv();}
@@ -682,11 +743,12 @@ function tryClose(){if(dirty)openDialog('ov-close');else closeDrawer();}
 
 /* ── 提交校验 ── */
 function submitForm(){
-  document.querySelectorAll('.has-err').forEach(e=>e.classList.remove('has-err'));
-  const errs=[];const need=(ok,id,label)=>{if(!ok){setErr(id);errs.push(label);}};
+  document.querySelectorAll('#drawer .has-err').forEach(e=>e.classList.remove('has-err'));clearSum('main');
+  const need=(ok,id,label)=>{if(!ok)markErr('main',id,label);};
   if(!type){setErr('f-type');$('err-sum').textContent='请先选择货品类型';return;}
-  const zh=$('nm-zh').value.trim(), en=$('nm-en').value.trim();
-  {const ez=zhNameErr(zh),ee=enNameErr(en,zh);if(ez){setErr('f-nm-zh',ez);errs.push('货品名称（中文）：'+ez);}if(ee){setErr('f-nm-en',ee);errs.push('货品名称（英文）：'+ee);}}
+  $('nm-zh').value=normName($('nm-zh').value,'zh');$('nm-en').value=normName($('nm-en').value,'en');
+  const zh=$('nm-zh').value, en=$('nm-en').value;
+  {const rz=zhRule(zh),re=enRule(en);if(rz)markErr('main','f-nm-zh',msg('L_ZH'),msg(rz[0],rz[1]));if(re)markErr('main','f-nm-en',msg('L_EN'),msg(re[0],re[1]));}
   need($('cat').value,'f-cat','后台类目');
   need(imgDone,'f-img','货品图片');
   if(type==='fin'){
@@ -700,12 +762,12 @@ function submitForm(){
   if(document.querySelector('input[name=vp]:checked').value==='1')need($('qp').value,'f-qp','保质期');
   need($('sc').value,'f-sc','储存条件');
   need($('fm').value,'f-fm','履约方式');
-  if(errs.length){
-    $('err-sum').textContent='还有 '+errs.length+' 项需处理：'+errs.join('、');
-    const first=document.querySelector('.has-err');if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+  if(Object.keys(SUM.main).length){
+    renderSum('main');
+    const first=document.querySelector('#drawer .has-err');if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  $('err-sum').textContent='';
+  clearSum('main');
   const fin=type==='fin', mp=$('minpack').value, st=fin?$('stock').value:$('rstock').value, pq=$('pq').value;
   const spec=fin?(`${$('nw').value}${$('nwu').value}/${mp}`+(st!==mp?` · 1${st}=${pq}${mp}`:'')):`1${st}`;
   const row={zh,en,type,stock:st,spec,cat:$('cat').value,pur:document.querySelector('input[name=pur]:checked').value==='1'?'可采':'不可采',
@@ -723,14 +785,25 @@ function emptySpec(){return {key:++rSeq,itemCode:'',stock:'',nw:'',zh:'',en:'',m
 function rawBase(r,l){return l==='zh'?String(r.zh).replace(/原料$/,''):String(r.en||'').replace(/\s*Raw$/i,'');}
 function fmtNum(v){return String(Number(v));}
 // 成品名称 = 原料名去「原料」后缀 + 净含量 + 净含量单位 / 库存单位（与线上拼接规则一致，英文用字典英文单位）
-function autoName(s,l){
+function rawEnOk(){const r=rawRow();const b=rawBase(r,'en');return !!b&&!enRule(b);} // 原料英文名缺失/不合规则不自动生成英文
+function autoName(s,l){ // BR-08：中文用原料中文名+中文单位，英文用原料英文名+英文单位，与界面语言无关
   const r=rawRow(), base=rawBase(r,l);
+  if(l==='en'&&!rawEnOk())return '';
   if(!base||!s.nw||!s.stock)return '';
   const st=l==='zh'?s.stock:(EN_UNIT[s.stock]||'');
   if(!st)return '';
   return `${base} ${fmtNum(s.nw)}${r.stock}/${st}`;
 }
-function refreshNames(i){const s=specs[i];if(!s.mZh)s.zh=autoName(s,'zh');if(!s.mEn)s.en=autoName(s,'en');}
+function refreshNames(i){const s=specs[i];
+  ['zh','en'].forEach(l=>{const m=l==='zh'?'mZh':'mEn';const a=autoName(s,l);
+    if(!s[m]){s[l]=a;s['tip_'+l]=(l==='en'&&s.stock&&!rawEnOk())?'T_NORAW':'';}
+    else if(a&&s[l]!==a)s['tip_'+l]='T_SPEC';
+  });
+}
+function specNameCheck(i,l){ // 自动填入/失焦即时校验，为空不报
+  const s=specs[i];if(!s.stock||!String(s[l]).trim())return;const r=nameRule(l,s[l]);
+  if(r)markErr('raw',`rf-${l}-${i}`,(lang==='zh'?`规格 ${i+1} `:`Spec ${i+1} `)+msg(l==='zh'?'L_ZH':'L_EN'),msg(r[0],r[1]));
+}
 function bomText(s){
   const r=rawRow();if(!(parseFloat(s.nw)>0)||!s.stock)return '—';
   return `1 ${s.stock} ⇐ ${fmtNum(s.nw)} ${r.stock}`;
@@ -747,10 +820,10 @@ function renderSpecs(){
       <div class="f"><label>净含量单位</label><input type="text" class="lock" value="🔒 ${r.stock}" disabled></div>
     </div>
     <div class="spec-grid names" id="spec-n-${i}" style="${s.stock?'':'display:none'}">
-      <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="填写净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
-      <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
-      <button class="btn btn-sm" style="margin-top:25px" onclick="resetNames(${i})">重新生成</button>
+      ${(lang==='zh'?['zh','en']:['en','zh']).map(l=>`<div class="f" id="rf-${l}-${i}"><label class="required"><span class="lang-badge ${l==='zh'?'lb-zh':'lb-en'}">${l==='zh'?'中':'EN'}</span>${msg(l==='zh'?'L_FZH':'L_FEN')}</label><input type="text" maxlength="${l==='zh'?50:100}" value="${s[l]}" placeholder="${msg('P_FN')}" oninput="setName(${i},'${l}',this.value)" onblur="blurSpecName(${i},'${l}',this)"><div class="err"></div><div class="tr-tip" style="color:var(--warning)" id="rtip-${l}-${i}">${s['tip_'+l]?msg(s['tip_'+l]):''}</div></div>`).join('')}
+      <button class="btn btn-sm" style="margin-top:25px" onclick="resetNames(${i})">${msg('B_GEN')}</button>
     </div></div>`).join('');
+  specs.forEach((s,i)=>{specNameCheck(i,'zh');specNameCheck(i,'en');});
 }
 function setSpec(i,k,v,soft){
   const s=specs[i];s[k]=v;rDirty=true;
@@ -759,11 +832,14 @@ function setSpec(i,k,v,soft){
   if(soft){ // 输入中不重绘输入框，只刷新名称和 BOM
     const ins=$('spec-n-'+i).querySelectorAll('input[type=text]');
     if(!s.mZh)ins[0].value=s.zh; if(!s.mEn)ins[1].value=s.en;
+    $('rtip-zh-'+i).textContent=s.tip_zh?msg(s.tip_zh):'';$('rtip-en-'+i).textContent=s.tip_en?msg(s.tip_en):'';
     $('spec-'+i).querySelector('.bom-cell').textContent='BOM：'+bomText(s);
+    specNameCheck(i,'zh');specNameCheck(i,'en');
   }else renderSpecs();
 }
-function setName(i,l,v){const s=specs[i];s[l]=v;s[l==='zh'?'mZh':'mEn']=true;rDirty=true;clrErr(`rf-${l}-${i}`);}
-function resetNames(i){const s=specs[i];s.mZh=s.mEn=false;refreshNames(i);renderSpecs();showToast('已按规格重新生成名称','success');}
+function setName(i,l,v){const s=specs[i];s[l]=v;s[l==='zh'?'mZh':'mEn']=!!v.trim();rDirty=true;clrErr(`rf-${l}-${i}`);s['tip_'+l]='';$('rtip-'+l+'-'+i).textContent='';}
+function blurSpecName(i,l,el){const s=specs[i];el.value=normName(el.value,l);s[l]=el.value;specNameCheck(i,l);}
+function resetNames(i){const s=specs[i];s.mZh=s.mEn=false;s.tip_zh=s.tip_en='';refreshNames(i);renderSpecs();showToast(lang==='zh'?'已按规格重新生成名称':'Names regenerated','success');}
 function addSpec(){specs.push(emptySpec());rDirty=true;clrErr('rf-specs');renderSpecs();}
 function delSpec(i){if(specs[i].itemCode){delAt=i;openDialog('ov-del-spec');return;}specs.splice(i,1);rDirty=true;renderSpecs();}
 function doDelSpec(){const code=specs[delAt].itemCode;ROWS=ROWS.filter(r=>r.code!==code);specs.splice(delAt,1);renderSpecs();renderList();showToast('已删除成品货品 '+code+' 及其 BOM','success');}
@@ -778,7 +854,7 @@ function openFromRaw(i){
   // 再次进入：带回该原料下已建、停用且未绑商品的成品，否则给 1 个空规格
   const drafts=ROWS.filter(x=>x.rawCode===r.code&&x.status==='停用');
   specs=drafts.length?drafts.map(x=>Object.assign(emptySpec(),x.s,{itemCode:x.code,zh:x.zh,en:x.en,mZh:true,mEn:true})):[emptySpec()];
-  document.querySelectorAll('#drawer-r .has-err').forEach(e=>e.classList.remove('has-err'));$('err-sum-r').textContent='';
+  document.querySelectorAll('#drawer-r .has-err').forEach(e=>e.classList.remove('has-err'));clearSum('raw');
   rGoStep(1);renderSpecs();
   $('mask-r').classList.add('show');$('drawer-r').classList.add('show');$('dr-body-r').scrollTop=0;
 }
@@ -792,20 +868,21 @@ function rGoStep(n){
 }
 function rNext(){
   if($('r-step2').style.display!=='none'){closeDrawerR();return;}
-  document.querySelectorAll('#drawer-r .has-err').forEach(e=>e.classList.remove('has-err'));
-  const errs=[];const need=(ok,id,l)=>{if(!ok){setErr(id);errs.push(l);}};
+  document.querySelectorAll('#drawer-r .has-err').forEach(e=>e.classList.remove('has-err'));clearSum('raw');
+  const need=(ok,id,l,m)=>{if(!ok)markErr('raw',id,l,m);};
   need($('r-cat').value,'rf-cat','后台类目');need($('r-sc').value,'rf-sc','储存条件');need($('r-fm').value,'rf-fm','履约方式');
   if(document.querySelector('input[name=r-vp]:checked').value==='1')need($('r-qp').value,'rf-qp','保质期');
-  if(!specs.length){setErr('rf-specs');errs.push('成品规格');}
+  if(!specs.length)markErr('raw','rf-specs','成品规格');
   const seen={};
-  specs.forEach((s,i)=>{const p=`规格${i+1}`;
-    need(s.stock,`rf-st-${i}`,p+'库存单位');need(parseFloat(s.nw)>0,`rf-nw-${i}`,p+'净含量');
-    if(s.stock){const ez=zhNameErr(s.zh),ee=enNameErr(s.en,s.zh);if(ez){setErr(`rf-zh-${i}`,ez);errs.push(p+'：'+ez);}if(ee){setErr(`rf-en-${i}`,ee);errs.push(p+'：'+ee);}}
+  specs.forEach((s,i)=>{const p=`规格 ${i+1} `;
+    need(s.stock,`rf-st-${i}`,p+'库存单位','请选择库存单位');need(parseFloat(s.nw)>0,`rf-nw-${i}`,p+'净含量','净含量须大于 0');
+    if(s.stock){s.zh=normName(s.zh,'zh');s.en=normName(s.en,'en');const rz=zhRule(s.zh),re=enRule(s.en);
+      const pp=lang==='zh'?p:`Spec ${i+1} `;if(rz)markErr('raw',`rf-zh-${i}`,pp+msg('L_ZH'),msg(rz[0],rz[1]));if(re)markErr('raw',`rf-en-${i}`,pp+msg('L_EN'),msg(re[0],re[1]));}
     const k=[s.stock,+s.nw].join('|');
-    if(s.nw&&s.stock){if(seen[k]!==undefined){setErr(`rf-st-${i}`,'与规格'+(seen[k]+1)+'重复');errs.push(p+'与规格'+(seen[k]+1)+'重复');}else seen[k]=i;}
+    if(s.nw&&s.stock){if(seen[k]!==undefined)markErr('raw',`rf-st-${i}`,p+'规格重复','与规格 '+(seen[k]+1)+' 重复');else seen[k]=i;}
   });
-  if(errs.length){$('err-sum-r').textContent='还有 '+errs.length+' 项需处理：'+errs.join('、');const f=document.querySelector('#drawer-r .has-err');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});return;}
-  $('err-sum-r').textContent='';
+  if(Object.keys(SUM.raw).length){renderSum('raw');const f=document.querySelector('#drawer-r .has-err');if(f)f.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  clearSum('raw');
   const r=rawRow();
   specs.forEach(s=>{
     const spec=`${fmtNum(s.nw)}${r.stock}/${s.stock}`;
