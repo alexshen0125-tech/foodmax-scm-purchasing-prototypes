@@ -548,6 +548,12 @@ function closeDialog(id){$(id).classList.remove('show');}
 function clrErr(id){const f=$(id);if(f)f.classList.remove('has-err');}
 function setErr(id,msg){const f=$(id);if(!f)return;f.classList.add('has-err');if(msg){const e=f.querySelector('.err');if(e)e.textContent=msg;}}
 
+/* ── 中英文名称语言校验：中文名须含汉字；英文名须含英文字母且不得含汉字/全角中文标点 ── */
+const HAN=/[一-鿿]/, ZH_PUNC=/[　-〿！-｠]/, LATIN=/[A-Za-z]/;
+function zhNameErr(v){v=(v||'').trim();if(!v)return '请填写中文名称';if(!HAN.test(v))return '中文名称需包含中文';return '';}
+function enNameErr(v,zh){v=(v||'').trim();if(!v)return '请填写英文名称';if(HAN.test(v)||ZH_PUNC.test(v))return '英文名称不能包含中文字符';if(!LATIN.test(v))return '英文名称需包含英文字母';
+  if(zh&&v.replace(/\s/g,'').toLowerCase()===zh.trim().replace(/\s/g,'').toLowerCase())return '英文名称不能与中文名称相同';return '';}
+
 /* ── 列表 ── */
 function renderList(){
   $('cnt').textContent=ROWS.length;
@@ -572,16 +578,17 @@ function renderName(keep){
 }
 function onNameInput(l){dirty=true;clrErr('f-nm-'+l);if(l!==lang)manual[l]=true;}
 function translate(text,to){
-  if(to==='en')return TR[text]||(text?text+' (EN)':'');
-  return TR_R[text.toLowerCase()]||(text?text+'（中）':'');
+  if(to==='en')return TR[text]||'';
+  return TR_R[text.toLowerCase()]||'';
 }
 function autoTr(l){ // 当前语言主字段失焦 → 自动翻译到另一语言；对侧被手改过不覆盖
   if(l!==lang)return;
   const other=l==='zh'?'en':'zh', src=$('nm-'+l).value.trim();
   if(!src||manual[other])return;
-  $('nm-'+other).value=translate(src,other);clrErr('f-nm-'+other);
+  const v=translate(src,other);if(!v){showToast('翻译失败，请手动输入译文','warning');return;}
+  $('nm-'+other).value=v;clrErr('f-nm-'+other);
 }
-function reTr(to){const from=to==='zh'?'en':'zh',src=$('nm-'+from).value.trim();if(!src){showToast('请先填写'+(from==='zh'?'中文':'英文')+'名称','warning');return;}$('nm-'+to).value=translate(src,to);manual[to]=false;clrErr('f-nm-'+to);showToast('已重新翻译','success');}
+function reTr(to){const from=to==='zh'?'en':'zh',src=$('nm-'+from).value.trim();if(!src){showToast('请先填写'+(from==='zh'?'中文':'英文')+'名称','warning');return;}const v=translate(src,to);if(!v){showToast('翻译失败，请手动输入译文','warning');return;}$('nm-'+to).value=v;manual[to]=false;clrErr('f-nm-'+to);showToast('已重新翻译','success');}
 
 /* ── 货品类型卡片 ── */
 function pickType(t){
@@ -674,8 +681,7 @@ function submitForm(){
   const errs=[];const need=(ok,id,label)=>{if(!ok){setErr(id);errs.push(label);}};
   if(!type){setErr('f-type');$('err-sum').textContent='请先选择货品类型';return;}
   const zh=$('nm-zh').value.trim(), en=$('nm-en').value.trim();
-  need(zh,'f-nm-zh','货品名称（中文）');
-  need(en,'f-nm-en','货品名称（英文）');
+  {const ez=zhNameErr(zh),ee=enNameErr(en,zh);if(ez){setErr('f-nm-zh',ez);errs.push('货品名称（中文）：'+ez);}if(ee){setErr('f-nm-en',ee);errs.push('货品名称（英文）：'+ee);}}
   need($('cat').value,'f-cat','后台类目');
   need(imgDone,'f-img','货品图片');
   if(type==='fin'){
@@ -690,7 +696,7 @@ function submitForm(){
   need($('sc').value,'f-sc','储存条件');
   need($('fm').value,'f-fm','履约方式');
   if(errs.length){
-    $('err-sum').textContent='还有 '+errs.length+' 项未填写：'+errs.join('、');
+    $('err-sum').textContent='还有 '+errs.length+' 项需处理：'+errs.join('、');
     const first=document.querySelector('.has-err');if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
@@ -716,6 +722,7 @@ function autoName(s,l){
   const r=rawRow(), base=rawBase(r,l);
   if(!base||!s.nw||!s.stock)return '';
   const st=l==='zh'?s.stock:(EN_UNIT[s.stock]||'');
+  if(!st)return '';
   return `${base} ${fmtNum(s.nw)}${r.stock}/${st}`;
 }
 function refreshNames(i){const s=specs[i];if(!s.mZh)s.zh=autoName(s,'zh');if(!s.mEn)s.en=autoName(s,'en');}
@@ -728,19 +735,19 @@ function renderSpecs(){
   $('spec-list').innerHTML=`<table class="inline-table" style="table-layout:fixed"><thead><tr>
     <th style="width:22%"><span style="color:var(--danger)">*</span> 库存单位</th><th style="width:22%"><span style="color:var(--danger)">*</span> 净含量</th><th style="width:14%">净含量单位</th>
     <th>BOM</th><th style="width:140px">操作</th></tr></thead><tbody>`+
-  specs.map((s,i)=>`<tr id="spec-${i}">
+  specs.map((s,i)=>`<tr id="spec-n-${i}"><td colspan="5" style="background:#fbfcfd;border-top:2px solid #e4e7ed;border-bottom:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:start">
+      <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="选择库存单位、填净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
+      <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
+      <button class="btn btn-sm" style="margin-top:26px" onclick="resetNames(${i})">重新生成</button>
+    </div></td></tr>
+  <tr id="spec-${i}">
     <td><div class="f" id="rf-st-${i}"><select onchange="setSpec(${i},'stock',this.value)"><option value="">请选择</option>${SPEC_UNITS.map(u=>`<option ${u===s.stock?'selected':''}>${u}</option>`).join('')}</select><div class="err">请选择</div></div></td>
     <td><div class="f" id="rf-nw-${i}"><input type="number" min="0" step="0.0001" placeholder="如 0.33" value="${s.nw}" oninput="setSpec(${i},'nw',this.value,true)"><div class="err">须大于 0</div></div></td>
     <td><span class="text-gray">🔒 ${r.stock}</span></td>
     <td class="text-sm text-gray bom-cell">${bomText(s)}</td>
     <td>${s.itemCode?'<span class="tag tag-gray" title="'+s.itemCode+'">已建·停用</span> ':''}<button class="btn-text danger" onclick="delSpec(${i})">删除</button></td>
-  </tr>
-  <tr id="spec-n-${i}"><td colspan="5" style="background:#fbfcfd;border-top:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:start">
-      <div class="f" id="rf-zh-${i}"><label class="required"><span class="lang-badge lb-zh">中</span>成品货品名称（中文）</label><input type="text" maxlength="50" value="${s.zh}" placeholder="选择库存单位、填净含量后自动生成" oninput="setName(${i},'zh',this.value)"><div class="err">请填写中文名称</div></div>
-      <div class="f" id="rf-en-${i}"><label class="required"><span class="lang-badge lb-en">EN</span>成品货品名称（英文）</label><input type="text" maxlength="100" value="${s.en}" placeholder="Auto-generated" oninput="setName(${i},'en',this.value)"><div class="err">请填写英文名称</div></div>
-      <button class="btn btn-sm" style="margin-top:26px" onclick="resetNames(${i})">重新生成</button>
-    </div></td></tr>`).join('')+'</tbody></table>';
+  </tr>`).join('')+'</tbody></table>';
 }
 function setSpec(i,k,v,soft){
   const s=specs[i];s[k]=v;rDirty=true;
@@ -790,7 +797,7 @@ function rNext(){
   const seen={};
   specs.forEach((s,i)=>{const p=`规格${i+1}`;
     need(s.stock,`rf-st-${i}`,p+'库存单位');need(parseFloat(s.nw)>0,`rf-nw-${i}`,p+'净含量');
-    need(s.zh.trim(),`rf-zh-${i}`,p+'中文名称');need(s.en.trim(),`rf-en-${i}`,p+'英文名称');
+    {const ez=zhNameErr(s.zh),ee=enNameErr(s.en,s.zh);if(ez){setErr(`rf-zh-${i}`,ez);errs.push(p+'：'+ez);}if(ee){setErr(`rf-en-${i}`,ee);errs.push(p+'：'+ee);}}
     const k=[s.stock,+s.nw].join('|');
     if(s.nw&&s.stock){if(seen[k]!==undefined){setErr(`rf-st-${i}`,'与规格'+(seen[k]+1)+'重复');errs.push(p+'与规格'+(seen[k]+1)+'重复');}else seen[k]=i;}
   });
