@@ -247,6 +247,17 @@
   window.deliv_handover=function(id){const d=dvGet(id);if(!d)return;(d.labels||[]).forEach(l=>l.arrived=true);deliveryHandover(id);render();toast(`【演示】仓库已扫码交接 ${id}，${d.orderIds.length} 个订单转「待收货」`,'ok');};
   /* ---------- 送货单详情（整页 · 快驴样式三段式）---------- */
   window.deliv_open=function(id){DB.delivView=id;render();window.scrollTo(0,0);};
+  // 商品明细筛选：按商品名称 / SKU编码 模糊匹配（不区分大小写），前端过滤不重渲染，序号保留原序；离开详情即清空
+  window.deliv_lineFilter=function(v,clear){
+    const ip=document.getElementById('dv-ln-q');if(clear&&ip){ip.value='';v='';ip.focus();}
+    const q=(v||'').trim().toLowerCase();const rows=[...document.querySelectorAll('.dv-ln-tb tbody tr[data-q]')];
+    let n=0;rows.forEach(tr=>{const hit=!q||tr.dataset.q.includes(q);tr.style.display=hit?'':'none';if(hit)n++;});
+    const none=document.getElementById('dv-ln-none');if(none)none.style.display=(q&&!n)?'':'none';
+    const x=document.getElementById('dv-ln-x');if(x)x.style.display=q?'':'none';
+    const c=document.getElementById('dv-ln-cnt');if(c)c.textContent=q?`匹配 ${n} / ${rows.length} 个 SKU`:`共 ${rows.length} 个 SKU · 按 SKU 聚合`;
+  };
+  // 表头吸顶：样式只作用于送货单详情商品明细；top = 顶栏高度 58px
+  if(!document.getElementById('dv-ln-css')){const st=document.createElement('style');st.id='dv-ln-css';st.textContent='.dv-ln-tb thead th{position:sticky;top:58px;z-index:5;box-shadow:inset 0 -1px 0 var(--bd)}';document.head.appendChild(st);}
   window.deliv_closeDetail=function(){DB.delivView=null;render();};
   window.deliv_signDetail=window.deliv_open;   // 兼容旧调用
   function kvItem(k,v){return `<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;}
@@ -322,10 +333,12 @@
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">错货<b>不新增单据、不产生结算</b>，沿用本送货单标记；也可在「售后管理 › 退货单 › 仓库退回」统一查看。<b>多送同一 SKU 不进此表</b>——仓库照收，见上方商品明细「多收数量」列。<button class="btn btn-link" style="padding-left:4px" onclick="DB.retSrcTab='wh';nav('m-after-return')">前往 →</button></div>
     </div></div>`:''}
-    <div class="card"><div class="card-hd"><h3>商品明细</h3><span class="sub">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
+    <div class="card" style="overflow:clip"><div class="card-hd"><div style="display:flex;align-items:baseline;gap:10px"><h3>商品明细</h3><span class="sub" id="dv-ln-cnt">共 ${lines.length} 个 SKU · 按 SKU 聚合</span></div>
+      <div style="position:relative;width:280px"><input id="dv-ln-q" placeholder="搜索商品名称 / SKU编码" oninput="deliv_lineFilter(this.value)" style="width:100%;padding-right:30px"><span id="dv-ln-x" onclick="deliv_lineFilter('',1)" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tt)">✕</span></div></div>
+      <div class="card-bd flush"><div><table class="dv-ln-tb">
       <thead><tr><th>序号</th><th>SKU编码</th><th>商品名称</th><th>规格</th><th style="text-align:right">下单数量</th><th style="text-align:right">应送数量</th>${(typeof ckOn=='function'&&ckOn())?'<th style="text-align:right">商家核货数量</th>':''}<th style="text-align:right">实收数量（收货清点）</th><th style="text-align:right">短收数量</th><th style="text-align:right">多收数量</th><th style="text-align:right">平台补采</th><th style="text-align:right">缺货罚款</th></tr></thead><tbody>
       ${lines.map((r,i)=>{const diff=(r.recvQty==null)?null:(r.recvQty-r.bookQty);
-        return `<tr><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td>
+        return `<tr data-q="${(r.sku+' '+r.name).toLowerCase().replace(/"/g,'')}"><td>${i+1}</td><td class="mono">${r.sku}</td><td><b>${r.name}</b></td><td>${r.spec}</td><td style="text-align:right">${r.orderQty}</td>
         <td style="text-align:right">${r.bookQty}${(()=>{const pn=(typeof presendNet=='function'?presendNet(r.name,d.warehouse,r.orderQty||0):null);if(!pn||!pn.gross)return '';return `<div style="font-size:11px;color:var(--ts)">订单 ${r.orderQty||0} · <span style="color:var(--gold)">预送 ${pn.gross}</span> · 取大 ${pn.need}</div>`;})()}</td>
         ${(typeof ckOn=='function'&&ckOn())?`<td style="text-align:right">${(()=>{const c=ckQty(d,r.sku);if(c==null)return '<span style="color:var(--tt)">—</span>';return c<r.bookQty?`<b style="color:var(--r)">${c}</b>`:`${c}`;})()}</td>`:''}
         <td style="text-align:right;${r.recvQty==null?'color:var(--ts)':(diff<0?'color:var(--r);font-weight:600':'color:var(--gd);font-weight:600')}">${r.recvQty==null?'待清点':r.recvQty}</td>
@@ -333,6 +346,7 @@
         <td style="text-align:right;${diff>0?'color:var(--gold);font-weight:600':'color:var(--ts)'}">${diff==null?'—':(diff>0?diff:'0')}</td>
         <td style="text-align:right;${dvReplSku(d,r.sku)>0?'color:var(--gold);font-weight:600':'color:var(--ts)'}">${dvReplSku(d,r.sku)}</td>
         <td style="text-align:right;${dvFineSku(d,r.sku)>0?'color:var(--r);font-weight:600':'color:var(--ts)'}">${dvFineSku(d,r.sku)>0?'-'+money(dvFineSku(d,r.sku)):'—'}</td></tr>`;}).join('')||`<tr><td colspan="12" style="text-align:center;color:var(--ts);padding:18px">本单无商品明细</td></tr>`}
+      <tr id="dv-ln-none" style="display:none"><td colspan="12" style="text-align:center;color:var(--ts);padding:18px">没有匹配的商品，换个关键词试试</td></tr>
       </tbody></table></div>
       <div class="card-bd" style="border-top:1px solid var(--bd2);font-size:12.5px;color:var(--ts)">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<br><b>多收</b>：你实际送的比应送多，仓库<b>照收不设上限</b>，超出部分计入你的<b>在仓寄存库存</b>（「库存管理 › 在仓预送库存」可查），<b>当天不参与售卖</b>、不结算，<b>次日优先抵扣应送量</b>。送来的若是应送清单外的 SKU，属<b>送错</b>，仍走仓库退回、需线下取回。<b>平台补采</b>＝该 SKU 缺口由平台自营现货补齐的数量（未补为 0），按<b>自营商品原定价</b>在结算单中抵扣；<b>缺货罚款</b>＝该 SKU 缺口件数 × 罚款标准，<b>与是否补采无关</b>，两者各自独立进结算单。</div></div>
       ${(d.signed&&!inbound)?`<div class="card-bd" style="padding:12px 16px;border-top:1px solid var(--bd2)"><button class="btn btn-link" onclick="deliv_handover('${d.id}')">🔬 演示：模拟仓库扫码交接（标签到齐 → 已入库）</button></div>`:''}
