@@ -48,6 +48,17 @@ body{font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",Aria
 .sel::after{content:"";position:absolute;right:11px;top:12px;border:4px solid transparent;border-top-color:var(--text-4);}
 .inp.dis,.sel.dis{background:var(--bg);color:var(--text-4);border-color:var(--border-light);cursor:not-allowed;}
 textarea.inp{height:auto;min-height:54px;line-height:1.5;padding:6px 12px;resize:vertical;}
+.radio{display:inline-flex;align-items:center;margin-right:24px;line-height:32px;font-size:14px;color:var(--text-2);}
+.radio i{width:14px;height:14px;border:1px solid var(--border);border-radius:50%;margin-right:6px;display:inline-block;position:relative;}
+.radio.on{color:var(--primary);}
+.radio.on i{border-color:var(--primary);background:var(--primary);}
+.radio.on i::after{content:"";position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;left:4px;top:4px;}
+.radio.dis{color:var(--text-4);}
+.radio.dis.on i{background:var(--bg);border-color:var(--border);}
+.radio.dis.on i::after{background:var(--text-4);}
+.txt{line-height:32px;color:var(--text);}
+table.vx td select{height:28px;border:1px solid var(--border);border-radius:4px;padding:0 6px;font-size:13px;font-family:inherit;background:#fff;}
+table.vx td select[disabled]{background:var(--bg);color:var(--text-4);}
 
 .btn{display:inline-block;height:32px;line-height:30px;padding:0 15px;font-size:13px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text-2);cursor:pointer;margin-left:10px;font-family:inherit;}
 .btn:first-child{margin-left:0;}
@@ -147,7 +158,7 @@ h4.sec{font-size:14px;margin:18px 0 8px;color:var(--text);}
   <!-- ========== 详情页 ========== -->
   <div id="pgDetail" class="hide">
     <div class="card">
-      <div class="card-hd"><span>基本信息</span><span><button class="btn sm">返回</button><button class="btn sm">复制</button></span></div>
+      <div class="card-hd"><span>基本信息</span><span id="detailBtns"></span></div>
       <div class="card-bd"><div class="ff" id="detailForm"></div></div>
     </div>
     <div class="bc-tabs">
@@ -243,6 +254,7 @@ function other(v){ if (v == null) return null; return S.pm === 1 ? v / (1 + TAX)
 
 function sel(v, dis){ return '<div class="sel'+(dis?' dis':'')+'">'+v+'</div>'; }
 function inp(v, dis){ return '<input class="inp'+(dis?' dis':'')+'" value="'+(v||'')+'"'+(dis?' disabled':'')+'>'; }
+function radio(opts, on, dis){ return opts.map(function(o){ return '<span class="radio'+(o===on?' on':'')+(dis?' dis':'')+'"><i></i>'+o+'</span>'; }).join(''); }
 function fi(label, ctl, req){ return '<div class="fi'+(req?' req':'')+'"><label>'+label+'</label><div class="ctl">'+ctl+'</div></div>'; }
 function priceUnit(r){ return byWt(r) || r.saleWay === 1 ? 'kg' : r.unit; }
 function modeCell(r, i, dis){
@@ -258,11 +270,20 @@ function renderEdit(){
     + fi('采购员：', inp('沈亮(Alex)', true), true)
     + fi('采购单类型：', sel('正常采购单', nd), true)
     + fi('供应商：', sel('示例冻品供应商', nd), true)
+    + fi('货源国', inp('Norway', true))
     + fi('入库仓库：', sel('Foodmax 大仓', nd), true)
     + fi('结算币种', sel('USD-美元', !e), true)
     + fi('业务类型', sel('跨境采购', true), true)
+    + fi('贸易方式', sel('CFR', nd), true)
+    + fi('运输方式', sel('海运', nd), true)
+    + fi('结算主体：', sel('Foodmax Pte. Ltd.', nd), true)
+    + fi('支付方式：', sel('银行转账', false), true)
     + fi('期望到货时间：', inp('2026-11-20 10:00', false), true)
+    + fi('是否均摊物流费：', radio(['是','否'], '否', nd), true)
+    + fi('采购单备注：', '<textarea class="inp" maxlength="2000" placeholder="请输入备注"></textarea>')
     + fi('定价方式', sel(pmTx, nd))
+    + fi('是否预付单', radio(['是','否'], '否', nd), true)
+    + fi('预计发货日', inp('2026-11-12 10:00', nd), true)
     + fi('采购单状态：', sel(ST_NAME[S.st], true));
 
   var tot = 0; ROWS.forEach(function(r){ tot += amount(r) || 0; });
@@ -273,12 +294,12 @@ function renderEdit(){
    +'<span>包装物金额：<b>0.00 '+CUR+'</b></span>';
   document.getElementById('editToolbar').classList.toggle('hide', !e);
 
-  document.getElementById('editTh').innerHTML = '<th>采购类型</th><th>货品编码</th><th>货品名称</th><th>商品分类</th>'
+  document.getElementById('editTh').innerHTML = '<th>采购类型</th><th>货品编码</th><th>货品名称</th><th>超收比例</th><th>销售类型</th><th>商品分类</th><th>成本均价(含税)</th><th>成本均价(未税)：</th>'
     + '<th class="new"><span class="'+(e?'req':'')+'">计价方式</span></th>'
     + '<th>采购单价('+pmTx+')</th><th>采购单价('+otTx+')</th>'
     + '<th class="new">折合件单价('+pmTx+')</th><th class="new">折合件单价('+otTx+')</th><th>采购数量</th>'
     + '<th class="new">采购重量</th>'
-    + '<th>采购金额('+pmTx+') ⓘ</th><th>采购金额('+otTx+')</th><th>税率</th><th>选择箱规</th><th>商品备注</th>'
+    + '<th>采购金额('+pmTx+') ⓘ</th><th>采购金额('+otTx+')</th><th>税率</th><th>采购金额税额</th><th>选择箱规</th><th>商品备注</th>'
     + (e ? '<th>操作</th>' : '');
 
   var tb = '';
@@ -303,12 +324,13 @@ function renderEdit(){
     // 采购金额：按重量只读
     var ac = w ? (a==null?'--':fmtAmt(a)+' '+CUR)
                : '<div class="cell-inp"><input value="'+(a==null?'':f2(a))+'"><span class="unit">'+CUR+'</span></div>';
-    tb += '<tr><td>商品</td><td>'+r.code+'</td><td>'+r.name+'</td><td>--</td>'
+    tb += '<tr><td>商品</td><td>'+r.code+'</td><td>'+r.name+'</td><td>--</td><td>--</td><td>--</td><td>--</td><td>--</td>'
       + '<td class="new">'+modeCell(r, i, !e)+'</td>'
       + '<td>'+pc+'</td><td>'+op+'</td><td class="new">'+u1+'</td><td class="new">'+u2+'</td><td>'+qc+'</td>'
       + '<td class="new">'+wc+'</td>'
       + '<td>'+ac+'</td><td>'+(a==null?'--':fmtAmt(other(a))+' '+CUR)+'</td><td>9%</td>'
-      + '<td>'+(r.saleWay===0 ? r.boxSize+r.unit+'/'+r.boxUnit : '--')+'</td>'
+      + '<td>'+(a==null?'--':fmtAmt(Math.abs(a-other(a)))+' '+CUR)+'</td>'
+      + '<td>'+(r.saleWay===0 ? '<select'+dis+'><option>'+r.boxSize+r.unit+'/'+r.boxUnit+'</option></select>' : '--')+'</td>'
       + '<td><div class="cell-inp"><input placeholder="请输入" style="width:140px;"></div></td>'
       + (e ? '<td><button class="btn text">删除</button></td>' : '') + '</tr>';
   });
@@ -373,16 +395,44 @@ function save(){
 // ---------- 详情页 ----------
 var TAB = 'products';
 function renderDetail(){
-  var pmTx = S.pm === 1 ? '含税' : '未税', otTx = S.pm === 1 ? '未税' : '含税';
+  var pmTx = S.pm === 1 ? '含税' : '未税', st = S.st;
+  // 按钮显隐 order-detail.vue（同冷鲜肉原型）
+  var b = '<button class="btn sm">返回</button>';
+  if ([0,1].indexOf(st) > -1) b += '<button class="btn sm">废弃</button>';
+  if ([1,2].indexOf(st) > -1) b += '<button class="btn sm">打印</button>';
+  b += '<button class="btn sm">复制</button>';
+  if (st === 0) b += '<button class="btn sm primary" onclick="document.querySelector(\'#segPage [data-v=edit]\').click()">编辑</button>';
+  document.getElementById('detailBtns').innerHTML = b;
   document.getElementById('detailForm').innerHTML = ''
     + fi('采购单编号：', inp('PA2026111000021', true))
+    + fi('结算单号：', inp('', true))
     + fi('采购员：', inp('沈亮(Alex)', true))
     + fi('采购单类型：', inp('正常采购单', true))
     + fi('供应商：', sel('示例冻品供应商', true))
+    + fi('货源国', inp('Norway', true))
     + fi('入库仓库：', sel('Foodmax 大仓', true))
     + fi('结算币种', inp('USD-美元', true))
+    + fi('业务类型', inp('跨境采购', true))
+    + fi('贸易方式', inp('CFR', true))
+    + fi('运输方式', inp('海运', true))
+    + fi('货柜号/车牌号', inp('', true))
+    + fi('结算主体：', inp('Foodmax Pte. Ltd.', true))
+    + fi('支付方式', inp('银行转账', true))
+    + fi('仓库编号：', inp('', true))
+    + fi('来源：', inp('', true))
+    + fi('期望到货时间：', inp('2026-11-20 10:00', true))
+    + fi('是否均摊物流费：', radio(['是','否'], '否', true))
+    + fi('物流费用：', inp('-', true))
+    + fi('采购单备注：', '<textarea class="inp dis" disabled></textarea>')
+    + fi('采购单状态：', sel(ST_NAME[S.st], true))
+    + fi('结算状态：', sel('', true))
+    + fi('结算完成时间：', inp('', true))
+    + fi('创建时间：', inp('2026-11-10 11:20:05', true))
+    + fi('完成时间：', inp('', true))
+    + fi('合同扣点：', sel('', true))
     + fi('定价方式', '<textarea class="inp dis" disabled>'+pmTx+'</textarea>')
-    + fi('采购单状态：', sel(ST_NAME[S.st], true));
+    + fi('是否预付单', '<span class="txt">否</span>')
+    + fi('预计发货日', inp('2026-11-12 10:00', true));
 
   var tabs = [['products','采购商品'],['prepay-records','预付记录'],['contract-attachment','合同附件'],['landing-cost','落地成本'],['records','操作记录']];
   document.getElementById('bcNav').innerHTML = tabs.map(function(t){ return '<span data-t="'+t[0]+'" class="'+(t[0]===TAB?'on':'')+'">'+t[1]+'</span>'; }).join('');
@@ -393,9 +443,11 @@ function renderDetail(){
     var tot = 0; ROWS.forEach(function(r){ tot += amount(r) || 0; });
     var tIn = S.pm === 1 ? tot : other(tot);
     bd += '<div class="stat"><span>商品数：<b>'+ROWS.length+'</b></span><span>包装物数：<b>0</b></span><span>商品总金额(含税)：<b>'+fmtAmt(tIn)+' '+CUR+'</b> ('+fmtAmt(tIn*RATE)+' SGD)</span><span>采购总金额(含税)：<b>'+fmtAmt(tIn)+' '+CUR+'</b></span></div>';
-    var th = '<th>序号</th><th>采购类型</th><th>货品编码</th><th>货品名称</th><th>税率</th><th>商品分类</th>'
+    var th = '<th>序号</th><th>采购类型</th><th>货品编码</th><th>货品名称</th><th>超收比例</th><th>销售类型</th><th>发票类型</th><th>税率</th><th>商品分类</th>'
       + '<th class="new">计价方式</th>'
-      + '<th>采购单价(含税)</th><th>采购单价(未税)</th><th class="new">折合件单价(含税)</th><th class="new">折合件单价(未税)</th><th>税额</th><th>采购数量</th>'
+      + '<th>采购单价(含税)</th><th>采购单价(未税)</th><th class="new">折合件单价(含税)</th><th class="new">折合件单价(未税)</th>'
+      + (S.st === 2 ? '<th>均摊后单价(含税)</th><th>均摊后单价(未税)</th>' : '')
+      + '<th>税额</th><th>采购数量</th>'
       + '<th class="new">采购重量</th>'
       + '<th>实际采购数量</th><th>采购金额(含税)</th><th>采购金额(未税)</th><th>箱规</th><th>商品备注</th>';
     var tb = '';
@@ -406,9 +458,10 @@ function renderDetail(){
       var uIn = S.pm === 1 ? up : other(up), uEx = S.pm === 1 ? other(up) : up;
       function pr(v){ return f4(v)+'/'+priceUnit(r)+' '+CUR; }
       function ur(v){ return w ? f4(v)+'/'+r.unit+' '+CUR : '--'; }
-      tb += '<tr><td>'+(i+1)+'</td><td>商品</td><td>'+r.code+'</td><td>'+r.name+'</td><td>9%</td><td>--</td>'
+      tb += '<tr><td>'+(i+1)+'</td><td>商品</td><td>'+r.code+'</td><td>'+r.name+'</td><td>--</td><td>--</td><td>--</td><td>9%</td><td>--</td>'
         + '<td class="new">'+(r.saleWay===0 && !w ? '按数量' : '按重量')+'</td>'
         + '<td>'+pr(pIn)+'</td><td>'+pr(pEx)+'</td><td class="new">'+ur(uIn)+'</td><td class="new">'+ur(uEx)+'</td>'
+        + (S.st === 2 ? '<td>--</td><td>--</td>' : '')
         + '<td>'+fmtAmt(aIn-aEx)+' '+CUR+'</td><td>'+r.qty+' '+r.unit+'</td>'
         + '<td class="new">'+(w ? (+r.wt).toFixed(3)+' kg' : '--')+'</td>'
         + '<td>'+(S.st===2 ? r.qty+' '+r.unit : '--')+'</td><td>'+fmtAmt(aIn)+' '+CUR+'</td><td>'+fmtAmt(aEx)+' '+CUR+'</td>'
