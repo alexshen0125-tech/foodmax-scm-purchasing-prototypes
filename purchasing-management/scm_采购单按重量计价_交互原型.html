@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 采购单（货品）· 标品按重量计价 — 交互原型</title>
+<!--
+  页面结构取自线上代码 h5-ddxm-intl-scm（origin/main ff6601da，2026-11-10）：
+  - 新建/编辑采购单（货品） src/views/purchase/v2/order-create.vue / order-edit.vue
+    · 标品 saleWay=0：单价 /unit + 箱规单价 /boxSizeUnit，数量 qty + boxSizeQty；非标品 saleWay=1：单价 /kg
+    · 定价方式 pricingMethod：1 含税（录含税单价）/ 2 未税（录未税单价）
+  - 采购单详情（货品） src/views/purchase/v2/order-detail.vue
+  - 单件重量默认值取货品「净含量 netWeight + 净含量单位 netWeightUnit」（commodity TabFinishedItems.vue:69）
+  绿色底色 = 本期新增，其余为现有页面。
+-->
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --primary:#409EFF;--success:#67C23A;--warning:#E6A23C;--danger:#F56C6C;--info:#909399;
+  --text:#303133;--text-2:#606266;--text-3:#909399;--text-4:#C0C4CC;
+  --border:#DCDFE6;--border-light:#EBEEF5;--bg:#F5F7FA;
+  --new:#F0F9EB;--new-bd:#C2E7B0;--new-tx:#529b2e;
+}
+body{font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",Arial,sans-serif;font-size:14px;color:var(--text);background:#F0F2F5;}
+.proto-bar{position:sticky;top:0;z-index:40;background:#2b2f3a;color:#cfd3dc;font-size:12px;padding:8px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+.proto-bar .seg{display:inline-flex;border:1px solid #4a5060;border-radius:4px;overflow:hidden;}
+.proto-bar .seg span{padding:4px 10px;cursor:pointer;border-right:1px solid #4a5060;}
+.proto-bar .seg span:last-child{border-right:0;}
+.proto-bar .seg span.on{background:var(--primary);color:#fff;}
+.page{padding:16px;}
+.tabs-nav{background:#fff;border-bottom:1px solid var(--border-light);padding:0 16px;font-size:13px;color:var(--text-2);display:flex;gap:2px;}
+.tabs-nav span{padding:8px 14px;border:1px solid var(--border-light);border-bottom:0;background:var(--bg);margin-top:6px;border-radius:3px 3px 0 0;}
+.tabs-nav span.on{background:#fff;color:var(--primary);}
+
+.card{background:#fff;border:1px solid var(--border-light);border-radius:4px;margin-bottom:16px;box-shadow:0 2px 12px 0 rgba(0,0,0,.06);}
+.card-hd{padding:14px 20px;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;}
+.card-bd{padding:20px;}
+
+.ff{display:flex;flex-wrap:wrap;}
+.fi{width:25%;display:flex;align-items:flex-start;margin-bottom:18px;padding-left:20px;}
+@media (max-width:1599px){.fi{width:33.333%;}}
+@media (max-width:1199px){.fi{width:50%;}}
+.fi>label{width:160px;flex:none;text-align:right;padding-right:12px;line-height:32px;font-size:14px;color:var(--text-2);}
+.fi .ctl{flex:1;min-width:0;}
+.fi.req>label::before{content:"*";color:var(--danger);margin-right:4px;}
+.inp,.sel{width:100%;height:32px;line-height:30px;border:1px solid var(--border);border-radius:4px;padding:0 12px;font-size:14px;color:var(--text);background:#fff;font-family:inherit;}
+.sel{position:relative;padding-right:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sel::after{content:"";position:absolute;right:11px;top:12px;border:4px solid transparent;border-top-color:var(--text-4);}
+.inp.dis,.sel.dis{background:var(--bg);color:var(--text-4);border-color:var(--border-light);cursor:not-allowed;}
+textarea.inp{height:auto;min-height:54px;line-height:1.5;padding:6px 12px;resize:vertical;}
+
+.btn{display:inline-block;height:32px;line-height:30px;padding:0 15px;font-size:13px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text-2);cursor:pointer;margin-left:10px;font-family:inherit;}
+.btn:first-child{margin-left:0;}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+.btn.sm{height:28px;line-height:26px;padding:0 12px;font-size:12px;}
+.btn.text{border:0;background:none;color:var(--primary);padding:0 4px;height:auto;line-height:1.5;margin:0;}
+
+.stat{display:flex;gap:24px;flex-wrap:wrap;font-size:13px;color:var(--text-2);margin-bottom:12px;}
+.stat b{color:var(--text);font-weight:600;}
+.toolbar{margin-bottom:12px;}
+
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border-light);}
+table.vx{border-collapse:collapse;font-size:13px;min-width:100%;}
+table.vx th,table.vx td{border:1px solid var(--border-light);padding:8px 10px;text-align:left;white-space:nowrap;vertical-align:middle;}
+table.vx th{background:#F8F8F9;color:var(--text);font-weight:600;}
+table.vx tbody tr:nth-child(even) td{background:#FAFAFA;}
+table.vx th.new{background:#E7F5DE;color:var(--new-tx);}
+table.vx td.new{background:var(--new)!important;}
+table.vx th .req::before{content:"*";color:var(--danger);margin-right:3px;}
+.cell-inp{display:flex;align-items:center;gap:6px;}
+.cell-inp+.cell-inp{margin-top:6px;}
+.cell-inp input{width:110px;height:28px;border:1px solid var(--border);border-radius:4px;padding:0 8px;font-size:13px;font-family:inherit;}
+.cell-inp input[disabled]{background:var(--bg);color:var(--text-4);}
+.cell-inp input.err{border-color:var(--danger);}
+.unit{color:var(--text-3);font-size:12px;}
+.sub{color:var(--text-3);font-size:12px;margin-top:4px;line-height:1.4;}
+.sub.new-tx{color:var(--new-tx);}
+.sub.warn{color:var(--warning);}
+.seg-cell{display:inline-flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;font-size:12px;}
+.seg-cell span{padding:3px 10px;cursor:pointer;color:var(--text-2);background:#fff;border-right:1px solid var(--border);}
+.seg-cell span:last-child{border-right:0;}
+.seg-cell span.on{background:var(--primary);color:#fff;}
+.seg-cell.dis span{cursor:not-allowed;}
+.seg-cell.dis span.on{background:var(--bg);color:var(--text-3);}
+.tag{display:inline-block;font-size:12px;padding:0 6px;border-radius:3px;line-height:20px;border:1px solid var(--border);color:var(--text-2);background:var(--bg);}
+.tag.wt{color:var(--new-tx);background:var(--new);border-color:var(--new-bd);}
+.empty{text-align:center;color:var(--text-3);padding:28px 0;font-size:13px;}
+.footer{display:flex;justify-content:center;padding:6px 0 20px;}
+
+.bc-tabs{background:#fff;border:1px solid var(--border);box-shadow:0 2px 4px rgba(0,0,0,.12);}
+.bc-nav{display:flex;background:var(--bg);border-bottom:1px solid var(--border-light);}
+.bc-nav span{padding:0 20px;line-height:39px;font-size:14px;color:var(--text-3);cursor:pointer;border-right:1px solid transparent;border-left:1px solid transparent;margin-bottom:-1px;}
+.bc-nav span.on{background:#fff;color:var(--primary);border-color:var(--border);}
+.bc-bd{padding:15px;}
+
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#f0f9eb;border:1px solid #e1f3d8;color:var(--success);padding:10px 18px;border-radius:4px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;}
+#toast.warn{background:#fdf6ec;border-color:#faecd8;color:var(--warning);}
+#toast.show{opacity:1;}
+.hide{display:none!important;}
+
+table.spec{width:100%;border-collapse:collapse;font-size:13px;}
+table.spec th,table.spec td{border:1px solid var(--border-light);padding:8px 10px;text-align:left;vertical-align:top;line-height:1.6;}
+table.spec th{background:#F8F8F9;font-weight:600;white-space:nowrap;}
+table.spec td:first-child{white-space:nowrap;font-weight:600;}
+.st{font-size:12px;border-radius:3px;padding:0 6px;white-space:nowrap;}
+.st.new{color:var(--new-tx);background:var(--new);border:1px solid var(--new-bd);}
+.st.chg{color:var(--primary);background:#ecf5ff;border:1px solid #d9ecff;}
+.st.tbd{color:#b26a00;background:#fdf6ec;border:1px solid #faecd8;}
+ol.rules{margin-top:12px;padding-left:20px;font-size:13px;line-height:1.9;color:var(--text-2);}
+h4.sec{font-size:14px;margin:18px 0 8px;color:var(--text);}
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <span>原型切换</span>
+  <span>页面：</span>
+  <div class="seg" id="segPage"><span class="on" data-v="edit">编辑采购单（货品）</span><span data-v="detail">采购单详情（货品）</span></div>
+  <span>定价方式：</span>
+  <div class="seg" id="segPm"><span class="on" data-v="1">含税</span><span data-v="2">未税</span></div>
+  <span>采购单状态：</span>
+  <div class="seg" id="segSt"><span data-v="0">草稿</span><span data-v="5">待下单</span><span class="on" data-v="6">待发货</span><span data-v="1">待入库</span><span data-v="2">已完成</span></div>
+</div>
+
+<div class="tabs-nav"><span>采购单列表（货品）</span><span class="on" id="tabTitle">编辑采购单（货品）</span></div>
+
+<div class="page">
+  <!-- ========== 编辑页 ========== -->
+  <div id="pgEdit">
+    <div class="card">
+      <div class="card-hd"><span>基本信息</span></div>
+      <div class="card-bd"><div class="ff" id="editForm"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><span>采购明细</span></div>
+      <div class="card-bd">
+        <div class="stat" id="editStat"></div>
+        <div class="toolbar" id="editToolbar">
+          <button class="btn">新增包装物</button><button class="btn primary">新增商品</button><button class="btn primary">批量新增商品</button><button class="btn">新增商品(模板)</button><button class="btn primary">导出采购商品</button><button class="btn primary">导入采购商品</button>
+        </div>
+        <div class="tbl-wrap"><table class="vx"><thead><tr id="editTh"></tr></thead><tbody id="editTb"></tbody></table></div>
+      </div>
+    </div>
+    <div class="footer" id="editFooter"></div>
+  </div>
+
+  <!-- ========== 详情页 ========== -->
+  <div id="pgDetail" class="hide">
+    <div class="card">
+      <div class="card-hd"><span>基本信息</span><span><button class="btn sm">返回</button><button class="btn sm">复制</button></span></div>
+      <div class="card-bd"><div class="ff" id="detailForm"></div></div>
+    </div>
+    <div class="bc-tabs">
+      <div class="bc-nav" id="bcNav"></div>
+      <div class="bc-bd" id="bcBd"></div>
+    </div>
+  </div>
+
+  <!-- ========== 规则说明 ========== -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-hd"><span>改造说明</span></div>
+    <div class="card-bd">
+      <table class="spec">
+        <thead><tr><th>字段</th><th>改动</th><th>类型</th><th>必填</th><th>默认值</th><th>规则</th></tr></thead>
+        <tbody>
+          <tr><td>计价方式</td><td><span class="st new">新增</span> 采购明细列</td><td>枚举：按数量 / 按重量</td><td>是（仅标品）</td><td>同供应商 + 同货品上一张采购单的计价方式；无历史 = 按数量</td><td>仅标品（saleWay=0）显示切换；非标品固定显示「按重量」不可改；包装物、押金行显示 "--"。草稿/待下单/待发货可改，其余状态只读</td></tr>
+          <tr><td>采购单价(含税/未税)</td><td><span class="st chg">改造</span> 输入单位随计价方式变</td><td>数值，4 位小数</td><td>是</td><td>按数量：带出现有报价 /件；按重量：空</td><td>按数量 = 现状（/件 + /箱 两个输入框）；按重量 = 只有一个输入框 <b>/kg</b>，隐藏 /箱 输入框。另一个税态（未税/含税）列同步显示 /kg</td></tr>
+          <tr><td>折合件单价(含税/未税)</td><td><span class="st new">新增</span> 采购明细列（只读）</td><td>数值，4 位小数</td><td>—</td><td>自动算</td><td>= 采购金额 ÷ 采购数量；仅按重量行有值，按数量行显示 "--"</td></tr>
+          <tr><td>采购重量</td><td><span class="st new">新增</span> 采购明细列</td><td>数值，3 位小数，单位 kg</td><td>按重量时必填</td><td>采购数量 × 单件净含量（货品资料净含量单位为 kg/g 时自动算，g÷1000）</td><td>&gt;0；手动改过后，再改采购数量不再自动覆盖重量；货品未维护重量类净含量时为空，提示手填。按数量 行显示 "--"</td></tr>
+          <tr><td>采购数量</td><td>不变</td><td>—</td><td>是</td><td>—</td><td>按重量 行仍必填件数（入库按件收货、库存按件记）</td></tr>
+          <tr><td>采购金额(含税/未税)</td><td><span class="st chg">改造</span> 计算公式</td><td>数值</td><td>—</td><td>自动算</td><td>按数量：单价 × 采购数量（现状）；按重量：<b>单价/kg × 采购重量</b>。按重量 时金额框只读（改金额会反算单价，与重量口径冲突）</td></tr>
+        </tbody>
+      </table>
+      <h4 class="sec">计算示例（三文鱼整条，按重量，含税）</h4>
+      <ol class="rules" style="margin-top:0;">
+        <li>录入：采购数量 40 条，单件净含量 6 kg → 采购重量默认 240.000 kg；供应商实际报 236.5 kg，手改为 236.500</li>
+        <li>单价 9.80 /kg → 采购金额 = 9.80 × 236.5 = <b>2,317.70 USD</b></li>
+        <li>折合件单价 = 2,317.70 ÷ 40 = <b>57.9425 /条</b>（落库为现有 price 字段，下游库存成本/结算/开票沿用件单价，不改）</li>
+      </ol>
+      <h4 class="sec">业务规则</h4>
+      <ol class="rules" style="margin-top:0;">
+        <li><b>切换计价方式金额不变</b>：按数量→按重量，单价/kg = 原件单价 ÷ 单件净含量，重量 = 数量 × 单件净含量；无净含量时单价、重量清空待填。按重量→按数量，件单价 = 原金额 ÷ 采购数量。</li>
+        <li><b>落库</b>：明细新增 计价方式、重量单价（含税/未税）、采购重量 3 个字段；现有 price / excludingTaxPrice 存折合件单价（4 位小数），purchaseAmount 存 重量单价 × 重量，保证下游只读件单价的环节不受影响。</li>
+        <li><b>保存校验</b>：按重量 行 采购数量、采购重量、单价/kg 三者缺一拦截，提示「第 N 行：按重量计价需填写采购重量」。</li>
+        <li><b>编辑态</b>：计价方式、采购重量跟随现有 isFullEditableStatus（草稿/待下单/待发货）；待入库及之后只读。</li>
+        <li><b>详情页</b>：采购单价显示「9.80/kg USD」；新增 计价方式、折合件单价(含税/未税)、采购重量 列，一字段一列。</li>
+      </ol>
+      <h4 class="sec">交互自检（7 项）</h4>
+      <ol class="rules" style="margin-top:0;">
+        <li>☑ 操作路径 ≤ 线下：线下 = 供应商报"每公斤多少、共多少公斤"；线上 = 切「按重量」→ 填单价/kg →（重量已预填）核对重量，与线下一致</li>
+        <li>☑ 输入方向 = 思维方向：供应商报的是 /kg 单价和总重量，就让采购录 /kg 和 kg，不让他自己折成件单价</li>
+        <li>☑ 可预填已预填：重量 = 数量 × 货品净含量预填；计价方式带上一单</li>
+        <li>☑ 无需心算：金额、折合件单价、另一税态单价全部自动算</li>
+        <li>☑ 高频有默认：计价方式默认带同供应商同货品上一单，首次 = 按数量（现状）</li>
+        <li>☑ 关联字段联动：改数量 → 重量跟随（未手动改过时）→ 金额 → 折合件单价；切换计价方式金额不变</li>
+        <li>☑ 核心操作 ≤ 3 步：切换计价方式（1）→ 填单价/kg（2）→ 核对/修改重量（3）</li>
+      </ol>
+      <h4 class="sec">待确认</h4>
+      <ol class="rules" style="margin-top:0;">
+        <li><span class="st tbd">待确认</span> <b>结算按订货重量还是实收重量</b>：本原型假设 按订货重量锁定金额，入库按件收货，结算 = 实收件数 × 折合件单价。若要按仓库实称重量结算，需改 WMS 收货录重量 + 结算取数，范围大很多。</li>
+        <li><span class="st tbd">待确认</span> 重量单位是否固定 kg（本原型假设固定 kg，与非标品一致）。</li>
+        <li><span class="st tbd">待确认</span> 导入/导出采购商品模板、VMS 供应商端采购单详情、采购单打印是否同期加 计价方式/采购重量（本原型未画）。</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// 示例数据（货品编码/名称为示例）；netW = 货品资料净含量折算 kg，null = 未维护或非重量单位
+var ROWS = [
+  {code:'item202611050012', name:'冷冻鸡全翅 1kg/包', saleWay:0, unit:'包', boxSize:10, boxUnit:'箱', netW:1,    mode:'qty', price:4.20, qty:100},
+  {code:'item202611050031', name:'冷冻挪威三文鱼整条', saleWay:0, unit:'条', boxSize:4,  boxUnit:'箱', netW:6,    mode:'wt',  price:9.80, qty:40, wt:236.5, wtTouched:true},
+  {code:'item202611050047', name:'冷冻澳洲牛腱 整件',   saleWay:0, unit:'件', boxSize:1,  boxUnit:'箱', netW:null, mode:'qty', price:62.00, qty:20},
+  {code:'item202611050058', name:'冰鲜去骨猪后腿肉',    saleWay:1, unit:'kg', netW:null, mode:'wt', price:4.70, qty:240}
+];
+var TAX = 0.09; // 示例进项税率 9%
+var ST_NAME = {0:'草稿',5:'待下单',6:'待发货',1:'待入库',2:'已完成'};
+var S = { page:'edit', pm:1, st:6 };
+var CUR = 'USD', RATE = 1.3;
+
+function f4(n){ return (Math.round(n*10000)/10000).toFixed(4); }
+function f2(n){ return (Math.round(n*100)/100).toFixed(2); }
+function fmtAmt(n){ return f2(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function num(v){ return v === '' || v == null || isNaN(+v) ? null : +v; }
+function editable(){ return [0,5,6].indexOf(S.st) > -1; }           // order-edit.vue isFullEditableStatus
+function byWt(r){ return r.saleWay === 0 && r.mode === 'wt'; }
+
+// 行金额（录入税态口径）与折合件单价
+function amount(r){
+  var p = num(r.price); if (p == null) return null;
+  if (byWt(r)) { var w = num(r.wt); return w == null ? null : p * w; }
+  var q = num(r.qty); return q == null ? null : p * q;
+}
+function unitPrice(r){
+  if (!byWt(r)) return num(r.price);
+  var a = amount(r), q = num(r.qty);
+  return a == null || !q ? null : a / q;
+}
+// 录入值是含税还是未税取决于定价方式；另一税态按税率换算
+function other(v){ if (v == null) return null; return S.pm === 1 ? v / (1 + TAX) : v * (1 + TAX); }
+
+function sel(v, dis){ return '<div class="sel'+(dis?' dis':'')+'">'+v+'</div>'; }
+function inp(v, dis){ return '<input class="inp'+(dis?' dis':'')+'" value="'+(v||'')+'"'+(dis?' disabled':'')+'>'; }
+function fi(label, ctl, req){ return '<div class="fi'+(req?' req':'')+'"><label>'+label+'</label><div class="ctl">'+ctl+'</div></div>'; }
+function priceUnit(r){ return byWt(r) || r.saleWay === 1 ? 'kg' : r.unit; }
+function modeCell(r, i, dis){
+  if (r.saleWay !== 0) return '按重量';
+  return '<div class="seg-cell'+(dis?' dis':'')+'" data-i="'+i+'"><span data-m="qty" class="'+(r.mode==='qty'?'on':'')+'">按数量</span><span data-m="wt" class="'+(r.mode==='wt'?'on':'')+'">按重量</span></div>';
+}
+
+// ---------- 编辑页 ----------
+function renderEdit(){
+  var nd = S.st !== 0, e = editable(), pmTx = S.pm === 1 ? '含税' : '未税', otTx = S.pm === 1 ? '未税' : '含税';
+  document.getElementById('editForm').innerHTML = ''
+    + fi('采购单编号：', inp('PA2026111000021', true))
+    + fi('采购员：', inp('沈亮(Alex)', true), true)
+    + fi('采购单类型：', sel('正常采购单', nd), true)
+    + fi('供应商：', sel('示例冻品供应商', nd), true)
+    + fi('入库仓库：', sel('Foodmax 大仓', nd), true)
+    + fi('结算币种', sel('USD-美元', !e), true)
+    + fi('业务类型', sel('跨境采购', true), true)
+    + fi('期望到货时间：', inp('2026-11-20 10:00', false), true)
+    + fi('定价方式', sel(pmTx, nd))
+    + fi('采购单状态：', sel(ST_NAME[S.st], true));
+
+  var tot = 0; ROWS.forEach(function(r){ tot += amount(r) || 0; });
+  var tIn = S.pm === 1 ? tot : other(tot), tEx = S.pm === 1 ? other(tot) : tot;
+  document.getElementById('editStat').innerHTML =
+    '<span>含税商品金额：<b>'+fmtAmt(tIn)+' '+CUR+'</b> ('+fmtAmt(tIn*RATE)+' SGD)</span>'
+   +'<span>未税商品金额：<b>'+fmtAmt(tEx)+' '+CUR+'</b></span>'
+   +'<span>包装物金额：<b>0.00 '+CUR+'</b></span>';
+  document.getElementById('editToolbar').classList.toggle('hide', !e);
+
+  document.getElementById('editTh').innerHTML = '<th>采购类型</th><th>货品编码</th><th>货品名称</th><th>商品分类</th>'
+    + '<th class="new"><span class="'+(e?'req':'')+'">计价方式</span></th>'
+    + '<th>采购单价('+pmTx+')</th><th>采购单价('+otTx+')</th>'
+    + '<th class="new">折合件单价('+pmTx+')</th><th class="new">折合件单价('+otTx+')</th><th>采购数量</th>'
+    + '<th class="new">采购重量</th>'
+    + '<th>采购金额('+pmTx+') ⓘ</th><th>采购金额('+otTx+')</th><th>税率</th><th>选择箱规</th><th>商品备注</th>'
+    + (e ? '<th>操作</th>' : '');
+
+  var tb = '';
+  ROWS.forEach(function(r, i){
+    var w = byWt(r), a = amount(r), up = unitPrice(r), dis = e ? '' : ' disabled';
+    // 采购单价（录入税态）
+    var pc = '<div class="cell-inp"><input data-i="'+i+'" data-f="price" value="'+(r.price==null?'':r.price)+'" placeholder="请输入"><span class="unit">/'+priceUnit(r)+' '+CUR+'</span></div>';
+    if (r.saleWay === 0 && !w) pc += '<div class="cell-inp"><input value="'+(num(r.price)==null?'':f4(r.price*r.boxSize))+'" placeholder="请输入箱规单价"><span class="unit">/'+r.boxUnit+' '+CUR+'</span></div>';
+    // 采购单价（另一税态，只读）
+    var op = num(r.price)==null ? '--' : f4(other(+r.price))+'/'+priceUnit(r)+' '+CUR;
+    // 折合件单价：仅按重量行有值
+    var u1 = w && up != null ? f4(up)+'/'+r.unit+' '+CUR : '--';
+    var u2 = w && up != null ? f4(other(up))+'/'+r.unit+' '+CUR : '--';
+    // 采购数量
+    var qc = '<div class="cell-inp"><input data-i="'+i+'" data-f="qty" value="'+(r.qty==null?'':r.qty)+'"'+dis+'><span class="unit">'+r.unit+'</span></div>';
+    if (r.saleWay === 0) qc += '<div class="cell-inp"><input value="'+(num(r.qty)==null?'':f4(r.qty/r.boxSize))+'"'+dis+'><span class="unit">'+r.boxUnit+'</span></div>';
+    // 采购重量
+    var wc = '--';
+    if (w) {
+      wc = '<div class="cell-inp"><input data-i="'+i+'" data-f="wt" value="'+(r.wt==null?'':r.wt)+'" placeholder="请输入"'+dis+'><span class="unit">kg</span></div>';
+    }
+    // 采购金额：按重量只读
+    var ac = w ? (a==null?'--':fmtAmt(a)+' '+CUR)
+               : '<div class="cell-inp"><input value="'+(a==null?'':f2(a))+'"><span class="unit">'+CUR+'</span></div>';
+    tb += '<tr><td>商品</td><td>'+r.code+'</td><td>'+r.name+'</td><td>--</td>'
+      + '<td class="new">'+modeCell(r, i, !e)+'</td>'
+      + '<td>'+pc+'</td><td>'+op+'</td><td class="new">'+u1+'</td><td class="new">'+u2+'</td><td>'+qc+'</td>'
+      + '<td class="new">'+wc+'</td>'
+      + '<td>'+ac+'</td><td>'+(a==null?'--':fmtAmt(other(a))+' '+CUR)+'</td><td>9%</td>'
+      + '<td>'+(r.saleWay===0 ? r.boxSize+r.unit+'/'+r.boxUnit : '--')+'</td>'
+      + '<td><div class="cell-inp"><input placeholder="请输入" style="width:140px;"></div></td>'
+      + (e ? '<td><button class="btn text">删除</button></td>' : '') + '</tr>';
+  });
+  document.getElementById('editTb').innerHTML = tb;
+
+  [].forEach.call(document.querySelectorAll('#editTb input[data-f]'), function(el){
+    el.addEventListener('change', function(){
+      var r = ROWS[+el.dataset.i], f = el.dataset.f, v = el.value.trim();
+      r[f] = v === '' ? null : +v;
+      if (f === 'wt') r.wtTouched = true;
+      // 改数量：重量未手动改过且有净含量时跟随
+      if (f === 'qty' && byWt(r) && r.netW && !r.wtTouched) r.wt = r.qty == null ? null : +(r.qty * r.netW).toFixed(3);
+      renderEdit();
+    });
+  });
+  [].forEach.call(document.querySelectorAll('#editTb .seg-cell:not(.dis) span'), function(s){
+    s.onclick = function(){ switchMode(+s.parentNode.dataset.i, s.dataset.m); };
+  });
+
+  var f = '<button class="btn">取消</button>';
+  if (S.st === 0) f += '<button class="btn primary" onclick="save()">存为草稿</button>';
+  if ([0,5].indexOf(S.st) > -1) f += '<button class="btn primary" onclick="save()">存为待下单</button>';
+  f += '<button class="btn primary" onclick="save()">保存并提交</button>';
+  document.getElementById('editFooter').innerHTML = f;
+}
+
+// 切换计价方式：金额保持不变
+function switchMode(i, m){
+  var r = ROWS[i]; if (r.mode === m) return;
+  if (m === 'wt') {
+    var p = num(r.price), q = num(r.qty);
+    r.wt = r.netW && q != null ? +(q * r.netW).toFixed(3) : null;
+    r.price = r.netW && p != null ? +(p / r.netW).toFixed(4) : null;
+    r.wtTouched = false;
+    r.mode = 'wt';
+  } else {
+    var up = unitPrice(r);
+    r.mode = 'qty';
+    r.price = up == null ? null : +up.toFixed(4);
+    r.wt = null; r.wtTouched = false;
+  }
+  renderEdit();
+}
+
+function save(){
+  var err = [];
+  ROWS.forEach(function(r, i){
+    if (!num(r.qty)) err.push('第 '+(i+1)+' 行：请填写采购数量');
+    else if (byWt(r) && !num(r.wt)) err.push('第 '+(i+1)+' 行：按重量计价需填写采购重量');
+    else if (num(r.price) == null) err.push('第 '+(i+1)+' 行：请填写采购单价');
+  });
+  if (err.length) {
+    [].forEach.call(document.querySelectorAll('#editTb input[data-f]'), function(el){
+      var r = ROWS[+el.dataset.i], f = el.dataset.f;
+      el.classList.toggle('err', (f === 'wt' && !num(r.wt)) || (f === 'qty' && !num(r.qty)) || (f === 'price' && num(r.price) == null));
+    });
+    return toast(err[0], true);
+  }
+  toast('保存成功');
+}
+
+// ---------- 详情页 ----------
+var TAB = 'products';
+function renderDetail(){
+  var pmTx = S.pm === 1 ? '含税' : '未税', otTx = S.pm === 1 ? '未税' : '含税';
+  document.getElementById('detailForm').innerHTML = ''
+    + fi('采购单编号：', inp('PA2026111000021', true))
+    + fi('采购员：', inp('沈亮(Alex)', true))
+    + fi('采购单类型：', inp('正常采购单', true))
+    + fi('供应商：', sel('示例冻品供应商', true))
+    + fi('入库仓库：', sel('Foodmax 大仓', true))
+    + fi('结算币种', inp('USD-美元', true))
+    + fi('定价方式', '<textarea class="inp dis" disabled>'+pmTx+'</textarea>')
+    + fi('采购单状态：', sel(ST_NAME[S.st], true));
+
+  var tabs = [['products','采购商品'],['prepay-records','预付记录'],['contract-attachment','合同附件'],['landing-cost','落地成本'],['records','操作记录']];
+  document.getElementById('bcNav').innerHTML = tabs.map(function(t){ return '<span data-t="'+t[0]+'" class="'+(t[0]===TAB?'on':'')+'">'+t[1]+'</span>'; }).join('');
+  [].forEach.call(document.querySelectorAll('#bcNav span'), function(s){ s.onclick = function(){ TAB = s.dataset.t; renderDetail(); }; });
+
+  var bd = '';
+  if (TAB === 'products') {
+    var tot = 0; ROWS.forEach(function(r){ tot += amount(r) || 0; });
+    var tIn = S.pm === 1 ? tot : other(tot);
+    bd += '<div class="stat"><span>商品数：<b>'+ROWS.length+'</b></span><span>包装物数：<b>0</b></span><span>商品总金额(含税)：<b>'+fmtAmt(tIn)+' '+CUR+'</b> ('+fmtAmt(tIn*RATE)+' SGD)</span><span>采购总金额(含税)：<b>'+fmtAmt(tIn)+' '+CUR+'</b></span></div>';
+    var th = '<th>序号</th><th>采购类型</th><th>货品编码</th><th>货品名称</th><th>税率</th><th>商品分类</th>'
+      + '<th class="new">计价方式</th>'
+      + '<th>采购单价(含税)</th><th>采购单价(未税)</th><th class="new">折合件单价(含税)</th><th class="new">折合件单价(未税)</th><th>税额</th><th>采购数量</th>'
+      + '<th class="new">采购重量</th>'
+      + '<th>实际采购数量</th><th>采购金额(含税)</th><th>采购金额(未税)</th><th>箱规</th><th>商品备注</th>';
+    var tb = '';
+    ROWS.forEach(function(r, i){
+      var w = byWt(r), a = amount(r), up = unitPrice(r);
+      var pIn = S.pm === 1 ? r.price : other(r.price), pEx = S.pm === 1 ? other(r.price) : r.price;
+      var aIn = S.pm === 1 ? a : other(a), aEx = S.pm === 1 ? other(a) : a;
+      var uIn = S.pm === 1 ? up : other(up), uEx = S.pm === 1 ? other(up) : up;
+      function pr(v){ return f4(v)+'/'+priceUnit(r)+' '+CUR; }
+      function ur(v){ return w ? f4(v)+'/'+r.unit+' '+CUR : '--'; }
+      tb += '<tr><td>'+(i+1)+'</td><td>商品</td><td>'+r.code+'</td><td>'+r.name+'</td><td>9%</td><td>--</td>'
+        + '<td class="new">'+(r.saleWay===0 && !w ? '按数量' : '按重量')+'</td>'
+        + '<td>'+pr(pIn)+'</td><td>'+pr(pEx)+'</td><td class="new">'+ur(uIn)+'</td><td class="new">'+ur(uEx)+'</td>'
+        + '<td>'+fmtAmt(aIn-aEx)+' '+CUR+'</td><td>'+r.qty+' '+r.unit+'</td>'
+        + '<td class="new">'+(w ? (+r.wt).toFixed(3)+' kg' : '--')+'</td>'
+        + '<td>'+(S.st===2 ? r.qty+' '+r.unit : '--')+'</td><td>'+fmtAmt(aIn)+' '+CUR+'</td><td>'+fmtAmt(aEx)+' '+CUR+'</td>'
+        + '<td>'+(r.saleWay===0 ? r.boxSize+r.unit+'/'+r.boxUnit : '--')+'</td><td></td></tr>';
+    });
+    bd += '<div class="tbl-wrap"><table class="vx"><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table></div>';
+  } else {
+    var cols = {
+      'prepay-records':['预付单号','预付金额','预付币种','当前状态','申请人','申请时间','付款时间','异常原因'],
+      'contract-attachment':['序号','文件名','大小','上传人','上传时间','操作'],
+      'landing-cost':['费用单号','物流商','费用摘要','预估金额','实际金额','分摊至本PO','状态','创建时间','操作'],
+      'records':['操作事项和结果','操作人','操作时间']
+    }[TAB];
+    bd += '<div class="tbl-wrap"><table class="vx" style="width:100%;"><thead><tr>'+cols.map(function(c){ return '<th>'+c+'</th>'; }).join('')+'</tr></thead><tbody><tr><td colspan="'+cols.length+'" class="empty">暂无数据</td></tr></tbody></table></div>';
+  }
+  document.getElementById('bcBd').innerHTML = bd;
+}
+
+// ---------- 通用 ----------
+function toast(m, warn){ var t = document.getElementById('toast'); t.textContent = m; t.className = warn ? 'warn show' : 'show'; clearTimeout(t._h); t._h = setTimeout(function(){ t.className = ''; }, 2400); }
+function render(){
+  document.getElementById('pgEdit').classList.toggle('hide', S.page !== 'edit');
+  document.getElementById('pgDetail').classList.toggle('hide', S.page !== 'detail');
+  document.getElementById('tabTitle').textContent = S.page === 'edit' ? '编辑采购单（货品）' : '采购单详情（货品）';
+  S.page === 'edit' ? renderEdit() : renderDetail();
+}
+function seg(id, cb){
+  [].forEach.call(document.querySelectorAll('#'+id+' span'), function(s){
+    s.onclick = function(){
+      [].forEach.call(document.querySelectorAll('#'+id+' span'), function(x){ x.classList.remove('on'); });
+      s.classList.add('on'); cb(s.dataset.v);
+    };
+  });
+}
+seg('segPage', function(v){
+  if (v === 'edit' && S.st === 2) { toast('已完成的采购单不能编辑', true); document.querySelector('#segPage [data-v="detail"]').click(); return; }
+  S.page = v; render(); window.scrollTo(0, 0);
+});
+seg('segPm', function(v){ S.pm = +v; render(); });
+seg('segSt', function(v){
+  S.st = +v;
+  if (S.st === 2 && S.page === 'edit') document.querySelector('#segPage [data-v="detail"]').click(); else render();
+});
+render();
+</script>
+</body>
+</html>
