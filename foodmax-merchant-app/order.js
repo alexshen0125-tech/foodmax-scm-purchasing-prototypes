@@ -2,7 +2,7 @@
    单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
-const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordPaid,ordFee,ordInclAmt,ordBcrs,lineBcrs}=window.FM;
+const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordPaid,ordFee,ordInclAmt,ordBcrs,lineBcrs,ordDisc,ordGiftVal,ordGiftQty}=window.FM;
 // 演示锚点“今天”=最新订单日期；订单时间筛选按 orderDate(下单日期) 精确匹配单日
 const TODAY='2026-07-01';
 
@@ -28,6 +28,8 @@ css.textContent=`
 .oc .ml{display:flex;font-size:13px;line-height:1.9;color:#27433A;}
 .oc .ml .lk{flex:0 0 64px;color:var(--sub);}
 .oc .ml .cx{font-size:10.5px;font-weight:700;color:var(--amber);background:#FBF1DE;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:1px;font-family:inherit;font-style:normal;}
+.oc .ml .gf,.odd-line .gf{font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:1px;font-family:inherit;font-style:normal;}
+.odd-line .gfa{color:#6B4FB8;font-size:12px;margin-top:2px;}
 .odd-line .cx{font-size:10.5px;font-weight:700;color:var(--amber);background:#FBF1DE;padding:1px 7px;border-radius:20px;margin-left:4px;}
 .odd-row a.asno{color:var(--emerald);font-family:monospace;text-decoration:underline;margin-left:10px;cursor:pointer;display:inline-block;min-height:24px;}
 .oc .ml .sg{font-size:9.5px;border:1px solid var(--emerald);color:var(--emerald);padding:0 4px;border-radius:4px;margin-left:6px;vertical-align:1px;}
@@ -89,6 +91,8 @@ const TABS=[
 ];
 /* 部分 SKU 取消 →「部分退款」：订单非整单取消且 ≥1 行 cancelQty>0；取消部分已原路退款、不计入订单金额（与 PC 同口径） */
 const cxQty=l=>+l.cancelQty||0;
+const isGift=l=>!!l.gift;
+const paidLines=o=>(o.lines||[]).filter(l=>!isGift(l));   // 付费行（列表卡片的首行商品、种数只看付费行）
 const isPartCx=o=>o.status!=='canceled'&&(o.lines||[]).some(l=>cxQty(l)>0);
 const cxAmt=o=>(o.lines||[]).reduce((s,l)=>s+cxQty(l)*l.price,0);
 const aftersOf=o=>(window.FM_MOD&&window.FM_MOD.afterOfOrder)?window.FM_MOD.afterOfOrder(o.id):[];
@@ -97,12 +101,12 @@ function listOf(k){const t=TABS.find(x=>x.k===k);return (window.FM.DB.orders||[]
 
 function card(o){
   const st=STMAP[o.status]||'待发货';
-  const l0=o.lines[0]||{};
+  const pl=paidLines(o),l0=pl[0]||{};
   return `<div class="oc" data-id="${o.id}">
     <div class="oh"><span class="buyer">${ordMask(o.client)}</span>
       <span class="st ${STCLASS[st]}">${st}${o.status==='packed'?'<span class="sub2">已贴标</span>':''}</span></div>
     <div class="meta">
-      <div class="ml"><span class="lk">订单号</span><span style="font-family:monospace">${o.id}${isPartCx(o)?'<i class="cx">部分退款</i>':''}</span></div>
+      <div class="ml"><span class="lk">订单号</span><span style="font-family:monospace">${o.id}${isPartCx(o)?'<i class="cx">部分退款</i>':''}${ordGiftQty(o)?'<i class="gf">赠</i>':''}</span></div>
       <div class="ml"><span class="lk">下单时间</span><span>${o.orderDate||'—'}</span></div>
       <div class="ml"><span class="lk">送达时间</span><span>${o.deliver} ${o.window}</span></div>
       <div class="ml"><span class="lk">入库仓库</span><span>${o.warehouse}<i class="sg">SG仓</i></span></div>
@@ -110,9 +114,9 @@ function card(o){
     <div class="it"><div class="img">${ICON[l0.name]||'📦'}</div>
       <div class="ib"><div class="nm">${l0.name} ${l0.qty}${l0.unit}</div>
         <div class="rw">单价 <b>S$${(l0.price||0).toFixed(2)}/${l0.unit}</b></div>
-        ${o.lines.length>1?`<div class="rw">等 ${o.lines.length} 种商品</div>`:''}
+        ${pl.length>1?`<div class="rw">等 ${pl.length} 种商品</div>`:''}
       </div></div>
-    <div class="foot"><span>共 ${o.lines.length} 种商品 · 订单金额 S$${o.amt.toFixed(2)}${(o.discount||0)>0?` · 商家补贴 -S$${(o.discount||0).toFixed(2)}`:''} · 实付金额 <b>S$${ordPaid(o).toFixed(2)}</b></span><span class="inc">预计收入<b class="disp">S$${ordIncome(o).toFixed(2)}</b></span></div>
+    <div class="foot"><span>共 ${pl.length} 种商品 · 订单金额 S$${o.amt.toFixed(2)}${ordDisc(o)>0?` · 商家补贴 -S$${ordDisc(o).toFixed(2)}`:''} · 实付金额 <b>S$${ordPaid(o).toFixed(2)}</b></span><span class="inc">预计收入<b class="disp">S$${ordIncome(o).toFixed(2)}</b></span></div>
   </div>`;
 }
 
@@ -133,7 +137,7 @@ function openDetail(o){
       <div class="st" style="color:var(--${STCLASS[st]==='emerald'?'emerald':STCLASS[st]==='amber'?'amber':STCLASS[st]==='red'?'red':'sub'})">${st}${o.status==='packed'?' · 已贴标待交接':''}</div></div>
     <div class="odd-tl">${steps.map((s,i)=>`<div class="n ${i<=cur&&o.status!=='canceled'?'on':''}"><div class="dot"></div>${s}</div>`).join('')}</div>
     <div class="odd-sec">商品明细</div>
-    <div class="odd-card">${o.lines.map(l=>{const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;const cq=cxQty(l);return `<div class="odd-line"${cq>=l.qty?' style="background:#FBF6EC"':''}><div><div class="nm">${l.name}${bc?' <span class="bcrs-b">BCRS</span>':''}${cq?`<span class="cx">${cq>=l.qty?'已取消':'部分取消'}</span>`:''}</div>${cq?`<div class="qp" style="color:var(--amber)">取消 ${cq}${l.unit} · ${l.cancelReason||''} · ${l.cancelAt||''}</div>`:''}${l.spec?`<div class="qp">规格 ${l.spec}</div>`:''}<div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;}).join('')}</div>
+    <div class="odd-card">${o.lines.map(l=>{const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;const cq=cxQty(l);return `<div class="odd-line"${cq>=l.qty?' style="background:#FBF6EC"':''}><div><div class="nm">${l.name}${isGift(l)?'<span class="gf">赠品</span>':''}${bc?' <span class="bcrs-b">BCRS</span>':''}${cq?`<span class="cx">${cq>=l.qty?'已取消':'部分取消'}</span>`:''}</div>${isGift(l)?`<div class="gfa">${l.gift.kind} · ${l.gift.name}</div>`:''}${cq?`<div class="qp" style="color:var(--amber)">取消 ${cq}${l.unit} · ${l.cancelReason||''} · ${l.cancelAt||''}</div>`:''}${l.spec?`<div class="qp">规格 ${l.spec}</div>`:''}<div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;}).join('')}</div>
     ${isPartCx(o)?`<div style="margin:10px 16px 0;padding:11px 14px;border-radius:14px;background:#FBF1DE;color:#7A5A12;font-size:12.5px;line-height:1.6"><b>部分退款</b>：已取消 SKU 已原路退款客户 <b>S$${cxAmt(o).toFixed(2)}</b>，不计入订单金额与预计收入。</div>`:''}
     <div class="odd-sec">配送信息</div>
     <div class="odd-card">
@@ -149,12 +153,13 @@ function openDetail(o){
     <div class="odd-card">
       <div class="odd-row"><span class="k">订单金额</span><span>S$${o.amt.toFixed(2)}</span></div>
       ${ordBcrs(o)>0?`<div class="odd-row"><span class="k">押金金额<span style="font-size:11px;color:var(--sub)"> · BCRS 过手不计收入</span></span><span>S$${ordBcrs(o).toFixed(2)}</span></div>`:''}
-      <div class="odd-row"><span class="k">商家补贴</span><span style="color:var(--red)">${(o.discount||0)>0?'-':''}S$${(o.discount||0).toFixed(2)}</span></div>
+      <div class="odd-row"><span class="k">商家补贴${ordGiftVal(o)>0?`<span style="font-size:11px;color:var(--sub)"> · 含赠品 S$${ordGiftVal(o).toFixed(2)}</span>`:''}</span><span style="color:var(--red)">${ordDisc(o)>0?'-':''}S$${ordDisc(o).toFixed(2)}</span></div>
       <div class="odd-row"><span class="k">实付金额<span style="font-size:11px;color:var(--sub)"> · 订单金额 − 商家补贴</span></span><span style="font-weight:600">S$${ordPaid(o).toFixed(2)}</span></div>
       ${(o.platSub||0)>0?`<div class="odd-row"><span class="k">平台补贴</span><span style="color:var(--emerald-2)">+S$${(o.platSub||0).toFixed(2)}</span></div>`:''}
       <div class="odd-row"><span class="k">平台服务费(预估)<span style="font-size:11px;color:var(--sub)"> · 服务佣金+物流佣金</span></span><span style="color:var(--red)">${ordFee(o)>0?'-':''}S$${ordFee(o).toFixed(2)}</span></div>
       <div class="odd-row" style="font-weight:700"><span>预计收入(预估)</span><span style="color:var(--emerald-2)">S$${ordIncome(o).toFixed(2)}</span></div>
     </div>
+    ${ordGiftQty(o)?`<div style="margin:10px 16px 0;padding:11px 14px;border-radius:14px;background:#EFEAFB;color:#4E3A8C;font-size:12.5px;line-height:1.6"><b>满赠赠品 ${ordGiftQty(o)} 件</b>由你出资：跟正常商品一样计入订单金额，赠品价值记入商家补贴，客户实付 0；赠品不收平台服务费。</div>`:''}
     <div style="height:16px"></div>`});
 }
 // 演示：上游动作模拟（客户收货 shipped→received、订单完成 received→done；发起售后=客户端动作占位）。改状态后重开详情反映变化。

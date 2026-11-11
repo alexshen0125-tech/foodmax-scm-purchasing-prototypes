@@ -741,6 +741,9 @@ function stationPopup(ware,kind){
 function relTs(h){const d=new Date(Date.now()+h*3600000);const p=n=>(''+n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());}
 function nowTs(){return relTs(0);}
 const RETURN=[
+ // 满赠退货（2026-11-11，与 PC 同源）：客服审核时勾了「取回赠品」，退货单带赠品行；赠品 gift={kind,name}、结算单价 0，不产生退货金额
+ {no:'TKD2026070108270015',orderNo:'#SG20260701015',ware:'兀兰DC',st:'待提货',order:'2026-07-01 12:30',gen:'2026-07-01 12:30',code:'582716',arrive:'2026-07-01 21:10',pickup:'',
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:null,price:32.50},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件'}}]},
  {no:'TKD2026063008266685',orderNo:'#SG20260630685',ware:'裕廊DC',st:'待提货',order:'2026-07-20 08:51',gen:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',pickup:'',
   items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,pickQty:null,price:32.50}]},
  {no:'TKD2026062908267496',orderNo:'#SG20260629496',ware:'兀兰DC',st:'待仓库入库',order:relTs(-60),gen:relTs(-60),code:'897256',arrive:'',pickup:'',
@@ -812,7 +815,7 @@ function pickHtml(g,x){const v=pickVal(g,x);return v==null?'<span style="color:v
 const raBtn=no=>`<span data-ra="${no}" style="min-height:44px;min-width:88px;padding:0 14px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13.5px;cursor:pointer">退货申诉</span>`;
 function returnCard(g){
   return `<div class="dl-rcard" data-rno="${g.no}" style="cursor:pointer">
-    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span><span class="st">${g.st}</span></div>
+    <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span>${g.items.some(x=>x.gift)?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">含赠品</span>':''}<span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     <div class="dl-kbox" style="margin-top:10px;padding:10px 0"><div class="k"><div class="l">退回数量</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">取回数量</div><div class="v">${pickHtml(g)}</div></div><div class="k"><div class="l">退货金额</div><div class="v">${g.items.some(x=>x.price==null)?'—':fmtS(retAmt(g))}</div></div></div>
     <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='已提货'?`已于 ${g.pickup} 提货`:'—'}</span></div>
@@ -831,9 +834,10 @@ function openReturnDetail(no){
     ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('正向订单号',`<span style="font-family:monospace">${g.orderNo||'—'}</span>`)+kv('状态',g.st)+kv('存放仓库',g.ware)+kv('到仓时间',g.arrive)+kv('提货时间',g.pickup))}
     ${sec('退货明细')}
     ${box(g.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-      <b style="font-size:14px">${x.name}</b><div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
+      <b style="font-size:14px">${x.name}</b>${x.gift?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">赠品</span>':''}<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}${x.gift?` · ${x.gift.kind} · ${x.gift.name}`:''}</div>
       <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>退回数量 ${x.retQty}</span><span>取回数量 ${pickHtml(g,x)}</span><span>结算单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>
     </div>`).join(''))}
+    ${g.items.some(x=>x.gift)?`<div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">标「赠品」的是满赠送出的赠品，跟着退货一起退回，提货时一并提走；赠品结算单价为 0，不产生退货金额。</div>`:''}
     ${raDetail(g,sec,box,kv)}
     <div style="height:8px"></div>`,
     footer:raOpen(g)?`<button class="btn primary" id="ra-go">退货申诉</button>`:'',

@@ -255,8 +255,14 @@ function ordMask(n){return n?n[0]+'***':'—';}                          // 买�
 const SVC_RATE=0.020, LOGI_RATE=0.015, TAX=0.09; // 服务佣金率 / 物流佣金率（演示店铺=绿鲜源·绿叶菜，同 PC DB.commCfg）/ GST 9%
 function ordQty(o){return (o.lines||[]).reduce((s,l)=>s+(+l.qty||0),0);}      // 订单总件数
 function ordInclAmt(o){return +(o.amt*(1+TAX)).toFixed(2);}                   // 订单含税总额（仅展示，不进收入算式）
-function ordPaid(o){return +(o.amt-(o.discount||0)).toFixed(2);}              // 实付金额 = 订单金额 − 商家补贴
-function ordFee(o){return +(o.amt*(SVC_RATE+LOGI_RATE)).toFixed(2);}          // 平台服务费(预估) = 服务佣金 + 物流佣金
+/* 满赠赠品行（2026-11-11，与 PC 同口径）：行 gift={kind,name} = 赠品行。金额跟正常订单同一套逻辑——订单金额含赠品，
+   赠品价值计入商家补贴（商家出资、客户实付 0），实付=订单金额−商家补贴；只是赠品行不收平台服务费 */
+function ordGiftLines(o){return (o.lines||[]).filter(l=>l.gift);}
+function ordGiftVal(o){return +ordGiftLines(o).reduce((s,l)=>s+(+l.qty||0)*l.price,0).toFixed(2);}   // 赠品价值 = Σ 赠品件数 × 单价
+function ordGiftQty(o){return ordGiftLines(o).reduce((s,l)=>s+(+l.qty||0),0);}
+function ordDisc(o){return +((o.discount||0)+ordGiftVal(o)).toFixed(2);}     // 商家补贴 = 商家优惠 + 赠品价值
+function ordPaid(o){return +(o.amt-ordDisc(o)).toFixed(2);}                   // 实付金额 = 订单金额 − 商家补贴
+function ordFee(o){return +((o.amt-ordGiftVal(o))*(SVC_RATE+LOGI_RATE)).toFixed(2);}   // 平台服务费(预估) = 服务佣金 + 物流佣金；赠品行不收
 function ordIncome(o){return +(ordPaid(o)+(o.platSub||0)-ordFee(o)).toFixed(2);} // 预计收入 = 实付金额 + 平台补贴 − 平台服务费
 // BCRS 饮料容器押金（商城三因子模型）：押金 = 平台固定单价 0.10 × 容器数 × 数量；过手项——不计 GST/佣金基数/预计收入
 const BCRS_UNIT_PRICE=0.10;                                   // 单容器法规押金 S$0.10（平台级参数，不逐SKU存、不计GST）
@@ -280,6 +286,9 @@ const DB={
     {id:'#SG20260701001',client:'海底捞（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:221.00,discount:0,platSub:8.00,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',spec:'1kg/件',price:9.30},{sku:'SKU8802',name:'白菜',qty:10,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260701002',client:'食为天餐厅',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'兀兰DC',amt:262.50,discount:5.00,lines:[{sku:'SKU8804',name:'空心菜',qty:30,unit:'件',spec:'1kg/件',price:7.00},{sku:'SKU8802',name:'白菜',qty:15,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260628003',client:'丰盛轩',orderDate:'2026-06-28',deliver:'06-28',window:'12:00~16:00',warehouse:'盛港DC',amt:144.00,discount:0,platSub:12.00,lines:[{sku:'SKU8803',name:'菠菜',qty:12,unit:'件',spec:'1kg/件',price:5.80},{sku:'SKU8801',name:'小棠菜',qty:8,unit:'件',spec:'1kg/件',price:9.30}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    // 满赠订单（商家出资，与 PC 同源）：行 gift={kind,name} = 赠品行，与同 SKU 付费行分两行；订单金额含赠品，赠品价值记商家补贴，赠品行不收平台服务费
+    {id:'#SG20260701007',client:'御膳坊',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:346.20,discount:0,lines:[{sku:'SKU8801',name:'小棠菜',qty:20,unit:'件',spec:'1kg/件',price:9.30},{sku:'SKU8813',name:'芥蓝',qty:4,unit:'件',spec:'10kg/件',price:32.50},{sku:'SKU8801',name:'小棠菜',qty:2,unit:'件',spec:'1kg/件',price:9.30,gift:{kind:'单品满赠',name:'小棠菜每满 10 件送 1 件'}},{sku:'SKU8803',name:'菠菜',qty:2,unit:'件',spec:'1kg/件',price:5.80,gift:{kind:'组合满赠',name:'本店蔬菜满 S$300 送菠菜 2 件'}}],status:'pending',labels:[],pickId:'',deliveryId:''},
+    {id:'#SG20260701015',client:'聚宝楼',orderDate:'2026-06-30',deliver:'07-01',window:'06:00~10:00',warehouse:'兀兰DC',amt:68.50,discount:0,lines:[{sku:'SKU8813',name:'芥蓝',qty:2,unit:'件',spec:'10kg/件',price:32.50},{sku:'SKU8802',name:'白菜',qty:1,unit:'件',spec:'1kg/件',price:3.50,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件'}}],status:'received',labels:[],pickId:'',deliveryId:''},
     {id:'#SG20260615004',client:'新味坊',orderDate:'2026-06-15',deliver:'06-15',window:'06:00~10:00',warehouse:'大巴窑DC',amt:140.00,discount:0,lines:[{sku:'SKU8802',name:'白菜',qty:40,unit:'件',spec:'1kg/件',price:3.50}],status:'pending',labels:[],pickId:'',deliveryId:''},
     // 饮料订单（含 BCRS 押金）：行项带 bcrsContainers=该售卖单位容器数，行押金=件数×容器数×0.10（椰子水 24瓶/箱→10×24×0.1=24、1瓶→20×1×0.1=2）
     {id:'#SG20260701005',client:'珍宝海鲜（新加坡）',orderDate:'2026-07-01',deliver:'07-01',window:'06:00~10:00',warehouse:'裕廊DC',amt:600.00,discount:0,platSub:0,lines:[{sku:'SKU8826',name:'NFC 椰子水 24瓶/箱',qty:10,unit:'箱',spec:'24瓶/箱(330ml)',price:55.00,bcrsContainers:24},{sku:'SKU8825',name:'NFC 椰子水',qty:20,unit:'瓶',spec:'330ml/瓶',price:2.50,bcrsContainers:1}],status:'pending',labels:[],pickId:'',deliveryId:''},
@@ -330,7 +339,7 @@ function cancelOrder(id){const o=DB.orders.find(x=>x.id===id);if(!o||o.status!==
   if(pk){pk.orderIds=pk.orderIds.filter(x=>x!==id);if(!pk.orderIds.length)pk.status='已作废';}
   o.pickId='';return pk;}
 window.FM={pushPage,popPage,resetStack,toast,confirmDialog,sheet,svg,I,skel,
-  PRESEND_ON,PRESEND_SKU_LIMIT,DB,ordMask,ordIncome,ordPaid,ordFee,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
+  PRESEND_ON,PRESEND_SKU_LIMIT,DB,ordMask,ordIncome,ordPaid,ordFee,ordDisc,ordGiftVal,ordGiftQty,ordQty,ordInclAmt,lineBcrs,ordBcrs,ordersOf,ensurePickOrders,pickAggr,pickAllPacked,labelOrder,triggerDeliveries,ensureDeliveriesFromPrint,deliveryHandover,cancelOrder,fmtRemain,cdSpan,arriveDueMs};
 
 function openModule(k,label){if(window.FM_MOD&&window.FM_MOD[k])return window.FM_MOD[k]();
   const r=READY.has(k);
