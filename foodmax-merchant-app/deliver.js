@@ -2,7 +2,7 @@
    还原快驴卖家App 9 张参考截图；SG 仓(裕廊/兀兰/盛港/大巴窑/淡滨尼/义顺 DC) + S$
    评审修复内建：列表先 skel→数据 / 装筐空态用 .empty / 破坏性(不需要提货·放弃所有权)用 confirmDialog / 可点元素≥44px */
 (function(){
-const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel,cdSpan,arriveDueMs}=window.FM;
+const {pushPage,popPage,toast,confirmDialog,sheet,svg,skel,cdSpan,arriveDueMs,giftBlockHtml,GB_HD,GB_OTHER}=window.FM;
 
 const css=document.createElement('style');
 css.textContent=`
@@ -743,7 +743,7 @@ function nowTs(){return relTs(0);}
 const RETURN=[
  // 满赠退货（2026-11-11，与 PC 同源）：客服审核时勾了「取回赠品」，退货单带赠品行；赠品 gift={kind,name}、结算单价 0，不产生退货金额
  {no:'TKD2026070108270015',orderNo:'#SG20260701015',ware:'兀兰DC',st:'待提货',order:'2026-07-01 12:30',gen:'2026-07-01 12:30',code:'582716',arrive:'2026-07-01 21:10',pickup:'',
-  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:null,price:32.50},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件'}}]},
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:null,price:32.50,acts:['GF261103']},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件',act:'GF261103'}}]},
  {no:'TKD2026063008266685',orderNo:'#SG20260630685',ware:'裕廊DC',st:'待提货',order:'2026-07-20 08:51',gen:'2026-07-20 08:51',code:'460439',arrive:'2026-07-20 21:00',pickup:'',
   items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,pickQty:null,price:32.50}]},
  {no:'TKD2026062908267496',orderNo:'#SG20260629496',ware:'兀兰DC',st:'待仓库入库',order:relTs(-60),gen:relTs(-60),code:'897256',arrive:'',pickup:'',
@@ -822,6 +822,9 @@ function returnCard(g){
     ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
 }
+// 退货明细单行（分区块与逐行两种排法共用）
+function retItemHtml(g,x){return `<b style="font-size:14px">${x.name}</b>${x.gift?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">赠品</span>':''}<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>退回数量 ${x.retQty}</span><span>取回数量 ${pickHtml(g,x)}</span><span>结算单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
 // 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
 function openReturnDetail(no){
   const g=RETURN.find(x=>x.no===no); if(!g)return;
@@ -833,9 +836,8 @@ function openReturnDetail(no){
     ${sec('单据信息')}
     ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('正向订单号',`<span style="font-family:monospace">${g.orderNo||'—'}</span>`)+kv('状态',g.st)+kv('存放仓库',g.ware)+kv('到仓时间',g.arrive)+kv('提货时间',g.pickup))}
     ${sec('退货明细')}
-    ${box(g.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
-      <b style="font-size:14px">${x.name}</b>${x.gift?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">赠品</span>':''}<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}${x.gift?` · ${x.gift.kind} · ${x.gift.name}`:''}</div>
-      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>退回数量 ${x.retQty}</span><span>取回数量 ${pickHtml(g,x)}</span><span>结算单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>
+    ${g.items.some(x=>x.gift)?`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;overflow:hidden">${giftBlockHtml(g.items,x=>x.retQty,(k,x)=>{if(k==='hd')return GB_HD(x);if(k==='other')return GB_OTHER;if(k==='ref')return `<div style="padding:10px 14px;font-size:12.5px;color:var(--sub)">${x.name} ${x.retQty}${x.unit} · 同时计入本活动门槛，已在上方列出</div>`;return `<div style="padding:11px 14px;border-top:1px solid rgba(0,0,0,.05)">${retItemHtml(g,x)}</div>`;})}</div>`:box(g.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+      ${retItemHtml(g,x)}
     </div>`).join(''))}
     ${g.items.some(x=>x.gift)?`<div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">标「赠品」的是满赠送出的赠品，跟着退货一起退回，提货时一并提走；赠品结算单价为 0，不产生退货金额。</div>`:''}
     ${raDetail(g,sec,box,kv)}

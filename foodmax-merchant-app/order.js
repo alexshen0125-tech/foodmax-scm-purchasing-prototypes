@@ -2,7 +2,7 @@
    单据链：订单由 备货单/送货单 驱动，订单页只看状态+详情，不放操作按钮（打码归备货单、交接归送货单）。
    评审修复内建：骨架屏/空态/44px/S$/买家脱敏。数据源=window.FM.DB.orders。 */
 (function(){
-const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordPaid,ordFee,ordInclAmt,ordBcrs,lineBcrs,ordDisc,ordGiftVal,ordGiftQty}=window.FM;
+const {pushPage,toast,sheet,svg,skel,ordMask,ordIncome,ordPaid,ordFee,ordInclAmt,ordBcrs,lineBcrs,ordDisc,ordGiftVal,ordGiftQty,giftBlockHtml,GB_HD,GB_OTHER}=window.FM;
 // 演示锚点“今天”=最新订单日期；订单时间筛选按 orderDate(下单日期) 精确匹配单日
 const TODAY='2026-07-01';
 
@@ -137,7 +137,7 @@ function openDetail(o){
       <div class="st" style="color:var(--${STCLASS[st]==='emerald'?'emerald':STCLASS[st]==='amber'?'amber':STCLASS[st]==='red'?'red':'sub'})">${st}${o.status==='packed'?' · 已贴标待交接':''}</div></div>
     <div class="odd-tl">${steps.map((s,i)=>`<div class="n ${i<=cur&&o.status!=='canceled'?'on':''}"><div class="dot"></div>${s}</div>`).join('')}</div>
     <div class="odd-sec">商品明细</div>
-    <div class="odd-card">${o.lines.map(l=>{const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;const cq=cxQty(l);return `<div class="odd-line"${cq>=l.qty?' style="background:#FBF6EC"':''}><div><div class="nm">${l.name}${isGift(l)?'<span class="gf">赠品</span>':''}${bc?' <span class="bcrs-b">BCRS</span>':''}${cq?`<span class="cx">${cq>=l.qty?'已取消':'部分取消'}</span>`:''}</div>${isGift(l)?`<div class="gfa">${l.gift.kind} · ${l.gift.name}</div>`:''}${cq?`<div class="qp" style="color:var(--amber)">取消 ${cq}${l.unit} · ${l.cancelReason||''} · ${l.cancelAt||''}</div>`:''}${l.spec?`<div class="qp">规格 ${l.spec}</div>`:''}<div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;}).join('')}</div>
+    <div class="odd-card">${giftBlockHtml(o.lines,l=>l.qty,(k,l)=>{if(k==='hd')return GB_HD(l);if(k==='other')return GB_OTHER;if(k==='ref')return `<div class="odd-line" style="color:var(--sub)"><div><div class="nm" style="font-weight:600">${l.name}</div><div class="qp">同时计入本活动门槛，金额已在上方列出</div></div><div class="amt">${l.qty}${l.unit}</div></div>`;const bc=+l.bcrsContainers||0;const unitDep=bc*0.10;const cq=cxQty(l);return `<div class="odd-line"${cq>=l.qty?' style="background:#FBF6EC"':''}><div><div class="nm">${l.name}${isGift(l)?'<span class="gf">赠品</span>':''}${bc?' <span class="bcrs-b">BCRS</span>':''}${cq?`<span class="cx">${cq>=l.qty?'已取消':'部分取消'}</span>`:''}</div>${cq?`<div class="qp" style="color:var(--amber)">取消 ${cq}${l.unit} · ${l.cancelReason||''} · ${l.cancelAt||''}</div>`:''}${l.spec?`<div class="qp">规格 ${l.spec}</div>`:''}<div class="qp">S$${l.price.toFixed(2)}/${l.unit}${bc?` · 押金 S$${unitDep.toFixed(2)}/${l.unit}（${bc}容器×S$0.10）`:''}</div></div><div style="text-align:right"><div class="amt">${l.qty}${l.unit}</div>${bc?`<div class="qp" style="margin-top:3px">押金 S$${lineBcrs(l).toFixed(2)}</div>`:''}</div></div>`;})}</div>
     ${isPartCx(o)?`<div style="margin:10px 16px 0;padding:11px 14px;border-radius:14px;background:#FBF1DE;color:#7A5A12;font-size:12.5px;line-height:1.6"><b>部分退款</b>：已取消 SKU 已原路退款客户 <b>S$${cxAmt(o).toFixed(2)}</b>，不计入订单金额与预计收入。</div>`:''}
     <div class="odd-sec">配送信息</div>
     <div class="odd-card">
