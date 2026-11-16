@@ -72,7 +72,7 @@ function openDetail(r){
   pushPage({title:'赔付单详情',navbar:true,body:`
     <div class="rp-card2"><div class="rp-ct">基础信息</div>
       ${rowKV('赔付单号',`<span style="font-family:monospace">${r.compNo}</span>`)}${rowKV('赔付类型',r.type)}${rowKV('来源',r.src)}${rowKV('关联单号',`<span style="font-family:monospace">${r.retNo}</span>`)}
-      ${isDiff(r)?rowKV('生成原因',r.closed?'建单超过未到仓赔付期限还没到仓，整单算取不回':'提货时实际取回少于应取回')+rowKV('生成时间',ra.at)
+      ${isDiff(r)?rowKV('生成原因',r.closed?'建单超过未到仓赔付期限还没到仓（无法取回）':'提货时实际取回少于应取回')+rowKV('生成时间',ra.at)
         :rowKV('申诉类型',kindL(ra))+rowKV('申诉时间',ra.at)+rowKV('核定时间',ra.reviewAt)+rowKV('核定结论',ra.status)+rowKV('核定说明',ra.note)}</div>
     <div class="rp-card2"><div class="rp-ct">赔付明细</div>
       ${ra.items.map(x=>`<div class="rp-row" style="display:block"><b style="font-size:14px">${x.name}</b>
