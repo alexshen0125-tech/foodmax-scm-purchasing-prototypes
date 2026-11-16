@@ -733,7 +733,7 @@ function stationPopup(ware,kind){
 }
 
 /* ============ 退货取回 → 退货单（2026-07-21 会议定稿：商家只读；确认由仓库操作。2026-10-14：线上无逾期规则，删除 72h 提货时限 / 逾期未提） ============ */
-// 退货单：三方退货到平台仓不入库仅暂存。状态（11-16）待仓库入库 → 部分到仓 → 待提货 → 已完成；货物在仓暂存至商家提走，没还到商家手里的完成时按差异直接赔付。
+// 退货单：三方退货到平台仓不入库仅暂存。状态（11-16 二改）待仓库入库 → 待提货 → 已提货 / 部分提货（一次提货结单）；少拿的部分提货当下按差异直接赔付。
 // 商家端只读展示状态+提货码，无状态确认/预约/新建权限（三方退款须基于已判责售后工单，禁止商家自建）
 // items：retQty=审核通过退款数量（退回数量）；pickQty=WMS 累计出库数量（取回数量），提货前为 null；price=正向订单该行结算单价（退货金额与申诉赔付共用，按正向订单结算同口径：实付+平台补贴−抽佣）
 // 口径与 PC scm_商家管理系统_全流程_交互原型.html 的 retQtySum/pickQtyVal/retAppealWin 一致
@@ -742,75 +742,66 @@ function relTs(h){const d=new Date(Date.now()+h*3600000);const p=n=>(''+n).padSt
 function nowTs(){return relTs(0);}
 const RETURN=[
  // 满赠退货（2026-11-11，与 PC 同源）：客服审核时勾了「取回赠品」，退货单带赠品行；赠品 gift={kind,name}、结算单价 0，不产生退货金额
- // 11-16：arrQty=WMS 累计到仓、handled=已处理过提货的到仓数、pickQty=累计取回（可为 0）；st 由 retRecalc 推导
+ // 11-16：retQty=应取回、pickQty=实际取回（WMS 提货回传，可为 0；未提货为 null）
  {no:'TKD2026070108270015',orderNo:'#SG20260701015',ware:'兀兰DC',st:'待提货',order:relTs(-30),gen:relTs(-30),code:'582716',arrive:relTs(-20),pickup:'',
-  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,arrQty:2,handled:0,pickQty:null,price:32.50,acts:['GF261103']},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,arrQty:1,handled:0,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件',act:'GF261103'}}]},
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:null,price:32.50,acts:['GF261103']},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件',act:'GF261103'}}]},
  {no:'TKD2026063008266685',orderNo:'#SG20260630685',ware:'裕廊DC',st:'待提货',order:relTs(-48),gen:relTs(-48),code:'460439',arrive:relTs(-36),pickup:'',
-  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,arrQty:1,handled:0,pickQty:null,price:32.50}]},
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,pickQty:null,price:32.50}]},
  {no:'TKD2026062908267496',orderNo:'#SG20260629496',ware:'兀兰DC',st:'待仓库入库',order:relTs(-60),gen:relTs(-60),code:'897256',arrive:'',pickup:'',
-  items:[{name:'娃娃菜',sku:'SKU8812',spec:'15kg/件',unit:'件',retQty:1,arrQty:0,handled:0,pickQty:null,price:105.00}]},
- {no:'TKD2026062908314280',orderNo:'#SG20260629280',ware:'盛港DC',st:'待提货',order:relTs(-50),gen:relTs(-50),code:'715187',arrive:relTs(-40),pickup:relTs(-30),
-  items:[{name:'上海青',sku:'SKU8806',spec:'1kg/件',unit:'件',retQty:4,arrQty:4,handled:2,pickQty:2,price:5.80}]},   // 分批：先提走 2 件，仓里还有 2 件
- {no:'TKD2026070208270011',orderNo:'#SG20260702011',ware:'大巴窑DC',st:'部分到仓',order:relTs(-44),gen:relTs(-44),code:'330301',arrive:relTs(-20),pickup:relTs(-8),
-  items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,arrQty:3,handled:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:3,arrQty:0,handled:0,pickQty:null,price:19.33}]},
- {no:'TKD2026062708201337',orderNo:'#SG20260627337',ware:'大巴窑DC',st:'已完成',order:relTs(-40),gen:relTs(-40),code:'330218',arrive:relTs(-26),pickup:relTs(-5),done:relTs(-5),
-  items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,arrQty:3,handled:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,arrQty:2,handled:2,pickQty:1,price:18.00}]},   // 番茄少取回 1 箱 → 差异赔付；取回的可申诉
- {no:'TKD2026070308270008',orderNo:'#SG20260703008',ware:'裕廊DC',st:'已完成',order:relTs(-70),gen:relTs(-70),code:'330320',arrive:relTs(-48),pickup:relTs(-20),done:relTs(-20),
-  items:[{name:'菜心',sku:'SKU8866',spec:'10kg/件',unit:'件',retQty:2,arrQty:2,handled:2,pickQty:0,price:25.20}]},   // 取回 0：仓库找不到货
- {no:'TKD2026070408270016',orderNo:'#SG20260704016',ware:'兀兰DC',st:'已完成',order:relTs(-190),gen:relTs(-190),code:'330330',arrive:relTs(-150),pickup:relTs(-130),closed:relTs(-22),done:relTs(-22),
-  items:[{name:'娃娃菜',sku:'SKU8812',spec:'15kg/件',unit:'件',retQty:4,arrQty:1,handled:1,pickQty:1,price:94.50}],
-  appeal:{kind:'goods',status:'成立',at:relTs(-18),reviewAt:relTs(-6),desc:'取回的 1 件外箱压烂，菜叶烂了不能卖',photos:2,compStatus:'已生成',items:[{name:'娃娃菜',ret:4,sysPick:1,actual:1,damaged:1,short:0,qty:1,cap:1,price:94.50,ok:1}],comp:94.50,compNo:'RC-20261116-615',note:'仓库确认存放时被压'}},   // 建单超 X 天只到 1 件，剩下 3 件算取不回；取回的 1 件申诉成立 → 一张退货单 2 张赔付单
- {no:'TKD2026062608200030',orderNo:'#SG20260626030',ware:'大巴窑DC',st:'已完成',order:relTs(-130),gen:relTs(-130),code:'330219',arrive:relTs(-120),pickup:relTs(-100),done:relTs(-100),
-  items:[{name:'生菜',sku:'SKU8875',spec:'1kg/包',unit:'包',retQty:6,arrQty:6,handled:6,pickQty:6,price:5.00}]},   // 已过申诉期演示
- {no:'TKD2026062508198820',orderNo:'#SG20260625820',ware:'裕廊DC',st:'已完成',order:relTs(-50),gen:relTs(-50),code:'118904',arrive:relTs(-30),pickup:relTs(-3),done:relTs(-3),
-  items:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,arrQty:1,handled:1,pickQty:1,price:78.00}]},
- {no:'TKD2026061808190012',orderNo:'#SG20260618012',ware:'淡滨尼DC',st:'已完成',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-18 15:20',done:'2026-06-18 15:20',
-  items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,arrQty:2,handled:2,pickQty:1,price:18.00}],
+  items:[{name:'娃娃菜',sku:'SKU8812',spec:'15kg/件',unit:'件',retQty:1,pickQty:null,price:105.00}]},
+ {no:'TKD2026062908314280',orderNo:'#SG20260629280',ware:'盛港DC',st:'待提货',order:relTs(-50),gen:relTs(-50),code:'715187',arrive:relTs(-40),pickup:'',
+  items:[{name:'上海青',sku:'SKU8806',spec:'1kg/件',unit:'件',retQty:4,pickQty:null,price:5.80}]},   
+ {no:'TKD2026070208270011',orderNo:'#SG20260702011',ware:'大巴窑DC',st:'部分提货',order:relTs(-44),gen:relTs(-44),code:'330301',arrive:relTs(-20),pickup:relTs(-8),done:relTs(-8),
+  items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:3,pickQty:0,price:19.33}]},
+ {no:'TKD2026062708201337',orderNo:'#SG20260627337',ware:'大巴窑DC',st:'部分提货',order:relTs(-40),gen:relTs(-40),code:'330218',arrive:relTs(-26),pickup:relTs(-5),done:relTs(-5),
+  items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},   // 番茄少拿 1 箱 → 提货当下差异赔付；取回的可申诉
+ {no:'TKD2026070308270008',orderNo:'#SG20260703008',ware:'裕廊DC',st:'部分提货',order:relTs(-70),gen:relTs(-70),code:'330320',arrive:relTs(-48),pickup:relTs(-20),done:relTs(-20),
+  items:[{name:'菜心',sku:'SKU8866',spec:'10kg/件',unit:'件',retQty:2,pickQty:0,price:25.20}]},   // 取回 0：仓库找不到货
+ {no:'TKD2026070408270016',orderNo:'#SG20260704016',ware:'兀兰DC',st:'部分提货',order:relTs(-60),gen:relTs(-60),code:'330330',arrive:relTs(-40),pickup:relTs(-22),done:relTs(-22),
+  items:[{name:'娃娃菜',sku:'SKU8812',spec:'15kg/件',unit:'件',retQty:4,pickQty:1,price:94.50}],
+  appeal:{kind:'goods',status:'成立',at:relTs(-18),reviewAt:relTs(-6),desc:'取回的 1 件外箱压烂，菜叶烂了不能卖',photos:2,compStatus:'已生成',items:[{name:'娃娃菜',ret:4,sysPick:1,actual:1,damaged:1,short:0,qty:1,cap:1,price:94.50,ok:1}],comp:94.50,compNo:'RC-20261116-615',note:'仓库确认存放时被压'}},   // 只拿到 1 件 → 差异 3 件直接赔；取回的 1 件申诉成立 → 一张退货单 2 张赔付单
+ {no:'TKD2026062608200030',orderNo:'#SG20260626030',ware:'大巴窑DC',st:'已提货',order:relTs(-130),gen:relTs(-130),code:'330219',arrive:relTs(-120),pickup:relTs(-100),done:relTs(-100),
+  items:[{name:'生菜',sku:'SKU8875',spec:'1kg/包',unit:'包',retQty:6,pickQty:6,price:5.00}]},   // 已过申诉期演示
+ {no:'TKD2026062508198820',orderNo:'#SG20260625820',ware:'裕廊DC',st:'已提货',order:relTs(-50),gen:relTs(-50),code:'118904',arrive:relTs(-30),pickup:relTs(-3),done:relTs(-3),
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'12kg/件',unit:'件',retQty:1,pickQty:1,price:78.00}]},
+ {no:'TKD2026061808190012',orderNo:'#SG20260618012',ware:'淡滨尼DC',st:'部分提货',order:'2026-06-16 09:10',gen:'2026-06-16 09:10',code:'552301',arrive:'2026-06-16 20:00',pickup:'2026-06-18 15:20',done:'2026-06-18 15:20',
+  items:[{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}],
   diffComp:{kind:'diff',compNo:'RC-20260618-317',at:'2026-06-18 15:20',reviewAt:'2026-06-18 15:20',items:[{name:'番茄',ret:2,arr:2,pick:1,qty:1,ok:1,price:18.00}],comp:18.00,
     origin:{'番茄':{orderQty:2,paid:38.00,platSub:2.00,svc:2.40,logi:1.20,chan:0.40}}}},   // 与 PC 同一张差异赔付单，已进 6 月结算单
 ];
 const retSum=g=>g.items.reduce((s,x)=>s+x.retQty,0);
 // 取回数量 = 各 SKU WMS 累计出库数量（可分次取）；SKU 无出库记录 = null，退货单进入 已提货 时补 0；
 // 单 SKU null 显示「—」；合计全 null 显示「—」、否则 null 按 0 计。纯展示不标色（与 PC 同口径）
-const pickOf=(g,x)=>(x.pickQty==null&&g.st==='已完成')?0:x.pickQty;
-/* 退货单差异赔付（2026-11-16 沈亮定，与 PC retRecalc / retDiffGen 同口径）
-   状态：有到仓的货没处理提货 → 待提货；没到齐且未满 X 天 → 有到仓 ? 部分到仓 : 待仓库入库；否则 → 已完成
-   结束：到仓的货都处理完提货（取回可以是 0），且全部到齐或建单超过 X 天（FM.DB.arriveCloseDays，运营平台配置，默认 7），没到的部分算取不回
-   差异 = 应退 − 取回，完成时有差异系统直接生成差异赔付单，不经人工核实；取不回一律平台承担；按原订单商家应得的钱 × 差异数量 ÷ 下单数量 */
+const RET_DONE=['已提货','部分提货'];
+const isDone=g=>RET_DONE.includes(g.st);
+const pickOf=(g,x)=>(x.pickQty==null&&isDone(g))?0:x.pickQty;
+/* 退货单差异赔付（2026-11-16 沈亮定，当日二改：去掉「部分到仓」，按提货结单；与 PC retRecalc / retSettle 同口径）
+   数量只看两个：应取回 retQty / 实际取回 pickQty
+   状态：待仓库入库 → 待提货 → 提货一次结单：实际取回 = 应取回 ? 已提货 : 部分提货
+         建单超过 X 天（FM.DB.arriveCloseDays，运营平台配置，默认 7）仍待仓库入库 → 整单算取不回，实际取回记 0，置部分提货
+   差异 = 应取回 − 实际取回 > 0 → 提货（或超 X 天）当下直接生成差异赔付单，不经人工核实；取不回一律平台承担；按原订单商家应得的钱 × 差异数量 ÷ 下单数量 */
 const arrDays=()=>window.FM.DB.arriveCloseDays||7;
 const diffOf=x=>Math.round(((x.retQty||0)-(x.pickQty||0))*100)/100;
-const arrSum=g=>Math.round(g.items.reduce((s,x)=>s+(x.arrQty||0),0)*100)/100;
 const diffSum=g=>Math.round(g.items.reduce((s,x)=>s+diffOf(x),0)*100)/100;
 const closeAt=g=>g.gen?tsMs(g.gen)+arrDays()*86400000:0;
 function diffGen(g){
   if(g.diffComp)return;
-  const items=g.items.filter(x=>diffOf(x)>0).map(x=>({name:x.name,ret:x.retQty,arr:x.arrQty||0,pick:x.pickQty||0,qty:diffOf(x),ok:diffOf(x),price:x.price}));
+  const items=g.items.filter(x=>diffOf(x)>0).map(x=>({name:x.name,ret:x.retQty,pick:x.pickQty||0,qty:diffOf(x),ok:diffOf(x),price:x.price}));
   if(!items.length)return;
   const at=g.done||nowTs();
   g.diffComp={kind:'diff',compNo:'RC-'+at.slice(0,10).replace(/-/g,'')+'-'+g.no.slice(-3),at,reviewAt:at,items,comp:r2(items.reduce((s,x)=>s+(x.price==null?0:r2(x.ok*x.price)),0))};
 }
 function retRecalc(g){
   if(g.st==='已取消')return;
-  if(g.st==='已完成'){diffGen(g);return;}
-  if(!g.closed&&closeAt(g)&&Date.now()>closeAt(g))g.closed=msTs(closeAt(g));
-  const L=g.items,pending=L.some(x=>(x.arrQty||0)>(x.handled||0)),allArr=L.every(x=>(x.arrQty||0)>=x.retQty),anyArr=L.some(x=>(x.arrQty||0)>0);
-  if(pending)g.st='待提货';
-  else if(!allArr&&!g.closed)g.st=anyArr?'部分到仓':'待仓库入库';
-  else{g.st='已完成';L.forEach(x=>{if(x.pickQty==null)x.pickQty=0;});g.done=[g.pickup,g.closed].filter(Boolean).sort().pop()||nowTs();diffGen(g);}
+  if(isDone(g)){diffGen(g);return;}
+  if(g.st==='待仓库入库'&&closeAt(g)&&Date.now()>closeAt(g)){g.closed=msTs(closeAt(g));g.items.forEach(x=>{x.pickQty=0;});g.st='部分提货';g.done=g.closed;diffGen(g);}
 }
 const retSweep=()=>RETURN.forEach(retRecalc);
 // 一张退货单的全部赔付单（最多 2 张：差异 + 申诉），与退货赔付页同一份数据
 const compsOf=g=>(window.FM_MOD.retCompSrc?window.FM_MOD.retCompSrc():[]).filter(r=>r.retNo===g.no);
 const compTotal=g=>r2(compsOf(g).reduce((s,r)=>s+r.ra.comp,0));
-/* 退货单申诉（scm_退货申诉_prd.md，与 PC retAppealWin / raModal 同口径）：只管退回的实物，不改原售后判责
-   2026-10-27：所有状态都能申诉（已取消除外），不设时间窗口
-   · 实物问题（待提货 / 已提货 / 逾期未提(存量)；仓库退回待取回 / 已取回）：按 SKU 填「实际数量」（默认=系统记录：已提货/已取回取取回数，
-     在仓取退回数）和「其中坏了不能卖」（默认 0），申诉数量 = (退回 − 实际数量) + 损坏，系统算；有损坏时照片必填
-   · 未到仓（待仓库入库）：申诉数量默认 = 退回数量
-   · 其他：申诉数量全为 0 但说明写了问题 → 按「其他」提交，平台核定数量（上限 = 退回数量）
-   · 每张退货单 / 每条退回记录 1 次；平台 48h 内给结果
-   · 赔付 = Σ 核定数量 × 单价（客户退货=原订单结算单价，仓库退回=商品售价，不扣佣金），生成赔付单，运营推送清结算后进结算单（不涉及开票）
-   · 10-27 会议：客服核实；仓库退回申诉入口默认关闭（FM.DB.whrAppealOn，与 PC 同） */
+/* 退货单申诉（scm_退货申诉_prd.md，与 PC retAppealWin / raModal 同口径）：只管取回的实物，不改原售后判责
+   11-16：客户退货只在提货后 N 天内可申诉；少拿的已按差异直接赔付，申诉只管 实际取回 里拿到的比记录少 / 坏了不能卖；仓库退回沿用原规则 */
 const RA_KIND={goods:'实物问题',noarrive:'未到仓'};
 const RA_REVIEW_H=48;
 const raKindLabel=a=>a.other?'其他':RA_KIND[a.kind];
@@ -825,14 +816,14 @@ const fmtS=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maxim
 const r2=n=>Math.round((+n||0)*100)/100;
 // 已提货申诉期限 N 天（与 PC DB.pickAppealDays 同，默认 3；运营平台配置）
 const raDays=()=>window.FM.DB.pickAppealDays||3;
-function raDeadline(g){const at=g._whr?(g._pendingCount?'':g._lastPick):(g.st==='已完成'?g.done:'');return at?tsMs(at)+raDays()*86400000:0;}
+function raDeadline(g){const at=g._whr?(g._pendingCount?'':g._lastPick):(isDone(g)?g.done:'');return at?tsMs(at)+raDays()*86400000:0;}
 function raExpired(g){const d=raDeadline(g);return !!d&&Date.now()>d;}
 function raWin(g){
   if(g.appeal)return null;
   if(g._whr&&!window.FM.DB.whrAppealOn)return null;   // 仓库退回申诉入口默认关闭
   if(g._whr){if(raExpired(g))return null;return ['待提货','已提货'].includes(g.st)?{kind:'goods'}:null;}
-  // 客户退货（11-16）：只在已完成后 N 天内可申诉；没到仓 / 没取回的已按差异自动赔付；一件都没取回的无可申诉
-  if(g.st!=='已完成'||raExpired(g))return null;
+  // 客户退货（11-16）：只在提货后 N 天内可申诉；少拿的已按差异直接赔付；一件都没取回的无可申诉
+  if(!isDone(g)||raExpired(g))return null;
   if(!g.items.some(x=>(x.pickQty||0)>0))return null;
   return {kind:'goods'};
 }
@@ -851,22 +842,22 @@ function pickVal(g,x){
 // 退货金额：关联正向订单，按正向订单结算单价 × 退回数量（按行四舍五入再求和），与 PC retAmt 同口径
 const retAmt=g=>+g.items.reduce((s,x)=>s+(x.price==null?0:Math.round(x.retQty*x.price*100)/100),0).toFixed(2);
 function pickHtml(g,x){const v=pickVal(g,x);return v==null?'<span style="color:var(--sub)">—</span>':`${v}`;}
-// 数量四格：应退 / 到仓 / 取回 / 差异（差异只在已完成后有值）
-function retKbox(g,st){const dv=g.st==='已完成'?diffSum(g):null;
-  return `<div class="dl-kbox" style="${st}"><div class="k"><div class="l">应退</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">到仓</div><div class="v">${arrSum(g)}</div></div><div class="k"><div class="l">取回</div><div class="v">${pickHtml(g)}</div></div><div class="k"><div class="l">差异</div><div class="v"${dv>0?' style="color:var(--red)"':''}>${dv==null?'<span style="color:var(--sub)">—</span>':dv}</div></div></div>`;}
+// 数量三格：应取回 / 实际取回 / 差异（差异只在提货后有值）
+function retKbox(g,st){const dv=isDone(g)?diffSum(g):null;
+  return `<div class="dl-kbox" style="${st}"><div class="k"><div class="l">应取回</div><div class="v">${retSum(g)}</div></div><div class="k"><div class="l">实际取回</div><div class="v">${pickHtml(g)}</div></div><div class="k"><div class="l">差异</div><div class="v"${dv>0?' style="color:var(--red)"':''}>${dv==null?'<span style="color:var(--sub)">—</span>':dv}</div></div></div>`;}
 const raBtn=no=>`<span data-ra="${no}" style="min-height:44px;min-width:88px;padding:0 14px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--emerald);color:var(--emerald-2);border-radius:999px;font-weight:700;font-size:13.5px;cursor:pointer">退货申诉</span>`;
 function returnCard(g){
   return `<div class="dl-rcard" data-rno="${g.no}" style="cursor:pointer">
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span>${g.items.some(x=>x.gift)?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">含赠品</span>':''}<span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     ${retKbox(g,'margin-top:10px;padding:10px 0')}
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='部分到仓'?'已到仓一部分，剩下的还在路上':g.st==='已完成'?`已于 ${g.done} 完成`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:g.st!=='已完成'&&g.st!=='已取消'?'<br><span style="color:var(--sub)">完成后没还到你手里的部分直接赔付</span>':''}</div>
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':isDone(g)?(g.pickup?`已于 ${g.pickup} 提货`:`建单超 ${arrDays()} 天未到仓，整单算取不回`):'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:!isDone(g)&&g.st!=='已取消'?'<br><span style="color:var(--sub)">提货时少拿的部分直接赔付</span>':''}</div>
     ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
 }
 // 退货明细单行（分区块与逐行两种排法共用）
 function retItemHtml(g,x){return `<b style="font-size:14px">${x.name}</b>${x.gift?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">赠品</span>':''}<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
-      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>应退 ${x.retQty}</span><span>到仓 ${x.arrQty||0}</span><span>取回 ${pickHtml(g,x)}</span>${g.st==='已完成'?`<span${diffOf(x)>0?' style="color:var(--red)"':''}>差异 ${diffOf(x)}</span>`:''}<span>单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>应取回 ${x.retQty}</span><span>实际取回 ${pickHtml(g,x)}</span>${isDone(g)?`<span${diffOf(x)>0?' style="color:var(--red)"':''}>差异 ${diffOf(x)}</span>`:''}<span>单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
 // 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
 function openReturnDetail(no){
   const g=RETURN.find(x=>x.no===no); if(!g)return;retRecalc(g);
@@ -894,8 +885,8 @@ function openReturnDetail(no){
 function diffDetail(g,sec,box,kv){
   const tip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
   if(g.st==='已取消')return '';
-  if(g.st!=='已完成'){const lim=closeAt(g);return sec('差异赔付')+tip(`到仓的货都提完、且全部到齐后退货单完成。${lim?`如果到 <b>${msTs(lim)}</b>（建单后 ${arrDays()} 天）还没到齐，没到的部分算取不回，退货单直接完成。`:''}完成时<b>没还到你手里的部分系统直接赔付</b>，按原订单你应得的钱算，不用申诉。`);}
-  return '';   // 已完成：差异看顶部数量与明细，金额看「赔付单」，不再重复
+  if(!isDone(g)){const lim=closeAt(g);return sec('差异赔付')+tip(`提货时<b>实际取回少于应取回的部分，系统当下直接赔付</b>，按原订单你应得的钱算，不用申诉。${g.st==='待仓库入库'&&lim?`如果到 <b>${msTs(lim)}</b>（建单后 ${arrDays()} 天）还没到仓，整单算取不回、全部赔付。`:''}`);}
+  return '';   // 已提货 / 部分提货：差异看顶部数量与明细，金额看「赔付单」，不再重复
 }
 // 赔付单列表：一张退货单所有赔付单 + 合计，点一行进赔付单详情（没有赔付单不显示）
 function compList(g,sec){
@@ -905,20 +896,20 @@ function compList(g,sec){
       <div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:13px">${r.compNo}</div><div style="font-size:12px;color:var(--sub);margin-top:3px">${r.type}</div></div>
       <b style="color:var(--emerald-2);font-size:14px">${fmtS(r.ra.comp)}</b><span style="color:var(--sub);font-size:18px">›</span></div>`).join('')}
     <div style="display:flex;justify-content:space-between;padding:12px 14px;background:var(--mint-soft);font-weight:700;font-size:13.5px"><span>合计</span><span style="color:var(--emerald-2)">${fmtS(compTotal(g))}</span></div></div>
-    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">差异赔付 = 应退 − 取回${g.closed?`（建单超过 ${arrDays()} 天没到齐的算取不回）`:''}，取不回由平台承担；申诉赔付 = 申诉核定成立的部分。都按原订单你应得的钱赔，平台推送后随结算单打给你。</div>`;
+    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">差异赔付 = 应取回 − 实际取回${g.closed?`（建单超过 ${arrDays()} 天还没到仓，整单算取不回）`:''}，取不回由平台承担；申诉赔付 = 申诉核定成立的部分。都按原订单你应得的钱赔，平台推送后随结算单打给你。</div>`;
 }
 const raTip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
 function raDetail(g,sec,box,kv){
   if(!g)return '';
   const a=g.appeal;
   if(!a){
-    if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return sec('退货申诉')+raTip(`${g._whr?'提货':'退货单完成'}后 ${raDays()} 天内可以申诉，截止时间 ${msTs(raDeadline(g))}，已过申诉期，不能再申诉。`);
-    if(!g._whr&&g.st!=='已完成')return sec('退货申诉')+raTip(`退货单完成后 ${raDays()} 天内，取回的货数量不对或坏了不能卖，可以申诉 1 次。没还到你手里的部分不用申诉，完成时系统直接赔付。`);
+    if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内可以申诉，截止时间 ${msTs(raDeadline(g))}，已过申诉期，不能再申诉。`);
+    if(!g._whr&&!isDone(g))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内，取回的货数量不对或坏了不能卖，可以申诉 1 次。少拿的部分不用申诉，提货时系统直接赔付。`);
     if(!g._whr&&!raWin(g))return sec('退货申诉')+raTip('这张退货单一件都没取回，已按差异全部赔付，没有可申诉的货。');
     const w=raWin(g);if(!w)return '';
     const once=g._whr?'每条退回记录只能申诉 1 次。':'每张退货单只能申诉 1 次。';
     const msg=w.kind==='noarrive'?`货还没到仓。如一直没到仓或有其他问题，可以申诉「未到仓」，不限时间。${once}`
-      :!g._whr?`取回的货如果实际拿到的比系统记录少、坏了不能卖或有其他问题，可以申诉，完成后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}）。${once}`
+      :!g._whr?`取回的货如果实际拿到的比系统记录少、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}）。${once}`
       :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}）。${once}`
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec('退货申诉')+raTip(msg);
@@ -948,7 +939,7 @@ function openRetAppeal(g,onDone){
     <div class="as-dblock" id="ra-items"><div class="bt"><span>${goods?'按实际情况填写':'没到仓数量'}</span><span style="font-size:12px;color:var(--sub);font-weight:400">${goods?actTip:'默认全部，只到了一部分的改小'}</span></div>
       ${g.items.map((x,k)=>{const sp=raSys(g,x);return `<div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
         <b style="font-size:14px">${x.name}</b>${g._whr?`<span style="font-size:11.5px;color:var(--sub);margin-left:6px">${x._picked?'已取回':'待取回'}</span>`:''}
-        ${line(g._whr?'退回数量':'应退数量',`<span>${x.retQty} ${x.unit}</span>`)}${g._whr?'':line('差异（已自动赔付）',`<span>${diffOf(x)} ${x.unit}</span>`)}
+        ${line(g._whr?'退回数量':'应取回数量',`<span>${x.retQty} ${x.unit}</span>`)}${g._whr?'':line('差异（已直接赔付）',`<span>${diffOf(x)} ${x.unit}</span>`)}
         ${goods?line(g._whr?sysL(x):'系统取回',`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,raMax(g,x)))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
         ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}
         ${line(g._priceLabel||'正向订单结算单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
@@ -1147,7 +1138,7 @@ function openReturn(){
     </div>
     <div id="rt-cust">
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
-    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="部分到仓" style="white-space:nowrap;flex-shrink:0">部分到仓</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="已完成" style="white-space:nowrap;flex-shrink:0">已完成</span></div>
+    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="部分提货" style="white-space:nowrap;flex-shrink:0">部分提货</span><span class="t" data-t="已提货" style="white-space:nowrap;flex-shrink:0">已提货</span></div>
     <div class="dl-list" id="dl-rtl"></div></div>
     <div id="rt-whr" style="display:none"></div>`,
     mount:(p)=>{
