@@ -192,7 +192,7 @@ tbody tr:hover>td{background:#f5f9f5}
       <button class="btn">导出 ⌄</button></div>
     <div class="selbar" id="selbar"></div>
     <table>
-      <thead><tr><th style="width:32px"><input type="checkbox" id="chkAll" onchange="selAll(this.checked)"></th><th style="width:28px"></th><th>商品 SPU</th><th>SPU 编码</th><th>后台类目</th><th>商品属性</th><th>规格数</th><th>渠道来源</th><th>创建人</th><th>创建时间</th><th>状态</th><th style="width:130px">操作</th></tr></thead>
+      <thead><tr><th style="width:32px"><input type="checkbox" id="chkAll" onchange="selAll(this.checked)"></th><th style="width:28px"></th><th>商品 SPU</th><th>SPU 编码</th><th>货品类目</th><th>商品属性</th><th>规格数</th><th>渠道来源</th><th>创建人</th><th>创建时间</th><th>状态</th><th style="width:130px">操作</th></tr></thead>
       <tbody id="listBody"></tbody>
     </table>
     <div class="pager" id="pager"></div>
@@ -223,7 +223,7 @@ tbody tr:hover>td{background:#f5f9f5}
 /* ============ 字典（取值来源见原型 PRD；运行时由字典接口返回） ============ */
 const CATS=[
   {g:'肉禽',items:['猪肉','猪骨','鸡肉','牛肉','羊肉','鸭肉']},
-  {g:'水产海鲜',items:['三文鱼','冷冻鱼']},
+  {g:'水产海鲜',items:['三文鱼','冷冻鱼','贝类']},
   {g:'饮料',items:['碳酸饮料','果汁']}
 ];
 const PARTS={ /* 商品部位：后台类目挂载 product_classification 字段才出现（李南凯 PRD §7.2 BR-07） */
@@ -243,6 +243,8 @@ const STORAGE=['常温','冷藏','冷冻'];
 const FULFIL=['常温履约','冷链履约'];
 const WAREHOUSES=['SG 大仓','SG 冷库'];
 const BCRS_CATS=['碳酸饮料','果汁'];
+const NO_MAP=['贝类'];   /* 演示：还没配商品类目映射的货品类目 */
+const prodCat=c=>c&&!NO_MAP.includes(c)?c:'';
 const EN_MAP={'三文鱼':'Salmon','块':'Cubes','片':'Slices','猪':'Pork','后腿肉':'Hind Leg','前腿肉':'Front Leg','冰鲜':'Chilled','去骨':'Boneless','鸡':'Chicken','胸':'Breast','可口可乐':'Coca-Cola','鸡腿':'Chicken Leg','牛腩':'Beef Brisket'};
 
 /* ============ 示例业务数据 ============ */
@@ -370,14 +372,15 @@ function livePreview(){document.querySelectorAll('[data-fn]').forEach(el=>{const
 /* ============ 表单渲染 ============ */
 function E(msg){return showErr&&msg?`<div class="fe">${msg}</div>`:''}
 function renderForm(){const sc=$('fBody').scrollTop;const ed=F.mode==='edit';
-  const catOpts=`<option value="">请选择后台类目</option>`+CATS.map(g=>`<optgroup label="${g.g}">`+g.items.map(c=>`<option value="${c}"${c===F.cat?' selected':''}>${g.g} / ${c}</option>`).join('')+'</optgroup>').join('');
+  const catOpts=`<option value="">请选择货品类目</option>`+CATS.map(g=>`<optgroup label="${g.g}">`+g.items.map(c=>`<option value="${c}"${c===F.cat?' selected':''}>${g.g} / ${c}</option>`).join('')+'</optgroup>').join('');
   const zE=zhErr(F.name),eE=enErr(F.en);
   let h=`<div class="sec"><div class="sec-hd"><span class="no">1</span>商品信息（SPU）</div><div class="sec-bd"><div class="g2">
     <div class="fr full"><label class="fl"><span class="rq">*</span>商品名称<span class="hint">中英文都必填；非标品的原料名、成品名、SKU 名随它自动生成</span></label>
       <div class="bi"><div><input value="${esc(F.name)}" placeholder="中文名称，最多 50 字" class="${showErr&&zE?'err':''}" oninput="nameInput(this.value)" onblur="nameBlur()">${E(zE)}</div>
       <div class="en"><input value="${esc(F.en)}" placeholder="English name, max 100" class="${showErr&&eE?'err':''}" oninput="enInput(this.value)" onchange="renderForm()">${F.enAuto?'<span class="badge">Auto</span>':''}${E(eE)}</div></div></div>
     <div class="fr full"><label class="fl">商品别名</label><input value="${esc(F.alias)}" maxlength="400" placeholder="多个别名用“逗号”隔开，最多 400 个字" onchange="F.alias=this.value"></div>
-    <div class="fr"><label class="fl"><span class="rq">*</span>后台类目</label><select class="${showErr&&!F.cat?'err':''}" onchange="set('cat',this.value)">${catOpts}</select>${E(!F.cat&&'请选择后台类目')}</div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>货品类目</label><select class="${showErr&&(!F.cat||!prodCat(F.cat))?'err':''}" onchange="set('cat',this.value)">${catOpts}</select>${E(!F.cat&&'请选择货品类目')}</div>
+    <div class="fr"><label class="fl">商品类目<span class="hint">跟着货品类目走，按类目映射自动带出</span></label><div class="ro">${F.cat?(prodCat(F.cat)?esc(prodCat(F.cat)):'<span style="color:var(--r)">该货品类目还没配商品类目映射，请先在类目映射里配置</span>'):'选了货品类目后自动带出'}</div></div>
     <div class="fr"><label class="fl">税率</label><div class="ro">9%<span class="fh">按配置 TAX_RATE 带出，只读</span></div></div>
     ${PARTS[F.cat]?`<div class="fr"><label class="fl"><span class="rq">*</span>商品部位</label><select class="${showErr&&!F.part?'err':''}" onchange="set('part',this.value)">${opts(PARTS[F.cat],F.part)}</select>${E(!F.part&&'请选择商品部位')}</div>`:''}
     <div class="fr"><label class="fl"><span class="rq">*</span>销售类型</label><div class="radios">${['销售品','赠品'].map(v=>`<label><input type="radio" name="sale" ${F.sale===v?'checked':''} onchange="set('sale','${v}')">${v}</label>`).join('')}</div></div>
@@ -524,7 +527,7 @@ function supplyBlock(){const ns=F.attr==='非标品';const newRaw=ns&&F.rawMode=
 
 /* ============ 校验与提交 ============ */
 function validate(){const e=[];const z=zhErr(F.name),en=enErr(F.en);if(z)e.push(z);if(en)e.push(en);
-  if(!F.cat)e.push('请选择后台类目');if(PARTS[F.cat]&&!F.part)e.push('请选择商品部位');
+  if(!F.cat)e.push('请选择货品类目');else if(!prodCat(F.cat))e.push('该货品类目还没配商品类目映射，不能提交');if(PARTS[F.cat]&&!F.part)e.push('请选择商品部位');
   if(F.validP==='是'&&!F.period)e.push('请输入保质期');if(!F.storage)e.push('请选择保存条件');if(!F.fulfil)e.push('请选择履约方式');
   if(!F.attr)e.push('请选择商品属性');
   if(F.attr==='标品'){if(!F.minPack)e.push('请选择最小包装单位');if(!(Number(F.net)>0))e.push('请填写净含量（大于 0）');if(!F.netUnit)e.push('请选择净含量单位');
@@ -540,7 +543,7 @@ function validate(){const e=[];const z=zhErr(F.name),en=enErr(F.en);if(z)e.push(
 function renderErrbar(){const e=validate();const b=$('errbar');if(e.length){b.innerHTML=`以下内容未通过校验，请修改后重试：<ol>${e.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`;b.classList.add('on')}else b.classList.remove('on')}
 function submitForm(){showErr=true;renderForm();const e=validate();if(e.length){renderErrbar();return}
   $('errbar').classList.remove('on');$('btnSubmit').disabled=true;
-  const ns=F.attr==='非标品';const steps=[ns?'建原料 / 成品 / BOM（停用）':'建货品（停用）','建商品与 SKU','启用货品'];let k=0;
+  const ns=F.attr==='非标品';const steps=[ns?(F.rawMode==='新建'&&F.mode==='create'?'建原料（启用）+ 成品 / BOM（成品停用）':'建成品 / BOM（成品停用）'):'建货品（停用）','建商品与 SKU',ns?'启用成品':'启用货品'];let k=0;
   const draw=st=>$('steps').innerHTML=steps.map((s,i)=>`<span class="st ${i<st?'ok':i===st?'ing':''}"><span class="dot">${i<st?'✓':''}</span>${s}</span>`).join('<span class="ar">›</span>');
   draw(0);const tick=()=>{k++;draw(k);if(k<3)setTimeout(tick,650);else setTimeout(finish,350)};setTimeout(tick,650)}
 function finish(){const ns=F.attr==='非标品';let s;
@@ -605,7 +608,7 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
   let h=`<div class="tabs" style="margin-bottom:16px">${['商品','货品'].map(t=>`<span class="${t===dTab?'on':''}" onclick="pend=null;openDetail(${i},'${t}')">${t}${t==='货品'&&pendItem?' <span style="color:var(--y);font-size:12px">· 待启用</span>':''}</span>`).join('')}</div>`;
   h+=confirmBox();
   if(dTab==='商品'){
-    h+=`<div class="dsec"><h4>商品信息</h4><div class="dl">${row('SPU 编码',`<span class="mono">${s.spu}</span>`)}${row('商品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('后台类目',s.cat)}${row('商品部位',s.part)}
+    h+=`<div class="dsec"><h4>商品信息</h4><div class="dl">${row('SPU 编码',`<span class="mono">${s.spu}</span>`)}${row('商品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('货品类目',s.cat)}${row('商品类目',prodCat(s.cat)+' <span class="fh">随货品类目</span>')}${row('商品部位',s.part)}
       ${row('商品属性',s.attr)}${row('渠道来源',s.src)}${row('销售类型',b.sale)}${row('产地',b.origin)}${row('品牌',b.brand)}${row('是否HALAL',b.halal)}${row('是否对HALAL客户展示',b.halalShow)}${row('APP是否展示效期',b.appExp)}</div></div>
       <div class="dsec"><h4>售卖规格（SKU）</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>售卖规格</th><th>绑定货品</th>${ns?'<th>多退少补</th>':''}<th>SKU 状态</th>${self?'<th style="width:80px">操作</th>':''}</tr></thead><tbody>`+
       s.skus.map(k=>{const blk=skuItemBlock(s,k);return`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${ns?`${fmtQty(k.qty)}${s.stockUnit}/${k.su}`:`${k.qty} ${s.std.stockUnit}${k.su?' / '+k.su:''}`}</td><td class="mono">${ns?k.item:s.std.item}</td>${ns?`<td>${k.st?'是':'否'}</td>`:''}
@@ -625,7 +628,7 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
       ${pendItem?`<div class="warn">商品已建好，成品货品启用失败（系统已自动重试 3 次）。启用前仓库不能收货、采购不能下单。</div>`:''}</div>`+logsBlock(s,'货品');
   }else{const d=s.std;
     h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">成品货品 ${self?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('std')">编辑货品</button><button class="lk ${d.status!=='停用'?'dg':''}" onclick="ask('stdStatus')">${d.status!=='停用'?'停用':'启用'}</button><button class="lk" onclick="ask('stdPurch')">${d.purch!=='否'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
-      <div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('货品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('库存单位',d.stockUnit+(d.stockIsPack==='否'?`（1 ${d.stockUnit} = ${d.packQty} ${d.minPack}）`:''))}
+      <div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('货品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('计量单位（库存单位）',d.stockUnit)}${row('箱规',d.stockIsPack==='否'?`${d.packQty} ${d.minPack} / ${d.stockUnit}`:'—')}
       ${row('状态',stTag(d.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(d.purch!=='否'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','成品采购')}${row('BCRS',d.bcrs==='是'?`支持，每 1 ${d.minPack} ${d.bcrsQty} 个容器`:'不支持')}
       ${row('保存条件 / 履约方式',(b.storage||'—')+' / '+(b.fulfil||'—'))}${row('效期管理 / 保质期',(b.validP||'—')+' / '+(b.period?b.period+b.periodUnit:'—'))}${extRows(ext(d),row)}</div></div>
       <div class="dsec"><h4>绑定的 SKU</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>1 份扣减货品库存</th><th>SKU 状态</th></tr></thead><tbody>`+
