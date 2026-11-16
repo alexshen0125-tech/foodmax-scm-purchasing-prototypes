@@ -4544,13 +4544,28 @@ PAGES['m-after-return']=()=>{
   </div>`;
   if(rt=='wh') return srcTabs+(typeof deliv_whReturnContent=='function'?deliv_whReturnContent():'');
   retSweep();
-  const rs=DB.afterSales.filter(a=>a.type=='退货退款'&&a.returnStatus);
+  // 筛选（对齐 dev /merchant-pc/aftersale/return：退货单号 / 工单号 + 查询 / 重置，点查询或回车才生效）
+  // 状态由 dev 的「全部状态」下拉改成 Tab（11-16 沈亮），点 Tab 立即切换；Tab 数字 = 当前单号条件下各状态单数
+  const rf=DB.retF||{},stK=DB.retStTab||'';
+  const kw=DB.afterSales.filter(a=>a.type=='退货退款'&&a.returnStatus)
+    .filter(a=>(!rf.no||('TH-'+a.id.slice(-6)).toLowerCase().includes(rf.no.toLowerCase()))&&(!rf.suit||a.id.toLowerCase().includes(rf.suit.toLowerCase())));
+  const rs=kw.filter(a=>!stK||a.returnStatus==stK);
   const stTag=retStTag;
+  const EN=`onkeydown="if(event.key=='Enter')retFQuery()"`;
+  const filterBar=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px">
+    <input id="rf-no" value="${rf.no||''}" placeholder="退货单号" style="width:200px" ${EN}>
+    <input id="rf-suit" value="${rf.suit||''}" placeholder="工单号" style="width:200px" ${EN}>
+    <button class="btn btn-p btn-sm" onclick="retFQuery()">查询</button><button class="btn btn-o btn-sm" onclick="DB.retF={};DB.retStTab='';render()">重置</button>
+  </div></div>`;
+  const RET_TABS=['','待仓库入库','待提货','部分提货','无法取回','已提货','已取消'];
+  const stTabs=`<div class="tabs" style="margin:0 16px">${RET_TABS.map(k=>{const n=k?kw.filter(a=>a.returnStatus==k).length:kw.length;
+    return `<div class="tab ${stK==k?'active':''}" onclick="DB.retStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>`;
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
     return `<tr><td class="mono" style="white-space:nowrap">TH-${a.id.slice(-6)}</td><td style="white-space:nowrap">${ord_mask(a.client)}</td><td class="mono" style="white-space:nowrap">${a.order}</td><td>${retItemsName(a)}${retHasGift(a)?` <span class="tag t-pp" style="font-size:10px" title="本退货单含满赠赠品，赠品随退货一起退回，需一并提走">含赠品</span>`:''}</td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td style="text-align:right">${diffQtyCell(a)}</td><td style="text-align:right">${retAmtCell(a)}</td><td style="text-align:right">${diffCompCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.pickupAt||'—'}</td><td>${stTag(a.returnStatus)}</td><td style="font-size:12px;white-space:nowrap">${retAppealCell(a)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>${retAppealOpen(a)?` <button class="btn btn-o btn-sm" onclick="act_retAppeal(${i})">申诉</button>`:''}</td></tr>`;}).join('');
-  return srcTabs+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b> → <b>待提货</b>（仓库确认到货）→ 提货后 <b>已提货</b>（拿全了）/ <b>部分提货</b>（少拿了，差异直接赔付）/ <b>无法取回</b>（一件没拿到或建单超过 <b>${DB.arriveCloseDays} 天</b>还没到仓，整单直接赔付、不走申诉）。赔付按原订单你应得的钱算，不用申诉，平台推送后随结算单打给你。提货后 <b>${DB.pickAppealDays} 天</b>内，如果取回的货数量不对或坏了不能卖，可以申诉 1 次。货在仓里不设提货时限。`)}
-  <div class="card"><div class="card-hd"><h3>客户退货</h3><span class="sub">客户售后「退货退款」判责后到仓暂存，商家凭提货码自提（商家只读 · 仓库确认）</span></div><div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户</th><th>正向订单号</th><th>退货商品</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">差异数量</th><th style="text-align:right">退货金额</th><th style="text-align:right">赔付金额</th><th>到仓时间</th><th>提货时间</th><th>状态</th><th>申诉</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>'}</div></div>`;
+  return srcTabs+filterBar+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b> → <b>待提货</b>（仓库确认到货）→ 提货后 <b>已提货</b>（拿全了）/ <b>部分提货</b>（少拿了，差异直接赔付）/ <b>无法取回</b>（一件没拿到或建单超过 <b>${DB.arriveCloseDays} 天</b>还没到仓，整单直接赔付、不走申诉）。赔付按原订单你应得的钱算，不用申诉，平台推送后随结算单打给你。提货后 <b>${DB.pickAppealDays} 天</b>内，如果取回的货数量不对或坏了不能卖，可以申诉 1 次。货在仓里不设提货时限。`)}
+  <div class="card"><div class="card-hd"><h3>客户退货</h3><span class="sub">客户售后「退货退款」判责后到仓暂存，商家凭提货码自提（商家只读 · 仓库确认）</span></div>${stTabs}<div class="card-bd flush">${rs.length?`<div style="overflow-x:auto"><table><thead><tr><th>退货单号</th><th>客户</th><th>正向订单号</th><th>退货商品</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">差异数量</th><th style="text-align:right">退货金额</th><th style="text-align:right">赔付金额</th><th>到仓时间</th><th>提货时间</th><th>状态</th><th>申诉</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`:((rf.no||rf.suit||stK)?`<div class="empty"><div class="e-ic">🔍</div><div class="e-t">没有${stK?'「'+stK+'」的':'符合条件的'}退货单</div><div class="e-s">换个单号或状态试试，或点「重置」</div></div>`:'<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无退货单</div><div class="e-s">退货退款售后单判责后会在此生成退货单，管理到仓提货</div></div>')}</div></div>`;
 };
+function retFQuery(){const v=id=>(document.getElementById(id).value||'').trim();DB.retF={no:v('rf-no'),suit:v('rf-suit')};render();}
 
 /* ---------- 退货单申诉（scm_退货申诉_prd.md）：只管退回的实物，不改原售后判责、不占售后申诉的 1 次机会 ----------
    2026-10-27：所有状态都能申诉（已取消除外），不设时间窗口。三种申诉：
