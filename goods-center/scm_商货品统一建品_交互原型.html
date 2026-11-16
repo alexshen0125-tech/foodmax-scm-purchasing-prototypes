@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商货品统一建品 · 运营平台</title>
+<style>
+:root{--p:#009919;--pd:#007a14;--pl:#e8f6ea;--tx:#1f2d3d;--ts:#606266;--tt:#909399;--ph:#97a8be;--bd:#dcdfe6;--bd2:#ebeef5;--th:#eef1f6;--bg:#f2f4f7;--r:#f56c6c;--rl:#fef0f0;--y:#e6a23c;--yl:#fdf6ec;--b:#409eff;--bl:#ecf5ff;--g2:#67c23a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.6 "PingFang SC","Microsoft YaHei",-apple-system,sans-serif;color:var(--tx);background:var(--bg)}
+header{height:48px;background:var(--p);color:#fff;display:flex;align-items:center;gap:36px;padding:0 20px;position:sticky;top:0;z-index:30}
+.logo{font-size:24px;font-weight:900;font-style:italic;letter-spacing:-.5px}
+header .sys{font-size:14px;opacity:.95}
+header .rt{margin-left:auto;display:flex;gap:22px;font-size:13px;opacity:.95}
+.wrap{display:flex;min-height:calc(100vh - 48px)}
+aside{width:160px;flex-shrink:0;background:#fff;border-right:1px solid var(--bd2);padding-top:8px}
+aside .grp{padding:10px 18px 4px;color:var(--tt);font-size:12px}
+aside a{display:block;padding:9px 18px 9px 28px;color:var(--ts);text-decoration:none;cursor:default}
+aside a.on{background:var(--pl);color:var(--p);border-right:2px solid var(--p)}
+main{flex:1;min-width:0;padding:16px 20px 40px}
+.crumb{color:var(--tt);font-size:12px;margin-bottom:10px}
+.panel{background:#fff;border:1px solid var(--bd2);border-radius:4px;padding:16px 18px;margin-bottom:14px}
+.filters{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
+.filters .fi{display:flex;flex-direction:column;gap:5px}
+.filters label{font-size:12px;color:var(--ts)}
+input,select,textarea{font:inherit;color:var(--tx);border:1px solid var(--bd);border-radius:4px;height:30px;padding:0 9px;background:#fff;outline:none;width:100%}
+textarea{height:auto;min-height:56px;padding:6px 9px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--p)}
+input::placeholder,textarea::placeholder{color:var(--ph)}
+input:disabled,select:disabled{background:#f5f7fa;color:var(--tt);cursor:not-allowed}
+input.err,select.err{border-color:var(--r)}
+input[type=radio],input[type=checkbox]{width:auto;height:auto;accent-color:var(--p);vertical-align:-2px;margin-right:4px}
+.btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 14px;border:1px solid var(--bd);border-radius:4px;background:#fff;color:var(--ts);font:inherit;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--p);color:var(--p)}
+.btn.pr{background:var(--p);border-color:var(--p);color:#fff}
+.btn.pr:hover{background:var(--pd);color:#fff}
+.btn.sm{height:26px;padding:0 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.lk{color:var(--p);cursor:pointer;background:none;border:none;font:inherit;padding:0}
+.lk:hover{text-decoration:underline}
+.lk.dg{color:var(--r)}
+.tabs{display:flex;gap:26px;border-bottom:1px solid var(--bd2);margin-bottom:12px}
+.tabs span{padding:8px 0;cursor:pointer;color:var(--ts);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--p);border-color:var(--p)}
+.toolbar{display:flex;gap:8px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+th{background:var(--th);color:var(--tx);font-weight:500;text-align:left;padding:9px 10px;border:1px solid var(--bd2);white-space:nowrap;font-size:12.5px}
+td{padding:9px 10px;border:1px solid var(--bd2);vertical-align:middle}
+tbody tr:hover>td{background:#f5f9f5}
+.mono{font-family:"SF Mono",Menlo,monospace;font-size:12px;color:var(--ts)}
+.tag{display:inline-block;font-size:12px;line-height:20px;padding:0 7px;border-radius:3px;border:1px solid;white-space:nowrap}
+.tg{color:var(--p);background:var(--pl);border-color:#b3e0bb}
+.tgr{color:var(--tt);background:#f4f4f5;border-color:#e9e9eb}
+.ty{color:var(--y);background:var(--yl);border-color:#f5dab1}
+.tr{color:var(--r);background:var(--rl);border-color:#fbc4c4}
+.tb{color:var(--b);background:var(--bl);border-color:#b3d8ff}
+.exp{cursor:pointer;color:var(--tt);user-select:none;width:28px;text-align:center}
+.sub td{background:#fafbfc}
+.sub table th{background:#f3f5f8}
+.pager{display:flex;justify-content:flex-end;gap:10px;align-items:center;color:var(--ts);margin-top:12px;font-size:12.5px}
+/* drawer */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50;display:none}
+.mask.on{display:block}
+.dw{position:fixed;top:0;right:0;height:100vh;background:#fff;z-index:60;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s;box-shadow:-6px 0 24px rgba(0,0,0,.12)}
+.dw.on{transform:none}
+#dwForm{width:80%;min-width:1100px;max-width:100vw}
+#dwDetail{width:62%;min-width:900px;max-width:100vw;z-index:70}
+.dw-hd{height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--bd2);font-size:16px;font-weight:600}
+.dw-hd .x{cursor:pointer;color:var(--tt);font-size:20px;font-weight:400}
+.dw-bd{flex:1;overflow-y:auto;padding:18px 24px 30px}
+.dw-ft{flex-shrink:0;border-top:1px solid var(--bd2);padding:12px 24px;display:flex;justify-content:flex-end;gap:10px;align-items:center}
+.errbar{flex-shrink:0;background:var(--rl);color:var(--r);border-top:1px solid #fbc4c4;padding:9px 24px;font-size:12.5px;display:none}
+.errbar.on{display:block}
+.errbar ol{margin:3px 0 0 18px}
+.sec{border:1px solid var(--bd2);border-radius:4px;margin-bottom:16px}
+.sec-hd{background:#f6f8fb;border-bottom:1px solid var(--bd2);padding:10px 16px;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.sec-hd .no{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--p);color:#fff;font-size:12px;align-items:center;justify-content:center;font-weight:600}
+.sec-hd .tip{font-weight:400;font-size:12px;color:var(--tt)}
+.sec-hd .fold{margin-left:auto;font-weight:400;font-size:12.5px}
+.sec-bd{padding:16px 18px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px 26px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px 26px}
+.fr{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fr.full{grid-column:1/-1}
+.fl{font-size:12.5px;color:var(--ts)}
+.fl .rq{color:var(--r);margin-right:3px}
+.fl .hint{color:var(--tt);font-size:12px;margin-left:4px}
+.fh{font-size:12px;color:var(--tt);line-height:1.5}
+.fe{font-size:12px;color:var(--r)}
+.ro{min-height:30px;display:flex;align-items:center;padding:0 9px;background:#f5f7fa;border:1px solid var(--bd2);border-radius:4px;color:var(--ts);gap:6px}
+.radios{display:flex;gap:18px;align-items:center;min-height:30px;flex-wrap:wrap}
+.radios label{cursor:pointer;color:var(--tx)}
+.bi{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bi .en{position:relative}
+.bi .badge{position:absolute;right:6px;top:6px;font-size:11px;color:var(--b);background:var(--bl);padding:0 5px;border-radius:3px;line-height:18px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{border:1.5px solid var(--bd);border-radius:6px;padding:10px 14px;cursor:pointer;background:#fff}
+.card.on{border-color:var(--p);background:var(--pl)}
+.card.dis{cursor:not-allowed;opacity:.65}
+.card b{font-size:14px}
+.card.on b{color:var(--pd)}
+.card p{font-size:12px;color:var(--ts);margin-top:3px}
+.itbl th{background:#f7f8fa;font-size:12px;color:var(--ts)}
+.itbl td{padding:6px}
+.box{border:1px dashed var(--bd);border-radius:4px;padding:12px 14px;background:#fbfcfd}
+.box.on{border:1px solid #b3e0bb;background:#f7fcf8}
+.raw-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dl{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 18px}
+.dl .k{font-size:12px;color:var(--tt)}
+.dl .v{font-size:13px;word-break:break-all}
+.notice{background:var(--bl);color:#4a6f99;border:1px solid #d9ecff;border-radius:4px;padding:8px 12px;font-size:12.5px;margin-bottom:12px}
+.warn{background:var(--yl);color:#a96a10;border:1px solid #f5dab1;border-radius:4px;padding:7px 10px;font-size:12px;margin-top:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.skut{border:1px solid var(--bd2);border-radius:4px;overflow:hidden}
+.skut .hd,.skut .row{display:grid;gap:8px;align-items:center;padding:7px 10px}
+.skut .hd{background:#f7f8fa;color:var(--ts);font-size:12px;border-bottom:1px solid var(--bd2)}
+.skut .row{border-bottom:1px solid var(--bd2)}
+.skut .row:last-child{border-bottom:none}
+.skut .row.off{background:#fafafa;color:var(--tt)}
+.skut .rowx{grid-column:1/-1}
+.cell-ro{height:30px;display:flex;align-items:center;padding:0 8px;background:#f5f7fa;border-radius:4px;color:var(--ts);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm{font-size:12.5px;line-height:1.45}
+.nm .en{color:var(--tt);font-size:12px}
+.bom{font-size:12px;color:var(--ts);line-height:1.45}
+.bom b{color:var(--tx);font-weight:500}
+.tgl{display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;font-size:12px;color:var(--ts)}
+.tgl i{width:32px;height:18px;border-radius:10px;background:#dcdfe6;position:relative;transition:.15s}
+.tgl i::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s}
+.tgl.on i{background:var(--p)}
+.tgl.on i::after{transform:translateX(14px)}
+.tgl.dis{cursor:not-allowed;opacity:.5}
+.up{border:1px dashed var(--bd);border-radius:4px;width:96px;height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--tt);cursor:pointer;font-size:12px;background:#fbfdff}
+.up:hover{border-color:var(--p);color:var(--p)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{width:96px;height:96px;border-radius:4px;background:linear-gradient(135deg,#e7efe8,#cfe3d3);display:flex;align-items:center;justify-content:center;color:#5f8a66;font-size:12px;position:relative}
+.thumb .rm{position:absolute;right:3px;top:1px;cursor:pointer;color:#5f8a66}
+.steps{display:flex;gap:6px;align-items:center;font-size:12.5px;color:var(--ts);margin-right:auto}
+.steps .st{display:flex;align-items:center;gap:5px}
+.steps .dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--bd);display:inline-flex;align-items:center;justify-content:center;font-size:10px}
+.steps .st.ing .dot{border-color:var(--p);border-top-color:transparent;animation:sp .8s linear infinite}
+.steps .st.ok{color:var(--p)}
+.steps .st.ok .dot{background:var(--p);border-color:var(--p);color:#fff}
+.steps .st.fail{color:var(--r)}
+.steps .st.fail .dot{background:var(--r);border-color:var(--r);color:#fff}
+.steps .ar{color:var(--bd)}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);background:#f0f9eb;color:var(--g2);border:1px solid #e1f3d8;padding:9px 18px;border-radius:4px;z-index:100;display:none;font-size:13px}
+.toast.e{background:var(--rl);color:var(--r);border-color:#fde2e2}
+.dsec{margin-bottom:18px}
+.dsec h4{font-size:14px;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--p)}
+.confirm{background:var(--yl);border:1px solid #f5dab1;border-radius:4px;padding:8px 10px;font-size:12px;color:#a96a10;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header><span class="logo">Foodmax</span><span class="sys">运营平台</span><div class="rt"><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
+<div class="wrap">
+<aside>
+  <div class="grp">数据看板</div><a>店铺经营指标</a>
+  <div class="grp">店铺</div><a>店铺管理</a>
+  <div class="grp">订单</div><a>商家订单</a>
+  <div class="grp">商品</div><a>同品管理</a><a class="on">商品列表</a><a>商品审批</a><a>后台类目</a><a>前台类目</a>
+  <div class="grp">商家</div><a>商家管理</a>
+</aside>
+<main>
+  <div class="crumb">商品 / 商品列表</div>
+  <div class="panel">
+    <div class="filters">
+      <div class="fi" style="width:300px"><label>编码搜索</label><input id="qCode" placeholder="SPU / SKU / 货品 / 原料编码，精确匹配"></div>
+      <div class="fi" style="width:200px"><label>商品名称</label><input id="qName" placeholder="名称模糊"></div>
+      <div class="fi" style="width:150px"><label>商品属性</label><select id="qAttr"><option value="">全部</option><option>标品</option><option>非标品</option></select></div>
+      <div class="fi" style="width:150px"><label>渠道来源</label><select id="qSrc"><option value="">全部</option><option>自营</option><option>三方</option></select></div>
+      <div class="fi" style="flex-direction:row;gap:8px"><button class="btn pr" onclick="renderList()">查询</button><button class="btn" onclick="resetQ()">重置</button></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="tabs" id="tabs"></div>
+    <div class="toolbar"><button class="btn pr" onclick="openCreate()">＋ 新建商品（自营）</button><button class="btn">导出 ⌄</button></div>
+    <table>
+      <thead><tr><th style="width:28px"></th><th>商品 SPU</th><th>SPU 编码</th><th>后台类目</th><th>商品属性</th><th>规格数</th><th>渠道来源</th><th>创建人</th><th>创建时间</th><th>状态</th><th style="width:130px">操作</th></tr></thead>
+      <tbody id="listBody"></tbody>
+    </table>
+    <div class="pager" id="pager"></div>
+  </div>
+</main>
+</div>
+
+<div class="mask" id="mask" onclick="maskClick()"></div>
+<div class="dw" id="dwForm">
+  <div class="dw-hd"><span id="fTitle">新建商品（自营）</span><span class="x" onclick="closeForm()">×</span></div>
+  <div class="dw-bd" id="fBody"></div>
+  <div class="errbar" id="errbar"></div>
+  <div class="dw-ft"><div class="steps" id="steps"></div><button class="btn" onclick="closeForm()">取消</button><button class="btn pr" id="btnSubmit" onclick="submitForm()">保存并创建</button></div>
+</div>
+<div class="dw" id="dwDetail">
+  <div class="dw-hd"><span id="dTitle">商品详情</span><span class="x" onclick="closeDetail()">×</span></div>
+  <div class="dw-bd" id="dBody"></div>
+  <div class="dw-ft" id="dFt"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 字典（取值来源见原型 PRD；运行时由字典接口返回） ============ */
+const CATS=[
+  {g:'肉禽',items:['猪肉','猪骨','鸡肉','牛肉','羊肉','鸭肉']},
+  {g:'水产海鲜',items:['三文鱼','冷冻鱼']},
+  {g:'饮料',items:['碳酸饮料','果汁']}
+];
+const PARTS={ /* 商品部位：后台类目挂载 product_classification 字段才出现（李南凯 PRD §7.2 BR-07） */
+  '鸡肉':['3001 鲜鸡块','3002 冻鸡块','3003 鲜鸡大胸','3004 冻鸡大胸','3005 鲜三黄鸡','3006 鲜带皮鸡腿肉','3007 冻鸡丁'],
+  '猪肉':['3008 鲜猪前腿肉','3009 鲜猪后腿肉','3010 冻带皮前腿肉','3011 冻带皮后腿肉','3012 冻去皮后腿肉'],
+  '猪骨':['3013 冻猪腿骨','3014 鲜猪腿骨','3015 鲜猪骨块','3016 冻猪腔排骨加工'],
+  '牛肉':['3017 鲜牛腿肉','3018 冻牛腿肉','3019 调理牛肉片','3020 鲜牛后','3021 冻牛后','3022 鲜牛碎肉','3023 冻牛碎肉','3024 冻牛腩','3025 冻牛前','3026 熟制牛肉'],
+  '羊肉':['3027 鲜羊腿肉','3028 冻羊腿肉','3029 冻去骨羊后腿','3030 鲜去骨羊后腿','3031 鲜羊肉块','3032 冻羊肉块','3033 鲜羊排'],
+  '鸭肉':['3034 鲜鸭块','3035 解冻鸭块','3036 冻鸭块','3037 鲜半片鸭','3038 白条鸭','3039 白鸭','3040 麻鸭']
+};
+const SPEC_UNIT=['个','打','瓶','罐','盒','袋','包','箱','卷','托'];   /* SPECIFICATIONS_UNIT */
+const SALE_UNIT_STD=['包','份','组','箱'];                          /* 标品售卖单位 */
+const SALE_UNIT_NS=['袋','盒','包','份','个','托'];                  /* 非标品成品计量单位 = 售卖单位，SPECIFICATIONS_UNIT */
+const MEASURE_UNIT=['g','kg'];                                     /* 非标品库存单位 = 原料计量单位，MEASURE_UNIT */
+const NET_UNIT=['g','kg','ml','L'];                                /* NET_WEIGHT_UNIT */
+const STORAGE=['常温','冷藏','冷冻'];
+const FULFIL=['常温履约','冷链履约'];
+const WAREHOUSES=['SG 大仓','SG 冷库'];
+const BCRS_CATS=['碳酸饮料','果汁'];
+const EN_MAP={'三文鱼':'Salmon','块':'Cubes','片':'Slices','猪':'Pork','后腿肉':'Hind Leg','前腿肉':'Front Leg','冰鲜':'Chilled','去骨':'Boneless','鸡':'Chicken','胸':'Breast','可口可乐':'Coca-Cola','鸡腿':'Chicken Leg','牛腩':'Beef Brisket'};
+
+/* ============ 示例业务数据 ============ */
+let RAWS=[
+  {code:'item202610200031',name:'三文鱼原料',en:'Salmon Raw',unit:'kg',cat:'三文鱼',status:'启用',purch:'是'},
+  {code:'item202610280007',name:'冰鲜去骨猪后腿肉原料',en:'Chilled Boneless Pork Hind Leg Raw',unit:'kg',cat:'猪肉',status:'启用',purch:'是'},
+  {code:'item202611030015',name:'鸡大胸原料',en:'Chicken Breast Raw',unit:'g',cat:'鸡肉',status:'启用',purch:'是'}
+];
+let SPUS=[
+  {spu:'SPU261020150003',name:'三文鱼块',en:'Salmon Cubes',cat:'三文鱼',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610200031',creator:'王帅',at:'2026-10-20 15:12',status:'在售',
+   base:{origin:'挪威',brand:'',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'180',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261020150011',qty:'0.5',su:'袋',st:false,item:'item202610200032',bom:'BM2610200041',status:'在售'},
+         {sku:'SKU261020150012',qty:'1',su:'袋',st:false,item:'item202610200033',bom:'BM2610200042',status:'在售'}]},
+  {spu:'SPU261021100005',name:'三文鱼片',en:'Salmon Slices',cat:'三文鱼',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610200031',creator:'陆璇',at:'2026-10-21 10:40',status:'在售',
+   base:{origin:'挪威',brand:'',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'180',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261021100021',qty:'0.3',su:'盒',st:false,item:'item202610210008',bom:'BM2610210012',status:'在售'}]},
+  {spu:'SPU261028090002',name:'冰鲜去骨猪后腿肉',en:'Chilled Boneless Pork Hind Leg',cat:'猪肉',part:'3009 鲜猪后腿肉',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610280007',creator:'李南凯',at:'2026-10-28 09:05',status:'在售',
+   base:{origin:'马来西亚',brand:'',storage:'冷藏',fulfil:'冷链履约',validP:'是',period:'5',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261028090011',qty:'1',su:'袋',st:true,item:'item202610280008',bom:'BM2610280019',status:'在售'},
+         {sku:'SKU261028090012',qty:'2',su:'袋',st:true,item:'item202610280009',bom:'BM2610280020',status:'在售'},
+         {sku:'SKU261028090013',qty:'5',su:'托',st:true,item:'item202610280010',bom:'BM2610280021',status:'已下架',itemStatus:'停用',bomStatus:'废弃'}]},
+  {spu:'SPU261103160004',name:'鸡大胸',en:'Chicken Breast',cat:'鸡肉',part:'3003 鲜鸡大胸',attr:'非标品',src:'自营',stockUnit:'g',rawCode:'item202611030015',creator:'王帅',at:'2026-11-03 16:22',status:'在售',
+   base:{origin:'马来西亚',brand:'',storage:'冷藏',fulfil:'冷链履约',validP:'是',period:'4',periodUnit:'天',halal:'HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261103160031',qty:'500',su:'袋',st:true,item:'item202611030016',bom:'BM2611030008',status:'在售',itemStatus:'待启用'}]},
+  {spu:'SPU261015110001',name:'可口可乐 330ml',en:'Coca-Cola 330ml',cat:'碳酸饮料',part:'',attr:'标品',src:'自营',creator:'陆璇',at:'2026-10-15 11:30',status:'在售',
+   std:{minPack:'罐',net:'330',netUnit:'ml',stockIsPack:'是',stockUnit:'罐',packQty:'',item:'item202610150004',bcrs:'是',bcrsQty:'1'},
+   base:{origin:'新加坡',brand:'Coca-Cola',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
+   skus:[{sku:'SKU261015110001',qty:'1',su:'',status:'在售'},{sku:'SKU261015110002',qty:'24',su:'箱',status:'在售'}]},
+  {spu:'SPU260930140008',name:'椰子水',en:'Coconut Water',cat:'果汁',part:'',attr:'标品',src:'三方',creator:'商家 Tropical Fresh',at:'2026-09-30 14:08',status:'在售',
+   std:{minPack:'瓶',net:'500',netUnit:'ml',stockIsPack:'是',stockUnit:'瓶',item:'ITEM260930140003'},base:{},skus:[{sku:'SKU260930140021',qty:'1',su:'',status:'在售'}]}
+];
+let tab='全部',openRows={},seq=1;
+
+/* ============ 工具 ============ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const opts=(arr,v,ph='请选择')=>`<option value="">${ph}</option>`+arr.map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('');
+function toast(m,e){const t=$('toast');t.textContent=m;t.className='toast'+(e?' e':'');t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)}
+function rawBy(code){return RAWS.find(r=>r.code===code)}
+function cleanName(s){return String(s||'').trim().replace(/[！-～]/g,c=>/[A-Za-z0-9]/.test(String.fromCharCode(c.charCodeAt(0)-0xFEE0))?String.fromCharCode(c.charCodeAt(0)-0xFEE0):c)}
+function zhErr(s){s=cleanName(s);if(!s)return'请输入中文名称';if(s.length>50)return'中文名称最多 50 个字';if(!/\p{Script=Han}/u.test(s))return'中文名称必须包含汉字';return''}
+function enErr(s){s=cleanName(s);if(!s)return'请输入英文名称';if(s.length>100)return'英文名称最多 100 个字符';if(/[^\x20-\x7EÀ-ÿ]/.test(s))return'英文名称只能包含英文字母、数字和常用符号';if(!/[A-Za-zÀ-ÿ]/.test(s))return'英文名称必须包含字母';return''}
+function autoEn(zh){let s=cleanName(zh);if(!s)return'';let out=[],rest=s;const keys=Object.keys(EN_MAP).sort((a,b)=>b.length-a.length);
+  while(rest.length){let hit=keys.find(k=>rest.startsWith(k));if(hit){out.push(EN_MAP[hit]);rest=rest.slice(hit.length)}else{const m=rest.match(/^[\x20-\x7E]+/);if(m){out.push(m[0].trim());rest=rest.slice(m[0].length)}else return''}}
+  return out.filter(Boolean).join(' ')}
+function fmtQty(q){const n=parseFloat(q);return isNaN(n)?'':String(+n.toFixed(2))}
+function qtyErr(q,attr){if(q===''||q==null)return'请填写售卖规格数量';const n=Number(q);if(!(n>0))return'售卖规格数量必须大于 0';
+  if(attr==='标品'&&!/^\d+$/.test(String(q)))return'标品的售卖规格数量必须是整数';if(attr==='非标品'&&!/^\d+(\.\d{1,2})?$/.test(String(q)))return'最多 2 位小数';if(n>2147483647)return'售卖规格数量过大';return''}
+function now(){const d=new Date(2026,10,16,new Date().getHours(),new Date().getMinutes());const p=n=>String(n).padStart(2,'0');return`2026-11-16 ${p(d.getHours())}:${p(d.getMinutes())}`}
+function code(prefix){const p=n=>String(n).padStart(4,'0');const s=seq++;
+  if(prefix==='item')return'item20261116'+p(800+s);if(prefix==='BM')return'BM261116'+p(300+s);if(prefix==='SKU')return'SKU26111614'+p(500+s);return'SPU26111614'+p(100+s)}
+
+/* ============ 列表 ============ */
+function skuNameOf(spu,s){
+  if(spu.attr==='非标品')return`${spu.name} ${fmtQty(s.qty)}${spu.stockUnit}/${s.su}`;
+  const u=spu.std.stockUnit;return Number(s.qty)===1&&!s.su?`${spu.name} 1${u}`:`${spu.name} ${s.qty}${u}${s.su?'/'+s.su:''}`}
+function matchCode(spu,c){if(!c)return true;c=c.trim().toLowerCase();
+  const pool=[spu.spu,spu.rawCode,spu.std&&spu.std.item,...spu.skus.flatMap(s=>[s.sku,s.item,s.bom])].filter(Boolean).map(x=>x.toLowerCase());return pool.includes(c)}
+function filtered(){const c=$('qCode').value,n=$('qName').value.trim(),a=$('qAttr').value,src=$('qSrc').value;
+  return SPUS.filter(s=>matchCode(s,c)&&(!n||s.name.includes(n))&&(!a||s.attr===a)&&(!src||s.src===src)&&(tab==='全部'||s.status===tab))}
+function renderTabs(){const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
+function skuStatusTag(s){if(s.itemStatus==='待启用')return'<span class="tag ty">货品待启用</span>';return s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}
+function renderList(){renderTabs();const rows=filtered();const c=$('qCode').value.trim();
+  $('listBody').innerHTML=rows.length?rows.map(s=>{const i=SPUS.indexOf(s);const open=openRows[s.spu]||(c&&!/^spu/i.test(c));
+    const pend=s.skus.some(k=>k.itemStatus==='待启用');
+    let h=`<tr><td class="exp" onclick="toggleRow('${s.spu}')">${open?'▾':'▸'}</td>
+      <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
+      <td>${s.src==='自营'?'<span class="tag tg">自营</span>':'<span class="tag tgr">'+esc(s.creator.replace('商家 ',''))+'</span>'}</td>
+      <td>${esc(s.src==='自营'?s.creator:'—')}</td><td class="mono">${s.at}</td><td>${s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">'+s.status+'</span>'}</td>
+      <td><button class="lk" onclick="openDetail(${i})">查看详情</button>${s.src==='自营'?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:''}</td></tr>`;
+    if(open){h+=`<tr class="sub"><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>状态</th></tr></thead><tbody>`+
+      s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${skuStatusTag(k)}</td></tr>`).join('')+`</tbody></table></td></tr>`}
+    return h}).join(''):`<tr><td colspan="11" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;
+  $('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
+function toggleRow(k){openRows[k]=!openRows[k];renderList()}
+function resetQ(){['qCode','qName','qAttr','qSrc'].forEach(i=>$(i).value='');tab='全部';renderList()}
+
+/* ============ 表单状态 ============ */
+let F=null,showErr=false;
+function blank(){return{mode:'create',idx:-1,name:'',en:'',enAuto:false,alias:'',cat:'',part:'',sale:'销售品',origin:'',brand:'',desc:'',
+  halal:'非HALAL',halalShow:'是',validP:'是',period:'',periodUnit:'天',storage:'',fulfil:'',appExp:'不展示',
+  attr:'',minPack:'',net:'',netUnit:'',stockIsPack:'是',stockUnit:'',packQty:'',bcrs:'否',bcrsQty:'1',
+  nsUnit:'',rawMode:'新建',rawCode:'',rawKw:'',rows:[],imgs:0,dimgs:0,purch:'是',rawPurch:'是',over:{},fee:'',rej:'',supplyOpen:false,confirmOff:-1}}
+function newRow(){const last=F.rows[F.rows.length-1];return{qty:'',su:last?last.su:'',st:false,locked:false}}
+function openCreate(){F=blank();showErr=false;WAREHOUSES.forEach(w=>F.over[w]=99);$('fTitle').textContent='新建商品（自营）';$('btnSubmit').textContent='保存并创建';$('btnSubmit').disabled=false;$('steps').innerHTML='';renderForm();showForm()}
+function openEdit(i){const s=SPUS[i];F=blank();showErr=false;F.mode='edit';F.idx=i;
+  Object.assign(F,{name:s.name,en:s.en,cat:s.cat,part:s.part,attr:s.attr},s.base);
+  if(s.attr==='非标品'){F.nsUnit=s.stockUnit;F.rawMode='已有';F.rawCode=s.rawCode;F.rows=s.skus.map(k=>({qty:k.qty,su:k.su,st:k.st,locked:true,sku:k.sku,item:k.item,bom:k.bom,status:k.status,itemStatus:k.itemStatus,bomStatus:k.bomStatus}))}
+  else{Object.assign(F,{minPack:s.std.minPack,net:s.std.net,netUnit:s.std.netUnit,stockIsPack:s.std.stockIsPack,stockUnit:s.std.stockUnit,packQty:s.std.packQty||'',bcrs:s.std.bcrs||'否',bcrsQty:s.std.bcrsQty||'1'});
+    F.rows=s.skus.map(k=>({qty:k.qty,su:k.su,locked:true,sku:k.sku,status:k.status}))}
+  F.imgs=3;F.dimgs=2;WAREHOUSES.forEach(w=>F.over[w]=99);
+  $('fTitle').textContent='编辑商品 · '+s.name;$('btnSubmit').textContent='保存';$('btnSubmit').disabled=false;$('steps').innerHTML='';renderForm();showForm()}
+function showForm(){$('mask').classList.add('on');$('dwForm').classList.add('on')}
+function closeForm(){$('dwForm').classList.remove('on');if(!$('dwDetail').classList.contains('on'))$('mask').classList.remove('on');$('errbar').classList.remove('on')}
+function maskClick(){if($('dwDetail').classList.contains('on'))closeDetail()}
+function set(k,v){F[k]=v;afterSet(k);renderForm()}
+function afterSet(k){
+  if(k==='cat'){if(!PARTS[F.cat]||!PARTS[F.cat].includes(F.part))F.part='';if(!BCRS_CATS.includes(F.cat))F.bcrs='否'}
+  if(k==='attr'){F.rows=[newRow()];F.rows[0].su='';if(F.attr==='非标品'){F.bcrs='否'}}
+  if(k==='nsUnit'){F.rawCode=''}
+  if(k==='rawMode'){F.rawCode=''}
+  if(k==='rawCode'){const r=rawBy(F.rawCode);if(r){if(!F.cat)F.cat=r.cat}}
+  if(k==='stockIsPack'&&F.stockIsPack==='是'){F.stockUnit=F.minPack;F.packQty=''}
+  if(k==='minPack'&&F.stockIsPack==='是')F.stockUnit=F.minPack;
+}
+function setRow(i,k,v){F.rows[i][k]=v;renderForm()}
+function addRow(){F.rows.push(newRow());renderForm()}
+function delRow(i){F.rows.splice(i,1);renderForm()}
+function nameInput(v){F.name=v;livePreview()}
+function enInput(v){F.en=v;F.enAuto=false;livePreview()}
+function nameBlur(){if(!F.en||F.enAuto){const a=autoEn(F.name);F.en=a;F.enAuto=!!a}renderForm()}
+
+/* 非标品：成品名、BOM（R-02/R-03） */
+function finName(r,lang){const base=lang==='en'?(cleanName(F.en)||'—'):(cleanName(F.name)||'商品名');const q=fmtQty(r.qty)||'?';return`${base} ${q}${F.nsUnit||'?'}/${r.su||'?'}`}
+function rawNameZh(){return F.rawMode==='已有'?(rawBy(F.rawCode)||{}).name||'':(cleanName(F.name)?cleanName(F.name)+'原料':'')}
+function rawNameEn(){return F.rawMode==='已有'?(rawBy(F.rawCode)||{}).en||'':(cleanName(F.en)?cleanName(F.en)+' Raw':'')}
+/* 已有原料下的成品（R-09：只展示，不复用；不同商品各建各的成品） */
+function existingFinished(rawCode){const out=[];SPUS.forEach(s=>{if(s.rawCode===rawCode)s.skus.forEach(k=>out.push({item:k.item,qty:k.qty,su:k.su,spu:s.name,sku:k.sku,off:k.itemStatus==='停用'}))});return out}
+function stdSkuName(r){const u=F.stockUnit||F.minPack||'?';const base=cleanName(F.name)||'商品名';return Number(r.qty)===1&&!r.su?`${base} 1${u}`:`${base} ${r.qty||'?'}${u}${r.su?'/'+r.su:''}`}
+function livePreview(){document.querySelectorAll('[data-fn]').forEach(el=>{const i=+el.dataset.fn,r=F.rows[i];if(!r)return;
+    el.innerHTML=F.attr==='非标品'?`${esc(finName(r))}<div class="en">${esc(finName(r,'en'))}</div>`:esc(stdSkuName(r))});
+  const rz=$('rawZh'),re=$('rawEn');if(rz)rz.textContent=rawNameZh()||'填写商品名称后自动生成';if(re)re.textContent=rawNameEn()||'—'}
+
+/* ============ 表单渲染 ============ */
+function E(msg){return showErr&&msg?`<div class="fe">${msg}</div>`:''}
+function renderForm(){const sc=$('fBody').scrollTop;const ed=F.mode==='edit';
+  const catOpts=`<option value="">请选择后台类目</option>`+CATS.map(g=>`<optgroup label="${g.g}">`+g.items.map(c=>`<option value="${c}"${c===F.cat?' selected':''}>${g.g} / ${c}</option>`).join('')+'</optgroup>').join('');
+  const zE=zhErr(F.name),eE=enErr(F.en);
+  let h=`<div class="sec"><div class="sec-hd"><span class="no">1</span>商品信息（SPU）</div><div class="sec-bd"><div class="g2">
+    <div class="fr full"><label class="fl"><span class="rq">*</span>商品名称<span class="hint">中英文都必填；非标品的原料名、成品名、SKU 名随它自动生成</span></label>
+      <div class="bi"><div><input value="${esc(F.name)}" placeholder="中文名称，最多 50 字" class="${showErr&&zE?'err':''}" oninput="nameInput(this.value)" onblur="nameBlur()">${E(zE)}</div>
+      <div class="en"><input value="${esc(F.en)}" placeholder="English name, max 100" class="${showErr&&eE?'err':''}" oninput="enInput(this.value)" onchange="renderForm()">${F.enAuto?'<span class="badge">Auto</span>':''}${E(eE)}</div></div></div>
+    <div class="fr full"><label class="fl">商品别名</label><input value="${esc(F.alias)}" maxlength="400" placeholder="多个别名用“逗号”隔开，最多 400 个字" onchange="F.alias=this.value"></div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>后台类目</label><select class="${showErr&&!F.cat?'err':''}" onchange="set('cat',this.value)">${catOpts}</select>${E(!F.cat&&'请选择后台类目')}</div>
+    <div class="fr"><label class="fl">税率</label><div class="ro">9%<span class="fh">按配置 TAX_RATE 带出，只读</span></div></div>
+    ${PARTS[F.cat]?`<div class="fr"><label class="fl"><span class="rq">*</span>商品部位</label><select class="${showErr&&!F.part?'err':''}" onchange="set('part',this.value)">${opts(PARTS[F.cat],F.part)}</select>${E(!F.part&&'请选择商品部位')}</div>`:''}
+    <div class="fr"><label class="fl"><span class="rq">*</span>销售类型</label><div class="radios">${['销售品','赠品'].map(v=>`<label><input type="radio" name="sale" ${F.sale===v?'checked':''} onchange="set('sale','${v}')">${v}</label>`).join('')}</div></div>
+    <div class="fr"><label class="fl">产地</label><input value="${esc(F.origin)}" maxlength="100" placeholder="选填" onchange="F.origin=this.value"></div>
+    <div class="fr"><label class="fl">品牌</label><input value="${esc(F.brand)}" maxlength="100" placeholder="选填" onchange="F.brand=this.value"></div>
+    <div class="fr full"><label class="fl">商品描述</label><textarea maxlength="500" placeholder="最多 500 个字" onchange="F.desc=this.value">${esc(F.desc)}</textarea></div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>是否HALAL</label><div class="radios">${['非HALAL','HALAL'].map(v=>`<label><input type="radio" name="halal" ${F.halal===v?'checked':''} onchange="set('halal','${v}')">${v}</label>`).join('')}</div></div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>是否对HALAL客户展示</label><div class="radios">${['是','否'].map(v=>`<label><input type="radio" name="hs" ${F.halalShow===v?'checked':''} onchange="set('halalShow','${v}')">${v}</label>`).join('')}</div><div class="fh">选择“否”时，HALAL 客户在商城看不到该商品</div></div>
+  </div><div class="g3" style="margin-top:14px">
+    <div class="fr"><label class="fl"><span class="rq">*</span>效期管理</label><div class="radios">${['是','否'].map(v=>`<label><input type="radio" name="vp" ${F.validP===v?'checked':''} onchange="set('validP','${v}')">${v}</label>`).join('')}</div></div>
+    <div class="fr"><label class="fl">${F.validP==='是'?'<span class="rq">*</span>':''}保质期</label><div style="display:flex;gap:6px"><input type="number" min="1" value="${esc(F.period)}" placeholder="如 7" ${F.validP==='否'?'disabled':''} class="${showErr&&F.validP==='是'&&!F.period?'err':''}" onchange="set('period',this.value)"><select style="width:80px" ${F.validP==='否'?'disabled':''} onchange="set('periodUnit',this.value)">${['天','月','年'].map(u=>`<option${u===F.periodUnit?' selected':''}>${u}</option>`).join('')}</select></div>${E(F.validP==='是'&&!F.period&&'请输入保质期')}</div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>APP是否展示效期</label><select onchange="set('appExp',this.value)">${['不展示','展示'].map(u=>`<option${u===F.appExp?' selected':''}>${u}</option>`).join('')}</select></div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>保存条件</label><select class="${showErr&&!F.storage?'err':''}" onchange="set('storage',this.value)">${opts(STORAGE,F.storage)}</select>${E(!F.storage&&'请选择保存条件')}</div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>履约方式</label><select class="${showErr&&!F.fulfil?'err':''}" onchange="set('fulfil',this.value)">${opts(FULFIL,F.fulfil,'请选择履约方式')}</select>${E(!F.fulfil&&'请选择履约方式')}</div>
+  </div></div></div>`;
+
+  /* ② 商品规格 */
+  h+=`<div class="sec"><div class="sec-hd"><span class="no">2</span>商品规格</div><div class="sec-bd">
+    <div class="fr" style="margin-bottom:14px"><label class="fl"><span class="rq">*</span>商品属性<span class="hint">保存后不可修改</span></label>
+    <div class="cards">
+      <div class="card ${F.attr==='标品'?'on':''} ${ed?'dis':''}" onclick="${ed?'':"set('attr','标品')"}"><b>标品</b><p>预包装商品，按件卖。建 1 个成品货品，所有规格共用它，下单按售卖规格数量扣货品库存</p></div>
+      <div class="card ${F.attr==='非标品'?'on':''} ${ed?'dis':''}" onclick="${ed?'':"set('attr','非标品')"}"><b>非标品</b><p>按重量分装卖。自动建 1 个原料货品 + 每个规格 1 个成品货品 + 原料到成品的 BOM</p></div>
+    </div>${E(!F.attr&&'请选择商品属性')}</div>`;
+  if(F.attr==='标品')h+=stdSpecBlock(ed);
+  if(F.attr==='非标品')h+=nsSpecBlock(ed);
+  h+=`</div></div>`;
+
+  /* ③ 售卖规格 */
+  if(F.attr)h+=`<div class="sec"><div class="sec-hd"><span class="no">3</span>售卖规格（SKU）<span class="tip">${F.attr==='非标品'?'每行 = 1 个成品货品 + 1 条 BOM + 1 个 SKU':'每行 1 个 SKU，共用同一个货品'}</span></div><div class="sec-bd">${F.attr==='非标品'?nsRows():stdRows()}</div></div>`;
+
+  /* ④ 展示配置 */
+  h+=`<div class="sec"><div class="sec-hd"><span class="no">${F.attr?4:3}</span>展示配置</div><div class="sec-bd"><div class="g2">
+    <div class="fr"><label class="fl"><span class="rq">*</span>商品主图<span class="hint">第一张请上传白底图，至少 800×800，单张 ≤8M，最多 15 张</span></label><div class="thumbs">${thumbs('imgs')}${F.imgs<15?`<div class="up" onclick="F.imgs++;renderForm()">＋<span>上传主图</span></div>`:''}</div>${E(!F.imgs&&'请至少上传一张商品主图')}</div>
+    <div class="fr"><label class="fl">商品详情<span class="hint">宽 750-1242px，限高 2000px，单张 ≤8M，最多 10 张</span></label><div class="thumbs">${thumbs('dimgs')}${F.dimgs<10?`<div class="up" onclick="F.dimgs++;renderForm()">＋<span>上传详情图</span></div>`:''}</div></div>
+  </div></div></div>`;
+
+  /* ⑤ 采购与仓储 */
+  if(F.attr){const n=5;h+=`<div class="sec"><div class="sec-hd"><span class="no">${n}</span>采购与仓储（自营）<span class="tip">写入货品，仓库与采购使用</span><button class="lk fold" onclick="F.supplyOpen=!F.supplyOpen;renderForm()">${F.supplyOpen?'收起 ▴':'展开 ▾'}</button></div>${F.supplyOpen?supplyBlock():''}</div>`}
+
+  $('fBody').innerHTML=h;$('fBody').scrollTop=sc;livePreview();if(showErr)renderErrbar()}
+function thumbs(k){return Array.from({length:F[k]},(_,i)=>`<div class="thumb">${k==='imgs'&&i===0?'白底主图':'图 '+(i+1)}<span class="rm" onclick="F.${k}--;renderForm()">×</span></div>`).join('')}
+
+function stdSpecBlock(ed){const lock=ed?'disabled':'';
+  let h=`<div class="fr" style="margin-bottom:14px"><label class="fl"><span class="rq">*</span>单件净含量<span class="hint">先选净含量申报的是哪一件，再填包装上的数值，如 罐 / 330 ml</span></label>
+    <table class="itbl" style="max-width:640px"><thead><tr><th>最小包装单位</th><th>净含量</th><th>净含量单位</th></tr></thead><tbody><tr>
+    <td><select ${lock} class="${showErr&&!F.minPack?'err':''}" onchange="set('minPack',this.value)">${opts(SPEC_UNIT,F.minPack)}</select></td>
+    <td><input ${lock} type="number" min="0" value="${esc(F.net)}" placeholder="如 330" class="${showErr&&!(Number(F.net)>0)?'err':''}" onchange="set('net',this.value)"></td>
+    <td><select ${lock} class="${showErr&&!F.netUnit?'err':''}" onchange="set('netUnit',this.value)">${opts(NET_UNIT,F.netUnit)}</select></td></tr></tbody></table>
+    ${E(!F.minPack&&'请选择最小包装单位')}${E(!(Number(F.net)>0)&&'请填写净含量（大于 0）')}${E(!F.netUnit&&'请选择净含量单位')}</div>`;
+  h+=`<div class="fr" style="margin-bottom:14px"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">货品库存按什么单位计，所有规格通用；保存后不可修改</span></label>`;
+  if(!F.minPack)h+=`<div class="fh">请先选择上方的「最小包装单位」</div>`;
+  else{h+=`<div class="radios"><span>库存单位就是最小包装单位 <b>${F.minPack}</b> 吗？</span>${['是','否'].map(v=>`<label><input type="radio" name="sip" ${lock} ${F.stockIsPack===v?'checked':''} onchange="set('stockIsPack','${v}')">${v}</label>`).join('')}</div>
+    <div class="fh">按${F.minPack}囤就选「是」；按箱囤就选「否」，再填 1 个库存单位装几${F.minPack}</div>`;
+    if(F.stockIsPack==='是')h+=`<div class="ro" style="max-width:240px;margin-top:6px">🔒 ${F.minPack}（同最小包装单位）</div>`;
+    else h+=`<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"><select ${lock} style="width:160px" class="${showErr&&!F.stockUnit?'err':''}" onchange="set('stockUnit',this.value)">${opts(SPEC_UNIT.filter(u=>u!==F.minPack),F.stockUnit,'请选择库存单位')}</select>
+      <span>每库存单位含</span><input ${lock} type="number" min="1" style="width:100px" value="${esc(F.packQty)}" placeholder="如 24" class="${showErr&&!(F.packQty>1)?'err':''}" onchange="set('packQty',this.value)"><span class="ro">🔒 ${F.minPack}</span>
+      ${F.stockUnit&&F.packQty?`<span class="fh" style="color:var(--pd)">1 ${F.stockUnit} = ${F.packQty} ${F.minPack}</span>`:''}</div>${E(!F.stockUnit&&'请选择库存单位')}${E(!(F.packQty>1)&&'请填写每库存单位含最小包装数（大于 1 的整数）')}`}
+  h+=`</div>`;
+  if(BCRS_CATS.includes(F.cat))h+=`<div class="fr"><label class="fl">是否支持 BCRS<span class="hint">饮料容器押金回收，仅 SGP 站点、类目支持时可选</span></label>
+    <div class="radios">${['否','是'].map(v=>`<label><input type="radio" name="bcrs" ${F.bcrs===v?'checked':''} onchange="set('bcrs','${v}')">${v}</label>`).join('')}
+    ${F.bcrs==='是'?`<span>每 1 ${F.minPack||'最小包装'}容器数</span><input type="number" min="1" style="width:80px" value="${esc(F.bcrsQty)}" onchange="set('bcrsQty',this.value)"><span class="fh">个 · 押金单价 S$0.10/容器（平台固定）</span>`:''}</div></div>`;
+  return h}
+
+function nsSpecBlock(ed){
+  let h=`<div class="g2" style="margin-bottom:14px"><div class="fr"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">即原料货品的计量单位，所有规格的售卖规格单位都锁定为它</span></label>
+    <select ${ed?'disabled':''} class="${showErr&&!F.nsUnit?'err':''}" onchange="set('nsUnit',this.value)">${opts(MEASURE_UNIT,F.nsUnit)}</select>${E(!F.nsUnit&&'请选择库存单位')}</div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>原料货品</label><div class="radios">${['新建','已有'].map(v=>`<label><input type="radio" name="rm" ${ed?'disabled':''} ${F.rawMode===v?'checked':''} onchange="set('rawMode','${v}')">${v==='新建'?'新建原料':'选择已有原料'}</label>`).join('')}</div></div></div>`;
+  if(F.rawMode==='新建'){
+    h+=`<div class="box on"><div class="raw-hd"><span class="tag tg">新建原料</span><span class="fh">提交时随商品一起建，名称和字段都取自本页，不用另填</span></div>
+    <div class="dl"><div><div class="k">原料名称（中文）</div><div class="v" id="rawZh"></div></div><div><div class="k">原料名称（英文）</div><div class="v" id="rawEn"></div></div>
+    <div><div class="k">计量单位 / 净含量</div><div class="v">${F.nsUnit||'—'} / 1${F.nsUnit||''}</div></div><div><div class="k">货品属性</div><div class="v">原料 · 非标品</div></div></div></div>`;
+    const sim=!ed&&F.cat&&F.nsUnit?RAWS.filter(x=>x.status==='启用'&&x.cat===F.cat&&x.unit===F.nsUnit):[];
+    if(sim.length)h+=`<div class="warn">后台类目「${esc(F.cat)}」下已有计量单位为 ${F.nsUnit} 的原料：${sim.map(x=>`${esc(x.name)}（<span class="mono">${x.code}</span>）<button class="btn sm" onclick="F.rawMode='已有';set('rawCode','${x.code}')">改为选它</button>`).join(' ')} 同一种原料拆成不同商品卖时请选已有的，不要重复建。</div>`;
+  }else{
+    const r=rawBy(F.rawCode);
+    if(!ed){const cand=RAWS.filter(x=>x.status==='启用'&&x.unit===F.nsUnit);
+      h+=`<div class="fr" style="margin-bottom:10px;max-width:640px"><select class="${showErr&&!F.rawCode?'err':''}" ${F.nsUnit?'':'disabled'} onchange="set('rawCode',this.value)"><option value="">${F.nsUnit?'输入编码/名称搜索原料货品（只列启用中、计量单位为 '+F.nsUnit+' 的原料）':'请先选择库存单位'}</option>${cand.map(x=>`<option value="${x.code}"${x.code===F.rawCode?' selected':''}>${x.code} - ${esc(x.name)}（${x.unit}）</option>`).join('')}</select>${E(!F.rawCode&&'请选择原料货品')}</div>`}
+    if(r){const own=ed?SPUS[F.idx].spu:'';const ex=existingFinished(r.code).filter(e=>!own||!SPUS[F.idx].skus.some(k=>k.item===e.item));
+      h+=`<div class="box on"><div class="raw-hd"><span class="tag tb">已有原料</span><span class="fh">${ed?'原料只读；新加的规格挂在这个原料下':'原料只读，不会改动；本次只新建成品、BOM 和 SKU'}</span></div>
+      <div class="dl" style="margin-bottom:10px"><div><div class="k">原料编码</div><div class="v mono">${r.code}</div></div><div><div class="k">原料名称</div><div class="v">${esc(r.name)}<br><span class="fh">${esc(r.en)}</span></div></div>
+      <div><div class="k">计量单位</div><div class="v">${r.unit}</div></div><div><div class="k">状态 / 是否可采</div><div class="v">${r.status} / ${r.purch==='是'?'可采':'不可采'}</div></div></div>
+      ${ex.length?`<div class="k fh" style="margin-bottom:4px">${ed?'这个原料在其他商品下的成品':'这个原料下已有的成品'}（${ex.length}）</div><table><thead><tr><th>成品货品编码</th><th>规格</th><th>所属商品</th><th>状态</th></tr></thead><tbody>${ex.map(e=>`<tr><td class="mono">${e.item}</td><td>${fmtQty(e.qty)}${r.unit}/${e.su}</td><td>${esc(e.spu)}</td><td>${e.off?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>'}</td></tr>`).join('')}</tbody></table>`:''}</div>`}
+  }
+  return h}
+
+function nsRows(){const cols='1.7fr 110px 90px 120px 1.3fr 100px 60px';
+  let h=`<div class="skut"><div class="hd" style="grid-template-columns:${cols}"><div>成品 / SKU 名称（自动）</div><div><span style="color:var(--r)">*</span>售卖规格数量</div><div>售卖规格单位</div><div><span style="color:var(--r)">*</span>售卖单位</div><div>BOM（原料用量 → 成品）</div><div>多退少补</div><div></div></div>`;
+  const seen={};
+  F.rows.forEach((r,i)=>{const qE=r.locked?'':qtyErr(r.qty,'非标品');const key=fmtQty(r.qty)+'|'+r.su;const dupSelf=r.qty&&r.su&&seen[key]!==undefined;if(r.qty&&r.su&&seen[key]===undefined)seen[key]=i;
+    const off=r.status==='已下架';
+    h+=`<div class="row ${off?'off':''}" style="grid-template-columns:${cols}">
+      <div class="nm" data-fn="${i}"></div>
+      <div>${r.locked?`<div class="cell-ro">🔒 ${fmtQty(r.qty)}</div>`:`<input type="number" min="0.01" step="0.01" value="${esc(r.qty)}" placeholder="如 0.5" class="${showErr&&qE?'err':''}" onchange="setRow(${i},'qty',this.value)">`}</div>
+      <div class="cell-ro">🔒 ${F.nsUnit||'库存单位'}</div>
+      <div>${r.locked?`<div class="cell-ro">🔒 ${r.su}</div>`:`<select class="${showErr&&!r.su?'err':''}" onchange="setRow(${i},'su',this.value)">${opts(SALE_UNIT_NS,r.su)}</select>`}</div>
+      <div class="bom">${r.qty&&F.nsUnit?`<b>${fmtQty(r.qty)} ${F.nsUnit}</b> 原料 → <b>1 ${r.su||'?'}</b> 成品`:'—'}${r.bom?`<br><span class="mono">${r.bom}</span>${r.bomStatus==='废弃'?' <span class="tag tgr">已废弃</span>':''}`:''}</div>
+      <div><span class="tgl ${r.st?'on':''} ${off?'dis':''}" onclick="${off?'':`setRow(${i},'st',${!r.st})`}"><i></i>${r.st?'按重量':'否'}</span></div>
+      <div>${r.locked?(off?'<span class="tag tgr">已停用</span>':`<button class="lk dg" onclick="F.confirmOff=${i};renderForm()">停用</button>`):`<button class="lk dg" ${F.rows.length<=1?'disabled':''} onclick="delRow(${i})">删除</button>`}</div>
+      ${r.locked?`<div class="rowx fh">SKU <span class="mono">${r.sku}</span> · 成品 <span class="mono">${r.item}</span>${r.itemStatus==='待启用'?' · <span class="tag ty">货品待启用</span>':''}${off?' · SKU 已下架、成品已停用':''}</div>`:''}
+      ${F.confirmOff===i?`<div class="rowx confirm">停用这个规格：SKU 下架、成品货品停用、BOM 废弃，三样一起改，不能恢复为同一个 SKU。<button class="btn sm pr" onclick="offRow(${i})">确认停用</button><button class="btn sm" onclick="F.confirmOff=-1;renderForm()">取消</button></div>`:''}
+      ${showErr&&qE?`<div class="rowx fe">规格 ${i+1}：${qE}</div>`:''}${showErr&&!r.su&&!r.locked?`<div class="rowx fe">规格 ${i+1}：请选择售卖单位</div>`:''}
+      ${dupSelf?`<div class="rowx fe">规格 ${i+1} 与规格 ${seen[key]+1} 重复（售卖规格数量 + 售卖单位相同）</div>`:''}
+    </div>`});
+  h+=`</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><button class="btn sm" onclick="addRow()">＋ 添加规格</button>
+    <span class="fh">${summaryNs()}</span></div>`;
+  return h}
+function offRow(i){const r=F.rows[i];r.status='已下架';r.itemStatus='停用';r.bomStatus='废弃';F.confirmOff=-1;r._off=true;renderForm()}
+function summaryNs(){const act=F.rows.filter(r=>!r.locked);const n=act.length;
+  const raw=F.mode==='create'&&F.rawMode==='新建'?'1 个原料货品、':'';
+  return act.length?`提交后新建：${raw}${n} 个成品货品、${n} 条 BOM、${n} 个 SKU`:'没有新增规格'}
+
+function stdRows(){const cols='1.6fr 110px 110px 120px 120px 1.2fr 60px';const u=F.stockUnit||F.minPack;
+  let h=`<div class="skut"><div class="hd" style="grid-template-columns:${cols}"><div>规格名称（自动）</div><div><span style="color:var(--r)">*</span>售卖规格数量</div><div>售卖规格单位</div><div>售卖单位</div><div>内含最小包装数</div><div>库存扣减</div><div></div></div>`;
+  const seen={};
+  F.rows.forEach((r,i)=>{const qE=r.locked?'':qtyErr(r.qty,'标品');const key=r.qty+'|'+r.su;const dup=r.qty&&seen[key]!==undefined;if(r.qty&&seen[key]===undefined)seen[key]=i;
+    const pack=F.stockIsPack==='是'?r.qty:(r.qty&&F.packQty?r.qty*F.packQty:'');
+    h+=`<div class="row" style="grid-template-columns:${cols}"><div class="nm" data-fn="${i}"></div>
+      <div>${r.locked?`<div class="cell-ro">🔒 ${r.qty}</div>`:`<input type="number" min="1" step="1" value="${esc(r.qty)}" placeholder="如 1 或 24" class="${showErr&&qE?'err':''}" onchange="setRow(${i},'qty',this.value)">`}</div>
+      <div class="cell-ro">🔒 ${u||'库存单位'}</div>
+      <div><select ${r.locked?'disabled':''} onchange="setRow(${i},'su',this.value)">${opts(SALE_UNIT_STD,r.su,'无')}</select></div>
+      <div class="cell-ro">${pack?pack+' '+(F.minPack||''):'—'}</div>
+      <div class="bom">${r.qty&&u?`下单 1 份扣减 <b>${r.qty} ${u}</b> 货品库存`:'—'}</div>
+      <div>${r.locked?'':`<button class="lk dg" ${F.rows.length<=1?'disabled':''} onclick="delRow(${i})">删除</button>`}</div>
+      ${r.locked?`<div class="rowx fh">SKU <span class="mono">${r.sku}</span></div>`:''}
+      ${showErr&&qE?`<div class="rowx fe">规格 ${i+1}：${qE}</div>`:''}${dup?`<div class="rowx fe">规格 ${i+1} 与规格 ${seen[key]+1} 重复</div>`:''}</div>`});
+  h+=`</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><button class="btn sm" onclick="addRow()">＋ 添加规格</button>
+    <span class="fh">${F.mode==='create'?`提交后新建：1 个成品货品、${F.rows.length} 个 SKU`:`新增 ${F.rows.filter(r=>!r.locked).length} 个 SKU，绑定原货品`}</span></div>`;
+  return h}
+
+function supplyBlock(){const ns=F.attr==='非标品';const newRaw=ns&&F.rawMode==='新建'&&F.mode==='create';
+  return `<div class="sec-bd"><div class="g3">
+    ${ns?`<div class="fr"><label class="fl"><span class="rq">*</span>原料是否可采</label>${newRaw?`<div class="radios">${['是','否'].map(v=>`<label><input type="radio" name="rp" ${F.rawPurch===v?'checked':''} onchange="set('rawPurch','${v}')">${v}</label>`).join('')}</div>`:`<div class="ro">${F.rawMode==='已有'?'沿用已有原料，不改':'—'}</div>`}</div>
+      <div class="fr"><label class="fl">成品是否可采</label><div class="ro">🔒 不可采（原料制造的成品，系统固定）</div></div>`
+      :`<div class="fr"><label class="fl"><span class="rq">*</span>是否可采</label><div class="radios">${['是','否'].map(v=>`<label><input type="radio" name="pp" ${F.purch===v?'checked':''} onchange="set('purch','${v}')">${v}</label>`).join('')}</div></div>`}
+    <div class="fr"><label class="fl">创建方式</label><div class="ro">🔒 ${ns?'原料制造':'成品采购'}</div></div>
+  </div>
+  <div class="fr" style="margin-top:14px;max-width:520px"><label class="fl">入库超收<span class="hint">${ns?'写入原料货品':'写入成品货品'}</span></label>
+    <table><thead><tr><th>仓库</th><th>入库超收比例</th></tr></thead><tbody>${WAREHOUSES.map(w=>`<tr><td>${w}</td><td><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" style="width:100px" value="${F.over[w]}" onchange="F.over['${w}']=this.value">%</div></td></tr>`).join('')}</tbody></table></div>
+  <div class="g3" style="margin-top:14px">
+    <div class="fr"><label class="fl">公司质检扣点</label><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" value="${esc(F.fee)}" onchange="F.fee=this.value">%</div></div>
+    <div class="fr"><label class="fl">质检拒收下限</label><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" value="${esc(F.rej)}" onchange="F.rej=this.value">%</div></div>
+    <div class="fr"><label class="fl">第三方检测报告<span class="hint">pdf 或图片，最多 10 张</span></label><div class="up" style="width:120px;height:56px">＋ 上传</div></div>
+  </div></div>`}
+
+/* ============ 校验与提交 ============ */
+function validate(){const e=[];const z=zhErr(F.name),en=enErr(F.en);if(z)e.push(z);if(en)e.push(en);
+  if(!F.cat)e.push('请选择后台类目');if(PARTS[F.cat]&&!F.part)e.push('请选择商品部位');
+  if(F.validP==='是'&&!F.period)e.push('请输入保质期');if(!F.storage)e.push('请选择保存条件');if(!F.fulfil)e.push('请选择履约方式');
+  if(!F.attr)e.push('请选择商品属性');
+  if(F.attr==='标品'){if(!F.minPack)e.push('请选择最小包装单位');if(!(Number(F.net)>0))e.push('请填写净含量（大于 0）');if(!F.netUnit)e.push('请选择净含量单位');
+    if(F.stockIsPack==='否'){if(!F.stockUnit)e.push('请选择库存单位');if(!(F.packQty>1))e.push('请填写每库存单位含最小包装数')}}
+  if(F.attr==='非标品'){if(!F.nsUnit)e.push('请选择库存单位');if(F.rawMode==='已有'&&!F.rawCode)e.push('请选择原料货品')}
+  if(F.attr){const act=F.rows.filter(r=>!r.locked);if(!F.rows.length)e.push('至少添加 1 个售卖规格');
+    const seen={};F.rows.forEach((r,i)=>{if(!r.locked){const q=qtyErr(r.qty,F.attr);if(q)e.push(`规格 ${i+1}：${q}`);if(F.attr==='非标品'&&!r.su)e.push(`规格 ${i+1}：请选择售卖单位`);
+      }
+      const k=(F.attr==='非标品'?fmtQty(r.qty):r.qty)+'|'+r.su;if(r.qty&&seen[k]!==undefined)e.push(`规格 ${i+1} 与规格 ${seen[k]+1} 重复`);else seen[k]=i});
+    }
+  if(!F.imgs)e.push('请至少上传一张商品主图');
+  return e}
+function renderErrbar(){const e=validate();const b=$('errbar');if(e.length){b.innerHTML=`以下内容未通过校验，请修改后重试：<ol>${e.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`;b.classList.add('on')}else b.classList.remove('on')}
+function submitForm(){showErr=true;renderForm();const e=validate();if(e.length){renderErrbar();return}
+  $('errbar').classList.remove('on');$('btnSubmit').disabled=true;
+  const ns=F.attr==='非标品';const steps=[ns?'建原料 / 成品 / BOM（停用）':'建货品（停用）','建商品与 SKU','启用货品'];let k=0;
+  const draw=st=>$('steps').innerHTML=steps.map((s,i)=>`<span class="st ${i<st?'ok':i===st?'ing':''}"><span class="dot">${i<st?'✓':''}</span>${s}</span>`).join('<span class="ar">›</span>');
+  draw(0);const tick=()=>{k++;draw(k);if(k<3)setTimeout(tick,650);else setTimeout(finish,350)};setTimeout(tick,650)}
+function finish(){const ns=F.attr==='非标品';let s;
+  if(F.mode==='create'){s={spu:code('SPU'),name:cleanName(F.name),en:cleanName(F.en),cat:F.cat,part:F.part,attr:F.attr,src:'自营',creator:'沈亮',at:now(),status:'在售',
+      base:{origin:F.origin,brand:F.brand,storage:F.storage,fulfil:F.fulfil,validP:F.validP,period:F.period,periodUnit:F.periodUnit,halal:F.halal,halalShow:F.halalShow,appExp:F.appExp,sale:F.sale},skus:[]};
+    if(ns){if(F.rawMode==='新建'){const rc=code('item');RAWS.push({code:rc,name:rawNameZh(),en:rawNameEn(),unit:F.nsUnit,cat:F.cat,status:'启用',purch:F.rawPurch});s.rawCode=rc}else s.rawCode=F.rawCode;s.stockUnit=F.nsUnit}
+    else s.std={minPack:F.minPack,net:F.net,netUnit:F.netUnit,stockIsPack:F.stockIsPack,stockUnit:F.stockIsPack==='是'?F.minPack:F.stockUnit,packQty:F.packQty,item:code('item'),bcrs:F.bcrs,bcrsQty:F.bcrsQty};
+    SPUS.unshift(s)}
+  else{s=SPUS[F.idx];s.name=cleanName(F.name);s.en=cleanName(F.en);s.cat=F.cat;s.part=F.part;Object.assign(s.base,{origin:F.origin,brand:F.brand,storage:F.storage,fulfil:F.fulfil,validP:F.validP,period:F.period,periodUnit:F.periodUnit,halal:F.halal,halalShow:F.halalShow,appExp:F.appExp,sale:F.sale});
+    s.skus.forEach((k,i)=>{const r=F.rows[i];if(r&&r._off){k.status='已下架';k.itemStatus='停用';k.bomStatus='废弃'}if(r&&ns)k.st=r.st});
+    }
+  F.rows.filter(r=>!r.locked).forEach(r=>{const k={sku:code('SKU'),qty:ns?fmtQty(r.qty):r.qty,su:r.su,status:'在售',st:r.st};
+    if(ns){k.item=code('item');k.bom=code('BM')}s.skus.push(k)});
+  const i=SPUS.indexOf(s);openRows[s.spu]=true;closeForm();renderList();toast(F.mode==='create'?'建档成功':'保存成功');openDetail(i)}
+
+/* ============ 详情 ============ */
+function openDetail(i){const s=SPUS[i];const ns=s.attr==='非标品';const b=s.base||{};
+  $('dTitle').textContent='商品详情 · '+s.name;
+  const row=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
+  let h=`<div class="dsec"><h4>商品信息</h4><div class="dl">${row('SPU 编码',`<span class="mono">${s.spu}</span>`)}${row('商品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('后台类目',s.cat)}${row('商品部位',s.part)}
+    ${row('商品属性',s.attr)}${row('渠道来源',s.src)}${row('保存条件',b.storage)}${row('履约方式',b.fulfil)}${row('效期管理',b.validP)}${row('保质期',b.period?b.period+b.periodUnit:'')}${row('是否HALAL',b.halal)}${row('APP是否展示效期',b.appExp)}</div></div>`;
+  if(ns){const r=rawBy(s.rawCode)||{};
+    h+=`<div class="dsec"><h4>原料货品</h4><div class="dl">${row('原料编码',`<span class="mono">${r.code}</span>`)}${row('原料名称',esc(r.name)+'<br><span class="fh">'+esc(r.en)+'</span>')}${row('计量单位',r.unit)}${row('状态 / 是否可采',(r.status||'')+' / '+(r.purch==='是'?'可采':'不可采'))}</div></div>
+    <div class="dsec"><h4>规格、成品货品与 BOM</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>成品货品编码</th><th>成品状态</th><th>BOM 编号</th><th>原料用量 → 成品</th><th>BOM 状态</th><th>SKU 状态</th></tr></thead><tbody>`+
+      s.skus.map(k=>{const pend=k.itemStatus==='待启用';return`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${k.item}</td>
+        <td>${pend?`<span class="tag ty">待启用</span> <button class="lk" onclick="enableItem(${i},'${k.sku}')">启用</button>`:k.itemStatus==='停用'?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>'}</td>
+        <td class="mono">${k.bom}</td><td>${fmtQty(k.qty)} ${s.stockUnit} → 1 ${k.su}</td><td>${k.bomStatus==='废弃'?'<span class="tag tgr">废弃</span>':'<span class="tag tg">启用</span>'}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`}).join('')+`</tbody></table>
+      ${s.skus.some(k=>k.itemStatus==='待启用')?`<div class="warn">商品已建好，成品货品启用失败（系统已自动重试 3 次）。启用前仓库不能收货、采购不能下单。</div>`:''}</div>`}
+  else{const d=s.std;h+=`<div class="dsec"><h4>货品</h4><div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('库存单位',d.stockUnit+(d.stockIsPack==='否'?`（1 ${d.stockUnit} = ${d.packQty} ${d.minPack}）`:''))}${row('BCRS',d.bcrs==='是'?`支持，每 1 ${d.minPack} ${d.bcrsQty} 个容器`:'不支持')}</div></div>
+    <div class="dsec"><h4>规格</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>绑定货品</th><th>1 份扣减货品库存</th><th>SKU 状态</th></tr></thead><tbody>`+
+    s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${d.item}</td><td>${k.qty} ${d.stockUnit}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')+`</tbody></table></div>`}
+  $('dBody').innerHTML=h;
+  $('dFt').innerHTML=`<button class="btn" onclick="closeDetail()">关闭</button>${s.src==='自营'?`<button class="btn pr" onclick="closeDetail();openEdit(${i})">编辑</button>`:''}`;
+  $('mask').classList.add('on');$('dwDetail').classList.add('on')}
+function enableItem(i,sku){const k=SPUS[i].skus.find(x=>x.sku===sku);k.itemStatus='';toast('货品已启用');openDetail(i);renderList()}
+function closeDetail(){$('dwDetail').classList.remove('on');if(!$('dwForm').classList.contains('on'))$('mask').classList.remove('on')}
+
+renderList();
+</script>
+</body>
+</html>
