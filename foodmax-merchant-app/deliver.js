@@ -895,19 +895,17 @@ function diffDetail(g,sec,box,kv){
   const tip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
   if(g.st==='已取消')return '';
   if(g.st!=='已完成'){const lim=closeAt(g);return sec('差异赔付')+tip(`到仓的货都提完、且全部到齐后退货单完成。${lim?`如果到 <b>${msTs(lim)}</b>（建单后 ${arrDays()} 天）还没到齐，没到的部分算取不回，退货单直接完成。`:''}完成时<b>没还到你手里的部分系统直接赔付</b>，按原订单你应得的钱算，不用申诉。`);}
-  const c=g.diffComp;if(!c)return sec('差异赔付')+tip('应退的货已全部取回，没有差异。');
-  return sec('差异赔付')+box(kv('差异数量',diffSum(g))+kv('差异赔付金额',`<span style="color:var(--emerald-2)">${fmtS(c.comp)}</span>`))
-    +`<div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">${g.closed?`建单超过 ${arrDays()} 天还没到齐，没到的部分算取不回。`:''}差异 = 应退 − 取回，取不回一律平台承担，按原订单你应得的钱赔付；平台推送后随结算单打给你，进度在下方「赔付单」看。</div>`;
+  return '';   // 已完成：差异看顶部数量与明细，金额看「赔付单」，不再重复
 }
 // 赔付单列表：一张退货单所有赔付单 + 合计，点一行进赔付单详情（没有赔付单不显示）
 function compList(g,sec){
   const cs=compsOf(g);if(!cs.length)return '';
   return sec(`赔付单 <span style="font-weight:400;font-size:12px;color:var(--sub)">共 ${cs.length} 张</span>`)+`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;overflow:hidden">
     ${cs.map(r=>`<div data-comp="${r.compNo}" style="display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer">
-      <div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:13px">${r.compNo}</div><div style="font-size:12px;color:var(--sub);margin-top:3px">${r.type} · 生成 ${(r.ra.reviewAt||'').slice(0,16)}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:13px">${r.compNo}</div><div style="font-size:12px;color:var(--sub);margin-top:3px">${r.type}</div></div>
       <b style="color:var(--emerald-2);font-size:14px">${fmtS(r.ra.comp)}</b><span style="color:var(--sub);font-size:18px">›</span></div>`).join('')}
     <div style="display:flex;justify-content:space-between;padding:12px 14px;background:var(--mint-soft);font-weight:700;font-size:13.5px"><span>合计</span><span style="color:var(--emerald-2)">${fmtS(compTotal(g))}</span></div></div>
-    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">每张退货单最多 2 张：完成时有差异的 1 张差异赔付，申诉成立的 1 张申诉赔付；各自推送、各自进结算单。</div>`;
+    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">差异赔付 = 应退 − 取回${g.closed?`（建单超过 ${arrDays()} 天没到齐的算取不回）`:''}，取不回由平台承担；申诉赔付 = 申诉核定成立的部分。都按原订单你应得的钱赔，平台推送后随结算单打给你。</div>`;
 }
 const raTip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
 function raDetail(g,sec,box,kv){
@@ -927,10 +925,10 @@ function raDetail(g,sec,box,kv){
   }
   const goods=a.kind==='goods',PL=g._priceLabel||'正向订单结算单价';
   const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.compNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中</span>':'—');
-  return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc))
+  return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc)+(!g._whr&&a.status!=='平台处理中'?kv('审核说明',a.note):''))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
-      ${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}${kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price)))}</div>`).join(''))
-    +(a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('赔付单',comp)+kv('审核说明',a.note)):'');
+      ${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}${kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${g._whr?kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price))):''}</div>`).join(''))
+    +(g._whr&&a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('赔付单',comp)+kv('审核说明',a.note)):'');
 }
 /* 退货申诉表单：按实际情况填写（实际拿到 / 坏了几件，系统算申诉数量与预计赔付）→ 提交 */
 function openRetAppeal(g,onDone){
