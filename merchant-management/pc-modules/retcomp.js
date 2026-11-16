@@ -1,7 +1,9 @@
 /* Food Max 商家系统 · 退货赔付（2026-10-27 沈亮定 + 当日「司机上门取货以及仓库退货差异结算沟通」会议）
    商家端：财务 › 退货赔付（m-ret-comp）；店铺运营平台：退货赔付（p-ret-comp，看全部商家 + 仓库退回申诉开关）
-   - 数据来源：退货申诉（客户退货 DB.afterSales[].retAppeal / 仓库退回 DB.whrAppeals）经客服核定「成立 / 部分成立」且赔付 > 0，
-     一笔申诉生成一张赔付单（RC-…），一行
+   - 数据来源两类（2026-11-16 起）：
+     · 差异赔付：客户退货单完成时 应退 − 取回 > 0，系统直接生成（DB.afterSales[].diffComp），不经人工核实；取不回一律平台承担
+     · 申诉赔付：退货申诉（客户退货 retAppeal / 仓库退回 DB.whrAppeals）经客服核定「成立 / 部分成立」且赔付 > 0
+     每张退货单最多 2 张：1 张差异赔付 + 1 张申诉赔付；一张赔付单一行
    - 结算（2026-11-04 沈亮定）：运营在店铺运营平台「退货赔付」页**手动推送**到清结算，推送时间 = 归期，
      进该店铺推送后下一张生成的结算单（结算单 comp[]）；未推送 / 已推送未进结算单 = 商家端「待进结算单」
      · 运营平台：推送状态 待推送 / 已推送；勾选待推送赔付单「推送到结算单」（按钮常驻，未勾选置灰）或行内「推送」；二次确认
@@ -16,10 +18,13 @@ const MER=()=>({name:DB.merchant.name,code:DB.merchant.code});   // 原型只有
 /* 全部赔付单（一笔申诉一行） */
 window.retCompRows=function(){
   const out=[];
-  (DB.afterSales||[]).forEach((a,i)=>{const ra=a.retAppeal;if(!ra||!(ra.comp>0))return;
-    out.push({compNo:ra.compNo,src:'客户退货',retNo:'TH-'+a.id.slice(-6),order:a.order,ra,priceLabel:'正向订单结算单价',open:`closeDrawer();act_afterDetail(${i})`});});
+  if(typeof retSweep=='function')retSweep();
+  (DB.afterSales||[]).forEach((a,i)=>{const open=`closeDrawer();act_afterDetail(${i})`;
+    const dc=a.diffComp;if(dc&&dc.comp>0)out.push({compNo:dc.compNo,type:'差异赔付',src:'客户退货',retNo:'TH-'+a.id.slice(-6),order:a.order,ra:dc,priceLabel:'正向订单结算单价',open,closed:!!a.arriveClosed});
+    const ra=a.retAppeal;if(!ra||!(ra.comp>0))return;
+    out.push({compNo:ra.compNo,type:'申诉赔付',src:'客户退货',retNo:'TH-'+a.id.slice(-6),order:a.order,ra,priceLabel:'正向订单结算单价',open});});
   Object.keys(DB.whrAppeals||{}).forEach(no=>{const ra=DB.whrAppeals[no];if(!ra||!(ra.comp>0))return;
-    out.push({compNo:ra.compNo,src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:`closeDrawer();DB.retSrcTab='wh';nav('m-after-return');setTimeout(()=>whr_detail('${no}'),50)`});});
+    out.push({compNo:ra.compNo,type:'申诉赔付',src:'仓库退回',retNo:no,ra,priceLabel:'商品售价',open:`closeDrawer();DB.retSrcTab='wh';nav('m-after-return');setTimeout(()=>whr_detail('${no}'),50)`});});
   out.forEach(r=>{r.bill=billOf(r.compNo);r.mer=MER();
     if(r.bill&&!r.ra.pushedAt){r.ra.pushedAt=r.ra.reviewAt;r.ra.pushedBy='张可心';}});   // 演示：已进结算单的视为当时已推送
   return out.sort((x,y)=>(y.ra.reviewAt||'').localeCompare(x.ra.reviewAt||''));
@@ -35,6 +40,10 @@ const pushSt=r=>r.ra.pushedAt?'已推送':'待推送';
 const PUSH_TONE={'待推送':'t-y','已推送':'t-g'};
 const SETTLE_TONE={'待进结算单':'t-gr','已进结算单':'t-b','已打款':'t-g'};
 const stTag=(t,tone)=>`<span class="tag ${tone[t]||'t-gr'}"><span class="dot"></span>${t}</span>`;
+window.rcpSettleTag=r=>stTag(settleSt(r),SETTLE_TONE);
+const isDiff=r=>r.type=='差异赔付';
+const kindOf=r=>isDiff(r)?'—':raKindLabel(r.ra);
+const resultOf=r=>isDiff(r)?'—':r.ra.status;
 const sum2=a=>+a.reduce((s,v)=>s+v,0).toFixed(2);
 const r2=n=>Math.round(n*100)/100;
 
@@ -62,7 +71,7 @@ function origHtml(r){
       ${line('− 物流佣金',money(o.logi))}
       ${line('− 通道费',money(o.chan))}
       ${line('＝ 原订单应结金额',`<b>${money(o.settle)}</b>`,'background:var(--gl)')}
-      ${line('× 核定数量 '+x.ok+' ÷ 结算数量 ＝ 赔付金额',`<b style="color:var(--g)">${money(r2(x.ok*x.price))}</b>`,'background:var(--gl)')}
+      ${line('× '+(isDiff(r)?'差异':'核定')+'数量 '+x.ok+' ÷ 结算数量 ＝ 赔付金额',`<b style="color:var(--g)">${money(r2(x.ok*x.price))}</b>`,'background:var(--gl)')}
     </tbody></table>`;}).join('')+`<div style="font-size:11.5px;color:var(--ts)">客户实付已扣除店铺自己的优惠；佣金按原订单结算时的费率</div>`;
 }
 window.rcpOrig=function(no,ev){
@@ -80,7 +89,7 @@ window.rcpOrig=function(no,ev){
 document.addEventListener('keydown',e=>{if(e.key=='Escape'){const el=document.getElementById('rcp-pop');if(el)el.remove();}});
 
 PAGES['m-ret-comp']=()=>listContent(false);
-PAGES['p-ret-comp']=()=>switchCard()+daysCard()+listContent(true);
+PAGES['p-ret-comp']=()=>switchCard()+arriveCard()+daysCard()+listContent(true);
 
 /* 运营平台：仓库退回申诉入口开关 */
 function switchCard(){
@@ -91,25 +100,36 @@ function switchCard(){
     <button class="btn ${on?'btn-o':'btn-p'} btn-sm" onclick="rcpSwitchAsk()">${on?'关闭入口':'开启入口'}</button>
   </div></div>`;
 }
-/* 运营平台：已提货申诉期限（N 天，1~30，默认 3） */
+/* 运营平台：未到仓赔付期限（X 天，1~30，默认 7；11-16 沈亮定） */
+function arriveCard(){
+  return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:16px;padding:14px 16px">
+    <div style="flex:1"><div style="font-weight:600">未到仓赔付期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货建单后超过这个天数还没到齐，没到的部分算取不回：仓里的货提完后退货单完成，按差异直接赔付商家。改了只影响还没完成的退货单。</div></div>
+    <b style="font-size:15px">${DB.arriveCloseDays} 天</b>
+    <button class="btn btn-o btn-sm" onclick="rcpDaysEdit('arrive')">修改</button>
+  </div></div>`;
+}
+/* 运营平台：申诉期限（N 天，1~30，默认 3） */
 function daysCard(){
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:16px;padding:14px 16px">
-    <div style="flex:1"><div style="font-weight:600">已提货申诉期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货提货后、仓库退回全部取回后，超过这个天数不能再申诉；货还在仓里的不受限。只影响还没提交的申诉。</div></div>
+    <div style="flex:1"><div style="font-weight:600">申诉期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货单完成后、仓库退回全部取回后，超过这个天数不能再申诉；还没完成的不受限。只影响还没提交的申诉。</div></div>
     <b style="font-size:15px">${DB.pickAppealDays} 天</b>
     <button class="btn btn-o btn-sm" onclick="rcpDaysEdit()">修改</button>
   </div></div>`;
 }
-window.rcpDaysEdit=function(){
-  modal(`<div class="mc-hd"><h3>已提货申诉期限</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-    <div style="font-size:12.5px;color:var(--ts);margin-bottom:6px">提货后可申诉天数（1~30 的整数）</div>
-    <div class="row" style="gap:8px;align-items:center"><input id="rcp-days" type="number" min="1" max="30" step="1" value="${DB.pickAppealDays}" style="width:120px"><span>天</span></div>
-    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>保存后立即生效，只影响还没提交的申诉；已提交的照常核定。</div>
-  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="rcpDaysSave()">保存</button></div>`);
+const DAYS_CFG={
+  arrive:{key:'arriveCloseDays',t:'未到仓赔付期限',l:'建单后多少天还没到齐，没到的部分算取不回（1~30 的整数）',w:'保存后立即生效，只影响还没完成的退货单；已完成、已生成的赔付单不变。'},
+  appeal:{key:'pickAppealDays',t:'申诉期限',l:'退货单完成后可申诉天数（1~30 的整数）',w:'保存后立即生效，只影响还没提交的申诉；已提交的照常核定。'}};
+window.rcpDaysEdit=function(k){const c=DAYS_CFG[k||'appeal'];
+  modal(`<div class="mc-hd"><h3>${c.t}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
+    <div style="font-size:12.5px;color:var(--ts);margin-bottom:6px">${c.l}</div>
+    <div class="row" style="gap:8px;align-items:center"><input id="rcp-days" type="number" min="1" max="30" step="1" value="${DB[c.key]}" style="width:120px"><span>天</span></div>
+    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>${c.w}</div>
+  </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="rcpDaysSave('${k||'appeal'}')">保存</button></div>`);
 };
-window.rcpDaysSave=function(){
+window.rcpDaysSave=function(k){const c=DAYS_CFG[k];
   const v=+document.getElementById('rcp-days').value;
   if(!Number.isInteger(v)||v<1||v>30){toast('请输入 1~30 的整数','err');return;}
-  DB.pickAppealDays=v;closeModal();render();toast(`已提货申诉期限已改为 ${v} 天`,'ok');
+  DB[c.key]=v;closeModal();render();toast(`${c.t}已改为 ${v} 天`,'ok');
 };
 window.rcpSwitchAsk=function(){const on=!!DB.whrAppealOn;
   askConfirm(on?'关闭后，商家端仓库退回不再显示申诉按钮，已提交的申诉照常核定。确认关闭？':'开启后，商家可对仓库退回的商品发起申诉（待取回、已取回都可以）。确认开启？',()=>{DB.whrAppealOn=!on;render();toast(on?'已关闭仓库退回申诉入口':'已开启仓库退回申诉入口','ok');});};
@@ -117,7 +137,7 @@ window.rcpSwitchAsk=function(){const on=!!DB.whrAppealOn;
 /* ---------- 赔付单列表 ---------- */
 function filtered(){
   const f=DB.rcpF||{};
-  return retCompRows().filter(r=>(!f.src||r.src==f.src)&&(!f.st||settleSt(r)==f.st)&&(!f.ps||pushSt(r)==f.ps)
+  return retCompRows().filter(r=>(!f.src||r.src==f.src)&&(!f.tp||r.type==f.tp)&&(!f.st||settleSt(r)==f.st)&&(!f.ps||pushSt(r)==f.ps)
     &&(!f.mer||[r.mer.name,r.mer.code].some(x=>x.toLowerCase().includes(f.mer.toLowerCase())))
     &&(!f.no||[r.retNo,r.compNo,r.bill&&r.bill.no].some(x=>x&&x.toLowerCase().includes(f.no.toLowerCase())))
     &&(!f.d1||(r.ra.reviewAt||'').slice(0,10)>=f.d1)&&(!f.d2||(r.ra.reviewAt||'').slice(0,10)<=f.d2));
@@ -131,22 +151,24 @@ function listContent(ops){
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     ${ops?`<div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">商家</div><input id="rcp-mer" value="${f.mer||''}" placeholder="商家名称 / 编码" style="min-width:160px" ${EN}></div>`:''}
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">单号</div><input id="rcp-no" value="${f.no||''}" placeholder="赔付单号 / 退货单号 / 结算单号" style="min-width:220px" ${EN}></div>
+    ${opt('rcp-tp','赔付类型',['差异赔付','申诉赔付'],f.tp)}
     ${opt('rcp-src','来源',['客户退货','仓库退回'],f.src)}
     ${ops?opt('rcp-ps','推送状态',['待推送','已推送'],f.ps):''}
     ${opt('rcp-st','结算状态',['待进结算单','已进结算单','已打款'],f.st)}
-    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">核定时间</div><div class="row" style="gap:6px;align-items:center"><input id="rcp-d1" type="date" value="${f.d1||''}" style="width:150px"><span style="color:var(--ts)">至</span><input id="rcp-d2" type="date" value="${f.d2||''}" style="width:150px"></div></div>
+    <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">生成时间</div><div class="row" style="gap:6px;align-items:center"><input id="rcp-d1" type="date" value="${f.d1||''}" style="width:150px"><span style="color:var(--ts)">至</span><input id="rcp-d2" type="date" value="${f.d2||''}" style="width:150px"></div></div>
     <button class="btn btn-p btn-sm" onclick="rcpQuery()">查询</button><button class="btn btn-o btn-sm" onclick="DB.rcpF={};render()">重置</button>
   </div></div>
-  <div class="card"><div class="card-hd"><h3>赔付单</h3><span class="sub">${ops?'全部商家':'退货申诉核定成立后生成，平台推送后进结算单，随结算单打款'}</span>${ops?`<span style="margin-left:auto"></span><button class="btn btn-p btn-sm" ${sel.length?'':'disabled'} onclick="rcpPush(DB.rcpSel.slice())">推送到结算单${sel.length?`（${sel.length}）`:''}</button>`:''}</div>
+  <div class="card"><div class="card-hd"><h3>赔付单</h3><span class="sub">${ops?'全部商家':'退货单完成时有差异系统直接生成，或退货申诉核定成立后生成；平台推送后进结算单，随结算单打款'}</span>${ops?`<span style="margin-left:auto"></span><button class="btn btn-p btn-sm" ${sel.length?'':'disabled'} onclick="rcpPush(DB.rcpSel.slice())">推送到结算单${sel.length?`（${sel.length}）`:''}</button>`:''}</div>
   <div class="card-bd ${rows.length?'flush':''}">${rows.length?`<div style="overflow-x:auto"><table>
-    <thead><tr>${ops?`<th style="width:34px"><input type="checkbox" title="全选待推送" ${all?'checked':''} ${canSel.length?'':'disabled'} onclick="rcpSelAll()"></th><th>商家名称</th><th>商家编码</th>`:''}<th>赔付单号</th><th>来源</th><th>关联单号</th><th>申诉类型</th><th>核定结论</th><th>赔付商品</th><th style="text-align:right">核定数量</th><th style="text-align:right">赔付金额</th><th>核定时间</th>${ops?'<th>推送状态</th><th>推送人</th>':''}<th>推送时间</th><th>结算单号</th><th>结算状态</th><th>操作</th></tr></thead><tbody>
+    <thead><tr>${ops?`<th style="width:34px"><input type="checkbox" title="全选待推送" ${all?'checked':''} ${canSel.length?'':'disabled'} onclick="rcpSelAll()"></th><th>商家名称</th><th>商家编码</th>`:''}<th>赔付单号</th><th>赔付类型</th><th>来源</th><th>关联单号</th><th>申诉类型</th><th>核定结论</th><th>赔付商品</th><th style="text-align:right">赔付数量</th><th style="text-align:right">赔付金额</th><th>生成时间</th>${ops?'<th>推送状态</th><th>推送人</th>':''}<th>推送时间</th><th>结算单号</th><th>结算状态</th><th>操作</th></tr></thead><tbody>
     ${rows.map(r=>{const ok=r.ra.items.filter(x=>x.ok>0);return `<tr>
       ${ops?`<td>${r.ra.pushedAt?'':`<input type="checkbox" ${sel.includes(r.compNo)?'checked':''} onclick="rcpSel('${r.compNo}')">`}</td><td style="white-space:nowrap">${r.mer.name}</td><td class="mono" style="white-space:nowrap">${r.mer.code}</td>`:''}
       <td class="mono" style="white-space:nowrap">${r.compNo||'—'}</td>
+      <td style="white-space:nowrap">${r.type}</td>
       <td style="white-space:nowrap">${r.src}</td>
       <td class="mono" style="white-space:nowrap">${r.retNo}</td>
-      <td style="white-space:nowrap">${raKindLabel(r.ra)}</td>
-      <td style="white-space:nowrap">${r.ra.status}</td>
+      <td style="white-space:nowrap">${kindOf(r)}</td>
+      <td style="white-space:nowrap">${resultOf(r)}</td>
       <td>${ok.map(x=>x.name).join('、')}</td>
       <td style="text-align:right">${sum2(ok.map(x=>x.ok))}</td>
       <td style="text-align:right"><a href="javascript:void(0)" title="查看原订单应结明细" onclick="rcpOrig('${r.compNo}',event)" style="color:var(--g);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--g)">${money(r.ra.comp)}</a></td>
@@ -156,9 +178,9 @@ function listContent(ops){
       <td class="mono" style="white-space:nowrap">${r.bill?r.bill.no:'—'}</td>
       <td style="white-space:nowrap">${stTag(settleSt(r),SETTLE_TONE)}</td>
       <td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="rcpDetail('${r.compNo}',${ops})">详情</button>${ops&&!r.ra.pushedAt?` <button class="btn btn-link" onclick="rcpPush(['${r.compNo}'])">推送</button>`:''}</td></tr>`;}).join('')}
-    </tbody></table></div>`:`<div class="empty"><div class="e-ic">💸</div><div class="e-t">暂无退货赔付</div><div class="e-s">退货单申诉经客服核实成立后，赔付单会显示在这里</div></div>`}</div></div>`;
+    </tbody></table></div>`:`<div class="empty"><div class="e-ic">💸</div><div class="e-t">暂无退货赔付</div><div class="e-s">退货单完成时有差异，或退货申诉核定成立后，赔付单会显示在这里</div></div>`}</div></div>`;
 }
-window.rcpQuery=function(){const v=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};DB.rcpF={mer:v('rcp-mer'),no:v('rcp-no'),src:v('rcp-src'),ps:v('rcp-ps'),st:v('rcp-st'),d1:v('rcp-d1'),d2:v('rcp-d2')};render();};
+window.rcpQuery=function(){const v=id=>{const e=document.getElementById(id);return e?(e.value||'').trim():'';};DB.rcpF={mer:v('rcp-mer'),no:v('rcp-no'),tp:v('rcp-tp'),src:v('rcp-src'),ps:v('rcp-ps'),st:v('rcp-st'),d1:v('rcp-d1'),d2:v('rcp-d2')};render();};
 window.rcpSel=function(no){const a=DB.rcpSel=DB.rcpSel||[],i=a.indexOf(no);i<0?a.push(no):a.splice(i,1);render();};
 window.rcpSelAll=function(){const c=filtered().filter(r=>!r.ra.pushedAt).map(r=>r.compNo),a=DB.rcpSel||[];DB.rcpSel=c.every(n=>a.includes(n))?[]:c;render();};
 /* 推送到清结算：推送时间 = 归期，进该店铺推送后下一张生成的结算单；推送后不能撤回 */
@@ -169,7 +191,7 @@ window.rcpPush=function(nos){
   modal(`<div class="mc-hd"><h3>推送到结算单</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
     <table><thead><tr><th>赔付单号</th><th>商家名称</th><th>关联单号</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
     ${list.map(r=>`<tr><td class="mono">${r.compNo}</td><td>${r.mer.name}</td><td class="mono">${r.retNo}</td><td style="text-align:right">${money(r.ra.comp)}</td></tr>`).join('')}</tbody></table>
-    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后进入该店铺下一张生成的结算单（已生成的结算单不改），作为「退货申诉赔付」加到货款里打给商家；推送后不能撤回。</div>
+    <div class="ib ib-y" style="margin-top:12px"><span class="i">⚠️</span>共 <b>${list.length}</b> 张、<b>${money(total)}</b>。推送后进入该店铺下一张生成的结算单（已生成的结算单不改），作为「退货赔付」加到货款里打给商家；推送后不能撤回。</div>
   </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick='rcpPushDo(${JSON.stringify(list.map(r=>r.compNo))})'>确认推送</button></div>`);
 };
 window.rcpPushDo=function(nos){
@@ -185,12 +207,16 @@ window.rcpDetail=function(no,ops){
   drawer(`<div class="drawer-hd"><div><h3>赔付单 · ${r.compNo||'—'}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ops?r.mer.name+' · ':''}${r.src} · ${r.retNo}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${sec('基础信息')}
-    <div class="kv">${ops?kv('商家名称',r.mer.name)+kv('商家编码',`<span class="mono">${r.mer.code}</span>`):''}${kv('赔付单号',`<span class="mono">${r.compNo||'—'}</span>`)}${kv('来源',r.src)}${kv('关联单号',`<span class="mono">${r.retNo}</span>`)}${kv('申诉类型',raKindLabel(ra))}${kv('申诉时间',ra.at)}${kv('核定时间',ra.reviewAt)}${kv('核定结论',ra.status)}${kv('核定说明',ra.note)}${ops?kv('推送状态',stTag(pushSt(r),PUSH_TONE))+kv('推送人',ra.pushedBy):''}${kv('推送时间',ra.pushedAt)}</div>
+    <div class="kv">${ops?kv('商家名称',r.mer.name)+kv('商家编码',`<span class="mono">${r.mer.code}</span>`):''}${kv('赔付单号',`<span class="mono">${r.compNo||'—'}</span>`)}${kv('赔付类型',r.type)}${kv('来源',r.src)}${kv('关联单号',`<span class="mono">${r.retNo}</span>`)}${isDiff(r)?kv('生成原因',r.closed?'退货单完成时有差异（建单超过未到仓赔付期限，没到的部分算取不回）':'退货单完成时有差异（应退 − 取回）')+kv('生成时间',ra.at):kv('申诉类型',raKindLabel(ra))+kv('申诉时间',ra.at)+kv('核定时间',ra.reviewAt)+kv('核定结论',ra.status)+kv('核定说明',ra.note)}${ops?kv('推送状态',stTag(pushSt(r),PUSH_TONE))+kv('推送人',ra.pushedBy):''}${kv('推送时间',ra.pushedAt)}</div>
     ${sec('赔付明细')}
-    <table><thead><tr><th>商品</th><th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${r.priceLabel}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
+    ${isDiff(r)?`<table><thead><tr><th>商品</th><th style="text-align:right">应退数量</th><th style="text-align:right">到仓数量</th><th style="text-align:right">取回数量</th><th style="text-align:right">差异数量</th><th style="text-align:right">${r.priceLabel}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
+      ${ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.ret}</td><td style="text-align:right">${x.arr}</td><td style="text-align:right">${x.pick}</td><td style="text-align:right;color:var(--r)">${x.qty}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</td></tr>`).join('')}
+      <tr style="font-weight:700;background:var(--gl)"><td colspan="6">赔付合计</td><td style="text-align:right;color:var(--gd)">${money(ra.comp)}</td></tr>
+    </tbody></table><div style="font-size:11.5px;color:var(--ts);margin-top:6px">差异 = 应退 − 取回。取不回一律平台承担，系统直接生成，不经人工核实。</div>`
+    :`<table><thead><tr><th>商品</th><th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${r.priceLabel}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
       ${ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.qty}</td><td style="text-align:right">${x.ok==null?'—':x.ok}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.ok&&x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</td></tr>`).join('')}
       <tr style="font-weight:700;background:var(--gl)"><td colspan="4">赔付合计</td><td style="text-align:right;color:var(--gd)">${money(ra.comp)}</td></tr>
-    </tbody></table>
+    </tbody></table>`}
     ${sec(r.src=='仓库退回'?'赔付金额依据':'原订单应结明细')}
     ${origHtml(r)}
     ${sec('结算')}

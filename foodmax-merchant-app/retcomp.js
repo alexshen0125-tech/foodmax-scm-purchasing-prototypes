@@ -1,5 +1,8 @@
 /* Food Max 商家端 v2 · 财务 › 退货赔付（与 PC pc-modules/retcomp.js 同口径，2026-10-27 沈亮定 + 当日会议）
-   - 数据：退货申诉经客服核定成立 / 部分成立且赔付 > 0（deliver.js FM_MOD.retCompSrc），一笔申诉 = 一张赔付单（RC-…）
+   - 数据（deliver.js FM_MOD.retCompSrc）两类（2026-11-16 起）：
+     · 差异赔付：客户退货单完成时 应退 − 取回 > 0，系统直接生成，不经人工核实；取不回一律平台承担
+     · 申诉赔付：退货申诉经客服核定成立 / 部分成立且赔付 > 0
+     每张退货单最多 2 张（1 差异 + 1 申诉）；一张赔付单 = 一张卡片
    - 结算（2026-11-04 沈亮定）：运营在店铺运营平台手动推送到清结算，推送时间 = 归期，进推送后下一张结算单
      （settle.js FM_MOD.settleBills 的 comp[] 含该赔付单号即归该单）；未推送 / 已推送未进单，商家端都显示「待进结算单」
    - 不涉及开票（2026-11-04 沈亮定）
@@ -9,6 +12,7 @@ const {pushPage,popPage,svg,skel}=window.FM;
 const money=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const bills=()=>window.FM_MOD.settleBills?window.FM_MOD.settleBills():[];
 const kindL=ra=>window.FM_MOD.raKindLabel?window.FM_MOD.raKindLabel(ra):ra.kind;
+const isDiff=r=>r.type==='差异赔付';
 const sum2=a=>+a.reduce((s,v)=>s+v,0).toFixed(2);
 function compRows(){
   const bs=bills();
@@ -29,7 +33,7 @@ function origRows(r){
   if(r.src==='仓库退回')return `<div style="font-size:12.5px;color:var(--sub);padding:4px 0 8px">仓库退回没有原订单，按商品售价赔付，不扣佣金</div>`+ok.map(x=>row(`${x.name} · 售价 ${money(x.price)} × ${x.ok}`,money(r2(x.ok*x.price)))).join('');
   return ok.map(x=>{const o=origOf(r,x);return `<div style="font-weight:700;font-size:14px;padding:8px 0 2px">${x.name} <span style="font-weight:400;font-size:12px;color:var(--sub)">正向订单 ${r.order||'—'}</span></div>
     ${row('下单数量',o.orderQty)}${row('客户实付',money(o.paid))}${row('＋ 平台补贴',money(o.platSub))}${row('− 服务佣金',money(o.svc))}${row('− 物流佣金',money(o.logi))}${row('− 通道费',money(o.chan))}
-    ${row('＝ 原订单应结金额',`<b>${money(o.settle)}</b>`,1)}${row('÷ 下单数量 ＝ 结算单价',money(x.price))}${row(`× 核定数量 ${x.ok} ＝ 赔付金额`,`<b style="color:var(--emerald-2)">${money(r2(x.ok*x.price))}</b>`,1)}`;}).join('')
+    ${row('＝ 原订单应结金额',`<b>${money(o.settle)}</b>`,1)}${row('÷ 下单数量 ＝ 结算单价',money(x.price))}${row(`× ${isDiff(r)?'差异':'核定'}数量 ${x.ok} ＝ 赔付金额`,`<b style="color:var(--emerald-2)">${money(r2(x.ok*x.price))}</b>`,1)}`;}).join('')
     +`<div style="font-size:11.5px;color:var(--sub);padding-top:8px">客户实付已扣除店铺自己的优惠；佣金按原订单结算时的费率</div>`;
 }
 function origSheet(r){
@@ -53,10 +57,10 @@ function open(){
         list.innerHTML=rs.length?rs.map((r,i)=>{const ok=r.ra.items.filter(x=>x.ok>0);return `<div class="rp-card" data-i="${i}">
           <div class="r1"><span class="no">${r.compNo}</span><span style="margin-left:auto">${chip(settleSt(r),SET_C)}</span></div>
           <div class="sub">${r.src} · <span style="font-family:monospace">${r.retNo}</span></div>
-          <div class="goods"><span class="nm">${ok.map(x=>x.name).join('、')}</span><span class="sk">${kindL(r.ra)} · ${r.ra.status}</span></div>
-          <div class="qty"><div class="q"><div class="v">${sum2(ok.map(x=>x.ok))}</div><div class="l">核定数量</div></div><div class="q"><div class="v" style="font-size:13px;font-family:monospace">${r.bill?r.bill.no:'—'}</div><div class="l">结算单号</div></div></div>
-          <div class="r2"><span>核定 ${r.ra.reviewAt||'—'}</span><span class="amt" data-orig="${i}" style="color:var(--emerald-2);border-bottom:1px dashed var(--emerald-2);padding:10px 0;margin:-10px 0">+${money(r.ra.comp)}</span></div></div>`;}).join('')
-          :`<div class="empty"><div class="ei">${svg('wallet')}</div><h4>暂无退货赔付</h4><p>退货单申诉经客服核实成立后，赔付单会显示在这里</p></div>`;
+          <div class="goods"><span class="nm">${ok.map(x=>x.name).join('、')}</span><span class="sk">${isDiff(r)?'差异赔付':'申诉赔付 · '+kindL(r.ra)+' · '+r.ra.status}</span></div>
+          <div class="qty"><div class="q"><div class="v">${sum2(ok.map(x=>x.ok))}</div><div class="l">赔付数量</div></div><div class="q"><div class="v" style="font-size:13px;font-family:monospace">${r.bill?r.bill.no:'—'}</div><div class="l">结算单号</div></div></div>
+          <div class="r2"><span>生成 ${r.ra.reviewAt||'—'}</span><span class="amt" data-orig="${i}" style="color:var(--emerald-2);border-bottom:1px dashed var(--emerald-2);padding:10px 0;margin:-10px 0">+${money(r.ra.comp)}</span></div></div>`;}).join('')
+          :`<div class="empty"><div class="ei">${svg('wallet')}</div><h4>暂无退货赔付</h4><p>退货单完成时有差异，或退货申诉核定成立后，赔付单会显示在这里</p></div>`;
         list.querySelectorAll('[data-i]').forEach(c=>c.onclick=e=>{const o=e.target.closest('[data-orig]');if(o){e.stopPropagation();origSheet(rs[+o.dataset.orig]);return;}openDetail(rs[+c.dataset.i]);});
       },250);
     }});
@@ -67,11 +71,12 @@ function openDetail(r){
   const ra=r.ra;
   pushPage({title:'赔付单详情',navbar:true,body:`
     <div class="rp-card2"><div class="rp-ct">基础信息</div>
-      ${rowKV('赔付单号',`<span style="font-family:monospace">${r.compNo}</span>`)}${rowKV('来源',r.src)}${rowKV('关联单号',`<span style="font-family:monospace">${r.retNo}</span>`)}
-      ${rowKV('申诉类型',kindL(ra))}${rowKV('申诉时间',ra.at)}${rowKV('核定时间',ra.reviewAt)}${rowKV('核定结论',ra.status)}${rowKV('核定说明',ra.note)}</div>
+      ${rowKV('赔付单号',`<span style="font-family:monospace">${r.compNo}</span>`)}${rowKV('赔付类型',r.type)}${rowKV('来源',r.src)}${rowKV('关联单号',`<span style="font-family:monospace">${r.retNo}</span>`)}
+      ${isDiff(r)?rowKV('生成原因',r.closed?'退货单完成时有差异（建单超过未到仓赔付期限，没到的算取不回）':'退货单完成时有差异（应退 − 取回）')+rowKV('生成时间',ra.at)
+        :rowKV('申诉类型',kindL(ra))+rowKV('申诉时间',ra.at)+rowKV('核定时间',ra.reviewAt)+rowKV('核定结论',ra.status)+rowKV('核定说明',ra.note)}</div>
     <div class="rp-card2"><div class="rp-ct">赔付明细</div>
       ${ra.items.map(x=>`<div class="rp-row" style="display:block"><b style="font-size:14px">${x.name}</b>
-        <div style="display:flex;gap:14px;margin-top:6px;font-size:12.5px;color:#46604F;flex-wrap:wrap"><span>申诉 ${x.qty}</span><span>核定 ${x.ok==null?'—':x.ok}</span><span>${r.priceLabel} ${x.price==null?'—':money(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.ok&&x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</span></div></div>`).join('')}
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:12.5px;color:#46604F;flex-wrap:wrap">${isDiff(r)?`<span>应退 ${x.ret}</span><span>到仓 ${x.arr}</span><span>取回 ${x.pick}</span><span style="color:var(--red)">差异 ${x.qty}</span>`:`<span>申诉 ${x.qty}</span><span>核定 ${x.ok==null?'—':x.ok}</span>`}<span>${r.priceLabel} ${x.price==null?'—':money(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.ok&&x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</span></div></div>`).join('')}
       <div class="rp-row total"><span class="k">赔付合计</span><span class="v" style="color:var(--emerald-2)">${money(ra.comp)}</span></div></div>
     <div class="rp-card2"><div class="rp-ct">${r.src==='仓库退回'?'赔付金额依据':'原订单应结明细'}</div>${origRows(r)}</div>
     <div class="rp-card2"><div class="rp-ct">结算</div>
