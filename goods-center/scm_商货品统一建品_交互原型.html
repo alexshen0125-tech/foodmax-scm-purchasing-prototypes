@@ -177,11 +177,14 @@ tbody tr:hover>td{background:#f5f9f5}
   <div class="crumb">商品 / 商品列表</div>
   <div class="panel">
     <div class="filters">
-      <div class="fi" style="width:180px"><label>SPU 编码</label><input id="qSpu" placeholder="精确匹配"></div>
-      <div class="fi" style="width:180px"><label>SKU 编码</label><input id="qSku" placeholder="精确匹配"></div>
-      <div class="fi" style="width:180px"><label>货品编码</label><input id="qItem" placeholder="精确匹配"></div>
-      <div class="fi" style="width:180px"><label>原料编码</label><input id="qRaw" placeholder="精确匹配"></div>
-      <div class="fi" style="width:200px"><label>商品名称</label><input id="qName" placeholder="名称模糊"></div>
+      <div class="fi" style="width:170px"><label>SPU 名称</label><input id="qSpuN" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>SPU 编码</label><input id="qSpu" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>SKU 名称</label><input id="qSkuN" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>SKU 编码</label><input id="qSku" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>货品名称</label><input id="qItemN" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>货品编码</label><input id="qItem" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>原料名称</label><input id="qRawN" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>原料编码</label><input id="qRaw" placeholder="模糊匹配"></div>
       <div class="fi" style="width:150px"><label>商品属性</label><select id="qAttr"><option value="">全部</option><option>标品</option><option>非标品</option></select></div>
       <div class="fi" style="width:150px"><label>渠道来源</label><select id="qSrc"><option value="">全部</option><option>自营</option><option>三方</option></select></div>
       <div class="fi" style="flex-direction:row;gap:8px"><button class="btn pr" onclick="renderList()">查询</button><button class="btn" onclick="resetQ()">重置</button></div>
@@ -304,20 +307,25 @@ function code(prefix){const p=n=>String(n).padStart(4,'0');const s=seq++;
 function skuNameOf(spu,s){
   if(spu.attr==='非标品')return`${spu.name} ${fmtQty(s.qty)}${spu.stockUnit}/${s.su}`;
   const u=spu.std.stockUnit;return Number(s.qty)===1&&!s.su?`${spu.name} 1${u}`:`${spu.name} ${s.qty}${u}${s.su?'/'+s.su:''}`}
-const eq=(a,b)=>!!a&&a.toLowerCase()===b.toLowerCase();
-function matchCode(spu,q){
-  if(q.spu&&!eq(spu.spu,q.spu))return false;
-  if(q.sku&&!spu.skus.some(k=>eq(k.sku,q.sku)))return false;
-  if(q.item&&!(eq(spu.std&&spu.std.item,q.item)||spu.skus.some(k=>eq(k.item,q.item))))return false;
-  if(q.raw&&!eq(spu.rawCode,q.raw))return false;return true}
-function codeQ(){return{spu:$('qSpu').value.trim(),sku:$('qSku').value.trim(),item:$('qItem').value.trim(),raw:$('qRaw').value.trim()}}
-function filtered(){const c=codeQ(),n=$('qName').value.trim(),a=$('qAttr').value,src=$('qSrc').value;
-  return SPUS.filter(s=>matchCode(s,c)&&(!n||s.name.includes(n))&&(!a||s.attr===a)&&(!src||s.src===src)&&(tab==='全部'||s.status===tab))}
+const has=(a,b)=>!!a&&String(a).toLowerCase().includes(b.toLowerCase());
+function itemNames(spu){return spu.attr==='非标品'?spu.skus.map(k=>skuNameOf(spu,k)):[spu.name]}
+function matchCode(spu,q){const R=rawBy(spu.rawCode)||{};
+  if(q.spuN&&!has(spu.name,q.spuN)&&!has(spu.en,q.spuN))return false;
+  if(q.spu&&!has(spu.spu,q.spu))return false;
+  if(q.skuN&&!spu.skus.some(k=>has(skuNameOf(spu,k),q.skuN)))return false;
+  if(q.sku&&!spu.skus.some(k=>has(k.sku,q.sku)))return false;
+  if(q.itemN&&!itemNames(spu).some(n=>has(n,q.itemN)))return false;
+  if(q.item&&!(has(spu.std&&spu.std.item,q.item)||spu.skus.some(k=>has(k.item,q.item))))return false;
+  if(q.rawN&&!(has(R.name,q.rawN)||has(R.en,q.rawN)))return false;
+  if(q.raw&&!has(spu.rawCode,q.raw))return false;return true}
+function codeQ(){const v=id=>$(id).value.trim();return{spuN:v('qSpuN'),spu:v('qSpu'),skuN:v('qSkuN'),sku:v('qSku'),itemN:v('qItemN'),item:v('qItem'),rawN:v('qRawN'),raw:v('qRaw')}}
+function filtered(){const c=codeQ(),a=$('qAttr').value,src=$('qSrc').value;
+  return SPUS.filter(s=>matchCode(s,c)&&(!a||s.attr===a)&&(!src||s.src===src)&&(tab==='全部'||s.status===tab))}
 function renderTabs(){const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
 function itemStTag(s,k){if(s.attr==='非标品'){if(k.itemStatus==='待启用')return'<span class="tag ty">待启用</span>';if(k.itemStatus==='停用')return'<span class="tag tgr">停用</span>';return'<span class="tag tg">启用</span>'}const d=s.std||{};return (d.status==='停用'?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>')+((d.purch||'是')==='否'?' <span class="tag ty">不可采</span>':'')}
 function skuStatusTag(s){if(s.itemStatus==='待启用')return'<span class="tag ty">货品待启用</span>';return s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}
 function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
-  $('listBody').innerHTML=rows.length?rows.map(s=>{const i=SPUS.indexOf(s);const open=openRows[s.spu]||!!(cq.sku||cq.item||cq.raw);
+  $('listBody').innerHTML=rows.length?rows.map(s=>{const i=SPUS.indexOf(s);const open=openRows[s.spu]||!!(cq.sku||cq.skuN||cq.item||cq.itemN||cq.raw||cq.rawN);
     const pend=s.skus.some(k=>k.itemStatus==='待启用');
     let h=`<tr><td><input type="checkbox" ${SEL.has(s.spu)?'checked':''} onchange="selOne('${s.spu}',this.checked)"></td><td class="exp" onclick="toggleRow('${s.spu}')">${open?'▾':'▸'}</td>
       <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
@@ -329,7 +337,7 @@ function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
   renderSel();$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
 function toggleRow(k){openRows[k]=!openRows[k];renderList()}
-function resetQ(){['qSpu','qSku','qItem','qRaw','qName','qAttr','qSrc'].forEach(i=>$(i).value='');tab='全部';renderList()}
+function resetQ(){['qSpuN','qSpu','qSkuN','qSku','qItemN','qItem','qRawN','qRaw','qAttr','qSrc'].forEach(i=>$(i).value='');tab='全部';renderList()}
 
 /* ============ 表单状态 ============ */
 let F=null,showErr=false;
