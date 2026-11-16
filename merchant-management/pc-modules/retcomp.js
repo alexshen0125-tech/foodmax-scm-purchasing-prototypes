@@ -231,7 +231,7 @@ const RC_RECON_DEMO={'RC-20260618-317':'2026-06-29'};
 window.rcReconComps=function(date){
   return retCompRows().filter(r=>r.ra.pushedAt&&(RC_RECON_DEMO[r.compNo]||r.ra.pushedAt.slice(0,10))==date).map(r=>{
     const ok=(r.ra.items||[]).filter(x=>x.ok>0);
-    return {compNo:r.compNo, src:r.src, retNo:r.retNo, goods:ok.map(x=>x.name).join('、'), qty:sum2(ok.map(x=>x.ok)), amt:r.ra.comp, at:r.ra.reviewAt||'', stNo:r.bill?r.bill.no:''};
+    return {compNo:r.compNo, type:r.type, pushedAt:r.ra.pushedAt||'', src:r.src, retNo:r.retNo, goods:ok.map(x=>x.name).join('、'), qty:sum2(ok.map(x=>x.ok)), amt:r.ra.comp, at:r.ra.reviewAt||'', stNo:r.bill?r.bill.no:''};
   });
 };
 })();

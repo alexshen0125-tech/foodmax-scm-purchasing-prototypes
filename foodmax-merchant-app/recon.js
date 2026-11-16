@@ -204,7 +204,7 @@ const dRevPaid=d=>sum(d.after||[],x=>aftPart(d,x).paid), dRevFee=d=>sum(d.after|
 const dRevInc=d=>sum(d.after||[],x=>aftPart(d,x).inc);
 const dSettle=d=>dInc(d)-dRevInc(d);   // 当日结算（货款）= 正向商家收入 − 售后扣款（逆向应付商家）
 const dPickL=d=>window.FM_MOD&&FM_MOD.pickfeeRecon?FM_MOD.pickfeeRecon(d.date):[], dCompL=d=>window.FM_MOD&&FM_MOD.retCompRecon?FM_MOD.retCompRecon(d.date):[];
-const dPick=d=>sum(dPickL(d),b=>b.incl), dComp=d=>sum(dCompL(d),r=>r.amt);   // 取货运费（含税，推送日计入）/ 退货赔付（平台补给你，核定日计入）
+const dPick=d=>sum(dPickL(d),b=>b.incl), dComp=d=>sum(dCompL(d),r=>r.amt);   // 取货运费（含税，推送日计入）/ 退货赔付（平台补给你，推送日计入）
 const dNet=d=>dSettle(d)-dRpl(d)-dSup(d)+dAdj(d)-dPick(d)+dComp(d);   // 预估当日结算 = 当日结算货款 − 平台补采 − 耗材订单 ± 业务调整净额 − 取货运费 + 退货赔付（罚款未接入按 0），同汇总卡「预计实付」
 const rplAmt=r=>Math.round(r.taxPrice*r.qty*(1+r.rate/100)*100)/100;
 const rplNet=r=>Math.round(rplAmt(r)/(1+GST/100)*100)/100;
@@ -481,11 +481,12 @@ function openReconDetail(no,tab){
         <div class="em"><div class="k">应扣（含税）</div><div class="v">${NEG(b.incl)}</div></div></div></div>`).join('')
     :`<div class="rc-empty">当天没有计入的取货运费<br><span>取货运费按周出账，推送当日计入对账单。</span></div>`;
   const compRows=dCompL(d).length?dCompL(d).map(r=>`<div class="rc-row">
-      <div class="t">${r.compNo} <span style="font-weight:400;color:var(--sub);font-size:12px">${r.src}</span></div>
-      <div class="s">${r.retNo} · ${r.goods} × ${r.qty} · 核定 ${r.at}</div>
+      <div class="t">${r.compNo} <span style="font-weight:400;color:var(--sub);font-size:12px">${r.type} · ${r.src}</span></div>
+      <div class="s">${r.retNo} · ${r.goods} × ${r.qty}</div>
+      <div class="s">生成 ${r.at||'—'} · 推送 ${r.pushedAt||'—'}</div>
       <div class="kvs"><div><div class="k">结算单</div><div class="v">${r.stNo||'待进结算单'}</div></div>
         <div class="em"><div class="k">赔付金额</div><div class="v">+${S(r.amt)}</div></div></div></div>`).join('')
-    :`<div class="rc-empty">当天没有计入的退货赔付<br><span>退货申诉核定成立后，核定当日计入对账单。</span></div>`;
+    :`<div class="rc-empty">当天没有计入的退货赔付<br><span>赔付单（差异赔付 / 申诉赔付）平台推送当日计入对账单。</span></div>`;
   const supRows=sup.length?sup.map(s=>`<div class="rc-row">
       <div class="t">${s.name} <span style="font-weight:400;color:var(--sub);font-size:12px">${s.qty}${s.unit} · ${s.cat}</span></div>
       <div class="s">${s.hs} · 采购单 ${s.po} · ${s.code}</div>
