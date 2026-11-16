@@ -860,7 +860,7 @@ function returnCard(g){
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span>${g.items.some(x=>x.gift)?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">含赠品</span>':''}<span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     ${retKbox(g,'margin-top:10px;padding:10px 0')}
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='部分到仓'?'已到仓一部分，剩下的还在路上':g.st==='已完成'?`已于 ${g.done} 完成`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:''}</div>
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='部分到仓'?'已到仓一部分，剩下的还在路上':g.st==='已完成'?`已于 ${g.done} 完成`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:g.st!=='已完成'&&g.st!=='已取消'?'<br><span style="color:var(--sub)">完成后没还到你手里的部分直接赔付</span>':''}</div>
     ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
 }

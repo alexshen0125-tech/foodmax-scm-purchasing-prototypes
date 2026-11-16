@@ -4496,7 +4496,9 @@ function diffQtyCell(a,x){if(a.returnStatus!='已完成')return QTY_EMPTY;const 
 /* 一张退货单的全部赔付单（最多 2 张：1 差异赔付 + 1 申诉赔付），取 retCompRows 同一份数据，结算状态一致 */
 function retCompsOf(a){const no='TH-'+a.id.slice(-6);return typeof retCompRows=='function'?retCompRows().filter(r=>r.retNo==no):[];}
 function retCompTotal(a){return r2q(retCompsOf(a).reduce((s,r)=>s+r.ra.comp,0));}
-function diffCompCell(a){const cs=retCompsOf(a);if(!cs.length)return QTY_EMPTY;const i=DB.afterSales.indexOf(a);
+function diffCompCell(a){const cs=retCompsOf(a);
+  // 没完成的单：差异还没定，完成时才算（到齐提完，或建单满 X 天）；列表写清楚，免得看着 应退 > 取回 以为漏赔
+  if(!cs.length)return (['待仓库入库','部分到仓','待提货'].includes(a.returnStatus))?`<span style="color:var(--ts);font-size:12px;white-space:nowrap" title="退货单完成时，没还到你手里的部分按差异直接赔付">完成后赔付</span>`:QTY_EMPTY;const i=DB.afterSales.indexOf(a);
   return `<a href="javascript:void(0)" title="查看赔付单" onclick="retCompPop(${i},event)" style="color:var(--g);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--g)">${money(retCompTotal(a))}</a>`;}
 // 列表点赔付金额：浮层列出这张退货单的每张赔付单，点单号看赔付单详情
 function retCompPop(i,ev){ev.stopPropagation();const a=DB.afterSales[i],cs=retCompsOf(a);
