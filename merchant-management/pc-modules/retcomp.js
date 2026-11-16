@@ -89,7 +89,9 @@ window.rcpOrig=function(no,ev){
 document.addEventListener('keydown',e=>{if(e.key=='Escape'){const el=document.getElementById('rcp-pop');if(el)el.remove();}});
 
 PAGES['m-ret-comp']=()=>listContent(false);
-PAGES['p-ret-comp']=()=>switchCard()+pickCard()+daysCard()+listContent(true);
+PAGES['p-ret-comp']=()=>listContent(true);
+// 店铺运营平台：退货单时效设置（11-16 沈亮：配置单独成页，不放在赔付单页）
+PAGES['p-ret-config']=()=>flowTip(`退货单相关的时效和开关，保存后立即生效，对全部商家。<b>待仓库入库超时</b>由大仓自己配置（超时后推送取回 0，退货单置「无法取回」），不在这里设置。`)+pickCard()+daysCard()+switchCard();
 
 /* 运营平台：仓库退回申诉入口开关 */
 function switchCard(){
