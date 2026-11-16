@@ -883,8 +883,8 @@ function openReturnDetail(no){
     </div>`).join(''))}
     ${g.items.some(x=>x.gift)?`<div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">标「赠品」的是满赠送出的赠品，跟着退货一起退回，提货时一并提走；赠品结算单价为 0，不产生退货金额。</div>`:''}
     ${diffDetail(g,sec,box,kv)}
-    ${compList(g,sec)}
     ${raDetail(g,sec,box,kv)}
+    ${compList(g,sec)}
     <div style="height:8px"></div>`,
     footer:raOpen(g)?`<button class="btn primary" id="ra-go">退货申诉</button>`:'',
     mount:(p)=>{const b=p.querySelector('#ra-go');if(b)b.onclick=()=>openRetAppeal(g,()=>{popPage();openReturnDetail(no);});
