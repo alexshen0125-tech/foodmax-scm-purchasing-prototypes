@@ -913,14 +913,14 @@ function raDetail(g,sec,box,kv){
   const a=g.appeal;
   if(!a){
     if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内可以申诉，截止时间 ${msTs(raDeadline(g))}，已过申诉期，不能再申诉。`);
-    if(!g._whr&&!isDone(g))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内，取回的货数量不对或坏了不能卖，可以申诉 1 次。少拿的部分不用申诉，提货时系统直接赔付。`);
+    if(!g._whr&&!isDone(g))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内，取回的货里有问题（如坏了不能卖），可以申诉 1 次，申诉数量不超过实际取回数量。少拿的部分不用申诉，提货时系统直接赔付。`);
     if(!g._whr&&g.st==='逾期未提')return '';
     if(!g._whr&&g.st==='无法取回')return sec('退货申诉')+raTip('货没能取回，已按应取回数量整单直接赔付，不走申诉。');
     if(!g._whr&&!raWin(g))return '';
     const w=raWin(g);if(!w)return '';
     const once=g._whr?'每条退回记录只能申诉 1 次。':'每张退货单只能申诉 1 次。';
     const msg=w.kind==='noarrive'?`货还没到仓。如一直没到仓或有其他问题，可以申诉「未到仓」，不限时间。${once}`
-      :!g._whr?`取回的货如果实际拿到的比系统记录少、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}，剩 ${remainTxt(raDeadline(g)-Date.now())}）。${once}`
+      :!g._whr?`取回的货里有问题（如坏了不能卖），可以申诉，申诉数量不超过实际取回数量，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}，剩 ${remainTxt(raDeadline(g)-Date.now())}）。${once}`
       :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}，剩 ${remainTxt(raDeadline(g)-Date.now())}）。${once}`
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec('退货申诉')+raTip(msg);
@@ -929,7 +929,7 @@ function raDetail(g,sec,box,kv){
   const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.compNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中</span>':'—');
   return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc)+(!g._whr&&a.status!=='平台处理中'?kv('审核说明',a.note):''))
     +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
-      ${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}${kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${g._whr?kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price))):''}</div>`).join(''))
+      ${!g._whr&&goods?kv('应取回数量',x.ret)+kv('实际取回数量',x.sysPick)+kv('申诉数量',x.qty):`${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}`}${!g._whr&&goods?'':kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${g._whr?kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price))):''}</div>`).join(''))
     +(g._whr&&a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('赔付单',comp)+kv('审核说明',a.note)):'');
 }
 /* 退货申诉表单：按实际情况填写（实际拿到 / 坏了几件，系统算申诉数量与预计赔付）→ 提交 */
@@ -942,17 +942,18 @@ function openRetAppeal(g,onDone){
   const inp=(cls,k,v,mx)=>`<input class="${cls}" data-k="${k}" type="number" inputmode="decimal" min="0" ${mx!=null?`max="${mx}"`:''} step="any" value="${v}" style="width:76px;height:44px;text-align:center;font-size:16px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit">`;
   const line=(l,r)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0"><span style="font-size:13px;color:#46604F">${l}</span>${r}</div>`;
   pushPage({title:'退货申诉',body:`
-    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${raDeadline(g)?`申诉截止 <b>${msTs(raDeadline(g))}</b>（剩 <b>${remainTxt(raDeadline(g)-Date.now())}</b>），过期不能再申诉。`:''}${g._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。${g._whr?'':'没取回的部分已按差异自动赔付，这里只申诉<b>取回的货</b>。'}</div>
+    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${raDeadline(g)?`申诉截止 <b>${msTs(raDeadline(g))}</b>（剩 <b>${remainTxt(raDeadline(g)-Date.now())}</b>），过期不能再申诉。`:''}${g._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。${g._whr?'':'没取回的部分已按差异自动赔付，这里只申诉<b>取回的货里有问题的部分</b>，申诉数量不能超过实际取回数量。'}</div>
     ${g._pendingCount?`<div style="margin:10px 16px 0;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">本条退回记录还有 <b>${g._pendingCount} 项</b>未取回。每条记录只能申诉 1 次，提交后这些商品取回时<b>不能再申诉</b>。</div>`:''}
     <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉原因</span></div>
       <div style="display:flex;gap:8px">${[[0,goods?'数量不对或有损坏':'货没到仓'],[1,'数量没问题，是其他问题']].map(([v,t])=>`<span data-oth="${v}" style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${v?'var(--line)':'var(--emerald)'};background:${v?'#fff':'var(--mint-soft)'};color:${v?'#27433A':'var(--emerald-2)'}">${t}</span>`).join('')}</div>
       <div id="ra-oth-tip" style="display:none;margin-top:10px;font-size:12.5px;color:var(--sub);line-height:1.6">按「其他」申诉，不用填数量。请在下方说明里写清楚问题，客服核实后定赔付数量。</div></div>
-    <div class="as-dblock" id="ra-items"><div class="bt"><span>${goods?'按实际情况填写':'没到仓数量'}</span><span style="font-size:12px;color:var(--sub);font-weight:400">${goods?actTip:'默认全部，只到了一部分的改小'}</span></div>
+    <div class="as-dblock" id="ra-items"><div class="bt"><span>${!g._whr&&goods?'填写申诉数量':goods?'按实际情况填写':'没到仓数量'}</span><span style="font-size:12px;color:var(--sub);font-weight:400">${!g._whr&&goods?'最多为实际取回数量':goods?actTip:'默认全部，只到了一部分的改小'}</span></div>
       ${g.items.map((x,k)=>{const sp=raSys(g,x);return `<div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
         <b style="font-size:14px">${x.name}</b>${g._whr?`<span style="font-size:11.5px;color:var(--sub);margin-left:6px">${x._picked?'已取回':'待取回'}</span>`:''}
-        ${line(g._whr?'退回数量':'应取回数量',`<span>${x.retQty} ${x.unit}</span>`)}${g._whr?'':line('差异（已直接赔付）',`<span>${diffOf(x)} ${x.unit}</span>`)}
-        ${goods?line(g._whr?sysL(x):'系统取回',`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,raMax(g,x)))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
-        ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}
+        ${!g._whr&&goods?line('应取回数量',`<span>${x.retQty} ${x.unit}</span>`)+line('实际取回数量',`<span>${sp} ${x.unit}</span>`)+line('申诉数量',inp('ra-cq',k,0,sp))+`<b id="ra-q-${k}" style="display:none">0</b>`
+        :`${line(g._whr?'退回数量':'应取回数量',`<span>${x.retQty} ${x.unit}</span>`)}
+        ${goods?line(sysL(x),`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,raMax(g,x)))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
+        ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}`}
         ${line(g._priceLabel||'正向订单结算单价',`<span>${x.price==null?'<span style="color:#B45309">待平台确认</span>':fmtS(x.price)+'/'+x.unit}</span>`)}
       </div>`;}).join('')}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px"><span style="color:var(--sub)">预计赔付</span><b id="ra-total" style="font-size:17px;color:var(--emerald-2)">—</b></div>
@@ -970,6 +971,7 @@ function openRetAppeal(g,onDone){
       const back=p.querySelector('.back');if(back)back.onclick=()=>{if(!dirty)return popPage();confirmDialog({title:'放弃填写？',body:'已填写的内容不会保存。',okText:'放弃',onOk:popPage});};
       const vals=()=>g.items.map((x,k)=>{
         if(other)return {k,ret:x.retQty,sysPick:raSys(g,x),actual:null,damaged:0,short:0,qty:0,price:x.price};
+        if(!g._whr&&goods){const sp=raSys(g,x);const v=Math.min(Math.max(r2(q(`.ra-cq[data-k="${k}"]`).value),0),sp);return {k,ret:x.retQty,sysPick:sp,actual:sp,damaged:0,short:0,qty:v,price:x.price};}
         if(!goods){const el=q(`.ra-na[data-k="${k}"]`);const v=Math.min(Math.max(r2(el.value),0),x.retQty);return {k,ret:x.retQty,qty:v,price:x.price};}
         const act=Math.min(Math.max(r2(q(`.ra-act[data-k="${k}"]`).value),0),raMax(g,x)),dmg=Math.min(Math.max(r2(q(`.ra-dmg[data-k="${k}"]`).value),0),act);
         const short=r2((g._whr?x.retQty:raSys(g,x))-act);   /* 客户退货：差异已赔，少的只算 系统取回 − 实际 */return {k,ret:x.retQty,sysPick:raSys(g,x),actual:act,damaged:dmg,short,qty:r2(short+dmg),price:x.price};});
@@ -983,8 +985,8 @@ function openRetAppeal(g,onDone){
         p.querySelectorAll('[data-oth]').forEach(e=>{const on=e===el;e.style.borderColor=on?'var(--emerald)':'var(--line)';e.style.background=on?'var(--mint-soft)':'#fff';e.style.color=on?'var(--emerald-2)':'#27433A';});
         q('#ra-items').style.display=other?'none':'';q('#ra-oth-tip').style.display=other?'':'none';calc();});
       // 失焦时把超范围的值改回范围内，看到的 = 提交的
-      p.querySelectorAll('.ra-act,.ra-dmg,.ra-na').forEach(el=>{el.oninput=()=>{dirty=true;calc();};el.onblur=()=>{
-        const k=+el.dataset.k,x=g.items[k];let mx=raMax(g,x);if(el.classList.contains('ra-dmg'))mx=Math.max(r2(q(`.ra-act[data-k="${k}"]`).value),0);
+      p.querySelectorAll('.ra-act,.ra-dmg,.ra-na,.ra-cq').forEach(el=>{el.oninput=()=>{dirty=true;calc();};el.onblur=()=>{
+        const k=+el.dataset.k,x=g.items[k];let mx=el.classList.contains('ra-cq')?raSys(g,x):raMax(g,x);if(el.classList.contains('ra-dmg'))mx=Math.max(r2(q(`.ra-act[data-k="${k}"]`).value),0);
         let v=r2(el.value);if(v<0)v=0;if(v>mx){v=mx;toast(`最多 ${mx}`);}el.value=v;
         if(el.classList.contains('ra-act')){const d=q(`.ra-dmg[data-k="${k}"]`);if(+d.value>v)d.value=v;}calc();};});
       q('#ra-desc').oninput=()=>{dirty=true;};
