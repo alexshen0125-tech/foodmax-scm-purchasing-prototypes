@@ -4638,15 +4638,15 @@ function raModal(){
   const actTip=a._whr?'已取回的填实际拿到的件数，待取回的填仓里实际有的件数':'实际数量填你实际拿到的件数，最多为系统取回数';
   const stCol=a._whr?'<th>状态</th>':'';
   const rows=a.retItems.map((x,k)=>{const pr=retUnitPrice(a,x),sp=raSys(a,x);
-    if(goods&&!a._whr)return `<tr><td style="white-space:nowrap">${x.name}</td><td style="white-space:nowrap;color:var(--ts)">${x.unit||''}</td><td style="text-align:right">${x.retQty}</td><td style="text-align:right">${sp}</td>
-      <td style="text-align:right;white-space:nowrap"><input class="ra-cq" data-k="${k}" type="number" min="0" max="${sp}" step="any" value="0" ${sp>0?'':'disabled'} oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"><button class="btn btn-link btn-sm" style="padding:0 0 0 8px" ${sp>0?'':'disabled'} onclick="raFillAll(${k})" title="填写全部实际取回数量">全部</button></td><td style="text-align:right;color:var(--ts)">${raPriceCell(pr)}</td></tr>`;
+    if(goods)return `<tr><td style="white-space:nowrap">${x.name}</td><td style="white-space:nowrap;color:var(--ts)">${x.unit||''}</td>${a._whr?`<td style="white-space:nowrap">${x._picked?'已取回':'待取回'}</td>`:''}<td style="text-align:right">${x.retQty}</td><td style="text-align:right">${a._whr&&!x._picked?'<span style="color:var(--tt)">—</span>':sp}</td>
+      <td style="text-align:right;white-space:nowrap"><input class="ra-cq" data-k="${k}" type="number" min="0" max="${sp}" step="any" value="0" ${sp>0?'':'disabled'} oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"><button class="btn btn-link btn-sm" style="padding:0 0 0 8px" ${sp>0?'':'disabled'} onclick="raFillAll(${k})" title="${a._whr&&!x._picked?'填写全部应取回数量（货还在仓）':'填写全部实际取回数量'}">全部</button></td><td style="text-align:right;color:var(--ts)">${raPriceCell(pr)}</td></tr>`;
     return goods?`<tr><td style="white-space:nowrap">${x.name}</td><td style="white-space:nowrap;color:var(--ts)">${x.unit||''}</td>${a._whr?`<td style="white-space:nowrap">${x._picked?'已取回':'待取回'}</td>`:''}<td style="text-align:right">${x.retQty}</td>${a._whr?'':`<td style="text-align:right;color:var(--ts)">${retDiffOf(x)}</td>`}<td style="text-align:right">${sp}</td>
       <td style="text-align:right"><input class="ra-act" data-k="${k}" type="number" min="0" max="${raMax(a,x)}" step="any" value="${sp}" ${raMax(a,x)>0?'':'disabled'} oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"></td>
       <td style="text-align:right"><input class="ra-dmg" data-k="${k}" type="number" min="0" step="any" value="0" oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"></td>
       <td style="text-align:right;font-weight:600" id="ra-q-${k}">0</td><td style="text-align:right;color:var(--ts)">${raPriceCell(pr)}</td></tr>`
     :`<tr><td style="white-space:nowrap">${x.name}</td><td style="white-space:nowrap;color:var(--ts)">${x.unit||''}</td><td style="text-align:right">${x.retQty}</td>
       <td style="text-align:right"><input class="ra-na" data-k="${k}" type="number" min="0" max="${x.retQty}" step="any" value="${x.retQty}" oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"></td><td style="text-align:right;color:var(--ts)">${raPriceCell(pr)}</td></tr>`;}).join('');
-  const head=goods&&!a._whr?`<tr><th>商品</th><th>单位</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">申诉数量</th><th style="text-align:right">${PL}</th></tr>`:goods?`<tr><th>商品</th><th>单位</th>${stCol}<th style="text-align:right">${a._whr?'退回数量':'应取回数量'}</th>${a._whr?'':'<th style="text-align:right">差异（已直接赔付）</th>'}<th style="text-align:right">${a._whr?sysH:'系统取回'}</th><th style="text-align:right">${actH}</th><th style="text-align:right">其中坏了不能卖</th><th style="text-align:right">申诉数量</th><th style="text-align:right">${PL}</th></tr>`
+  const head=goods?`<tr><th>商品</th><th>单位</th>${stCol}<th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">申诉数量</th><th style="text-align:right">${PL}</th></tr>`:goods?`<tr><th>商品</th><th>单位</th>${stCol}<th style="text-align:right">${a._whr?'退回数量':'应取回数量'}</th>${a._whr?'':'<th style="text-align:right">差异（已直接赔付）</th>'}<th style="text-align:right">${a._whr?sysH:'系统取回'}</th><th style="text-align:right">${actH}</th><th style="text-align:right">其中坏了不能卖</th><th style="text-align:right">申诉数量</th><th style="text-align:right">${PL}</th></tr>`
     :`<tr><th>商品</th><th>单位</th><th style="text-align:right">退回数量</th><th style="text-align:right">没到仓数量</th><th style="text-align:right">${PL}</th></tr>`;
   const pend=a._pendingCount?`<div class="ib ib-y" style="margin-top:10px"><span class="i">⚠️</span><div>本条退回记录还有 <b>${a._pendingCount} 项</b>未取回。每条记录只能申诉 1 次，提交后这些商品取回时<b>不能再申诉</b>。</div></div>`:'';
   const html=new String(`<div class="mc-hd"><h3>退货申诉 · ${a._title||'TH-'+a.id.slice(-6)}</h3><p>${retItemsName(a)} · ${a._stLabel||a.returnStatus}</p><button class="mc-x" onclick="closeModal()">×</button></div>
@@ -4657,7 +4657,7 @@ function raModal(){
       <button class="btn btn-sm ${oth?'btn-o':'btn-p'}" onclick="raSetOther(false)">${goods?'数量不对或有损坏':'货没到仓'}</button>
       <button class="btn btn-sm ${oth?'btn-p':'btn-o'}" onclick="raSetOther(true)">数量没问题，是其他问题</button></div></div>
     ${oth?`<div class="ib ib-gr" style="margin-bottom:12px"><span class="i">📝</span><div>按「其他」申诉，不用填数量。请在下方说明里写清楚问题，客服核实后定赔付数量。</div></div>`
-    :`<div class="fr"><label class="fl">${goods&&!a._whr?`填写申诉数量 <span style="font-weight:400;color:var(--ts);font-size:12px">（取回的货里有问题的件数，最多为实际取回数量）</span>`:goods?`按实际情况填写 <span style="font-weight:400;color:var(--ts);font-size:12px">（${actTip}；默认等于系统记录，不对就改；坏了不能卖的填件数）</span>`:'没到仓数量 <span style="font-weight:400;color:var(--ts);font-size:12px">（默认全部退回数量，只到了一部分的改小）</span>'}</label>
+    :`<div class="fr"><label class="fl">${goods?`填写申诉数量 <span style="font-weight:400;color:var(--ts);font-size:12px">（${a._whr?'有问题的件数：已取回的最多为实际取回数量，待取回的最多为应取回数量':'取回的货里有问题的件数，最多为实际取回数量'}）</span>`:goods?`按实际情况填写 <span style="font-weight:400;color:var(--ts);font-size:12px">（${actTip}；默认等于系统记录，不对就改；坏了不能卖的填件数）</span>`:'没到仓数量 <span style="font-weight:400;color:var(--ts);font-size:12px">（默认全部退回数量，只到了一部分的改小）</span>'}</label>
       <table><thead>${head}</thead><tbody>${rows}</tbody></table>
       <div style="text-align:right;margin-top:10px;font-size:13px">预计赔付 <b id="ra-total" style="color:var(--g);font-size:15px">—</b><div id="ra-nop" style="font-size:12px;color:var(--y);margin-top:2px"></div></div></div>`}
     <div class="fr"><label class="fl">说明 <span id="ra-descreq" style="font-weight:400;font-size:12px;color:${oth?'var(--r)':'var(--ts)'}">${oth?'（必填，最多 500 字）':'（选填，最多 500 字）'}</span></label><textarea id="ra-desc" maxlength="500" placeholder="例：到仓提货时仓库只找到 1 箱番茄">${DB._ra.desc||''}</textarea></div>
@@ -4754,7 +4754,7 @@ function retAppealBlock(a){
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec+`<div class="ib ib-b" style="margin-bottom:20px"><span class="i">📣</span><div>${msg}</div></div>`;
   }
-  const goods=ra.kind=='goods',cust=!a._whr&&goods;
+  const goods=ra.kind=='goods',cust=goods;
   const rows=cust?ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.ret}</td><td style="text-align:right">${x.sysPick}</td><td style="text-align:right">${x.qty}</td></tr>`).join(''):ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.ret}</td>${goods?`<td style="text-align:right">${x.sysPick}</td><td style="text-align:right">${x.actual}</td><td style="text-align:right">${x.damaged}</td>`:''}<td style="text-align:right">${x.qty}</td><td style="text-align:right">${x.ok==null?QTY_EMPTY:x.ok}</td><td style="text-align:right;color:var(--ts)">${raPriceCell(x.price)}</td>${a._whr?`<td style="text-align:right">${x.ok==null||x.price==null?QTY_EMPTY:money(Math.round(x.ok*x.price*100)/100)}</td>`:''}</tr>`).join('');
   const compTxt=ra.compStatus=='已生成'?`<span class="mono">${ra.compNo}</span>`:(ra.compStatus=='待生成'?'<span style="color:var(--y)">生成中</span>':'—');
   return sec+`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:14px">
@@ -6780,7 +6780,7 @@ goHome();
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20261030f"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
-<script src="pc-modules/delivery.js?v=20261110a"></script>
+<script src="pc-modules/delivery.js?v=20261116a"></script>
 <script src="pc-modules/checkgoods.js?v=20261104c"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>

@@ -450,7 +450,7 @@
     if(!nos.length)return '';
     return `<div class="card" style="margin-top:16px"><div class="card-hd"><h3>仓库退回 · 申诉待核定</h3><span class="sub">${nos.length} 单</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>退回单号</th><th>申诉类型</th><th>申诉商品</th><th style="text-align:right">申诉数量</th><th>申诉时间</th><th>操作</th></tr></thead><tbody>
-      ${nos.map(no=>{const ra=DB.whrAppeals[no];return `<tr><td class="mono">${no}</td><td>${raKindLabel(ra)}</td><td>${ra.items.map(x=>x.name).join('、')}</td><td style="text-align:right">${ra.items.reduce((s,x)=>s+x.qty,0)}</td><td style="font-size:12px;color:var(--ts)">${ra.at}</td><td><button class="btn btn-p btn-sm" onclick="raReviewOpen(DB.whrAppeals['${no}'],'${no}','商品售价')">核定退货申诉</button></td></tr>`;}).join('')}
+      ${nos.map(no=>{const ra=DB.whrAppeals[no];return `<tr><td class="mono">${no}</td><td>${raKindLabel(ra)}</td><td>${ra.items.map(x=>x.name).join('、')}</td><td style="text-align:right">${ra.items.reduce((s,x)=>s+x.qty,0)}</td><td style="font-size:12px;color:var(--ts)">${ra.at}</td><td><button class="btn btn-p btn-sm" onclick="raReviewOpen(DB.whrAppeals['${no}'],'${no}','商品售价',true)">核定退货申诉</button></td></tr>`;}).join('')}
       </tbody></table></div></div></div>`;
   };
   window.whrOfDelivery=function(id){return (DB.whReturns||[]).filter(r=>r.deliveryNo==id);};
@@ -494,18 +494,31 @@
   }
   // 取回数量单元格：null=灰「—」；纯展示不标色（scm_退货单退回与取回数量_prd BR-06）
   function whrPickCell(v){return v==null?'<span style="color:var(--tt)">—</span>':`<span style="font-variant-numeric:tabular-nums">${v}</span>`;}
+  window.whrFQuery=function(){const v=id=>(document.getElementById(id).value||'').trim();DB.whrF={no:v('wf-no'),dno:v('wf-dno')};render();};
   window.deliv_whReturnContent=function(){
-    const gs=whrGroups();
-    if(!gs.length) return `<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无待退回商品</div><div class="e-s">送货到仓被清点出<b>送错</b>（应送清单外的 SKU）时，仓库登记台账后在此生成取货通知。<br>多送同一 SKU 不在这里——仓库照收，计入你的在仓寄存库存。</div></div>`;
-    const waitDoc=gs.filter(g=>g.status!='已取回').length;
-    return `<div class="ib ib-y" style="margin-bottom:12px"><span class="i">📦</span><div>
+    const all=whrGroups();
+    if(!all.length) return `<div class="empty"><div class="e-ic">📦</div><div class="e-t">暂无待退回商品</div><div class="e-s">送货到仓被清点出<b>送错</b>（应送清单外的 SKU）时，仓库登记台账后在此生成取货通知。<br>多送同一 SKU 不在这里——仓库照收，计入你的在仓寄存库存。</div></div>`;
+    // 筛选 / 状态 Tab（与客户退货同一套交互：单号点查询或回车生效，状态 Tab 点即切）
+    const wf=DB.whrF||{},wst=DB.whrStTab||'';
+    const kw=all.filter(g=>(!wf.no||g.no.toLowerCase().includes(wf.no.toLowerCase()))&&(!wf.dno||g.deliveryNo.toLowerCase().includes(wf.dno.toLowerCase())));
+    const gs=kw.filter(g=>!wst||g.status==wst);
+    const EN=`onkeydown="if(event.key=='Enter')whrFQuery()"`;
+    const filterBar=`<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px">
+      <input id="wf-no" value="${wf.no||''}" placeholder="退回单号" style="width:200px" ${EN}>
+      <input id="wf-dno" value="${wf.dno||''}" placeholder="送货单号" style="width:200px" ${EN}>
+      <button class="btn btn-p btn-sm" onclick="whrFQuery()">查询</button><button class="btn btn-o btn-sm" onclick="DB.whrF={};DB.whrStTab='';render()">重置</button>
+    </div></div>`;
+    const stTabs=`<div class="tabs" style="margin:0 16px">${['','待取回','部分取回','已取回'].map(k=>{const n=k?kw.filter(g=>g.status==k).length:kw.length;
+      return `<div class="tab ${wst==k?'active':''}" onclick="DB.whrStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>`;
+    const waitDoc=all.filter(g=>g.status!='已取回').length;
+    return filterBar+`<div class="ib ib-y" style="margin-bottom:12px"><span class="i">📦</span><div>
       <b>仓库退回</b>＝你送到仓的商品中被清点出<b>送错</b>（应送清单外的 SKU）的部分。这批货<b>不计入结算、不产生扣款也不付款</b>，仓库已放入专属虚拟库位暂存，请<b>线下联系仓库约时间取回</b>。
       <br><span style="color:var(--ts)">每条退回记录有自己的<b>退回单号</b>，一张送货单可能有多条；点<b>详情</b>看逐个商品的类型、数量与实物照片。</span>
       <br><b>多送同一 SKU 不进这里</b>：仓库照收不设上限，多收量在送货单「差异」列展示并计入你的<b>在仓寄存库存</b>，当天不参与售卖、次日优先抵扣应送量。
     </div></div>
-    <div class="card"><div class="card-hd"><h3>仓库退回</h3><span class="sub">待取回 ${waitDoc} 单 · 共 ${gs.length} 单 / ${(DB.whReturns||[]).length} 项 · 按退回单号，一张送货单可有多条</span></div>
-    <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>退回单号</th><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>状态</th><th>申诉</th><th>操作</th></tr></thead><tbody>
+    <div class="card"><div class="card-hd"><h3>仓库退回</h3><span class="sub">待取回 ${waitDoc} 单 · 共 ${all.length} 单 / ${(DB.whReturns||[]).length} 项 · 按退回单号，一张送货单可有多条</span></div>${stTabs}
+    <div class="card-bd flush">${gs.length?'':`<div class="empty"><div class="e-ic">🔍</div><div class="e-t">没有${wst?'「'+wst+'」的':'符合条件的'}退回记录</div><div class="e-s">换个单号或状态试试，或点「重置」</div></div>`}<div style="overflow-x:auto;${gs.length?'':'display:none'}"><table>
+      <thead><tr><th>退回单号</th><th>来源送货单</th><th>退回商品</th><th>类型合计</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th>存放仓库 / 库位</th><th>登记时间</th><th>状态</th><th>申诉</th><th>操作</th></tr></thead><tbody>
       ${gs.map(g=>`<tr>
         <td class="mono" style="white-space:nowrap">${g.no}</td>
         <td class="mono" style="white-space:nowrap">${g.deliveryNo}</td>
@@ -541,18 +554,18 @@
         ${kv('虚拟库位',`<span class="mono">${g.slot}</span>`)}
         ${kv('首次登记时间',g.at)}
         ${kv('退回商品',`${g.list.length} 个 SKU`)}
-        ${kv('退回数量',`${g.qty}`)}
-        ${kv('取回数量',g.pickedQty==null?'—':`${g.pickedQty}`)}
+        ${kv('应取回数量',`${g.qty}`)}
+        ${kv('实际取回数量',g.pickedQty==null?'—':`${g.pickedQty}`)}
       </div>
 
       ${sec('退回商品明细')}
       <div style="overflow-x:auto;margin-bottom:14px"><table>
-        <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">退回数量</th><th style="text-align:right">取回数量</th><th>库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
+        <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th>${DB.whrAppeals[g.no]?'<th style="text-align:right">申诉数量</th>':''}<th>库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
         ${g.list.map(r=>`<tr>
           <td style="white-space:nowrap"><b>${r.name}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${r.skuCode} · ${r.spec}</div>${r.note?`<div style="font-size:11px;color:var(--ts);margin-top:3px;white-space:normal;max-width:220px">${r.note}</div>`:''}</td>
           <td><span class="tag ${r.type=='送错'?'t-r':'t-y'}" style="font-size:10.5px"><span class="dot"></span>${r.type}</span></td>
           <td style="text-align:right;white-space:nowrap"><span style="font-variant-numeric:tabular-nums">${r.qty}</span> ${r.unit}</td>
-          <td style="text-align:right;white-space:nowrap">${r.status=='已取回'?whrPickCell(r.pickedQty)+' '+r.unit:whrPickCell(null)}</td>
+          <td style="text-align:right;white-space:nowrap">${r.status=='已取回'?whrPickCell(r.pickedQty)+' '+r.unit:whrPickCell(null)}</td>${DB.whrAppeals[g.no]?`<td style="text-align:right">${(DB.whrAppeals[g.no].items.find(i=>i.name==r.name)||{qty:0}).qty}</td>`:''}
           <td class="mono" style="font-size:12px;white-space:nowrap">${r.slot}</td>
           <td style="font-size:12px;color:var(--ts);white-space:nowrap">${r.registeredAt}</td>
           <td><button class="btn btn-link btn-sm" onclick="whr_photos('${r.deliveryNo}','${r.skuCode}')">📷 ${r.photos} 张</button></td>
