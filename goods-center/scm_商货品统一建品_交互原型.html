@@ -187,8 +187,9 @@ tbody tr:hover>td{background:#f5f9f5}
   <div class="panel">
     <div class="tabs" id="tabs"></div>
     <div class="toolbar"><button class="btn pr" onclick="openCreate()">＋ 新建商品（自营）</button>
-      <div class="dd" id="ddBatch"><button class="btn" onclick="toggleDd(event)">批量操作 ⌄</button><div class="dd-menu" id="ddMenu"></div></div>
-      <button class="btn" onclick="openExcel()">Excel 批量修改</button><button class="btn">导出 ⌄</button></div>
+      <div class="dd" id="ddSpu"><button class="btn" onclick="toggleDd(event,'ddSpu')">商品批量操作 ⌄</button><div class="dd-menu" id="ddSpuMenu"></div></div>
+      <div class="dd" id="ddItem"><button class="btn" onclick="toggleDd(event,'ddItem')">货品批量操作 ⌄</button><div class="dd-menu" id="ddItemMenu"></div></div>
+      <button class="btn">导出 ⌄</button></div>
     <div class="selbar" id="selbar"></div>
     <table>
       <thead><tr><th style="width:32px"><input type="checkbox" id="chkAll" onchange="selAll(this.checked)"></th><th style="width:28px"></th><th>商品 SPU</th><th>SPU 编码</th><th>后台类目</th><th>商品属性</th><th>规格数</th><th>渠道来源</th><th>创建人</th><th>创建时间</th><th>状态</th><th style="width:130px">操作</th></tr></thead>
@@ -687,12 +688,14 @@ const SEL=new Set();
 function selOne(c,v){v?SEL.add(c):SEL.delete(c);renderSel();const all=filtered();$('chkAll').checked=all.length&&all.every(x=>SEL.has(x.spu))}
 function selAll(v){filtered().forEach(x=>v?SEL.add(x.spu):SEL.delete(x.spu));renderList()}
 function renderSel(){const n=SEL.size;$('selbar').style.display=n?'flex':'none';$('selbar').innerHTML=`已选 ${n} 个商品 <button class="lk" onclick="SEL.clear();renderList()">清空</button>`;renderDd()}
-const BATCH=[
-  {g:'商品'},{k:'shelfOn',t:'批量上架'},{k:'shelfOff',t:'批量下架'},{k:'valid',t:'批量设置效期管理'},
-  {g:'货品'},{k:'itemOn',t:'批量启用货品'},{k:'itemOff',t:'批量停用货品'},{k:'purchY',t:'批量设为可采'},{k:'purchN',t:'批量设为不可采'},{k:'vendor',t:'批量设置默认供应商'},{k:'over',t:'批量设置入库超收'},{k:'qc',t:'批量设置质检扣点 / 拒收下限'}];
-function renderDd(){$('ddMenu').innerHTML=BATCH.map(b=>b.g?`<div class="g">${b.g}</div>`:`<a class="${SEL.size?'':'dis'}" onclick="${SEL.size?`openBatch('${b.k}')`:''}">${b.t}</a>`).join('')}
-function toggleDd(e){e.stopPropagation();$('ddBatch').classList.toggle('on')}
-document.addEventListener('click',()=>{const d=$('ddBatch');if(d)d.classList.remove('on')});
+const BATCH_SPU=[{k:'shelfOn',t:'批量上架'},{k:'shelfOff',t:'批量下架'},{k:'valid',t:'批量设置效期管理'},{k:'excel',t:'Excel 批量修改',free:true}];
+const BATCH_ITEM=[{k:'itemOn',t:'批量启用'},{k:'itemOff',t:'批量停用'},{k:'purchY',t:'批量设为可采'},{k:'purchN',t:'批量设为不可采'},{k:'vendor',t:'批量设置默认供应商'},{k:'over',t:'批量设置入库超收'},{k:'qc',t:'批量设置质检扣点 / 拒收下限'}];
+const BATCH=[...BATCH_SPU,...BATCH_ITEM];
+function ddHtml(list,tip){return`<div class="g">${tip}</div>`+list.map(b=>{const on=SEL.size||b.free;return`<a class="${on?'':'dis'}" onclick="${on?(b.k==='excel'?'closeDd();openExcel()':`openBatch('${b.k}')`):''}">${b.t}</a>`}).join('')}
+function renderDd(){$('ddSpuMenu').innerHTML=ddHtml(BATCH_SPU,'作用于勾选商品下的 SPU / SKU');$('ddItemMenu').innerHTML=ddHtml(BATCH_ITEM,'作用于勾选商品关联的标品货品、原料')}
+function closeDd(){['ddSpu','ddItem'].forEach(id=>{const d=$(id);if(d)d.classList.remove('on')})}
+function toggleDd(e,id){e.stopPropagation();const was=$(id).classList.contains('on');closeDd();if(!was)$(id).classList.add('on')}
+document.addEventListener('click',closeDd);
 
 let B=null;
 /* 解析勾选商品 → 作用对象，并给出跳过原因 */
@@ -713,8 +716,8 @@ function curOf(kind,o,t){if(kind==='itemOn'||kind==='itemOff')return o.status||'
 function skipOf(kind,o,t){const st=o.status||'启用',pu=o.purch||'是';if(kind==='itemOn'&&st==='启用')return'已是启用';if(kind==='itemOff'&&st==='停用')return'已是停用';if(kind==='purchY'&&pu==='是')return'已是可采';if(kind==='purchN'&&pu==='否')return'已是不可采';return''}
 function effectOf(kind,x){if(x.skip)return'';if(kind==='itemOff'&&x.type==='标品货品'){const n=x.ref.s.skus.filter(k=>k.status==='在售').length;return n?`${n} 个在售 SKU 一起下架`:''}
   if(kind==='itemOff'&&x.type==='原料')return'成品不跟着停，库存卖完自动下架';if(kind==='purchN')return'库存不足 1 份时 SKU 自动下架';if(kind==='itemOn'||kind==='purchY')return'SKU 不自动上架';return''}
-function openBatch(kind){$('ddBatch').classList.remove('on');B={kind,vals:{validP:'是',period:'',periodUnit:'天',vendor:{},over:Object.fromEntries(WAREHOUSES.map(w=>[w,99])),fee:'',rej:''},done:false};renderBatch()}
-function renderBatch(){const {kind}=B;const t=BATCH.find(b=>b.k===kind).t;const T=targets(kind);const ok=T.filter(x=>!x.skip);$('bTitle').textContent=t;
+function openBatch(kind){closeDd();B={kind,vals:{validP:'是',period:'',periodUnit:'天',vendor:{},over:Object.fromEntries(WAREHOUSES.map(w=>[w,99])),fee:'',rej:''},done:false};renderBatch()}
+function renderBatch(){const {kind}=B;const isI=BATCH_ITEM.some(b=>b.k===kind);const t=(isI?'货品':'商品')+' · '+BATCH.find(b=>b.k===kind).t;const T=targets(kind);const ok=T.filter(x=>!x.skip);$('bTitle').textContent=t;
   let form='';const v=B.vals;
   if(kind==='valid')form=`<div class="g3"><div class="fr"><label class="fl"><span class="rq">*</span>效期管理</label><div class="radios">${['是','否'].map(x=>`<label><input type="radio" name="bv" ${v.validP===x?'checked':''} onchange="B.vals.validP='${x}';renderBatch()">${x}</label>`).join('')}</div></div>${v.validP==='是'?`<div class="fr"><label class="fl"><span class="rq">*</span>保质期</label><div style="display:flex;gap:6px"><input type="number" min="1" value="${esc(v.period)}" onchange="B.vals.period=this.value"><select style="width:80px" onchange="B.vals.periodUnit=this.value">${['天','月','年'].map(u=>`<option${u===v.periodUnit?' selected':''}>${u}</option>`).join('')}</select></div></div>`:''}</div><div class="fh" style="margin-top:6px">商品和它的货品（标品货品、非标品的成品）一起改；原料的效期在原料上单独改</div>`;
   if(kind==='vendor')form=`<table style="max-width:560px"><thead><tr><th>仓库</th><th>默认供应商</th></tr></thead><tbody>${WAREHOUSES.map(w=>`<tr><td>${w}</td><td><select onchange="B.vals.vendor['${w}']=this.value">${opts(VENDORS,v.vendor[w],'不修改')}</select></td></tr>`).join('')}</tbody></table>`;
