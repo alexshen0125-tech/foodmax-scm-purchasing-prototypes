@@ -4570,7 +4570,7 @@ PAGES['m-after-return']=()=>{
     <input id="rf-suit" value="${rf.suit||''}" placeholder="工单号" style="width:200px" ${EN}>
     <button class="btn btn-p btn-sm" onclick="retFQuery()">查询</button><button class="btn btn-o btn-sm" onclick="DB.retF={};DB.retStTab='';render()">重置</button>
   </div></div>`;
-  const RET_TABS=['','待仓库入库','待提货','部分提货','无法取回','已提货','逾期未提','已取消'];
+  const RET_TABS=['','待仓库入库','待提货','部分提货','已提货','无法取回','逾期未提','已取消'];
   const stTabs=`<div class="tabs" style="margin:0 16px">${RET_TABS.map(k=>{const n=k?kw.filter(a=>a.returnStatus==k).length:kw.length;
     return `<div class="tab ${stK==k?'active':''}" onclick="DB.retStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>`;
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
@@ -6111,7 +6111,7 @@ PAGES['p-return-monitor']=()=>{
   return `${flowTip(`全部客户退货单。<b>停留天数</b>：待仓库入库从建单算，待提货从到仓算。待仓库入库超时由大仓自己配置，超时后大仓推送取回 0，自动置「无法取回」并整单赔付；待提货超过 <b>${DB.pickupDays} 天</b>没来提置「逾期未提」，商家责任、不赔付。`)}
   <div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;padding:14px 16px">
     <div><div style="font-size:12px;color:var(--ts);margin-bottom:5px">单号</div><input id="rm-no" value="${f.no||''}" placeholder="退货单号 / 正向订单号" style="min-width:200px" onkeydown="if(event.key=='Enter')rmQuery()"></div>
-    ${opt('rm-st','状态',[['','全部'],['未完成','未完成'],['待仓库入库','待仓库入库'],['待提货','待提货'],['部分提货','部分提货'],['无法取回','无法取回'],['已提货','已提货'],['逾期未提','逾期未提'],['已取消','已取消']],f.st)}
+    ${opt('rm-st','状态',[['','全部'],['未完成','未完成'],['待仓库入库','待仓库入库'],['待提货','待提货'],['部分提货','部分提货'],['已提货','已提货'],['无法取回','无法取回'],['逾期未提','逾期未提'],['已取消','已取消']],f.st)}
     ${opt('rm-stay','停留天数',[['','全部'],['3','3 天及以上'],['7','7 天及以上'],['14','14 天及以上']],f.stay)}
     <button class="btn btn-p btn-sm" onclick="rmQuery()">查询</button><button class="btn btn-o btn-sm" onclick="DB.rmF={st:'未完成',stay:''};render()">重置</button>
   </div></div>

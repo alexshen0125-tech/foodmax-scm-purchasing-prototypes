@@ -1151,7 +1151,7 @@ function openReturn(){
     </div>
     <div id="rt-cust">
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
-    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="部分提货" style="white-space:nowrap;flex-shrink:0">部分提货</span><span class="t" data-t="无法取回" style="white-space:nowrap;flex-shrink:0">无法取回</span><span class="t" data-t="已提货" style="white-space:nowrap;flex-shrink:0">已提货</span><span class="t" data-t="逾期未提" style="white-space:nowrap;flex-shrink:0">逾期未提</span></div>
+    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="部分提货" style="white-space:nowrap;flex-shrink:0">部分提货</span><span class="t" data-t="已提货" style="white-space:nowrap;flex-shrink:0">已提货</span><span class="t" data-t="无法取回" style="white-space:nowrap;flex-shrink:0">无法取回</span><span class="t" data-t="逾期未提" style="white-space:nowrap;flex-shrink:0">逾期未提</span></div>
     <div class="dl-list" id="dl-rtl"></div></div>
     <div id="rt-whr" style="display:none"></div>`,
     mount:(p)=>{
