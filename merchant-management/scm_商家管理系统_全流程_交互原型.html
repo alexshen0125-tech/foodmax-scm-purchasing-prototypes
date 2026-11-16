@@ -4763,7 +4763,7 @@ function retAppealBlock(a){
       ${kv('照片',ra.photos?`<button class="btn btn-link btn-sm" style="padding:0" onclick="toast('（原型）查看已上传的 ${ra.photos} 张照片','info')">📷 ${ra.photos} 张</button>`:'未上传')}
       ${kv('说明',ra.desc)}
     </div>
-    <div style="overflow-x:auto;margin-bottom:14px"><table><thead>${cust?'<tr><th>商品</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">申诉数量</th></tr>':`<tr><th>商品</th><th style="text-align:right">${a._whr?'退回数量':'应取回数量'}</th>${goods?`<th style="text-align:right">${a._whr?'系统记录':'系统取回'}</th><th style="text-align:right">实际数量</th><th style="text-align:right">坏了不能卖</th>`:''}<th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${a._priceLabel||'正向订单结算单价'}</th>${a._whr?'<th style="text-align:right">赔付金额</th>':''}</tr>`}</thead><tbody>${rows}</tbody></table></div>
+    ${cust?'':`<div style="overflow-x:auto;margin-bottom:14px"><table><thead>${cust?'<tr><th>商品</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">申诉数量</th></tr>':`<tr><th>商品</th><th style="text-align:right">${a._whr?'退回数量':'应取回数量'}</th>${goods?`<th style="text-align:right">${a._whr?'系统记录':'系统取回'}</th><th style="text-align:right">实际数量</th><th style="text-align:right">坏了不能卖</th>`:''}<th style="text-align:right">申诉数量</th><th style="text-align:right">核定数量</th><th style="text-align:right">${a._priceLabel||'正向订单结算单价'}</th>${a._whr?'<th style="text-align:right">赔付金额</th>':''}</tr>`}</thead><tbody>${rows}</tbody></table></div>`}
     ${ra.status!='平台处理中'?(a._whr?`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px 24px;margin-bottom:20px">${kv('赔付合计',ra.comp>0?`<span style="color:var(--g)">${money(ra.comp)}</span>`:money(0))}${kv('赔付单',compTxt)}${kv('审核说明',ra.note)}</div>`:`<div style="margin-bottom:20px">${kv('审核说明',ra.note)}</div>`):'<div style="margin-bottom:20px"></div>'}`;
 }
 
@@ -6635,6 +6635,9 @@ function retDiffBlock(a){
   }
   return '';   // 已完成：差异数量看明细表，赔付金额看「赔付单」区块，不再重复
 }
+// 客户退货有申诉：退货明细表多一列「申诉数量」（申诉区块不再单列商品表，避免重复）；返回按商品取数的函数，无申诉返回 null
+function retApQ(a){const ra=a.retAppeal;if(!ra||a._whr||ra.kind!='goods')return null;
+  return x=>{const it=(ra.items||[]).find(i=>i.name==x.name);return it?it.qty:'<span style="color:var(--tt)">0</span>';};}
 // 售后详情
 function act_afterDetail(i){const a=DB.afterSales[i];retRecalc(a);
   const kv=(k,v)=>`<div style="min-width:0"><div style="font-size:12px;color:var(--ts);margin-bottom:4px">${k}</div><div style="font-size:13.5px;color:var(--tp);font-weight:500;word-break:break-word">${v||'—'}</div></div>`;
@@ -6682,9 +6685,9 @@ function act_afterDetail(i){const a=DB.afterSales[i];retRecalc(a);
 
     ${(a.returnStatus&&(a.retItems||[]).length)?`${sec('退货明细')}
     <div style="overflow-x:auto;margin-bottom:20px"><table>
-      <thead><tr><th>商品</th><th>正向订单号</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">差异数量</th><th style="text-align:right">正向订单结算单价</th><th style="text-align:right">退货金额</th></tr></thead><tbody>
-      ${giftBlockRows(a.retItems,x=>`<tr><td style="white-space:nowrap">${x.name}${retGiftTag(x)}</td><td class="mono" style="white-space:nowrap">${a.order}</td><td style="text-align:right;font-variant-numeric:tabular-nums">${x.retQty}</td><td style="text-align:right">${pickQtyCell(a,x)}</td><td style="text-align:right">${diffQtyCell(a,x)}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.price==null?'—':money(Math.round(x.retQty*x.price*100)/100)}</td></tr>`,7,x=>x.retQty,x=>`<tr style="color:var(--ts)"><td>${x.name}</td><td colspan="6" style="font-size:12px">同时计入本活动门槛，数量已在上方区块列出</td></tr>`)}
-      <tr style="background:var(--gl)"><td>合计</td><td></td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td style="text-align:right">${diffQtyCell(a)}</td><td></td><td style="text-align:right">${money(retAmt(a))}</td></tr>
+      <thead><tr><th>商品</th><th>正向订单号</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">差异数量</th>${retApQ(a)?'<th style="text-align:right">申诉数量</th>':''}<th style="text-align:right">正向订单结算单价</th><th style="text-align:right">退货金额</th></tr></thead><tbody>
+      ${giftBlockRows(a.retItems,x=>`<tr><td style="white-space:nowrap">${x.name}${retGiftTag(x)}</td><td class="mono" style="white-space:nowrap">${a.order}</td><td style="text-align:right;font-variant-numeric:tabular-nums">${x.retQty}</td><td style="text-align:right">${pickQtyCell(a,x)}</td><td style="text-align:right">${diffQtyCell(a,x)}</td>${retApQ(a)?`<td style="text-align:right">${retApQ(a)(x)}</td>`:''}<td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.price==null?'—':money(Math.round(x.retQty*x.price*100)/100)}</td></tr>`,retApQ(a)?8:7,x=>x.retQty,x=>`<tr style="color:var(--ts)"><td>${x.name}</td><td colspan="${retApQ(a)?7:6}" style="font-size:12px">同时计入本活动门槛，数量已在上方区块列出</td></tr>`)}
+      <tr style="background:var(--gl)"><td>合计</td><td></td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td style="text-align:right">${diffQtyCell(a)}</td>${retApQ(a)?`<td style="text-align:right">${r2q((a.retAppeal.items||[]).reduce((s,i)=>s+(i.qty||0),0))}</td>`:''}<td></td><td style="text-align:right">${money(retAmt(a))}</td></tr>
     </tbody></table></div>${retDiffBlock(a)}${retHasGift(a)?`<div style="font-size:11.5px;color:var(--ts);margin:-12px 0 20px">标「赠品」的是满赠送出的赠品，跟着退货一起退回，提货时一并提走；赠品结算单价为 0，不产生退货金额。</div>`:''}`:''}
 
     ${a.returnStatus?retAppealBlock(a):''}

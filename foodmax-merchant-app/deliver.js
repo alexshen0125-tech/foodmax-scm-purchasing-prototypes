@@ -865,7 +865,7 @@ function returnCard(g){
 }
 // 退货明细单行（分区块与逐行两种排法共用）
 function retItemHtml(g,x){return `<b style="font-size:14px">${x.name}</b>${x.gift?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">赠品</span>':''}<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
-      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>应取回 ${x.retQty}</span><span>实际取回 ${pickHtml(g,x)}</span>${isDone(g)?`<span${diffOf(x)>0?' style="color:var(--red)"':''}>差异 ${diffOf(x)}</span>`:''}<span>单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:12.5px;color:#46604F;font-variant-numeric:tabular-nums"><span>应取回 ${x.retQty}</span><span>实际取回 ${pickHtml(g,x)}</span>${isDone(g)?`<span${diffOf(x)>0?' style="color:var(--red)"':''}>差异 ${diffOf(x)}</span>`:''}${g.appeal&&!g._whr&&g.appeal.kind==='goods'?`<span>申诉 ${((g.appeal.items||[]).find(i=>i.name===x.name)||{qty:0}).qty}</span>`:''}<span>单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
 // 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
 function openReturnDetail(no){
   const g=RETURN.find(x=>x.no===no); if(!g)return;retRecalc(g);
@@ -928,8 +928,8 @@ function raDetail(g,sec,box,kv){
   const goods=a.kind==='goods',PL=g._priceLabel||'正向订单结算单价';
   const comp=a.compStatus==='已生成'?`<span style="font-family:monospace">${a.compNo}</span>`:(a.compStatus==='待生成'?'<span style="color:#B45309">生成中</span>':'—');
   return sec('退货申诉')+box(kv('申诉状态',raTag(a.status))+kv('申诉类型',raKindLabel(a))+kv('申诉时间',a.at)+(a.status==='平台处理中'?kv('预计出结果时间',msTs(a.reviewDue)):kv('审核时间',a.reviewAt))+kv('照片',a.photos?a.photos+' 张':'未上传')+kv('说明',a.desc)+(!g._whr&&a.status!=='平台处理中'?kv('审核说明',a.note):''))
-    +sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
-      ${!g._whr&&goods?kv('应取回数量',x.ret)+kv('实际取回数量',x.sysPick)+kv('申诉数量',x.qty):`${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}`}${!g._whr&&goods?'':kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${g._whr?kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price))):''}</div>`).join(''))
+    +(!g._whr&&goods?'':sec('申诉明细')+box(a.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)"><b style="font-size:14px">${x.name}</b>
+      ${!g._whr&&goods?kv('应取回数量',x.ret)+kv('实际取回数量',x.sysPick)+kv('申诉数量',x.qty):`${goods?kv('系统记录',x.sysPick)+kv('实际数量',x.actual)+kv('坏了不能卖',x.damaged):''}${kv('申诉数量',x.qty)}${kv('核定数量',x.ok==null?'—':x.ok)}`}${!g._whr&&goods?'':kv(PL,x.price==null?'待平台确认':fmtS(x.price))}${g._whr?kv('赔付金额',x.ok==null||x.price==null?'—':fmtS(r2(x.ok*x.price))):''}</div>`).join('')))
     +(g._whr&&a.status!=='平台处理中'?sec('审核结果')+box(kv('赔付合计',a.comp>0?`<span style="color:var(--emerald-2)">${fmtS(a.comp)}</span>`:fmtS(0))+kv('赔付单',comp)+kv('审核说明',a.note)):'');
 }
 /* 退货申诉表单：按实际情况填写（实际拿到 / 坏了几件，系统算申诉数量与预计赔付）→ 提交 */
