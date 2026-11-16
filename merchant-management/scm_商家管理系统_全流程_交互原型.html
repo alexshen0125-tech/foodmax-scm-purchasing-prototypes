@@ -4506,8 +4506,7 @@ function diffQtyCell(a,x){if(!retDone(a))return QTY_EMPTY;const v=x?retDiffOf(x)
 function retCompsOf(a){const no='TH-'+a.id.slice(-6);return typeof retCompRows=='function'?retCompRows().filter(r=>r.retNo==no):[];}
 function retCompTotal(a){return r2q(retCompsOf(a).reduce((s,r)=>s+r.ra.comp,0));}
 function diffCompCell(a){const cs=retCompsOf(a);
-  // 还没提货：差异要等提货时才定；列表写清楚，免得看着空着以为漏赔
-  if(!cs.length)return (['待仓库入库','待提货'].includes(a.returnStatus))?`<span style="color:var(--ts);font-size:12px;white-space:nowrap" title="提货时实际取回少于应取回的部分直接赔付">提货后赔付</span>`:QTY_EMPTY;const i=DB.afterSales.indexOf(a);
+  if(!cs.length)return QTY_EMPTY;   // 没提货不一定有差异，不预告赔付const i=DB.afterSales.indexOf(a);
   return `<a href="javascript:void(0)" title="查看赔付单" onclick="retCompPop(${i},event)" style="color:var(--g);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--g)">${money(retCompTotal(a))}</a>`;}
 // 列表点赔付金额：浮层列出这张退货单的每张赔付单，点单号看赔付单详情
 function retCompPop(i,ev){ev.stopPropagation();const a=DB.afterSales[i],cs=retCompsOf(a);
