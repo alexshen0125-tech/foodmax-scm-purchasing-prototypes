@@ -4627,7 +4627,7 @@ function retAppealCell(a){
   if(ra)return `<span class="tag ${RA_TONE[ra.status]||'t-gr'}"><span class="dot"></span>${ra.status=='平台处理中'?'平台处理中':'申诉'+ra.status}</span>`;
   if(a.type=='退货退款'&&raExpired(a)&&!(a._whr&&!DB.whrAppealOn))return `<span style="color:var(--tt)">已过申诉期</span>`;
   if(!retAppealWin(a))return QTY_EMPTY;
-  const d=raPickDeadline(a);return `<span style="color:var(--g);white-space:nowrap"${d?` title="申诉截止 ${msTs(d)}"`:''}>可申诉${d&&!a._whr?`（剩 ${remainTxt(d-Date.now())}）`:''}</span>`;
+  const d=raPickDeadline(a);return `<span style="color:var(--g);white-space:nowrap"${d?` title="申诉截止 ${msTs(d)}"`:''}>可申诉${d?`（剩 ${remainTxt(d-Date.now())}）`:''}</span>`;
 }
 function act_retAppeal(i){const a=DB.afterSales[i];if(!retAppealOpen(a))return toast('该单不能申诉','err');DB._ra={t:a,photo:false,busy:false};raModal();}
 function raModal(){
@@ -4648,7 +4648,7 @@ function raModal(){
   const pend=a._pendingCount?`<div class="ib ib-y" style="margin-top:10px"><span class="i">⚠️</span><div>本条退回记录还有 <b>${a._pendingCount} 项</b>未取回。每条记录只能申诉 1 次，提交后这些商品取回时<b>不能再申诉</b>。</div></div>`:'';
   const html=new String(`<div class="mc-hd"><h3>退货申诉 · ${a._title||'TH-'+a.id.slice(-6)}</h3><p>${retItemsName(a)} · ${a._stLabel||a.returnStatus}</p><button class="mc-x" onclick="closeModal()">×</button></div>
   <div class="mc-bd">
-    <div class="ib ib-b"><span class="i">📣</span><div>${a._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。${a._whr?'':'没取回的部分已经按差异自动赔付，这里只申诉<b>取回的货</b>：实际拿到的比系统记录少，或坏了不能卖。'}</div></div>
+    <div class="ib ib-b"><span class="i">📣</span><div>${raPickDeadline(a)?`申诉截止 <b>${msTs(raPickDeadline(a))}</b>（剩 <b>${remainTxt(raPickDeadline(a)-Date.now())}</b>），过期不能再申诉。`:''}${a._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。${a._whr?'':'没取回的部分已经按差异自动赔付，这里只申诉<b>取回的货</b>：实际拿到的比系统记录少，或坏了不能卖。'}</div></div>
     ${pend}
     <div class="fr"><label class="fl">申诉原因</label><div class="row" style="gap:8px">
       <button class="btn btn-sm ${oth?'btn-o':'btn-p'}" onclick="raSetOther(false)">${goods?'数量不对或有损坏':'货没到仓'}</button>

@@ -841,7 +841,7 @@ function raLine(g){
   if(g.appeal)return raTag(g.appeal.status);
   if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return `<span style="color:var(--sub)">已过申诉期</span>`;
   if(!raWin(g))return '';
-  const d=raDeadline(g);return `<span style="color:var(--emerald-2)">可申诉${d&&!g._whr?`（剩 ${remainTxt(d-Date.now())}）`:''}</span>`;
+  const d=raDeadline(g);return `<span style="color:var(--emerald-2)">可申诉${d?`（剩 ${remainTxt(d-Date.now())}）`:''}</span>`;
 }
 function pickVal(g,x){
   const vals=(x?[x]:g.items).map(i=>pickOf(g,i));
@@ -942,7 +942,7 @@ function openRetAppeal(g,onDone){
   const inp=(cls,k,v,mx)=>`<input class="${cls}" data-k="${k}" type="number" inputmode="decimal" min="0" ${mx!=null?`max="${mx}"`:''} step="any" value="${v}" style="width:76px;height:44px;text-align:center;font-size:16px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit">`;
   const line=(l,r)=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0"><span style="font-size:13px;color:#46604F">${l}</span>${r}</div>`;
   pushPage({title:'退货申诉',body:`
-    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${g._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。${g._whr?'':'没取回的部分已按差异自动赔付，这里只申诉<b>取回的货</b>。'}</div>
+    <div style="margin:13px 16px 0;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${raDeadline(g)?`申诉截止 <b>${msTs(raDeadline(g))}</b>（剩 <b>${remainTxt(raDeadline(g)-Date.now())}</b>），过期不能再申诉。`:''}${g._whr?'每条退回记录':'每张退货单'}<b>只能申诉 1 次</b>，平台在 <b>${RA_REVIEW_H} 小时</b>内给出结果。本申诉只针对退回的货，不影响原售后单判责。${g._whr?'':'没取回的部分已按差异自动赔付，这里只申诉<b>取回的货</b>。'}</div>
     ${g._pendingCount?`<div style="margin:10px 16px 0;background:var(--amber-soft);color:#B45309;font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">本条退回记录还有 <b>${g._pendingCount} 项</b>未取回。每条记录只能申诉 1 次，提交后这些商品取回时<b>不能再申诉</b>。</div>`:''}
     <div class="as-dblock" style="margin-top:13px"><div class="bt"><span>申诉原因</span></div>
       <div style="display:flex;gap:8px">${[[0,goods?'数量不对或有损坏':'货没到仓'],[1,'数量没问题，是其他问题']].map(([v,t])=>`<span data-oth="${v}" style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 8px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid ${v?'var(--line)':'var(--emerald)'};background:${v?'#fff':'var(--mint-soft)'};color:${v?'#27433A':'var(--emerald-2)'}">${t}</span>`).join('')}</div>
