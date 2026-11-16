@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>费用单批量审核</title>
+<style>
+:root{
+  --green:#1f9d3c;--green-d:#178232;--green-l:#e8f6ec;--link:#07c160;
+  --text:#1f2329;--text2:#646a73;--text3:#8f959e;--line:#e5e6eb;--bg:#f5f6f7;
+  --red:#f54a45;--red-l:#fef0f0;--orange:#ff8800;--orange-l:#fff5e6;--blue:#3370ff;--blue-l:#e1eaff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;font-size:13px;color:var(--text);background:var(--bg)}
+button{font-family:inherit;font-size:13px;cursor:pointer}
+.top{height:44px;background:var(--green);display:flex;align-items:center;color:#fff;padding:0 16px;gap:4px}
+.logo{font-weight:800;font-size:20px;letter-spacing:.5px;margin-right:60px}
+.top .nav{padding:0 14px;height:44px;line-height:44px;font-weight:600}
+.top .nav.on{background:rgba(255,255,255,.18)}
+.top .right{margin-left:auto;display:flex;gap:24px;font-weight:600}
+.wrap{display:flex;min-height:calc(100vh - 44px)}
+.side{width:200px;background:#fff;border-right:1px solid var(--line);padding:10px 0;flex-shrink:0}
+.side div{padding:12px 20px;color:var(--text)}
+.side .grp{font-weight:500}
+.side .sub{padding-left:40px}
+.side .on{background:var(--green-l);color:var(--green);font-weight:600}
+.main{flex:1;min-width:0;padding:0 12px 24px}
+.tabs{height:34px;display:flex;align-items:flex-end}
+.tabs span{background:#fff;padding:7px 14px;font-size:12px;border:1px solid var(--line);border-bottom:none}
+.card{background:#fff;padding:14px 16px;margin-bottom:12px}
+.filters{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.f label{display:block;color:var(--text2);font-size:12px;margin-bottom:6px}
+.f input,.f select{height:32px;border:1px solid #dcdfe6;border-radius:3px;padding:0 10px;width:200px;color:var(--text);background:#fff}
+.btn{height:32px;padding:0 15px;border-radius:3px;border:1px solid #dcdfe6;background:#fff;color:var(--text)}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn.primary:hover{background:var(--green-d);color:#fff}
+.btn:disabled,.btn:disabled:hover{background:#f5f7fa;border-color:#e4e7ed;color:#c0c4cc;cursor:not-allowed}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.tbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.tbar h3{font-size:15px}
+.tbar .tip{color:var(--text3);margin-left:8px}
+.tbar .sp{flex:1}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1500px}
+th{background:#f5f6f7;font-weight:600;text-align:left;padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:hover td{background:#fafbfc}
+td.op,th.op{position:sticky;right:0;background:#fff;box-shadow:-4px 0 6px -4px rgba(0,0,0,.08)}
+th.op{background:#f5f6f7}
+.lk{color:var(--link);cursor:pointer;margin-right:10px}
+.lk:hover{text-decoration:underline}
+.tag{display:inline-block;padding:1px 8px;border-radius:3px;font-size:12px;line-height:20px;border:1px solid}
+.t-info{color:#909399;background:#f4f4f5;border-color:#e9e9eb}
+.t-warn{color:#e6a23c;background:#fdf6ec;border-color:#faecd8}
+.t-danger{color:#f56c6c;background:#fef0f0;border-color:#fde2e2}
+.t-primary{color:#409eff;background:#ecf5ff;border-color:#d9ecff}
+.t-success{color:#67c23a;background:#f0f9eb;border-color:#e1f3d8}
+.ck{width:14px;height:14px;accent-color:var(--green);cursor:pointer}
+.warn-ic{color:#e6a23c;margin-left:4px;cursor:help}
+.pager{display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:14px;color:var(--text2)}
+.pager b{display:inline-block;width:28px;height:28px;line-height:28px;text-align:center;background:var(--green);color:#fff;border-radius:3px}
+/* tooltip */
+.tt{position:relative}
+.tt .pop{display:none;position:absolute;bottom:calc(100% + 6px);left:0;background:#303133;color:#fff;padding:8px 10px;border-radius:4px;font-size:12px;line-height:20px;z-index:20;white-space:nowrap}
+.tt:hover .pop{display:block}
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100}
+.mask.show{display:flex}
+.dlg{background:#fff;border-radius:4px;width:860px;max-width:calc(100vw - 32px);max-height:88vh;display:flex;flex-direction:column}
+.dlg-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.dlg-h h4{font-size:16px;flex:1}
+.x{cursor:pointer;color:var(--text3);font-size:18px}
+.dlg-b{padding:16px 20px;overflow:auto}
+.dlg-f{padding:12px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px}
+.sec-t{font-weight:600;margin:4px 0 8px;display:flex;align-items:center;gap:8px}
+.sec-t .n{color:var(--text3);font-weight:400}
+.mini{min-width:0}
+.mini th,.mini td{padding:8px 10px;font-size:12px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.sum-row td{background:#fafbfc;font-weight:600}
+.groupbox{border:1px solid var(--line);border-radius:4px;margin-bottom:14px}
+.groupbox .gh{padding:10px 12px;background:#f7f8fa;display:flex;gap:16px;align-items:center;border-bottom:1px solid var(--line)}
+.groupbox .gh b{font-size:14px}
+.reason{color:var(--red)}
+.alert{padding:9px 12px;border-radius:4px;margin-bottom:12px;line-height:20px}
+.alert.warn{background:var(--orange-l);color:#ad6800}
+.alert.err{background:var(--red-l);color:#c0392b}
+textarea{width:100%;border:1px solid #dcdfe6;border-radius:3px;padding:8px 10px;font-family:inherit;font-size:13px;resize:vertical;min-height:60px}
+.cnt{color:var(--text3);font-size:12px;text-align:right;margin-top:4px}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#f0f9eb;border:1px solid #e1f3d8;color:#67c23a;padding:10px 18px;border-radius:4px;z-index:300;display:none;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.toast.err{background:var(--red-l);border-color:#fde2e2;color:#f56c6c}
+/* feishu */
+.fs{width:1080px;background:#f2f3f5}
+.fs .dlg-h{background:#fff}
+.fs-body{display:flex;gap:16px;padding:16px;overflow:auto;align-items:flex-start}
+.fs-col-l{width:320px;flex-shrink:0}
+.fs-col-r{flex:1;min-width:0;background:#fff;border-radius:8px;padding:20px 24px}
+.fs-lbl{font-size:12px;color:var(--text3);margin:0 0 8px}
+.fs-card{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(31,35,41,.08);margin-bottom:16px}
+.fs-card .ch{background:var(--blue);color:#fff;padding:10px 14px;font-weight:600}
+.fs-card .cb{padding:12px 14px;line-height:22px}
+.fs-card .cb .k{color:var(--text3)}
+.fs-card .cf{padding:0 14px 12px;display:flex;gap:8px}
+.fs-btn{flex:1;height:30px;border-radius:6px;border:1px solid var(--line);background:#fff}
+.fs-btn.p{background:var(--blue);border-color:var(--blue);color:#fff}
+.fs-todo{background:#fff;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(31,35,41,.08)}
+.fs-todo .ti{font-weight:600;margin-bottom:6px}
+.fs-todo .sub{color:var(--text2);line-height:20px}
+.fs-title{font-size:20px;font-weight:600;margin-bottom:6px}
+.fs-meta{color:var(--text3);margin-bottom:18px;display:flex;gap:16px}
+.fs-st{display:inline-block;padding:0 8px;border-radius:4px;font-size:12px;line-height:22px}
+.fs-st.ing{background:var(--blue-l);color:var(--blue)}
+.fs-st.ok{background:#d9f5d6;color:#2ea121}
+.fs-st.no{background:#fde2e2;color:var(--red)}
+.fs-field{margin-bottom:14px}
+.fs-field .k{color:var(--text3);font-size:12px;margin-bottom:4px}
+.fs-field .v{font-size:14px;line-height:22px;white-space:pre-wrap}
+.fs-field .v.big{font-size:18px;font-weight:600}
+.fs-list{border:1px solid var(--line);border-radius:6px;overflow:auto}
+.fs-list table{min-width:820px}
+.fs-list th{background:#f7f8fa;font-size:12px;padding:8px 10px}
+.fs-list td{font-size:12px;padding:8px 10px}
+.fs-flow{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.node{display:flex;gap:10px;margin-bottom:14px}
+.dot{width:10px;height:10px;border-radius:50%;background:#c9cdd4;margin-top:5px;flex-shrink:0}
+.dot.ok{background:#34c724}.dot.ing{background:var(--blue)}.dot.no{background:var(--red)}
+.node .nm{font-weight:600}.node .ds{color:var(--text3);font-size:12px;line-height:20px}
+.fs-act{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;padding-top:14px;border-top:1px solid var(--line)}
+.fs-act .fs-btn{flex:none;width:96px;height:34px}
+.fs-act .fs-btn.r{color:var(--red)}
+.hint{color:var(--text3);font-size:12px}
+.diff-up{color:var(--red)}.diff-dn{color:#2ea121}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">Foodmax</div>
+  <div class="nav">商城(MALL)</div><div class="nav on">采购(SCM)</div><div class="nav">仓储(WMS)</div><div class="nav">运输管理系统(TMS)</div><div class="nav">商家运营(Merchant)</div>
+  <div class="right"><span>小满新加坡(SG Xiaoman)</span><span>简体中文</span><span>货币: SGD</span><span>沈亮</span></div>
+</div>
+<div class="wrap">
+  <div class="side">
+    <div class="grp">工作台</div><div class="grp">采购计划</div><div class="grp">库存管理</div><div class="grp">货品管理</div><div class="grp">采购管理</div><div class="grp">结算</div><div class="grp">供应商管理</div>
+    <div class="grp" style="color:var(--green)">跨境物流费</div>
+    <div class="sub">物流商管理</div><div class="sub on">费用单管理</div><div class="sub">结算单管理</div>
+    <div class="grp">配置中心</div>
+  </div>
+  <div class="main">
+    <div class="tabs"><span>费用单管理 ✕</span></div>
+    <div class="card">
+      <div class="filters">
+        <div class="f"><label>费用单号</label><input placeholder="请输入费用单号"></div>
+        <div class="f"><label>物流商</label><input placeholder="请选择/搜索物流商"></div>
+        <div class="f"><label>费用单状态</label><select id="fStatus" onchange="render()"><option value="">全部</option></select></div>
+        <div class="f"><label>审批单号</label><input id="fBatch" placeholder="请输入审批单号" oninput="render()"></div>
+        <div class="f"><label>创建时间</label><input value="2026-11-10 - 2026-11-16"></div>
+        <button class="btn primary" onclick="render()">查询</button>
+        <button class="btn" onclick="document.getElementById('fStatus').value='';document.getElementById('fBatch').value='';render()">重置</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tbar">
+        <h3>费用单列表</h3><span class="tip" id="selTip">已勾选 0 项</span>
+        <span class="sp"></span>
+        <button class="btn primary">新建费用单</button>
+        <button class="btn primary" id="batchBtn" disabled onclick="openSubmit(selectedIds())">批量提交审核</button>
+        <button class="btn">⤓ 导出列表</button>
+        <button class="btn">⤓ 导出明细</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:40px"><input type="checkbox" class="ck" id="ckAll" onchange="toggleAll(this)"></th>
+            <th>费用单号</th><th>物流商</th><th>结算主体</th><th>关联PO数</th><th>费用摘要</th><th>结算币种</th><th class="num">预估金额</th><th class="num">实际金额</th><th>分摊方式</th><th>费用单状态</th><th>审批单号</th><th>创建时间</th><th>创建人</th><th class="op">操作</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="pager">共 <span id="total"></span> 条 <span>10条/页</span><b>1</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- 提交审核确认弹窗 -->
+<div class="mask" id="mSubmit">
+  <div class="dlg">
+    <div class="dlg-h"><h4 id="subTitle">提交审核</h4><span class="x" onclick="closeM('mSubmit')">✕</span></div>
+    <div class="dlg-b" id="subBody"></div>
+    <div class="dlg-f">
+      <button class="btn" onclick="closeM('mSubmit')">取消</button>
+      <button class="btn primary" id="subOk" onclick="doSubmit()">提交审核</button>
+    </div>
+  </div>
+</div>
+
+<!-- 飞书审批展示 -->
+<div class="mask" id="mFs">
+  <div class="dlg fs">
+    <div class="dlg-h"><h4>飞书审批 · <span id="fsNo"></span></h4><span class="x" onclick="closeM('mFs')">✕</span></div>
+    <div class="fs-body">
+      <div class="fs-col-l">
+        <div class="fs-lbl">① 审批人收到的飞书消息卡片</div>
+        <div class="fs-card" id="fsCard"></div>
+        <div class="fs-lbl">② 飞书「审批 › 待我审批」列表项</div>
+        <div class="fs-todo" id="fsTodo"></div>
+      </div>
+      <div class="fs-col-r" id="fsDetail"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 驳回意见（飞书侧） -->
+<div class="mask" id="mReject" style="z-index:200">
+  <div class="dlg" style="width:460px">
+    <div class="dlg-h"><h4>拒绝审批</h4><span class="x" onclick="closeM('mReject')">✕</span></div>
+    <div class="dlg-b">
+      <div class="alert warn">拒绝后本审批单内 <b id="rjCnt"></b> 张费用单全部退回「审核驳回」，采购员修改后重新提交。</div>
+      <div style="margin-bottom:6px">审批意见 <span class="reason">*</span></div>
+      <textarea id="rjText" maxlength="500" oninput="document.getElementById('rjLen').textContent=this.value.length" placeholder="请填写拒绝原因，会回写到每张费用单的驳回原因"></textarea>
+      <div class="cnt"><span id="rjLen">0</span>/500</div>
+    </div>
+    <div class="dlg-f"><button class="btn" onclick="closeM('mReject')">取消</button><button class="btn danger" onclick="doReject()">确认拒绝</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STATUS={1:['待录入','t-info'],2:['审核中','t-warn'],3:['审核驳回','t-danger'],4:['待对账','t-primary'],5:['待付款','t-warn'],6:['已付款','t-success'],7:['已废弃','t-info']};
+const MAX_PER_APPROVAL=50;
+// 费用单数据（字段对齐线上 LogisticsCostListItem）
+let bills=[
+ {costNo:'LC2026111600004',vendor:'D&Y LOGISTICS PTE LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026110300012','PO2026110300015'],summary:'海运费、报关费',cur:'SGD',est:2600,act:2688.40,alloc:'按重量占比',status:1,poDone:true,create:'2026-11-16 09:12:40',creator:'沈亮'},
+ {costNo:'LC2026111200003',vendor:'D&Y LOGISTICS PTE LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026110200031'],summary:'报关费',cur:'SGD',est:1300,act:1362.05,alloc:'按重量占比',status:1,poDone:true,create:'2026-11-12 15:20:11',creator:'沈亮'},
+ {costNo:'LC2026111200002',vendor:'D&Y LOGISTICS PTE LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026110200028'],summary:'报关费',cur:'SGD',est:1300,act:1277.15,alloc:'按重量占比',status:1,poDone:true,create:'2026-11-12 15:18:02',creator:'沈亮'},
+ {costNo:'LC2026111200001',vendor:'D&Y LOGISTICS PTE LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026110200021','PO2026110200022'],summary:'报关费',cur:'SGD',est:1300,act:null,alloc:'按重量占比',status:1,poDone:true,create:'2026-11-12 15:16:45',creator:'沈亮'},
+ {costNo:'LC2026111000001',vendor:'D&Y LOGISTICS PTE LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026110100003','PO2026110100004','PO2026110100007','PO2026110100009'],summary:'报关费',cur:'SGD',est:1300,act:1351.17,alloc:'按重量占比',status:1,poDone:false,create:'2026-11-10 10:05:33',creator:'沈亮'},
+ {costNo:'LC2026110700002',vendor:'HEALTHY LIVING BIOTECH CO., LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026103000011'],summary:'空运费、保险费',cur:'USD',est:820,act:845.60,alloc:'按金额占比',status:3,poDone:true,rejectReason:'保险费单价偏高，请附物流商报价单后重提',auditTime:'2026-11-14 11:02:18',batchNo:'LCA2026111300002',create:'2026-11-07 14:40:09',creator:'沈亮'},
+ {costNo:'LC2026110700001',vendor:'HEALTHY LIVING BIOTECH CO., LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026103000008'],summary:'空运费',cur:'USD',est:600,act:612.30,alloc:'按金额占比',status:1,poDone:true,create:'2026-11-07 14:31:52',creator:'沈亮'},
+ {costNo:'LC2026103100002',vendor:'HEALTHY LIVING BIOTECH CO., LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026102800005','PO2026102800006'],summary:'报关费',cur:'SGD',est:1300,act:1277.15,alloc:'按重量占比',status:2,poDone:true,batchNo:'LCA2026111300001',submitTime:'2026-11-13 16:22:05',create:'2026-10-31 09:15:27',creator:'沈亮'},
+ {costNo:'LC2026103100001',vendor:'HEALTHY LIVING BIOTECH CO., LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026102800002'],summary:'报关费',cur:'SGD',est:1300,act:1379.70,alloc:'按重量占比',status:2,poDone:true,batchNo:'LCA2026111300001',submitTime:'2026-11-13 16:22:05',create:'2026-10-31 09:11:40',creator:'沈亮'},
+ {costNo:'LC2026102800001',vendor:'HEALTHY LIVING BIOTECH CO., LTD',corp:'10X AI TECHNOLOGY PTE LTD',pos:['PO2026102500017'],summary:'报关费',cur:'SGD',est:1300,act:1351.17,alloc:'按重量占比',status:6,poDone:true,batchNo:'LCA2026102800001',create:'2026-10-28 10:20:00',creator:'沈亮'},
+];
+// 审批单（飞书实例）
+let approvals={
+ 'LCA2026111300001':{no:'LCA2026111300001',cur:'SGD',costNos:['LC2026103100002','LC2026103100001'],submitter:'沈亮',submitTime:'2026-11-13 16:22:05',remark:'10 月底两票报关费，与物流商对账单一致',state:'ing'},
+ 'LCA2026111300002':{no:'LCA2026111300002',cur:'USD',costNos:['LC2026110700002'],submitter:'沈亮',submitTime:'2026-11-13 17:40:51',remark:'',state:'no',opinion:'保险费单价偏高，请附物流商报价单后重提',approver:'王敏（采购主管）',doneTime:'2026-11-14 11:02:18'},
+ 'LCA2026102800001':{no:'LCA2026102800001',cur:'SGD',costNos:['LC2026102800001'],submitter:'沈亮',submitTime:'2026-10-28 11:00:00',remark:'',state:'ok',approver:'王敏（采购主管）',doneTime:'2026-10-28 15:30:12'},
+};
+let seq=3; let pending=null; let curFs=null;
+
+const fmt=n=>n==null?'--':n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const byNo=no=>bills.find(b=>b.costNo===no);
+const now=()=>{const d=new Date(),p=x=>String(x).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+function pct(est,act){const d=act-est,p=est?d/est*100:0;return {d,p,txt:`${d>=0?'+':''}${fmt(d)}（${p>=0?'+':''}${p.toFixed(1)}%）`}}
+
+(function initFilter(){const s=document.getElementById('fStatus');Object.entries(STATUS).forEach(([k,v])=>s.insertAdjacentHTML('beforeend',`<option value="${k}">${v[0]}</option>`))})();
+
+function render(){
+  const fs=document.getElementById('fStatus').value, fb=document.getElementById('fBatch').value.trim();
+  const rows=bills.filter(b=>(!fs||b.status==fs)&&(!fb||(b.batchNo||'').includes(fb)));
+  document.getElementById('total').textContent=rows.length;
+  document.getElementById('tbody').innerHTML=rows.map(b=>{
+    const [sn,sc]=STATUS[b.status];
+    let st=`<span class="tag ${sc}">${sn}</span>`;
+    if(b.status===3) st=`<span class="tt"><span class="tag ${sc}">${sn}</span><span class="warn-ic">⚠</span><span class="pop">驳回原因：${b.rejectReason||'--'}<br>驳回时间：${b.auditTime||'--'}</span></span>`;
+    const editable=b.status===1||b.status===3;
+    const ops=`<span class="lk">详情</span>`+(editable?`<span class="lk">编辑</span><span class="lk">作废</span><span class="lk" onclick="openSubmit(['${b.costNo}'])">提交审核</span>`:'');
+    return `<tr>
+      <td><input type="checkbox" class="ck row-ck" value="${b.costNo}" onchange="syncSel()"></td>
+      <td><span class="lk">${b.costNo}</span></td><td>${b.vendor}</td><td>${b.corp.slice(0,14)}…</td>
+      <td><span class="lk" title="${b.pos.join(', ')}">${b.pos.length}</span></td><td>${b.summary}</td><td>${b.cur}</td>
+      <td class="num">${fmt(b.est)}</td><td class="num">${fmt(b.act)}</td><td>${b.alloc}</td><td>${st}</td>
+      <td>${b.batchNo?`<span class="lk" onclick="openFs('${b.batchNo}')">${b.batchNo}</span>`:'--'}</td>
+      <td>${b.create}</td><td>${b.creator}</td><td class="op">${ops}</td></tr>`}).join('');
+  document.getElementById('ckAll').checked=false; syncSel();
+}
+function selectedIds(){return [...document.querySelectorAll('.row-ck:checked')].map(c=>c.value)}
+function syncSel(){const n=selectedIds().length;document.getElementById('selTip').textContent=`已勾选 ${n} 项`;document.getElementById('batchBtn').disabled=n===0}
+function toggleAll(el){document.querySelectorAll('.row-ck').forEach(c=>c.checked=el.checked);syncSel()}
+
+// 提交前校验（对齐 submitAudit 现网校验）
+function checkBill(b){
+  if(!(b.status===1||b.status===3)) return `当前状态「${STATUS[b.status][0]}」不可提交`;
+  if(!b.poDone) return '关联采购单未全部完成';
+  if(b.act==null) return '费用明细实际金额未录入';
+  return '';
+}
+function openSubmit(ids){
+  const ok=[],bad=[];
+  ids.map(byNo).forEach(b=>{const r=checkBill(b);r?bad.push([b,r]):ok.push(b)});
+  const groups={}; ok.forEach(b=>(groups[b.cur]=groups[b.cur]||[]).push(b));
+  const curs=Object.keys(groups);
+  const over=curs.filter(c=>groups[c].length>MAX_PER_APPROVAL);
+  pending={groups,over};
+  const single=ids.length===1;
+  document.getElementById('subTitle').textContent=single?'提交审核':`批量提交审核（已勾选 ${ids.length} 张）`;
+  let h='';
+  if(!ok.length){
+    h+=`<div class="alert err">勾选的费用单都不满足提交条件，请修改后再提交。</div>`;
+  }else{
+    h+=`<div class="alert warn">提交后费用单不可编辑。${curs.length>1?`勾选含 ${curs.length} 种结算币种，将按币种生成 <b>${curs.length} 张</b>飞书审批单。`:`将生成 <b>1 张</b>飞书审批单，审批人整单同意或拒绝，拒绝时本单内费用单全部退回「审核驳回」。`}</div>`;
+    if(over.length) h+=`<div class="alert err">${over.join('、')} 币种超过 ${MAX_PER_APPROVAL} 张，一张审批单最多 ${MAX_PER_APPROVAL} 张，请减少勾选。</div>`;
+    curs.forEach(c=>{
+      const g=groups[c],est=g.reduce((s,b)=>s+b.est,0),act=g.reduce((s,b)=>s+b.act,0),d=pct(est,act);
+      h+=`<div class="groupbox"><div class="gh"><b>飞书审批单 ${curs.length>1?curs.indexOf(c)+1:''}</b><span>结算币种 ${c}</span><span>${g.length} 张</span><span>实际合计 <b>${c} ${fmt(act)}</b></span><span class="${d.d>=0?'diff-up':'diff-dn'}">差异 ${d.txt}</span></div>
+      <table class="mini"><thead><tr><th>费用单号</th><th>物流商</th><th>费用摘要</th><th class="num">预估金额</th><th class="num">实际金额</th><th class="num">差异率</th></tr></thead><tbody>
+      ${g.map(b=>{const x=pct(b.est,b.act);return `<tr><td>${b.costNo}</td><td>${b.vendor}</td><td>${b.summary}</td><td class="num">${fmt(b.est)}</td><td class="num">${fmt(b.act)}</td><td class="num ${x.d>=0?'diff-up':'diff-dn'}">${x.p>=0?'+':''}${x.p.toFixed(1)}%</td></tr>`}).join('')}
+      </tbody></table></div>`;
+    });
+    h+=`<div style="margin:4px 0 6px">提交说明 <span class="hint">（选填，显示在飞书审批单上）</span></div><textarea id="subRemark" maxlength="200" placeholder="如：10 月报关费，已与物流商对账单核对一致" oninput="document.getElementById('rmLen').textContent=this.value.length"></textarea><div class="cnt"><span id="rmLen">0</span>/200</div>`;
+  }
+  if(bad.length){
+    h+=`<div class="sec-t" style="margin-top:10px">不可提交，本次跳过 <span class="n">${bad.length} 张</span></div>
+    <table class="mini"><thead><tr><th>费用单号</th><th>状态</th><th>原因</th></tr></thead><tbody>
+    ${bad.map(([b,r])=>`<tr><td>${b.costNo}</td><td><span class="tag ${STATUS[b.status][1]}">${STATUS[b.status][0]}</span></td><td class="reason">${r}</td></tr>`).join('')}</tbody></table>`;
+  }
+  document.getElementById('subBody').innerHTML=h;
+  const btn=document.getElementById('subOk');
+  btn.disabled=!ok.length||over.length>0;
+  btn.textContent=ok.length?`提交审核（${ok.length} 张）`:'提交审核';
+  openM('mSubmit');
+}
+function doSubmit(){
+  const remark=(document.getElementById('subRemark')||{}).value||'';
+  const made=[];
+  Object.entries(pending.groups).forEach(([cur,g])=>{
+    const d=new Date(),p=x=>String(x).padStart(2,'0');
+    const no=`LCA${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}${String(++seq).padStart(5,'0')}`;
+    const t=now();
+    approvals[no]={no,cur,costNos:g.map(b=>b.costNo),submitter:'沈亮',submitTime:t,remark,state:'ing'};
+    g.forEach(b=>{b.status=2;b.batchNo=no;b.submitTime=t});
+    made.push(no);
+  });
+  closeM('mSubmit'); render();
+  toast(`已提交 ${made.length} 张飞书审批单：${made.join('、')}`);
+}
+
+// 飞书审批展示
+function openFs(no){
+  curFs=no; const a=approvals[no], g=a.costNos.map(byNo);
+  const est=g.reduce((s,b)=>s+b.est,0),act=g.reduce((s,b)=>s+b.act,0),d=pct(est,act);
+  const vendors=[...new Set(g.map(b=>b.vendor))], corps=[...new Set(g.map(b=>b.corp))];
+  const maxP=Math.max(...g.map(b=>Math.abs(pct(b.est,b.act).p)));
+  const vtxt=vendors.length>1?`${vendors[0]} 等 ${vendors.length} 家`:vendors[0];
+  const title=`物流费审核 · ${g.length} 单 · ${a.cur} ${fmt(act)}`;
+  const stMap={ing:['审批中','ing'],ok:['已通过','ok'],no:['已拒绝','no']};
+  document.getElementById('fsNo').textContent=no;
+  document.getElementById('fsCard').innerHTML=`<div class="ch">审批 · ${a.submitter} 提交的「物流费审核」</div>
+    <div class="cb"><div style="font-weight:600;margin-bottom:4px">${title}</div>
+    <div><span class="k">实际合计：</span>${a.cur} ${fmt(act)}</div>
+    <div><span class="k">差异合计：</span>${d.txt}</div>
+    <div><span class="k">物流商：</span>${vtxt}</div></div>
+    ${a.state==='ing'?`<div class="cf"><button class="fs-btn" onclick="openReject()">拒绝</button><button class="fs-btn p" onclick="doApprove()">同意</button></div>`:`<div class="cf"><span class="fs-st ${stMap[a.state][1]}">${stMap[a.state][0]}</span></div>`}`;
+  document.getElementById('fsTodo').innerHTML=`<div class="ti">${title}</div><div class="sub">${a.submitter} · ${a.submitTime}<br>差异合计 ${d.txt}</div>`;
+  const flow=`<div class="fs-flow"><div class="sec-t">审批记录</div>
+    <div class="node"><span class="dot ok"></span><div><div class="nm">${a.submitter} 提交</div><div class="ds">${a.submitTime}</div></div></div>
+    <div class="node"><span class="dot ${a.state==='ing'?'ing':a.state}"></span><div><div class="nm">采购主管审批 · ${a.approver||'王敏'}</div><div class="ds">${a.state==='ing'?'审批中':(a.state==='ok'?'已同意':'已拒绝')+' · '+a.doneTime}${a.opinion?'<br>意见：'+a.opinion:''}</div></div></div></div>`;
+  document.getElementById('fsDetail').innerHTML=`
+    <div class="fs-title">${title}</div>
+    <div class="fs-meta"><span class="fs-st ${stMap[a.state][1]}">${stMap[a.state][0]}</span><span>审批编号 ${no}</span><span>${a.submitter} · ${a.submitTime}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
+      <div class="fs-field"><div class="k">实际合计</div><div class="v big">${a.cur} ${fmt(act)}</div></div>
+      <div class="fs-field"><div class="k">差异合计（实际 − 预估）</div><div class="v big ${d.d>=0?'diff-up':'diff-dn'}">${d.txt}</div></div>
+      <div class="fs-field"><div class="k">费用单数</div><div class="v">${g.length} 张</div></div>
+      <div class="fs-field"><div class="k">预估合计</div><div class="v">${a.cur} ${fmt(est)}</div></div>
+      <div class="fs-field"><div class="k">物流商</div><div class="v">${vendors.join('\n')}</div></div>
+      <div class="fs-field"><div class="k">结算主体</div><div class="v">${corps.join('\n')}</div></div>
+      <div class="fs-field" style="grid-column:1/3"><div class="k">提交说明</div><div class="v">${a.remark||'无'}</div></div>
+    </div>
+    <div class="fs-field"><div class="k">费用单明细</div>
+      <div class="fs-list"><table><thead><tr><th>费用单号</th><th>物流商</th><th>关联采购单</th><th>费用摘要</th><th class="num">预估金额</th><th class="num">实际金额</th><th class="num">差异</th><th class="num">差异率</th></tr></thead><tbody>
+      ${g.map(b=>{const x=pct(b.est,b.act);return `<tr><td>${b.costNo}</td><td>${b.vendor}</td><td>${b.pos.join('\n').replace(/\n/g,'<br>')}</td><td>${b.summary}</td><td class="num">${fmt(b.est)}</td><td class="num">${fmt(b.act)}</td><td class="num">${x.d>=0?'+':''}${fmt(x.d)}</td><td class="num">${x.p>=0?'+':''}${x.p.toFixed(1)}%</td></tr>`}).join('')}
+      </tbody></table></div></div>
+    <div class="fs-field"><div class="k">单张最大差异率（审批流条件用，可隐藏）</div><div class="v">${maxP.toFixed(1)}%</div></div>
+    <div class="fs-field"><div class="k">SCM 详情</div><div class="v"><span class="lk">admin.foodexmart.com/h5-ddxm-scm/logistics/cost-management?approvalNo=${no}</span></div></div>
+    ${flow}
+    ${a.state==='ing'?`<div class="fs-act"><button class="fs-btn r" onclick="openReject()">拒绝</button><button class="fs-btn p" onclick="doApprove()">同意</button></div>`:''}`;
+  openM('mFs');
+}
+function doApprove(){
+  const a=approvals[curFs]; a.state='ok'; a.approver='王敏（采购主管）'; a.doneTime=now();
+  a.costNos.map(byNo).forEach(b=>{b.status=4;b.auditTime=a.doneTime});
+  render(); openFs(curFs); toast(`审批通过：${a.costNos.length} 张费用单进入「待对账」`);
+}
+function openReject(){document.getElementById('rjCnt').textContent=approvals[curFs].costNos.length;document.getElementById('rjText').value='';document.getElementById('rjLen').textContent=0;openM('mReject')}
+function doReject(){
+  const t=document.getElementById('rjText').value.trim();
+  if(!t){toast('请填写审批意见',true);return}
+  const a=approvals[curFs]; a.state='no'; a.opinion=t; a.approver='王敏（采购主管）'; a.doneTime=now();
+  a.costNos.map(byNo).forEach(b=>{b.status=3;b.rejectReason=t;b.auditTime=a.doneTime});
+  closeM('mReject'); render(); openFs(curFs); toast(`已拒绝：${a.costNos.length} 张费用单退回「审核驳回」`);
+}
+function openM(id){document.getElementById(id).classList.add('show')}
+function closeM(id){document.getElementById(id).classList.remove('show')}
+function toast(m,err){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(err?' err':'');t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600)}
+render();
+</script>
+</body>
+</html>
