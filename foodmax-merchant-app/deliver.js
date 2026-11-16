@@ -755,6 +755,8 @@ const RETURN=[
   items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:3,pickQty:0,price:19.33}]},
  {no:'TKD2026062708201337',orderNo:'#SG20260627337',ware:'大巴窑DC',st:'部分提货',order:relTs(-40),gen:relTs(-40),code:'330218',arrive:relTs(-26),pickup:relTs(-5),done:relTs(-5),
   items:[{name:'西兰花',sku:'SKU8861',spec:'5kg/件',unit:'件',retQty:3,pickQty:3,price:20.00},{name:'番茄',sku:'SKU8862',spec:'5kg/箱',unit:'箱',retQty:2,pickQty:1,price:18.00}]},   // 番茄少拿 1 箱 → 提货当下差异赔付；取回的可申诉
+ {no:'TKD2026070508270003',orderNo:'#SG20260705003',ware:'盛港DC',st:'待提货',order:relTs(-100),gen:relTs(-100),code:'330340',arrive:relTs(-80),pickup:'',
+  items:[{name:'上海青',sku:'SKU8806',spec:'1kg/件',unit:'件',retQty:12,pickQty:null,price:5.80}]},   // 到仓超 3 天没来提 → 逾期未提
  {no:'TKD2026070308270008',orderNo:'#SG20260703008',ware:'裕廊DC',st:'无法取回',order:relTs(-70),gen:relTs(-70),code:'330320',arrive:relTs(-48),pickup:relTs(-20),done:relTs(-20),
   items:[{name:'菜心',sku:'SKU8866',spec:'10kg/件',unit:'件',retQty:2,pickQty:0,price:25.20}]},   // 取回 0：仓库找不到货
  {no:'TKD2026070408270016',orderNo:'#SG20260704016',ware:'兀兰DC',st:'部分提货',order:relTs(-60),gen:relTs(-60),code:'330330',arrive:relTs(-40),pickup:relTs(-22),done:relTs(-22),
@@ -778,13 +780,17 @@ const pickOf=(g,x)=>(x.pickQty==null&&isDone(g))?0:x.pickQty;
 /* 退货单差异赔付（2026-11-16 沈亮定，当日二改：去掉「部分到仓」，按提货结单；与 PC retRecalc / retSettle 同口径）
    数量只看两个：应取回 retQty / 实际取回 pickQty
    状态：待仓库入库 → 待提货 → 提货一次结单：实际取回 = 应取回 ? 已提货 : 实际取回 = 0 ? 无法取回 : 部分提货
-         建单超过 X 天（FM.DB.arriveCloseDays，运营平台配置，默认 7）仍待仓库入库 → 无法取回，实际取回记 0
+         待仓库入库超时由大仓自己配置，超时后 WMS 推送实际取回 0 → 无法取回（商家端不展示入库倒计时）
+         待提货超过提货期限（FM.DB.pickupDays，运营平台配置，默认 3，从到仓算）没来提 → 逾期未提：商家责任，不赔付、不能申诉
+   11-16 会议：页面展示提货倒计时、申诉倒计时
    无法取回：整单直接赔付，不走申诉；部分提货：差异直接赔付，取回的部分 N 天内可申诉
    差异 = 应取回 − 实际取回 > 0 → 提货（或超 X 天）当下直接生成差异赔付单，不经人工核实；取不回一律平台承担；按原订单商家应得的钱 × 差异数量 ÷ 下单数量 */
-const arrDays=()=>window.FM.DB.arriveCloseDays||7;
+const pickDays=()=>window.FM.DB.pickupDays||3;
 const diffOf=x=>Math.round(((x.retQty||0)-(x.pickQty||0))*100)/100;
 const diffSum=g=>Math.round(g.items.reduce((s,x)=>s+diffOf(x),0)*100)/100;
-const closeAt=g=>g.gen?tsMs(g.gen)+arrDays()*86400000:0;
+const pickDeadline=g=>g.arrive?tsMs(g.arrive)+pickDays()*86400000:0;
+// 倒计时文案：剩 X 天 X 小时（打开 / 刷新时更新，不逐秒跳）
+const remainTxt=ms=>{if(ms<=0)return '0 分';const m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;return d?`${d} 天 ${h} 小时`:(h?`${h} 小时 ${mi} 分`:`${mi} 分`);};
 function diffGen(g){
   if(g.diffComp)return;
   const items=g.items.filter(x=>diffOf(x)>0).map(x=>({name:x.name,ret:x.retQty,pick:x.pickQty||0,qty:diffOf(x),ok:diffOf(x),price:x.price}));
@@ -795,7 +801,7 @@ function diffGen(g){
 function retRecalc(g){
   if(g.st==='已取消')return;
   if(isDone(g)){diffGen(g);return;}
-  if(g.st==='待仓库入库'&&closeAt(g)&&Date.now()>closeAt(g)){g.closed=msTs(closeAt(g));g.items.forEach(x=>{x.pickQty=0;});g.st='无法取回';g.done=g.closed;diffGen(g);}
+  if(g.st==='待提货'&&pickDeadline(g)&&Date.now()>pickDeadline(g))g.st='逾期未提';   // 商家责任，不赔付、不能申诉
 }
 const retSweep=()=>RETURN.forEach(retRecalc);
 // 一张退货单的全部赔付单（最多 2 张：差异 + 申诉），与退货赔付页同一份数据
@@ -834,7 +840,8 @@ function raTag(st){const c=RA_TONE[st]||RA_TONE['不成立'];return `<span style
 function raLine(g){
   if(g.appeal)return raTag(g.appeal.status);
   if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return `<span style="color:var(--sub)">已过申诉期</span>`;
-  return raWin(g)?`<span style="color:var(--emerald-2)">可申诉</span>`:'';
+  if(!raWin(g))return '';
+  const d=raDeadline(g);return `<span style="color:var(--emerald-2)">可申诉${d&&!g._whr?`（剩 ${remainTxt(d-Date.now())}）`:''}</span>`;
 }
 function pickVal(g,x){
   const vals=(x?[x]:g.items).map(i=>pickOf(g,i));
@@ -852,7 +859,7 @@ function returnCard(g){
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span>${g.items.some(x=>x.gift)?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">含赠品</span>':''}<span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     ${retKbox(g,'margin-top:10px;padding:10px 0')}
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?'已到仓，凭提货码到仓提货':g.st==='待仓库入库'?'待仓库确认到货':g.st==='无法取回'?(g.pickup?'货没能取回，已整单直接赔付':`建单超 ${arrDays()} 天未到仓，已整单直接赔付`):isDone(g)?`已于 ${g.pickup} 提货`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:!isDone(g)&&g.st!=='已取消'?'<br><span style="color:var(--sub)">提货时少拿的部分直接赔付</span>':''}</div>
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`已到仓，凭提货码到仓提货 · <b style="color:#B45309">剩 ${remainTxt(pickDeadline(g)-Date.now())}</b>`:g.st==='逾期未提'?'<span style="color:var(--red)">超过提货期限没来提，逾期未提不赔付</span>':g.st==='待仓库入库'?'待仓库确认到货':g.st==='无法取回'?(g.pickup?'货没能取回，已整单直接赔付':'大仓超时未入库，已整单直接赔付'):isDone(g)?`已于 ${g.pickup} 提货`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:['待仓库入库','待提货'].includes(g.st)?'<br><span style="color:var(--sub)">提货时少拿的部分直接赔付</span>':''}</div>
     ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
 }
@@ -886,7 +893,8 @@ function openReturnDetail(no){
 function diffDetail(g,sec,box,kv){
   const tip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
   if(g.st==='已取消')return '';
-  if(!isDone(g)){const lim=closeAt(g);return sec('差异赔付')+tip(`提货时<b>实际取回少于应取回的部分，系统当下直接赔付</b>，按原订单你应得的钱算，不用申诉。${g.st==='待仓库入库'&&lim?`如果到 <b>${msTs(lim)}</b>（建单后 ${arrDays()} 天）还没到仓，置「无法取回」、整单直接赔付。`:''}`);}
+  if(g.st==='逾期未提')return sec('提货')+tip(`提货截止 ${msTs(pickDeadline(g))}，超过提货期限没来提，逾期未提责任在你，不赔付、不能申诉。`);
+  if(!isDone(g)){const d=pickDeadline(g);return sec('差异赔付')+tip(`${g.st==='待提货'&&d?`请在 <b>${msTs(d)}</b> 前到仓提货（剩 <b>${remainTxt(d-Date.now())}</b>），超过提货期限没来提算逾期未提，不赔付。`:`货到仓后进入待提货，到仓后 ${pickDays()} 天内来提。`}提货时<b>实际取回少于应取回的部分，系统当下直接赔付</b>，按原订单你应得的钱算，不用申诉。`);}
   return '';   // 已提货 / 部分提货：差异看顶部数量与明细，金额看「赔付单」，不再重复
 }
 // 赔付单列表：一张退货单所有赔付单 + 合计，点一行进赔付单详情（没有赔付单不显示）
@@ -897,7 +905,7 @@ function compList(g,sec){
       <div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:13px">${r.compNo}</div><div style="font-size:12px;color:var(--sub);margin-top:3px">${r.type}</div></div>
       <b style="color:var(--emerald-2);font-size:14px">${fmtS(r.ra.comp)}</b><span style="color:var(--sub);font-size:18px">›</span></div>`).join('')}
     <div style="display:flex;justify-content:space-between;padding:12px 14px;background:var(--mint-soft);font-weight:700;font-size:13.5px"><span>合计</span><span style="color:var(--emerald-2)">${fmtS(compTotal(g))}</span></div></div>
-    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">差异赔付 = 应取回 − 实际取回${g.closed?`（建单超过 ${arrDays()} 天还没到仓，整单算取不回）`:''}，取不回由平台承担；申诉赔付 = 申诉核定成立的部分。都按原订单你应得的钱赔，平台推送后随结算单打给你。</div>`;
+    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">差异赔付 = 应取回 − 实际取回${g.closed?'（大仓超时未入库，推送取回 0）':''}，取不回由平台承担；申诉赔付 = 申诉核定成立的部分。都按原订单你应得的钱赔，平台推送后随结算单打给你。</div>`;
 }
 const raTip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
 function raDetail(g,sec,box,kv){
@@ -906,13 +914,14 @@ function raDetail(g,sec,box,kv){
   if(!a){
     if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内可以申诉，截止时间 ${msTs(raDeadline(g))}，已过申诉期，不能再申诉。`);
     if(!g._whr&&!isDone(g))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内，取回的货数量不对或坏了不能卖，可以申诉 1 次。少拿的部分不用申诉，提货时系统直接赔付。`);
+    if(!g._whr&&g.st==='逾期未提')return '';
     if(!g._whr&&g.st==='无法取回')return sec('退货申诉')+raTip('货没能取回，已按应取回数量整单直接赔付，不走申诉。');
     if(!g._whr&&!raWin(g))return '';
     const w=raWin(g);if(!w)return '';
     const once=g._whr?'每条退回记录只能申诉 1 次。':'每张退货单只能申诉 1 次。';
     const msg=w.kind==='noarrive'?`货还没到仓。如一直没到仓或有其他问题，可以申诉「未到仓」，不限时间。${once}`
-      :!g._whr?`取回的货如果实际拿到的比系统记录少、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}）。${once}`
-      :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}）。${once}`
+      :!g._whr?`取回的货如果实际拿到的比系统记录少、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}，剩 ${remainTxt(raDeadline(g)-Date.now())}）。${once}`
+      :(g.st==='已提货'&&!g._pendingCount)?`如发现没拿够、坏了不能卖或有其他问题，可以申诉，提货后 ${raDays()} 天内有效（截止 ${msTs(raDeadline(g))}，剩 ${remainTxt(raDeadline(g)-Date.now())}）。${once}`
       :`货在仓里。如发现数量不对、坏了不能卖或有其他问题，可以申诉，不限时间。${once}`;
     return sec('退货申诉')+raTip(msg);
   }
@@ -1140,7 +1149,7 @@ function openReturn(){
     </div>
     <div id="rt-cust">
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
-    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="部分提货" style="white-space:nowrap;flex-shrink:0">部分提货</span><span class="t" data-t="无法取回" style="white-space:nowrap;flex-shrink:0">无法取回</span><span class="t" data-t="已提货" style="white-space:nowrap;flex-shrink:0">已提货</span></div>
+    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="部分提货" style="white-space:nowrap;flex-shrink:0">部分提货</span><span class="t" data-t="无法取回" style="white-space:nowrap;flex-shrink:0">无法取回</span><span class="t" data-t="已提货" style="white-space:nowrap;flex-shrink:0">已提货</span><span class="t" data-t="逾期未提" style="white-space:nowrap;flex-shrink:0">逾期未提</span></div>
     <div class="dl-list" id="dl-rtl"></div></div>
     <div id="rt-whr" style="display:none"></div>`,
     mount:(p)=>{

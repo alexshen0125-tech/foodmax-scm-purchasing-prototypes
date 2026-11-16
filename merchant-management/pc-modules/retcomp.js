@@ -89,7 +89,7 @@ window.rcpOrig=function(no,ev){
 document.addEventListener('keydown',e=>{if(e.key=='Escape'){const el=document.getElementById('rcp-pop');if(el)el.remove();}});
 
 PAGES['m-ret-comp']=()=>listContent(false);
-PAGES['p-ret-comp']=()=>switchCard()+arriveCard()+daysCard()+listContent(true);
+PAGES['p-ret-comp']=()=>switchCard()+pickCard()+daysCard()+listContent(true);
 
 /* 运营平台：仓库退回申诉入口开关 */
 function switchCard(){
@@ -100,24 +100,24 @@ function switchCard(){
     <button class="btn ${on?'btn-o':'btn-p'} btn-sm" onclick="rcpSwitchAsk()">${on?'关闭入口':'开启入口'}</button>
   </div></div>`;
 }
-/* 运营平台：未到仓赔付期限（X 天，1~30，默认 7；11-16 沈亮定） */
-function arriveCard(){
+/* 运营平台：提货期限（天，1~30，默认 3；11-16 会议：商家待提货时效由平台统一配置）。待仓库入库超时由大仓自己配置，不在这里 */
+function pickCard(){
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:16px;padding:14px 16px">
-    <div style="flex:1"><div style="font-weight:600">未到仓赔付期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货建单后超过这个天数还没到仓，置「无法取回」并按应取回数量整单直接赔付商家，不走申诉。改了只影响还没到仓的退货单。</div></div>
-    <b style="font-size:15px">${DB.arriveCloseDays} 天</b>
-    <button class="btn btn-o btn-sm" onclick="rcpDaysEdit('arrive')">修改</button>
+    <div style="flex:1"><div style="font-weight:600">提货期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货到仓后超过这个天数商家没来提，置「逾期未提」，商家责任、不赔付、不能申诉。商家端显示提货倒计时。改了只影响还没提货的退货单。</div></div>
+    <b style="font-size:15px">${DB.pickupDays} 天</b>
+    <button class="btn btn-o btn-sm" onclick="rcpDaysEdit('pickup')">修改</button>
   </div></div>`;
 }
 /* 运营平台：申诉期限（N 天，1~30，默认 3） */
 function daysCard(){
   return `<div class="card" style="margin-bottom:14px"><div class="card-bd" style="display:flex;align-items:center;gap:16px;padding:14px 16px">
-    <div style="flex:1"><div style="font-weight:600">申诉期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货提货后、仓库退回全部取回后，超过这个天数不能再申诉；还没提货的不受限。只影响还没提交的申诉。</div></div>
+    <div style="flex:1"><div style="font-weight:600">申诉期限</div><div style="font-size:12.5px;color:var(--ts);margin-top:4px">客户退货已提货 / 部分提货后、仓库退回全部取回后，超过这个天数不能再申诉；商家端显示申诉倒计时。只影响还没提交的申诉。</div></div>
     <b style="font-size:15px">${DB.pickAppealDays} 天</b>
     <button class="btn btn-o btn-sm" onclick="rcpDaysEdit()">修改</button>
   </div></div>`;
 }
 const DAYS_CFG={
-  arrive:{key:'arriveCloseDays',t:'未到仓赔付期限',l:'建单后多少天还没到仓，整单算取不回（1~30 的整数）',w:'保存后立即生效，只影响还没到仓的退货单；已生成的赔付单不变。'},
+  pickup:{key:'pickupDays',t:'提货期限',l:'到仓后多少天内要来提货（1~30 的整数）',w:'保存后立即生效，只影响还没提货的退货单；已逾期的不回改。'},
   appeal:{key:'pickAppealDays',t:'申诉期限',l:'提货后可申诉天数（1~30 的整数）',w:'保存后立即生效，只影响还没提交的申诉；已提交的照常核定。'}};
 window.rcpDaysEdit=function(k){const c=DAYS_CFG[k||'appeal'];
   modal(`<div class="mc-hd"><h3>${c.t}</h3><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
@@ -207,7 +207,7 @@ window.rcpDetail=function(no,ops){
   drawer(`<div class="drawer-hd"><div><h3>赔付单 · ${r.compNo||'—'}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ops?r.mer.name+' · ':''}${r.src} · ${r.retNo}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${sec('基础信息')}
-    <div class="kv">${ops?kv('商家名称',r.mer.name)+kv('商家编码',`<span class="mono">${r.mer.code}</span>`):''}${kv('赔付单号',`<span class="mono">${r.compNo||'—'}</span>`)}${kv('赔付类型',r.type)}${kv('来源',r.src)}${kv('关联单号',`<span class="mono">${r.retNo}</span>`)}${isDiff(r)?kv('生成原因',r.closed?'建单超过未到仓赔付期限还没到仓（无法取回）':'提货时实际取回少于应取回')+kv('生成时间',ra.at):kv('申诉类型',raKindLabel(ra))+kv('申诉时间',ra.at)+kv('核定时间',ra.reviewAt)+kv('核定结论',ra.status)+kv('核定说明',ra.note)}${ops?kv('推送状态',stTag(pushSt(r),PUSH_TONE))+kv('推送人',ra.pushedBy):''}${kv('推送时间',ra.pushedAt)}</div>
+    <div class="kv">${ops?kv('商家名称',r.mer.name)+kv('商家编码',`<span class="mono">${r.mer.code}</span>`):''}${kv('赔付单号',`<span class="mono">${r.compNo||'—'}</span>`)}${kv('赔付类型',r.type)}${kv('来源',r.src)}${kv('关联单号',`<span class="mono">${r.retNo}</span>`)}${isDiff(r)?kv('生成原因',r.closed?'大仓超时未入库，推送实际取回 0（无法取回）':'提货时实际取回少于应取回')+kv('生成时间',ra.at):kv('申诉类型',raKindLabel(ra))+kv('申诉时间',ra.at)+kv('核定时间',ra.reviewAt)+kv('核定结论',ra.status)+kv('核定说明',ra.note)}${ops?kv('推送状态',stTag(pushSt(r),PUSH_TONE))+kv('推送人',ra.pushedBy):''}${kv('推送时间',ra.pushedAt)}</div>
     ${sec('赔付明细')}
     ${isDiff(r)?`<table><thead><tr><th>商品</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">差异数量</th><th style="text-align:right">${r.priceLabel}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
       ${ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.ret}</td><td style="text-align:right">${x.pick}</td><td style="text-align:right;color:var(--r)">${x.qty}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</td></tr>`).join('')}
