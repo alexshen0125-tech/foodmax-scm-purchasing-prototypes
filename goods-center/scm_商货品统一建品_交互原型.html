@@ -271,9 +271,6 @@ let SPUS=[
    std:{minPack:'罐',net:'330',netUnit:'ml',stockIsPack:'是',stockUnit:'罐',packQty:'',item:'item202610150004',bcrs:'是',bcrsQty:'1'},
    base:{origin:'新加坡',brand:'Coca-Cola',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
    skus:[{sku:'SKU261015110001',qty:'1',su:'',status:'在售'},{sku:'SKU261015110002',qty:'24',su:'箱',status:'在售'}]},
-  {spu:'spu00004127',name:'三文鱼原条',en:'Whole Salmon',cat:'三文鱼',part:'',attr:'非标品',src:'自营',legacy:true,stockUnit:'kg',rawCode:'',creator:'龚鹏羽',at:'2025-03-06 10:12',status:'在售',
-   base:{origin:'挪威',brand:'',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'180',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
-   skus:[{sku:'sku00012231',qty:'1',su:'条',status:'在售'},{sku:'sku00012232',qty:'5',su:'条',status:'在售'}]},
   {spu:'SPU260930140008',name:'椰子水',en:'Coconut Water',cat:'果汁',part:'',attr:'标品',src:'三方',creator:'商家 Tropical Fresh',at:'2026-09-30 14:08',status:'在售',
    std:{minPack:'瓶',net:'500',netUnit:'ml',stockIsPack:'是',stockUnit:'瓶',item:'ITEM260930140003'},base:{},skus:[{sku:'SKU260930140021',qty:'1',su:'',status:'在售'}]}
 ];
@@ -313,11 +310,11 @@ function renderList(){renderTabs();const rows=filtered();const c=$('qCode').valu
   $('listBody').innerHTML=rows.length?rows.map(s=>{const i=SPUS.indexOf(s);const open=openRows[s.spu]||(c&&!/^spu/i.test(c));
     const pend=s.skus.some(k=>k.itemStatus==='待启用');
     let h=`<tr><td><input type="checkbox" ${SEL.has(s.spu)?'checked':''} onchange="selOne('${s.spu}',this.checked)"></td><td class="exp" onclick="toggleRow('${s.spu}')">${open?'▾':'▸'}</td>
-      <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}${s.legacy?' <span class="tag tgr">旧结构</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
+      <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
       <td>${s.src==='自营'?'<span class="tag tg">自营</span>':'<span class="tag tgr">'+esc(s.creator.replace('商家 ',''))+'</span>'}</td>
       <td>${esc(s.src==='自营'?s.creator:'—')}</td><td class="mono">${s.at}</td><td>${s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">'+s.status+'</span>'}</td>
-      <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button>${s.src==='自营'?(s.legacy?` &nbsp;<span class="fh" title="旧结构商品，迁移后可编辑">编辑</span>`:` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`):''}</td></tr>`;
-    if(open&&!s.legacy){h+=`<tr class="sub"><td></td><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>货品状态</th><th>SKU 状态</th></tr></thead><tbody>`+
+      <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button>${s.src==='自营'?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:''}</td></tr>`;
+    if(open){h+=`<tr class="sub"><td></td><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>货品状态</th><th>SKU 状态</th></tr></thead><tbody>`+
       s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${itemStTag(s,k)}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')+`</tbody></table></td></tr>`}
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
   renderSel();$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
@@ -600,7 +597,7 @@ function enableItem(i,sku){const s=SPUS[i];const k=s.skus.find(x=>x.sku===sku);k
 function logsBlock(s,tab){const L=(s.logs||[]).filter(l=>l.tab===tab);return`<div class="dsec"><h4>操作记录</h4>${L.length?`<table><thead><tr><th style="width:150px">时间</th><th style="width:90px">操作人</th><th style="width:170px">对象</th><th>操作</th></tr></thead><tbody>${L.map(l=>`<tr><td class="mono">${l.at}</td><td>${esc(l.who)}</td><td class="mono">${l.obj}</td><td>${esc(l.act)}</td></tr>`).join('')}</tbody></table>`:'<div class="fh">暂无</div>'}</div>`}
 function stTag(v,map){const c=map[v]||'tgr';return`<span class="tag ${c}">${v}</span>`}
 
-function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=SPUS[i];if(s.legacy)return openLegacy(i);seedLogs(s);const ns=s.attr==='非标品';const b=s.base||{};const self=s.src==='自营';
+function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=SPUS[i];seedLogs(s);const ns=s.attr==='非标品';const b=s.base||{};const self=s.src==='自营';
   if(!ns&&s.std){s.std.status=s.std.status||'启用';s.std.purch=s.std.purch||'是'}
   $('dTitle').textContent='商品详情 · '+s.name;
   const row=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
@@ -678,11 +675,6 @@ function saveItemEdit(){const s=SPUS[dCur];const e=IE.e;for(const w of WAREHOUSE
   IE.o.ext=e;if(IE.kind==='raw'){spusOfRaw(IE.o.code).forEach(x=>{Object.assign(x.base,IE.stor);log(x,'货品',IE.code,'编辑原料')})}else log(s,'货品',IE.code,'编辑货品');
   closeBatch();toast('已保存');openDetail(dCur,'货品')}
 function closeBatch(){$('dwBatch').classList.remove('on');if(!$('dwDetail').classList.contains('on')&&!$('dwForm').classList.contains('on'))$('mask').classList.remove('on')}
-function openLegacy(i){const s=SPUS[i];$('dTitle').textContent='商品详情 · '+s.name;
-  $('dBody').innerHTML=`<div class="warn" style="margin:0 0 14px">旧结构商品：SKU 直接按重量卖原料，没有成品和 BOM。迁移后才能在这里编辑和做货品操作。</div>
-    <div class="dsec"><h4>售卖规格（SKU）</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>售卖规格</th><th>SKU 状态</th></tr></thead><tbody>${s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(s.name)} ${k.qty}${s.stockUnit}/${k.su}</td><td>${k.qty} ${s.stockUnit} / ${k.su}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')}</tbody></table></div>`;
-  $('dFt').innerHTML=`<button class="btn" onclick="closeDetail()">关闭</button>`;$('mask').classList.add('on');$('dwDetail').classList.add('on')}
-
 /* ============ 勾选与批量操作 ============ */
 const SEL=new Set();
 function selOne(c,v){v?SEL.add(c):SEL.delete(c);renderSel();const all=filtered();$('chkAll').checked=all.length&&all.every(x=>SEL.has(x.spu))}
@@ -703,7 +695,6 @@ function targets(kind){const spus=SPUS.filter(s=>SEL.has(s.spu));const out=[];co
   const isItem=['itemOn','itemOff','purchY','purchN','vendor','over','qc'].includes(kind);
   spus.forEach(s=>{const base={spu:s.name};
     if(s.src!=='自营'){out.push({...base,code:s.spu,type:'商品',cur:'—',skip:'三方商品，在商家端维护'});return}
-    if(s.legacy){out.push({...base,code:s.spu,type:'商品',cur:'—',skip:'旧结构商品，迁移后可操作'});return}
     if(kind==='shelfOn'||kind==='shelfOff'){s.skus.forEach(k=>{const on=kind==='shelfOn';const blk=skuItemBlock(s,k);
       out.push({...base,code:k.sku,type:'SKU',name:skuNameOf(s,k),cur:k.status,ref:{s,k},skip:(on&&k.status==='在售')||(!on&&k.status!=='在售')?'已是目标状态':(on&&blk)?blk:''})});return}
     if(kind==='valid'){out.push({...base,code:s.spu,type:'商品',name:s.name,cur:s.base.validP+(s.base.period?' / '+s.base.period+s.base.periodUnit:''),ref:{s},skip:''});return}
@@ -754,15 +745,14 @@ let X=null;
 function openExcel(){X={step:1};renderExcel()}
 function renderExcel(){$('bTitle').textContent='Excel 批量修改';const n=SEL.size||filtered().length;
   let h=`<div class="stepbar">${['① 导出可改数据','② 上传修改后的文件','③ 校验预览','④ 完成'].map((t,i)=>`<span class="${X.step===i+1?'on':''}">${t}</span>`).join('')}</div>`;
-  if(X.step===1)h+=`<div class="sec"><div class="sec-hd">导出范围</div><div class="sec-bd">${SEL.size?`按勾选导出 ${SEL.size} 个商品`:`没勾选时按当前筛选导出 ${n} 个商品`}（旧结构、三方商品不导出）<div style="margin-top:10px"><button class="btn pr" onclick="toast('已下载 商品批量修改_20261116.xlsx');X.step=2;renderExcel()">下载可改数据</button></div></div></div>
+  if(X.step===1)h+=`<div class="sec"><div class="sec-hd">导出范围</div><div class="sec-bd">${SEL.size?`按勾选导出 ${SEL.size} 个商品`:`没勾选时按当前筛选导出 ${n} 个商品`}（三方商品不导出）<div style="margin-top:10px"><button class="btn pr" onclick="toast('已下载 商品批量修改_20261116.xlsx');X.step=2;renderExcel()">下载可改数据</button></div></div></div>
     <div class="sec"><div class="sec-hd">模板里哪些列能改</div><div class="sec-bd" style="padding:0"><table><thead><tr><th style="width:280px">列</th><th>说明</th></tr></thead><tbody>${XCOLS.map(([c,d])=>`<tr><td>${c}</td><td class="${d.startsWith('不')?'res-err':''}">${d}</td></tr>`).join('')}</tbody></table></div></div>`;
   if(X.step===2)h+=`<div class="sec"><div class="sec-hd">上传</div><div class="sec-bd"><div class="up" style="width:100%;height:110px" onclick="X.step=3;renderExcel()">＋ 选择修改后的文件（.xlsx，最多 2,000 行）</div><div class="fh" style="margin-top:6px">只认下载的模板；表头被改动、SPU 编码不存在时整份文件不能导入</div></div></div>`;
   if(X.step>=3){const rows=[
       {r:2,spu:'SPU261020150003',f:'商品中文名称',o:'三文鱼块',n:'挪威三文鱼块',ok:'通过',fx:'原料名不变（原料被 2 个商品共用）；成品名、SKU 名、BOM 名一起改'},
       {r:3,spu:'SPU261021100005',f:'保质期',o:'180天',n:'90天',ok:'通过',fx:'成品货品同步'},
       {r:4,spu:'SPU261015110001',f:'商品英文名称',o:'Coca-Cola 330ml',n:'可乐 330ml',ok:'英文名称只能包含英文字母、数字和常用符号'},
-      {r:5,spu:'SPU261028090002',f:'SKU 售卖规格数量',o:'1',n:'1.5',ok:'这一列不能通过 Excel 改'},
-      {r:6,spu:'spu00004127',f:'商品别名',o:'',n:'原条三文鱼',ok:'旧结构商品，迁移后可修改'}];
+      {r:5,spu:'SPU261028090002',f:'SKU 售卖规格数量',o:'1',n:'1.5',ok:'这一列不能通过 Excel 改'}];
     const pass=rows.filter(x=>x.ok==='通过');
     h+=`<div class="sec"><div class="sec-hd">校验结果<span class="tip">共 ${rows.length} 处修改，通过 ${pass.length}，不通过 ${rows.length-pass.length}</span></div><div class="sec-bd" style="padding:0"><table><thead><tr><th>行号</th><th>SPU 编码</th><th>列</th><th>原值</th><th>新值</th><th>校验</th><th>联动</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${x.r}</td><td class="mono">${x.spu}</td><td>${x.f}</td><td>${esc(x.o||'—')}</td><td>${esc(x.n)}</td><td class="${x.ok==='通过'?'res-ok':'res-err'}">${X.step===4&&x.ok==='通过'?'✓ 已修改':x.ok}</td><td class="fh">${x.fx||''}</td></tr>`).join('')}</tbody></table></div></div>
     ${X.step===3?`<div class="fh">不通过的行不会导入，改好后可以单独再传一次。</div>`:''}`;
