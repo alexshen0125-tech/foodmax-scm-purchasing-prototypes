@@ -950,7 +950,7 @@ function openRetAppeal(g,onDone){
     <div class="as-dblock" id="ra-items"><div class="bt"><span>${!g._whr&&goods?'填写申诉数量':goods?'按实际情况填写':'没到仓数量'}</span><span style="font-size:12px;color:var(--sub);font-weight:400">${!g._whr&&goods?'最多为实际取回数量':goods?actTip:'默认全部，只到了一部分的改小'}</span></div>
       ${g.items.map((x,k)=>{const sp=raSys(g,x);return `<div style="padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05)">
         <b style="font-size:14px">${x.name}</b>${g._whr?`<span style="font-size:11.5px;color:var(--sub);margin-left:6px">${x._picked?'已取回':'待取回'}</span>`:''}
-        ${!g._whr&&goods?line('应取回数量',`<span>${x.retQty} ${x.unit}</span>`)+line('实际取回数量',`<span>${sp} ${x.unit}</span>`)+line('申诉数量',inp('ra-cq',k,0,sp))+`<b id="ra-q-${k}" style="display:none">0</b>`
+        ${!g._whr&&goods?line('应取回数量',`<span>${x.retQty} ${x.unit}</span>`)+line('实际取回数量',`<span>${sp} ${x.unit}</span>`)+line('申诉数量',`<span style="display:flex;align-items:center;gap:8px">${inp('ra-cq',k,0,sp)}<span data-all="${k}" style="min-height:44px;display:flex;align-items:center;padding:0 4px;color:${sp>0?'var(--emerald-2)':'var(--sub)'};font-weight:700;font-size:13.5px;cursor:pointer">全部</span></span>`)+`<b id="ra-q-${k}" style="display:none">0</b>`
         :`${line(g._whr?'退回数量':'应取回数量',`<span>${x.retQty} ${x.unit}</span>`)}
         ${goods?line(sysL(x),`<span>${sp} ${x.unit}</span>`)+line(actL(x),inp('ra-act',k,sp,raMax(g,x)))+line('其中坏了不能卖',inp('ra-dmg',k,0,null)):line('未到仓数量',inp('ra-na',k,x.retQty,x.retQty))}
         ${line('申诉数量',`<b id="ra-q-${k}">0</b>`)}`}
@@ -989,6 +989,8 @@ function openRetAppeal(g,onDone){
         const k=+el.dataset.k,x=g.items[k];let mx=el.classList.contains('ra-cq')?raSys(g,x):raMax(g,x);if(el.classList.contains('ra-dmg'))mx=Math.max(r2(q(`.ra-act[data-k="${k}"]`).value),0);
         let v=r2(el.value);if(v<0)v=0;if(v>mx){v=mx;toast(`最多 ${mx}`);}el.value=v;
         if(el.classList.contains('ra-act')){const d=q(`.ra-dmg[data-k="${k}"]`);if(+d.value>v)d.value=v;}calc();};});
+      // 申诉数量「全部」：填成实际取回数量
+      p.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{const el=q(`.ra-cq[data-k="${b.dataset.all}"]`);if(!el||!(+el.max>0))return;el.value=el.max;dirty=true;calc();});
       q('#ra-desc').oninput=()=>{dirty=true;};
       calc();
       q('#ra-ph').onclick=()=>{photo=true;dirty=true;q('#ra-ph').innerHTML='<span style="font-size:12px;color:var(--emerald-2);font-weight:700">已传 2 张</span>';};

@@ -4639,7 +4639,7 @@ function raModal(){
   const stCol=a._whr?'<th>状态</th>':'';
   const rows=a.retItems.map((x,k)=>{const pr=retUnitPrice(a,x),sp=raSys(a,x);
     if(goods&&!a._whr)return `<tr><td style="white-space:nowrap">${x.name}</td><td style="white-space:nowrap;color:var(--ts)">${x.unit||''}</td><td style="text-align:right">${x.retQty}</td><td style="text-align:right">${sp}</td>
-      <td style="text-align:right"><input class="ra-cq" data-k="${k}" type="number" min="0" max="${sp}" step="any" value="0" ${sp>0?'':'disabled'} oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"></td><td style="text-align:right;color:var(--ts)">${raPriceCell(pr)}</td></tr>`;
+      <td style="text-align:right;white-space:nowrap"><input class="ra-cq" data-k="${k}" type="number" min="0" max="${sp}" step="any" value="0" ${sp>0?'':'disabled'} oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"><button class="btn btn-link btn-sm" style="padding:0 0 0 8px" ${sp>0?'':'disabled'} onclick="raFillAll(${k})" title="填写全部实际取回数量">全部</button></td><td style="text-align:right;color:var(--ts)">${raPriceCell(pr)}</td></tr>`;
     return goods?`<tr><td style="white-space:nowrap">${x.name}</td><td style="white-space:nowrap;color:var(--ts)">${x.unit||''}</td>${a._whr?`<td style="white-space:nowrap">${x._picked?'已取回':'待取回'}</td>`:''}<td style="text-align:right">${x.retQty}</td>${a._whr?'':`<td style="text-align:right;color:var(--ts)">${retDiffOf(x)}</td>`}<td style="text-align:right">${sp}</td>
       <td style="text-align:right"><input class="ra-act" data-k="${k}" type="number" min="0" max="${raMax(a,x)}" step="any" value="${sp}" ${raMax(a,x)>0?'':'disabled'} oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"></td>
       <td style="text-align:right"><input class="ra-dmg" data-k="${k}" type="number" min="0" step="any" value="0" oninput="raCalc()" onblur="raClamp(this)" style="width:72px;text-align:right"></td>
@@ -4666,6 +4666,8 @@ function raModal(){
   <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" id="ra-sub" onclick="raSubmit()">提交申诉</button></div>`);
   html._wide=true;modal(html);raCalc();
 }
+// 申诉数量「全部」：填成该商品的实际取回数量（上限）
+function raFillAll(k){const el=document.querySelector(`.ra-cq[data-k="${k}"]`);if(!el||el.disabled)return;el.value=el.max;raCalc();}
 // 切换申诉原因：保留已填说明后重绘
 function raSetOther(v){const d=document.getElementById('ra-desc');DB._ra.desc=d?d.value:'';if(!!DB._ra.other===v)return;DB._ra.other=v;raModal();}
 // 失焦时把超范围的值改回范围内（实际拿到 0~退回；损坏 0~实际拿到；未到仓 0~退回），保证看到的=提交的
