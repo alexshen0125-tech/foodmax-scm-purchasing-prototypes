@@ -181,7 +181,7 @@ tbody tr:hover>td{background:#f5f9f5}
       <div class="fi" style="width:170px"><label>SPU 名称</label><input id="qSpuN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>SPU 编码</label><input id="qSpu" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>SKU 名称</label><input id="qSkuN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>SKU 编码</label><input id="qSku" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>货品名称</label><input id="qItemN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>货品编码</label><input id="qItem" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>原料名称</label><input id="qRawN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>原料编码</label><input id="qRaw" placeholder="模糊匹配"></div>
       <div class="fi" style="width:170px"><label>商家编号/名称</label><input id="qMer" placeholder="支持编号/名称搜索"></div><div class="fi" style="width:170px"><label>报价单</label><select id="qPl"><option value="">全部</option><option>示例报价单 1</option><option>示例报价单 2</option></select></div><div class="fi" style="width:150px"><label>是否HALAL</label><select id="qHalal"><option value="">全部</option><option>HALAL</option><option>非HALAL</option></select></div><div class="fi" style="width:150px"><label>是否可采</label><select id="qPurch"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi" style="width:150px"><label>创建方式</label><select id="qWay"><option value="">全部</option><option>原料采购</option><option>成品采购</option><option>原料制造</option></select></div><div class="fi" style="width:150px"><label>货品状态</label><select id="qIst"><option value="">全部</option><option>启用</option><option>停用</option></select></div>
       <div class="fi more" style="display:none;width:100%;height:0"></div>
-      <div class="fi more"  style="width:190px"><label>SPU 编号（批量）</label><input id="qSpuB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>SKU 编号（批量）</label><input id="qSkuB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>货品编码（批量）</label><input id="qItemB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>商家编号（批量）</label><input id="qMerB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:170px"><label>旧编码</label><input id="qOld" placeholder="请输入旧编码"></div><div class="fi more"  style="width:150px"><label>货品类别</label><select id="qType"><option value="">全部</option><option>标品</option><option>非标品</option></select></div><div class="fi more"  style="width:150px"><label>是否BCRS货品</label><select id="qBcrs"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:150px"><label>销售类型</label><select id="qSale"><option value="">全部</option><option>销售品</option><option>赠品</option></select></div><div class="fi more"  style="width:150px"><label>效期管理</label><select id="qValid"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:150px"><label>多退少补</label><select id="qSt"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:170px"><label>创建人</label><input id="qCreator" placeholder="请输入"></div>
+      <div class="fi more"  style="width:190px"><label>SPU 编号（批量）</label><input id="qSpuB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>SKU 编号（批量）</label><input id="qSkuB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>货品编码（批量）</label><input id="qItemB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>商家编号（批量）</label><input id="qMerB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:150px"><label>货品类别</label><select id="qType"><option value="">全部</option><option>标品</option><option>非标品</option></select></div><div class="fi more"  style="width:150px"><label>是否BCRS货品</label><select id="qBcrs"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:150px"><label>销售类型</label><select id="qSale"><option value="">全部</option><option>销售品</option><option>赠品</option></select></div><div class="fi more"  style="width:150px"><label>多退少补</label><select id="qSt"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:170px"><label>创建人</label><input id="qCreator" placeholder="请输入"></div>
       <div class="fi more" style="width:300px"><label>创建日期</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="qD1"><span>~</span><input type="date" id="qD2"></div></div>
       <div class="fi" style="flex-direction:row;gap:8px"><button class="btn pr" onclick="renderList()">查询</button><button class="btn" onclick="resetQ()">重置</button><button class="lk" id="moreBtn" onclick="toggleMore()">更多筛选 ▾</button></div>
     </div>
@@ -255,6 +255,8 @@ let RAWS=[
   {code:'item202610200031',name:'三文鱼块原料',en:'Salmon Cubes Raw',unit:'kg',cat:'三文鱼',status:'启用',purch:'是'},
   {code:'item202610210007',name:'三文鱼片原料',en:'Salmon Slices Raw',unit:'kg',cat:'三文鱼',status:'启用',purch:'是'},
   {code:'item202609120011',name:'大白菜原料',en:'Napa Cabbage Raw',unit:'kg',cat:'叶菜',status:'启用',purch:'是'},
+  {code:'item202610080014',name:'冻鸡丁原料',en:'Frozen Diced Chicken Raw',unit:'kg',cat:'鸡肉',status:'启用',purch:'是'},
+  {code:'item202609220005',name:'鲜牛腿肉原料',en:'Fresh Beef Leg Raw',unit:'kg',cat:'牛肉',status:'启用',purch:'否'},
   {code:'item202610280007',name:'冰鲜去骨猪后腿肉原料',en:'Chilled Boneless Pork Hind Leg Raw',unit:'kg',cat:'猪肉',status:'启用',purch:'是'},
   {code:'item202611030015',name:'鸡大胸原料',en:'Chicken Breast Raw',unit:'g',cat:'鸡肉',status:'启用',purch:'是'}
 ];
@@ -284,6 +286,20 @@ let SPUS=[
   {spu:'SPU260915090003',name:'（整箱）大白菜',en:'Napa Cabbage (Whole Carton)',cat:'叶菜',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202609120011',creator:'王帅',at:'2026-09-15 09:30',status:'在售',
    base:{origin:'马来西亚',brand:'',storage:'冷藏',fulfil:'冷链履约',validP:'是',period:'7',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
    skus:[{sku:'SKU260915090011',qty:'10',su:'箱',st:true,item:'item202609150004',bom:'BM2609150002',status:'在售'}]},
+  {spu:'SPU261008150002',pl:['示例报价单 1'],name:'冻鸡丁',en:'Frozen Diced Chicken',cat:'鸡肉',part:'3007 冻鸡丁',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610080014',creator:'陆璇',at:'2026-10-08 15:20',status:'售罄',
+   base:{origin:'巴西',brand:'Seara',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261008150011',qty:'1',su:'袋',st:false,item:'item202610080015',bom:'BM2610080006',status:'售罄'},{sku:'SKU261008150012',qty:'2',su:'袋',st:false,item:'item202610080016',bom:'BM2610080007',status:'售罄'}]},
+  {spu:'SPU261012100004',pl:['示例报价单 2'],name:'矿泉水 1.5L',en:'Mineral Water 1.5L',cat:'碳酸饮料',part:'',attr:'标品',src:'自营',creator:'李南凯',at:'2026-10-12 10:05',status:'售罄',
+   std:{minPack:'瓶',net:'1.5',netUnit:'L',stockIsPack:'否',stockUnit:'箱',packQty:'12',item:'item202610120006',bcrs:'是',bcrsQty:'1',status:'启用',purch:'否'},
+   base:{origin:'马来西亚',brand:'',storage:'常温',fulfil:'常温履约',validP:'是',period:'18',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
+   skus:[{sku:'SKU261012100021',qty:'1',su:'',status:'售罄'}]},
+  {spu:'SPU260922140001',name:'鲜牛腿肉',en:'Fresh Beef Leg',cat:'牛肉',part:'3017 鲜牛腿肉',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202609220005',creator:'王帅',at:'2026-09-22 14:40',status:'已下架',
+   base:{origin:'澳大利亚',brand:'',storage:'冷藏',fulfil:'冷链履约',validP:'是',period:'7',periodUnit:'天',halal:'非HALAL',halalShow:'否',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU260922140011',qty:'0.5',su:'盒',st:true,item:'item202609220006',bom:'BM2609220003',status:'已下架'},{sku:'SKU260922140012',qty:'1',su:'盒',st:true,item:'item202609220007',bom:'BM2609220004',status:'已下架',itemStatus:'停用',bomStatus:'废弃'}]},
+  {spu:'SPU260918110003',name:'雪碧 330ml',en:'Sprite 330ml',cat:'碳酸饮料',part:'',attr:'标品',src:'自营',creator:'陆璇',at:'2026-09-18 11:12',status:'已下架',
+   std:{minPack:'罐',net:'330',netUnit:'ml',stockIsPack:'是',stockUnit:'罐',packQty:'',item:'item202609180002',bcrs:'是',bcrsQty:'1',status:'停用',purch:'否'},
+   base:{origin:'新加坡',brand:'Sprite',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'赠品'},
+   skus:[{sku:'SKU260918110001',qty:'1',su:'',status:'已下架'},{sku:'SKU260918110002',qty:'24',su:'箱',status:'已下架'}]},
   {spu:'SPU260930140008',name:'椰子水',en:'Coconut Water',cat:'果汁',part:'',attr:'标品',src:'三方',creator:'商家 Tropical Fresh',at:'2026-09-30 14:08',status:'在售',
    std:{minPack:'瓶',net:'500',netUnit:'ml',stockIsPack:'是',stockUnit:'瓶',item:'ITEM260930140003'},base:{},skus:[{sku:'SKU260930140021',qty:'1',su:'',status:'在售'}]}
 ];
@@ -291,6 +307,7 @@ let tab='全部',openRows={},seq=1;
 
 /* ============ 工具 ============ */
 const $=id=>document.getElementById(id);
+const stTagK=v=>v==='在售'?'<span class="tag tg">在售</span>':v==='售罄'?'<span class="tag ty">售罄</span>':'<span class="tag tgr">已下架</span>';
 /* 岗位权限：查看全员开放；商品类编辑 / 批量 → 商品运营，货品类编辑 / 批量 → 采购（11-17 商货品重构沟通） */
 let ROLE='商品运营';const canSpu=()=>ROLE==='商品运营',canItem=()=>ROLE==='采购';
 const NOPERM=t=>`<span class="fh" title="当前岗位没有${t}权限">`;
@@ -327,7 +344,7 @@ function matchCode(spu,q){const R=rawBy(spu.rawCode)||{};
   if(q.rawN&&!(has(R.name,q.rawN)||has(R.en,q.rawN)))return false;
   if(q.raw&&!has(spu.rawCode,q.raw))return false;return true}
 function codeQ(){const v=id=>$(id).value.trim();return{spuN:v('qSpuN'),spu:v('qSpu'),skuN:v('qSkuN'),sku:v('qSku'),itemN:v('qItemN'),item:v('qItem'),rawN:v('qRawN'),raw:v('qRaw')}}
-const QIDS=['qCat','qSpuN','qSpu','qSkuN','qSku','qItemN','qItem','qRawN','qRaw','qMer','qPl','qHalal','qPurch','qWay','qIst','qSpuB','qSkuB','qItemB','qMerB','qOld','qType','qBcrs','qSale','qValid','qSt','qCreator','qD1','qD2'];
+const QIDS=['qCat','qSpuN','qSpu','qSkuN','qSku','qItemN','qItem','qRawN','qRaw','qMer','qPl','qHalal','qPurch','qWay','qIst','qSpuB','qSkuB','qItemB','qMerB','qType','qBcrs','qSale','qSt','qCreator','qD1','qD2'];
 const qv=id=>($(id).value||'').trim();
 const bat=id=>qv(id).split(/[,，\s]+/).filter(Boolean).map(x=>x.toLowerCase());
 function itemsOf(s){/* 该商品关联的货品：[{code,way,status,purch,old}] */
@@ -347,11 +364,9 @@ function filtered(){const c=codeQ();const its=s=>itemsOf(s).filter(x=>x.code);
     const kb=bat('qSkuB');if(kb.length&&!s.skus.some(k=>kb.includes(k.sku.toLowerCase())))return false;
     const ib=bat('qItemB');if(ib.length&&!its(s).some(x=>ib.includes(x.code.toLowerCase())))return false;
     const mb=bat('qMerB');if(mb.length&&!mb.some(m=>merOf(s).toLowerCase().includes(m)))return false;
-    if(qv('qOld')&&!its(s).some(x=>has(x.old,qv('qOld'))))return false;
     if(qv('qType')&&s.attr!==qv('qType'))return false;
     if(qv('qBcrs')&&!(s.std&&(s.std.bcrs==='是'?'是':'否')===qv('qBcrs'))&&!(qv('qBcrs')==='否'&&s.attr==='非标品'))return false;
     if(qv('qSale')&&(s.base||{}).sale!==qv('qSale'))return false;
-    if(qv('qValid')&&(s.base||{}).validP!==qv('qValid'))return false;
     if(qv('qSt')&&s.skus.some(k=>k.st)!==(qv('qSt')==='是'))return false;
     if(qv('qCreator')&&!has(s.creator,qv('qCreator')))return false;
     const d=s.at.slice(0,10);if(qv('qD1')&&d<qv('qD1'))return false;if(qv('qD2')&&d>qv('qD2'))return false;
@@ -366,10 +381,10 @@ function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
     let h=`<tr><td><input type="checkbox" ${SEL.has(s.spu)?'checked':''} onchange="selOne('${s.spu}',this.checked)"></td><td class="exp" onclick="toggleRow('${s.spu}')">${open?'▾':'▸'}</td>
       <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
       <td>${s.src==='自营'?'<span class="tag tg">自营</span>':'<span class="tag tgr">'+esc(s.creator.replace('商家 ',''))+'</span>'}</td>
-      <td>${esc(s.src==='自营'?s.creator:'—')}</td><td class="mono">${s.at}</td><td>${s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">'+s.status+'</span>'}</td>
+      <td>${esc(s.src==='自营'?s.creator:'—')}</td><td class="mono">${s.at}</td><td>${stTagK(s.status)}</td>
       <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button>${s.src==='自营'?(canSpu()?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:` &nbsp;${NOPERM('编辑商品')}编辑</span>`):''}</td></tr>`;
     if(open){h+=`<tr class="sub"><td></td><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>货品状态</th><th>SKU 状态</th></tr></thead><tbody>`+
-      s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${itemStTag(s,k)}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')+`</tbody></table></td></tr>`}
+      s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${itemStTag(s,k)}</td><td>${stTagK(k.status)}</td></tr>`).join('')+`</tbody></table></td></tr>`}
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
   renderSel();$('btnNew').disabled=!canSpu();$('btnNew').title=canSpu()?'':'当前岗位没有新建商品权限';$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
 function toggleRow(k){openRows[k]=!openRows[k];renderList()}
@@ -647,7 +662,7 @@ function doAsk(){const s=SPUS[dCur];const {kind,arg}=pend;pend=null;
   syncSpuStatus(s);renderList();openDetail(dCur)}
 function skuOn(sku){const s=SPUS[dCur];const k=s.skus.find(x=>x.sku===sku);const why=skuItemBlock(s,k);if(why){toast(why+'，不能上架',true);return}
   k.status='在售';log(s,'商品',k.sku,'上架');syncSpuStatus(s);toast('已上架');renderList();openDetail(dCur)}
-function syncSpuStatus(s){s.status=s.skus.some(k=>k.status==='在售')?'在售':'已下架'}
+function syncSpuStatus(s){s.status=s.skus.some(k=>k.status==='在售')?'在售':s.skus.some(k=>k.status==='售罄')?'售罄':'已下架'}
 function enableItem(i,sku){const s=SPUS[i];const k=s.skus.find(x=>x.sku===sku);k.itemStatus='';log(s,'货品',k.item,'手动启用成品');toast('货品已启用');openDetail(i,'货品');renderList()}
 function logsBlock(s,tab){const L=(s.logs||[]).filter(l=>l.tab===tab);return`<div class="dsec"><h4>操作记录</h4>${L.length?`<table><thead><tr><th style="width:150px">时间</th><th style="width:90px">操作人</th><th style="width:170px">对象</th><th>操作</th></tr></thead><tbody>${L.map(l=>`<tr><td class="mono">${l.at}</td><td>${esc(l.who)}</td><td class="mono">${l.obj}</td><td>${esc(l.act)}</td></tr>`).join('')}</tbody></table>`:'<div class="fh">暂无</div>'}</div>`}
 function stTag(v,map){const c=map[v]||'tgr';return`<span class="tag ${c}">${v}</span>`}
@@ -664,8 +679,8 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
       ${row('商品属性',s.attr)}${row('渠道来源',s.src)}${row('销售类型',b.sale)}${row('产地',b.origin)}${row('品牌',b.brand)}${row('是否HALAL',b.halal)}${row('是否对HALAL客户展示',b.halalShow)}${row('APP是否展示效期',b.appExp)}</div></div>
       <div class="dsec"><h4>售卖规格（SKU）</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>售卖规格</th><th>绑定货品</th>${ns?'<th>多退少补</th>':''}<th>SKU 状态</th>${selfP?'<th style="width:80px">操作</th>':''}</tr></thead><tbody>`+
       s.skus.map(k=>{const blk=skuItemBlock(s,k);return`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${ns?`${fmtQty(k.qty)}${s.stockUnit}/${k.su}`:`${k.qty} ${s.std.stockUnit}${k.su?' / '+k.su:''}`}</td><td class="mono">${ns?k.item:s.std.item}</td>${ns?`<td>${k.st?'是':'否'}</td>`:''}
-        <td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}${blk&&k.status!=='在售'?`<div class="fh">${blk}</div>`:''}</td>
-        ${selfP?`<td>${k.status==='在售'?`<button class="lk dg" onclick="ask('skuOff','${k.sku}')">下架</button>`:(ns&&k.itemStatus==='停用'?'<span class="fh">—</span>':blk?`<span class="fh" title="${blk}">上架</span>`:`<button class="lk" onclick="skuOn('${k.sku}')">上架</button>`)}</td>`:''}</tr>`}).join('')+`</tbody></table></div>`+logsBlock(s,'商品');
+        <td>${stTagK(k.status)}${blk&&k.status!=='在售'?`<div class="fh">${blk}</div>`:''}</td>
+        ${selfP?`<td>${k.status!=='已下架'?`<button class="lk dg" onclick="ask('skuOff','${k.sku}')">下架</button>`:(ns&&k.itemStatus==='停用'?'<span class="fh">—</span>':blk?`<span class="fh" title="${blk}">上架</span>`:`<button class="lk" onclick="skuOn('${k.sku}')">上架</button>`)}</td>`:''}</tr>`}).join('')+`</tbody></table></div>`+logsBlock(s,'商品');
   }else if(ns){const r=rawBy(s.rawCode)||{};const users=spusOfRaw(r.code);
     h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">原料货品 ${selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('raw')">编辑原料</button><button class="lk ${r.status==='启用'?'dg':''}" onclick="ask('rawStatus')">${r.status==='启用'?'停用':'启用'}</button><button class="lk" onclick="ask('rawPurch')">${r.purch==='是'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
       <div class="dl">${row('原料编码',`<span class="mono">${r.code}</span>`)}${row('原料名称',esc(r.name)+'<br><span class="fh">'+esc(r.en)+'</span>')}${row('计量单位 / 净含量',r.unit+' / 1'+r.unit)}${row('使用它的商品',users.length+' 个'+(users.length>1?'：'+users.map(x=>esc(x.name)).join('、'):''))}
@@ -684,7 +699,7 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
       ${row('状态',stTag(d.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(d.purch!=='否'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','成品采购')}${row('BCRS',d.bcrs==='是'?`支持，每 1 ${d.minPack} ${d.bcrsQty} 个容器`:'不支持')}
       ${row('保存条件 / 履约方式',(b.storage||'—')+' / '+(b.fulfil||'—'))}${row('效期管理 / 保质期',(b.validP||'—')+' / '+(b.period?b.period+b.periodUnit:'—'))}${extRows(ext(d),row)}</div></div>
       <div class="dsec"><h4>绑定的 SKU</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>1 份扣减货品库存</th><th>SKU 状态</th></tr></thead><tbody>`+
-      s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${k.qty} ${d.stockUnit}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')+`</tbody></table></div>`+logsBlock(s,'货品')}
+      s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${k.qty} ${d.stockUnit}</td><td>${stTagK(k.status)}</td></tr>`).join('')+`</tbody></table></div>`+logsBlock(s,'货品')}
   $('dBody').innerHTML=h;
   $('dFt').innerHTML=`<button class="btn" onclick="closeDetail()">关闭</button>${selfP?`<button class="btn pr" onclick="closeDetail();openEdit(${i})">编辑商品</button>`:''}`;
   $('mask').classList.add('on');$('dwDetail').classList.add('on')}
