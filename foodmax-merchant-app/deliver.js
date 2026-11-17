@@ -859,7 +859,8 @@ function returnCard(g){
     <div class="r1"><span class="no">${g.no}</span><span class="lbl">客退退货单</span>${g.items.some(x=>x.gift)?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">含赠品</span>':''}<span class="st">${g.st}</span></div>
     <div class="r2"><span class="ware">${g.ware}<span class="dot"></span></span></div>
     ${retKbox(g,'margin-top:10px;padding:10px 0')}
-    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="code">提货码：${g.code}</span><br><span class="dl-deadline">${g.st==='待提货'?`已到仓，凭提货码到仓提货 · <b style="color:#B45309">剩 ${remainTxt(pickDeadline(g)-Date.now())}</b>`:g.st==='逾期未提'?'<span style="color:var(--red)">超过提货期限没来提，逾期未提不赔付</span>':g.st==='待仓库入库'?'待仓库确认到货':g.st==='无法取回'?(g.pickup?'货没能取回，已整单直接赔付':'大仓超时未入库，已整单直接赔付'):isDone(g)?`已于 ${g.pickup} 提货`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:''}</div>
+    <div class="info">${g.arrive?`到仓时间：${g.arrive}`:`${g.order} 下单`}<br><span class="dl-deadline">${g.st==='待提货'?`已到仓，凭提货码到仓提货 · <b style="color:#B45309">剩 ${remainTxt(pickDeadline(g)-Date.now())}</b>`:g.st==='逾期未提'?'<span style="color:var(--red)">超过提货期限没来提，逾期未提不赔付</span>':g.st==='待仓库入库'?'待仓库确认到货':g.st==='无法取回'?(g.pickup?'货没能取回，已整单直接赔付':'大仓超时未入库，已整单直接赔付'):isDone(g)?`已于 ${g.pickup} 提货`:'—'}</span>${compsOf(g).length?`<br><span style="color:var(--emerald-2);font-weight:700">赔付金额 ${fmtS(compTotal(g))}</span>`:''}</div>
+    ${g.st==='待提货'?`<div style="display:flex;justify-content:flex-end;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><span data-code="${g.no}" style="min-height:44px;padding:0 18px;display:flex;align-items:center;background:var(--emerald);color:#fff;border-radius:999px;font-weight:700;font-size:13.5px;cursor:pointer">出示提货码</span></div>`:''}
     ${raLine(g)?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px"><span>${raLine(g)}</span>${raOpen(g)?raBtn(g.no):''}</div>`:''}
   </div>`;
 }
@@ -882,12 +883,41 @@ function openReturnDetail(no){
     </div>`).join(''))}
     ${g.items.some(x=>x.gift)?`<div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">标「赠品」的是满赠送出的赠品，跟着退货一起退回，提货时一并提走；赠品结算单价为 0，不产生退货金额。</div>`:''}
     ${diffDetail(g,sec,box,kv)}
+    ${handoverDetail(g,sec,box,kv)}
     ${raDetail(g,sec,box,kv)}
     ${compList(g,sec)}
     <div style="height:8px"></div>`,
-    footer:raOpen(g)?`<button class="btn primary" id="ra-go">退货申诉</button>`:'',
-    mount:(p)=>{const b=p.querySelector('#ra-go');if(b)b.onclick=()=>openRetAppeal(g,()=>{popPage();openReturnDetail(no);});
+    footer:g.st==='待提货'?`<button class="btn primary" id="pc-go">出示提货码</button>`:raOpen(g)?`<button class="btn primary" id="ra-go">退货申诉</button>`:'',
+    mount:(p)=>{const c=p.querySelector('#pc-go');if(c)c.onclick=()=>showPickCode(g);const b=p.querySelector('#ra-go');if(b)b.onclick=()=>openRetAppeal(g,()=>{popPage();openReturnDetail(no);});
       p.querySelectorAll('[data-comp]').forEach(el=>el.onclick=()=>{if(window.FM_MOD.retcompDetail)window.FM_MOD.retcompDetail(el.dataset.comp);});}});
+}
+/* 提货码与拍照交接（11-17 沈亮：一张退货单一个码；与 PC retShowCode / retHandoverBlock 同口径）
+   待提货出示二维码 + 6 位数字码 → 仓库 PDA 扫码 → 录实际取回 + 拍交接照片 → 回传结单；商家不二次确认，有异议走申诉 */
+function qrSvgApp(text,px){const n=25,c=px/n;let seed=0;for(const ch of text)seed=(seed*131+ch.charCodeAt(0))>>>0;
+  const rnd=()=>{seed=(seed*1103515245+12345)>>>0;return (seed>>>16)&1;};let r='';
+  const f=(x,y)=>`<rect x="${x*c}" y="${y*c}" width="${7*c}" height="${7*c}" fill="#12271D"/><rect x="${(x+1)*c}" y="${(y+1)*c}" width="${5*c}" height="${5*c}" fill="#fff"/><rect x="${(x+2)*c}" y="${(y+2)*c}" width="${3*c}" height="${3*c}" fill="#12271D"/>`;
+  const inF=(x,y)=>(x<8&&y<8)||(x>n-9&&y<8)||(x<8&&y>n-9);
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){if(inF(x,y))continue;if(rnd())r+=`<rect x="${x*c}" y="${y*c}" width="${c}" height="${c}" fill="#12271D"/>`;}
+  return `<svg width="${px}" height="${px}" viewBox="0 0 ${px} ${px}" style="display:block;margin:0 auto"><rect width="${px}" height="${px}" fill="#fff"/>${r}${f(0,0)}${f(n-7,0)}${f(0,n-7)}</svg>`;}
+function showPickCode(g){if(!g)return;const d=pickDeadline(g);
+  const m=document.createElement('div');m.className='dl-sheet-mask';
+  m.innerHTML=`<div class="dl-sheet"><div class="sh">提货码 · ${g.no.slice(-8)}<span class="x">✕</span></div><div class="sbody" style="text-align:center;padding-bottom:calc(16px + env(safe-area-inset-bottom))">
+    <div style="font-size:12.5px;color:var(--sub);margin-bottom:10px">到仓后出示给仓库扫码 · ${g.ware}</div>
+    <div style="display:inline-block;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff">${qrSvgApp(g.no+g.code,190)}</div>
+    <div style="font-size:12px;color:var(--sub);margin-top:10px">扫不出来时让仓库手输</div>
+    <div style="font-family:monospace;font-size:30px;font-weight:800;letter-spacing:8px">${g.code}</div>
+    ${d?`<div style="margin-top:6px;font-size:13px;color:#B45309;font-weight:700">提货截止 ${msTs(d)}（剩 ${remainTxt(d-Date.now())}）</div>`:''}
+    <div style="text-align:left;margin-top:14px;font-size:13px">${g.items.map(x=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)"><span>${x.name}</span><span>应取回 ${x.retQty} ${x.unit}</span></div>`).join('')}</div>
+    <div style="text-align:left;margin-top:10px;background:var(--mint-soft);color:var(--emerald-2);font-size:12px;line-height:1.6;padding:10px 12px;border-radius:12px">仓库扫码后按实际拿走的数量出库并拍照交接，结果直接推送到这张退货单；少拿的部分系统直接赔付，有异议可在提货后 ${raDays()} 天内申诉。</div>
+  </div></div>`;
+  document.querySelector('.phone').appendChild(m);
+  m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
+}
+// 详情：提货交接记录（仓库扫码提货后才有）
+function handoverDetail(g,sec,box,kv){
+  if(!isDone(g)||!g.pickup||g.closed)return '';
+  const h=g.handover||{by:'仓库 · 李明',photos:2};
+  return sec('提货交接')+box(kv('提货码',`<span style="font-family:monospace">${g.code}</span>`)+kv('仓库交接人',h.by)+kv('交接照片',`<span style="color:var(--emerald-2);font-weight:700">📷 ${h.photos} 张</span>`));
 }
 // 差异赔付区块（与 PC retDiffBlock 同口径）
 function diffDetail(g,sec,box,kv){
@@ -1194,6 +1224,7 @@ function openReturn(){
           list.innerHTML=data.map(returnCard).join('');
           list.querySelectorAll('[data-rno]').forEach(e=>e.onclick=()=>openReturnDetail(e.dataset.rno));
           list.querySelectorAll('[data-ra]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();openRetAppeal(RETURN.find(x=>x.no===e.dataset.ra));});
+          list.querySelectorAll('[data-code]').forEach(e=>e.onclick=ev=>{ev.stopPropagation();showPickCode(RETURN.find(x=>x.no===e.dataset.code));});
         },420);
       };
       let cur='all';
