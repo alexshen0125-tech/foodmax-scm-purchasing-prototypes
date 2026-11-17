@@ -177,17 +177,13 @@ tbody tr:hover>td{background:#f5f9f5}
   <div class="crumb">商品 / 商品列表</div>
   <div class="panel">
     <div class="filters">
-      <div class="fi" style="width:170px"><label>SPU 名称</label><input id="qSpuN" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>SPU 编码</label><input id="qSpu" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>SKU 名称</label><input id="qSkuN" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>SKU 编码</label><input id="qSku" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>货品名称</label><input id="qItemN" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>货品编码</label><input id="qItem" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>原料名称</label><input id="qRawN" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:170px"><label>原料编码</label><input id="qRaw" placeholder="模糊匹配"></div>
-      <div class="fi" style="width:150px"><label>商品属性</label><select id="qAttr"><option value="">全部</option><option>标品</option><option>非标品</option></select></div>
-      <div class="fi" style="width:150px"><label>渠道来源</label><select id="qSrc"><option value="">全部</option><option>自营</option><option>三方</option></select></div>
-      <div class="fi" style="flex-direction:row;gap:8px"><button class="btn pr" onclick="renderList()">查询</button><button class="btn" onclick="resetQ()">重置</button></div>
+      <div class="fi" style="width:220px"><label>后台类目</label><select id="qCat"><option value="">全部</option></select></div>
+      <div class="fi" style="width:170px"><label>SPU 名称</label><input id="qSpuN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>SPU 编码</label><input id="qSpu" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>SKU 名称</label><input id="qSkuN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>SKU 编码</label><input id="qSku" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>货品名称</label><input id="qItemN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>货品编码</label><input id="qItem" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>原料名称</label><input id="qRawN" placeholder="模糊匹配"></div><div class="fi" style="width:170px"><label>原料编码</label><input id="qRaw" placeholder="模糊匹配"></div>
+      <div class="fi" style="width:170px"><label>商家编号/名称</label><input id="qMer" placeholder="支持编号/名称搜索"></div><div class="fi" style="width:170px"><label>报价单</label><select id="qPl"><option value="">全部</option><option>示例报价单 1</option><option>示例报价单 2</option></select></div><div class="fi" style="width:150px"><label>是否HALAL</label><select id="qHalal"><option value="">全部</option><option>HALAL</option><option>非HALAL</option></select></div><div class="fi" style="width:150px"><label>是否可采</label><select id="qPurch"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi" style="width:150px"><label>创建方式</label><select id="qWay"><option value="">全部</option><option>原料采购</option><option>成品采购</option><option>原料制造</option></select></div><div class="fi" style="width:150px"><label>货品状态</label><select id="qIst"><option value="">全部</option><option>启用</option><option>停用</option></select></div>
+      <div class="fi more" style="display:none;width:100%;height:0"></div>
+      <div class="fi more"  style="width:190px"><label>SPU 编号（批量）</label><input id="qSpuB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>SKU 编号（批量）</label><input id="qSkuB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>货品编码（批量）</label><input id="qItemB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:190px"><label>商家编号（批量）</label><input id="qMerB" placeholder="批量输入，逗号或换行分隔"></div><div class="fi more"  style="width:170px"><label>旧编码</label><input id="qOld" placeholder="请输入旧编码"></div><div class="fi more"  style="width:150px"><label>货品类别</label><select id="qType"><option value="">全部</option><option>标品</option><option>非标品</option></select></div><div class="fi more"  style="width:150px"><label>是否BCRS货品</label><select id="qBcrs"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:150px"><label>销售类型</label><select id="qSale"><option value="">全部</option><option>销售品</option><option>赠品</option></select></div><div class="fi more"  style="width:150px"><label>效期管理</label><select id="qValid"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:150px"><label>多退少补</label><select id="qSt"><option value="">全部</option><option>是</option><option>否</option></select></div><div class="fi more"  style="width:170px"><label>创建人</label><input id="qCreator" placeholder="请输入"></div>
+      <div class="fi more" style="width:300px"><label>创建日期</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="qD1"><span>~</span><input type="date" id="qD2"></div></div>
+      <div class="fi" style="flex-direction:row;gap:8px"><button class="btn pr" onclick="renderList()">查询</button><button class="btn" onclick="resetQ()">重置</button><button class="lk" id="moreBtn" onclick="toggleMore()">更多筛选 ▾</button></div>
     </div>
   </div>
   <div class="panel">
@@ -263,7 +259,7 @@ let RAWS=[
   {code:'item202611030015',name:'鸡大胸原料',en:'Chicken Breast Raw',unit:'g',cat:'鸡肉',status:'启用',purch:'是'}
 ];
 let SPUS=[
-  {spu:'SPU261020150003',name:'三文鱼块',en:'Salmon Cubes',cat:'三文鱼',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610200031',creator:'王帅',at:'2026-10-20 15:12',status:'在售',
+  {spu:'SPU261020150003',pl:['示例报价单 1'],name:'三文鱼块',en:'Salmon Cubes',cat:'三文鱼',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610200031',creator:'王帅',at:'2026-10-20 15:12',status:'在售',
    base:{origin:'挪威',brand:'',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'180',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
    skus:[{sku:'SKU261020150011',qty:'0.5',su:'袋',st:false,item:'item202610200032',bom:'BM2610200041',status:'在售'},
          {sku:'SKU261020150012',qty:'1',su:'袋',st:false,item:'item202610200033',bom:'BM2610200042',status:'在售'}]},
@@ -278,8 +274,8 @@ let SPUS=[
   {spu:'SPU261103160004',name:'鸡大胸',en:'Chicken Breast',cat:'鸡肉',part:'3003 鲜鸡大胸',attr:'非标品',src:'自营',stockUnit:'g',rawCode:'item202611030015',creator:'王帅',at:'2026-11-03 16:22',status:'在售',
    base:{origin:'马来西亚',brand:'',storage:'冷藏',fulfil:'冷链履约',validP:'是',period:'4',periodUnit:'天',halal:'HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
    skus:[{sku:'SKU261103160031',qty:'500',su:'袋',st:true,item:'item202611030016',bom:'BM2611030008',status:'在售',itemStatus:'待启用'}]},
-  {spu:'SPU261015110001',name:'可口可乐 330ml',en:'Coca-Cola 330ml',cat:'碳酸饮料',part:'',attr:'标品',src:'自营',creator:'陆璇',at:'2026-10-15 11:30',status:'在售',
-   std:{minPack:'罐',net:'330',netUnit:'ml',stockIsPack:'是',stockUnit:'罐',packQty:'',item:'item202610150004',bcrs:'是',bcrsQty:'1'},
+  {spu:'SPU261015110001',pl:['示例报价单 1','示例报价单 2'],name:'可口可乐 330ml',en:'Coca-Cola 330ml',cat:'碳酸饮料',part:'',attr:'标品',src:'自营',creator:'陆璇',at:'2026-10-15 11:30',status:'在售',
+   std:{minPack:'罐',net:'330',netUnit:'ml',stockIsPack:'是',stockUnit:'罐',packQty:'',item:'item202610150004',oldCode:'sku00008812',bcrs:'是',bcrsQty:'1'},
    base:{origin:'新加坡',brand:'Coca-Cola',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
    skus:[{sku:'SKU261015110001',qty:'1',su:'',status:'在售'},{sku:'SKU261015110002',qty:'24',su:'箱',status:'在售'}]},
   {spu:'SPU260912100006',name:'（去外叶）大白菜',en:'Napa Cabbage (Outer Leaves Removed)',cat:'叶菜',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202609120011',creator:'王帅',at:'2026-09-12 10:06',status:'在售',
@@ -331,8 +327,36 @@ function matchCode(spu,q){const R=rawBy(spu.rawCode)||{};
   if(q.rawN&&!(has(R.name,q.rawN)||has(R.en,q.rawN)))return false;
   if(q.raw&&!has(spu.rawCode,q.raw))return false;return true}
 function codeQ(){const v=id=>$(id).value.trim();return{spuN:v('qSpuN'),spu:v('qSpu'),skuN:v('qSkuN'),sku:v('qSku'),itemN:v('qItemN'),item:v('qItem'),rawN:v('qRawN'),raw:v('qRaw')}}
-function filtered(){const c=codeQ(),a=$('qAttr').value,src=$('qSrc').value;
-  return SPUS.filter(s=>matchCode(s,c)&&(!a||s.attr===a)&&(!src||s.src===src)&&(tab==='全部'||s.status===tab))}
+const QIDS=['qCat','qSpuN','qSpu','qSkuN','qSku','qItemN','qItem','qRawN','qRaw','qMer','qPl','qHalal','qPurch','qWay','qIst','qSpuB','qSkuB','qItemB','qMerB','qOld','qType','qBcrs','qSale','qValid','qSt','qCreator','qD1','qD2'];
+const qv=id=>($(id).value||'').trim();
+const bat=id=>qv(id).split(/[,，\s]+/).filter(Boolean).map(x=>x.toLowerCase());
+function itemsOf(s){/* 该商品关联的货品：[{code,way,status,purch,old}] */
+  if(s.attr==='标品'&&s.std)return[{code:s.std.item,way:'成品采购',status:s.std.status||'启用',purch:s.std.purch||'是',old:s.std.oldCode||''}];
+  const r=rawBy(s.rawCode)||{};return[{code:r.code,way:'原料采购',status:r.status||'启用',purch:r.purch||'是',old:''},...s.skus.map(k=>({code:k.item,way:'原料制造',status:k.itemStatus==='停用'?'停用':'启用',purch:'否',old:''}))]}
+function merOf(s){return s.src==='自营'?'自营 FM0000':s.creator.replace('商家 ','')+' M10021'}
+function filtered(){const c=codeQ();const its=s=>itemsOf(s).filter(x=>x.code);
+  return SPUS.filter(s=>{if(!matchCode(s,c))return false;
+    if(qv('qCat')&&s.cat!==qv('qCat'))return false;
+    if(qv('qMer')&&!has(merOf(s),qv('qMer')))return false;
+    if(qv('qPl')&&!(s.pl||[]).includes(qv('qPl')))return false;
+    if(qv('qHalal')&&(s.base||{}).halal!==qv('qHalal'))return false;
+    if(qv('qPurch')&&!its(s).some(x=>x.purch===qv('qPurch')))return false;
+    if(qv('qWay')&&!its(s).some(x=>x.way===qv('qWay')))return false;
+    if(qv('qIst')&&!its(s).some(x=>x.status===qv('qIst')))return false;
+    const sb=bat('qSpuB');if(sb.length&&!sb.includes(s.spu.toLowerCase()))return false;
+    const kb=bat('qSkuB');if(kb.length&&!s.skus.some(k=>kb.includes(k.sku.toLowerCase())))return false;
+    const ib=bat('qItemB');if(ib.length&&!its(s).some(x=>ib.includes(x.code.toLowerCase())))return false;
+    const mb=bat('qMerB');if(mb.length&&!mb.some(m=>merOf(s).toLowerCase().includes(m)))return false;
+    if(qv('qOld')&&!its(s).some(x=>has(x.old,qv('qOld'))))return false;
+    if(qv('qType')&&s.attr!==qv('qType'))return false;
+    if(qv('qBcrs')&&!(s.std&&(s.std.bcrs==='是'?'是':'否')===qv('qBcrs'))&&!(qv('qBcrs')==='否'&&s.attr==='非标品'))return false;
+    if(qv('qSale')&&(s.base||{}).sale!==qv('qSale'))return false;
+    if(qv('qValid')&&(s.base||{}).validP!==qv('qValid'))return false;
+    if(qv('qSt')&&s.skus.some(k=>k.st)!==(qv('qSt')==='是'))return false;
+    if(qv('qCreator')&&!has(s.creator,qv('qCreator')))return false;
+    const d=s.at.slice(0,10);if(qv('qD1')&&d<qv('qD1'))return false;if(qv('qD2')&&d>qv('qD2'))return false;
+    return tab==='全部'||s.status===tab})}
+let MORE_ON=false;function toggleMore(){MORE_ON=!MORE_ON;document.querySelectorAll('.fi.more').forEach(e=>e.style.display=MORE_ON?'':'none');$('moreBtn').textContent=MORE_ON?'收起筛选 ▴':'更多筛选 ▾'}
 function renderTabs(){const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
 function itemStTag(s,k){if(s.attr==='非标品'){if(k.itemStatus==='待启用')return'<span class="tag ty">待启用</span>';if(k.itemStatus==='停用')return'<span class="tag tgr">停用</span>';return'<span class="tag tg">启用</span>'}const d=s.std||{};return (d.status==='停用'?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>')+((d.purch||'是')==='否'?' <span class="tag ty">不可采</span>':'')}
 function skuStatusTag(s){if(s.itemStatus==='待启用')return'<span class="tag ty">货品待启用</span>';return s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}
@@ -349,7 +373,7 @@ function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
   renderSel();$('btnNew').disabled=!canSpu();$('btnNew').title=canSpu()?'':'当前岗位没有新建商品权限';$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
 function toggleRow(k){openRows[k]=!openRows[k];renderList()}
-function resetQ(){['qSpuN','qSpu','qSkuN','qSku','qItemN','qItem','qRawN','qRaw','qAttr','qSrc'].forEach(i=>$(i).value='');tab='全部';renderList()}
+function resetQ(){QIDS.forEach(i=>$(i).value='');tab='全部';renderList()}
 
 /* ============ 表单状态 ============ */
 let F=null,showErr=false;
@@ -797,6 +821,7 @@ function renderExcel(){$('bTitle').textContent='Excel 批量修改';const n=SEL.
   else $('bFt').innerHTML=`<button class="btn" onclick="closeBatch()">取消</button>`;
   $('bBody').innerHTML=h;$('mask').classList.add('on');$('dwBatch').classList.add('on')}
 
+document.querySelectorAll('.fi.more').forEach(e=>e.style.display='none');$('qCat').innerHTML='<option value="">全部</option>'+CATS.map(g=>`<optgroup label="${g.g}">`+g.items.map(c=>`<option value="${c}">${g.g} / ${c}</option>`).join('')+'</optgroup>').join('');
 renderList();
 </script>
 </body>
