@@ -656,7 +656,7 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
       ${pendItem?`<div class="warn">商品已建好，成品货品启用失败（系统已自动重试 3 次）。启用前仓库不能收货、采购不能下单。</div>`:''}</div>`+logsBlock(s,'货品');
   }else{const d=s.std;
     h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">成品货品 ${selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('std')">编辑货品</button><button class="lk ${d.status!=='停用'?'dg':''}" onclick="ask('stdStatus')">${d.status!=='停用'?'停用':'启用'}</button><button class="lk" onclick="ask('stdPurch')">${d.purch!=='否'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
-      <div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('货品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('计量单位（库存单位）',d.stockUnit)}${row('箱规',d.stockIsPack==='否'?`${d.packQty} ${d.minPack} / ${d.stockUnit}`:'—')}
+      <div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('货品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('计量单位（库存单位）',d.stockUnit)}${row('包装规格',d.stockIsPack==='否'?`${d.packQty} ${d.minPack} / ${d.stockUnit}`:'—')}
       ${row('状态',stTag(d.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(d.purch!=='否'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','成品采购')}${row('BCRS',d.bcrs==='是'?`支持，每 1 ${d.minPack} ${d.bcrsQty} 个容器`:'不支持')}
       ${row('保存条件 / 履约方式',(b.storage||'—')+' / '+(b.fulfil||'—'))}${row('效期管理 / 保质期',(b.validP||'—')+' / '+(b.period?b.period+b.periodUnit:'—'))}${extRows(ext(d),row)}</div></div>
       <div class="dsec"><h4>绑定的 SKU</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>1 份扣减货品库存</th><th>SKU 状态</th></tr></thead><tbody>`+
@@ -666,41 +666,51 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
   $('mask').classList.add('on');$('dwDetail').classList.add('on')}
 function closeDetail(){$('dwDetail').classList.remove('on');if(!$('dwForm').classList.contains('on'))$('mask').classList.remove('on')}
 
-/* ============ 货品扩展字段（SCM item 表真实字段） ============ */
-const VENDORS=['示例供应商 A','示例供应商 B','示例供应商 C'];
-function ext(o){if(!o.ext)o.ext={bar:'',gross:'',unitRemark:'',license:'',vendor:{},over:Object.fromEntries(WAREHOUSES.map(w=>[w,99])),fee:'',rej:'',report:0};return o.ext}
-function extRows(e,row){const img=row('货品图片','随商品主图（第 1 张），只读');const v=WAREHOUSES.map(w=>`${w}：${e.vendor[w]||'未设置'}`).join('<br>');const o=WAREHOUSES.map(w=>`${w} ${e.over[w]}%`).join(' · ');
-  return img+row('默认供应商',v)+row('入库超收',o)+row('公司质检扣点 / 拒收下限',(e.fee!==''?e.fee+'%':'—')+' / '+(e.rej!==''?e.rej+'%':'—'))+row('条形码',e.bar)+row('毛重',e.gross?e.gross+' kg':'')+row('第三方检测报告',e.report?e.report+' 份':'')}
+/* ============ 货品字段：100% 对齐 SCM 线上「编辑货品」页 h5-ddxm-intl-scm@b0ed4072 src/views/commodity/product-create.vue ============ */
+const VENDORS=['示例供应商 A','示例供应商 B','示例供应商 C'];   /* 仅「货品批量操作 › 批量设置默认供应商」用（SCM /admin/item/batch/setDefaultVendor） */
+function ext(o){if(!o.ext)o.ext={unitRemark:'',vendor:{},over:WAREHOUSES.map(w=>({wh:w,rate:99})),fee:'',rej:'',report:0,other:'',bcrsPrice:''};return o.ext}
+function extRows(e,row){
+  return row('货品图片','随商品主图（第 1 张）')+row('入仓超收',e.over.length?e.over.map(x=>`${x.wh} ${x.rate}%`).join(' · '):'—')+row('质检扣点 / 质检拒收下限',(e.fee!==''?e.fee+'%':'—')+' / '+(e.rej!==''?e.rej+'%':'—'))
+    +row('第三方检测报告',e.report?e.report+' 份':'')+row('其他检测报告',e.other)+row('备注',e.unitRemark)}
 
-/* ============ 单独编辑货品 ============ */
+/* ============ 单独编辑货品（字段同 SCM 编辑货品页，共用字段置灰） ============ */
 let IE=null;
-function openItemEdit(kind,sku,keep){const s=SPUS[dCur];let o,code,name,info;
-  if(kind==='raw'){o=rawBy(s.rawCode);code=o.code;name=o.name+' / '+o.en;info=[['货品属性','原料 · 非标品'],['计量单位 / 净含量',o.unit+' / 1'+o.unit],['创建方式','原料采购']]}
-  if(kind==='std'){o=s.std;code=o.item;name=s.name+' / '+s.en;info=[['货品属性','成品 · 标品'],['单件净含量',o.net+o.netUnit+'/'+o.minPack],['库存单位',o.stockUnit],['创建方式','成品采购']]}
-  if(kind==='fin'){o=s.skus.find(k=>k.sku===sku);code=o.item;name=skuNameOf(s,o);info=[['货品属性','成品 · 非标品'],['净含量 / 计量单位',fmtQty(o.qty)+s.stockUnit+' / '+o.su],['原料',s.rawCode],['创建方式','原料制造（不可采）']]}
-  IE={kind,o,code,e:keep?keep.e:JSON.parse(JSON.stringify(ext(o))),stor:keep?keep.stor:{storage:s.base.storage,fulfil:s.base.fulfil,validP:s.base.validP,period:s.base.period,periodUnit:s.base.periodUnit}};
+function openItemEdit(kind,sku,keep){const s=SPUS[dCur];const b=s.base;let o,code,v;
+  if(kind==='raw'){o=rawBy(s.rawCode);code=o.code;v={type:'非标品',attr:'原料',name:o.name,en:o.en,mu:o.unit,nw:'1',nwu:o.unit,pq:'',pu:'',purch:o.purch==='否'?'否':'是',purchLock:false,way:'',raw:''}}
+  if(kind==='std'){o=s.std;code=o.item;v={type:'标品',attr:'成品',name:s.name,en:s.en,mu:o.stockUnit,nw:o.net,nwu:o.netUnit,pq:o.stockIsPack==='否'?o.packQty:'',pu:o.stockIsPack==='否'?o.minPack:'',purch:o.purch==='否'?'否':'是',purchLock:false,way:'成品采购',raw:''}}
+  if(kind==='fin'){o=s.skus.find(k=>k.sku===sku);code=o.item;v={type:'非标品',attr:'成品',name:skuNameOf(s,o),en:'',mu:o.su,nw:fmtQty(o.qty),nwu:s.stockUnit,pq:'',pu:'',purch:'否',purchLock:true,way:'原料制造',raw:s.rawCode}}
+  IE={kind,o,code,v,e:keep?keep.e:JSON.parse(JSON.stringify(ext(o)))};const e=IE.e;
   $('bTitle').textContent='编辑货品 · '+code;
-  const ro=info.map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`).join('');
-  const e=IE.e,purch=kind!=='fin';
-  let h=`<div class="sec"><div class="sec-hd">基础信息<span class="tip">名称随商品名联动，单位、净含量、原料关系建品后锁定</span></div><div class="sec-bd"><div class="dl"><div><div class="k">货品编码</div><div class="v mono">${code}</div></div><div><div class="k">货品名称</div><div class="v">${esc(name)}</div></div>${ro}</div>
-    <div class="g3" style="margin-top:14px"><div class="fr"><label class="fl">条形码</label><input value="${esc(e.bar)}" maxlength="30" placeholder="EAN-13 / UPC" oninput="IE.e.bar=this.value.replace(/[^\\d]/g,'');this.value=IE.e.bar"></div>
-    <div class="fr"><label class="fl">毛重（kg）</label><input type="number" min="0" value="${esc(e.gross)}" onchange="IE.e.gross=this.value"></div>
-    <div class="fr"><label class="fl">单位说明</label><input maxlength="20" value="${esc(e.unitRemark)}" placeholder="最多 20 字" onchange="IE.e.unitRemark=this.value"></div>
-    <div class="fr"><label class="fl">生产许可证号</label><input value="${esc(e.license)}" onchange="IE.e.license=this.value"></div></div></div></div>`;
-  h+=`<div class="sec"><div class="sec-hd">仓储信息<span class="tip">和商品共用，在商品编辑里改，这里只读</span></div><div class="sec-bd"><div class="dl"><div><div class="k">保存条件</div><div class="v">${IE.stor.storage||'—'}</div></div><div><div class="k">履约方式</div><div class="v">${IE.stor.fulfil||'—'}</div></div><div><div class="k">效期管理 / 保质期</div><div class="v">${IE.stor.validP} / ${IE.stor.period||'—'}${IE.stor.period?IE.stor.periodUnit:''}</div></div></div></div></div>`;
-  if(purch)h+=`<div class="sec"><div class="sec-hd">采购与质检</div><div class="sec-bd">
-    <table style="max-width:720px"><thead><tr><th>仓库</th><th>默认供应商</th><th>入库超收比例</th></tr></thead><tbody>${WAREHOUSES.map(w=>`<tr><td>${w}</td><td><select onchange="IE.e.vendor['${w}']=this.value">${opts(VENDORS,e.vendor[w],'未设置')}</select></td><td><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" style="width:90px" value="${e.over[w]}" onchange="IE.e.over['${w}']=this.value">%</div></td></tr>`).join('')}</tbody></table>
-    <div class="g3" style="margin-top:14px"><div class="fr"><label class="fl">公司质检扣点</label><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" value="${esc(e.fee)}" onchange="IE.e.fee=this.value">%</div></div>
-    <div class="fr"><label class="fl">质检拒收下限</label><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" value="${esc(e.rej)}" onchange="IE.e.rej=this.value">%</div></div>
-    <div class="fr"><label class="fl">第三方检测报告<span class="hint">pdf 或图片，最多 10 张</span></label><div class="thumbs">${Array.from({length:e.report},(_,i)=>`<div class="thumb" style="width:56px;height:56px">报告${i+1}</div>`).join('')}${e.report<10?`<div class="up" style="width:56px;height:56px" onclick="IE.e.report++;openItemEditKeep()">＋</div>`:''}</div></div></div></div></div>`;
+  const L=(t,c,req,tip)=>`<div class="fr"><label class="fl">${req?'<span class="rq">*</span>':''}${t}${tip?`<span class="hint">${tip}</span>`:''}</label>${c}</div>`;
+  const RO=(x)=>`<div class="ro">${x||'—'}</div>`;const SH='在商品编辑里改';
+  const sgp=kind!=='raw';   /* BCRS：仅 SGP 站点 + 成品 */
+  let h=`<div class="sec"><div class="sec-hd">货品基础信息</div><div class="sec-bd"><div class="g2">
+    ${L('货品类型',RO(v.type))}${L('货品属性',RO(v.attr))}
+    <div class="fr full"><label class="fl"><span class="rq">*</span>货品名称<span class="hint">和商品名称一致，${SH}</span></label><div class="bi"><div class="ro">${esc(v.name)}</div><div class="ro">${esc(v.en)||'—'}</div></div></div>
+    <div class="fr full"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">计量单位、净含量${SH}</span></label><table class="itbl" style="max-width:760px"><thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td><div class="cell-ro">${v.mu}</div></td><td><div class="cell-ro">${v.nw}</div></td><td><div class="cell-ro">${v.nwu}</div></td><td><input maxlength="20" value="${esc(e.unitRemark)}" placeholder="最多 20 字" onchange="IE.e.unitRemark=this.value"></td></tr></tbody></table></div>
+    <div class="fr full"><label class="fl">包装规格（选填）<span class="hint">${SH}</span></label><table class="itbl" style="max-width:420px"><thead><tr><th>包装数量</th><th>包装单位</th></tr></thead><tbody><tr><td><div class="cell-ro">${v.pq||'—'}</div></td><td><div class="cell-ro">${v.pu||'—'}</div></td></tr></tbody></table></div>
+    ${L('后台类目',RO(esc(s.cat)),true,'即货品类目，'+SH)}
+    ${L('是否可采',v.purchLock?RO('否'):`<div class="radios">${['是','否'].map(x=>`<label><input type="radio" name="iep" ${v.purch===x?'checked':''} onchange="IE.v.purch='${x}'">${x}</label>`).join('')}</div>`,true,v.purchLock?'原料制造的成品固定不可采':'')}
+    ${L('货品描述',RO(esc(b.desc||'')),false,SH)}${L('产地',RO(esc(b.origin)),false,SH)}${L('品牌',RO(esc(b.brand)),false,SH)}
+    ${L('货品图片',RO('随商品主图（第 1 张）'),true,SH)}
+  </div></div></div>`;
+  if(kind!=='raw')h+=`<div class="sec"><div class="sec-hd">创建方式</div><div class="sec-bd"><div class="g2">${L('创建方式',RO(v.way),false,kind==='std'?'标品固定成品采购（R-11）':'原料做的成品固定原料制造')}${v.raw?L('原料货品',RO(`<span class="mono">${v.raw}</span>`)):''}</div></div></div>`;
+  if(sgp)h+=`<div class="sec"><div class="sec-hd">BCRS 押金信息<span class="tip">仅 SGP 站点</span></div><div class="sec-bd"><div class="g2">${L('押金单价',`<input type="number" min="0" step="0.01" value="${esc(e.bcrsPrice)}" placeholder="例如 0.10" onchange="IE.e.bcrsPrice=this.value">`)}${L('预览',RO(e.bcrsPrice?`每 1 ${v.mu} 押金 S$${Number(e.bcrsPrice).toFixed(2)}`:'—'))}</div></div></div>`;
+  h+=`<div class="sec"><div class="sec-hd">货品仓储信息</div><div class="sec-bd"><div class="g3">
+    ${L('效期管理',RO(b.validP),false,SH)}${L('保质期',RO(b.period?b.period+b.periodUnit:'—'),false,SH)}${L('保存条件',RO(b.storage),true,SH)}${L('履约方式',RO(b.fulfil),true,SH)}</div>
+    <div class="fr" style="margin-top:14px;max-width:640px"><label class="fl">入仓超收</label><table><thead><tr><th>仓库</th><th>超收比例(%)</th><th style="width:70px">操作</th></tr></thead><tbody>${e.over.map((x,k)=>`<tr><td><select onchange="IE.e.over[${k}].wh=this.value">${opts(WAREHOUSES,x.wh)}</select></td><td><input type="number" min="0" max="100" step="0.01" value="${x.rate}" onchange="IE.e.over[${k}].rate=this.value"></td><td><button class="lk dg" onclick="IE.e.over.splice(${k},1);openItemEditKeep()">删除</button></td></tr>`).join('')}</tbody></table><div style="margin-top:6px"><button class="btn sm" onclick="IE.e.over.push({wh:'',rate:''});openItemEditKeep()">添加</button></div></div>
+    <div class="g3" style="margin-top:14px">${L('质检扣点',`<div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="100" value="${esc(e.fee)}" onchange="IE.e.fee=this.value">%</div>`)}${L('质检拒收下限',`<div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="100" value="${esc(e.rej)}" onchange="IE.e.rej=this.value">%</div>`)}
+    ${L('第三方检测报告',`<div class="thumbs">${Array.from({length:e.report},(_,k)=>`<div class="thumb" style="width:56px;height:56px">报告${k+1}</div>`).join('')}<div class="up" style="width:56px;height:56px" onclick="IE.e.report++;openItemEditKeep()">＋</div></div>`)}
+    ${L('其他检测报告',`<select onchange="IE.e.other=this.value"><option value="">请选择</option></select>`,false,'选项取字典 OTHER_INSPECT')}</div></div></div>`;
   $('bBody').innerHTML=h;
   $('bFt').innerHTML=`<button class="btn" onclick="closeBatch()">取消</button><button class="btn pr" onclick="saveItemEdit()">保存</button>`;
   $('mask').classList.add('on');$('dwBatch').classList.add('on')}
-function openItemEditKeep(){openItemEdit(IE.kind,IE.kind==='fin'?IE.o.sku:undefined,IE)}
-function saveItemEdit(){const s=SPUS[dCur];const e=IE.e;for(const w of WAREHOUSES){const v=Number(e.over[w]);if(!(v>=0&&v<=99)){toast('入库超收比例须为 0~99',true);return}}
-  if(e.fee!==''&&!(e.fee>=0&&e.fee<=99)){toast('公司质检扣点须为 0~99',true);return}if(e.rej!==''&&!(e.rej>=0&&e.rej<=99)){toast('质检拒收下限须为 0~99',true);return}
-  IE.o.ext=e;if(IE.kind==='raw'){spusOfRaw(IE.o.code).forEach(x=>{Object.assign(x.base,IE.stor);log(x,'货品',IE.code,'编辑原料')})}else log(s,'货品',IE.code,'编辑货品');
-  closeBatch();toast('已保存');openDetail(dCur,'货品')}
+function openItemEditKeep(){const v=IE.v;openItemEdit(IE.kind,IE.kind==='fin'?IE.o.sku:undefined,IE);IE.v.purch=v.purch}
+function saveItemEdit(){const s=SPUS[dCur];const e=IE.e;
+  for(const x of e.over){if(!x.wh){toast('入仓超收：请选择仓库',true);return}const v=Number(x.rate);if(!(v>=0&&v<=100)){toast('超收比例须为 0~100',true);return}}
+  if(e.fee!==''&&!(e.fee>=0&&e.fee<=100)){toast('质检扣点须为 0~100',true);return}if(e.rej!==''&&!(e.rej>=0&&e.rej<=100)){toast('质检拒收下限须为 0~100',true);return}
+  IE.o.ext=e;if(!IE.v.purchLock){const was=IE.o.purch==='否'?'否':'是';IE.o.purch=IE.v.purch;if(was!==IE.v.purch)log(s,'货品',IE.code,'设为'+(IE.v.purch==='是'?'可采':'不可采'))}
+  log(s,'货品',IE.code,'编辑货品');closeBatch();toast('已保存');openDetail(dCur,'货品')}
 function closeBatch(){$('dwBatch').classList.remove('on');if(!$('dwDetail').classList.contains('on')&&!$('dwForm').classList.contains('on'))$('mask').classList.remove('on')}
 /* ============ 勾选与批量操作 ============ */
 const SEL=new Set();
@@ -730,7 +740,7 @@ function targets(kind){const spus=SPUS.filter(s=>SEL.has(s.spu));const out=[];co
         if(['itemOn','itemOff','purchY','purchN','vendor','over','qc'].includes(kind))s.skus.forEach(k=>out.push({...base,code:k.item,type:'成品',name:skuNameOf(s,k),cur:'—',skip:kind==='itemOff'?'成品停用要连 SKU、BOM 一起改，请在详情里逐个停用':kind==='itemOn'?(k.itemStatus==='待启用'?'待启用成品请在详情里启用':'成品不参与批量启用'):'原料做的成品不可采，不参与'}))}}});
   return out}
 function curOf(kind,o,t){if(kind==='itemOn'||kind==='itemOff')return o.status||'启用';if(kind==='purchY'||kind==='purchN')return (o.purch||'是')==='是'?'可采':'不可采';
-  const e=ext(o);if(kind==='vendor')return WAREHOUSES.map(w=>e.vendor[w]||'未设置').join(' / ');if(kind==='over')return WAREHOUSES.map(w=>e.over[w]+'%').join(' / ');if(kind==='qc')return (e.fee||'—')+' / '+(e.rej||'—');return'—'}
+  const e=ext(o);if(kind==='vendor')return WAREHOUSES.map(w=>e.vendor[w]||'未设置').join(' / ');if(kind==='over')return e.over.map(x=>x.wh+' '+x.rate+'%').join(' / ')||'—';if(kind==='qc')return (e.fee||'—')+' / '+(e.rej||'—');return'—'}
 function skipOf(kind,o,t){const st=o.status||'启用',pu=o.purch||'是';if(kind==='itemOn'&&st==='启用')return'已是启用';if(kind==='itemOff'&&st==='停用')return'已是停用';if(kind==='purchY'&&pu==='是')return'已是可采';if(kind==='purchN'&&pu==='否')return'已是不可采';return''}
 function effectOf(kind,x){if(x.skip)return'';if(kind==='itemOff'&&x.type==='标品货品'){const n=x.ref.s.skus.filter(k=>k.status==='在售').length;return n?`${n} 个在售 SKU 一起下架`:''}
   if(kind==='itemOff'&&x.type==='原料')return'成品不跟着停，库存卖完自动下架';if(kind==='purchN')return'库存不足 1 份时 SKU 自动下架';if(kind==='itemOn'||kind==='purchY')return'SKU 不自动上架';return''}
@@ -761,7 +771,7 @@ function submitBatch(){const {kind,vals:v}=B;if(kind==='valid'&&v.validP==='是'
     if(kind==='purchY'){r.o.purch='是';L('批量设为可采')}
     if(kind==='purchN'){r.o.purch='否';L('批量设为不可采')}
     if(kind==='vendor'){const e=ext(r.o);WAREHOUSES.forEach(w=>{if(v.vendor[w])e.vendor[w]=v.vendor[w]});L('批量设置默认供应商')}
-    if(kind==='over'){const e=ext(r.o);WAREHOUSES.forEach(w=>e.over[w]=v.over[w]);L('批量设置入库超收')}
+    if(kind==='over'){const e=ext(r.o);e.over=WAREHOUSES.map(w=>({wh:w,rate:v.over[w]}));L('批量设置入仓超收')}
     if(kind==='qc'){const e=ext(r.o);if(v.fee!=='')e.fee=v.fee;if(v.rej!=='')e.rej=v.rej;L('批量设置质检扣点/拒收下限')}});
   B.done=true;toast('批量修改完成');renderList();renderBatch()}
 
