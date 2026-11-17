@@ -164,7 +164,7 @@ tbody tr:hover>td{background:#f5f9f5}
 </style>
 </head>
 <body>
-<header><span class="logo">Foodmax</span><span class="sys">运营平台</span><div class="rt"><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
+<header><span class="logo">Foodmax</span><span class="sys">运营平台</span><div class="rt"><span>岗位 <select id="roleSel" onchange="ROLE=this.value;renderList();if($('dwDetail').classList.contains('on'))openDetail(dCur)" style="width:auto;height:24px;padding:0 6px;border:none;border-radius:3px;font-size:12.5px"><option>商品运营</option><option>采购</option></select></span><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
 <div class="wrap">
 <aside>
   <div class="grp">数据看板</div><a>店铺经营指标</a>
@@ -192,7 +192,7 @@ tbody tr:hover>td{background:#f5f9f5}
   </div>
   <div class="panel">
     <div class="tabs" id="tabs"></div>
-    <div class="toolbar"><button class="btn pr" onclick="openCreate()">＋ 新建商品（自营）</button>
+    <div class="toolbar"><button class="btn pr" id="btnNew" onclick="openCreate()">＋ 新建商品（自营）</button>
       <div class="dd" id="ddSpu"><button class="btn" onclick="toggleDd(event,'ddSpu')">商品批量操作 ⌄</button><div class="dd-menu" id="ddSpuMenu"></div></div>
       <div class="dd" id="ddItem"><button class="btn" onclick="toggleDd(event,'ddItem')">货品批量操作 ⌄</button><div class="dd-menu" id="ddItemMenu"></div></div>
       <button class="btn">导出 ⌄</button></div>
@@ -255,7 +255,8 @@ const EN_MAP={'三文鱼':'Salmon','块':'Cubes','片':'Slices','猪':'Pork','�
 
 /* ============ 示例业务数据 ============ */
 let RAWS=[
-  {code:'item202610200031',name:'三文鱼原料',en:'Salmon Raw',unit:'kg',cat:'三文鱼',status:'启用',purch:'是'},
+  {code:'item202610200031',name:'三文鱼块原料',en:'Salmon Cubes Raw',unit:'kg',cat:'三文鱼',status:'启用',purch:'是'},
+  {code:'item202610210007',name:'三文鱼片原料',en:'Salmon Slices Raw',unit:'kg',cat:'三文鱼',status:'启用',purch:'是'},
   {code:'item202610280007',name:'冰鲜去骨猪后腿肉原料',en:'Chilled Boneless Pork Hind Leg Raw',unit:'kg',cat:'猪肉',status:'启用',purch:'是'},
   {code:'item202611030015',name:'鸡大胸原料',en:'Chicken Breast Raw',unit:'g',cat:'鸡肉',status:'启用',purch:'是'}
 ];
@@ -264,7 +265,7 @@ let SPUS=[
    base:{origin:'挪威',brand:'',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'180',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
    skus:[{sku:'SKU261020150011',qty:'0.5',su:'袋',st:false,item:'item202610200032',bom:'BM2610200041',status:'在售'},
          {sku:'SKU261020150012',qty:'1',su:'袋',st:false,item:'item202610200033',bom:'BM2610200042',status:'在售'}]},
-  {spu:'SPU261021100005',name:'三文鱼片',en:'Salmon Slices',cat:'三文鱼',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610200031',creator:'陆璇',at:'2026-10-21 10:40',status:'在售',
+  {spu:'SPU261021100005',name:'三文鱼片',en:'Salmon Slices',cat:'三文鱼',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610210007',creator:'陆璇',at:'2026-10-21 10:40',status:'在售',
    base:{origin:'挪威',brand:'',storage:'冷冻',fulfil:'冷链履约',validP:'是',period:'180',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
    skus:[{sku:'SKU261021100021',qty:'0.3',su:'盒',st:false,item:'item202610210008',bom:'BM2610210012',status:'在售'}]},
   {spu:'SPU261028090002',name:'冰鲜去骨猪后腿肉',en:'Chilled Boneless Pork Hind Leg',cat:'猪肉',part:'3009 鲜猪后腿肉',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202610280007',creator:'李南凯',at:'2026-10-28 09:05',status:'在售',
@@ -286,6 +287,9 @@ let tab='全部',openRows={},seq=1;
 
 /* ============ 工具 ============ */
 const $=id=>document.getElementById(id);
+/* 岗位权限：查看全员开放；商品类编辑 / 批量 → 商品运营，货品类编辑 / 批量 → 采购（11-17 商货品重构沟通） */
+let ROLE='商品运营';const canSpu=()=>ROLE==='商品运营',canItem=()=>ROLE==='采购';
+const NOPERM=t=>`<span class="fh" title="当前岗位没有${t}权限">`;
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const opts=(arr,v,ph='请选择')=>`<option value="">${ph}</option>`+arr.map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('');
 function toast(m,e){const t=$('toast');t.textContent=m;t.className='toast'+(e?' e':'');t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2600)}
@@ -331,11 +335,11 @@ function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
       <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
       <td>${s.src==='自营'?'<span class="tag tg">自营</span>':'<span class="tag tgr">'+esc(s.creator.replace('商家 ',''))+'</span>'}</td>
       <td>${esc(s.src==='自营'?s.creator:'—')}</td><td class="mono">${s.at}</td><td>${s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">'+s.status+'</span>'}</td>
-      <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button>${s.src==='自营'?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:''}</td></tr>`;
+      <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button>${s.src==='自营'?(canSpu()?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:` &nbsp;${NOPERM('编辑商品')}编辑</span>`):''}</td></tr>`;
     if(open){h+=`<tr class="sub"><td></td><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>货品状态</th><th>SKU 状态</th></tr></thead><tbody>`+
       s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${itemStTag(s,k)}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')+`</tbody></table></td></tr>`}
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
-  renderSel();$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
+  renderSel();$('btnNew').disabled=!canSpu();$('btnNew').title=canSpu()?'':'当前岗位没有新建商品权限';$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
 function toggleRow(k){openRows[k]=!openRows[k];renderList()}
 function resetQ(){['qSpuN','qSpu','qSkuN','qSku','qItemN','qItem','qRawN','qRaw','qAttr','qSrc'].forEach(i=>$(i).value='');tab='全部';renderList()}
 
@@ -463,13 +467,11 @@ function stdSpecBlock(ed){const lock=ed?'disabled':'';
 function nsSpecBlock(ed){
   let h=`<div class="g2" style="margin-bottom:14px"><div class="fr"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">即原料货品的计量单位，所有规格的售卖规格单位都锁定为它</span></label>
     <select ${ed?'disabled':''} class="${showErr&&!F.nsUnit?'err':''}" onchange="set('nsUnit',this.value)">${opts(MEASURE_UNIT,F.nsUnit)}</select>${E(!F.nsUnit&&'请选择库存单位')}</div>
-    <div class="fr"><label class="fl"><span class="rq">*</span>原料货品</label><div class="radios">${['新建','已有'].map(v=>`<label><input type="radio" name="rm" ${ed?'disabled':''} ${F.rawMode===v?'checked':''} onchange="set('rawMode','${v}')">${v==='新建'?'新建原料':'选择已有原料'}</label>`).join('')}</div></div></div>`;
+    <div class="fr"><label class="fl">原料货品</label><div class="ro">${ed?'🔒 本商品的原料（建品时新建）':'提交时新建 1 个原料，只给本商品用'}</div></div></div>`;
   if(F.rawMode==='新建'){
     h+=`<div class="box on"><div class="raw-hd"><span class="tag tg">新建原料</span><span class="fh">提交时随商品一起建，名称和字段都取自本页，不用另填</span></div>
     <div class="dl"><div><div class="k">原料名称（中文）</div><div class="v" id="rawZh"></div></div><div><div class="k">原料名称（英文）</div><div class="v" id="rawEn"></div></div>
     <div><div class="k">计量单位 / 净含量</div><div class="v">${F.nsUnit||'—'} / 1${F.nsUnit||''}</div></div><div><div class="k">货品属性</div><div class="v">原料 · 非标品</div></div></div></div>`;
-    const sim=!ed&&F.cat&&F.nsUnit?RAWS.filter(x=>x.status==='启用'&&x.cat===F.cat&&x.unit===F.nsUnit):[];
-    if(sim.length)h+=`<div class="warn">后台类目「${esc(F.cat)}」下已有计量单位为 ${F.nsUnit} 的原料：${sim.map(x=>`${esc(x.name)}（<span class="mono">${x.code}</span>）<button class="btn sm" onclick="F.rawMode='已有';set('rawCode','${x.code}')">改为选它</button>`).join(' ')} 同一种原料拆成不同商品卖时请选已有的，不要重复建。</div>`;
   }else{
     const r=rawBy(F.rawCode);
     if(!ed){const cand=RAWS.filter(x=>x.status==='启用'&&x.unit===F.nsUnit);
@@ -581,7 +583,7 @@ const ME='沈亮';
 function log(s,tab,obj,act){(s.logs=s.logs||[]).unshift({at:now(),who:ME,tab,obj,act})}
 function seedLogs(s){if(s.logs)return;s.logs=[];const t=s.at;
   s.logs.push({at:t,who:s.creator,tab:'商品',obj:s.spu,act:'新建商品，'+s.skus.length+' 个 SKU'});
-  if(s.attr==='非标品'){s.logs.push({at:t,who:s.creator,tab:'货品',obj:s.rawCode,act:'关联原料'});s.skus.forEach(k=>s.logs.push({at:t,who:s.creator,tab:'货品',obj:k.item,act:'新建成品 + BOM '+k.bom}))}
+  if(s.attr==='非标品'){s.logs.push({at:t,who:s.creator,tab:'货品',obj:s.rawCode,act:'新建原料'});s.skus.forEach(k=>s.logs.push({at:t,who:s.creator,tab:'货品',obj:k.item,act:'新建成品 + BOM '+k.bom}))}
   else s.logs.push({at:t,who:s.creator,tab:'货品',obj:s.std.item,act:'新建货品'})}
 function spusOfRaw(code){return SPUS.filter(x=>x.rawCode===code)}
 function skuItemBlock(s,k){/* 上架前检查货品状态 */
@@ -616,7 +618,7 @@ function enableItem(i,sku){const s=SPUS[i];const k=s.skus.find(x=>x.sku===sku);k
 function logsBlock(s,tab){const L=(s.logs||[]).filter(l=>l.tab===tab);return`<div class="dsec"><h4>操作记录</h4>${L.length?`<table><thead><tr><th style="width:150px">时间</th><th style="width:90px">操作人</th><th style="width:170px">对象</th><th>操作</th></tr></thead><tbody>${L.map(l=>`<tr><td class="mono">${l.at}</td><td>${esc(l.who)}</td><td class="mono">${l.obj}</td><td>${esc(l.act)}</td></tr>`).join('')}</tbody></table>`:'<div class="fh">暂无</div>'}</div>`}
 function stTag(v,map){const c=map[v]||'tgr';return`<span class="tag ${c}">${v}</span>`}
 
-function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=SPUS[i];seedLogs(s);const ns=s.attr==='非标品';const b=s.base||{};const self=s.src==='自营';
+function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=SPUS[i];seedLogs(s);const ns=s.attr==='非标品';const b=s.base||{};const self=s.src==='自营',selfP=self&&canSpu(),selfI=self&&canItem();
   if(!ns&&s.std){s.std.status=s.std.status||'启用';s.std.purch=s.std.purch||'是'}
   $('dTitle').textContent='商品详情 · '+s.name;
   const row=(k,v)=>`<div><div class="k">${k}</div><div class="v">${v||'—'}</div></div>`;
@@ -626,44 +628,44 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
   if(dTab==='商品'){
     h+=`<div class="dsec"><h4>商品信息</h4><div class="dl">${row('SPU 编码',`<span class="mono">${s.spu}</span>`)}${row('商品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('货品类目',s.cat)}${row('商品类目',prodCat(s.cat)+' <span class="fh">随货品类目</span>')}${row('商品部位',s.part)}
       ${row('商品属性',s.attr)}${row('渠道来源',s.src)}${row('销售类型',b.sale)}${row('产地',b.origin)}${row('品牌',b.brand)}${row('是否HALAL',b.halal)}${row('是否对HALAL客户展示',b.halalShow)}${row('APP是否展示效期',b.appExp)}</div></div>
-      <div class="dsec"><h4>售卖规格（SKU）</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>售卖规格</th><th>绑定货品</th>${ns?'<th>多退少补</th>':''}<th>SKU 状态</th>${self?'<th style="width:80px">操作</th>':''}</tr></thead><tbody>`+
+      <div class="dsec"><h4>售卖规格（SKU）</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>售卖规格</th><th>绑定货品</th>${ns?'<th>多退少补</th>':''}<th>SKU 状态</th>${selfP?'<th style="width:80px">操作</th>':''}</tr></thead><tbody>`+
       s.skus.map(k=>{const blk=skuItemBlock(s,k);return`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${ns?`${fmtQty(k.qty)}${s.stockUnit}/${k.su}`:`${k.qty} ${s.std.stockUnit}${k.su?' / '+k.su:''}`}</td><td class="mono">${ns?k.item:s.std.item}</td>${ns?`<td>${k.st?'是':'否'}</td>`:''}
         <td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}${blk&&k.status!=='在售'?`<div class="fh">${blk}</div>`:''}</td>
-        ${self?`<td>${k.status==='在售'?`<button class="lk dg" onclick="ask('skuOff','${k.sku}')">下架</button>`:(ns&&k.itemStatus==='停用'?'<span class="fh">—</span>':blk?`<span class="fh" title="${blk}">上架</span>`:`<button class="lk" onclick="skuOn('${k.sku}')">上架</button>`)}</td>`:''}</tr>`}).join('')+`</tbody></table></div>`+logsBlock(s,'商品');
+        ${selfP?`<td>${k.status==='在售'?`<button class="lk dg" onclick="ask('skuOff','${k.sku}')">下架</button>`:(ns&&k.itemStatus==='停用'?'<span class="fh">—</span>':blk?`<span class="fh" title="${blk}">上架</span>`:`<button class="lk" onclick="skuOn('${k.sku}')">上架</button>`)}</td>`:''}</tr>`}).join('')+`</tbody></table></div>`+logsBlock(s,'商品');
   }else if(ns){const r=rawBy(s.rawCode)||{};const users=spusOfRaw(r.code);
-    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">原料货品 ${self?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('raw')">编辑原料</button><button class="lk ${r.status==='启用'?'dg':''}" onclick="ask('rawStatus')">${r.status==='启用'?'停用':'启用'}</button><button class="lk" onclick="ask('rawPurch')">${r.purch==='是'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
-      <div class="dl">${row('原料编码',`<span class="mono">${r.code}</span>`)}${row('原料名称',esc(r.name)+'<br><span class="fh">'+esc(r.en)+'</span>')}${row('计量单位 / 净含量',r.unit+' / 1'+r.unit)}${row('使用它的商品',users.length+' 个'+(users.length>1?'：'+users.map(x=>esc(x.name)).join('、'):''))}
+    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">原料货品 ${selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('raw')">编辑原料</button><button class="lk ${r.status==='启用'?'dg':''}" onclick="ask('rawStatus')">${r.status==='启用'?'停用':'启用'}</button><button class="lk" onclick="ask('rawPurch')">${r.purch==='是'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
+      <div class="dl">${row('原料编码',`<span class="mono">${r.code}</span>`)}${row('原料名称',esc(r.name)+'<br><span class="fh">'+esc(r.en)+'</span>')}${row('计量单位 / 净含量',r.unit+' / 1'+r.unit)}
       ${row('状态',stTag(r.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(r.purch==='是'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','原料采购')}${row('保存条件 / 履约方式',(b.storage||'—')+' / '+(b.fulfil||'—'))}
       ${row('效期管理 / 保质期',(b.validP||'—')+' / '+(b.period?b.period+b.periodUnit:'—'))}${extRows(ext(r),row)}</div></div>
-      <div class="dsec"><h4>成品货品与 BOM</h4><table><thead><tr><th>成品货品编码</th><th>成品名称</th><th>净含量 / 计量单位</th><th>是否可采</th><th>成品状态</th><th>BOM 编号</th><th>原料用量 → 成品</th><th>BOM 状态</th>${self?'<th style="width:96px">操作</th>':''}</tr></thead><tbody>`+
+      <div class="dsec"><h4>成品货品与 BOM</h4><table><thead><tr><th>成品货品编码</th><th>成品名称</th><th>净含量 / 计量单位</th><th>是否可采</th><th>成品状态</th><th>BOM 编号</th><th>原料用量 → 成品</th><th>BOM 状态</th>${selfI?'<th style="width:96px">操作</th>':''}</tr></thead><tbody>`+
       s.skus.map(k=>{const pd=k.itemStatus==='待启用',off=k.itemStatus==='停用';return`<tr><td class="mono">${k.item}</td><td>${esc(skuNameOf(s,k))}</td><td>${fmtQty(k.qty)}${s.stockUnit} / ${k.su}</td><td><span class="tag tgr">🔒 不可采</span></td>
         <td>${pd?'<span class="tag ty">待启用</span>':off?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>'}</td>
         <td class="mono">${k.bom}</td><td>${fmtQty(k.qty)} ${s.stockUnit} → 1 ${k.su}</td><td>${k.bomStatus==='废弃'?'<span class="tag tgr">废弃</span>':'<span class="tag tg">启用</span>'}</td>
-        ${self?`<td style="white-space:nowrap">${off?'—':`<button class="lk" onclick="openItemEdit('fin','${k.sku}')">编辑</button> `}${pd?`<button class="lk" onclick="enableItem(${i},'${k.sku}')">启用</button>`:off?'':`<button class="lk dg" onclick="ask('finOff','${k.sku}')">停用</button>`}</td>`:''}</tr>`}).join('')+`</tbody></table>
+        ${selfI?`<td style="white-space:nowrap">${off?'—':`<button class="lk" onclick="openItemEdit('fin','${k.sku}')">编辑</button> `}${pd?`<button class="lk" onclick="enableItem(${i},'${k.sku}')">启用</button>`:off?'':`<button class="lk dg" onclick="ask('finOff','${k.sku}')">停用</button>`}</td>`:''}</tr>`}).join('')+`</tbody></table>
       <div class="fh" style="margin-top:6px">原料做的成品固定不可采：库存靠原料加工补充，库存不足 1 份时 SKU 自动下架。BOM 用量 = 规格数量，在这里只读。</div>
       ${pendItem?`<div class="warn">商品已建好，成品货品启用失败（系统已自动重试 3 次）。启用前仓库不能收货、采购不能下单。</div>`:''}</div>`+logsBlock(s,'货品');
   }else{const d=s.std;
-    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">成品货品 ${self?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('std')">编辑货品</button><button class="lk ${d.status!=='停用'?'dg':''}" onclick="ask('stdStatus')">${d.status!=='停用'?'停用':'启用'}</button><button class="lk" onclick="ask('stdPurch')">${d.purch!=='否'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
+    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">成品货品 ${selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('std')">编辑货品</button><button class="lk ${d.status!=='停用'?'dg':''}" onclick="ask('stdStatus')">${d.status!=='停用'?'停用':'启用'}</button><button class="lk" onclick="ask('stdPurch')">${d.purch!=='否'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
       <div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('货品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('计量单位（库存单位）',d.stockUnit)}${row('箱规',d.stockIsPack==='否'?`${d.packQty} ${d.minPack} / ${d.stockUnit}`:'—')}
       ${row('状态',stTag(d.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(d.purch!=='否'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','成品采购')}${row('BCRS',d.bcrs==='是'?`支持，每 1 ${d.minPack} ${d.bcrsQty} 个容器`:'不支持')}
       ${row('保存条件 / 履约方式',(b.storage||'—')+' / '+(b.fulfil||'—'))}${row('效期管理 / 保质期',(b.validP||'—')+' / '+(b.period?b.period+b.periodUnit:'—'))}${extRows(ext(d),row)}</div></div>
       <div class="dsec"><h4>绑定的 SKU</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>1 份扣减货品库存</th><th>SKU 状态</th></tr></thead><tbody>`+
       s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${k.qty} ${d.stockUnit}</td><td>${k.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}</td></tr>`).join('')+`</tbody></table></div>`+logsBlock(s,'货品')}
   $('dBody').innerHTML=h;
-  $('dFt').innerHTML=`<button class="btn" onclick="closeDetail()">关闭</button>${self?`<button class="btn pr" onclick="closeDetail();openEdit(${i})">编辑</button>`:''}`;
+  $('dFt').innerHTML=`<button class="btn" onclick="closeDetail()">关闭</button>${selfP?`<button class="btn pr" onclick="closeDetail();openEdit(${i})">编辑商品</button>`:''}`;
   $('mask').classList.add('on');$('dwDetail').classList.add('on')}
 function closeDetail(){$('dwDetail').classList.remove('on');if(!$('dwForm').classList.contains('on'))$('mask').classList.remove('on')}
 
 /* ============ 货品扩展字段（SCM item 表真实字段） ============ */
 const VENDORS=['示例供应商 A','示例供应商 B','示例供应商 C'];
 function ext(o){if(!o.ext)o.ext={bar:'',gross:'',unitRemark:'',license:'',vendor:{},over:Object.fromEntries(WAREHOUSES.map(w=>[w,99])),fee:'',rej:'',report:0};return o.ext}
-function extRows(e,row){const v=WAREHOUSES.map(w=>`${w}：${e.vendor[w]||'未设置'}`).join('<br>');const o=WAREHOUSES.map(w=>`${w} ${e.over[w]}%`).join(' · ');
-  return row('默认供应商',v)+row('入库超收',o)+row('公司质检扣点 / 拒收下限',(e.fee!==''?e.fee+'%':'—')+' / '+(e.rej!==''?e.rej+'%':'—'))+row('条形码',e.bar)+row('毛重',e.gross?e.gross+' kg':'')+row('第三方检测报告',e.report?e.report+' 份':'')}
+function extRows(e,row){const img=row('货品图片','随商品主图（第 1 张），只读');const v=WAREHOUSES.map(w=>`${w}：${e.vendor[w]||'未设置'}`).join('<br>');const o=WAREHOUSES.map(w=>`${w} ${e.over[w]}%`).join(' · ');
+  return img+row('默认供应商',v)+row('入库超收',o)+row('公司质检扣点 / 拒收下限',(e.fee!==''?e.fee+'%':'—')+' / '+(e.rej!==''?e.rej+'%':'—'))+row('条形码',e.bar)+row('毛重',e.gross?e.gross+' kg':'')+row('第三方检测报告',e.report?e.report+' 份':'')}
 
 /* ============ 单独编辑货品 ============ */
 let IE=null;
 function openItemEdit(kind,sku,keep){const s=SPUS[dCur];let o,code,name,info;
-  if(kind==='raw'){o=rawBy(s.rawCode);code=o.code;name=o.name+' / '+o.en;info=[['货品属性','原料 · 非标品'],['计量单位 / 净含量',o.unit+' / 1'+o.unit],['创建方式','原料采购'],['使用它的商品',spusOfRaw(o.code).map(x=>x.name).join('、')]]}
+  if(kind==='raw'){o=rawBy(s.rawCode);code=o.code;name=o.name+' / '+o.en;info=[['货品属性','原料 · 非标品'],['计量单位 / 净含量',o.unit+' / 1'+o.unit],['创建方式','原料采购']]}
   if(kind==='std'){o=s.std;code=o.item;name=s.name+' / '+s.en;info=[['货品属性','成品 · 标品'],['单件净含量',o.net+o.netUnit+'/'+o.minPack],['库存单位',o.stockUnit],['创建方式','成品采购']]}
   if(kind==='fin'){o=s.skus.find(k=>k.sku===sku);code=o.item;name=skuNameOf(s,o);info=[['货品属性','成品 · 非标品'],['净含量 / 计量单位',fmtQty(o.qty)+s.stockUnit+' / '+o.su],['原料',s.rawCode],['创建方式','原料制造（不可采）']]}
   IE={kind,o,code,e:keep?keep.e:JSON.parse(JSON.stringify(ext(o))),stor:keep?keep.stor:{storage:s.base.storage,fulfil:s.base.fulfil,validP:s.base.validP,period:s.base.period,periodUnit:s.base.periodUnit}};
@@ -675,11 +677,7 @@ function openItemEdit(kind,sku,keep){const s=SPUS[dCur];let o,code,name,info;
     <div class="fr"><label class="fl">毛重（kg）</label><input type="number" min="0" value="${esc(e.gross)}" onchange="IE.e.gross=this.value"></div>
     <div class="fr"><label class="fl">单位说明</label><input maxlength="20" value="${esc(e.unitRemark)}" placeholder="最多 20 字" onchange="IE.e.unitRemark=this.value"></div>
     <div class="fr"><label class="fl">生产许可证号</label><input value="${esc(e.license)}" onchange="IE.e.license=this.value"></div></div></div></div>`;
-  if(kind==='raw')h+=`<div class="sec"><div class="sec-hd">仓储信息<span class="tip">原料的仓储信息在这里改；成品和标品货品的仓储信息随商品编辑</span></div><div class="sec-bd"><div class="g3">
-    <div class="fr"><label class="fl"><span class="rq">*</span>保存条件</label><select onchange="IE.stor.storage=this.value">${opts(STORAGE,IE.stor.storage)}</select></div>
-    <div class="fr"><label class="fl"><span class="rq">*</span>履约方式</label><select onchange="IE.stor.fulfil=this.value">${opts(FULFIL,IE.stor.fulfil)}</select></div>
-    <div class="fr"><label class="fl"><span class="rq">*</span>效期管理 / 保质期</label><div style="display:flex;gap:6px"><select style="width:70px" onchange="IE.stor.validP=this.value">${['是','否'].map(v=>`<option${v===IE.stor.validP?' selected':''}>${v}</option>`).join('')}</select><input type="number" value="${esc(IE.stor.period)}" onchange="IE.stor.period=this.value"><select style="width:70px" onchange="IE.stor.periodUnit=this.value">${['天','月','年'].map(u=>`<option${u===IE.stor.periodUnit?' selected':''}>${u}</option>`).join('')}</select></div></div></div></div></div>`;
-  else h+=`<div class="sec"><div class="sec-hd">仓储信息<span class="tip">随商品编辑，这里只读</span></div><div class="sec-bd"><div class="dl"><div><div class="k">保存条件</div><div class="v">${IE.stor.storage||'—'}</div></div><div><div class="k">履约方式</div><div class="v">${IE.stor.fulfil||'—'}</div></div><div><div class="k">效期管理 / 保质期</div><div class="v">${IE.stor.validP} / ${IE.stor.period||'—'}${IE.stor.period?IE.stor.periodUnit:''}</div></div></div></div></div>`;
+  h+=`<div class="sec"><div class="sec-hd">仓储信息<span class="tip">和商品共用，在商品编辑里改，这里只读</span></div><div class="sec-bd"><div class="dl"><div><div class="k">保存条件</div><div class="v">${IE.stor.storage||'—'}</div></div><div><div class="k">履约方式</div><div class="v">${IE.stor.fulfil||'—'}</div></div><div><div class="k">效期管理 / 保质期</div><div class="v">${IE.stor.validP} / ${IE.stor.period||'—'}${IE.stor.period?IE.stor.periodUnit:''}</div></div></div></div></div>`;
   if(purch)h+=`<div class="sec"><div class="sec-hd">采购与质检</div><div class="sec-bd">
     <table style="max-width:720px"><thead><tr><th>仓库</th><th>默认供应商</th><th>入库超收比例</th></tr></thead><tbody>${WAREHOUSES.map(w=>`<tr><td>${w}</td><td><select onchange="IE.e.vendor['${w}']=this.value">${opts(VENDORS,e.vendor[w],'未设置')}</select></td><td><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" style="width:90px" value="${e.over[w]}" onchange="IE.e.over['${w}']=this.value">%</div></td></tr>`).join('')}</tbody></table>
     <div class="g3" style="margin-top:14px"><div class="fr"><label class="fl">公司质检扣点</label><div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="99" value="${esc(e.fee)}" onchange="IE.e.fee=this.value">%</div></div>
@@ -702,8 +700,8 @@ function renderSel(){const n=SEL.size;$('selbar').style.display=n?'flex':'none';
 const BATCH_SPU=[{k:'shelfOn',t:'批量上架'},{k:'shelfOff',t:'批量下架'},{k:'valid',t:'批量设置效期管理'},{k:'excel',t:'Excel 批量修改',free:true}];
 const BATCH_ITEM=[{k:'itemOn',t:'批量启用'},{k:'itemOff',t:'批量停用'},{k:'purchY',t:'批量设为可采'},{k:'purchN',t:'批量设为不可采'},{k:'vendor',t:'批量设置默认供应商'},{k:'over',t:'批量设置入库超收'},{k:'qc',t:'批量设置质检扣点 / 拒收下限'}];
 const BATCH=[...BATCH_SPU,...BATCH_ITEM];
-function ddHtml(list,tip){return`<div class="g">${tip}</div>`+list.map(b=>{const on=SEL.size||b.free;return`<a class="${on?'':'dis'}" onclick="${on?(b.k==='excel'?'closeDd();openExcel()':`openBatch('${b.k}')`):''}">${b.t}</a>`}).join('')}
-function renderDd(){$('ddSpuMenu').innerHTML=ddHtml(BATCH_SPU,'作用于勾选商品下的 SPU / SKU');$('ddItemMenu').innerHTML=ddHtml(BATCH_ITEM,'作用于勾选商品关联的标品货品、原料')}
+function ddHtml(list,tip,perm){return`<div class="g">${tip}${perm?'':'<br><span style="color:var(--r)">当前岗位没有这类权限</span>'}</div>`+list.map(b=>{const on=perm&&(SEL.size||b.free);return`<a class="${on?'':'dis'}" onclick="${on?(b.k==='excel'?'closeDd();openExcel()':`openBatch('${b.k}')`):''}">${b.t}</a>`}).join('')}
+function renderDd(){$('ddSpuMenu').innerHTML=ddHtml(BATCH_SPU,'作用于勾选商品下的 SPU / SKU（商品运营）',canSpu());$('ddItemMenu').innerHTML=ddHtml(BATCH_ITEM,'作用于勾选商品关联的货品、原料（采购）',canItem())}
 function closeDd(){['ddSpu','ddItem'].forEach(id=>{const d=$(id);if(d)d.classList.remove('on')})}
 function toggleDd(e,id){e.stopPropagation();const was=$(id).classList.contains('on');closeDd();if(!was)$(id).classList.add('on')}
 document.addEventListener('click',closeDd);
