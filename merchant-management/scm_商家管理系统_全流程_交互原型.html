@@ -4545,6 +4545,15 @@ function retAmtCell(a){const l=a.retItems||[];if(!l.length)return money(a.amt);r
 function retItemsName(a){const l=a.retItems||[];return l.length?(l[0].name+(l.length>1?` 等${l.length}件`:'')):a.item;}
 function retHasGift(a){return (a.retItems||[]).some(x=>x.gift);}
 function retGiftTag(x){return x.gift?` <span class="tag t-pp" style="font-size:10px" title="${x.gift.kind} · ${x.gift.name}">赠品</span>`:'';}
+// 状态 Tab 下的一行说明（11-17 沈亮：解释当前状态）；全部不显示
+function retStDesc(k){return {
+  '待仓库入库':'客户退回的货正在送往平台仓，到仓后变为待提货。',
+  '待提货':'货已到仓，请在提货截止前凭提货码到仓提货；超过截止没来提会变为逾期未提。',
+  '部分提货':`已提货但少拿了一部分，少拿的部分已按原订单你应得的钱直接赔付；取回的货有问题可在提货后 ${DB.pickAppealDays} 天内申诉。`,
+  '已提货':`应取回的货已全部拿走；取回的货有问题可在提货后 ${DB.pickAppealDays} 天内申诉。`,
+  '无法取回':'货没能取回，已按应取回数量整单直接赔付，不需要申诉。',
+  '逾期未提':'超过提货截止没来提货，责任在你，不赔付、不能申诉。',
+  '已取消':'客户退款被驳回，退货单作废，不需要提货。'}[k]||'';}
 const RET_ST_TONE={'待仓库入库':'t-pp','待提货':'t-b','部分提货':'t-y','无法取回':'t-r','已提货':'t-g','逾期未提':'t-gr','已取消':'t-gr'};
 function retStTag(s){return `<span class="tag ${RET_ST_TONE[s]||'t-gr'}"><span class="dot"></span>${s}</span>`;}
 PAGES['m-after-return']=()=>{
@@ -4571,7 +4580,7 @@ PAGES['m-after-return']=()=>{
   </div></div>`;
   const RET_TABS=['','待仓库入库','待提货','部分提货','已提货','无法取回','逾期未提','已取消'];
   const stTabs=`<div class="tabs" style="margin:0 16px">${RET_TABS.map(k=>{const n=k?kw.filter(a=>a.returnStatus==k).length:kw.length;
-    return `<div class="tab ${stK==k?'active':''}" onclick="DB.retStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>`;
+    return `<div class="tab ${stK==k?'active':''}" onclick="DB.retStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>${stK?`<div style="margin:10px 16px 2px;font-size:12.5px;color:var(--ts)">${retStDesc(stK)}</div>`:''}`;
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
     return `<tr><td class="mono" style="white-space:nowrap">TH-${a.id.slice(-6)}</td><td style="white-space:nowrap">${ord_mask(a.client)}</td><td class="mono" style="white-space:nowrap">${a.order}</td><td>${retItemsName(a)}${retHasGift(a)?` <span class="tag t-pp" style="font-size:10px" title="本退货单含满赠赠品，赠品随退货一起退回，需一并提走">含赠品</span>`:''}</td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td style="text-align:right">${diffQtyCell(a)}</td><td style="text-align:right">${retAmtCell(a)}</td><td style="text-align:right">${diffCompCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td style="font-size:12px;white-space:nowrap">${pickDlCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${pickupCell(a)}</td><td>${stTag(a.returnStatus)}</td><td style="font-size:12px;white-space:nowrap">${retAppealCell(a)}</td><td style="font-size:12px;white-space:nowrap">${apDlCell(a)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>${a.returnStatus=='待提货'?` <button class="btn btn-p btn-sm" onclick="retShowCode(${i})">提货码</button>`:''}${retAppealOpen(a)?` <button class="btn btn-o btn-sm" onclick="act_retAppeal(${i})">申诉</button>`:''}</td></tr>`;}).join('');
   return srcTabs+filterBar+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b> → <b>待提货</b>（仓库确认到货，到仓后 <b>${DB.pickupDays} 天</b>内来提）→ 提货后 <b>已提货</b>（拿全了）/ <b>部分提货</b>（少拿了，差异直接赔付）/ <b>无法取回</b>（大仓超时未入库或一件没拿到，整单直接赔付、不走申诉）；超过提货期限没来提为 <b>逾期未提</b>，责任在你，不赔付。赔付按原订单你应得的钱算，平台推送后随结算单打给你。已提货、部分提货后 <b>${DB.pickAppealDays} 天</b>内，取回的货数量不对或坏了不能卖，可以申诉 1 次。`)}
