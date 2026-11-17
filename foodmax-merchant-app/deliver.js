@@ -788,7 +788,8 @@ const pickOf=(g,x)=>(x.pickQty==null&&isDone(g))?0:x.pickQty;
 const pickDays=()=>window.FM.DB.pickupDays||3;
 const diffOf=x=>Math.round(((x.retQty||0)-(x.pickQty||0))*100)/100;
 const diffSum=g=>Math.round(g.items.reduce((s,x)=>s+diffOf(x),0)*100)/100;
-const pickDeadline=g=>g.arrive?tsMs(g.arrive)+pickDays()*86400000:0;
+// 提货截止在到仓时定死（PRD BR-05），改期限只影响新到仓的单
+const pickDeadline=g=>{if(!g.arrive)return 0;if(!g.pickDl)g.pickDl=tsMs(g.arrive)+pickDays()*86400000;return g.pickDl;};
 // 倒计时文案：剩 X 天 X 小时（打开 / 刷新时更新，不逐秒跳）
 const remainTxt=ms=>{if(ms<=0)return '0 分';const m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;return d?`${d} 天 ${h} 小时`:(h?`${h} 小时 ${mi} 分`:`${mi} 分`);};
 function diffGen(g){
@@ -823,7 +824,7 @@ const fmtS=n=>'S$'+(+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maxim
 const r2=n=>Math.round((+n||0)*100)/100;
 // 已提货申诉期限 N 天（与 PC DB.pickAppealDays 同，默认 3；运营平台配置）
 const raDays=()=>window.FM.DB.pickAppealDays||3;
-function raDeadline(g){const at=g._whr?(g._pendingCount?'':g._lastPick):(isDone(g)?g.done:'');return at?tsMs(at)+raDays()*86400000:0;}
+function raDeadline(g){if(!g._whr){if(!isDone(g))return 0;if(!g.apDl)g.apDl=tsMs(g.done)+raDays()*86400000;return g.apDl;}const at=g._pendingCount?'':g._lastPick;return at?tsMs(at)+raDays()*86400000:0;}   // 申诉截止在结单时定死（PRD BR-09）
 function raExpired(g){const d=raDeadline(g);return !!d&&Date.now()>d;}
 function raWin(g){
   if(g.appeal)return null;
@@ -876,7 +877,7 @@ function openReturnDetail(no){
   pushPage({title:'退货单详情',navbar:true,body:`
     ${retKbox(g,'margin:12px 16px 0;background:#fff;box-shadow:var(--sh-sm)')}
     ${sec('单据信息')}
-    ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('正向订单号',`<span style="font-family:monospace">${g.orderNo||'—'}</span>`)+kv('状态',g.st)+kv('存放仓库',g.ware)+kv('退货金额',g.items.some(x=>x.price==null)?'—':fmtS(retAmt(g)))+kv('到仓时间',g.arrive)+kv('提货时间',g.pickup)+kv('完成时间',g.done))}
+    ${box(kv('退货单号',`<span style="font-family:monospace">${g.no}</span>`)+kv('正向订单号',`<span style="font-family:monospace">${g.orderNo||'—'}</span>`)+kv('存放仓库',g.ware)+kv('退货金额',g.items.some(x=>x.price==null)?'—':fmtS(retAmt(g)))+kv('到仓时间',g.arrive)+kv('提货截止',g.st==='待提货'&&pickDeadline(g)?`${msTs(pickDeadline(g))} · 剩 ${remainTxt(pickDeadline(g)-Date.now())}`:'—')+kv('提货时间',isDone(g)&&!g.closed?g.pickup:'—')+kv('申诉截止',raOpen(g)&&!g._whr?`${msTs(raDeadline(g))} · 剩 ${remainTxt(raDeadline(g)-Date.now())}`:'—'))}
     ${sec('退货明细')}
     ${g.items.some(x=>x.gift)?`<div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;overflow:hidden">${giftBlockHtml(g.items,x=>x.retQty,(k,x)=>{if(k==='hd')return GB_HD(x);if(k==='other')return GB_OTHER;if(k==='ref')return `<div style="padding:10px 14px;font-size:12.5px;color:var(--sub)">${x.name} ${x.retQty}${x.unit} · 同时计入本活动门槛，已在上方列出</div>`;return `<div style="padding:11px 14px;border-top:1px solid rgba(0,0,0,.05)">${retItemHtml(g,x)}</div>`;})}</div>`:box(g.items.map(x=>`<div style="padding:11px 0;border-bottom:1px solid rgba(0,0,0,.05)">
       ${retItemHtml(g,x)}
@@ -901,14 +902,13 @@ function qrSvgApp(text,px){const n=25,c=px/n;let seed=0;for(const ch of text)see
   return `<svg width="${px}" height="${px}" viewBox="0 0 ${px} ${px}" style="display:block;margin:0 auto"><rect width="${px}" height="${px}" fill="#fff"/>${r}${f(0,0)}${f(n-7,0)}${f(0,n-7)}</svg>`;}
 function showPickCode(g){if(!g)return;const d=pickDeadline(g);
   const m=document.createElement('div');m.className='dl-sheet-mask';
-  m.innerHTML=`<div class="dl-sheet"><div class="sh">提货码 · ${g.no.slice(-8)}<span class="x">✕</span></div><div class="sbody" style="text-align:center;padding-bottom:calc(16px + env(safe-area-inset-bottom))">
+  m.innerHTML=`<div class="dl-sheet"><div class="sh">提货码 · ${g.no}<span class="x">✕</span></div><div class="sbody" style="text-align:center;padding-bottom:calc(16px + env(safe-area-inset-bottom))">
     <div style="font-size:12.5px;color:var(--sub);margin-bottom:10px">到仓后出示给仓库扫码 · ${g.ware}</div>
-    <div style="display:inline-block;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff">${qrSvgApp(g.no+g.code,190)}</div>
+    <div style="display:inline-block;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff">${qrSvgApp(g.no+'|'+g.code,190)}</div>
     <div style="font-size:12px;color:var(--sub);margin-top:10px">扫不出来时让仓库手输</div>
     <div style="font-family:monospace;font-size:30px;font-weight:800;letter-spacing:8px">${g.code}</div>
     ${d?`<div style="margin-top:6px;font-size:13px;color:#B45309;font-weight:700">提货截止 ${msTs(d)}（剩 ${remainTxt(d-Date.now())}）</div>`:''}
     <div style="text-align:left;margin-top:14px;font-size:13px">${g.items.map(x=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)"><span>${x.name}</span><span>应取回 ${x.retQty} ${x.unit}</span></div>`).join('')}</div>
-    <div style="text-align:left;margin-top:10px;background:var(--mint-soft);color:var(--emerald-2);font-size:12px;line-height:1.6;padding:10px 12px;border-radius:12px">仓库扫码后按实际拿走的数量出库并拍照交接，结果直接推送到这张退货单；少拿的部分系统直接赔付，有异议可在提货后 ${raDays()} 天内申诉。</div>
   </div></div>`;
   document.querySelector('.phone').appendChild(m);
   m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
@@ -917,16 +917,10 @@ function showPickCode(g){if(!g)return;const d=pickDeadline(g);
 function handoverDetail(g,sec,box,kv){
   if(!isDone(g)||!g.pickup||g.closed)return '';
   const h=g.handover||{by:'仓库 · 李明',photos:2};
-  return sec('提货交接')+box(kv('提货码',`<span style="font-family:monospace">${g.code}</span>`)+kv('仓库交接人',h.by)+kv('交接照片',`<span style="color:var(--emerald-2);font-weight:700">📷 ${h.photos} 张</span>`));
+  return sec('提货交接')+box(kv('提货码',`<span style="font-family:monospace">${g.code}</span>`)+kv('仓库交接人',h.by)+(h.reason?kv('差异原因',h.reason):'')+kv('交接照片',`<span style="color:var(--emerald-2);font-weight:700">📷 ${h.photos} 张</span>`));
 }
 // 差异赔付区块（与 PC retDiffBlock 同口径）
-function diffDetail(g,sec,box,kv){
-  const tip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
-  if(g.st==='已取消')return '';
-  if(g.st==='逾期未提')return sec('提货')+tip(`提货截止 ${msTs(pickDeadline(g))}，超过提货期限没来提，逾期未提责任在你，不赔付、不能申诉。`);
-  if(!isDone(g)){const d=pickDeadline(g);return sec('差异赔付')+tip(`${g.st==='待提货'&&d?`请在 <b>${msTs(d)}</b> 前到仓提货（剩 <b>${remainTxt(d-Date.now())}</b>），超过提货期限没来提算逾期未提，不赔付。`:`货到仓后进入待提货，到仓后 ${pickDays()} 天内来提。`}提货时<b>实际取回少于应取回的部分，系统当下直接赔付</b>，按原订单你应得的钱算，不用申诉。`);}
-  return '';   // 已提货 / 部分提货：差异看顶部数量与明细，金额看「赔付单」，不再重复
-}
+function diffDetail(){return '';}   // 11-17 评审：去掉说明横幅，截止时间放「单据信息」
 // 赔付单列表：一张退货单所有赔付单 + 合计，点一行进赔付单详情（没有赔付单不显示）
 function compList(g,sec){
   const cs=compsOf(g);if(!cs.length)return '';
@@ -934,14 +928,14 @@ function compList(g,sec){
     ${cs.map(r=>`<div data-comp="${r.compNo}" style="display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer">
       <div style="flex:1;min-width:0"><div style="font-family:monospace;font-size:13px">${r.compNo}</div><div style="font-size:12px;color:var(--sub);margin-top:3px">${r.type}</div></div>
       <b style="color:var(--emerald-2);font-size:14px">${fmtS(r.ra.comp)}</b><span style="color:var(--sub);font-size:18px">›</span></div>`).join('')}
-    <div style="display:flex;justify-content:space-between;padding:12px 14px;background:var(--mint-soft);font-weight:700;font-size:13.5px"><span>合计</span><span style="color:var(--emerald-2)">${fmtS(compTotal(g))}</span></div></div>
-    <div style="margin:8px 16px 0;font-size:12px;color:var(--sub);line-height:1.6">差异赔付 = 应取回 − 实际取回${g.closed?'（大仓超时未入库，推送取回 0）':''}，取不回由平台承担；申诉赔付 = 申诉核定成立的部分。都按原订单你应得的钱赔，平台推送后随结算单打给你。</div>`;
+    <div style="display:flex;justify-content:space-between;padding:12px 14px;background:var(--mint-soft);font-weight:700;font-size:13.5px"><span>合计</span><span style="color:var(--emerald-2)">${fmtS(compTotal(g))}</span></div></div>`;
 }
 const raTip=t=>`<div style="margin:0 16px;background:var(--mint-soft);color:var(--emerald-2);font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">${t}</div>`;
 function raDetail(g,sec,box,kv){
   if(!g)return '';
   const a=g.appeal;
   if(!a){
+    if(!g._whr)return '';   // 客户退货：未申诉不显示该区块；截止看「单据信息」，入口看底部按钮
     if(raExpired(g)&&!(g._whr&&!window.FM.DB.whrAppealOn))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内可以申诉，截止时间 ${msTs(raDeadline(g))}，已过申诉期，不能再申诉。`);
     if(!g._whr&&!isDone(g))return sec('退货申诉')+raTip(`提货后 ${raDays()} 天内，取回的货里有问题（如坏了不能卖），可以申诉 1 次，申诉数量不超过实际取回数量。少拿的部分不用申诉，提货时系统直接赔付。`);
     if(!g._whr&&g.st==='逾期未提')return '';
@@ -1183,7 +1177,7 @@ function openReturn(){
     </div>
     <div id="rt-cust">
     <div class="dl-filters"><span class="dl-drop" data-f="ware">全部仓库 <span class="ca">▾</span></span><span class="dl-drop" data-f="bill">全部单据 <span class="ca">▾</span></span></div>
-    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"><span class="t on" data-t="all" style="white-space:nowrap;flex-shrink:0">全部</span><span class="t" data-t="待仓库入库" style="white-space:nowrap;flex-shrink:0">待仓库入库</span><span class="t" data-t="待提货" style="white-space:nowrap;flex-shrink:0">待提货</span><span class="t" data-t="部分提货" style="white-space:nowrap;flex-shrink:0">部分提货</span><span class="t" data-t="已提货" style="white-space:nowrap;flex-shrink:0">已提货</span><span class="t" data-t="无法取回" style="white-space:nowrap;flex-shrink:0">无法取回</span><span class="t" data-t="逾期未提" style="white-space:nowrap;flex-shrink:0">逾期未提</span></div>
+    <div class="dl-tabs" id="dl-rtab" style="overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none"></div>
     <div class="dl-list" id="dl-rtl"></div></div>
     <div id="rt-whr" style="display:none"></div>`,
     mount:(p)=>{
@@ -1216,6 +1210,11 @@ function openReturn(){
         cust.style.display=isWhr?'none':'block'; whr.style.display=isWhr?'block':'none';
         if(isWhr)drawWhr();
       });
+      // 状态页签：8 个、带单数（与 PC 同序，0 不显示）
+      const RT=['all','待仓库入库','待提货','部分提货','已提货','无法取回','逾期未提','已取消'];
+      const drawTabs=()=>{retSweep();const box=p.querySelector('#dl-rtab');
+        box.innerHTML=RT.map(k=>{const n=k==='all'?RETURN.length:RETURN.filter(g=>g.st===k).length;return `<span class="t${cur===k?' on':''}" data-t="${k}" style="white-space:nowrap;flex-shrink:0">${k==='all'?'全部':k}${n?` ${n}`:''}</span>`;}).join('');
+        box.querySelectorAll('.t').forEach(t=>t.onclick=()=>{cur=t.dataset.t;drawTabs();draw(cur);});};
       const draw=(t)=>{
         list.innerHTML=skel(2);
         setTimeout(()=>{
@@ -1230,7 +1229,7 @@ function openReturn(){
       let cur='all';
       window._rtRedraw=()=>draw(cur);
       draw('all');
-      p.querySelectorAll('#dl-rtab .t').forEach(t=>t.onclick=()=>{p.querySelectorAll('#dl-rtab .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');cur=t.dataset.t;draw(cur);});
+      drawTabs();
       p.querySelectorAll('.dl-drop').forEach(d=>d.onclick=()=>sheet([{label:d.dataset.f==='ware'?'裕廊DC':'客退退货单',onClick:()=>toast('已筛选')},{label:d.dataset.f==='ware'?'兀兰DC':'报损退货单',onClick:()=>toast('已筛选')}]));
     }});
 }
