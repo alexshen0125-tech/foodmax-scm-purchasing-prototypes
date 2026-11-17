@@ -1219,8 +1219,14 @@ function openReturn(){
       const drawTabs=()=>{retSweep();const box=p.querySelector('#dl-rtab');
         box.innerHTML=RT.map(k=>{const n=k==='all'?RETURN.length:RETURN.filter(g=>g.st===k).length;return `<span class="t${cur===k?' on':''}" data-t="${k}" style="white-space:nowrap;flex-shrink:0">${k==='all'?'全部':k}${n?` ${n}`:''}</span>`;}).join('');
         box.querySelectorAll('.t').forEach(t=>t.onclick=()=>{cur=t.dataset.t;drawTabs();draw(cur);});
-        let tip=p.querySelector('#dl-rtip');if(!tip){tip=document.createElement('div');tip.id='dl-rtip';tip.style.cssText='margin:8px 16px 0;font-size:12.5px;line-height:1.6;color:var(--sub)';box.after(tip);}
-        tip.textContent=RT_DESC[cur]||'';tip.style.display=RT_DESC[cur]?'':'none';};
+        let tip=p.querySelector('#dl-rtip');if(!tip){tip=document.createElement('div');tip.id='dl-rtip';box.after(tip);}
+        // 状态说明块：底色随状态色（与 PC .ib 同口径），线性图标 + 状态名加粗
+        const TONE={'待仓库入库':['var(--muted)','var(--sub)'],'待提货':['#E1EBFF','#2563EB'],'部分提货':['var(--amber-soft)','#B45309'],'已提货':['var(--mint-soft)','var(--emerald-2)'],'无法取回':['var(--red-soft)','var(--red)'],'逾期未提':['var(--muted)','var(--sub)'],'已取消':['var(--muted)','var(--sub)']};
+        const IC={'待仓库入库':'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>','待提货':'<path d="M4 8l8-4 8 4v8l-8 4-8-4V8Z"/><path d="M4 8l8 4 8-4M12 20v-8"/>','部分提货':'<path d="M4 8l8-4 8 4v8l-8 4-8-4V8Z"/><path d="M9 13h6"/>','已提货':'<circle cx="12" cy="12" r="8"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/>','无法取回':'<path d="M12 4l9 16H3L12 4Z"/><path d="M12 10v4M12 17h.01"/>','逾期未提':'<circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.8"/>','已取消':'<circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/>'};
+        const c=TONE[cur];
+        if(!RT_DESC[cur]){tip.style.display='none';return;}
+        tip.style.cssText=`display:flex;gap:10px;align-items:flex-start;margin:10px 16px 2px;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.6;background:${c[0]};color:${c[1]}`;
+        tip.innerHTML=`<svg viewBox="0 0 24 24" fill="none" style="width:20px;height:20px;flex:none;margin-top:1px;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round">${IC[cur]}</svg><div><b style="margin-right:6px">${cur}</b>${RT_DESC[cur]}</div>`;};
       const draw=(t)=>{
         list.innerHTML=skel(2);
         setTimeout(()=>{

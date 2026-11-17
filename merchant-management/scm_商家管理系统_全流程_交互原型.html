@@ -4554,6 +4554,18 @@ function retStDesc(k){return {
   '无法取回':'货没能取回，已按应取回数量整单直接赔付，不需要申诉。',
   '逾期未提':'超过提货截止没来提货，责任在你，不赔付、不能申诉。',
   '已取消':'客户退款被驳回，退货单作废，不需要提货。'}[k]||'';}
+const RET_ST_ICON={   // 线性 SVG（foodmax-frontend icons.md 规范：stroke 1.7、圆角端点、currentColor）
+  '待仓库入库':'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/>',
+  '待提货':'<path d="M4 8l8-4 8 4v8l-8 4-8-4V8Z"/><path d="M4 8l8 4 8-4M12 20v-8"/>',
+  '部分提货':'<path d="M4 8l8-4 8 4v8l-8 4-8-4V8Z"/><path d="M9 13h6"/>',
+  '已提货':'<circle cx="12" cy="12" r="8"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/>',
+  '无法取回':'<path d="M12 4l9 16H3L12 4Z"/><path d="M12 10v4M12 17h.01"/>',
+  '逾期未提':'<circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.8"/>',
+  '已取消':'<circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/>'};
+const RET_ST_IB={'待仓库入库':'ib-gr','待提货':'ib-b','部分提货':'ib-y','已提货':'ib-g','无法取回':'ib-r','逾期未提':'ib-gr','已取消':'ib-gr'};
+function retStDescBar(k){if(!k)return '';
+  // 沿用原型 .ib 结构：图标放 .i 绝对定位，文字容器不用 flex（避免 <b> 混排断行）
+  return `<div class="ib ${RET_ST_IB[k]}" style="margin:12px 16px 4px"><span class="i" style="top:13px"><svg viewBox="0 0 24 24" fill="none" style="width:18px;height:18px;display:block;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round">${RET_ST_ICON[k]}</svg></span><b style="margin-right:8px">${k}</b>${retStDesc(k)}</div>`;}
 const RET_ST_TONE={'待仓库入库':'t-pp','待提货':'t-b','部分提货':'t-y','无法取回':'t-r','已提货':'t-g','逾期未提':'t-gr','已取消':'t-gr'};
 function retStTag(s){return `<span class="tag ${RET_ST_TONE[s]||'t-gr'}"><span class="dot"></span>${s}</span>`;}
 PAGES['m-after-return']=()=>{
@@ -4580,7 +4592,7 @@ PAGES['m-after-return']=()=>{
   </div></div>`;
   const RET_TABS=['','待仓库入库','待提货','部分提货','已提货','无法取回','逾期未提','已取消'];
   const stTabs=`<div class="tabs" style="margin:0 16px">${RET_TABS.map(k=>{const n=k?kw.filter(a=>a.returnStatus==k).length:kw.length;
-    return `<div class="tab ${stK==k?'active':''}" onclick="DB.retStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>${stK?`<div style="margin:10px 16px 2px;font-size:12.5px;color:var(--ts)">${retStDesc(stK)}</div>`:''}`;
+    return `<div class="tab ${stK==k?'active':''}" onclick="DB.retStTab='${k}';render()">${k||'全部'}${n?`<span class="tb" style="background:var(--bd2);color:var(--ts)">${n}</span>`:''}</div>`;}).join('')}</div>${retStDescBar(stK)}`;
   const rows=rs.map(a=>{const i=DB.afterSales.indexOf(a);
     return `<tr><td class="mono" style="white-space:nowrap">TH-${a.id.slice(-6)}</td><td style="white-space:nowrap">${ord_mask(a.client)}</td><td class="mono" style="white-space:nowrap">${a.order}</td><td>${retItemsName(a)}${retHasGift(a)?` <span class="tag t-pp" style="font-size:10px" title="本退货单含满赠赠品，赠品随退货一起退回，需一并提走">含赠品</span>`:''}</td><td style="text-align:right">${retQtyCell(a)}</td><td style="text-align:right">${pickQtyCell(a)}</td><td style="text-align:right">${diffQtyCell(a)}</td><td style="text-align:right">${retAmtCell(a)}</td><td style="text-align:right">${diffCompCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${a.arriveAt||'—'}</td><td style="font-size:12px;white-space:nowrap">${pickDlCell(a)}</td><td style="font-size:12px;color:var(--ts);white-space:nowrap">${pickupCell(a)}</td><td>${stTag(a.returnStatus)}</td><td style="font-size:12px;white-space:nowrap">${retAppealCell(a)}</td><td style="font-size:12px;white-space:nowrap">${apDlCell(a)}</td><td style="white-space:nowrap"><button class="btn btn-o btn-sm" onclick="act_afterDetail(${i})">详情</button>${a.returnStatus=='待提货'?` <button class="btn btn-p btn-sm" onclick="retShowCode(${i})">提货码</button>`:''}${retAppealOpen(a)?` <button class="btn btn-o btn-sm" onclick="act_retAppeal(${i})">申诉</button>`:''}</td></tr>`;}).join('');
   return srcTabs+filterBar+`${flowTip(`<b>退货退款</b>判责后生成退货单，三方货物到平台仓<b>不入库、仅暂存</b>。状态：<b>待仓库入库</b> → <b>待提货</b>（仓库确认到货，到仓后 <b>${DB.pickupDays} 天</b>内来提）→ 提货后 <b>已提货</b>（拿全了）/ <b>部分提货</b>（少拿了，差异直接赔付）/ <b>无法取回</b>（大仓超时未入库或一件没拿到，整单直接赔付、不走申诉）；超过提货期限没来提为 <b>逾期未提</b>，责任在你，不赔付。赔付按原订单你应得的钱算，平台推送后随结算单打给你。已提货、部分提货后 <b>${DB.pickAppealDays} 天</b>内，取回的货数量不对或坏了不能卖，可以申诉 1 次。`)}
