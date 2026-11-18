@@ -161,19 +161,122 @@ tbody tr:hover>td{background:#f5f9f5}
 .stepbar span{flex:1;text-align:center;padding:7px;border-radius:4px;background:#f5f7fa;color:var(--tt);font-size:12.5px}
 .stepbar span.on{background:var(--pl);color:var(--pd);font-weight:600}
 .selbar{background:var(--pl);color:var(--pd);border-radius:4px;padding:6px 12px;font-size:12.5px;margin-bottom:10px;display:flex;gap:12px;align-items:center}
+/* 仅作用于商品详情新内容与独立修改弹窗 */
+.pd-change-tag{display:inline-block;padding:0 5px;margin-left:5px;border:1px solid #e8c98b;background:#fff8e8;color:#a56a13;border-radius:3px;font-size:11px;line-height:18px;vertical-align:middle}
+.pd-section{margin-bottom:22px}
+.pd-heading{display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+.pd-heading h4{border-left:3px solid var(--p);padding-left:9px;font-size:14px;margin:0}
+.pd-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 18px}
+.pd-field{min-width:0}
+.pd-full{grid-column:1/-1}.pd-half{grid-column:span 2}
+.pd-label{font-size:12px;color:var(--tt);line-height:1.6}
+.pd-value{font-size:13px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap;min-width:0}
+.pd-value .pd-table-scroll{white-space:normal}
+.pd-empty{color:var(--tt)}
+.pd-images{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}.pd-images img{width:64px;height:64px;object-fit:contain;border:1px solid var(--bd2);border-radius:3px}
+.pd-sku-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.pd-sku-tabs .btn{padding:4px 12px}
+.btn.pd-active{border-color:var(--p);color:var(--p);background:#f2faf3}
+.pd-stock-actions{display:flex;align-items:center;gap:24px;margin:0 0 18px}
+.pd-segment{display:flex;gap:8px;align-items:center}.pd-segment .btn{border-radius:4px;padding:4px 12px}
+.pd-table-scroll{overflow-x:auto}
+.pd-table-scroll table{width:100%;border-collapse:collapse;margin:0}
+
+.pd-table-scroll td{white-space:nowrap}
+.pd-inventory table{min-width:800px}.pd-inventory th:first-child{width:39%}.pd-inventory td.pd-warehouse{color:var(--tx);font-family:inherit;font-size:inherit;font-weight:400;white-space:normal;min-width:245px}
+.pd-sales table{min-width:1260px}.pd-deposit{margin-left:auto;color:#7c8580;font-size:13px}.pd-deposit b{margin-left:18px;color:var(--tx);font-weight:400}
+.pd-no-data{text-align:center;color:var(--tt);padding:28px!important}
+#pdEditor{position:fixed;inset:0;margin:auto;border:1px solid var(--bd);border-radius:6px;width:min(1060px,94vw);max-height:88vh;padding:0;color:var(--tx);background:white;box-shadow:0 8px 35px #0002}
+#pdEditor::backdrop{background:#0005}#pdEditForm{display:flex;flex-direction:column;max-height:88vh}
+.pd-editor-head,.pd-editor-foot{padding:16px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd2);flex-shrink:0}
+.pd-editor-foot{border-top:1px solid var(--bd2);border-bottom:0;justify-content:flex-end;gap:10px}.pd-editor-head .lk{font-size:22px}
+#pdEditBody{padding:20px 22px;overflow:auto}#pdEditBody>.btn{margin-top:16px}#pdEditBody input[type=number]{width:110px}#pdEditBody td select{min-width:120px}#pdEditBody td:first-child select{width:280px}.pd-quote-edit{padding:0 0 22px}.pd-quote-edit h4{margin-bottom:14px}
+@media(max-width:900px){.pd-fields{grid-template-columns:repeat(2,minmax(0,1fr))}#dwDetail:has(.pd-product){width:100%;min-width:0}.pd-deposit{margin-left:0}#pdEditBody .g3{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.pd-fields{grid-template-columns:1fr}.pd-half{grid-column:auto}#pdEditBody .g3{grid-template-columns:1fr}.pd-stock-actions{gap:12px;flex-wrap:wrap}}
+
+
+/* B端详情：对齐、可见上下文与长表格浏览 */
+.pd-fields{row-gap:12px}
+.pd-label{margin-bottom:2px}
+.pd-images img{width:52px;height:52px}
+.pd-certificate{margin-top:0}.pd-certificate img{display:none}.pd-certificate a{display:inline-flex;align-items:center;gap:10px;color:var(--tx);font-size:13px;text-decoration:none;min-height:22px}
+.pd-sku-area{position:relative}
+.pd-sku-bar{position:sticky;top:-18px;z-index:6;background:#fff;padding:10px 0 12px;margin:0 0 14px;border-bottom:1px solid var(--bd2)}
+.pd-sku-bar .pd-heading{margin-bottom:8px}.pd-sku-bar .pd-sku-tabs{margin:0;flex-wrap:nowrap;overflow-x:auto;padding:1px 0 2px}.pd-sku-tabs .btn{flex-shrink:0}
+.pd-current-code{margin-left:auto;color:var(--ts);font-size:12px;font-weight:400;overflow-wrap:anywhere}
+.pd-stock-actions{gap:16px;margin-bottom:10px;flex-wrap:wrap}.pd-segment .btn{padding:4px 12px}
+.pd-warehouse-count{margin-left:auto;color:var(--tt);font-size:12px}
+.pd-inventory{max-height:246px;overflow:auto;scrollbar-gutter:stable}
+.pd-inventory table,.pd-sales table{border-collapse:separate;border-spacing:0}
+.pd-inventory th,.pd-inventory td,.pd-sales th,.pd-sales td{border-width:0 1px 1px 0}
+.pd-inventory th,.pd-sales th{border-top:1px solid var(--bd2)}
+.pd-inventory th:first-child,.pd-inventory td:first-child,.pd-sales th:first-child,.pd-sales td:first-child{border-left:1px solid var(--bd2)}
+.pd-inventory th{position:sticky;top:0;z-index:2;background:var(--th)}
+.pd-inventory th:nth-child(n+3),.pd-inventory td:nth-child(n+3){text-align:right;font-variant-numeric:tabular-nums}
+.pd-sales th:nth-child(n+3):nth-child(-n+8),.pd-sales td:nth-child(n+3):nth-child(-n+8){text-align:right;font-variant-numeric:tabular-nums}
+.pd-sales th:first-child,.pd-sales td:first-child{position:sticky;left:0;z-index:1;min-width:210px;max-width:240px;white-space:normal;box-shadow:2px 0 0 var(--bd2);background:#fff}
+.pd-sales th:first-child{background:var(--th);z-index:2}
+.pd-table-scroll:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+@media(max-width:560px){.pd-current-code{margin-left:0;flex-basis:100%}.pd-sales th:first-child,.pd-sales td:first-child{min-width:145px;max-width:145px}.pd-warehouse-count{margin-left:0}.pd-sku-bar{padding-top:8px}}
+
+
+.pd-images{display:grid;grid-template-columns:repeat(4,minmax(0,44px));gap:6px;align-items:start;max-width:194px}
+.pd-images a{display:block;min-width:0}.pd-images img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain}
+.pd-images:not(.pd-certificate) a:nth-child(n+4){display:none}
+.pd-media-more{width:100%;aspect-ratio:1;border:1px solid var(--bd);border-radius:3px;background:#f7f8fa;color:var(--ts);font:inherit;cursor:pointer}
+.pd-media-more:hover{border-color:var(--p);color:var(--p)}
+
+.pd-ai-images{grid-template-columns:repeat(2,minmax(0,80px));max-width:166px;gap:10px 6px}
+.pd-ai-image{min-width:0}
+.pd-ai-images .pd-ai-image>a{display:block;width:44px;margin:0 auto}
+.pd-ai-actions{display:flex;justify-content:center;gap:4px;margin-top:6px}
+.pd-ai-actions button{padding:2px 5px;border:1px solid var(--bd);border-radius:3px;background:#fff;color:var(--p);font:inherit;font-size:12px;line-height:20px;white-space:nowrap;cursor:pointer}
+.pd-ai-actions button:hover{border-color:var(--p);background:#f0faf1}
+.pd-ai-actions button:focus-visible{outline:2px solid var(--p);outline-offset:2px}
+
+.pd-certificate{display:flex;max-width:none}.pd-certificate a{display:inline-flex}.pd-certificate img{display:none}
+#pdImageViewer{margin:auto;border:1px solid var(--bd);border-radius:6px;padding:0;width:min(760px,94vw);max-height:94vh;background:#fff;color:var(--tx)}
+#pdImageViewer::backdrop{background:#0006}
+.pd-gallery-head,.pd-gallery-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px}
+.pd-gallery-head{border-bottom:1px solid var(--bd2)}.pd-gallery-foot{border-top:1px solid var(--bd2)}
+.pd-gallery-image{padding:12px;display:flex;align-items:center;justify-content:center;background:#f7f8fa}
+.pd-gallery-image img{display:block;max-width:100%;max-height:68vh;object-fit:contain}
+#pdGalleryCount{color:var(--ts);font-variant-numeric:tabular-nums}.pd-gallery-foot .btn:disabled{opacity:.45;cursor:default}
+
 </style>
-</head>
+<style>/* 库存、销售修改沿用参考原型的右侧抽屉和表格交互 */
+#pdEditor{inset:0 0 0 auto;margin:0;width:min(1200px,94vw);height:100dvh;max-height:100dvh;max-width:none;border-radius:0;border:0;border-left:1px solid var(--bd2)}
+#pdEditor.pd-sales-editor{width:min(1440px,96vw)}
+#pdEditForm{height:100%;max-height:none;min-height:0}#pdEditBody{flex:1;min-height:0;padding:24px;overflow:auto}
+#pdEditTitle{font-size:15px}#pdEditor .pd-editor-foot{padding:16px 24px}.pd-editor-foot #pdEditMessage{margin-right:auto;color:var(--ts);font-size:12px}
+.pd-edit-heading{margin:12px 0 18px;font-size:14px}.pd-edit-toolbar{display:flex;align-items:center;gap:16px;margin:10px 0 20px}.pd-edit-toolbar h4{margin:0}.pd-edit-toolbar>span{margin-left:auto;font-size:12px;color:var(--ts)}
+#pdEditBody .pd-table-scroll th,#pdEditBody .pd-table-scroll td{padding:12px 10px}
+.pd-stock-edit-table table{min-width:960px}.pd-stock-edit-table td:first-child{white-space:normal;min-width:250px;max-width:350px}.pd-stock-edit-table td:nth-child(n+3):nth-child(-n+5){text-align:right;font-variant-numeric:tabular-nums}
+.pd-safety-inputs{display:flex;gap:6px;align-items:center;white-space:nowrap}#pdEditBody .pd-safety-inputs input{width:70px;min-width:0;padding:5px}
+.pd-batch{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.pd-batch label{display:flex;align-items:center;gap:8px;white-space:nowrap;font-size:12px}#pdEditBody .pd-batch input{width:110px}.pd-batch select{width:90px}
+.pd-batch-note{font-size:12px;color:var(--tt);margin:10px 0 16px}.pd-sale-edit-table table{min-width:1250px}.pd-sale-edit-table td:nth-child(2){min-width:180px;max-width:240px;white-space:normal}.pd-sale-edit-table td:nth-child(n+3):nth-child(-n+8){text-align:right;font-variant-numeric:tabular-nums}#pdEditBody .pd-sale-edit-table input[type=number]{width:88px;text-align:right}
+.pd-sale-edit-table details{min-width:70px}.pd-sale-edit-table summary{color:var(--p);cursor:pointer}.pd-sale-edit-table details label{display:block;text-align:left;margin:8px 0}.pd-sale-edit-table details input{display:block;width:190px;margin-top:4px}
+.pd-sale-switch{border:0;border-radius:18px;min-width:60px;padding:5px 12px;background:#e0e2e5;color:var(--ts)}.pd-sale-switch.on{background:var(--p);color:#fff}.pd-quote-picker{display:flex;align-items:center;gap:8px;margin:0 0 16px}.pd-quote-picker select{width:300px;max-width:60%}
+@media(max-width:600px){#pdEditor,#pdEditor.pd-sales-editor{width:100vw}.pd-edit-toolbar{flex-wrap:wrap}#pdEditBody{padding:16px}.pd-editor-head{padding:14px 16px}.pd-editor-foot{flex-wrap:wrap}}
+</style><style>
+header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#fff;padding:4px 12px;height:30px;border-radius:4px;font:inherit;white-space:nowrap;cursor:pointer}header .creation-flow-entry:hover,header .creation-flow-entry[aria-current="page"]{background:#b8222b;border-color:#b8222b}
+#creationFlowPage[hidden],#productListPage[hidden]{display:none!important}
+.creation-flow-panel{background:#fff;border:1px solid var(--bd2);border-radius:4px}
+.creation-flow-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--bd2)}.creation-flow-head h1{font-size:16px;margin:0}.creation-flow-head button{margin-left:auto}
+.creation-flow-actions{display:flex;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid var(--bd2)}.creation-flow-actions span{margin-right:auto;color:var(--ts)}
+.creation-flow-canvas{overflow:auto;padding:24px;background:#fff}.creation-flow-diagram{width:min(640px,100%);margin:0 auto}.creation-flow-diagram svg{display:block;width:calc(100% * var(--creation-flow-scale,1));max-width:none;height:auto}
+@media(max-width:600px){header:has(.creation-flow-entry){gap:12px;flex-wrap:wrap;height:auto;min-height:48px;padding:8px 12px}header:has(.creation-flow-entry) .rt{flex-wrap:wrap;gap:8px}.creation-flow-head,.creation-flow-actions{padding:12px;flex-wrap:wrap}.creation-flow-canvas{padding:8px}body:has(#creationFlowPage:not([hidden])) aside{display:none}body:has(#creationFlowPage:not([hidden])) main{padding:12px}}
+</style></head>
 <body>
-<header><span class="logo">Foodmax</span><span class="sys">运营平台</span><div class="rt"><span>岗位 <select id="roleSel" onchange="ROLE=this.value;renderList();if($('dwDetail').classList.contains('on'))openDetail(dCur)" style="width:auto;height:24px;padding:0 6px;border:none;border-radius:3px;font-size:12.5px"><option>商品运营</option><option>采购</option></select></span><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
+<header><span class="logo">Foodmax</span><span class="sys">运营平台</span><button type="button" class="creation-flow-entry" onclick="openCreationFlow()">建品逻辑</button><div class="rt"><span>岗位 <select id="roleSel" onchange="ROLE=this.value;renderList();if($('dwDetail').classList.contains('on'))openDetail(dCur)" style="width:auto;height:24px;padding:0 6px;border:none;border-radius:3px;font-size:12.5px"><option>商品运营</option><option>采购</option></select></span><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
 <div class="wrap">
 <aside>
   <div class="grp">数据看板</div><a>店铺经营指标</a>
   <div class="grp">店铺</div><a>店铺管理</a>
   <div class="grp">订单</div><a>商家订单</a>
-  <div class="grp">商品</div><a>同品管理</a><a class="on">商品列表</a><a>商品审批</a><a>后台类目</a><a>前台类目</a>
+  <div class="grp">商品</div><a>同品管理</a><a id="productListNav" class="on" href="#product-list" style="cursor:pointer">商品列表</a><a>商品审批</a><a>后台类目</a><a>前台类目</a>
   <div class="grp">商家</div><a>商家管理</a>
 </aside>
-<main>
+<main><div id="productListPage">
   <div class="crumb">商品 / 商品列表</div>
   <div class="panel">
     <div class="filters">
@@ -199,7 +302,50 @@ tbody tr:hover>td{background:#f5f9f5}
     </table>
     <div class="pager" id="pager"></div>
   </div>
-</main>
+</div><section id="creationFlowPage" hidden aria-labelledby="creationFlowHeading"><div class="crumb">商品 / 建品逻辑</div><div class="creation-flow-panel"><div class="creation-flow-head"><h1 id="creationFlowHeading" tabindex="-1">建品逻辑</h1><button type="button" class="btn" onclick="returnToProductList()">返回商品列表</button></div><div class="creation-flow-actions"><span>自营品创建流程</span><button type="button" class="btn" onclick="zoomCreationFlow(-.25)">缩小</button><button type="button" class="btn" onclick="zoomCreationFlow(.25)">放大</button><button type="button" class="btn" onclick="zoomCreationFlow(0)">还原</button></div><div class="creation-flow-canvas" role="region" aria-label="自营品创建流程图" tabindex="0"><div class="creation-flow-diagram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 1080" width="640" height="1080" role="img" aria-labelledby="creation-flow-title creation-flow-desc">
+<title id="creation-flow-title">自营品创建流程</title>
+<desc id="creation-flow-desc">平台运营端发起创建自营品。SCM判断商品属性：标品创建成品货品；非标品创建原料、成品货品并建立BOM关系。两条分支汇入商品中心，基于成品货品创建自营商品，SKU关联对应成品货品。</desc>
+<style>text{font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;fill:#111827} .sub{fill:#6b7280}</style>
+<defs><marker id="creation-flow-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2563eb"/></marker></defs>
+<rect width="640" height="1080" fill="#fff"/>
+<text x="320" y="40" text-anchor="middle" font-size="30" font-weight="600" class="">自营品创建流程</text>
+<text x="320" y="70" text-anchor="middle" font-size="18" font-weight="400" class="sub">平台发起 → SCM 建货 → 商品中心建品</text>
+<rect x="40" y="95" width="560" height="120" rx="8" fill="#f8fafc" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="60" y="124" text-anchor="start" font-size="20" font-weight="600" class="">平台运营端</text>
+<rect x="190" y="143" width="260" height="52" rx="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="320" y="177" text-anchor="middle" font-size="22" font-weight="400" class="">发起创建自营品</text>
+<rect x="40" y="245" width="560" height="520" rx="8" fill="#f8fafc" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="60" y="275" text-anchor="start" font-size="20" font-weight="600" class="">SCM · 创建自营货品</text>
+<polygon points="320,295 420,345 320,395 220,345" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+<text x="320" y="353" text-anchor="middle" font-size="22" font-weight="600" class="">商品属性</text>
+<path d="M320 195 V295" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#creation-flow-arrow)"/>
+<path d="M220 345 H180 V440" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#creation-flow-arrow)"/>
+<rect x="150.0" y="387" width="60" height="31" fill="#fff"/>
+<text x="180" y="410" text-anchor="middle" font-size="22" font-weight="400" class="">标品</text>
+<path d="M420 345 H460 V440" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#creation-flow-arrow)"/>
+<rect x="419.0" y="387" width="82" height="31" fill="#fff"/>
+<text x="460" y="410" text-anchor="middle" font-size="22" font-weight="400" class="">非标品</text>
+<rect x="80" y="440" width="200" height="64" rx="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="180" y="479" text-anchor="middle" font-size="22" font-weight="400" class="">创建成品货品</text>
+<rect x="360" y="440" width="200" height="64" rx="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="460" y="479" text-anchor="middle" font-size="22" font-weight="400" class="">创建原料</text>
+<path d="M460 504 V552" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#creation-flow-arrow)"/>
+<rect x="360" y="552" width="200" height="64" rx="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="460" y="591" text-anchor="middle" font-size="22" font-weight="400" class="">创建成品货品</text>
+<path d="M460 616 V664" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#creation-flow-arrow)"/>
+<rect x="360" y="664" width="200" height="76" rx="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="460" y="695" text-anchor="middle" font-size="21" font-weight="400" class="">建立 BOM 关系</text>
+<text x="460" y="722" text-anchor="middle" font-size="18" font-weight="400" class="sub">原料 → 成品货品</text>
+<path d="M180 504 V805 H320 M460 740 V805 H320" fill="none" stroke="#2563eb" stroke-width="2"/>
+<circle cx="320" cy="805" r="4" fill="#2563eb"/>
+<rect x="40" y="845" width="560" height="195" rx="8" fill="#f0fdf4" stroke="#bbdfc2" stroke-width="1.5"/>
+<text x="60" y="877" text-anchor="start" font-size="20" font-weight="600" class="">商品中心</text>
+<path d="M320 805 V910" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#creation-flow-arrow)"/>
+<rect x="130" y="910" width="380" height="80" rx="8" fill="#fff" stroke="#d1d5db" stroke-width="1.5"/>
+<text x="320" y="943" text-anchor="middle" font-size="22" font-weight="400" class="">基于成品货品</text>
+<text x="320" y="976" text-anchor="middle" font-size="22" font-weight="600" class="">创建自营商品（SPU / SKU）</text>
+<text x="320" y="1022" text-anchor="middle" font-size="20" font-weight="400" class="sub">SKU 关联对应成品货品</text>
+</svg></div></div></div></section></main>
 </div>
 
 <div class="mask" id="mask" onclick="maskClick()"></div>
@@ -387,7 +533,7 @@ function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
       <td><b style="font-weight:500">${esc(s.name)}</b>${pend?' <span class="tag ty">货品待启用</span>':''}</td><td class="mono">${s.spu}</td><td>${esc(s.cat)}</td><td>${s.attr}</td><td>${s.skus.length}</td>
       <td>${s.src==='自营'?'<span class="tag tg">自营</span>':'<span class="tag tgr">'+esc(s.creator.replace('商家 ',''))+'</span>'}</td>
       <td>${esc(s.src==='自营'?s.creator:'—')}</td><td class="mono">${s.at}</td><td>${stTagK(s.status)}</td>
-      <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button>${s.src==='自营'?(canSpu()?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:` &nbsp;${NOPERM('编辑商品')}编辑</span>`):''}</td></tr>`;
+      <td><button class="lk" onclick="openDetail(${i},'商品')">查看详情</button><span class="pd-change-tag">修改</span>${s.src==='自营'?(canSpu()?` &nbsp;<button class="lk" onclick="openEdit(${i})">编辑</button>`:` &nbsp;${NOPERM('编辑商品')}编辑</span>`):''}</td></tr>`;
     if(open){h+=`<tr class="sub"><td></td><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>货品状态</th><th>是否可采</th><th>SKU 状态</th></tr></thead><tbody>`+
       s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${itemStTag(s,k)}</td><td>${purchTag(s)}</td><td>${stTagK(k.status)}</td></tr>`).join('')+`</tbody></table></td></tr>`}
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
@@ -622,11 +768,11 @@ function submitForm(){showErr=true;renderForm();const e=validate();if(e.length){
   draw(0);const tick=()=>{k++;draw(k);if(k<3)setTimeout(tick,650);else setTimeout(finish,350)};setTimeout(tick,650)}
 function finish(){const ns=F.attr==='非标品';let s;
   if(F.mode==='create'){s={spu:code('SPU'),name:cleanName(F.name),en:cleanName(F.en),cat:F.cat,part:F.part,attr:F.attr,src:'自营',creator:'沈亮',at:now(),status:'在售',
-      base:{origin:F.origin,brand:F.brand,storage:F.storage,fulfil:F.fulfil,validP:F.validP,period:F.period,periodUnit:F.periodUnit,halal:F.halal,halalShow:F.halalShow,appExp:F.appExp,sale:F.sale},skus:[]};
+      base:{alias:F.alias,desc:F.desc,origin:F.origin,brand:F.brand,storage:F.storage,fulfil:F.fulfil,validP:F.validP,period:F.period,periodUnit:F.periodUnit,halal:F.halal,halalShow:F.halalShow,appExp:F.appExp,sale:F.sale},skus:[]};
     if(ns){if(F.rawMode==='新建'){const rc=code('item');RAWS.push({code:rc,name:rawNameZh(),en:rawNameEn(),unit:F.nsUnit,cat:F.cat,status:'启用',purch:F.rawPurch});s.rawCode=rc}else s.rawCode=F.rawCode;s.stockUnit=F.nsUnit}
     else s.std={minPack:F.minPack,net:F.net,netUnit:F.netUnit,stockIsPack:F.stockIsPack,stockUnit:F.stockIsPack==='是'?F.minPack:F.stockUnit,packQty:F.packQty,item:code('item'),bcrs:F.bcrs,bcrsQty:F.bcrsQty,status:'启用',purch:F.purch};
     SPUS.unshift(s)}
-  else{s=SPUS[F.idx];s.name=cleanName(F.name);s.en=cleanName(F.en);s.cat=F.cat;s.part=F.part;Object.assign(s.base,{origin:F.origin,brand:F.brand,storage:F.storage,fulfil:F.fulfil,validP:F.validP,period:F.period,periodUnit:F.periodUnit,halal:F.halal,halalShow:F.halalShow,appExp:F.appExp,sale:F.sale});
+  else{s=SPUS[F.idx];s.name=cleanName(F.name);s.en=cleanName(F.en);s.cat=F.cat;s.part=F.part;Object.assign(s.base,{alias:F.alias,desc:F.desc,origin:F.origin,brand:F.brand,storage:F.storage,fulfil:F.fulfil,validP:F.validP,period:F.period,periodUnit:F.periodUnit,halal:F.halal,halalShow:F.halalShow,appExp:F.appExp,sale:F.sale});
     seedLogs(s);s.skus.forEach((k,i)=>{const r=F.rows[i];if(r&&r._off){k.status='已下架';k.itemStatus='停用';k.bomStatus='废弃';log(s,'商品',k.sku,'下架（停用规格）');log(s,'货品',k.item,'停用成品（停用规格）');log(s,'货品',k.bom,'废弃 BOM（停用规格）')}if(r&&ns)k.st=r.st});
     }
   F.rows.filter(r=>!r.locked).forEach(r=>{const k={sku:code('SKU'),qty:ns?fmtQty(r.qty):r.qty,su:r.su,status:'在售',st:r.st};
@@ -684,12 +830,7 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
   let h=`<div class="tabs" style="margin-bottom:16px">${['商品','货品'].map(t=>`<span class="${t===dTab?'on':''}" onclick="pend=null;openDetail(${i},'${t}')">${t}${t==='货品'&&pendItem?' <span style="color:var(--y);font-size:12px">· 待启用</span>':''}</span>`).join('')}</div>`;
   h+=confirmBox();
   if(dTab==='商品'){
-    h+=`<div class="dsec"><h4>商品信息</h4><div class="dl">${row('SPU 编码',`<span class="mono">${s.spu}</span>`)}${row('商品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('货品类目',s.cat)}${row('商品类目',prodCat(s.cat)+' <span class="fh">随货品类目</span>')}${row('商品部位',s.part)}
-      ${row('商品属性',s.attr)}${row('渠道来源',s.src)}${row('销售类型',b.sale)}${row('产地',b.origin)}${row('品牌',b.brand)}${row('是否HALAL',b.halal)}${row('是否对HALAL客户展示',b.halalShow)}${row('APP是否展示效期',b.appExp)}</div></div>
-      <div class="dsec"><h4>售卖规格（SKU）</h4><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>售卖规格</th><th>绑定货品</th>${ns?'<th>多退少补</th>':''}<th>SKU 状态</th>${self?'<th style="width:80px">操作</th>':''}</tr></thead><tbody>`+
-      s.skus.map(k=>{const blk=skuItemBlock(s,k);return`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td>${ns?`${fmtQty(k.qty)}${s.stockUnit}/${k.su}`:`${k.qty} ${s.std.stockUnit}${k.su?' / '+k.su:''}`}</td><td class="mono">${ns?k.item:s.std.item}</td>${ns?`<td>${k.st?'是':'否'}</td>`:''}
-        <td>${stTagK(k.status)}${blk&&k.status!=='在售'?`<div class="fh">${blk}</div>`:''}</td>
-        ${self?(selfP?`<td>${k.status!=='已下架'?`<button class="lk dg" onclick="ask('skuOff','${k.sku}')">下架</button>`:(ns&&k.itemStatus==='停用'?'<span class="fh">—</span>':blk?`<span class="fh" title="${blk}">上架</span>`:`<button class="lk" onclick="skuOn('${k.sku}')">上架</button>`)}</td>`:`<td>${NOPERM('上下架')}${k.status==='在售'?'下架':'上架'}</span></td>`):''}</tr>`}).join('')+`</tbody></table></div>`+logsBlock(s,'商品');
+    h+=pdProduct(s);
   }else if(ns){const r=rawBy(s.rawCode)||{};const users=spusOfRaw(r.code);const rb=users.length>1?rawBase(r):b;
     h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">原料货品 ${self?(selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('raw')">编辑原料</button><button class="lk ${r.status==='启用'?'dg':''}" onclick="ask('rawStatus')">${r.status==='启用'?'停用':'启用'}</button><button class="lk" onclick="ask('rawPurch')">${r.purch==='是'?'设为不可采':'设为可采'}</button></span>`:`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px">${NOPERM('货品操作')}编辑原料</span>${NOPERM('货品操作')}${r.status==='启用'?'停用':'启用'}</span>${NOPERM('货品操作')}${r.purch==='是'?'设为不可采':'设为可采'}</span></span>`):''}</h4>
       <div class="dl">${row('原料编码',`<span class="mono">${r.code}</span>`)}${row('原料名称',esc(r.name)+'<br><span class="fh">'+esc(r.en)+'</span>')}${row('计量单位',r.unit)}${row('净含量','1'+r.unit)}${row('使用它的商品',users.length+' 个'+(users.length>1?'：'+users.map(x=>esc(x.name)).join('、'):''))}
@@ -850,7 +991,273 @@ function renderExcel(){$('bTitle').textContent='Excel 批量修改';const n=SEL.
   $('bBody').innerHTML=h;$('mask').classList.add('on');$('dwBatch').classList.add('on')}
 
 document.querySelectorAll('.fi.more').forEach(e=>e.style.display='none');$('qCat').innerHTML='<option value="">全部</option>'+CATS.map(g=>`<optgroup label="${g.g}">`+g.items.map(c=>`<option value="${c}">${g.g} / ${c}</option>`).join('')+'</optgroup>').join('');
+
+/* 商品详情：仅扩展商品 Tab；库存、报价按 SKU 独立维护。 */
+const PD_WAREHOUSES=['新加坡-外部仓','国际业务-SG-foodmax 业务综采中转仓','国际业务-AK业务中转仓','国际业务-SG-foodmax中转仓','马来工厂品牌销售组','新加坡-越库仓','新加坡-大贸仓','新加坡-KA仓','新加坡-B端仓','【测试-勿动】新加坡测试仓-Test Warehouse One'];
+const PD_STATE={};
+let PD_EDIT=null;
+const pdText=v=>esc(v===undefined||v===null||v===''?'—':v);
+function pdState(s){return PD_STATE[s.spu]||(PD_STATE[s.spu]={sku:s.skus[0]?.sku,stock:'sales'});}
+function pdSpec(s,k){
+ const ns=s.attr==='非标品',d=s.std||{},unit=ns?s.stockUnit:d.stockUnit;
+ const packs=Number(k.qty)*(d.stockIsPack==='否'?Number(d.packQty||1):1);
+ return {standard:k.standardUnitSpec||'1'+(unit||''),ratio:k.standardUnitConversionRatio??Number(k.qty),net:k.netWeightText||(ns?fmtQty(k.qty)+(unit||''):fmtQty(packs*Number(d.net||0))+(d.netUnit||'')),sale:k.saleSpecText||fmtQty(k.qty)+(unit||''),unit:k.su||d.minPack||'—'};
+}
+function pdMedia(value,empty='未上传'){
+ const a=Array.isArray(value)?value:value?[value]:[];
+ const urls=a.map(v=>typeof v==='string'?v:v.url||v.src).filter(v=>typeof v==='string'&&/^(https?:|data:image\/|file:)/.test(v));
+ return urls.length?'<div class="pd-images">'+urls.map((u,i)=>`<a href="${esc(u)}" aria-label="查看第 ${i+1} 张图片，共 ${urls.length} 张" data-image-index="${i}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="图片 ${i+1}"></a>`).join('')+(urls.length>3?`<button type="button" class="pd-media-more" aria-label="查看全部 ${urls.length} 张图片">+${urls.length-3}</button>`:'')+'</div>':`<span class="pd-empty">${empty}</span>`;
+}
+function pdAiMedia(s,key){
+ const images=Array.isArray(s[key])?s[key]:s[key]?[s[key]]:[];
+ const entries=images.length?images:[null];
+ return '<div class="pd-images pd-ai-images">'+entries.map((value,index)=>{
+  const url=typeof value==='string'?value:value?.url||value?.src;
+  const preview=url&&/^(https?:|data:image\/|file:)/.test(url)?`<a href="${esc(url)}" data-image-index="${index}" aria-label="查看第 ${index+1} 张优化图"><img src="${esc(url)}" alt="优化图 ${index+1}"></a>`:'<span class="pd-empty">暂无优化图</span>';
+  return `<div class="pd-ai-image">${preview}<div class="pd-ai-actions"><button type="button" onclick="pdAiAction('${key}',${index},'generate')" aria-label="生成第 ${index+1} 张${key==='bAiImages'?'B':'C'}端优化图">生成</button><button type="button" onclick="pdAiAction('${key}',${index},'replace')" aria-label="替换第 ${index+1} 张${key==='bAiImages'?'B':'C'}端优化图">替换</button></div></div>`;
+ }).join('')+'</div>';
+}
+function pdAiAction(key,index,action){
+ if(!['bAiImages','cAiImages'].includes(key))return;
+ const product=SPUS[dCur];
+ if(action==='generate'){toast('原型演示：生成入口已预留，尚未接入 AI 图片生成服务');return;}
+ const input=document.createElement('input');input.type='file';input.accept='image/png,image/jpeg,image/webp';
+ input.onchange=()=>{const file=input.files?.[0];if(!file)return;
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)){toast('请选择 PNG、JPG 或 WebP 图片',true);return;}
+  if(file.size>20*1024*1024){toast('图片不能超过 20MB',true);return;}
+  const reader=new FileReader();reader.onerror=()=>toast('图片读取失败，请重新选择',true);
+  reader.onload=()=>{if(!Array.isArray(product[key]))product[key]=product[key]?[product[key]]:[];product[key][index]=reader.result;
+   if(SPUS[dCur]===product){const pos=$('dBody').scrollTop;openDetail(dCur,'商品');$('dBody').scrollTop=pos;}
+   toast('图片已替换（本次原型会话有效）');};reader.readAsDataURL(file);
+ };input.click();
+}
+function pdCertificate(value,empty){
+ if(!value)return `<span class="pd-empty">${empty}</span>`;
+ const media=pdMedia(value,empty);
+ return media.replace('class="pd-images"','class="pd-images pd-certificate"').replace(/(<img[^>]*>)/g,'$1<span>HALAL 证书</span><span class="lk">查看</span>');
+}
+function pdMoney(v,digits=2){if(v===undefined||v===null||v==='')return '—';const n=Number(v);return Number.isFinite(n)?n.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits}):String(v);}
+function pdUnitDigits(r){return Math.min(6,Math.max(2,...[r.unitNet,r.unitGross].map(v=>(String(v??'').split('.')[1]||'').length)));}
+function pdField(label,value,full=false,html=false){return `<div class="pd-field${full===true?' pd-full':full==='half'?' pd-half':''}"><div class="pd-label">${label}</div><div class="pd-value">${html?value:pdText(value)}</div></div>`;}
+function pdSection(title,body,extra=''){return `<section class="pd-section"><div class="pd-heading"><h4>${title}</h4>${extra}</div>${body}</section>`;}
+function pdTable(heads,rows,cls=''){return `<div class="pd-table-scroll ${cls}" tabindex="0" role="region" aria-label="${cls==='pd-inventory'?'库存表格':cls==='pd-sales'?'销售信息表格':'数据表格'}"><table><thead><tr>${heads.map(h=>'<th>'+h+'</th>').join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;}
+function pdChooseSku(index){const pos=$('dBody').scrollTop,s=SPUS[dCur];pdState(s).sku=s.skus[index].sku;openDetail(dCur,'商品');$('dBody').scrollTop=pos;}
+function pdStock(type){pdState(SPUS[dCur]).stock=type;const pos=$('dBody').scrollTop;openDetail(dCur,'商品');$('dBody').scrollTop=pos;}
+function pdProduct(s){
+ const b=s.base||{},d=s.std||{},st=pdState(s);
+ let h='';
+  h+=pdSection('商品信息','<div class="pd-fields">'+[
+   pdField('SPU编码',s.spu,true),pdField('商品名称（中文）',s.name,'half'),pdField('商品名称（英文）',s.en,'half'),
+   pdField('商品别名（中文）',b.alias),pdField('商品别名（英文）',b.aliasEn),pdField('后台类目',s.cat,'half'),
+   pdField('商品描述（中文）',b.desc,'half'),pdField('商品描述（英文）',b.descEn,'half'),pdField('产地（中文）',b.origin),pdField('产地（英文）',b.originEn),
+   pdField('品牌（中文）',b.brand),pdField('品牌（英文）',b.brandEn),pdField('商品属性',s.attr),pdField('销售类型',b.sale),
+   pdField('商品经营类型',b.businessType||s.src),pdField('履约模式',b.fulfilMode),
+   pdField('商品主图',pdMedia(s.mainImages),false,true),pdField('B 端 AI 优化图',pdAiMedia(s,'bAiImages'),false,true),
+   pdField('C 端 AI 优化图',pdAiMedia(s,'cAiImages'),false,true),pdField('商品详情图',pdMedia(s.detailImages),false,true)
+  ].join('')+'</div>');
+  const halal=b.halal==='HALAL';
+  h+=pdSection('商品属性信息','<div class="pd-fields">'+[
+   pdField('是否测试商品',b.isTest?'是':'否'),pdField('是否HALAL',b.halal),pdField('是否对HALAL客户展示',b.halalShow),
+   pdField('HALAL 证书',pdCertificate(b.halalCertificate,halal?'未上传':'不适用'),false,true),pdField('证书到期日',halal?b.halalExpiry:'不适用'),
+   pdField('是否支持BCRS',d.bcrs||'否'),pdField('BCRS押金',d.bcrs==='是'?(d.bcrsDeposit!==undefined?d.bcrsDeposit+' SGD / '+d.minPack:'未设置'):'—')
+  ].join('')+'</div>');
+
+  let k=s.skus.find(x=>x.sku===st.sku)||s.skus[0];
+  if(!k)return '<div class="pd-product">'+h+pdSection('规格信息','<div class="pd-empty">暂无规格</div>')+logsBlock(s,'商品')+'</div>';
+  st.sku=k.sku;const spec=pdSpec(s,k);
+  let skuTabs=`<div class="pd-sku-tabs" role="tablist" aria-label="切换售卖规格">${s.skus.map((v,i)=>{const sp=pdSpec(s,v);return `<button role="tab" aria-selected="${v===k}" class="btn ${v===k?'pd-active':''}" onclick="pdChooseSku(${i})">${pdText(sp.sale+'/'+sp.unit)}</button>`;}).join('')}</div>`;
+  const cells=[spec.standard,spec.ratio,spec.net,spec.sale,spec.unit].map(x=>'<td>'+pdText(x)+'</td>').join('');
+  let skuBody='<div class="pd-fields">'+[
+   pdField('SKU编码',k.sku,'half'),pdField('对应成品货品编码',s.attr==='非标品'?k.item:d.item,'half'),
+   pdField('规格名称（中文）',k.nameZh||skuNameOf(s,k),'half'),pdField('规格名称（英文）',k.nameEn,'half'),
+   pdField('规格信息',pdTable(['标准单位规格','标准单位换算比例','净含量','售卖规格','售卖单位'],'<tr>'+cells+'</tr>'),true,true),
+   pdField('规格描述（中文）',k.desc,'half'),pdField('规格描述（英文）',k.descEn,'half'),pdField('规格主图',pdMedia(k.mainImages),false,true),pdField('规格详情图',pdMedia(k.detailImages),false,true)
+  ].join('')+'</div>';
+  h+=`<div class="pd-sku-area"><div class="pd-sku-bar"><div class="pd-heading"><h4>规格信息</h4></div>${skuTabs}</div><section class="pd-section">${skuBody}</section>`;
+  h+=pdSection('规格属性信息','<div class="pd-fields">'+pdField('是否支持多退少补',k.st?'是':'否')+'</div>');
+  h+=pdInventory(s,k,st)+pdSales(s,k)+'</div>';
+ return '<div class="pd-product">'+h+logsBlock(s,'商品')+'</div>';
+}
+function pdInventory(s,k,st){
+ const key=st.stock==='presale'?'presaleInventories':'inventories',rows=k[key]||[];
+ const controls=`<div class="pd-stock-actions"><div class="pd-segment" role="tablist" aria-label="库存类型"><button role="tab" aria-selected="${st.stock==='sales'}" class="btn ${st.stock==='sales'?'pd-active':''}" onclick="pdStock('sales')">销售库存</button><button role="tab" aria-selected="${st.stock==='presale'}" class="btn ${st.stock==='presale'?'pd-active':''}" onclick="pdStock('presale')">预售库存</button></div>${st.stock==='sales'?'<button class="lk" onclick="pdEdit(\'stock\')">修改（销售库存）</button>':''}<span class="pd-warehouse-count">共 ${rows.length} 个仓库</span></div>`;
+ const body=rows.map(r=>'<tr><td class="pd-warehouse">'+pdText(r.warehouse)+'</td>'+[r.mode,r.available,r.stock,r.locked,pdSafetyText(r)].map(v=>'<td>'+pdText(v)+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="6" class="pd-no-data">暂无库存数据</td></tr>';
+ return pdSection('库存信息',controls+pdTable(['仓库','库存售卖方式','可销售库存','销售库存','锁定库存','安全库存'],body,'pd-inventory'));
+}
+function pdSales(s,k){
+ const rows=k.quotes||[],spec=pdSpec(s,k),deposit=k.depositTotal??0;
+ const body=rows.map(r=>'<tr>'+[r.name,r.standard||spec.standard,pdMoney(r.unitNet,pdUnitDigits(r)),pdMoney(r.unitGross,pdUnitDigits(r)),pdMoney(r.priceNet),pdMoney(r.priceGross),r.minimum,r.daily||'不限购'].map(v=>'<td>'+pdText(v)+'</td>').join('')+`<td>上架：${pdText(r.onTime)}<br>下架：${pdText(r.offTime)}</td><td><span class="tag ${r.enabled?'tg':'tgr'}">${r.enabled?'已上架':'已下架'}</span></td></tr>`).join('')||'<tr><td colspan="10" class="pd-no-data">暂无关联报价单</td></tr>';
+ return pdSection('销售信息',pdTable(['报价单','定价标准单位','销售单价（未税）','销售单价（含税）','销售价（未税）','销售价（含税）','起售数量','每日限购','定时上下架','状态'],body,'pd-sales'),`<button class="lk" onclick="pdEdit('sales')">修改</button><span class="pd-deposit">包装物押金总额（含税） <b>${pdMoney(deposit)}</b></span>`);
+}
+/* 原型示例数据只初始化已有 SKU；新建 SKU 保留空表，不继承别的 SKU 库存或报价。 */
+for(const s of SPUS)for(const k of s.skus){
+ k.inventories??=PD_WAREHOUSES.map(warehouse=>({warehouse,mode:'虚拟库存',available:10,stock:'---',locked:'---',safety:'---'}));
+ k.presaleInventories??=[];
+ k.quotes??=[{name:'供应商自建SKU共享报价单',standard:pdSpec(s,k).standard,unitNet:'2.20',unitGross:'2.40',priceNet:(2.2*pdSpec(s,k).ratio).toFixed(2),priceGross:(2.4*pdSpec(s,k).ratio).toFixed(2),minimum:1,daily:'',onTime:'',offTime:'',enabled:k.status==='在售'}];
+}
+/* 完整演示资料：品牌、证书、图片、库存与报价仅供本地原型预览。 */
+function pdDemoImage(name,kind,variant='main',subtitle=''){
+ const colors={salmon:'#f39a7c',pork:'#e7a2a4',chicken:'#efc8a3',cola:'#c82129',coconut:'#65a84c'};
+ const color=colors[kind]||'#68a07a',cert=variant==='certificate',detail=variant==='detail';
+ let art='';
+ if(cert){art=`<rect x="90" y="74" width="420" height="400" rx="5" fill="white" stroke="#d5dfd8"/><text x="300" y="138" text-anchor="middle" font-size="27" fill="#237847">HALAL CERTIFICATE</text><text x="300" y="186" text-anchor="middle" font-size="18" fill="#59695e">仅供原型展示 · 非有效证书</text><path d="M150 245h300M150 282h300M150 319h230M150 356h280" stroke="#e0e7e2" stroke-width="10"/><circle cx="397" cy="412" r="34" fill="#edf5ee" stroke="#9bb7a3"/><text x="397" y="418" text-anchor="middle" font-size="14" fill="#6a8873">DEMO</text>`;}
+ else if(kind==='cola'){art=`<ellipse cx="300" cy="429" rx="120" ry="18" fill="#e9e9e9"/><rect x="228" y="126" width="144" height="294" rx="27" fill="${color}"/><ellipse cx="300" cy="134" rx="72" ry="16" fill="#dce2e4"/><ellipse cx="300" cy="134" rx="44" ry="8" fill="#b7c0c3"/><path d="M235 310q65-65 130-20" fill="none" stroke="white" stroke-width="18"/><text x="300" y="244" text-anchor="middle" font-size="27" fill="white">COLA</text><text x="300" y="357" text-anchor="middle" font-size="18" fill="white">330 ml</text>`;}
+ else if(kind==='coconut'){art=`<ellipse cx="300" cy="429" rx="130" ry="18" fill="#e5eae2"/><rect x="255" y="100" width="82" height="44" rx="8" fill="#478142"/><path d="M248 145h96l25 67v201H224V212z" fill="#e8f1df" stroke="#b1cca4"/><rect x="226" y="225" width="141" height="125" fill="${color}"/><text x="297" y="266" text-anchor="middle" font-size="20" fill="white">COCONUT</text><text x="297" y="294" text-anchor="middle" font-size="20" fill="white">WATER</text><circle cx="298" cy="323" r="15" fill="#fff9df"/><text x="297" y="386" text-anchor="middle" font-size="18" fill="#427239">500 ml</text>`;}
+ else {art=`<ellipse cx="300" cy="416" rx="192" ry="24" fill="#e4e9e6"/><rect x="98" y="157" width="404" height="250" rx="36" fill="#fafbf9" stroke="#d6dfd8" stroke-width="10"/><path d="M137 208q70-55 147 0v145q-67 38-147-4z" fill="${color}"/><path d="M310 209q75-53 150 7v128q-70 40-150 11z" fill="${color}"/><path d="M151 222l110 92m-112-51l95 83m80-113l117 81m-115-33l100 67" stroke="#fff3e6" stroke-width="10" opacity=".7"/><path d="M400 162l31-44 20 48" fill="#7fa778"/>`;}
+ const bg=variant==='b'?'#edf3f0':variant==='c'?'#fcf4e9':'#f8faf8';
+ const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600"><rect width="600" height="600" fill="${bg}"/><text x="28" y="37" font-family="sans-serif" font-size="18" fill="#728476">FOODMAX · ${cert?'证书示例':variant==='b'?'B端展示示例':variant==='c'?'C端展示示例':detail?'详情图示例':'商品图示例'}</text>${art}<text x="300" y="515" text-anchor="middle" font-family="sans-serif" font-size="27" fill="#24382d">${esc(name)}</text><text x="300" y="552" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#738276">${esc(subtitle||'演示素材 · 非真实商品图片')}</text></svg>`;
+ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+const PD_DEMO=[
+ {kind:'salmon',alias:'挪威三文鱼块，去骨鱼块',aliasEn:'Norwegian salmon cubes, boneless salmon',origin:'挪威',originEn:'Norway',brand:'北海鲜选（示例）',brandEn:'Nordic Fresh (Demo)',desc:'精选挪威三文鱼，去皮去骨后切成均匀鱼块。适合煎炒、焗烤与餐饮分装，冷冻保存，解冻后请尽快烹饪。',descEn:'Skinless, boneless Norwegian salmon cut into even cubes. Suitable for pan-frying, baking and food-service portioning. Keep frozen and cook promptly after thawing.',halal:'HALAL',halalShow:'是',fulfilMode:'自营直发',price:26.8},
+ {kind:'salmon',alias:'刺身切片三文鱼，挪威鱼片',aliasEn:'Norwegian salmon slices, portioned salmon',origin:'挪威',originEn:'Norway',brand:'北海鲜选（示例）',brandEn:'Nordic Fresh (Demo)',desc:'挪威三文鱼切片，规格统一，适合餐饮备料与家庭料理。全程冷链配送，建议充分加热后食用。',descEn:'Evenly sliced Norwegian salmon for food-service preparation and home cooking. Delivered through the cold chain. Cook thoroughly before serving.',halal:'HALAL',halalShow:'是',fulfilMode:'自营直发',price:29.8},
+ {kind:'pork',alias:'冰鲜猪腿肉，去骨后腿肉',aliasEn:'Chilled pork leg, boneless hind leg',origin:'马来西亚',originEn:'Malaysia',brand:'鲜牧优选（示例）',brandEn:'Fresh Pastures (Demo)',desc:'冰鲜去骨猪后腿肉，肉质紧实，适合切丝、切片及炖煮。0–4℃冷藏保存，收货后请及时入库。',descEn:'Chilled boneless pork hind leg with firm texture, suitable for slicing, stir-frying and braising. Store at 0–4°C and refrigerate promptly on receipt.',halal:'非HALAL',halalShow:'否',fulfilMode:'自营直发',price:12.5},
+ {kind:'chicken',alias:'鸡胸肉，去骨鸡大胸',aliasEn:'Chicken breast fillet, boneless chicken',origin:'马来西亚',originEn:'Malaysia',brand:'鲜牧优选（示例）',brandEn:'Fresh Pastures (Demo)',desc:'去皮去骨鸡大胸，500g定量分装。适合煎烤、沙拉及团餐加工，冷藏配送，建议充分加热后食用。',descEn:'Skinless, boneless chicken breast portioned into 500g packs. Suitable for grilling, salads and catering. Chilled delivery; cook thoroughly before serving.',halal:'HALAL',halalShow:'是',fulfilMode:'自营直发',price:.0088},
+ {kind:'cola',alias:'可乐，330毫升罐装汽水',aliasEn:'Cola, 330ml canned soft drink',origin:'新加坡',originEn:'Singapore',brand:'可口可乐',brandEn:'Coca-Cola',desc:'330ml罐装碳酸饮料，支持单罐与24罐整箱售卖。常温避光保存，冷藏后口感更佳。',descEn:'Carbonated soft drink in 330ml cans, available by the can or in cases of 24. Store away from direct sunlight. Best served chilled.',halal:'HALAL',halalShow:'是',fulfilMode:'自营直发',price:.85},
+ {kind:'coconut',alias:'椰子水，500毫升瓶装饮料',aliasEn:'Coconut water, 500ml bottled drink',origin:'泰国',originEn:'Thailand',brand:'热带鲜饮（示例）',brandEn:'Tropical Fresh (Demo)',desc:'500ml瓶装椰子水，适合餐饮及日常饮用。未开封常温保存，开封后冷藏并尽快饮用。',descEn:'Coconut water in a 500ml bottle for food-service and everyday refreshment. Store unopened at room temperature; refrigerate after opening and consume promptly.',halal:'HALAL',halalShow:'是',fulfilMode:'三方越库',price:2.6}
+];
+SPUS.forEach((s,index)=>{
+ const demo=PD_DEMO[index];if(!demo)return;
+ const {kind,price,...base}=demo;
+ Object.assign(s.base,base,{businessType:s.src,isTest:true,sale:s.base.sale||'销售品'});
+ if(s.src==='三方')Object.assign(s.base,{storage:'常温',fulfil:'常温履约',validP:'是',period:'9',periodUnit:'月',appExp:'展示'});
+ if(base.halal==='HALAL'){s.base.halalCertificate=pdDemoImage(s.name,'certificate','certificate');s.base.halalExpiry='2027-12-31';}
+ s.mainImages=Array.from({length:5},(_,i)=>pdDemoImage(s.name,kind,i%2?'b':'main','商品主图示例 '+(i+1)));s.bAiImages=[1,2].map(i=>pdDemoImage(s.name,kind,'b','B端展示示例 '+i));s.cAiImages=[1,2].map(i=>pdDemoImage(s.name,kind,'c','C端展示示例 '+i));s.detailImages=[1,2,3,4].map(i=>pdDemoImage(s.name,kind,'detail',s.base.origin+' · '+s.base.storage+' · 详情示例 '+i));
+ if(s.std){s.std.bcrs='是';s.std.bcrsDeposit=.10;s.std.bcrsQty='1';}
+ s.skus.forEach((k,j)=>{
+  const sp=pdSpec(s,k),units={'袋':'bag','盒':'box','托':'tray','罐':'can','瓶':'bottle','箱':'case','份':'portion'};
+  k.nameEn=s.en+' '+sp.sale+' / '+(units[sp.unit]||sp.unit);
+  if(s.attr==='标品')k.nameEn=s.en+(Number(k.qty)>1?' · '+k.qty+' cans per case':' · 1 '+(units[sp.unit]||sp.unit));
+  k.desc=`${sp.sale}/${sp.unit}，每${sp.unit}净含量${sp.net}。${j===0?'适合小批量采购，独立包装便于分装。':'适合餐饮批量采购，按整包装出库。'}`;
+  k.descEn=`${sp.net} net per ${units[sp.unit]||sp.unit}. ${j===0?'Individually packed for small orders and easy portioning.':'Packed for bulk food-service orders; dispatched as a complete pack.'}`;
+  k.mainImages=[1,2].map(i=>pdDemoImage(s.name,kind,'main',sp.sale+' / '+sp.unit+' · 主图示例 '+i));k.detailImages=[1,2,3,4].map(i=>pdDemoImage(s.name,kind,'detail','净含量 '+sp.net+' · 详情示例 '+i));
+  k.inventories=PD_WAREHOUSES.map((warehouse,w)=>({warehouse,mode:w%3===0?'货物库存':'虚拟库存',available:Math.max(0,120-index*10-j*12-w*3),stock:w%3===0?150-index*10-j*12-w*3:'---',locked:w%3===0?20:'---',safety:10}));
+  k.presaleInventories=PD_WAREHOUSES.slice(0,3).map((warehouse,w)=>({warehouse,mode:'虚拟库存',available:60-j*10-w*5,stock:'---',locked:'---',safety:5}));
+  const gross=price*1.09;
+  k.quotes=[{name:'供应商自建SKU共享报价单',standard:sp.standard,unitNet:price.toFixed(price<.01?4:2),unitGross:gross.toFixed(price<.01?4:2),priceNet:(price*sp.ratio).toFixed(2),priceGross:(gross*sp.ratio).toFixed(2),minimum:1,daily:j===0?20:10,onTime:'2026-11-17T08:00',offTime:'2026-12-31T23:59',enabled:k.status==='在售'}];
+  // 额外报价仅用于原型对比，按当前 SKU 的定价标准单位和换算比例计算。
+  const quoteSamples=[
+   {name:'餐饮客户常规报价单（示例）',factor:.96,minimum:5,daily:'',onTime:'2026-11-01T08:00',offTime:'',enabled:true},
+   {name:'KA客户合同报价单（示例）',factor:.90,minimum:20,daily:100,onTime:'2026-11-01T08:00',offTime:'2027-03-31T23:59',enabled:true},
+   {name:'连锁门店专属报价单（示例）',factor:.94,minimum:10,daily:50,onTime:'2026-11-10T08:00',offTime:'2027-01-31T23:59',enabled:true},
+   {name:'限量促销报价单（示例）',factor:.85,minimum:2,daily:10,onTime:'2026-12-01T08:00',offTime:'2026-12-07T23:59',enabled:false},
+   {name:'临时客户报价单（示例）',factor:1.05,minimum:1,daily:'',onTime:'',offTime:'',enabled:false}
+  ];
+  k.quotes.push(...quoteSamples.map(({factor,...quote})=>{
+   const digits=price<.01?4:2,net=Number((price*factor).toFixed(digits)),gross=net*1.09;
+   return {...quote,standard:sp.standard,unitNet:net.toFixed(digits),unitGross:gross.toFixed(digits),priceNet:(net*sp.ratio).toFixed(2),priceGross:(gross*sp.ratio).toFixed(2),enabled:quote.enabled&&k.status==='在售'};
+  }));
+  k.depositTotal=s.std?.bcrs==='是'?Number((.10*Number(k.qty)*(s.std.stockIsPack==='否'?Number(s.std.packQty):1)).toFixed(2)):0;
+ });
+});
+
+const pdModal=document.createElement('dialog');pdModal.id='pdEditor';pdModal.innerHTML='<form id="pdEditForm"><div class="pd-editor-head"><strong id="pdEditTitle"></strong><button type="button" class="lk" aria-label="关闭" onclick="pdCancel()">×</button></div><div id="pdEditBody"></div><div class="pd-editor-foot"><span id="pdEditMessage" role="status"></span><button type="button" class="btn" onclick="pdCancel()">取消</button><button class="btn pr" type="submit">保存</button></div></form>';document.body.appendChild(pdModal);
+pdModal.addEventListener('cancel',e=>{e.preventDefault();pdCancel();});
+const PD_QUOTE_OPTIONS=new Map();
+const PD_PRICE_LIST_NAMES=[...new Set(SPUS.flatMap(s=>s.skus.flatMap(k=>(k.quotes||[]).map(r=>r.name))))];
+function pdEdit(kind){
+ const s=SPUS[dCur],st=pdState(s),k=s.skus.find(v=>v.sku===st.sku);if(!k)return;
+ const key=kind==='sales'?'quotes':st.stock==='presale'?'presaleInventories':'inventories';
+ const id=s.spu+'|'+k.sku;
+ if(kind==='sales'){
+  const options=PD_QUOTE_OPTIONS.get(id)||[];
+  for(const r of k.quotes||[])if(!options.some(v=>v.name===r.name))options.push(structuredClone(r));
+  for(const name of PD_PRICE_LIST_NAMES)if(!options.some(v=>v.name===name))options.push({name,standard:pdSpec(s,k).standard,unitNet:'0',unitGross:'0',priceNet:'0',priceGross:'0',minimum:1,daily:'',onTime:'',offTime:'',enabled:false});
+  PD_QUOTE_OPTIONS.set(id,options);
+ }
+ PD_EDIT={kind,key,spu:s.spu,sku:k.sku,rows:structuredClone(k[key]||[]),scroll:$('dBody').scrollTop,selected:[],batch:{},options:PD_QUOTE_OPTIONS.get(id)||[],ratio:Number(pdSpec(s,k).ratio)||1};
+ if(kind==='stock')for(const r of PD_EDIT.rows)if(pdSafetyEditable(r)){r.safetyPercent??='';r.safetyAbsolute??=(r.safety!==''&&Number.isFinite(Number(r.safety))?r.safety:'');}
+ if(kind==='sales')for(const r of PD_EDIT.rows)r._taxFactor=Number(r.unitNet)>0&&Number.isFinite(Number(r.unitGross))?Number(r.unitGross)/Number(r.unitNet):1.09;
+ pdModal.classList.toggle('pd-sales-editor',kind==='sales');pdDrawEditor();pdModal.showModal();
+}
+function pdInput(i,key,value,type='text',extra=''){return `<input aria-label="${({unitNet:'销售单价（未税）',minimum:'起售数量',daily:'每日限购',safetyPercent:'安全库存比例',safetyAbsolute:'安全库存数量',onTime:'上架时间',offTime:'下架时间'})[key]||key} ${i+1}" type="${type}" value="${esc(value??'')}" data-row="${i}" data-key="${key}" ${extra}>`;}
+function pdSafetyEditable(r){return !['新加坡-外部仓','国际业务-SG-foodmax 业务综采中转仓','国际业务-AK业务中转仓'].includes(r.warehouse);}
+function pdSafetyText(r){return r.safetyPercent!==undefined||r.safetyAbsolute!==undefined?((r.safetyPercent!==''&&r.safetyPercent!=null?r.safetyPercent+'%':'—')+' / '+(r.safetyAbsolute!==''&&r.safetyAbsolute!=null?r.safetyAbsolute:'—')):r.safety;}
+function pdDrawEditor(){
+ const e=PD_EDIT,s=SPUS.find(v=>v.spu===e.spu),k=s.skus.find(v=>v.sku===e.sku);
+ $('pdEditTitle').textContent=(k.nameZh||skuNameOf(s,k))+'　'+e.sku;
+ $('pdEditMessage').textContent='';
+ let h='';
+ if(e.kind==='stock'){
+  const rows=e.rows.map((r,i)=>`<tr><td>${pdText(r.warehouse)}</td><td><select aria-label="库存售卖方式 ${i+1}" data-row="${i}" data-key="mode">${['实物库存','虚拟库存'].map(v=>`<option value="${v==='实物库存'?'货物库存':v}" ${(v==='实物库存'?['货物库存','实物库存'].includes(r.mode):r.mode===v)?'selected':''}>${v}</option>`).join('')}</select></td><td>${pdText(r.stock)}</td><td>${pdText(r.available)}</td><td>${pdText(r.locked)}</td><td>${pdSafetyEditable(r)?`<div class="pd-safety-inputs">${pdInput(i,'safetyPercent',r.safetyPercent,'number','min="0" max="100" step="any" placeholder="请输入"')}<span>% /</span>${pdInput(i,'safetyAbsolute',r.safetyAbsolute,'number','min="0" step="any" placeholder="请输入"')}</div>`:'—'}</td></tr>`).join('');
+  h='<h4 class="pd-edit-heading">'+(e.key==='inventories'?'销售库存':'预售库存')+'</h4>'+pdTable(['仓库','库存售卖方式','销售库存','可销售库存','锁定库存','安全库存'],rows||'<tr><td colspan="6" class="pd-no-data">暂无库存数据</td></tr>','pd-stock-edit-table');
+ }else{
+  const rows=e.rows.map((r,i)=>`<tr><td><input type="checkbox" aria-label="选择报价单 ${i+1}" data-pd-check="${i}" ${e.selected.includes(i)?'checked':''}></td><td>${pdText(r.name)}</td><td>${pdInput(i,'unitNet',r.unitNet,'number','min="0" step="any" required')}</td><td data-derived="unitGross">${pdMoney(r.unitGross,pdUnitDigits(r))}</td><td data-derived="priceNet">${pdMoney(r.priceNet)}</td><td data-derived="priceGross">${pdMoney(r.priceGross)}</td><td>${pdInput(i,'minimum',r.minimum,'number','min="1" step="1" required')}</td><td>${pdInput(i,'daily',r.daily,'number','min="0" step="1" placeholder="不限购"')}</td><td><details><summary>设置</summary><label>上架时间${pdInput(i,'onTime',r.onTime,'datetime-local')}</label><label>下架时间${pdInput(i,'offTime',r.offTime,'datetime-local')}</label></details></td><td><button type="button" role="switch" aria-label="报价单 ${i+1} 上下架" aria-checked="${!!r.enabled}" class="pd-sale-switch ${r.enabled?'on':''}" onclick="pdToggleQuote(${i})">${r.enabled?'上架':'下架'}</button></td><td><button type="button" class="lk" onclick="pdRemoveQuote(${i})">删除</button></td></tr>`).join('');
+  const batch=(label,key,min,step,placeholder='')=>`<label>${label}<input aria-label="批量${label}" type="number" data-pd-batch="${key}" min="${min}" step="${step}" value="${esc(e.batch[key]||'')}" placeholder="${placeholder}"></label>`;
+  const missing=e.options.filter(r=>!e.rows.some(v=>v.name===r.name));
+  h=`<div class="pd-edit-toolbar"><h4>销售信息</h4><span>包装物押金总额（含税）　${pdMoney(k.depositTotal??0)}</span><button type="button" class="btn" onclick="pdAddRow()">新增</button></div>`;
+  if(e.adding)h+=`<div class="pd-quote-picker"><select id="pdQuoteChoice" aria-label="选择报价单">${missing.map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('')}</select><button type="button" class="btn pr" onclick="pdAttachQuote()">添加</button><button type="button" class="btn" onclick="PD_EDIT.adding=false;pdDrawEditor()">取消</button></div>`;
+  h+=`<div class="pd-batch"><button type="button" class="btn" onclick="pdBatchQuotes()">批量编辑</button>${batch('销售单价（未税）','unitNet',0,'any')}${batch('起售数量','minimum',1,1)}${batch('每日限购','daily',0,1,'0 表示不限购')}<label>状态<select aria-label="批量状态" data-pd-batch="enabled"><option value="">不修改</option><option value="true" ${e.batch.enabled==='true'?'selected':''}>上架</option><option value="false" ${e.batch.enabled==='false'?'selected':''}>下架</option></select></label></div><p class="pd-batch-note">批量编辑仅作用于勾选行，留空项不修改。</p>`;
+  h+=pdTable(['<input type="checkbox" aria-label="全选报价单" data-pd-all '+(e.rows.length&&e.selected.length===e.rows.length?'checked':'')+'>','报价单','销售单价（未税）','销售单价（含税）','销售价（未税）','销售价（含税）','起售数量','每日限购','定时上下架','状态','操作'],rows||'<tr><td colspan="11" class="pd-no-data">暂无关联报价单</td></tr>','pd-sale-edit-table');
+ }
+ $('pdEditBody').innerHTML=h;
+}
+function pdReadDraft(){
+ for(const el of $('pdEditBody').querySelectorAll('[data-key]'))PD_EDIT.rows[Number(el.dataset.row)][el.dataset.key]=el.value;
+ for(const el of $('pdEditBody').querySelectorAll('[data-pd-batch]'))PD_EDIT.batch[el.dataset.pdBatch]=el.value;
+}
+function pdReprice(r){
+ const unit=Number(r.unitNet),factor=r._taxFactor||1.09,ratio=PD_EDIT.ratio;
+ r.unitGross=(unit*factor).toFixed(Math.min(6,Math.max(2,(String(r.unitNet).split('.')[1]||'').length))); r.priceNet=(unit*ratio).toFixed(2);r.priceGross=(unit*factor*ratio).toFixed(2);
+}
+function pdToggleQuote(i){pdReadDraft();PD_EDIT.rows[i].enabled=!PD_EDIT.rows[i].enabled;pdDrawEditor();}
+function pdRemoveQuote(i){pdReadDraft();PD_EDIT.rows.splice(i,1);PD_EDIT.selected=PD_EDIT.selected.filter(v=>v!==i).map(v=>v>i?v-1:v);pdDrawEditor();}
+function pdAddRow(){pdReadDraft();if(!PD_EDIT.options.some(r=>!PD_EDIT.rows.some(v=>v.name===r.name))){$('pdEditMessage').textContent='当前可用报价单已全部关联。';return;}PD_EDIT.adding=true;pdDrawEditor();}
+function pdAttachQuote(){const name=$('pdQuoteChoice').value,r=PD_EDIT.options.find(v=>v.name===name);if(!r||PD_EDIT.rows.some(v=>v.name===name))return;const next={...structuredClone(r),enabled:false,onTime:'',offTime:''};next._taxFactor=Number(next.unitNet)>0?Number(next.unitGross)/Number(next.unitNet):1.09;PD_EDIT.rows.push(next);PD_EDIT.adding=false;pdDrawEditor();}
+function pdBatchQuotes(){
+ pdReadDraft();if(!PD_EDIT.selected.length){$('pdEditMessage').textContent='请先勾选报价单。';return;}
+ const invalid=[...$('pdEditBody').querySelectorAll('[data-pd-batch]')].find(el=>!el.checkValidity());if(invalid){invalid.reportValidity();return;}
+ for(const i of PD_EDIT.selected){const r=PD_EDIT.rows[i];for(const [key,value] of Object.entries(PD_EDIT.batch))if(value!=='')r[key]=key==='enabled'?value==='true':value;if(PD_EDIT.batch.unitNet!==undefined&&PD_EDIT.batch.unitNet!=='')pdReprice(r);}
+ PD_EDIT.batch={};pdDrawEditor();
+}
+$('pdEditBody').addEventListener('input',e=>{
+ const el=e.target;if(!el.matches('[data-key]'))return;const r=PD_EDIT.rows[Number(el.dataset.row)];r[el.dataset.key]=el.value;
+ if(el.dataset.key==='unitNet'&&el.value!==''&&el.validity.valid){pdReprice(r);for(const key of ['unitGross','priceNet','priceGross'])el.closest('tr').querySelector('[data-derived="'+key+'"]').textContent=pdMoney(r[key],key==='unitGross'?pdUnitDigits(r):2);}
+});
+$('pdEditBody').addEventListener('change',e=>{
+ const el=e.target;if(el.matches('[data-pd-check]')){const i=Number(el.dataset.pdCheck);PD_EDIT.selected=el.checked?[...new Set([...PD_EDIT.selected,i])]:PD_EDIT.selected.filter(v=>v!==i);const all=$('pdEditBody').querySelector('[data-pd-all]');all.checked=PD_EDIT.rows.length===PD_EDIT.selected.length;all.indeterminate=PD_EDIT.selected.length>0&&!all.checked;}
+ if(el.matches('[data-pd-all]')){PD_EDIT.selected=el.checked?PD_EDIT.rows.map((_,i)=>i):[];for(const cb of $('pdEditBody').querySelectorAll('[data-pd-check]'))cb.checked=el.checked;}
+});
+function pdCancel(){pdModal.close();PD_EDIT=null;}
+pdModal.addEventListener('cancel',e=>{e.preventDefault();pdCancel();});
+$('pdEditForm').addEventListener('submit',e=>{
+ e.preventDefault();if(!$('pdEditForm').reportValidity())return;pdReadDraft();const d=PD_EDIT;
+ if(d.kind==='sales'&&d.rows.some(r=>r.onTime&&r.offTime&&r.offTime<=r.onTime)){$('pdEditMessage').textContent='下架时间必须晚于上架时间。';return;}
+ const s=SPUS.find(v=>v.spu===d.spu),k=s?.skus.find(v=>v.sku===d.sku);if(!k){$('pdEditMessage').textContent='该规格已不存在，请关闭后重新打开详情。';return;}
+ const rows=structuredClone(d.rows);for(const r of rows){delete r._taxFactor;if(d.kind==='sales'&&Number(r.daily)===0)r.daily='';}
+ k[d.key]=rows;log(s,'商品',k.sku,d.kind==='sales'?'修改销售信息':d.key==='inventories'?'修改销售库存':'修改预售库存');
+ const scroll=d.scroll;pdCancel();openDetail(SPUS.indexOf(s),'商品');$('dBody').scrollTop=scroll;toast('已保存');
+});
+
+const pdImageDialog=document.createElement('dialog');pdImageDialog.id='pdImageViewer';pdImageDialog.setAttribute('aria-labelledby','pdGalleryTitle');
+pdImageDialog.innerHTML=`<div class="pd-gallery-head"><strong id="pdGalleryTitle">图片预览</strong><button class="lk" aria-label="关闭图片预览" onclick="pdImageDialog.close()">关闭</button></div><div class="pd-gallery-image"><img alt="图片预览"></div><div class="pd-gallery-foot"><button class="btn" id="pdGalleryPrev" onclick="pdGalleryMove(-1)">上一张</button><span id="pdGalleryCount" aria-live="polite"></span><button class="btn" id="pdGalleryNext" onclick="pdGalleryMove(1)">下一张</button></div>`;
+document.body.appendChild(pdImageDialog);
+let PD_GALLERY={urls:[],index:0,title:''};
+function pdGalleryDraw(){const g=PD_GALLERY,img=pdImageDialog.querySelector('img');img.src=g.urls[g.index];img.alt=g.title+' 第 '+(g.index+1)+' 张';$('pdGalleryTitle').textContent=g.title;$('pdGalleryCount').textContent='第 '+(g.index+1)+' 张 / 共 '+g.urls.length+' 张';$('pdGalleryPrev').disabled=g.index===0;$('pdGalleryNext').disabled=g.index===g.urls.length-1;}
+function pdGalleryMove(offset){PD_GALLERY.index=Math.max(0,Math.min(PD_GALLERY.urls.length-1,PD_GALLERY.index+offset));pdGalleryDraw();}
+pdImageDialog.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();pdGalleryMove(e.key==='ArrowLeft'?-1:1);}});
+document.addEventListener('click',e=>{const target=e.target.closest('.pd-images a,.pd-media-more');if(!target)return;e.preventDefault();const group=target.closest('.pd-images');PD_GALLERY={urls:[...group.querySelectorAll('a img')].map(img=>img.src),index:target.matches('.pd-media-more')?3:Number(target.dataset.imageIndex||0),title:group.closest('.pd-field')?.querySelector('.pd-label')?.textContent||'图片预览'};pdGalleryDraw();pdImageDialog.showModal();});
+
 renderList();
 </script>
-</body>
+<script>
+let creationFlowScale=1,creationListScroll=0,creationPageActive=false;
+function openCreationFlow(){if(location.hash==='#creation-flow')return;creationListScroll=window.scrollY;location.hash='creation-flow';}
+function returnToProductList(){location.hash='product-list';}
+function renderCreationRoute(){
+ const active=location.hash==='#creation-flow';
+ if(active&&!creationPageActive)creationListScroll=window.scrollY;
+ document.getElementById('creationFlowPage').hidden=!active;
+ document.getElementById('productListPage').hidden=active;
+ document.getElementById('productListNav').classList.toggle('on',!active);
+ const entry=document.querySelector('.creation-flow-entry');
+ if(active)entry.setAttribute('aria-current','page');else entry.removeAttribute('aria-current');
+ document.title=active?'建品逻辑 · 自营品创建流程':'商货品统一建品 · 运营平台';
+ if(active&&!creationPageActive){zoomCreationFlow(0);window.scrollTo(0,0);document.getElementById('creationFlowHeading').focus({preventScroll:true});}
+ else if(!active&&creationPageActive)requestAnimationFrame(()=>window.scrollTo(0,creationListScroll));
+ creationPageActive=active;
+}
+function zoomCreationFlow(delta){creationFlowScale=delta===0?1:Math.min(2.5,Math.max(.75,creationFlowScale+delta));document.querySelector('.creation-flow-canvas').style.setProperty('--creation-flow-scale',creationFlowScale);}
+window.addEventListener('hashchange',renderCreationRoute);renderCreationRoute();
+</script></body>
 </html>
