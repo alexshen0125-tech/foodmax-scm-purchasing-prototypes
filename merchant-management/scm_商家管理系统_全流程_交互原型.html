@@ -3297,8 +3297,8 @@ function ord_baseAmt(o){return o.amt-ord_giftVal(o);}                // 付费�
    没参与满赠的付费商品归最后「其他商品」区块。一个付费行同时参与多个活动时，只在第一个区块列金额，后面区块列一条引用行、金额不重复 */
 function giftBlocks(lines){const acts=[];(lines||[]).filter(l=>l.gift).forEach(g=>{let a=acts.find(x=>x.act==g.gift.act);if(!a){a={act:g.gift.act,kind:g.gift.kind,name:g.gift.name,gifts:[],paid:[]};acts.push(a);}a.gifts.push(g);});
   acts.forEach(a=>a.paid=(lines||[]).filter(l=>!l.gift&&(l.acts||[]).includes(a.act)));return acts;}
-function giftBlockHd(a,ncol,qtyOf){const buy=a.paid.map(l=>`${l.name} ${qtyOf(l)}${l.unit}`).join('、')||'—',give=a.gifts.map(g=>`${g.name} ${qtyOf(g)}${g.unit}`).join('、');
-  return `<tr><td colspan="${ncol}" style="background:#F5F1FC;border-top:1px solid #E4DBF6;padding:9px 12px;white-space:normal"><span class="tag t-pp" style="font-size:11px">${a.kind}</span> <b style="margin-left:4px">${a.name}</b><span style="font-size:12px;color:var(--ts);margin-left:10px">买 ${buy} → 送 ${give}</span></td></tr>`;}
+function giftBlockHd(a,ncol){
+  return `<tr><td colspan="${ncol}" style="background:#F5F1FC;border-top:1px solid #E4DBF6;padding:9px 12px;white-space:normal"><span class="tag t-pp" style="font-size:11px">${a.kind}</span> <b style="margin-left:4px">${a.name}</b></td></tr>`;}
 function giftOtherHd(ncol){return `<tr><td colspan="${ncol}" style="background:var(--bd2);padding:9px 12px;font-weight:600;color:var(--ts)">其他商品</td></tr>`;}
 function giftBlockRows(lines,rowOf,ncol,qtyOf,refOf){const acts=giftBlocks(lines);if(!acts.length)return (lines||[]).map(rowOf).join('');
   const used=new Set();let h='';

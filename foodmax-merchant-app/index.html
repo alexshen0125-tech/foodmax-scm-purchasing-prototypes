@@ -260,7 +260,7 @@ function ordInclAmt(o){return +(o.amt*(1+TAX)).toFixed(2);}                   //
 function ordGiftLines(o){return (o.lines||[]).filter(l=>l.gift);}
 function ordGiftVal(o){return +ordGiftLines(o).reduce((s,l)=>s+(+l.qty||0)*l.price,0).toFixed(2);}   // 赠品价值 = Σ 赠品件数 × 单价
 function ordGiftQty(o){return ordGiftLines(o).reduce((s,l)=>s+(+l.qty||0),0);}
-/* 满赠分区块（与 PC giftBlockRows 同口径）：按活动分区——区块头写活动规则 + 「买 X → 送 Y」，先列买的商品（付费行 acts 含该活动）再列赠品；
+/* 满赠分区块（与 PC giftBlockRows 同口径）：按活动分区——区块头只写活动规则（11-18 去掉「买 X → 送 Y」），先列买的商品（付费行 acts 含该活动）再列赠品；
    没参与满赠的付费商品归「其他商品」。一个付费行同时参与多个活动时只在第一个区块完整展示，后面区块出一条引用行
    render(kind,item) kind: 'hd'(区块头,item=活动) / 'other'(其他商品头) / 'row' / 'ref'(引用行) */
 function giftBlockHtml(lines,qtyOf,render){
@@ -271,7 +271,7 @@ function giftBlockHtml(lines,qtyOf,render){
   acts.forEach(a=>{h+=render('hd',a);a.paid.forEach(l=>{h+=render(used.has(l)?'ref':'row',l);used.add(l);});a.gifts.forEach(g=>{h+=render('row',g);});});
   const rest=(lines||[]).filter(l=>!l.gift&&!used.has(l));if(rest.length){h+=render('other');rest.forEach(l=>{h+=render('row',l);});}
   return h;}
-const GB_HD=a=>`<div style="background:#F5F1FC;padding:10px 15px;border-top:1px solid #E4DBF6"><div style="font-size:13.5px;font-weight:700;color:#3F2F78"><span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#fff;border:1px solid #D9CCF3;padding:1px 7px;border-radius:20px;margin-right:6px">${a.kind}</span>${a.name}</div><div style="font-size:12px;color:#6A5E8C;margin-top:4px;line-height:1.5">买 ${a.buy} → 送 ${a.give}</div></div>`;
+const GB_HD=a=>`<div style="background:#F5F1FC;padding:10px 15px;border-top:1px solid #E4DBF6"><div style="font-size:13.5px;font-weight:700;color:#3F2F78"><span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#fff;border:1px solid #D9CCF3;padding:1px 7px;border-radius:20px;margin-right:6px">${a.kind}</span>${a.name}</div></div>`;
 const GB_OTHER=`<div style="background:var(--muted);padding:9px 15px;font-size:13px;font-weight:700;color:var(--sub)">其他商品</div>`;
 function ordDisc(o){return +((o.discount||0)+ordGiftVal(o)).toFixed(2);}     // 商家补贴 = 商家优惠 + 赠品价值
 function ordPaid(o){return +(o.amt-ordDisc(o)).toFixed(2);}                   // 实付金额 = 订单金额 − 商家补贴
