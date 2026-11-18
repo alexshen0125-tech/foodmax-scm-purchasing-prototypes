@@ -744,7 +744,7 @@ const RETURN=[
  // 满赠退货（2026-11-11，与 PC 同源）：客服审核时勾了「取回赠品」，退货单带赠品行；赠品 gift={kind,name}、结算单价 0，不产生退货金额
  // 11-16：retQty=应取回、pickQty=实际取回（WMS 提货回传，可为 0；未提货为 null）
  {no:'TKD2026070108270015',orderNo:'#SG20260701015',ware:'兀兰DC',st:'待提货',order:relTs(-30),gen:relTs(-30),code:'582716',arrive:relTs(-20),pickup:'',
-  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:null,price:32.50,acts:['GF261103']},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件',act:'GF261103'}}]},
+  items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:2,pickQty:null,price:32.50,acts:['GF261103']},{name:'白菜',sku:'SKU8802',spec:'1kg/件',unit:'件',retQty:1,pickQty:null,price:0,gift:{kind:'单品满赠',name:'芥蓝满 2 件送白菜 1 件',rule:{buy:2,get:1,max:1},act:'GF261103'}}]},
  {no:'TKD2026063008266685',orderNo:'#SG20260630685',ware:'裕廊DC',st:'待提货',order:relTs(-48),gen:relTs(-48),code:'460439',arrive:relTs(-36),pickup:'',
   items:[{name:'芥蓝',sku:'SKU8813',spec:'10kg/件',unit:'件',retQty:1,pickQty:null,price:32.50}]},
  {no:'TKD2026062908267496',orderNo:'#SG20260629496',ware:'兀兰DC',st:'待仓库入库',order:relTs(-60),gen:relTs(-60),code:'897256',arrive:'',pickup:'',
