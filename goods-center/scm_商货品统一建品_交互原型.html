@@ -266,6 +266,7 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
 .creation-flow-canvas{overflow:auto;padding:24px;background:#fff}.creation-flow-diagram{width:min(640px,100%);margin:0 auto}.creation-flow-diagram svg{display:block;width:calc(100% * var(--creation-flow-scale,1));max-width:none;height:auto}
 @media(max-width:600px){header:has(.creation-flow-entry){gap:12px;flex-wrap:wrap;height:auto;min-height:48px;padding:8px 12px}header:has(.creation-flow-entry) .rt{flex-wrap:wrap;gap:8px}.creation-flow-head,.creation-flow-actions{padding:12px;flex-wrap:wrap}.creation-flow-canvas{padding:8px}body:has(#creationFlowPage:not([hidden])) aside{display:none}body:has(#creationFlowPage:not([hidden])) main{padding:12px}}
 #ivTable th,#ivTable td{white-space:nowrap}
+.hide3{display:none!important}
 </style></head>
 <body>
 <header><span class="logo">Foodmax</span><span class="sys">运营平台</span><button type="button" class="creation-flow-entry" onclick="openCreationFlow()">建品逻辑</button><div class="rt"><span>岗位 <select id="roleSel" onchange="ROLE=this.value;renderList();if($('dwDetail').classList.contains('on'))openDetail(dCur)" style="width:auto;height:24px;padding:0 6px;border:none;border-radius:3px;font-size:12.5px"><option>商品运营</option><option>采购</option></select></span><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
@@ -557,7 +558,9 @@ function filtered(){const c=codeQ();const its=s=>itemsOf(s).filter(x=>x.code);
     return s.src===SRC&&(tab==='全部'||s.status===tab)})}
 let MORE_ON=false;function toggleMore(){MORE_ON=!MORE_ON;document.querySelectorAll('.fi.more').forEach(e=>e.style.display=MORE_ON?'':'none');$('moreBtn').textContent=MORE_ON?'收起筛选 ▴':'更多筛选 ▾'}
 let SRC='自营';
-function renderTabs(){$('srcTabs').innerHTML=['自营','三方'].map(t=>`<span class="${t===SRC?'on':''}" style="font-weight:${t===SRC?600:400}" onclick="SRC='${t}';tab='全部';SEL.clear();renderList()">${t}商品 <span style="color:var(--tt);font-size:12px">${SPUS.filter(x=>x.src===t).length}</span></span>`).join('');const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
+const ITEM_F=['qItemN','qItem','qRawN','qRaw','qPurch','qWay','qIst','qItemB','qType','qBcrs'];
+function applySrcFilters(){ITEM_F.forEach(id=>{const el=$(id);if(!el)return;const fi=el.closest('.fi');if(SRC==='三方'){el.value='';fi.classList.add('hide3')}else fi.classList.remove('hide3')})}
+function renderTabs(){$('srcTabs').innerHTML=['自营','三方'].map(t=>`<span class="${t===SRC?'on':''}" style="font-weight:${t===SRC?600:400}" onclick="SRC='${t}';tab='全部';SEL.clear();applySrcFilters();renderList()">${t}商品 <span style="color:var(--tt);font-size:12px">${SPUS.filter(x=>x.src===t).length}</span></span>`).join('');const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
 function itemStTag(s,k){const v=s.attr==='非标品'?(k.itemStatus||'启用'):((s.std||{}).status||'启用');return v==='待启用'?'<span class="tag ty">待启用</span>':v==='停用'?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>'}
 function purchTag(s){const no=s.attr==='非标品'||((s.std||{}).purch==='否');return no?'<span class="tag ty">不可采</span>':'<span class="tag tg">可采</span>'}
 function skuStatusTag(s){if(s.itemStatus==='待启用')return'<span class="tag ty">货品待启用</span>';return s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}
