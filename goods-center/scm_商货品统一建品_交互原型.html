@@ -769,7 +769,7 @@ function stdRows(){const cols='1.6fr 110px 110px 120px 120px 1.2fr 60px';const u
   return h}
 
 function supplyBlock(){const ns=F.attr==='非标品';const newRaw=ns&&F.rawMode==='新建'&&F.mode==='create';
-  if(F.mode==='edit')return `<div class="sec-bd"><div class="g3">${['原料是否可采','是否可采','创建方式','入库超收','公司质检扣点','质检拒收下限','第三方检测报告'].filter(t=>ns?t!=='是否可采':t!=='原料是否可采').map(t=>`<div class="fr"><label class="fl">${t}</label><div class="ro">建好后在「详情 › 货品 › 编辑」里改</div></div>`).join('')}</div></div>`;
+  if(F.mode==='edit')return `<div class="sec-bd"><div class="g3">${['原料是否可采','是否可采','创建方式','入库超收','公司质检扣点','质检拒收下限','第三方检测报告'].filter(t=>ns?t!=='是否可采':t!=='原料是否可采').map(t=>`<div class="fr"><label class="fl">${t}</label><div class="ro">建好后用「详情 › 货品」的启停用 / 可采按钮，或「货品批量操作」改</div></div>`).join('')}</div></div>`;
   return `<div class="sec-bd"><div class="g3">
     ${ns?`<div class="fr"><label class="fl"><span class="rq">*</span>原料是否可采</label>${newRaw?`<div class="radios">${['是','否'].map(v=>`<label><input type="radio" name="rp" ${F.rawPurch===v?'checked':''} onchange="set('rawPurch','${v}')">${v}</label>`).join('')}</div>`:`<div class="ro">${F.rawMode==='已有'?((rawBy(F.rawCode)||{}).purch==='是'?'可采':'不可采')+'<span class="fh">在详情 › 货品里切换</span>':'—'}</div>`}</div>
       <div class="fr"><label class="fl">成品是否可采</label><div class="ro">🔒 不可采（原料制造的成品，系统固定）</div></div>`
@@ -873,7 +873,7 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
   if(dTab==='商品'){
     h+=pdProduct(s);
   }else if(ns){const r=rawBy(s.rawCode)||{};const users=spusOfRaw(r.code);const rb=users.length>1?rawBase(r):b;
-    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">原料货品 ${self?(selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('raw')">编辑原料</button><button class="lk ${r.status==='启用'?'dg':''}" onclick="ask('rawStatus')">${r.status==='启用'?'停用':'启用'}</button><button class="lk" onclick="ask('rawPurch')">${r.purch==='是'?'设为不可采':'设为可采'}</button></span>`:`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px">${NOPERM('货品操作')}编辑原料</span>${NOPERM('货品操作')}${r.status==='启用'?'停用':'启用'}</span>${NOPERM('货品操作')}${r.purch==='是'?'设为不可采':'设为可采'}</span></span>`):''}</h4>
+    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">原料货品 ${self?(selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk ${r.status==='启用'?'dg':''}" onclick="ask('rawStatus')">${r.status==='启用'?'停用':'启用'}</button><button class="lk" onclick="ask('rawPurch')">${r.purch==='是'?'设为不可采':'设为可采'}</button></span>`:`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px">${NOPERM('货品操作')}${r.status==='启用'?'停用':'启用'}</span>${NOPERM('货品操作')}${r.purch==='是'?'设为不可采':'设为可采'}</span></span>`):''}</h4>
       <div class="dl">${row('原料编码',`<span class="mono">${r.code}</span>`)}${row('原料名称',esc(r.name)+'<br><span class="fh">'+esc(r.en)+'</span>')}${row('计量单位',r.unit)}${row('净含量','1'+r.unit)}${row('使用它的商品',users.length+' 个'+(users.length>1?'：'+users.map(x=>esc(x.name)).join('、'):''))}
       ${row('状态',stTag(r.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(r.purch==='是'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','原料采购')}
       ${row('效期管理',rb.validP)}${row('保质期',rb.period?rb.period+rb.periodUnit:'—')}${extRows(ext(r),row)}</div></div>
@@ -881,11 +881,11 @@ function openDetail(i,tab){if(tab)dTab=tab;if(i!==dCur)pend=null;dCur=i;const s=
       s.skus.map(k=>{const pd=k.itemStatus==='待启用',off=k.itemStatus==='停用';return`<tr><td class="mono">${k.item}</td><td>${esc(skuNameOf(s,k))}</td><td>${fmtQty(k.qty)}${s.stockUnit}</td><td>${k.su}</td><td><span class="tag tgr">🔒 不可采</span></td>
         <td>${pd?'<span class="tag ty">待启用</span>':off?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>'}</td>
         <td class="mono">${k.bom}</td><td>${fmtQty(k.qty)} ${s.stockUnit} → 1 ${k.su}</td><td>${k.bomStatus==='废弃'?'<span class="tag tgr">废弃</span>':'<span class="tag tg">启用</span>'}</td>
-        ${self?(selfI?`<td style="white-space:nowrap">${off?'—':`<button class="lk" onclick="openItemEdit('fin','${k.sku}')">编辑</button> `}${pd?`<button class="lk" onclick="enableItem(${i},'${k.sku}')">启用</button> `:''}${off?'':`<button class="lk dg" onclick="ask('finOff','${k.sku}')">停用</button>`}</td>`:`<td>${off?'—':NOPERM('货品操作')+'编辑 停用</span>'}</td>`):''}</tr>`}).join('')+`</tbody></table>
+        ${self?(selfI?`<td style="white-space:nowrap">${pd?`<button class="lk" onclick="enableItem(${i},'${k.sku}')">启用</button> `:''}${off?'':`<button class="lk dg" onclick="ask('finOff','${k.sku}')">停用</button>`}</td>`:`<td>${off?'—':NOPERM('货品操作')+'停用</span>'}</td>`):''}</tr>`}).join('')+`</tbody></table>
       <div class="fh" style="margin-top:6px">原料做的成品固定不可采：库存靠原料加工补充，库存不足 1 份时 SKU 自动下架。BOM 用量 = 规格数量，在这里只读。</div>
       ${pendItem?`<div class="warn">商品已建好，成品货品启用失败（系统已自动重试 3 次）。启用前仓库不能收货、采购不能下单。</div>`:''}</div>`+whBlock(s)+logsBlock(s,'货品');
   }else{const d=s.std;
-    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">成品货品 ${self&&!selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px">${NOPERM('货品操作')}编辑货品</span>${NOPERM('货品操作')}${d.status!=='停用'?'停用':'启用'}</span>${NOPERM('货品操作')}${d.purch!=='否'?'设为不可采':'设为可采'}</span></span>`:''}${selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px"><button class="lk" onclick="openItemEdit('std')">编辑货品</button>${d.status==='待启用'?`<button class="lk" onclick="enableStd(${i})">启用</button>`:''}<button class="lk ${d.status!=='停用'?'dg':''}" onclick="ask('stdStatus')">${d.status!=='停用'?'停用':'启用'}</button><button class="lk" onclick="ask('stdPurch')">${d.purch!=='否'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
+    h+=`<div class="dsec"><h4 style="display:flex;align-items:center;gap:10px">成品货品 ${self&&!selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px">${NOPERM('货品操作')}${d.status!=='停用'?'停用':'启用'}</span>${NOPERM('货品操作')}${d.purch!=='否'?'设为不可采':'设为可采'}</span></span>`:''}${selfI?`<span style="margin-left:auto;display:flex;gap:14px;font-weight:400;font-size:12.5px">${d.status==='待启用'?`<button class="lk" onclick="enableStd(${i})">启用</button>`:''}<button class="lk ${d.status!=='停用'?'dg':''}" onclick="ask('stdStatus')">${d.status!=='停用'?'停用':'启用'}</button><button class="lk" onclick="ask('stdPurch')">${d.purch!=='否'?'设为不可采':'设为可采'}</button></span>`:''}</h4>
       <div class="dl">${row('货品编码',`<span class="mono">${d.item}</span>`)}${row('货品名称',esc(s.name)+'<br><span class="fh">'+esc(s.en)+'</span>')}${row('单件净含量',d.net+d.netUnit+'/'+d.minPack)}${row('计量单位（库存单位）',d.stockUnit)}${row('包装规格',d.stockIsPack==='否'?`${d.packQty} ${d.minPack} / ${d.stockUnit}`:'—')}
       ${row('状态',stTag(d.status,{'启用':'tg','停用':'tgr'}))}${row('是否可采',stTag(d.purch!=='否'?'可采':'不可采',{'可采':'tg','不可采':'ty'}))}${row('创建方式','成品采购')}${row('BCRS',d.bcrs==='是'?'支持':'不支持')}
       ${row('效期管理',b.validP)}${row('保质期',b.period?b.period+b.periodUnit:'—')}${extRows(ext(d),row)}</div></div>
@@ -971,48 +971,7 @@ function whBatchForm(){const v=B.vals.wh;const sel=(f,arr)=>`<select onchange="B
   return`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px"><div class="fr"><label class="fl">保存条件</label>${sel('storage',STORAGE)}</div><div class="fr"><label class="fl">履约方式</label>${sel('fulfil',FULFIL)}</div><div class="fr"><label class="fl">大小件</label>${sel('size',WH_SIZE)}</div><div class="fr"><label class="fl">是否易碎</label>${sel('fragile',['是','否'])}</div><div class="fr"><label class="fl">是否可压</label>${sel('press',['是','否'])}</div></div>
   <div class="fh" style="margin-top:8px">不修改的项保持原值。保存条件、履约方式、易碎、可压改到原料 / 标品货品；大小件改到成品 / 标品货品。分拣规格图片要逐个在详情里传。</div>`}
 
-/* ============ 单独编辑货品（字段同 SCM 编辑货品页，共用字段置灰） ============ */
-let IE=null;
-function openItemEdit(kind,sku,keep){const s=SPUS[dCur];const b=s.base;let o,code,v;
-  if(kind==='raw'){o=rawBy(s.rawCode);code=o.code;v={type:'非标品',attr:'原料',name:o.name,en:o.en,mu:o.unit,nw:'1',nwu:o.unit,pq:'',pu:'',purch:o.purch==='否'?'否':'是',purchLock:false,way:'',raw:''}}
-  if(kind==='std'){o=s.std;code=o.item;v={type:'标品',attr:'成品',name:s.name,en:s.en,mu:o.stockUnit,nw:o.net,nwu:o.netUnit,pq:o.stockIsPack==='否'?o.packQty:'',pu:o.stockIsPack==='否'?o.minPack:'',purch:o.purch==='否'?'否':'是',purchLock:false,way:'成品采购',raw:''}}
-  if(kind==='fin'){o=s.skus.find(k=>k.sku===sku);code=o.item;v={type:'非标品',attr:'成品',name:skuNameOf(s,o),en:`${s.en} ${fmtQty(o.qty)}${s.stockUnit}/${o.su}`,mu:o.su,nw:fmtQty(o.qty),nwu:s.stockUnit,pq:'',pu:'',purch:'否',purchLock:true,way:'原料制造',raw:s.rawCode}}
-  if(keep&&keep.v)v.purch=keep.v.purch;IE={kind,o,code,v,ask:keep?keep.ask:'',ok:keep?keep.ok:false,e:keep?keep.e:JSON.parse(JSON.stringify(ext(o)))};const e=IE.e;
-  $('bTitle').textContent='编辑货品 · '+code;
-  const L=(t,c,req,tip)=>`<div class="fr"><label class="fl">${req?'<span class="rq">*</span>':''}${t}${tip?`<span class="hint">${tip}</span>`:''}</label>${c}</div>`;
-  const RO=(x)=>`<div class="ro">${x||'—'}</div>`;const SH='在商品编辑里改';
-  const sgp=kind==='std';   /* BCRS：仅 SGP 站点 + 标品成品（原型默认 SGP 站点） */
-  const users=kind==='raw'?spusOfRaw(o.code):[];const shared=users.length>1;const rb=kind==='raw'&&shared?rawBase(o):b;
-  const nameTip=kind==='raw'?(shared?'多个商品共用，不随商品名改':'= 商品名 +「原料」，随商品名改'):'随商品名自动生成，'+SH;
-  let h=(IE.ask?`<div class="confirm" style="margin-bottom:14px">${IE.ask}<button class="btn sm pr" onclick="IE.ok=true;saveItemEdit()">确认保存</button><button class="btn sm" onclick="IE.ask='';openItemEditKeep()">取消</button></div>`:'')+(shared?`<div class="warn" style="margin:0 0 14px">这个原料被 ${users.length} 个商品共用：${users.map(x=>esc(x.name)).join('、')}。这里的修改对它们都生效。</div>`:'')+`<div class="sec"><div class="sec-hd">货品基础信息</div><div class="sec-bd"><div class="g2">
-    ${L('货品类型',RO(v.type))}${L('货品属性',RO(v.attr))}
-    <div class="fr full"><label class="fl"><span class="rq">*</span>货品名称<span class="hint">${nameTip}</span></label><div class="bi"><div class="ro">${esc(v.name)}</div><div class="ro">${esc(v.en)||'—'}</div></div></div>
-    <div class="fr full"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">计量单位、净含量${SH}</span></label><table class="itbl" style="max-width:760px"><thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td><div class="cell-ro">${v.mu}</div></td><td><div class="cell-ro">${v.nw}</div></td><td><div class="cell-ro">${v.nwu}</div></td><td><input maxlength="20" value="${esc(e.unitRemark)}" placeholder="最多 20 字" onchange="IE.e.unitRemark=this.value"></td></tr></tbody></table></div>
-    <div class="fr full"><label class="fl">包装规格（选填）<span class="hint">${SH}</span></label><table class="itbl" style="max-width:420px"><thead><tr><th>包装数量</th><th>包装单位</th></tr></thead><tbody><tr><td><div class="cell-ro">${v.pq||'—'}</div></td><td><div class="cell-ro">${v.pu||'—'}</div></td></tr></tbody></table></div>
-    ${L('后台类目',RO(esc(s.cat)),true,'即货品类目，'+SH)}
-    ${L('是否可采',v.purchLock?RO('否'):`<div class="radios">${['是','否'].map(x=>`<label><input type="radio" name="iep" ${v.purch===x?'checked':''} onchange="IE.v.purch='${x}'">${x}</label>`).join('')}</div>`,true,v.purchLock?'原料制造的成品固定不可采':'')}
-    ${L('货品描述',RO(esc(b.desc||'')),false,SH)}${L('产地',RO(esc(b.origin)),false,SH)}${L('品牌',RO(esc(b.brand)),false,SH)}
-    ${L('货品图片',RO('随商品主图（第 1 张）'),true,SH)}
-  </div></div></div>`;
-  if(kind!=='raw')h+=`<div class="sec"><div class="sec-hd">创建方式</div><div class="sec-bd"><div class="g2">${L('创建方式',RO(v.way),false,kind==='std'?'标品固定成品采购（R-11）':'原料做的成品固定原料制造')}${v.raw?L('原料货品',RO(`<span class="mono">${v.raw}</span>`)):''}</div></div></div>`;
-  if(sgp)h+=`<div class="sec"><div class="sec-hd">BCRS 押金信息<span class="tip">仅 SGP 站点</span></div><div class="sec-bd"><div class="g2">${L('押金单价',`<input type="number" min="0" step="0.01" value="${esc(e.bcrsPrice)}" placeholder="例如 0.10" onchange="IE.e.bcrsPrice=this.value">`)}${L('预览',RO(e.bcrsPrice?`每 1 ${v.mu} 押金 S$${Number(e.bcrsPrice).toFixed(2)}`:'—'))}</div></div></div>`;
-  h+=`<div class="sec"><div class="sec-hd">货品仓储信息</div><div class="sec-bd"><div class="g3">
-    ${L('效期管理',RO(rb.validP),false,shared?'多个商品共用，不随商品编辑改':SH)}${L('保质期',RO(rb.period?rb.period+rb.periodUnit:'—'),false,shared?'':SH)}</div><div class="fh" style="margin-top:6px">保存条件、履约方式在「货品 › 仓库信息」由仓库维护</div>
-    <div class="fr" style="margin-top:14px;max-width:640px"><label class="fl">入仓超收</label><table><thead><tr><th>仓库</th><th>超收比例(%)</th><th style="width:70px">操作</th></tr></thead><tbody>${e.over.map((x,k)=>`<tr><td><select onchange="IE.e.over[${k}].wh=this.value">${opts(WAREHOUSES,x.wh)}</select></td><td><input type="number" min="0" max="100" step="0.01" value="${x.rate}" onchange="IE.e.over[${k}].rate=this.value"></td><td><button class="lk dg" onclick="IE.e.over.splice(${k},1);openItemEditKeep()">删除</button></td></tr>`).join('')}</tbody></table><div style="margin-top:6px"><button class="btn sm" onclick="IE.e.over.push({wh:'',rate:''});openItemEditKeep()">添加</button></div></div>
-    <div class="g3" style="margin-top:14px">${L('质检扣点',`<div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="100" value="${esc(e.fee)}" onchange="IE.e.fee=this.value">%</div>`)}${L('质检拒收下限',`<div style="display:flex;gap:6px;align-items:center"><input type="number" min="0" max="100" value="${esc(e.rej)}" onchange="IE.e.rej=this.value">%</div>`)}
-    ${L('第三方检测报告',`<div class="thumbs">${Array.from({length:e.report},(_,k)=>`<div class="thumb" style="width:56px;height:56px">报告${k+1}</div>`).join('')}<div class="up" style="width:56px;height:56px" onclick="IE.e.report++;openItemEditKeep()">＋</div></div>`)}
-    ${L('其他检测报告',`<select onchange="IE.e.other=this.value"><option value="">请选择</option></select>`,false,'选项取字典 OTHER_INSPECT')}</div></div></div>`;
-  $('bBody').innerHTML=h;
-  $('bFt').innerHTML=`<button class="btn" onclick="closeBatch()">取消</button><button class="btn pr" onclick="saveItemEdit()">保存</button>`;
-  $('mask').classList.add('on');$('dwBatch').classList.add('on')}
-function openItemEditKeep(){openItemEdit(IE.kind,IE.kind==='fin'?IE.o.sku:undefined,IE)}
-function saveItemEdit(){const s=SPUS[dCur];const e=IE.e;
-  for(const x of e.over){if(!x.wh){toast('入仓超收：请选择仓库',true);return}const v=Number(x.rate);if(!(v>=0&&v<=100)){toast('超收比例须为 0~100',true);return}}
-  if(e.fee!==''&&!(e.fee>=0&&e.fee<=100)){toast('质检扣点须为 0~100',true);return}if(e.rej!==''&&!(e.rej>=0&&e.rej<=100)){toast('质检拒收下限须为 0~100',true);return}
-  if(!IE.v.purchLock&&!IE.ok){const was=IE.o.purch==='否'?'否':'是';if(was!==IE.v.purch){const s2=SPUS[dCur];const n=IE.kind==='raw'?spusOfRaw(IE.o.code).length:1;
-    IE.ask=IE.v.purch==='否'?`是否可采改为「否」：采购单、采购计划都不能再选它（使用它的商品 ${n} 个）${IE.kind==='std'?'；SKU 库存不足 1 份时自动下架，补货后不会自动上架':''}。`:`是否可采改为「是」：采购单可以选它。之前因不可采自动下架的 SKU 不会自动上架。`;openItemEditKeep();return}}
-  IE.o.ext=e;if(!IE.v.purchLock){const was=IE.o.purch==='否'?'否':'是';IE.o.purch=IE.v.purch;if(was!==IE.v.purch)log(s,'货品',IE.code,'设为'+(IE.v.purch==='是'?'可采':'不可采'))}
-  log(s,'货品',IE.code,'编辑货品');closeBatch();toast('已保存');openDetail(dCur,'货品')}
+
 function closeBatch(){$('dwBatch').classList.remove('on');if(!$('dwDetail').classList.contains('on')&&!$('dwForm').classList.contains('on'))$('mask').classList.remove('on')}
 /* ============ 勾选与批量操作 ============ */
 const SEL=new Set();
