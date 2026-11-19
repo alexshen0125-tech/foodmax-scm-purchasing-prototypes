@@ -291,7 +291,8 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
     </div>
   </div>
   <div class="panel">
-    <div class="tabs" id="tabs"></div>
+    <div class="tabs" id="srcTabs" style="margin-bottom:4px;font-size:14px"></div>
+    <div class="tabs" id="tabs" style="border-bottom:none;margin-bottom:8px"></div>
     <div class="toolbar"><button class="btn pr" id="btnNew" onclick="openCreate()">＋ 新建商品（自营）</button>
       <div class="dd" id="ddSpu"><button class="btn" onclick="toggleDd(event,'ddSpu')">商品批量操作 ⌄</button><div class="dd-menu" id="ddSpuMenu"></div></div>
       <div class="dd" id="ddItem"><button class="btn" onclick="toggleDd(event,'ddItem')">货品批量操作 ⌄</button><div class="dd-menu" id="ddItemMenu"></div></div>
@@ -474,6 +475,15 @@ let SPUS=[
   {spu:'SPU261118090005',pl:['示例报价单 1'],name:'西瓜（按 kg）',en:'Watermelon (By Weight)',cat:'瓜类',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202611180004',creator:'王帅',at:'2026-11-18 09:25',status:'在售',
    base:{alias:'称重西瓜',desc:'按重量卖，下单按规格重量计价，送货后按实际称重多退少补。',origin:'马来西亚',brand:'',storage:'常温',fulfil:'常温履约',validP:'是',period:'7',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
    skus:[{sku:'SKU261118090011',qty:'5',su:'个',st:true,item:'item202611180005',bom:'BM2611180002',status:'在售'},{sku:'SKU261118090012',qty:'10',su:'箱',st:true,item:'item202611180006',bom:'BM2611180003',status:'在售'}]},
+  {spu:'SPU261109170003',name:'白醋 5L',en:'White Vinegar 5L',cat:'沙拉酱/酱料',part:'',attr:'标品',src:'三方',creator:'商家 BLENWELL FOOD PTE LTD',at:'2026-11-09 17:20',status:'在售',
+   std:{minPack:'桶',net:'5',netUnit:'L',stockIsPack:'是',stockUnit:'桶',item:'ITEM26110917000003'},base:{origin:'新加坡',storage:'常温',fulfil:'常温履约',validP:'是',period:'24',periodUnit:'月',halal:'非HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
+   skus:[{sku:'SKU261109170003',qty:'1',su:'',status:'在售'}]},
+  {spu:'SPU261027100004',name:'金龙鱼珍珠米25KG',en:'Arawana Pearl Rice 25KG',cat:'大米',part:'',attr:'标品',src:'三方',creator:'商家 DIONG SUPPLY PTE. LTD.',at:'2026-10-27 10:15',status:'已下架',
+   std:{minPack:'袋',net:'25',netUnit:'kg',stockIsPack:'是',stockUnit:'袋',item:'ITEM26102710000004'},base:{origin:'中国',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'非HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
+   skus:[{sku:'SKU261027100007',qty:'1',su:'份',status:'已下架'}]},
+  {spu:'SPU260918140009',name:'ASINA苹果味汽水 HCS 325mlX24',en:'ASINA Apple Soda 325ml x24',cat:'碳酸类',part:'',attr:'标品',src:'三方',creator:'商家 MAYA CORPORATION PTE. LTD.',at:'2026-09-18 14:30',status:'在售',
+   std:{minPack:'罐',net:'325',netUnit:'ml',stockIsPack:'否',stockUnit:'箱',packQty:'24',item:'ITEM26091814000009'},base:{origin:'马来西亚',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
+   skus:[{sku:'SKU260918140016',qty:'1',su:'份',status:'在售'}]},
   {spu:'SPU260930140008',name:'椰子水',en:'Coconut Water',cat:'果汁',part:'',attr:'标品',src:'三方',creator:'商家 Tropical Fresh',at:'2026-09-30 14:08',status:'在售',
    std:{minPack:'瓶',net:'500',netUnit:'ml',stockIsPack:'是',stockUnit:'瓶',item:'ITEM260930140003'},base:{},skus:[{sku:'SKU260930140021',qty:'1',su:'',status:'在售'}]}
 ];
@@ -544,9 +554,10 @@ function filtered(){const c=codeQ();const its=s=>itemsOf(s).filter(x=>x.code);
     if(qv('qSt')&&s.skus.some(k=>k.st)!==(qv('qSt')==='是'))return false;
     if(qv('qCreator')&&!has(s.creator,qv('qCreator')))return false;
     const d=s.at.slice(0,10);if(qv('qD1')&&d<qv('qD1'))return false;if(qv('qD2')&&d>qv('qD2'))return false;
-    return tab==='全部'||s.status===tab})}
+    return s.src===SRC&&(tab==='全部'||s.status===tab)})}
 let MORE_ON=false;function toggleMore(){MORE_ON=!MORE_ON;document.querySelectorAll('.fi.more').forEach(e=>e.style.display=MORE_ON?'':'none');$('moreBtn').textContent=MORE_ON?'收起筛选 ▴':'更多筛选 ▾'}
-function renderTabs(){const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
+let SRC='自营';
+function renderTabs(){$('srcTabs').innerHTML=['自营','三方'].map(t=>`<span class="${t===SRC?'on':''}" style="font-weight:${t===SRC?600:400}" onclick="SRC='${t}';tab='全部';SEL.clear();renderList()">${t}商品 <span style="color:var(--tt);font-size:12px">${SPUS.filter(x=>x.src===t).length}</span></span>`).join('');const all=['全部','在售','售罄','已下架'];$('tabs').innerHTML=all.map(t=>`<span class="${t===tab?'on':''}" onclick="tab='${t}';renderList()">${t}</span>`).join('')}
 function itemStTag(s,k){const v=s.attr==='非标品'?(k.itemStatus||'启用'):((s.std||{}).status||'启用');return v==='待启用'?'<span class="tag ty">待启用</span>':v==='停用'?'<span class="tag tgr">停用</span>':'<span class="tag tg">启用</span>'}
 function purchTag(s){const no=s.attr==='非标品'||((s.std||{}).purch==='否');return no?'<span class="tag ty">不可采</span>':'<span class="tag tg">可采</span>'}
 function skuStatusTag(s){if(s.itemStatus==='待启用')return'<span class="tag ty">货品待启用</span>';return s.status==='在售'?'<span class="tag tg">在售</span>':'<span class="tag tgr">已下架</span>'}
@@ -561,7 +572,7 @@ function renderList(){renderTabs();const rows=filtered();const cq=codeQ();
     if(open){h+=`<tr class="sub"><td></td><td></td><td colspan="10" style="padding:8px 10px"><table><thead><tr><th>SKU 编码</th><th>SKU 名称</th><th>${s.attr==='非标品'?'成品货品编码':'货品编码'}</th>${s.attr==='非标品'?'<th>原料编码</th><th>BOM 编号</th>':''}<th>货品状态</th><th>是否可采</th><th>SKU 状态</th></tr></thead><tbody>`+
       s.skus.map(k=>`<tr><td class="mono">${k.sku}</td><td>${esc(skuNameOf(s,k))}</td><td class="mono">${s.attr==='非标品'?k.item:s.std.item}</td>${s.attr==='非标品'?`<td class="mono">${s.rawCode}</td><td class="mono">${k.bom}</td>`:''}<td>${itemStTag(s,k)}</td><td>${purchTag(s)}</td><td>${stTagK(k.status)}</td></tr>`).join('')+`</tbody></table></td></tr>`}
     return h}).join(''):`<tr><td colspan="12" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;renderSel();
-  renderSel();$('btnNew').disabled=!canSpu();$('btnNew').title=canSpu()?'':'当前岗位没有新建商品权限';$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
+  renderSel();$('btnNew').disabled=!canSpu()||SRC==='三方';$('btnNew').title=SRC==='三方'?'三方商品由商家在商家端新建':(canSpu()?'':'当前岗位没有新建商品权限');$('pager').innerHTML=`共 ${rows.length} 条 <select style="width:96px"><option>10 条/页</option></select>`}
 function toggleRow(k){openRows[k]=!openRows[k];renderList()}
 function resetQ(){QIDS.forEach(i=>$(i).value='');tab='全部';renderList()}
 
@@ -938,7 +949,7 @@ const BATCH_SPU=[{k:'shelfOn',t:'批量上架'},{k:'shelfOff',t:'批量下架'},
 const BATCH_ITEM=[{k:'itemOn',t:'批量启用'},{k:'itemOff',t:'批量停用'},{k:'purchY',t:'批量设为可采'},{k:'purchN',t:'批量设为不可采'},{k:'vendor',t:'批量设置默认供应商'},{k:'over',t:'批量设置入库超收'},{k:'qc',t:'批量设置质检扣点 / 拒收下限'}];
 const BATCH=[...BATCH_SPU,...BATCH_ITEM];
 function ddHtml(list,tip,perm){return`<div class="g">${tip}${perm?'':'<br><span style="color:var(--r)">当前岗位没有这类权限</span>'}</div>`+list.map(b=>{const on=perm&&(SEL.size||b.free);return`<a class="${on?'':'dis'}" onclick="${on?(b.k==='excel'?'closeDd();openExcel()':`openBatch('${b.k}')`):''}">${b.t}</a>`}).join('')}
-function renderDd(){$('ddSpuMenu').innerHTML=ddHtml(BATCH_SPU,'作用于勾选商品下的 SPU / SKU（商品运营）',canSpu());$('ddItemMenu').innerHTML=ddHtml(BATCH_ITEM,'作用于勾选商品关联的货品、原料（采购）',canItem())}
+function renderDd(){$('ddSpuMenu').innerHTML=ddHtml(BATCH_SPU,'作用于勾选商品下的 SPU / SKU（商品运营）',canSpu());$('ddItemMenu').innerHTML=ddHtml(BATCH_ITEM,SRC==='三方'?'三方商品的货品由商家维护，不在这里批量操作':'作用于勾选商品关联的货品、原料（采购）',canItem()&&SRC==='自营')}
 function closeDd(){['ddSpu','ddItem'].forEach(id=>{const d=$(id);if(d)d.classList.remove('on')})}
 function toggleDd(e,id){e.stopPropagation();const was=$(id).classList.contains('on');closeDd();if(!was)$(id).classList.add('on')}
 document.addEventListener('click',closeDd);
