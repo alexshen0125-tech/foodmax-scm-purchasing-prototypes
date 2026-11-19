@@ -279,6 +279,7 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
 </aside>
 <main><div id="productListPage">
   <div class="crumb">商品 / 商品列表</div>
+  <div class="tabs" id="srcTabs" style="margin-bottom:12px;font-size:15px;background:#fff;padding:0 18px;border:1px solid var(--bd2);border-radius:4px"></div>
   <div class="panel">
     <div class="filters">
       <div class="fi" style="width:220px"><label>后台类目</label><select id="qCat"><option value="">全部</option></select></div>
@@ -291,8 +292,7 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
     </div>
   </div>
   <div class="panel">
-    <div class="tabs" id="srcTabs" style="margin-bottom:4px;font-size:14px"></div>
-    <div class="tabs" id="tabs" style="border-bottom:none;margin-bottom:8px"></div>
+    <div class="tabs" id="tabs"></div>
     <div class="toolbar"><button class="btn pr" id="btnNew" onclick="openCreate()">＋ 新建商品（自营）</button>
       <div class="dd" id="ddSpu"><button class="btn" onclick="toggleDd(event,'ddSpu')">商品批量操作 ⌄</button><div class="dd-menu" id="ddSpuMenu"></div></div>
       <div class="dd" id="ddItem"><button class="btn" onclick="toggleDd(event,'ddItem')">货品批量操作 ⌄</button><div class="dd-menu" id="ddItemMenu"></div></div>
