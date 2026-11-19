@@ -349,18 +349,16 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
 </svg></div></div></div></section><section id="inventoryPage" hidden>
   <div class="crumb">商品 / 商货品库存列表</div>
   <div class="panel"><div class="filters">
-    <div class="fi" style="width:200px"><label>仓库：</label><select id="ivWh"><option value="">全部</option></select></div>
-    <div class="fi" style="width:180px"><label>SKU名称：</label><input id="ivSku" placeholder="请输入"></div>
-    <div class="fi" style="width:180px"><label>货品编码</label><input id="ivItem" placeholder="请输入"></div>
-    <div class="fi" style="width:300px"><label>库存变动日期：</label><div style="display:flex;gap:6px;align-items:center"><input type="date" id="ivD1"><span>至</span><input type="date" id="ivD2"></div></div>
-    <div class="fi" style="width:200px"><label>类目：</label><select id="ivCat"><option value="">全部</option></select></div>
-    <div class="fi" style="width:180px"><label>SPU名称：</label><input id="ivSpu" placeholder="请输入"></div>
-    <div class="fi" style="width:150px"><label>库存：</label><select id="ivStock"><option value="">全部</option></select></div>
+    <div class="fi" style="width:180px"><label>仓库</label><select id="ivWh"><option value="">全部</option></select></div>
+    <div class="fi" style="width:200px"><label>类目</label><select id="ivCat"><option value="">全部</option></select></div>
+    <div class="fi" style="width:150px"><label>商品属性</label><select id="ivAttr"><option value="">全部</option><option>标品</option><option>非标品</option></select></div>
+    <div class="fi" style="width:180px"><label>商品名称</label><input id="ivSpu" placeholder="模糊匹配"></div>
+    <div class="fi" style="width:180px"><label>货品名称 / 编码</label><input id="ivItem" placeholder="原料、成品都能搜"></div>
     <div class="fi" style="flex-direction:row;gap:8px"><button class="btn pr" onclick="renderInv()">查询</button><button class="btn" onclick="resetInv()">重置</button></div>
   </div></div>
   <div class="panel">
-    <div class="toolbar" style="align-items:center"><span id="ivSum" style="color:var(--ts);margin-right:auto"></span><button class="btn">导出</button></div>
-    <div style="overflow-x:auto"><table id="ivTable" class="ivt"></table></div>
+    <div class="toolbar" style="align-items:center"><span id="ivSum" style="color:var(--ts);margin-right:auto"></span><button class="lk" onclick="ivExpandAll()">全部展开</button>&nbsp;&nbsp;<button class="btn">导出</button></div>
+    <div style="overflow-x:auto"><table id="ivTable"></table></div>
   </div>
 </section></main>
 </div>
@@ -1287,33 +1285,41 @@ function zoomCreationFlow(delta){creationFlowScale=delta===0?1:Math.min(2.5,Math
 window.addEventListener('hashchange',renderCreationRoute);renderCreationRoute();
 
 /* ============ 商货品库存列表：字段照 SCM 货品库存页 h5-ddxm-intl-scm src/views/warehouse/components/product-inventory.vue ============ */
-let IV_TAB='成品库存';
+let IV_OPEN={};
 const WH_CODE={'SG 大仓':'WH-SG01','SG 冷库':'WH-SG02'};
 function hnum(str,mod){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%100000;return h%mod}
-function catPath(c){const g=CATS.find(x=>x.items.includes(c));return[g?g.g:'—',c||'—']}
-function invRows(){const out=[];
-  SPUS.filter(s=>s.src==='自营').forEach(s=>{
-    const items=s.attr==='标品'?[{code:s.std.item,name:s.name,sku:s.skus[0],qtyPer:1,cost:1.85}]:s.skus.map(k=>({code:k.item,name:skuNameOf(s,k),sku:k,qtyPer:Number(k.qty),cost:3.2*Number(k.qty)}));
-    items.forEach(it=>WAREHOUSES.forEach(w=>{const tot=hnum(it.code+w,180),lock=hnum(w+it.code,Math.max(1,Math.floor(tot/4)+1)),pre=hnum(it.code,3),bad=hnum(it.code+'b'+w,4);
-      const avail=Math.max(0,tot-lock-bad),availN=Math.max(0,tot-(lock-pre<0?0:lock-pre)-pre-bad),c=+it.cost.toFixed(2);
-      const raw=s.attr==='非标品'?rawBy(s.rawCode):null;
-      out.push({kind:'成品',wh:w,code:it.code,name:it.name,spu:s.spu,spuName:s.name,sku:it.sku?it.sku.sku:'—',skuName:it.sku?skuNameOf(s,it.sku):'—',cat:s.cat,tot,lock,pre,avail,availN,bad,cost:c,raw,rawQty:raw?+(availN*it.qtyPer).toFixed(2):null,rawCost:raw?2.8:null,at:s.at})}))});
-  RAWS.forEach(r=>{const users=spusOfRaw(r.code);if(!users.length)return;WAREHOUSES.forEach(w=>{const tot=hnum(r.code+w,900)+20,lock=hnum(w+r.code,60),bad=hnum(r.code+'b',6);
-    out.push({kind:'原料',wh:w,code:r.code,name:r.name,spu:users.map(x=>x.spu).join('、'),spuName:users.map(x=>x.name).join('、'),sku:'—',skuName:'—',cat:r.cat,tot,lock,pre:0,avail:Math.max(0,tot-lock-bad),availN:Math.max(0,tot-lock-bad),bad,cost:2.8,raw:null,at:users[0].at,unit:r.unit})})});
-  const key=r=>(r.kind==='原料'?r.spuName.split('、')[0]:r.spuName)+'|'+(r.kind==='原料'?0:1)+'|'+r.code+'|'+r.wh;
-  return out.sort((a,b)=>key(a)<key(b)?-1:1)}
-const money2=v=>v==null?'—':'S$'+Number(v).toFixed(2);
+const r2n=v=>+Number(v).toFixed(2);
+/* 一个货品一行：非标品按原料汇总（未加工原料 + 已加工成品折合），标品按货品 */
+function invGroups(){const out=[];
+  RAWS.forEach(r=>{const users=spusOfRaw(r.code).filter(x=>x.src==='自营');if(!users.length)return;
+    WAREHOUSES.forEach(w=>{const rawQty=hnum(r.code+w,400)+20,rawOut=hnum(w+r.code,25);
+      const fins=users.flatMap(s=>s.skus.map(k=>{const q=hnum(k.item+w,120),fo=hnum(w+k.item,Math.floor(q/5)+1),per=Number(k.qty);
+        return{spu:s,code:k.item,name:skuNameOf(s,k),per,unitPack:k.su,qty:q,out:fo,avail:Math.max(0,q-fo),fold:r2n(q*per),status:k.itemStatus||'启用'}}));
+      const fold=r2n(fins.reduce((a,f)=>a+f.fold,0)),foldAvail=r2n(fins.reduce((a,f)=>a+f.avail*f.per,0)),foldOut=r2n(fins.reduce((a,f)=>a+f.out*f.per,0));
+      out.push({key:r.code+'|'+w,attr:'非标品',wh:w,code:r.code,name:r.name,spus:users,cat:r.cat,unit:r.unit,raw:rawQty,fold,total:r2n(rawQty+fold),avail:r2n(rawQty-rawOut+foldAvail),out:r2n(rawOut+foldOut),price:2.8,fins})})});
+  SPUS.filter(s=>s.src==='自营'&&s.attr==='标品').forEach(s=>WAREHOUSES.forEach(w=>{const d=s.std,q=hnum(d.item+w,300),oq=hnum(w+d.item,Math.floor(q/5)+1);
+    out.push({key:d.item+'|'+w,attr:'标品',wh:w,code:d.item,name:s.name,spus:[s],cat:s.cat,unit:d.stockUnit,raw:null,fold:q,total:q,avail:Math.max(0,q-oq),out:oq,price:1.85*(d.stockIsPack==='否'?Number(d.packQty||1):1),fins:[]})}));
+  return out.sort((a,b)=>(a.spus[0].name+a.wh)<(b.spus[0].name+b.wh)?-1:1)}
+const money2=v=>v==null?'—':'S$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 function ivFiltered(){const q=id=>($(id).value||'').trim();
-  return invRows().filter(r=>(!q('ivWh')||r.wh===q('ivWh'))&&(!q('ivSku')||has(r.skuName,q('ivSku')))&&(!q('ivItem')||has(r.code,q('ivItem')))&&(!q('ivCat')||r.cat===q('ivCat'))&&(!q('ivSpu')||has(r.spuName,q('ivSpu')))&&(!q('ivD1')||r.at.slice(0,10)>=q('ivD1'))&&(!q('ivD2')||r.at.slice(0,10)<=q('ivD2')))}
-function renderInv(){
-  const rows=ivFiltered(),fin=true,tax=1.09;
-  const valN=r=>+(r.avail*r.cost).toFixed(2),valT=r=>+(r.avail*r.cost*tax).toFixed(2);
-  $('ivSum').innerHTML=`库存货品总数：${rows.length} &nbsp; 库存总货值(含税)：${money2(rows.reduce((a,r)=>a+valT(r),0))} &nbsp; 库存总货值(未税)：${money2(rows.reduce((a,r)=>a+valN(r),0))}`;
-  const H=['仓库编号','所属仓库','货品编码','货品名称','货品属性',...(fin?['SPU编码','SPU名称','SKU编码','SKU名称']:[]),'一级分类','二级分类','总库存','待出库',...(fin?['预售待出库']:[]),'可用库存','可用库存（新）','不可用库存','成本均价(未税)','成本均价(含税)','库存货值(未税)','库存货值(含税)',...(fin?['原料货品编码','原料货品名称','原料理论库存','原料成本均价（含税）','原料成本均价（未税）']:[]),'操作'];
-  const td=v=>`<td>${v}</td>`,tn=v=>`<td style="text-align:right" class="mono">${v}</td>`;
-  $('ivTable').innerHTML=`<thead><tr><th style="width:32px"><input type="checkbox"></th>${H.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`+(rows.length?rows.map(r=>{const [c1,c2]=catPath(r.cat);
-    return`<tr><td><input type="checkbox"></td>${td(`<span class="mono">${WH_CODE[r.wh]}</span>`)}${td(r.wh)}${td(`<span class="mono">${r.code}</span>`)}${td(esc(r.name))}${td(r.kind==='原料'?'<span class="tag tb">原料</span>':'<span class="tag tg">成品</span>')}${fin?td(`<span class="mono">${r.spu}</span>`)+td(esc(r.spuName))+td(`<span class="mono">${r.sku}</span>`)+td(esc(r.skuName)):''}${td(c1)}${td(c2)}${tn(r.tot)}${tn(r.lock)}${fin?tn(r.kind==='原料'?'—':r.pre):''}${tn(r.avail)}${tn(r.availN)}${tn(r.bad)}${tn(money2(r.cost))}${tn(money2(r.cost*tax))}${tn(money2(valN(r)))}${tn(money2(valT(r)))}${fin?(r.raw?td(`<span class="mono">${r.raw.code}</span>`)+td(esc(r.raw.name))+tn(r.rawQty+' '+r.raw.unit)+tn(money2(r.rawCost*tax))+tn(money2(r.rawCost)):td('—')+td('—')+tn('—')+tn('—')+tn('—')):''}<td><button class="lk" onclick="toast('（原型）跳转库存台账：${r.code} · ${r.wh}')">查看</button></td></tr>`}).join(''):`<tr><td colspan="${H.length+1}" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`)+'</tbody>'}
-function resetInv(){['ivWh','ivSku','ivItem','ivD1','ivD2','ivCat','ivSpu','ivStock'].forEach(i=>$(i).value='');renderInv()}
+  return invGroups().filter(g=>(!q('ivWh')||g.wh===q('ivWh'))&&(!q('ivCat')||g.cat===q('ivCat'))&&(!q('ivAttr')||g.attr===q('ivAttr'))&&(!q('ivSpu')||g.spus.some(s=>has(s.name,q('ivSpu'))))
+    &&(!q('ivItem')||has(g.code,q('ivItem'))||has(g.name,q('ivItem'))||g.fins.some(f=>has(f.code,q('ivItem'))||has(f.name,q('ivItem')))))}
+function renderInv(){const rows=ivFiltered(),tax=1.09;
+  $('ivSum').innerHTML=`共 ${rows.length} 行 &nbsp; 库存总货值（含税）：${money2(rows.reduce((a,g)=>a+g.total*g.price*tax,0))}`;
+  const H=['','仓库','货品编码','货品名称','商品属性','所属商品','未加工原料','已加工成品（折合）','合计库存','可用库存','待出库','单位','库存货值（含税）','操作'];
+  const tn=v=>`<td style="text-align:right" class="mono">${v}</td>`;
+  let h=`<thead><tr>${H.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+  if(!rows.length)h+=`<tr><td colspan="${H.length}" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;
+  rows.forEach(g=>{const op=IV_OPEN[g.key],ns=g.attr==='非标品';
+    h+=`<tr><td class="exp" ${ns?`onclick="IV_OPEN['${g.key}']=!IV_OPEN['${g.key}'];renderInv()"`:''}>${ns?(op?'▾':'▸'):''}</td><td>${g.wh}</td><td class="mono">${g.code}</td><td><b style="font-weight:500">${esc(g.name)}</b></td><td>${ns?'<span class="tag tb">非标品</span>':'<span class="tag tg">标品</span>'}</td><td>${g.spus.map(s=>esc(s.name)).join('、')}</td>
+      ${tn(ns?g.raw:'—')}${tn(ns?g.fold:'—')}<td style="text-align:right" class="mono"><b>${g.total}</b></td>${tn(g.avail)}${tn(g.out)}<td>${g.unit}</td>${tn(money2(g.total*g.price*tax))}<td><button class="lk" onclick="toast('（原型）查看库存流水：${g.code} · ${g.wh}')">流水</button></td></tr>`;
+    if(ns&&op)h+=`<tr class="sub"><td></td><td colspan="${H.length-1}" style="padding:8px 10px"><table><thead><tr><th>成品货品编码</th><th>成品名称</th><th>所属商品</th><th>每份用原料</th><th>成品库存</th><th>成品可用库存</th><th>成品待出库</th><th>成品单位</th><th>折合原料</th><th>成品状态</th></tr></thead><tbody>`+
+      `<tr style="background:#f7faff"><td class="mono">${g.code}</td><td>${esc(g.name)}（未加工）</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="mono" style="text-align:right">${g.raw} ${g.unit}</td><td>—</td></tr>`+
+      g.fins.map(f=>`<tr><td class="mono">${f.code}</td><td>${esc(f.name)}</td><td>${esc(f.spu.name)}</td><td class="mono">${f.per} ${g.unit}</td><td class="mono" style="text-align:right">${f.qty}</td><td class="mono" style="text-align:right">${f.avail}</td><td class="mono" style="text-align:right">${f.out}</td><td>${f.unitPack}</td><td class="mono" style="text-align:right">${f.fold} ${g.unit}</td><td>${f.status==='停用'?'<span class="tag tgr">停用</span>':f.status==='待启用'?'<span class="tag ty">待启用</span>':'<span class="tag tg">启用</span>'}</td></tr>`).join('')+
+      `<tr><td colspan="8" style="text-align:right;color:var(--ts)">合计（原料口径）</td><td class="mono" style="text-align:right"><b>${g.total} ${g.unit}</b></td><td></td></tr></tbody></table></td></tr>`});
+  $('ivTable').innerHTML=h+'</tbody>'}
+function ivExpandAll(){const all=ivFiltered().filter(g=>g.attr==='非标品');const on=!all.every(g=>IV_OPEN[g.key]);all.forEach(g=>IV_OPEN[g.key]=on);renderInv()}
+function resetInv(){['ivWh','ivCat','ivAttr','ivSpu','ivItem'].forEach(i=>$(i).value='');renderInv()}
 function renderInvRoute(){const on=location.hash==='#item-inventory';$('inventoryPage').hidden=!on;
   if(on){$('productListPage').hidden=true;$('creationFlowPage').hidden=true;$('productListNav').classList.remove('on');renderInv()}
   $('invNav').classList.toggle('on',on)}
