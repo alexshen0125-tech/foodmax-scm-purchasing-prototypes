@@ -373,6 +373,7 @@ const CATS=[
   {g:'肉禽',items:['猪肉','猪骨','鸡肉','牛肉','羊肉','鸭肉']},
   {g:'水产海鲜',items:['三文鱼','冷冻鱼','贝类']},
   {g:'蔬菜',items:['叶菜']},
+  {g:'水果',items:['瓜类']},
   {g:'饮料',items:['碳酸饮料','果汁']}
 ];
 const PARTS={ /* 商品部位：后台类目挂载 product_classification 字段才出现（李南凯 PRD §7.2 BR-07） */
@@ -403,6 +404,7 @@ let RAWS=[
   {code:'item202609120011',name:'大白菜原料',en:'Napa Cabbage Raw',unit:'kg',cat:'叶菜',status:'启用',purch:'是'},
   {code:'item202610080014',name:'冻鸡丁原料',en:'Frozen Diced Chicken Raw',unit:'kg',cat:'鸡肉',status:'启用',purch:'是'},
   {code:'item202609220005',name:'鲜牛腿肉原料',en:'Fresh Beef Leg Raw',unit:'kg',cat:'牛肉',status:'启用',purch:'否'},
+  {code:'item202611180004',name:'西瓜原料',en:'Watermelon Raw',unit:'kg',cat:'瓜类',status:'启用',purch:'是'},
   {code:'item202610280007',name:'冰鲜去骨猪后腿肉原料',en:'Chilled Boneless Pork Hind Leg Raw',unit:'kg',cat:'猪肉',status:'启用',purch:'是'},
   {code:'item202611030015',name:'鸡大胸原料',en:'Chicken Breast Raw',unit:'g',cat:'鸡肉',status:'启用',purch:'是'}
 ];
@@ -450,6 +452,13 @@ let SPUS=[
    std:{minPack:'罐',net:'330',netUnit:'ml',stockIsPack:'是',stockUnit:'罐',packQty:'',item:'item202611170003',bcrs:'是',status:'待启用',purch:'是'},
    base:{origin:'新加坡',brand:'7UP',storage:'常温',fulfil:'常温履约',validP:'是',period:'12',periodUnit:'月',halal:'HALAL',halalShow:'是',appExp:'不展示',sale:'销售品'},
    skus:[{sku:'SKU261117100001',qty:'1',su:'',status:'已下架'}]},
+  {spu:'SPU261118090001',pl:['示例报价单 1'],name:'西瓜（按个）',en:'Watermelon (Per Piece)',cat:'瓜类',part:'',attr:'标品',src:'自营',creator:'王帅',at:'2026-11-18 09:10',status:'在售',
+   std:{minPack:'个',net:'5',netUnit:'kg',stockIsPack:'是',stockUnit:'个',packQty:'',item:'item202611180001',bcrs:'否',status:'启用',purch:'是'},
+   base:{alias:'整个西瓜',desc:'整个西瓜按个卖，单个约 5kg，按件计价不称重。',origin:'马来西亚',brand:'',storage:'常温',fulfil:'常温履约',validP:'是',period:'7',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261118090001',qty:'1',su:'',status:'在售'},{sku:'SKU261118090002',qty:'3',su:'箱',status:'在售'}]},
+  {spu:'SPU261118090005',pl:['示例报价单 1'],name:'西瓜（按 kg）',en:'Watermelon (By Weight)',cat:'瓜类',part:'',attr:'非标品',src:'自营',stockUnit:'kg',rawCode:'item202611180004',creator:'王帅',at:'2026-11-18 09:25',status:'在售',
+   base:{alias:'称重西瓜',desc:'按重量卖，下单按规格重量计价，送货后按实际称重多退少补。',origin:'马来西亚',brand:'',storage:'常温',fulfil:'常温履约',validP:'是',period:'7',periodUnit:'天',halal:'非HALAL',halalShow:'是',appExp:'展示',sale:'销售品'},
+   skus:[{sku:'SKU261118090011',qty:'5',su:'个',st:true,item:'item202611180005',bom:'BM2611180002',status:'在售'},{sku:'SKU261118090012',qty:'10',su:'箱',st:true,item:'item202611180006',bom:'BM2611180003',status:'在售'}]},
   {spu:'SPU260930140008',name:'椰子水',en:'Coconut Water',cat:'果汁',part:'',attr:'标品',src:'三方',creator:'商家 Tropical Fresh',at:'2026-09-30 14:08',status:'在售',
    std:{minPack:'瓶',net:'500',netUnit:'ml',stockIsPack:'是',stockUnit:'瓶',item:'ITEM260930140003'},base:{},skus:[{sku:'SKU260930140021',qty:'1',su:'',status:'在售'}]}
 ];
