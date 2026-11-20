@@ -611,8 +611,8 @@ function afterSet(k){
   if(k==='cat'){if(!PARTS[F.cat]||!PARTS[F.cat].includes(F.part))F.part='';if(!BCRS_CATS.includes(F.cat))F.bcrs='否'}
   if(k==='attr'){F.rows=[newRow()];F.rows[0].su='';if(F.attr==='非标品'){F.bcrs='否'}}
   if(k==='nsUnit'){F.rawCode=''}
-  if(k==='rawMode'){F.rawCode=''}
-  if(k==='rawCode'){const r=rawBy(F.rawCode);if(r){if(!F.cat)F.cat=r.cat}}
+  if(k==='rawMode'){F.rawCode='';if(F.rawMode==='已有')F.nsUnit=''}
+  if(k==='rawCode'){const r=rawBy(F.rawCode);F.nsUnit=r?r.unit:'';if(r){if(!F.cat)F.cat=r.cat}}
   if(k==='stockIsPack'&&F.stockIsPack==='是'){F.stockUnit=F.minPack;F.packQty=''}
   if(k==='minPack'&&F.stockIsPack==='是')F.stockUnit=F.minPack;
 }
@@ -710,9 +710,11 @@ function stdSpecBlock(ed){const lock=ed?'disabled':'';
   return h}
 
 function nsSpecBlock(ed){
-  let h=`<div class="g2" style="margin-bottom:14px"><div class="fr"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">即原料货品的计量单位，所有规格的售卖规格单位都锁定为它</span></label>
-    <select ${ed?'disabled':''} class="${showErr&&!F.nsUnit?'err':''}" onchange="set('nsUnit',this.value)">${opts(MEASURE_UNIT,F.nsUnit)}</select>${E(!F.nsUnit&&'请选择库存单位')}</div>
-    <div class="fr"><label class="fl"><span class="rq">*</span>原料货品</label><div class="radios">${['新建','已有'].map(v=>`<label><input type="radio" name="rm" ${ed?'disabled':''} ${F.rawMode===v?'checked':''} onchange="set('rawMode','${v}')">${v==='新建'?'新建原料':'选择已有原料'}</label>`).join('')}</div></div></div>`;
+  /* 先定原料：新建原料 → 手选库存单位；选已有原料 → 库存单位由原料计量单位带出（只读） */
+  const unitSel=F.rawMode==='新建'?`<select ${ed?'disabled':''} class="${showErr&&!F.nsUnit?'err':''}" onchange="set('nsUnit',this.value)">${opts(MEASURE_UNIT,F.nsUnit)}</select>${E(!F.nsUnit&&'请选择库存单位')}`
+    :`<div class="ro">${F.nsUnit?F.nsUnit+'<span class="fh">取自所选原料的计量单位</span>':'<span style="color:var(--tt)">选择原料后自动带出</span>'}</div>`;
+  let h=`<div class="g2" style="margin-bottom:14px"><div class="fr"><label class="fl"><span class="rq">*</span>原料货品</label><div class="radios">${['新建','已有'].map(v=>`<label><input type="radio" name="rm" ${ed?'disabled':''} ${F.rawMode===v?'checked':''} onchange="set('rawMode','${v}')">${v==='新建'?'新建原料':'选择已有原料'}</label>`).join('')}</div></div>
+    <div class="fr"><label class="fl"><span class="rq">*</span>库存单位<span class="hint">即原料货品的计量单位，所有规格的售卖规格单位都锁定为它</span></label>${unitSel}</div></div>`;
   if(F.rawMode==='新建'){
     h+=`<div class="box on"><div class="raw-hd"><span class="tag tg">新建原料</span><span class="fh">提交时随商品一起建，名称和字段都取自本页，不用另填</span></div>
     <div class="dl"><div><div class="k">原料名称（中文）</div><div class="v" id="rawZh"></div></div><div><div class="k">原料名称（英文）</div><div class="v" id="rawEn"></div></div>
@@ -721,8 +723,8 @@ function nsSpecBlock(ed){
     if(sim.length)h+=`<div class="warn">货品类目「${esc(F.cat)}」下已有计量单位为 ${F.nsUnit} 的原料：${sim.map(x=>`${esc(x.name)}（<span class="mono">${x.code}</span>）<button class="btn sm" onclick="F.rawMode='已有';set('rawCode','${x.code}')">改为选它</button>`).join(' ')} 同一种原料拆成不同商品卖时请选已有的，不要重复建。</div>`;
   }else{
     const r=rawBy(F.rawCode);
-    if(!ed){const cand=RAWS.filter(x=>x.status==='启用'&&x.unit===F.nsUnit&&(!F.cat||x.cat===F.cat));
-      h+=`<div class="fr" style="margin-bottom:10px;max-width:640px"><select class="${showErr&&!F.rawCode?'err':''}" ${F.nsUnit?'':'disabled'} onchange="set('rawCode',this.value)"><option value="">${F.nsUnit?'输入编码/名称搜索原料货品（只列启用中、同货品类目、计量单位为 '+F.nsUnit+' 的原料）':'请先选择库存单位'}</option>${cand.map(x=>`<option value="${x.code}"${x.code===F.rawCode?' selected':''}>${x.code} - ${esc(x.name)}（${x.unit}）</option>`).join('')}</select>${E(!F.rawCode&&'请选择原料货品')}</div>`}
+    if(!ed){const cand=RAWS.filter(x=>x.status==='启用'&&MEASURE_UNIT.includes(x.unit)&&(!F.cat||x.cat===F.cat));
+      h+=`<div class="fr" style="margin-bottom:10px;max-width:640px"><select class="${showErr&&!F.rawCode?'err':''}" onchange="set('rawCode',this.value)"><option value="">输入编码/名称搜索原料货品（只列启用中、同货品类目的原料）</option>${cand.map(x=>`<option value="${x.code}"${x.code===F.rawCode?' selected':''}>${x.code} - ${esc(x.name)}（${x.unit}）</option>`).join('')}</select>${E(!F.rawCode&&'请选择原料货品')}</div>`}
     if(r){const own=ed?SPUS[F.idx].spu:'';const ex=existingFinished(r.code).filter(e=>!own||!SPUS[F.idx].skus.some(k=>k.item===e.item));
       h+=`<div class="box on"><div class="raw-hd"><span class="tag tb">已有原料</span><span class="fh">${ed?'原料只读；新加的规格挂在这个原料下':'原料只读，不会改动；本次只新建成品、BOM 和 SKU'}</span></div>
       <div class="dl" style="margin-bottom:10px"><div><div class="k">原料编码</div><div class="v mono">${r.code}</div></div><div><div class="k">原料名称</div><div class="v">${esc(r.name)}<br><span class="fh">${esc(r.en)}</span></div></div>
@@ -799,7 +801,7 @@ function validate(){const e=[];const z=zhErr(F.name),en=enErr(F.en);if(z)e.push(
   if(!F.attr)e.push('请选择商品属性');
   if(F.attr==='标品'){if(!F.minPack)e.push('请选择最小包装单位');if(!(Number(F.net)>0))e.push('请填写净含量（大于 0）');if(!F.netUnit)e.push('请选择净含量单位');
     if(F.stockIsPack==='否'){if(!F.stockUnit)e.push('请选择库存单位');if(!(F.packQty>1))e.push('请填写每库存单位含最小包装数')}}
-  if(F.attr==='非标品'){if(!F.nsUnit)e.push('请选择库存单位');if(F.rawMode==='已有'&&!F.rawCode)e.push('请选择原料货品')}
+  if(F.attr==='非标品'){if(F.rawMode==='新建'&&!F.nsUnit)e.push('请选择库存单位');if(F.rawMode==='已有'&&!F.rawCode)e.push('请选择原料货品')}
   if(F.attr){const act=F.rows.filter(r=>!r.locked);if(!F.rows.length)e.push('至少添加 1 个售卖规格');
     const seen={};F.rows.forEach((r,i)=>{if(!r.locked){const q=qtyErr(r.qty,F.attr);if(q)e.push(`规格 ${i+1}：${q}`);if(F.attr==='非标品'&&!r.su)e.push(`规格 ${i+1}：请选择售卖单位`);
       }
