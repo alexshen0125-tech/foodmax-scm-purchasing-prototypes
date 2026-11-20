@@ -42,8 +42,9 @@ const SETTLE_TONE={'待进结算单':'t-gr','已进结算单':'t-b','已打款':
 const stTag=(t,tone)=>`<span class="tag ${tone[t]||'t-gr'}"><span class="dot"></span>${t}</span>`;
 window.rcpSettleTag=r=>stTag(settleSt(r),SETTLE_TONE);
 const isDiff=r=>r.type=='差异赔付';
-const kindOf=r=>isDiff(r)?'—':raKindLabel(r.ra);
-const resultOf=r=>isDiff(r)?'—':r.ra.status;
+// 11-20 沈亮：差异赔付默认 申诉类型=数量差异、核定结论=成立
+const kindOf=r=>isDiff(r)?'数量差异':raKindLabel(r.ra);
+const resultOf=r=>isDiff(r)?'成立':r.ra.status;
 const sum2=a=>+a.reduce((s,v)=>s+v,0).toFixed(2);
 const r2=n=>Math.round(n*100)/100;
 
@@ -209,7 +210,7 @@ window.rcpDetail=function(no,ops){
   drawer(`<div class="drawer-hd"><div><h3>赔付单 · ${r.compNo||'—'}</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">${ops?r.mer.name+' · ':''}${r.src} · ${r.retNo}</div></div><span class="x" onclick="closeDrawer()">×</span></div>
   <div class="drawer-bd">
     ${sec('基础信息')}
-    <div class="kv">${ops?kv('商家名称',r.mer.name)+kv('商家编码',`<span class="mono">${r.mer.code}</span>`):''}${kv('赔付单号',`<span class="mono">${r.compNo||'—'}</span>`)}${kv('赔付类型',r.type)}${kv('来源',r.src)}${kv('关联单号',`<span class="mono">${r.retNo}</span>`)}${isDiff(r)?kv('生成原因',r.closed?'大仓超时未入库，推送实际取回 0（无法取回）':'提货时实际取回少于应取回')+kv('生成时间',ra.at):kv('申诉类型',raKindLabel(ra))+kv('申诉时间',ra.at)+kv('核定时间',ra.reviewAt)+kv('核定结论',ra.status)+kv('核定说明',ra.note)}${ops?kv('推送状态',stTag(pushSt(r),PUSH_TONE))+kv('推送人',ra.pushedBy):''}${kv('推送时间',ra.pushedAt)}</div>
+    <div class="kv">${ops?kv('商家名称',r.mer.name)+kv('商家编码',`<span class="mono">${r.mer.code}</span>`):''}${kv('赔付单号',`<span class="mono">${r.compNo||'—'}</span>`)}${kv('赔付类型',r.type)}${kv('来源',r.src)}${kv('关联单号',`<span class="mono">${r.retNo}</span>`)}${isDiff(r)?kv('申诉类型',kindOf(r))+kv('核定结论',resultOf(r))+kv('生成原因',r.closed?'大仓超时未入库，推送实际取回 0（无法取回）':'提货时实际取回少于应取回')+kv('生成时间',ra.at):kv('申诉类型',raKindLabel(ra))+kv('申诉时间',ra.at)+kv('核定时间',ra.reviewAt)+kv('核定结论',ra.status)+kv('核定说明',ra.note)}${ops?kv('推送状态',stTag(pushSt(r),PUSH_TONE))+kv('推送人',ra.pushedBy):''}${kv('推送时间',ra.pushedAt)}</div>
     ${sec('赔付明细')}
     ${isDiff(r)?`<table><thead><tr><th>商品</th><th style="text-align:right">应取回数量</th><th style="text-align:right">实际取回数量</th><th style="text-align:right">差异数量</th><th style="text-align:right">${r.priceLabel}</th><th style="text-align:right">赔付金额</th></tr></thead><tbody>
       ${ra.items.map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.ret}</td><td style="text-align:right">${x.pick}</td><td style="text-align:right;color:var(--r)">${x.qty}</td><td style="text-align:right">${x.price==null?'—':money(x.price)}</td><td style="text-align:right">${x.price!=null?money(Math.round(x.ok*x.price*100)/100):money(0)}</td></tr>`).join('')}
