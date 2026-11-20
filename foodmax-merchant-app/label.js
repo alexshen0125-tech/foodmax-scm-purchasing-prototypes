@@ -61,6 +61,15 @@ css.textContent=`
 .lp-gatetip .go{color:var(--emerald-2);font-weight:700;text-decoration:underline;}
 .lp-seqlink{margin:12px 16px 0;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--sub);background:transparent;border:1px dashed var(--line);cursor:pointer;}
 .lp-seqlink:active{background:var(--muted);}
+.lp-log{margin:14px 16px 0;background:#fff;border-radius:12px;box-shadow:var(--sh-sm);overflow:hidden;}
+.lp-log .hd{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px 6px;font-size:13.5px;font-weight:700;color:var(--ink);}
+.lp-log .hd span{font-size:12px;font-weight:400;color:var(--sub);}
+.lp-log .it{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;min-height:48px;box-sizing:border-box;}
+.lp-log .it+.it{border-top:1px solid var(--line);}
+.lp-log .it .a{font-size:13px;color:var(--ink);}
+.lp-log .it .b{font-size:11.5px;color:var(--sub);margin-top:2px;}
+.lp-log .it .n{font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.lp-log .sub{padding:0 14px 6px;font-size:11.5px;color:var(--sub);border-bottom:1px solid var(--line);}
 .lpm-in{width:76px;height:44px;border:1.5px solid var(--line);border-radius:11px;text-align:center;font-size:17px;font-family:inherit;color:var(--ink);}
 .lpm-in:focus{border-color:var(--emerald);outline:none;}
 .lb-row .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
@@ -136,6 +145,7 @@ function renderPrint(box){
     <div class="lb-sum">${ps?`<div class="k"><div class="v">${needAll}</div><div class="l">应送数量</div></div><div class="k"><div class="v">${lock?'待回传':stockAll}</div><div class="l">在仓库存</div></div><div class="k"><div class="v">${lock?'待回传':should}</div><div class="l">需打标签数</div></div>`:`<div class="k"><div class="v">${should}</div><div class="l">应送货(张)</div></div>`}<div class="k"><div class="v g">${printed}</div><div class="l">已打印</div></div><div class="k"><div class="v r">${lock?'待回传':unpr}</div><div class="l">未打印</div></div>${ps&&!lock&&overAll?`<div class="k"><div class="v r">${overAll}</div><div class="l">多打</div></div>`:''}</div>
     ${ps?`<div class="bq-entry" id="lb-wms"><span>在仓库存 <span class="bq-tag ${({wms:'g',pending:'y',calc:'gr'})[PS_WMS()]}" title="演示：点击切换仓库回传状态">${PS_WMS_TXT()}</span></span><span class="c">${({wms:'已按回传数计算',pending:'回传后可打印',calc:'按系统推算计算'})[PS_WMS()]}</span></div>`:''}
     <div class="bq-entry" id="lb-bq"><span>📉 报缺记录${window.FM_SHORT&&window.FM_SHORT.count(state.date)?`（${window.FM_SHORT.count(state.date)}）`:''} <span class="bq-tag ${window.FM.DB.labelCutoff?'gr':'y'}" id="lb-cut" title="演示：点击切换截单状态">${window.FM.DB.labelCutoff?'已截单':'未截单'}</span></span><span class="c">缺货在标签详情里报 ›</span></div>
+    <div class="bq-entry" id="lb-log"><span>🧾 打印日志${lpLogsOf(state.date||'').length?`（${lpLogsOf(state.date||'').length}）`:''}</span><span class="c">每次打了哪些、打多少 ›</span></div>
     ${rs.length?whSet.map(w=>`
       <div class="lb-sec">${w}<span class="hint">${lock?'待回传':`${ps?'需打标签':'应送货'} ${byWh[w].reduce((a,r)=>a+r.qty,0)} 张`}</span></div>
       <div class="lb-tbl">${byWh[w].map(r=>{const pr=Math.min(r.qty,printedOf(r.key)),un=r.qty-pr;
@@ -151,6 +161,7 @@ function renderPrint(box){
     :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>该筛选下暂无应送货标签</h4><p>切换配送日期 / 仓库看看</p></div>`}
     <div style="height:12px"></div>`;
   df.bind(box);
+  const lg=box.querySelector('#lb-log');if(lg)lg.onclick=openPrintLog;
   const wm=box.querySelector('#lb-wms');if(wm)wm.onclick=()=>{PS_WMS_NEXT();renderPrint(box);};
   const bq=box.querySelector('#lb-bq');if(bq)bq.onclick=e=>{if(e.target.id==='lb-cut'){window.FM.DB.labelCutoff=!window.FM.DB.labelCutoff;renderPrint(box);return;}if(window.FM_SHORT)window.FM_SHORT.records(state.date,()=>renderPrint(box));};
   box.querySelectorAll('.lb-row[data-key]').forEach(el=>el.onclick=()=>openLabelDetail(el.dataset.key));
@@ -420,9 +431,22 @@ function connectPrinter(then){window.FM.sheet([
   {label:'Brother QL-820NWB（蓝牙）',onClick:()=>{const p=printer();p.connected=true;p.name='QL-820';window.FM.toast('已连接 QL-820 标签机','ok');then&&then();}},
 ]);}
 let CURLP=null;
+// 打印日志（统一入口）：每次提交打印记一批——时间/方式/操作人 + 本次打了哪些商品、序号几到几、几张；与 PC 同口径
+function lpNow(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
+function lpLog(key,type,from,to){const D=window.FM.DB;const r=rowOf(key);D.labelLog=D.labelLog||[];
+  D.labelLog.unshift({date:state.date||'',type,time:lpNow(),op:(D.merchant&&D.merchant.contact)||'陈志强',items:[{wh:r.wh,sku:r.sku,name:r.name,spec:r.spec||'',from,to,qty:to-from+1}]});}
+function lpLogsOf(date){return (window.FM.DB.labelLog||[]).filter(x=>x.date===date);}
+const lpSum=b=>b.items.reduce((s,x)=>s+x.qty,0);
+function openPrintLog(){const list=lpLogsOf(state.date||'');const tot=list.reduce((a,b)=>a+lpSum(b),0);
+  pushPage({title:'打印日志',body:`<div class="lb-note">配送日 ${fmtDate(state.date)} · 共打印 <b>${list.length}</b> 次 · <b>${tot}</b> 张</div>
+    ${list.length?list.map((b,i)=>`<div class="lp-log"><div class="hd">第 ${list.length-i} 次 · ${b.type}<span>${b.items.length} 个商品 · ${lpSum(b)} 张</span></div>
+      <div class="sub">${b.time} · ${b.op}</div>
+      ${b.items.map(x=>`<div class="it"><div><div class="a">${x.name}</div><div class="b">${x.wh} · ${x.sku} · 序号 ${x.from}–${x.to}</div></div><div class="n">${x.qty} 张</div></div>`).join('')}</div>`).join('')
+    :`<div class="empty"><div class="ei">${svg('ticket')}</div><h4>今天还没有打印记录</h4><p>每次提交打印都会在这里记一次</p></div>`}
+    <div style="height:14px"></div>`});}
 function reallyPrint(key){window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};const r=rowOf(key);const old=Math.min(r.qty,printedOf(key));
   if(old>=r.qty){window.FM.toast('该商品标签已全部打印','info');return;}
-  window.FM.DB.labelPrinted[key]=r.qty;
+  window.FM.DB.labelPrinted[key]=r.qty;lpLog(key,'单个打印',old+1,r.qty);
   window.FM.toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张（印实发净重）`,'ok');
   drawLabelDetail(CURLP.querySelector('#lpd'),key);
   if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}}   // 同步刷新底层列表，返回即最新
@@ -453,7 +477,7 @@ window.lp_seqModal=function(key){if(lockOn()){lockDeny();return;}const r=rowOf(k
     if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){window.FM.toast(`请填有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
     close();
     const doIt=()=>{window.FM.DB.labelPrinted=window.FM.DB.labelPrinted||{};
-      window.FM.DB.labelPrinted[key]=Math.max(printedOf(key),to);
+      window.FM.DB.labelPrinted[key]=Math.max(printedOf(key),to);lpLog(key,'按序号打印',from,to);
       window.FM.toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张`,'ok');
       drawLabelDetail(CURLP.querySelector('#lpd'),key);
       if(LBTAB==='print'&&LBROOT){const b=LBROOT.querySelector('#lb-body');if(b)renderPrint(b);}};

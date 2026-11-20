@@ -192,10 +192,26 @@
     <div class="ib ib-gr" style="margin-top:8px"><span class="i">ℹ️</span>更换标签纸后请回此重新选择，否则可能打印错位。</div></div>
     <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">取消</button><button class="btn btn-p" onclick="label_savePaper()">保存设置</button></div>`);};
   window.label_savePaper=function(){const v=(document.getElementById('lp-paper')||{}).value;if(!v){toast('请选择标签纸张大小','err');return;}DB.labelPaper=v;closeModal();render();toast('已设置标签纸张：'+v,'ok');};
+  // 打印日志（统一入口）：每次提交打印记一批——时间/方式/操作人 + 本次打了哪些商品、各打序号几到几、几张；按配送日归档
+  function lbNow(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
+  function lbBatch(type){return {date:(DB.labelF||{}).date||'',type,time:lbNow(),op:(DB.merchant&&DB.merchant.contact)||'—',items:[]};}
+  function lbAdd(b,r,from,to){b.items.push({wh:String(r.key).split('|')[0],sku:r.sku,name:r.name,spec:specLabel(r),from,to,qty:to-from+1});}
+  function lbSave(b){if(!b.items.length)return;DB.labelLog=DB.labelLog||[];DB.labelSeq=(DB.labelSeq||0)+1;b.no=DB.labelSeq;DB.labelLog.unshift(b);}
+  function lbLogsOf(date){return (DB.labelLog||[]).filter(x=>x.date==date);}
+  window.label_log=function(){const date=(DB.labelF||{}).date||'';const list=lbLogsOf(date);const tot=list.reduce((a,b)=>a+b.items.reduce((s,x)=>s+x.qty,0),0);
+    drawer(`<div class="drawer-hd"><div><h3>打印日志</h3><div style="font-size:12.5px;color:var(--ts);margin-top:2px">配送日 ${date||'—'} · 共打印 ${list.length} 次 · ${tot} 张</div></div><span class="x" onclick="closeDrawer()">×</span></div>
+    <div class="drawer-bd">${list.length?list.map((b,i)=>`<div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px">
+      <div style="display:flex;gap:22px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:var(--bd2);font-size:13px">
+        <b>第 ${list.length-i} 次</b><span>打印时间：${b.time}</span><span>打印方式：${b.type}</span><span>操作人：${b.op}</span><span>商品数：<b>${b.items.length}</b></span><span>打印张数：<b>${b.items.reduce((s,x)=>s+x.qty,0)}</b></span>
+      </div>
+      <table><thead><tr><th>仓库</th><th>商品名称</th><th>规格</th><th>SKU编码</th><th>序号区间</th><th style="text-align:right">打印张数</th></tr></thead><tbody>
+      ${b.items.map(x=>`<tr><td>${x.wh}</td><td><b>${x.name}</b></td><td>${x.spec}</td><td class="mono">${x.sku}</td><td class="mono">${x.from}–${x.to}</td><td style="text-align:right">${x.qty}</td></tr>`).join('')}
+      </tbody></table></div>`).join(''):`<div class="empty"><div class="e-ic">🏷️</div><div class="e-t">该配送日还没有打印记录</div><div class="e-s">每次提交打印（单个/批量/按序号）都会在这里记一次。</div></div>`}</div>
+    <div class="drawer-ft"><button class="btn btn-o" onclick="closeDrawer()">关闭</button></div>`);};
   function ensurePaper(){if(psLock())return lockDeny();if(!DB.labelPaper){toast('请先在「打印机设置」选择标签纸张大小，选完才能打印','err');label_paperModal();return false;}return true;}
   // 打印：一个 SKU 按应送货数量打 N 个连续序号的码；首打/续打从 已打印+1 到 N
-  window.label_printOne=function(key){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${r.wgNeed?'（印实发净重，不含订单信息）':''}${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
-  window.label_printAll=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
+  window.label_printOne=function(key){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const r=labelRows().find(x=>x.key==key);if(!r)return;if(wgBlocked(r)){wgDeny(r);return;}const old=printedOf(key);if(old>=r.qty){toast('该商品标签已全部打印，如漏打请用「补打」','info');return;}DB.labelLast[key]=r.qty-old;DB.labelPrinted[key]=r.qty;{const b=lbBatch('单个打印');lbAdd(b,r,old+1,r.qty);lbSave(b);}const made=labelTriggerDelivery([key]);render();toast(`已打印「${r.name}」序号 ${old+1}–${r.qty}，共 ${r.qty-old} 张标签${r.wgNeed?'（印实发净重，不含订单信息）':''}${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
+  window.label_printAll=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const lb=lbBatch('批量打印');let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;lbAdd(lb,r,old+1,r.qty);n+=r.qty-old;done.push(r.key);}});lbSave(lb);const made=labelTriggerDelivery(done);render();toast(n?`批量打印完成，共 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个商品因未完成称重被拦截`:''}`:(blk?`${blk} 个商品未完成称重，无法打印`:'无待打印标签'),blk&&!n?'err':'ok');};
   // 按序号打印：先勾选一个 SKU，再点顶部「按序号打印」→ 弹窗填序号区间 [从X 到Y]（漏打时也用它补打）
   window.label_bySeqPrint=function(){if(!ensurePaper())return;const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));
     if(sel.length==0){toast('请先勾选一个商品，再点「按序号打印」','err');return;}
@@ -217,12 +233,12 @@
     const from=parseInt((document.getElementById('rp-from')||{}).value,10),to=parseInt((document.getElementById('rp-to')||{}).value,10);
     if(isNaN(from)||isNaN(to)||from<1||to>N||from>to){toast(`请填写有效序号区间（1–${N}，起始 ≤ 结束）`,'err');return;}
     DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};
-    DB.labelPrinted[key]=Math.max(printedOf(key),to);DB.labelLast[key]=to-from+1;DB.labelSel=[];
+    DB.labelPrinted[key]=Math.max(printedOf(key),to);DB.labelLast[key]=to-from+1;{const b=lbBatch('按序号打印');lbAdd(b,r,from,to);lbSave(b);}DB.labelSel=[];
     const made=labelTriggerDelivery([key]);closeModal();render();toast(`已按序号打印「${r.name}」序号 ${from}–${to}，共 ${to-from+1} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}`,'ok');};
   // 勾选 → 批量打印（只打勾选项，最多 50 个）
   window.label_toggleSel=function(key){DB.labelSel=DB.labelSel||[];const i=DB.labelSel.indexOf(key);if(i<0)DB.labelSel.push(key);else DB.labelSel.splice(i,1);render();};
   window.label_selAll=function(){DB.labelSel=DB.labelSel||[];const keys=labelRows().map(r=>r.key);const all=keys.length&&keys.every(k=>DB.labelSel.includes(k));DB.labelSel=all?[]:keys.slice();render();};
-  window.label_printSel=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;n+=r.qty-old;done.push(r.key);}});const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length-blk} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个因未完成称重被拦截`:''}`:(blk?`所选 ${blk} 个商品未完成称重，无法打印`:'所选商品标签均已打印'),blk&&!n?'err':'ok');};
+  window.label_printSel=function(){if(!ensurePaper())return;DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};const keys=labelRows().map(r=>r.key);const sel=(DB.labelSel||[]).filter(k=>keys.includes(k));if(!sel.length){toast('请先勾选要打印的商品','err');return;}if(sel.length>50){toast('每次最多支持 50 个商品批量打印','err');return;}const lb=lbBatch('批量打印');let n=0,blk=0;const done=[];labelRows().forEach(r=>{if(!sel.includes(r.key))return;if(wgBlocked(r)){blk++;return;}const old=printedOf(r.key);if(old<r.qty){DB.labelLast[r.key]=r.qty-old;DB.labelPrinted[r.key]=r.qty;lbAdd(lb,r,old+1,r.qty);n+=r.qty-old;done.push(r.key);}});lbSave(lb);const made=labelTriggerDelivery(done);DB.labelSel=[];render();toast(n?`批量打印完成，共 ${sel.length-blk} 个商品 ${n} 张标签${made.length?`；已自动生成送货单 ${made.join('、')}`:''}${blk?`；${blk} 个因未完成称重被拦截`:''}`:(blk?`所选 ${blk} 个商品未完成称重，无法打印`:'所选商品标签均已打印'),blk&&!n?'err':'ok');};
 
   function labelView(){
     DB.labelF=DB.labelF||{};DB.labelPrinted=DB.labelPrinted||{};DB.labelLast=DB.labelLast||{};
@@ -269,6 +285,7 @@
         <button class="btn btn-p btn-sm" ${lock?'disabled title="仓库尚未回传在仓库存，12:00 前不可打印标签"':''} onclick="label_bySeqPrint()">按序号打印</button>
         <button class="btn btn-o btn-sm" onclick="toast('已导出应送货标签清单.xlsx','ok')">应送货导出</button>
         <button class="btn btn-o btn-sm" onclick="short_records()">报缺记录${(()=>{const n=(DB.shortReports||[]).filter(x=>x.date==f.date&&x.status!='revoked').length;return n?`（${n}）`:'';})()}</button>
+        <button class="btn btn-o btn-sm" onclick="label_log()">打印日志${lbLogsOf(f.date).length?`（${lbLogsOf(f.date).length}）`:''}</button>
         <span style="font-size:12px;color:var(--r)">每次最多支持 50 个商品进行批量打印标签</span>
       </div>
       <div class="row" style="gap:14px;font-size:12.5px;align-items:center">
