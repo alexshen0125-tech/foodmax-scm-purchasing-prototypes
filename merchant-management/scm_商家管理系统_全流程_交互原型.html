@@ -1333,6 +1333,7 @@ const NAV={
     {id:'p-shops',ic:'🏬',t:'店铺管理',p1:1,badge:()=>DB.merchant.onboard=='task_review'?1:0},
     {sec:'商品'},
     {id:'p-category',ic:'🗂️',t:'后台类目',p1:1},
+    {id:'p-frontcat',ic:'🧭',t:'前台类目',p1:1},   // 11-23：末级类目加「是否同品展示」开关（pc-modules/frontcat.js）
     {sec:'审核'},
     {id:'p-prodaudit',ic:'🔍',t:'商品审核',p1:1,badge:()=>DB.products.filter(p=>p.status=='reviewing').length},
     {id:'p-auditcfg',ic:'⚙️',t:'审核配置',p1:1},
@@ -6867,5 +6868,6 @@ goHome();
 <script src="pc-modules/voice.js?v=20260924h"></script>
 <script src="pc-modules/shortage.js?v=20261027f"></script>
 <script src="pc-modules/retcomp.js?v=20261116f"></script>
+<script src="pc-modules/frontcat.js?v=20261123a"></script>
 </body>
 </html>

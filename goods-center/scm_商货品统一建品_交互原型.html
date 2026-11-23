@@ -277,34 +277,6 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
 @media(max-width:600px){header:has(.creation-flow-entry){gap:12px;flex-wrap:wrap;height:auto;min-height:48px;padding:8px 12px}header:has(.creation-flow-entry) .rt{flex-wrap:wrap;gap:8px}.creation-flow-head,.creation-flow-actions{padding:12px;flex-wrap:wrap}.creation-flow-canvas{padding:8px}body:has(#creationFlowPage:not([hidden])) aside{display:none}body:has(#creationFlowPage:not([hidden])) main{padding:12px}}
 #ivTable th,#ivTable td{white-space:nowrap}
 .hide3{display:none!important}
-#frontCategoryPage[hidden]{display:none!important}
-.fc-wrap{display:flex;gap:16px;align-items:flex-start}
-.fc-tree{width:300px;flex-shrink:0;background:#fff;border:1px solid var(--bd2);border-radius:4px}
-.fc-tree-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--bd2);font-weight:500}
-.fc-tree-bd{padding:8px 0;max-height:640px;overflow:auto}
-.fc-row{display:flex;align-items:center;gap:6px;padding:4px 12px;cursor:pointer;line-height:20px}
-.fc-row:hover{background:#f5f7fa}.fc-row.on{background:var(--pl)}
-.fc-row.l2{padding-left:34px}
-.fc-row .car{width:12px;color:var(--tt);font-size:10px}
-.fc-lv{font-size:11px;padding:0 5px;border:1px solid #b3d8ff;color:var(--b);background:var(--bl);border-radius:3px;line-height:16px}
-.fc-row.l2 .fc-lv{border-color:#e9e9eb;color:var(--tt);background:#f4f4f5}
-.fc-row .cnt{color:var(--tt)}.fc-row.off .nm{color:var(--tt)}
-.fc-row .add{margin-left:auto;display:none}.fc-row:hover .add{display:inline}
-.fc-detail{flex:1;min-width:0;background:#fff;border:1px solid var(--bd2);border-radius:4px;padding:16px 20px 24px}
-.fc-hd{display:flex;align-items:center;gap:10px;margin-bottom:18px}.fc-hd h3{font-size:15px;font-weight:600}.fc-hd .act{margin-left:auto;display:flex;gap:8px}
-.fc-form .fcr{display:flex;align-items:flex-start;margin-bottom:16px}
-.fc-form .fcl{width:120px;flex-shrink:0;text-align:right;padding-right:12px;line-height:30px;color:var(--ts)}
-.fc-form .fcl .rq{color:var(--r);margin-right:3px}
-.fc-form .fcv{flex:1;min-width:0;max-width:680px}
-.fc-form .fcrg{line-height:30px;display:flex;gap:28px}
-.fc-form .fcrg label{cursor:pointer}
-.fc-hint{font-size:12px;color:var(--tt);line-height:18px;margin-top:4px}
-.fc-num{display:inline-flex;border:1px solid var(--bd);border-radius:4px;overflow:hidden}.fc-num button{width:30px;border:none;background:#f5f7fa;cursor:pointer;color:var(--ts)}.fc-num input{width:64px;border:none;border-left:1px solid var(--bd);border-right:1px solid var(--bd);border-radius:0;text-align:center}
-.fc-img{width:110px;height:110px;border:1px dashed var(--bd);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--tt);font-size:24px;background:#fafafa}
-.fc-div{display:flex;align-items:center;gap:12px;margin:22px 0 14px;color:var(--tx);font-weight:500}.fc-div:after{content:"";flex:1;border-top:1px solid var(--bd2)}
-.fc-sec{display:flex;align-items:center;gap:10px;margin-bottom:10px}.fc-sec b{font-weight:600}.fc-sec span{color:var(--tt);font-size:12px}.fc-sec .btn{margin-left:auto}
-.fc-tip{background:var(--yl);color:var(--y);font-size:12px;padding:6px 12px;border-radius:3px;margin-bottom:10px}
-.fc-empty{text-align:center;color:var(--tt);padding:26px 0}
 </style></head>
 <body>
 <header><span class="logo">Foodmax</span><span class="sys">运营平台</span><button type="button" class="creation-flow-entry" onclick="openCreationFlow()">建品逻辑</button><div class="rt"><span>岗位 <select id="roleSel" onchange="ROLE=this.value;renderList();if($('dwDetail').classList.contains('on'))openDetail(dCur)" style="width:auto;height:24px;padding:0 6px;border:none;border-radius:3px;font-size:12.5px"><option>商品运营</option><option>采购</option><option>仓库</option></select></span><span>小满新加坡(SG Xiaoman) ⌄</span><span>简体中文 ⌄</span><span>货币：SGD</span></div></header>
@@ -313,7 +285,7 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
   <div class="grp">数据看板</div><a>店铺经营指标</a>
   <div class="grp">店铺</div><a>店铺管理</a>
   <div class="grp">订单</div><a>商家订单</a>
-  <div class="grp">商品</div><a>同品管理</a><a id="productListNav" class="on" href="#product-list" style="cursor:pointer">商品列表</a><a id="invNav" href="#item-inventory" style="cursor:pointer">商货品库存列表</a><a>商品审批</a><a>后台类目</a><a id="fcNav" href="#front-category" style="cursor:pointer">前台类目</a>
+  <div class="grp">商品</div><a>同品管理</a><a id="productListNav" class="on" href="#product-list" style="cursor:pointer">商品列表</a><a id="invNav" href="#item-inventory" style="cursor:pointer">商货品库存列表</a><a>商品审批</a><a>后台类目</a><a>前台类目</a>
   <div class="grp">商家</div><a>商家管理</a>
 </aside>
 <main><div id="productListPage">
@@ -401,14 +373,6 @@ header .creation-flow-entry{border:1px solid #d9363e;background:#d9363e;color:#f
   <div class="panel">
     <div class="toolbar" style="align-items:center"><span id="ivSum" style="color:var(--ts);margin-right:auto"></span><button class="lk" id="ivExp" onclick="ivExpandAll()">全部展开</button>&nbsp;&nbsp;<button class="btn" onclick="toast('（原型）导出：勾选时导出勾选项，否则按筛选条件全部导出')">导出</button></div>
     <div style="overflow-x:auto"><table id="ivTable"></table></div>
-  </div>
-</section><section id="frontCategoryPage" hidden>
-  <div class="crumb">商品 / 前台类目</div>
-  <div class="fc-wrap">
-    <div class="fc-tree"><div class="fc-tree-hd">前台类目树<button class="btn pr sm" onclick="fcAddRoot()">添加一级类目</button></div>
-      <div style="padding:10px 12px 0"><input id="fcQ" placeholder="类目名称" oninput="fcRenderTree()"></div>
-      <div class="fc-tree-bd" id="fcTree"></div></div>
-    <div class="fc-detail" id="fcDetail"></div>
   </div>
 </section></main>
 </div>
@@ -1470,53 +1434,5 @@ $('ivWh').innerHTML='<option value="">全部</option>'+WAREHOUSES.map(w=>`<optio
 $('ivCat').innerHTML='<option value="">全部</option>'+CATS.map(g=>`<optgroup label="${g.g}">`+g.items.map(c=>`<option value="${c}">${g.g} / ${c}</option>`).join('')+'</optgroup>').join('');
 window.addEventListener('hashchange',renderInvRoute);renderInvRoute();
 
-</script>
-<script>
-/* ============ 前台类目（还原线上 h5-foodmax-platform views/front-category/front-category-detail.vue）
-   本期新增：末级类目（L2）增加「是否同品展示」开关，是/否，默认否；只存配置，前台怎么展示由商城侧处理。L1 不展示该字段。
-   ============ */
-let FC_ID=0;const fcN=(name,cnt,kids,o)=>Object.assign({id:++FC_ID,name,cnt,status:1,sort:0,sameShow:0,kids:kids||null,open:true},o||{});
-const FC_TREE=[
-  fcN('【测试-勿动】新加坡水果1',11,[fcN('热带水果',9),fcN('热带水果测试',2),fcN('测试子分类',0)]),
-  fcN('爆品',93,[fcN('蔬菜',15,null,{sameShow:1}),fcN('素食',45),fcN('优质禽肉',28),fcN('调味干货',0),fcN('酒水饮料',5),fcN('肉禽',0),fcN('蛋类',0)]),
-  fcN('肉禽',457,[fcN('冷冻猪肉',60),fcN('冷冻牛内脏',0),fcN('冷鲜猪肉',29,null,{sameShow:1}),fcN('加工冷鲜牛肉',1),fcN('冷冻牛肉',24),fcN('冷鲜猪内脏',3),fcN('冷冻鸡肉',79),fcN('加工冷鲜猪肉',5),fcN('加工冷冻猪肉',86),fcN('加工冷冻牛肉',26),fcN('加工冷冻鸡肉',43),fcN('冷冻猪内脏',16)])];
-let FC_CUR=FC_TREE[1].kids[0].id,FC_MODE='edit',FC_PARENT=null,FC_FORM={};
-function fcFind(id){for(const a of FC_TREE){if(a.id===id)return{n:a,p:null};for(const b of a.kids||[])if(b.id===id)return{n:b,p:a}}return{}}
-function fcRenderTree(){const q=($('fcQ').value||'').trim();let h='';
-  FC_TREE.forEach(a=>{const ks=(a.kids||[]).filter(k=>!q||k.name.includes(q));if(q&&!a.name.includes(q)&&!ks.length)return;
-    h+=`<div class="fc-row ${FC_MODE==='edit'&&FC_CUR===a.id?'on':''} ${a.status?'':'off'}" onclick="fcPick(${a.id})"><span class="car" onclick="event.stopPropagation();fcFind(${a.id}).n.open=!fcFind(${a.id}).n.open;fcRenderTree()">${a.open?'▼':'▶'}</span><span class="fc-lv">L1</span><span class="nm">${esc(a.name)}</span><span class="cnt">(${a.cnt})</span><button class="lk add" onclick="event.stopPropagation();fcAddChild(${a.id})">+ 子类目</button></div>`;
-    if(a.open||q)ks.forEach(b=>h+=`<div class="fc-row l2 ${FC_MODE==='edit'&&FC_CUR===b.id?'on':''} ${b.status?'':'off'}" onclick="fcPick(${b.id})"><span class="fc-lv">L2</span><span class="nm">${esc(b.name)}</span><span class="cnt">(${b.cnt})</span></div>`)});
-  $('fcTree').innerHTML=h||'<div class="fc-empty">暂无数据</div>'}
-function fcPick(id){FC_MODE='edit';FC_CUR=id;const n=fcFind(id).n;FC_FORM={name:n.name,sort:n.sort,status:n.status,sameShow:n.sameShow};fcRender()}
-function fcAddRoot(){FC_MODE='create';FC_PARENT=null;FC_FORM={name:'',sort:0,status:1,sameShow:0};fcRender()}
-function fcAddChild(pid){FC_MODE='create';FC_PARENT=pid;FC_FORM={name:'',sort:0,status:1,sameShow:0};fcRender()}
-function fcRender(){fcRenderTree();const ed=FC_MODE==='edit',f=fcFind(FC_CUR),n=ed?f.n:null,parent=ed?f.p:(FC_PARENT?fcFind(FC_PARENT).n:null);
-  const leaf=ed?!!f.p:!!FC_PARENT;   /* 末级 = L2 */
-  const radio=(key,opts)=>`<div class="fcrg">${opts.map(([v,t])=>`<label><input type="radio" name="fc_${key}" ${FC_FORM[key]===v?'checked':''} onchange="FC_FORM.${key}=${v}">${t}</label>`).join('')}</div>`;
-  const row=(l,v,rq)=>`<div class="fcr"><div class="fcl">${rq?'<span class="rq">*</span>':''}${l}</div><div class="fcv">${v}</div></div>`;
-  let h=`<div class="fc-hd"><span class="tag ${leaf?'tgr':'tb'}">${leaf?'L2':'L1'}</span><h3>${ed?'类目配置':(leaf?'新增子类目':'添加一级类目')}</h3>${ed?`<span class="tag ${n.status?'tg':'tgr'}">${n.status?'启用':'停用'}</span>`:''}
-    <span class="act">${ed?'<button class="btn sm" onclick="toast(\'原型：删除不演示\')">删除</button>':''}<button class="btn pr sm" onclick="fcSave()">保存</button></span></div><div class="fc-form">`;
-  h+=row('类目名称',`<div style="position:relative"><input id="fcName" maxlength="60" value="${esc(FC_FORM.name)}" oninput="FC_FORM.name=this.value;$('fcLen').textContent=this.value.length+'/60'" style="padding-right:50px"><span id="fcLen" style="position:absolute;right:10px;top:5px;color:var(--tt);font-size:12px">${FC_FORM.name.length}/60</span></div>`,1);
-  h+=row('上级类目',`<input disabled value="${parent?esc(parent.name):'（根分类，无上级）'}">`);
-  h+=row('排序',`<span class="fc-num"><button onclick="FC_FORM.sort=Math.max(0,FC_FORM.sort-1);$('fcSort').value=FC_FORM.sort">−</button><input id="fcSort" value="${FC_FORM.sort}" oninput="FC_FORM.sort=Math.min(9999,Math.max(0,parseInt(this.value)||0))"><button onclick="FC_FORM.sort=Math.min(9999,FC_FORM.sort+1);$('fcSort').value=FC_FORM.sort">+</button></span>`);
-  h+=row('类目图片',`<div class="fc-img">+</div><div class="fc-hint">建议尺寸 800×800px，支持 JPG/PNG 格式</div>`);
-  h+=row('状态',radio('status',[[1,'启用'],[0,'停用']]));
-  if(leaf)h+=row('是否同品展示',radio('sameShow',[[1,'是'],[0,'否']]));
-  h+='</div>';
-  if(ed&&leaf)h+=`<div class="fc-div">圈品配置</div>
-    <div class="fc-sec"><b>圈品规则</b><span>按后台采购类目动态圈选商品，后台类目支持多选</span><button class="btn sm" onclick="toast('原型：圈品规则沿用线上，不演示')">添加规则</button></div>
-    <div class="fc-tip">优先级：指定剔除 > 指定加入 > 圈品规则</div><div class="fc-empty">请选择后台采购类目</div>
-    <button class="btn pr sm" onclick="toast('圈品规则保存成功')">保存</button>
-    <div class="fc-sec" style="margin-top:22px"><b>指定商品</b><span>优先级高于圈品规则</span></div><div class="fc-empty">暂无数据</div>`;
-  $('fcDetail').innerHTML=h}
-function fcSave(){const nm=(FC_FORM.name||'').trim();if(!nm){$('fcName').classList.add('err');toast('请输入类目名称',1);return}
-  if(FC_MODE==='edit'){Object.assign(fcFind(FC_CUR).n,{name:nm,sort:FC_FORM.sort,status:FC_FORM.status,sameShow:FC_FORM.sameShow})}
-  else{const n=fcN(nm,0,FC_PARENT?null:[],{sort:FC_FORM.sort,status:FC_FORM.status,sameShow:FC_PARENT?FC_FORM.sameShow:0});
-    if(FC_PARENT){const p=fcFind(FC_PARENT).n;p.kids.push(n);p.open=true}else FC_TREE.push(n);FC_MODE='edit';FC_CUR=n.id}
-  toast('前台类目保存成功');fcPick(FC_CUR)}
-function renderFcRoute(){const on=location.hash==='#front-category';$('frontCategoryPage').hidden=!on;
-  if(on){$('productListPage').hidden=true;$('creationFlowPage').hidden=true;$('inventoryPage').hidden=true;$('productListNav').classList.remove('on');if(!$('fcDetail').innerHTML)fcPick(FC_CUR)}
-  $('fcNav').classList.toggle('on',on)}
-window.addEventListener('hashchange',renderFcRoute);renderFcRoute();
 </script></body>
 </html>
