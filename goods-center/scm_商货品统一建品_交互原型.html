@@ -1362,7 +1362,7 @@ window.addEventListener('hashchange',renderCreationRoute);renderCreationRoute();
    非标品按原料池（item_inventory 原料行）：可售（原料口径）raw_left_qty = 原料实物 wms_inventory + 成品折算 raw_finished_equiv_qty − 订单占用 raw_occupied_qty
    成品折算 = Σ（成品实物 × BOM 单耗 bom_raw_per_finished）；SKU 可售份数 = 可售 ÷ 每份用原料（向下取整，同池各 SKU 共用，不能相加）
    标品：可售 left_inventory = 实物 wms_inventory − 锁定 locked_inventory；SKU 可售份数 = 可售 ÷ 每份扣货品数（convertQty）
-   货值字段照 SCM 货品库存页 product-inventory.vue（成本均价 × 实物） ============ */
+   ============ */
 const WH_CODE={'SG 大仓':'WH-SG01','SG 冷库':'WH-SG02'};
 function hnum(str,mod){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%100000;return h%mod}
 const r2n=v=>+Number(v).toFixed(2);
@@ -1390,13 +1390,13 @@ const ivTip=(t,tip)=>`${t} <span title="${tip}" style="cursor:help;color:var(--t
 const IV_TIP={fold:'已加工成品折合成原料 = Σ（成品实物 × 每份用原料）',phys:'实物合计 = 未加工原料 + 已加工成品（折合）；标品 = 货品实物',occ:'已下单还没出库的数量；非标品 = Σ（各 SKU 占用份数 × 每份用原料）',left:'可售 = 实物合计 − 订单占用；非标品是原料和所有成品、所有关联商品共用的一本账',val:'库存货值 = 成本均价 × 实物；非标品 = 原料与各成品各自的货值相加',can:'可售份数 = 可售 ÷ 每份用量，向下取整；同一本账里各 SKU 共用库存，份数不能相加'};
 function renderInv(){const rows=IV_ROWS=ivFiltered();
   $('ivSum').innerHTML=`共 ${rows.length} 行`;
-  const H=['仓库','原料 / 货品编码','名称','商品属性','关联商品','未加工原料',ivTip('已加工成品（折合）',IV_TIP.fold),ivTip('实物合计',IV_TIP.phys),ivTip('订单占用',IV_TIP.occ),ivTip('可售',IV_TIP.left),'单位',ivTip('库存货值（含税）',IV_TIP.val),'操作'];
+  const H=['仓库','原料 / 货品编码','名称','商品属性','关联商品','未加工原料',ivTip('已加工成品（折合）',IV_TIP.fold),ivTip('实物合计',IV_TIP.phys),ivTip('订单占用',IV_TIP.occ),ivTip('可售',IV_TIP.left),'单位','操作'];
   const tn=v=>`<td style="text-align:right" class="mono">${v}</td>`;
   let h=`<thead><tr>${H.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
   if(!rows.length)h+=`<tr><td colspan="${H.length}" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;
   rows.forEach((g,i)=>{const ns=g.attr==='非标品';
     h+=`<tr><td>${g.wh}</td><td class="mono">${g.code}</td><td><b style="font-weight:500">${esc(g.name)}</b></td><td>${ns?'<span class="tag tb">非标品</span>':'<span class="tag tg">标品</span>'}</td><td>${g.spus.map(s=>esc(s.name)).join('、')}</td>
-      ${tn(ns?g.raw:'—')}${tn(ns?g.fold:'—')}${tn(g.phys)}${tn(g.occ)}<td style="text-align:right" class="mono"><b>${g.left}</b></td><td>${g.unit}</td>${tn(money2(g.val))}
+      ${tn(ns?g.raw:'—')}${tn(ns?g.fold:'—')}${tn(g.phys)}${tn(g.occ)}<td style="text-align:right" class="mono"><b>${g.left}</b></td><td>${g.unit}</td>
       <td style="white-space:nowrap"><button class="lk" onclick="openInv(${i})">明细</button>&nbsp;&nbsp;<button class="lk" onclick="toast('（原型）跳库存流水：${g.code} · ${g.wh}')">流水</button></td></tr>`});
   $('ivTable').innerHTML=h+'</tbody>'}
 /* 明细抽屉：一盘账 = 原料（未加工）+ 每个关联商品的每个 SKU（成品）一行 + 合计 */
