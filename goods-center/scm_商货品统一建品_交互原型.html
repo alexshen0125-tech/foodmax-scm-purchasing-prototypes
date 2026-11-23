@@ -1384,8 +1384,8 @@ function invGroups(){const out=[];
       const val=r2n(raw*rawCost+lines.reduce((a,x)=>a+x.qty*x.cost,0));
       out.push({key:r.code+'|'+w,attr:'非标品',wh:w,code:r.code,name:r.name,spus:users,cat:r.cat,unit:r.unit,raw,rawUn,rawCost,fold,phys,un,occ,left,val,lines})})});
   SPUS.filter(s=>s.src==='自营'&&s.attr==='标品').forEach(s=>IV_WH.forEach(w=>{const d=s.std,phys=hnum(d.item+w,300)+10,un=hnum('u'+d.item+w,6),cost=r2n(1.85*(d.stockIsPack==='否'?Number(d.packQty||1):1));
-    const lines=s.skus.map(k=>{const per=Number(k.qty)||1,occ=hnum('o'+k.sku+w,Math.max(2,Math.floor(phys/(per*6))));return{spu:s,sku:k.sku,spec:per===1&&!k.su?'1'+d.stockUnit:per+d.stockUnit+'/'+(k.su||d.stockUnit),item:d.item,per,occ,occRaw:occ*per,skuStatus:k.status}});
-    const occ=lines.reduce((a,x)=>a+x.occRaw,0),left=phys-occ;lines.forEach(x=>x.can=Math.max(0,Math.floor(left/x.per)));
+    const lines=s.skus.map(k=>{const per=Number(k.qty)||1,occ=hnum('o'+k.sku+w,Math.max(2,Math.floor(phys/(per*6))));return{spu:s,sku:k.sku,spec:per===1&&!k.su?'1'+d.stockUnit:per+d.stockUnit+'/'+(k.su||d.stockUnit),su:per===1&&!k.su?d.stockUnit:(k.su||d.stockUnit),item:d.item,per,occ,occRaw:occ*per,skuStatus:k.status}});
+    const occ=lines.reduce((a,x)=>a+x.occRaw,0),left=phys-occ;lines.forEach(x=>{x.can=Math.max(0,Math.floor(left/x.per));x.physPcs=Math.floor(phys/x.per);x.unPcs=Math.floor(un/x.per)});
     out.push({key:d.item+'|'+w,attr:'标品',wh:w,code:d.item,name:s.name,spus:[s],cat:s.cat,unit:d.stockUnit,raw:null,fold:null,phys,un,occ,left,cost,val:r2n(phys*cost),lines})}));
   return out.sort((a,b)=>(a.spus[0].name+a.wh)<(b.spus[0].name+b.wh)?-1:1)}
 const money2=v=>v==null?'—':'S$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1395,22 +1395,22 @@ function ivFiltered(){const q=id=>($(id).value||'').trim(),sk=q('ivStock');
     &&(!q('ivItem')||has(g.code,q('ivItem'))||has(g.name,q('ivItem'))||g.lines.some(f=>has(f.item,q('ivItem'))||has(f.sku,q('ivItem'))))
     &&(!sk||(sk==='gt'?g.left>0:sk==='eq'?g.left===0:g.left<0)))}
 const ivTip=(t,tip)=>`${t} <span title="${tip}" style="cursor:help;color:var(--tt)">ⓘ</span>`;
-const IV_TIP={un:'仓库里不能发货的库存：不良品、退货、越库、中转、包装物退货库位（取 WMS 库位）；非标品成品按每份用原料折合。已含在实物合计里',fold:'已加工成品折合成原料 = Σ（成品实物 × 每份用原料）',phys:'实物合计 = 未加工原料 + 已加工成品（折合）；标品 = 货品实物',occ:'已下单还没出库的数量；非标品 = Σ（各 SKU 占用份数 × 每份用原料）',left:'可售 = 实物合计 − 订单占用；非标品是原料和所有成品、所有关联商品共用的一本账',val:'库存货值 = 成本均价 × 实物；非标品 = 原料与各成品各自的货值相加',can:'可售份数 = 可售 ÷ 每份用量，向下取整；同一本账里各 SKU 共用库存，份数不能相加'};
+const IV_TIP={pcs:'标品各规格共用同一个货品的库存：这里是把货品库存按该规格折成几份（向下取整），各规格不能相加',un:'仓库里不能发货的库存：不良品、退货、越库、中转、包装物退货库位（取 WMS 库位）；非标品成品按每份用原料折合。已含在实物合计里',fold:'已加工成品折合成原料 = Σ（成品实物 × 每份用原料）',phys:'实物合计 = 未加工原料 + 已加工成品（折合）；标品 = 货品实物',occ:'已下单还没出库的数量；非标品 = Σ（各 SKU 占用份数 × 每份用原料）',left:'可售 = 实物合计 − 订单占用；非标品是原料和所有成品、所有关联商品共用的一本账',val:'库存货值 = 成本均价 × 实物；非标品 = 原料与各成品各自的货值相加',can:'可售份数 = 可售 ÷ 每份用量，向下取整；同一本账里各 SKU 共用库存，份数不能相加'};
 let IV_OPEN={};
 function renderInv(){const rows=IV_ROWS=ivFiltered();
   $('ivSum').innerHTML=`共 ${rows.length} 行`;
-  const nsRows=rows.filter(g=>g.attr==='非标品');$('ivExp').textContent=nsRows.length&&nsRows.every(g=>IV_OPEN[g.key])?'全部收起':'全部展开';
+  const nsRows=rows;$('ivExp').textContent=nsRows.length&&nsRows.every(g=>IV_OPEN[g.key])?'全部收起':'全部展开';
   const H=['','仓库','原料 / 货品编码','名称','商品属性','关联商品','未加工原料',ivTip('已加工成品（折合）',IV_TIP.fold),ivTip('实物合计',IV_TIP.phys),ivTip('不可用库存',IV_TIP.un),ivTip('订单占用',IV_TIP.occ),ivTip('可售',IV_TIP.left),'单位','操作'];
   const tn=v=>`<td style="text-align:right" class="mono">${v}</td>`;
   let h=`<thead><tr>${H.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
   if(!rows.length)h+=`<tr><td colspan="${H.length}" style="text-align:center;color:var(--tt);padding:40px">暂无数据</td></tr>`;
-  rows.forEach((g,i)=>{const ns=g.attr==='非标品',op=ns&&IV_OPEN[g.key];
-    h+=`<tr${ns?` style="cursor:pointer" onclick="IV_OPEN['${g.key}']=!IV_OPEN['${g.key}'];renderInv()"`:''}><td class="exp" style="width:28px">${ns?(op?'▾':'▸'):''}</td><td>${g.wh}</td><td class="mono">${g.code}</td><td><b style="font-weight:500">${esc(g.name)}</b></td><td>${ns?'<span class="tag tb">非标品</span>':'<span class="tag tg">标品</span>'}</td><td>${g.spus.map(s=>esc(s.name)).join('、')}</td>
+  rows.forEach((g,i)=>{const ns=g.attr==='非标品',op=IV_OPEN[g.key];
+    h+=`<tr style="cursor:pointer" onclick="IV_OPEN['${g.key}']=!IV_OPEN['${g.key}'];renderInv()"><td class="exp" style="width:28px">${op?'▾':'▸'}</td><td>${g.wh}</td><td class="mono">${g.code}</td><td><b style="font-weight:500">${esc(g.name)}</b></td><td>${ns?'<span class="tag tb">非标品</span>':'<span class="tag tg">标品</span>'}</td><td>${g.spus.map(s=>esc(s.name)).join('、')}</td>
       ${tn(ns?g.raw:'—')}${tn(ns?g.fold:'—')}${tn(g.phys)}${tn(g.un)}${tn(g.occ)}<td style="text-align:right" class="mono"><b>${g.left}</b></td><td>${g.unit}</td>
-      <td style="white-space:nowrap">${ns?`<button class="lk" onclick="event.stopPropagation();IV_OPEN['${g.key}']=!IV_OPEN['${g.key}'];renderInv()">${op?'收起':'展开'}</button>`:`<button class="lk" onclick="openInv(${i})">明细</button>`}</td></tr>`;
+      <td style="white-space:nowrap"><button class="lk" onclick="event.stopPropagation();IV_OPEN['${g.key}']=!IV_OPEN['${g.key}'];renderInv()">${op?'收起':'展开'}</button></td></tr>`;
     if(op)h+=`<tr class="sub"><td></td><td colspan="${H.length-1}" style="padding:10px 12px 14px">${ledgerHtml(g)}${skuTable(g)}</td></tr>`});
   $('ivTable').innerHTML=h+'</tbody>'}
-function ivExpandAll(){const all=ivFiltered().filter(g=>g.attr==='非标品');const on=!all.every(g=>IV_OPEN[g.key]);all.forEach(g=>IV_OPEN[g.key]=on);renderInv()}
+function ivExpandAll(){const all=ivFiltered();const on=!all.every(g=>IV_OPEN[g.key]);all.forEach(g=>IV_OPEN[g.key]=on);renderInv()}
 /* 一本账：未加工原料 + 成品折合 − 订单占用 = 可售（标品：实物 − 订单占用 = 可售）；不可用库存单独列出，含在实物里，不从可售里扣（库存服务现口径） */
 function ledgerHtml(g){const u=g.unit,ns=g.attr==='非标品';
   const it=(k,v,cls)=>`<div class="it ${cls||''}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div></div>`,op=o=>`<div class="op">${o}</div>`;
@@ -1419,16 +1419,12 @@ function ledgerHtml(g){const u=g.unit,ns=g.attr==='非标品';
 function skuTable(g){const u=g.unit,ns=g.attr==='非标品',tn=v=>`<td style="text-align:right" class="mono">${v}</td>`;
   const sk=s=>s==='在售'?'<span class="tag tg">在售</span>':s==='售罄'?'<span class="tag ty">售罄</span>':'<span class="tag tgr">'+(s||'已下架')+'</span>';
   const H=ns?['关联商品','SKU 编码','规格','成品货品编码','每份用原料','成品实物','成品不可用',ivTip('折合原料（'+u+'）',IV_TIP.fold),'订单占用（份）','占用折合（'+u+'）',ivTip('可售份数',IV_TIP.can),'SKU 状态']
-           :['关联商品','SKU 编码','规格','每份扣货品','订单占用（份）',ivTip('可售份数',IV_TIP.can),'SKU 状态'];
+           :['关联商品','SKU 编码','规格','货品编码','每份扣货品',ivTip('实物（按规格）',IV_TIP.pcs),ivTip('不可用（按规格）',IV_TIP.pcs),'订单占用（份）','占用折合（'+u+'）',ivTip('可售份数',IV_TIP.can),'SKU 状态'];
   let h=`<div style="overflow-x:auto"><table><thead><tr>${H.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`,last='';
   h+=g.lines.map(f=>{const first=f.spu.name!==last;last=f.spu.name;const sp=first?'<b style="font-weight:500">'+esc(f.spu.name)+'</b>':'';
     return ns?`<tr><td>${sp}</td><td class="mono">${f.sku}</td><td>${esc(f.spec)}</td><td class="mono">${f.item}</td><td class="mono">${f.per} ${u}</td>${tn(f.qty+' '+f.unitPack)}${tn(f.un+' '+f.unitPack)}${tn(f.fold)}${tn(f.occ)}${tn(f.occRaw)}<td style="text-align:right" class="mono"><b>${f.can}</b></td><td>${sk(f.skuStatus)}</td></tr>`
-             :`<tr><td>${sp}</td><td class="mono">${f.sku}</td><td>${esc(f.spec)}</td><td class="mono">${f.per} ${u}</td>${tn(f.occ)}<td style="text-align:right" class="mono"><b>${f.can}</b></td><td>${sk(f.skuStatus)}</td></tr>`}).join('');
+             :`<tr><td>${sp}</td><td class="mono">${f.sku}</td><td>${esc(f.spec)}</td><td class="mono">${f.item}</td><td class="mono">${f.per} ${u}</td>${tn(f.physPcs+' '+f.su)}${tn(f.unPcs+' '+f.su)}${tn(f.occ)}${tn(f.occRaw)}<td style="text-align:right" class="mono"><b>${f.can}</b></td><td>${sk(f.skuStatus)}</td></tr>`}).join('');
   return h+`</tbody></table></div>`}
-/* 标品明细：右侧抽屉（非标品改为行内折叠） */
-function openInv(i){const g=IV_ROWS[i];if(!g)return;
-  $('ivTitle').textContent=`库存明细 · ${g.name} · ${g.wh}（${WH_CODE[g.wh]||'—'}）`;
-  $('ivBody').innerHTML=ledgerHtml(g)+skuTable(g);$('dwInv').classList.add('std','on');$('mask').classList.add('on')}
 function closeInv(){$('dwInv').classList.remove('on');$('mask').classList.remove('on')}
 function resetInv(){['ivWh','ivCat','ivAttr','ivSpu','ivItem','ivStock'].forEach(i=>$(i).value='');renderInv()}
 function renderInvRoute(){const on=location.hash==='#item-inventory';$('inventoryPage').hidden=!on;
