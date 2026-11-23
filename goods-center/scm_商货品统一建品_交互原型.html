@@ -1366,16 +1366,17 @@ window.addEventListener('hashchange',renderCreationRoute);renderCreationRoute();
 const WH_CODE={'SG 大仓':'WH-SG01','SG 冷库':'WH-SG02'};
 function hnum(str,mod){let h=0;for(const c of str)h=(h*31+c.charCodeAt(0))%100000;return h%mod}
 const r2n=v=>+Number(v).toFixed(2);
+const IV_WH=['SG 大仓'];                                       /* 示例数据只放一个仓库 */
 function invGroups(){const out=[];
   RAWS.forEach(r=>{const users=spusOfRaw(r.code).filter(x=>x.src==='自营');if(!users.length)return;
-    WAREHOUSES.forEach(w=>{const raw=hnum(r.code+w,400)+20,rawCost=2.8;
+    IV_WH.forEach(w=>{const raw=hnum(r.code+w,400)+20,rawCost=2.8;
       const lines=users.flatMap(s=>s.skus.map(k=>{const per=Number(k.qty),qty=hnum(k.item+w,120),occ=hnum('o'+k.sku+w,Math.floor(qty/4)+3),cost=r2n(per*rawCost+0.35);
         return{spu:s,sku:k.sku,spec:skuNameOf(s,k).replace(s.name,'').trim()||(k.qty+r.unit+'/'+k.su),item:k.item,per,unitPack:k.su,qty,fold:r2n(qty*per),occ,occRaw:r2n(occ*per),cost,skuStatus:k.status,itemStatus:k.itemStatus||'启用'}}));
       const fold=r2n(lines.reduce((a,x)=>a+x.fold,0)),occ=r2n(lines.reduce((a,x)=>a+x.occRaw,0)),phys=r2n(raw+fold),left=r2n(phys-occ);
       lines.forEach(x=>x.can=Math.max(0,Math.floor(left/x.per+1e-9)));
       const val=r2n(raw*rawCost+lines.reduce((a,x)=>a+x.qty*x.cost,0));
       out.push({key:r.code+'|'+w,attr:'非标品',wh:w,code:r.code,name:r.name,spus:users,cat:r.cat,unit:r.unit,raw,rawCost,fold,phys,occ,left,val,lines})})});
-  SPUS.filter(s=>s.src==='自营'&&s.attr==='标品').forEach(s=>WAREHOUSES.forEach(w=>{const d=s.std,phys=hnum(d.item+w,300)+10,cost=r2n(1.85*(d.stockIsPack==='否'?Number(d.packQty||1):1));
+  SPUS.filter(s=>s.src==='自营'&&s.attr==='标品').forEach(s=>IV_WH.forEach(w=>{const d=s.std,phys=hnum(d.item+w,300)+10,cost=r2n(1.85*(d.stockIsPack==='否'?Number(d.packQty||1):1));
     const lines=s.skus.map(k=>{const per=Number(k.qty)||1,occ=hnum('o'+k.sku+w,Math.max(2,Math.floor(phys/(per*6))));return{spu:s,sku:k.sku,spec:per===1&&!k.su?'1'+d.stockUnit:per+d.stockUnit+'/'+(k.su||d.stockUnit),item:d.item,per,occ,occRaw:occ*per,skuStatus:k.status}});
     const occ=lines.reduce((a,x)=>a+x.occRaw,0),left=phys-occ;lines.forEach(x=>x.can=Math.max(0,Math.floor(left/x.per)));
     out.push({key:d.item+'|'+w,attr:'标品',wh:w,code:d.item,name:s.name,spus:[s],cat:s.cat,unit:d.stockUnit,raw:null,fold:null,phys,occ,left,cost,val:r2n(phys*cost),lines})}));
