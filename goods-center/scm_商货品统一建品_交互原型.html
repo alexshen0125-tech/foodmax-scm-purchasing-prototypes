@@ -65,8 +65,15 @@ tbody tr:hover>td{background:#f5f9f5}
 .dw.on{transform:none}
 #dwForm{width:80%;min-width:1100px;max-width:100vw}
 #dwDetail{width:62%;min-width:900px;max-width:100vw;z-index:70}
-#dwInv{width:88%;min-width:960px;max-width:100vw}
+#dwInv{width:1280px;max-width:100vw}#dwInv.std{width:780px}
 #ivBody table td,#ivBody table th{white-space:nowrap}
+.ledger{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:16px 18px;border:1px solid var(--bd2);border-radius:6px;margin-bottom:16px}
+.ledger .it .k{font-size:12px;color:var(--ts);margin-bottom:4px}
+.ledger .it .v{font-size:22px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.ledger .it .v small{font-size:13px;font-weight:400;color:var(--ts);margin-left:3px}
+.ledger .op{font-size:20px;color:var(--tt);padding-bottom:2px}
+.ledger .it.res .v{color:var(--pd,#009919)}
+.ledger .fl{margin-left:auto;align-self:center}
 .dw-hd{height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--bd2);font-size:16px;font-weight:600}
 .dw-hd .x{cursor:pointer;color:var(--tt);font-size:20px;font-weight:400}
 .dw-bd{flex:1;overflow-y:auto;padding:18px 24px 30px}
@@ -1401,20 +1408,23 @@ function renderInv(){const rows=IV_ROWS=ivFiltered();
       <td style="white-space:nowrap"><button class="lk" onclick="openInv(${i})">明细</button>&nbsp;&nbsp;<button class="lk" onclick="toast('（原型）跳库存流水：${g.code} · ${g.wh}')">流水</button></td></tr>`});
   $('ivTable').innerHTML=h+'</tbody>'}
 /* 明细抽屉：一盘账 = 原料（未加工）+ 每个关联商品的每个 SKU（成品）一行 + 合计 */
-function openInv(i){const g=IV_ROWS[i];if(!g)return;const u=g.unit,ns=g.attr==='非标品',tn=v=>`<td style="text-align:right" class="mono">${v}</td>`,D='<td style="text-align:right;color:var(--tt)">—</td>';
-  $('ivTitle').textContent=`库存明细 · ${g.name} · ${g.wh}`;
+function openInv(i){const g=IV_ROWS[i];if(!g)return;const u=g.unit,ns=g.attr==='非标品',tn=v=>`<td style="text-align:right" class="mono">${v}</td>`;
+  $('ivTitle').textContent=`库存明细 · ${g.name} · ${g.wh}（${WH_CODE[g.wh]||'—'}）`;
   const sk=s=>s==='在售'?'<span class="tag tg">在售</span>':s==='售罄'?'<span class="tag ty">售罄</span>':'<span class="tag tgr">'+(s||'已下架')+'</span>';
-  const fl=code=>`<button class="lk" onclick="toast('（原型）跳库存流水：${code} · ${g.wh}')">流水</button>`;
-  const fm=ns?`未加工原料 ${g.raw} + 已加工成品折合 ${g.fold} − 订单占用 ${g.occ} = 可售 ${g.left} ${u}`:`实物 ${g.phys} − 订单占用 ${g.occ} = 可售 ${g.left} ${u}`;
-  let h=`<div class="pd-fields" style="margin-bottom:12px">${[['仓库',g.wh+'（'+(WH_CODE[g.wh]||'—')+'）'],[ns?'原料编码':'货品编码',g.code],['关联商品',g.spus.map(s=>esc(s.name)).join('、')],['单位',u]].map(([l,v])=>`<div class="pd-field"><div class="pd-label">${l}</div><div class="pd-value">${v}</div></div>`).join('')}</div>
-  <div style="margin-bottom:12px;padding:10px 14px;background:#f6fbf7;border:1px solid #d7ecdc;border-radius:4px" class="mono">${fm}</div>
-  <div style="overflow-x:auto"><table><thead><tr><th>关联商品</th><th>SKU 编码</th><th>规格</th><th>${ns?'货品编码（成品）':'货品编码'}</th><th>每份用${ns?'原料':'货品'}</th><th>实物</th><th>${ivTip('折合（'+u+'）',IV_TIP.fold)}</th><th>订单占用（份）</th><th>占用折合（${u}）</th><th>${ivTip('可售份数',IV_TIP.can)}</th><th>SKU 状态</th><th>操作</th></tr></thead><tbody>`;
-  h+=`<tr style="background:#f7faff"><td>${ns?'原料（未加工）':'货品库存'}</td><td>—</td><td>—</td><td class="mono">${g.code}</td>${D}${tn((ns?g.raw:g.phys)+' '+u)}${tn(ns?g.raw:g.phys)}${D}${D}${D}<td>—</td><td>${fl(g.code)}</td></tr>`;
+  const fl=(code,t)=>`<button class="lk" onclick="toast('（原型）跳库存流水：${code} · ${g.wh}')">${t||'流水'}</button>`;
+  const it=(k,v,cls)=>`<div class="it ${cls||''}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div></div>`,op=o=>`<div class="op">${o}</div>`;
+  /* 顶部一本账：这一行替代原来的字段区和合计行 */
+  let h=`<div class="ledger">${ns?it('未加工原料',g.raw)+op('+')+it('已加工成品折合',g.fold)+op('−'):it('实物',g.phys)+op('−')}${it('订单占用',g.occ)}${op('=')}${it('可售',g.left,'res')}<div class="fl">${fl(g.code,ns?'原料流水':'货品流水')}</div></div>`;
+  /* 表格只放 SKU（同一本账里的各个卖法），列按商品属性区分，不用「—」占位 */
+  const H=ns?['关联商品','SKU 编码','规格','成品货品编码','每份用原料','成品实物',ivTip('折合原料（'+u+'）',IV_TIP.fold),'订单占用（份）','占用折合（'+u+'）',ivTip('可售份数',IV_TIP.can),'SKU 状态','操作']
+           :['关联商品','SKU 编码','规格','每份扣货品','订单占用（份）',ivTip('可售份数',IV_TIP.can),'SKU 状态'];
+  h+=`<div style="overflow-x:auto"><table><thead><tr>${H.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
   let last='';
-  h+=g.lines.map(f=>{const first=f.spu.name!==last;last=f.spu.name;
-    return`<tr><td>${first?'<b style="font-weight:500">'+esc(f.spu.name)+'</b>':''}</td><td class="mono">${f.sku}</td><td>${esc(f.spec)}</td><td class="mono">${ns?f.item:'同上'}</td><td class="mono">${f.per} ${u}</td>${ns?tn(f.qty+' '+f.unitPack):D}${ns?tn(f.fold):D}${tn(f.occ)}${tn(f.occRaw)}<td style="text-align:right" class="mono"><b>${f.can}</b></td><td>${sk(f.skuStatus)}</td><td>${ns?fl(f.item):''}</td></tr>`}).join('');
-  h+=`<tr><td colspan="6" style="text-align:right;color:var(--ts)">合计（${u}）</td>${tn('<b>'+g.phys+'</b>')}<td></td>${tn('<b>'+g.occ+'</b>')}<td style="text-align:right" class="mono">可售 <b>${g.left}</b></td><td></td><td></td></tr></tbody></table></div>`;
-  $('ivBody').innerHTML=h;$('dwInv').classList.add('on');$('mask').classList.add('on')}
+  h+=g.lines.map(f=>{const first=f.spu.name!==last;last=f.spu.name;const sp=first?'<b style="font-weight:500">'+esc(f.spu.name)+'</b>':'';
+    return ns?`<tr><td>${sp}</td><td class="mono">${f.sku}</td><td>${esc(f.spec)}</td><td class="mono">${f.item}</td><td class="mono">${f.per} ${u}</td>${tn(f.qty+' '+f.unitPack)}${tn(f.fold)}${tn(f.occ)}${tn(f.occRaw)}<td style="text-align:right" class="mono"><b>${f.can}</b></td><td>${sk(f.skuStatus)}</td><td>${fl(f.item)}</td></tr>`
+             :`<tr><td>${sp}</td><td class="mono">${f.sku}</td><td>${esc(f.spec)}</td><td class="mono">${f.per} ${u}</td>${tn(f.occ)}<td style="text-align:right" class="mono"><b>${f.can}</b></td><td>${sk(f.skuStatus)}</td></tr>`}).join('');
+  h+=`</tbody></table></div>`;
+  $('ivBody').innerHTML=h;$('dwInv').classList.toggle('std',!ns);$('dwInv').classList.add('on');$('mask').classList.add('on')}
 function closeInv(){$('dwInv').classList.remove('on');$('mask').classList.remove('on')}
 function resetInv(){['ivWh','ivCat','ivAttr','ivSpu','ivItem','ivStock'].forEach(i=>$(i).value='');renderInv()}
 function renderInvRoute(){const on=location.hash==='#item-inventory';$('inventoryPage').hidden=!on;
