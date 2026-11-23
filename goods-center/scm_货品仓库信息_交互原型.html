@@ -98,6 +98,28 @@ tr:hover td{background:#f5f7fa}
 .g5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}
 .g5 label{font-size:12px;color:var(--t2);display:block;margin-bottom:4px}
 .res-ok{color:#67c23a}.res-skip{color:var(--t3)}
+.drawer.w70{width:70%}
+.ccard{border:1px solid var(--bd2);border-radius:4px;margin-top:16px}
+.ccard-hd{padding:12px 16px;border-bottom:1px solid var(--bd2);font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px}
+.ccard-bd{padding:16px 16px 2px}
+.cf{display:flex;align-items:flex-start;margin-bottom:16px}
+.cf>label{width:130px;flex-shrink:0;color:var(--t2);font-size:13px;text-align:right;padding:7px 12px 0 0}
+.cf .ctl{flex:1;max-width:640px}
+.cf .ctl .radios{padding-top:7px}
+.rq{color:var(--danger)}
+.newtag{font-size:11px;color:#fff;background:var(--danger);border-radius:8px;padding:0 6px;font-weight:400}
+.newwrap{border-left:3px solid #fde2e2;background:#fffafa;margin:0 -16px 14px;padding:12px 16px 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spec-t{border:1px solid var(--bd2)}.spec-t th,.spec-t td{padding:6px 8px}
+.ro{height:32px;line-height:32px;padding:0 10px;background:#f5f7fa;border:1px solid var(--bd2);border-radius:4px;color:var(--t2);font-size:13px}
+.ro .h{color:var(--t3);font-size:12px;margin-left:8px}
+.rawbar{background:#f5f7fa;border-radius:4px;padding:10px 14px;font-size:13px;color:var(--t2);display:flex;gap:22px;flex-wrap:wrap;margin-top:14px}
+.locktip{background:#ecf5ff;color:#409eff;border-radius:4px;padding:8px 12px;font-size:12px;margin:12px 0}
+.speccard{border:1px solid var(--bd2);border-radius:4px;padding:12px 14px;margin-bottom:12px}
+.speccard .hd{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;font-weight:500}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.g3 label{display:block;font-size:12px;color:var(--t2);margin-bottom:4px}
+.dw-ft{padding:12px 20px;border-top:1px solid var(--bd2);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--bd2);box-shadow:0 4px 12px rgba(0,0,0,.12);padding:10px 18px;border-radius:4px;font-size:13px;z-index:400;display:none}
 </style>
 </head>
@@ -132,7 +154,7 @@ tr:hover td{background:#f5f7fa}
   <div class="card">
     <div class="toolbar"><span id="selInfo" style="color:var(--t2);font-size:13px"></span><div class="r">
       <div class="dd"><button class="btn" onclick="toggleDD(event)">批量操作 ▾</button><div class="dd-menu" id="ddBatch"></div></div>
-      <div class="dd"><button class="btn btn-primary">新建货品 ▾</button></div>
+      <div class="dd"><button class="btn btn-primary" onclick="event.stopPropagation();$('ddNew').classList.toggle('show')">新建货品 ▾</button><div class="dd-menu" id="ddNew" style="min-width:120px"><div class="dd-item" onclick="openCreate('标品')">标品</div><div class="dd-item" onclick="openCreate('非标品')">非标品</div></div></div>
       <button class="btn" onclick="toast('（原型）按当前筛选条件导出全部货品')">导出</button>
     </div></div>
     <div style="overflow-x:auto"><table id="tbl"></table></div>
@@ -142,6 +164,7 @@ tr:hover td{background:#f5f7fa}
 
 <div class="mask" id="mask" onclick="closeDetail()"></div>
 <div class="drawer" id="drawer"><div class="dw-hd"><span>货品详情</span><span class="x" onclick="closeDetail()">×</span></div><div class="dw-bd" id="dBody"></div></div>
+<div class="drawer w70" id="cDrawer"><div class="dw-hd"><span id="cTitle">新建货品</span><span class="x" onclick="closeCreate()">×</span></div><div class="dw-bd" id="cBody"></div><div class="dw-ft" id="cFoot"></div></div>
 <div class="mask2" id="mask2"></div>
 <div class="dlg" id="dlg"><div class="dlg-hd"><span id="dlgT"></span><span class="x" onclick="closeDlg()">×</span></div><div class="dlg-bd" id="dlgB"></div><div class="dlg-ft" id="dlgF"></div></div>
 <div class="toast" id="toast"></div>
@@ -185,7 +208,7 @@ function render(){const rows=filtered();
   let h=`<thead><tr><th style="width:40px"><input type="checkbox" onchange="rows_all(this.checked)" ${rows.length&&rows.every(r=>SEL.has(r.code))?'checked':''}></th><th>货品编码</th><th>旧编码</th><th>货品名称</th><th>后台类目</th><th>货品规格</th><th>货品属性</th><th>货品类型</th><th>创建方式</th><th>是否可采</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>`;
   rows.forEach(r=>{h+=`<tr><td><input type="checkbox" ${SEL.has(r.code)?'checked':''} onchange="pick('${r.code}',this.checked)"></td><td class="mono">${r.code}</td><td class="mono">${r.old||'-'}</td><td>${esc(r.name)}</td><td>${esc(r.cat)}</td><td>${esc(r.spec)}</td>
     <td>${r.attr==='原料'?tg('原料','t-info'):tg('成品','t-blue')}</td><td>${r.type==='标品'?tg('标品','t-suc'):tg('非标品','t-warn')}</td><td>${r.create==='原料制造'?tg(r.create,'t-warn'):tg(r.create,'t-info')}</td><td>${r.purch}</td><td>${r.status==='启用'?tg('启用','t-suc'):tg('停用','t-info')}</td><td>${r.upd}</td>
-    <td><button class="lk">编辑</button><button class="lk" onclick="openDetail('${r.code}')">详情</button><button class="lk">日志</button></td></tr>`});
+    <td><button class="lk">编辑</button><button class="lk" onclick="openDetail('${r.code}')">详情</button>${r.attr==='原料'&&r.status==='启用'?`<button class="lk" onclick="openFromRaw('${r.code}')">新建商品</button>`:''}<button class="lk">日志</button></td></tr>`});
   $('tbl').innerHTML=h+'</tbody>';$('pager').textContent=`共 ${rows.length} 条　〈 1 〉　10条/页`;
   $('selInfo').textContent=SEL.size?`已选 ${SEL.size} 条`:'';
   const n=SEL.size;
@@ -194,7 +217,7 @@ function render(){const rows=filtered();
 function pick(c,on){on?SEL.add(c):SEL.delete(c);render()}
 function rows_all(on){filtered().forEach(r=>on?SEL.add(r.code):SEL.delete(r.code));render()}
 function toggleDD(e){e.stopPropagation();$('ddBatch').classList.toggle('show')}
-document.addEventListener('click',()=>$('ddBatch').classList.remove('show'));
+document.addEventListener('click',()=>{$('ddBatch').classList.remove('show');$('ddNew').classList.remove('show')});
 
 /* ============ 货品详情（照线上 item-detail-drawer.vue）：仓储信息 tab 内加「仓库信息」区块 ============ */
 function openDetail(code){DCUR=code;const it=by(code);
@@ -279,6 +302,92 @@ function runBatch(){const plan=batchPlan().filter(p=>p.res==='ok');
   plan.forEach(p=>{const d=diff(p.r.wh,BV,p.keys);p.keys.forEach(k=>p.r.wh[k]=BV[k]);p.r.upd=NOW;addLog(p.r.code,'批量编辑仓库信息',d.join('；'));
     if(p.r.attr==='原料')finsOf(p.r.code).forEach(f=>{f.upd=NOW;addLog(f.code,'批量编辑仓库信息',`跟原料 ${p.r.code}：`+d.join('；'))})});
   closeDlg();SEL.clear();toast(`批量设置完成：成功 ${plan.length} 条`);render()}
+
+
+/* ============ 新建货品（照线上 product-create.vue，70% 抽屉）：「货品仓储信息」卡片在履约方式后加本期新增字段 ============
+   标品：是否易碎、是否可压、大小件、分拣规格图片；非标品（新建原料）：是否易碎、是否可压（大小件、分拣图按成品规格，在「新建商品」建成品时填） */
+let CF=null;
+function openCreate(type){$('ddNew').classList.remove('show');
+  CF={type,name:'',en:'',unit:'',net:'',cat:'',purch:'可采',storage:'',fulfil:'',fragile:'',press:'',size:'',imgs:0,bcrs:false,err:false};renderCreate();
+  $('cDrawer').classList.add('on');$('mask').classList.add('on')}
+function closeCreate(){$('cDrawer').classList.remove('on');if(!$('drawer').classList.contains('on'))$('mask').classList.remove('on')}
+const cset=(k,v)=>{CF[k]=v;renderCreate()};
+function renderCreate(){const c=CF,std=c.type==='标品',E=(bad)=>c.err&&bad?'border-color:var(--danger)':'';
+  const sel=(k,arr,ph)=>`<select style="${E(!c[k])}" onchange="CF.${k}=this.value"><option value="">${ph||'请选择'}</option>${arr.map(x=>`<option ${c[k]===x?'selected':''}>${x}</option>`).join('')}</select>`;
+  const rad=(k,arr)=>`<div class="radios">${arr.map(x=>`<label><input type="radio" name="c${k}" ${c[k]===x?'checked':''} onchange="CF.${k}='${x}'">${x}</label>`).join('')}</div>`;
+  const f=(l,ctl,req)=>`<div class="cf"><label>${req?'<span class="rq">*</span> ':''}${l}</label><div class="ctl">${ctl}</div></div>`;
+  let h='';
+  if(!std)h+=`<div class="ccard"><div class="ccard-hd">商品来源</div><div class="ccard-bd">${f('原料来源','<div class="radios"><label><input type="radio" checked>新建原料</label></div>')}</div></div>`;
+  h+=`<div class="ccard"><div class="ccard-hd">货品基础信息</div><div class="ccard-bd">
+    ${f('货品类型',`<select disabled><option>${c.type}</option></select>`,1)}
+    ${f('货品属性',`<div class="radios" style="color:var(--t3)"><label><input type="radio" disabled ${std?'':'checked'}>原料</label><label><input type="radio" disabled ${std?'checked':''}>成品</label></div>`,1)}
+    ${f('货品名称',`<div class="pair"><input type="text" placeholder="中文名称" value="${esc(c.name)}" style="${E(!c.name)}" oninput="CF.name=this.value"><input type="text" placeholder="English name" value="${esc(c.en)}" oninput="CF.en=this.value"></div>`,1)}
+    ${f('库存单位',`<table class="spec-t"><thead><tr><th>计量单位</th><th>净含量</th><th>净含量单位</th><th>备注</th></tr></thead><tbody><tr><td>${sel('unit',std?['罐','瓶','箱','袋','包']:['kg','g'])}</td><td><input type="text" value="${esc(c.net)}" oninput="CF.net=this.value" placeholder="${std?'如 330':'1'}"></td><td><select disabled><option>${std?'ml':(c.unit||'—')}</option></select></td><td><input type="text"></td></tr></tbody></table>`,1)}
+    ${std?f('包装规格（选填）',`<table class="spec-t"><thead><tr><th>包装数量</th><th>包装单位</th></tr></thead><tbody><tr><td><input type="text"></td><td><select><option>请选择</option><option>箱</option></select></td></tr></tbody></table>`):''}
+    ${f('后台类目',`<select style="${E(!c.cat)}" onchange="CF.cat=this.value"><option value="">请选择</option>${[...new Set(ITEMS.map(x=>x.cat))].map(x=>`<option ${c.cat===x?'selected':''}>${x}</option>`).join('')}</select>`,1)}
+    ${f('是否可采',rad('purch',['可采','不可采']),1)}
+    ${f('货品描述','<div class="pair"><input type="text" placeholder="中文"><input type="text" placeholder="English"></div>')}
+    ${f('产地','<div class="pair"><input type="text" placeholder="中文"><input type="text" placeholder="English"></div>')}
+    ${f('品牌','<div class="pair"><input type="text" placeholder="中文"><input type="text" placeholder="English"></div>')}
+    ${f('货品图片','<div class="up">＋</div>',1)}
+  </div></div>`;
+  if(std)h+=`<div class="ccard"><div class="ccard-hd">BCRS 押金信息 <span class="tag t-suc" style="height:18px;line-height:16px">本期新增 · 仅 SGP</span><label style="margin-left:auto;font-weight:400;font-size:13px"><input type="checkbox" ${c.bcrs?'checked':''} onchange="cset('bcrs',this.checked)"> 开启</label></div>${c.bcrs?`<div class="ccard-bd">${f('押金单价','<input type="text" placeholder="例如 0.10" style="width:240px">',1)}</div>`:''}</div>`;
+  h+=`<div class="ccard"><div class="ccard-hd">货品仓储信息</div><div class="ccard-bd">
+    ${f('效期管理','<div class="radios"><label><input type="radio" name="cvp" checked>是</label><label><input type="radio" name="cvp">否</label></div>',1)}
+    ${f('保质期','<div style="display:flex;gap:8px"><input type="text" style="width:120px"><select style="width:90px"><option>天</option><option>月</option><option>年</option></select></div>')}
+    ${f('保存条件',sel('storage',STORAGE,'请选择保存条件'),1)}
+    ${f('履约方式',sel('fulfil',FULFIL,'请选择履约方式'),1)}
+    <div class="newwrap"><div style="font-size:12px;color:var(--danger);margin-bottom:10px"><span class="newtag">本期新增</span> 仓库信息，选填，建好后仓库可在详情 › 仓储信息 › 仓库信息里改</div>
+      ${f('是否易碎',rad('fragile',YN))}${f('是否可压',rad('press',YN))}
+      ${std?f('大小件',sel('size',SIZE,'请选择'))+f('分拣规格图片',`<div class="thumbs">${Array.from({length:c.imgs},(_,k)=>`<div class="thumb" style="width:72px;height:72px">图${k+1}<span style="position:absolute;top:0;right:4px;cursor:pointer;color:var(--danger)" onclick="cset('imgs',CF.imgs-1)">×</span></div>`).join('')}${c.imgs<5?`<div class="up" onclick="cset('imgs',CF.imgs+1)">＋ 上传</div>`:''}</div><div class="fh">分拣员照着图打包；jpg / png，单张 ≤ 5M，最多 5 张</div>`)
+        :'<div class="fh" style="padding:0 0 14px 130px">大小件、分拣规格图片按成品规格维护，在原料行「新建商品」建成品时填。</div>'}
+    </div>
+    ${f('入仓超收','<table class="spec-t"><thead><tr><th>仓库</th><th>超收比例(%)</th><th>操作</th></tr></thead><tbody><tr><td><select><option>SG 大仓</option></select></td><td><input type="text" value="99"></td><td><button class="lk">删除</button></td></tr></tbody></table><button class="lk" style="margin-top:6px">添加</button>')}
+    ${f('质检扣点','<input type="text" style="width:160px" placeholder="%">')}
+    ${f('质检拒收下限','<input type="text" style="width:160px" placeholder="%">')}
+    ${f('第三方检测报告','<div class="up">＋</div><div class="fh">仅支持pdf文件和图片格式，多页pdf默认转成多张图片，单张图最大8M，最多可上传10张图片</div>')}
+    ${f('其他检测报告','<select><option>请选择</option></select>')}
+  </div></div>`;
+  $('cTitle').textContent='新建货品';$('cBody').innerHTML=h;
+  $('cFoot').innerHTML=`<button class="btn" onclick="closeCreate()">取消</button><button class="btn btn-primary" onclick="submitCreate()">${std?'完成建档':'完成原料建档'}</button>`}
+let SEQ=31;
+function submitCreate(){const c=CF;if(!c.name||!c.unit||!c.cat||!c.storage||!c.fulfil){c.err=true;renderCreate();return toast('请填写必填项')}
+  const std=c.type==='标品',code='item2026112300'+(SEQ++);
+  const wh={storage:c.storage,fulfil:c.fulfil,fragile:c.fragile||undefined,press:c.press||undefined};if(std){wh.size=c.size||undefined;wh.imgs=c.imgs}
+  ITEMS.unshift({code,old:'',name:c.name,cat:c.cat,spec:std?(c.net||'')+'ml/'+c.unit:'1'+c.unit,attr:std?'成品':'原料',type:c.type,create:std?'成品采购':'原料采购',purch:c.purch,status:'启用',upd:NOW,wh});
+  addLog(code,'新建货品','仓库信息：'+Object.entries(wh).filter(([k,v])=>v&&k!=='imgs'||k==='imgs'&&v).map(([k,v])=>FN[k]+' '+(k==='imgs'?v+' 张':v)).join('；'));
+  closeCreate();toast(std?'建档成功':'原料建档成功，可在列表原料行点「新建商品」建成品');render()}
+
+/* ============ 原料行「新建商品」（照线上 create-from-raw/TabFinishedItems.vue）：
+   保存条件、履约方式、易碎、可压跟原料只读；每个规格卡片加大小件、分拣规格图片 ============ */
+let FR=null;
+function openFromRaw(rc){const r=by(rc);FR={rc,cat:r.cat,rows:[{unit:'',net:'',size:'',imgs:0}],err:false};renderFromRaw();$('cDrawer').classList.add('on');$('mask').classList.add('on')}
+function renderFromRaw(){const r=by(FR.rc),w=r.wh;
+  const ro=(v,h)=>`<div class="ro">${v?esc(v):'<span class="unset">未维护</span>'}<span class="h">${h||'跟原料'}</span></div>`;
+  const f=(l,ctl,req)=>`<div class="cf"><label>${req?'<span class="rq">*</span> ':''}${l}</label><div class="ctl">${ctl}</div></div>`;
+  let h=`<div class="tabs" style="margin-top:4px"><div class="tab on">创建成品货品</div><div class="tab" onclick="toast('（原型）第 ② 步：创建商品并绑定货品，现有流程不变')">创建商品并绑定货品</div></div>
+  <div class="rawbar"><span>原料来源：<b>${esc(r.name)}</b></span><span>编码：${r.code}</span><span>计量单位：kg</span><span>类目：${esc(r.cat)}</span><span>产地：-</span><span>品牌：-</span></div>
+  <div class="locktip">（系统锁定）创建方式 = 原料制造·是否可采 = 不可采（不可修改）；每个规格各建一个成品货品并建立 BOM（原料 → 成品）。</div>
+  ${f('后台类目',`<select><option>${esc(FR.cat)}</option></select>`,1)}
+  ${f('效期管理','<div class="radios"><label><input type="radio" name="fvp" checked>是</label><label><input type="radio" name="fvp">否</label></div>')}
+  ${f('保质期','<div style="display:flex;gap:8px"><input type="text" style="width:120px" value="180"><select style="width:90px"><option>天</option></select></div>')}
+  <div class="newwrap" style="margin:0 0 16px;padding-left:0"><div style="font-size:12px;color:var(--danger);margin:0 0 10px 12px"><span class="newtag">本期改动</span> 保存条件、履约方式改为跟原料只读（原来可改）；易碎、可压同样跟原料。要改去原料的仓库信息</div>
+    ${f('保存条件',ro(w.storage))}${f('履约方式',ro(w.fulfil))}${f('是否易碎',ro(w.fragile))}${f('是否可压',ro(w.press))}</div>
+  <div style="display:flex;align-items:center;gap:10px;margin:6px 0 12px"><b style="font-size:14px">成品规格</b><span class="fh">每个规格 = 1 个成品货品</span><button class="btn btn-sm" style="margin-left:auto;height:28px" onclick="FR.rows.push({unit:'',net:'',size:'',imgs:0});renderFromRaw()">＋ 添加规格</button></div>`;
+  FR.rows.forEach((x,i)=>{const nm=x.unit&&x.net?`${r.name.replace('原料','')} ${x.net}kg/${x.unit}`:'';
+    h+=`<div class="speccard"><div class="hd">规格 ${i+1}<span class="fh" style="font-weight:400">BOM：${x.net?x.net+' kg 原料 → 1 '+(x.unit||'?'):'—'}</span>${FR.rows.length>1?`<button class="lk" style="margin-left:auto" onclick="FR.rows.splice(${i},1);renderFromRaw()">删除</button>`:''}</div>
+      <div class="g3"><div><label><span class="rq">*</span> 计量单位</label><select style="${FR.err&&!x.unit?'border-color:var(--danger)':''}" onchange="FR.rows[${i}].unit=this.value;renderFromRaw()"><option value="">请选择</option>${['袋','盒','箱','托'].map(u=>`<option ${x.unit===u?'selected':''}>${u}</option>`).join('')}</select></div>
+      <div><label><span class="rq">*</span> 净含量</label><input type="text" placeholder="如 0.33" value="${esc(x.net)}" style="${FR.err&&!x.net?'border-color:var(--danger)':''}" onchange="FR.rows[${i}].net=this.value;renderFromRaw()"></div><div><label>🔒 净含量单位</label><select disabled><option>kg</option></select></div></div>
+      ${x.unit?`<div class="pair" style="margin-top:10px"><div><label class="fh">成品货品名称（中文）</label><input type="text" value="${esc(nm)}" placeholder="选择计量单位并填写净含量后自动生成"></div><div><label class="fh">成品货品名称（英文）</label><input type="text" placeholder="选择计量单位并填写净含量后自动生成"></div></div>`:''}
+      <div class="newwrap" style="margin:12px -14px 0;padding:10px 14px 2px"><div class="g3" style="grid-template-columns:200px 1fr"><div><label><span class="newtag">本期新增</span> 大小件</label><select onchange="FR.rows[${i}].size=this.value"><option value="">请选择</option>${SIZE.map(z=>`<option ${x.size===z?'selected':''}>${z}</option>`).join('')}</select></div>
+        <div><label><span class="newtag">本期新增</span> 分拣规格图片</label><div class="thumbs">${Array.from({length:x.imgs},(_,k)=>`<div class="thumb" style="width:56px;height:56px">图${k+1}</div>`).join('')}${x.imgs<5?`<div class="up" style="width:56px;height:56px" onclick="FR.rows[${i}].imgs++;renderFromRaw()">＋</div>`:''}</div></div></div><div class="fh" style="margin:6px 0 8px">选填，每个规格分别填；建好后仓库可在详情 › 仓储信息 › 仓库信息里改</div></div>
+    </div>`});
+  $('cTitle').textContent='新建商品';$('cBody').innerHTML=h;
+  $('cFoot').innerHTML=`<button class="btn" onclick="closeCreate()">取消</button><button class="btn btn-primary" onclick="submitFromRaw()">下一步</button>`}
+function submitFromRaw(){const r=by(FR.rc);if(FR.rows.some(x=>!x.unit||!x.net)){FR.err=true;renderFromRaw();return toast('请填写计量单位和净含量')}
+  FR.rows.forEach(x=>{const code='item2026112300'+(SEQ++);ITEMS.splice(ITEMS.indexOf(r)+1,0,{code,old:'',name:`${r.name.replace('原料','')} ${x.net}kg/${x.unit}`,cat:r.cat,spec:`${x.net}kg/${x.unit}`,attr:'成品',type:'非标品',create:'原料制造',raw:r.code,purch:'不可采',status:'停用',upd:NOW,wh:{size:x.size||undefined,imgs:x.imgs}});
+    addLog(code,'新建货品',`仓库信息：大小件 ${x.size||'未维护'}；分拣规格图片 ${x.imgs} 张（保存条件、履约方式、易碎、可压跟原料 ${r.code}）`)});
+  closeCreate();toast(`已建 ${FR.rows.length} 个成品货品（停用），进入第 ② 步创建商品`);render()}
 
 $('fCat').innerHTML='<option value="">全部</option>'+[...new Set(ITEMS.map(x=>x.cat))].map(c=>`<option>${c}</option>`).join('');
 render();
