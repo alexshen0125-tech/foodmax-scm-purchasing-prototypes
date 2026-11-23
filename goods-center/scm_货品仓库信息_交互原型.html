@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCM 货品仓库信息 · 交互原型</title>
+<!-- 外框与字段照 SCM 线上：h5-ddxm-intl-scm src/views/commodity/item-list.vue（货品管理列表）、item-detail-drawer.vue（货品详情）
+     本期只加「仓库信息」：详情「仓储信息」tab 内的仓库信息区块 + 单行编辑；列表「批量操作」加「批量设置仓库信息」 -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#07B77D;--primary-hover:#05A06D;--primary-light:#e8f9f4;--danger:#F56C6C;--warning:#E6A23C;--info:#409EFF;--border:#DCDFE6;--bd2:#EBEEF5;--t1:#303133;--t2:#606266;--t3:#909399;--bg:#F5F7FA}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--t1);background:#f0f2f5;min-height:100vh}
+.layout{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:50px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;flex-shrink:0}
+.topbar-logo{font-weight:700;font-size:16px;color:#fff;background:var(--primary);padding:4px 12px;border-radius:4px;margin-right:24px}
+.topbar-nav{display:flex;height:100%}
+.topbar-nav a{display:flex;align-items:center;padding:0 16px;color:var(--t2);font-size:13px;border-bottom:2px solid transparent}
+.topbar-nav a.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px;color:var(--t2);font-size:13px}
+.topbar-right select{width:auto;height:26px}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:#fff;border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sg{padding:12px 16px 6px;font-size:12px;color:var(--t3)}
+.si{padding:10px 20px;color:var(--t2);font-size:13px;border-left:3px solid transparent}
+.si.active{background:var(--primary-light);color:var(--primary);border-left-color:var(--primary);font-weight:500}
+.main{flex:1;overflow:auto;padding:16px}
+.card{background:#fff;border-radius:4px;border:1px solid var(--border);margin-bottom:12px}
+.card-body{padding:16px}
+.filter-form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}
+.fi{display:flex;flex-direction:column;gap:4px;width:180px}
+.fi label{font-size:12px;color:var(--t2)}
+input[type=text],select{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;font-size:13px;color:var(--t1);background:#fff;outline:none;width:100%}
+input:focus,select:focus{border-color:var(--primary)}
+.btn{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 14px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--t1);white-space:nowrap}
+.btn:hover{color:var(--primary);border-color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);color:#fff}
+.btn-primary[disabled]{opacity:.5;cursor:not-allowed}
+.lk{border:none;background:none;color:var(--primary);cursor:pointer;font-size:13px;padding:0 4px}
+.lk[disabled]{color:#c0c4cc;cursor:not-allowed}
+.dd{position:relative;display:inline-block}
+.dd-menu{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);min-width:190px;z-index:200;display:none;padding:4px 0}
+.dd-menu.show{display:block}
+.dd-item{padding:8px 16px;font-size:13px;cursor:pointer}
+.dd-item:hover{background:var(--primary-light);color:var(--primary)}
+.dd-item.dis{color:#c0c4cc;cursor:not-allowed;background:none}
+.dd-item.new{font-weight:500}
+.dd-item.new::after{content:'新';margin-left:6px;font-size:11px;color:#fff;background:var(--danger);border-radius:8px;padding:0 5px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border)}
+.toolbar .r{display:flex;gap:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#fafafa;color:var(--t2);font-weight:500;padding:10px 12px;text-align:left;border-bottom:1px solid var(--bd2);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--bd2);white-space:nowrap}
+tr:hover td{background:#f5f7fa}
+.mono{font-family:Menlo,Consolas,monospace;font-size:12px}
+.tag{display:inline-block;padding:0 8px;height:22px;line-height:20px;border-radius:4px;font-size:12px;border:1px solid}
+.t-info{color:#909399;background:#f4f4f5;border-color:#e9e9eb}
+.t-suc{color:#67c23a;background:#f0f9eb;border-color:#e1f3d8}
+.t-warn{color:#e6a23c;background:#fdf6ec;border-color:#faecd8}
+.t-blue{color:#409eff;background:#ecf5ff;border-color:#d9ecff}
+.t-red{color:#f56c6c;background:#fef0f0;border-color:#fde2e2}
+.pager{display:flex;justify-content:flex-end;padding:12px 16px;color:var(--t2);font-size:13px}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none}.mask.on{display:block}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:62%;min-width:900px;background:#fff;z-index:310;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s;box-shadow:-6px 0 24px rgba(0,0,0,.12)}
+.drawer.on{transform:none}
+.dw-hd{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid var(--bd2);font-size:16px;font-weight:500;flex-shrink:0}
+.x{cursor:pointer;color:var(--t3);font-size:20px}
+.dw-bd{flex:1;overflow:auto;padding:0 20px 20px}
+.tabs{display:flex;border-bottom:2px solid var(--bd2);margin-bottom:16px;position:sticky;top:0;background:#fff;z-index:2}
+.tab{padding:12px 18px;font-size:14px;color:var(--t2);cursor:pointer;margin-bottom:-2px;border-bottom:2px solid transparent}
+.tab.on{color:var(--primary);border-bottom-color:var(--primary);font-weight:500}
+.info{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 24px;margin-bottom:18px}
+.info-item__label{font-size:12px;color:var(--t3);margin-bottom:4px}
+.info-item__value{font-size:13px;word-break:break-all}
+.sec{display:flex;align-items:center;gap:10px;margin:6px 0 12px;font-size:14px;font-weight:500}
+.sec::before{content:'';width:3px;height:14px;background:var(--primary);border-radius:2px}
+.sec .hint{font-size:12px;color:var(--t3);font-weight:400}
+.sec .r{margin-left:auto}
+.inh{color:#a8abb2}
+.cur td{background:#f0faf6}
+.unset{color:#c0c4cc}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap}
+.thumb{width:40px;height:40px;border-radius:4px;background:#e8f4ee;color:#5a9;display:flex;align-items:center;justify-content:center;font-size:11px;position:relative}
+.up{width:72px;height:72px;border:1px dashed var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:12px;cursor:pointer}
+.fh{font-size:12px;color:var(--t3);line-height:1.7}
+.dlg{position:fixed;left:50%;top:8vh;transform:translateX(-50%);width:560px;max-width:96vw;max-height:84vh;background:#fff;border-radius:4px;z-index:330;display:none;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,.2)}
+.dlg.on{display:flex}.dlg.wide{width:1100px}
+.dlg-hd{padding:16px 20px;font-size:16px;font-weight:500;display:flex;justify-content:space-between}
+.dlg-bd{padding:4px 20px 12px;overflow:auto;flex:1}
+.dlg-ft{padding:12px 20px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--bd2)}
+.mask2{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:320;display:none}.mask2.on{display:block}
+.fr{display:flex;align-items:center;margin-bottom:16px}
+.fr>label{width:110px;flex-shrink:0;color:var(--t2);font-size:13px;text-align:right;padding-right:12px}
+.fr .ctl{flex:1}
+.radios{display:flex;gap:18px;font-size:13px}
+.radios label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.warnbar{background:#fdf6ec;color:#b88230;border:1px solid #faecd8;border-radius:4px;padding:8px 12px;font-size:12px;margin-bottom:14px;line-height:1.7}
+.g5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.g5 label{font-size:12px;color:var(--t2);display:block;margin-bottom:4px}
+.res-ok{color:#67c23a}.res-skip{color:var(--t3)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--bd2);box-shadow:0 4px 12px rgba(0,0,0,.12);padding:10px 18px;border-radius:4px;font-size:13px;z-index:400;display:none}
+</style>
+</head>
+<body>
+<div class="layout">
+<div class="topbar">
+  <div class="topbar-logo">Foodmax</div>
+  <nav class="topbar-nav"><a>商城(MALL)</a><a class="active">采购(SCM)</a><a>仓储(WMS)</a></nav>
+  <div class="topbar-right"><span>账号权限 <select id="roleSel" onchange="ROLE=this.value;render();if(DCUR)openDetail(DCUR)"><option>仓库</option><option>采购</option></select></span><span>小美新加坡(SG)</span><span>简体中文</span><span>退出</span></div>
+</div>
+<div class="body-wrap">
+<div class="sidebar">
+  <div class="sg">采购管理</div><div class="si">采购计划</div><div class="si">采购单管理</div>
+  <div class="sg">货品中心</div><div class="si active">货品管理</div><div class="si">BOM关系管理</div><div class="si">检验报告</div>
+  <div class="sg">供应商管理</div><div class="si">供应商列表</div>
+</div>
+<div class="main">
+  <div class="card"><div class="card-body"><div class="filter-form">
+    <div class="fi"><label>后台类目</label><select id="fCat"><option value="">全部</option></select></div>
+    <div class="fi"><label>货品名称</label><input type="text" id="fName" placeholder="请输入"></div>
+    <div class="fi"><label>货品编码</label><input type="text" id="fCode" placeholder="请输入"></div>
+    <div class="fi"><label>货品编码(批量)</label><input type="text" placeholder="批量输入货品编码"></div>
+    <div class="fi"><label>旧编码</label><input type="text" placeholder="请输入"></div>
+    <div class="fi"><label>原料编码</label><input type="text" id="fRaw" placeholder="请输入"></div>
+    <div class="fi"><label>货品类别</label><select id="fAttr"><option value="">全部</option><option>原料</option><option>成品</option></select></div>
+    <div class="fi"><label>是否可采</label><select><option>全部</option><option>可采</option><option>不可采</option></select></div>
+    <div class="fi"><label>是否BCRS货品</label><select><option>全部</option><option>是</option><option>否</option></select></div>
+    <div class="fi"><label>创建方式</label><select><option>全部</option><option>原料采购</option><option>成品采购</option><option>原料制造</option></select></div>
+    <div class="fi"><label>状态</label><select><option>启用</option><option>停用</option><option>全部</option></select></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="render()">查询</button><button class="btn" onclick="['fCat','fName','fCode','fRaw','fAttr'].forEach(i=>$(i).value='');render()">重置</button></div>
+  </div></div></div>
+  <div class="card">
+    <div class="toolbar"><span id="selInfo" style="color:var(--t2);font-size:13px"></span><div class="r">
+      <div class="dd"><button class="btn" onclick="toggleDD(event)">批量操作 ▾</button><div class="dd-menu" id="ddBatch"></div></div>
+      <div class="dd"><button class="btn btn-primary">新建货品 ▾</button></div>
+      <button class="btn" onclick="toast('（原型）按当前筛选条件导出全部货品')">导出</button>
+    </div></div>
+    <div style="overflow-x:auto"><table id="tbl"></table></div>
+    <div class="pager" id="pager"></div>
+  </div>
+</div></div></div>
+
+<div class="mask" id="mask" onclick="closeDetail()"></div>
+<div class="drawer" id="drawer"><div class="dw-hd"><span>货品详情</span><span class="x" onclick="closeDetail()">×</span></div><div class="dw-bd" id="dBody"></div></div>
+<div class="mask2" id="mask2"></div>
+<div class="dlg" id="dlg"><div class="dlg-hd"><span id="dlgT"></span><span class="x" onclick="closeDlg()">×</span></div><div class="dlg-bd" id="dlgB"></div><div class="dlg-ft" id="dlgF"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2200)}
+let ROLE='仓库';
+const STORAGE=['常温','冷藏','冷冻'],FULFIL=['常温履约','冷链履约'],YN=['是','否'],SIZE=['大件','小件'];
+const NOW='2026-11-23 15:20';
+/* 货品示例：attr 原料/成品；type 标品/非标品；create 原料采购/成品采购/原料制造；raw = 原料编码（原料制造的成品才有） */
+const ITEMS=[
+ {code:'item202610200031',old:'',name:'三文鱼块原料',cat:'水产海鲜 / 三文鱼',spec:'1kg',attr:'原料',type:'非标品',create:'原料采购',purch:'可采',status:'启用',upd:'2026-10-20 15:12',wh:{storage:'冷冻',fulfil:'冷链履约',fragile:'否',press:'是'}},
+ {code:'item202610200032',old:'',name:'三文鱼块 0.5kg/袋',cat:'水产海鲜 / 三文鱼',spec:'0.5kg/袋',attr:'成品',type:'非标品',create:'原料制造',raw:'item202610200031',purch:'不可采',status:'启用',upd:'2026-10-20 15:12',wh:{size:'小件',imgs:1}},
+ {code:'item202610200033',old:'',name:'三文鱼块 1kg/袋',cat:'水产海鲜 / 三文鱼',spec:'1kg/袋',attr:'成品',type:'非标品',create:'原料制造',raw:'item202610200031',purch:'不可采',status:'启用',upd:'2026-10-20 15:12',wh:{size:'小件',imgs:1}},
+ {code:'item202609120011',old:'sku00007721',name:'大白菜原料',cat:'蔬菜 / 叶菜',spec:'1kg',attr:'原料',type:'非标品',create:'原料采购',purch:'可采',status:'启用',upd:'2026-09-15 09:02',wh:{storage:'冷藏',fulfil:'冷链履约'}},
+ {code:'item202609120012',old:'',name:'（去外叶）大白菜 1kg/袋',cat:'蔬菜 / 叶菜',spec:'1kg/袋',attr:'成品',type:'非标品',create:'原料制造',raw:'item202609120011',purch:'不可采',status:'启用',upd:'2026-09-12 10:06',wh:{}},
+ {code:'item202609150004',old:'',name:'（整箱）大白菜 10kg/箱',cat:'蔬菜 / 叶菜',spec:'10kg/箱',attr:'成品',type:'非标品',create:'原料制造',raw:'item202609120011',purch:'不可采',status:'启用',upd:'2026-09-15 09:02',wh:{size:'大件'}},
+ {code:'item202610150004',old:'sku00008812',name:'可口可乐 330ml',cat:'酒水饮料 / 碳酸饮料',spec:'330ml/罐',attr:'成品',type:'标品',create:'成品采购',purch:'可采',status:'启用',upd:'2026-10-15 11:30',wh:{storage:'常温',fulfil:'常温履约',fragile:'否',press:'是',size:'小件',imgs:2}},
+ {code:'item202610120006',old:'',name:'矿泉水 1.5L 12瓶/箱',cat:'酒水饮料 / 饮用水',spec:'1.5L*12/箱',attr:'成品',type:'标品',create:'成品采购',purch:'可采',status:'启用',upd:'2026-10-12 10:00',wh:{storage:'常温',fulfil:'常温履约'}},
+ {code:'item202611170003',old:'',name:'七喜 330ml',cat:'酒水饮料 / 碳酸饮料',spec:'330ml/罐',attr:'成品',type:'标品',create:'成品采购',purch:'可采',status:'启用',upd:'2026-11-17 10:00',wh:{storage:'常温',fulfil:'常温履约'}},
+ {code:'item202610080014',old:'',name:'冻鸡丁原料',cat:'禽肉 / 鸡肉',spec:'1kg',attr:'原料',type:'非标品',create:'原料采购',purch:'可采',status:'停用',upd:'2026-11-02 14:21',wh:{storage:'冷冻',fulfil:'冷链履约',fragile:'否',press:'否'}},
+];
+const LOGS={};
+const by=c=>ITEMS.find(x=>x.code===c);
+const finsOf=rc=>ITEMS.filter(x=>x.raw===rc);
+/* 字段挂在哪：保存条件/履约方式/易碎/可压 跟实物（有原料的成品 → 原料）；大小件/分拣图 跟出库规格（成品） */
+const ownerOf=it=>it.raw?by(it.raw):it;
+const OWN4=it=>!it.raw;                                    /* 4 个实物字段由自己维护 */
+const OWNSIZE=it=>it.attr==='成品';                        /* 大小件、分拣图由自己维护 */
+const canEdit=()=>ROLE==='仓库';
+let SEL=new Set(),DCUR=null,DTAB='wh';
+const V=v=>v?esc(v):'<span class="unset">未维护</span>';
+const IMG=n=>n?`<div class="thumbs">${Array.from({length:n},(_,k)=>`<div class="thumb">图${k+1}</div>`).join('')}</div>`:'<span class="unset">未上传</span>';
+
+function filtered(){const q=id=>($(id).value||'').trim();
+  return ITEMS.filter(x=>(!q('fCat')||x.cat===q('fCat'))&&(!q('fName')||x.name.includes(q('fName')))&&(!q('fCode')||x.code.includes(q('fCode')))&&(!q('fRaw')||x.raw===q('fRaw')||x.code===q('fRaw')&&x.attr==='原料')&&(!q('fAttr')||x.attr===q('fAttr')))}
+function render(){const rows=filtered();
+  const tg=(t,c)=>`<span class="tag ${c}">${t}</span>`;
+  let h=`<thead><tr><th style="width:40px"><input type="checkbox" onchange="rows_all(this.checked)" ${rows.length&&rows.every(r=>SEL.has(r.code))?'checked':''}></th><th>货品编码</th><th>旧编码</th><th>货品名称</th><th>后台类目</th><th>货品规格</th><th>货品属性</th><th>货品类型</th><th>创建方式</th><th>是否可采</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>`;
+  rows.forEach(r=>{h+=`<tr><td><input type="checkbox" ${SEL.has(r.code)?'checked':''} onchange="pick('${r.code}',this.checked)"></td><td class="mono">${r.code}</td><td class="mono">${r.old||'-'}</td><td>${esc(r.name)}</td><td>${esc(r.cat)}</td><td>${esc(r.spec)}</td>
+    <td>${r.attr==='原料'?tg('原料','t-info'):tg('成品','t-blue')}</td><td>${r.type==='标品'?tg('标品','t-suc'):tg('非标品','t-warn')}</td><td>${r.create==='原料制造'?tg(r.create,'t-warn'):tg(r.create,'t-info')}</td><td>${r.purch}</td><td>${r.status==='启用'?tg('启用','t-suc'):tg('停用','t-info')}</td><td>${r.upd}</td>
+    <td><button class="lk">编辑</button><button class="lk" onclick="openDetail('${r.code}')">详情</button><button class="lk">日志</button></td></tr>`});
+  $('tbl').innerHTML=h+'</tbody>';$('pager').textContent=`共 ${rows.length} 条　〈 1 〉　10条/页`;
+  $('selInfo').textContent=SEL.size?`已选 ${SEL.size} 条`:'';
+  const n=SEL.size;
+  $('ddBatch').innerHTML=[['批量设置可采',1],['批量设置默认供应商',1],['批量设置 - 是否启用',1],['批量导入默认供应商',0],['批量导入商品关联供应商',0],['批量修改名称',0]].map(([t,s])=>`<div class="dd-item ${s&&!n?'dis':''}" onclick="toast('（原型）现有功能，不在本期')">${t}</div>`).join('')+
+    `<div class="dd-item new ${!n||!canEdit()?'dis':''}" title="${!canEdit()?'需要仓库信息编辑权限':!n?'请先勾选货品':''}" onclick="openBatch()">批量设置仓库信息</div>`}
+function pick(c,on){on?SEL.add(c):SEL.delete(c);render()}
+function rows_all(on){filtered().forEach(r=>on?SEL.add(r.code):SEL.delete(r.code));render()}
+function toggleDD(e){e.stopPropagation();$('ddBatch').classList.toggle('show')}
+document.addEventListener('click',()=>$('ddBatch').classList.remove('show'));
+
+/* ============ 货品详情（照线上 item-detail-drawer.vue）：仓储信息 tab 内加「仓库信息」区块 ============ */
+function openDetail(code){DCUR=code;const it=by(code);
+  const tabs=[['basic','基础信息'],['wh','仓储信息'],['vendor','供应商信息'],['bom',it.type==='非标品'?'BOM':'BOM'],['log','操作日志']];
+  let h=`<div class="tabs">${tabs.map(([k,t])=>`<div class="tab ${DTAB===k?'on':''}" onclick="DTAB='${k}';openDetail('${code}')">${t}</div>`).join('')}</div>`;
+  const info=arr=>`<div class="info">${arr.map(([l,v])=>`<div><div class="info-item__label">${l}</div><div class="info-item__value">${v}</div></div>`).join('')}</div>`;
+  if(DTAB==='basic')h+=info([['货品编码',it.code],['旧编码',it.old||'-'],['创建时间',it.upd],['创建人','王帅'],['更新时间',it.upd],['更新人','王帅'],['货品类型',it.type],['货品属性',it.attr],['是否可采',it.purch],['货品名称',esc(it.name)],['后台类目',esc(it.cat)],['计量单位',it.attr==='原料'?'kg':it.spec.split('/').pop()],['净含量','-'],['净含量单位','-'],['规格备注','-'],['包装单位','-'],['包装数量','-'],['产地','-'],['品牌','-']]);
+  if(DTAB==='wh'){
+    h+=info([['效期管理','是'],['保质期',it.type==='标品'?'12 月':'180 天'],['质检扣点','-'],['质检拒收下限','-'],['第三方检测报告','-'],['其他检测报告','-']]);
+    h+=`<div class="info-item__label" style="margin-bottom:6px">入仓超收</div><table style="margin-bottom:22px"><thead><tr><th>仓库ID</th><th>仓库名称</th><th>超收比例</th></tr></thead><tbody><tr><td>1</td><td>SG 大仓</td><td>99%</td></tr><tr><td>2</td><td>SG 冷库</td><td>99%</td></tr></tbody></table>`;
+    h+=whBlock(it)}
+  if(DTAB==='vendor')h+=`<table><thead><tr><th>所属仓库</th><th>默认供应商名称</th><th>供应商编号</th></tr></thead><tbody><tr><td>SG 大仓</td><td>示例供应商</td><td class="mono">V000123</td></tr></tbody></table>`;
+  if(DTAB==='bom'){const rel=it.attr==='原料'?finsOf(it.code):it.raw?[by(it.raw)]:[];
+    h+=rel.length?`<table><thead><tr><th>BOM编码</th><th>对端货品编码</th><th>对端货品名称</th><th>关系</th><th>用量</th><th>状态</th></tr></thead><tbody>${rel.map(r=>`<tr><td class="mono">BM${r.code.slice(4)}</td><td class="mono">${r.code}</td><td>${esc(r.name)}</td><td>${it.attr==='原料'?'成品':'原料'}</td><td>${(it.attr==='原料'?r:it).spec.split('/')[0]}</td><td><span class="tag t-suc">启用</span></td></tr>`).join('')}</tbody></table>`:'<div class="fh" style="padding:30px;text-align:center">暂无数据</div>'}
+  if(DTAB==='log'){const L=(LOGS[code]||[]).concat([{t:it.upd,u:'王帅',m:'新建货品',c:'—'}]);
+    h+=`<table><thead><tr><th>操作时间</th><th>操作人</th><th>操作类型</th><th>操作内容</th></tr></thead><tbody>${L.map(l=>`<tr><td>${l.t}</td><td>${l.u}</td><td>${l.m}</td><td style="white-space:normal">${esc(l.c)}</td></tr>`).join('')}</tbody></table>`}
+  $('dBody').innerHTML=h;$('drawer').classList.add('on');$('mask').classList.add('on')}
+function closeDetail(){DCUR=null;$('drawer').classList.remove('on');$('mask').classList.remove('on')}
+
+/* 仓库信息区块：非标品显示 原料 + 它下面所有成品（当前货品高亮）；没有原料的货品一行 */
+function whBlock(it){const own=ownerOf(it);const ce=canEdit();
+  const grp=own.attr==='原料'?[own,...finsOf(own.code)]:[it];
+  const eb=(r)=>ce?`<button class="lk" onclick="openEdit('${r.code}')">编辑</button>`:`<button class="lk" disabled title="需要仓库信息编辑权限">编辑</button>`;
+  let h=`<div class="sec">仓库信息<span class="hint">仓库维护</span></div>
+  <table><thead><tr><th>货品编码</th><th>货品</th><th>保存条件</th><th>履约方式</th><th>是否易碎</th><th>是否可压</th><th>大小件</th><th>分拣规格图片</th><th>操作</th></tr></thead><tbody>`;
+  grp.forEach(r=>{const o=ownerOf(r),w=r.wh,ow=o.wh,inh=!OWN4(r),cur=r.code===it.code&&grp.length>1;
+    const c4=k=>inh?`<span class="inh" title="跟原料，在原料行改">${ow[k]||'未维护'}</span>`:V(w[k]);
+    h+=`<tr class="${cur?'cur':''}"><td class="mono">${r.code}</td><td>${r.attr==='原料'?'原料':esc(r.name)}${cur?' <span class="tag t-blue" style="height:18px;line-height:16px">当前</span>':''}</td><td>${c4('storage')}</td><td>${c4('fulfil')}</td><td>${c4('fragile')}</td><td>${c4('press')}</td>
+      <td>${OWNSIZE(r)?V(w.size):'—'}</td><td>${OWNSIZE(r)?IMG(w.imgs):'—'}</td><td>${eb(r)}</td></tr>`});
+  h+=`</tbody></table>`;
+  if(grp.length>1)h+=`<div class="fh" style="margin-top:6px">成品行灰字 = 跟原料，在原料行改。保存条件、履约方式、易碎、可压跟着原料（同一种实物）；大小件、分拣规格图片按每个成品规格分别维护。</div>`;
+  return h}
+
+/* 单行编辑弹窗：只列该行能改的字段 */
+let WE=null;
+function openEdit(code){const r=by(code);WE={code,v:JSON.parse(JSON.stringify(r.wh))};renderEdit()}
+function renderEdit(){const r=by(WE.code),v=WE.v,f4=OWN4(r),fs=OWNSIZE(r);
+  const sel=(k,arr,req)=>`<select onchange="WE.v.${k}=this.value||undefined">${req?'':'<option value="">未维护</option>'}${!v[k]&&req?'<option value="">请选择</option>':''}${arr.map(x=>`<option ${v[k]===x?'selected':''}>${x}</option>`).join('')}</select>`;
+  const rad=(k)=>`<div class="radios">${YN.map(x=>`<label><input type="radio" name="r${k}" ${v[k]===x?'checked':''} onchange="WE.v.${k}='${x}'">${x}</label>`).join('')}</div>`;
+  let h='';
+  if(r.attr==='原料'){const fs_=finsOf(r.code);if(fs_.length)h+=`<div class="warnbar">保存条件、履约方式、易碎、可压改了以后，它下面 ${fs_.length} 个成品（${fs_.map(x=>esc(x.name)).join('、')}）一起生效。</div>`}
+  if(f4)h+=`<div class="fr"><label><span style="color:var(--danger)">*</span> 保存条件</label><div class="ctl">${sel('storage',STORAGE,1)}</div></div><div class="fr"><label><span style="color:var(--danger)">*</span> 履约方式</label><div class="ctl">${sel('fulfil',FULFIL,1)}</div></div><div class="fr"><label>是否易碎</label><div class="ctl">${rad('fragile')}</div></div><div class="fr"><label>是否可压</label><div class="ctl">${rad('press')}</div></div>`;
+  if(fs)h+=`<div class="fr"><label>大小件</label><div class="ctl">${sel('size',SIZE)}</div></div><div class="fr" style="align-items:flex-start"><label>分拣规格图片</label><div class="ctl"><div class="thumbs">${Array.from({length:v.imgs||0},(_,k)=>`<div class="thumb" style="width:72px;height:72px">图${k+1}<span style="position:absolute;top:0;right:4px;cursor:pointer;color:var(--danger)" onclick="WE.v.imgs--;renderEdit()">×</span></div>`).join('')}${(v.imgs||0)<5?'<div class="up" onclick="WE.v.imgs=(WE.v.imgs||0)+1;renderEdit()">＋ 上传</div>':''}</div><div class="fh">分拣员照着图打包；jpg / png，单张 ≤ 5M，最多 5 张</div></div></div>`;
+  if(!f4)h+=`<div class="fh" style="padding-left:110px">保存条件、履约方式、易碎、可压跟原料 ${r.raw}，在原料行改。</div>`;
+  $('dlgT').textContent=`编辑仓库信息 · ${r.name}`;$('dlgB').innerHTML=h;
+  $('dlgF').innerHTML=`<button class="btn" onclick="closeDlg()">取消</button><button class="btn btn-primary" onclick="saveEdit()">保存</button>`;
+  $('dlg').classList.remove('wide');$('dlg').classList.add('on');$('mask2').classList.add('on')}
+const FN={storage:'保存条件',fulfil:'履约方式',fragile:'是否易碎',press:'是否可压',size:'大小件',imgs:'分拣规格图片'};
+function diff(o,n,keys){return keys.filter(k=>(o[k]||'')!==(n[k]||'')).map(k=>k==='imgs'?`${FN[k]} ${o[k]||0} 张 → ${n[k]||0} 张`:`${FN[k]} ${o[k]||'未维护'} → ${n[k]||'未维护'}`)}
+function addLog(code,m,c){(LOGS[code]=LOGS[code]||[]).unshift({t:NOW,u:'李仓管',m,c})}
+function saveEdit(){const r=by(WE.code),v=WE.v,keys=[...(OWN4(r)?['storage','fulfil','fragile','press']:[]),...(OWNSIZE(r)?['size','imgs']:[])];
+  if(OWN4(r)&&(!v.storage||!v.fulfil))return toast('请选择保存条件和履约方式');
+  const d=diff(r.wh,v,keys);if(!d.length)return toast('没有改动');
+  keys.forEach(k=>r.wh[k]=v[k]);r.upd=NOW;addLog(r.code,'编辑仓库信息',d.join('；'));
+  if(r.attr==='原料')finsOf(r.code).forEach(f=>{f.upd=NOW;addLog(f.code,'编辑仓库信息',`跟原料 ${r.code}：`+d.join('；'))});
+  closeDlg();toast('保存成功');render();if(DCUR)openDetail(DCUR)}
+function closeDlg(){$('dlg').classList.remove('on');$('mask2').classList.remove('on')}
+
+/* ============ 批量设置仓库信息（批量操作下拉新增一项，勾选后可用，单次 ≤ 500 条，同现有批量） ============ */
+let BV={};
+function openBatch(){if(!canEdit())return toast('需要仓库信息编辑权限');if(!SEL.size)return toast('请至少选择一条货品');if(SEL.size>500)return toast('单次批量操作不能超过 500 条');
+  BV={storage:'',fulfil:'',fragile:'',press:'',size:''};$('ddBatch').classList.remove('show');renderBatch()}
+function batchPlan(){const keys=Object.keys(BV).filter(k=>BV[k]);
+  return [...SEL].map(by).map(r=>{
+    if(!keys.length)return{r,res:'skip',why:'先在上面选要改的项'};
+    const ok=keys.filter(k=>k==='size'?OWNSIZE(r):OWN4(r));
+    if(!ok.length)return{r,res:'skip',why:keys.every(k=>k==='size')?'大小件按成品规格维护，原料不适用':'所选项跟着原料，在原料行改'};
+    const ch=ok.filter(k=>(r.wh[k]||'')!==BV[k]);
+    if(!ch.length)return{r,res:'skip',why:'已是目标值'};
+    return{r,res:'ok',keys:ch,why:'将修改：'+ch.map(k=>FN[k]+' → '+BV[k]).join('、')}})}
+function renderBatch(){const plan=batchPlan(),okN=plan.filter(p=>p.res==='ok').length;
+  const sel=(k,arr)=>`<div><label>${FN[k]}</label><select onchange="BV.${k}=this.value;renderBatch()"><option value="">不修改</option>${arr.map(x=>`<option ${BV[k]===x?'selected':''}>${x}</option>`).join('')}</select></div>`;
+  let h=`<div class="g5">${sel('storage',STORAGE)}${sel('fulfil',FULFIL)}${sel('fragile',YN)}${sel('press',YN)}${sel('size',SIZE)}</div>
+  <div class="fh" style="margin-bottom:10px">保存条件、履约方式、易碎、可压只改原料和没有原料的货品（改原料时它下面的成品一起生效）；大小件只改成品。分拣规格图片不支持批量，在详情里逐个上传。</div>
+  <table><thead><tr><th>货品编码</th><th>货品名称</th><th>货品属性</th><th>保存条件</th><th>履约方式</th><th>是否易碎</th><th>是否可压</th><th>大小件</th><th>结果</th></tr></thead><tbody>`;
+  plan.forEach(p=>{const r=p.r,o=ownerOf(r),c4=k=>OWN4(r)?V(r.wh[k]):`<span class="inh">${o.wh[k]||'未维护'}</span>`;
+    h+=`<tr><td class="mono">${r.code}</td><td>${esc(r.name)}</td><td>${r.attr}</td><td>${c4('storage')}</td><td>${c4('fulfil')}</td><td>${c4('fragile')}</td><td>${c4('press')}</td><td>${OWNSIZE(r)?V(r.wh.size):'—'}</td><td class="${p.res==='ok'?'res-ok':'res-skip'}" style="white-space:normal">${p.res==='ok'?p.why:'跳过：'+p.why}</td></tr>`});
+  $('dlgT').textContent=`批量设置仓库信息（已选 ${SEL.size} 条）`;$('dlgB').innerHTML=h+'</tbody></table>';
+  $('dlgF').innerHTML=`<span class="fh" style="margin-right:auto;align-self:center">将修改 ${okN} 条，跳过 ${plan.length-okN} 条</span><button class="btn" onclick="closeDlg()">取消</button><button class="btn btn-primary" ${okN?'':'disabled'} onclick="runBatch()">确定</button>`;
+  $('dlg').classList.add('wide','on');$('mask2').classList.add('on')}
+function runBatch(){const plan=batchPlan().filter(p=>p.res==='ok');
+  plan.forEach(p=>{const d=diff(p.r.wh,BV,p.keys);p.keys.forEach(k=>p.r.wh[k]=BV[k]);p.r.upd=NOW;addLog(p.r.code,'批量编辑仓库信息',d.join('；'));
+    if(p.r.attr==='原料')finsOf(p.r.code).forEach(f=>{f.upd=NOW;addLog(f.code,'批量编辑仓库信息',`跟原料 ${p.r.code}：`+d.join('；'))})});
+  closeDlg();SEL.clear();toast(`批量设置完成：成功 ${plan.length} 条`);render()}
+
+$('fCat').innerHTML='<option value="">全部</option>'+[...new Set(ITEMS.map(x=>x.cat))].map(c=>`<option>${c}</option>`).join('');
+render();
+</script>
+</body>
+</html>
