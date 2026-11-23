@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>原料按成品收货配置 · 交互原型</title>
+<!-- 外框照 SCM 线上（h5-ddxm-intl-scm）：顶部系统切换 + 左侧菜单 + 页签栏；
+     菜单挂在「配置中心」下，与「发票差异金额配置」「工作台配置」同级（src/router/modules/config-center.ts）；
+     列表/筛选/弹窗写法照 src/views/config-center/invoice-threshold-list.vue -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#18a03a;--primary-hover:#138a31;--primary-dark:#0f8a2c;--primary-light:#e9f6ec;--danger:#F56C6C;--warning:#E6A23C;--border:#DCDFE6;--bd2:#EBEEF5;--t1:#303133;--t2:#606266;--t3:#909399;--bg:#F5F7FA}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:var(--t1);background:#fff;min-height:100vh}
+.layout{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{height:40px;background:var(--primary);display:flex;align-items:center;color:#fff;flex-shrink:0}
+.logo{width:220px;padding-left:16px;font-weight:800;font-size:20px;font-style:italic;letter-spacing:.5px}
+.sys{display:flex;height:100%}
+.sys a{display:flex;align-items:center;padding:0 10px;margin-right:12px;font-size:14px;font-weight:500;cursor:default}
+.sys a.on{background:var(--primary-dark)}
+.tr{margin-left:auto;display:flex;gap:26px;padding-right:24px;font-size:14px;font-weight:500}
+.body-wrap{display:flex;flex:1;overflow:hidden}
+.sidebar{width:220px;border-right:1px solid var(--bd2);overflow-y:auto;flex-shrink:0;padding-top:8px}
+.msearch{margin:0 10px 12px;height:32px;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;padding:0 10px;color:#c0c4cc;font-size:13px}
+.mi{height:56px;display:flex;align-items:center;padding:0 20px;color:var(--t1);font-size:14px;gap:12px}
+.mi .ar{margin-left:auto;color:var(--t3);font-size:11px}
+.mi.open{color:var(--primary);background:var(--primary-light)}
+.mi .ic{width:16px;height:16px;border:1.5px solid currentColor;border-radius:3px;opacity:.75}
+.sub{height:50px;display:flex;align-items:center;padding-left:40px;font-size:14px;color:var(--t1);cursor:pointer}
+.sub:hover{color:var(--primary)}
+.sub.on{color:var(--primary);background:var(--primary-light);font-weight:500}
+.newdot{font-size:10px;color:#fff;background:var(--danger);border-radius:8px;padding:0 5px;margin-left:6px}
+.right{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+.pagetabs{height:28px;background:#f2f2f2;display:flex;align-items:flex-end;padding-left:8px;flex-shrink:0;font-size:12px;color:var(--t2)}
+.pt{padding:0 14px;height:26px;display:flex;align-items:center;gap:30px}
+.pt.on{background:#fff;color:var(--t1)}
+.pt .x{color:var(--t3)}
+.main{flex:1;overflow:auto;padding:12px 16px}
+.filter{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-end;padding:8px 0 16px;border-bottom:1px solid var(--bd2)}
+.fi{display:flex;flex-direction:column;gap:6px;width:200px}
+.fi label{font-size:13px;color:var(--t2)}
+input[type=text],select,textarea{height:32px;border:1px solid var(--border);border-radius:4px;padding:0 10px;font-size:13px;color:var(--t1);background:#fff;outline:none;width:100%;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:32px;min-width:72px;padding:0 14px;border-radius:3px;font-size:13px;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--t1);white-space:nowrap}
+.btn:hover{color:var(--primary);border-color:var(--primary)}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed;pointer-events:none}
+.lk{border:none;background:none;color:var(--primary);cursor:pointer;font-size:13px;padding:0 4px}
+.lk.red{color:var(--danger)}
+.tt{display:flex;align-items:center;justify-content:space-between;margin:16px 0 4px}
+.tt .t{font-size:16px;font-weight:500}
+.tt .r{display:flex;gap:10px}
+.tip{font-size:13px;color:var(--t3);margin-bottom:12px}
+.tbl-wrap{border:1px solid var(--bd2);overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f5f7fa;color:var(--t1);font-weight:600;padding:12px;text-align:left;border-bottom:1px solid var(--bd2);white-space:nowrap}
+td{padding:12px;border-bottom:1px solid var(--bd2);white-space:nowrap}
+tbody tr:hover td{background:#f5f7fa}
+.mono{font-family:Menlo,Consolas,monospace;font-size:12px}
+.pager{display:flex;justify-content:flex-end;align-items:center;gap:10px;padding:14px 0;color:var(--t2);font-size:13px}
+.pg{min-width:28px;height:28px;border:1px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;padding:0 6px}
+.pg.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.pg.dis{color:#c0c4cc;cursor:not-allowed}
+.empty{text-align:center;color:var(--t3);padding:40px 0}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;display:none}.mask.on{display:block}
+.dlg{position:fixed;left:50%;top:8vh;transform:translateX(-50%);width:520px;max-width:96vw;max-height:84vh;background:#fff;border-radius:4px;z-index:310;display:none;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,.2)}
+.dlg.on{display:flex}.dlg.wide{width:960px}
+.dlg-hd{padding:18px 20px 10px;font-size:16px;font-weight:500;display:flex;justify-content:space-between}
+.dlg-hd .x{cursor:pointer;color:var(--t3);font-size:20px;line-height:1}
+.dlg-bd{padding:6px 20px 14px;overflow:auto;flex:1;font-size:13px;color:var(--t2);line-height:1.7}
+.dlg-ft{padding:12px 20px 18px;display:flex;justify-content:flex-end;gap:10px}
+.addrow{display:flex;gap:10px;position:relative}
+.sug{position:absolute;top:36px;left:0;right:90px;background:#fff;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:5;max-height:260px;overflow:auto;display:none}
+.sug.on{display:block}
+.sg-i{padding:8px 12px;cursor:pointer;display:flex;gap:12px;font-size:13px;color:var(--t1)}
+.sg-i:hover{background:var(--primary-light)}
+.sg-i .c{color:var(--t3);font-family:Menlo,Consolas,monospace;font-size:12px}
+.sg-i.dis{color:#c0c4cc;cursor:not-allowed;background:none}
+.fh{font-size:12px;color:var(--t3);margin:6px 0 12px}
+.res-ok{color:#67c23a}.res-bad{color:var(--danger)}
+.prev td,.prev th{padding:8px 10px}
+.prev select{height:28px;width:100%;min-width:220px}
+td.w{white-space:normal;min-width:180px;line-height:1.5}
+.prev td.w{min-width:160px}
+.prev td.res-bad,.prev td.res-ok{white-space:normal;min-width:150px}
+.bad td{color:#a8abb2}
+.bad td.res-bad{color:var(--danger)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#f0f9eb;color:#67c23a;border:1px solid #e1f3d8;box-shadow:0 4px 12px rgba(0,0,0,.08);padding:10px 18px;border-radius:4px;font-size:13px;z-index:400;display:none}
+</style>
+</head>
+<body>
+<div class="layout">
+<div class="topbar">
+  <div class="logo">Foodmax</div>
+  <nav class="sys"><a>商城(MALL)</a><a class="on">采购(SCM)</a><a>仓储(WMS)</a><a>运输管理系统(TMS)</a><a>商家运营(Merchant)</a></nav>
+  <div class="tr"><span>货品翻译审核</span><span>小满新加坡(SG Xiaoman) ▾</span><span>简体中文 ▾</span><span>货币: SGD</span><span>沈亮 ▾</span></div>
+</div>
+<div class="body-wrap">
+<div class="sidebar">
+  <div class="msearch">⌕ 菜单搜索</div>
+  <div class="mi"><span class="ic"></span>工作台</div>
+  <div class="mi"><span class="ic"></span>采购计划<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>库存管理<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>货品管理<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>采购管理<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>数据迁移<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>结算<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>供应商管理<span class="ar">▾</span></div>
+  <div class="mi"><span class="ic"></span>跨境物流费<span class="ar">▾</span></div>
+  <div class="mi open"><span class="ic"></span>配置中心<span class="ar">▴</span></div>
+  <div class="sub" onclick="toast('（原型）现有页面，本期不改')">发票差异金额配置</div>
+  <div class="sub" onclick="toast('（原型）现有页面，本期不改')">工作台配置</div>
+  <div class="sub on">原料按成品收货配置<span class="newdot">新</span></div>
+</div>
+<div class="right">
+  <div class="pagetabs"><div class="pt">货品列表<span class="x">×</span></div><div class="pt">采购单列表（货品）<span class="x">×</span></div><div class="pt on">原料按成品收货配置<span class="x">×</span></div></div>
+  <div class="main">
+    <div class="filter">
+      <div class="fi"><label>原料编码</label><input type="text" id="fCode" placeholder="请输入"></div>
+      <div class="fi"><label>原料名称</label><input type="text" id="fName" placeholder="请输入"></div>
+      <div class="fi"><label>后台类目</label><select id="fCat"><option value="">全部</option></select></div>
+      <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="PAGE=1;render()">查询</button><button class="btn" onclick="resetQ()">重置</button></div>
+    </div>
+    <div class="tt"><span class="t">原料按成品收货列表</span><div class="r">
+      <button class="btn" id="bDel" onclick="askDel([...SEL])" disabled>批量删除</button>
+      <button class="btn btn-primary" onclick="openAdd()">新增</button>
+    </div></div>
+    <div class="tip" id="tip"></div>
+    <div class="tbl-wrap"><table id="tbl"></table></div>
+    <div class="pager" id="pager"></div>
+  </div>
+</div>
+</div></div>
+
+<div class="mask" id="mask"></div>
+<div class="dlg" id="dlg"><div class="dlg-hd"><span id="dlgT"></span><span class="x" onclick="closeDlg()">×</span></div><div class="dlg-bd" id="dlgB"></div><div class="dlg-ft" id="dlgF"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2200)}
+const ME='沈亮';
+const now=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+
+/* 货品库（示例）：attr 原料/成品，raw = 成品所属原料编码。前 25 个原料取自数仓 cdd_scm_item（2026-11-22 分区）真实数据 */
+const G=[];
+const R=(code,name,cat,fins,st)=>{G.push({code,name,cat,attr:'原料',status:st||'启用'});(fins||[]).forEach(f=>G.push({code:f[0],name:f[1],cat,attr:'成品',raw:code,status:'启用'}))};
+const FB='Whole/ Primal Cuts - Frozen Beef',FL='Whole/ Primal Cuts - Frozen Lamb',FP='冷冻猪肉',FPO='冷冻猪内脏';
+const one=(c,n,s)=>[[c.replace(/\d+$/,m=>String(+m+1).padStart(m.length,'0')),n+' '+(s||'0.5KG/bag')]];
+[
+ ['item202611060001','Frigol Brazil Ribeye Sample',FB],
+ ['item202611060003','Frigol Brazil Beef Knuckle Sample',FB],
+ ['item202610250007','Minerva PUL Brazil Beef Short Ribs Sample','Cut /Portioned - Frozen Beef','500g/bag'],
+ ['item202611060007','Minerva PUL Brazil Beef Shin Sample',FB],
+ ['item202611060009','Minerva PUL Brazil Beef Brisket PE Sample',FB],
+ ['item202611060017','Hillside Lamp Flap Bone In Sample',FL,'300-600g/bag 0.6KG/bag'],
+ ['item202611060019','Swift Lamb Shoulder Bone in Square Cut Sample',FL],
+ ['item202611060021','Minerva Brazil Beef Neck Bone Bulk Pack Sample',FB],
+ ['item202611060023','Midfield Lamb Shortloin Bone In Sample',FL],
+ ['item202611060025','Minerva PUL Brazil Beef Rump Sample',FB],
+ ['item202611060027','Swift Australia Lamb Foreshank Sample',FL],
+ ['item202611060031','Minerva Brazil Beef Tail Sample',FB],
+ ['item202611050009','Rivasam Spain Pork Belly Sheet Ribbed BL RL Sample',FP],
+ ['item202611050007','ColdStar Pork Belly SingleRibbed BL Skin On Sample',FP],
+ ['item202611050005','Boseler Pork Belly Sheet Ribbed BL RL Sample',FP],
+ ['item202611050001','Finland Pork Liver Sliced - Sample','冷鲜猪内脏'],
+ ['item202611050003','Friselva Pork Belly Sheet Ribbed BL RL Sample',FP],
+ ['item202611050013','Hunan Pork China Pork Collar Sample',FP],
+ ['item202611050011','Sulina Brazil Pork Shoulder Boneless Sample',FP],
+ ['item202611050015','Hunan Pork Belly Sheet Ribbed Boneless Sample',FP],
+ ['item202611050017','Scan Sverige Sweden Pork Kidney Sample',FP],
+ ['item202611050019','Frimesa Brazil Pork Tenderloin Sample',FP],
+ ['item202611050021','PPS Spain Pork Large Intestine Sample',FPO],
+ ['item202611050023','Frimesa Brazil Pork Cooked Large Intestine Sample',FPO,'0.55KG/bag'],
+ ['item202611050025','Sulina Brazil Pork Knuckle/ Hock Bone In Sample',FP,'0.8KG/bag'],
+].forEach(([c,n,cat,sp])=>R(c,n,cat,one(c,n,sp))); /* 截图中的 25 个，预置为已配置 */
+/* 新增弹窗里可演示的其他原料 */
+R('item202610200031','三文鱼块原料','水产海鲜 / 三文鱼',[['item202610200032','三文鱼块 0.5kg/袋'],['item202610200033','三文鱼块 1kg/袋']]);
+R('item202609120011','大白菜原料','蔬菜 / 叶菜',[['item202609120012','（去外叶）大白菜 1kg/袋'],['item202609150004','（整箱）大白菜 10kg/箱']]);
+R('item202611200001','Frimesa Brazil Pork Loin Sample',FP,[]);
+R('item202610080014','冻鸡丁原料','禽肉 / 鸡肉',[['item202610080015','冻鸡丁 1kg/袋']],'停用');
+R('item202611100003','Minerva PUL Brazil Beef Chuck Roll Sample',FB,[['item202611100004','Minerva PUL Brazil Beef Chuck Roll Sample 0.5KG/bag']]);
+const by=c=>G.find(x=>x.code===c);
+const finsOf=rc=>G.filter(x=>x.raw===rc&&x.status==='启用');
+
+/* 配置列表：一个原料一条，记录收货用哪个成品 */
+const SAMPLE=G.filter(x=>x.attr==='原料').slice(0,25);
+let LIST=SAMPLE.map((x,i)=>({raw:x.code,fin:finsOf(x.code)[0].code,user:ME,time:'2026-11-23 16:'+String(10+Math.floor(i/3)).padStart(2,'0')+':'+String(i*2%60).padStart(2,'0')}));
+let SEL=new Set(),PAGE=1;const SIZE=10;
+
+[...new Set(G.filter(x=>x.attr==='原料').map(x=>x.cat))].forEach(c=>$('fCat').insertAdjacentHTML('beforeend',`<option>${esc(c)}</option>`));
+function resetQ(){['fCode','fName','fCat'].forEach(i=>$(i).value='');PAGE=1;render()}
+function rows(){
+  const c=$('fCode').value.trim().toLowerCase(),n=$('fName').value.trim().toLowerCase(),cat=$('fCat').value;
+  return LIST.filter(r=>{const g=by(r.raw);return(!c||g.code.toLowerCase().includes(c))&&(!n||g.name.toLowerCase().includes(n))&&(!cat||g.cat===cat)})
+    .sort((a,b)=>b.time.localeCompare(a.time));
+}
+function render(){
+  const all=rows(),pages=Math.max(1,Math.ceil(all.length/SIZE));if(PAGE>pages)PAGE=pages;
+  const cur=all.slice((PAGE-1)*SIZE,PAGE*SIZE);
+  $('tip').textContent=`共 ${all.length} 条`;
+  const allSel=cur.length&&cur.every(r=>SEL.has(r.raw));
+  $('tbl').innerHTML=`<thead><tr><th style="width:40px"><input type="checkbox" ${allSel?'checked':''} onchange="selPage(this.checked)"></th><th>原料编码</th><th>原料名称</th><th>后台类目</th><th>收货成品编码</th><th>收货成品名称</th><th>添加人</th><th>添加时间</th><th style="position:sticky;right:0;background:#f5f7fa">操作</th></tr></thead><tbody>`+
+   (cur.length?cur.map(r=>{const g=by(r.raw),f=by(r.fin);return `<tr><td><input type="checkbox" ${SEL.has(r.raw)?'checked':''} onchange="sel('${r.raw}',this.checked)"></td><td class="mono">${g.code}</td><td class="w">${esc(g.name)}</td><td>${esc(g.cat)}</td><td class="mono">${f.code}</td><td class="w">${esc(f.name)}</td><td>${esc(r.user)}</td><td>${r.time}</td><td style="position:sticky;right:0;background:#fff"><button class="lk red" onclick="askDel(['${r.raw}'])">删除</button></td></tr>`}).join('')
+   :`<tr><td colspan="9" class="empty">暂无数据</td></tr>`)+'</tbody>';
+  let p=`<span>共 ${all.length} 条</span><span class="pg">10条/页</span><span class="pg ${PAGE<=1?'dis':''}" onclick="go(${PAGE-1})">‹</span>`;
+  for(let i=1;i<=pages;i++)p+=`<span class="pg ${i===PAGE?'on':''}" onclick="go(${i})">${i}</span>`;
+  $('pager').innerHTML=p+`<span class="pg ${PAGE>=pages?'dis':''}" onclick="go(${PAGE+1})">›</span>`;
+  $('bDel').disabled=!SEL.size;$('bDel').textContent=SEL.size?`批量删除（${SEL.size}）`:'批量删除';
+}
+function go(p){const pages=Math.max(1,Math.ceil(rows().length/SIZE));if(p<1||p>pages)return;PAGE=p;render()}
+function sel(c,on){on?SEL.add(c):SEL.delete(c);render()}
+function selPage(on){rows().slice((PAGE-1)*SIZE,PAGE*SIZE).forEach(r=>on?SEL.add(r.raw):SEL.delete(r.raw));render()}
+
+function openDlg(t,b,f,wide){$('dlgT').textContent=t;$('dlgB').innerHTML=b;$('dlgF').innerHTML=f;$('dlg').classList.toggle('wide',!!wide);$('dlg').classList.add('on');$('mask').classList.add('on')}
+function closeDlg(){$('dlg').classList.remove('on');$('mask').classList.remove('on')}
+
+/* 删除 */
+function askDel(codes){
+  if(!codes.length)return;
+  const names=codes.slice(0,3).map(c=>'「'+esc(by(c).name)+'」').join('、')+(codes.length>3?` 等 ${codes.length} 个原料`:'');
+  openDlg('删除确认',`确定删除 ${names}？<br>删除后这些原料恢复按原料收货；已创建的收货单不受影响。`,
+   `<button class="btn" onclick="closeDlg()">取消</button><button class="btn btn-primary" onclick="doDel('${codes.join(',')}')">确定</button>`);
+}
+function doDel(s){const cs=s.split(',');LIST=LIST.filter(r=>!cs.includes(r.raw));cs.forEach(c=>SEL.delete(c));closeDlg();render();toast(`已删除 ${cs.length} 条`)}
+
+/* 新增：搜索选择或粘贴多个编码 → 预览校验 → 确定 */
+let ADD=[];
+function check(code){
+  const g=by(code);
+  if(!g)return{ok:false,msg:'货品不存在'};
+  if(g.attr!=='原料')return{ok:false,msg:`这是成品，请填原料编码（${g.raw}）`};
+  if(g.status!=='启用')return{ok:false,msg:'原料已停用'};
+  if(LIST.some(r=>r.raw===code))return{ok:false,msg:'已在配置中'};
+  if(!finsOf(code).length)return{ok:false,msg:'原料下没有启用的成品，请先建成品'};
+  return{ok:true};
+}
+function openAdd(){
+  ADD=[];
+  openDlg('新增',`<div class="addrow"><input type="text" id="aIn" placeholder="输入原料编码或名称搜索；多个编码可直接粘贴，回车添加" oninput="sug()" onkeydown="if(event.key==='Enter'){event.preventDefault();addCodes(this.value)}"><button class="btn" onclick="addCodes($('aIn').value)">添加</button><div class="sug" id="sug"></div></div>
+   <div class="fh">粘贴时支持换行、逗号、空格分隔，单次最多 200 个。原料下只有一个成品时自动带出，有多个成品时选一个。</div>
+   <div id="aPrev"></div>`,
+   `<button class="btn" onclick="closeDlg()">取消</button><button class="btn btn-primary" id="aOk" onclick="doAdd()">确定</button>`,true);
+  renderAdd();setTimeout(()=>$('aIn').focus(),0);
+}
+function sug(){
+  const v=$('aIn').value.trim().toLowerCase(),box=$('sug');
+  if(!v||/[\s,，]/.test(v)){box.classList.remove('on');return}
+  const hit=G.filter(x=>x.attr==='原料'&&(x.code.toLowerCase().includes(v)||x.name.toLowerCase().includes(v))).slice(0,10);
+  box.innerHTML=hit.length?hit.map(x=>{const r=check(x.code),inAdd=ADD.some(a=>a.code===x.code);const dis=!r.ok||inAdd;
+    return `<div class="sg-i ${dis?'dis':''}" ${dis?'':`onclick="addCodes('${x.code}')"`}><span class="c">${x.code}</span><span>${esc(x.name)}</span>${dis?`<span style="margin-left:auto">${inAdd?'已添加':esc(r.msg)}</span>`:''}</div>`}).join('')
+    :'<div class="sg-i dis">无匹配原料</div>';
+  box.classList.add('on');
+}
+function addCodes(text){
+  const codes=[...new Set(String(text).split(/[\s,，;；]+/).map(s=>s.trim()).filter(Boolean))];
+  if(!codes.length)return;
+  if(ADD.length+codes.length>200){toast('单次最多 200 个');return}
+  codes.forEach(c=>{if(ADD.some(a=>a.code===c))return;const r=check(c),fs=r.ok?finsOf(c):[];ADD.push({code:c,ok:r.ok,msg:r.msg,fin:fs.length===1?fs[0].code:''})});
+  $('aIn').value='';$('sug').classList.remove('on');renderAdd();
+}
+function renderAdd(){
+  const ok=ADD.filter(a=>a.ok),need=ok.filter(a=>!a.fin).length;
+  $('aPrev').innerHTML=ADD.length?`<div style="margin-bottom:8px">已添加 ${ADD.length} 个，可新增 <b class="res-ok">${ok.length}</b> 个${ADD.length-ok.length?`，<b class="res-bad">${ADD.length-ok.length}</b> 个不能新增（确定时自动跳过）`:''}${need?`，<b style="color:var(--warning)">${need}</b> 个待选收货成品`:''}</div>
+   <div class="tbl-wrap"><table class="prev"><thead><tr><th>原料编码</th><th>原料名称</th><th>收货成品</th><th>校验结果</th><th>操作</th></tr></thead><tbody>`+
+   ADD.map((a,i)=>{const g=by(a.code),fs=a.ok?finsOf(a.code):[];
+     const fin=!a.ok?'-':fs.length===1?`<span class="mono">${fs[0].code}</span> ${esc(fs[0].name)}`
+       :`<select onchange="ADD[${i}].fin=this.value;renderAdd()"><option value="">请选择收货成品</option>${fs.map(f=>`<option value="${f.code}" ${a.fin===f.code?'selected':''}>${f.code} ${esc(f.name)}</option>`).join('')}</select>`;
+     return `<tr class="${a.ok?'':'bad'}"><td class="mono">${esc(a.code)}</td><td class="w">${g?esc(g.name):'-'}</td><td class="w">${fin}</td><td class="${a.ok?'res-ok':'res-bad'}">${a.ok?'可新增':esc(a.msg)}</td><td><button class="lk" onclick="ADD.splice(${i},1);renderAdd()">移除</button></td></tr>`}).join('')+'</tbody></table></div>'
+   :'<div class="empty" style="padding:30px 0">还没有添加原料</div>';
+  const b=$('aOk');b.disabled=!ok.length||need>0;b.textContent=ok.length?`确定（${ok.length}）`:'确定';
+}
+function doAdd(){
+  const ok=ADD.filter(a=>a.ok&&a.fin),t=now();
+  ok.forEach(a=>LIST.push({raw:a.code,fin:a.fin,user:ME,time:t}));
+  closeDlg();PAGE=1;render();toast(`已新增 ${ok.length} 条`+(ADD.length>ok.length?`，跳过 ${ADD.length-ok.length} 条`:''));
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.addrow'))$('sug')&&$('sug').classList.remove('on')});
+render();
+</script>
+</body>
+</html>
