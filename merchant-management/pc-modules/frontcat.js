@@ -2,7 +2,7 @@
    按线上 h5-foodmax-platform 还原（views/front-category/index.vue + components/front-category-{tree,detail,rules,products,preview}.vue，
    Element UI 默认尺寸，主题色 $--color-primary:#009919，见 src/scss/element-variables.scss）。样式全部挂在 .fco 下，不影响原型其他页。
    本期新增（2026-11-23）：末级类目（L2）加「是否同品展示」是/否，默认否；运营平台只存开关，商城侧读取后自行处理展示。L1 不展示该字段。
-   本期新增（2026-11-24）：指定商品下加「置顶排序」池，最多 10 个、只能选本类目预计最终展示的商品，拖动/上移/下移调位次，其余按商城默认排序。 */
+   本期新增（2026-11-24）：指定商品下加「置顶排序」池，最多 10 个、只能选本类目预计最终展示的商品，拖动/上移/下移调位次，其余按商城默认排序；只在置顶排序区操作，商品预览表不放置顶入口。 */
 (function(){
   const CSS=`<style>
 .fco{--p:#009919;--pl:#e6f5e8;--pb:#99d6a3;font-size:14px;color:#303133;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
@@ -129,7 +129,6 @@
   const TOP_MAX=10,curN=()=>find(DB.fcSel).n,topOf=n=>(n.top=n.top||[]);
   window.fcTopMove=function(i,d){const t=topOf(curN()),j=i+d;if(j<0||j>=t.length)return;[t[i],t[j]]=[t[j],t[i]];render();toast('置顶排序已保存','ok');};
   window.fcTopDel=function(i){const t=topOf(curN());t.splice(i,1);render();toast('已移出置顶，后面的商品自动前移','ok');};
-  window.fcTopPin=function(code){const t=topOf(curN());if(t.includes(code))return;if(t.length>=TOP_MAX)return toast('置顶最多 10 个，请先移出再添加','err');t.push(code);render();toast(`已置顶，排第 ${t.length} 位`,'ok');};
   let dragI=null;
   window.fcTopDragStart=function(i,e){dragI=i;e.dataTransfer.effectAllowed='move';e.currentTarget.classList.add('drag');};
   window.fcTopDrop=function(i,e){e.preventDefault();if(dragI===null||dragI===i)return;const t=topOf(curN()),[x]=t.splice(dragI,1);t.splice(i,0,x);dragI=null;render();toast('置顶排序已保存','ok');};
@@ -192,7 +191,7 @@
         <div class="dv"></div>
         <div class="sum"><span>规则圈选 <b>0</b> 个</span><span>指定加入 <b>${inc.length}</b> 个</span><span>指定剔除 <b class="r">0</b> 个</span><span>预计最终展示 <b class="g">${rows.length}</b> 个商品</span></div>
         <div class="sh"><h4>商品预览</h4><span class="tip">根据当前圈品规则实时计算，商品默认全部选中</span><button class="btn mini" onclick="toast('演示：导出商品','info')">导出商品</button><button class="btn mini" onclick="toast('已刷新','ok')">刷新</button></div>
-        <div style="max-height:360px;overflow-y:auto"><table><thead><tr><th style="width:160px">商品SPU编码</th><th>商品名称</th><th style="width:110px">置顶</th></tr></thead><tbody>${rows.length?rows.map(x=>{const k=top.indexOf(x[0]);return `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${k>=0?`<span class="tag info">第 ${k+1} 位</span>`:`<button class="lk" ${top.length>=TOP_MAX?'disabled title="置顶已满 10 个"':''} onclick="fcTopPin('${x[0]}')">置顶</button>`}</td></tr>`}).join(''):'<tr><td colspan="3" style="text-align:center;color:#909399;padding:30px 0">暂无数据</td></tr>'}</tbody></table></div>
+        <div style="max-height:360px;overflow-y:auto"><table><thead><tr><th style="width:160px">商品SPU编码</th><th>商品名称</th></tr></thead><tbody>${rows.length?rows.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td></tr>`).join(''):'<tr><td colspan="2" style="text-align:center;color:#909399;padding:30px 0">暂无数据</td></tr>'}</tbody></table></div>
         <div class="foot">预计共 ${rows.length} 个商品</div>`;
     }
     if(DB.fcDlg&&ed&&leaf){const d=DB.fcDlg,rows=n.pre||[],top=topOf(n),left=TOP_MAX-top.length,kw=d.kw.trim();
