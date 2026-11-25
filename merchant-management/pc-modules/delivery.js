@@ -90,8 +90,8 @@
   function tabSign(){
     const DL=DB.deliveries||[];
     if(!DL.length) return `<div class="empty"><div class="e-ic">🚚</div><div class="e-t">暂无送货单</div><div class="e-s">在「打印标签」页打印<b>第一个标签</b>时，系统按<b>入库仓库</b>自动生成送货单。<br>可到「备货管理 → 打印标签」打印任一标签试试。</div></div>`;
-    return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。${(typeof ckOn=='function'&&ckOn())?'<br><b>送货前先核货</b>：营业截止（截单）后才能开始核货，对照车上实际装的货逐个 SKU 核数量（按实际打印数带出），<b>核完仓库才能扫码签到收货</b>；签到前可撤回重核。':''}</div>
-    <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单${(typeof ckPendingCount=='function'&&ckPendingCount())?` · <b style="color:var(--y)">待核货 ${ckPendingCount()}</b>`:''} · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
+    return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。${(typeof ckOn=='function'&&ckOn())?'<br><b>送货前先核货</b>：打印标签生成送货单后就能核货（截单前也能先核，截单前客户还可能改单，应送变了要重核），对照车上实际装的货逐个 SKU 核数量（按实际打印数带出），<b>核完仓库才能扫码签到收货</b>；签到前可撤回重核，每次核货都留记录（送货单详情可查）。':''}</div>
+    <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单${(typeof ckTodoAll=='function'&&ckTodoAll())?` · <b style="color:var(--y)">待核货 ${ckTodoAll()}</b>`:''} · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>送货单</th>${(typeof ckOn=='function'&&ckOn())?'<th>核货状态</th><th>核货时间</th><th style="text-align:right">少送(件)</th>':''}<th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
       ${DL.map(d=>{if(d.booked===undefined)d.booked=false;if(d.signed===undefined)d.signed=(d.status=='已签到'||d.status=='交接完成');const done=d.status=='交接完成';
@@ -111,8 +111,8 @@
         <td style="white-space:nowrap">${done
           ?`<button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">查看详情</button>`
           :`${(()=>{if(typeof ckState!='function'||d.signed)return '';const s=ckState(d);
-              if(s=='todo'||s=='stale')return cf.passed?`<button class="btn btn-p btn-sm" onclick="ck_open('${d.id}')">${s=='stale'?'重新核货':'核货'}</button> `:`<button class="btn btn-o btn-sm" disabled style="opacity:.42;cursor:not-allowed" title="未到营业截单时间 ${cf.at}，截单后才能核货">核货</button> `;
-              if(s=='done')return `<button class="btn btn-o btn-sm" onclick="ck_open('${d.id}')">核货记录</button> `;return '';})()}${cf.passed
+              if(s=='todo'||s=='stale')return `<button class="btn btn-p btn-sm" onclick="ck_open('${d.id}')">${s=='stale'?'重新核货':'核货'}</button> `;
+              if(s=='done')return `<button class="btn btn-o btn-sm" onclick="ck_open('${d.id}')">查看核货</button> `;return '';})()}${cf.passed
               ?`<button class="btn ${(typeof ckBlocked=='function'&&ckBlocked(d))?'btn-o':'btn-p'} btn-sm" onclick="deliv_print('${d.id}')">${d.printed?'重新打印':'打印'}</button>`
               :`<button class="btn btn-o btn-sm" disabled style="opacity:.42;cursor:not-allowed" title="未到营业截单时间 ${cf.at}${cf.wd?'（'+cf.wd+'）':''}，截单后送货单内容才固定，届时可打印">打印</button>`
             } ${d.signed?'<span style="font-size:11.5px;color:var(--ts);margin:0 4px">已签到 · 待仓库交接</span>':`${d.booked?`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">改约</button> <button class="btn btn-link btn-sm" style="color:var(--r)" onclick="deliv_cancelBook('${d.id}')">取消预约</button>`:`<button class="btn btn-o btn-sm" onclick="deliv_book('${d.id}')">预约送货</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signQR('${d.id}')">签到码</button>`} <button class="btn btn-o btn-sm" onclick="deliv_signDetail('${d.id}')">详情</button>`}</td>
@@ -291,7 +291,7 @@
         ${kvItem('送达时段',`${d.deliver} ${dash(d.window)}`)}
         ${kvItem('应送货',`${dvShould(d)} 件`)}
         ${kvItem('已入库',`${dvIn(d)} 件`)}
-        ${(typeof ckOn=='function'&&ckOn())?kvItem('核货',ckTag(d)+(d.check?`<div style="font-size:11.5px;color:var(--ts);margin-top:3px">${d.check.by} · ${d.check.at}${ckShortQty(d)?` · <span style="color:var(--r)">少送 ${ckShortQty(d)} 件</span>`:''}</div>`:'')+(['todo','stale'].includes(ckState(d))&&!d.signed?`<button class="btn btn-link" style="padding:0" onclick="ck_open('${d.id}')">去核货 →</button>`:'')):''}
+        ${(typeof ckOn=='function'&&ckOn())?kvItem('核货',ckTag(d)+(['todo','stale'].includes(ckState(d))&&!d.signed?`<button class="btn btn-link" style="padding:0" onclick="ck_open('${d.id}')">去核货 →</button>`:'')):''}
         ${kvItem('预约时间',d.booked?`${d.deliver} ${d.bookWindow||d.window}`:'未预约')}
         ${kvItem('签到时间',(d.signed||inbound)?`${d.deliver} ${d.signTime||'00:12'} 仓库扫码确认`:'未签到')}
         ${kvItem('交接时间',inbound?`${d.deliver} 已交接入仓`:'未交接')}
@@ -301,6 +301,7 @@
         ${kvItem('缺货罚款',inbound?(dvFineAmt(d)>0?`<b style="color:var(--r)">${money(dvFineAmt(d))}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${dvFineQty(d)} 件 × ${money(dvFine(d).rate)}/件 · 单号 <span class="mono">${dvFine(d).no}</span></div>`:'<span style="color:var(--ts)">无</span>'):'—')}
       </div>
     </div></div>
+    ${(typeof ckHistoryCard=='function')?ckHistoryCard(d):''}
     ${(inbound&&dvShort(d))?(()=>{const rs=(typeof replByDelivery=='function')?replByDelivery(d.id):[];
       return `<div class="ib ${rs.length?'ib-y':'ib-r'}" style="margin-bottom:14px"><span class="i">${rs.length?'🔁':'⚠️'}</span><div>
         本单收货清点<b>少货 ${dvShortQty(d)} 件</b>。${rs.length
