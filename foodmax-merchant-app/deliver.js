@@ -937,16 +937,17 @@ function pickHtml(g,x){const v=pickVal(g,x);return v==null?'<span style="color:v
 // 数量三格：应取回 / 实际取回 / 差异（差异只在提货后有值）
 /* 11-25 按重量退款（与 PC qtyGrp/qtyGrpHtml 同口径）：byWt 行单位 kg，件数行、重量行各自相加不混加
    只有件数 →「3」；只有重量 →「21.2 kg」；两种都有 → 两行「2 件」「21.2 kg」；实际取回全 0 →「0」；差异只显示有差异的单位，都没有 →「0」 */
-function qtyGrp(list,fn){const g={n:0,w:0,hn:false,hw:false};list.forEach(x=>{const v=fn(x);if(v==null)return;if(x.byWt){g.w=r2(g.w+v);g.hw=true;}else{g.n=r2(g.n+v);g.hn=true;}});return g;}
+const retUnit=x=>x.byWt?'kg':(x.unit||'件');
+function qtyGrp(list,fn){const g={};list.forEach(x=>{const v=fn(x);if(v==null)return;const u=retUnit(x);g[u]=r2((g[u]||0)+v);});return g;}
+// 11-25 二改（与 PC 同）：所有数量带单位，按商品自己的单位分开汇总（件/箱/包…，按重量写 kg），一种单位一行、kg 排最后；差异只显示有差异的单位，都没有 → 各单位 0
 function qtyGrpHtml(g,o){o=o||{};
-  let ls=[];if(g.hn)ls.push([g.n,'件']);if(g.hw)ls.push([g.w,'kg']);
-  if(o.diff)ls=ls.filter(l=>l[0]>0);
-  if(!ls.length||(o.zero&&ls.every(l=>!l[0])))return '0';
-  const both=ls.length>1,c=o.diff?' style="color:var(--red)"':'';
-  return ls.map(([v,u])=>`<div${c}>${v}${u=='kg'?' kg':(both?' 件':'')}</div>`).join('');}
+  let ls=Object.keys(g).sort((a,b)=>(a=='kg')-(b=='kg')).map(u=>[g[u],u]);
+  if(o.diff){const nz=ls.filter(l=>l[0]>0);if(nz.length)ls=nz;}
+  if(!ls.length)return NONE;
+  return ls.map(([v,u])=>`<div${o.diff&&v>0?' style="color:var(--red)"':''}>${v} <span style="font-size:.62em">${u}</span></div>`).join('');}
 const NONE='<span style="color:var(--sub)">—</span>';
 const retQtyHtml=(g,x)=>qtyGrpHtml(qtyGrp(x?[x]:g.items,i=>i.retQty||0));
-const pickQtyHtml=(g,x)=>pickVal(g,x)==null?NONE:qtyGrpHtml(qtyGrp(x?[x]:g.items,i=>pickOf(g,i)||0),{zero:true});
+const pickQtyHtml=(g,x)=>pickVal(g,x)==null?NONE:qtyGrpHtml(qtyGrp(x?[x]:g.items,i=>pickOf(g,i)||0));
 const diffQtyHtml=(g,x)=>isDone(g)?qtyGrpHtml(qtyGrp(x?[x]:g.items,diffOf),{diff:true}):NONE;
 function retKbox(g,st){
   return `<div class="dl-kbox" style="${st}"><div class="k"><div class="l">应取回</div><div class="v">${retQtyHtml(g)}</div></div><div class="k"><div class="l">实际取回</div><div class="v">${pickQtyHtml(g)}</div></div><div class="k"><div class="l">差异</div><div class="v">${diffQtyHtml(g)}</div></div></div>`;}
@@ -963,7 +964,7 @@ function returnCard(g){
 }
 // 退货明细单行（分区块与逐行两种排法共用）
 function retItemHtml(g,x){return `<b style="font-size:14px">${x.name}</b>${x.byWt?'<span style="font-size:10.5px;font-weight:700;color:#2563EB;background:#E8EFFD;padding:1px 7px;border-radius:20px;margin-left:6px">按重量</span>':''}${x.gift?'<span style="font-size:10.5px;font-weight:700;color:#6B4FB8;background:#EFEAFB;padding:1px 7px;border-radius:20px;margin-left:6px">赠品</span>':''}<div style="font-size:11.5px;color:var(--sub);margin-top:3px">${x.sku} · ${x.spec}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:12.5px;white-space:nowrap;color:#46604F;font-variant-numeric:tabular-nums"><span>应取回 ${x.retQty}${x.byWt?' kg':''}</span><span>实际取回 ${pickVal(g,x)==null?NONE:pickOf(g,x)+(x.byWt?' kg':'')}</span>${isDone(g)?`<span${diffOf(x)>0?' style="color:var(--red)"':''}>差异 ${diffOf(x)}${x.byWt&&diffOf(x)?' kg':''}</span>`:''}${g.appeal&&!g._whr&&g.appeal.kind==='goods'?`<span>申诉 ${((g.appeal.items||[]).find(i=>i.name===x.name)||{qty:0}).qty}</span>`:''}<span>单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
+      <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:12.5px;white-space:nowrap;color:#46604F;font-variant-numeric:tabular-nums"><span>应取回 ${x.retQty} ${retUnit(x)}</span><span>实际取回 ${pickVal(g,x)==null?NONE:pickOf(g,x)+' '+retUnit(x)}</span>${isDone(g)?`<span${diffOf(x)>0?' style="color:var(--red)"':''}>差异 ${diffOf(x)} ${retUnit(x)}</span>`:''}${g.appeal&&!g._whr&&g.appeal.kind==='goods'?`<span>申诉 ${((g.appeal.items||[]).find(i=>i.name===x.name)||{qty:0}).qty} ${retUnit(x)}</span>`:''}<span>单价 ${x.price==null?'—':fmtS(x.price)}</span><span style="margin-left:auto;font-weight:700">${x.price==null?'—':fmtS(Math.round(x.retQty*x.price*100)/100)}</span></div>`;}
 // 客户退货详情：单据信息 + 逐商品退回/取回数量（只读）
 function openReturnDetail(no){
   const g=RETURN.find(x=>x.no===no); if(!g)return;retRecalc(g);
