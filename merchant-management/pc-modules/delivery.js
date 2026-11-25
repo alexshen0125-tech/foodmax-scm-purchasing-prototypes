@@ -301,7 +301,6 @@
         ${kvItem('缺货罚款',inbound?(dvFineAmt(d)>0?`<b style="color:var(--r)">${money(dvFineAmt(d))}</b><div style="font-size:11px;color:var(--ts);margin-top:2px">${dvFineQty(d)} 件 × ${money(dvFine(d).rate)}/件 · 单号 <span class="mono">${dvFine(d).no}</span></div>`:'<span style="color:var(--ts)">无</span>'):'—')}
       </div>
     </div></div>
-    ${(typeof ckHistoryCard=='function')?ckHistoryCard(d):''}
     ${(inbound&&dvShort(d))?(()=>{const rs=(typeof replByDelivery=='function')?replByDelivery(d.id):[];
       return `<div class="ib ${rs.length?'ib-y':'ib-r'}" style="margin-bottom:14px"><span class="i">${rs.length?'🔁':'⚠️'}</span><div>
         本单收货清点<b>少货 ${dvShortQty(d)} 件</b>。${rs.length
@@ -320,6 +319,7 @@
         ${kvItem('联系电话',dash(meta.day&&meta.day[0]?(meta.day[0].split(' ')[1]||''):''))}
       </div>
     </div></div>`:''}
+    ${(typeof ckHistoryCard=='function')?ckHistoryCard(d):''}
     ${(typeof whrOfDelivery=='function'&&whrOfDelivery(d.id).length)?`<div class="card" style="margin-bottom:14px"><div class="card-hd"><h3>错货 · 待退回</h3><span class="sub">${[...new Set(whrOfDelivery(d.id).map(x=>x.type))].map(t=>`${t} ${whrOfDelivery(d.id).filter(x=>x.type==t).reduce((a,x)=>a+x.qty,0)}${whrOfDelivery(d.id).find(x=>x.type==t).unit}`).join(' · ')} · 应送清单外的 SKU，仓库已登记台账并留存照片，请线下取回；不计入结算。<b>多送同一 SKU 不在此列</b>，已按多收入寄存库存</span></div><div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>商品</th><th>类型</th><th style="text-align:right">数量</th><th>存放库位</th><th>登记时间</th><th>凭证</th><th>状态</th></tr></thead><tbody>
       ${whrOfDelivery(d.id).map(r=>`<tr>

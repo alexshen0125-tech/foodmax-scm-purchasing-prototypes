@@ -258,24 +258,15 @@
     if(!ckOn())return '';const st=ckState(d),p=ckTally(d),pct=p.tot?Math.round(p.done/p.tot*100):0;
     const L=(d.ckLog||[]).map((x,i)=>({x,i})).reverse(),need=!isLocked(d)&&(st=='todo'||st=='stale');
     const nm=x=>x.name||'—';
-    const prog=`<div style="padding:14px 20px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    const prog=`<div style="padding:16px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
       <div style="font-size:13px;color:var(--ts);white-space:nowrap">核货进度</div>
       <div style="flex:1;min-width:200px;max-width:420px;height:8px;border-radius:4px;background:var(--bd2);overflow:hidden"><div style="width:${pct}%;height:100%;background:${(d.check&&ckShortQty(d))?'var(--y)':'var(--g)'}"></div></div>
       <div style="font-size:15px;white-space:nowrap"><b>${p.done}</b> <span style="color:var(--ts)">/ ${p.tot} 件</span></div>
       <div style="font-size:12.5px;color:var(--ts)">扫码 <b style="color:var(--tp)">${p.scan}</b> 件 · 手动 <b style="color:var(--tp)">${p.manual}</b> 件${st=='stale'?' · <b style="color:var(--r)">应送变了，已扫的保留，请补核后再点完成</b>':(d.check?'':(p.done?' · <b style="color:var(--b)">核货中，还没点完成</b>':''))}</div>
       ${need?`<button class="btn btn-p btn-sm" style="margin-left:auto" onclick="ck_open('${d.id}')">${st=='stale'?'补核':(p.done?'继续核货':'核货')}</button>`:''}</div>`;
-    return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><div style="display:flex;align-items:baseline;gap:10px"><h3>核货记录</h3><span class="sub">共 ${L.length} 条明细 · 每扫一张、每填一次数都记一条，多人多次扫的累加</span></div></div>
-      ${prog}
-      <div class="card-bd flush"><div style="overflow-x:auto;max-height:420px;overflow-y:auto"><table>
-      <thead><tr><th>序号</th><th>时间</th><th>核货时点</th><th>操作人</th><th>来源</th><th>动作</th><th>商品</th><th style="text-align:right">标签序号</th><th style="text-align:right">数量</th><th>结果</th><th style="text-align:right">累计已核</th></tr></thead><tbody>
-      ${L.map(({x,i})=>{const k=rowKind(x);return `<tr>
-        <td>${i+1}</td><td style="white-space:nowrap">${x.at}</td>
-        <td>${x.pre?'<span class="tag t-y"><span class="dot"></span>截单前</span>':'<span style="color:var(--ts)">截单后</span>'}</td>
-        <td>${x.by}</td><td>${x.src}</td><td style="white-space:nowrap">${k[0]}</td><td>${nm(x)}</td>
-        <td style="text-align:right">${x.seq!=null?x.seq:'—'}</td><td style="text-align:right">${k[1]}</td>
-        <td style="white-space:nowrap;color:${k[2][1]}">${k[2][0]}</td>
-        <td style="text-align:right">${x.cum!=null?x.cum:'—'} <span style="color:var(--ts)">/ ${p.tot}</span></td></tr>`;}).join('')||`<tr><td colspan="11" style="text-align:center;color:var(--ts);padding:18px">还没有核货明细</td></tr>`}
-      </tbody></table></div></div></div>`;
+    /* 2026-11-25：详情只展示核货进度，不列全部明细；每条明细在「商品明细 › 商家核货数量 › 明细」按商品查看 */
+    return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><div style="display:flex;align-items:baseline;gap:10px"><h3>核货记录</h3><span class="sub">每扫一张、每填一次数都记一条明细，在下方商品明细点「明细」查看</span></div></div>
+      ${prog}</div>`;
   };
 
   /* 商品明细「明细」：该 SKU 的每一条核货明细（右侧抽屉），带该商品累计 */

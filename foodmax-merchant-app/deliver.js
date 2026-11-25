@@ -301,7 +301,7 @@ function ckSkuLogPageA(d,key){
       <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);margin-top:3px"><span>${x.at} · ${x.by} · ${x.src}${x.pre?' · 截单前':''}</span><span style="color:${k[2][1]}">${k[2][0]} · 累计 ${cum}/${l.should}</span></div></div>`;}).join('')||'<div style="padding:20px 0;text-align:center;color:var(--sub)">该商品还没有核货明细</div>'}
     </div></div>`});
 }
-// 送货单详情「核货记录」：顶部核货进度 + 每扫一次 / 每填一次一条明细（倒序，默认最近 8 条）
+// 送货单详情「核货记录」：只展示核货进度（2026-11-25 定：全部明细不在这里列，按商品点「明细 ›」看）
 function ckLogBoxA(d){
   if(ckStateA(d)==='off')return '';
   const st=ckStateA(d),p=ckTallyA(d),pct=p.tot?Math.round(p.done/p.tot*100):0,L=(d.ckLog||[]).map((x,i)=>({x,i})).reverse();
@@ -311,15 +311,13 @@ function ckLogBoxA(d){
     return `<div class="ck-log" style="${hide?'display:none;':''}padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="color:var(--sub);font-size:11.5px">#${i+1}</span>${k[0]}<span style="font-size:13px">${nm(x)}${x.seq!=null?` <span style="color:var(--sub)">序号 ${x.seq}</span>`:''}</span>${k[1]?`<b style="margin-left:auto">${k[1]}</b>`:''}</div>
       <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);margin-top:3px"><span>${x.at} · ${x.by} · ${x.src}${x.pre?' · 截单前':''}</span><span style="color:${k[2][1]}">${k[2][0]}${x.cum!=null&&x.kind!=='done'&&x.kind!=='revoke'?` · 累计 ${x.cum}`:''}</span></div></div>`;};
-  return `<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">核货记录 <span style="font-weight:500;font-size:12px;color:var(--sub)">共 ${L.length} 条明细</span></div>
+  return `<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">核货记录 <span style="font-weight:500;font-size:12px;color:var(--sub)">明细在商品明细点「明细 ›」查看</span></div>
   <div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">
-    <div style="padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+    <div style="padding:12px 0">
       <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12.5px;color:var(--sub)">核货进度</span><span><b style="font-size:16px">${p.done}</b><span style="color:var(--sub);font-size:12.5px"> / ${p.tot} 件</span></span></div>
       <div style="height:6px;border-radius:3px;background:var(--muted);overflow:hidden;margin:7px 0"><div style="width:${pct}%;height:100%;background:${sh?'var(--amber)':'var(--emerald)'}"></div></div>
       <div style="font-size:12px;color:var(--sub)">扫码 <b>${p.scan}</b> 件 · 手动 <b>${p.manual}</b> 件${st==='stale'?' · <b style="color:var(--red)">应送变了，请补核</b>':(d.check?(sh?` · <b style="color:var(--red)">少送 ${sh} 件</b>`:''):(p.done?' · <b style="color:#2563EB">核货中，还没点完成</b>':''))}</div></div>
     ${need?`<div id="ck-log-go" class="ck-go${st==='stale'?' red':''}" style="margin:10px 0">${st==='stale'?'应送变了，去补核':(p.done?'继续扫码核货':'扫码核货')}</div>`:''}
-    ${L.map((r,k)=>row(r,k>=8)).join('')||'<div style="padding:16px 0;text-align:center;font-size:12.5px;color:var(--sub)">还没有核货明细</div>'}
-    ${L.length>8?`<div id="ck-log-more" style="padding:11px 0;text-align:center;color:var(--emerald);font-weight:700;font-size:13px;min-height:44px;cursor:pointer">展开全部 ${L.length} 条</div>`:''}
   </div>`;
 }
 
@@ -710,7 +708,6 @@ function openSignDetail(d){
       kv('缺货罚款',d.status==='交接完成'?(dvFineAmt(d)>0?`<b style="color:var(--red)">S$${dvFineAmt(d).toFixed(2)}</b>（${dvFineQty(d)} 件 × S$${dvFine(d).rate.toFixed(2)}/件 · ${dvFine(d).no}）`:'无'):'—')+
       kv('平台补采',d.status==='交接完成'?`<b style="color:${dvReplQty(d)>0?'var(--amber)':'var(--sub)'}">${dvReplQty(d)}</b> 件${dvReplQty(d)>0?'（缺口由平台自营现货补货）':'（无需补货）'}`:'0 件')
     )}
-    ${!signed?ckLogBoxA(d):''}
     ${dvShort(d)?(()=>{const rs=(window.FM_REPL_BY_DELIVERY?window.FM_REPL_BY_DELIVERY(d.id):[]);
       return `<div style="margin:12px 16px 0;background:${rs.length?'var(--amber-soft)':'var(--red-soft)'};color:${rs.length?'#B45309':'var(--red)'};font-size:12.5px;line-height:1.6;padding:11px 14px;border-radius:12px">
         本单收货清点<b>少货 ${totQty-totIn} 件</b>。${rs.length
@@ -725,6 +722,7 @@ function openSignDetail(d){
       kv('送货联系人',meta.d?String(meta.d).split(' ')[0]:'')+
       kv('联系电话',meta.d?(String(meta.d).split(' ')[1]||''):'')
     ):''}
+    ${ckLogBoxA(d)}
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">${d.status==='交接完成'?'实收(件)':'已入库(件)'}</div><div class="v" ${totIn<totQty?'style="color:var(--red)"':''}>${totIn}</div></div><div class="k"><div class="l">平台补采(件)</div><div class="v" ${dvReplQty(d)>0?'style="color:var(--amber)"':''}>${dvReplQty(d)}</div></div></div>
     ${whrOf(d.id).length?sec('错货 · 待退回')+box(
       `<div style="padding:9px 0;font-size:12.5px;color:#B45309">本单被清点出 <b>${(function(l){return [...new Set(l.map(x=>x.type))].map(t=>`${t} ${l.filter(x=>x.type===t).reduce((a,x)=>a+x.qty,0)}${l.find(x=>x.type===t).unit}`).join(' · ');})(whrOf(d.id))}</b>，仓库已登记台账并留存照片，请线下取回；<b>不计入结算</b>。</div>`+
@@ -734,7 +732,6 @@ function openSignDetail(d){
       </div>`).join('')+
       `<div id="dl-whr-go" style="padding:11px 0;color:var(--emerald);font-weight:700;font-size:13px;min-height:44px;display:flex;align-items:center;cursor:pointer;border-top:1px solid rgba(0,0,0,.05)">前往「退货单 › 仓库退回」查看明细与照片 ›</div>`
     ):''}
-    ${signed?ckLogBoxA(d):''}
     ${sec('商品明细 · 按 SKU 件数')}
     ${rows.length>1?`<div style="margin:0 16px 8px;position:relative"><input id="dl-ln-q" type="search" placeholder="搜索商品名称 / SKU编码" oninput="dlLineFilter(this.value)" style="width:100%;box-sizing:border-box;height:40px;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:0 12px;font-size:14px;background:#fff"></div>`:''}
     ${box(
