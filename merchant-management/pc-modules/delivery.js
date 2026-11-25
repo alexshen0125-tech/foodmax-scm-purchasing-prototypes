@@ -93,7 +93,7 @@
     return `<div class="ib ib-b" style="margin-bottom:12px"><span class="i">📣</span><b>预约送货</b>与<b>仓库签到</b>相互独立：可先预约到仓时段，也可<b>不预约直接到仓签到</b>；签到后由仓库逐张核验交接入仓（标签到齐 → 订单转「待收货」）。${(typeof ckOn=='function'&&ckOn())?'<br><b>送货前先核货</b>：打印标签生成送货单后就能核货（截单前也能先核，截单前客户还可能改单，应送变了要重核），对照车上实际装的货逐个 SKU 核数量（按实际打印数带出），<b>核完仓库才能扫码签到收货</b>；签到前可撤回重核，每次核货都留记录（送货单详情可查）。':''}</div>
     <div class="card"><div class="card-hd"><h3>送货单</h3><div class="row" style="gap:12px;align-items:center"><span class="sub">共 ${DL.length} 单${(typeof ckTodoAll=='function'&&ckTodoAll())?` · <b style="color:var(--y)">待核货 ${ckTodoAll()}</b>`:''} · 已预约 ${DL.filter(d=>d.booked).length} · 已签到 ${DL.filter(d=>d.signed||d.status=='交接完成').length} · 已入库 ${DL.filter(d=>d.status=='交接完成').length} · 已打印 ${DL.filter(d=>d.printed).length}</span><button class="btn btn-o btn-sm" onclick="deliv_toggleDemoCutoff()">🔬 ${DB.delivDemoPreCutoff?'演示中：未截单':'演示：切为未截单'}</button></div></div>
     <div class="card-bd flush"><div style="overflow-x:auto"><table>
-      <thead><tr><th>送货单</th>${(typeof ckOn=='function'&&ckOn())?'<th>核货状态</th><th>核货时间</th><th style="text-align:right">少送(件)</th>':''}<th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
+      <thead><tr><th>送货单</th>${(typeof ckOn=='function'&&ckOn())?'<th>核货状态</th><th>核货进度</th><th>核货方式</th><th style="text-align:right">核货次数</th><th>核货时间</th><th style="text-align:right">少送(件)</th>':''}<th>预约状态</th><th>签到状态</th><th>入库仓库</th><th>送达时段</th><th>应送货 / 已入库</th><th>收货清点</th><th>操作</th></tr></thead><tbody>
       ${DL.map(d=>{if(d.booked===undefined)d.booked=false;if(d.signed===undefined)d.signed=(d.status=='已签到'||d.status=='交接完成');const done=d.status=='交接完成';
       const cf=dvCutoff(d);
       return `<tr>

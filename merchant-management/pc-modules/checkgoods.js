@@ -105,10 +105,19 @@
     if(!d.check||!isDone(d))return 0;
     return ((typeof dvDetailLines=='function')?dvDetailLines(d):[]).reduce((a,l)=>{const c=d.check.lines[l.sku];return a+((c!=null&&l.recvQty!=null&&l.recvQty<c)?(c-l.recvQty):0);},0);
   };
-  // 列表三列（一字段一列）：核货状态 / 核货时间 / 少送件数
+  // 核货进度（快照口径，取当前有效那次）：{done,tot,gap,method,adj,n}；无有效 → done 0、tot 当前应送
+  window.ckProg=function(d){
+    const st=ckState(d),L=d.checkLogs||[],v=L.find(x=>x.st=='valid'),ok=!!(v&&st=='done');
+    const tot=ok?Object.values(v.snap).reduce((a,b)=>a+(+b||0),0):ckLines(d).reduce((a,l)=>a+l.should,0);
+    const done=ok?Object.values(v.lines).reduce((a,b)=>a+(+b||0),0):0;
+    return {ok,st,done,tot,gap:ok?Math.max(0,tot-done):0,method:ok?v.method:null,adj:ok?(v.manualAdj||0):0,n:L.length};
+  };
+  // 列表核货列（一字段一列）：核货状态 / 核货进度 / 核货方式 / 核货次数 / 核货时间 / 少送(件)
   window.ckCols=function(d){
-    const s=ckState(d),c=d.check&&s!='none'?d.check:null,sh=c?ckShortQty(d):0;
-    return `<td style="white-space:nowrap">${ckTag(d)}</td><td style="white-space:nowrap;color:var(--ts)">${c?c.at:'—'}</td><td style="text-align:right">${c?(sh?`<b style="color:var(--r)">${sh}</b>`:'0'):'—'}</td>`;
+    const s=ckState(d),c=d.check&&s!='none'?d.check:null,sh=c?ckShortQty(d):0,p=ckProg(d),pct=p.tot?Math.round(p.done/p.tot*100):0;
+    const prog=(s=='none'||s=='off')?'—':`<div style="white-space:nowrap"><b>${p.done}</b> <span style="color:var(--ts)">/ ${p.tot}</span></div><div style="width:72px;height:4px;border-radius:2px;background:var(--bd2);margin-top:5px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${p.gap?'var(--y)':'var(--g)'}"></div></div>`;
+    const mth=p.ok?(p.method=='scan'?'<span class="tag t-b"><span class="dot"></span>扫码核货</span>':'手动核货'):'—';
+    return `<td style="white-space:nowrap">${ckTag(d)}</td><td>${prog}</td><td style="white-space:nowrap">${mth}</td><td style="text-align:right">${p.n?p.n:'—'}</td><td style="white-space:nowrap;color:var(--ts)">${c?c.at:'—'}</td><td style="text-align:right">${c?(sh?`<b style="color:var(--r)">${sh}</b>`:'0'):'—'}</td>`;
   };
 
   /* ---------- 核货抽屉 ---------- */

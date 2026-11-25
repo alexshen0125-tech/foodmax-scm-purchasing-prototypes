@@ -536,7 +536,9 @@ function signinCard(d){
     ${d.printed?`<div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;color:var(--emerald-2);font-weight:600">🖨️ 已打印 ${d.printedAt||''}</div>`:''}
     ${(()=>{const s=ckStateA(d);
       if((s==='todo'||s==='stale')&&!d.signed)return `<div class="ck-go${s==='stale'?' red':''}" data-ck="go">${s==='stale'?'应送变了，重新核货':'扫码核货'}<span style="font-weight:500;font-size:12px;opacity:.85">· 核完仓库才能收货</span></div>`;
-      if(s==='done'&&d.check)return `<div class="ck-done" data-ck="view"><span>${d.check.method==='scan'?'扫码':'手动'}核货 ${d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">少送 ${ckShortA(d)} 件</b>`:''}</span><span style="color:var(--emerald);font-weight:700">${ckLocked(d)?'查看':'查看/修改'} ›</span></div>`;
+      if(s==='done'&&d.check){   /* 核货进度汇总（快照口径，同 PC ckProg）：方式胶囊 + 已核/应送 + 共 N 次 + 时间 + 少送 */
+        const v=(d.checkLogs||[]).find(x=>x.st==='valid')||{snap:d.check.snap,lines:d.check.lines},tot=Object.values(v.snap||{}).reduce((a,b)=>a+(+b||0),0),dn=Object.values(v.lines||{}).reduce((a,b)=>a+(+b||0),0),n=(d.checkLogs||[]).length;
+        return `<div class="ck-done" data-ck="view"><span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${d.check.method==='scan'?stChip('扫码核货','#E1EBFF','#2563EB'):'<span>手动核货</span>'}<span>已核 <b>${dn}</b>/${tot}${n>1?` · 共 ${n} 次`:''} · ${d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">少送 ${ckShortA(d)}</b>`:''}</span></span><span style="color:var(--emerald);font-weight:700;white-space:nowrap">${ckLocked(d)?'查看':'查看/修改'} ›</span></div>`;}
       return '';})()}
     <div class="dl-acts">${done
       ?`<div class="a" data-a="detail">查看详情</div>`
