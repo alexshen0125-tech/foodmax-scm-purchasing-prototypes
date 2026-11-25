@@ -53,7 +53,7 @@
     if(!isLocked(d)||d.check)return;
     const lines={},snap={};
     ckLines(d).forEach(l=>{const s=SEED_SHORT[d.id]&&SEED_SHORT[d.id][l.sku];lines[l.sku]=(s!=null?s:l.cap);snap[l.sku]=l.should;});
-    d.check={by:who(),at:`${d.deliver} ${d.signTime?ckBefore(d.signTime):'23:40'}`,lines,snap,method:d.id=='SH20260701008'?'scan':'manual',manualAdj:0};
+    d.check={by:who(),at:`${d.deliver} ${d.signTime?ckBefore(d.signTime):'23:40'}`,lines,snap,method:d.id=='SH20260701008'?'scan':'manual',manualAdj:d.id=='SH20260701008'?2:0};   /* 演示：扫码 18 + 破损补录 2 */
     d.checkLogs=[];
     if(d.id=='SH20260701008'){   // 演示多次核货：截单前先核过一次（当时应送 22），晚上客户加单到 25 → 失效，截单后在 App 扫码重核
       const cf=(typeof dvCutoff=='function')?dvCutoff(d):{at:'06-30 18:00'};const _mm=(at,dm)=>{const [dd,t]=String(at||'06-30 18:00').split(' ');const [h,m]=(t||'18:00').split(':').map(Number);const x=Math.max(0,h*60+m-dm);return `${dd} ${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`;};   // 截单前 100 / 35 分钟
@@ -230,11 +230,25 @@
     if(m[2]=='replaced')return `签到前改过核货，以第 ${x.next} 次为准。`;
     if(m[2]=='revoked')return `${x.endBy||'商家'} 于 ${x.endAt} 撤回了这次核货。`;
     return '';}
+  const mTag=m=>m=='scan'?'<span class="tag t-b"><span class="dot"></span>扫码核货</span>':'手动核货';
+  /* 核货进度汇总（快照口径）：取当前有效那次；扫码记录拆「扫码 / 手动补录」件数 */
+  function ckProgress(d,L){
+    const st=ckState(d),v=L.find(({x})=>x.st=='valid'),cur=ckLines(d).reduce((a,l)=>a+l.should,0);
+    const ok=v&&st=='done',s=ok?logSum(d,v.x):null,tot=ok?s.sh:cur,done=ok?s.ck:0,pct=tot?Math.round(done/tot*100):0;
+    const sub=ok?(v.x.method=='scan'?`扫码 <b style="color:var(--tp)">${done-(v.x.manualAdj||0)}</b> 件 · 手动补录 <b style="color:var(--tp)">${v.x.manualAdj||0}</b> 件`:`手动核货 <b style="color:var(--tp)">${done}</b> 件`)+(s.gap?` · <b style="color:var(--r)">少送 ${s.gap} 件</b>`:'')
+      :(st=='stale'?'<b style="color:var(--r)">应送变了，上次核货已作废，待重新核货</b>':'还没有有效的核货');
+    return `<div style="padding:14px 20px;border-bottom:1px solid var(--bd2);display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--ts);white-space:nowrap">核货进度</div>
+      <div style="flex:1;min-width:200px;max-width:420px;height:8px;border-radius:4px;background:var(--bd2);overflow:hidden"><div style="width:${pct}%;height:100%;background:${ok&&s.gap?'var(--y)':'var(--g)'}"></div></div>
+      <div style="font-size:15px;white-space:nowrap"><b>${done}</b> <span style="color:var(--ts)">/ ${tot} 件</span>${ok?` <span style="font-size:12px;color:var(--ts)">（当前有效 · 第 ${v.i+1} 次）</span>`:''}</div>
+      <div style="font-size:12.5px;color:var(--ts)">${sub}</div></div>`;
+  }
   window.ckHistoryCard=function(d){
     if(!ckOn())return '';const st=ckState(d);
     const L=(d.checkLogs||[]).map((x,i)=>({x,i})).reverse();
     const need=!isLocked(d)&&(st=='todo'||st=='stale')&&L.length;
     return `<div class="card" style="margin-bottom:14px"><div class="card-hd"><div style="display:flex;align-items:baseline;gap:10px"><h3>核货记录</h3><span class="sub">共 ${L.length} 次${need?` · <b style="color:var(--r)">${st=='stale'?'应送变了，还没重新核货':'已撤回，还没重新核货'}</b>`:' · 仓库签到以「当前有效」那次为准'}</span></div>${need?`<button class="btn btn-p btn-sm" onclick="ck_open('${d.id}')">${st=='stale'?'重新核货':'核货'}</button>`:''}</div>
+      ${L.length?ckProgress(d,L):''}
       <div class="card-bd flush"><div style="overflow-x:auto"><table>
       <thead><tr><th>次序</th><th>核货时间</th><th>核货时点</th><th>核货人</th><th>核货方式</th><th style="text-align:right">应送(件)</th><th style="text-align:right">核货(件)</th><th style="text-align:right">少送(件)</th><th>记录状态</th><th>结束时间</th><th>操作</th></tr></thead><tbody>
       ${L.map(({x,i})=>{const m=logSt(d,x),s=logSum(d,x);return `<tr>
@@ -242,7 +256,7 @@
         <td style="white-space:nowrap">${x.at}</td>
         <td>${x.pre?'<span class="tag t-y"><span class="dot"></span>截单前</span>':'<span style="color:var(--ts)">截单后</span>'}</td>
         <td>${x.by}</td>
-        <td>${MT[x.method]||'手动核货'}</td>
+        <td>${mTag(x.method)}</td>
         <td style="text-align:right">${s.sh}</td>
         <td style="text-align:right">${s.ck}</td>
         <td style="text-align:right">${s.gap?`<b style="color:var(--r)">${s.gap}</b>`:'0'}</td>

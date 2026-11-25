@@ -247,7 +247,7 @@ function ckSeedA(d){
   if(d._ckSeeded)return;d._ckSeeded=true;
   if(!ckLocked(d)||d.check)return;
   const lines={},snap={};ckLinesA(d).forEach(l=>{const s=CK_SEED_SHORT[d.id]&&CK_SEED_SHORT[d.id][l.key];lines[l.key]=s!=null?s:l.cap;snap[l.key]=l.should;});
-  d.check={by:CK_WHO(),at:`${d.deliver} 23:40`,lines,snap,method:'manual',manualAdj:0};
+  d.check={by:CK_WHO(),at:`${d.deliver} 23:40`,lines,snap,method:d.id==='SH20260628004'?'scan':'manual',manualAdj:d.id==='SH20260628004'?1:0};   /* 演示：扫码 19 + 补录 1 */
   d.checkLogs=[];
   if(d.id==='SH20260628004'){   // 演示多次核货：截单前先核一次（当时应送 16），客户晚上加单到 20 → 失效，截单后重核
     const cat=dvCutoff(d).at;const _mm=(at,dm)=>{const [dd,t]=String(at||'06-30 18:00').split(' ');const [h,m]=(t||'18:00').split(':').map(Number);const x=Math.max(0,h*60+m-dm);return `${dd} ${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`;};   // 截单前 100 / 35 分钟
@@ -298,10 +298,18 @@ function ckLogBoxA(d){
   const row=({x,i},hide)=>{const m=ckLogStA(d,x),s=ckLogSumA(x);
     return `<div class="ck-log" data-lg="${i}" style="${hide?'display:none;':''}padding:10px 0;border-bottom:1px solid rgba(0,0,0,.05);cursor:pointer;min-height:44px">
       <div style="display:flex;align-items:center;gap:8px"><b>第 ${i+1} 次</b>${stChip(m[0],m[1],m[2])}${x.pre?stChip('截单前','var(--amber-soft)','#B45309'):''}<span style="margin-left:auto;color:var(--emerald);font-weight:700">›</span></div>
-      <div style="font-size:12px;color:var(--sub);margin-top:4px">${x.at} · ${x.by} · ${CK_MT[x.method]||'手动核货'}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${x.method==='scan'?stChip('扫码核货','#E1EBFF','#2563EB'):''}<span>${x.at} · ${x.by}${x.method==='scan'?'':' · 手动核货'}</span></div>
       <div style="font-size:12px;color:var(--sub);margin-top:2px">应送 ${s.sh} · 核货 ${s.ck} · ${s.gap?`<b style="color:var(--red)">少送 ${s.gap}</b>`:'少送 0'}</div></div>`;};
+  /* 核货进度汇总（与 PC ckProgress 同口径）：当前有效那次；扫码记录拆扫码 / 手动补录 */
+  const v=L.find(({x})=>x.st==='valid'),ok=v&&st==='done',sm=ok?ckLogSumA(v.x):null;
+  const tot=ok?sm.sh:ckLinesA(d).reduce((a,l)=>a+l.should,0),dn=ok?sm.ck:0,pct=tot?Math.round(dn/tot*100):0;
+  const prog=L.length?`<div style="padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12.5px;color:var(--sub)">核货进度${ok?`（当前有效 · 第 ${v.i+1} 次）`:''}</span><span><b style="font-size:16px">${dn}</b><span style="color:var(--sub);font-size:12.5px"> / ${tot} 件</span></span></div>
+      <div style="height:6px;border-radius:3px;background:var(--muted);overflow:hidden;margin:7px 0"><div style="width:${pct}%;height:100%;background:${ok&&sm.gap?'var(--amber)':'var(--emerald)'}"></div></div>
+      <div style="font-size:12px;color:var(--sub)">${ok?(v.x.method==='scan'?`扫码 <b>${dn-(v.x.manualAdj||0)}</b> 件 · 手动补录 <b>${v.x.manualAdj||0}</b> 件`:`手动核货 <b>${dn}</b> 件`)+(sm.gap?` · <b style="color:var(--red)">少送 ${sm.gap} 件</b>`:''):(st==='stale'?'<b style="color:var(--red)">应送变了，上次核货已作废，待重新核货</b>':'还没有有效的核货')}</div></div>`:'';
   return `<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">核货记录 <span style="font-weight:500;font-size:12px;color:${need?'var(--red)':'var(--sub)'}">共 ${L.length} 次 · ${need?(st==='stale'?'应送变了，还没重新核货':'已撤回，还没重新核货'):'签到以「当前有效」为准'}</span></div>
   <div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">
+    ${prog}
     ${need?`<div id="ck-log-go" class="ck-go${st==='stale'?' red':''}" style="margin:10px 0">${st==='stale'?'应送变了，重新核货':'扫码核货'}</div>`:''}
     ${L.map((r,k)=>row(r,k>=3)).join('')||'<div style="padding:16px 0;text-align:center;font-size:12.5px;color:var(--sub)">还没有核货记录</div>'}
     ${L.length>3?`<div id="ck-log-more" style="padding:11px 0;text-align:center;color:var(--emerald);font-weight:700;font-size:13px;min-height:44px;cursor:pointer">展开全部 ${L.length} 次</div>`:''}
