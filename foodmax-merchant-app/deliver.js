@@ -627,22 +627,37 @@ function dvPrint(d){
 }
 function dvBookSheet(d){sheet(DL_SLOTS.map(s=>({label:`预约 ${s}${(d.bookWindow||d.window)===s?'　✓':''}`,onClick:()=>{d.booked=true;d.bookWindow=s;toast('已预约送货 '+s);rerenderSignin();}})));}
 // 签到码：商家出示，由【仓库人员扫码确认】，商家端不做签到确认操作（演示用"模拟仓库扫码"）
-function dvSignQR(d){const m=document.createElement('div');m.className='modal-mask';
-  // 与 PC 同口径：仓库 / 二维码 / 送货单号 / 应送货 / 订单数 / 白夜班联系人；核货拦截提示置顶，出示前先看到
+// 移动端：全屏页而非弹窗——到仓门口举着手机给仓管扫，二维码要大、单号要醒目；
+// 拦截提示置顶；联系人可一键拨号；演示按钮放底部拇指区。字段与 PC 同口径。
+function dvSignQR(d){
   const rv=RECV[d.warehouse]||{};
-  const ppl=v=>{if(!v)return '<div style="font-size:12.5px;color:var(--sub)">—</div>';const i=v.indexOf(' ');return `<div style="display:flex;justify-content:space-between;gap:12px;font-size:12.5px;line-height:1.8"><span>${i>0?v.slice(0,i):v}</span><span style="color:var(--sub);font-family:monospace">${i>0?v.slice(i+1):''}</span></div>`;};
-  const stat=(k,v)=>`<div style="flex:1;background:var(--muted);border-radius:10px;padding:8px 10px;text-align:left"><div style="font-size:11px;color:var(--sub)">${k}</div><div style="font-size:17px;font-weight:700;font-family:monospace;color:#12271D">${v}</div></div>`;
-  m.innerHTML=`<div class="modal" style="max-width:320px"><div class="mt">到仓签到码<div style="font-size:12px;font-weight:400;color:var(--sub);margin-top:2px">${d.warehouse}</div></div>
-    <div class="mb">${ckBlockedA(d)?`<div style="margin-bottom:10px;background:var(--red-soft);color:var(--red);font-size:12px;line-height:1.55;padding:9px 12px;border-radius:12px">本单<b>${ckStateA(d)==='stale'?'应送变了，要重新核货':'还没核货'}</b>，仓库扫码会被拦截，请先核货。</div>`:''}<div style="text-align:center"><div style="display:inline-block;border:1px solid #E3EADF;border-radius:12px;padding:10px;background:#fff"><div class="dl-qr" style="width:168px;height:168px">${qrGrid((d.id||'').length+3)}</div></div><div style="font-weight:700;font-size:15px;font-family:monospace;margin-top:8px">${d.id}</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">请向仓库人员出示，由其扫码完成签到</div></div>
-    <div style="text-align:left;color:#12271D"><div style="display:flex;gap:8px;margin-top:12px">${stat('应送货(件)',dvSku(d).reduce((s,r)=>s+r.qty,0))}${stat('订单数',d.orderIds.length)}</div>
-    <div style="margin-top:12px"><div style="font-size:11.5px;font-weight:600;color:#A9711F">☀︎ 白班联系人</div>${ppl(rv.d)}</div>
-    <div style="margin-top:8px"><div style="font-size:11.5px;font-weight:600;color:#2563EB">☾ 夜班联系人</div>${ppl(rv.n)}</div></div></div>
-    <div class="mf"><div class="mbn cancel">关闭</div><div class="mbn ok">🔬 模拟签到</div></div></div>`;
-  document.querySelector('.phone').appendChild(m);
-  m.querySelector('.cancel').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
-  m.querySelector('.ok').onclick=()=>{
-    if(ckBlockedA(d)){m.remove();confirmDialog({title:'签到被拦截',body:`仓库扫码结果：<b>${ckStateA(d)==='stale'?'应送数量变了，要重新核货':'商家还没核货'}</b>，暂不能签到收货。请打开 App「送货签到」核货，核完仓库再扫码。`,okText:'去核货',onOk:()=>ckOpenA(d)});return;}
-    d.signed=true;d.signTime=d.signTime||'00:12';m.remove();toast('仓库已扫码确认签到，待逐张核验交接入仓');rerenderSignin();};}
+  const blocked=ckBlockedA(d);
+  const tel='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+  const ppl=v=>{if(!v)return '<div style="font-size:13px;color:var(--sub);padding:6px 0">—</div>';const i=v.indexOf(' ');const nm=i>0?v.slice(0,i):v,ph=i>0?v.slice(i+1):'';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px"><div style="min-width:0"><div style="font-size:14px;font-weight:600">${nm}</div><div style="font-size:12px;color:var(--sub);font-family:monospace;margin-top:1px">${ph}</div></div>${ph?`<a class="sq-call" data-ph="${ph}" style="flex:none;width:40px;height:40px;border-radius:50%;background:var(--mint-soft);color:var(--emerald-2);display:flex;align-items:center;justify-content:center">${tel}</a>`:''}</div>`;};
+  const grp=(ic,label,color,v)=>`<div style="padding:10px 0"><div style="font-size:12px;font-weight:700;color:${color};margin-bottom:2px">${ic} ${label}</div>${ppl(v)}</div>`;
+  const stat=(k,v)=>`<div style="flex:1;text-align:center;padding:4px 0"><div style="font-size:22px;font-weight:800;font-family:monospace">${v}</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">${k}</div></div>`;
+  pushPage({title:'到仓签到码',body:`<div style="padding:12px 16px 20px">
+    ${blocked?`<div style="display:flex;align-items:center;gap:10px;background:var(--red-soft);color:var(--red);border-radius:14px;padding:10px 10px 10px 14px;margin-bottom:12px"><div style="flex:1;font-size:12.5px;line-height:1.5">本单<b>${ckStateA(d)==='stale'?'应送变了，要重新核货':'还没核货'}</b>，仓库扫码会被拦截</div><button id="sq-ck" style="flex:none;height:36px;padding:0 14px;border:none;border-radius:18px;background:var(--red);color:#fff;font-size:13px;font-weight:700">去核货</button></div>`:''}
+    <div style="background:#fff;border-radius:18px;box-shadow:var(--sh-sm);padding:18px 16px 16px;text-align:center">
+      <div style="font-size:13px;color:var(--sub)">${d.warehouse}</div>
+      <div style="display:inline-block;margin-top:12px;padding:12px;border:1px solid #E3EADF;border-radius:14px;background:#fff"><div class="dl-qr" style="width:232px;height:232px">${qrGrid((d.id||'').length+3)}</div></div>
+      <div style="font-size:20px;font-weight:800;font-family:monospace;letter-spacing:.5px;margin-top:12px">${d.id}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:4px">请向仓库人员出示，由其扫码完成签到</div>
+      <div style="display:flex;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid #EDF1E9">${stat('应送货(件)',dvSku(d).reduce((s,r)=>s+r.qty,0))}<div style="width:1px;height:32px;background:#EDF1E9"></div>${stat('订单数',d.orderIds.length)}</div>
+    </div>
+    <div style="background:#fff;border-radius:18px;box-shadow:var(--sh-sm);padding:6px 16px;margin-top:12px">
+      ${grp('☀︎','白班联系人','#A9711F',rv.d)}<div style="height:1px;background:#EDF1E9"></div>${grp('☾','夜班联系人','#2563EB',rv.n)}
+    </div></div>`,
+    footer:`<button class="btn ghost" id="sq-sim">🔬 演示：模拟仓库扫码签到</button>`,
+    mount:p=>{
+      const ck=p.querySelector('#sq-ck');if(ck)ck.onclick=()=>{popPage();ckOpenA(d);};
+      p.querySelectorAll('.sq-call').forEach(a=>a.onclick=()=>toast('拨打 '+a.dataset.ph));
+      p.querySelector('#sq-sim').onclick=()=>{
+        if(ckBlockedA(d)){confirmDialog({title:'签到被拦截',body:`仓库扫码结果：<b>${ckStateA(d)==='stale'?'应送数量变了，要重新核货':'商家还没核货'}</b>，暂不能签到收货。请打开 App「送货签到」核货，核完仓库再扫码。`,okText:'去核货',onOk:()=>{popPage();ckOpenA(d);}});return;}
+        d.signed=true;d.signTime=d.signTime||'00:12';popPage();toast('仓库已扫码确认签到，待逐张核验交接入仓');rerenderSignin();};
+    }});
+}
 function bindSignin(el,d){
   el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{const k=b.dataset.ck;ckOpenA(d,k==='go',null,k==='go');});
   el.querySelectorAll('.dl-acts .a').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
