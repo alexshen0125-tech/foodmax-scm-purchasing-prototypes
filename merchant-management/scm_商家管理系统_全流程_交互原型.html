@@ -6693,16 +6693,22 @@ function qrSvg(text,px){const n=25,c=px/n;let seed=0;for(const ch of text)seed=(
   const inF=(x,y)=>(x<8&&y<8)||(x>n-9&&y<8)||(x<8&&y>n-9);
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){if(inF(x,y))continue;if(rnd())r+=`<rect x="${x*c}" y="${y*c}" width="${c}" height="${c}" fill="#12271D"/>`;}
   return `<svg width="${px}" height="${px}" viewBox="0 0 ${px} ${px}" style="display:block"><rect width="${px}" height="${px}" fill="#fff"/>${r}${finder(0,0)}${finder(n-7,0)}${finder(0,n-7)}</svg>`;}
-function retShowCode(i){const a=DB.afterSales[i],code=retPickCode(a),no='TH-'+a.id.slice(-6),d=retPickDeadline(a);
-  modal(`<div class="mc-hd"><h3>提货码 · ${no}</h3><p>到仓后出示给仓库扫码</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd" style="text-align:center">
-    <div style="font-size:13px;margin-bottom:10px">存放仓库 <b>${a.ware||'裕廊DC'}</b></div>
-    <div style="display:inline-block;padding:14px;border:1px solid var(--bd);border-radius:14px;background:#fff">${qrSvg(no+'|'+code,200)}</div>
-    <div style="margin-top:12px;font-size:12.5px;color:var(--ts)">扫不出来时让仓库手输</div>
-    <div class="mono" style="font-size:30px;font-weight:800;letter-spacing:8px;margin-top:2px">${code}</div>
-    ${d?`<div style="margin-top:8px;font-size:13px;color:var(--y)">提货截止 ${msTs(d)}（剩 ${remainTxt(d-Date.now())}）</div>`:''}
-    <table style="margin-top:16px;text-align:left"><thead><tr><th>商品</th><th style="text-align:right">应取回数量</th></tr></thead><tbody>${(a.retItems||[]).map(x=>`<tr><td>${x.name}${retGiftTag(x)}</td><td style="text-align:right">${x.retQty} ${x.unit||''}</td></tr>`).join('')}</tbody></table>
-    ${typeof dcContacts=='function'?`<div style="text-align:left;margin-top:16px;padding-top:14px;border-top:1px solid var(--bd2)">${dcContacts(a.ware||'裕廊DC',true)}</div>`:''}
-  </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);}
+function retShowCode(i){const a=DB.afterSales[i],code=retPickCode(a),no='TH-'+a.id.slice(-6),d=retPickDeadline(a),wh=a.ware||'裕廊DC';
+  // 版式与到仓签到码一致：左码右信息两栏（左=二维码+手输码+截止，右=应取回商品+白班/夜班联系人）
+  modalWide(`<div class="mc-hd"><h3>提货码 · ${no}</h3><p>${wh} · 到仓后出示给仓库扫码</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    <div style="display:grid;grid-template-columns:auto 1fr">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:24px 28px;border-right:1px solid var(--bd2)">
+        <div style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:14px">${qrSvg(no+'|'+code,180)}</div>
+        <div style="font-size:12px;color:var(--ts);margin-top:12px">扫不出来时让仓库手输</div>
+        <div class="mono" style="font-size:28px;font-weight:800;letter-spacing:7px;margin-top:2px">${code}</div>
+        ${d?`<div style="margin-top:6px;font-size:12.5px;color:var(--y);text-align:center;max-width:230px">提货截止 ${msTs(d)}<br>（剩 ${remainTxt(d-Date.now())}）</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px;padding:24px;min-width:0">
+        <div><div style="font-size:12px;color:var(--ts);margin-bottom:4px">应取回商品 · ${(a.retItems||[]).length} 种</div>${(a.retItems||[]).map(x=>`<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 12px;background:var(--bd2);border-radius:8px;margin-top:6px;font-size:13px"><span>${x.name}${retGiftTag(x)}</span><b class="mono" style="font-size:14px">${x.retQty} ${x.unit||''}</b></div>`).join('')}</div>
+        ${typeof dcContacts=='function'?dcContacts(wh):''}
+      </div>
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);}
 // 详情：提货交接记录（仓库扫码提货后才有；超时未入库的无法取回没有交接）
 function retHandoverBlock(a,sec,kv){
   if(a._whr||!retDone(a)||!a.pickupAt||a.arriveClosed)return '';
