@@ -106,9 +106,13 @@ th.fixr{background:#f5f7fa}
 .label .hd div+div{border-left:1px solid #000}
 .label .hd small{display:block;font-size:7px}
 .label .hd strong{font-size:13px}
-.label .bc{display:flex;flex-direction:column;align-items:center;margin-top:4px}
+.label .bcrow{display:flex;align-items:center;margin-top:4px;gap:6px}
+.label .bc{display:flex;flex-direction:column;align-items:center;flex:0 0 200px}
 .label .bc svg{height:34px;width:200px}
 .label .hri{font-size:7px;letter-spacing:.3px;margin-top:-1px}
+.label .nw{flex:1;text-align:center}
+.label .nw small{display:block;font-size:7px;font-weight:bold}
+.label .nw strong{font-size:20px}
 .label .ft{border-top:1px solid #000;margin-top:4px;padding-top:3px;font-size:7px;line-height:1.45}
 .label .ft b{font-size:8px}
 .empty{color:var(--t3);text-align:center;padding:24px 0}
@@ -309,7 +313,8 @@ function drawLabel(r){
   const box=document.getElementById('lblBox');
   const d=r||{date:form.date||'2026-11-17',batch:form.batch||'—',cert:form.cert||'—',mfr:form.mfr,code:null};
   box.innerHTML=`<div class="label"><div class="hd"><div><small>Production Date 生产日期</small><strong>${d.date?ddmmyyyy(d.date):''}</strong></div><div><small>Storage 贮存条件</small><strong>0–4°C</strong></div></div>
-  <div class="bc">${d.code?'<svg id="bcsvg"></svg><div class="hri mono">'+hri(d.code)+'</div>':'<div style="height:44px;line-height:44px;color:#c0c4cc;font-size:11px">扫码后生成条码</div>'}</div>
+  <div class="bcrow"><div class="bc">${d.code?'<svg id="bcsvg"></svg><div class="hri mono">'+hri(d.code)+'</div>':'<div style="height:44px;line-height:44px;color:#c0c4cc;font-size:11px">扫码后生成条码</div>'}</div>
+  <div class="nw"><small>Net Wt. 净重</small><strong>${d.code?d.g+'g':''}</strong></div></div>
   <div class="ft">Batch No. 批次号 <b>${d.batch}</b><br>Veterinary Cert. No. 兽医证书号 <b>${d.cert}</b><br>Manufacturer 生产商 <b>${d.mfr}</b><br>Imported by 进口商 ${IMPORTER}</div></div>`;
   if(d.code&&window.JsBarcode)JsBarcode('#bcsvg',d.code,{format:'CODE128',displayValue:false,margin:0,height:34,width:1});
 }
