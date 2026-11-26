@@ -209,7 +209,7 @@ document.head.appendChild(css);
 
 const ADDR={'裕廊DC':'1 Jurong West Ave 1, #01-23 裕廊配送中心三号库','兀兰DC':'30 Woodlands Loop, #01-08 兀兰配送中心','盛港DC':'33 Sengkang West Ave, #01-15 盛港提揽点','大巴窑DC':'5 Toa Payoh Ind Park, #01-02 大巴窑配送中心','淡滨尼DC':'10 Tampines St 92, #01-19 淡滨尼配送中心','义顺DC':'8 Yishun Ind St 1, #01-11 义顺配送中心'};
 // 各 DC 收货人 / 入门位置（送货单详情·交货地点信息）
-const RECV={'裕廊DC':{d:'王志明 8123****7813',n:'林国强 9012****0250',g:'裕廊西门进，2号库3号闸口，只收不卸'},'兀兰DC':{d:'黄俊 8765****1122',n:'李文 9033****3344',g:'兀兰北门进，8号库1楼9–11号门'},'盛港DC':{d:'吴成 8201****5566',n:'/ 9111****1111',g:'东门进，1号平台，只收不卸'},'大巴窑DC':{d:'许尚 8678****7788',n:'史金超 9158****0250',g:'中门进，只收不卸'},'淡滨尼DC':{d:'周强 8299****9900',n:'郑凯 9088****2233',g:'A门进，3号卸货区'},'义顺DC':{d:'马良 8322****4455',n:'孙浩 9077****6677',g:'西门进，2号库'}};
+const RECV={'裕廊DC':{d:['王志明 8123****7813','陈伟 8456****6567'],n:['林国强 9012****0250','张海 9035****1866','吴俊 9120****4412'],g:'裕廊西门进，2号库3号闸口，只收不卸'},'兀兰DC':{d:['黄俊 8765****1122','李文 9033****3344','周海 8211****2201','许明 8302****5510','陈强 8433****7781'],n:['李文 9033****3344'],g:'兀兰北门进，8号库1楼9–11号门'},'盛港DC':{d:['吴成 8201****5566'],n:['/ 9111****1111'],g:'东门进，1号平台，只收不卸'},'大巴窑DC':{d:['许尚 8678****7788'],n:['史金超 9158****0250'],g:'中门进，只收不卸'},'淡滨尼DC':{d:['周强 8299****9900'],n:['郑凯 9088****2233'],g:'A门进，3号卸货区'},'义顺DC':{d:['马良 8322****4455'],n:['孙浩 9077****6677'],g:'西门进，2号库'}};
 function dvWave(d){const h=parseInt((d.window||'0'),10);return h<12?'上午达':'下午达';}                 // 履约波次(由送达时段派生)
 // 商品明细按SKU聚合(件)；demoLines 带 recvQty=仓库收货清点(出库前)回写的实收数量。
 // 差异双向：实收<应送=短收；实收>应送=多收（BR-16c 仓库照收不设上限，多收入在仓寄存库存、当日不可卖）
@@ -633,9 +633,11 @@ function dvSignQR(d){
   const rv=RECV[d.warehouse]||{};
   const blocked=ckBlockedA(d);
   const tel='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
-  const ppl=v=>{if(!v)return '<div style="font-size:13px;color:var(--sub);padding:6px 0">—</div>';const i=v.indexOf(' ');const nm=i>0?v.slice(0,i):v,ph=i>0?v.slice(i+1):'';
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px"><div style="min-width:0"><div style="font-size:14px;font-weight:600">${nm}</div><div style="font-size:12px;color:var(--sub);font-family:monospace;margin-top:1px">${ph}</div></div>${ph?`<a class="sq-call" data-ph="${ph}" style="flex:none;width:40px;height:40px;border-radius:50%;background:var(--mint-soft);color:var(--emerald-2);display:flex;align-items:center;justify-content:center">${tel}</a>`:''}</div>`;};
-  const grp=(ic,label,color,v)=>`<div style="padding:10px 0"><div style="font-size:12px;font-weight:700;color:${color};margin-bottom:2px">${ic} ${label}</div>${ppl(v)}</div>`;
+  // 多人：一人一行（姓名+电话同行、右侧拨号），每班超过 3 人折叠「还有 N 人」，不让联系人把签到码页拉得太长
+  const one=v=>{const i=v.indexOf(' ');const nm=i>0?v.slice(0,i):v,ph=i>0?v.slice(i+1):'';
+    return `<div style="display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid #F1F4EE"><span style="font-size:14px;font-weight:600;min-width:52px">${nm}</span><span style="flex:1;font-size:13px;color:var(--sub);font-family:monospace">${ph}</span>${ph?`<a class="sq-call" data-ph="${ph}" style="flex:none;width:36px;height:36px;border-radius:50%;background:var(--mint-soft);color:var(--emerald-2);display:flex;align-items:center;justify-content:center">${tel}</a>`:''}</div>`;};
+  const grp=(ic,label,color,arr)=>{arr=arr||[];const fold=arr.length>3;
+    return `<div style="padding:12px 0 4px"><div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:${color};margin-bottom:4px">${ic} ${label}<span style="font-weight:400;color:var(--sub)">· ${arr.length} 人</span></div>${arr.length?arr.slice(0,3).map(one).join('')+(fold?`<div class="sq-more" style="display:none">${arr.slice(3).map(one).join('')}</div><div class="sq-fold" style="min-height:44px;display:flex;align-items:center;justify-content:center;border-top:1px solid #F1F4EE;font-size:13px;color:var(--emerald-2);font-weight:600">还有 ${arr.length-3} 人 ▾</div>`:''):'<div style="font-size:13px;color:var(--sub);padding:8px 0">—</div>'}</div>`;};
   const stat=(k,v)=>`<div style="flex:1;text-align:center;padding:4px 0"><div style="font-size:22px;font-weight:800;font-family:monospace">${v}</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">${k}</div></div>`;
   pushPage({title:'到仓签到码',body:`<div style="padding:12px 16px 20px">
     ${blocked?`<div style="display:flex;align-items:center;gap:10px;background:var(--red-soft);color:var(--red);border-radius:14px;padding:10px 10px 10px 14px;margin-bottom:12px"><div style="flex:1;font-size:12.5px;line-height:1.5">本单<b>${ckStateA(d)==='stale'?'应送变了，要重新核货':'还没核货'}</b>，仓库扫码会被拦截</div><button id="sq-ck" style="flex:none;height:36px;padding:0 14px;border:none;border-radius:18px;background:var(--red);color:#fff;font-size:13px;font-weight:700">去核货</button></div>`:''}
@@ -653,6 +655,7 @@ function dvSignQR(d){
     mount:p=>{
       const ck=p.querySelector('#sq-ck');if(ck)ck.onclick=()=>{popPage();ckOpenA(d);};
       p.querySelectorAll('.sq-call').forEach(a=>a.onclick=()=>toast('拨打 '+a.dataset.ph));
+      p.querySelectorAll('.sq-fold').forEach(f=>f.onclick=()=>{f.previousElementSibling.style.display='block';f.remove();});
       p.querySelector('#sq-sim').onclick=()=>{
         if(ckBlockedA(d)){confirmDialog({title:'签到被拦截',body:`仓库扫码结果：<b>${ckStateA(d)==='stale'?'应送数量变了，要重新核货':'商家还没核货'}</b>，暂不能签到收货。请打开 App「送货签到」核货，核完仓库再扫码。`,okText:'去核货',onOk:()=>{popPage();ckOpenA(d);}});return;}
         d.signed=true;d.signTime=d.signTime||'00:12';popPage();toast('仓库已扫码确认签到，待逐张核验交接入仓');rerenderSignin();};
@@ -741,8 +744,8 @@ function openSignDetail(d){
     ${(ADDR[d.warehouse]||meta.d)?sec('交货地点信息')+box(
       kv('入库仓库',d.warehouse)+
       kv('详细地址',ADDR[d.warehouse])+
-      kv('送货联系人',meta.d?String(meta.d).split(' ')[0]:'')+
-      kv('联系电话',meta.d?(String(meta.d).split(' ')[1]||''):'')
+      kv('送货联系人',meta.d&&meta.d[0]?meta.d[0].split(' ')[0]:'')+
+      kv('联系电话',meta.d&&meta.d[0]?(meta.d[0].split(' ')[1]||''):'')
     ):''}
     ${ckLogBoxA(d)}
     <div class="dl-kbox" style="margin:0 16px"><div class="k"><div class="l">应送货(件)</div><div class="v">${totQty}</div></div><div class="k"><div class="l">${d.status==='交接完成'?'实收(件)':'已入库(件)'}</div><div class="v" ${totIn<totQty?'style="color:var(--red)"':''}>${totIn}</div></div><div class="k"><div class="l">平台补采(件)</div><div class="v" ${dvReplQty(d)>0?'style="color:var(--amber)"':''}>${dvReplQty(d)}</div></div></div>
