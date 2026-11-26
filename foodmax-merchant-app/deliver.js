@@ -311,7 +311,7 @@ function ckLogBoxA(d){
     return `<div class="ck-log" style="${hide?'display:none;':''}padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="color:var(--sub);font-size:11.5px">#${i+1}</span>${k[0]}<span style="font-size:13px">${nm(x)}${x.seq!=null?` <span style="color:var(--sub)">序号 ${x.seq}</span>`:''}</span>${k[1]?`<b style="margin-left:auto">${k[1]}</b>`:''}</div>
       <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--sub);margin-top:3px"><span>${x.at} · ${x.by} · ${x.src}${x.pre?' · 截单前':''}</span><span style="color:${k[2][1]}">${k[2][0]}${x.cum!=null&&x.kind!=='done'&&x.kind!=='revoke'?` · 累计 ${x.cum}`:''}</span></div></div>`;};
-  return `<div style="margin:16px 16px 6px;font-weight:700;font-size:14px">核货记录 <span style="font-weight:500;font-size:12px;color:var(--sub)">明细在商品明细点「明细 ›」查看</span></div>
+  return `<div id="ck-log-anchor" style="margin:16px 16px 6px;font-weight:700;font-size:14px;scroll-margin-top:8px">核货记录 <span style="font-weight:500;font-size:12px;color:var(--sub)">明细在商品明细点「核货明细 ›」查看</span></div>
   <div style="margin:0 16px;background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:12px;padding:2px 14px">
     <div style="padding:12px 0">
       <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12.5px;color:var(--sub)">核货进度</span><span><b style="font-size:16px">${p.done}</b><span style="color:var(--sub);font-size:12.5px"> / ${p.tot} 件</span></span></div>
@@ -512,6 +512,12 @@ function dvArrived(d){return (d.labels||[]).filter(l=>l.arrived).length;}
 const DL_SLOTS=['23:00–02:00','02:00–05:00','06:00–10:00','11:00–14:00','16:00–20:00'];   // 预约送货可选时段
 function stChip(t,bg,c){return `<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:${bg};color:${c}">${t}</span>`;}
 // 送货单：预约(booked) 与 签到(signed) 相互独立
+// 卡片核货条右侧挂「核货记录」：有记录就出，核货中也能随时查谁扫了什么（与 PC 列表「核货记录」对齐）；操作行已满 4 个按钮，不再往里塞
+function ckWithLogA(d,bar){if(!bar||ckStateA(d)==='off'||!(d.ckLog||[]).length)return bar||'';
+  bar=bar.replace('<span style="font-weight:500;font-size:12px;opacity:.85">· 核完仓库才能收货</span>','');   // 已开始核货，省掉提示给「核货记录」腾位
+  return `<div style="display:flex;gap:8px;align-items:flex-end"><div style="flex:1;min-width:0">${bar}</div><div data-ck="log" style="flex:none;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid rgba(5,150,105,.35);color:var(--emerald-2);background:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;cursor:pointer;white-space:nowrap">核货记录</div></div>`;}
+// 直达送货单详情的核货记录区
+function ckGoLogA(d){openSignDetail(d);setTimeout(()=>{const t=[...document.querySelectorAll('.page.show #ck-log-anchor')].pop();if(t)t.scrollIntoView({block:'start',behavior:'smooth'});},350);}
 function signinCard(d){
   if(d.booked===undefined)d.booked=false;if(d.signed===undefined)d.signed=(d.status==='已签到'||d.status==='交接完成');
   const done=d.status==='交接完成';
@@ -530,11 +536,11 @@ function signinCard(d){
       ?stChip('收货清点 · 少货 '+dvShortQty(d)+' 件','var(--red-soft)','var(--red)')+(dvReplQty(d)>0?stChip('平台补采 '+dvReplQty(d)+' 件','var(--amber-soft)','#B45309'):'')
       :stChip('收货清点 · 足额收货','var(--mint-soft)','var(--emerald-2)')}</div>`:''}
     ${d.printed?`<div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;color:var(--emerald-2);font-weight:600">🖨️ 已打印 ${d.printedAt||''}</div>`:''}
-    ${(()=>{const s=ckStateA(d);
+    ${ckWithLogA(d,(()=>{const s=ckStateA(d);
       const P=ckTallyA(d);
       if((s==='todo'||s==='stale')&&!d.signed)return `<div class="ck-go${s==='stale'?' red':''}" data-ck="go">${s==='stale'?'应送变了，去补核':(P.done?`继续扫码 · 已核 ${P.done}/${P.tot}`:'扫码核货')}<span style="font-weight:500;font-size:12px;opacity:.85">· 核完仓库才能收货</span></div>`;
       if(s==='done'&&d.check)return `<div class="ck-done" data-ck="view"><span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${P.scan?stChip('扫码核货','#E1EBFF','#2563EB'):''}${P.manual?stChip('手动核货','var(--muted)','#46604F'):''}<span>已核 <b>${P.done}</b>/${P.tot} · 最后核货 ${((d.ckLog||[]).filter(x=>x.kind!=='revoke').pop()||{}).at||d.check.at}${ckShortA(d)?` · <b style="color:var(--red)">少送 ${ckShortA(d)}</b>`:''}</span></span><span style="color:var(--emerald);font-weight:700;white-space:nowrap">${ckLocked(d)?'查看':'查看/修改'} ›</span></div>`;
-      return '';})()}
+      return '';})())}
     <div class="dl-acts">${done
       ?`<div class="a" data-a="detail">查看详情</div>`
       :`${dvCutoff(d).passed
@@ -627,17 +633,22 @@ function dvPrint(d){
 }
 function dvBookSheet(d){sheet(DL_SLOTS.map(s=>({label:`预约 ${s}${(d.bookWindow||d.window)===s?'　✓':''}`,onClick:()=>{d.booked=true;d.bookWindow=s;toast('已预约送货 '+s);rerenderSignin();}})));}
 // 签到码：商家出示，由【仓库人员扫码确认】，商家端不做签到确认操作（演示用"模拟仓库扫码"）
-// 移动端：全屏页而非弹窗——到仓门口举着手机给仓管扫，二维码要大、单号要醒目；
-// 拦截提示置顶；联系人可一键拨号；演示按钮放底部拇指区。字段与 PC 同口径。
-function dvSignQR(d){
-  const rv=RECV[d.warehouse]||{};
-  const blocked=ckBlockedA(d);
+/* 仓库白班/夜班联系人（签到码、提货码共用）：一人一行+右侧拨号、标人数、每班超 3 人折叠「还有 N 人」；某班没人显示「—」 */
+function shiftContactsA(wh){const rv=RECV[wh]||{};
   const tel='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
   // 多人：一人一行（姓名+电话同行、右侧拨号），每班超过 3 人折叠「还有 N 人」，不让联系人把签到码页拉得太长
   const one=v=>{const i=v.indexOf(' ');const nm=i>0?v.slice(0,i):v,ph=i>0?v.slice(i+1):'';
     return `<div style="display:flex;align-items:center;gap:10px;min-height:48px;border-top:1px solid #F1F4EE"><span style="font-size:14px;font-weight:600;min-width:52px">${nm}</span><span style="flex:1;font-size:13px;color:var(--sub);font-family:monospace">${ph}</span>${ph?`<a class="sq-call" data-ph="${ph}" style="flex:none;width:36px;height:36px;border-radius:50%;background:var(--mint-soft);color:var(--emerald-2);display:flex;align-items:center;justify-content:center">${tel}</a>`:''}</div>`;};
   const grp=(ic,label,color,arr)=>{arr=arr||[];const fold=arr.length>3;
     return `<div style="padding:12px 0 4px"><div style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:${color};margin-bottom:4px">${ic} ${label}<span style="font-weight:400;color:var(--sub)">· ${arr.length} 人</span></div>${arr.length?arr.slice(0,3).map(one).join('')+(fold?`<div class="sq-more" style="display:none">${arr.slice(3).map(one).join('')}</div><div class="sq-fold" style="min-height:44px;display:flex;align-items:center;justify-content:center;border-top:1px solid #F1F4EE;font-size:13px;color:var(--emerald-2);font-weight:600">还有 ${arr.length-3} 人 ▾</div>`:''):'<div style="font-size:13px;color:var(--sub);padding:8px 0">—</div>'}</div>`;};
+  return grp('☀︎','白班联系人','#A9711F',rv.d)+'<div style="height:1px;background:#EDF1E9"></div>'+grp('☾','夜班联系人','#2563EB',rv.n);}
+function bindShiftContactsA(root){
+  root.querySelectorAll('.sq-call').forEach(a=>a.onclick=()=>toast('拨打 '+a.dataset.ph));
+  root.querySelectorAll('.sq-fold').forEach(f=>f.onclick=()=>{f.previousElementSibling.style.display='block';f.remove();});}
+// 移动端：全屏页而非弹窗——到仓门口举着手机给仓管扫，二维码要大、单号要醒目；
+// 拦截提示置顶；联系人可一键拨号；演示按钮放底部拇指区。字段与 PC 同口径。
+function dvSignQR(d){
+  const blocked=ckBlockedA(d);
   const stat=(k,v)=>`<div style="flex:1;text-align:center;padding:4px 0"><div style="font-size:22px;font-weight:800;font-family:monospace">${v}</div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">${k}</div></div>`;
   pushPage({title:'到仓签到码',body:`<div style="padding:12px 16px 20px">
     ${blocked?`<div style="display:flex;align-items:center;gap:10px;background:var(--red-soft);color:var(--red);border-radius:14px;padding:10px 10px 10px 14px;margin-bottom:12px"><div style="flex:1;font-size:12.5px;line-height:1.5">本单<b>${ckStateA(d)==='stale'?'应送变了，要重新核货':'还没核货'}</b>，仓库扫码会被拦截</div><button id="sq-ck" style="flex:none;height:36px;padding:0 14px;border:none;border-radius:18px;background:var(--red);color:#fff;font-size:13px;font-weight:700">去核货</button></div>`:''}
@@ -649,20 +660,19 @@ function dvSignQR(d){
       <div style="display:flex;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid #EDF1E9">${stat('应送货(件)',dvSku(d).reduce((s,r)=>s+r.qty,0))}<div style="width:1px;height:32px;background:#EDF1E9"></div>${stat('订单数',d.orderIds.length)}</div>
     </div>
     <div style="background:#fff;border-radius:18px;box-shadow:var(--sh-sm);padding:6px 16px;margin-top:12px">
-      ${grp('☀︎','白班联系人','#A9711F',rv.d)}<div style="height:1px;background:#EDF1E9"></div>${grp('☾','夜班联系人','#2563EB',rv.n)}
+      ${shiftContactsA(d.warehouse)}
     </div></div>`,
     footer:`<button class="btn ghost" id="sq-sim">🔬 演示：模拟仓库扫码签到</button>`,
     mount:p=>{
       const ck=p.querySelector('#sq-ck');if(ck)ck.onclick=()=>{popPage();ckOpenA(d);};
-      p.querySelectorAll('.sq-call').forEach(a=>a.onclick=()=>toast('拨打 '+a.dataset.ph));
-      p.querySelectorAll('.sq-fold').forEach(f=>f.onclick=()=>{f.previousElementSibling.style.display='block';f.remove();});
+      bindShiftContactsA(p);
       p.querySelector('#sq-sim').onclick=()=>{
         if(ckBlockedA(d)){confirmDialog({title:'签到被拦截',body:`仓库扫码结果：<b>${ckStateA(d)==='stale'?'应送数量变了，要重新核货':'商家还没核货'}</b>，暂不能签到收货。请打开 App「送货签到」核货，核完仓库再扫码。`,okText:'去核货',onOk:()=>{popPage();ckOpenA(d);}});return;}
         d.signed=true;d.signTime=d.signTime||'00:12';popPage();toast('仓库已扫码确认签到，待逐张核验交接入仓');rerenderSignin();};
     }});
 }
 function bindSignin(el,d){
-  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{const k=b.dataset.ck;ckOpenA(d,k==='go',null,k==='go');});
+  el.querySelectorAll('[data-ck]').forEach(b=>b.onclick=()=>{const k=b.dataset.ck;if(k==='log')return ckGoLogA(d);ckOpenA(d,k==='go',null,k==='go');});
   el.querySelectorAll('.dl-acts .a').forEach(b=>b.onclick=()=>{const a=b.dataset.a;
     // 签到与预约相互独立；签到由仓库扫码确认，商家端只出示签到码
     if(a==='print')dvPrint(d);
@@ -671,6 +681,7 @@ function bindSignin(el,d){
     else if(a==='book')dvBookSheet(d);
     else if(a==='bookmenu')sheet([{label:'改约时段',onClick:()=>dvBookSheet(d)},{label:'取消预约',danger:1,onClick:()=>{d.booked=false;d.bookWindow='';toast('已取消预约，仍可到仓直接签到');rerenderSignin();}}]);
     else if(a==='detail')openSignDetail(d);
+
   });
 }
 let _signList=null;
@@ -760,7 +771,7 @@ function openSignDetail(d){
     ${sec('商品明细 · 按 SKU 件数')}
     ${rows.length>1?`<div style="margin:0 16px 8px;position:relative"><input id="dl-ln-q" type="search" placeholder="搜索商品名称 / SKU编码" oninput="dlLineFilter(this.value)" style="width:100%;box-sizing:border-box;height:40px;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:0 12px;font-size:14px;background:#fff"></div>`:''}
     ${box(
-      rows.map(r=>`<div class="dl-ln" data-q="${(skuFrom(r.code)+' '+r.name).toLowerCase().replace(/"/g,'')}" style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="font-size:11.5px;color:var(--sub);margin-top:2px">下单/预约 ${r.qty}${r.unit}${(()=>{if(ckStateA(d)==='off')return '';const v=ckTallyA(d).per[r.name];if(v==null)return '';return ` · 核货 <b style="color:${v<r.qty?'var(--red)':'inherit'}">${v}${r.unit}</b> <span class="ck-sku" data-k="${r.name}" style="color:var(--emerald);font-weight:700;cursor:pointer;padding:6px 2px">明细 ›</span>`;})()} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${d.status==='交接完成'?` · 短收 <b style="color:${r.inQty<r.qty?'var(--red)':'var(--sub)'}">${Math.max(0,r.qty-r.inQty)}</b> · 多收 <b style="color:${r.inQty>r.qty?'var(--amber)':'var(--sub)'}">${Math.max(0,r.inQty-r.qty)}</b>`:''} · 平台补采 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div></div>`).join('')+(rows.length?'<div id="dl-ln-none" style="display:none;padding:12px 0;color:var(--sub);text-align:center">没有匹配的商品</div>':'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>')
+      rows.map(r=>`<div class="dl-ln" data-q="${(skuFrom(r.code)+' '+r.name).toLowerCase().replace(/"/g,'')}" style="padding:9px 0;border-bottom:1px solid rgba(0,0,0,.05)"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">${r.name} <span style="font-family:monospace;font-size:11px;color:var(--sub)">${skuFrom(r.code)}</span></span><span style="font-family:'Lora',serif">${r.qty}${r.unit}</span></div><div style="display:flex;align-items:center;gap:10px;margin-top:4px"><div style="flex:1;min-width:0;font-size:11.5px;color:var(--sub)">下单/预约 ${r.qty}${r.unit}${(()=>{if(ckStateA(d)==='off')return '';const v=ckTallyA(d).per[r.name];if(v==null)return '';return ` · 核货 <b style="color:${v<r.qty?'var(--red)':'inherit'}">${v}${r.unit}</b>`;})()} · ${d.status==='交接完成'?'实收':'已入库'} <b style="color:${r.inQty>=r.qty?'var(--emerald)':'var(--red)'}">${r.inQty}${r.unit}</b>${d.status==='交接完成'?` · 短收 <b style="color:${r.inQty<r.qty?'var(--red)':'var(--sub)'}">${Math.max(0,r.qty-r.inQty)}</b> · 多收 <b style="color:${r.inQty>r.qty?'var(--amber)':'var(--sub)'}">${Math.max(0,r.inQty-r.qty)}</b>`:''} · 平台补采 <b style="color:${dvReplName(d,r.name)>0?'var(--amber)':'var(--sub)'}">${dvReplName(d,r.name)}</b>${r.unit}</div>${(ckStateA(d)!=='off'&&ckTallyA(d).per[r.name]!=null)?`<span class="ck-sku" data-k="${r.name}" style="flex:none;display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:999px;background:var(--mint-soft);border:1px solid rgba(5,150,105,.3);color:var(--emerald-2);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">核货明细 ›</span>`:''}</div></div>`).join('')+(rows.length?'<div id="dl-ln-none" style="display:none;padding:12px 0;color:var(--sub);text-align:center">没有匹配的商品</div>':'<div style="padding:12px 0;color:var(--sub);text-align:center">无商品明细</div>')
     )}
     <div style="margin:8px 16px 0;font-size:11.5px;color:var(--sub);line-height:1.6">实收数量由仓库<b>收货清点</b>后由 WMS 实时回写，商家端只读。少货部分<b>不冲减客户订单</b>，也不下调你的 GMV 与佣金。<b>平台补采</b>＝缺口由平台自营现货补货的数量（未补货为 0），按含税售价 ×(1+加价率) 在结算单中抵扣。<br><b>多收</b>：你送的比应送多，仓库<b>照收不设上限</b>，超出部分计入<b>在仓寄存库存</b>，<b>当天不参与售卖</b>、不结算，次日优先抵扣应送量。送来应送清单外的 SKU 属<b>送错</b>，仍需线下取回。</div>
     <div style="height:8px"></div>`,
@@ -1025,9 +1036,10 @@ function showPickCode(g){if(!g)return;const d=pickDeadline(g);
     <div style="font-family:monospace;font-size:30px;font-weight:800;letter-spacing:8px">${g.code}</div>
     ${d?`<div style="margin-top:6px;font-size:13px;color:#B45309;font-weight:700">提货截止 ${msTs(d)}（剩 ${remainTxt(d-Date.now())}）</div>`:''}
     <div style="text-align:left;margin-top:14px;font-size:13px">${g.items.map(x=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)"><span>${x.name}</span><span>应取回 ${x.retQty} ${x.unit}</span></div>`).join('')}</div>
+    <div style="text-align:left;margin-top:6px;border-top:6px solid var(--muted);margin-left:-18px;margin-right:-18px;padding:0 18px">${shiftContactsA(g.ware)}</div>
   </div></div>`;
   document.querySelector('.phone').appendChild(m);
-  m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};
+  m.querySelector('.x').onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove();};bindShiftContactsA(m);
 }
 // 详情：提货交接记录（仓库扫码提货后才有）
 function handoverDetail(g,sec,box,kv){

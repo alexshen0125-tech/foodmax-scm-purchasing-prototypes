@@ -6701,6 +6701,7 @@ function retShowCode(i){const a=DB.afterSales[i],code=retPickCode(a),no='TH-'+a.
     <div class="mono" style="font-size:30px;font-weight:800;letter-spacing:8px;margin-top:2px">${code}</div>
     ${d?`<div style="margin-top:8px;font-size:13px;color:var(--y)">提货截止 ${msTs(d)}（剩 ${remainTxt(d-Date.now())}）</div>`:''}
     <table style="margin-top:16px;text-align:left"><thead><tr><th>商品</th><th style="text-align:right">应取回数量</th></tr></thead><tbody>${(a.retItems||[]).map(x=>`<tr><td>${x.name}${retGiftTag(x)}</td><td style="text-align:right">${x.retQty} ${x.unit||''}</td></tr>`).join('')}</tbody></table>
+    ${typeof dcContacts=='function'?`<div style="text-align:left;margin-top:16px;padding-top:14px;border-top:1px solid var(--bd2)">${dcContacts(a.ware||'裕廊DC',true)}</div>`:''}
   </div><div class="mc-ft"><button class="btn btn-p" onclick="closeModal()">关闭</button></div>`);}
 // 详情：提货交接记录（仓库扫码提货后才有；超时未入库的无法取回没有交接）
 function retHandoverBlock(a,sec,kv){
@@ -6871,7 +6872,7 @@ goHome();
 <script src="pc-modules/stock.js?v=20260917a"></script>
 <script src="pc-modules/pick.js?v=20261120a"></script>
 <script src="pc-modules/weigh.js?v=20261014a"></script>
-<script src="pc-modules/delivery.js?v=20261126b"></script>
+<script src="pc-modules/delivery.js?v=20261126c"></script>
 <script src="pc-modules/checkgoods.js?v=20261125g"></script>
 <script src="pc-modules/biz.js?v=20260730f"></script>
 <script src="pc-modules/price.js?v=20260730f"></script>

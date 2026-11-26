@@ -222,13 +222,19 @@
     d.printed=true; d.printedAt=d.printedAt||new Date().toLocaleString('zh-CN',{hour12:false}).slice(5,16);
     closeModal(); render(); toast(`${id} 送货单已打印（含签到二维码），到仓出示本单由仓库扫码签到`,'ok');};
 
-  window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
-    // 版式：左码右信息两栏，高度不超一屏；核货拦截提示置于码上方，出示前先看到
-    const meta=DC_META[d.warehouse]||{day:[],night:[]};
+  // 仓库白班/夜班联系人（签到码、提货码共用；提货码在主 HTML 的 retShowCode 里经 window.dcContacts 调用）
+  function dcContacts(wh,cols){
+    const meta=DC_META[wh]||{day:[],night:[]};
     const ppl=arr=>arr&&arr.length?arr.map(x=>{const i=x.indexOf(' ');return `<div style="display:flex;justify-content:space-between;gap:16px;font-size:13px;line-height:1.9"><span>${i>0?x.slice(0,i):x}</span><span class="mono" style="font-size:13px;color:var(--ts)">${i>0?x.slice(i+1):''}</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--tt)">—</div>';
-    const grp=(ic,label,color,arr)=>`<div><div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${color};margin-bottom:2px">${ic}${label}</div>${ppl(arr)}</div>`;
+    const grp=(ic,label,color,arr)=>`<div style="min-width:0"><div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${color};margin-bottom:2px">${ic}${label}<span style="font-weight:400;color:var(--tt)">· ${(arr||[]).length} 人</span></div>${ppl(arr)}</div>`;
     const sun='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
     const moon='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    const g=grp(sun,'白班联系人','#A9711F',meta.day)+grp(moon,'夜班联系人','#2563EB',meta.night);
+    return cols?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 28px">${g}</div>`:g;
+  }
+  window.dcContacts=dcContacts;
+  window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
+    // 版式：左码右信息两栏，高度不超一屏；核货拦截提示置于码上方，出示前先看到
     const stat=(k,v)=>`<div style="background:var(--bd2);border-radius:10px;padding:10px 14px"><div style="font-size:12px;color:var(--ts)">${k}</div><div class="mono" style="font-size:20px;font-weight:700;margin-top:2px">${v}</div></div>`;
     const blocked=(typeof ckBlocked=='function'&&ckBlocked(d));
     modalWide(`<div class="mc-hd"><h3>到仓签到码</h3><p>${d.warehouse}</p><button class="mc-x" onclick="closeModal()">×</button></div>
@@ -241,8 +247,7 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:18px;padding:24px;min-width:0">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${stat('应送货',dvShould(d))}${stat('订单数',d.orderIds.length)}</div>
-        ${grp(sun,'白班联系人','#A9711F',meta.day)}
-        ${grp(moon,'夜班联系人','#2563EB',meta.night)}
+        ${dcContacts(d.warehouse)}
       </div>
     </div>
     <div class="mc-ft"><button class="btn btn-o" onclick="deliv_doSign('${d.id}')">🔬 演示：模拟仓库扫码签到</button><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
