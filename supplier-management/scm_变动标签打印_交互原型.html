@@ -167,7 +167,7 @@ tr.void td{color:#c0c4cc}
   </div>
 </div>
 
-<!-- 打变动标签抽屉（新增） -->
+<!-- 打标签抽屉（新增） -->
 <div class="mask" id="mask2" onclick="closeLabel()"></div>
 <div class="drawer" id="dr2" style="width:78%">
   <div class="dhd"><div class="tt" id="dr2tt"></div><span class="x" onclick="closeLabel()">×</span></div>
@@ -245,16 +245,16 @@ function recs(o,l){return REC[o.no+'|'+l.itemCode]||(REC[o.no+'|'+l.itemCode]=[]
 function valid(rs){return rs.filter(r=>!r.void)}
 function renderLines(){
   const o=curOrder;
-  let h='<tr><th><input type="checkbox" class="chk"></th><th>商品类型</th><th>SPU信息</th><th>SKU信息</th><th>货品信息</th><th>类目</th><th>发票类型</th><th class="r">税率</th><th class="r">单价(含税)</th><th class="r">单价(未税)</th><th class="r">需求数量</th><th class="r">可送达数量</th><th class="r">已送达数量</th><th class="r">单位</th><th class="r">订单金额(含税)</th><th class="r">订单金额(未税)</th><th class="r fixr" style="right:110px">已打变动标签</th><th class="fixr">操作</th></tr>';
+  let h='<tr><th><input type="checkbox" class="chk"></th><th>商品类型</th><th>SPU信息</th><th>SKU信息</th><th>货品信息</th><th>类目</th><th>发票类型</th><th class="r">税率</th><th class="r">单价(含税)</th><th class="r">单价(未税)</th><th class="r">需求数量</th><th class="r">可送达数量</th><th class="r">已送达数量</th><th class="r">单位</th><th class="r">订单金额(含税)</th><th class="r">订单金额(未税)</th><th class="r fixr" style="right:110px">已打标签</th><th class="fixr">操作</th></tr>';
   LINES[o.no].forEach((l,i)=>{
     const n=valid(recs(o,l)).length;
     h+=`<tr><td><input type="checkbox" class="chk"></td><td>${l.type}</td><td>${l.spu}<div class="sub">${l.spuCode}</div></td><td>${l.sku}<div class="sub">${l.skuCode}</div></td><td>${l.item}<div class="sub">${l.itemCode}</div></td><td>${l.cat}</td><td>${l.inv}</td><td class="r">${l.tax}</td><td class="r">${l.price}</td><td class="r">${l.priceEx}</td><td class="r">${l.qty}</td><td class="r">${l.deliv}</td><td class="r">${l.inb}</td><td class="r">${l.unit}</td><td class="r">${l.a}</td><td class="r">${l.aEx}</td>
     <td class="r fixr" style="right:110px">${l.pork?n:'--'}</td>
-    <td class="fixr" style="white-space:nowrap">${l.pork?`<button class="link" onclick="openLabel(${i})">打变动标签</button>`:'--'}</td></tr>`});
+    <td class="fixr" style="white-space:nowrap">${l.pork?`<button class="link" onclick="openLabel(${i})">打标签</button>`:'--'}</td></tr>`});
   document.getElementById('lineTbl').innerHTML=h;
 }
 
-/* ---------- 打变动标签 ---------- */
+/* ---------- 打标签 ---------- */
 let curLine=null,form=null,lastScan={v:null,t:0},previewIdx=-1,sel=new Set();
 function canScan(o){return [1,4,6].includes(o.status)}   /* BR：废弃、配送完成的单不能新打，只能补打 */
 function openLabel(i){
@@ -264,7 +264,7 @@ function openLabel(i){
   const rs=valid(recs(curOrder,curLine));
   if(rs.length){const r=rs[rs.length-1];form={date:r.date,batch:r.batch,cert:r.cert,mfr:r.mfr}}
   previewIdx=recs(curOrder,curLine).length-1;sel=new Set();
-  document.getElementById('dr2tt').innerHTML=`打变动标签<span class="sub">${curOrder.no}　${curLine.item}</span>`;
+  document.getElementById('dr2tt').innerHTML=`打标签<span class="sub">${curOrder.no}　${curLine.item}</span>`;
   renderLabel();show('mask2');show('dr2');
   setTimeout(()=>{const s=document.getElementById('scan');s&&!s.disabled&&s.focus()},50);
 }

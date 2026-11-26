@@ -123,8 +123,8 @@ function pageOrder(i){
    <div class="sectt">商品明细</div>`+O.lines.map((l,j)=>{const n=l.recs.length;return `<div class="card">
    <div style="font-weight:600">${l.item}</div><div style="font-size:12px;color:var(--t3)">${l.itemCode}</div>
    <div class="row" style="margin-top:6px"><label>可送达数量</label><span>${l.deliv} ${l.unit}</span></div>
-   ${l.pork?`<div class="row"><label>已打变动标签</label><span>${n} 盒</span></div>
-   <div style="text-align:right;margin-top:8px"><button class="btn p" onclick="pageLabel(${j})">打变动标签</button></div>`:''}</div>`}).join('');
+   ${l.pork?`<div class="row"><label>已打标签</label><span>${n} 盒</span></div>
+   <div style="text-align:right;margin-top:8px"><button class="btn p" onclick="pageLabel(${j})">打标签</button></div>`:''}</div>`}).join('');
 }
 function pageLabel(j){
   L=O.lines[j];const lb=LAST[L.itemCode]||{};
@@ -134,7 +134,7 @@ function pageLabel(j){
 function ok(){return F.date&&F.batch.trim()&&F.cert.trim()&&F.mfr.trim()}
 function dmy(d){const [y,m,dd]=d.split('-');return dd+'/'+m+'/'+y}
 function renderLabel(){
-  nav('打变动标签',`pageOrder(${ORDERS.indexOf(O)})`);
+  nav('打标签',`pageOrder(${ORDERS.indexOf(O)})`);
   const n=L.recs.length,pend=L.recs.filter(r=>r.ps==='待打印').length,tw=L.recs.reduce((a,r)=>a+r.g,0);
   $('body').innerHTML=`<div class="card"><div style="font-weight:600">${L.item}</div><div style="font-size:12px;color:var(--t3)">${L.itemCode}　条码货品码 ${itemDigits(L.itemCode)}</div></div>
   <div class="card summary"><div class="hd" style="margin:0"><span style="color:var(--t3);font-size:13px">批次信息</span><span class="edit" onclick="editBatch()">修改</span></div>
@@ -144,7 +144,7 @@ function renderLabel(){
    <div class="row"><label>生产商</label><span>${F.mfr}</span></div>
    <div class="row"><label>贮存条件</label><span>0–4°C</span></div></div>
   <div class="card prog"><div><b>${n}</b><small>已打 / ${L.deliv} 盒</small></div><div><b>${(tw/1000).toFixed(3)}</b><small>合计净重 kg</small></div><div><b style="color:${pend?'var(--org)':'inherit'}">${pend}</b><small>待打印</small></div></div>
-  <div class="sectt">标签记录${pend?'　·　待打印的在电脑端「打变动标签」里打印':''}</div>
+  <div class="sectt">标签记录${pend?'　·　待打印的在电脑端「打标签」里打印':''}</div>
   <div class="card">${n?L.recs.map((r,i)=>`<div class="rec"><div><div class="w">${r.g} g</div><div class="c">${r.code}</div></div><div style="text-align:right"><div style="font-size:12px;color:var(--t3)">第 ${i+1} 盒</div><span class="tag ${r.ps==='已打印'?'g':'o'}">${r.ps}</span></div></div>`).reverse().join(''):'<div style="text-align:center;color:var(--t3);padding:16px 0;font-size:14px">暂无标签</div>'}</div>`;
   const dis=!canScan(O)||!ok()||n>=L.deliv;
   const hint=!canScan(O)?`订单${STATUS[O.status][0]}，不能新打标签`:!ok()?'先填批次信息':n>=L.deliv?`已打满 ${L.deliv} 盒`:'';
