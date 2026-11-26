@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VMS 变动标签 移动端</title>
+<style>
+:root{--g:#009919;--gl:#e8f5ea;--t:#303133;--t2:#606266;--t3:#909399;--b:#ebeef5;--red:#f56c6c;--org:#e6a23c;--blue:#409eff;--bg:#f2f3f5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:15px/1.5 -apple-system,"PingFang SC",sans-serif;color:var(--t);background:#d9dde3;display:flex;justify-content:center;padding:20px 0}
+.phone{width:375px;height:780px;background:var(--bg);border-radius:36px;overflow:hidden;position:relative;box-shadow:0 10px 40px rgba(0,0,0,.25);border:10px solid #111;display:flex;flex-direction:column}
+.status{height:28px;background:#fff;font-size:12px;display:flex;justify-content:space-between;padding:6px 22px 0;font-weight:600}
+.nav{height:46px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid var(--b);font-size:17px;font-weight:600}
+.nav .back{position:absolute;left:10px;font-size:24px;font-weight:400;padding:0 8px;cursor:pointer;color:var(--t)}
+.body{flex:1;overflow:auto;padding:12px 12px 90px}
+.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;gap:10px;font-size:14px;line-height:24px}
+.row label{color:var(--t3);white-space:nowrap}
+.row span{text-align:right;word-break:break-all}
+.ono{font-weight:600;font-size:16px}
+.tag{display:inline-block;padding:0 7px;height:22px;line-height:20px;border-radius:4px;font-size:12px;border:1px solid}
+.tag.b{color:var(--blue);background:#ecf5ff;border-color:#b3d8ff}
+.tag.o{color:var(--org);background:#fdf6ec;border-color:#f5dab1}
+.tag.g{color:var(--g);background:var(--gl);border-color:#a8dbb2}
+.tag.i{color:var(--t3);background:#f4f4f5;border-color:#e9e9eb}
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sectt{font-size:13px;color:var(--t3);margin:14px 4px 8px}
+.btn{height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--g);color:var(--g);background:#fff;font-size:14px;cursor:pointer}
+.btn.p{background:var(--g);color:#fff}
+.btn[disabled]{opacity:.4}
+.bottom{position:absolute;left:0;right:0;bottom:0;background:#fff;padding:10px 16px 26px;border-top:1px solid var(--b)}
+.big{width:100%;height:48px;border-radius:24px;border:0;background:var(--g);color:#fff;font-size:17px;font-weight:600;cursor:pointer}
+.big[disabled]{background:#a8dbb2}
+.hint{font-size:12px;color:var(--red);text-align:center;margin-bottom:6px}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:13px;color:var(--t2);margin-bottom:4px}
+.fld label i{color:var(--red);font-style:normal}
+.fld input{width:100%;height:44px;border:1px solid #dcdfe6;border-radius:8px;padding:0 12px;font-size:16px;outline:none;background:#fff}
+.fld input:focus{border-color:var(--g)}
+.fld input[readonly]{background:#f5f7fa;color:var(--t2)}
+.prog{display:flex;text-align:center}
+.prog div{flex:1}
+.prog b{display:block;font-size:22px;font-weight:600}
+.prog small{color:var(--t3);font-size:12px}
+.rec{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--b);font-size:14px}
+.rec:last-child{border-bottom:0}
+.rec .w{font-size:17px;font-weight:600}
+.rec .c{font-family:Menlo,monospace;font-size:11px;color:var(--t3)}
+.summary{font-size:14px;line-height:24px}
+.summary .edit{color:var(--g);font-size:14px;cursor:pointer}
+/* camera */
+.cam{position:absolute;inset:0;background:#000;display:none;flex-direction:column;z-index:20}
+.cam.on{display:flex}
+.cam .top{color:#fff;display:flex;justify-content:space-between;align-items:center;padding:40px 18px 10px;font-size:15px}
+.cam .vf{flex:1;display:flex;align-items:center;justify-content:center;position:relative;background:radial-gradient(#333,#000)}
+.cam .box{width:220px;height:220px;border:2px solid rgba(255,255,255,.25);position:relative}
+.cam .box:before,.cam .box:after{content:"";position:absolute;left:0;right:0;height:2px;background:var(--g);top:50%;box-shadow:0 0 8px var(--g);animation:sc 1.6s infinite}
+@keyframes sc{0%{top:4%}50%{top:94%}100%{top:4%}}
+.cam .tip{position:absolute;bottom:24px;color:#fff;font-size:14px;text-align:center;width:100%}
+.cam .last{background:rgba(255,255,255,.12);color:#fff;margin:0 16px;border-radius:10px;padding:10px 14px;font-size:14px;min-height:44px}
+.cam .last.bad{background:rgba(245,108,108,.25)}
+.cam .sim{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap}
+.cam .sim button{flex:1;height:34px;border-radius:17px;border:1px dashed #888;background:transparent;color:#bbb;font-size:12px;cursor:pointer}
+.cam .done{margin:0 16px 30px;height:48px;border-radius:24px;border:0;background:#fff;color:var(--t);font-size:17px;font-weight:600}
+.toast{position:absolute;top:120px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:10px 16px;border-radius:8px;font-size:14px;display:none;z-index:30;white-space:nowrap}
+.sheet{position:absolute;inset:0;background:rgba(0,0,0,.4);display:none;z-index:15;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet .in{background:#fff;width:100%;border-radius:16px 16px 0 0;padding:18px 16px 26px}
+.sheet .in h3{font-size:16px;text-align:center;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 􀙇 ▮</span></div>
+  <div class="nav" id="nav"></div>
+  <div class="body" id="body"></div>
+  <div class="bottom" id="bottom" style="display:none"></div>
+
+  <div class="sheet" id="sheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="in" id="sheetIn"></div></div>
+  <div class="cam" id="cam">
+    <div class="top"><span id="camTitle"></span><span id="camCnt"></span></div>
+    <div class="vf"><div class="box"></div><div class="tip">对准盒上的重量二维码，连续扫，一盒一张</div></div>
+    <div class="last" id="camLast">还没扫</div>
+    <div class="sim"><button onclick="scan(rw()+'g')">模拟扫到重量码</button><button onclick="scan('xmitem202611090012')">模拟扫到条形码</button></div>
+    <button class="done" onclick="closeCam()">完成</button>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+const SUPPLIER='Hunan Huale Foodstuff Co. Ltd.';
+const IMPORTER='10X AI Technology Pte. Ltd., 8 Jurong Town Hall Road, #18-06, The JTC Summit, Singapore 609434';
+const STATUS={1:['待配送','b'],2:['配送完成','g'],3:['废弃','i'],4:['配送中','o'],6:['待发货','b']};
+const ORDERS=[
+ {no:'PA2026112600041',wh:'新加坡-B端仓',dt:'2026-11-28 06:00:00',status:6,lines:[
+   {item:'冰鲜猪背排 0.5KG/盒',itemCode:'item202611090020',deliv:40,unit:'盒',pork:true,recs:[]},
+   {item:'冰鲜猪肋排 0.5KG/盒',itemCode:'item202611090012',deliv:30,unit:'盒',pork:true,recs:[]},
+   {item:'湖南剁辣椒 500G/瓶',itemCode:'item202609150031',deliv:20,unit:'瓶',pork:false,recs:[]}]},
+ {no:'PA2026112500018',wh:'新加坡-B端仓',dt:'2026-11-27 06:00:00',status:4,lines:[
+   {item:'冰鲜猪背排 0.5KG/盒',itemCode:'item202611090020',deliv:20,unit:'盒',pork:true,recs:[
+     {g:518,code:'2611172026110900200005187411',ps:'已打印',batch:'10XBX26004'},{g:532,code:'2611172026110900200005320388',ps:'已打印',batch:'10XBX26004'},{g:497,code:'2611172026110900200004975120',ps:'待打印',batch:'10XBX26004'}]}]},
+ {no:'PA2026112100026',wh:'新加坡-B端仓',dt:'2026-11-23 06:00:00',status:2,lines:[
+   {item:'冰鲜猪背排 0.5KG/盒',itemCode:'item202611090020',deliv:10,unit:'盒',pork:true,recs:[]}]},
+];
+const LAST={item202611090020:{batch:'10XBX26004',cert:'226N49040007608001'}};
+let O=null,L=null,F=null,last={v:null,t:0};
+const $=id=>document.getElementById(id);
+function itemDigits(c){const m=String(c).match(/(\d{12})$/);return m?m[1]:null}
+function parseWeight(s){const m=String(s).trim().match(/^(\d{1,6})\s*g$/i);if(!m)return null;const g=+m[1];return g>0?g:null}
+function canScan(o){return [1,4,6].includes(o.status)}
+function nav(t,back){$('nav').innerHTML=(back?`<span class="back" onclick="${back}">‹</span>`:'')+t}
+
+function pageList(){
+  nav('订单');$('bottom').style.display='none';
+  $('body').innerHTML=ORDERS.map((o,i)=>{const s=STATUS[o.status];return `<div class="card" onclick="pageOrder(${i})">
+   <div class="hd"><span class="ono">${o.no}</span><span class="tag ${s[1]}">${s[0]}</span></div>
+   <div class="row"><label>送达仓库</label><span>${o.wh}</span></div>
+   <div class="row"><label>要求到货时间</label><span>${o.dt}</span></div></div>`}).join('');
+}
+function pageOrder(i){
+  O=ORDERS[i];const s=STATUS[O.status];nav('订单详情','pageList()');$('bottom').style.display='none';
+  $('body').innerHTML=`<div class="card"><div class="hd"><span class="ono">${O.no}</span><span class="tag ${s[1]}">${s[0]}</span></div>
+   <div class="row"><label>送达仓库</label><span>${O.wh}</span></div><div class="row"><label>要求到货时间</label><span>${O.dt}</span></div></div>
+   <div class="sectt">商品明细</div>`+O.lines.map((l,j)=>{const n=l.recs.length;return `<div class="card">
+   <div style="font-weight:600">${l.item}</div><div style="font-size:12px;color:var(--t3)">${l.itemCode}</div>
+   <div class="row" style="margin-top:6px"><label>可送达数量</label><span>${l.deliv} ${l.unit}</span></div>
+   ${l.pork?`<div class="row"><label>已打变动标签</label><span>${n} 盒</span></div>
+   <div style="text-align:right;margin-top:8px"><button class="btn p" onclick="pageLabel(${j})">打变动标签</button></div>`:''}</div>`}).join('');
+}
+function pageLabel(j){
+  L=O.lines[j];const lb=LAST[L.itemCode]||{};
+  F=F&&F.item===L.itemCode?F:{item:L.itemCode,date:new Date().toISOString().slice(0,10),batch:lb.batch||'',cert:lb.cert||'',mfr:SUPPLIER};
+  renderLabel();
+}
+function ok(){return F.date&&F.batch.trim()&&F.cert.trim()&&F.mfr.trim()}
+function dmy(d){const [y,m,dd]=d.split('-');return dd+'/'+m+'/'+y}
+function renderLabel(){
+  nav('打变动标签',`pageOrder(${ORDERS.indexOf(O)})`);
+  const n=L.recs.length,pend=L.recs.filter(r=>r.ps==='待打印').length,tw=L.recs.reduce((a,r)=>a+r.g,0);
+  $('body').innerHTML=`<div class="card"><div style="font-weight:600">${L.item}</div><div style="font-size:12px;color:var(--t3)">${L.itemCode}　条码货品码 ${itemDigits(L.itemCode)}</div></div>
+  <div class="card summary"><div class="hd" style="margin:0"><span style="color:var(--t3);font-size:13px">批次信息</span><span class="edit" onclick="editBatch()">修改</span></div>
+   <div class="row"><label>生产日期</label><span>${F.date?dmy(F.date):'<span style="color:var(--red)">未填</span>'}</span></div>
+   <div class="row"><label>批次号</label><span>${F.batch||'<span style="color:var(--red)">未填</span>'}</span></div>
+   <div class="row"><label>兽医证书号</label><span>${F.cert||'<span style="color:var(--red)">未填</span>'}</span></div>
+   <div class="row"><label>生产商</label><span>${F.mfr}</span></div>
+   <div class="row"><label>贮存条件</label><span>0–4°C</span></div></div>
+  <div class="card prog"><div><b>${n}</b><small>已打 / ${L.deliv} 盒</small></div><div><b>${(tw/1000).toFixed(3)}</b><small>合计净重 kg</small></div><div><b style="color:${pend?'var(--org)':'inherit'}">${pend}</b><small>待打印</small></div></div>
+  <div class="sectt">标签记录${pend?'　·　待打印的在电脑端「打变动标签」里打印':''}</div>
+  <div class="card">${n?L.recs.map((r,i)=>`<div class="rec"><div><div class="w">${r.g} g</div><div class="c">${r.code}</div></div><div style="text-align:right"><div style="font-size:12px;color:var(--t3)">第 ${i+1} 盒</div><span class="tag ${r.ps==='已打印'?'g':'o'}">${r.ps}</span></div></div>`).reverse().join(''):'<div style="text-align:center;color:var(--t3);padding:16px 0;font-size:14px">暂无标签</div>'}</div>`;
+  const dis=!canScan(O)||!ok()||n>=L.deliv;
+  const hint=!canScan(O)?`订单${STATUS[O.status][0]}，不能新打标签`:!ok()?'先填批次信息':n>=L.deliv?`已打满 ${L.deliv} 盒`:'';
+  $('bottom').style.display='block';
+  $('bottom').innerHTML=(hint?`<div class="hint">${hint}</div>`:'')+`<button class="big" ${dis?'disabled':''} onclick="openCam()">扫重量二维码</button>`;
+  if(canScan(O)&&!ok()&&n<L.deliv)editBatch();
+}
+function editBatch(){
+  const today=new Date().toISOString().slice(0,10);
+  $('sheetIn').innerHTML=`<h3>批次信息</h3>
+  <div class="fld"><label><i>*</i>生产日期</label><input type="date" id="fDate" max="${today}" value="${F.date}"></div>
+  <div class="fld"><label><i>*</i>批次号 Batch No.</label><input id="fBatch" maxlength="30" value="${F.batch}"></div>
+  <div class="fld"><label><i>*</i>兽医证书号 Veterinary Cert. No.</label><input id="fCert" maxlength="40" value="${F.cert}"></div>
+  <div class="fld"><label><i>*</i>生产商 Manufacturer</label><input id="fMfr" maxlength="80" value="${F.mfr}"></div>
+  <button class="big" onclick="saveBatch()">确定</button>`;
+  $('sheet').classList.add('on');
+}
+function saveBatch(){
+  const v={date:$('fDate').value,batch:$('fBatch').value.trim(),cert:$('fCert').value.trim(),mfr:$('fMfr').value.trim()};
+  if(!v.date||!v.batch||!v.cert||!v.mfr)return toast('四项都要填');
+  Object.assign(F,v);LAST[L.itemCode]={batch:v.batch,cert:v.cert};$('sheet').classList.remove('on');renderLabel();
+}
+function openCam(){$('cam').classList.add('on');$('camTitle').textContent=L.item;cnt();$('camLast').className='last';$('camLast').textContent='还没扫'}
+function cnt(){$('camCnt').textContent=`${L.recs.length} / ${L.deliv} 盒`}
+function closeCam(){$('cam').classList.remove('on');renderLabel()}
+function rw(){return 480+Math.floor(Math.random()*70)}
+function scan(v){
+  const now=Date.now();if(v===last.v&&now-last.t<2000)return;last={v,t:now};
+  const bad=m=>{$('camLast').className='last bad';$('camLast').textContent=m;if(navigator.vibrate)navigator.vibrate([80,60,80])};
+  const g=parseWeight(v);
+  if(g===null)return bad(`识别不了「${v}」，请扫重量二维码（如 518g）`);
+  if(L.recs.length>=L.deliv)return bad(`已打满 ${L.deliv} 盒，不能再扫`);
+  const [y,m,d]=F.date.split('-');
+  const used=new Set(L.recs.filter(r=>r.g===g).map(r=>r.code.slice(-4)));
+  let rnd;do{rnd=String(Math.floor(Math.random()*10000)).padStart(4,'0')}while(used.has(rnd));
+  const code=y.slice(2)+m+d+itemDigits(L.itemCode)+String(g).padStart(6,'0')+rnd;
+  L.recs.push({g,code,ps:'待打印',batch:F.batch});
+  $('camLast').className='last';$('camLast').innerHTML=`✓ 第 ${L.recs.length} 盒　<b>${g} g</b><br><span style="font-family:Menlo;font-size:11px;opacity:.7">${code}</span>`;
+  if(navigator.vibrate)navigator.vibrate(40);cnt();
+}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',1600)}
+pageList();
+</script>
+</body>
+</html>
