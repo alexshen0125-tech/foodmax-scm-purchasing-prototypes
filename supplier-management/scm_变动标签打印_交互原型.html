@@ -103,20 +103,19 @@ th.fixr{background:#f5f7fa}
 .lblwrap .cap{color:var(--t3);font-size:12px;align-self:flex-start}
 /* 80x50mm label at 4px/mm = 320x200 */
 .label{width:320px;height:200px;background:#fff;border:1px solid #c0c4cc;padding:10px 14px;font-family:Arial,"PingFang SC",sans-serif;color:#000;display:flex;flex-direction:column}
-.label .hd{display:grid;grid-template-columns:1.6fr 1fr;border:1px solid #000;text-align:center}
-.label .hd div{padding:2px 0}
-.label .hd div+div{border-left:1px solid #000}
-.label .hd small{display:block;font-size:7px}
-.label .hd strong{font-size:13px}
+.label .nm{text-align:center;font-weight:bold;line-height:1.2}
+.label .nm .en{font-size:11px}
+.label .nm .cn{font-size:10px}
 .label .bcrow{display:flex;align-items:center;margin-top:4px;gap:6px}
 .label .bc{display:flex;flex-direction:column;align-items:center;flex:0 0 200px}
-.label .bc svg{height:34px;width:200px}
+.label .bc svg{height:32px;width:200px}
 .label .hri{font-size:7px;letter-spacing:.3px;margin-top:-1px}
 .label .nw{flex:1;text-align:center}
 .label .nw small{display:block;font-size:7px;font-weight:bold}
 .label .nw strong{font-size:20px}
-.label .ft{border-top:1px solid #000;margin-top:4px;padding-top:3px;font-size:7px;line-height:1.45}
+.label .ft{border-top:1px solid #000;margin-top:3px;padding-top:3px;font-size:7px;line-height:1.45}
 .label .ft b{font-size:8px}
+.label .ft .two{display:flex;justify-content:space-between}
 .empty{color:var(--t3);text-align:center;padding:24px 0}
 .pop{position:absolute;background:#fff;border:1px solid var(--bl);box-shadow:0 2px 12px rgba(0,0,0,.12);border-radius:4px;padding:12px;width:220px;z-index:30;font-size:12px}
 .pop .ops{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
@@ -196,8 +195,8 @@ const STATUS={1:['待配送','b'],2:['配送完成','g'],3:['废弃','i'],4:['�
 const SETTLE={0:['待结算','b'],1:['结算中','o'],2:['结算完成','g']};
 const LINES={
  PA2026112600041:[
-  {type:'商品',spu:'冰鲜猪背排 Chilled Pork Back Ribs',spuCode:'spu00007231',sku:'冰鲜猪背排 0.5KG/盒',skuCode:'sku00011496',item:'冰鲜猪背排 0.5KG/盒',itemCode:'item202611090020',cat:'猪肉/冷鲜猪肉',inv:'Tax Invoice',tax:'9%',price:'7.63',priceEx:'7.00',qty:40,deliv:40,inb:0,unit:'盒',a:'305.20',aEx:'280.00',pork:true},
-  {type:'商品',spu:'冰鲜猪肋排 Chilled Pork Spareribs',spuCode:'spu00007229',sku:'冰鲜猪肋排 0.5KG/盒',skuCode:'sku00011488',item:'冰鲜猪肋排 0.5KG/盒',itemCode:'item202611090012',cat:'猪肉/冷鲜猪肉',inv:'Tax Invoice',tax:'9%',price:'8.72',priceEx:'8.00',qty:30,deliv:30,inb:0,unit:'盒',a:'261.60',aEx:'240.00',pork:true},
+  {type:'商品',spu:'冰鲜猪背排 Chilled Pork Back Ribs',spuCode:'spu00007231',sku:'冰鲜猪背排 0.5KG/盒',skuCode:'sku00011496',item:'冰鲜猪背排 0.5KG/盒',itemCode:'item202611090020',cat:'猪肉/冷鲜猪肉',inv:'Tax Invoice',tax:'9%',price:'7.63',priceEx:'7.00',qty:40,deliv:40,inb:0,unit:'盒',a:'305.20',aEx:'280.00',pork:true,nameEn:'Chilled Pork Back Ribs',nameCn:'冰鲜猪背排'},
+  {type:'商品',spu:'冰鲜猪肋排 Chilled Pork Spareribs',spuCode:'spu00007229',sku:'冰鲜猪肋排 0.5KG/盒',skuCode:'sku00011488',item:'冰鲜猪肋排 0.5KG/盒',itemCode:'item202611090012',cat:'猪肉/冷鲜猪肉',inv:'Tax Invoice',tax:'9%',price:'8.72',priceEx:'8.00',qty:30,deliv:30,inb:0,unit:'盒',a:'261.60',aEx:'240.00',pork:true,nameEn:'Chilled Pork Spareribs',nameCn:'冰鲜猪肋排'},
   {type:'商品',spu:'湖南剁辣椒 Hunan Chopped Chili',spuCode:'spu00006811',sku:'湖南剁辣椒 500G/瓶',skuCode:'sku00010902',item:'湖南剁辣椒 500G/瓶',itemCode:'item202609150031',cat:'调味品/酱料',inv:'Tax Invoice',tax:'9%',price:'4.36',priceEx:'4.00',qty:20,deliv:20,inb:0,unit:'瓶',a:'87.20',aEx:'80.00',pork:false},
  ],
 };
@@ -284,7 +283,7 @@ function renderLabel(){
   const scanHint=!canScan(o)?`订单${STATUS[o.status][0]}，不能新打标签，已打的可补打`:!formOk()?'先填完上面的生产日期、批次号、兽医证书号':n>=l.deliv?`已打满 ${l.deliv} 盒（可送达数量）`:'';
   let h=`<div class="sec"><div class="sectt">货品</div><div class="kv" style="grid-template-columns:repeat(4,1fr)">
     <div><label>货品名称：</label><span>${l.item}</span></div><div><label>货品编码：</label><span>${l.itemCode}</span></div>
-    <div><label>条码货品码：</label><span class="mono">${itemDigits(l.itemCode)}</span></div><div><label>可送达数量：</label><span>${l.deliv} ${l.unit}</span></div></div></div>
+    <div><label>条码货品码：</label><span class="mono">${itemDigits(l.itemCode)}</span></div><div><label>可送达数量：</label><span>${l.deliv} ${l.unit}</span></div><div style="grid-column:span 2"><label>标签品名：</label><span>${l.nameEn} / ${l.nameCn}</span></div></div></div>
   <div class="sec"><div class="sectt">批次信息</div><div class="form">
     <div class="fi"><label><i>*</i>生产日期</label><input class="inp" type="date" max="${today}" value="${form.date}" onchange="setF('date',this.value)"></div>
     <div class="fi"><label><i>*</i>批次号 Batch No.</label><input class="inp" maxlength="30" value="${form.batch}" oninput="setF('batch',this.value,1)" onchange="renderLabel()"></div>
@@ -312,13 +311,14 @@ function renderLabel(){
 }
 function setF(k,v,quiet){form[k]=v;if(!quiet)renderLabel();else{const s=document.getElementById('scan');const ok=formOk();if(s&&canScan(curOrder)&&valid(recs(curOrder,curLine)).length<curLine.deliv){s.disabled=!ok;document.getElementById('scanErr').textContent=ok?'':'先填完上面的生产日期、批次号、兽医证书号'}}}
 function drawLabel(r){
+  /* 版面按条码说明 V1.1(3) 第 5 节：品名→条码+净重→批次号|生产日期→贮存→兽医证书号→生产商→进口商 */
   const box=document.getElementById('lblBox');
   const d=r||{date:form.date||'2026-11-17',batch:form.batch||'—',cert:form.cert||'—',mfr:form.mfr,code:null};
-  box.innerHTML=`<div class="label"><div class="hd"><div><small>Production Date 生产日期</small><strong>${d.date?ddmmyyyy(d.date):''}</strong></div><div><small>Storage 贮存条件</small><strong>0–4°C</strong></div></div>
-  <div class="bcrow"><div class="bc">${d.code?'<svg id="bcsvg"></svg><div class="hri mono">'+hri(d.code)+'</div>':'<div style="height:44px;line-height:44px;color:#c0c4cc;font-size:11px">扫码后生成条码</div>'}</div>
+  box.innerHTML=`<div class="label"><div class="nm"><div class="en">${curLine.nameEn}</div><div class="cn">${curLine.nameCn}</div></div>
+  <div class="bcrow"><div class="bc">${d.code?'<svg id="bcsvg"></svg><div class="hri mono">'+hri(d.code)+'</div>':'<div style="height:42px;line-height:42px;color:#c0c4cc;font-size:11px">扫码后生成条码</div>'}</div>
   <div class="nw"><small>Net Wt. 净重</small><strong>${d.code?d.g+'g':''}</strong></div></div>
-  <div class="ft">Batch No. 批次号 <b>${d.batch}</b><br>Veterinary Cert. No. 兽医证书号 <b>${d.cert}</b><br>Manufacturer 生产商 <b>${d.mfr}</b><br>Imported by 进口商 ${IMPORTER}</div></div>`;
-  if(d.code&&window.JsBarcode)JsBarcode('#bcsvg',d.code,{format:'CODE128',displayValue:false,margin:0,height:34,width:1});
+  <div class="ft"><div class="two"><span>Batch No. 批次号 <b>${d.batch}</b></span><span>Production Date 生产日期 <b>${d.date?ddmmyyyy(d.date):''}</b></span></div>Storage 贮存条件 <b>0–4°C</b><br>Veterinary Cert. No. 兽医证书号 <b>${d.cert}</b><br>Manufacturer 生产商 <b>${d.mfr}</b><br>Imported by 进口商 ${IMPORTER}</div></div>`;
+  if(d.code&&window.JsBarcode)JsBarcode('#bcsvg',d.code,{format:'CODE128',displayValue:false,margin:0,height:32,width:1});
 }
 function onScan(v){
   const o=curOrder,l=curLine,all=recs(o,l);
