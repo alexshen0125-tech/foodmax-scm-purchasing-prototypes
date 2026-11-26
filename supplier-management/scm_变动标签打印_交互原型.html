@@ -65,6 +65,7 @@ td.wrap{white-space:normal;min-width:160px;max-width:180px}
 .mask{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:10}
 .drawer{position:fixed;top:0;right:0;height:100vh;background:#fff;box-shadow:-4px 0 16px rgba(0,0,0,.12);display:none;flex-direction:column;z-index:11}
 .drawer.on,.mask.on{display:flex}
+#mask3{z-index:12}
 .mask.on{display:block}
 .dhd{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--bl)}
 .dhd .tt{font-size:16px;font-weight:500}
@@ -122,6 +123,39 @@ th.fixr{background:#f5f7fa}
 tr.void td{color:#c0c4cc}
 .mono{font-family:Menlo,Consolas,monospace;font-size:12px}
 .chk{width:14px;height:14px;accent-color:var(--g)}
+
+/* 标签规则页（条码说明 V1.1(3)） */
+.spec{font-size:13px;line-height:1.7;color:#303133}
+.spec h1{font-size:20px;margin-bottom:2px}
+.spec .en{color:#909399;font-size:12px;margin-bottom:12px}
+.spec h2{font-size:15px;margin:20px 0 8px;padding-left:8px;border-left:3px solid #009919;line-height:15px}
+.spec h3{font-size:13px;margin:12px 0 6px}
+.spec p{margin:6px 0}
+.spec table{border-collapse:collapse;width:100%;font-size:12px;margin:6px 0}
+.spec th{background:#303133;color:#fff;text-align:left;padding:6px 8px;font-weight:500;white-space:normal}
+.spec td{border:1px solid #dcdfe6;padding:6px 8px;vertical-align:top;white-space:normal}
+.spec tr:hover td{background:transparent}
+.spec .mono{font-family:Menlo,Consolas,monospace;font-size:12px}
+.spec .warn{border-left:3px solid #f56c6c;background:#fef0f0;padding:8px 10px;margin:8px 0}
+.spec .seg{display:grid;grid-template-columns:6fr 12fr 6fr 4fr;border:1px solid #303133;text-align:center;margin:8px 0 4px}
+.spec .seg div{border-left:1px solid #303133;padding:4px 0}
+.spec .seg div:first-child{border-left:0}
+.spec .seg b{display:block;font-family:Menlo,monospace;font-size:14px}
+.spec .seg small{color:#909399;font-size:11px}
+.spec .full{text-align:center;color:#909399;font-size:12px}
+.spec ol{padding-left:20px}
+.spec .fig{display:flex;flex-direction:column;align-items:center;gap:6px;margin:10px 0}
+.spec .fig .cap{color:#909399;font-size:12px}
+.slbl{width:320px;height:200px;background:#fff;border:1px dashed #c0c4cc;padding:10px 14px;font-family:Arial,"PingFang SC",sans-serif;color:#000;display:flex;flex-direction:column;line-height:1.45}
+.slbl .nm{text-align:center;font-weight:bold;line-height:1.2}
+.slbl .nm .e{font-size:11px}.slbl .nm .c{font-size:10px}
+.slbl .row{display:flex;align-items:center;margin-top:4px;gap:6px}
+.slbl .bc{display:flex;flex-direction:column;align-items:center;flex:0 0 200px}
+.slbl .bc svg{height:32px;width:200px}
+.slbl .hri{font-size:7px;font-family:Menlo,monospace}
+.slbl .nw{flex:1;text-align:center}.slbl .nw small{display:block;font-size:7px;font-weight:bold}.slbl .nw strong{font-size:20px}
+.slbl .ft{border-top:1px solid #000;margin-top:3px;padding-top:3px;font-size:7px}
+.slbl .ft b{font-size:8px}.slbl .two{display:flex;justify-content:space-between}
 </style>
 </head>
 <body>
@@ -175,9 +209,12 @@ tr.void td{color:#c0c4cc}
 <!-- 打标签抽屉（新增） -->
 <div class="mask" id="mask2" onclick="closeLabel()"></div>
 <div class="drawer" id="dr2" style="width:78%">
-  <div class="dhd"><div class="tt" id="dr2tt"></div><span class="x" onclick="closeLabel()">×</span></div>
+  <div class="dhd"><div class="tt" id="dr2tt"></div><div><button class="link" onclick="openSpec()">标签规则</button><span class="x" onclick="closeLabel()">×</span></div></div>
   <div class="dbd" id="dr2bd"></div>
 </div>
+<!-- 标签规则抽屉（新增，内容=条码说明 V1.1(3)） -->
+<div class="mask" id="mask3" onclick="closeSpec()"></div>
+<div class="drawer" id="dr3" style="width:60%;z-index:13"><div class="dhd"><div class="tt">标签规则</div><span class="x" onclick="closeSpec()">×</span></div><div class="dbd" id="dr3bd"></div></div>
 <div class="toast" id="toast"></div>
 <div class="pop" id="pop" style="display:none"></div>
 
@@ -352,6 +389,10 @@ function stamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.g
 function toast(m,ok){const t=document.getElementById('toast');t.textContent=m;t.className='toast '+(ok?'ok':'bad');t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',1800)}
 function show(id){document.getElementById(id).classList.add('on')}
 function hide(id){document.getElementById(id).classList.remove('on')}
+const SPEC_HTML="<div class=\"spec\">\n<h1>山海1号 变动标签 · 条码生产说明</h1>\n<div class=\"en\">Barcode Production Specification for Variable Labels — Shanhai No.1 Chilled Pork</div>\n<table><tr><td>文件编号</td><td>SH1-BC-SPEC-001</td><td>版本</td><td>V1.1</td></tr>\n<tr><td>发布日期</td><td>2026-11-26</td><td>适用标签</td><td>变动标签 80 × 50 mm（每盒一张）</td></tr>\n<tr><td>发布方</td><td>10X AI Technology Pte. Ltd.</td><td>执行方</td><td>Hunan Huale Foodstuff Co. Ltd.（生产商 / 贴标方）</td></tr>\n<tr><td>货品码提供方</td><td colspan=\"3\">Foodmax</td></tr></table>\n\n<h2>1. 目的与适用范围</h2>\n<p>本说明规定山海1号冰鲜猪肉产品<b>变动标签</b>上条形码的码制、数据结构、生成规则和打印质量要求。我方在新加坡仓库用 PDA 扫描该条码，自动读取<b>生产日期、货品码、净重</b>，用于收货、库存和出库称重核对。</p>\n<p>本说明适用于所有发往 10X AI Technology 的山海1号预包装产品。条码必须<b>严格按本说明生成</b>，任何偏差（位数、单位、顺序）都会导致 PDA 无法解析或读错重量。</p>\n\n<h2>2. 码制</h2>\n<table><tr><th style=\"width:24%\">项目</th><th>要求</th></tr>\n<tr><td>码制</td><td><b>Code 128</b>（ISO/IEC 15417）。数据全部为数字，打印软件应自动使用 Code Set C（两位数字编为一个码字）</td></tr>\n<tr><td>数据长度</td><td><b>固定 28 位纯数字</b>，不得含字母、空格、分隔符</td></tr>\n<tr><td>GS1 / FNC1</td><td><b>不使用</b>。不要在开头加 FNC1，也不要加 GS1 应用标识符（如 (01)(3103)）</td></tr>\n<tr><td>校验位</td><td>使用 Code 128 自带的模 103 校验符（打印软件自动生成）。数据中<b>不另加</b>校验位</td></tr></table>\n\n<h2>3. 数据结构（28 位）</h2>\n<div class=\"seg\"><div><b>261121</b><small>① 生产日期 · 6位</small></div><div><b>202611090020</b><small>② 货品码 · 12位</small></div><div><b>002107</b><small>③ 净重(克) · 6位</small></div><div><b>5305</b><small>④ 随机码 · 4位</small></div></div>\n<div class=\"full\">完整条码内容：<span class=\"mono\">2611212026110900200021075305</span></div>\n<table><tr><th>段</th><th>位置</th><th>字段</th><th>长度</th><th>规则</th><th>示例</th></tr>\n<tr><td>①</td><td>第 1–6 位</td><td>生产日期</td><td>6</td><td>格式 <b>YYMMDD</b>（年后两位 + 月 + 日），取标签所示的<b>生产日期</b>，月、日不足两位前面补 0</td><td class=\"mono\">261121<br>= 2026-11-21</td></tr>\n<tr><td>②</td><td>第 7–18 位</td><td>货品码</td><td>12</td><td><b>货品码由 Foodmax 提供</b>，供应商不得自行编制。<b>去掉前缀 \"item\"，只取后面 12 位数字。</b>每个 SKU 一个码，见附表 A</td><td class=\"mono\">202611090020<br>= item202611090020</td></tr>\n<tr><td>③</td><td>第 19–24 位</td><td>净重</td><td>6</td><td>该盒<b>实际称重的净重（已去皮）</b>，单位<b>克</b>，四舍五入到整克，不足 6 位前面补 0。不写小数点、不写单位</td><td class=\"mono\">002107 = 2.107 kg<br>000500 = 0.500 kg</td></tr>\n<tr><td>④</td><td>第 25–28 位</td><td>随机码</td><td>4</td><td>0000–9999 随机生成，不足 4 位前面补 0。用于区分同日期、同货品、同重量的不同盒子</td><td class=\"mono\">5305、0042</td></tr></table>\n<div class=\"warn\"><b>重量必须来自称重设备的实时读数</b>，与标签同一次打印生成，不得手工输入或沿用上一盒的数值。同一张标签上，<b>条码里的重量、人读字符里的重量、Net Wt. 净重栏的重量三者必须完全一致</b>。</div>\n<h3>生成示例</h3>\n<table><tr><th>生产日期</th><th>货品码</th><th>实称净重</th><th>随机码</th><th>条码内容（28 位）</th></tr>\n<tr><td>21/11/2026</td><td>item202611090020</td><td>2.107 kg</td><td>5305</td><td class=\"mono\">2611212026110900200021075305</td></tr>\n<tr><td>21/11/2026</td><td>item202611090020</td><td>0.500 kg</td><td>2471</td><td class=\"mono\">2611212026110900200005002471</td></tr>\n<tr><td>05/01/2027</td><td>item202611090020</td><td>12.350 kg</td><td>0042</td><td class=\"mono\">2701052026110900200123500042</td></tr></table>\n<h3>常见错误（以下均不合格）</h3>\n<table><tr><th>错误写法</th><th>问题</th></tr>\n<tr><td class=\"mono\">21112026...</td><td>日期写成了 DDMMYYYY，必须是 YYMMDD</td></tr>\n<tr><td class=\"mono\">261121item202611090020...</td><td>条码中包含字母 \"item\"</td></tr>\n<tr><td class=\"mono\">...2.107... / ...2107...</td><td>重量带小数点，或没有补足 6 位</td></tr>\n<tr><td class=\"mono\">...000002...</td><td>重量写成了公斤（2 kg），必须是克</td></tr>\n<tr><td>总长度不是 28 位</td><td>任意一段少补 0 或多位，PDA 将拒绝该条码</td></tr>\n<tr><td>(01)... / 开头带 FNC1</td><td>按 GS1-128 打印，本项目不使用 GS1</td></tr></table>\n\n<h2>4. 打印要求</h2>\n<table><tr><th style=\"width:24%\">项目</th><th>要求</th></tr>\n<tr><td>标签尺寸</td><td>80 × 50 mm，横向</td></tr>\n<tr><td>打印方式</td><td>热敏或热转印，单色黑。分辨率 ≥ 203 dpi（推荐 300 dpi）</td></tr>\n<tr><td>窄条宽度（X 尺寸）</td><td><b>0.25 mm</b>（203 dpi = 2 点；300 dpi = 3 点）。不得小于 0.25 mm</td></tr>\n<tr><td>条码宽度</td><td>约 47.3 mm（不含空白区）</td></tr>\n<tr><td>条高</td><td>≥ 7 mm</td></tr>\n<tr><td>静区（左右空白）</td><td>两侧各 ≥ 3 mm，静区内不得有文字、线条或标签边缘</td></tr>\n<tr><td>方向</td><td>条与标签短边平行（横向排列），不得旋转或倾斜</td></tr>\n<tr><td>人读字符</td><td>印在条码正下方，内容与条码完全一致，按 4 段用空格分隔：<span class=\"mono\">261121 202611090020 002107 5305</span>，字高 ≥ 2 mm</td></tr>\n<tr><td>打印质量</td><td>符合 ISO/IEC 15416，等级 ≥ <b>C（1.5）</b>。无断条、无粘连、无拖尾，黑度均匀</td></tr>\n<tr><td>标签材质</td><td>适合 0–4 °C 冷藏和冷凝水环境：防水、防油，冷藏下不脱胶，打印内容不褪色</td></tr>\n<tr><td>贴标位置</td><td>贴平，条码区不得跨盒角、折边或压在凸起处</td></tr></table>\n\n<h2>5. 标签版面</h2>\n<p>变动标签<b>只打印以下 9 项信息</b>（不印包装日期），版面请按下图（1:1 尺寸）及下表顺序从上到下排版：品名在最上方，其下为条码，文字信息在条码下方。字段内容按每盒实际数据填写。</p>\n<div class=\"fig\"><div class=\"slbl\"><div class=\"nm\"><div class=\"e\">Chilled Pork Back Ribs</div><div class=\"c\">冰鲜猪背排</div></div>\n<div class=\"row\"><div class=\"bc\"><svg class=\"specbc\"></svg><div class=\"hri\">261117 202611090020 000518 7411</div></div><div class=\"nw\"><small>Net Wt. 净重</small><strong>518g</strong></div></div>\n<div class=\"ft\"><div class=\"two\"><span>Batch No. 批次号 <b>10XBX26004</b></span><span>Production Date 生产日期 <b>17/11/2026</b></span></div>Storage 贮存条件 <b>0–4°C</b><br>Veterinary Cert. No. 兽医证书号 <b>226N49040007608001</b><br>Manufacturer 生产商 <b>Hunan Huale Foodstuff Co. Ltd.</b><br>Imported by 进口商 10X AI Technology Pte. Ltd., 8 Jurong Town Hall Road, #18-06, The JTC Summit, Singapore 609434</div></div>\n<span class=\"cap\">图 1　变动标签示例（80 × 50 mm）</span></div>\n<table><tr><th>顺序</th><th>字段</th><th>内容 / 来源</th></tr>\n<tr><td>1</td><td>品名（英文 + 中文）</td><td>按 SKU，见附表 A。<b>位于标签最上方，居中</b>；英文在上、中文在下，英文过长可折两行</td></tr>\n<tr><td>2</td><td>条码 + 人读字符</td><td>按本说明第 3、4 节，位于品名下方左侧</td></tr>\n<tr><td>2</td><td>Net Wt. 净重</td><td>该盒实称净重，单位 g，例 518g。<b>须与条码第 19–24 位重量一致</b>，位于条码右侧</td></tr>\n<tr><td>3</td><td>Batch No. 批次号</td><td>每批实际批次号；<b>与生产日期同一行，靠左</b></td></tr>\n<tr><td>3</td><td>Production Date 生产日期</td><td>DD/MM/YYYY，例 17/11/2026。<b>须与条码第 1–6 位日期一致</b>；与批次号同一行，靠右</td></tr>\n<tr><td>4</td><td>Storage 贮存条件</td><td>0–4°C</td></tr>\n<tr><td>5</td><td>Veterinary Cert. No. 兽医证书号</td><td>每批实际证书号</td></tr>\n<tr><td>6</td><td>Manufacturer 生产商</td><td>Hunan Huale Foodstuff Co. Ltd.</td></tr>\n<tr><td>7</td><td>Imported by 进口商</td><td>10X AI Technology Pte. Ltd., 8 Jurong Town Hall Road, #18-06, The JTC Summit, Singapore 609434</td></tr></table>\n\n<h2>6. 首样确认与验收</h2>\n<ol><li><b>首样确认：</b>正式生产前，请按本说明打印<b>至少 10 张</b>样标（含不同重量，至少一张 ≥ 10 kg），贴在实际包装盒上，拍照并寄送实物给我方。我方用 PDA 扫描确认合格后方可批量生产。</li>\n<li><b>生产中自检：</b>每班开机、换卷、换 SKU 后，各扫描 1 张，核对条码读出内容与人读字符、称重读数一致。</li>\n<li><b>到货抽检：</b>我方每批按 1% 抽检（不少于 5 盒），出现以下任一情况判为不合格：无法扫描；位数不是 28 位；条码重量与人读字符或净重栏不一致；条码重量与复称净重相差超过秤允许误差。</li>\n<li>不合格批次需由供应商重新贴标，相关费用由供应商承担（以双方合同约定为准）。</li></ol>\n\n<h2>7. 变更</h2>\n<p>任何字段长度、顺序、码制、标签尺寸的变更都必须由 10X AI Technology 书面通知并发布新版本说明。新增 SKU 时，由 Foodmax 提供新的货品码并更新附表 A；未收到 Foodmax 货品码的 SKU 不得打印条码。</p>\n\n<h2>附表 A　货品码对照表（由 Foodmax 提供）</h2>\n<table><tr><th>#</th><th>品名（英文）</th><th>品名（中文）</th><th>货品码</th><th>条码中第 7–18 位</th></tr>\n<tr><td>1</td><td>Chilled Pork Back Ribs</td><td>冰鲜猪背排</td><td class=\"mono\">item202611090020</td><td class=\"mono\">202611090020</td></tr>\n<tr><td>2</td><td></td><td></td><td></td><td></td></tr>\n<tr><td>3</td><td></td><td></td><td></td><td></td></tr></table>\n<p style=\"color:#909399;font-size:12px\">注：货品码由 Foodmax 统一提供并维护。其余 SKU 的货品码以 Foodmax 提供的正式码表为准。</p>\n\n<h2>修订记录</h2>\n<table><tr><th>版本</th><th>日期</th><th>内容</th></tr>\n<tr><td>V1.0</td><td>2026-11-26</td><td>初版</td></tr>\n<tr><td>V1.1</td><td>2026-11-26</td><td>标签只保留 9 项信息（品名、条码、净重、批次号、生产日期、贮存条件、兽医证书号、生产商、进口商）；“屠宰/生产日期”统一为“生产日期”；进口商地址更新为 #18-06, The JTC Summit；附表 A 第 1 行改为冰鲜猪背排；版式为 品名置顶→条码+净重→批次号 + 生产日期同一行，其后依次为 贮存条件→兽医证书号→生产商→进口商</td></tr></table>\n</div>";
+function drawSpecBarcode(){if(window.JsBarcode)document.querySelectorAll('.specbc').forEach(el=>JsBarcode(el,'2611172026110900200005187411',{format:'CODE128',displayValue:false,margin:0,height:32,width:1}))}
+function openSpec(){document.getElementById('dr3bd').innerHTML=SPEC_HTML;drawSpecBarcode();show('mask3');show('dr3')}
+function closeSpec(){hide('mask3');hide('dr3')}
 renderOrders();
 </script>
 </body>
