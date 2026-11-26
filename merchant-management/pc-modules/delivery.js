@@ -223,13 +223,29 @@
     closeModal(); render(); toast(`${id} 送货单已打印（含签到二维码），到仓出示本单由仓库扫码签到`,'ok');};
 
   window.deliv_signQR=function(id){const d=dvGet(id);if(!d)return;
-    modal(`<div class="mc-hd"><h3>送货签到码 · ${d.warehouse}</h3><p>送货单 ${d.id} · 备货单 ${d.pickId}</p><button class="mc-x" onclick="closeModal()">×</button></div><div class="mc-bd">
-      <div class="kv" style="margin-bottom:14px"><div><div class="k">入库仓库</div><div class="v">${d.warehouse}</div></div><div><div class="k">送达时段</div><div class="v" style="font-size:13px">${d.deliver} ${d.window}</div></div><div><div class="k">应送货</div><div class="v">${dvShould(d)} 张</div></div><div><div class="k">订单数</div><div class="v">${d.orderIds.length}</div></div></div>
-      <div class="ib ib-b" style="margin-bottom:10px"><span class="i">ℹ️</span>到仓<b>出示此码</b>，由<b>仓库人员扫码确认签到</b>——商家端不做签到操作。</div>${(typeof ckBlocked=='function'&&ckBlocked(d))?`<div class="ib ib-r" style="margin-bottom:10px"><span class="i">⛔</span><div>本单<b>${ckState(d)=='stale'?'应送变了，要重新核货':'还没核货'}</b>，仓库扫码会被拦截。<button class="btn btn-link" style="padding:0 4px" onclick="closeModal();ck_open('${d.id}')">去核货 →</button></div></div>`:''}
-      <div style="background:var(--gl);border-radius:12px;padding:18px 0 14px;text-align:center;margin-bottom:6px">
-        <div style="font-weight:700;margin-bottom:12px">送货签到码</div>${qrBlock(d.id)}
-        <div style="font-size:12px;color:var(--ts);margin-top:12px">仓库扫码签到后，逐张核验交接入仓</div></div>
-    </div><div class="mc-ft"><button class="btn btn-o" onclick="closeModal()">关闭</button><button class="btn btn-o" onclick="deliv_doSign('${d.id}')">🔬 演示：模拟仓库扫码签到</button></div>`);
+    // 版式：左码右信息两栏，高度不超一屏；核货拦截提示置于码上方，出示前先看到
+    const meta=DC_META[d.warehouse]||{day:[],night:[]};
+    const ppl=arr=>arr&&arr.length?arr.map(x=>{const i=x.indexOf(' ');return `<div style="display:flex;justify-content:space-between;gap:16px;font-size:13px;line-height:1.9"><span>${i>0?x.slice(0,i):x}</span><span class="mono" style="font-size:13px;color:var(--ts)">${i>0?x.slice(i+1):''}</span></div>`;}).join(''):'<div style="font-size:13px;color:var(--tt)">—</div>';
+    const grp=(ic,label,color,arr)=>`<div><div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:${color};margin-bottom:2px">${ic}${label}</div>${ppl(arr)}</div>`;
+    const sun='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    const moon='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    const stat=(k,v)=>`<div style="background:var(--bd2);border-radius:10px;padding:10px 14px"><div style="font-size:12px;color:var(--ts)">${k}</div><div class="mono" style="font-size:20px;font-weight:700;margin-top:2px">${v}</div></div>`;
+    const blocked=(typeof ckBlocked=='function'&&ckBlocked(d));
+    modalWide(`<div class="mc-hd"><h3>到仓签到码</h3><p>${d.warehouse}</p><button class="mc-x" onclick="closeModal()">×</button></div>
+    ${blocked?`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 24px;background:var(--rl);border-bottom:1px solid var(--bd2)"><div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#B91C1C"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span>本单<b>${ckState(d)=='stale'?'应送变了，要重新核货':'还没核货'}</b>，仓库扫码会被拦截。</span></div><button class="btn btn-p btn-sm" style="flex:none" onclick="closeModal();ck_open('${d.id}')">去核货 →</button></div>`:''}
+    <div style="display:grid;grid-template-columns:auto 1fr">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:24px 28px;border-right:1px solid var(--bd2)">
+        <div style="background:#fff;border:1px solid var(--bd);border-radius:12px;padding:14px">${qrBlock(d.id,180)}</div>
+        <div class="mono" style="font-size:18px;font-weight:700;letter-spacing:.5px;margin-top:14px">${d.id}</div>
+        <div style="font-size:12px;color:var(--ts);margin-top:4px;text-align:center;max-width:220px">请向仓库人员出示，由其扫码完成签到</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px;padding:24px;min-width:0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">${stat('应送货',dvShould(d))}${stat('订单数',d.orderIds.length)}</div>
+        ${grp(sun,'白班联系人','#A9711F',meta.day)}
+        ${grp(moon,'夜班联系人','#2563EB',meta.night)}
+      </div>
+    </div>
+    <div class="mc-ft"><button class="btn btn-o" onclick="deliv_doSign('${d.id}')">🔬 演示：模拟仓库扫码签到</button><button class="btn btn-o" onclick="closeModal()">关闭</button></div>`);
   };
   // 签到由【仓库人员扫码】确认——商家端只出示签到码、不做签到操作。此处为【演示】模拟仓库扫码；与预约相互独立(未预约也可被扫码签到)
   window.deliv_doSign=function(id){const d=dvGet(id);if(!d)return;d.signed=true;d.signTime=d.signTime||'00:12';closeModal();render();toast(`${id} 仓库已扫码确认签到${d.booked?'':'（未预约·直接到仓签到）'}，可逐张核验交接入仓`,'ok');};
